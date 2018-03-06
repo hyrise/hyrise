@@ -27,8 +27,6 @@ class RangePartitionSchema : public AbstractPartitionSchema {
   std::string name() const override;
   PartitionSchemaType get_type() const override;
 
-  void append(const std::vector<AllTypeVariant>& values) override;
-
   PartitionID get_matching_partition_for(const std::vector<AllTypeVariant>& values) const override;
   PartitionID get_matching_partition_for(const AllTypeVariant& value) const;
   std::map<RowID, PartitionID> get_mapping_to_partitions(std::shared_ptr<const Table> table) const override;

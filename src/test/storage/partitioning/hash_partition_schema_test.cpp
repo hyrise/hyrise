@@ -37,28 +37,6 @@ TEST_F(StorageHashPartitionSchemaTest, AppendViaTable) {
   EXPECT_EQ(t0.chunk_count(), 4u);
 }
 
-#if IS_DEBUG
-
-TEST_F(StorageHashPartitionSchemaTest, AppendDirectly) {
-  t0.get_mutable_partition_schema()->append({1, "Foo"});
-  t0.get_mutable_partition_schema()->append({2, "Bar"});
-
-  EXPECT_EQ(t0.row_count(), 2u);
-  EXPECT_EQ(t0.chunk_count(), 3u);
-}
-
-TEST_F(StorageHashPartitionSchemaTest, AppendDirectlyCanExceedMaxChunkSize) {
-  t0.get_mutable_partition_schema()->append({1, "Foo"});
-  t0.get_mutable_partition_schema()->append({1, "Bar"});
-  t0.get_mutable_partition_schema()->append({1, "Baz"});
-
-  // No new chunk is created since this is done by Table which is not involved here.
-  EXPECT_EQ(t0.row_count(), 3u);
-  EXPECT_EQ(t0.chunk_count(), 3u);
-}
-
-#endif
-
 TEST_F(StorageHashPartitionSchemaTest, Name) { EXPECT_EQ(t0.get_partition_schema()->name(), "HashPartition"); }
 
 TEST_F(StorageHashPartitionSchemaTest, GetColumnID) {

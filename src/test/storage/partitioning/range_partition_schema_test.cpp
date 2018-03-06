@@ -48,34 +48,6 @@ TEST_F(StorageRangePartitionSchemaTest, AppendViaTable) {
   EXPECT_EQ(t0.chunk_count(), 4u);
 }
 
-#if IS_DEBUG
-
-TEST_F(StorageRangePartitionSchemaTest, AppendDirectly) {
-  t0.get_mutable_partition_schema()->append({1, "Foo"});
-  t0.get_mutable_partition_schema()->append({2, "Bar"});
-
-  t0.get_mutable_partition_schema()->append({6, "Baz"});
-
-  EXPECT_EQ(t0.row_count(), 3u);
-  EXPECT_EQ(t0.chunk_count(), 3u);
-  EXPECT_EQ(t0.get_chunk(ChunkID{0})->size(), 2u);
-  EXPECT_EQ(t0.get_chunk(ChunkID{1})->size(), 1u);
-  EXPECT_EQ(t0.get_chunk(ChunkID{2})->size(), 0u);
-}
-
-TEST_F(StorageRangePartitionSchemaTest, AppendDirectlyCanExceedMaxChunkSize) {
-  t0.get_mutable_partition_schema()->append({1, "Foo"});
-  t0.get_mutable_partition_schema()->append({2, "Bar"});
-  t0.get_mutable_partition_schema()->append({3, "Baz"});
-
-  // No new chunk is created since this is done by Table which is not involved here.
-  EXPECT_EQ(t0.row_count(), 3u);
-  EXPECT_EQ(t0.chunk_count(), 3u);
-  EXPECT_EQ(t0.get_chunk(ChunkID{0})->size(), 3u);
-}
-
-#endif
-
 TEST_F(StorageRangePartitionSchemaTest, Name) { EXPECT_EQ(t0.get_partition_schema()->name(), "RangePartition"); }
 
 TEST_F(StorageRangePartitionSchemaTest, GetColumnID) {

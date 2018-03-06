@@ -34,9 +34,7 @@ class AbstractPartitionSchema : private Noncopyable {
   // removes chunks from partitions
   void clear();
 
-  // appends a row to the last chunk of the corresponding partition
-  virtual void append(const std::vector<AllTypeVariant>& values) = 0;
-  void append(const std::vector<AllTypeVariant>& values, PartitionID partition_id);
+  // find partition the values belong in
   virtual PartitionID get_matching_partition_for(const std::vector<AllTypeVariant>& values) const = 0;
   
   // produces a map stating the partition each row is in
@@ -56,7 +54,7 @@ class AbstractPartitionSchema : private Noncopyable {
   std::shared_ptr<const Partition> get_partition(PartitionID partition_id) const;
 
   // returns last chunk of a partition referenced by id
-  std::shared_ptr<const Chunk> last_chunk(PartitionID partition_id) const;
+  std::shared_ptr<Chunk> last_chunk(PartitionID partition_id) const;
 
  protected:
   std::vector<std::shared_ptr<Partition>> _partitions;

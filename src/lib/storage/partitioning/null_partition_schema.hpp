@@ -22,8 +22,6 @@ class NullPartitionSchema : public AbstractPartitionSchema {
   std::string name() const override;
   PartitionSchemaType get_type() const override;
 
-  void append(const std::vector<AllTypeVariant>& values) override;
-
   // Return false, since NullPartitioningSchema is only a list of chunks.
   bool is_partitioned() const override { return false; }
 

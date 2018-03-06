@@ -17,11 +17,6 @@ std::string RoundRobinPartitionSchema::name() const { return "RoundRobinPartitio
 
 PartitionSchemaType RoundRobinPartitionSchema::get_type() const { return PartitionSchemaType::RoundRobin; }
 
-void RoundRobinPartitionSchema::append(const std::vector<AllTypeVariant>& values) {
-  AbstractPartitionSchema::append(values, _next_partition);
-  _go_to_next_partition();
-}
-
 PartitionID RoundRobinPartitionSchema::get_matching_partition_for(const std::vector<AllTypeVariant>& values) const {
   return get_next_partition();
 }

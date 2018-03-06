@@ -19,10 +19,6 @@ PartitionSchemaType HashPartitionSchema::get_type() const { return PartitionSche
 
 HashFunctionType HashPartitionSchema::get_function_type() const { return _hash_function->get_type(); }
 
-void HashPartitionSchema::append(const std::vector<AllTypeVariant>& values) {
-  AbstractPartitionSchema::append(values, get_matching_partition_for(values));
-}
-
 PartitionID HashPartitionSchema::get_matching_partition_for(const std::vector<AllTypeVariant>& values) const {
   DebugAssert(values.size() > static_cast<size_t>(_column_id), "Can not determine partition, too few values given");
   const auto& value = values[_column_id];

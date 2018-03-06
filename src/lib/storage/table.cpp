@@ -73,17 +73,17 @@ void Table::add_column(const std::string& name, DataType data_type, bool nullabl
   }
 }
 
-void Table::append(std::vector<AllTypeVariant> values) {
+void Table::append(const std::vector<AllTypeVariant>& values) {
   // TODO(Anyone): Chunks should be preallocated for chunk size
   auto partition_id = _partition_schema->get_matching_partition_for(values);
   auto last_chunk = _partition_schema->last_chunk(partition_id);
   if (last_chunk->size() >= max_chunk_size()) {
-    create_new_chunk(partition_id);
+    last_chunk = create_new_chunk(partition_id);
   }
-  _partition_schema->append(values, partition_id);
+  last_chunk->append(values);
 }
 
-void Table::create_new_chunk(PartitionID partition_id) {
+std::shared_ptr<Chunk> Table::create_new_chunk(PartitionID partition_id) {
   // Create chunk with mvcc columns
   auto new_chunk = std::make_shared<Chunk>(UseMvcc::Yes);
 
@@ -97,6 +97,8 @@ void Table::create_new_chunk(PartitionID partition_id) {
   new_chunk->set_id(static_cast<ChunkID>(_chunks.size()));
   _chunks.push_back(new_chunk);
   _partition_schema->add_new_chunk(new_chunk, partition_id);
+
+  return new_chunk;
 }
 
 uint16_t Table::column_count() const { return _column_types.size(); }
@@ -247,9 +249,6 @@ PartitionID Table::partition_count() const { return _partition_schema->partition
 
 const std::shared_ptr<const AbstractPartitionSchema> Table::get_partition_schema() const { return _partition_schema; }
 
-#if IS_DEBUG
-std::shared_ptr<AbstractPartitionSchema> Table::get_mutable_partition_schema() { return _partition_schema; }
-#endif
 std::vector<IndexInfo> Table::get_indexes() const { return _indexes; }
 
 size_t Table::estimate_memory_usage() const {

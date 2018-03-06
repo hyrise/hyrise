@@ -21,8 +21,4 @@ std::map<RowID, PartitionID> NullPartitionSchema::get_mapping_to_partitions(std:
   return partition_mapping;
 }
 
-void NullPartitionSchema::append(const std::vector<AllTypeVariant>& values) {
-  AbstractPartitionSchema::append(values, PartitionID{0});
-}
-
 }  // namespace opossum

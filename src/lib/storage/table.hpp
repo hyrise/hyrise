@@ -54,7 +54,7 @@ class Table : private Noncopyable {
   ChunkID chunk_count() const;
 
   // creates a new chunk and appends it
-  void create_new_chunk(PartitionID partition_id = PartitionID{0});
+  std::shared_ptr<Chunk> create_new_chunk(PartitionID partition_id = PartitionID{0});
 
   // returns the chunk with the given id
   std::shared_ptr<Chunk> get_mutable_chunk(ChunkID chunk_id);
@@ -99,7 +99,7 @@ class Table : private Noncopyable {
 
   // inserts a row at the end of the table
   // note this is slow and not thread-safe and should be used for testing purposes only
-  void append(std::vector<AllTypeVariant> values);
+  void append(const std::vector<AllTypeVariant>& values);
 
   // returns one materialized value
   // multiversion concurrency control values of chunks are ignored
@@ -162,10 +162,6 @@ class Table : private Noncopyable {
   bool is_partitioned() const;
   PartitionID partition_count() const;
   const std::shared_ptr<const AbstractPartitionSchema> get_partition_schema() const;
-
-#if IS_DEBUG
-  std::shared_ptr<AbstractPartitionSchema> get_mutable_partition_schema();
-#endif
 
   /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Columns)

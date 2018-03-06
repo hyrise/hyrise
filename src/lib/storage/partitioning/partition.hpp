@@ -34,7 +34,7 @@ class Partition {
   void append(const std::vector<AllTypeVariant>& values);
 
   std::vector<std::shared_ptr<const Chunk>> get_chunks() const;
-  std::shared_ptr<const Chunk> last_chunk() const;
+  std::shared_ptr<Chunk> last_chunk() const;
 
   Partition(Partition&&) = default;
   Partition& operator=(Partition&&) = default;

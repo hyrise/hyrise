@@ -10,7 +10,7 @@ namespace opossum {
 
 /*
  * PartitionSchema distributing tuples over a number of Partitions (defined in the constructor)
- * using round-robin scheduling. This way all Partitions are always almost equally filled.
+ * using round-robin distribution. This way all Partitions are always almost equally filled.
  */
 
 class RoundRobinPartitionSchema : public AbstractPartitionSchema {
@@ -19,8 +19,6 @@ class RoundRobinPartitionSchema : public AbstractPartitionSchema {
 
   std::string name() const override;
   PartitionSchemaType get_type() const override;
-
-  void append(const std::vector<AllTypeVariant>& values) override;
 
   PartitionID get_matching_partition_for(const std::vector<AllTypeVariant>& values) const override;
   std::map<RowID, PartitionID> get_mapping_to_partitions(std::shared_ptr<const Table> table) const override;

@@ -17,6 +17,6 @@ std::vector<std::shared_ptr<const Chunk>> Partition::get_chunks() const {
   return immutable_chunks;
 }
 
-std::shared_ptr<const Chunk> Partition::last_chunk() const { return _chunks.back(); }
+std::shared_ptr<Chunk> Partition::last_chunk() const { return _chunks.back(); }
 
 }  // namespace opossum
