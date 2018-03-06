@@ -253,6 +253,7 @@ boost::future<uint64_t> ClientConnection::_send_bytes_async(std::shared_ptr<Outp
 boost::future<uint64_t> ClientConnection::_flush_async() {
   return _socket.async_send(boost::asio::buffer(_response_buffer), boost::asio::use_boost_future) >> then >>
          [=](uint64_t sent_bytes) {
+           // If this fails, the connection may be closed but the server will keep running.
            Assert(sent_bytes == _response_buffer.size(), "Could not send all data");
            _response_buffer.clear();
            return static_cast<uint64_t>(sent_bytes);
