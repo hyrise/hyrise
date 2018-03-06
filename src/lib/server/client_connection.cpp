@@ -90,7 +90,7 @@ boost::future<void> ClientConnection::send_error(const std::string& message) {
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ErrorResponse);
 
   // Send the error message with type info 'M' that indicates that the following body is a plain message to be displayed
-  PostgresWireHandler::write_value(*output_packet, NetworkMessgeType::HumanReadableError);
+  PostgresWireHandler::write_value(*output_packet, NetworkMessageType::HumanReadableError);
   PostgresWireHandler::write_string(*output_packet, message);
 
   // Terminate the error response
@@ -102,7 +102,7 @@ boost::future<void> ClientConnection::send_notice(const std::string& notice) {
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::Notice);
 
   // Send notice message with type info 'M' that indicates that the following body is a plain message to be displayed
-  PostgresWireHandler::write_value(*output_packet, NetworkMessgeType::HumanReadableError);
+  PostgresWireHandler::write_value(*output_packet, NetworkMessageType::HumanReadableError);
   PostgresWireHandler::write_string(*output_packet, notice);
 
   // Terminate the notice response
