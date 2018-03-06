@@ -50,6 +50,7 @@ class RangeFilter : public AbstractFilter {
 
 template <typename T>
 std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>& dictionary) {
+  static_assert(std::is_arithmetic_v<T>, "Range filters are only allowed on arithmetic types.");
   // calculate distances by taking the difference between two neighbouring elements
   std::vector<std::pair<T, size_t>> distances;
   distances.reserve(dictionary.size());
