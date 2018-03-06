@@ -319,6 +319,7 @@ set(
     storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_compressor.hpp
     storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_decompressor.hpp
     storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp
+    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp
     storage/vector_compression/resolve_compressed_vector_type.hpp
     storage/vector_compression/simd_bp128/oversized_types.hpp
     storage/vector_compression/simd_bp128/simd_bp128_compressor.cpp

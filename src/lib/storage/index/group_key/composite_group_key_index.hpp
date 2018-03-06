@@ -12,7 +12,7 @@
 namespace opossum {
 
 class CompositeGroupKeyIndexTest;
-class BaseDeprecatedDictionaryColumn;
+class BaseDictionaryColumn;
 
 /**
  *
@@ -98,7 +98,7 @@ class CompositeGroupKeyIndex : public BaseIndex {
 
  private:
   // the columns the index is based on
-  std::vector<std::shared_ptr<const BaseDeprecatedDictionaryColumn>> _indexed_columns;
+  std::vector<std::shared_ptr<const BaseDictionaryColumn>> _indexed_columns;
 
   // contains concatenated value-ids
   VariableLengthKeyStore _keys;
