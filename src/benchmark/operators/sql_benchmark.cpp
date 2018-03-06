@@ -90,24 +90,24 @@ class SQLBenchmark : public BenchmarkBasicFixture {
       "  HAVING COUNT(o_orderkey) >= 100;";
 
   const std::string Q4 =
-      R"(SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.orders.o_orderkey)
+      R"(SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.o_orderkey)
         FROM customer
         JOIN (SELECT * FROM
           orders
           JOIN lineitem ON o_orderkey = l_orderkey
-        ) AS orderitems ON c_custkey = orders.o_custkey
+        ) AS orderitems ON c_custkey = orderitems.o_custkey
         GROUP BY customer.c_custkey, customer.c_name
-        HAVING COUNT(orderitems.orders.o_orderkey) >= 100;)";
+        HAVING COUNT(orderitems.o_orderkey) >= 100;)";
 
   const std::string Q4Param =
-      R"(SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.orders.o_orderkey)
+      R"(SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.o_orderkey)
         FROM customer
         JOIN (SELECT * FROM
           orders
           JOIN lineitem ON o_orderkey = l_orderkey
-        ) AS orderitems ON c_custkey = orders.o_custkey
+        ) AS orderitems ON c_custkey = orderitems.o_custkey
         GROUP BY customer.c_custkey, customer.c_name
-        HAVING COUNT(orderitems.orders.o_orderkey) >= ?;)";
+        HAVING COUNT(orderitems.o_orderkey) >= ?;)";
 };
 
 // Run all benchmarks for Q1.
