@@ -118,9 +118,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   // Determine correct type for hashing
   using HashedType = typename JoinHashTraits<LeftType, RightType>::HashType;
 
-  using PosLists = std::vector<const PosList*>;
-  using PosListsSPtr = std::shared_ptr<PosLists>;
-  using PosListsByColumn = std::vector<PosListsSPtr>;
+  using PosLists = std::vector<std::shared_ptr<const PosList>>;
+  using PosListsByColumn = std::vector<std::shared_ptr<PosLists>>;
 
   /*
   This is how elements of the input relations are saved after materialization.
@@ -689,7 +688,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
                              _right_in_table->get_chunk(ChunkID{0})->get_column(ColumnID{0}))
                              ? true
                              : false;
-    auto output_left_side = !_inputs_swapped || (_mode != JoinMode::Semi && _mode != JoinMode::Anti);
+    auto only_output_right_input = !_inputs_swapped || (_mode != JoinMode::Semi && _mode != JoinMode::Anti);
 
     /**
      * Two Caches to avoid redundant reference materialization for Reference input tables. As the there might be
@@ -704,7 +703,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     PosListsByColumn left_pos_lists_by_column;
     PosListsByColumn right_pos_lists_by_column;
 
-    if (ref_col_left && output_left_side) {
+    if (ref_col_left && only_output_right_input) {
       left_pos_lists_by_column = setup_pos_lists_by_column(_left_in_table);
     }
     if (ref_col_right) {
@@ -726,7 +725,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         write_output_chunks(output_chunk, _right_in_table, right_pos_lists_by_column, right, ref_col_right);
 
         // Semi/Anti joins are always swapped but do not need the outer relation
-        if (output_left_side) {
+        if (only_output_right_input) {
           write_output_chunks(output_chunk, _left_in_table, left_pos_lists_by_column, left, ref_col_left);
         }
       } else {
@@ -741,7 +740,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
   // See usage in _on_execute() for doc.
   static PosListsByColumn setup_pos_lists_by_column(const std::shared_ptr<const Table> input_table) {
-    std::map<std::vector<const PosList*>, PosListsSPtr> shared_pos_lists_by_pos_lists;
+    std::map<PosLists, std::shared_ptr<PosLists>> shared_pos_lists_by_pos_lists;
 
     PosListsByColumn pos_lists_by_column(input_table->column_count());
     auto pos_lists_by_column_it = pos_lists_by_column.begin();
@@ -757,7 +756,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         // This works because we assume that the columns have to be either all ReferenceColumns or none.
         const auto& ref_column =
             *static_cast<const ReferenceColumn*>(input_chunks[chunk_id]->columns()[column_id].get());
-        *pos_lists_iter = ref_column.pos_list().get();
+        *pos_lists_iter = ref_column.pos_list();
         ++pos_lists_iter;
       }
 
@@ -776,7 +775,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
                                   bool is_ref_column) {
     if (pos_list.empty()) return;
 
-    std::map<PosListsSPtr, std::shared_ptr<PosList>> output_pos_list_by_input_pos_list_ptrs_sptr;
+    std::map<std::shared_ptr<PosLists>, std::shared_ptr<PosList>> output_pos_list_cache;
 
     // Add columns from input table to output chunk
     for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
@@ -785,8 +784,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       if (is_ref_column) {
         const auto& input_table_pos_lists = input_pos_list_ptrs_sptrs_by_column[column_id];
 
-        auto iter = output_pos_list_by_input_pos_list_ptrs_sptr.find(input_table_pos_lists);
-        if (iter == output_pos_list_by_input_pos_list_ptrs_sptr.end()) {
+        auto iter = output_pos_list_cache.find(input_table_pos_lists);
+        if (iter == output_pos_list_cache.end()) {
           // Get the row ids that are referenced
           const auto& input_table_pos_lists_ref = *input_table_pos_lists;
 
@@ -801,7 +800,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
             ++new_pos_list_iter;
           }
 
-          iter = output_pos_list_by_input_pos_list_ptrs_sptr.emplace(input_table_pos_lists, new_pos_list).first;
+          iter = output_pos_list_cache.emplace(input_table_pos_lists, new_pos_list).first;
         }
 
         auto ref_col =
