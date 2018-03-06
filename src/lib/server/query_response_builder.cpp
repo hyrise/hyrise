@@ -5,7 +5,11 @@
 
 #include "SQLParserResult.h"
 
+#include "then_operator.hpp"
+
 namespace opossum {
+
+using opossum::then_operator::then;
 
 std::vector<ColumnDescription> QueryResponseBuilder::build_row_description(const std::shared_ptr<const Table> table) {
   std::vector<ColumnDescription> result;
@@ -85,35 +89,39 @@ boost::future<uint64_t> QueryResponseBuilder::send_query_response(send_row_t sen
   // use this two-level recursion instead of two nested for-loops
 
   const auto num_columns = table.column_count();
+  // Pre-allocate a vector for row values and keep it alive in the shared_ptr
   auto row_strings = std::make_shared<std::vector<std::string>>(num_columns);
 
-  return send_query_response_chunk(table, ChunkID{0}, *row_strings) 
-    >> then >> [&, =row_strings]() { row_strings.reset(); return table.row_count(); };
+  return send_query_response_chunks(send_row, table, ChunkID{0}, *row_strings) >> then >> [&, row_strings]() mutable {
+    row_strings.reset();
+    return table.row_count();
+  };
 }
 
-boost::future<uint64_t> QueryResponseBuilder::send_query_response_chunk(send_row_t send_row, Table& table,
-                                                                        ChunkID current_chunk_id,
-                                                                        std::vector<std::string>& row_strings) {
+boost::future<void> QueryResponseBuilder::send_query_response_chunks(send_row_t send_row, const Table& table,
+                                                                     ChunkID current_chunk_id,
+                                                                     std::vector<std::string>& row_strings) {
   if (current_chunk_id == table.chunk_count()) return boost::make_ready_future();
 
   const auto& chunk = table.get_chunk(current_chunk_id);
 
-  return send_query_response_row(*chunk, ChunkOffset{0}, row_strings) >> then >>
-         [&]() { return send_query_response_chunk(send_row, table, current_chunk_id + 1); };
+  return send_query_response_rows(send_row, *chunk, ChunkOffset{0}, row_strings) >> then >>
+         [&]() { return send_query_response_chunks(send_row, table, ChunkID{current_chunk_id + 1}, row_strings); };
 }
 
-boost::future<uint64_t> QueryResponseBuilder::send_query_response_row(send_row_t send_row, Chunk& chunk,
-                                                                      ChunkOffset current_chunk_offset,
-                                                                      std::vector<std::string>& row_strings) {
+boost::future<void> QueryResponseBuilder::send_query_response_rows(send_row_t send_row, const Chunk& chunk,
+                                                                   ChunkOffset current_chunk_offset,
+                                                                   std::vector<std::string>& row_strings) {
   if (current_chunk_offset == chunk.size()) return boost::make_ready_future();
 
-  for (ColumnID column_id{0}; column_id < ColumnId{row_strings.size()}; ++column_id) {
+  for (ColumnID column_id{0}; column_id < ColumnID{row_strings.size()}; ++column_id) {
     const auto& column = chunk.get_column(column_id);
     row_strings[column_id] = type_cast<std::string>((*column)[current_chunk_offset]);
   }
 
-  return send_row(row_strings) >> then >>
-         [&]() { return send_query_response_row(send_row, chunk, current_chunk_offset + 1, row_strings); };
+  return send_row(row_strings) >> then >> [&]() {
+    return send_query_response_rows(send_row, chunk, ChunkOffset{current_chunk_offset + 1}, row_strings);
+  };
 }
 
 }  // namespace opossum

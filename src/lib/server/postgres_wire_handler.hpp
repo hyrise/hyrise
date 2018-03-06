@@ -15,8 +15,6 @@ namespace opossum {
 // For convenience
 using ByteBuffer = std::vector<char>;
 
-static const uint32_t MAX_BUFFER_SIZE = 1024u;
-
 // This is the struct that we store our incoming network bytes in and that we then read from
 struct InputPacket {
   // The vector needs to have a fixed size for boost::asio to work with it
@@ -82,6 +80,10 @@ T PostgresWireHandler::read_value(const InputPacket& packet) {
   T result;
   auto num_bytes = sizeof(T);
 
+  auto test = std::distance(packet.offset + num_bytes, packet.data.cend());
+  (void)test;
+  auto bar = packet.offset + num_bytes <= packet.data.cend();
+  (void)bar;
   DebugAssert(packet.offset + num_bytes <= packet.data.cend(), "Reading too many bytes from buffer.");
 
   std::copy(packet.offset, packet.offset + num_bytes, reinterpret_cast<char*>(&result));
@@ -95,6 +97,10 @@ std::vector<T> PostgresWireHandler::read_values(const InputPacket& packet, const
   std::vector<T> result(num_values);
   auto num_bytes = result.size() * sizeof(T);
 
+  auto test = std::distance(packet.offset + num_bytes, packet.data.cend());
+  (void)test;
+  auto bar = packet.offset + num_bytes <= packet.data.cend();
+  (void)bar;
   DebugAssert(packet.offset + num_bytes <= packet.data.cend(), "Reading too many bytes from buffer.");
 
   std::copy(packet.offset, packet.offset + num_bytes, reinterpret_cast<char*>(result.data()));

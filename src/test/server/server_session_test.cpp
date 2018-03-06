@@ -218,13 +218,14 @@ TEST_F(ServerSessionTest, SessionExecutesSimpleQueryCommand) {
   // It sends the result schema...
   EXPECT_CALL(*_connection, send_row_description(_));
 
-  // ... as well as the row data, using another scheduled task (not tested here)
-  uint64_t row_count = 42u;
-  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<SendQueryResponseTask>>()))
-      .WillOnce(Return(ByMove(boost::make_ready_future(row_count))));
+  // ... as well as the row data (one message per row)
+  EXPECT_CALL(*_connection, send_data_row(_)).Times(3);
 
   // Finally, the session completes the command...
   EXPECT_CALL(*_connection, send_command_complete(_));
+
+  // sends some execution statistics...
+  EXPECT_CALL(*_connection, send_notice(_));
 
   // and accepts the next query
   EXPECT_CALL(*_connection, send_ready_for_query());
@@ -286,10 +287,8 @@ TEST_F(ServerSessionTest, SessionHandlesExtendedProtocolFlow) {
   EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<ExecuteServerPreparedStatementTask>>()))
       .WillOnce(Return(ByMove(boost::make_ready_future(sql_pipeline->get_result_table()))));
 
-  // It sends the row data, using another scheduled task (not tested here)
-  uint64_t row_count = 42u;
-  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<SendQueryResponseTask>>()))
-      .WillOnce(Return(ByMove(boost::make_ready_future(row_count))));
+  // It sends the row data (one message per row)
+  EXPECT_CALL(*_connection, send_data_row(_)).Times(3);
 
   // ... and completes the command
   EXPECT_CALL(*_connection, send_command_complete(_));

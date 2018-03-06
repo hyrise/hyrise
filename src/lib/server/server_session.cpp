@@ -101,7 +101,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_client_
       }
 
       default:
-        throw std::logic_error("Unsupported message type.");
+        Fail("Unsupported message type.");
     }
   };
 
@@ -159,8 +159,10 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_
 
       auto row_description = QueryResponseBuilder::build_row_description(sql_pipeline->get_result_table());
 
-      return _connection->send_row_description(row_description) >> then >>
-             [=]() { return QueryResoponseBuilder::send_query_response(/* TODO */, *result_table); };
+      return _connection->send_row_description(row_description) >> then >> [=]() {
+        return QueryResponseBuilder::send_query_response(
+            [=](const std::vector<std::string>& row) { return _connection->send_data_row(row); }, *result_table);
+      };
     };
 
     return send_row_data() >> then >>
@@ -197,7 +199,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_parse_c
   auto statement_it = _prepared_statements.find(prepared_statement_name);
   if (statement_it != _prepared_statements.end()) {
     if (!prepared_statement_name.empty()) {
-      throw std::logic_error("Named prepared statements must be explicitly closed before they can be redefined.");
+      Fail("Named prepared statements must be explicitly closed before they can be redefined.");
     }
     _prepared_statements.erase(statement_it);
   }
@@ -213,7 +215,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_parse_c
 template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_bind_command(const BindPacket& packet) {
   auto statement_it = _prepared_statements.find(packet.statement_name);
-  if (statement_it == _prepared_statements.end()) throw std::logic_error("The specified statement does not exist.");
+  if (statement_it == _prepared_statements.end()) Fail("The specified statement does not exist.");
 
   auto sql_pipeline = statement_it->second;
   if (packet.statement_name.empty()) _prepared_statements.erase(statement_it);
@@ -225,8 +227,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_bind_co
   // https://www.postgresql.org/docs/10/static/protocol-flow.html
   auto portal_it = _portals.find(portal_name);
   if (portal_it != _portals.end()) {
-    if (!portal_name.empty())
-      throw std::logic_error("Named portals must be explicitly closed before they can be redefined.");
+    if (!portal_name.empty()) Fail("Named portals must be explicitly closed before they can be redefined.");
     _portals.erase(portal_it);
   }
 
@@ -283,7 +284,8 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_execute
              return _connection->send_status_message(NetworkMessageType::NoDataResponse) >> then >>
                     []() { return uint64_t(0); };
 
-           return QueryResoponseBuilder::send_query_response(/* TODO */, *result_table);
+           return QueryResponseBuilder::send_query_response(
+               [=](const std::vector<std::string>& row) { return _connection->send_data_row(row); }, *result_table);
          } >>
          then >> [=](uint64_t row_count) {
            auto complete_message = QueryResponseBuilder::build_command_complete_message(statement_type, row_count);

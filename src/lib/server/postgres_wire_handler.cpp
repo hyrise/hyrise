@@ -149,9 +149,13 @@ void PostgresWireHandler::write_output_packet_size(OutputPacket& packet) {
 std::string PostgresWireHandler::read_string(const InputPacket& packet) {
   if (packet.offset == packet.data.cend()) return "";
 
-  auto max_length = std::distance(packet.offset, packet.data.cend());
-  std::string result(&*packet.offset, max_length);
+  // We have to convert the byte buffer into a std::string, making sure
+  // we don't run past the end of the buffer and stop at the first null byte
+  auto string_end = std::find(packet.offset, packet.data.cend(), '\0');
+  std::string result(packet.offset, string_end);
+
   packet.offset += result.length() + 1;
+
   return result;
 }
 
