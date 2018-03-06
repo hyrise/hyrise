@@ -16,16 +16,8 @@ class StoragePartitionTest : public BaseTest {
   void SetUp() override {}
 };
 
-TEST_F(StoragePartitionTest, CreateAndGetId) {
-  Partition p0{PartitionID{0}};
-  Partition p1{PartitionID{1}};
-
-  EXPECT_EQ(p0.get_partition_id(), PartitionID{0});
-  EXPECT_EQ(p1.get_partition_id(), PartitionID{1});
-}
-
 TEST_F(StoragePartitionTest, AddAndAccessChunk) {
-  Partition p0{PartitionID{0}};
+  Partition p0;
   std::shared_ptr<Chunk> c0 = std::make_shared<Chunk>();
   std::shared_ptr<Chunk> c1 = std::make_shared<Chunk>();
 
@@ -37,7 +29,7 @@ TEST_F(StoragePartitionTest, AddAndAccessChunk) {
 }
 
 TEST_F(StoragePartitionTest, Append) {
-  Partition p0{PartitionID{0}};
+  Partition p0;
   std::shared_ptr<Chunk> c0 = std::make_shared<Chunk>();
   std::shared_ptr<BaseColumn> vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
   std::shared_ptr<BaseColumn> vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);

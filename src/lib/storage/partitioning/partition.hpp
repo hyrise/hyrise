@@ -23,9 +23,8 @@ class Table;
 
 class Partition {
  public:
-  explicit Partition(PartitionID partition_id);
 
-  const PartitionID get_partition_id();
+  Partition() = default;
 
   void clear();
   void add_new_chunk(std::shared_ptr<Chunk> chunk);
@@ -42,7 +41,6 @@ class Partition {
 
  protected:
   std::vector<std::shared_ptr<Chunk>> _chunks;
-  const PartitionID _partition_id;
 };
 
 }  // namespace opossum

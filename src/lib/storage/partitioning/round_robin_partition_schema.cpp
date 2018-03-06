@@ -9,7 +9,7 @@ RoundRobinPartitionSchema::RoundRobinPartitionSchema(PartitionID number_of_parti
   _partitions.reserve(number_of_partitions);
 
   for (PartitionID index{0}; index < number_of_partitions; ++index) {
-    _partitions.emplace_back(std::make_shared<Partition>(index));
+    _partitions.emplace_back(std::make_shared<Partition>());
   }
 }
 

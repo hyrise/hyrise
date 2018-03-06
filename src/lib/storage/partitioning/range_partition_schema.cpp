@@ -11,7 +11,7 @@ RangePartitionSchema::RangePartitionSchema(ColumnID column_id, std::vector<AllTy
   _bound_type = data_type_from_all_type_variant(bounds.front());
   _partitions.reserve(bounds.size() + 1);
   for (PartitionID index{0}; index < bounds.size() + 1; ++index) {
-    _partitions.emplace_back(std::make_shared<Partition>(index));
+    _partitions.emplace_back(std::make_shared<Partition>());
   }
 }
 

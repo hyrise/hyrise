@@ -4,7 +4,7 @@
 
 namespace opossum {
 
-NullPartitionSchema::NullPartitionSchema() { _partitions.emplace_back(std::make_shared<Partition>(PartitionID{0})); }
+NullPartitionSchema::NullPartitionSchema() { _partitions.emplace_back(std::make_shared<Partition>()); }
 
 std::string NullPartitionSchema::name() const { return "NullPartition"; }
 

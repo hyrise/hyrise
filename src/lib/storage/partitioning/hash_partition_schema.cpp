@@ -9,7 +9,7 @@ HashPartitionSchema::HashPartitionSchema(ColumnID column_id, std::unique_ptr<Abs
   _partitions.reserve(number_of_partitions);
 
   for (PartitionID index{0}; index < _number_of_partitions; ++index) {
-    _partitions.emplace_back(std::make_shared<Partition>(index));
+    _partitions.emplace_back(std::make_shared<Partition>());
   }
 }
 
