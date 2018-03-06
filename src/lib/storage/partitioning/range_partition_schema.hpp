@@ -43,7 +43,7 @@ class RangePartitionSchema : public AbstractPartitionSchema {
   DataType _bound_type;
 
   bool _partition_matches_condition(PartitionID partition_id, PredicateCondition condition,
-                                    PartitionID matching_partition_id);
+                                    PartitionID matching_partition_id) const;
 };
 
 }  // namespace opossum

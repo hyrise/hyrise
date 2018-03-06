@@ -44,10 +44,10 @@ std::map<RowID, PartitionID> RangePartitionSchema::get_mapping_to_partitions(std
 
 std::vector<ChunkID> RangePartitionSchema::get_chunk_ids_to_exclude(PredicateCondition condition,
                                                                     const AllTypeVariant& value) const {
-  PartitionID matching_partition = get_matching_partition_for(value);
+  PartitionID matching_partition_id = get_matching_partition_for(value);
   std::vector<ChunkID> chunk_ids_to_exclude;
   for (PartitionID partition_id{0}; partition_id < partition_count(); partition_id++) {
-    if (partition_id != matching_partition) {
+    if (!_partition_matches_condition(partition_id, condition, matching_partition_id)) {
       auto chunks_of_partition = get_partition(partition_id)->get_chunks();
       std::transform(chunks_of_partition.cbegin(), chunks_of_partition.cend(), std::back_inserter(chunk_ids_to_exclude),
                      [](auto chunk) { return chunk->id(); });
@@ -61,7 +61,7 @@ const std::vector<AllTypeVariant>& RangePartitionSchema::get_bounds() const { re
 DataType RangePartitionSchema::get_bound_type() const { return _bound_type; }
 
 bool RangePartitionSchema::_partition_matches_condition(PartitionID partition_id, PredicateCondition condition,
-                                                        PartitionID matching_partition_id) {
+                                                        PartitionID matching_partition_id) const {
   switch (condition) {
     case PredicateCondition::Equals:
       return partition_id == matching_partition_id;

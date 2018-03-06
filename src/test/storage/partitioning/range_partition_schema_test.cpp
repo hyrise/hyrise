@@ -56,9 +56,17 @@ TEST_F(StorageRangePartitionSchemaTest, GetColumnID) {
 }
 
 TEST_F(StorageRangePartitionSchemaTest, GetChunkIDsToExclude) {
-  const auto chunk_ids =
-      t0.get_partition_schema()->get_chunk_ids_to_exclude(PredicateCondition::LessThan, AllTypeVariant{4});
-  EXPECT_EQ(chunk_ids.size(), 2u);
+  const auto chunk_ids_less_than =
+      t0.get_partition_schema()->get_chunk_ids_to_exclude(PredicateCondition::LessThan, AllTypeVariant{8});
+  EXPECT_EQ(chunk_ids_less_than.size(), 1u);
+
+  const auto chunk_ids_greater_than =
+      t0.get_partition_schema()->get_chunk_ids_to_exclude(PredicateCondition::GreaterThan, AllTypeVariant{4});
+  EXPECT_EQ(chunk_ids_greater_than.size(), 0u);
+
+  const auto chunk_ids_equals =
+      t0.get_partition_schema()->get_chunk_ids_to_exclude(PredicateCondition::Equals, AllTypeVariant{4});
+  EXPECT_EQ(chunk_ids_equals.size(), 2u);
 }
 
 }  // namespace opossum
