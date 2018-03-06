@@ -72,6 +72,7 @@ set(
     operators/update_test.cpp
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
+    optimizer/chunk_statistics/pruning_filters_test.cpp
     optimizer/column_statistics_test.cpp
     optimizer/expression_test.cpp
     optimizer/join_ordering/join_graph_builder_test.cpp
