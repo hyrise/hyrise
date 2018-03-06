@@ -31,4 +31,11 @@ TEST_F(PruningFiltersTest, MinMaxFilterTest) {
   EXPECT_EQ(true, filter->can_prune({-21}, PredicateCondition::LessThanEquals));
 }
 
+TEST_F(PruningFiltersTest, RangeFilterGapTest) {
+  auto filter = RangeFilter<int>::build_filter(_values);
+
+  EXPECT_EQ(true, filter->can_prune({5}, PredicateCondition::Equals));
+  EXPECT_EQ(true, filter->can_prune({9}, PredicateCondition::Equals));
+}
+
 }  // namespace opossum
