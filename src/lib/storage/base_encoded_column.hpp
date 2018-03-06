@@ -5,6 +5,8 @@
 
 namespace opossum {
 
+enum class CompressedVectorType : uint8_t;
+
 /**
  * @brief Base class of all encoded columns
  *
@@ -20,6 +22,12 @@ class BaseEncodedColumn : public BaseColumn {
   void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
 
   virtual EncodingType encoding_type() const = 0;
+
+  /**
+   * An encoded column may use a compressed vector to reduce its memory footprint.
+   * Returns the vector’s type if it does, else CompressedVectorType::Invalid
+   */
+  virtual CompressedVectorType compressed_vector_type() const;
 };
 
 }  // namespace opossum

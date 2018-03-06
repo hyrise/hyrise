@@ -73,7 +73,7 @@ class Projection : public AbstractReadOnlyOperator {
    * It returns a vector containing the materialized values resulting from the expression.
    */
   template <typename T>
-  static const pmr_concurrent_vector<std::optional<T>> _evaluate_expression(
+  static const pmr_concurrent_vector<std::pair<bool, T>> _evaluate_expression(
       const std::shared_ptr<PQPExpression>& expression, const std::shared_ptr<const Table> table,
       const ChunkID chunk_id);
 
