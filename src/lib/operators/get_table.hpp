@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -17,6 +18,9 @@ class GetTable : public AbstractReadOnlyOperator {
   const std::string description(DescriptionMode description_mode) const override;
 
   const std::string& table_name() const;
+  const std::vector<ChunkID>& excluded_chunk_ids() const;
+
+  void set_excluded_chunk_ids(const std::vector<ChunkID>& excluded_chunk_ids);
 
   std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args = {}) const override;
 
@@ -25,5 +29,6 @@ class GetTable : public AbstractReadOnlyOperator {
 
   // name of the table to retrieve
   const std::string _name;
+  std::vector<ChunkID> _excluded_chunk_ids;
 };
 }  // namespace opossum
