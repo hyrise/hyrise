@@ -55,10 +55,6 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
    * @{
    */
 
-  template <typename DictionaryColumnType>
-  void _handle_dictionary_column(const DictionaryColumnType& left_column,
-                                 std::shared_ptr<ColumnVisitableContext> base_context);
-
   /**
    * @returns number of matches and the result of each dictionary entry
    */

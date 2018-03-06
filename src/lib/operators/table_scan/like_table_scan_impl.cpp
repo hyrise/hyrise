@@ -50,12 +50,6 @@ void LikeTableScanImpl::handle_column(const BaseValueColumn& base_column,
   });
 }
 
-void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
-                                      std::shared_ptr<ColumnVisitableContext> base_context) {
-  const auto& left_column = static_cast<const DictionaryColumn<std::string>&>(base_column);
-  _handle_dictionary_column(left_column, base_context);
-}
-
 void LikeTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
                                       std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
@@ -99,9 +93,9 @@ std::string LikeTableScanImpl::sqllike_to_regex(std::string sqllike) {
   return "^" + sqllike + "$";
 }
 
-template <typename DictionaryColumnType>
-void LikeTableScanImpl::_handle_dictionary_column(const DictionaryColumnType& left_column,
-                                                  std::shared_ptr<ColumnVisitableContext> base_context) {
+void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
+                                      std::shared_ptr<ColumnVisitableContext> base_context) {
+  const auto& left_column = static_cast<const DictionaryColumn<std::string>&>(base_column);
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;

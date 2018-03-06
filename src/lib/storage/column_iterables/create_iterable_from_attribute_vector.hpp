@@ -15,8 +15,6 @@ namespace opossum {
  * In debug mode, create_iterable_from_column returns a type erased
  * iterable, i.e., all iterators have the same type
  *
- * These functions exist as long as their are two implementations of dictionary encoding
- *
  * @{
  */
 
