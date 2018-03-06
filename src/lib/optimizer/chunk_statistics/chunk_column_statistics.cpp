@@ -66,12 +66,15 @@ static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_col
   return std::make_shared<ChunkColumnStatistics>();
 }
 
+static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_column(const BaseColumn& column) {
+  return std::make_shared<ChunkColumnStatistics>();
+}
+
 std::shared_ptr<ChunkColumnStatistics> ChunkColumnStatistics::build_statistics(DataType data_type,
                                                                                std::shared_ptr<BaseColumn> column) {
   std::shared_ptr<ChunkColumnStatistics> statistics;
   resolve_data_and_column_type(data_type, *column, [&statistics](auto type, auto& typed_column) {
-    using ColumnDataType = typename decltype(type)::type;
-    statistics = build_statistics_from_concrete_column<ColumnDataType>(typed_column);
+    statistics = build_statistics_from_concrete_column(typed_column);
   });
   return statistics;
 }
