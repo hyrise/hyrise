@@ -6,7 +6,7 @@
 #include <boost/thread/future.hpp>
 
 #include "scheduler/current_scheduler.hpp"
-#include "tasks/server/server_task.hpp"
+#include "tasks/server/abstract_server_task.hpp"
 
 #include "then_operator.hpp"
 #include "use_boost_future.hpp"

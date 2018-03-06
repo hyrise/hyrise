@@ -353,6 +353,7 @@ set(
     tasks/chunk_migration_task.hpp
     tasks/migration_preparation_task.cpp
     tasks/migration_preparation_task.hpp
+    tasks/server/abstract_server_task.hpp
     tasks/server/bind_server_prepared_statement_task.cpp
     tasks/server/bind_server_prepared_statement_task.hpp
     tasks/server/commit_transaction_task.cpp
@@ -365,7 +366,6 @@ set(
     tasks/server/execute_server_query_task.hpp
     tasks/server/load_server_file_task.cpp
     tasks/server/load_server_file_task.hpp
-    tasks/server/server_task.hpp
     type_cast.hpp
     type_comparison.hpp
     types.hpp

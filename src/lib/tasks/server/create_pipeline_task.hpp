@@ -2,7 +2,7 @@
 
 #include <boost/thread/future.hpp>
 
-#include "server_task.hpp"
+#include "abstract_server_task.hpp"
 
 namespace opossum {
 
@@ -13,7 +13,10 @@ struct CreatePipelineResult {
   std::optional<std::pair<std::string, std::string>> load_table;
 };
 
-class CreatePipelineTask : public ServerTask<std::unique_ptr<CreatePipelineResult>> {
+// This task is used to parse an SQL string from a client and wrap it in an SQLPipeline. It is a separate task and not
+// "inlined" because parsing can be a potentially expensive task on long strings and we want to reduce the computational
+// load on the main server thread to a miminum.
+class CreatePipelineTask : public AbstractServerTask<std::unique_ptr<CreatePipelineResult>> {
  public:
   explicit CreatePipelineTask(std::string sql, bool allow_load_table = false)
       : _sql(sql), _allow_load_table(allow_load_table) {}

@@ -6,10 +6,12 @@
 
 namespace opossum {
 
+// This is the base class for all server-related tasks. Every tasks needs the promise that is defined here. Each custom
+// task that is started from within the server application code should inherit from this class.
 template <typename T>
-class ServerTask : public AbstractTask {
+class AbstractServerTask : public AbstractTask {
  public:
-  ServerTask() = default;
+  AbstractServerTask() = default;
 
   using result_type = T;
 

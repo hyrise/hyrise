@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+# This test script can be used to test the Hyrise server interface with a real client. Testing only within C++ does not
+# provide the full end2end-test-like experience :) This is basically just a check to see if the server starts correctly
+# and can interact with clients. We cannot do this in our regular testing framework because it requires us to mock the
+# actual network interface.
+#
+# usage: ./scripts/run_server_test.sh
+#
 # This script requires psql to be pre-installed
 
 if [ -z "$1" ]

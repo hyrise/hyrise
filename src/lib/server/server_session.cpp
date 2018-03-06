@@ -253,8 +253,10 @@ template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_sync_command() {
   if (!_transaction) return boost::make_ready_future();
 
-  return _task_runner->dispatch_server_task(std::make_shared<CommitTransactionTask>(_transaction)) >> then >>
-         [=]() { _transaction.reset(); };
+  _transaction->commit();
+  _transaction.reset();
+
+  return boost::make_ready_future();
 }
 
 template <typename TConnection, typename TTaskRunner>

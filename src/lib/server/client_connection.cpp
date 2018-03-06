@@ -8,7 +8,7 @@ namespace opossum {
 
 using opossum::then_operator::then;
 
-const auto ignore_sent_bytes = [](uint64_t sent_bytes) { };
+const auto ignore_sent_bytes = [](uint64_t sent_bytes) {};
 
 ClientConnection::ClientConnection(tcp::socket socket) : _socket(std::move(socket)) {
   _response_buffer.reserve(_max_response_size);
@@ -90,7 +90,7 @@ boost::future<void> ClientConnection::send_error(const std::string& message) {
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ErrorResponse);
 
   // Send the error message with type info 'M' that indicates that the following body is a plain message to be displayed
-  PostgresWireHandler::write_value(*output_packet, 'M');
+  PostgresWireHandler::write_value(*output_packet, NetworkMessgeType::HumanReadableError);
   PostgresWireHandler::write_string(*output_packet, message);
 
   // Terminate the error response
@@ -102,7 +102,7 @@ boost::future<void> ClientConnection::send_notice(const std::string& notice) {
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::Notice);
 
   // Send notice message with type info 'M' that indicates that the following body is a plain message to be displayed
-  PostgresWireHandler::write_value(*output_packet, 'M');
+  PostgresWireHandler::write_value(*output_packet, NetworkMessgeType::HumanReadableError);
   PostgresWireHandler::write_string(*output_packet, notice);
 
   // Terminate the notice response
@@ -214,7 +214,7 @@ boost::future<InputPacket> ClientConnection::_receive_bytes_async(size_t size) {
 
   return _socket.async_read_some(boost::asio::buffer(result->data, size), boost::asio::use_boost_future) >> then >>
          [=](uint64_t received_size) {
-           // If this assertion should fail, we will end up in either the error handler for the current command or 
+           // If this assertion should fail, we will end up in either the error handler for the current command or
            // the entire session. The connection may be closed but the server will keep running either way.
            Assert(received_size == size, "Client sent less data than expected.");
 

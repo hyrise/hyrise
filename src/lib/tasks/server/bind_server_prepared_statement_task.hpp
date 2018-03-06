@@ -1,6 +1,6 @@
 #pragma once
 
-#include "server_task.hpp"
+#include "abstract_server_task.hpp"
 
 #include "all_parameter_variant.hpp"
 
@@ -9,7 +9,8 @@ namespace opossum {
 class SQLPipeline;
 class SQLQueryPlan;
 
-class BindServerPreparedStatementTask : public ServerTask<std::unique_ptr<SQLQueryPlan>> {
+// This task is used to bind the actual variables of a prepared statements and return the corresponding query plan.
+class BindServerPreparedStatementTask : public AbstractServerTask<std::unique_ptr<SQLQueryPlan>> {
  public:
   BindServerPreparedStatementTask(const std::shared_ptr<SQLPipeline> sql_pipeline,
                                   std::vector<AllParameterVariant> params)

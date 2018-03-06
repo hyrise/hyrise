@@ -23,7 +23,7 @@ uint32_t PostgresWireHandler::handle_startup_package(const InputPacket& packet) 
   // Reset data buffer
   packet.offset = packet.data.cbegin();
 
-  // Special SSL version number
+  // Special SSL version number that we catch to deny SSL support
   if (version == 80877103) {
     return 0;
   } else {
@@ -60,13 +60,7 @@ ParsePacket PostgresWireHandler::handle_parse_packet(const InputPacket& packet) 
 
   /*auto parameter_data_types = */ read_values<uint32_t>(packet, network_parameter_data_types);
 
-  //  SQLPipeline sql_pipeline{query};
-  //  auto parsed_statements = sql_pipeline.get_parsed_sql_statements();
-  //  if (parsed_statements.size() != 1) {
-  //    throw std::runtime_error("Only exactly 1 statement supported.");
-  //  }
-
-  return ParsePacket{std::move(statement_name), std::move(query)};  //, std::move(sql_pipeline)};
+  return ParsePacket{std::move(statement_name), std::move(query)};
 }
 
 BindPacket PostgresWireHandler::handle_bind_packet(const InputPacket& packet) {
