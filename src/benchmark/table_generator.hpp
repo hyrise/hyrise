@@ -66,7 +66,7 @@ class TableGenerator {
 
  protected:
   const size_t _num_columns = 10;
-  const size_t _num_rows = 4'000'000;
+  const size_t _num_rows = 40'000;
   const int _max_different_value = 10'000;
 };
 
