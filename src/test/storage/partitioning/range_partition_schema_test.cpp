@@ -83,4 +83,9 @@ TEST_F(StorageRangePartitionSchemaTest, GetColumnID) {
             ColumnID{0});
 }
 
+TEST_F(StorageRangePartitionSchemaTest, GetChunkIDsToExclude) {
+  const auto chunk_ids = t0.get_partition_schema()->get_chunk_ids_to_exclude(PredicateCondition::LessThan, AllTypeVariant{4});
+  EXPECT_EQ(chunk_ids.size(), 2u);
+}
+
 }  // namespace opossum

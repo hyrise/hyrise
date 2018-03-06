@@ -61,4 +61,9 @@ TEST_F(StorageNullPartitionSchemaTest, AppendDirectlyCanExceedMaxChunkSize) {
 
 TEST_F(StorageNullPartitionSchemaTest, Name) { EXPECT_EQ(t0.get_partition_schema()->name(), "NullPartition"); }
 
+TEST_F(StorageNullPartitionSchemaTest, GetChunkIDsToExclude) {
+  const auto chunk_ids = t0.get_partition_schema()->get_chunk_ids_to_exclude(PredicateCondition::Equals, AllTypeVariant{2});
+  EXPECT_EQ(chunk_ids.size(), 0u);
+}
+
 }  // namespace opossum
