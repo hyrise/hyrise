@@ -173,8 +173,6 @@ std::shared_ptr<AbstractPartitionSchema> ImportBinary::_read_partitioning_header
       });
       return std::make_shared<RangePartitionSchema>(column_id, bounds);
     }
-    default:
-      throw std::runtime_error("import for partition schema type not implemented");
   }
 }
 

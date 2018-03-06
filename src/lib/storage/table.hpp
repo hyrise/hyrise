@@ -11,7 +11,6 @@
 #include "proxy_chunk.hpp"
 #include "storage/index/index_info.hpp"
 #include "storage/partitioning/abstract_partition_schema.hpp"
-#include "storage/partitioning/hash_function.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -156,14 +155,9 @@ class Table : private Noncopyable {
    * On empty Tables, the PartitionSchema can be altered using the functions below.
    * The logic behind partitioning (which tuples goes in which Partition) is handled by PartitionSchema.
    */
+  void apply_partitioning(std::shared_ptr<AbstractPartitionSchema> partition_schema);
   // this function is needed for deserialization, it does not create a set of initial chunks
   void set_partitioning_and_clear(std::shared_ptr<AbstractPartitionSchema> partition_schema);
-  void apply_partitioning(std::shared_ptr<AbstractPartitionSchema> partition_schema);
-  void create_hash_partitioning(const ColumnID column_id, const HashFunction hash_function,
-                                const PartitionID number_of_partitions);
-  void create_null_partitioning();
-  void create_range_partitioning(const ColumnID column_id, const std::vector<AllTypeVariant> bounds);
-  void create_round_robin_partitioning(const PartitionID number_of_partitions);
 
   bool is_partitioned() const;
   PartitionID partition_count() const;

@@ -54,7 +54,7 @@ bool Table::layouts_equal(const std::shared_ptr<const Table>& left, const std::s
 Table::Table(const uint32_t max_chunk_size)
     : _max_chunk_size(max_chunk_size), _append_mutex(std::make_unique<std::mutex>()) {
   Assert(max_chunk_size > 0, "Table must have a chunk size greater than 0.");
-  create_null_partitioning();
+  apply_partitioning(std::make_shared<NullPartitionSchema>());
 }
 
 void Table::add_column_definition(const std::string& name, DataType data_type, bool nullable) {
@@ -216,10 +216,6 @@ TableType Table::get_type() const {
   }
 }
 
-void Table::set_partitioning_and_clear(std::shared_ptr<AbstractPartitionSchema> partition_schema) {
-  _partition_schema = std::move(partition_schema);
-  _chunks.clear();
-}
 
 void Table::apply_partitioning(std::shared_ptr<AbstractPartitionSchema> partition_schema) {
   if (row_count() > 0) {
@@ -229,19 +225,9 @@ void Table::apply_partitioning(std::shared_ptr<AbstractPartitionSchema> partitio
   _create_initial_chunks(static_cast<PartitionID>(partition_schema->partition_count()));
 }
 
-void Table::create_hash_partitioning(const ColumnID column_id, const HashFunction hash_function,
-                                     const PartitionID number_of_partitions) {
-  apply_partitioning(std::make_shared<HashPartitionSchema>(column_id, hash_function, number_of_partitions));
-}
-
-void Table::create_null_partitioning() { apply_partitioning(std::make_shared<NullPartitionSchema>()); }
-
-void Table::create_range_partitioning(const ColumnID column_id, const std::vector<AllTypeVariant> bounds) {
-  apply_partitioning(std::make_shared<RangePartitionSchema>(column_id, bounds));
-}
-
-void Table::create_round_robin_partitioning(const PartitionID number_of_partitions) {
-  apply_partitioning(std::make_shared<RoundRobinPartitionSchema>(number_of_partitions));
+void Table::set_partitioning_and_clear(std::shared_ptr<AbstractPartitionSchema> partition_schema) {
+  _partition_schema = std::move(partition_schema);
+  _chunks.clear();
 }
 
 void Table::_create_initial_chunks(PartitionID number_of_partitions) {

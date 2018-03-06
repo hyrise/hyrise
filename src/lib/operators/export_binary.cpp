@@ -133,10 +133,10 @@ std::shared_ptr<const Table> ExportBinary::_on_execute() {
   }
 
   if (table->is_partitioned()) {
-    _write_partitioning_header(table, ofstream);
+    _write_partition_schema_header(table, ofstream);
 
     for (PartitionID partition_id{0}; partition_id < table->get_partition_schema()->partition_count(); partition_id++) {
-      _write_partition(table, ofstream, partition_id);
+      _write_partition_info(table, ofstream, partition_id);
     }
   }
 
@@ -177,19 +177,19 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
   }
 }
 
-void ExportBinary::_write_partitioning_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream) {
+void ExportBinary::_write_partition_schema_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream) {
   const auto partition_schema = table->get_partition_schema();
   _export_value(ofstream, partition_schema_type_to_uint.left.at(partition_schema->get_type()));
   _export_value(ofstream, partition_schema->partition_count());
 
   switch (partition_schema->get_type()) {
     case PartitionSchemaType::Hash: {
-      const auto hash_schema = std::dynamic_pointer_cast<const HashPartitionSchema>(partition_schema);
+      const auto hash_schema = std::static_pointer_cast<const HashPartitionSchema>(partition_schema);
       _export_value(ofstream, static_cast<ColumnID>(hash_schema->get_column_id()));
       break;
     }
     case PartitionSchemaType::Range: {
-      const auto range_schema = std::dynamic_pointer_cast<const RangePartitionSchema>(partition_schema);
+      const auto range_schema = std::static_pointer_cast<const RangePartitionSchema>(partition_schema);
       const auto bound_type_string = data_type_to_string.left.at(range_schema->get_bound_type());
       _export_value(ofstream, static_cast<ColumnID>(range_schema->get_column_id()));
       _export_values(ofstream, std::vector<std::string>{bound_type_string});
@@ -206,13 +206,13 @@ void ExportBinary::_write_partitioning_header(const std::shared_ptr<const Table>
     }
     case PartitionSchemaType::RoundRobin:
     case PartitionSchemaType::Null: {
+      // no additional information is required
       break;
     }
-    default: { throw std::runtime_error("binary header for partitioning schema is not implemented"); }
   }
 }
 
-void ExportBinary::_write_partition(const std::shared_ptr<const Table>& table, std::ofstream& ofstream,
+void ExportBinary::_write_partition_info(const std::shared_ptr<const Table>& table, std::ofstream& ofstream,
                                     const PartitionID& partition_id) {
   const auto partition = table->get_partition_schema()->get_partition(partition_id);
 

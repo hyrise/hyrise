@@ -91,7 +91,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * NullPartitioningSchema: empty
    * RoundRobinPartitioningSchema: empty
    * 
-   * * RangePartitioningSchema:
+   * RangePartitioningSchema:
    * 
    * Description            | Type                                  | Size in bytes
    * -----------------------------------------------------------------------------------------
@@ -110,7 +110,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * @param table The table that is to be exported
    * @param ofstream The output stream for exporting
    */
-  static void _write_partitioning_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream);
+  static void _write_partition_schema_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream);
 
   /**
    * Writes the chunk ids of the partition into the given ofstream.
@@ -127,7 +127,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * @param partitionId The id of the chunk that is to be worked on now
    *
    */
-  static void _write_partition(const std::shared_ptr<const Table>& table, std::ofstream& ofstream,
+  static void _write_partition_info(const std::shared_ptr<const Table>& table, std::ofstream& ofstream,
                                const PartitionID& partition_id);
 
   template <typename T>

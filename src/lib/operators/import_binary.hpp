@@ -40,7 +40,8 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * -----------------
    *
    * ¹ Zero or more chunks
-   * ² Partition header is optional. If present, there is at least one partition.
+   * ² Partition header is optional. If present, there is at least 
+   *   one partition (e.g. the partition of NullPartitionSchema).
    */
   std::shared_ptr<const Table> _on_execute() final;
 
@@ -189,8 +190,6 @@ class ImportBinary : public AbstractReadOnlyOperator {
   // Reads row_count many strings from input file. String lengths are encoded in type T.
   template <typename T = StringLength>
   static pmr_vector<std::string> _read_string_values(std::ifstream& file, const size_t count);
-
-  static std::vector<AllTypeVariant> _read_all_type_variants(std::ifstream& file, const size_t count);
 
   // Reads a single value of type T from the input file.
   template <typename T>
