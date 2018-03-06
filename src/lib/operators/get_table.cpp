@@ -49,7 +49,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     if (excluded_chunks_set.count(chunk_id)) {
       continue;
     }
-    pruned_table->emplace_chunk(original_table->get_chunk(chunk_id));
+    pruned_table->emplace_chunk(original_table->get_mutable_chunk(chunk_id));
   }
   return pruned_table;
 }
