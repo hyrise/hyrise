@@ -37,11 +37,11 @@ PartitionID HashPartitionSchema::get_matching_partition_for(const AllTypeVariant
 
 std::map<RowID, PartitionID> HashPartitionSchema::get_mapping_to_partitions(std::shared_ptr<const Table> table) const {
   std::map<RowID, PartitionID> partition_mapping;
-  for (ChunkID chunkID = ChunkID{0}; chunkID < table->chunk_count(); ++chunkID) {
-    const auto source_chunk = table->get_chunk(chunkID);
+  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    const auto source_chunk = table->get_chunk(chunk_id);
     auto column_with_partitioning_values = source_chunk->get_column(get_column_id());
     for (uint32_t rowID = 0; rowID < source_chunk->size(); ++rowID) {
-      partition_mapping[{chunkID, rowID}] = get_matching_partition_for((*column_with_partitioning_values)[rowID]);
+      partition_mapping[{chunk_id, rowID}] = get_matching_partition_for((*column_with_partitioning_values)[rowID]);
     }
   }
   return partition_mapping;
@@ -49,12 +49,12 @@ std::map<RowID, PartitionID> HashPartitionSchema::get_mapping_to_partitions(std:
 
 std::vector<ChunkID> HashPartitionSchema::get_chunk_ids_to_exclude(PredicateCondition condition,
                                                                    const AllTypeVariant& value) const {
-  PartitionID matching_partition = get_matching_partition_for(value);
   std::vector<ChunkID> chunk_ids_to_exclude;
-
   if (condition != PredicateCondition::Equals) {
     return chunk_ids_to_exclude;
   }
+  
+  PartitionID matching_partition = get_matching_partition_for(value);
 
   for (PartitionID partition_id{0}; partition_id < partition_count(); partition_id++) {
     if (partition_id != matching_partition) {

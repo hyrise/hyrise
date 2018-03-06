@@ -12,10 +12,10 @@ PartitionSchemaType NullPartitionSchema::get_type() const { return PartitionSche
 
 std::map<RowID, PartitionID> NullPartitionSchema::get_mapping_to_partitions(std::shared_ptr<const Table> table) const {
   std::map<RowID, PartitionID> partition_mapping;
-  for (ChunkID chunkID = ChunkID{0}; chunkID < table->chunk_count(); ++chunkID) {
-    const auto source_chunk = table->get_chunk(chunkID);
+  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    const auto source_chunk = table->get_chunk(chunk_id);
     for (uint32_t rowID = 0; rowID < source_chunk->size(); ++rowID) {
-      partition_mapping[{chunkID, rowID}] = PartitionID{0};
+      partition_mapping[{chunk_id, rowID}] = PartitionID{0};
     }
   }
   return partition_mapping;

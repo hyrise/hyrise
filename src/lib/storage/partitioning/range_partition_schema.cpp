@@ -40,11 +40,11 @@ PartitionID RangePartitionSchema::get_matching_partition_for(const AllTypeVarian
 
 std::map<RowID, PartitionID> RangePartitionSchema::get_mapping_to_partitions(std::shared_ptr<const Table> table) const {
   std::map<RowID, PartitionID> partition_mapping;
-  for (ChunkID chunkID = ChunkID{0}; chunkID < table->chunk_count(); ++chunkID) {
-    const auto source_chunk = table->get_chunk(chunkID);
+  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    const auto source_chunk = table->get_chunk(chunk_id);
     auto column_with_partitioning_values = source_chunk->get_column(get_column_id());
     for (uint32_t rowID = 0; rowID < source_chunk->size(); ++rowID) {
-      partition_mapping[{chunkID, rowID}] = get_matching_partition_for((*column_with_partitioning_values)[rowID]);
+      partition_mapping[{chunk_id, rowID}] = get_matching_partition_for((*column_with_partitioning_values)[rowID]);
     }
   }
   return partition_mapping;
