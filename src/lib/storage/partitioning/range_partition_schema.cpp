@@ -30,12 +30,8 @@ PartitionID RangePartitionSchema::get_matching_partition_for(const std::vector<A
 }
 
 PartitionID RangePartitionSchema::get_matching_partition_for(const AllTypeVariant& value) const {
-  for (size_t index = 0; index < _bounds.size(); ++index) {
-    if (value <= _bounds.at(index)) {
-      return static_cast<PartitionID>(index);
-    }
-  }
-  return static_cast<PartitionID>(_bounds.size());
+  auto bounds_iterator = std::lower_bound(_bounds.cbegin(), _bounds.cend(), value);
+  return static_cast<PartitionID>(std::distance(_bounds.cbegin(), bounds_iterator));
 }
 
 std::map<RowID, PartitionID> RangePartitionSchema::get_mapping_to_partitions(std::shared_ptr<const Table> table) const {
