@@ -25,14 +25,15 @@ static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_dictionary(c
   auto statistics = std::make_shared<ChunkColumnStatistics>();
   // only create statistics when the compressed dictionary is not empty
   if (!dictionary.empty()) {
-    auto min_max_filter = std::make_unique<MinMaxFilter<T>>(dictionary.front(), dictionary.back());
-    statistics->add_filter(std::move(min_max_filter));
-
     // no range filter for strings
     // clang-format off
     if constexpr(std::is_arithmetic_v<T>) {
       auto range_filter = RangeFilter<T>::build_filter(dictionary);
       statistics->add_filter(std::move(range_filter));
+    } else {
+      // we only need the min-max filter if we cannot have a range filter
+      auto min_max_filter = std::make_unique<MinMaxFilter<T>>(dictionary.front(), dictionary.back());
+      statistics->add_filter(std::move(min_max_filter));
     }
     // clang-format on
   }
