@@ -27,9 +27,8 @@ node {
 
       parallel clangRelease: {
         stage("clang-release") {
-          sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && CCACHE_LOGFILE=/ccache/log.txt make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+          sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "./clang-release/hyriseTest clang-release"
-          sh "cat /ccache/log.txt"
         }
       }, clangDebugBuildOnly: {
         stage("clang-debug") {
@@ -68,8 +67,9 @@ node {
         }
       }, clangReleaseSanitizers: {
         stage("clang-release:sanitizers") {
-          sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+          sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-sanitizers && CCACHE_LOGFILE=/ccache/log.txt make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers/hyriseTest clang-release-sanitizers"
+          sh "cat /ccache/log.txt"
         }
       }, clangReleaseSanitizersNoNuma: {
         stage("clang-release:sanitizers w/o NUMA") {
