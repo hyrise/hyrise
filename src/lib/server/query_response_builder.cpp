@@ -88,40 +88,33 @@ boost::future<uint64_t> QueryResponseBuilder::send_query_response(send_row_t sen
   // its string representation. However, because of the asynchronous send_row call, we have to
   // use this two-level recursion instead of two nested for-loops
 
-  const auto num_columns = table.column_count();
-  // Pre-allocate a vector for row values and keep it alive in the shared_ptr
-  auto row_strings = std::make_shared<std::vector<std::string>>(num_columns);
-
-  return send_query_response_chunks(send_row, table, ChunkID{0}, *row_strings) >> then >> [&, row_strings]() mutable {
-    row_strings.reset();
-    return table.row_count();
-  };
+  return send_query_response_chunks(send_row, table, ChunkID{0}) >> then >> [&]() { return table.row_count(); };
 }
 
 boost::future<void> QueryResponseBuilder::send_query_response_chunks(send_row_t send_row, const Table& table,
-                                                                     ChunkID current_chunk_id,
-                                                                     std::vector<std::string>& row_strings) {
+                                                                     ChunkID current_chunk_id) {
   if (current_chunk_id == table.chunk_count()) return boost::make_ready_future();
 
   const auto& chunk = table.get_chunk(current_chunk_id);
 
-  return send_query_response_rows(send_row, *chunk, ChunkOffset{0}, row_strings) >> then >>
-         [&]() { return send_query_response_chunks(send_row, table, ChunkID{current_chunk_id + 1}, row_strings); };
+  return send_query_response_rows(send_row, *chunk, ChunkOffset{0}) >> then >>
+         std::bind(QueryResponseBuilder::send_query_response_chunks, send_row, std::ref(table),
+                   ChunkID{current_chunk_id + 1});
 }
 
 boost::future<void> QueryResponseBuilder::send_query_response_rows(send_row_t send_row, const Chunk& chunk,
-                                                                   ChunkOffset current_chunk_offset,
-                                                                   std::vector<std::string>& row_strings) {
+                                                                   ChunkOffset current_chunk_offset) {
   if (current_chunk_offset == chunk.size()) return boost::make_ready_future();
 
-  for (ColumnID column_id{0}; column_id < ColumnID{row_strings.size()}; ++column_id) {
+  std::vector<std::string> row_strings(chunk.column_count());
+
+  for (ColumnID column_id{0}; column_id < ColumnID{chunk.column_count()}; ++column_id) {
     const auto& column = chunk.get_column(column_id);
     row_strings[column_id] = type_cast<std::string>((*column)[current_chunk_offset]);
   }
 
-  return send_row(row_strings) >> then >> [&]() {
-    return send_query_response_rows(send_row, chunk, ChunkOffset{current_chunk_offset + 1}, row_strings);
-  };
+  return send_row(row_strings) >> then >> std::bind(QueryResponseBuilder::send_query_response_rows, send_row,
+                                                    std::ref(chunk), ChunkOffset{current_chunk_offset + 1});
 }
 
 }  // namespace opossum
