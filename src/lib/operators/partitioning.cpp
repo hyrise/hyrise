@@ -46,8 +46,8 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
     auto target_is_nullable = casted_target->is_nullable();
 
     if (auto casted_source = std::dynamic_pointer_cast<const ValueColumn<T>>(source)) {
-      size_t target_index = target_start_index;
-      for (size_t row_to_copy : rows_to_copy) {
+      auto target_index = target_start_index;
+      for (const auto row_to_copy : rows_to_copy) {
         if (row_to_copy >= source_start_index) {
           std::copy_n(casted_source->values().begin() + row_to_copy, 1, values.begin() + target_index);
           target_index++;
@@ -58,7 +58,7 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
         // Values to insert contain null, copy them
         if (target_is_nullable) {
           target_index = target_start_index;
-          for (size_t row_to_copy : rows_to_copy) {
+          for (const auto row_to_copy : rows_to_copy) {
             if (row_to_copy >= source_start_index) {
               std::copy_n(casted_source->null_values().begin() + row_to_copy, 1,
                           casted_target->null_values().begin() + target_index);
@@ -87,8 +87,8 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
       // this would require us to find out the referenced column's type for each single row.
       // instead, we just use the slow path below.
 
-      size_t target_index = target_start_index;
-      for (size_t row_to_copy : rows_to_copy) {
+      auto target_index = target_start_index;
+      for (const auto row_to_copy : rows_to_copy) {
         if (row_to_copy >= source_start_index) {
           auto ref_value = (*source)[row_to_copy];
           if (variant_is_null(ref_value)) {
@@ -105,10 +105,10 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
   }
 };
 
-Partitioning::Partitioning(const std::string& table_to_partition_name,
+Partitioning::Partitioning(const std::string& table_name,
                            std::shared_ptr<AbstractPartitionSchema> target_partition_schema)
     : AbstractReadWriteOperator(),
-      _table_to_partition_name{table_to_partition_name},
+      _table_name{table_name},
       _target_partition_schema{target_partition_schema} {}
 
 const std::string Partitioning::name() const { return "Partitioning"; }
@@ -124,7 +124,7 @@ std::shared_ptr<const Table> Partitioning::_on_execute(std::shared_ptr<Transacti
 }
 
 std::shared_ptr<Table> Partitioning::_get_table_to_be_partitioned() {
-  return StorageManager::get().get_table(_table_to_partition_name);
+  return StorageManager::get().get_table(_table_name);
 }
 
 std::unique_lock<std::mutex> Partitioning::_lock_table(std::shared_ptr<Table> table_to_lock) {
@@ -140,8 +140,8 @@ std::shared_ptr<Table> Partitioning::_create_partitioned_table_copy(std::shared_
 
 void Partitioning::_copy_table_content(std::shared_ptr<Table> source, std::shared_ptr<Table> target) {
   // partitioning
-  std::map<RowID, PartitionID> target_partition_mapping = _target_partition_schema->get_mapping_to_partitions(source);
-  std::map<PartitionID, uint32_t> rows_to_add_to_partition = _count_rows_for_partitions(target_partition_mapping);
+  auto target_partition_mapping = _target_partition_schema->get_mapping_to_partitions(source);
+  const auto rows_to_add_to_partition = _count_rows_for_partitions(target_partition_mapping);
 
   // These TypedColumnProcessors kind of retrieve the template parameter of the columns.
   auto typed_column_processors = std::vector<std::unique_ptr<AbstractTypedColumnProcessor>>();
@@ -150,10 +150,9 @@ void Partitioning::_copy_table_content(std::shared_ptr<Table> source, std::share
         make_unique_by_data_type<AbstractTypedColumnProcessor, TypedColumnProcessor>(column_type));
   }
 
-  for (std::map<PartitionID, uint32_t>::iterator iter = rows_to_add_to_partition.begin();
-       iter != rows_to_add_to_partition.end(); ++iter) {
-    PartitionID partitionID = iter->first;
-    uint32_t total_rows_to_insert = iter->second;
+  for (const auto& partition_row_pair : rows_to_add_to_partition) {
+    PartitionID partitionID = partition_row_pair.first;
+    const auto total_rows_to_insert = partition_row_pair.second;
 
     auto partition = target->get_partition_schema()->get_partition(partitionID);
 
@@ -209,10 +208,9 @@ void Partitioning::_copy_table_content(std::shared_ptr<Table> source, std::share
     auto source_chunk_start_index = 0u;
 
     std::vector<RowID> rows_to_insert_into_partition;
-    for (std::map<RowID, PartitionID>::iterator iter = target_partition_mapping.begin();
-         iter != target_partition_mapping.end(); ++iter) {
-      if (iter->second == partitionID) {
-        rows_to_insert_into_partition.emplace_back(iter->first);
+    for (const auto& target_partitioning_pair : target_partition_mapping) {
+      if (target_partitioning_pair.second == partitionID) {
+        rows_to_insert_into_partition.emplace_back(target_partitioning_pair.first);
       }
     }
 
@@ -233,10 +231,10 @@ void Partitioning::_copy_table_content(std::shared_ptr<Table> source, std::share
         auto num_to_insert = std::min(source_chunk->size() - source_chunk_start_index, still_to_insert);
 
         std::vector<size_t> rows_to_copy;
-        size_t last_touched_index_source_chunk = 0;
+        auto last_touched_index_source_chunk = 0;
         if (source_chunk->column_count() >= 1) {
           // doing this for one column only is enough because the rows to copy are the same in all columns
-          for (size_t row = source_chunk_start_index; row < source_chunk->get_column(ColumnID{0})->size(); ++row) {
+          for (auto row = source_chunk_start_index; row < source_chunk->get_column(ColumnID{0})->size(); ++row) {
             if (target_partition_mapping[{source_chunk_id, static_cast<ChunkOffset>(row)}] == partitionID &&
                 rows_to_copy.size() < num_to_insert) {
               rows_to_copy.push_back(row);
@@ -252,14 +250,14 @@ void Partitioning::_copy_table_content(std::shared_ptr<Table> source, std::share
                                                         rows_to_copy);
         }
 
-        for (auto i = target_start_index, j = 0u; i < target_start_index + num_to_insert && j < rows_to_copy.size();
-             i++, j++) {
-          target_chunk->mvcc_columns()->tids[i] =
-              source->get_chunk(source_chunk_id)->mvcc_columns()->tids[rows_to_copy[j]];
-          target_chunk->mvcc_columns()->begin_cids[i] =
-              source->get_chunk(source_chunk_id)->mvcc_columns()->begin_cids[rows_to_copy[j]];
-          target_chunk->mvcc_columns()->end_cids[i] =
-              source->get_chunk(source_chunk_id)->mvcc_columns()->end_cids[rows_to_copy[j]];
+        for (auto target_index = target_start_index, source_index = 0u; target_index < target_start_index + num_to_insert && source_index < rows_to_copy.size();
+             target_index++, source_index++) {
+          target_chunk->mvcc_columns()->tids[target_index] =
+              source->get_chunk(source_chunk_id)->mvcc_columns()->tids[rows_to_copy[source_index]];
+          target_chunk->mvcc_columns()->begin_cids[target_index] =
+              source->get_chunk(source_chunk_id)->mvcc_columns()->begin_cids[rows_to_copy[source_index]];
+          target_chunk->mvcc_columns()->end_cids[target_index] =
+              source->get_chunk(source_chunk_id)->mvcc_columns()->end_cids[rows_to_copy[source_index]];
         }
 
         still_to_insert -= num_to_insert;
@@ -279,23 +277,19 @@ void Partitioning::_copy_table_content(std::shared_ptr<Table> source, std::share
   }
 }
 
-std::map<PartitionID, uint32_t> Partitioning::_count_rows_for_partitions(
+std::unordered_map<PartitionID, uint32_t> Partitioning::_count_rows_for_partitions(
     std::map<RowID, PartitionID> target_partition_mapping) {
-  std::map<PartitionID, uint32_t> rows_to_add_to_partition;
-  for (std::map<RowID, PartitionID>::iterator iter = target_partition_mapping.begin();
-       iter != target_partition_mapping.end(); ++iter) {
-    PartitionID partitionID = iter->second;
-    if (rows_to_add_to_partition.count(partitionID) == 1) {
-      rows_to_add_to_partition[partitionID] += 1u;
-    } else {
-      rows_to_add_to_partition[partitionID] = 1u;
-    }
+  std::unordered_map<PartitionID, uint32_t> rows_to_add_to_partition;
+  for (const auto& rows_in_partition : target_partition_mapping) {
+    auto insert_result = rows_to_add_to_partition.insert({ rows_in_partition.second, 1 });
+    if (!insert_result.second)
+      insert_result.first->second++;
   }
   return rows_to_add_to_partition;
 }
 
 void Partitioning::_replace_table(std::shared_ptr<Table> partitioned_table) {
-  StorageManager::get().replace_table(_table_to_partition_name, partitioned_table);
+  StorageManager::get().replace_table(_table_name, partitioned_table);
 }
 
 }  // namespace opossum

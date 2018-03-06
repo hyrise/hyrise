@@ -15,7 +15,7 @@ class Insert;
 
 class Partitioning : public AbstractReadWriteOperator {
  public:
-  explicit Partitioning(const std::string& table_to_partition_name,
+  explicit Partitioning(const std::string& table_name,
                         std::shared_ptr<AbstractPartitionSchema> target_partition_schema);
 
   const std::string name() const override;
@@ -31,10 +31,10 @@ class Partitioning : public AbstractReadWriteOperator {
   void _copy_table_content(std::shared_ptr<Table> source, std::shared_ptr<Table> target);
   void _replace_table(std::shared_ptr<Table> partitioned_table);
 
-  std::map<PartitionID, uint32_t> _count_rows_for_partitions(std::map<RowID, PartitionID> target_partition_mapping);
+  std::unordered_map<PartitionID, uint32_t> _count_rows_for_partitions(std::map<RowID, PartitionID> target_partition_mapping);
 
  private:
-  const std::string _table_to_partition_name;
+  const std::string _table_name;
   std::shared_ptr<AbstractPartitionSchema> _target_partition_schema;
   std::shared_ptr<Insert> _insert;
 };
