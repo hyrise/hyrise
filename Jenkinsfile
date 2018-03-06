@@ -29,6 +29,7 @@ node {
         stage("clang-release") {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "./clang-release/hyriseTest clang-release"
+          sh "cat /mnt/ccache/log.txt"
         }
       }, clangDebugBuildOnly: {
         stage("clang-debug") {
