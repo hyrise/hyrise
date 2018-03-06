@@ -33,7 +33,7 @@ class ChunkPruningTest : public StrategyBaseTest {
     auto& storage_manager = StorageManager::get();
     storage_manager.add_table("compressed", load_table("src/test/tables/int_float2.tbl", 2u));
     storage_manager.add_table("long_compressed", load_table("src/test/tables/25_ints_sorted.tbl", 25u));
-    storage_manager.add_table("run_length_compressed", load_table("src/test/tables/25_ints_sorted.tbl", 25u));
+    storage_manager.add_table("run_length_compressed", load_table("src/test/tables/10_ints.tbl", 5u));
 
     ChunkEncoder::encode_all_chunks(storage_manager.get_table("compressed"), EncodingType::Dictionary);
     ChunkEncoder::encode_all_chunks(storage_manager.get_table("long_compressed"), EncodingType::Dictionary);
@@ -186,7 +186,7 @@ TEST_F(ChunkPruningTest, RunLengthColumnPruningTest) {
   auto stored_table_node = std::make_shared<StoredTableNode>("run_length_compressed");
 
   auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}),
-                                                        PredicateCondition::Equals, 2500);
+                                                        PredicateCondition::Equals, 2);
   predicate_node->set_left_input(stored_table_node);
 
   auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);

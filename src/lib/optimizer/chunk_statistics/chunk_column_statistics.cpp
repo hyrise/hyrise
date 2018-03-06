@@ -1,6 +1,7 @@
 #include "chunk_column_statistics.hpp"
 
 #include <iterator>
+#include <set>
 #include <type_traits>
 
 #include "resolve_type.hpp"
@@ -65,16 +66,19 @@ std::shared_ptr<ChunkColumnStatistics> ChunkColumnStatistics::build_statistics(D
     } else if constexpr (std::is_base_of_v<BaseEncodedColumn, ColumnType>) {
       // if we have a generic encoded column we create the dictionary ourselves
       auto iterable = create_iterable_from_column(typed_column);
-      pmr_vector<DataType> values;
+      std::set<DataType> values;
       iterable.with_iterators([&](auto it, auto end_it) {
         for (; it != end_it; ++it) {
           // we are only interested in non-null values
           if (!it->is_null()) {
-            values.push_back(it->value());
+            values.insert(it->value());
           }
         }
       });
-      statistics = build_statistics_from_dictionary(values);
+      pmr_vector<DataType> dictionary;
+      dictionary.reserve(values.size());
+      std::copy(values.cbegin(), values.cend(), std::back_inserter(dictionary));
+      statistics = build_statistics_from_dictionary(dictionary);
     } else {
       DebugAssert(false, "ChunkColumnStatistics should only be built for encoded columns.");
     }
