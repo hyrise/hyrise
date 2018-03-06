@@ -9,8 +9,8 @@ namespace opossum {
 
 /**
  * Base class for all Filters. A Filter is part of ChunkColumnStatistics and holds
- * some kind of statistical information about the columns contents. This information can
- * be used to optimize SQL Queries.
+ * some kind of statistical information about the contents of a column within a chunk.
+ * This information can be used to optimize SQL Queries.
 */
 class AbstractFilter : public std::enable_shared_from_this<AbstractFilter> {
  public:

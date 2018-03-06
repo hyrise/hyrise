@@ -58,8 +58,8 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   }
   std::set<ChunkID> excluded_chunks;
   for (auto& predicate : predicate_nodes) {
-    auto new_exlusions = _compute_exclude_list(statistics, predicate);
-    excluded_chunks.insert(new_exlusions.begin(), new_exlusions.end());
+    auto new_exclusions = _compute_exclude_list(statistics, predicate);
+    excluded_chunks.insert(new_exclusions.begin(), new_exclusions.end());
   }
 
   // wanted side effect of usings sets: excluded_chunks vector is sorted

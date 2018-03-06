@@ -13,7 +13,8 @@ namespace opossum {
 class BaseColumn;
 
 /**
- * container class that holds a set of filters with statistical information about a certain chunks column
+ * Container class that holds a set of filters with statistical information about a
+ * certain chunks column. Is part of ChunkStatistics.
  */
 class ChunkColumnStatistics final {
  public:
