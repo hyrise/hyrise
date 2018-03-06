@@ -56,21 +56,21 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     statistics.push_back(table->get_chunk(chunk_id)->statistics());
   }
-  std::set<ChunkID> excluded_chunks;
+  std::set<ChunkID> excluded_chunk_ids;
   for (auto& predicate : predicate_nodes) {
     auto new_exclusions = _compute_exclude_list(statistics, predicate);
-    excluded_chunks.insert(new_exclusions.begin(), new_exclusions.end());
+    excluded_chunk_ids.insert(new_exclusions.begin(), new_exclusions.end());
   }
 
-  // wanted side effect of usings sets: excluded_chunks vector is sorted
-  auto& already_excluded_chunks = stored_table->excluded_chunks();
-  if (!already_excluded_chunks.empty()) {
+  // wanted side effect of usings sets: excluded_chunk_ids vector is sorted
+  auto& already_excluded_chunk_ids = stored_table->excluded_chunk_ids();
+  if (!already_excluded_chunk_ids.empty()) {
     std::vector<ChunkID> intersection;
-    std::set_intersection(already_excluded_chunks.begin(), already_excluded_chunks.end(), excluded_chunks.begin(),
-                          excluded_chunks.end(), std::back_inserter(intersection));
-    stored_table->set_excluded_chunks(intersection);
+    std::set_intersection(already_excluded_chunk_ids.begin(), already_excluded_chunk_ids.end(),
+                          excluded_chunk_ids.begin(), excluded_chunk_ids.end(), std::back_inserter(intersection));
+    stored_table->set_excluded_chunk_ids(intersection);
   } else {
-    stored_table->set_excluded_chunks(std::vector<ChunkID>(excluded_chunks.begin(), excluded_chunks.end()));
+    stored_table->set_excluded_chunk_ids(std::vector<ChunkID>(excluded_chunk_ids.begin(), excluded_chunk_ids.end()));
   }
 
   // always returns false as we never modify the LQP

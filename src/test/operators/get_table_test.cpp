@@ -43,7 +43,7 @@ TEST_F(OperatorsGetTableTest, OperatorName) {
 TEST_F(OperatorsGetTableTest, ExcludedChunks) {
   auto gt = std::make_shared<opossum::GetTable>("tableWithValues");
 
-  gt->set_excluded_chunks({ChunkID(0), ChunkID(2)});
+  gt->set_excluded_chunk_ids({ChunkID(0), ChunkID(2)});
   gt->execute();
 
   auto original_table = StorageManager::get().get_table("tableWithValues");

@@ -30,15 +30,15 @@ namespace opossum {
 class ChunkPruningTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
-    auto& man = StorageManager::get();
-    man.add_table("compressed", load_table("src/test/tables/int_float2.tbl", 2u));
-    man.add_table("long_compressed", load_table("src/test/tables/25_ints_sorted.tbl", 25u));
+    auto& storage_manager = StorageManager::get();
+    storage_manager.add_table("compressed", load_table("src/test/tables/int_float2.tbl", 2u));
+    storage_manager.add_table("long_compressed", load_table("src/test/tables/25_ints_sorted.tbl", 25u));
 
-    ChunkEncoder::encode_all_chunks(man.get_table("compressed"), EncodingType::Dictionary);
-    ChunkEncoder::encode_all_chunks(man.get_table("long_compressed"), EncodingType::Dictionary);
+    ChunkEncoder::encode_all_chunks(storage_manager.get_table("compressed"), EncodingType::Dictionary);
+    ChunkEncoder::encode_all_chunks(storage_manager.get_table("long_compressed"), EncodingType::Dictionary);
     _rule = std::make_shared<ChunkPruningRule>();
 
-    man.add_table("uncompressed", load_table("src/test/tables/int_float2.tbl", 10u));
+    storage_manager.add_table("uncompressed", load_table("src/test/tables/int_float2.tbl", 10u));
   }
 
   std::shared_ptr<ChunkPruningRule> _rule;
@@ -55,7 +55,7 @@ TEST_F(ChunkPruningTest, SimplePruningTest) {
 
   EXPECT_EQ(pruned, predicate_node);
   std::vector<ChunkID> expected = {ChunkID{1}};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunks();
+  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
   EXPECT_EQ(excluded, expected);
 }
 
@@ -74,7 +74,7 @@ TEST_F(ChunkPruningTest, NoStatisticsAvailable) {
 
   EXPECT_EQ(pruned, predicate_node);
   std::vector<ChunkID> expected = {};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunks();
+  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
   EXPECT_EQ(excluded, expected);
 }
 
@@ -93,7 +93,7 @@ TEST_F(ChunkPruningTest, TwoOperatorPruningTest) {
 
   EXPECT_EQ(pruned, predicate_node_1);
   std::vector<ChunkID> expected = {ChunkID{0}, ChunkID{1}};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunks();
+  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
   EXPECT_EQ(excluded, expected);
 }
 
@@ -116,7 +116,7 @@ TEST_F(ChunkPruningTest, IntersectionPruningTest) {
 
   EXPECT_EQ(pruned, union_node);
   std::vector<ChunkID> expected = {ChunkID{1}};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunks();
+  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
   EXPECT_EQ(excluded, expected);
 }
 
@@ -131,7 +131,7 @@ TEST_F(ChunkPruningTest, ComparatorEdgeCasePruningTest_GreaterThan) {
 
   EXPECT_EQ(pruned, predicate_node);
   std::vector<ChunkID> expected = {ChunkID{0}, ChunkID{1}};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunks();
+  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
   EXPECT_EQ(excluded, expected);
 }
 
@@ -146,7 +146,7 @@ TEST_F(ChunkPruningTest, ComparatorEdgeCasePruningTest_Equals) {
 
   EXPECT_EQ(pruned, predicate_node);
   std::vector<ChunkID> expected = {ChunkID{0}};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunks();
+  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
   EXPECT_EQ(excluded, expected);
 }
 
@@ -161,7 +161,7 @@ TEST_F(ChunkPruningTest, RangeFilterTest) {
 
   EXPECT_EQ(pruned, predicate_node);
   std::vector<ChunkID> expected = {ChunkID{0}, ChunkID{1}};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunks();
+  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
   EXPECT_EQ(excluded, expected);
 }
 
@@ -176,7 +176,7 @@ TEST_F(ChunkPruningTest, LotsOfRangesFilterTest) {
 
   EXPECT_EQ(pruned, predicate_node);
   std::vector<ChunkID> expected = {ChunkID{0}};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunks();
+  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
   EXPECT_EQ(excluded, expected);
 }
 
@@ -191,7 +191,7 @@ TEST_F(ChunkPruningTest, GetTablePruningTest) {
 
   EXPECT_EQ(pruned, predicate_node);
   std::vector<ChunkID> expected = {ChunkID{1}};
-  std::vector<ChunkID> excluded = stored_table_node->excluded_chunks();
+  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
   EXPECT_EQ(excluded, expected);
 
   LQPTranslator translator;

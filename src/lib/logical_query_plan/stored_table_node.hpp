@@ -32,8 +32,8 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
-  void set_excluded_chunks(const std::vector<ChunkID>& chunks);
-  const std::vector<ChunkID>& excluded_chunks() const;
+  void set_excluded_chunk_ids(const std::vector<ChunkID>& chunks);
+  const std::vector<ChunkID>& excluded_chunk_ids() const;
 
   bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
@@ -47,7 +47,7 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
 
  private:
   const std::string _table_name;
-  std::vector<ChunkID> _excluded_chunks;
+  std::vector<ChunkID> _excluded_chunk_ids;
 
   std::vector<std::string> _output_column_names;
 };
