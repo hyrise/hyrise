@@ -47,7 +47,6 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
 }
 
 void JoinIndex::_create_table_structure() {
-
   _left_in_table = _input_left->get_output();
   _right_in_table = _input_right->get_output();
 
@@ -63,13 +62,13 @@ void JoinIndex::_create_table_structure() {
     for (ColumnID column_id{0}; column_id < from_table->column_count(); ++column_id) {
       auto nullable = (from_may_produce_null || from_table->column_is_nullable(column_id));
       column_definitions.emplace_back(from_table->column_name(column_id), from_table->column_data_type(column_id),
-                                           nullable);
+                                      nullable);
     }
   };
 
   add_column_definitions(_left_in_table, left_may_produce_null);
   add_column_definitions(_right_in_table, right_may_produce_null);
-  
+
   _output_table = std::make_shared<Table>(column_definitions, TableType::References);
 }
 
@@ -311,8 +310,8 @@ void JoinIndex::_append_matches(const BaseIndex::Iterator& range_begin, const Ba
   }
 }
 
-void JoinIndex::_write_output_columns(ChunkColumns &output_columns, const std::shared_ptr<const Table> input_table,
-                                    std::shared_ptr<PosList> pos_list) {
+void JoinIndex::_write_output_columns(ChunkColumns& output_columns, const std::shared_ptr<const Table> input_table,
+                                      std::shared_ptr<PosList> pos_list) {
   // Add columns from table to output chunk
   for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
     std::shared_ptr<BaseColumn> column;
@@ -324,7 +323,7 @@ void JoinIndex::_write_output_columns(ChunkColumns &output_columns, const std::s
         ChunkID current_chunk_id{0};
 
         auto reference_column =
-        std::static_pointer_cast<const ReferenceColumn>(input_table->get_chunk(ChunkID{0})->get_column(column_id));
+            std::static_pointer_cast<const ReferenceColumn>(input_table->get_chunk(ChunkID{0})->get_column(column_id));
 
         // de-reference to the correct RowID so the output can be used in a Multi Join
         for (const auto row : *pos_list) {
@@ -336,7 +335,7 @@ void JoinIndex::_write_output_columns(ChunkColumns &output_columns, const std::s
             current_chunk_id = row.chunk_id;
 
             reference_column = std::dynamic_pointer_cast<const ReferenceColumn>(
-            input_table->get_chunk(current_chunk_id)->get_column(column_id));
+                input_table->get_chunk(current_chunk_id)->get_column(column_id));
           }
           new_pos_list->push_back(reference_column->pos_list()->at(row.chunk_offset));
         }
