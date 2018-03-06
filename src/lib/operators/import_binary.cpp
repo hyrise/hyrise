@@ -194,7 +194,7 @@ std::shared_ptr<DictionaryColumn<T>> ImportBinary::_import_dictionary_column(std
 
   const auto null_value_id = dictionary_size;
   auto dictionary = _read_values<T>(file, dictionary_size);
-  auto value_vector = std::make_shared<ValueVector<T>>(dictionary.begin(), dictionary.end());
+  auto value_vector = std::make_shared<dictionary_vector_t<T>>(dictionary.begin(), dictionary.end());
 
   auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);
 

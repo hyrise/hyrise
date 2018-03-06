@@ -16,15 +16,29 @@ class BaseCompressedVector;
  *
  * Uses vector compression schemes for its attribute vector.
  */
+
+template <typename T>
+struct dictionary_vector {
+  using type = pmr_vector<T>;
+};
+
+template <>
+struct dictionary_vector<FixedString> {
+  using type = ValueVector<FixedString>;
+};
+
+template <typename T>
+using dictionary_vector_t = typename dictionary_vector<T>::type;
+
 template <typename T>
 class DictionaryColumn : public BaseDictionaryColumn {
  public:
-  explicit DictionaryColumn(const std::shared_ptr<const ValueVector<T>>& dictionary,
+  explicit DictionaryColumn(const std::shared_ptr<const dictionary_vector_t<T>>& dictionary,
                             const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
                             const ValueID null_value_id);
 
   // returns an underlying dictionary
-  std::shared_ptr<const ValueVector<T>> dictionary() const;
+  std::shared_ptr<const dictionary_vector_t<T>> dictionary() const;
 
   /**
    * @defgroup BaseColumn interface
@@ -63,7 +77,8 @@ class DictionaryColumn : public BaseDictionaryColumn {
   /**@}*/
 
  protected:
-  const std::shared_ptr<const ValueVector<T>> _dictionary;
+  const std::shared_ptr<const dictionary_vector_t<T>> _dictionary;
+  // const std::shared_ptr<const ValueVector<T>> _dictionary;
   const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
   const ValueID _null_value_id;
 };

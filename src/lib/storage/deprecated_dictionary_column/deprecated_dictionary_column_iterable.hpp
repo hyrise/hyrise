@@ -36,7 +36,7 @@ class DeprecatedDictionaryColumnIterable : public PointAccessibleColumnIterable<
  private:
   class Iterator : public BaseColumnIterator<Iterator, ColumnIteratorValue<T>> {
    public:
-    explicit Iterator(const ValueVector<T>& dictionary, const BaseAttributeVector& attribute_vector,
+    explicit Iterator(const dictionary_vector_t<T>& dictionary, const BaseAttributeVector& attribute_vector,
                       ChunkOffset chunk_offset)
         : _dictionary{dictionary}, _attribute_vector{attribute_vector}, _chunk_offset{chunk_offset} {}
 
@@ -56,14 +56,14 @@ class DeprecatedDictionaryColumnIterable : public PointAccessibleColumnIterable<
     }
 
    private:
-    const ValueVector<T>& _dictionary;
+    const dictionary_vector_t<T>& _dictionary;
     const BaseAttributeVector& _attribute_vector;
     ChunkOffset _chunk_offset;
   };
 
   class PointAccessIterator : public BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorValue<T>> {
    public:
-    explicit PointAccessIterator(const ValueVector<T>& dictionary, const BaseAttributeVector& attribute_vector,
+    explicit PointAccessIterator(const dictionary_vector_t<T>& dictionary, const BaseAttributeVector& attribute_vector,
                                  const ChunkOffsetsIterator& chunk_offsets_it)
         : BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorValue<T>>{chunk_offsets_it},
           _dictionary{dictionary},
@@ -87,7 +87,7 @@ class DeprecatedDictionaryColumnIterable : public PointAccessibleColumnIterable<
     }
 
    private:
-    const ValueVector<T>& _dictionary;
+    const dictionary_vector_t<T>& _dictionary;
     const BaseAttributeVector& _attribute_vector;
   };
 };

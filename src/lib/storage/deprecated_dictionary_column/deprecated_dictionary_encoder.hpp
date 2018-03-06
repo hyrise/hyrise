@@ -27,7 +27,7 @@ class DeprecatedDictionaryEncoder : public ColumnEncoder<DeprecatedDictionaryEnc
     const auto& values = value_column->values();
     const auto alloc = values.get_allocator();
 
-    auto dictionary = ValueVector<T>{values.cbegin(), values.cend(), alloc};
+    auto dictionary = dictionary_vector_t<T>{values.cbegin(), values.cend(), alloc};
 
     // Remove null values from value vector
     if (value_column->is_nullable()) {
@@ -86,7 +86,7 @@ class DeprecatedDictionaryEncoder : public ColumnEncoder<DeprecatedDictionaryEnc
 
  private:
   template <typename T>
-  static ValueID _get_value_id(const ValueVector<T>& dictionary, const T& value) {
+  static ValueID _get_value_id(const dictionary_vector_t<T>& dictionary, const T& value) {
     return static_cast<ValueID>(
         std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
   }
