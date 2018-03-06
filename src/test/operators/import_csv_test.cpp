@@ -5,7 +5,6 @@
 #include "gtest/gtest.h"
 
 #include "operators/import_csv.hpp"
-#include "storage/base_deprecated_dictionary_column.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 

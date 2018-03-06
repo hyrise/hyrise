@@ -229,7 +229,6 @@ set(
     sql/sql_translator.hpp
     storage/base_column_encoder.hpp
     storage/base_column.hpp
-    storage/base_deprecated_dictionary_column.hpp
     storage/base_dictionary_column.cpp
     storage/base_dictionary_column.hpp
     storage/base_encoded_column.cpp
@@ -253,15 +252,6 @@ set(
     storage/column_visitable.hpp
     storage/create_iterable_from_column.hpp
     storage/create_iterable_from_column.ipp
-    storage/deprecated_dictionary_column.cpp
-    storage/deprecated_dictionary_column.hpp
-    storage/deprecated_dictionary_column/base_attribute_vector.hpp
-    storage/deprecated_dictionary_column.cpp
-    storage/deprecated_dictionary_column/deprecated_attribute_vector_iterable.hpp
-    storage/deprecated_dictionary_column/deprecated_dictionary_column_iterable.hpp
-    storage/deprecated_dictionary_column/deprecated_dictionary_encoder.hpp
-    storage/deprecated_dictionary_column/fitted_attribute_vector.hpp
-    storage/deprecated_dictionary_column.hpp
     storage/dictionary_column/attribute_vector_iterable.hpp
     storage/dictionary_column.cpp
     storage/dictionary_column/dictionary_column_iterable.hpp

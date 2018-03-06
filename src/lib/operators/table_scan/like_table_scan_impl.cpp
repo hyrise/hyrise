@@ -15,7 +15,6 @@
 #include "storage/column_iterables/constant_value_iterable.hpp"
 #include "storage/column_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/create_iterable_from_column.hpp"
-#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/resolve_encoded_column_type.hpp"
 #include "storage/value_column.hpp"
 #include "storage/value_column/value_column_iterable.hpp"
@@ -49,12 +48,6 @@ void LikeTableScanImpl::handle_column(const BaseValueColumn& base_column,
   left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
     this->_unary_scan(regex_match, left_it, left_end, chunk_id, matches_out);
   });
-}
-
-void LikeTableScanImpl::handle_column(const BaseDeprecatedDictionaryColumn& base_column,
-                                      std::shared_ptr<ColumnVisitableContext> base_context) {
-  const auto& left_column = static_cast<const DeprecatedDictionaryColumn<std::string>&>(base_column);
-  _handle_dictionary_column(left_column, base_context);
 }
 
 void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,

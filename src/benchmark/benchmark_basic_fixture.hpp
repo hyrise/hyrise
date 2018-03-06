@@ -22,7 +22,6 @@ class BenchmarkBasicFixture : public benchmark::Fixture {
   std::shared_ptr<TableWrapper> _table_wrapper_a;
   std::shared_ptr<TableWrapper> _table_wrapper_b;
   std::shared_ptr<TableWrapper> _table_dict_wrapper;
-  std::shared_ptr<TableWrapper> _table_deprecated_dict_wrapper;
   ChunkID _chunk_size;
 };
 

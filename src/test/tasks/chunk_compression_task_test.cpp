@@ -9,7 +9,6 @@
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
 #include "operators/validate.hpp"
-#include "storage/base_deprecated_dictionary_column.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "tasks/chunk_compression_task.hpp"

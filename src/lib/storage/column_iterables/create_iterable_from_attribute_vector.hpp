@@ -1,8 +1,6 @@
 #pragma once
 
 #include "storage/column_iterables/any_column_iterable.hpp"
-#include "storage/deprecated_dictionary_column.hpp"
-#include "storage/deprecated_dictionary_column/deprecated_attribute_vector_iterable.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/dictionary_column/attribute_vector_iterable.hpp"
 
@@ -24,10 +22,6 @@ namespace opossum {
 
 inline auto create_iterable_from_attribute_vector(const BaseDictionaryColumn& column) {
   return erase_type_from_iterable_if_debug(AttributeVectorIterable{*column.attribute_vector(), column.null_value_id()});
-}
-
-inline auto create_iterable_from_attribute_vector(const BaseDeprecatedDictionaryColumn& column) {
-  return erase_type_from_iterable_if_debug(DeprecatedAttributeVectorIterable{*column.attribute_vector()});
 }
 
 /**@}*/

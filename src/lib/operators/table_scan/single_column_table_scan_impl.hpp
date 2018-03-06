@@ -13,9 +13,6 @@
 
 namespace opossum {
 
-class BaseDeprecatedDictionaryColumn;
-class BaseDictionaryColumn;
-
 /**
  * @brief Compares one column to a constant value
  *
@@ -32,9 +29,6 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
   PosList scan_chunk(ChunkID) override;
 
   void handle_column(const BaseValueColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
-
-  void handle_column(const BaseDeprecatedDictionaryColumn& base_column,
-                     std::shared_ptr<ColumnVisitableContext> base_context) override;
 
   void handle_column(const BaseDictionaryColumn& base_column,
                      std::shared_ptr<ColumnVisitableContext> base_context) override;

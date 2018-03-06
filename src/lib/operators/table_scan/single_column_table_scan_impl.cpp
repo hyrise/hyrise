@@ -4,7 +4,6 @@
 #include <utility>
 #include <vector>
 
-#include "storage/base_deprecated_dictionary_column.hpp"
 #include "storage/base_dictionary_column.hpp"
 #include "storage/column_iterables/constant_value_iterable.hpp"
 #include "storage/column_iterables/create_iterable_from_attribute_vector.hpp"
@@ -62,11 +61,6 @@ void SingleColumnTableScanImpl::handle_column(const BaseValueColumn& base_column
       });
     });
   });
-}
-
-void SingleColumnTableScanImpl::handle_column(const BaseDeprecatedDictionaryColumn& base_column,
-                                              std::shared_ptr<ColumnVisitableContext> base_context) {
-  _handle_dictionary_column(base_column, base_context);
 }
 
 void SingleColumnTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
