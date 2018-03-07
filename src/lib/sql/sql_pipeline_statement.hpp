@@ -12,6 +12,8 @@
 
 namespace opossum {
 
+using PreparedStatementCache = std::shared_ptr<SQLQueryCache<SQLQueryPlan>>;
+
 /**
  * This is the unified interface to handle SQL queries and related operations.
  * This should rarely be used directly - use SQLPipeline instead, as it creates the correct SQLPipelineStatement(s).
@@ -30,16 +32,36 @@ namespace opossum {
 class SQLPipelineStatement : public Noncopyable {
  public:
   // Constructors for creation from SQL string
-  explicit SQLPipelineStatement(const std::string& sql, const UseMvcc use_mvcc = UseMvcc::Yes,
-                                const std::shared_ptr<Optimizer>& optimizer = Optimizer::create_default_optimizer());
-  SQLPipelineStatement(const std::string& sql, const std::shared_ptr<TransactionContext>& transaction_context,
-                       const std::shared_ptr<Optimizer>& optimizer = Optimizer::create_default_optimizer());
+  explicit SQLPipelineStatement(const std::string& sql, const UseMvcc use_mvcc = UseMvcc::Yes);
+
+  // No explicit transaction context constructors
+  SQLPipelineStatement(const std::string& sql, const std::shared_ptr<Optimizer>& optimizer,
+                       const UseMvcc use_mvcc = UseMvcc::Yes);
+
+  SQLPipelineStatement(const std::string& sql, const PreparedStatementCache& prepared_statements,
+                       const UseMvcc use_mvcc = UseMvcc::Yes);
+
+  SQLPipelineStatement(const std::string& sql, const std::shared_ptr<Optimizer>& optimizer,
+                       const PreparedStatementCache& prepared_statements, const UseMvcc use_mvcc = UseMvcc::Yes);
+
+  // Explicit transaction context constructors
+  SQLPipelineStatement(const std::string& sql, const std::shared_ptr<TransactionContext>& transaction_context);
+
+  SQLPipelineStatement(const std::string& sql, const std::shared_ptr<Optimizer>& optimizer,
+                       const std::shared_ptr<TransactionContext>& transaction_context);
+
+  SQLPipelineStatement(const std::string& sql, const PreparedStatementCache& prepared_statements,
+                       const std::shared_ptr<TransactionContext>& transaction_context);
+
+  SQLPipelineStatement(const std::string& sql, const std::shared_ptr<Optimizer>& optimizer,
+                       const PreparedStatementCache& prepared_statements,
+                       const std::shared_ptr<TransactionContext>& transaction_context);
 
   // Constructor for creation from SQLParseResult statement.
   // This should be called from SQLPipeline and not by the user directly.
   SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                        const UseMvcc use_mvcc, const std::shared_ptr<TransactionContext>& transaction_context,
-                       const std::shared_ptr<Optimizer>& optimizer = Optimizer::create_default_optimizer());
+                       const std::shared_ptr<Optimizer>& optimizer, const PreparedStatementCache& prepared_statements);
 
   // Returns the raw SQL string.
   const std::string& get_sql_string();
@@ -69,6 +91,8 @@ class SQLPipelineStatement : public Noncopyable {
   std::chrono::microseconds compile_time_microseconds() const;
   std::chrono::microseconds execution_time_microseconds() const;
 
+  bool query_plan_cache_hit() const;
+
   // Helper function to create a pretty print error message after an invalid SQL parse
   static std::string create_parse_error_message(const std::string& sql, const hsql::SQLParserResult& result);
 
@@ -93,10 +117,15 @@ class SQLPipelineStatement : public Noncopyable {
   std::shared_ptr<const Table> _result_table;
   // Assume there is an output table. Only change if nullptr is returned from execution.
   bool _query_has_output = true;
+  bool _query_plan_cache_hit = false;
 
   // Execution times
   std::chrono::microseconds _compile_time_micros;
   std::chrono::microseconds _execution_time_micros;
+
+  PreparedStatementCache _prepared_statements;
+  // Number of placeholders in prepared statement; default 0 becasue we assume no prepared statement
+  uint16_t _num_parameters = 0;
 };
 
 }  // namespace opossum

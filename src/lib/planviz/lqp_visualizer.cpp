@@ -20,25 +20,31 @@ LQPVisualizer::LQPVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_
                          std::move(edge_info)) {}
 
 void LQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractLQPNode>>& lqp_roots) {
+  std::unordered_set<std::shared_ptr<const AbstractLQPNode>> visualized_nodes;
+
   for (const auto& root : lqp_roots) {
-    _add_vertex(root, root->description());
-    _build_subtree(root);
+    _build_subtree(root, visualized_nodes);
   }
 }
 
-void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node) {
-  if (node->left_child()) {
-    auto left_child = node->left_child();
-    _add_vertex(left_child, left_child->description());
-    _build_dataflow(left_child, node);
-    _build_subtree(left_child);
+void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
+                                   std::unordered_set<std::shared_ptr<const AbstractLQPNode>>& visualized_nodes) {
+  // Avoid drawing dataflows/ops redundantly in diamond shaped Nodes
+  if (visualized_nodes.find(node) != visualized_nodes.end()) return;
+  visualized_nodes.insert(node);
+
+  _add_vertex(node, node->description());
+
+  if (node->left_input()) {
+    auto left_input = node->left_input();
+    _build_subtree(left_input, visualized_nodes);
+    _build_dataflow(left_input, node);
   }
 
-  if (node->right_child()) {
-    auto right_child = node->right_child();
-    _add_vertex(right_child, right_child->description());
-    _build_dataflow(right_child, node);
-    _build_subtree(right_child);
+  if (node->right_input()) {
+    auto right_input = node->right_input();
+    _build_subtree(right_input, visualized_nodes);
+    _build_dataflow(right_input, node);
   }
 }
 
@@ -56,11 +62,11 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
     pen_width = 1.0;
   }
 
-  if (from->left_child()) {
+  if (from->left_input()) {
     try {
-      float input_count = from->left_child()->get_statistics()->row_count();
-      if (from->right_child()) {
-        input_count *= from->right_child()->get_statistics()->row_count();
+      float input_count = from->left_input()->get_statistics()->row_count();
+      if (from->right_input()) {
+        input_count *= from->right_input()->get_statistics()->row_count();
       }
       row_percentage = 100 * row_count / input_count;
     } catch (...) {

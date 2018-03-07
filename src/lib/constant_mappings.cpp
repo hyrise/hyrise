@@ -38,6 +38,19 @@ const boost::bimap<PredicateCondition, std::string> predicate_condition_to_strin
         {PredicateCondition::IsNotNull, "IS NOT NULL"},
     });
 
+const std::unordered_map<PredicateCondition, ExpressionType> predicate_condition_to_expression_type = {
+    {PredicateCondition::Equals, ExpressionType::Equals},
+    {PredicateCondition::NotEquals, ExpressionType::NotEquals},
+    {PredicateCondition::LessThan, ExpressionType::LessThan},
+    {PredicateCondition::LessThanEquals, ExpressionType::LessThanEquals},
+    {PredicateCondition::GreaterThan, ExpressionType::GreaterThan},
+    {PredicateCondition::GreaterThanEquals, ExpressionType::GreaterThanEquals},
+    {PredicateCondition::Between, ExpressionType::Between},
+    {PredicateCondition::Like, ExpressionType::Like},
+    {PredicateCondition::NotLike, ExpressionType::NotLike},
+    {PredicateCondition::IsNull, ExpressionType::IsNull},
+    {PredicateCondition::IsNotNull, ExpressionType::IsNotNull}};
+
 const std::unordered_map<ExpressionType, std::string> expression_type_to_string = {
     {ExpressionType::Literal, "Literal"},
     {ExpressionType::Star, "Star"},
@@ -70,6 +83,7 @@ const std::unordered_map<ExpressionType, std::string> expression_type_to_string 
     {ExpressionType::Exists, "Exists"},
     /*Other*/
     {ExpressionType::IsNull, "IsNull"},
+    {ExpressionType::IsNotNull, "IsNotNull"},
     {ExpressionType::Case, "Case"},
     {ExpressionType::Hint, "Hint"},
 };
@@ -142,16 +156,15 @@ const boost::bimap<DataType, std::string> data_type_to_string =
                  return map;
                });
 
-const boost::bimap<EncodingType, std::string> encoding_type_to_string = make_bimap<EncodingType, std::string>({
+const std::unordered_map<EncodingType, std::string> encoding_type_to_string = {
     {EncodingType::DeprecatedDictionary, "Dictionary (Deprecated)"},
     {EncodingType::Dictionary, "Dictionary"},
     {EncodingType::RunLength, "RunLength"},
-});
+};
 
-const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string =
-    make_bimap<VectorCompressionType, std::string>({
-        {VectorCompressionType::FixedSizeByteAligned, "Fixed-size byte-aligned"},
-        {VectorCompressionType::SimdBp128, "SIMD-BP128"},
-    });
+const std::unordered_map<VectorCompressionType, std::string> vector_compression_type_to_string = {
+    {VectorCompressionType::FixedSizeByteAligned, "Fixed-size byte-aligned"},
+    {VectorCompressionType::SimdBp128, "SIMD-BP128"},
+};
 
 }  // namespace opossum

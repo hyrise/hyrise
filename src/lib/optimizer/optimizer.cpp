@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "logical_query_plan/logical_plan_root_node.hpp"
+#include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/constant_calculation_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/join_detection_rule.hpp"
@@ -22,6 +23,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule_batch(main_batch);
 
   RuleBatch final_batch(RuleBatchExecutionPolicy::Once);
+  final_batch.add_rule(std::make_shared<ChunkPruningRule>());
   final_batch.add_rule(std::make_shared<ConstantCalculationRule>());
   final_batch.add_rule(std::make_shared<IndexScanRule>());
   optimizer->add_rule_batch(final_batch);
@@ -37,7 +39,7 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<Abstr
   // Add explicit root node, so the rules can freely change the tree below it without having to maintain a root node
   // to return to the Optimizer
   const auto root_node = LogicalPlanRootNode::make();
-  root_node->set_left_child(input);
+  root_node->set_left_input(input);
 
   for (const auto& rule_batch : _rule_batches) {
     switch (rule_batch.execution_policy()) {
@@ -58,8 +60,8 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<Abstr
   }
 
   // Remove LogicalPlanRootNode
-  const auto optimized_node = root_node->left_child();
-  optimized_node->clear_parents();
+  const auto optimized_node = root_node->left_input();
+  optimized_node->clear_outputs();
 
   return optimized_node;
 }
