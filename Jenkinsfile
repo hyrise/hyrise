@@ -52,7 +52,7 @@ node {
           sh "./clang-debug/hyriseTest clang-debug/run-shuffled --gtest_repeat=5 --gtest_shuffle"
         }
       }, clangDebugSanitizers: {
-        stage("clang-debug:sanitizers") {
+        stage("clang-debug:sanitizers (master only)") {
           when { branch "master" }
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-debug-sanitizers/hyriseTest clang-debug-sanitizers"
@@ -67,13 +67,13 @@ node {
             sh "./scripts/run_system_test.sh clang-release"
         }
       }, clangReleaseSanitizers: {
-        stage("clang-release:sanitizers") {
+        stage("clang-release:sanitizers (master only)") {
           when { branch "master" }
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers/hyriseTest clang-release-sanitizers"
         }
       }, clangReleaseSanitizersNoNuma: {
-        stage("clang-release:sanitizers w/o NUMA") {
+        stage("clang-release:sanitizers w/o NUMA (master only)") {
           when { branch "master" }
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-sanitizers-no-numa && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers-no-numa/hyriseTest clang-release-sanitizers-no-numa"
