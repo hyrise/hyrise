@@ -9,8 +9,8 @@ namespace opossum {
 
 template <typename T, typename U>
 FrameOfReferenceColumn<T, U>::FrameOfReferenceColumn(std::shared_ptr<const pmr_vector<T>> block_minima,
-                                                  std::shared_ptr<const BaseCompressedVector> offset_values,
-                                                  std::shared_ptr<const pmr_vector<bool>> null_values)
+                                                     std::shared_ptr<const BaseCompressedVector> offset_values,
+                                                     std::shared_ptr<const pmr_vector<bool>> null_values)
     : _block_minima{block_minima}, _offset_values{offset_values}, _null_values{null_values} {}
 
 template <typename T, typename U>
