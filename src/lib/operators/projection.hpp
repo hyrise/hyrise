@@ -36,8 +36,6 @@ class Projection : public AbstractReadOnlyOperator {
 
   const ColumnExpressions& column_expressions() const;
 
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
-
   /**
    * The dummy table is used for literal projections that have no input table.
    * This was introduce to allow queries like INSERT INTO tbl VALUES (1, 2, 3);
@@ -78,6 +76,10 @@ class Projection : public AbstractReadOnlyOperator {
       const ChunkID chunk_id);
 
   std::shared_ptr<const Table> _on_execute() override;
+
+  std::shared_ptr<AbstractOperator> _on_recreate(
+      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
 };
 
 }  // namespace opossum

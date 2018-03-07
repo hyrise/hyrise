@@ -16,8 +16,8 @@
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/deprecated_dictionary_column/fitted_attribute_vector.hpp"
-#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -96,6 +96,12 @@ std::shared_ptr<const Table> ImportBinary::_on_execute() {
   }
 
   return table;
+}
+
+std::shared_ptr<AbstractOperator> ImportBinary::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+  return std::make_shared<ImportBinary>(_filename, _tablename);
 }
 
 std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstream& file) {

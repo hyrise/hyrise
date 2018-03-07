@@ -59,6 +59,11 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   void set_as_predecessor_of(std::shared_ptr<AbstractTask> successor);
 
   /**
+   * @return the successors of this Task
+   */
+  const std::vector<std::shared_ptr<AbstractTask>>& successors() const;
+
+  /**
    * Node ids are changed when moving the Task between nodes (e.g. during work stealing)
    */
   void set_node_id(NodeID node_id);

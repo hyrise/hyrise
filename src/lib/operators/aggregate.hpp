@@ -87,7 +87,6 @@ class Aggregate : public AbstractReadOnlyOperator {
 
   const std::string name() const override;
   const std::string description(DescriptionMode description_mode) const override;
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
 
   // write the aggregated output for a given aggregate column
   template <typename ColumnType, AggregateFunction function>
@@ -95,6 +94,10 @@ class Aggregate : public AbstractReadOnlyOperator {
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
+
+  std::shared_ptr<AbstractOperator> _on_recreate(
+      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
 
   template <typename ColumnType>
   static void _create_aggregate_context(boost::hana::basic_type<ColumnType> type,

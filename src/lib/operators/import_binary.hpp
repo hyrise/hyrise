@@ -39,6 +39,10 @@ class ImportBinary : public AbstractReadOnlyOperator {
    */
   std::shared_ptr<const Table> _on_execute() final;
 
+  std::shared_ptr<AbstractOperator> _on_recreate(
+      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+
   // Returns the name of the operator
   const std::string name() const final;
 
@@ -130,8 +134,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * °: This field is needed if the type of the column is NOT a string
    */
   template <typename T>
-  static std::shared_ptr<DictionaryColumn<T>> _import_dictionary_column(std::ifstream& file,
-                                                                        ChunkOffset row_count);
+  static std::shared_ptr<DictionaryColumn<T>> _import_dictionary_column(std::ifstream& file, ChunkOffset row_count);
 
   // Calls the _import_attribute_vector<uintX_t> function that corresponds to the given attribute_vector_width.
   static std::shared_ptr<BaseCompressedVector> _import_attribute_vector(std::ifstream& file, ChunkOffset row_count,
