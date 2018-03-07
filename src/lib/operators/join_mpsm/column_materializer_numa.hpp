@@ -42,7 +42,7 @@ struct MaterializedNUMAPartition {
 
   MaterializedNUMAPartition() {}
 
-  void fit() {
+  void shrink_to_fit() {
     _chunk_columns.erase(
         std::remove(_chunk_columns.begin(), _chunk_columns.end(), std::shared_ptr<MaterializedChunk<T>>{}),
         _chunk_columns.end());
@@ -104,7 +104,7 @@ class ColumnMaterializer {
 
     for (auto& partition : (*output)) {
       // removes null pointers, this is important since we currently opt against using mutexes so we have sparse vectors
-      partition.fit();
+      partition.shrink_to_fit();
     }
 
     return std::make_pair(std::move(output), std::move(null_rows));
