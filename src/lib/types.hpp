@@ -187,6 +187,7 @@ enum class PredicateCondition {
   GreaterThan,
   GreaterThanEquals,
   Between,  // Currently, OpBetween is not handled by a single scan. The LQPTranslator creates two scans.
+  In,
   Like,
   NotLike,
   IsNull,
@@ -206,7 +207,7 @@ enum class ExpressionType {
   Function,
 
   /*A subselect*/
-  Select,
+  Subselect,
 
   /*Arithmetic operators*/
   Addition,

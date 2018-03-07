@@ -11,6 +11,10 @@
 #include "constant_mappings.hpp"
 #include "operators/pqp_expression.hpp"
 #include "resolve_type.hpp"
+
+#include "scheduler/current_scheduler.hpp"
+#include "sql/sql_query_plan.hpp"
+
 #include "storage/create_iterable_from_column.hpp"
 #include "storage/materialize.hpp"
 #include "storage/reference_column.hpp"
@@ -74,8 +78,25 @@ std::shared_ptr<BaseColumn> Projection::_create_column(boost::hana::basic_type<T
     // fill a nullable column with NULLs
     auto row_count = input_table_left->get_chunk(chunk_id)->size();
     auto null_values = pmr_concurrent_vector<bool>(row_count, true);
-    // Explicitly pass T{} because in some cases it won't initialize otherwise
+    // explicitly pass T{} because in some cases it won't initialize otherwise
     auto values = pmr_concurrent_vector<T>(row_count, T{});
+
+    return std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
+  } else if (expression->type() == ExpressionType::Subselect) {
+    // since we are only extracting one value from the subselect
+    // table, using Table::get_value is not a performance issue
+    PerformanceWarningDisabler performance_warning_disabler;
+
+    // the subquery result table can only contain exactly one column with one row
+    // since we checked for this at subquery execution time we can make some assumptions here
+    const auto subselect_table = expression->subselect_table();
+    const auto subselect_value = subselect_table->get_value<T>(ColumnID(0), 0u);
+
+    auto row_count = input_table_left->get_chunk(chunk_id)->size();
+
+    // materialize the result of the subquery for every row in the input table
+    auto null_values = pmr_concurrent_vector<bool>(row_count, false);
+    auto values = pmr_concurrent_vector<T>(row_count, subselect_value);
 
     return std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
   } else {
@@ -106,6 +127,33 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   for (const auto& column_expression : _column_expressions) {
     TableColumnDefinition column_definition;
 
+    // For subselects, we need to execeute the subquery in order to use the result table later
+    if (column_expression->is_subselect() && !column_expression->has_subselect_table()) {
+      SQLQueryPlan query_plan;
+      query_plan.add_tree_by_root(column_expression->subselect_operator());
+
+      auto transaction_context = this->transaction_context();
+      if (transaction_context) {
+        query_plan.set_transaction_context(transaction_context);
+      }
+
+      std::vector<std::shared_ptr<OperatorTask>> tasks = query_plan.create_tasks();
+      CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+
+      auto result_table = tasks.back()->get_operator()->get_output();
+      DebugAssert(result_table->column_count() == 1, "Subselect table must have exactly one column.");
+
+      if (result_table->row_count() == 0) {
+        Fail("Subselect returned no results.");
+      }
+
+      if (result_table->row_count() > 1) {
+        Fail("Subselect returned more than one row.");
+      }
+
+      column_expression->set_subselect_table(result_table);
+    }
+
     // Determine column name
     if (column_expression->alias()) {
       column_definition.name = *column_expression->alias();
@@ -113,6 +161,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       column_definition.name = input_table_left()->column_name(column_expression->column_id());
     } else if (column_expression->is_arithmetic_operator() || column_expression->type() == ExpressionType::Literal) {
       column_definition.name = column_expression->to_string(input_table_left()->column_names());
+    } else if (column_expression->is_subselect()) {
+      column_definition.name = column_expression->subselect_table()->column_names()[0];
     } else {
       Fail("Expression type is not supported.");
     }
@@ -163,6 +213,9 @@ DataType Projection::_get_type_of_expression(const std::shared_ptr<PQPExpression
   }
   if (expression->type() == ExpressionType::Column) {
     return table->column_data_type(expression->column_id());
+  }
+  if (expression->type() == ExpressionType::Subselect) {
+    return expression->subselect_table()->column_data_type(ColumnID(0));
   }
 
   Assert(expression->is_arithmetic_operator(),
