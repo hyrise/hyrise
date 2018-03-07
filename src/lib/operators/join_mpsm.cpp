@@ -107,9 +107,9 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     TablePosition(NodeID partition, size_t cluster, size_t index)
         : cluster{cluster}, index{index}, partition{partition} {}
 
-    NodeID partition;
     size_t cluster;
     size_t index;
+    NodeID partition;
 
     TableRange to(TablePosition position) { return TableRange(*this, position); }
   };
