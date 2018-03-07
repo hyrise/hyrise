@@ -43,11 +43,7 @@ auto create_iterable_from_column(const RunLengthColumn<T>& column) {
   return erase_type_from_iterable_if_debug(RunLengthColumnIterable<T>{column});
 }
 
-/**
- * The enable if prevents FrameOfReferenceColumn from
- * being instantiated for types that it does not supported
- */
-template <typename T, typename = std::enable_if_t<encoding_supports_v<EncodingType::FrameOfReference, T>>>
+template <typename T>
 auto create_iterable_from_column(const FrameOfReferenceColumn<T>& column) {
   return erase_type_from_iterable_if_debug(FrameOfReferenceIterable<T>{column});
 }

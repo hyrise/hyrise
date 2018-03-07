@@ -7,29 +7,29 @@
 
 namespace opossum {
 
-template <typename T>
-FrameOfReferenceColumn<T>::FrameOfReferenceColumn(std::shared_ptr<const pmr_vector<T>> block_minima,
+template <typename T, typename U>
+FrameOfReferenceColumn<T, U>::FrameOfReferenceColumn(std::shared_ptr<const pmr_vector<T>> block_minima,
                                                   std::shared_ptr<const BaseCompressedVector> offset_values,
                                                   std::shared_ptr<const pmr_vector<bool>> null_values)
     : _block_minima{block_minima}, _offset_values{offset_values}, _null_values{null_values} {}
 
-template <typename T>
-std::shared_ptr<const pmr_vector<T>> FrameOfReferenceColumn<T>::block_minima() const {
+template <typename T, typename U>
+std::shared_ptr<const pmr_vector<T>> FrameOfReferenceColumn<T, U>::block_minima() const {
   return _block_minima;
 }
 
-template <typename T>
-std::shared_ptr<const BaseCompressedVector> FrameOfReferenceColumn<T>::offset_values() const {
+template <typename T, typename U>
+std::shared_ptr<const BaseCompressedVector> FrameOfReferenceColumn<T, U>::offset_values() const {
   return _offset_values;
 }
 
-template <typename T>
-std::shared_ptr<const pmr_vector<bool>> FrameOfReferenceColumn<T>::null_values() const {
+template <typename T, typename U>
+std::shared_ptr<const pmr_vector<bool>> FrameOfReferenceColumn<T, U>::null_values() const {
   return _null_values;
 }
 
-template <typename T>
-const AllTypeVariant FrameOfReferenceColumn<T>::operator[](const ChunkOffset chunk_offset) const {
+template <typename T, typename U>
+const AllTypeVariant FrameOfReferenceColumn<T, U>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
 
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
@@ -46,13 +46,13 @@ const AllTypeVariant FrameOfReferenceColumn<T>::operator[](const ChunkOffset chu
   return value;
 }
 
-template <typename T>
-size_t FrameOfReferenceColumn<T>::size() const {
+template <typename T, typename U>
+size_t FrameOfReferenceColumn<T, U>::size() const {
   return _offset_values->size();
 }
 
-template <typename T>
-std::shared_ptr<BaseColumn> FrameOfReferenceColumn<T>::copy_using_allocator(
+template <typename T, typename U>
+std::shared_ptr<BaseColumn> FrameOfReferenceColumn<T, U>::copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
   auto new_block_minima = pmr_vector<T>{*_block_minima, alloc};
   auto new_offset_values = _offset_values->copy_using_allocator(alloc);
@@ -64,21 +64,21 @@ std::shared_ptr<BaseColumn> FrameOfReferenceColumn<T>::copy_using_allocator(
                                                       new_null_values_ptr);
 }
 
-template <typename T>
-size_t FrameOfReferenceColumn<T>::estimate_memory_usage() const {
+template <typename T, typename U>
+size_t FrameOfReferenceColumn<T, U>::estimate_memory_usage() const {
   static const auto bits_per_byte = 8u;
 
   return sizeof(*this) + sizeof(typename decltype(_block_minima)::element_type) + _offset_values->data_size() +
          _null_values->size() / bits_per_byte;
 }
 
-template <typename T>
-EncodingType FrameOfReferenceColumn<T>::encoding_type() const {
+template <typename T, typename U>
+EncodingType FrameOfReferenceColumn<T, U>::encoding_type() const {
   return EncodingType::FrameOfReference;
 }
 
-template <typename T>
-CompressedVectorType FrameOfReferenceColumn<T>::compressed_vector_type() const {
+template <typename T, typename U>
+CompressedVectorType FrameOfReferenceColumn<T, U>::compressed_vector_type() const {
   return _offset_values->type();
 }
 

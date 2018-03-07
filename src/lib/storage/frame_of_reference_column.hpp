@@ -4,6 +4,8 @@
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/type.hpp>
 
+#include <type_traits>
+
 #include <array>
 #include <memory>
 
@@ -17,10 +19,8 @@ class BaseCompressedVector;
 /**
  * @brief Column implementing frame-of-reference encoding
  */
-template <typename T>
+template <typename T, typename = std::enable_if_t<encoding_supports_v<EncodingType::FrameOfReference, T>>>
 class FrameOfReferenceColumn : public BaseEncodedColumn {
-  static_assert(encoding_supports_v<EncodingType::FrameOfReference, T>, "FOR supports only integral data types.");
-
  public:
   /**
    * The column is divided into fixed-size blocks.
