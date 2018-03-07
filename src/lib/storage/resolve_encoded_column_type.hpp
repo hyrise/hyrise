@@ -8,7 +8,6 @@
 #include <memory>
 
 // Include your encoded column file here!
-#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/run_length_column.hpp"
 
@@ -27,7 +26,6 @@ namespace hana = boost::hana;
  * Note: Add your encoded column class here!
  */
 constexpr auto encoded_column_for_type = hana::make_map(
-    hana::make_pair(enum_c<EncodingType, EncodingType::DeprecatedDictionary>, template_c<DeprecatedDictionaryColumn>),
     hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, template_c<DictionaryColumn>),
     hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, template_c<RunLengthColumn>));
 

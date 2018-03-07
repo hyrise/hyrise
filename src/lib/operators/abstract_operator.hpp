@@ -35,11 +35,6 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   virtual ~AbstractOperator() = default;
 
-  // we need to explicitly set the move constructor to default when
-  // we overwrite the copy constructor
-  AbstractOperator(AbstractOperator&&) = default;
-  AbstractOperator& operator=(AbstractOperator&&) = default;
-
   // Overriding implementations need to call on_operator_started/finished() on the _transaction_context as well
   virtual void execute();
 
@@ -82,10 +77,6 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   };
   const AbstractOperator::PerformanceData& performance_data() const;
 
-  // Gets and sets the associated operator task (if any)
-  std::shared_ptr<OperatorTask> operator_task();
-  void set_operator_task(const std::shared_ptr<OperatorTask>&);
-
   void print(std::ostream& stream = std::cout) const;
 
  protected:
@@ -101,6 +92,15 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   void _print_impl(std::ostream& out, std::vector<bool>& levels,
                    std::unordered_map<const AbstractOperator*, size_t>& id_by_operator, size_t& id_counter) const;
+
+  // Looks itself up in @param recreated_ops to support diamond shapes in PQPs, if not found calls _on_recreate()
+  std::shared_ptr<AbstractOperator> _recreate_impl(
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& recreated_ops,
+      const std::vector<AllParameterVariant>& args) const;
+
+  virtual std::shared_ptr<AbstractOperator> _on_recreate(
+      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& recreated_input_right) const = 0;
 
   // Shared pointers to input operators, can be nullptr.
   std::shared_ptr<const AbstractOperator> _input_left;

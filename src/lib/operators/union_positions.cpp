@@ -59,8 +59,10 @@ UnionPositions::UnionPositions(const std::shared_ptr<const AbstractOperator>& le
                                const std::shared_ptr<const AbstractOperator>& right)
     : AbstractReadOnlyOperator(left, right) {}
 
-std::shared_ptr<AbstractOperator> UnionPositions::recreate(const std::vector<AllParameterVariant>& args) const {
-  return std::make_shared<UnionPositions>(input_left()->recreate(args), input_right()->recreate(args));
+std::shared_ptr<AbstractOperator> UnionPositions::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+  return std::make_shared<UnionPositions>(recreated_input_left, recreated_input_right);
 }
 
 const std::string UnionPositions::name() const { return "UnionPositions"; }
@@ -86,7 +88,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   std::iota(virtual_pos_list_right.begin(), virtual_pos_list_right.end(), 0u);
 
   /**
-   * Sort the virtual pos lists, that they bring the rows in their respective ReferenceMatrix into order.
+   * Sort the virtual pos lists so that they bring the rows in their respective ReferenceMatrix into order.
    * This is necessary for merging them.
    * PERFORMANCE NOTE: These sorts take the vast majority of time spend in this Operator
    */

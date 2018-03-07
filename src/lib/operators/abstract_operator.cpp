@@ -19,6 +19,8 @@ AbstractOperator::AbstractOperator(const std::shared_ptr<const AbstractOperator>
     : _input_left(left), _input_right(right) {}
 
 void AbstractOperator::execute() {
+  DebugAssert(!_output, "Operator has already been executed");
+
   auto start = std::chrono::high_resolution_clock::now();
 
   auto transaction_context = this->transaction_context();
@@ -68,7 +70,8 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const {
 const std::string AbstractOperator::description(DescriptionMode description_mode) const { return name(); }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::recreate(const std::vector<AllParameterVariant>& args) const {
-  Fail("Operator " + name() + " does not implement recreation.");
+  std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>> recreated_ops;
+  return _recreate_impl(recreated_ops, args);
 }
 
 std::shared_ptr<const Table> AbstractOperator::input_table_left() const { return _input_left->get_output(); }
@@ -108,13 +111,6 @@ std::shared_ptr<const AbstractOperator> AbstractOperator::input_left() const { r
 
 std::shared_ptr<const AbstractOperator> AbstractOperator::input_right() const { return _input_right; }
 
-std::shared_ptr<OperatorTask> AbstractOperator::operator_task() { return _operator_task.lock(); }
-
-void AbstractOperator::set_operator_task(const std::shared_ptr<OperatorTask>& operator_task) {
-  DebugAssert(!_operator_task.lock(), "_operator_task was already set");
-  _operator_task = operator_task;
-}
-
 void AbstractOperator::print(std::ostream& stream) const {
   const auto get_children_fn = [](const auto& op) {
     std::vector<std::shared_ptr<const AbstractOperator>> children;
@@ -141,5 +137,22 @@ void AbstractOperator::print(std::ostream& stream) const {
 }
 
 void AbstractOperator::_on_cleanup() {}
+
+std::shared_ptr<AbstractOperator> AbstractOperator::_recreate_impl(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& recreated_ops,
+    const std::vector<AllParameterVariant>& args) const {
+  const auto recreated_ops_iter = recreated_ops.find(this);
+  if (recreated_ops_iter != recreated_ops.end()) return recreated_ops_iter->second;
+
+  const auto recreated_input_left =
+      input_left() ? input_left()->_recreate_impl(recreated_ops, args) : std::shared_ptr<AbstractOperator>{};
+  const auto recreated_input_right =
+      input_right() ? input_right()->_recreate_impl(recreated_ops, args) : std::shared_ptr<AbstractOperator>{};
+
+  const auto recreated_op = _on_recreate(args, recreated_input_left, recreated_input_right);
+  recreated_ops.emplace(this, recreated_op);
+
+  return recreated_op;
+}
 
 }  // namespace opossum

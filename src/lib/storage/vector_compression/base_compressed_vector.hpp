@@ -76,15 +76,17 @@ class CompressedVector : public BaseCompressedVector {
 
   /**
    * @brief Returns an iterator to the beginning
-   * @return a constant forward iterator returning uint32_t
+   * @return a constant input iterator returning uint32_t
    */
-  auto cbegin() const { return _self()._on_cbegin(); }
+  auto begin() const { return _self()._on_begin(); }
+  auto cbegin() const { return begin(); }
 
   /**
    * @brief Returns an iterator to the end
-   * @return a constant forward iterator returning uint32_t
+   * @return a constant input iterator returning uint32_t
    */
-  auto cend() const { return _self()._on_cend(); }
+  auto end() const { return _self()._on_end(); }
+  auto cend() const { return end(); }
   /**@}*/
 
  public:

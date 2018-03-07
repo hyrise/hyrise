@@ -3,7 +3,6 @@
 #include <map>
 #include <memory>
 
-#include "storage/deprecated_dictionary_column/deprecated_dictionary_encoder.hpp"
 #include "storage/dictionary_column/dictionary_encoder.hpp"
 #include "storage/run_length_column/run_length_encoder.hpp"
 
@@ -21,7 +20,6 @@ namespace {
  * Add your column encoder here!
  */
 static const auto encoder_for_type = std::map<EncodingType, std::shared_ptr<BaseColumnEncoder>>{
-    {EncodingType::DeprecatedDictionary, std::make_shared<DeprecatedDictionaryEncoder>()},
     {EncodingType::Dictionary, std::make_shared<DictionaryEncoder>()},
     {EncodingType::RunLength, std::make_shared<RunLengthEncoder>()}};
 

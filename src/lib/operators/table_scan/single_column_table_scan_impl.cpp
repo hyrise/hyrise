@@ -4,7 +4,6 @@
 #include <utility>
 #include <vector>
 
-#include "storage/base_deprecated_dictionary_column.hpp"
 #include "storage/base_dictionary_column.hpp"
 #include "storage/column_iterables/constant_value_iterable.hpp"
 #include "storage/column_iterables/create_iterable_from_attribute_vector.hpp"
@@ -64,16 +63,6 @@ void SingleColumnTableScanImpl::handle_column(const BaseValueColumn& base_column
   });
 }
 
-void SingleColumnTableScanImpl::handle_column(const BaseDeprecatedDictionaryColumn& base_column,
-                                              std::shared_ptr<ColumnVisitableContext> base_context) {
-  _handle_dictionary_column(base_column, base_context);
-}
-
-void SingleColumnTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
-                                              std::shared_ptr<ColumnVisitableContext> base_context) {
-  _handle_dictionary_column(base_column, base_context);
-}
-
 void SingleColumnTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
                                               std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
@@ -101,9 +90,8 @@ void SingleColumnTableScanImpl::handle_column(const BaseEncodedColumn& base_colu
   });
 }
 
-template <typename BaseDictionaryColumnType>
-void SingleColumnTableScanImpl::_handle_dictionary_column(const BaseDictionaryColumnType& left_column,
-                                                          std::shared_ptr<ColumnVisitableContext> base_context) {
+void SingleColumnTableScanImpl::handle_column(const BaseDictionaryColumn& left_column,
+                                              std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto chunk_id = context->_chunk_id;
@@ -164,8 +152,7 @@ void SingleColumnTableScanImpl::_handle_dictionary_column(const BaseDictionaryCo
   });
 }
 
-template <typename BaseDictionaryColumnType>
-ValueID SingleColumnTableScanImpl::_get_search_value_id(const BaseDictionaryColumnType& column) const {
+ValueID SingleColumnTableScanImpl::_get_search_value_id(const BaseDictionaryColumn& column) const {
   switch (_predicate_condition) {
     case PredicateCondition::Equals:
     case PredicateCondition::NotEquals:
@@ -182,8 +169,7 @@ ValueID SingleColumnTableScanImpl::_get_search_value_id(const BaseDictionaryColu
   }
 }
 
-template <typename BaseDictionaryColumnType>
-bool SingleColumnTableScanImpl::_right_value_matches_all(const BaseDictionaryColumnType& column,
+bool SingleColumnTableScanImpl::_right_value_matches_all(const BaseDictionaryColumn& column,
                                                          const ValueID search_value_id) const {
   switch (_predicate_condition) {
     case PredicateCondition::Equals:
@@ -205,8 +191,7 @@ bool SingleColumnTableScanImpl::_right_value_matches_all(const BaseDictionaryCol
   }
 }
 
-template <typename BaseDictionaryColumnType>
-bool SingleColumnTableScanImpl::_right_value_matches_none(const BaseDictionaryColumnType& column,
+bool SingleColumnTableScanImpl::_right_value_matches_none(const BaseDictionaryColumn& column,
                                                           const ValueID search_value_id) const {
   switch (_predicate_condition) {
     case PredicateCondition::Equals:

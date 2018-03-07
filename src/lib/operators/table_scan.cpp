@@ -60,17 +60,17 @@ const std::string TableScan::description(DescriptionMode description_mode) const
          " " + predicate_string + ")";
 }
 
-std::shared_ptr<AbstractOperator> TableScan::recreate(const std::vector<AllParameterVariant>& args) const {
+std::shared_ptr<AbstractOperator> TableScan::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
   // Replace value in the new operator, if it’s a parameter and an argument is available.
   if (is_placeholder(_right_parameter)) {
     const auto index = boost::get<ValuePlaceholder>(_right_parameter).index();
     if (index < args.size()) {
-      return std::make_shared<TableScan>(_input_left->recreate(args), _left_column_id, _predicate_condition,
-                                         args[index]);
+      return std::make_shared<TableScan>(recreated_input_left, _left_column_id, _predicate_condition, args[index]);
     }
   }
-  return std::make_shared<TableScan>(_input_left->recreate(args), _left_column_id, _predicate_condition,
-                                     _right_parameter);
+  return std::make_shared<TableScan>(recreated_input_left, _left_column_id, _predicate_condition, _right_parameter);
 }
 
 std::shared_ptr<const Table> TableScan::_on_execute() {

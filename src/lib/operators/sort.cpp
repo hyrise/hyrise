@@ -25,8 +25,10 @@ OrderByMode Sort::order_by_mode() const { return _order_by_mode; }
 
 const std::string Sort::name() const { return "Sort"; }
 
-std::shared_ptr<AbstractOperator> Sort::recreate(const std::vector<AllParameterVariant>& args) const {
-  return std::make_shared<Sort>(_input_left->recreate(args), _column_id, _order_by_mode, _output_chunk_size);
+std::shared_ptr<AbstractOperator> Sort::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+  return std::make_shared<Sort>(recreated_input_left, _column_id, _order_by_mode, _output_chunk_size);
 }
 
 std::shared_ptr<const Table> Sort::_on_execute() {

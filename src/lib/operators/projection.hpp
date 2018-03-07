@@ -12,7 +12,6 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "storage/chunk.hpp"
-#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "types.hpp"
 
@@ -35,8 +34,6 @@ class Projection : public AbstractReadOnlyOperator {
   const std::string description(DescriptionMode description_mode) const override;
 
   const ColumnExpressions& column_expressions() const;
-
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
 
   /**
    * The dummy table is used for literal projections that have no input table.
@@ -78,6 +75,10 @@ class Projection : public AbstractReadOnlyOperator {
       const ChunkID chunk_id);
 
   std::shared_ptr<const Table> _on_execute() override;
+
+  std::shared_ptr<AbstractOperator> _on_recreate(
+      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
 };
 
 }  // namespace opossum

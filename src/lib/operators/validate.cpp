@@ -34,8 +34,10 @@ Validate::Validate(const std::shared_ptr<AbstractOperator> in) : AbstractReadOnl
 
 const std::string Validate::name() const { return "Validate"; }
 
-std::shared_ptr<AbstractOperator> Validate::recreate(const std::vector<AllParameterVariant>& args) const {
-  return std::make_shared<Validate>(_input_left->recreate(args));
+std::shared_ptr<AbstractOperator> Validate::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+  return std::make_shared<Validate>(recreated_input_left);
 }
 
 std::shared_ptr<const Table> Validate::_on_execute() {

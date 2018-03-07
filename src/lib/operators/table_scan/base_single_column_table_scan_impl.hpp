@@ -16,7 +16,6 @@ namespace opossum {
 class Table;
 class ReferenceColumn;
 class AttributeVectorIterable;
-class DeprecatedAttributeVectorIterable;
 
 /**
  * @brief The base class of table scan impls that scan a single column

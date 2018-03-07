@@ -109,26 +109,6 @@ TEST_F(OperatorsExportCsvTest, MultipleChunks) {
                            "6,\"Tag\",3.5\n"));
 }
 
-TEST_F(OperatorsExportCsvTest, DeprecatedDictionaryColumn) {
-  table->append({1, "Hallo", 3.5f});
-  table->append({1, "Hallo", 3.5f});
-  table->append({1, "Hallo3", 3.55f});
-
-  ChunkEncoder::encode_chunks(table, {ChunkID{0}});
-
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-  table_wrapper->execute();
-  auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, filename);
-  ex->execute();
-
-  EXPECT_TRUE(file_exists(filename));
-  EXPECT_TRUE(file_exists(meta_filename));
-  EXPECT_TRUE(compare_file(filename,
-                           "1,\"Hallo\",3.5\n"
-                           "1,\"Hallo\",3.5\n"
-                           "1,\"Hallo3\",3.55\n"));
-}
-
 TEST_F(OperatorsExportCsvTest, DictionaryColumnFixedSizeByteAligned) {
   table->append({1, "Hallo", 3.5f});
   table->append({1, "Hallo", 3.5f});
