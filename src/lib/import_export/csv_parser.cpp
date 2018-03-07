@@ -15,6 +15,7 @@
 #include "import_export/csv_meta.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/job_task.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/column_encoding_utils.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
@@ -60,15 +61,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
 
     // create and start parsing task to fill chunk
     tasks.emplace_back(std::make_shared<JobTask>([this, relevant_content, field_ends, &table, &columns]() {
-      const auto row_count = _parse_into_chunk(relevant_content, field_ends, *table, columns);
-
-      if (_meta.auto_compress && row_count == _meta.chunk_size) {
-        for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-          const auto value_column = std::static_pointer_cast<BaseValueColumn>(columns[column_id]);
-          columns[column_id] =
-              encode_column(EncodingType::DeprecatedDictionary, table->column_data_type(column_id), value_column);
-        }
-      }
+      _parse_into_chunk(relevant_content, field_ends, *table, columns);
     }));
     tasks.back()->schedule();
   }
@@ -80,6 +73,8 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   for (auto& chunk_columns : columns_by_chunks) {
     table->append_chunk(chunk_columns);
   }
+
+  if (_meta.auto_compress) ChunkEncoder::encode_all_chunks(table);
 
   return table;
 }
