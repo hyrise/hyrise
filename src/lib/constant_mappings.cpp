@@ -157,7 +157,6 @@ const boost::bimap<DataType, std::string> data_type_to_string =
                });
 
 const std::unordered_map<EncodingType, std::string> encoding_type_to_string = {
-    {EncodingType::DeprecatedDictionary, "Dictionary (Deprecated)"},
     {EncodingType::Dictionary, "Dictionary"},
     {EncodingType::RunLength, "RunLength"},
     {EncodingType::FrameOfReference, "FrameOfReference"},

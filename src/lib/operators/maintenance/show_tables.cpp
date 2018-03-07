@@ -16,7 +16,9 @@ namespace opossum {
 
 const std::string ShowTables::name() const { return "ShowTables"; }
 
-std::shared_ptr<AbstractOperator> ShowTables::recreate(const std::vector<AllParameterVariant>& args) const {
+std::shared_ptr<AbstractOperator> ShowTables::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
   return std::make_shared<ShowTables>();
 }
 
