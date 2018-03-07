@@ -8,17 +8,15 @@
 
 #include "utils/assert.hpp"
 
-#include "types.hpp"
 #include "optimizer/chunk_statistics/min_max_filter.hpp"
 #include "optimizer/chunk_statistics/range_filter.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
 class PruningFiltersTest : public BaseTest {
  protected:
-  void SetUp() override {
-    _values = pmr_vector<int>{2, 3, 4, 7, 8, 10};
-  }
+  void SetUp() override { _values = pmr_vector<int>{2, 3, 4, 7, 8, 10}; }
 
   pmr_vector<int> _values;
 };

@@ -26,7 +26,8 @@ class RangeFilter : public AbstractFilter {
   explicit RangeFilter(std::vector<std::pair<T, T>> ranges) : _ranges(std::move(ranges)) {}
   ~RangeFilter() override = default;
 
-  static std::unique_ptr<RangeFilter<T>> build_filter(const pmr_vector<T>& dictionary, uint32_t max_ranges_count = MAX_RANGES_COUNT);
+  static std::unique_ptr<RangeFilter<T>> build_filter(const pmr_vector<T>& dictionary,
+                                                      uint32_t max_ranges_count = MAX_RANGES_COUNT);
 
   bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const override {
     const auto t_value = boost::get<T>(value);
@@ -35,25 +36,25 @@ class RangeFilter : public AbstractFilter {
     // thus we can exclude chunk if t_value >= _max since then no value from the table can be greater than t_value
     switch (predicate_type) {
       case PredicateCondition::GreaterThan: {
-        auto & max = _ranges.back().second;
+        auto& max = _ranges.back().second;
         return t_value >= max;
       }
       case PredicateCondition::GreaterThanEquals: {
-        auto & max = _ranges.back().second;
+        auto& max = _ranges.back().second;
         return t_value > max;
       }
       case PredicateCondition::LessThan: {
-        auto & min = _ranges.front().first;
+        auto& min = _ranges.front().first;
         return t_value <= min;
       }
       case PredicateCondition::LessThanEquals: {
-        auto & min = _ranges.front().first;
+        auto& min = _ranges.front().first;
         return t_value < min;
       }
       case PredicateCondition::Equals: {
         bool prunable = true;
-        for(const auto& bounds : _ranges) {
-          const auto& [ min, max ] = bounds;
+        for (const auto& bounds : _ranges) {
+          const auto & [ min, max ] = bounds;
           // prunable becomes false if t_value is within any of the bounds
           prunable &= !(t_value >= min && t_value <= max);
         }
@@ -69,14 +70,15 @@ class RangeFilter : public AbstractFilter {
 };
 
 template <typename T>
-std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>& dictionary, uint32_t max_ranges_count) {
+std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>& dictionary,
+                                                             uint32_t max_ranges_count) {
   static_assert(std::is_arithmetic_v<T>, "Range filters are only allowed on arithmetic types.");
   DebugAssert(!dictionary.empty(), "The dictionary should not be empty.");
 
   if (dictionary.size() == 1) {
-      std::vector<std::pair<T,T>> ranges;
-      ranges.emplace_back(dictionary.front(), dictionary.front());
-      return std::make_unique<RangeFilter<T>>(std::move(ranges));
+    std::vector<std::pair<T, T>> ranges;
+    ranges.emplace_back(dictionary.front(), dictionary.front());
+    return std::make_unique<RangeFilter<T>>(std::move(ranges));
   }
 
   // calculate distances by taking the difference between two neighbouring elements
@@ -109,9 +111,9 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   //
   // next_startpoint is the start of the next range
 
-  std::vector<std::pair<T,T>> ranges;
+  std::vector<std::pair<T, T>> ranges;
   size_t next_startpoint = 0u;
-  for(const auto& distance_index_pair : distances) {
+  for (const auto& distance_index_pair : distances) {
     const auto index = std::get<1>(distance_index_pair);
     ranges.emplace_back(dictionary[next_startpoint], dictionary[index]);
     next_startpoint = index + 1;
