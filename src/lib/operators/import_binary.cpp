@@ -16,8 +16,13 @@
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/deprecated_dictionary_column/fitted_attribute_vector.hpp"
-#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
+#include "storage/partitioning/hash_function.hpp"
+#include "storage/partitioning/hash_partition_schema.hpp"
+#include "storage/partitioning/null_partition_schema.hpp"
+#include "storage/partitioning/range_partition_schema.hpp"
+#include "storage/partitioning/round_robin_partition_schema.hpp"
 #include "storage/storage_manager.hpp"
+#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -87,8 +92,30 @@ std::shared_ptr<const Table> ImportBinary::_on_execute() {
   std::shared_ptr<Table> table;
   ChunkID chunk_count;
   std::tie(table, chunk_count) = _read_header(file);
+  std::vector<std::shared_ptr<Chunk>> chunks;
+  chunks.reserve(chunk_count);
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
-    table->emplace_chunk(_import_chunk(file, table));
+    chunks.emplace_back(_import_chunk(file, table));
+  }
+
+  try {
+    // check if partitioning information is available
+    const auto partition_schema = _read_partitioning_header(file);
+    table->set_partitioning_and_clear(partition_schema);
+
+    std::map<ChunkID, PartitionID> chunk_to_partition;
+    for (PartitionID partition_id{0}; partition_id < partition_schema->partition_count(); ++partition_id) {
+      _import_partition(file, partition_schema, partition_id, chunk_to_partition);
+    }
+
+    for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+      table->emplace_chunk(chunks[chunk_id], chunk_to_partition[chunk_id]);
+    }
+  } catch (const std::ios_base::failure& fail) {
+    // unpartitioned table
+    for (auto chunk : chunks) {
+      table->emplace_chunk(chunk);
+    }
   }
 
   if (_tablename) {
@@ -116,6 +143,51 @@ std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstr
   }
 
   return std::make_pair(table, chunk_count);
+}
+
+std::shared_ptr<AbstractPartitionSchema> ImportBinary::_read_partitioning_header(std::ifstream& file) {
+  const auto partition_schema_type = static_cast<PartitionSchemaType>(_read_value<uint8_t>(file));
+  const auto partition_count = _read_value<PartitionID>(file);
+
+  switch (partition_schema_type) {
+    case PartitionSchemaType::Null: {
+      return std::make_shared<NullPartitionSchema>();
+    }
+    case PartitionSchemaType::RoundRobin: {
+      return std::make_shared<RoundRobinPartitionSchema>(partition_count);
+    }
+    case PartitionSchemaType::Hash: {
+      const auto column_id = _read_value<ColumnID>(file);
+      const auto hash_function_type = _read_value<uint8_t>(file);
+      auto hash_function = _resolve_hash_function(hash_function_type);
+      return std::make_shared<HashPartitionSchema>(column_id, std::move(hash_function), partition_count);
+    }
+    case PartitionSchemaType::Range: {
+      auto column_id = _read_value<ColumnID>(file);
+      auto bound_type_string = _read_values<std::string>(file, 1);
+      auto bound_type = data_type_to_string.right.at(bound_type_string.front());
+      std::vector<AllTypeVariant> bounds;
+      resolve_data_type(bound_type, [&](auto type) {
+        using VectorDataType = typename decltype(type)::type;
+        auto typed_bounds = _read_values<VectorDataType>(file, partition_count - 1);
+        std::copy(typed_bounds.begin(), typed_bounds.end(), std::back_inserter(bounds));
+      });
+      return std::make_shared<RangePartitionSchema>(column_id, bounds);
+    }
+    default: { Fail("Unknown partition schema"); }
+  }
+}
+
+void ImportBinary::_import_partition(std::ifstream& file,
+                                     const std::shared_ptr<AbstractPartitionSchema>& partition_schema,
+                                     const PartitionID partition_id,
+                                     std::map<ChunkID, PartitionID>& chunk_to_partition) {
+  const auto partition = partition_schema->get_partition(partition_id);
+  const auto chunk_count = _read_value<ChunkID>(file);
+  const auto chunk_ids = _read_values<ChunkID>(file, chunk_count);
+  for (const auto chunk_id : chunk_ids) {
+    chunk_to_partition[chunk_id] = partition_id;
+  }
 }
 
 std::shared_ptr<Chunk> ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& table) {
@@ -196,6 +268,16 @@ std::shared_ptr<DictionaryColumn<T>> ImportBinary::_import_dictionary_column(std
   auto attribute_vector = _import_attribute_vector(file, row_count, attribute_vector_width);
 
   return std::make_shared<DictionaryColumn<T>>(dictionary, attribute_vector, null_value_id);
+}
+
+std::unique_ptr<AbstractHashFunction> ImportBinary::_resolve_hash_function(uint8_t type_id) {
+  HashFunctionType hash_function_type = static_cast<HashFunctionType>(type_id);
+  switch (hash_function_type) {
+    case HashFunctionType::Default: {
+      return std::make_unique<HashFunction>();
+    }
+    default: { Fail("Unknown hash function type"); }
+  }
 }
 
 }  // namespace opossum

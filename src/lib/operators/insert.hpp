@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -30,6 +31,9 @@ class Insert : public AbstractReadWriteOperator {
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
   void _on_commit_records(const CommitID cid) override;
   void _on_rollback_records() override;
+
+  std::unordered_map<PartitionID, uint32_t> _count_rows_for_partitions(
+      std::map<RowID, PartitionID> target_partition_mapping);
 
  private:
   const std::string _target_table_name;

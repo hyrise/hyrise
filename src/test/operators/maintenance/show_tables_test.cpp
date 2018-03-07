@@ -11,7 +11,10 @@
 
 namespace opossum {
 
-class ShowTablesTest : public BaseTest {};
+class ShowTablesTest : public BaseTest {
+ protected:
+  void SetUp() override { StorageManager::reset(); }
+};
 
 TEST_F(ShowTablesTest, OperatorName) {
   auto st = std::make_shared<ShowTables>();

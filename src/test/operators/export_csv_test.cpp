@@ -12,6 +12,10 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/partitioning/hash_function.hpp"
+#include "storage/partitioning/hash_partition_schema.hpp"
+#include "storage/partitioning/range_partition_schema.hpp"
+#include "storage/partitioning/round_robin_partition_schema.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
@@ -104,6 +108,31 @@ TEST_F(OperatorsExportCsvTest, MultipleChunks) {
                            "3,\"Gute\",-4\n"
                            "4,\"Nacht\",7.5\n"
                            "5,\"Guten\",8.33\n"
+                           "6,\"Tag\",3.5\n"));
+}
+
+TEST_F(OperatorsExportCsvTest, MultipleChunksPartitioned) {
+  const std::vector<AllTypeVariant> bounds = {4.0f};
+  table->apply_partitioning(std::make_shared<RangePartitionSchema>(ColumnID{2}, bounds));
+  table->append({1, "Hallo", 3.5f});
+  table->append({2, "Welt!", 3.5f});
+  table->append({3, "Gute", -4.0f});
+  table->append({4, "Nacht", 7.5f});
+  table->append({5, "Guten", 8.33f});
+  table->append({6, "Tag", 3.5f});
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, filename);
+  ex->execute();
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(file_exists(meta_filename));
+  EXPECT_TRUE(compare_file(filename,
+                           "1,\"Hallo\",3.5\n"
+                           "2,\"Welt!\",3.5\n"
+                           "4,\"Nacht\",7.5\n"
+                           "5,\"Guten\",8.33\n"
+                           "3,\"Gute\",-4\n"
                            "6,\"Tag\",3.5\n"));
 }
 

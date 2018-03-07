@@ -37,6 +37,8 @@
 
 STRONG_TYPEDEF(uint32_t, ChunkID);
 STRONG_TYPEDEF(uint16_t, ColumnID);
+STRONG_TYPEDEF(uint16_t, PartitionID);
+STRONG_TYPEDEF(uint64_t, HashValue);
 STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
 STRONG_TYPEDEF(uint32_t, NodeID);
 STRONG_TYPEDEF(int32_t, CpuID);
@@ -237,6 +239,10 @@ enum class AggregateFunction { Min, Max, Sum, Avg, Count, CountDistinct };
 enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
 
 enum class TableType { References, Data };
+
+enum class PartitionSchemaType { Null = 0, RoundRobin = 1, Hash = 2, Range = 3 };
+
+enum class HashFunctionType { Default = 0 };
 
 enum class DescriptionMode { SingleLine, MultiLine };
 

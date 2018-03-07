@@ -127,8 +127,8 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   const auto table = StorageManager::get().get_table("table_int_float_chunked");
   std::vector<ColumnID> index_column_ids = {ColumnID{1}};
   std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
-  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
-  table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
+  table->get_mutable_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
+  table->get_mutable_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
 
   auto predicate_node =
       PredicateNode::make(LQPColumnReference(stored_table_node, ColumnID{1}), PredicateCondition::Equals, 42);
@@ -163,8 +163,8 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   const auto table = StorageManager::get().get_table("table_int_float_chunked");
   std::vector<ColumnID> index_column_ids = {ColumnID{1}};
   std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
-  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
-  table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
+  table->get_mutable_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
+  table->get_mutable_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
 
   auto predicate_node = PredicateNode::make(LQPColumnReference(stored_table_node, ColumnID{1}),
                                             PredicateCondition::Between, AllParameterVariant(42), AllTypeVariant(1337));
@@ -207,8 +207,8 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
   const auto table = StorageManager::get().get_table("table_int_float_chunked");
   std::vector<ColumnID> index_column_ids = {ColumnID{1}};
   std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
-  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
-  table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
+  table->get_mutable_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
+  table->get_mutable_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
 
   auto predicate_node =
       PredicateNode::make(LQPColumnReference(stored_table_node, ColumnID{1}), PredicateCondition::Equals, 42);

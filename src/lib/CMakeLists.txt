@@ -120,6 +120,8 @@ set(
     operators/maintenance/show_columns.hpp
     operators/maintenance/show_tables.cpp
     operators/maintenance/show_tables.hpp
+    operators/partitioning.cpp
+    operators/partitioning.hpp
     operators/pqp_expression.cpp
     operators/pqp_expression.hpp
     operators/print.cpp
@@ -377,6 +379,20 @@ set(
     utils/print_directed_acyclic_graph.hpp
     utils/scoped_locking_ptr.hpp
     utils/template_type.hpp
+    storage/partitioning/hash_function.hpp
+    storage/partitioning/hash_function.cpp
+    storage/partitioning/partition.cpp
+    storage/partitioning/partition.hpp
+    storage/partitioning/abstract_partition_schema.cpp
+    storage/partitioning/abstract_partition_schema.hpp
+    storage/partitioning/hash_partition_schema.cpp
+    storage/partitioning/hash_partition_schema.hpp
+    storage/partitioning/range_partition_schema.cpp
+    storage/partitioning/range_partition_schema.hpp
+    storage/partitioning/null_partition_schema.cpp
+    storage/partitioning/null_partition_schema.hpp
+    storage/partitioning/round_robin_partition_schema.cpp
+    storage/partitioning/round_robin_partition_schema.hpp
 )
 
 set(

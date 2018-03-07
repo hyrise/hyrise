@@ -109,6 +109,12 @@ class Chunk : private Noncopyable {
   Chunk(Chunk&&) = default;
   Chunk& operator=(Chunk&&) = default;
 
+  // returns id of the chunk
+  ChunkID id() const;
+
+  // sets the id of the chunk
+  void set_id(ChunkID id);
+
   // adds a column to the "right" of the chunk
   void add_column(std::shared_ptr<BaseColumn> column);
 
@@ -220,6 +226,7 @@ class Chunk : private Noncopyable {
   std::vector<std::shared_ptr<const BaseColumn>> get_columns_for_ids(const std::vector<ColumnID>& column_ids) const;
 
  private:
+  ChunkID _id;
   PolymorphicAllocator<Chunk> _alloc;
   pmr_concurrent_vector<std::shared_ptr<BaseColumn>> _columns;
   std::shared_ptr<MvccColumns> _mvcc_columns;

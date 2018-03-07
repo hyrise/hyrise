@@ -10,6 +10,7 @@
 #include "chunk.hpp"
 #include "proxy_chunk.hpp"
 #include "storage/index/index_info.hpp"
+#include "storage/partitioning/abstract_partition_schema.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -52,14 +53,17 @@ class Table : private Noncopyable {
   // returns the number of chunks (cannot exceed ChunkID (uint32_t))
   ChunkID chunk_count() const;
 
+  // creates a new chunk and appends it
+  std::shared_ptr<Chunk> create_new_chunk(PartitionID partition_id = PartitionID{0});
+
   // returns the chunk with the given id
-  std::shared_ptr<Chunk> get_chunk(ChunkID chunk_id);
+  std::shared_ptr<Chunk> get_mutable_chunk(ChunkID chunk_id);
   std::shared_ptr<const Chunk> get_chunk(ChunkID chunk_id) const;
-  ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id);
+  ProxyChunk get_mutable_chunk_with_access_counting(ChunkID chunk_id);
   const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const;
 
   // Adds a chunk to the table. If the first chunk is empty, it is replaced.
-  void emplace_chunk(const std::shared_ptr<Chunk>& chunk);
+  void emplace_chunk(const std::shared_ptr<Chunk>& chunk, PartitionID partition_id = PartitionID{0});
 
   // Returns a list of all column names.
   const std::vector<std::string>& column_names() const;
@@ -95,7 +99,7 @@ class Table : private Noncopyable {
 
   // inserts a row at the end of the table
   // note this is slow and not thread-safe and should be used for testing purposes only
-  void append(std::vector<AllTypeVariant> values);
+  void append(const std::vector<AllTypeVariant>& values);
 
   // returns one materialized value
   // multiversion concurrency control values of chunks are ignored
@@ -117,9 +121,6 @@ class Table : private Noncopyable {
     }
     Fail("Row does not exist.");
   }
-
-  // creates a new chunk and appends it
-  void create_new_chunk();
 
   std::unique_lock<std::mutex> acquire_append_mutex();
 
@@ -149,6 +150,20 @@ class Table : private Noncopyable {
   }
 
   /**
+   * Partitioning
+   * Standard PartitionSchema is NullPartitionSchema which creates no partitioning at all.
+   * On empty Tables, the PartitionSchema can be altered using the functions below.
+   * The logic behind partitioning (which tuples goes in which Partition) is handled by PartitionSchema.
+   */
+  void apply_partitioning(const std::shared_ptr<AbstractPartitionSchema> partition_schema);
+  // this function is needed for deserialization, it does not create a set of initial chunks
+  void set_partitioning_and_clear(const std::shared_ptr<AbstractPartitionSchema> partition_schema);
+
+  bool is_partitioned() const;
+  PartitionID partition_count() const;
+  const std::shared_ptr<const AbstractPartitionSchema> get_partition_schema() const;
+
+  /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Columns)
    */
   size_t estimate_memory_usage() const;
@@ -167,6 +182,9 @@ class Table : private Noncopyable {
 
   std::unique_ptr<std::mutex> _append_mutex;
 
+  std::shared_ptr<AbstractPartitionSchema> _partition_schema;
+
+  void _create_initial_chunks(PartitionID number_of_partitions);
   std::vector<IndexInfo> _indexes;
 };
 }  // namespace opossum

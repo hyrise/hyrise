@@ -9,9 +9,11 @@
 #include "import_export/binary.hpp"
 #include "storage/deprecated_dictionary_column/fitted_attribute_vector.hpp"
 #include "storage/dictionary_column.hpp"
-#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
-#include "storage/vector_compression/compressed_vector_type.hpp"
+#include "storage/partitioning/hash_partition_schema.hpp"
+#include "storage/partitioning/range_partition_schema.hpp"
 #include "storage/reference_column.hpp"
+#include "storage/vector_compression/compressed_vector_type.hpp"
+#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
@@ -130,6 +132,14 @@ std::shared_ptr<const Table> ExportBinary::_on_execute() {
     _write_chunk(table, ofstream, chunk_id);
   }
 
+  if (table->is_partitioned()) {
+    _write_partition_schema_header(table, ofstream);
+
+    for (PartitionID partition_id{0}; partition_id < table->get_partition_schema()->partition_count(); partition_id++) {
+      _write_partition_info(table, ofstream, partition_id);
+    }
+  }
+
   return _input_left->get_output();
 }
 
@@ -165,6 +175,57 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
     auto visitor = make_unique_by_data_type<ColumnVisitable, ExportBinaryVisitor>(table->column_type(column_id));
     chunk->get_column(column_id)->visit(*visitor, context);
   }
+}
+
+void ExportBinary::_write_partition_schema_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream) {
+  const auto partition_schema = table->get_partition_schema();
+  _export_value(ofstream, static_cast<uint8_t>(partition_schema->get_type()));
+  _export_value(ofstream, partition_schema->partition_count());
+
+  switch (partition_schema->get_type()) {
+    case PartitionSchemaType::Hash: {
+      const auto hash_schema = std::static_pointer_cast<const HashPartitionSchema>(partition_schema);
+      _export_value(ofstream, static_cast<ColumnID>(hash_schema->get_column_id()));
+      _export_value(ofstream, static_cast<uint8_t>(hash_schema->get_function_type()));
+      break;
+    }
+    case PartitionSchemaType::Range: {
+      const auto range_schema = std::static_pointer_cast<const RangePartitionSchema>(partition_schema);
+      const auto bound_type_string = data_type_to_string.left.at(range_schema->get_bound_type());
+      _export_value(ofstream, static_cast<ColumnID>(range_schema->get_column_id()));
+      _export_values(ofstream, std::vector<std::string>{bound_type_string});
+      resolve_data_type(range_schema->get_bound_type(), [&](auto type) {
+        using VectorDataType = typename decltype(type)::type;
+        std::vector<VectorDataType> typed_bounds;
+        typed_bounds.reserve(range_schema->get_bounds().size());
+        for (const auto& bound : range_schema->get_bounds()) {
+          typed_bounds.emplace_back(get<VectorDataType>(bound));
+        }
+        _export_values(ofstream, typed_bounds);
+      });
+      break;
+    }
+    case PartitionSchemaType::RoundRobin:
+    case PartitionSchemaType::Null: {
+      // no additional information is required
+      break;
+    }
+  }
+}
+
+void ExportBinary::_write_partition_info(const std::shared_ptr<const Table>& table, std::ofstream& ofstream,
+                                         const PartitionID& partition_id) {
+  const auto partition = table->get_partition_schema()->get_partition(partition_id);
+
+  // Iterating over all chunks and get corresponding id
+  const auto chunks = partition->get_chunks();
+  std::vector<ChunkID> chunk_ids;
+  chunk_ids.reserve(chunks.size());
+  for (const auto chunk : chunks) {
+    chunk_ids.emplace_back(chunk->id());
+  }
+  _export_value(ofstream, static_cast<ChunkID>(chunk_ids.size()));
+  _export_values(ofstream, chunk_ids);
 }
 
 template <typename T>
@@ -292,7 +353,7 @@ void ExportBinary::ExportBinaryVisitor<T>::_export_attribute_vector(std::ofstrea
       _export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint32_t>&>(attribute_vector).data());
       return;
     case CompressedVectorType::FixedSize2ByteAligned:
-     _export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint16_t>&>(attribute_vector).data());
+      _export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint16_t>&>(attribute_vector).data());
       return;
     case CompressedVectorType::FixedSize1ByteAligned:
       _export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint8_t>&>(attribute_vector).data());

@@ -51,6 +51,8 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * Column nullable       | bool (stored as BoolAsByteType)       |   Column Count * 1
    * Column name lengths   | ColumnNameLength array                |   Column Count * 1
    * Column names          | std::string array                     |   Sum of lengths of all names
+   * Partition schema      | uint8_t                               |   1
+   * Partition count       | PartitionID                           |   2
    *
    * @param table The table that is to be exported
    * @param ofstream The output stream for exporting
@@ -74,6 +76,60 @@ class ExportBinary : public AbstractReadOnlyOperator {
    *
    */
   static void _write_chunk(const std::shared_ptr<const Table>& table, std::ofstream& ofstream, const ChunkID& chunk_id);
+
+  /**
+   * This methods writes the header for the partitioning information of this table into the given ofstream.
+   *
+   * Description           | Type                                  | Size in bytes
+   * -----------------------------------------------------------------------------------------
+   * Partition schema      | uint8_t                               |   1
+   * Partition count       | PartitionID                           |   2
+   * Partition specific    | ?                                     |   ?
+   * 
+   * The partition specific information consists of the following:
+   * 
+   * NullPartitioningSchema: empty
+   * RoundRobinPartitioningSchema: empty
+   * 
+   * RangePartitioningSchema:
+   * 
+   * Description            | Type                                  | Size in bytes
+   * -----------------------------------------------------------------------------------------
+   * Column to partition by | ColumnID                              |   4
+   * DataType of bounds     | std::string array                     |   Length of DataType string representation
+   * Bounds                 | Typed array                           |   (Partition count - 1) * x
+   * 
+   * 
+   * HashPartitioningSchema:
+   * 
+   * Description            | Type                                  | Size in bytes
+   * -----------------------------------------------------------------------------------------
+   * Column to partition by | ColumnID                              |   4
+   * Hash function type     | uint8_t                               |   1
+   * 
+   *
+   * @param table The table that is to be exported
+   * @param ofstream The output stream for exporting
+   */
+  static void _write_partition_schema_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream);
+
+  /**
+   * Writes the chunk ids of the partition into the given ofstream.
+   * First, it creates a partition header with the following contents:
+   *
+   * Description           | Type                                  | Size in bytes
+   * -----------------------------------------------------------------------------------------
+   * Chunk count           | ChunkID                               |  4
+   *
+   * Next, it dumps the vector of chunk ids belonging to the partition.
+   *
+   * @param table The table we are currently exporting
+   * @param ofstream The output stream to write to
+   * @param partitionId The id of the chunk that is to be worked on now
+   *
+   */
+  static void _write_partition_info(const std::shared_ptr<const Table>& table, std::ofstream& ofstream,
+                                    const PartitionID& partition_id);
 
   template <typename T>
   class ExportBinaryVisitor;

@@ -47,6 +47,7 @@ set(
     operators/import_csv_test.cpp
     operators/index_scan_test.cpp
     operators/insert_test.cpp
+    operators/insert_partitioned_test.cpp
     operators/join_equi_test.cpp
     operators/join_full_test.cpp
     operators/join_hash_test.cpp
@@ -55,6 +56,7 @@ set(
     operators/join_semi_anti_test.cpp
     operators/join_test.hpp
     operators/limit_test.cpp
+    operators/partitioning_test.cpp
     operators/physical_query_plan_test.cpp
     operators/maintenance/create_view_test.cpp
     operators/maintenance/drop_view_test.cpp
@@ -123,6 +125,12 @@ set(
     storage/variable_length_key_base_test.cpp
     storage/variable_length_key_store_test.cpp
     storage/variable_length_key_test.cpp
+    storage/partitioning/hash_function_test.cpp
+    storage/partitioning/hash_partition_schema_test.cpp
+    storage/partitioning/null_partition_schema_test.cpp
+    storage/partitioning/partition_test.cpp
+    storage/partitioning/range_partition_schema_test.cpp
+    storage/partitioning/round_robin_partition_schema_test.cpp
     tasks/chunk_compression_task_test.cpp
     tasks/operator_task_test.cpp
     testing_assert.cpp

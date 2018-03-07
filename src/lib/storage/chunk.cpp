@@ -34,6 +34,9 @@ Chunk::Chunk(const PolymorphicAllocator<Chunk>& alloc, const UseMvcc mvcc_mode,
   if (counter_mode == ChunkUseAccessCounter::Yes) _access_counter = std::make_shared<AccessCounter>(alloc);
 }
 
+ChunkID Chunk::id() const { return _id; }
+
+void Chunk::set_id(ChunkID id) { _id = id; }
 void Chunk::add_column(std::shared_ptr<BaseColumn> column) {
   // The added column must have the same size as the chunk.
   DebugAssert((_columns.size() <= 0 || size() == column->size()),

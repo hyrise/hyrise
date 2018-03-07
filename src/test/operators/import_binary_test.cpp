@@ -7,6 +7,10 @@
 
 #include "operators/import_binary.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/partitioning/hash_function.hpp"
+#include "storage/partitioning/hash_partition_schema.hpp"
+#include "storage/partitioning/range_partition_schema.hpp"
+#include "storage/partitioning/round_robin_partition_schema.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -254,6 +258,66 @@ TEST_F(OperatorsImportBinaryTest, AllTypesDictionaryNullValues) {
   expected_table->append({5, 5.5f, 500, "five", opossum::NULL_VALUE});
 
   auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesDictionaryNullValues.bin");
+  importer->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
+
+TEST_F(OperatorsImportBinaryTest, AllTypesValueColumnRoundRobinPartitioned) {
+  auto expected_table = std::make_shared<opossum::Table>(2);
+  expected_table->apply_partitioning(std::make_shared<RoundRobinPartitionSchema>(PartitionID{3}));
+  expected_table->add_column("a", DataType::String);
+  expected_table->add_column("b", DataType::Int);
+  expected_table->add_column("c", DataType::Long);
+  expected_table->add_column("d", DataType::Float);
+  expected_table->add_column("e", DataType::Double);
+  expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
+  expected_table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
+  expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
+  expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
+
+  auto importer =
+      std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesValueColumnRoundRobinPartitioned.bin");
+  importer->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
+
+TEST_F(OperatorsImportBinaryTest, AllTypesValueColumnRangePartitioned) {
+  auto expected_table = std::make_shared<opossum::Table>(2);
+  const std::vector<AllTypeVariant> bounds = {2.5f, 4.0f};
+  expected_table->apply_partitioning(std::make_shared<RangePartitionSchema>(ColumnID{3}, bounds));
+  expected_table->add_column("a", DataType::String);
+  expected_table->add_column("b", DataType::Int);
+  expected_table->add_column("c", DataType::Long);
+  expected_table->add_column("d", DataType::Float);
+  expected_table->add_column("e", DataType::Double);
+  expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
+  expected_table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
+  expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
+  expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
+
+  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesValueColumnRangePartitioned.bin");
+  importer->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
+
+TEST_F(OperatorsImportBinaryTest, AllTypesValueColumnHashPartitioned) {
+  auto expected_table = std::make_shared<opossum::Table>(2);
+  auto hf = std::make_unique<HashFunction>();
+  expected_table->apply_partitioning(std::make_shared<HashPartitionSchema>(ColumnID{3}, std::move(hf), PartitionID{3}));
+  expected_table->add_column("a", DataType::String);
+  expected_table->add_column("b", DataType::Int);
+  expected_table->add_column("c", DataType::Long);
+  expected_table->add_column("d", DataType::Float);
+  expected_table->add_column("e", DataType::Double);
+  expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
+  expected_table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
+  expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
+  expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
+
+  auto importer = std::make_shared<opossum::ImportBinary>("src/test/binary/AllTypesValueColumnHashPartitioned.bin");
   importer->execute();
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);

@@ -11,6 +11,7 @@
 #include "import_export/binary.hpp"
 #include "storage/base_column.hpp"
 #include "storage/dictionary_column.hpp"
+#include "storage/partitioning/abstract_hash_function.hpp"
 #include "storage/value_column.hpp"
 
 namespace opossum {
@@ -29,13 +30,19 @@ class ImportBinary : public AbstractReadOnlyOperator {
   /*
    * Reads the given binary file. The file must be in the following form:
    *
-   * --------------
-   * |   Header   |
-   * |------------|
-   * |   Chunks¹  |
-   * --------------
+   * -----------------
+   * |     Header    |
+   * |---------------|
+   * |     Chunks¹   |
+   * |---------------|
+   * |  Part. Header²|
+   * |---------------|
+   * |   Partitions² |
+   * -----------------
    *
    * ¹ Zero or more chunks
+   * ² Partition header is optional. If present, there is at least 
+   *   one partition (e.g. the partition of NullPartitionSchema).
    */
   std::shared_ptr<const Table> _on_execute() final;
 
@@ -75,6 +82,47 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * ¹Number of columns is provided in the binary header
    */
   static std::shared_ptr<Chunk> _import_chunk(std::ifstream& file, std::shared_ptr<Table>& table);
+
+  /*
+   * Reads the header from the given file.
+   * Creates an empty table from the extracted information and
+   * returns that table and the number of chunks.
+   * The header has the following format:
+   *
+   * Description           | Type                                  | Size in bytes
+   * -----------------------------------------------------------------------------------------
+   * Partition schema      | uint8_t                               |   1
+   * Partition count       | PartitionID                           |   2
+   * Partition specific    | ?                                     |   ?
+   * 
+   * The partition specific information consists of the following:
+   * 
+   * NullPartitioningSchema: empty
+   * RoundRobinPartitioningSchema: empty
+   * 
+   * 
+   * RangePartitioningSchema:
+   * 
+   * Description            | Type                                  | Size in bytes
+   * -----------------------------------------------------------------------------------------
+   * Column to partition by | ColumnID                              |   4
+   * DataType of bounds     | std::string array                     |   Length of DataType string representation
+   * Bounds                 | Typed array                           |   (Partition count - 1) * x
+   * 
+   * 
+   * HashPartitioningSchema:
+   * 
+   * Description            | Type                                  | Size in bytes
+   * -----------------------------------------------------------------------------------------
+   * Column to partition by | ColumnID                              |   4
+   * Hash function type     | uint8_t                               |   1
+   *
+   */
+  static std::shared_ptr<AbstractPartitionSchema> _read_partitioning_header(std::ifstream& file);
+
+  // Reads the partition info from the given file and adds the corresponding chunks to it
+  static void _import_partition(std::ifstream& file, const std::shared_ptr<AbstractPartitionSchema>& partition_schema,
+                                const PartitionID partition_id, std::map<ChunkID, PartitionID>& chunk_to_partition);
 
   // Calls the right _import_column<ColumnDataType> depending on the given data_type.
   static std::shared_ptr<BaseColumn> _import_column(std::ifstream& file, ChunkOffset row_count, DataType data_type,
@@ -130,8 +178,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * °: This field is needed if the type of the column is NOT a string
    */
   template <typename T>
-  static std::shared_ptr<DictionaryColumn<T>> _import_dictionary_column(std::ifstream& file,
-                                                                        ChunkOffset row_count);
+  static std::shared_ptr<DictionaryColumn<T>> _import_dictionary_column(std::ifstream& file, ChunkOffset row_count);
 
   // Calls the _import_attribute_vector<uintX_t> function that corresponds to the given attribute_vector_width.
   static std::shared_ptr<BaseCompressedVector> _import_attribute_vector(std::ifstream& file, ChunkOffset row_count,
@@ -148,6 +195,8 @@ class ImportBinary : public AbstractReadOnlyOperator {
   // Reads a single value of type T from the input file.
   template <typename T>
   static T _read_value(std::ifstream& file);
+
+  static std::unique_ptr<AbstractHashFunction> _resolve_hash_function(uint8_t type_id);
 
  private:
   // Name of the import file

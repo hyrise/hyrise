@@ -39,6 +39,12 @@ std::shared_ptr<const Table> Print::_on_execute() {
 
   auto widths = _column_string_widths(8, 20, _input_table_left());
 
+  // print partitioning information
+  if (_input_table_left()->is_partitioned()) {
+    _out << "=== Partitioning" << std::endl;
+    _out << "Schema: " << _input_table_left()->get_partition_schema()->name() << std::endl;
+  }
+
   // print column headers
   _out << "=== Columns" << std::endl;
   for (ColumnID col{0}; col < _input_table_left()->column_count(); ++col) {
@@ -57,48 +63,54 @@ std::shared_ptr<const Table> Print::_on_execute() {
   }
   _out << "|" << std::endl;
 
-  // print each chunk
-  for (ChunkID chunk_id{0}; chunk_id < _input_table_left()->chunk_count(); ++chunk_id) {
-    auto chunk = _input_table_left()->get_chunk(chunk_id);
-    if (chunk->size() == 0 && (_flags & PrintIgnoreEmptyChunks)) {
-      continue;
+  // print each partition
+  for (PartitionID partition_id{0}; partition_id < _input_table_left()->partition_count(); ++partition_id) {
+    const auto partition = _input_table_left()->get_partition_schema()->get_partition(partition_id);
+    if (_input_table_left()->is_partitioned()) {
+      _out << "=== Partition " << partition_id << std::endl;
     }
-
-    _out << "=== Chunk " << chunk_id << " === " << std::endl;
-
-    if (chunk->size() == 0) {
-      _out << "Empty chunk." << std::endl;
-      continue;
-    }
-
-    // print the rows in the chunk
-    for (size_t row = 0; row < chunk->size(); ++row) {
-      _out << "|";
-      for (ColumnID col{0}; col < chunk->column_count(); ++col) {
-        // well yes, we use BaseColumn::operator[] here, but since Print is not an operation that should
-        // be part of a regular query plan, let's keep things simple here
-        auto col_width = widths[col];
-        auto cell = _truncate_cell((*chunk->get_column(col))[row], col_width);
-        _out << std::setw(col_width) << cell << "|" << std::setw(0);
+    // print each chunk
+    for (const auto chunk : partition->get_chunks()) {
+      if (chunk->size() == 0 && (_flags & PrintIgnoreEmptyChunks)) {
+        continue;
       }
 
-      if (_flags & PrintMvcc && chunk->has_mvcc_columns()) {
-        auto mvcc_columns = chunk->mvcc_columns();
+      _out << "=== Chunk " << chunk->id() << " === " << std::endl;
 
-        auto begin = mvcc_columns->begin_cids[row];
-        auto end = mvcc_columns->end_cids[row];
-        auto tid = mvcc_columns->tids[row];
+      if (chunk->size() == 0) {
+        _out << "Empty chunk." << std::endl;
+        continue;
+      }
 
-        auto begin_str = begin == Chunk::MAX_COMMIT_ID ? "" : std::to_string(begin);
-        auto end_str = end == Chunk::MAX_COMMIT_ID ? "" : std::to_string(end);
-        auto tid_str = tid == 0 ? "" : std::to_string(tid);
-
-        _out << "|" << std::setw(6) << begin_str << std::setw(0);
-        _out << "|" << std::setw(6) << end_str << std::setw(0);
-        _out << "|" << std::setw(6) << tid_str << std::setw(0);
+      // print the rows in the chunk
+      for (size_t row = 0; row < chunk->size(); ++row) {
         _out << "|";
+        for (ColumnID col{0}; col < chunk->column_count(); ++col) {
+          // well yes, we use BaseColumn::operator[] here, but since Print is not an operation that should
+          // be part of a regular query plan, let's keep things simple here
+          auto col_width = widths[col];
+          auto cell = _truncate_cell((*chunk->get_column(col))[row], col_width);
+          _out << std::setw(col_width) << cell << "|" << std::setw(0);
+        }
+
+        if (_flags & PrintMvcc && chunk->has_mvcc_columns()) {
+          auto mvcc_columns = chunk->mvcc_columns();
+
+          auto begin = mvcc_columns->begin_cids[row];
+          auto end = mvcc_columns->end_cids[row];
+          auto tid = mvcc_columns->tids[row];
+
+          auto begin_str = begin == Chunk::MAX_COMMIT_ID ? "" : std::to_string(begin);
+          auto end_str = end == Chunk::MAX_COMMIT_ID ? "" : std::to_string(end);
+          auto tid_str = tid == 0 ? "" : std::to_string(tid);
+
+          _out << "|" << std::setw(6) << begin_str << std::setw(0);
+          _out << "|" << std::setw(6) << end_str << std::setw(0);
+          _out << "|" << std::setw(6) << tid_str << std::setw(0);
+          _out << "|";
+        }
+        _out << std::endl;
       }
-      _out << std::endl;
     }
   }
 
