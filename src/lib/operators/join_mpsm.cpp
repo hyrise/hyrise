@@ -105,7 +105,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   struct TablePosition {
     TablePosition() {}
     TablePosition(NodeID partition, size_t cluster, size_t index)
-        : partition{partition}, cluster{cluster}, index{index} {}
+        : cluster{cluster}, index{index}, partition{partition} {}
 
     NodeID partition;
     size_t cluster;
@@ -119,7 +119,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     * a start position to an end position.
   **/
   struct TableRange {
-    TableRange(TablePosition start_position, TablePosition end_position) : start(start_position), end(end_position) {}
+    TableRange(TablePosition start_position, TablePosition end_position) : start{start_position}, end{end_position} {}
     TableRange(NodeID partition, size_t cluster, size_t start_index, size_t end_index)
         : start{TablePosition(partition, cluster, start_index)}, end{TablePosition(partition, cluster, end_index)} {}
 

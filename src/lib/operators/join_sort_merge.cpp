@@ -136,7 +136,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     * a start position to an end position.
   **/
   struct TableRange {
-    TableRange(TablePosition start_position, TablePosition end_position) : start(start_position), end(end_position) {}
+    TableRange(TablePosition start_position, TablePosition end_position) : start{start_position}, end{end_position} {}
     TableRange(size_t cluster, size_t start_index, size_t end_index)
         : start{TablePosition(cluster, start_index)}, end{TablePosition(cluster, end_index)} {}
 
