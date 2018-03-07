@@ -704,12 +704,12 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     PosListsByColumn left_pos_lists_by_column;
     PosListsByColumn right_pos_lists_by_column;
 
-    // left_pos_lists_by_column won't be used if left is data table or not being output at all
+    // left_pos_lists_by_column will only be needed if left is a reference table and being output
     if (ref_col_left && !only_output_right_input) {
       left_pos_lists_by_column = setup_pos_lists_by_column(_left_in_table);
     }
 
-    // right_pos_lists_by_column won't be used if right is data table
+    // right_pos_lists_by_column will only be needed if right is a reference table
     if (ref_col_right) {
       right_pos_lists_by_column = setup_pos_lists_by_column(_right_in_table);
     }
