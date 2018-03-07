@@ -34,8 +34,8 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
       auto decoder = vector.create_decoder();
       using ZsDecoderType = std::decay_t<decltype(*decoder)>;
 
-      auto begin = PointAccessIterator<ZsDecoderType>{_column.block_minima().get(), _column.null_values().get(), decoder.get(),
-                                                      mapped_chunk_offsets.cbegin()};
+      auto begin = PointAccessIterator<ZsDecoderType>{_column.block_minima().get(), _column.null_values().get(),
+                                                      decoder.get(), mapped_chunk_offsets.cbegin()};
 
       auto end = PointAccessIterator<ZsDecoderType>{mapped_chunk_offsets.cend()};
 

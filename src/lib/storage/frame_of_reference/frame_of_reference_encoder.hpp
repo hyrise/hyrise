@@ -1,8 +1,8 @@
 #pragma once
 
-#include <memory>
 #include <array>
 #include <limits>
+#include <memory>
 
 #include "storage/base_column_encoder.hpp"
 
@@ -53,8 +53,9 @@ class FrameOfReferenceEncoder : public ColumnEncoder<FrameOfReferenceEncoder> {
           null_values.push_back(column_value.is_null());
         }
 
-        const auto [min_it, max_it] = std::minmax_element(value_block.begin(), value_block_it);
-        Assert(static_cast<std::make_unsigned_t<T>>(*max_it - *min_it) <= std::numeric_limits<uint32_t>::max(), "Value range in block must fit into uint32_t.");
+        const auto[min_it, max_it] = std::minmax_element(value_block.begin(), value_block_it);
+        Assert(static_cast<std::make_unsigned_t<T>>(*max_it - *min_it) <= std::numeric_limits<uint32_t>::max(),
+               "Value range in block must fit into uint32_t.");
 
         const auto minimum = *min_it;
         block_minima.push_back(minimum);
@@ -72,7 +73,8 @@ class FrameOfReferenceEncoder : public ColumnEncoder<FrameOfReferenceEncoder> {
     auto block_minima_ptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(block_minima));
     auto encoded_offset_values_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(encoded_offset_values));
     auto null_values_ptr = std::allocate_shared<pmr_vector<bool>>(alloc, std::move(null_values));
-    return std::allocate_shared<FrameOfReferenceColumn<T>>(alloc, block_minima_ptr, encoded_offset_values_sptr, null_values_ptr);
+    return std::allocate_shared<FrameOfReferenceColumn<T>>(alloc, block_minima_ptr, encoded_offset_values_sptr,
+                                                           null_values_ptr);
   }
 };
 

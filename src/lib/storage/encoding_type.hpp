@@ -26,10 +26,10 @@ enum class EncodingType : uint8_t { Unencoded, Dictionary, RunLength, FrameOfRef
  *
  * Use data_types if the encoding supports all data types.
  */
-constexpr auto supported_data_types_for_type =
-    hana::make_map(hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, data_types),
-                   hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, data_types),
-                   hana::make_pair(enum_c<EncodingType, EncodingType::FrameOfReference>, hana::tuple_t<int32_t, int64_t>));
+constexpr auto supported_data_types_for_type = hana::make_map(
+    hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, data_types),
+    hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, data_types),
+    hana::make_pair(enum_c<EncodingType, EncodingType::FrameOfReference>, hana::tuple_t<int32_t, int64_t>));
 
 //  Example for an encoding that doesn’t support all data types:
 //  hane::make_pair(enum_c<EncodingType, EncodingType::NewEncoding>, hana::tuple_t<int32_t, int64_t>)

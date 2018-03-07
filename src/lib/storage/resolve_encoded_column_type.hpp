@@ -9,8 +9,8 @@
 
 // Include your encoded column file here!
 #include "storage/dictionary_column.hpp"
-#include "storage/run_length_column.hpp"
 #include "storage/frame_of_reference_column.hpp"
+#include "storage/run_length_column.hpp"
 
 #include "storage/encoding_type.hpp"
 

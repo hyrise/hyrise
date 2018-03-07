@@ -2,11 +2,11 @@
 
 #include "storage/column_iterables/any_column_iterable.hpp"
 #include "storage/dictionary_column/dictionary_column_iterable.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/frame_of_reference/frame_of_reference_iterable.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/run_length_column/run_length_column_iterable.hpp"
 #include "storage/value_column/value_column_iterable.hpp"
-#include "storage/encoding_type.hpp"
 
 namespace opossum {
 
