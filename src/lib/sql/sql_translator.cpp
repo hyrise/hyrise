@@ -822,7 +822,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_projection(
 
     // For subselects, recursively translate the term to an LQPNode and add its root to an LQPExpression
     if (select_column_hsql_expr->select) {
-      auto alias = select_column_hsql_expr->alias != nullptr ? std::optional<std::string>(select_column_hsql_expr->alias) : std::nullopt;
+      auto alias = select_column_hsql_expr->alias != nullptr
+                       ? std::optional<std::string>(select_column_hsql_expr->alias)
+                       : std::nullopt;
       auto subselect_node = _translate_select(*select_column_hsql_expr->select);
       expr = LQPExpression::create_subselect(subselect_node, alias);
     } else {
