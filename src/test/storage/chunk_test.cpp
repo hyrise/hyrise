@@ -26,8 +26,8 @@ class StorageChunkTest : public BaseTest {
     vc_str->append("world");
     vc_str->append("!");
 
-    dc_int = encode_column(EncodingType::DeprecatedDictionary, DataType::Int, vc_int);
-    dc_str = encode_column(EncodingType::DeprecatedDictionary, DataType::String, vc_str);
+    dc_int = encode_column(EncodingType::Dictionary, DataType::Int, vc_int);
+    dc_str = encode_column(EncodingType::Dictionary, DataType::String, vc_str);
 
     c = std::make_shared<Chunk>();
   }

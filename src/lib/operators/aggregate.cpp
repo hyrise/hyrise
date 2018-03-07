@@ -66,8 +66,10 @@ const std::string Aggregate::description(DescriptionMode description_mode) const
   return desc.str();
 }
 
-std::shared_ptr<AbstractOperator> Aggregate::recreate(const std::vector<AllParameterVariant>& args) const {
-  return std::make_shared<Aggregate>(_input_left->recreate(args), _aggregates, _groupby_column_ids);
+std::shared_ptr<AbstractOperator> Aggregate::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+  return std::make_shared<Aggregate>(recreated_input_left, _aggregates, _groupby_column_ids);
 }
 
 /*

@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "import_export/binary.hpp"
-#include "storage/deprecated_dictionary_column/fitted_attribute_vector.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
@@ -133,6 +132,12 @@ std::shared_ptr<const Table> ExportBinary::_on_execute() {
   return _input_left->get_output();
 }
 
+std::shared_ptr<AbstractOperator> ExportBinary::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+  return std::make_shared<ExportBinary>(recreated_input_left, _filename);
+}
+
 void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream) {
   _export_value(ofstream, static_cast<ChunkOffset>(table->max_chunk_size()));
   _export_value(ofstream, static_cast<ChunkID>(table->chunk_count()));
@@ -222,12 +227,6 @@ void ExportBinary::ExportBinaryVisitor<std::string>::handle_column(
 
   _export_values(context->ofstream, string_lengths);
   context->ofstream << values.rdbuf();
-}
-
-template <typename T>
-void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseDeprecatedDictionaryColumn& base_column,
-                                                         std::shared_ptr<ColumnVisitableContext> base_context) {
-  Fail("Does not support the deprecated dictionary column any longer.");
 }
 
 template <typename T>

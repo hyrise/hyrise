@@ -37,7 +37,9 @@ const std::string Projection::description(DescriptionMode description_mode) cons
 
 const Projection::ColumnExpressions& Projection::column_expressions() const { return _column_expressions; }
 
-std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllParameterVariant>& args) const {
+std::shared_ptr<AbstractOperator> Projection::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
   ColumnExpressions new_column_expressions;
 
   for (const auto& column_expression : _column_expressions) {
@@ -54,7 +56,7 @@ std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllPara
     }
   }
 
-  return std::make_shared<Projection>(_input_left->recreate(args), new_column_expressions);
+  return std::make_shared<Projection>(recreated_input_left, new_column_expressions);
 }
 
 template <typename T>

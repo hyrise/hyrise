@@ -15,9 +15,6 @@
 #include "scheduler/job_task.hpp"
 #include "storage/column_visitable.hpp"
 #include "storage/create_iterable_from_column.hpp"
-#include "storage/deprecated_dictionary_column.hpp"
-#include "storage/reference_column.hpp"
-#include "storage/value_column.hpp"
 #include "type_cast.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
@@ -35,8 +32,10 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
 
 const std::string JoinHash::name() const { return "JoinHash"; }
 
-std::shared_ptr<AbstractOperator> JoinHash::recreate(const std::vector<AllParameterVariant>& args) const {
-  return std::make_shared<JoinHash>(_input_left->recreate(args), _input_right->recreate(args), _mode, _column_ids,
+std::shared_ptr<AbstractOperator> JoinHash::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+  return std::make_shared<JoinHash>(recreated_input_left, recreated_input_right, _mode, _column_ids,
                                     _predicate_condition);
 }
 
