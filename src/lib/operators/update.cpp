@@ -34,7 +34,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
   TableColumnDefinitions insert_table_column_definitions;
   for (ColumnID column_id{0}; column_id < table_to_update->column_count(); ++column_id) {
     insert_table_column_definitions.emplace_back(table_to_update->column_name(column_id),
-                                                table_to_update->column_data_type(column_id));
+                                                 table_to_update->column_data_type(column_id));
   }
 
   auto insert_table = std::make_shared<Table>(insert_table_column_definitions, TableType::References);
