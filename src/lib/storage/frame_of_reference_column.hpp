@@ -19,14 +19,21 @@ class BaseCompressedVector;
  */
 template <typename T>
 class FrameOfReferenceColumn : public BaseEncodedColumn {
+  static_cast(encoding_supports<EncodingType::FrameOfReference, T>, "FOR supports only integral data types.");
+
  public:
-  static constexpr auto frame_size = 2048u;
+  /**
+   * The column is divided into fixed-size blocks.
+   * Each block has its own minimum from which the
+   * offsets are calculated.
+   */
+  static constexpr auto block_size = 2048u;
 
   explicit FrameOfReferenceColumn(std::shared_ptr<const pmr_vector<T>> reference_frames,
                                   std::shared_ptr<const BaseCompressedVector> offset_values,
                                   std::shared_ptr<const pmr_vector<bool>> null_values);
 
-  std::shared_ptr<const pmr_vector<T>> reference_frames() const;
+  std::shared_ptr<const pmr_vector<T>> block_minima() const;
   std::shared_ptr<const BaseCompressedVector> offset_values() const;
   std::shared_ptr<const pmr_vector<bool>> null_values() const;
 
@@ -56,7 +63,7 @@ class FrameOfReferenceColumn : public BaseEncodedColumn {
   /**@}*/
 
  private:
-  const std::shared_ptr<const pmr_vector<T>> _reference_frames;
+  const std::shared_ptr<const pmr_vector<T>> _block_minima;
   const std::shared_ptr<const BaseCompressedVector> _offset_values;
   const std::shared_ptr<const pmr_vector<bool>> _null_values;
 };

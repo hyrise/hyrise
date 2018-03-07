@@ -25,6 +25,8 @@ const ColumnEncodingSpec all_column_encoding_specs[]{
     {EncodingType::Unencoded},
     {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
     {EncodingType::Dictionary, VectorCompressionType::SimdBp128},
+    {EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned},
+    {EncodingType::FrameOfReference, VectorCompressionType::SimdBp128},
     {EncodingType::RunLength}};
 
 }  // namespace opossum

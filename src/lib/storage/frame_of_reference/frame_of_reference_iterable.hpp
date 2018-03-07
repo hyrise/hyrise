@@ -19,7 +19,7 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
     resolve_compressed_vector_type(*_column.offset_values(), [&](const auto& offset_values) {
       using ZsIteratorType = decltype(offset_values.cbegin());
 
-      auto begin = Iterator<ZsIteratorType>{_column.reference_frames()->cbegin(), offset_values.cbegin(),
+      auto begin = Iterator<ZsIteratorType>{_column.block_minima()->cbegin(), offset_values.cbegin(),
                                             _column.null_values()->cbegin()};
 
       auto end = Iterator<ZsIteratorType>{offset_values.cend()};
@@ -34,7 +34,7 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
       auto decoder = vector.create_decoder();
       using ZsDecoderType = std::decay_t<decltype(*decoder)>;
 
-      auto begin = PointAccessIterator<ZsDecoderType>{_column.reference_frames().get(), _column.null_values().get(), decoder.get(),
+      auto begin = PointAccessIterator<ZsDecoderType>{_column.block_minima().get(), _column.null_values().get(), decoder.get(),
                                                       mapped_chunk_offsets.cbegin()};
 
       auto end = PointAccessIterator<ZsDecoderType>{mapped_chunk_offsets.cend()};
@@ -56,9 +56,9 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
 
    public:
     // Begin Iterator
-    explicit Iterator(ReferenceFrameIterator reference_frame_it, OffsetValueIterator offset_value_it,
+    explicit Iterator(ReferenceFrameIterator block_minimum_it, OffsetValueIterator offset_value_it,
                       NullValueIterator null_value_it)
-        : _reference_frame_it{reference_frame_it},
+        : _block_minimum_it{block_minimum_it},
           _offset_value_it{offset_value_it},
           _null_value_it{null_value_it},
           _index_within_frame{0u},
@@ -76,21 +76,21 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
       ++_index_within_frame;
       ++_chunk_offset;
 
-      if (_index_within_frame >= FrameOfReferenceColumn<T>::frame_size) {
+      if (_index_within_frame >= FrameOfReferenceColumn<T>::block_size) {
         _index_within_frame = 0u;
-        ++_reference_frame_it;
+        ++_block_minimum_it;
       }
     }
 
     bool equal(const Iterator& other) const { return _offset_value_it == other._offset_value_it; }
 
     ColumnIteratorValue<T> dereference() const {
-      const auto value = static_cast<T>(*_offset_value_it) + *_reference_frame_it;
+      const auto value = static_cast<T>(*_offset_value_it) + *_block_minimum_it;
       return ColumnIteratorValue<T>{value, *_null_value_it, _chunk_offset};
     }
 
    private:
-    ReferenceFrameIterator _reference_frame_it;
+    ReferenceFrameIterator _block_minimum_it;
     OffsetValueIterator _offset_value_it;
     NullValueIterator _null_value_it;
     size_t _index_within_frame;
@@ -102,10 +102,10 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
       : public BasePointAccessColumnIterator<PointAccessIterator<ZsDecoderType>, ColumnIteratorValue<T>> {
    public:
     // Begin Iterator
-    PointAccessIterator(const pmr_vector<T>* reference_frames, const pmr_vector<bool>* null_values,
+    PointAccessIterator(const pmr_vector<T>* block_minima, const pmr_vector<bool>* null_values,
                         ZsDecoderType* attribute_decoder, ChunkOffsetsIterator chunk_offsets_it)
         : BasePointAccessColumnIterator<PointAccessIterator<ZsDecoderType>, ColumnIteratorValue<T>>{chunk_offsets_it},
-          _reference_frames{reference_frames},
+          _block_minima{block_minima},
           _null_values{null_values},
           _attribute_decoder{attribute_decoder} {}
 
@@ -122,18 +122,18 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
       if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET)
         return ColumnIteratorValue<T>{T{}, true, chunk_offsets.into_referencing};
 
-      static constexpr auto frame_size = FrameOfReferenceColumn<T>::frame_size;
+      static constexpr auto block_size = FrameOfReferenceColumn<T>::block_size;
 
       const auto is_null = (*_null_values)[chunk_offsets.into_referenced];
-      const auto reference_frame = (*_reference_frames)[chunk_offsets.into_referenced / frame_size];
+      const auto block_minimum = (*_block_minima)[chunk_offsets.into_referenced / block_size];
       const auto offset_value = _attribute_decoder->get(chunk_offsets.into_referenced);
-      const auto value = static_cast<T>(offset_value) + reference_frame;
+      const auto value = static_cast<T>(offset_value) + block_minimum;
 
       return ColumnIteratorValue<T>{value, is_null, chunk_offsets.into_referencing};
     }
 
    private:
-    const pmr_vector<T>* _reference_frames;
+    const pmr_vector<T>* _block_minima;
     const pmr_vector<bool>* _null_values;
     ZsDecoderType* _attribute_decoder;
   };

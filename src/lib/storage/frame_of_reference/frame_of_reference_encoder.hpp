@@ -24,13 +24,13 @@ class FrameOfReferenceEncoder : public ColumnEncoder<FrameOfReferenceEncoder> {
   std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueColumn<T>>& value_column) {
     const auto alloc = value_column->values().get_allocator();
 
-    static constexpr auto frame_size = FrameOfReferenceColumn<T>::frame_size;
+    static constexpr auto block_size = FrameOfReferenceColumn<T>::block_size;
 
     const auto size = value_column->size();
-    const auto num_reference_frames = size / frame_size;
+    const auto num_blocks = size / block_size;
 
-    auto reference_frames = pmr_vector<T>{alloc};
-    reference_frames.reserve(num_reference_frames);
+    auto block_minima = pmr_vector<T>{alloc};
+    block_minima.reserve(num_blocks);
 
     auto offset_values = pmr_vector<uint32_t>{alloc};
     offset_values.reserve(size);
@@ -42,7 +42,7 @@ class FrameOfReferenceEncoder : public ColumnEncoder<FrameOfReferenceEncoder> {
 
     auto iterable = ValueColumnIterable<T>{*value_column};
     iterable.with_iterators([&](auto column_it, auto column_end) {
-      auto value_block = std::array<T, frame_size>{};
+      auto value_block = std::array<T, block_size>{};
 
       while (column_it != column_end) {
         auto value_block_it = value_block.begin();
@@ -56,11 +56,11 @@ class FrameOfReferenceEncoder : public ColumnEncoder<FrameOfReferenceEncoder> {
         const auto [min_it, max_it] = std::minmax_element(value_block.begin(), value_block_it);
         Assert(static_cast<std::make_unsigned_t<T>>(*max_it - *min_it) <= std::numeric_limits<uint32_t>::max(), "Value range in block must fit into uint32_t.");
 
-        const auto reference_frame = *min_it;
-        reference_frames.push_back(reference_frame);
+        const auto minimum = *min_it;
+        block_minima.push_back(minimum);
 
         for (auto value : value_block) {
-          const auto offset = static_cast<uint32_t>(value - reference_frame);
+          const auto offset = static_cast<uint32_t>(value - minimum);
           offset_values.push_back(offset);
           max_value |= offset;
         }
@@ -69,10 +69,10 @@ class FrameOfReferenceEncoder : public ColumnEncoder<FrameOfReferenceEncoder> {
 
     auto encoded_offset_values = compress_vector(offset_values, vector_compression_type(), alloc, {max_value});
 
-    auto reference_frames_ptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(reference_frames));
+    auto block_minima_ptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(block_minima));
     auto encoded_offset_values_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(encoded_offset_values));
     auto null_values_ptr = std::allocate_shared<pmr_vector<bool>>(alloc, std::move(null_values));
-    return std::allocate_shared<FrameOfReferenceColumn<T>>(alloc, reference_frames_ptr, encoded_offset_values_sptr, null_values_ptr);
+    return std::allocate_shared<FrameOfReferenceColumn<T>>(alloc, block_minima_ptr, encoded_offset_values_sptr, null_values_ptr);
   }
 };
 
