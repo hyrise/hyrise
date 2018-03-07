@@ -158,7 +158,7 @@ class RadixClusterSortNUMA {
 
     // Reserve the required space and move the data to the output
     auto output_chunk = std::make_shared<MaterializedChunk<T>>();
-    _materialized_table_size((*input_table)[0]);
+    output_chunk->reserve(_materialized_table_size((*input_table)[0]));
     for (auto& chunk : (*input_table)[0]._chunk_columns) {
       output_chunk->insert(output_chunk->end(), chunk->begin(), chunk->end());
     }
