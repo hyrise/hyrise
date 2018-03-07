@@ -50,13 +50,12 @@ template <typename T>
 class RadixClusterSortNUMA {
  public:
   RadixClusterSortNUMA(const std::shared_ptr<const Table> left, const std::shared_ptr<const Table> right,
-                       const std::pair<ColumnID, ColumnID>& column_ids, bool equi_case,
+                       const std::pair<ColumnID, ColumnID>& column_ids,
                        const bool materialize_null_left, const bool materialize_null_right, size_t cluster_count)
       : _input_table_left{left},
         _input_table_right{right},
         _left_column_id{column_ids.first},
         _right_column_id{column_ids.second},
-        _equi_case{equi_case},
         _cluster_count{cluster_count},
         _materialize_null_left{materialize_null_left},
         _materialize_null_right{materialize_null_right} {
@@ -112,7 +111,6 @@ class RadixClusterSortNUMA {
   std::shared_ptr<const Table> _input_table_right;
   const ColumnID _left_column_id;
   const ColumnID _right_column_id;
-  bool _equi_case;
 
   // The cluster count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
   // It is asserted to be a power of two in the constructor.
@@ -339,8 +337,8 @@ class RadixClusterSortNUMA {
     RadixClusterOutput<T> output;
 
     // Sort the chunks of the input tables in the non-equi cases
-    ColumnMaterializer<T> left_column_materializer(!_equi_case, _materialize_null_left);
-    ColumnMaterializer<T> right_column_materializer(!_equi_case, _materialize_null_right);
+    ColumnMaterializer<T> left_column_materializer( _materialize_null_left);
+    ColumnMaterializer<T> right_column_materializer(_materialize_null_right);
     auto materialization_left = left_column_materializer.materialize(_input_table_left, _left_column_id);
     auto materialization_right = right_column_materializer.materialize(_input_table_right, _right_column_id);
     auto materialized_left_columns = std::move(materialization_left.first);

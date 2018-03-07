@@ -462,7 +462,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
     auto radix_clusterer = RadixClusterSortNUMA<T>(
         _mpsm_join._input_table_left(), _mpsm_join._input_table_right(), _mpsm_join._column_ids,
-        _op == PredicateCondition::Equals, include_null_left, include_null_right, _cluster_count);
+        include_null_left, include_null_right, _cluster_count);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
     _sorted_left_table = std::move(sort_output.clusters_left);

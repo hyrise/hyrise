@@ -59,7 +59,7 @@ using MaterializedNUMAPartitionList = std::vector<MaterializedNUMAPartition<T>>;
 template <typename T>
 class ColumnMaterializer {
  public:
-  explicit ColumnMaterializer(bool sort, bool materialize_null) : _sort{sort}, _materialize_null{materialize_null} {}
+  explicit ColumnMaterializer(bool materialize_null) : _materialize_null{materialize_null} {}
 
  public:
   /**
@@ -153,11 +153,6 @@ class ColumnMaterializer {
       }
     });
 
-    if (_sort) {
-      std::sort(output->begin(), output->end(),
-                [](const auto& left, const auto& right) { return left.value < right.value; });
-    }
-
     partition._chunk_columns[chunk_id] = output;
   }
 
@@ -173,58 +168,23 @@ class ColumnMaterializer {
     auto value_ids = column.attribute_vector();
     auto dict = column.dictionary();
 
-    if (_sort) {
-      // Works like Bucket Sort
-      // Collect for every value id, the set of rows that this value appeared in
-      // value_count is used as an inverted index
 
-      auto rows_with_value = std::vector<std::vector<RowID>>(dict->size());
-
-      // Reserve correct size of the vectors by assuming a uniform distribution
-      for (auto& row : rows_with_value) {
-        row.reserve(value_ids->size() / dict->size());
-      }
-
-      // Collect the rows for each value id
-      for (ChunkOffset chunk_offset{0}; chunk_offset < value_ids->size(); ++chunk_offset) {
-        auto value_id = value_ids->get(chunk_offset);
-
-        if (value_id != NULL_VALUE_ID) {
-          rows_with_value[value_id].push_back(RowID{chunk_id, chunk_offset});
-        } else {
-          if (_materialize_null) {
-            null_rows_output->emplace_back(RowID{chunk_id, chunk_offset});
-          }
+    auto iterable = create_iterable_from_column(column);
+    iterable.for_each([&](const auto& column_value) {
+      const auto row_id = RowID{chunk_id, column_value.chunk_offset()};
+      if (column_value.is_null()) {
+        if (_materialize_null) {
+          null_rows_output->emplace_back(row_id);
         }
+      } else {
+        output.emplace_back(row_id, column_value.value());
       }
-
-      // Output the Materialized Values
-      ChunkOffset chunk_offset{0};
-      for (ValueID value_id{0}; value_id < dict->size(); ++value_id) {
-        for (auto& row_id : rows_with_value[value_id]) {
-          output.emplace_back(row_id, (*dict)[value_id]);
-          ++chunk_offset;
-        }
-      }
-    } else {
-      auto iterable = create_iterable_from_column(column);
-      iterable.for_each([&](const auto& column_value) {
-        const auto row_id = RowID{chunk_id, column_value.chunk_offset()};
-        if (column_value.is_null()) {
-          if (_materialize_null) {
-            null_rows_output->emplace_back(row_id);
-          }
-        } else {
-          output.emplace_back(row_id, column_value.value());
-        }
-      });
-    }
+    });
 
     return std::make_shared<MaterializedChunk<T>>(std::move(output));
   }
 
  private:
-  bool _sort;
   bool _materialize_null;
 };
 
