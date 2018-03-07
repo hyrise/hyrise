@@ -181,11 +181,11 @@ class RadixClusterSortNUMA {
                                         std::function<size_t(const T&)> clusterer, NodeID node_id) {
     auto num_chunks = input_chunks._chunk_columns.size();
     auto output_table = MaterializedNUMAPartition<T>(node_id, _cluster_count);
-    NUMAPartitionInformation numa_part_info(num_chunks, _cluster_count);
+    NUMAPartitionInformation numa_partition_information(num_chunks, _cluster_count);
 
     // Count for every chunk the number of entries for each cluster in parallel
     for (size_t chunk_number = 0; chunk_number < num_chunks; ++chunk_number) {
-      auto& chunk_information = numa_part_info.chunk_information[chunk_number];
+      auto& chunk_information = numa_partition_information.chunk_information[chunk_number];
       auto input_chunk = input_chunks._chunk_columns[chunk_number];
 
       for (auto& entry : *input_chunk) {
@@ -195,16 +195,16 @@ class RadixClusterSortNUMA {
     }
 
     // Aggregate the chunks histograms to a table histogram and initialize the insert positions for each chunk
-    for (auto& chunk_information : numa_part_info.chunk_information) {
+    for (auto& chunk_information : numa_partition_information.chunk_information) {
       for (size_t cluster_id = 0; cluster_id < _cluster_count; ++cluster_id) {
-        chunk_information.insert_position[cluster_id] = numa_part_info.cluster_histogram[cluster_id];
-        numa_part_info.cluster_histogram[cluster_id] += chunk_information.cluster_histogram[cluster_id];
+        chunk_information.insert_position[cluster_id] = numa_partition_information.cluster_histogram[cluster_id];
+        numa_partition_information.cluster_histogram[cluster_id] += chunk_information.cluster_histogram[cluster_id];
       }
     }
 
     // Reserve the appropriate output space for the clusters
     for (size_t cluster_id = 0; cluster_id < _cluster_count; ++cluster_id) {
-      auto cluster_size = numa_part_info.cluster_histogram[cluster_id];
+      auto cluster_size = numa_partition_information.cluster_histogram[cluster_id];
       output_table._chunk_columns[cluster_id] =
           std::make_shared<MaterializedChunk<T>>(cluster_size, output_table._alloc);
     }
@@ -212,8 +212,8 @@ class RadixClusterSortNUMA {
     // Move each entry into its appropriate cluster in parallel
     std::vector<std::shared_ptr<AbstractTask>> cluster_jobs;
     for (size_t chunk_number = 0; chunk_number < num_chunks; ++chunk_number) {
-      auto job = std::make_shared<JobTask>([chunk_number, &output_table, &input_chunks, &numa_part_info, &clusterer] {
-        auto& chunk_information = numa_part_info.chunk_information[chunk_number];
+      auto job = std::make_shared<JobTask>([chunk_number, &output_table, &input_chunks, &numa_partition_information, &clusterer] {
+        auto& chunk_information = numa_partition_information.chunk_information[chunk_number];
         for (auto& entry : (*input_chunks._chunk_columns[chunk_number])) {
           auto cluster_id = clusterer(entry.value);
           auto& output_cluster = output_table._chunk_columns[cluster_id];
