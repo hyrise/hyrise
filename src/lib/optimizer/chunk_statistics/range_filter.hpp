@@ -8,15 +8,15 @@
 
 namespace opossum {
 
-// select how many ranges we want in the filter
-// make this customizable?
+//! default number of maximum range count
 static constexpr uint32_t MAX_RANGES_COUNT = 10;
 
 /**
- * Filter that stores MAX_RANGES_COUNT value ranges. Each range represents a gap in the data
- * i.e. an interval where the column has no values.
+ * Filter that stores a certain number of value ranges. Each range represents a spread
+ * of values that is contained within the bounds.
+ * Example: [1, 2, 4, 7] might be represented as [1, 7]
  * These ranges can be used to check whether a certain value exists in the column.
- * Once the between operator uses two parameters, the ranges can be used for that aswell.
+ * Once the between operator uses two parameters, the ranges can be used for that as well.
 */
 template <typename T>
 class RangeFilter : public AbstractFilter {
@@ -26,7 +26,7 @@ class RangeFilter : public AbstractFilter {
   explicit RangeFilter(std::vector<std::pair<T, T>> ranges) : _ranges(std::move(ranges)) {}
   ~RangeFilter() override = default;
 
-  static std::unique_ptr<RangeFilter<T>> build_filter(const pmr_vector<T>& dictionary);
+  static std::unique_ptr<RangeFilter<T>> build_filter(const pmr_vector<T>& dictionary, uint32_t max_ranges_count = MAX_RANGES_COUNT);
 
   bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const override {
     const auto t_value = boost::get<T>(value);
@@ -69,7 +69,7 @@ class RangeFilter : public AbstractFilter {
 };
 
 template <typename T>
-std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>& dictionary) {
+std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>& dictionary, uint32_t max_ranges_count) {
   static_assert(std::is_arithmetic_v<T>, "Range filters are only allowed on arithmetic types.");
   DebugAssert(!dictionary.empty(), "The dictionary should not be empty.");
 
@@ -90,8 +90,8 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   std::sort(distances.begin(), distances.end(),
             [](const auto& pair1, const auto& pair2) { return pair1.first > pair2.first; });
 
-  if ((MAX_RANGES_COUNT - 1) < distances.size()) {
-    distances.erase(distances.cbegin() + (MAX_RANGES_COUNT - 1), distances.cend());
+  if ((max_ranges_count - 1) < distances.size()) {
+    distances.erase(distances.cbegin() + (max_ranges_count - 1), distances.cend());
   }
 
   std::sort(distances.begin(), distances.end(),
@@ -99,13 +99,13 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   // we want a range until the last element in the dictionary
   distances.emplace_back(T{}, dictionary.size() - 1);
 
-  // derive intervals where items exists from distances
+  // derive intervals from distances where items exist
   //
   // start   end  next_startpoint
   // v       v    v
   // 1 2 3 4 5    10 11     15 16
   //         ^
-  //       distance 5, index 4
+  //         distance 5, index 4
   //
   // next_startpoint is the start of the next range
 
