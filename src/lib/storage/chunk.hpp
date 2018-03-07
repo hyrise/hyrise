@@ -138,6 +138,8 @@ class Chunk : private Noncopyable {
   std::shared_ptr<BaseColumn> get_mutable_column(ColumnID column_id) const;
   std::shared_ptr<const BaseColumn> get_column(ColumnID column_id) const;
 
+  const pmr_concurrent_vector<std::shared_ptr<BaseColumn>>& columns() const;
+
   bool has_mvcc_columns() const;
   bool has_access_counter() const;
 
