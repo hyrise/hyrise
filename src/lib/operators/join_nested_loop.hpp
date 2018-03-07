@@ -34,7 +34,7 @@ class JoinNestedLoop : public AbstractJoinOperator {
 
   void _create_table_structure();
 
-  void _write_output_chunks(const std::shared_ptr<Chunk>& output_chunk, const std::shared_ptr<const Table> input_table,
+  void _write_output_chunks(ChunkColumns& columns, const std::shared_ptr<const Table> input_table,
                             std::shared_ptr<PosList> pos_list);
 
   std::shared_ptr<Table> _output_table;

@@ -899,12 +899,11 @@ const char* const tpch_query_22 =
 
 namespace opossum {
 
-const char* tpch_queries[NUM_TPCH_QUERIES] = {
-    tpch_query_1,  tpch_query_2,  tpch_query_3,  tpch_query_4,  tpch_query_5,  tpch_query_6,  tpch_query_7,
-    tpch_query_8,  tpch_query_9,  tpch_query_10, tpch_query_11, tpch_query_12, tpch_query_13, tpch_query_14,
-    tpch_query_15, tpch_query_16, tpch_query_17, tpch_query_18, tpch_query_19, tpch_query_20, tpch_query_21,
-    tpch_query_22
-};
+const char* tpch_queries[NUM_TPCH_QUERIES] = {tpch_query_1,  tpch_query_2,  tpch_query_3,  tpch_query_4,  tpch_query_5,
+                                              tpch_query_6,  tpch_query_7,  tpch_query_8,  tpch_query_9,  tpch_query_10,
+                                              tpch_query_11, tpch_query_12, tpch_query_13, tpch_query_14, tpch_query_15,
+                                              tpch_query_16, tpch_query_17, tpch_query_18, tpch_query_19, tpch_query_20,
+                                              tpch_query_21, tpch_query_22};
 
 size_t tpch_supported_queries[NUM_SUPPORTED_TPCH_QUERIES] = {
     0,

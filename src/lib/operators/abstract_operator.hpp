@@ -68,6 +68,10 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::shared_ptr<AbstractOperator> mutable_input_left() const;
   std::shared_ptr<AbstractOperator> mutable_input_right() const;
 
+  // Return the output tables of the inputs
+  std::shared_ptr<const Table> input_table_left() const;
+  std::shared_ptr<const Table> input_table_right() const;
+
   struct PerformanceData {
     uint64_t walltime_ns = 0;  // time spent in nanoseconds executing this operator
   };
@@ -97,9 +101,6 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   virtual std::shared_ptr<AbstractOperator> _on_recreate(
       const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
       const std::shared_ptr<AbstractOperator>& recreated_input_right) const = 0;
-
-  std::shared_ptr<const Table> _input_table_left() const;
-  std::shared_ptr<const Table> _input_table_right() const;
 
   // Shared pointers to input operators, can be nullptr.
   std::shared_ptr<const AbstractOperator> _input_left;

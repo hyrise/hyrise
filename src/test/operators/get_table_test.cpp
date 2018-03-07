@@ -12,7 +12,7 @@ namespace opossum {
 class OperatorsGetTableTest : public BaseTest {
  protected:
   void SetUp() override {
-    _test_table = std::make_shared<Table>(2);
+    _test_table = std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data, 2);
     auto& manager = StorageManager::get();
     manager.add_table("aNiceTestTable", _test_table);
     manager.add_table("tableWithValues", load_table("src/test/tables/int_float2.tbl", 1u));

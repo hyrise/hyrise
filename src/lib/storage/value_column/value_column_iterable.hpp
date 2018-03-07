@@ -119,9 +119,6 @@ class ValueColumnIterable : public PointAccessibleColumnIterable<ValueColumnIter
     ColumnIteratorValue<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET)
-        return ColumnIteratorValue<T>{T{}, true, chunk_offsets.into_referencing};
-
       return ColumnIteratorValue<T>{_values[chunk_offsets.into_referenced], false, chunk_offsets.into_referencing};
     }
 
@@ -146,9 +143,6 @@ class ValueColumnIterable : public PointAccessibleColumnIterable<ValueColumnIter
 
     ColumnIteratorValue<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
-
-      if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET)
-        return ColumnIteratorValue<T>{T{}, true, chunk_offsets.into_referencing};
 
       return ColumnIteratorValue<T>{_values[chunk_offsets.into_referenced], _null_values[chunk_offsets.into_referenced],
                                     chunk_offsets.into_referencing};
