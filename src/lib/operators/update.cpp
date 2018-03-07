@@ -31,13 +31,13 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
   const auto table_to_update = StorageManager::get().get_table(_table_to_update_name);
 
   // 1. Create insert_table with ReferenceColumns that contain all rows that should be updated
-  TableColumnDefinitions insert_table_column_defintions;
+  TableColumnDefinitions insert_table_column_definitions;
   for (ColumnID column_id{0}; column_id < table_to_update->column_count(); ++column_id) {
-    insert_table_column_defintions.emplace_back(table_to_update->column_name(column_id),
+    insert_table_column_definitions.emplace_back(table_to_update->column_name(column_id),
                                                 table_to_update->column_data_type(column_id));
   }
 
-  auto insert_table = std::make_shared<Table>(insert_table_column_defintions, TableType::References);
+  auto insert_table = std::make_shared<Table>(insert_table_column_definitions, TableType::References);
 
   auto current_row_in_left_chunk = 0u;
   auto current_pos_list = std::shared_ptr<const PosList>();

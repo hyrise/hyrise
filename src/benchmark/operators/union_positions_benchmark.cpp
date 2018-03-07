@@ -57,12 +57,12 @@ class UnionPositionsBenchmarkFixture : public benchmark::Fixture {
      * Create the referenced table, that doesn't actually contain any data - but UnionPositions won't care, it just
      * operates on RowIDs
      */
-    TableColumnDefinitions column_defintions;
+    TableColumnDefinitions column_definitions;
 
     for (auto column_idx = 0; column_idx < num_columns; ++column_idx) {
-      column_defintions.emplace_back("c" + std::to_string(column_idx), DataType::Int);
+      column_definitions.emplace_back("c" + std::to_string(column_idx), DataType::Int);
     }
-    _referenced_table = std::make_shared<Table>(column_defintions, TableType::Data);
+    _referenced_table = std::make_shared<Table>(column_definitions, TableType::Data);
 
     /**
      * Create the referencing tables, the ones we're actually going to perform the benchmark on
@@ -83,11 +83,11 @@ class UnionPositionsBenchmarkFixture : public benchmark::Fixture {
   std::shared_ptr<Table> _create_reference_table(size_t num_rows, size_t num_columns) const {
     const auto num_rows_per_chunk = num_rows / GENERATED_TABLE_NUM_CHUNKS;
 
-    TableColumnDefinitions column_defintions;
+    TableColumnDefinitions column_definitions;
     for (size_t column_idx = 0; column_idx < num_columns; ++column_idx) {
-      column_defintions.emplace_back("c" + std::to_string(column_idx), DataType::Int);
+      column_definitions.emplace_back("c" + std::to_string(column_idx), DataType::Int);
     }
-    auto table = std::make_shared<Table>(column_defintions, TableType::References);
+    auto table = std::make_shared<Table>(column_definitions, TableType::References);
 
     for (size_t row_idx = 0; row_idx < num_rows;) {
       const auto num_rows_in_this_chunk = std::min(num_rows_per_chunk, num_rows - row_idx);
