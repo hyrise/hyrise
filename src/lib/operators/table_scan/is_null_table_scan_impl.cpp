@@ -2,7 +2,6 @@
 
 #include <memory>
 
-#include "storage/base_deprecated_dictionary_column.hpp"
 #include "storage/base_value_column.hpp"
 #include "storage/column_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/create_iterable_from_column.hpp"
@@ -37,17 +36,6 @@ void IsNullTableScanImpl::handle_column(const BaseValueColumn& base_column,
               "Columns that are not nullable should have been caught by edge case handling.");
 
   auto left_column_iterable = NullValueVectorIterable{left_column.null_values()};
-
-  left_column_iterable.with_iterators(mapped_chunk_offsets.get(),
-                                      [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
-}
-
-void IsNullTableScanImpl::handle_column(const BaseDeprecatedDictionaryColumn& left_column,
-                                        std::shared_ptr<ColumnVisitableContext> base_context) {
-  auto context = std::static_pointer_cast<Context>(base_context);
-  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
-
-  auto left_column_iterable = create_iterable_from_attribute_vector(left_column);
 
   left_column_iterable.with_iterators(mapped_chunk_offsets.get(),
                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });

@@ -3,9 +3,11 @@
 #include <memory>
 
 #include "logical_query_plan/logical_plan_root_node.hpp"
+#include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/constant_calculation_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/join_detection_rule.hpp"
+#include "strategy/predicate_pushdown_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
 
 namespace opossum {
@@ -15,11 +17,13 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   RuleBatch main_batch(RuleBatchExecutionPolicy::Iterative);
 
+  main_batch.add_rule(std::make_shared<PredicatePushdownRule>());
   main_batch.add_rule(std::make_shared<PredicateReorderingRule>());
   main_batch.add_rule(std::make_shared<JoinDetectionRule>());
   optimizer->add_rule_batch(main_batch);
 
   RuleBatch final_batch(RuleBatchExecutionPolicy::Once);
+  final_batch.add_rule(std::make_shared<ChunkPruningRule>());
   final_batch.add_rule(std::make_shared<ConstantCalculationRule>());
   final_batch.add_rule(std::make_shared<IndexScanRule>());
   optimizer->add_rule_batch(final_batch);

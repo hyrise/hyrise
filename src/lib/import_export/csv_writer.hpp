@@ -19,14 +19,7 @@ class CsvWriter {
    */
   explicit CsvWriter(const std::string& file, const ParseConfig& config = {});
 
-  template <typename T>
-  void write(const T& value) {
-    if (_current_col_count > 0) {
-      _stream << _config.separator;
-    }
-    _write_value(value);
-    ++_current_col_count;
-  }
+  void write(const AllTypeVariant& value);
 
   /*
    * Ends a row of entries in the csv file.
@@ -36,41 +29,12 @@ class CsvWriter {
  protected:
   std::string escape(const std::string& string);
 
-  template <typename T>
-  void _write_value(const T& value);
+  void _write_value(const AllTypeVariant& value);
+  void _write_string_value(const std::string& value);
 
   std::ofstream _stream;
   ColumnID _current_col_count{0};
   ParseConfig _config;
 };
-
-template <typename T>
-void CsvWriter::_write_value(const T& value) {
-  _stream << value;
-}
-
-template <>
-inline void CsvWriter::_write_value<std::string>(const std::string& value) {
-  /* We put an the quotechars around any string value by default
-   * as this is the only time when a comma (,) might be inside a value.
-   * This might consume more space, however it speeds the program as it
-   * does not require additional checks.
-   * If we start allowing more characters as delimiter, we should change
-   * this behaviour to either general quoting or checking for "illegal"
-   * characters.
-   */
-  _stream << _config.quote;
-  _stream << escape(value);
-  _stream << _config.quote;
-}
-
-template <>
-inline void CsvWriter::_write_value<AllTypeVariant>(const AllTypeVariant& value) {
-  if (value.type() == typeid(std::string)) {
-    _write_value(type_cast<std::string>(value));
-  } else {
-    _stream << value;
-  }
-}
 
 }  // namespace opossum

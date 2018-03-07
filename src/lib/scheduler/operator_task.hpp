@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <vector>
+#include <unordered_map>
 
 #include "scheduler/abstract_task.hpp"
 
@@ -31,9 +32,11 @@ class OperatorTask : public AbstractTask {
 
   /**
    * Create tasks recursively. Called by `make_tasks_from_operator`. Returns the root of the subtree that was added.
+   * @param task_by_op  Cache to avoid creating duplicate Tasks for diamond shapes
    */
-  static std::shared_ptr<OperatorTask> _add_tasks_from_operator(std::shared_ptr<AbstractOperator> op,
-                                                                std::vector<std::shared_ptr<OperatorTask>>& tasks);
+  static std::shared_ptr<OperatorTask> _add_tasks_from_operator(
+      std::shared_ptr<AbstractOperator> op, std::vector<std::shared_ptr<OperatorTask>>& tasks,
+      std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<OperatorTask>>& task_by_op);
 
  private:
   std::shared_ptr<AbstractOperator> _op;

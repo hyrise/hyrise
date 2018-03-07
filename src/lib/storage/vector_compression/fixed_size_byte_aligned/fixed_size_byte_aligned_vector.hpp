@@ -32,6 +32,9 @@ class FixedSizeByteAlignedVector : public CompressedVector<FixedSizeByteAlignedV
   explicit FixedSizeByteAlignedVector(pmr_vector<UnsignedIntType> data) : _data{std::move(data)} {}
   ~FixedSizeByteAlignedVector() = default;
 
+  const pmr_vector<UnsignedIntType>& data() const { return _data; }
+
+ public:
   size_t _on_size() const { return _data.size(); }
   size_t _on_data_size() const { return sizeof(UnsignedIntType) * _data.size(); }
 
@@ -39,9 +42,9 @@ class FixedSizeByteAlignedVector : public CompressedVector<FixedSizeByteAlignedV
 
   auto _on_create_decoder() const { return std::make_unique<FixedSizeByteAlignedDecompressor<UnsignedIntType>>(_data); }
 
-  auto _on_cbegin() const { return boost::make_transform_iterator(_data.cbegin(), cast_to_uint32); }
+  auto _on_begin() const { return boost::make_transform_iterator(_data.cbegin(), cast_to_uint32); }
 
-  auto _on_cend() const { return boost::make_transform_iterator(_data.cend(), cast_to_uint32); }
+  auto _on_end() const { return boost::make_transform_iterator(_data.cend(), cast_to_uint32); }
 
   std::shared_ptr<BaseCompressedVector> _on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
     auto data_copy = pmr_vector<UnsignedIntType>{_data, alloc};
