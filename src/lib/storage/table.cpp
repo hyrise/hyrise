@@ -116,6 +116,8 @@ bool Table::empty() const { return row_count() == 0u; }
 
 ChunkID Table::chunk_count() const { return static_cast<ChunkID>(_chunks.size()); }
 
+const std::vector<std::shared_ptr<Chunk>>& Table::chunks() const { return _chunks; }
+
 uint32_t Table::max_chunk_size() const { return _max_chunk_size; }
 
 std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
