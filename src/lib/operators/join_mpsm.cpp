@@ -19,6 +19,8 @@
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
 
+STRONG_TYPEDEF(size_t, ClusterID);
+
 namespace opossum {
 JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator> left,
                    const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
@@ -92,7 +94,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   const JoinMode _mode;
 
   // the cluster count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
-  size_t _cluster_count;
+  ClusterID _cluster_count;
 
   // Contains the output row ids for each cluster
   std::vector<std::vector<std::shared_ptr<PosList>>> _output_pos_lists_left;
@@ -104,10 +106,10 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   struct TableRange;
   struct TablePosition {
     TablePosition() {}
-    TablePosition(NodeID partition, size_t cluster, size_t index)
+    TablePosition(NodeID partition, ClusterID cluster, size_t index)
         : cluster{cluster}, index{index}, partition{partition} {}
 
-    size_t cluster;
+    ClusterID cluster;
     size_t index;
     NodeID partition;
 
@@ -122,7 +124,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     TableRange(TablePosition start_position, TablePosition end_position) : start{start_position}, end{end_position} {
       DebugAssert( start.partition == end.partition, "Table ranges are only allowed over the same position");
     }
-    TableRange(NodeID partition, size_t cluster, size_t start_index, size_t end_index)
+    TableRange(NodeID partition, ClusterID cluster, size_t start_index, size_t end_index)
         : start{TablePosition(partition, cluster, start_index)}, end{TablePosition(partition, cluster, end_index)} {
       DebugAssert( start.partition == end.partition, "Table ranges are only allowed over the same position");
     }
@@ -154,10 +156,10 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   * Determines the number of clusters to be used for the join.
   * The number of clusters must be a power of two, i.e. 1, 2, 4, 8, 16...
   **/
-  size_t _determine_number_of_clusters() {
+  ClusterID _determine_number_of_clusters() {
     // Get the next lower power of two of the bigger chunk number
     const size_t numa_nodes = NUMAPlacementManager::get().topology()->nodes().size();
-    return static_cast<size_t>(std::pow(2, std::floor(std::log2(numa_nodes))));
+    return static_cast<ClusterID>(std::pow(2, std::floor(std::log2(numa_nodes))));
   }
 
   /**
@@ -288,14 +290,14 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   * Performs the join on a single cluster. Runs of entries with the same value are identified and handled together.
   * This constitutes the merge phase of the join. The output combinations of row ids are determined by _join_runs.
   **/
-  void _join_cluster(size_t cluster_number) {
+  void _join_cluster(ClusterID cluster_number) {
     // For MPSM join the left side is reshuffled to contain one cluster per NUMA node,
     // it is therefore the first (and only) cluster in the corresponding data structure
     const NodeID left_node_id = static_cast<NodeID>(cluster_number);
-    const size_t left_cluster_id = 0;
+    const ClusterID left_cluster_id{0};
 
     // The right side is not reshuffled and is worked on for each partition
-    const size_t right_cluster_id = cluster_number;
+    const ClusterID right_cluster_id = cluster_number;
 
     _output_pos_lists_left[left_node_id][left_cluster_id] = std::make_shared<PosList>();
 
@@ -304,7 +306,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
     std::vector<bool> left_joined(left_cluster->size(), false);
 
-    for (NodeID right_node_id{0}; right_node_id < _cluster_count; ++right_node_id) {
+    for (NodeID right_node_id{0}; right_node_id < static_cast<NodeID>(_cluster_count); ++right_node_id) {
       _output_pos_lists_right[right_node_id][right_cluster_id] = std::make_shared<PosList>();
 
       std::shared_ptr<MaterializedChunk<T>> right_cluster =
@@ -368,7 +370,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
     // Parallel join for each cluster
     // TODO(florian): this is ideal, just make sure the jobs get scheduled on the correct nodes
-    for (size_t cluster_number = 0; cluster_number < _cluster_count; ++cluster_number) {
+    for (ClusterID cluster_number{0}; cluster_number < _cluster_count; ++cluster_number) {
       jobs.push_back(std::make_shared<JobTask>([this, cluster_number] { this->_join_cluster(cluster_number); }));
       jobs.back()->schedule();
     }
@@ -474,6 +476,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     _null_rows_left = std::move(sort_output.null_rows_left);
     _null_rows_right = std::move(sort_output.null_rows_right);
 
+    // this generates the actual join results and fills the _output_pos_lists
     _perform_join();
 
     auto output_table = std::make_shared<Table>();
