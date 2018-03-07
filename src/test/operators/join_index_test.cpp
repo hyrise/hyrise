@@ -63,7 +63,7 @@ class JoinIndexTest : public BaseTest {
     auto table = load_table(filename, chunk_size);
 
     // TODO(anyone): replace with EncodingType::Dictionary as soon as all index types support new compression
-    ChunkEncoder::encode_all_chunks(table, ColumnEncodingSpec{EncodingType::DeprecatedDictionary});
+    ChunkEncoder::encode_all_chunks(table, ColumnEncodingSpec{EncodingType::Dictionary});
 
     for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       auto chunk = table->get_chunk(chunk_id);

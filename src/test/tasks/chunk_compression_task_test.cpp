@@ -45,7 +45,7 @@ TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
     for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
       auto column = chunk->get_column(column_id);
 
-      auto dict_column = std::dynamic_pointer_cast<const BaseDeprecatedDictionaryColumn>(column);
+      auto dict_column = std::dynamic_pointer_cast<const BaseDictionaryColumn>(column);
       ASSERT_NE(dict_column, nullptr);
     }
   }
@@ -69,7 +69,7 @@ TEST_F(ChunkCompressionTaskTest, DictionarySize) {
     for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
       auto column = chunk->get_column(column_id);
 
-      auto dict_column = std::dynamic_pointer_cast<const BaseDeprecatedDictionaryColumn>(column);
+      auto dict_column = std::dynamic_pointer_cast<const BaseDictionaryColumn>(column);
       ASSERT_NE(dict_column, nullptr);
 
       EXPECT_EQ(dict_column->unique_values_count(), dictionary_sizes[chunk_id][column_id]);
@@ -96,7 +96,7 @@ TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
 
   for (auto i = ChunkID{0}; i < table->chunk_count() - 1; ++i) {
     auto dict_column =
-        std::dynamic_pointer_cast<const BaseDeprecatedDictionaryColumn>(table->get_chunk(i)->get_column(ColumnID{0}));
+        std::dynamic_pointer_cast<const BaseDictionaryColumn>(table->get_chunk(i)->get_column(ColumnID{0}));
     ASSERT_NE(dict_column, nullptr);
   }
 

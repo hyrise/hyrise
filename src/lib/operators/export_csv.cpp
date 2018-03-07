@@ -10,8 +10,8 @@
 #include "json.hpp"
 #include "storage/deprecated_dictionary_column.hpp"
 #include "storage/deprecated_dictionary_column/base_attribute_vector.hpp"
-#include "storage/reference_column.hpp"
 #include "storage/materialize.hpp"
+#include "storage/reference_column.hpp"
 
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"

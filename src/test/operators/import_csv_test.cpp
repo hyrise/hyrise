@@ -297,7 +297,7 @@ TEST_F(OperatorsImportCsvTest, AutoCompressChunks) {
     auto chunk = result_table->get_chunk(chunk_id);
     for (ColumnID column_id = ColumnID{0}; column_id < chunk->column_count(); ++column_id) {
       auto base_column = chunk->get_column(column_id);
-      auto dict_column = std::dynamic_pointer_cast<const BaseDeprecatedDictionaryColumn>(base_column);
+      auto dict_column = std::dynamic_pointer_cast<const BaseDictionaryColumn>(base_column);
 
       EXPECT_TRUE(dict_column != nullptr);
     }
