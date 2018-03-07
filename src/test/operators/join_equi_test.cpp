@@ -32,8 +32,8 @@ template <typename T>
 class JoinEquiTest : public JoinTest {};
 
 // here we define all Join types
-using JoinEquiTypes = ::testing::Types < JoinNestedLoop, JoinHash, JoinSortMerge, JoinIndex,
-      JoinMPSM TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes);
+using JoinEquiTypes = ::testing::Types < JoinNestedLoop, JoinHash, JoinSortMerge, JoinIndex, JoinMPSM>;
+TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes);
 
 TYPED_TEST(JoinEquiTest, WrongJoinOperator) {
   if (!IS_DEBUG) return;

@@ -102,13 +102,10 @@ set(
     operators/join_hash.cpp
     operators/join_hash/hash_traits.hpp
     operators/join_hash.hpp
-<<<<<<< HEAD
     operators/join_mpsm.cpp
     operators/join_mpsm.hpp
-=======
     operators/join_index.cpp
     operators/join_index.hpp
->>>>>>> master
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
     operators/join_sort_merge/column_materializer.hpp
