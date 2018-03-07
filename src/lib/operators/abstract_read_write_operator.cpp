@@ -10,6 +10,7 @@ AbstractReadWriteOperator::AbstractReadWriteOperator(const std::shared_ptr<const
     : AbstractOperator(left, right), _state{ReadWriteOperatorState::Pending} {}
 
 void AbstractReadWriteOperator::execute() {
+  DebugAssert(!_output, "Operator has already been executed");
   Assert(static_cast<bool>(transaction_context()),
          "AbstractReadWriteOperator::execute() should never be called without having set the transaction context.");
 

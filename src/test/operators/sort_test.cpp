@@ -52,7 +52,7 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
 
 // As long as two implementation of dictionary encoding exist, this ensure to run the tests for both.
 INSTANTIATE_TEST_CASE_P(DictionaryEncodingTypes, OperatorsSortTest,
-                        ::testing::Values(EncodingType::DeprecatedDictionary, EncodingType::Dictionary), formatter);
+                        ::testing::Values(EncodingType::Dictionary), formatter);
 
 TEST_P(OperatorsSortTest, AscendingSortOfOneColumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);

@@ -109,6 +109,6 @@ TEST_P(MaterializeTest, MaterializeNulls) {
 
 INSTANTIATE_TEST_CASE_P(MaterializeTestInstances, MaterializeTest,
                         ::testing::ValuesIn(std::begin(all_column_encoding_specs),
-                                            std::end(all_column_encoding_specs)), ); // NOLINT
+                                            std::end(all_column_encoding_specs)), );  // NOLINT
 
 }  // namespace opossum

@@ -5,13 +5,12 @@
 #include <utility>
 #include <vector>
 
+#include "json.hpp"
+
 #include "import_export/csv_meta.hpp"
 #include "import_export/csv_writer.hpp"
-#include "json.hpp"
-#include "storage/deprecated_dictionary_column.hpp"
-#include "storage/deprecated_dictionary_column/base_attribute_vector.hpp"
-#include "storage/reference_column.hpp"
 #include "storage/materialize.hpp"
+#include "storage/reference_column.hpp"
 
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
@@ -28,6 +27,12 @@ std::shared_ptr<const Table> ExportCsv::_on_execute() {
   _generate_content_file(_input_left->get_output(), _filename);
 
   return _input_left->get_output();
+}
+
+std::shared_ptr<AbstractOperator> ExportCsv::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+  return std::make_shared<ExportCsv>(recreated_input_left, _filename);
 }
 
 void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table>& table, const std::string& meta_file_path) {

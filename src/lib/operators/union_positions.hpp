@@ -71,7 +71,6 @@ class UnionPositions : public AbstractReadOnlyOperator {
   UnionPositions(const std::shared_ptr<const AbstractOperator>& left,
                  const std::shared_ptr<const AbstractOperator>& right);
 
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
   const std::string name() const override;
 
  private:
@@ -89,6 +88,10 @@ class UnionPositions : public AbstractReadOnlyOperator {
   };
 
   std::shared_ptr<const Table> _on_execute() override;
+
+  std::shared_ptr<AbstractOperator> _on_recreate(
+      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
 
   /**
    * Validates the input AND initializes some utility data it uses (_column_segment_offsets, _referenced_tables,

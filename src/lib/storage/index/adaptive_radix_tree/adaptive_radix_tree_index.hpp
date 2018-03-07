@@ -12,7 +12,7 @@ namespace opossum {
 
 class BaseColumn;
 class ARTNode;
-class BaseDeprecatedDictionaryColumn;
+class BaseDictionaryColumn;
 
 /**
  * The AdaptiveRadixTreeIndex (ART) currently works on single DictionaryColumns. Conceptually it also works on
@@ -81,7 +81,7 @@ class AdaptiveRadixTreeIndex : public BaseIndex {
 
   std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const;
 
-  const std::shared_ptr<const BaseDeprecatedDictionaryColumn> _index_column;
+  const std::shared_ptr<const BaseDictionaryColumn> _index_column;
   std::vector<ChunkOffset> _chunk_offsets;
   std::shared_ptr<ARTNode> _root;
 };
