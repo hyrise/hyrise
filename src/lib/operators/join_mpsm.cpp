@@ -373,7 +373,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   }
 
   /**
-  * Concatenates a vector of pos lists into a single new pos list.
+  * Flattens the multiple pos lists into a single pos list
   **/
   std::shared_ptr<PosList> _concatenate_pos_lists(std::vector<std::vector<std::shared_ptr<PosList>>>& pos_lists) {
     auto output = std::make_shared<PosList>();
@@ -455,7 +455,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
  public:
   /**
-  * Executes the SortMergeJoin operator.
+  * Executes the MPSMJoin operator.
   **/
   std::shared_ptr<const Table> _on_execute() {
     bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
