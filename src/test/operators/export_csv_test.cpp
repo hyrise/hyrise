@@ -107,12 +107,12 @@ TEST_F(OperatorsExportCsvTest, MultipleChunks) {
                            "6,\"Tag\",3.5\n"));
 }
 
-TEST_F(OperatorsExportCsvTest, DeprecatedDictionaryColumn) {
+TEST_F(OperatorsExportCsvTest, DictionaryColumnFixedSizeByteAligned) {
   table->append({1, "Hallo", 3.5f});
   table->append({1, "Hallo", 3.5f});
   table->append({1, "Hallo3", 3.55f});
 
-  ChunkEncoder::encode_chunks(table, {ChunkID{0}});
+  ChunkEncoder::encode_chunks(table, {ChunkID{0}}, EncodingType::Dictionary);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();

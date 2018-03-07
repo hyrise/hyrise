@@ -41,7 +41,9 @@ const std::string Projection::description(DescriptionMode description_mode) cons
 
 const Projection::ColumnExpressions& Projection::column_expressions() const { return _column_expressions; }
 
-std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllParameterVariant>& args) const {
+std::shared_ptr<AbstractOperator> Projection::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
   ColumnExpressions new_column_expressions;
 
   for (const auto& column_expression : _column_expressions) {
@@ -58,7 +60,7 @@ std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllPara
     }
   }
 
-  return std::make_shared<Projection>(_input_left->recreate(args), new_column_expressions);
+  return std::make_shared<Projection>(recreated_input_left, new_column_expressions);
 }
 
 template <typename T>
@@ -83,20 +85,13 @@ void Projection::_create_column(boost::hana::basic_type<T> type, const std::shar
 
     column = std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
   } else if (expression->type() == ExpressionType::Subselect) {
-    auto chunk = expression->subselect_table()->get_chunk(ChunkID{0});
-    auto base_column = chunk->get_column(ColumnID{0});
+    // Since we are only extracting one value from the subselect table, using Table::get_value is not a performance issue
+    PerformanceWarningDisabler performance_warning_disabler;
 
     // the subquery result table can only contain exactly one column with one row
     // since we checked for this at subquery execution time we can make some assumptions here
-    T subselect_value{};
-    if (auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(base_column)) {
-      subselect_value = value_column->get(ChunkOffset{0});
-    } else if (auto dictionary_column = std::dynamic_pointer_cast<const DictionaryColumn<T>>(base_column)) {
-      subselect_value = dictionary_column->dictionary()->at(0);
-    } else {
-      // fall back on slow access
-      subselect_value = type_cast<T>((*base_column)[ChunkOffset{0}]);
-    }
+    const auto subselect_table = expression->subselect_table();
+    const auto subselect_value = subselect_table->get_value<T>(ColumnID(0), 0u);
 
     auto row_count = input_table_left->get_chunk(chunk_id)->size();
 

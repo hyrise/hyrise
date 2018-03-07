@@ -16,7 +16,7 @@ namespace opossum {
 
 namespace hana = boost::hana;
 
-enum class EncodingType : uint8_t { Unencoded, DeprecatedDictionary, Dictionary, RunLength };
+enum class EncodingType : uint8_t { Unencoded, Dictionary, RunLength };
 
 /**
  * @brief Maps each encoding type to its supported data types
@@ -27,8 +27,7 @@ enum class EncodingType : uint8_t { Unencoded, DeprecatedDictionary, Dictionary,
  * Use data_types if the encoding supports all data types.
  */
 constexpr auto supported_data_types_for_type =
-    hana::make_map(hana::make_pair(enum_c<EncodingType, EncodingType::DeprecatedDictionary>, data_types),
-                   hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, data_types),
+    hana::make_map(hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, data_types),
                    hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, data_types));
 
 //  Example for an encoding that doesn’t support all data types:

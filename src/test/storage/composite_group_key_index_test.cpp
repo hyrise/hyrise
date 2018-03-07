@@ -9,7 +9,6 @@
 #include "gtest/gtest.h"
 #include "storage/base_column.hpp"
 #include "storage/chunk.hpp"
-#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/variable_length_key_proxy.hpp"
 

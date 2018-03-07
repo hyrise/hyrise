@@ -10,6 +10,7 @@
 #include "base_column.hpp"
 #include "chunk.hpp"
 #include "index/base_index.hpp"
+#include "optimizer/chunk_statistics/chunk_statistics.hpp"
 #include "reference_column.hpp"
 #include "utils/assert.hpp"
 
@@ -225,6 +226,14 @@ std::vector<std::shared_ptr<const BaseColumn>> Chunk::get_columns_for_ids(
   std::transform(column_ids.cbegin(), column_ids.cend(), std::back_inserter(columns),
                  [&](const auto& column_id) { return get_column(column_id); });
   return columns;
+}
+
+std::shared_ptr<ChunkStatistics> Chunk::statistics() const { return _statistics; }
+
+void Chunk::set_statistics(std::shared_ptr<ChunkStatistics> chunk_statistics) {
+  DebugAssert(chunk_statistics->statistics().size() == column_count(),
+              "ChunkStatistics must have same column amount as Chunk");
+  _statistics = chunk_statistics;
 }
 
 }  // namespace opossum

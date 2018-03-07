@@ -11,18 +11,20 @@
 
 namespace opossum {
 
-/*
- * Creates a Table with values of to the parsed csv file <filename> and the corresponding meta file
- * <filename>.meta
+/**
+ * Creates a Table with values of the parsed csv file <filename>
+ * and the corresponding meta file <filename>.meta
  * For the structure of the meta csv file see export_csv.hpp
- * If parameter tablename provided, the imported table is stored in the StorageManager. If a table with this name
- * already exists, it is returned and no import is performed.
  *
+ * If the parameter `tablename` is provided, the imported table is stored in the StorageManager.
+ * If a table with this name already exists, it is returned and no import is performed.
+ *
+ * TODO(mjendruk): is this still true?
  * Note: ImportCsv does not support null values at the moment
  */
 class ImportCsv : public AbstractReadOnlyOperator {
  public:
-  /*
+  /**
    * @param filename      Path to the input file.
    * @param tablename     Optional. Name of the table to store/look up in the StorageManager.
    * @param meta          Optional. A specific meta config, to override the given .json file.
@@ -33,16 +35,17 @@ class ImportCsv : public AbstractReadOnlyOperator {
   explicit ImportCsv(const std::string& filename, const std::optional<CsvMeta> csv_meta,
                      const std::optional<std::string> tablename = std::nullopt);
 
-  // cannot move-assign because of const members
-  ImportCsv& operator=(ImportCsv&&) = delete;
-
-  // Name of the operator is "ImportCSV"
   const std::string name() const override;
 
  protected:
   // Returns the table that was created from the csv file.
   std::shared_ptr<const Table> _on_execute() override;
 
+  std::shared_ptr<AbstractOperator> _on_recreate(
+      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+
+ private:
   // Path to the input file
   const std::string _filename;
   // Name for adding the table to the StorageManager

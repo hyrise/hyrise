@@ -14,7 +14,9 @@ CreateView::CreateView(const std::string& view_name, std::shared_ptr<const Abstr
 
 const std::string CreateView::name() const { return "CreateView"; }
 
-std::shared_ptr<AbstractOperator> CreateView::recreate(const std::vector<AllParameterVariant>& args) const {
+std::shared_ptr<AbstractOperator> CreateView::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
   Fail("This operator cannot be recreated");
   // ... because it makes no sense to do so.
 }
