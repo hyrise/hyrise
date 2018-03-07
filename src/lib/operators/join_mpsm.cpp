@@ -134,11 +134,17 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     template <typename F>
     void for_every_row_id(std::unique_ptr<MaterializedNUMAPartitionList<T>>& table, F action) {
       for (size_t cluster = start.cluster; cluster <= end.cluster; ++cluster) {
-        size_t start_index = (cluster == start.cluster) ? start.index : 0;
-        size_t end_index =
-            (cluster == end.cluster) ? end.index : (*table)[end.partition]._chunk_columns[cluster]->size();
+        const auto current_cluster = (*table)[end.partition]._chunk_columns[cluster];
+        size_t start_index = 0;
+        // For the end index we need to find out how long the cluster is on this partition
+        size_t end_index = current_cluster->size();
+
+        // See whether we have more specific start or end indices
+        if (cluster == start.cluster) start_index = start.index;
+        if (cluster == end.cluster) end_index = end.index;
+
         for (size_t index = start_index; index < end_index; ++index) {
-          action((*(*table)[end.partition]._chunk_columns[cluster])[index].row_id);
+          action((*current_cluster)[index].row_id);
         }
       }
     }
