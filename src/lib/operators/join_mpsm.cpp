@@ -153,13 +153,11 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   /**
   * Determines the number of clusters to be used for the join.
   * The number of clusters must be a power of two, i.e. 1, 2, 4, 8, 16...
-  * TODO(anyone): How should we determine the number of clusters?
   **/
   size_t _determine_number_of_clusters() {
     // Get the next lower power of two of the bigger chunk number
-    // Note: this is only provisional. There should be a reasonable calculation here based on hardware stats.
     const size_t numa_nodes = NUMAPlacementManager::get().topology()->nodes().size();
-    return static_cast<size_t>(std::pow(2, std::ceil(std::log2(numa_nodes))));
+    return static_cast<size_t>(std::pow(2, std::floor(std::log2(numa_nodes))));
   }
 
   /**
