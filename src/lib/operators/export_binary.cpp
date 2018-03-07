@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "import_export/binary.hpp"
-#include "storage/deprecated_dictionary_column/fitted_attribute_vector.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
@@ -228,12 +227,6 @@ void ExportBinary::ExportBinaryVisitor<std::string>::handle_column(
 
   _export_values(context->ofstream, string_lengths);
   context->ofstream << values.rdbuf();
-}
-
-template <typename T>
-void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseDeprecatedDictionaryColumn& base_column,
-                                                         std::shared_ptr<ColumnVisitableContext> base_context) {
-  Fail("Does not support the deprecated dictionary column any longer.");
 }
 
 template <typename T>

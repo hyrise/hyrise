@@ -118,7 +118,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
                                                               bool is_nullable);
 
   /*
-   * Imports a serialized DeprecatedDictionaryColumn from the given file.
+   * Imports a serialized DictionaryColumn from the given file.
    * The file must contain data in the following format:
    *
    * Description           | Type                                  | Size in bytes

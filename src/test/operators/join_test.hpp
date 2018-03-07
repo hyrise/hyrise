@@ -47,7 +47,7 @@ class JoinTest : public BaseTest {
     _table_wrapper_p = std::make_shared<TableWrapper>(load_table("src/test/tables/double_zero_precision.tbl", 1));
     _table_wrapper_q = std::make_shared<TableWrapper>(load_table("src/test/tables/string_numbers.tbl", 1));
 
-    // load and create DeprecatedDictionaryColumn tables
+    // load and create DictionaryColumn tables
     auto table = load_table("src/test/tables/int_float.tbl", 2);
     ChunkEncoder::encode_chunks(table, {ChunkID{0}, ChunkID{1}});
     _table_wrapper_a_dict = std::make_shared<TableWrapper>(std::move(table));

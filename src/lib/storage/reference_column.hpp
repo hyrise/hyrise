@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "base_column.hpp"
-#include "deprecated_dictionary_column.hpp"
 #include "table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

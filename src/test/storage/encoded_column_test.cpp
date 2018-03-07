@@ -109,8 +109,7 @@ INSTANTIATE_TEST_CASE_P(
     ColumnEncodingSpecs, EncodedColumnTest,
     ::testing::Values(ColumnEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
                       ColumnEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-                      ColumnEncodingSpec{EncodingType::RunLength},
-                      ColumnEncodingSpec{EncodingType::DeprecatedDictionary}),
+                      ColumnEncodingSpec{EncodingType::RunLength}),
     formatter);
 
 TEST_P(EncodedColumnTest, SequenciallyReadNotNullableIntColumn) {

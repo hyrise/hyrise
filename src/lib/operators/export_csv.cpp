@@ -5,11 +5,10 @@
 #include <utility>
 #include <vector>
 
+#include "json.hpp"
+
 #include "import_export/csv_meta.hpp"
 #include "import_export/csv_writer.hpp"
-#include "json.hpp"
-#include "storage/deprecated_dictionary_column.hpp"
-#include "storage/deprecated_dictionary_column/base_attribute_vector.hpp"
 #include "storage/materialize.hpp"
 #include "storage/reference_column.hpp"
 
