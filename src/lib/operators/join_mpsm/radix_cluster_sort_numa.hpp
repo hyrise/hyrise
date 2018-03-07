@@ -26,15 +26,16 @@ struct RadixClusterOutput {
 
 /*
 *
-* Performs radix clustering for the sort merge join. The radix clustering algorithm clusters on the basis
+* Performs radix clustering for the mpsm join. The radix clustering algorithm clusters on the basis
 * of the least significant bits of the values because the values there are much more evenly distributed than for the
 * most significant bits. As a result, equal values always get moved to the same cluster and the clusters are
 * sorted in themselves but not in between the clusters. This is okay for the equi join, because we are only interested
-* in equality. In the case of a non-equi join however, complete sortedness is required, because join matches exist
-* beyond cluster borders. Therefore, the clustering defaults to a range clustering algorithm for the non-equi-join.
+* in equality. The non equi join is not considered because non equi joins over multiple partitions do not work well, so
+* the mpsm join does not support non equi joins.
 * General clustering process:
 * -> Input chunks are materialized and sorted. Every value is stored together with its row id.
-* -> Then, either radix clustering or range clustering is performed.
+* -> Then, radix clustering is performed.
+* -> The clusters of the left hand side parition are distributed to their corresponding numa nodes.
 * -> At last, the resulting clusters are sorted.
 *
 * Radix clustering example:
@@ -136,7 +137,7 @@ class RadixClusterSortNUMA {
   }
 
   /**
-  * Determines the total size of a materialized column list.
+  * Determines the total size of a materialized partition.
   **/
   static size_t _materialized_table_size(MaterializedNUMAPartition<T>& table) {
     size_t total_size = 0;
@@ -169,7 +170,7 @@ class RadixClusterSortNUMA {
   }
 
   /**
-  * Performs the clustering on a materialized table using a clustering function that determines for each
+  * Performs the clustering on a materialized partition using a clustering function that determines for each
   * value the appropriate cluster id. This is how the clustering works:
   * -> Count for each chunk how many of its values belong in each of the clusters using histograms.
   * -> Aggregate the per-chunk histograms to a histogram for the whole table. For each chunk it is noted where
@@ -233,10 +234,6 @@ class RadixClusterSortNUMA {
 
   /**
   * Performs least significant bit radix clustering which is used in the equi join case.
-  * Note: if we used the most significant bits, we could also use this for non-equi joins.
-  * Then, however we would have to deal with skewed clusters. Other ideas:
-  * - hand select the clustering bits based on statistics.
-  * - consolidate clusters in order to reduce skew.
   **/
   std::unique_ptr<MaterializedNUMAPartitionList<T>> _radix_cluster_numa(
       std::unique_ptr<MaterializedNUMAPartitionList<T>>& input_chunks) {
