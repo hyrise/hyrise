@@ -16,7 +16,7 @@ inline bool is_fixed_size_byte_aligned(CompressedVectorType type) {
   }
 }
 
-inline size_t byte_width_for_fsba_type(CompressedVectorType type) {
+inline size_t byte_width_for_fixed_size_byte_aligned_type(CompressedVectorType type) {
   DebugAssert(is_fixed_size_byte_aligned(type), "Type must be one of the fixed-size byte-aligned types.");
 
   switch (type) {

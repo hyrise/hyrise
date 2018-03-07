@@ -38,6 +38,10 @@ class IndexScan : public AbstractReadOnlyOperator {
  protected:
   std::shared_ptr<const Table> _on_execute() final;
 
+  std::shared_ptr<AbstractOperator> _on_recreate(
+      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+
   void _validate_input();
   std::shared_ptr<JobTask> _create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex);
   PosList _scan_chunk(const ChunkID chunk_id);
