@@ -24,9 +24,10 @@ class OperatorsIndexScanTest : public BaseTest {
   void SetUp() override {
     _index_type = get_index_type_of<DerivedIndex>();
 
-    auto table = std::make_shared<Table>(5);
-    table->add_column("a", DataType::Int);
-    table->add_column("b", DataType::Int);
+    TableColumnDefinitions column_definitions;
+    column_definitions.emplace_back("a", DataType::Int);
+    column_definitions.emplace_back("b", DataType::Int);
+    auto table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
     for (int i = 0; i <= 24; i += 2) table->append({i, 100 + i});
     ChunkEncoder::encode_all_chunks(table);
 
@@ -43,9 +44,7 @@ class OperatorsIndexScanTest : public BaseTest {
     _table_wrapper = std::make_shared<TableWrapper>(table);
     _table_wrapper->execute();
 
-    auto empty_table = std::make_shared<Table>(5);
-    empty_table->add_column("a", DataType::Int);
-    empty_table->add_column("b", DataType::Int);
+    auto empty_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
 
     _empty_table_wrapper = std::make_shared<TableWrapper>(empty_table);
     _empty_table_wrapper->execute();
