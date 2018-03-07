@@ -10,7 +10,7 @@ node {
   // create ccache volume on host using:
   // mkdir /mnt/ccache; mount -t tmpfs -o size=10G none /mnt/ccache
 
-  oppossumCI.inside("-u 0:0 -v /mnt/ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_CPP2=yes\" -e \"CCACHE_MAXSIZE=10GB\" -e \"CCACHE_LOGFILE=ccache.log\" -e \"CCACHE_SLOPPINESS=file_macro\"") {
+  oppossumCI.inside("-u 0:0 -v /mnt/ccache:/ccache -e \"CCACHE_DIR=/ccache\" -e \"CCACHE_CPP2=yes\" -e \"CCACHE_MAXSIZE=10GB\" -e \"CCACHE_SLOPPINESS=file_macro\"") {
     try {
       stage("Setup") {
         checkout scm
@@ -28,13 +28,11 @@ node {
       parallel clangRelease: {
         stage("clang-release") {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "cat ./clang-release/ccache.log"
           sh "./clang-release/hyriseTest clang-release"
         }
       }, clangDebugBuildOnly: {
         stage("clang-debug") {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "cat ./clang-debug/ccache.log"
         }
       }, lint: {
         stage("Linting") {
@@ -56,13 +54,11 @@ node {
       }, clangDebugSanitizers: {
         stage("clang-debug:sanitizers") {
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "cat ./clang-debug-sanitizers/ccache.log"
           sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-debug-sanitizers/hyriseTest clang-debug-sanitizers"
         }
       }, gccRelease: {
         stage("gcc-release") {
           sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "cat ./gcc-release/ccache.log"
           sh "./gcc-release/hyriseTest gcc-release"
         }
       }, systemTest: {
@@ -73,14 +69,12 @@ node {
         stage("clang-release:sanitizers") {
           when { branch "master" }
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "cat ./clang-release-sanitizers/ccache.log"
           sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers/hyriseTest clang-release-sanitizers"
         }
       }, clangReleaseSanitizersNoNuma: {
         stage("clang-release:sanitizers w/o NUMA") {
           when { branch "master" }
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-sanitizers-no-numa && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "cat ./clang-release-sanitizers-no-numa/ccache.log"
           sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers-no-numa/hyriseTest clang-release-sanitizers-no-numa"
         }
       }, gccDebugCoverage: {
