@@ -162,7 +162,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     } else if (column_expression->is_arithmetic_operator() || column_expression->type() == ExpressionType::Literal) {
       column_definition.name = column_expression->to_string(input_table_left()->column_names());
     } else if (column_expression->is_subselect()) {
-      name = column_expression->subselect_table()->column_names()[0];
+      column_definition.name = column_expression->subselect_table()->column_names()[0];
     } else {
       Fail("Expression type is not supported.");
     }
@@ -215,7 +215,7 @@ DataType Projection::_get_type_of_expression(const std::shared_ptr<PQPExpression
     return table->column_data_type(expression->column_id());
   }
   if (expression->type() == ExpressionType::Subselect) {
-    return expression->subselect_table()->column_type(ColumnID(0));
+    return expression->subselect_table()->column_data_type(ColumnID(0));
   }
 
   Assert(expression->is_arithmetic_operator(),
