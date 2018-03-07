@@ -119,9 +119,13 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     * a start position to an end position.
   **/
   struct TableRange {
-    TableRange(TablePosition start_position, TablePosition end_position) : start{start_position}, end{end_position} {}
+    TableRange(TablePosition start_position, TablePosition end_position) : start{start_position}, end{end_position} {
+      DebugAssert( start.partition == end.partition, "Table ranges are only allowed over the same position");
+    }
     TableRange(NodeID partition, size_t cluster, size_t start_index, size_t end_index)
-        : start{TablePosition(partition, cluster, start_index)}, end{TablePosition(partition, cluster, end_index)} {}
+        : start{TablePosition(partition, cluster, start_index)}, end{TablePosition(partition, cluster, end_index)} {
+      DebugAssert( start.partition == end.partition, "Table ranges are only allowed over the same position");
+    }
 
     TablePosition start;
     TablePosition end;
@@ -129,7 +133,6 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     // Executes the given action for every row id of the table in this range.
     template <typename F>
     void for_every_row_id(std::unique_ptr<MaterializedNUMAPartitionList<T>>& table, F action) {
-      DebugAssert(start.partition == end.partition, "for_every_row_id only allowed inside of partitions");
       for (size_t cluster = start.cluster; cluster <= end.cluster; ++cluster) {
         size_t start_index = (cluster == start.cluster) ? start.index : 0;
         size_t end_index =
