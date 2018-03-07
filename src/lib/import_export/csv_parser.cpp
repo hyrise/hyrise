@@ -16,6 +16,7 @@
 #include "resolve_type.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/column_encoding_utils.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
@@ -44,13 +45,13 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   std::string_view content_view{content.c_str(), content.size()};
 
   // Save chunks in list to avoid memory relocation
-  std::list<std::shared_ptr<Chunk>> chunks;
+  std::list<ChunkColumns> columns_by_chunks;
   std::vector<std::shared_ptr<JobTask>> tasks;
   std::vector<size_t> field_ends;
   while (_find_fields_in_chunk(content_view, *table.get(), field_ends)) {
     // create empty chunk
-    chunks.emplace_back(std::make_shared<Chunk>(UseMvcc::Yes));
-    auto& chunk = chunks.back();
+    columns_by_chunks.emplace_back();
+    auto& columns = columns_by_chunks.back();
 
     // Only pass the part of the string that is actually needed to the parsing task
     std::string_view relevant_content = content_view.substr(0, field_ends.back());
@@ -59,11 +60,8 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
     content_view = content_view.substr(field_ends.back() + 1);
 
     // create and start parsing task to fill chunk
-    tasks.emplace_back(std::make_shared<JobTask>([this, relevant_content, field_ends, &table, &chunk]() {
-      _parse_into_chunk(relevant_content, field_ends, *table, chunk);
-      if (_meta.auto_compress && chunk->size() == _meta.chunk_size) {
-        ChunkEncoder::encode_chunk(chunk, table->column_types());
-      }
+    tasks.emplace_back(std::make_shared<JobTask>([this, relevant_content, field_ends, &table, &columns]() {
+      _parse_into_chunk(relevant_content, field_ends, *table, columns);
     }));
     tasks.back()->schedule();
   }
@@ -72,16 +70,17 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
     task->join();
   }
 
-  for (auto& chunk : chunks) {
-    table->emplace_chunk(std::move(chunk));
+  for (auto& chunk_columns : columns_by_chunks) {
+    table->append_chunk(chunk_columns);
   }
+
+  if (_meta.auto_compress) ChunkEncoder::encode_all_chunks(table);
 
   return table;
 }
 
 std::shared_ptr<Table> CsvParser::_create_table_from_meta() {
-  auto table = std::make_shared<Table>(_meta.chunk_size);
-
+  TableColumnDefinitions colum_definitions;
   for (const auto& column_meta : _meta.columns) {
     auto column_name = column_meta.name;
     BaseCsvConverter::unescape(column_name);
@@ -91,10 +90,10 @@ std::shared_ptr<Table> CsvParser::_create_table_from_meta() {
 
     const auto data_type = data_type_to_string.right.at(column_type);
 
-    table->add_column_definition(column_name, data_type, column_meta.nullable);
+    colum_definitions.emplace_back(column_name, data_type, column_meta.nullable);
   }
 
-  return table;
+  return std::make_shared<Table>(colum_definitions, TableType::Data, _meta.chunk_size, UseMvcc::Yes);
 }
 
 bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table& table,
@@ -148,8 +147,8 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
   return true;
 }
 
-void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends, const Table& table,
-                                  const std::shared_ptr<Chunk>& chunk) {
+size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends,
+                                    const Table& table, ChunkColumns& columns) {
   // For each csv column create a CsvConverter which builds up a ValueColumn
   const auto column_count = table.column_count();
   const auto row_count = field_ends.size() / column_count;
@@ -157,7 +156,7 @@ void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<
 
   for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
     const auto is_nullable = table.column_is_nullable(column_id);
-    const auto column_type = table.column_type(column_id);
+    const auto column_type = table.column_data_type(column_id);
 
     converters.emplace_back(
         make_unique_by_data_type<BaseCsvConverter, CsvConverter>(column_type, row_count, _meta.config, is_nullable));
@@ -186,8 +185,10 @@ void CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vector<
 
   // Transform the field_offsets to columns and add columns to chunk.
   for (auto& converter : converters) {
-    chunk->add_column(converter->finish());
+    columns.push_back(converter->finish());
   }
+
+  return row_count;
 }
 
 void CsvParser::_sanitize_field(std::string& field) {

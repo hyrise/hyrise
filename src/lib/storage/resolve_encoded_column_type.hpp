@@ -25,9 +25,9 @@ namespace hana = boost::hana;
  *
  * Note: Add your encoded column class here!
  */
-constexpr auto encoded_column_for_type = hana::make_map(
-    hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, template_c<DictionaryColumn>),
-    hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, template_c<RunLengthColumn>));
+constexpr auto encoded_column_for_type =
+    hana::make_map(hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, template_c<DictionaryColumn>),
+                   hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, template_c<RunLengthColumn>));
 
 /**
  * @brief Resolves the type of an encoded column.

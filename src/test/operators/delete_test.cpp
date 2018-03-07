@@ -70,14 +70,14 @@ void OperatorsDeleteTest::helper(bool commit) {
     EXPECT_EQ(_table->table_statistics()->approx_valid_row_count(), 1u);
   } else {
     transaction_context->rollback();
-    expected_end_cid = Chunk::MAX_COMMIT_ID;
+    expected_end_cid = MvccColumns::MAX_COMMIT_ID;
 
     // Delete rolled back, three rows left.
     EXPECT_EQ(_table->table_statistics()->approx_valid_row_count(), 3u);
   }
 
   EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_columns()->end_cids.at(0u), expected_end_cid);
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_columns()->end_cids.at(1u), Chunk::MAX_COMMIT_ID);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_columns()->end_cids.at(1u), MvccColumns::MAX_COMMIT_ID);
   EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_columns()->end_cids.at(2u), expected_end_cid);
 
   auto expected_tid = commit ? transaction_context->transaction_id() : 0u;

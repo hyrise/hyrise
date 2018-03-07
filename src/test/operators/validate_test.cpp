@@ -43,7 +43,7 @@ void OperatorsValidateTest::set_all_records_visible(Table& table) {
 
     for (auto i = 0u; i < chunk->size(); ++i) {
       mvcc_columns->begin_cids[i] = 0u;
-      mvcc_columns->end_cids[i] = Chunk::MAX_COMMIT_ID;
+      mvcc_columns->end_cids[i] = MvccColumns::MAX_COMMIT_ID;
     }
   }
 }
