@@ -80,12 +80,13 @@ void Projection::_create_column(boost::hana::basic_type<T> type, const std::shar
     // fill a nullable column with NULLs
     auto row_count = input_table_left->get_chunk(chunk_id)->size();
     auto null_values = pmr_concurrent_vector<bool>(row_count, true);
-    // Explicitly pass T{} because in some cases it won't initialize otherwise
+    // explicitly pass T{} because in some cases it won't initialize otherwise
     auto values = pmr_concurrent_vector<T>(row_count, T{});
 
     column = std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
   } else if (expression->type() == ExpressionType::Subselect) {
-    // Since we are only extracting one value from the subselect table, using Table::get_value is not a performance issue
+    // since we are only extracting one value from the subselect
+    // table, using Table::get_value is not a performance issue
     PerformanceWarningDisabler performance_warning_disabler;
 
     // the subquery result table can only contain exactly one column with one row
