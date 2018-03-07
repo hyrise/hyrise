@@ -128,6 +128,33 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   for (const auto& column_expression : _column_expressions) {
     std::string name;
 
+    // For subselects, we need to execeute the subquery in order to use the result table later
+    if (column_expression->is_subselect() && !column_expression->has_subselect_table()) {
+      SQLQueryPlan query_plan;
+      query_plan.add_tree_by_root(column_expression->subselect_operator());
+
+      auto transaction_context = this->transaction_context();
+      if (transaction_context) {
+        query_plan.set_transaction_context(transaction_context);
+      }
+
+      std::vector<std::shared_ptr<OperatorTask>> tasks = query_plan.create_tasks();
+      CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+
+      auto result_table = tasks.back()->get_operator()->get_output();
+      DebugAssert(result_table->column_count() == 1, "Subselect table must have exactly one column.");
+
+      if (result_table->row_count() == 0) {
+        Fail("Subselect returned no results.");
+      }
+
+      if (result_table->row_count() > 1) {
+        Fail("Subselect returned more than one row.");
+      }
+
+      column_expression->set_subselect_table(result_table);
+    }
+
     if (column_expression->alias()) {
       name = *column_expression->alias();
     } else if (column_expression->type() == ExpressionType::Column) {
@@ -135,32 +162,6 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     } else if (column_expression->is_arithmetic_operator() || column_expression->type() == ExpressionType::Literal) {
       name = column_expression->to_string(_input_table_left()->column_names());
     } else if (column_expression->is_subselect()) {
-      if (!column_expression->has_subselect_table()) {
-        SQLQueryPlan query_plan;
-        query_plan.add_tree_by_root(column_expression->subselect_operator());
-
-        auto transaction_context = this->transaction_context();
-        if (transaction_context) {
-          query_plan.set_transaction_context(transaction_context);
-        }
-
-        std::vector<std::shared_ptr<OperatorTask>> tasks = query_plan.create_tasks();
-        CurrentScheduler::schedule_and_wait_for_tasks(tasks);
-
-        auto result_table = tasks.back()->get_operator()->get_output();
-        DebugAssert(result_table->column_count() == 1, "Subselect table must have exactly one column.");
-
-        if (result_table->row_count() == 0) {
-          Fail("Subselect returned no results.");
-        }
-
-        if (result_table->row_count() > 1) {
-          Fail("Subselect returned more than one row.");
-        }
-
-        column_expression->set_subselect_table(result_table);
-      }
-
       name = column_expression->subselect_table()->column_names()[0];
     } else {
       Fail("Expression type is not supported.");

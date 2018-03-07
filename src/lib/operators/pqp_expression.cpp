@@ -16,9 +16,11 @@ std::shared_ptr<PQPExpression> PQPExpression::create_column(const ColumnID colum
   return expression;
 }
 
-std::shared_ptr<PQPExpression> PQPExpression::create_subselect(std::shared_ptr<AbstractOperator> root_operator) {
+std::shared_ptr<PQPExpression> PQPExpression::create_subselect(std::shared_ptr<AbstractOperator> root_operator,
+                                                               const std::optional<std::string>& alias) {
   auto expression = std::make_shared<PQPExpression>(ExpressionType::Subselect);
   expression->_subselect_operator = root_operator;
+  expression->_alias = alias;
 
   return expression;
 }

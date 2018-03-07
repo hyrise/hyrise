@@ -24,7 +24,8 @@ class PQPExpression : public AbstractExpression<PQPExpression> {
    * Creates an expression representing a subselect, i.e. containing the PQP associated with the subselect.
    * From this PQP, a table can be created which then contains the value of this expression.
    */
-  static std::shared_ptr<PQPExpression> create_subselect(std::shared_ptr<AbstractOperator> root_operator);
+  static std::shared_ptr<PQPExpression> create_subselect(std::shared_ptr<AbstractOperator> root_operator,
+                                                         const std::optional<std::string>& alias = std::nullopt);
 
   // Necessary for the AbstractExpression<T>::create_*() methods
   using AbstractExpression<PQPExpression>::AbstractExpression;
