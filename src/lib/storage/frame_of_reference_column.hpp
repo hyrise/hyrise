@@ -19,7 +19,7 @@ class BaseCompressedVector;
  */
 template <typename T>
 class FrameOfReferenceColumn : public BaseEncodedColumn {
-  static_cast(encoding_supports_v<EncodingType::FrameOfReference, T>, "FOR supports only integral data types.");
+  static_assert(encoding_supports_v<EncodingType::FrameOfReference, T>, "FOR supports only integral data types.");
 
  public:
   /**

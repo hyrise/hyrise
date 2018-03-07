@@ -65,7 +65,8 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
           _chunk_offset{0u} {}
 
     // End iterator
-    explicit Iterator(OffsetValueIterator offset_value_it) : _offset_value_it{offset_value_it} {}
+    explicit Iterator(OffsetValueIterator offset_value_it) :
+        : Iterator{{}, offset_value_it, {}} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -110,8 +111,8 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
           _attribute_decoder{attribute_decoder} {}
 
     // End Iterator
-    PointAccessIterator(ChunkOffsetsIterator chunk_offsets_it)
-        : BasePointAccessColumnIterator<PointAccessIterator<ZsDecoderType>, ColumnIteratorValue<T>>{chunk_offsets_it} {}
+    explicit PointAccessIterator(ChunkOffsetsIterator chunk_offsets_it)
+        : PointAccessIterator{nullptr, nullptr, nullptr, chunk_offsets_it} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
