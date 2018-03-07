@@ -297,6 +297,8 @@ set(
     storage/index/group_key/variable_length_key_store.cpp
     storage/index/group_key/variable_length_key_store.hpp
     storage/index/index_info.hpp
+    storage/merge_adjacent_chunks.cpp
+    storage/merge_adjacent_chunks.hpp
     storage/materialize.hpp
     storage/numa_placement_manager.cpp
     storage/numa_placement_manager.hpp
