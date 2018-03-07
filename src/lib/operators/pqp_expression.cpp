@@ -71,6 +71,8 @@ std::shared_ptr<const Table> PQPExpression::subselect_table() {
   return _subselect_table;
 }
 
+bool PQPExpression::has_subselect_table() const { return _subselect_table != nullptr; }
+
 void PQPExpression::set_subselect_table(std::shared_ptr<const Table> table) {
   DebugAssert(type() == ExpressionType::Subselect, "Table can only be set for subselect expressions.");
   _subselect_table = table;

@@ -43,6 +43,8 @@ class PQPExpression : public AbstractExpression<PQPExpression> {
   std::shared_ptr<const Table> subselect_table();
   // Set the result table for this subselect
   void set_subselect_table(std::shared_ptr<const Table> subselect_table);
+  // Check if a table has already been generated for this subselect expression
+  bool has_subselect_table() const;
 
   std::string to_string(const std::optional<std::vector<std::string>>& input_column_names = std::nullopt,
                         bool is_root = true) const override;
