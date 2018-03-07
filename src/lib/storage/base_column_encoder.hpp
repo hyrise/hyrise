@@ -112,9 +112,9 @@ class ColumnEncoder : public BaseColumnEncoder {
    * Hint: Use hana::value() if you want to use the result
    *       in a constant expression such as constexpr-if.
    */
-  template <typename DataTypeT>
-  auto supports(hana::basic_type<DataTypeT> data_type_c) const {
-    return encoding_supports(Derived::_encoding_type, data_type_c);
+  template <typename ColumnDataType>
+  auto supports(hana::basic_type<ColumnDataType> data_type) const {
+    return encoding_supports(Derived::_encoding_type, data_type);
   }
 
   /**
@@ -122,12 +122,12 @@ class ColumnEncoder : public BaseColumnEncoder {
    *
    * Compiles only for supported data types.
    */
-  template <typename DataTypeT>
+  template <typename ColumnDataType>
   std::shared_ptr<BaseEncodedColumn> encode(const std::shared_ptr<const BaseValueColumn>& base_value_column,
-                                            hana::basic_type<DataTypeT> data_type_c) {
+                                            hana::basic_type<ColumnDataType> data_type_c) {
     static_assert(decltype(supports(data_type_c))::value);
 
-    const auto value_column = std::dynamic_pointer_cast<const ValueColumn<DataTypeT>>(base_value_column);
+    const auto value_column = std::dynamic_pointer_cast<const ValueColumn<ColumnDataType>>(base_value_column);
     Assert(value_column != nullptr, "Value column must have passed data type.");
 
     return _self()._on_encode(value_column);

@@ -40,8 +40,8 @@ constexpr auto supported_data_types_for_type =
  * Hint: Use decltype(result)::value if you want to use the result
  *       in a constant expression such as constexpr-if.
  */
-template <typename EncodingTypeC, typename DataTypeC>
-constexpr auto encoding_supports(EncodingTypeC encoding_type, DataTypeC data_type) {
+template <typename ColumnEncodingType, typename ColumnDataType>
+constexpr auto encoding_supports(ColumnEncodingType encoding_type, ColumnDataType data_type) {
   return hana::contains(hana::at_key(supported_data_types_for_type, encoding_type), data_type);
 }
 
