@@ -258,7 +258,7 @@ void TableStatistics::increment_invalid_row_count(uint64_t count) { _approx_inva
 
 std::shared_ptr<BaseColumnStatistics> TableStatistics::_get_or_generate_column_statistics(
     const ColumnID column_id) const {
-  if (_column_statistics[column_id]) {
+  if (column_id < _column_statistics.size() && _column_statistics[column_id]) {
     return _column_statistics[column_id];
   }
 
