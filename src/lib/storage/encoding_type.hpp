@@ -46,6 +46,6 @@ constexpr auto encoding_supports(ColumnEncodingType encoding_type, ColumnDataTyp
 }
 
 template <EncodingType encoding_type, typename T>
-constexpr auto encoding_supports_v = encoding_supports(enum_c<EncodingType, encoding_type>, hana::type_c<T>);
+constexpr auto encoding_supports_v = hana::value(encoding_supports(enum_c<EncodingType, encoding_type>, hana::type_c<T>));
 
 }  // namespace opossum
