@@ -369,10 +369,9 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     std::vector<std::shared_ptr<AbstractTask>> jobs;
 
     // Parallel join for each cluster
-    // TODO(florian): this is ideal, just make sure the jobs get scheduled on the correct nodes
     for (ClusterID cluster_number{0}; cluster_number < _cluster_count; ++cluster_number) {
       jobs.push_back(std::make_shared<JobTask>([this, cluster_number] { this->_join_cluster(cluster_number); }));
-      jobs.back()->schedule();
+      jobs.back()->schedule(static_cast<NodeID>(cluster_number), SchedulePriority::Unstealable);
     }
 
     CurrentScheduler::wait_for_tasks(jobs);
