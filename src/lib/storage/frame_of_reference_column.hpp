@@ -19,7 +19,7 @@ class BaseCompressedVector;
 /**
  * @brief Column implementing frame-of-reference encoding
  */
-template <typename T, typename = std::enable_if_t<encoding_supports_v<EncodingType::FrameOfReference, T>>>
+template <typename T, typename = std::enable_if_t<encoding_supports(enum_c<EncodingType, EncodingType::FrameOfReference>, hana::type_c<T>)>>
 class FrameOfReferenceColumn : public BaseEncodedColumn {
  public:
   /**

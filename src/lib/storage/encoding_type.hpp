@@ -6,6 +6,7 @@
 #include <boost/hana/map.hpp>
 #include <boost/hana/pair.hpp>
 #include <boost/hana/type.hpp>
+#include <boost/hana/tuple.hpp>
 
 #include <cstdint>
 
@@ -44,9 +45,5 @@ template <typename ColumnEncodingType, typename ColumnDataType>
 constexpr auto encoding_supports(ColumnEncodingType encoding_type, ColumnDataType data_type) {
   return hana::contains(hana::at_key(supported_data_types_for_type, encoding_type), data_type);
 }
-
-template <EncodingType encoding_type, typename T>
-constexpr auto encoding_supports_v =
-    hana::value(encoding_supports(enum_c<EncodingType, encoding_type>, hana::type_c<T>));
 
 }  // namespace opossum
