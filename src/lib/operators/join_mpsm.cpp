@@ -174,18 +174,18 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   /**
   * Represents the result of a value comparison.
   **/
-  enum class CompareResult { Less, Greater, Equal };
+  enum class ComparisonResult { Less, Greater, Equal };
 
   /**
   * Performs the join for two runs of a specified cluster.
   * A run is a series of rows in a cluster with the same value.
   **/
-  void _join_runs(TableRange left_run, TableRange right_run, CompareResult compare_result,
+  void _join_runs(TableRange left_run, TableRange right_run, ComparisonResult comparison_result,
                   std::vector<bool>& left_joined) {
     size_t cluster_number = left_run.start.cluster;
     NodeID partition_number = left_run.start.partition;
-    switch (compare_result) {
-      case CompareResult::Equal:
+    switch (comparison_result) {
+      case ComparisonResult::Equal:
         _emit_all_combinations(partition_number, cluster_number, left_run, right_run);
 
         // Since we step multiple times over the left chunk
@@ -197,11 +197,11 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
         }
 
         break;
-      case CompareResult::Less:
+      case ComparisonResult::Less:
         // This usually does something for the left join case
         // but we could hit an equal when stepping again over the left side
         break;
-      case CompareResult::Greater:
+      case ComparisonResult::Greater:
         if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
           _emit_left_null_combinations(partition_number, cluster_number, right_run);
         }
@@ -270,13 +270,13 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   /**
   * Compares two values and creates a comparison result.
   **/
-  CompareResult _compare(T left, T right) {
+  ComparisonResult _compare(T left, T right) {
     if (left < right) {
-      return CompareResult::Less;
+      return ComparisonResult::Less;
     } else if (left == right) {
-      return CompareResult::Equal;
+      return ComparisonResult::Equal;
     } else {
-      return CompareResult::Greater;
+      return ComparisonResult::Greater;
     }
   }
 
@@ -319,20 +319,20 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
         auto& left_value = (*left_cluster)[left_run_start].value;
         auto& right_value = (*right_cluster)[right_run_start].value;
 
-        auto compare_result = _compare(left_value, right_value);
+        auto comparison_result = _compare(left_value, right_value);
 
         TableRange left_run(left_node_id, left_cluster_id, left_run_start, left_run_end);
         TableRange right_run(right_node_id, right_cluster_id, right_run_start, right_run_end);
-        _join_runs(left_run, right_run, compare_result, left_joined);
+        _join_runs(left_run, right_run, comparison_result, left_joined);
 
         // Advance to the next run on the smaller side or both if equal
-        if (compare_result == CompareResult::Equal) {
+        if (comparison_result == ComparisonResult::Equal) {
           // Advance both runs
           left_run_start = left_run_end;
           right_run_start = right_run_end;
           left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
           right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
-        } else if (compare_result == CompareResult::Less) {
+        } else if (comparison_result == ComparisonResult::Less) {
           // Advance the left run
           left_run_start = left_run_end;
           left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
@@ -347,7 +347,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
       auto left_rest = TableRange(left_node_id, left_cluster_id, left_run_start, left_size);
       auto right_rest = TableRange(right_node_id, right_cluster_id, right_run_start, right_size);
       if (right_run_start < right_size) {
-        _join_runs(left_rest, right_rest, CompareResult::Greater, left_joined);
+        _join_runs(left_rest, right_rest, ComparisonResult::Greater, left_joined);
       }
     }
 
