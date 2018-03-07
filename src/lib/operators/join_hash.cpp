@@ -688,24 +688,29 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
                              _right_in_table->get_chunk(ChunkID{0})->get_column(ColumnID{0}))
                              ? true
                              : false;
-    auto only_output_right_input = !_inputs_swapped || (_mode != JoinMode::Semi && _mode != JoinMode::Anti);
+    auto only_output_right_input = _inputs_swapped && (_mode == JoinMode::Semi || _mode == JoinMode::Anti);
 
     /**
-     * Two Caches to avoid redundant reference materialization for Reference input tables. As the there might be
+     * Two Caches to avoid redundant reference materialization for Reference input tables. As there might be
      *  quite a lot Partitions (>500 seen), input Chunks (>500 seen), and columns (>50 seen), this speeds up
-     *  write_output_chunks a lot()
+     *  write_output_chunks a lot.
      *
      * They do two things:
      *      - Make it possible to re-use output pos lists if two columns in the input table have exactly the same
      *          PosLists Chunk by Chunk
      *      - Avoid creating the std::vector<const PosList*> for each Partition over and over again.
+     *
+     * They hold one entry per column in the table, not per BaseColumn in a single chunk
      */
     PosListsByColumn left_pos_lists_by_column;
     PosListsByColumn right_pos_lists_by_column;
 
-    if (ref_col_left && only_output_right_input) {
+    // left_pos_lists_by_column won't be used if left is data table or not being output at all
+    if (ref_col_left && !only_output_right_input) {
       left_pos_lists_by_column = setup_pos_lists_by_column(_left_in_table);
     }
+
+    // right_pos_lists_by_column won't be used if right is data table
     if (ref_col_right) {
       right_pos_lists_by_column = setup_pos_lists_by_column(_right_in_table);
     }
@@ -725,7 +730,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         write_output_chunks(output_chunk, _right_in_table, right_pos_lists_by_column, right, ref_col_right);
 
         // Semi/Anti joins are always swapped but do not need the outer relation
-        if (only_output_right_input) {
+        if (!only_output_right_input) {
           write_output_chunks(output_chunk, _left_in_table, left_pos_lists_by_column, left, ref_col_left);
         }
       } else {
@@ -740,6 +745,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
   // See usage in _on_execute() for doc.
   static PosListsByColumn setup_pos_lists_by_column(const std::shared_ptr<const Table> input_table) {
+    DebugAssert(input_table->get_type() == TableType::References, "Function only works for reference tables");
+
     std::map<PosLists, std::shared_ptr<PosLists>> shared_pos_lists_by_pos_lists;
 
     PosListsByColumn pos_lists_by_column(input_table->column_count());
@@ -753,10 +760,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       auto pos_lists_iter = pos_list_ptrs->begin();
 
       for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); chunk_id++) {
-        // This works because we assume that the columns have to be either all ReferenceColumns or none.
-        const auto& ref_column =
-            *static_cast<const ReferenceColumn*>(input_chunks[chunk_id]->columns()[column_id].get());
-        *pos_lists_iter = ref_column.pos_list();
+        const auto ref_column =
+            std::static_pointer_cast<const ReferenceColumn>(input_chunks[chunk_id]->columns()[column_id]);
+        *pos_lists_iter = ref_column->pos_list();
         ++pos_lists_iter;
       }
 
@@ -787,15 +793,14 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         auto iter = output_pos_list_cache.find(input_table_pos_lists);
         if (iter == output_pos_list_cache.end()) {
           // Get the row ids that are referenced
-          const auto& input_table_pos_lists_ref = *input_table_pos_lists;
-
           auto new_pos_list = std::make_shared<PosList>(pos_list.size());
           auto new_pos_list_iter = new_pos_list->begin();
           for (const auto& row : pos_list) {
             if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
               *new_pos_list_iter = row;
             } else {
-              *new_pos_list_iter = (*input_table_pos_lists_ref[row.chunk_id])[row.chunk_offset];
+              const auto& referenced_pos_list = *(*input_table_pos_lists)[row.chunk_id];
+              *new_pos_list_iter = referenced_pos_list[row.chunk_offset];
             }
             ++new_pos_list_iter;
           }
