@@ -53,6 +53,7 @@ node {
         }
       }, clangDebugSanitizers: {
         stage("clang-debug:sanitizers") {
+          when { branch "master" }
           sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-debug-sanitizers/hyriseTest clang-debug-sanitizers"
         }
