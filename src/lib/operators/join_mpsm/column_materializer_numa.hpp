@@ -131,7 +131,7 @@ class ColumnMaterializer {
   }
 
   /**
-   * Materialization works of all types of columns
+   * Materialization works for all types of columns
    */
   template <typename ColumnType>
   void _materialize_column(const ColumnType& column, ChunkID chunk_id, std::unique_ptr<PosList>& null_rows_output,
