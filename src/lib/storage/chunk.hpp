@@ -23,6 +23,7 @@ namespace opossum {
 
 class BaseIndex;
 class BaseColumn;
+class ChunkStatistics;
 
 enum class ChunkUseAccessCounter { Yes, No };
 
@@ -137,6 +138,8 @@ class Chunk : private Noncopyable {
   std::shared_ptr<BaseColumn> get_mutable_column(ColumnID column_id) const;
   std::shared_ptr<const BaseColumn> get_column(ColumnID column_id) const;
 
+  const pmr_concurrent_vector<std::shared_ptr<BaseColumn>>& columns() const;
+
   bool has_mvcc_columns() const;
   bool has_access_counter() const;
 
@@ -206,6 +209,10 @@ class Chunk : private Noncopyable {
 
   const PolymorphicAllocator<Chunk>& get_allocator() const;
 
+  std::shared_ptr<ChunkStatistics> statistics() const;
+
+  void set_statistics(std::shared_ptr<ChunkStatistics> statistics);
+
   /**
    * For debugging purposes, makes an estimation about the memory used by this Chunk and its Columns
    */
@@ -220,6 +227,7 @@ class Chunk : private Noncopyable {
   std::shared_ptr<MvccColumns> _mvcc_columns;
   std::shared_ptr<AccessCounter> _access_counter;
   pmr_vector<std::shared_ptr<BaseIndex>> _indices;
+  std::shared_ptr<ChunkStatistics> _statistics;
 };
 
 }  // namespace opossum
