@@ -147,8 +147,8 @@ SELECT * FROM mixed WHERE b IS NOT NULL;
 SELECT * FROM mixed_null WHERE b IS NULL;
 SELECT * FROM mixed_null WHERE b IS NOT NULL;
 
--- Subqueries in SELECT statement (doesn't work because of column name)
--- SELECT int_a, (SELECT MAX(b) FROM mixed) FROM int_int_int;
+-- Subqueries in SELECT statement
+SELECT int_a, (SELECT MAX(b) FROM mixed) AS foo FROM int_int_int;
 
 -- Subqueries in WHERE statement
 SELECT int_a FROM int_int_int WHERE int_a > (SELECT MIN(b) FROM mixed)
