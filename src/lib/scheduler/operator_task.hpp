@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <vector>
+#include <unordered_map>
 
 #include "scheduler/abstract_task.hpp"
 
