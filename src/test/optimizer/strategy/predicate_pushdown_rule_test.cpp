@@ -42,64 +42,64 @@ class PredicatePushdownRuleTest : public StrategyBaseTest {
 
 TEST_F(PredicatePushdownRuleTest, SimpleLiteralJoinPushdownTest) {
   auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_a_a, _b_a), PredicateCondition::Equals);
-  join_node->set_left_child(_table_a);
-  join_node->set_right_child(_table_b);
+  join_node->set_left_input(_table_a);
+  join_node->set_right_input(_table_b);
 
   auto predicate_node_0 = std::make_shared<PredicateNode>(_a_a, PredicateCondition::GreaterThan, 10);
-  predicate_node_0->set_left_child(join_node);
+  predicate_node_0->set_left_input(join_node);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
 
   EXPECT_EQ(reordered, join_node);
-  EXPECT_EQ(reordered->left_child(), predicate_node_0);
-  EXPECT_EQ(reordered->right_child(), _table_b);
-  EXPECT_EQ(reordered->left_child()->left_child(), _table_a);
+  EXPECT_EQ(reordered->left_input(), predicate_node_0);
+  EXPECT_EQ(reordered->right_input(), _table_b);
+  EXPECT_EQ(reordered->left_input()->left_input(), _table_a);
 }
 
 TEST_F(PredicatePushdownRuleTest, SimpleOneSideJoinPushdownTest) {
   auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_a_a, _b_a), PredicateCondition::Equals);
-  join_node->set_left_child(_table_a);
-  join_node->set_right_child(_table_b);
+  join_node->set_left_input(_table_a);
+  join_node->set_right_input(_table_b);
 
   auto predicate_node_0 = std::make_shared<PredicateNode>(_a_a, PredicateCondition::GreaterThan, _a_b);
-  predicate_node_0->set_left_child(join_node);
+  predicate_node_0->set_left_input(join_node);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
 
   EXPECT_EQ(reordered, join_node);
-  EXPECT_EQ(reordered->left_child(), predicate_node_0);
-  EXPECT_EQ(reordered->right_child(), _table_b);
-  EXPECT_EQ(reordered->left_child()->left_child(), _table_a);
+  EXPECT_EQ(reordered->left_input(), predicate_node_0);
+  EXPECT_EQ(reordered->right_input(), _table_b);
+  EXPECT_EQ(reordered->left_input()->left_input(), _table_a);
 }
 
 TEST_F(PredicatePushdownRuleTest, SimpleBothSideJoinPushdownTest) {
   auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_a_b, _b_a), PredicateCondition::Equals);
-  join_node->set_left_child(_table_a);
-  join_node->set_right_child(_table_b);
+  join_node->set_left_input(_table_a);
+  join_node->set_right_input(_table_b);
 
   auto predicate_node_0 = std::make_shared<PredicateNode>(_a_a, PredicateCondition::GreaterThan, _b_b);
-  predicate_node_0->set_left_child(join_node);
+  predicate_node_0->set_left_input(join_node);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
 
   EXPECT_EQ(reordered, predicate_node_0);
-  EXPECT_EQ(reordered->left_child(), join_node);
-  EXPECT_EQ(reordered->left_child()->right_child(), _table_b);
-  EXPECT_EQ(reordered->left_child()->left_child(), _table_a);
+  EXPECT_EQ(reordered->left_input(), join_node);
+  EXPECT_EQ(reordered->left_input()->right_input(), _table_b);
+  EXPECT_EQ(reordered->left_input()->left_input(), _table_a);
 }
 
 TEST_F(PredicatePushdownRuleTest, SimpleSortPushdownTest) {
   auto sort_node = std::make_shared<SortNode>(std::vector<OrderByDefinition>{{_a_a, OrderByMode::Ascending}});
-  sort_node->set_left_child(_table_a);
+  sort_node->set_left_input(_table_a);
 
   auto predicate_node = std::make_shared<PredicateNode>(_a_a, PredicateCondition::GreaterThan, _a_b);
-  predicate_node->set_left_child(sort_node);
+  predicate_node->set_left_input(sort_node);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
   EXPECT_EQ(reordered, sort_node);
-  EXPECT_EQ(reordered->left_child(), predicate_node);
-  EXPECT_EQ(reordered->left_child()->left_child(), _table_a);
+  EXPECT_EQ(reordered->left_input(), predicate_node);
+  EXPECT_EQ(reordered->left_input()->left_input(), _table_a);
 }
 
 TEST_F(PredicatePushdownRuleTest, ComplexBlockingPredicatesPushdownTest) {
@@ -108,32 +108,32 @@ TEST_F(PredicatePushdownRuleTest, ComplexBlockingPredicatesPushdownTest) {
   auto join_node_bc =
       std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_b_a, _c_a), PredicateCondition::Equals);
 
-  join_node_bc->set_left_child(_table_b);
-  join_node_bc->set_right_child(_table_c);
-  join_node_ab->set_left_child(join_node_bc);
-  join_node_ab->set_right_child(_table_a);
+  join_node_bc->set_left_input(_table_b);
+  join_node_bc->set_right_input(_table_c);
+  join_node_ab->set_left_input(join_node_bc);
+  join_node_ab->set_right_input(_table_a);
 
   auto predicate_node_0 = std::make_shared<PredicateNode>(_b_b, PredicateCondition::Equals, _a_b);
-  predicate_node_0->set_left_child(join_node_ab);
+  predicate_node_0->set_left_input(join_node_ab);
 
   auto predicate_node_1 = std::make_shared<PredicateNode>(_a_b, PredicateCondition::GreaterThan, 123);
-  predicate_node_1->set_left_child(predicate_node_0);
+  predicate_node_1->set_left_input(predicate_node_0);
 
   auto predicate_node_2 = std::make_shared<PredicateNode>(_c_a, PredicateCondition::GreaterThan, 100);
-  predicate_node_2->set_left_child(predicate_node_1);
+  predicate_node_2->set_left_input(predicate_node_1);
 
   auto reordered0 = StrategyBaseTest::apply_rule(_rule, predicate_node_2);
   auto reordered1 = StrategyBaseTest::apply_rule(_rule, reordered0);
   auto reordered = StrategyBaseTest::apply_rule(_rule, reordered1);
 
   EXPECT_EQ(reordered, predicate_node_0);
-  EXPECT_EQ(reordered->left_child(), join_node_ab);
-  EXPECT_EQ(reordered->left_child()->left_child(), join_node_bc);
-  EXPECT_EQ(reordered->left_child()->left_child()->left_child(), _table_b);
-  EXPECT_EQ(reordered->left_child()->left_child()->right_child(), predicate_node_2);
-  EXPECT_EQ(reordered->left_child()->left_child()->right_child()->left_child(), _table_c);
-  EXPECT_EQ(reordered->left_child()->right_child(), predicate_node_1);
-  EXPECT_EQ(reordered->left_child()->right_child()->left_child(), _table_a);
+  EXPECT_EQ(reordered->left_input(), join_node_ab);
+  EXPECT_EQ(reordered->left_input()->left_input(), join_node_bc);
+  EXPECT_EQ(reordered->left_input()->left_input()->left_input(), _table_b);
+  EXPECT_EQ(reordered->left_input()->left_input()->right_input(), predicate_node_2);
+  EXPECT_EQ(reordered->left_input()->left_input()->right_input()->left_input(), _table_c);
+  EXPECT_EQ(reordered->left_input()->right_input(), predicate_node_1);
+  EXPECT_EQ(reordered->left_input()->right_input()->left_input(), _table_a);
 }
 
 }  // namespace opossum

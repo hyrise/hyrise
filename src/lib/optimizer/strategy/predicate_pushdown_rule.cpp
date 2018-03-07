@@ -12,31 +12,31 @@ std::string PredicatePushdownRule::name() const { return "Predicate Pushdown Rul
 
 bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   if (node->type() != LQPNodeType::Predicate) {
-    return _apply_to_children(node);
+    return _apply_to_inputs(node);
   }
 
-  const auto parents = node->parents();
-  // Only predicates with exactly one parent are currently supported.
-  if (parents.empty() || parents.size() > 1) {
+  const auto outputs = node->outputs();
+  // Only predicates with exactly one output are currently supported.
+  if (outputs.empty() || outputs.size() > 1) {
     return false;
   }
 
   // find predicate node
   const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
 
-  auto child = node->left_child();
-  while (child->type() == LQPNodeType::Predicate) {
-    child = child->left_child();
+  auto input = node->left_input();
+  while (input->type() == LQPNodeType::Predicate) {
+    input = input->left_input();
   }
 
-  if (child->type() == LQPNodeType::Join) {
-    const auto join_node = std::dynamic_pointer_cast<JoinNode>(child);
+  if (input->type() == LQPNodeType::Join) {
+    const auto join_node = std::dynamic_pointer_cast<JoinNode>(input);
 
     const bool demotable =
         join_node->join_mode() == JoinMode::Inner && _predicate_value_demotable(predicate_node, join_node);
 
     if (!demotable) {
-      return _apply_to_children(node);
+      return _apply_to_inputs(node);
     }
 
     node->remove_from_tree();
@@ -44,13 +44,13 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
     const auto predicate_column = predicate_node->column_reference();
 
     if (_contained_in_left_subtree(join_node, predicate_column)) {
-      const auto previous_left_child = join_node->left_child();
-      join_node->set_left_child(node);
-      node->set_left_child(previous_left_child);
+      const auto previous_left_input = join_node->left_input();
+      join_node->set_left_input(node);
+      node->set_left_input(previous_left_input);
     } else if (_contained_in_right_subtree(join_node, predicate_column)) {
-      const auto previous_right_child = join_node->right_child();
-      join_node->set_right_child(node);
-      node->set_left_child(previous_right_child);
+      const auto previous_right_input = join_node->right_input();
+      join_node->set_right_input(node);
+      node->set_left_input(previous_right_input);
     } else {
       DebugAssert(false, "Predicate denotion failed. The join node must be contained in one subtree.")
     }
@@ -58,14 +58,14 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
     return true;
 
     // push always down if other node is a sort node
-  } else if (child->type() == LQPNodeType::Sort) {
-    const auto sort_node = std::dynamic_pointer_cast<SortNode>(child);
+  } else if (input->type() == LQPNodeType::Sort) {
+    const auto sort_node = std::dynamic_pointer_cast<SortNode>(input);
 
     node->remove_from_tree();
-    const auto previous_left_child = sort_node->left_child();
+    const auto previous_left_input = sort_node->left_input();
 
-    sort_node->set_left_child(node);
-    node->set_left_child(previous_left_child);
+    sort_node->set_left_input(node);
+    node->set_left_input(previous_left_input);
 
     return true;
   }
@@ -97,14 +97,14 @@ bool PredicatePushdownRule::_predicate_value_demotable(const std::shared_ptr<Pre
 
 bool PredicatePushdownRule::_contained_in_left_subtree(const std::shared_ptr<AbstractLQPNode>& node,
                                                        const LQPColumnReference& column) const {
-  Assert(node->left_child(), "Node must have left child to compare column to");
-  return _contained_in_node(node->left_child(), column);
+  Assert(node->left_input(), "Node must have left input to compare column to");
+  return _contained_in_node(node->left_input(), column);
 }
 
 bool PredicatePushdownRule::_contained_in_right_subtree(const std::shared_ptr<AbstractLQPNode>& node,
                                                         const LQPColumnReference& column) const {
-  if (node->right_child()) {
-    return _contained_in_node(node->right_child(), column);
+  if (node->right_input()) {
+    return _contained_in_node(node->right_input(), column);
   }
   return false;
 }

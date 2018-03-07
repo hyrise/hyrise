@@ -12,7 +12,7 @@ class PredicateNode;
 class LQPColumnReference;
 
 // This optimizer rule is responsible for pushing down pradicates in the lqp as much as possible
-// to reduce the result set early on. Currently only predicates with exactly one input Node ase supported
+// to reduce the result set early on. Currently only predicates with exactly one input Node are supported
 // Currently supported nodes:
 // - Inner join
 // - Sort node
