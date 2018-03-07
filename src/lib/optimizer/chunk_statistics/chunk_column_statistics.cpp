@@ -8,7 +8,6 @@
 #include "optimizer/chunk_statistics/min_max_filter.hpp"
 #include "optimizer/chunk_statistics/range_filter.hpp"
 #include "storage/base_encoded_column.hpp"
-#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/run_length_column.hpp"
@@ -45,13 +44,6 @@ template <typename T>
 static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_column(const ValueColumn<T>& column) {
   DebugAssert(false, "Chunk statistics should only be computed for compressed columns!");
   return std::make_shared<ChunkColumnStatistics>();
-}
-
-template <typename T>
-static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_column(
-    const DeprecatedDictionaryColumn<T>& column) {
-  const auto& dictionary = *column.dictionary();
-  return build_statistics_from_dictionary(dictionary);
 }
 
 template <typename T>
