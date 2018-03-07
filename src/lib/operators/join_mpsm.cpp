@@ -60,7 +60,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
  public:
   JoinMPSMImpl<T>(JoinMPSM& sort_merge_join, ColumnID left_column_id, ColumnID right_column_id,
                   const PredicateCondition op, JoinMode mode)
-      : _sort_merge_join{sort_merge_join},
+      : _mpsm_join{sort_merge_join},
         _left_column_id{left_column_id},
         _right_column_id{right_column_id},
         _op{op},
@@ -75,7 +75,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   }
 
  protected:
-  JoinMPSM& _sort_merge_join;
+  JoinMPSM& _mpsm_join;
 
   // Contains the materialized sorted input tables
   std::unique_ptr<MaterializedNUMAPartitionList<T>> _sorted_left_table;
@@ -458,7 +458,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
     bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
     auto radix_clusterer = RadixClusterSortNUMA<T>(
-        _sort_merge_join._input_table_left(), _sort_merge_join._input_table_right(), _sort_merge_join._column_ids,
+        _mpsm_join._input_table_left(), _mpsm_join._input_table_right(), _mpsm_join._column_ids,
         _op == PredicateCondition::Equals, include_null_left, include_null_right, _cluster_count);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
@@ -490,8 +490,8 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     }
 
     // Add the columns from both input tables to the output
-    _add_output_columns(output_table, _sort_merge_join._input_table_left(), output_left);
-    _add_output_columns(output_table, _sort_merge_join._input_table_right(), output_right);
+    _add_output_columns(output_table, _mpsm_join._input_table_left(), output_left);
+    _add_output_columns(output_table, _mpsm_join._input_table_right(), output_right);
 
     return output_table;
   }
