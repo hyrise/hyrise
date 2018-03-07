@@ -56,7 +56,7 @@ class PQPExpression : public AbstractExpression<PQPExpression> {
 
  private:
   std::optional<ColumnID> _column_id;
-  std::optional<std::shared_ptr<AbstractOperator>> _subselect_operator;
-  std::optional<std::shared_ptr<const Table>> _subselect_table;
+  std::shared_ptr<AbstractOperator> _subselect_operator;
+  std::shared_ptr<const Table> _subselect_table;
 };
 }  // namespace opossum

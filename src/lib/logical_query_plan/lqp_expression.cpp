@@ -54,8 +54,8 @@ void LQPExpression::set_column_reference(const LQPColumnReference& column_refere
 }
 
 std::shared_ptr<AbstractLQPNode> LQPExpression::subselect_node() const {
-  DebugAssert(_subselect_node != std::nullopt, "LPQNode does not contain a subselect node.");
-  return *_subselect_node;
+  DebugAssert(_subselect_node, "LPQNode does not contain a subselect node.");
+  return _subselect_node;
 }
 
 std::string LQPExpression::to_string(const std::optional<std::vector<std::string>>& input_column_names,

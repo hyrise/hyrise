@@ -46,6 +46,6 @@ class LQPExpression : public AbstractExpression<LQPExpression> {
 
  private:
   std::optional<LQPColumnReference> _column_reference;
-  std::optional<std::shared_ptr<AbstractLQPNode>> _subselect_node;
+  std::shared_ptr<AbstractLQPNode> _subselect_node;
 };
 }  // namespace opossum

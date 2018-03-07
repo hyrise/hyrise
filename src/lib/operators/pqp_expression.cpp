@@ -62,13 +62,13 @@ ColumnID PQPExpression::column_id() const {
 std::shared_ptr<AbstractOperator> PQPExpression::subselect_operator() {
   DebugAssert(_subselect_operator,
               "Expression " + expression_type_to_string.at(_type) + " does not have a subselect operator");
-  return *_subselect_operator;
+  return _subselect_operator;
 }
 
 std::shared_ptr<const Table> PQPExpression::subselect_table() {
   DebugAssert(_subselect_table,
               "Expression " + expression_type_to_string.at(_type) + " does not have a subselect table");
-  return *_subselect_table;
+  return _subselect_table;
 }
 
 void PQPExpression::set_subselect_table(std::shared_ptr<const Table> table) {
