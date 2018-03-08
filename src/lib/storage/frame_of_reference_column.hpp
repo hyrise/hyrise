@@ -18,6 +18,12 @@ class BaseCompressedVector;
 
 /**
  * @brief Column implementing frame-of-reference encoding
+ *
+ * Frame-of-Reference encoding divides it values into
+ * fixed-size blocks. The values of each block are encoded
+ * as an offset to the block’s minimum value. These offsets,
+ * which can ideally be represented by fewer bits, are then
+ * compressed using vector compression (null suppression).
  */
 template <typename T, typename = std::enable_if_t<encoding_supports(
                           enum_c<EncodingType, EncodingType::FrameOfReference>, hana::type_c<T>)>>
