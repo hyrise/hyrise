@@ -148,9 +148,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       auto result_table = tasks.back()->get_operator()->get_output();
       DebugAssert(result_table->column_count() == 1, "Subselect table must have exactly one column.");
 
-      const auto num_result_rows = result_table->row_count();
-      Assert(num_result_rows != 0, "Subselect returned no results.");
-      Assert(num_result_rows == 1, "Subselect returned more than one row.");
+      Assert(result_table->row_count() == 1, "Subselect returned " + std::to_string(result_table->row_count()) + " rows instead of one");
 
       column_expression->set_subselect_table(result_table);
     }
