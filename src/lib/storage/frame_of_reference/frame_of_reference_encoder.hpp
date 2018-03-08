@@ -71,7 +71,7 @@ class FrameOfReferenceEncoder : public ColumnEncoder<FrameOfReferenceEncoder> {
         const auto minimum = *min_it;
         block_minima.push_back(minimum);
 
-        auto value_block_it = current_value_block.begin();
+        value_block_it = current_value_block.begin();
         for (; value_block_it != this_value_block_end; ++value_block_it) {
           const auto value = *value_block_it;
           const auto offset = static_cast<uint32_t>(value - minimum);

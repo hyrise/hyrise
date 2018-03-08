@@ -23,12 +23,25 @@ namespace opossum {
 
 class EncodedColumnTest : public BaseTestWithParam<ColumnEncodingSpec> {
  protected:
-  static constexpr auto row_count = 16'384u;
   static constexpr auto max_value = 1'024;
 
  protected:
+  size_t row_count() {
+    static constexpr default_row_count = size_t{1u} << 14;
+
+    const auto encoding_spec = GetParam();
+
+    switch (encoding_spec.encoding_type) {
+      case EncodingType::FrameOfReference:
+        // fill three blocks and a bit more
+        return FrameOfReferenceColumn<int32_t>::block_size * (3.3);
+      default:
+        return default_row_count;
+    }
+  }
+
   std::shared_ptr<ValueColumn<int32_t>> create_int_value_column() {
-    auto values = pmr_concurrent_vector<int32_t>(row_count);
+    auto values = pmr_concurrent_vector<int32_t>(row_count());
 
     std::default_random_engine engine{};
     std::uniform_int_distribution<int32_t> dist{0u, max_value};
@@ -41,14 +54,14 @@ class EncodedColumnTest : public BaseTestWithParam<ColumnEncodingSpec> {
   }
 
   std::shared_ptr<ValueColumn<int32_t>> create_int_w_null_value_column() {
-    auto values = pmr_concurrent_vector<int32_t>(row_count);
-    auto null_values = pmr_concurrent_vector<bool>(row_count);
+    auto values = pmr_concurrent_vector<int32_t>(row_count());
+    auto null_values = pmr_concurrent_vector<bool>(row_count());
 
     std::default_random_engine engine{};
     std::uniform_int_distribution<int32_t> dist{0u, max_value};
     std::bernoulli_distribution bernoulli_dist{0.3};
 
-    for (auto i = 0u; i < row_count; ++i) {
+    for (auto i = 0u; i < row_count(); ++i) {
       values[i] = dist(engine);
       null_values[i] = bernoulli_dist(engine);
     }
@@ -62,7 +75,7 @@ class EncodedColumnTest : public BaseTestWithParam<ColumnEncodingSpec> {
     std::default_random_engine engine{};
     std::bernoulli_distribution bernoulli_dist{0.5};
 
-    for (auto into_referencing = 0u, into_referenced = 0u; into_referenced < row_count; ++into_referenced) {
+    for (auto into_referencing = 0u, into_referenced = 0u; into_referenced < row_count(); ++into_referenced) {
       if (bernoulli_dist(engine)) {
         list.push_back({into_referencing++, into_referenced});
       }
