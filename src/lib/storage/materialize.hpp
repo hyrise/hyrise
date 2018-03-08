@@ -9,8 +9,7 @@
 namespace opossum {
 
 /**
- * Materialization convenience functions. Can't be put into base_column.hpp because that would lead to circular
- * includes.
+ * @brief Materialization convenience functions.
  *
  * Use like:
  *
@@ -48,5 +47,8 @@ void materialize_nulls(const BaseColumn& column, Container& container) {
     create_iterable_from_column<ColumnValueType>(column).materialize_nulls(container);
   });
 }
+
+// Materialize a BaseColumn into a Value Column. Creates a copy of the data, even if the @param column is a ValueColumn
+std::shared_ptr<BaseColumn> materialize_as_value_column(const BaseColumn& column);
 
 }  // namespace opossum

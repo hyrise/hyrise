@@ -17,27 +17,31 @@ SQLQueryPlanVisualizer::SQLQueryPlanVisualizer(GraphvizConfig graphviz_config, V
                          std::move(edge_info)) {}
 
 void SQLQueryPlanVisualizer::_build_graph(const SQLQueryPlan& plan) {
+  std::unordered_set<std::shared_ptr<const AbstractOperator>> visualized_ops;
   for (const auto& root : plan.tree_roots()) {
-    _add_operator(root);
-    _build_subtree(root);
+    _build_subtree(root, visualized_ops);
   }
 }
 
-void SQLQueryPlanVisualizer::_build_subtree(const std::shared_ptr<const AbstractOperator>& op) {
+void SQLQueryPlanVisualizer::_build_subtree(
+    const std::shared_ptr<const AbstractOperator>& op,
+    std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
+  // Avoid drawing dataflows/ops redundantly in diamond shaped PQPs
+  if (visualized_ops.find(op) != visualized_ops.end()) return;
+  visualized_ops.insert(op);
+
   _add_operator(op);
 
   if (op->input_left() != nullptr) {
     auto left = op->input_left();
-    _add_operator(left);
+    _build_subtree(left, visualized_ops);
     _build_dataflow(left, op);
-    _build_subtree(left);
   }
 
   if (op->input_right() != nullptr) {
     auto right = op->input_right();
-    _add_operator(right);
+    _build_subtree(right, visualized_ops);
     _build_dataflow(right, op);
-    _build_subtree(right);
   }
 }
 

@@ -87,9 +87,6 @@ class AttributeVectorIterable : public PointAccessibleColumnIterable<AttributeVe
     ColumnIteratorValue<ValueID> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET)
-        return {ValueID{}, true, chunk_offsets.into_referencing};
-
       const auto value_id = static_cast<ValueID>(_attribute_decoder.get(chunk_offsets.into_referenced));
       const auto is_null = (value_id == _null_value_id);
 

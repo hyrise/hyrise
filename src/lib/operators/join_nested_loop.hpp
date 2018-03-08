@@ -18,7 +18,9 @@ class JoinNestedLoop : public AbstractJoinOperator {
                  const ColumnIDPair& column_ids, const PredicateCondition predicate_condition);
 
   const std::string name() const override;
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args = {}) const override;
+  std::shared_ptr<AbstractOperator> _on_recreate(
+      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
@@ -32,7 +34,7 @@ class JoinNestedLoop : public AbstractJoinOperator {
 
   void _create_table_structure();
 
-  void _write_output_chunks(const std::shared_ptr<Chunk>& output_chunk, const std::shared_ptr<const Table> input_table,
+  void _write_output_chunks(ChunkColumns& columns, const std::shared_ptr<const Table> input_table,
                             std::shared_ptr<PosList> pos_list);
 
   std::shared_ptr<Table> _output_table;

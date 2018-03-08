@@ -19,11 +19,6 @@ class BaseColumn : private Noncopyable {
   explicit BaseColumn(const DataType data_type);
   virtual ~BaseColumn() = default;
 
-  // we need to explicitly set the move constructor to default when
-  // we overwrite the copy constructor
-  BaseColumn(BaseColumn&&) = default;
-  BaseColumn& operator=(BaseColumn&&) = default;
-
   // the type of the data contained in this column
   DataType data_type() const;
 

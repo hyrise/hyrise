@@ -13,6 +13,7 @@
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/union_positions.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -37,7 +38,7 @@ class RecreationTest : public BaseTest {
     _table_wrapper_c->execute();
     _table_wrapper_d->execute();
 
-    _test_get_table = std::make_shared<Table>(2);
+    _test_get_table = std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data, 2);
     StorageManager::get().add_table("aNiceTestTable", _test_get_table);
   }
 
@@ -160,6 +161,17 @@ TEST_F(RecreationTest, RecreationTableScan) {
   recreated_scan->mutable_input_left()->execute();
   recreated_scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(recreated_scan->get_output(), expected_result);
+}
+
+TEST_F(RecreationTest, DiamondShape) {
+  auto scan_a = std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+  auto scan_b = std::make_shared<TableScan>(scan_a, ColumnID{1}, PredicateCondition::LessThan, 1000);
+  auto scan_c = std::make_shared<TableScan>(scan_a, ColumnID{1}, PredicateCondition::GreaterThan, 2000);
+  auto union_positions = std::make_shared<UnionPositions>(scan_b, scan_c);
+
+  auto recreated_pqp = union_positions->recreate();
+
+  EXPECT_EQ(recreated_pqp->input_left()->input_left(), recreated_pqp->input_right()->input_left());
 }
 
 }  // namespace opossum

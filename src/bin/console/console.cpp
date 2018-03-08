@@ -220,8 +220,7 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
 bool Console::_initialize_pipeline(const std::string& sql) {
   try {
     if (_explicitly_created_transaction_context != nullptr) {
-      _sql_pipeline =
-          std::make_unique<SQLPipeline>(sql, _prepared_statements, _explicitly_created_transaction_context);
+      _sql_pipeline = std::make_unique<SQLPipeline>(sql, _prepared_statements, _explicitly_created_transaction_context);
     } else {
       _sql_pipeline = std::make_unique<SQLPipeline>(sql, _prepared_statements);
     }
@@ -404,7 +403,11 @@ int Console::load_table(const std::string& args) {
     }
   } else if (extension == "tbl") {
     try {
-      auto table = opossum::load_table(filepath, Chunk::MAX_SIZE);
+      // We used this chunk size in order to be able to test chunk pruning
+      // on sizeable data sets. This should probably be made configurable
+      // at some point.
+      static constexpr auto default_chunk_size = 500'000u;
+      auto table = opossum::load_table(filepath, default_chunk_size);
       auto& storage_manager = StorageManager::get();
       if (storage_manager.has_table(tablename)) {
         storage_manager.drop_table(tablename);

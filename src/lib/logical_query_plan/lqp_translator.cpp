@@ -82,7 +82,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_stored_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto table_node = std::dynamic_pointer_cast<StoredTableNode>(node);
-  return std::make_shared<GetTable>(table_node->table_name());
+  auto get_table_operator = std::make_shared<GetTable>(table_node->table_name());
+  get_table_operator->set_excluded_chunk_ids(table_node->excluded_chunk_ids());
+  return get_table_operator;
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
@@ -479,7 +481,12 @@ std::vector<std::shared_ptr<PQPExpression>> LQPTranslator::_translate_expression
   pqp_expressions.reserve(lqp_expressions.size());
 
   for (const auto& lqp_expression : lqp_expressions) {
-    pqp_expressions.emplace_back(std::make_shared<PQPExpression>(lqp_expression, node->left_input()));
+    if (lqp_expression->is_subselect()) {
+      auto root_operator = translate_node(lqp_expression->subselect_node());
+      pqp_expressions.emplace_back(PQPExpression::create_subselect(root_operator, lqp_expression->alias()));
+    } else {
+      pqp_expressions.emplace_back(std::make_shared<PQPExpression>(lqp_expression, node->left_input()));
+    }
   }
 
   return pqp_expressions;

@@ -12,7 +12,9 @@ namespace opossum {
 class CaseTest : public ::testing::Test {
  public:
   void SetUp() override {
-
+    const auto table_a = load_table("src/test/tables/case/input_table.tbl", 2);
+    _table_wrapper_a = std::make_shared<TableWrapper>(table_a);
+    _table_wrapper_a->execute();
   }
 
  protected:
@@ -22,16 +24,16 @@ class CaseTest : public ::testing::Test {
 TEST_F(CaseTest, WhenColumnThenValue) {
   /**
    * Test
-   *    CASE WHEN #Col0 THEN 42 ELSE NULL
+   *    CASE WHEN #Col0 THEN 142 [ELSE NULL]
    */
 
-  const auto clause = PhysicalCaseClause<int32_t>(ColumnID{0}, int32_t{42});
-  const auto case_definition = PhysicalCaseExpression<int32_t>({clause});
+  const auto clause = PhysicalCaseClause<int32_t>(ColumnID{0}, int32_t{142});
+  const auto case_expression = std::make_shared<PhysicalCaseExpression<int32_t>>(clause, Null{}, "c0");
 
-  const auto case_op = std::make_shared<Case>(_table_wrapper_a, case_definition);
+  const auto case_op = std::make_shared<Case>(_table_wrapper_a, Case::Expressions{case_expression});
   case_op->execute();
 
-  EXPECT_TABLE_EQ(case_op->get_output(), load_table("src/test/case/when_column_then_value.tbl"));
+  EXPECT_TABLE_EQ_UNORDERED(case_op->get_output(), load_table("src/test/tables/case/when_column_then_value.tbl"));
 }
 
 TEST_F(CaseTest, WhenColumnThenColumnElseColumn) {
@@ -41,27 +43,27 @@ TEST_F(CaseTest, WhenColumnThenColumnElseColumn) {
    */
 
   const auto clause = PhysicalCaseClause<int32_t>(ColumnID{0}, ColumnID{1});
-  const auto case_definition = PhysicalCaseExpression<int32_t>({clause}, ColumnID{2});
+  const auto case_expression = std::make_shared<PhysicalCaseExpression<int32_t>>(clause, ColumnID{2}, "c0");
 
-  const auto case_op = std::make_shared<Case>(_table_wrapper_a, case_definition);
+  const auto case_op = std::make_shared<Case>(_table_wrapper_a, Case::Expressions{case_expression});
   case_op->execute();
 
-  EXPECT_TABLE_EQ(case_op->get_output(), load_table("src/test/case/when_column_then_column_else_column.tbl"));
+  EXPECT_TABLE_EQ_UNORDERED(case_op->get_output(), load_table("src/test/tables/case/when_column_then_column_else_column.tbl"));
 }
 
 TEST_F(CaseTest, WhenColumnThenNullElseValue) {
   /**
    * Test
-   *    CASE WHEN #Col0 THEN NULL ELSE #Col2
+   *    CASE WHEN #Col0 THEN NULL ELSE 143
    */
 
   const auto clause = PhysicalCaseClause<int32_t>(ColumnID{0}, Null{});
-  const auto case_definition = PhysicalCaseExpression<int32_t>({clause}, 42);
+  const auto case_expression =  std::make_shared<PhysicalCaseExpression<int32_t>>(clause, 143, "c0");
 
-  const auto case_op = std::make_shared<Case>(_table_wrapper_a, case_definition);
+  const auto case_op = std::make_shared<Case>(_table_wrapper_a, Case::Expressions{case_expression});
   case_op->execute();
 
-  EXPECT_TABLE_EQ(case_op->get_output(), load_table("src/test/case/when_column_then_null_else_column.tbl"));
+  EXPECT_TABLE_EQ_UNORDERED(case_op->get_output(), load_table("src/test/tables/case/when_column_then_null_else_column.tbl"));
 }
 
 TEST_F(CaseTest, WhenColumnsThenMixedElseValue) {
@@ -74,15 +76,15 @@ TEST_F(CaseTest, WhenColumnsThenMixedElseValue) {
    *    END
    */
 
-  const auto clauses = std::vector<PhysicalCaseClause<float>>{};
+  auto clauses = std::vector<PhysicalCaseClause<float>>{};
   clauses.emplace_back(ColumnID{0}, ColumnID{3});
   clauses.emplace_back(ColumnID{4}, float{3.14});
-  const auto case_definition = PhysicalCaseExpression<float>(clauses, float{13});
+  const auto case_expression =  std::make_shared<PhysicalCaseExpression<float>>(clauses, 13.0f, "c0");
 
-  const auto case_op = std::make_shared<Case>(_table_wrapper_a, case_definition);
+  const auto case_op = std::make_shared<Case>(_table_wrapper_a, Case::Expressions{case_expression});
   case_op->execute();
 
-  EXPECT_TABLE_EQ(case_op->get_output(), load_table("src/test/case/when_columns_then_mixed_else_value.tbl"));
+  EXPECT_TABLE_EQ_UNORDERED(case_op->get_output(), load_table("src/test/tables/case/when_columns_then_mixed_else_value.tbl"));
 }
 
 }  // namespace opossum

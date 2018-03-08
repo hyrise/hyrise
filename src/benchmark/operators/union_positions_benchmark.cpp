@@ -57,10 +57,12 @@ class UnionPositionsBenchmarkFixture : public benchmark::Fixture {
      * Create the referenced table, that doesn't actually contain any data - but UnionPositions won't care, it just
      * operates on RowIDs
      */
-    _referenced_table = std::make_shared<Table>();
+    TableColumnDefinitions column_definitions;
+
     for (auto column_idx = 0; column_idx < num_columns; ++column_idx) {
-      _referenced_table->add_column("c" + std::to_string(column_idx), DataType::Int);
+      column_definitions.emplace_back("c" + std::to_string(column_idx), DataType::Int);
     }
+    _referenced_table = std::make_shared<Table>(column_definitions, TableType::Data);
 
     /**
      * Create the referencing tables, the ones we're actually going to perform the benchmark on
@@ -81,15 +83,16 @@ class UnionPositionsBenchmarkFixture : public benchmark::Fixture {
   std::shared_ptr<Table> _create_reference_table(size_t num_rows, size_t num_columns) const {
     const auto num_rows_per_chunk = num_rows / GENERATED_TABLE_NUM_CHUNKS;
 
-    auto table = std::make_shared<Table>();
+    TableColumnDefinitions column_definitions;
     for (size_t column_idx = 0; column_idx < num_columns; ++column_idx) {
-      table->add_column_definition("c" + std::to_string(column_idx), DataType::Int);
+      column_definitions.emplace_back("c" + std::to_string(column_idx), DataType::Int);
     }
+    auto table = std::make_shared<Table>(column_definitions, TableType::References);
 
     for (size_t row_idx = 0; row_idx < num_rows;) {
       const auto num_rows_in_this_chunk = std::min(num_rows_per_chunk, num_rows - row_idx);
 
-      auto chunk = std::make_shared<Chunk>();
+      ChunkColumns columns;
       for (auto column_idx = ColumnID{0}; column_idx < num_columns; ++column_idx) {
         /**
          * By specifying a chunk size of num_rows * 0.2f for the referenced table, we're emulating a referenced table
@@ -97,9 +100,9 @@ class UnionPositionsBenchmarkFixture : public benchmark::Fixture {
          * we're creating. So when creating TWO referencing tables, there should be a fair amount of overlap.
          */
         auto pos_list = generate_pos_list(_random_engine, num_rows * 0.2f, num_rows_per_chunk);
-        chunk->add_column(std::make_shared<ReferenceColumn>(_referenced_table, column_idx, pos_list));
+        columns.push_back(std::make_shared<ReferenceColumn>(_referenced_table, column_idx, pos_list));
       }
-      table->emplace_chunk(std::move(chunk));
+      table->append_chunk(columns);
 
       row_idx += num_rows_in_this_chunk;
     }

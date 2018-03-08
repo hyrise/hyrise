@@ -50,33 +50,13 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
 
     // TODO(anyone): benchmark if using two maps instead doing the dynamic cast every time really is faster.
     ColumnIteratorValue<T> dereference() const {
-      if (*_pos_list_it == NULL_ROW_ID) return ColumnIteratorValue<T>{T{}, true, 0u};
+      if (_pos_list_it->is_null()) return ColumnIteratorValue<T>{T{}, true, 0u};
 
       const auto chunk_id = _pos_list_it->chunk_id;
       const auto& chunk_offset = _pos_list_it->chunk_offset;
 
-      auto value_column_it = _value_columns.find(chunk_id);
-      if (value_column_it != _value_columns.end()) {
-        return _value_from_value_column(*(value_column_it->second), chunk_offset);
-      }
-
-      auto dict_column_it = _dictionary_columns.find(chunk_id);
-      if (dict_column_it != _dictionary_columns.end()) {
-        return _value_from_dictionary_column(*(dict_column_it->second), chunk_offset);
-      }
-
       const auto chunk = _table->get_chunk(chunk_id);
       const auto column = chunk->get_column(_column_id);
-
-      if (auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(column)) {
-        _value_columns[chunk_id] = value_column;
-        return _value_from_value_column(*value_column, chunk_offset);
-      }
-
-      if (auto dict_column = std::dynamic_pointer_cast<const DeprecatedDictionaryColumn<T>>(column)) {
-        _dictionary_columns[chunk_id] = dict_column;
-        return _value_from_dictionary_column(*dict_column, chunk_offset);
-      }
 
       /**
        * This is just a temporary solution to supporting encoded column type.
@@ -86,37 +66,6 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
     }
 
    private:
-    auto _value_from_value_column(const ValueColumn<T>& column, const ChunkOffset& chunk_offset) const {
-      const auto chunk_offset_into_ref_column =
-          static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
-
-      if (column.is_nullable()) {
-        auto is_null = column.null_values()[chunk_offset];
-        const auto& value = is_null ? T{} : column.values()[chunk_offset];
-        return ColumnIteratorValue<T>{value, is_null, chunk_offset_into_ref_column};
-      }
-
-      const auto& value = column.values()[chunk_offset];
-      return ColumnIteratorValue<T>{value, false, chunk_offset_into_ref_column};
-    }
-
-    auto _value_from_dictionary_column(const DeprecatedDictionaryColumn<T>& column,
-                                       const ChunkOffset& chunk_offset) const {
-      const auto chunk_offset_into_ref_column =
-          static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
-      auto attribute_vector = column.attribute_vector();
-      auto value_id = attribute_vector->get(chunk_offset);
-
-      if (value_id == NULL_VALUE_ID) {
-        return ColumnIteratorValue<T>{T{}, true, chunk_offset_into_ref_column};
-      }
-
-      auto dictionary = column.dictionary();
-      const auto& value = (*dictionary)[value_id];
-
-      return ColumnIteratorValue<T>{value, false, chunk_offset_into_ref_column};
-    }
-
     auto _value_from_any_column(const BaseColumn& column, const ChunkOffset& chunk_offset) const {
       const auto variant_value = column[chunk_offset];
 
@@ -136,9 +85,6 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
 
     const PosListIterator _begin_pos_list_it;
     PosListIterator _pos_list_it;
-
-    mutable std::map<ChunkID, std::shared_ptr<const ValueColumn<T>>> _value_columns;
-    mutable std::map<ChunkID, std::shared_ptr<const DeprecatedDictionaryColumn<T>>> _dictionary_columns;
   };
 };
 
