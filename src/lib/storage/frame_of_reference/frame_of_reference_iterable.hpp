@@ -119,9 +119,6 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
     ColumnIteratorValue<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET)
-        return ColumnIteratorValue<T>{T{}, true, chunk_offsets.into_referencing};
-
       static constexpr auto block_size = FrameOfReferenceColumn<T>::block_size;
 
       const auto is_null = (*_null_values)[chunk_offsets.into_referenced];
