@@ -12,7 +12,6 @@
 #include "optimizer/chunk_statistics/range_filter.hpp"
 #include "storage/base_encoded_column.hpp"
 #include "storage/create_iterable_from_column.hpp"
-#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/run_length_column.hpp"
@@ -41,19 +40,6 @@ static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_dictionary(c
   return statistics;
 }
 
-template <typename T>
-static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_column(const DictionaryColumn<T>& column) {
-  const auto& dictionary = *column.dictionary();
-  return build_statistics_from_dictionary(dictionary);
-}
-
-template <typename T>
-static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_concrete_column(
-    const DeprecatedDictionaryColumn<T>& column) {
-  const auto& dictionary = *column.dictionary();
-  return build_statistics_from_dictionary(dictionary);
-}
-
 std::shared_ptr<ChunkColumnStatistics> ChunkColumnStatistics::build_statistics(DataType data_type,
                                                                                std::shared_ptr<BaseColumn> column) {
   std::shared_ptr<ChunkColumnStatistics> statistics;
@@ -62,10 +48,10 @@ std::shared_ptr<ChunkColumnStatistics> ChunkColumnStatistics::build_statistics(D
     using DataTypeT = typename decltype(type)::type;
 
     // clang-format off
-    if constexpr(std::is_same_v<ColumnType, DictionaryColumn<DataTypeT>> ||
-                 std::is_same_v<ColumnType, DeprecatedDictionaryColumn<DataTypeT>>) {
+    if constexpr(std::is_same_v<ColumnType, DictionaryColumn<DataTypeT>>) {
         // we can use the fact that dictionary columns have an accessor for the dictionary
-        statistics = build_statistics_from_concrete_column(typed_column);
+        const auto& dictionary = *typed_column.dictionary();
+        statistics = build_statistics_from_dictionary(dictionary);
     } else if constexpr(std::is_base_of_v<BaseEncodedColumn, ColumnType>) {
         // if we have a generic encoded column we create the dictionary ourselves
         auto iterable = create_iterable_from_column(typed_column);
