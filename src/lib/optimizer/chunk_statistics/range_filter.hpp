@@ -82,6 +82,7 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   }
 
   // calculate distances by taking the difference between two neighbouring elements
+  // vector stores <distance to next element, dictionary index>
   std::vector<std::pair<T, size_t>> distances;
   distances.reserve(dictionary.size());
   for (auto dict_it = dictionary.cbegin(); dict_it + 1 != dictionary.cend(); ++dict_it) {
