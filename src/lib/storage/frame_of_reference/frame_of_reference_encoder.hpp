@@ -3,6 +3,7 @@
 #include <array>
 #include <limits>
 #include <memory>
+#include <algorithm>
 
 #include "storage/base_column_encoder.hpp"
 
@@ -29,41 +30,46 @@ class FrameOfReferenceEncoder : public ColumnEncoder<FrameOfReferenceEncoder> {
     const auto size = value_column->size();
     const auto num_blocks = size / block_size;
 
+    // holds the minimum of each block
     auto block_minima = pmr_vector<T>{alloc};
     block_minima.reserve(num_blocks);
 
+    // holds the uncompressed offset values
     auto offset_values = pmr_vector<uint32_t>{alloc};
     offset_values.reserve(size);
 
+    // holds whether a column value is null
     auto null_values = pmr_vector<bool>{alloc};
     null_values.reserve(size);
 
+    // used as optional input for the compression of the offset values
     auto max_value = uint32_t{0u};
 
     auto iterable = ValueColumnIterable<T>{*value_column};
     iterable.with_iterators([&](auto column_it, auto column_end) {
-      auto value_block = std::array<T, block_size>{};
+      // a temporary storage to hold the values of one block
+      auto current_value_block = std::array<T, block_size>{};
 
       while (column_it != column_end) {
-        auto value_block_it = value_block.begin();
-        for (; value_block_it != value_block.end() && column_it != column_end; ++value_block_it, ++column_it) {
+        auto value_block_it = current_value_block.begin();
+        for (; value_block_it != current_value_block.end() && column_it != column_end; ++value_block_it, ++column_it) {
           const auto column_value = *column_it;
 
           *value_block_it = column_value.is_null() ? T{0u} : column_value.value();
           null_values.push_back(column_value.is_null());
         }
 
-        const auto[min_it, max_it] = std::minmax_element(value_block.begin(), value_block_it);
+        const auto[min_it, max_it] = std::minmax_element(current_value_block.begin(), value_block_it);
         Assert(static_cast<std::make_unsigned_t<T>>(*max_it - *min_it) <= std::numeric_limits<uint32_t>::max(),
                "Value range in block must fit into uint32_t.");
 
         const auto minimum = *min_it;
         block_minima.push_back(minimum);
 
-        for (auto value : value_block) {
+        for (auto value : current_value_block) {
           const auto offset = static_cast<uint32_t>(value - minimum);
           offset_values.push_back(offset);
-          max_value |= offset;
+          max_value = std::max(max_value, offset);
         }
       }
     });
