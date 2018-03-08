@@ -59,14 +59,21 @@ class FrameOfReferenceEncoder : public ColumnEncoder<FrameOfReferenceEncoder> {
           null_values.push_back(column_value.is_null());
         }
 
-        const auto[min_it, max_it] = std::minmax_element(current_value_block.begin(), value_block_it);
+        // The last value block might not be filled completely
+        const auto this_value_block_end = value_block_it;
+
+        const auto[min_it, max_it] = std::minmax_element(current_value_block.begin(), this_value_block_end);
+
+        // Make sure that the largest offset fits into uint32_t (required for vector compression.)
         Assert(static_cast<std::make_unsigned_t<T>>(*max_it - *min_it) <= std::numeric_limits<uint32_t>::max(),
                "Value range in block must fit into uint32_t.");
 
         const auto minimum = *min_it;
         block_minima.push_back(minimum);
 
-        for (auto value : current_value_block) {
+        auto value_block_it = current_value_block.begin();
+        for (; value_block_it != this_value_block_end; ++value_block_it) {
+          const auto value = *value_block_it;
           const auto offset = static_cast<uint32_t>(value - minimum);
           offset_values.push_back(offset);
           max_value = std::max(max_value, offset);
