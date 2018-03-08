@@ -481,7 +481,12 @@ std::vector<std::shared_ptr<PQPExpression>> LQPTranslator::_translate_expression
   pqp_expressions.reserve(lqp_expressions.size());
 
   for (const auto& lqp_expression : lqp_expressions) {
-    pqp_expressions.emplace_back(std::make_shared<PQPExpression>(lqp_expression, node->left_input()));
+    if (lqp_expression->is_subselect()) {
+      auto root_operator = translate_node(lqp_expression->subselect_node());
+      pqp_expressions.emplace_back(PQPExpression::create_subselect(root_operator, lqp_expression->alias()));
+    } else {
+      pqp_expressions.emplace_back(std::make_shared<PQPExpression>(lqp_expression, node->left_input()));
+    }
   }
 
   return pqp_expressions;

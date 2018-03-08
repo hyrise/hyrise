@@ -45,7 +45,7 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
   chunk->set_statistics(std::make_shared<ChunkStatistics>(column_statistics));
 
   if (chunk->has_mvcc_columns()) {
-    chunk->shrink_mvcc_columns();
+    chunk->mvcc_columns()->shrink();
   }
 }
 
@@ -57,7 +57,7 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
 
 void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids,
                                  const std::map<ChunkID, ChunkEncodingSpec>& chunk_encoding_specs) {
-  const auto data_types = table->column_types();
+  const auto data_types = table->column_data_types();
 
   for (auto chunk_id : chunk_ids) {
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
@@ -71,7 +71,7 @@ void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std:
 
 void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids,
                                  const ColumnEncodingSpec& column_encoding_spec) {
-  const auto data_types = table->column_types();
+  const auto data_types = table->column_data_types();
 
   for (auto chunk_id : chunk_ids) {
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
@@ -83,7 +83,7 @@ void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std:
 
 void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
                                      const std::vector<ChunkEncodingSpec>& chunk_encoding_specs) {
-  const auto column_types = table->column_types();
+  const auto column_types = table->column_data_types();
   const auto chunk_count = static_cast<size_t>(table->chunk_count());
   Assert(chunk_encoding_specs.size() == chunk_count, "Number of encoding specs must match table’s chunk count.");
 
@@ -97,7 +97,7 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
 
 void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
                                      const ColumnEncodingSpec& column_encoding_spec) {
-  const auto column_types = table->column_types();
+  const auto column_types = table->column_data_types();
 
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     auto chunk = table->get_chunk(chunk_id);

@@ -7,9 +7,9 @@
 #include "resolve_type.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
-#include "storage/dictionary_column.hpp"
 #include "storage/create_iterable_from_column.hpp"
+#include "storage/dictionary_column.hpp"
+#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -109,8 +109,7 @@ class ColumnMaterializer {
   /**
    * Specialization for dictionary columns
    */
-  std::shared_ptr<MaterializedColumn<T>> _materialize_column(const DictionaryColumn<T>& column,
-                                                             ChunkID chunk_id,
+  std::shared_ptr<MaterializedColumn<T>> _materialize_column(const DictionaryColumn<T>& column, ChunkID chunk_id,
                                                              std::unique_ptr<PosList>& null_rows_output) {
     auto output = MaterializedColumn<T>{};
     output.reserve(column.size());

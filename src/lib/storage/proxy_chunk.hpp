@@ -11,7 +11,7 @@ namespace opossum {
 // The ProxyChunk class wraps chunk objects and implements the RAII pattern
 // to track the time a particular chunk has been in scope. These times are
 // measured using the RDTSC instructions and are stored in the Chunk's
-// AccessCounter.
+// ChunkAccessCounter.
 class ProxyChunk {
  public:
   explicit ProxyChunk(const std::shared_ptr<Chunk>& chunk);

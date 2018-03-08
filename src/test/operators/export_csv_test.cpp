@@ -21,10 +21,12 @@ namespace opossum {
 class OperatorsExportCsvTest : public BaseTest {
  protected:
   void SetUp() override {
-    table = std::make_shared<Table>(2);
-    table->add_column("a", DataType::Int);
-    table->add_column("b", DataType::String);
-    table->add_column("c", DataType::Float);
+    TableColumnDefinitions column_definitions;
+    column_definitions.emplace_back("a", DataType::Int);
+    column_definitions.emplace_back("b", DataType::String);
+    column_definitions.emplace_back("c", DataType::Float);
+
+    table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   }
 
   void TearDown() override {
@@ -148,12 +150,14 @@ TEST_F(OperatorsExportCsvTest, ReferenceColumn) {
 }
 
 TEST_F(OperatorsExportCsvTest, ExportAllTypes) {
-  std::shared_ptr<Table> new_table = std::make_shared<Table>(2);
-  new_table->add_column("a", DataType::Int);
-  new_table->add_column("b", DataType::String);
-  new_table->add_column("c", DataType::Float);
-  new_table->add_column("d", DataType::Long);
-  new_table->add_column("e", DataType::Double);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int);
+  column_definitions.emplace_back("b", DataType::String);
+  column_definitions.emplace_back("c", DataType::Float);
+  column_definitions.emplace_back("d", DataType::Long);
+  column_definitions.emplace_back("e", DataType::Double);
+
+  std::shared_ptr<Table> new_table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   new_table->append({1, "Hallo", 3.5f, static_cast<int64_t>(12), 2.333});
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(new_table));
