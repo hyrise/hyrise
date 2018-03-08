@@ -19,9 +19,9 @@ class BaseCompressedVector;
 /**
  * @brief Column implementing frame-of-reference encoding
  *
- * Frame-of-Reference encoding divides it values into
+ * Frame-of-Reference encoding divides the values of column into
  * fixed-size blocks. The values of each block are encoded
- * as an offset to the block’s minimum value. These offsets,
+ * as an offset from the block’s minimum value. These offsets,
  * which can ideally be represented by fewer bits, are then
  * compressed using vector compression (null suppression).
  */
