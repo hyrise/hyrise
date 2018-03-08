@@ -5,8 +5,8 @@
 #include <boost/hana/equal.hpp>
 #include <boost/hana/map.hpp>
 #include <boost/hana/pair.hpp>
-#include <boost/hana/type.hpp>
 #include <boost/hana/tuple.hpp>
+#include <boost/hana/type.hpp>
 
 #include <cstdint>
 

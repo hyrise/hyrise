@@ -1,9 +1,9 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <limits>
 #include <memory>
-#include <algorithm>
 
 #include "storage/base_column_encoder.hpp"
 

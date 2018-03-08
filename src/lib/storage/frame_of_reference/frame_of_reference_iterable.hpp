@@ -17,12 +17,12 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
     resolve_compressed_vector_type(*_column.offset_values(), [&](const auto& offset_values) {
-      using ZsIteratorType = decltype(offset_values.cbegin());
+      using OffsetValueIteratorT = decltype(offset_values.cbegin());
 
-      auto begin = Iterator<ZsIteratorType>{_column.block_minima()->cbegin(), offset_values.cbegin(),
-                                            _column.null_values()->cbegin()};
+      auto begin = Iterator<OffsetValueIteratorT>{_column.block_minima()->cbegin(), offset_values.cbegin(),
+                                                  _column.null_values()->cbegin()};
 
-      auto end = Iterator<ZsIteratorType>{offset_values.cend()};
+      auto end = Iterator<OffsetValueIteratorT>{offset_values.cend()};
 
       functor(begin, end);
     });
@@ -32,12 +32,12 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
     resolve_compressed_vector_type(*_column.offset_values(), [&](const auto& vector) {
       auto decoder = vector.create_decoder();
-      using ZsDecoderType = std::decay_t<decltype(*decoder)>;
+      using OffsetValueDecompressorT = std::decay_t<decltype(*decoder)>;
 
-      auto begin = PointAccessIterator<ZsDecoderType>{_column.block_minima().get(), _column.null_values().get(),
-                                                      decoder.get(), mapped_chunk_offsets.cbegin()};
+      auto begin = PointAccessIterator<OffsetValueDecompressorT>{
+          _column.block_minima().get(), _column.null_values().get(), decoder.get(), mapped_chunk_offsets.cbegin()};
 
-      auto end = PointAccessIterator<ZsDecoderType>{mapped_chunk_offsets.cend()};
+      auto end = PointAccessIterator<OffsetValueDecompressorT>{mapped_chunk_offsets.cend()};
 
       functor(begin, end);
     });
@@ -47,16 +47,15 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
   const FrameOfReferenceColumn<T>& _column;
 
  private:
-  template <typename ZsIteratorType>
-  class Iterator : public BaseColumnIterator<Iterator<ZsIteratorType>, ColumnIteratorValue<T>> {
+  template <typename OffsetValueIteratorT>
+  class Iterator : public BaseColumnIterator<Iterator<OffsetValueIteratorT>, ColumnIteratorValue<T>> {
    public:
     using ReferenceFrameIterator = typename pmr_vector<T>::const_iterator;
-    using OffsetValueIterator = ZsIteratorType;
     using NullValueIterator = typename pmr_vector<bool>::const_iterator;
 
    public:
     // Begin Iterator
-    explicit Iterator(ReferenceFrameIterator block_minimum_it, OffsetValueIterator offset_value_it,
+    explicit Iterator(ReferenceFrameIterator block_minimum_it, OffsetValueIteratorT offset_value_it,
                       NullValueIterator null_value_it)
         : _block_minimum_it{block_minimum_it},
           _offset_value_it{offset_value_it},
@@ -65,7 +64,7 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
           _chunk_offset{0u} {}
 
     // End iterator
-    explicit Iterator(OffsetValueIterator offset_value_it) : Iterator{{}, offset_value_it, {}} {}
+    explicit Iterator(OffsetValueIteratorT offset_value_it) : Iterator{{}, offset_value_it, {}} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -91,20 +90,21 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
 
    private:
     ReferenceFrameIterator _block_minimum_it;
-    OffsetValueIterator _offset_value_it;
+    OffsetValueIteratorT _offset_value_it;
     NullValueIterator _null_value_it;
     size_t _index_within_frame;
     ChunkOffset _chunk_offset;
   };
 
-  template <typename ZsDecoderType>
+  template <typename OffsetValueDecompressorT>
   class PointAccessIterator
-      : public BasePointAccessColumnIterator<PointAccessIterator<ZsDecoderType>, ColumnIteratorValue<T>> {
+      : public BasePointAccessColumnIterator<PointAccessIterator<OffsetValueDecompressorT>, ColumnIteratorValue<T>> {
    public:
     // Begin Iterator
     PointAccessIterator(const pmr_vector<T>* block_minima, const pmr_vector<bool>* null_values,
-                        ZsDecoderType* attribute_decoder, ChunkOffsetsIterator chunk_offsets_it)
-        : BasePointAccessColumnIterator<PointAccessIterator<ZsDecoderType>, ColumnIteratorValue<T>>{chunk_offsets_it},
+                        OffsetValueDecompressorT* attribute_decoder, ChunkOffsetsIterator chunk_offsets_it)
+        : BasePointAccessColumnIterator<PointAccessIterator<OffsetValueDecompressorT>,
+                                        ColumnIteratorValue<T>>{chunk_offsets_it},
           _block_minima{block_minima},
           _null_values{null_values},
           _attribute_decoder{attribute_decoder} {}
@@ -135,7 +135,7 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
    private:
     const pmr_vector<T>* _block_minima;
     const pmr_vector<bool>* _null_values;
-    ZsDecoderType* _attribute_decoder;
+    OffsetValueDecompressorT* _attribute_decoder;
   };
 };
 
