@@ -27,7 +27,7 @@ class EncodedColumnTest : public BaseTestWithParam<ColumnEncodingSpec> {
 
  protected:
   size_t row_count() {
-    static constexpr default_row_count = size_t{1u} << 14;
+    static constexpr auto default_row_count = size_t{1u} << 14;
 
     const auto encoding_spec = GetParam();
 
