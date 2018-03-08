@@ -47,17 +47,22 @@ std::shared_ptr<AbstractOperator> Projection::_on_recreate(
   ColumnExpressions new_column_expressions;
 
   for (const auto& column_expression : _column_expressions) {
+    std::shared_ptr<PQPExpression> new_column_expression = column_expression;
+
     if (column_expression->type() == ExpressionType::Placeholder) {
       auto value_placeholder = column_expression->value_placeholder();
 
       if (value_placeholder.index() < args.size()) {
         const auto& parameter_variant = args[value_placeholder.index()];
         auto value = boost::get<AllTypeVariant>(parameter_variant);
-        new_column_expressions.emplace_back(column_expression->set_placeholder_value(value));
+        new_column_expression = column_expression->copy_with_placeholder_value(value);
       }
-    } else {
-      new_column_expressions.emplace_back(column_expression);
+    } else if (column_expression->type() == ExpressionType::Subselect) {
+      const auto new_subselect_operator = column_expression->subselect_operator()->recreate(args);
+      new_column_expression = PQPExpression::create_subselect(new_subselect_operator, column_expression->alias());
     }
+
+    new_column_expressions.push_back(new_column_expression);
   }
 
   return std::make_shared<Projection>(recreated_input_left, new_column_expressions);
@@ -137,19 +142,15 @@ std::shared_ptr<const Table> Projection::_on_execute() {
         query_plan.set_transaction_context(transaction_context);
       }
 
-      std::vector<std::shared_ptr<OperatorTask>> tasks = query_plan.create_tasks();
+      const auto tasks = query_plan.create_tasks();
       CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 
       auto result_table = tasks.back()->get_operator()->get_output();
       DebugAssert(result_table->column_count() == 1, "Subselect table must have exactly one column.");
 
-      if (result_table->row_count() == 0) {
-        Fail("Subselect returned no results.");
-      }
-
-      if (result_table->row_count() > 1) {
-        Fail("Subselect returned more than one row.");
-      }
+      const auto num_result_rows = result_table->row_count();
+      Assert(num_result_rows != 0, "Subselect returned no results.");
+      Assert(num_result_rows == 1, "Subselect returned more than one row.");
 
       column_expression->set_subselect_table(result_table);
     }

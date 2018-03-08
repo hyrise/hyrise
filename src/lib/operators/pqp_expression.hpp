@@ -52,7 +52,7 @@ class PQPExpression : public AbstractExpression<PQPExpression> {
 
   bool operator==(const PQPExpression& other) const;
 
-  std::shared_ptr<PQPExpression> set_placeholder_value(const AllTypeVariant& value);
+  std::shared_ptr<PQPExpression> copy_with_placeholder_value(const AllTypeVariant& value);
 
  protected:
   void _deep_copy_impl(const std::shared_ptr<PQPExpression>& copy) const override;
