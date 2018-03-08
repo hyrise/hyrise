@@ -52,7 +52,8 @@ std::shared_ptr<ChunkColumnStatistics> ChunkColumnStatistics::build_statistics(D
         // we can use the fact that dictionary columns have an accessor for the dictionary
         const auto& dictionary = *typed_column.dictionary();
         statistics = build_statistics_from_dictionary(dictionary);
-    } else if constexpr(std::is_base_of_v<BaseEncodedColumn, ColumnType>) {
+    } else {
+      if constexpr(std::is_base_of_v<BaseEncodedColumn, ColumnType>) {
         // if we have a generic encoded column we create the dictionary ourselves
         auto iterable = create_iterable_from_column(typed_column);
         std::unordered_set<DataTypeT> values;
@@ -65,8 +66,9 @@ std::shared_ptr<ChunkColumnStatistics> ChunkColumnStatistics::build_statistics(D
         pmr_vector<DataTypeT> dictionary{values.cbegin(), values.cend()};
         std::sort(dictionary.begin(), dictionary.end());
         statistics = build_statistics_from_dictionary(dictionary);
-    } else {
-      Fail("ChunkColumnStatistics should only be built for encoded columns.");
+      } else {
+       Fail("ChunkColumnStatistics should only be built for encoded columns.");
+      }
     }
     // clang-format on
   });
