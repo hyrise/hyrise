@@ -23,33 +23,32 @@ std::string OperatorTask::description() const {
 const std::vector<std::shared_ptr<OperatorTask>> OperatorTask::make_tasks_from_operator(
     std::shared_ptr<AbstractOperator> op) {
   std::vector<std::shared_ptr<OperatorTask>> tasks;
-  OperatorTask::_add_tasks_from_operator(op, tasks);
+  std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<OperatorTask>> task_by_op;
+  OperatorTask::_add_tasks_from_operator(op, tasks, task_by_op);
   return tasks;
 }
 
 std::shared_ptr<OperatorTask> OperatorTask::_add_tasks_from_operator(
-    std::shared_ptr<AbstractOperator> op, std::vector<std::shared_ptr<OperatorTask>>& tasks) {
-  std::shared_ptr<OperatorTask> task = op->operator_task();
-  bool add_task = false;
-  if (!task) {
-    // We need to make sure that we don't create two tasks for the same operator. This could happen if the same
-    // operator is used as input for two other operators.
-    task = std::make_shared<OperatorTask>(op);
-    op->set_operator_task(task);
-    add_task = true;
-  }
+    std::shared_ptr<AbstractOperator> op, std::vector<std::shared_ptr<OperatorTask>>& tasks,
+    std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<OperatorTask>>& task_by_op) {
+  const auto task_by_op_it = task_by_op.find(op);
+  if (task_by_op_it != task_by_op.end()) return task_by_op_it->second;
+
+  const auto task = std::make_shared<OperatorTask>(op);
+  task_by_op.emplace(op, task);
 
   if (auto left = op->mutable_input_left()) {
-    auto subtree_root = OperatorTask::_add_tasks_from_operator(left, tasks);
+    auto subtree_root = OperatorTask::_add_tasks_from_operator(left, tasks, task_by_op);
     subtree_root->set_as_predecessor_of(task);
   }
 
   if (auto right = op->mutable_input_right()) {
-    auto subtree_root = OperatorTask::_add_tasks_from_operator(right, tasks);
+    auto subtree_root = OperatorTask::_add_tasks_from_operator(right, tasks, task_by_op);
     subtree_root->set_as_predecessor_of(task);
   }
 
-  if (add_task) tasks.push_back(task);
+  // Add AFTER the inputs to establish a task order where predecessor get executed before successors
+  tasks.push_back(task);
 
   return task;
 }

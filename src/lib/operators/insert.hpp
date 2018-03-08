@@ -24,10 +24,12 @@ class Insert : public AbstractReadWriteOperator {
   explicit Insert(const std::string& target_table_name, const std::shared_ptr<AbstractOperator>& values_to_insert);
 
   const std::string name() const override;
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
+  std::shared_ptr<AbstractOperator> _on_recreate(
+      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
   void _on_commit_records(const CommitID cid) override;
   void _on_rollback_records() override;
 

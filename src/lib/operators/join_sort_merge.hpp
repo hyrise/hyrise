@@ -20,18 +20,21 @@ namespace opossum {
    * Note: SortMergeJoin does not support null values in the input at the moment.
    * Note: Cross joins are not supported. Use the product operator instead.
    * Note: Outer joins are only implemented for the equi-join case, i.e. the "=" operator.
-**/
+   */
 class JoinSortMerge : public AbstractJoinOperator {
  public:
   JoinSortMerge(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
                 const JoinMode mode, const ColumnIDPair& column_ids, const PredicateCondition op);
 
-  std::shared_ptr<const Table> _on_execute() override;
-  void _on_cleanup() override;
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args = {}) const override;
   const std::string name() const override;
 
  protected:
+  std::shared_ptr<const Table> _on_execute() override;
+  void _on_cleanup() override;
+  std::shared_ptr<AbstractOperator> _on_recreate(
+      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+
   template <typename T>
   class JoinSortMergeImpl;
 

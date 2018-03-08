@@ -44,12 +44,17 @@ class SQLPipelineStatementTest : public BaseTest {
     _table_b = load_table("src/test/tables/int_float2.tbl", 2);
     StorageManager::get().add_table("table_b", _table_b);
 
-    _join_result = std::make_shared<Table>();
-    _join_result->add_column("a", DataType::Int);
-    _join_result->add_column("b", DataType::Float);
-    _join_result->add_column("bb", DataType::Float);
+    TableColumnDefinitions column_definitions;
+    column_definitions.emplace_back("a", DataType::Int);
+    column_definitions.emplace_back("b", DataType::Float);
+    column_definitions.emplace_back("bb", DataType::Float);
+    _join_result = std::make_shared<Table>(column_definitions, TableType::Data);
+
     _join_result->append({12345, 458.7f, 456.7f});
     _join_result->append({12345, 458.7f, 457.7f});
+
+    _int_float_column_definitions.emplace_back("a", DataType::Int);
+    _int_float_column_definitions.emplace_back("b", DataType::Float);
 
     _select_parse_result = std::make_shared<hsql::SQLParserResult>();
     hsql::SQLParser::parse(_select_query_a, _select_parse_result.get());
@@ -63,6 +68,8 @@ class SQLPipelineStatementTest : public BaseTest {
   std::shared_ptr<Table> _table_a;
   std::shared_ptr<Table> _table_b;
   std::shared_ptr<Table> _join_result;
+
+  TableColumnDefinitions _int_float_column_definitions;
 
   const std::string _select_query_a = "SELECT * FROM table_a";
   const std::string _invalid_sql = "SELECT FROM table_a";
@@ -514,9 +521,7 @@ TEST_F(SQLPipelineStatementTest, PreparedStatementExecute) {
   SQLPipelineStatement execute_sql_pipeline{execute_statement, prepared_statement_cache};
   const auto& table = execute_sql_pipeline.get_result_table();
 
-  auto expected = std::make_shared<Table>();
-  expected->add_column("a", DataType::Int);
-  expected->add_column("b", DataType::Float);
+  auto expected = std::make_shared<Table>(_int_float_column_definitions, TableType::Data);
   expected->append({123, 456.7f});
 
   EXPECT_TABLE_EQ_UNORDERED(table, expected);
@@ -535,9 +540,7 @@ TEST_F(SQLPipelineStatementTest, PreparedStatementMultiPlaceholderExecute) {
   SQLPipelineStatement execute_sql_pipeline{execute_statement, prepared_statement_cache};
   const auto& table = execute_sql_pipeline.get_result_table();
 
-  auto expected = std::make_shared<Table>();
-  expected->add_column("a", DataType::Int);
-  expected->add_column("b", DataType::Float);
+  auto expected = std::make_shared<Table>(_int_float_column_definitions, TableType::Data);
   expected->append({123, 456.7f});
   expected->append({12345, 458.7f});
 
@@ -588,21 +591,15 @@ TEST_F(SQLPipelineStatementTest, MultiplePreparedStatementsExecute) {
   const auto& table_multi = execute_sql_pipeline_multi.get_result_table();
 
   // x1 result
-  auto expected1 = std::make_shared<Table>();
-  expected1->add_column("a", DataType::Int);
-  expected1->add_column("b", DataType::Float);
+  auto expected1 = std::make_shared<Table>(_int_float_column_definitions, TableType::Data);
   expected1->append({123, 456.7f});
 
   // x2 result
-  auto expected2 = std::make_shared<Table>();
-  expected2->add_column("a", DataType::Int);
-  expected2->add_column("b", DataType::Float);
+  auto expected2 = std::make_shared<Table>(_int_float_column_definitions, TableType::Data);
   expected2->append({12345, 458.7f});
 
   // x_multi result
-  auto expected_multi = std::make_shared<Table>();
-  expected_multi->add_column("a", DataType::Int);
-  expected_multi->add_column("b", DataType::Float);
+  auto expected_multi = std::make_shared<Table>(_int_float_column_definitions, TableType::Data);
   expected_multi->append({123, 456.7f});
   expected_multi->append({12345, 458.7f});
 
@@ -646,9 +643,7 @@ TEST_F(SQLPipelineStatementTest, PreparedUpdateStatementExecute) {
   SQLPipelineStatement select_sql_pipeline{_select_query_a};
   const auto table = select_sql_pipeline.get_result_table();
 
-  auto expected = std::make_shared<Table>();
-  expected->add_column("a", DataType::Int);
-  expected->add_column("b", DataType::Float);
+  auto expected = std::make_shared<Table>(_int_float_column_definitions, TableType::Data);
   expected->append({1, 456.7f});
   expected->append({1234, 457.7f});
   expected->append({12345, 458.7f});
@@ -672,9 +667,7 @@ TEST_F(SQLPipelineStatementTest, PreparedDeleteStatementExecute) {
   SQLPipelineStatement select_sql_pipeline{_select_query_a};
   const auto table = select_sql_pipeline.get_result_table();
 
-  auto expected = std::make_shared<Table>();
-  expected->add_column("a", DataType::Int);
-  expected->add_column("b", DataType::Float);
+  auto expected = std::make_shared<Table>(_int_float_column_definitions, TableType::Data);
   expected->append({1234, 457.7f});
   expected->append({12345, 458.7f});
 

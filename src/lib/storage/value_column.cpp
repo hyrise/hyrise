@@ -104,18 +104,6 @@ pmr_concurrent_vector<T>& ValueColumn<T>::values() {
 }
 
 template <typename T>
-const pmr_concurrent_vector<std::optional<T>> ValueColumn<T>::materialize_values() const {
-  pmr_concurrent_vector<std::optional<T>> values(_values.size(), std::nullopt, _values.get_allocator());
-
-  for (ChunkOffset chunk_offset = 0; chunk_offset < _values.size(); ++chunk_offset) {
-    if (is_null(chunk_offset)) continue;
-    values[chunk_offset] = _values[chunk_offset];
-  }
-
-  return values;
-}
-
-template <typename T>
 bool ValueColumn<T>::is_nullable() const {
   return static_cast<bool>(_null_values);
 }

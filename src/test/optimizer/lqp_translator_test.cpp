@@ -521,4 +521,31 @@ TEST_F(LQPTranslatorTest, DiamondShapeSimple) {
   EXPECT_EQ(pqp->input_left()->input_left()->input_left(), pqp->input_right()->input_left()->input_left());
 }
 
+TEST_F(LQPTranslatorTest, ProjectionWithSubselect) {
+  auto table_node = std::make_shared<StoredTableNode>("table_int_float2");
+  auto subselect_node = std::make_shared<StoredTableNode>("table_int_float");
+
+  const auto expressions = std::vector<std::shared_ptr<LQPExpression>>{
+      LQPExpression::create_column(LQPColumnReference(table_node, ColumnID{0})),
+      LQPExpression::create_subselect(subselect_node)};
+
+  auto projection_node = std::make_shared<ProjectionNode>(expressions);
+  projection_node->set_left_input(table_node);
+
+  const auto& lqp = projection_node;
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  ASSERT_NE(pqp, nullptr);
+  ASSERT_NE(pqp->input_left(), nullptr);
+  EXPECT_EQ(pqp->input_right(), nullptr);
+
+  auto projection = std::dynamic_pointer_cast<Projection>(pqp);
+  ASSERT_NE(projection, nullptr);
+  EXPECT_EQ(projection->column_expressions().size(), 2u);
+
+  auto pqp_expression = projection->column_expressions().back();
+  ASSERT_TRUE(pqp_expression->is_subselect());
+  ASSERT_NE(pqp_expression->subselect_operator(), nullptr);
+}
+
 }  // namespace opossum
