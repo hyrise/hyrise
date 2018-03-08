@@ -6,20 +6,19 @@
 
 namespace {
 
-using namespace opossum; // NOLINT
+using namespace opossum;  // NOLINT
 
-template<typename ResultDataType>
+template <typename ResultDataType>
 std::pair<bool, ResultDataType> materialize_case_result(
-const PhysicalCaseResult<ResultDataType>& case_result, const Chunk& chunk,
-                                                        const ChunkOffset chunk_offset,
+    const PhysicalCaseResult<ResultDataType>& case_result, const Chunk& chunk, const ChunkOffset chunk_offset,
 
-                                                        std::vector<std::optional<std::vector<std::pair<bool, ResultDataType>>>>& materialized_column_cache) {
+    std::vector<std::optional<std::vector<std::pair<bool, ResultDataType>>>>& materialized_column_cache) {
   if (case_result.type() == typeid(Null)) {
     return {true, {}};
   } else if (case_result.type() == typeid(ColumnID)) {
     // If not yet done, materialize the column as values and nulls and cache it.
     const auto column_id = boost::get<ColumnID>(case_result);
-    auto &materialized_column = materialized_column_cache[column_id];
+    auto& materialized_column = materialized_column_cache[column_id];
     if (!materialized_column) {
       materialized_column.emplace();
       materialized_column->reserve(chunk.size());
@@ -38,13 +37,10 @@ const PhysicalCaseResult<ResultDataType>& case_result, const Chunk& chunk,
 
 namespace opossum {
 
-Case::Case(const std::shared_ptr<AbstractOperator>& input, const Expressions& case_expressions):
-  AbstractReadOnlyOperator(input), _case_expressions(std::move(case_expressions))
-{}
+Case::Case(const std::shared_ptr<AbstractOperator>& input, const Expressions& case_expressions)
+    : AbstractReadOnlyOperator(input), _case_expressions(std::move(case_expressions)) {}
 
-const std::string Case::name() const {
-  return "Case";
-}
+const std::string Case::name() const { return "Case"; }
 
 std::shared_ptr<const Table> Case::_on_execute() {
   /**
@@ -52,7 +48,7 @@ std::shared_ptr<const Table> Case::_on_execute() {
    * _case_expression.
    */
   auto column_definitions = input_table_left()->column_definitions();
-  for (const auto &case_expression : _case_expressions) {
+  for (const auto& case_expression : _case_expressions) {
     std::string name;
     if (case_expression->alias) {
       name = *case_expression->alias;
@@ -87,15 +83,17 @@ std::shared_ptr<const Table> Case::_on_execute() {
      */
     // If a column in the input chunk is used as a WHEN column, it is materialized into this cache
     std::vector<std::optional<std::vector<int32_t>>> materialized_when_columns(input_table_left()->column_count());
-    for (const auto &case_expression : _case_expressions) {
+    for (const auto& case_expression : _case_expressions) {
       resolve_data_type(case_expression->result_data_type, [&](auto type) {
         using ResultDataType = typename decltype(type)::type;
         using NullOrValue = std::pair<bool, ResultDataType>;
 
         // If a column in the input chunk is used as a THEN column, it is materialized into this cache
-        std::vector<std::optional<std::vector<NullOrValue>>> materialized_then_columns(input_table_left()->column_count());
+        std::vector<std::optional<std::vector<NullOrValue>>> materialized_then_columns(
+            input_table_left()->column_count());
 
-        const auto& typed_case_expression = static_cast<const PhysicalCaseExpression<ResultDataType>&>(*case_expression);
+        const auto& typed_case_expression =
+            static_cast<const PhysicalCaseExpression<ResultDataType>&>(*case_expression);
 
         pmr_concurrent_vector<ResultDataType> output_values(input_chunk->size());
         pmr_concurrent_vector<bool> output_nulls(input_chunk->size());
@@ -104,16 +102,14 @@ std::shared_ptr<const Table> Case::_on_execute() {
          * Compute the CaseExpression for each row in the Chunk.
          */
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk->size(); ++chunk_offset) {
-
-          auto any_when_claused_fulfilled = false; // If no WHEN clause was TRUE, we have to use the ELSE clause
+          auto any_when_claused_fulfilled = false;  // If no WHEN clause was TRUE, we have to use the ELSE clause
 
           /**
            * Find the first case_clause whose WHEN is true and write its THEN to output_values/nulls
            */
-          for (const auto &case_clause : typed_case_expression.clauses) {
-
+          for (const auto& case_clause : typed_case_expression.clauses) {
             // If not yet done, materialize the WHEN column and cache it.
-            auto &materialized_when_column = materialized_when_columns[case_clause.when];
+            auto& materialized_when_column = materialized_when_columns[case_clause.when];
             if (!materialized_when_column) {
               materialized_when_column.emplace();
               materialized_when_column->reserve(input_chunk->size());
@@ -123,7 +119,8 @@ std::shared_ptr<const Table> Case::_on_execute() {
             // The case_clause is not true? Continue with the next clause.
             if ((*materialized_when_column)[chunk_offset] == int32_t{0}) continue;
 
-            const auto null_and_value = materialize_case_result(case_clause.then, *input_chunk, chunk_offset, materialized_then_columns);
+            const auto null_and_value =
+                materialize_case_result(case_clause.then, *input_chunk, chunk_offset, materialized_then_columns);
             output_nulls[chunk_offset] = null_and_value.first;
             output_values[chunk_offset] = null_and_value.second;
 
@@ -136,13 +133,15 @@ std::shared_ptr<const Table> Case::_on_execute() {
            * If none of the case_clauses were TRUE, the result of the CaseExpression is in ELSE (which is NULL by default)
            */
           if (!any_when_claused_fulfilled) {
-            const auto null_and_value = materialize_case_result(typed_case_expression.else_, *input_chunk, chunk_offset, materialized_then_columns);
+            const auto null_and_value = materialize_case_result(typed_case_expression.else_, *input_chunk, chunk_offset,
+                                                                materialized_then_columns);
             output_nulls[chunk_offset] = null_and_value.first;
             output_values[chunk_offset] = null_and_value.second;
           }
         }
 
-        output_columns.emplace_back(std::make_shared<ValueColumn<ResultDataType>>(std::move(output_values), std::move(output_nulls)));
+        output_columns.emplace_back(
+            std::make_shared<ValueColumn<ResultDataType>>(std::move(output_values), std::move(output_nulls)));
       });
     }
 
@@ -153,8 +152,8 @@ std::shared_ptr<const Table> Case::_on_execute() {
 }
 
 std::shared_ptr<AbstractOperator> Case::_on_recreate(
-const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
   return std::make_shared<Case>(recreated_input_left, _case_expressions);
 }
 

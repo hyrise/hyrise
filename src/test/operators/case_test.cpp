@@ -4,8 +4,8 @@
 
 #include "operators/case.hpp"
 #include "operators/table_wrapper.hpp"
-#include "utils/load_table.hpp"
 #include "testing_assert.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
@@ -48,7 +48,8 @@ TEST_F(CaseTest, WhenColumnThenColumnElseColumn) {
   const auto case_op = std::make_shared<Case>(_table_wrapper_a, Case::Expressions{case_expression});
   case_op->execute();
 
-  EXPECT_TABLE_EQ_UNORDERED(case_op->get_output(), load_table("src/test/tables/case/when_column_then_column_else_column.tbl"));
+  EXPECT_TABLE_EQ_UNORDERED(case_op->get_output(),
+                            load_table("src/test/tables/case/when_column_then_column_else_column.tbl"));
 }
 
 TEST_F(CaseTest, WhenColumnThenNullElseValue) {
@@ -58,12 +59,13 @@ TEST_F(CaseTest, WhenColumnThenNullElseValue) {
    */
 
   const auto clause = PhysicalCaseClause<int32_t>(ColumnID{0}, Null{});
-  const auto case_expression =  std::make_shared<PhysicalCaseExpression<int32_t>>(clause, 143, "c0");
+  const auto case_expression = std::make_shared<PhysicalCaseExpression<int32_t>>(clause, 143, "c0");
 
   const auto case_op = std::make_shared<Case>(_table_wrapper_a, Case::Expressions{case_expression});
   case_op->execute();
 
-  EXPECT_TABLE_EQ_UNORDERED(case_op->get_output(), load_table("src/test/tables/case/when_column_then_null_else_column.tbl"));
+  EXPECT_TABLE_EQ_UNORDERED(case_op->get_output(),
+                            load_table("src/test/tables/case/when_column_then_null_else_column.tbl"));
 }
 
 TEST_F(CaseTest, WhenColumnsThenMixedElseValue) {
@@ -79,12 +81,13 @@ TEST_F(CaseTest, WhenColumnsThenMixedElseValue) {
   auto clauses = std::vector<PhysicalCaseClause<float>>{};
   clauses.emplace_back(ColumnID{0}, ColumnID{3});
   clauses.emplace_back(ColumnID{4}, float{3.14});
-  const auto case_expression =  std::make_shared<PhysicalCaseExpression<float>>(clauses, 13.0f, "c0");
+  const auto case_expression = std::make_shared<PhysicalCaseExpression<float>>(clauses, 13.0f, "c0");
 
   const auto case_op = std::make_shared<Case>(_table_wrapper_a, Case::Expressions{case_expression});
   case_op->execute();
 
-  EXPECT_TABLE_EQ_UNORDERED(case_op->get_output(), load_table("src/test/tables/case/when_columns_then_mixed_else_value.tbl"));
+  EXPECT_TABLE_EQ_UNORDERED(case_op->get_output(),
+                            load_table("src/test/tables/case/when_columns_then_mixed_else_value.tbl"));
 }
 
 }  // namespace opossum

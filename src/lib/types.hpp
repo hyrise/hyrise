@@ -267,6 +267,6 @@ class Noncopyable {
 };
 
 // Dummy type, can be used to overload functions with a variant accepting a Null value
-struct Null{};
+struct Null {};
 
 }  // namespace opossum
