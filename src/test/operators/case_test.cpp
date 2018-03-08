@@ -65,7 +65,7 @@ TEST_F(CaseTest, WhenColumnThenNullElseValue) {
   case_op->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(case_op->get_output(),
-                            load_table("src/test/tables/case/when_column_then_null_else_column.tbl"));
+                            load_table("src/test/tables/case/when_column_then_null_else_value.tbl"));
 }
 
 TEST_F(CaseTest, WhenColumnsThenMixedElseValue) {

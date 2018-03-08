@@ -11,7 +11,6 @@ using namespace opossum;  // NOLINT
 template <typename ResultDataType>
 std::pair<bool, ResultDataType> materialize_case_result(
     const PhysicalCaseResult<ResultDataType>& case_result, const Chunk& chunk, const ChunkOffset chunk_offset,
-
     std::vector<std::optional<std::vector<std::pair<bool, ResultDataType>>>>& materialized_column_cache) {
   if (case_result.type() == typeid(Null)) {
     return {true, {}};
@@ -61,6 +60,10 @@ std::shared_ptr<const Table> Case::_on_execute() {
 
   const auto output_table = std::make_shared<Table>(column_definitions, TableType::Data);
 
+  /**
+   * For every Chunk in the input Table, create a Chunk in the output Table that contains the same columns as the input
+   * Table with the results from the CaseExpressions each as an additional Column
+   */
   for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     const auto input_chunk = input_table_left()->get_chunk(chunk_id);
 
