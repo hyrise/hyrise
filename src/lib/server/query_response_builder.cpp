@@ -15,7 +15,7 @@ std::vector<ColumnDescription> QueryResponseBuilder::build_row_description(const
   std::vector<ColumnDescription> result;
 
   const auto& column_names = table->column_names();
-  const auto& column_types = table->column_types();
+  const auto& column_types = table->column_data_types();
 
   for (auto column_id = 0u; column_id < table->column_count(); ++column_id) {
     uint32_t object_id;
