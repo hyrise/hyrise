@@ -24,25 +24,30 @@ class BaseCompressedVector;
  * as an offset from the block’s minimum value. These offsets,
  * which can ideally be represented by fewer bits, are then
  * compressed using vector compression (null suppression).
+ * FOR encoding on its own withou vector compression, does not
+ * add any benefit.
  */
-template <typename T, typename = std::enable_if_t<encoding_supports(
+template <typename T, typename = std::enable_if_t<encoding_supports_data_type(
                           enum_c<EncodingType, EncodingType::FrameOfReference>, hana::type_c<T>)>>
 class FrameOfReferenceColumn : public BaseEncodedColumn {
  public:
   /**
    * The column is divided into fixed-size blocks.
    * Each block has its own minimum from which the
-   * offsets are calculated.
+   * offsets are calculated. Theoretically, it would
+   * possible to make the block size dependent on the
+   * data’s properties. Determining the optimal size
+   * is however not trivial.
    */
   static constexpr auto block_size = 2048u;
 
-  explicit FrameOfReferenceColumn(std::shared_ptr<const pmr_vector<T>> reference_frames,
-                                  std::shared_ptr<const BaseCompressedVector> offset_values,
-                                  std::shared_ptr<const pmr_vector<bool>> null_values);
+  explicit FrameOfReferenceColumn(const pmr_vector<T> reference_frames,
+                                  const pmr_vector<bool> null_values,
+                                  std::unique_ptr<const BaseCompressedVector> offset_values);
 
-  std::shared_ptr<const pmr_vector<T>> block_minima() const;
-  std::shared_ptr<const BaseCompressedVector> offset_values() const;
-  std::shared_ptr<const pmr_vector<bool>> null_values() const;
+  const pmr_vector<T>& block_minima() const;
+  const pmr_vector<bool>& null_values() const;
+  const BaseCompressedVector& offset_values() const;
 
   /**
    * @defgroup BaseColumn interface
@@ -70,9 +75,9 @@ class FrameOfReferenceColumn : public BaseEncodedColumn {
   /**@}*/
 
  private:
-  const std::shared_ptr<const pmr_vector<T>> _block_minima;
-  const std::shared_ptr<const BaseCompressedVector> _offset_values;
-  const std::shared_ptr<const pmr_vector<bool>> _null_values;
+  const pmr_vector<T>& _block_minima;
+  const pmr_vector<bool>& _null_values;
+  const std::unique_ptr<const BaseCompressedVector> _offset_values;
 };
 
 }  // namespace opossum

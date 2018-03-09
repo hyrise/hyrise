@@ -50,7 +50,7 @@ void resolve_encoded_column_type(const BaseEncodedColumn& column, const Functor&
     // If the column’s encoding type matches that of the pair, we have found the column’s type
     if (!match_found && (encoding_type == column.encoding_type())) {
       // Check if ColumnDataType is supported by encoding
-      const auto data_type_supported = encoding_supports(encoding_type_c, hana::type_c<ColumnDataType>);
+      const auto data_type_supported = encoding_supports_data_type(encoding_type_c, hana::type_c<ColumnDataType>);
 
       // clang-format off
 

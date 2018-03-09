@@ -28,7 +28,11 @@ class FrameOfReferenceEncoder : public ColumnEncoder<FrameOfReferenceEncoder> {
     static constexpr auto block_size = FrameOfReferenceColumn<T>::block_size;
 
     const auto size = value_column->size();
-    const auto num_blocks = size / block_size;
+
+    // Ceiling of integer division
+    const auto div_ceil = [](auto x, auto y) { return (x + y - 1u) / y; };
+
+    const auto num_blocks = div_ceil(size, block_size);
 
     // holds the minimum of each block
     auto block_minima = pmr_vector<T>{alloc};
@@ -43,7 +47,7 @@ class FrameOfReferenceEncoder : public ColumnEncoder<FrameOfReferenceEncoder> {
     null_values.reserve(size);
 
     // used as optional input for the compression of the offset values
-    auto max_value = uint32_t{0u};
+    auto max_offset = uint32_t{0u};
 
     auto iterable = ValueColumnIterable<T>{*value_column};
     iterable.with_iterators([&](auto column_it, auto column_end) {
@@ -76,18 +80,15 @@ class FrameOfReferenceEncoder : public ColumnEncoder<FrameOfReferenceEncoder> {
           const auto value = *value_block_it;
           const auto offset = static_cast<uint32_t>(value - minimum);
           offset_values.push_back(offset);
-          max_value = std::max(max_value, offset);
+          max_offset = std::max(max_offset, offset);
         }
       }
     });
 
-    auto encoded_offset_values = compress_vector(offset_values, vector_compression_type(), alloc, {max_value});
+    auto encoded_offset_values = compress_vector(offset_values, vector_compression_type(), alloc, {max_offset});
 
-    auto block_minima_ptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(block_minima));
-    auto encoded_offset_values_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(encoded_offset_values));
-    auto null_values_ptr = std::allocate_shared<pmr_vector<bool>>(alloc, std::move(null_values));
-    return std::allocate_shared<FrameOfReferenceColumn<T>>(alloc, block_minima_ptr, encoded_offset_values_sptr,
-                                                           null_values_ptr);
+    return std::allocate_shared<FrameOfReferenceColumn<T>>(alloc, std::move(block_minima), std::move(null_values),
+                                                           encoded_offset_values);
   }
 };
 

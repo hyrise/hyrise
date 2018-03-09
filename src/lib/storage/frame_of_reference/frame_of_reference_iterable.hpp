@@ -16,11 +16,11 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
-    resolve_compressed_vector_type(*_column.offset_values(), [&](const auto& offset_values) {
+    resolve_compressed_vector_type(_column.offset_values(), [&](const auto& offset_values) {
       using OffsetValueIteratorT = decltype(offset_values.cbegin());
 
-      auto begin = Iterator<OffsetValueIteratorT>{_column.block_minima()->cbegin(), offset_values.cbegin(),
-                                                  _column.null_values()->cbegin()};
+      auto begin = Iterator<OffsetValueIteratorT>{_column.block_minima().cbegin(), offset_values.cbegin(),
+                                                  _column.null_values().cbegin()};
 
       auto end = Iterator<OffsetValueIteratorT>{offset_values.cend()};
 
@@ -30,12 +30,12 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
 
   template <typename Functor>
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
-    resolve_compressed_vector_type(*_column.offset_values(), [&](const auto& vector) {
+    resolve_compressed_vector_type(_column.offset_values(), [&](const auto& vector) {
       auto decoder = vector.create_decoder();
       using OffsetValueDecompressorT = std::decay_t<decltype(*decoder)>;
 
       auto begin = PointAccessIterator<OffsetValueDecompressorT>{
-          _column.block_minima().get(), _column.null_values().get(), decoder.get(), mapped_chunk_offsets.cbegin()};
+          &_column.block_minima(), &_column.null_values(), decoder.get(), mapped_chunk_offsets.cbegin()};
 
       auto end = PointAccessIterator<OffsetValueDecompressorT>{mapped_chunk_offsets.cend()};
 
@@ -107,7 +107,7 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
                                         ColumnIteratorValue<T>>{chunk_offsets_it},
           _block_minima{block_minima},
           _null_values{null_values},
-          _attribute_decoder{attribute_decoder} {}
+          _offset_value_decoder{attribute_decoder} {}
 
     // End Iterator
     explicit PointAccessIterator(ChunkOffsetsIterator chunk_offsets_it)
@@ -123,7 +123,7 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
 
       const auto is_null = (*_null_values)[chunk_offsets.into_referenced];
       const auto block_minimum = (*_block_minima)[chunk_offsets.into_referenced / block_size];
-      const auto offset_value = _attribute_decoder->get(chunk_offsets.into_referenced);
+      const auto offset_value = _offset_value_decoder->get(chunk_offsets.into_referenced);
       const auto value = static_cast<T>(offset_value) + block_minimum;
 
       return ColumnIteratorValue<T>{value, is_null, chunk_offsets.into_referencing};
@@ -132,7 +132,7 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
    private:
     const pmr_vector<T>* _block_minima;
     const pmr_vector<bool>* _null_values;
-    OffsetValueDecompressorT* _attribute_decoder;
+    OffsetValueDecompressorT* _offset_value_decoder;
   };
 };
 

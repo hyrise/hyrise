@@ -8,31 +8,33 @@
 namespace opossum {
 
 template <typename T, typename U>
-FrameOfReferenceColumn<T, U>::FrameOfReferenceColumn(std::shared_ptr<const pmr_vector<T>> block_minima,
-                                                     std::shared_ptr<const BaseCompressedVector> offset_values,
-                                                     std::shared_ptr<const pmr_vector<bool>> null_values)
-    : _block_minima{block_minima}, _offset_values{offset_values}, _null_values{null_values} {}
+FrameOfReferenceColumn<T, U>::FrameOfReferenceColumn(const pmr_vector<T> block_minima,
+                                                     const pmr_vector<bool> null_values,
+                                                     std::unique_ptr<const BaseCompressedVector> offset_values)
+    : _block_minima{std::move(block_minima)},
+      _null_values{std::move(null_values)},
+      _offset_values{std::move(offset_values)} {}
 
 template <typename T, typename U>
-std::shared_ptr<const pmr_vector<T>> FrameOfReferenceColumn<T, U>::block_minima() const {
+const pmr_vector<T>& FrameOfReferenceColumn<T, U>::block_minima() const {
   return _block_minima;
 }
 
 template <typename T, typename U>
-std::shared_ptr<const BaseCompressedVector> FrameOfReferenceColumn<T, U>::offset_values() const {
-  return _offset_values;
+const pmr_vector<bool>& FrameOfReferenceColumn<T, U>::null_values() const {
+  return _null_values;
 }
 
 template <typename T, typename U>
-std::shared_ptr<const pmr_vector<bool>> FrameOfReferenceColumn<T, U>::null_values() const {
-  return _null_values;
+const BaseCompressedVector& FrameOfReferenceColumn<T, U>::offset_values() const {
+  return *_offset_values;
 }
 
 template <typename T, typename U>
 const AllTypeVariant FrameOfReferenceColumn<T, U>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
 
-  DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
+  DebugAssert(chunk_offset < size(), "Passed chunk offset must be valid.");
 
   if ((*_null_values)[chunk_offset]) {
     return NULL_VALUE;

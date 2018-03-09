@@ -114,7 +114,7 @@ class ColumnEncoder : public BaseColumnEncoder {
    */
   template <typename ColumnDataType>
   auto supports(hana::basic_type<ColumnDataType> data_type) const {
-    return encoding_supports(Derived::_encoding_type, data_type);
+    return encoding_supports_data_type(Derived::_encoding_type, data_type);
   }
 
   /**
