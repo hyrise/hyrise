@@ -82,8 +82,8 @@ set(
     operators/abstract_read_write_operator.hpp
     operators/aggregate.cpp
     operators/aggregate.hpp
-    operators/case.cpp
-    operators/case.hpp
+    operators/case_operator.cpp
+    operators/case_operator.hpp
     operators/delete.cpp
     operators/delete.hpp
     operators/difference.cpp
