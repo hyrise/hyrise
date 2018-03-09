@@ -79,7 +79,14 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
       probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped);
   auto output_table = _impl->_on_execute();
 
-  auto defragmented_table = defragment_reference_table(output_table, 10'000, output_table->max_chunk_size());
+  const auto t0 = std::chrono::high_resolution_clock::now();
+  // Somewhat arbitrarily chose min chunk size for the defragmentation. We want no Chunks smaller than that.
+  constexpr auto min_chunk_size = 10'000;
+  auto defragmented_table = defragment_reference_table(output_table, min_chunk_size, output_table->max_chunk_size());
+  const auto t1 = std::chrono::high_resolution_clock::now();
+
+  std::cout << "Defragmentation took " << (std::chrono::duration_cast<std::chrono::microseconds>(t1-t0)).count() << "µs, operated on " << defragmented_table->row_count() << " rows and reduced Chunk count from " << output_table->chunk_count() << " to " << defragmented_table->chunk_count() << std::endl;
+
   return defragmented_table;
 }
 
