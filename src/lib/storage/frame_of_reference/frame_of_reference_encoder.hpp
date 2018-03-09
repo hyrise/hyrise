@@ -88,7 +88,7 @@ class FrameOfReferenceEncoder : public ColumnEncoder<FrameOfReferenceEncoder> {
     auto encoded_offset_values = compress_vector(offset_values, vector_compression_type(), alloc, {max_offset});
 
     return std::allocate_shared<FrameOfReferenceColumn<T>>(alloc, std::move(block_minima), std::move(null_values),
-                                                           encoded_offset_values);
+                                                           std::move(encoded_offset_values));
   }
 };
 

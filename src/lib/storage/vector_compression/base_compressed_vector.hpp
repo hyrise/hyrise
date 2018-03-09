@@ -44,7 +44,7 @@ class BaseCompressedVector : private Noncopyable {
 
   virtual std::unique_ptr<BaseVectorDecompressor> create_base_decoder() const = 0;
 
-  virtual std::shared_ptr<BaseCompressedVector> copy_using_allocator(
+  virtual std::unique_ptr<BaseCompressedVector> copy_using_allocator(
       const PolymorphicAllocator<size_t>& alloc) const = 0;
 };
 
@@ -104,7 +104,7 @@ class CompressedVector : public BaseCompressedVector {
     return _self()._on_create_base_decoder();
   }
 
-  std::shared_ptr<BaseCompressedVector> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final {
+  std::unique_ptr<BaseCompressedVector> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final {
     return _self()._on_copy_using_allocator(alloc);
   }
 

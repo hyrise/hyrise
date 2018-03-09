@@ -21,10 +21,10 @@ SimdBp128Iterator SimdBp128Vector::_on_begin() const { return SimdBp128Iterator{
 
 SimdBp128Iterator SimdBp128Vector::_on_end() const { return SimdBp128Iterator{nullptr, _size, _size}; }
 
-std::shared_ptr<BaseCompressedVector> SimdBp128Vector::_on_copy_using_allocator(
+std::unique_ptr<BaseCompressedVector> SimdBp128Vector::_on_copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
   auto data_copy = pmr_vector<uint128_t>{_data, alloc};
-  return std::allocate_shared<SimdBp128Vector>(alloc, std::move(data_copy), _size);
+  return std::make_unique<SimdBp128Vector>(std::move(data_copy), _size);
 }
 
 }  // namespace opossum
