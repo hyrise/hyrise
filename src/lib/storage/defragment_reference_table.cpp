@@ -64,7 +64,7 @@ std::shared_ptr<Table> defragment_reference_table(const std::shared_ptr<const Ta
     }
 
     /**
-     * II. For each Column, concatenate the PosLists into one.
+     * II. For each Column, concatenate the PosLists of the Chunks to be merged into one.
      *
      * Neighbouring columns often use the same PosLists. To avoid redundantly concatenating PosLists, the cache
      * `concatenated_pos_list_by_pos_lists` is used.
