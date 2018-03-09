@@ -72,6 +72,7 @@ set(
     operators/update_test.cpp
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
+    optimizer/chunk_statistics/pruning_filters_test.cpp
     optimizer/column_statistics_test.cpp
     optimizer/expression_test.cpp
     optimizer/join_ordering/join_graph_builder_test.cpp
@@ -105,7 +106,6 @@ set(
     storage/chunk_encoder_test.cpp
     storage/chunk_test.cpp
     storage/composite_group_key_index_test.cpp
-    storage/deprecated_dictionary_column_test.cpp
     storage/dictionary_column_test.cpp
     storage/encoding_test.hpp
     storage/encoded_column_test.cpp

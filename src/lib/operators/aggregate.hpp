@@ -13,8 +13,6 @@
 #include "abstract_read_only_operator.hpp"
 #include "resolve_type.hpp"
 #include "storage/column_visitable.hpp"
-#include "storage/deprecated_dictionary_column.hpp"
-#include "storage/deprecated_dictionary_column/base_attribute_vector.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
 #include "types.hpp"
@@ -117,12 +115,20 @@ class Aggregate : public AbstractReadOnlyOperator {
   template <typename ColumnDataType, AggregateFunction function>
   void _aggregate_column(ChunkID chunk_id, ColumnID column_index, const BaseColumn& base_column);
 
+  std::shared_ptr<ColumnVisitableContext> _create_aggregate_context(const DataType data_type,
+                                                                    const AggregateFunction function) const;
+
+  template <typename ColumnDataType, AggregateFunction aggregate_function>
+  std::shared_ptr<ColumnVisitableContext> _create_aggregate_context_impl() const;
+
   const std::vector<AggregateColumnDefinition> _aggregates;
   const std::vector<ColumnID> _groupby_column_ids;
 
   std::shared_ptr<Table> _output;
-  std::shared_ptr<Chunk> _out_chunk;
-  std::vector<std::shared_ptr<BaseColumn>> _groupby_columns;
+  TableColumnDefinitions _output_column_definitions;
+  ChunkColumns _output_columns;
+
+  ChunkColumns _groupby_columns;
   std::vector<std::shared_ptr<ColumnVisitableContext>> _contexts_per_column;
   std::vector<std::shared_ptr<std::vector<AggregateKey>>> _keys_per_chunk;
 };

@@ -11,7 +11,6 @@
 #include "gtest/gtest.h"
 #include "types.hpp"
 
-#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp"
 

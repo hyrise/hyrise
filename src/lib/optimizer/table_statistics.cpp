@@ -258,13 +258,13 @@ void TableStatistics::increment_invalid_row_count(uint64_t count) { _approx_inva
 
 std::shared_ptr<BaseColumnStatistics> TableStatistics::_get_or_generate_column_statistics(
     const ColumnID column_id) const {
-  if (_column_statistics[column_id]) {
+  if (column_id < _column_statistics.size() && _column_statistics[column_id]) {
     return _column_statistics[column_id];
   }
 
   auto table = _table.lock();
   DebugAssert(table != nullptr, "Corresponding table of table statistics is deleted.");
-  auto column_type = table->column_type(column_id);
+  auto column_type = table->column_data_type(column_id);
   auto column_statistics =
       make_shared_by_data_type<BaseColumnStatistics, ColumnStatistics>(column_type, column_id, _table);
   _column_statistics[column_id] = column_statistics;

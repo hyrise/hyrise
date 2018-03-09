@@ -53,7 +53,7 @@ TEST_F(ShowColumnsTest, CanShowColumnsWithNull) {
 }
 
 TEST_F(ShowColumnsTest, NoColumns) {
-  StorageManager::get().add_table("no_columns", std::make_shared<Table>());
+  StorageManager::get().add_table("no_columns", std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data));
 
   auto sc = std::make_shared<ShowColumns>("no_columns");
   sc->execute();

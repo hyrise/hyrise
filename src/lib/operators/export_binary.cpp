@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "import_export/binary.hpp"
-#include "storage/deprecated_dictionary_column/fitted_attribute_vector.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
@@ -146,16 +145,16 @@ void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std:
 
   std::vector<std::string> column_types(table->column_count());
   std::vector<std::string> column_names(table->column_count());
-  std::vector<bool> column_nullables(table->column_count());
+  std::vector<bool> columns_are_nullable(table->column_count());
 
   // Transform column types and copy column names in order to write them to the file.
   for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-    column_types[column_id] = data_type_to_string.left.at(table->column_type(column_id));
+    column_types[column_id] = data_type_to_string.left.at(table->column_data_type(column_id));
     column_names[column_id] = table->column_name(column_id);
-    column_nullables[column_id] = table->column_is_nullable(column_id);
+    columns_are_nullable[column_id] = table->column_is_nullable(column_id);
   }
   _export_values(ofstream, column_types);
-  _export_values(ofstream, column_nullables);
+  _export_values(ofstream, columns_are_nullable);
   _export_string_values<ColumnNameLength>(ofstream, column_names);
 }
 
@@ -168,7 +167,7 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
 
   // Iterating over all columns of this chunk and exporting them
   for (ColumnID column_id{0}; column_id < chunk->column_count(); column_id++) {
-    auto visitor = make_unique_by_data_type<ColumnVisitable, ExportBinaryVisitor>(table->column_type(column_id));
+    auto visitor = make_unique_by_data_type<ColumnVisitable, ExportBinaryVisitor>(table->column_data_type(column_id));
     chunk->get_column(column_id)->visit(*visitor, context);
   }
 }
@@ -228,12 +227,6 @@ void ExportBinary::ExportBinaryVisitor<std::string>::handle_column(
 
   _export_values(context->ofstream, string_lengths);
   context->ofstream << values.rdbuf();
-}
-
-template <typename T>
-void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseDeprecatedDictionaryColumn& base_column,
-                                                         std::shared_ptr<ColumnVisitableContext> base_context) {
-  Fail("Does not support the deprecated dictionary column any longer.");
 }
 
 template <typename T>

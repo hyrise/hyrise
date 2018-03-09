@@ -9,7 +9,6 @@
 
 #include "../lib/storage/base_column.hpp"
 #include "../lib/storage/chunk.hpp"
-#include "../lib/storage/deprecated_dictionary_column.hpp"
 #include "../lib/storage/index/group_key/composite_group_key_index.hpp"
 #include "../lib/types.hpp"
 
@@ -194,9 +193,7 @@ TYPED_TEST(MultiColumnIndexTest, IsIndexForTest) {
 }
 
 TYPED_TEST(MultiColumnIndexTest, CreateAndRetrieveUsingChunk) {
-  auto chunk = std::make_shared<Chunk>();
-  chunk->add_column(this->dict_col_int);
-  chunk->add_column(this->dict_col_str);
+  auto chunk = std::make_shared<Chunk>(ChunkColumns({this->dict_col_int, this->dict_col_str}));
 
   chunk->create_index<TypeParam>({this->dict_col_int});
   chunk->create_index<TypeParam>({this->dict_col_int, this->dict_col_str});

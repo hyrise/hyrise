@@ -9,7 +9,6 @@
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
 #include "operators/validate.hpp"
-#include "storage/base_deprecated_dictionary_column.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "tasks/chunk_compression_task.hpp"
@@ -89,6 +88,8 @@ TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
   ins->set_transaction_context(context);
   ins->execute();
   context->rollback();
+
+  ASSERT_EQ(table->chunk_count(), 4u);
 
   auto compression = std::make_unique<ChunkCompressionTask>(
       "table_insert", std::vector<ChunkID>{ChunkID{0}, ChunkID{1}, ChunkID{2}, ChunkID{3}});

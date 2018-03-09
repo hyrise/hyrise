@@ -238,7 +238,6 @@ set(
     sql/sql_translator.hpp
     storage/base_column_encoder.hpp
     storage/base_column.hpp
-    storage/base_deprecated_dictionary_column.hpp
     storage/base_dictionary_column.cpp
     storage/base_dictionary_column.hpp
     storage/base_encoded_column.cpp
@@ -248,6 +247,8 @@ set(
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
     storage/chunk.hpp
+    storage/chunk_access_counter.cpp
+    storage/chunk_access_counter.hpp
     storage/column_encoding_utils.cpp
     storage/column_encoding_utils.hpp
     storage/column_iterables.hpp
@@ -262,21 +263,14 @@ set(
     storage/column_visitable.hpp
     storage/create_iterable_from_column.hpp
     storage/create_iterable_from_column.ipp
-    storage/deprecated_dictionary_column.cpp
-    storage/deprecated_dictionary_column.hpp
-    storage/deprecated_dictionary_column/base_attribute_vector.hpp
-    storage/deprecated_dictionary_column.cpp
-    storage/deprecated_dictionary_column/deprecated_attribute_vector_iterable.hpp
-    storage/deprecated_dictionary_column/deprecated_dictionary_column_iterable.hpp
-    storage/deprecated_dictionary_column/deprecated_dictionary_encoder.hpp
-    storage/deprecated_dictionary_column/fitted_attribute_vector.hpp
-    storage/deprecated_dictionary_column.hpp
     storage/dictionary_column/attribute_vector_iterable.hpp
     storage/dictionary_column.cpp
     storage/dictionary_column/dictionary_column_iterable.hpp
     storage/dictionary_column/dictionary_encoder.hpp
     storage/dictionary_column.hpp
     storage/encoding_type.hpp
+    storage/mvcc_columns.cpp
+    storage/mvcc_columns.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
@@ -316,6 +310,8 @@ set(
     storage/storage_manager.hpp
     storage/table.cpp
     storage/table.hpp
+    storage/table_column_definition.cpp
+    storage/table_column_definition.hpp
     storage/value_column.cpp
     storage/value_column.hpp
     storage/value_column/null_value_vector_iterable.hpp
@@ -402,8 +398,7 @@ if (NOT DISABLE_JIT_SUPPORT)
         SOURCES
         ${SOURCES}
         ${JIT_EMBEDDED_SOURCES}
-        ${LLVM_BUNDLE_FILE}
-    )
+        ${LLVM_BUNDLE_FILE})
     # Prevent clang from complaining about unused defines when compiling the assembly file
     set_property(SOURCE ${LLVM_BUNDLE_FILE} PROPERTY COMPILE_FLAGS -Qunused-arguments)
     set(LIBRARIES ${LIBRARIES} ${LLVM_LIBRARY})

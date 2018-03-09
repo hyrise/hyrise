@@ -23,7 +23,6 @@ class EncodingTest : public ::testing::TestWithParam<ColumnEncodingSpec> {
 
 const ColumnEncodingSpec all_column_encoding_specs[]{
     {EncodingType::Unencoded},
-    {EncodingType::DeprecatedDictionary},
     {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
     {EncodingType::Dictionary, VectorCompressionType::SimdBp128},
     {EncodingType::RunLength}};

@@ -78,7 +78,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    *
    * ¹Number of columns is provided in the binary header
    */
-  static std::shared_ptr<Chunk> _import_chunk(std::ifstream& file, std::shared_ptr<Table>& table);
+  static void _import_chunk(std::ifstream& file, std::shared_ptr<Table>& table);
 
   // Calls the right _import_column<ColumnDataType> depending on the given data_type.
   static std::shared_ptr<BaseColumn> _import_column(std::ifstream& file, ChunkOffset row_count, DataType data_type,
@@ -118,7 +118,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
                                                               bool is_nullable);
 
   /*
-   * Imports a serialized DeprecatedDictionaryColumn from the given file.
+   * Imports a serialized DictionaryColumn from the given file.
    * The file must contain data in the following format:
    *
    * Description           | Type                                  | Size in bytes

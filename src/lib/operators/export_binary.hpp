@@ -7,7 +7,6 @@
 #include "abstract_read_only_operator.hpp"
 #include "import_export/binary.hpp"
 #include "storage/column_visitable.hpp"
-#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
 #include "utils/assert.hpp"
@@ -71,7 +70,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * Row count             | ChunkOffset                           |  4
    *
    * Next, it dumps the contents of the columns in the respective format (depending on the type
-   * of the column, such as ReferenceColumn, DeprecatedDictionaryColumn, ValueColumn).
+   * of the column, such as ReferenceColumn, DictionaryColumn, ValueColumn).
    *
    * @param table The table we are currently exporting
    * @param ofstream The output stream to write to
@@ -159,9 +158,6 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
   void handle_column(const BaseDictionaryColumn& base_column,
-                     std::shared_ptr<ColumnVisitableContext> base_context) override;
-
-  void handle_column(const BaseDeprecatedDictionaryColumn& base_column,
                      std::shared_ptr<ColumnVisitableContext> base_context) override;
 
   void handle_column(const BaseEncodedColumn& base_column,
