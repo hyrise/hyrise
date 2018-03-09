@@ -1,5 +1,7 @@
 #include "case.hpp"
 
+#include <sstream>
+
 #include "storage/column_iterables/any_column_iterator.hpp"
 #include "storage/create_iterable_from_column.hpp"
 #include "storage/materialize.hpp"
@@ -8,13 +10,22 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
+/**
+ * Turns a PhysicalCaseResult - which is either a THEN result or an ELSE result - into a value/null - pair
+ */
 template <typename ResultDataType>
 std::pair<bool, ResultDataType> materialize_case_result(
     const PhysicalCaseResult<ResultDataType>& case_result, const Chunk& chunk, const ChunkOffset chunk_offset,
     std::vector<std::optional<std::vector<std::pair<bool, ResultDataType>>>>& materialized_column_cache) {
+
+  /**
+   * CaseResult can be either Null, a value from a column or a constant value
+   */
+
   if (case_result.type() == typeid(Null)) {
     return {true, {}};
   } else if (case_result.type() == typeid(ColumnID)) {
+
     // If not yet done, materialize the column as values and nulls and cache it.
     const auto column_id = boost::get<ColumnID>(case_result);
     auto& materialized_column = materialized_column_cache[column_id];
@@ -41,6 +52,65 @@ Case::Case(const std::shared_ptr<AbstractOperator>& input, const Expressions& ca
 
 const std::string Case::name() const { return "Case"; }
 
+const std::string Case::description(DescriptionMode description_mode) const {
+  /**
+   * SingleLine:
+   *    CASE {[WHEN #Col0 THEN 42, WHEN #Col1 THEN 43, ELSE 55], [WHEN #Col0 THEN #Col1, ELSE NULL]}
+   *
+   * MultiLine:
+   *    CASE {
+   *        [WHEN #Col0 THEN 42, WHEN #Col1 THEN 43, ELSE 55]
+   *        [WHEN #Col0 THEN #Col1, ELSE NULL]}
+   */
+
+  const auto next_expression_separator = description_mode == DescriptionMode::SingleLine ? ", " : "\n     ";
+
+  std::stringstream stream;
+  stream << "CASE {";
+
+  if (description_mode == DescriptionMode::MultiLine) stream << next_expression_separator;
+
+  for (auto expression_idx = size_t{0}; expression_idx < _case_expressions.size(); ++expression_idx) {
+    const auto& abstract_expression = _case_expressions[expression_idx];
+
+    stream << "[";
+
+    resolve_data_type(abstract_expression->result_data_type, [&](auto type) {
+      using ResultDataType = typename decltype(type)::type;
+
+      // Needed for THEN and ELSE. Lambda because having this as a free function feels unnecessary
+      const auto stream_case_result = [&](const auto& case_result) {
+        if (case_result.type() == typeid(Null)) {
+          stream << "NULL";
+        } else if (case_result.type() == typeid(ColumnID)) {
+          stream << "#Col" << boost::get<ColumnID>(case_result);
+        } else if (case_result.type() == typeid(ResultDataType)) {
+          stream << "'" << boost::get<ResultDataType>(case_result) << "'";
+        }
+      };
+
+      const auto& expression = static_cast<const PhysicalCaseExpression<ResultDataType>&>(*abstract_expression);
+
+      for (const auto &clause : expression.clauses) {
+        stream << "WHEN #Col" << clause.when << " THEN ";
+        stream_case_result(clause.then);
+        stream << ", ";
+      }
+
+      stream << "ELSE ";
+      stream_case_result(expression.else_);
+    });
+
+    stream << "]";
+
+    if (expression_idx + 1 < _case_expressions.size()) stream << next_expression_separator;
+  }
+
+  stream << "}";
+
+  return stream.str();
+}
+
 std::shared_ptr<const Table> Case::_on_execute() {
   /**
    * Create ColumnDefinitions for the output table - consisting of the columns from the input, plus one for every
@@ -48,14 +118,7 @@ std::shared_ptr<const Table> Case::_on_execute() {
    */
   auto column_definitions = input_table_left()->column_definitions();
   for (const auto& case_expression : _case_expressions) {
-    std::string name;
-    if (case_expression->alias) {
-      name = *case_expression->alias;
-    } else {
-      Fail("Not yet implemented");
-    }
-
-    column_definitions.emplace_back(name, case_expression->result_data_type, true);
+    column_definitions.emplace_back("case_expr", case_expression->result_data_type, true);
   }
 
   const auto output_table = std::make_shared<Table>(column_definitions, TableType::Data);
@@ -84,10 +147,12 @@ std::shared_ptr<const Table> Case::_on_execute() {
     /**
      * Create an output_column from each CaseExpression
      */
+
     // If a column in the input chunk is used as a WHEN column, it is materialized into this cache
     std::vector<std::optional<std::vector<int32_t>>> materialized_when_columns(input_table_left()->column_count());
-    for (const auto& case_expression : _case_expressions) {
-      resolve_data_type(case_expression->result_data_type, [&](auto type) {
+
+    for (const auto& abstract_case_expression : _case_expressions) {
+      resolve_data_type(abstract_case_expression->result_data_type, [&](auto type) {
         using ResultDataType = typename decltype(type)::type;
         using NullOrValue = std::pair<bool, ResultDataType>;
 
@@ -95,8 +160,8 @@ std::shared_ptr<const Table> Case::_on_execute() {
         std::vector<std::optional<std::vector<NullOrValue>>> materialized_then_columns(
             input_table_left()->column_count());
 
-        const auto& typed_case_expression =
-            static_cast<const PhysicalCaseExpression<ResultDataType>&>(*case_expression);
+        const auto& case_expression =
+            static_cast<const PhysicalCaseExpression<ResultDataType>&>(*abstract_case_expression);
 
         pmr_concurrent_vector<ResultDataType> output_values(input_chunk->size());
         pmr_concurrent_vector<bool> output_nulls(input_chunk->size());
@@ -110,7 +175,7 @@ std::shared_ptr<const Table> Case::_on_execute() {
           /**
            * Find the first case_clause whose WHEN is true and write its THEN to output_values/nulls
            */
-          for (const auto& case_clause : typed_case_expression.clauses) {
+          for (const auto& case_clause : case_expression.clauses) {
             // If not yet done, materialize the WHEN column and cache it.
             auto& materialized_when_column = materialized_when_columns[case_clause.when];
             if (!materialized_when_column) {
@@ -136,7 +201,7 @@ std::shared_ptr<const Table> Case::_on_execute() {
            * If none of the case_clauses were TRUE, the result of the CaseExpression is in ELSE (which is NULL by default)
            */
           if (!any_when_claused_fulfilled) {
-            const auto null_and_value = materialize_case_result(typed_case_expression.else_, *input_chunk, chunk_offset,
+            const auto null_and_value = materialize_case_result(case_expression.else_, *input_chunk, chunk_offset,
                                                                 materialized_then_columns);
             output_nulls[chunk_offset] = null_and_value.first;
             output_values[chunk_offset] = null_and_value.second;

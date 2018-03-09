@@ -28,7 +28,7 @@ TEST_F(CaseTest, WhenColumnThenValue) {
    */
 
   const auto clause = PhysicalCaseClause<int32_t>(ColumnID{0}, int32_t{142});
-  const auto case_expression = std::make_shared<PhysicalCaseExpression<int32_t>>(clause, Null{}, "c0");
+  const auto case_expression = std::make_shared<PhysicalCaseExpression<int32_t>>(clause, Null{});
 
   const auto case_op = std::make_shared<Case>(_table_wrapper_a, Case::Expressions{case_expression});
   case_op->execute();
@@ -43,7 +43,7 @@ TEST_F(CaseTest, WhenColumnThenColumnElseColumn) {
    */
 
   const auto clause = PhysicalCaseClause<int32_t>(ColumnID{0}, ColumnID{1});
-  const auto case_expression = std::make_shared<PhysicalCaseExpression<int32_t>>(clause, ColumnID{2}, "c0");
+  const auto case_expression = std::make_shared<PhysicalCaseExpression<int32_t>>(clause, ColumnID{2});
 
   const auto case_op = std::make_shared<Case>(_table_wrapper_a, Case::Expressions{case_expression});
   case_op->execute();
@@ -59,7 +59,7 @@ TEST_F(CaseTest, WhenColumnThenNullElseValue) {
    */
 
   const auto clause = PhysicalCaseClause<int32_t>(ColumnID{0}, Null{});
-  const auto case_expression = std::make_shared<PhysicalCaseExpression<int32_t>>(clause, 143, "c0");
+  const auto case_expression = std::make_shared<PhysicalCaseExpression<int32_t>>(clause, 143);
 
   const auto case_op = std::make_shared<Case>(_table_wrapper_a, Case::Expressions{case_expression});
   case_op->execute();
@@ -81,7 +81,7 @@ TEST_F(CaseTest, WhenColumnsThenMixedElseValue) {
   auto clauses = std::vector<PhysicalCaseClause<float>>{};
   clauses.emplace_back(ColumnID{0}, ColumnID{3});
   clauses.emplace_back(ColumnID{4}, float{3.14});
-  const auto case_expression = std::make_shared<PhysicalCaseExpression<float>>(clauses, 13.0f, "c0");
+  const auto case_expression = std::make_shared<PhysicalCaseExpression<float>>(clauses, 13.0f);
 
   const auto case_op = std::make_shared<Case>(_table_wrapper_a, Case::Expressions{case_expression});
   case_op->execute();
@@ -90,7 +90,7 @@ TEST_F(CaseTest, WhenColumnsThenMixedElseValue) {
                             load_table("src/test/tables/case/when_columns_then_mixed_else_value.tbl"));
 }
 
-TEST_F(CaseTest, MultipleExpressions) {
+TEST_F(CaseTest, MultipleExpressionsAndDescription) {
   /**
    * Test multiple expressions (std::string and int64_t, just to have them covered as well)
    *    CASE
@@ -111,13 +111,13 @@ TEST_F(CaseTest, MultipleExpressions) {
   auto clauses_a = std::vector<PhysicalCaseClause<std::string>>{};
   clauses_a.emplace_back(ColumnID{0}, std::string("Hallo"));
   clauses_a.emplace_back(ColumnID{4}, std::string("Welt"));
-  expressions.emplace_back(std::make_shared<PhysicalCaseExpression<std::string>>(clauses_a, std::string("!"), "c0"));
+  expressions.emplace_back(std::make_shared<PhysicalCaseExpression<std::string>>(clauses_a, std::string("!")));
 
   // Second expression
   auto clauses_b = std::vector<PhysicalCaseClause<int64_t>>{};
   clauses_b.emplace_back(ColumnID{4}, int64_t{42});
   clauses_b.emplace_back(ColumnID{0}, int64_t{43});
-  expressions.emplace_back(std::make_shared<PhysicalCaseExpression<int64_t>>(clauses_b, Null(), "c1"));
+  expressions.emplace_back(std::make_shared<PhysicalCaseExpression<int64_t>>(clauses_b, Null()));
 
   //
   const auto case_op = std::make_shared<Case>(_table_wrapper_a, expressions);
@@ -125,6 +125,15 @@ TEST_F(CaseTest, MultipleExpressions) {
 
   EXPECT_TABLE_EQ_UNORDERED(case_op->get_output(),
                             load_table("src/test/tables/case/multiple_expressions.tbl"));
+
+  /**
+   * Test description here as well, so we don't have to build a "complex" Case operator in multiple places
+   */
+  EXPECT_EQ(case_op->description(DescriptionMode::SingleLine), R"(CASE {[WHEN #Col0 THEN 'Hallo', WHEN #Col4 THEN 'Welt', ELSE '!'], [WHEN #Col4 THEN '42', WHEN #Col0 THEN '43', ELSE NULL]})");
+  EXPECT_EQ(case_op->description(DescriptionMode::MultiLine), R"(CASE {
+     [WHEN #Col0 THEN 'Hallo', WHEN #Col4 THEN 'Welt', ELSE '!']
+     [WHEN #Col4 THEN '42', WHEN #Col0 THEN '43', ELSE NULL]})");
+
 }
 
 }  // namespace opossum
