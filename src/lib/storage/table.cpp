@@ -142,7 +142,8 @@ const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
 
 void Table::append_chunk(const ChunkColumns& columns, const std::optional<PolymorphicAllocator<Chunk>>& alloc,
                          const std::shared_ptr<ChunkAccessCounter>& access_counter) {
-  DebugAssert(columns.size() == _column_definitions.size(), "Number of columns doesn't match number of columns in TableColumnDefinitions");
+  DebugAssert(columns.size() == _column_definitions.size(),
+              "Number of columns doesn't match number of columns in TableColumnDefinitions");
 
   const auto chunk_size = columns.empty() ? 0u : columns[0]->size();
 

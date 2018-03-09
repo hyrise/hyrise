@@ -21,6 +21,7 @@ class Table;
  * @param max_chunk_size    Max number of rows for any Chunk created as the result of merging Chunk
  * @return                  A new reference Table.
  */
-std::shared_ptr<Table> defragment_reference_table(const std::shared_ptr<const Table>& reference_table, const ChunkOffset min_chunk_size, const ChunkOffset max_chunk_size);
+std::shared_ptr<Table> defragment_reference_table(const std::shared_ptr<const Table>& reference_table,
+                                                  const ChunkOffset min_chunk_size, const ChunkOffset max_chunk_size);
 
 }  // namespace opossum
