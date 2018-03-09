@@ -13,19 +13,26 @@ namespace opossum {
  * @defgroup Types to describe Case's similar to SQL's CASE expression in PQPs and LQPs.
  * Terms are kept similar to SQL92.
  *
- * Hyrise's CaseOperator supports no computations in its CASE, WHEN, THEN or ELSE statements - these have to be
- * performed in previous Operators, e.g. Projections, and then used in Case by referencing
- * the WHEN-column/CaseExpressionResults to the Column where the result of the computation is stored. Also, there is no
- * special construct for SQL's searched CASE, because internally it can be supported with the same algorithms as the
- * normal CASE.
+ * # Nesting with other expression types
+ *    Hyrise's CaseOperator supports no computations in its CASE, WHEN, THEN or ELSE statements - these have to be
+ *    performed in previous Operators, e.g. Projections, and then used in Case by referencing
+ *    the WHEN-column/CaseExpressionResults to the Column where the result of the computation is stored. Also, there is
+ *    no special construct for SQL's searched CASE, because internally it can be supported with the same algorithms as
+ *    the normal CASE.
  *
- * From the perspective of the CaseOperator, a Case expression looks like this.
- *      [WHEN <column> THEN <case_expression_result>, ...] ELSE <case_expression_result; default=NULL>
- * where <case_expression_result> is either Null, a Column or a constant value.
+ * # On the WHEN condition
+ *    The WHEN conditions have to be pre-computed (again, using e.g. Projection) and stored in a int32 column.
+ *    0 means false and anything else means true
  *
- * CaseExpression, CaseWhenClause and CaseExpressionResult are templated over the ResultDataType - instead of using
- * an AllTypeVariant in CaseExpressionResult - to statically ensure that all CaseWhenClauses/ElseClauses have the same
- * type (and thus a CaseExpression yields the same type for all rows).
+ * # Internal syntax
+ *    From the perspective of the CaseOperator, a Case expression looks like this.
+ *         [WHEN <column> THEN <case_expression_result>, ...] ELSE <case_expression_result; default=NULL>
+ *    where <case_expression_result> is either Null, a Column or a constant value.
+ *
+ * # Template over AllTypeVariant
+ *    CaseExpression, CaseWhenClause and CaseExpressionResult are templated over the ResultDataType - instead of using
+ *    an AllTypeVariant in CaseExpressionResult - to statically ensure that all CaseWhenClauses/ElseClauses in a
+ *    CaseExpression yield the same type (and thus a CaseExpression yields a value of the same type for all rows).
  */
 
 // The result from a CaseExpression, can be either Null, a Column or a constant value
