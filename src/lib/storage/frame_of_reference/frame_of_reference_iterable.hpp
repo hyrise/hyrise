@@ -34,8 +34,8 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
       auto decoder = vector.create_decoder();
       using OffsetValueDecompressorT = std::decay_t<decltype(*decoder)>;
 
-      auto begin = PointAccessIterator<OffsetValueDecompressorT>{
-          &_column.block_minima(), &_column.null_values(), decoder.get(), mapped_chunk_offsets.cbegin()};
+      auto begin = PointAccessIterator<OffsetValueDecompressorT>{&_column.block_minima(), &_column.null_values(),
+                                                                 decoder.get(), mapped_chunk_offsets.cbegin()};
 
       auto end = PointAccessIterator<OffsetValueDecompressorT>{mapped_chunk_offsets.cend()};
 

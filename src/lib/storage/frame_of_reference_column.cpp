@@ -60,18 +60,16 @@ std::shared_ptr<BaseColumn> FrameOfReferenceColumn<T, U>::copy_using_allocator(
   auto new_offset_values = _offset_values->copy_using_allocator(alloc);
   auto new_null_values = pmr_vector<bool>{*_null_values, alloc};
 
-  auto new_block_minima_ptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(new_block_minima));
-  auto new_null_values_ptr = std::allocate_shared<pmr_vector<bool>>(alloc, std::move(new_null_values));
-  return std::allocate_shared<FrameOfReferenceColumn>(alloc, new_block_minima_ptr, new_offset_values,
-                                                      new_null_values_ptr);
+  return std::allocate_shared<FrameOfReferenceColumn>(alloc, std::move(new_block_minima), std::move(new_null_values),
+                                                      std::move(new_offset_values));
 }
 
 template <typename T, typename U>
 size_t FrameOfReferenceColumn<T, U>::estimate_memory_usage() const {
   static const auto bits_per_byte = 8u;
 
-  return sizeof(*this) + sizeof(typename decltype(_block_minima)::element_type) + _offset_values->data_size() +
-         _null_values->size() / bits_per_byte;
+  return sizeof(*this) + sizeof(typename decltype(_block_minima)::element_type) * _block_minima.size() +
+         _offset_values->data_size() + _null_values.size() / bits_per_byte;
 }
 
 template <typename T, typename U>
