@@ -90,4 +90,41 @@ TEST_F(CaseTest, WhenColumnsThenMixedElseValue) {
                             load_table("src/test/tables/case/when_columns_then_mixed_else_value.tbl"));
 }
 
+TEST_F(CaseTest, MultipleExpressions) {
+  /**
+   * Test multiple expressions (std::string and int64_t, just to have them covered as well)
+   *    CASE
+   *        WHEN #Col0 THEN "Hallo"
+   *        WHEN #Col4 THEN "Welt"
+   *        ELSE "!"
+   *    END
+   *    ,
+   *    CASE
+   *        WHEN #Col4 THEN 42
+   *        WHEN #Col0 THEN 43
+   *    END
+   */
+
+  Case::Expressions expressions;
+
+  // First expression
+  auto clauses_a = std::vector<PhysicalCaseClause<std::string>>{};
+  clauses_a.emplace_back(ColumnID{0}, std::string("Hallo"));
+  clauses_a.emplace_back(ColumnID{4}, std::string("Welt"));
+  expressions.emplace_back(std::make_shared<PhysicalCaseExpression<std::string>>(clauses_a, std::string("!"), "c0"));
+
+  // Second expression
+  auto clauses_b = std::vector<PhysicalCaseClause<int64_t>>{};
+  clauses_b.emplace_back(ColumnID{4}, int64_t{42});
+  clauses_b.emplace_back(ColumnID{0}, int64_t{43});
+  expressions.emplace_back(std::make_shared<PhysicalCaseExpression<int64_t>>(clauses_b, Null(), "c1"));
+
+  //
+  const auto case_op = std::make_shared<Case>(_table_wrapper_a, expressions);
+  case_op->execute();
+
+  EXPECT_TABLE_EQ_UNORDERED(case_op->get_output(),
+                            load_table("src/test/tables/case/multiple_expressions.tbl"));
+}
+
 }  // namespace opossum
