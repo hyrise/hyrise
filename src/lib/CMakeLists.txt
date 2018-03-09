@@ -15,7 +15,6 @@ set(
     concurrency/transaction_manager.hpp
     constant_mappings.cpp
     constant_mappings.hpp
-    case_expression.hpp
     import_export/binary.hpp
     import_export/csv_converter.cpp
     import_export/csv_converter.hpp
@@ -82,8 +81,6 @@ set(
     operators/abstract_read_write_operator.hpp
     operators/aggregate.cpp
     operators/aggregate.hpp
-    operators/case.cpp
-    operators/case.hpp
     operators/delete.cpp
     operators/delete.hpp
     operators/difference.cpp
