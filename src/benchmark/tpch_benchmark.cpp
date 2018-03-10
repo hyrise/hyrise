@@ -8,8 +8,8 @@
 #include "SQLParserResult.h"
 #include "cxxopts.hpp"
 #include "json.hpp"
-#include "planviz/sql_query_plan_visualizer.hpp"
 #include "planviz/lqp_visualizer.hpp"
+#include "planviz/sql_query_plan_visualizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
@@ -127,7 +127,8 @@ class TpchBenchmark final {
  public:
   TpchBenchmark(const BenchmarkMode benchmark_mode, std::vector<QueryID> query_ids,
                 const opossum::ChunkOffset chunk_size, const float scale_factor, const size_t max_num_query_runs,
-                const Duration max_duration, const std::optional<std::string>& output_file_path, const UseMvcc use_mvcc, const bool enable_visualization)
+                const Duration max_duration, const std::optional<std::string>& output_file_path, const UseMvcc use_mvcc,
+                const bool enable_visualization)
       : _benchmark_mode(benchmark_mode),
         _query_ids(std::move(query_ids)),
         _chunk_size(chunk_size),
@@ -137,7 +138,7 @@ class TpchBenchmark final {
         _output_file_path(output_file_path),
         _use_mvcc(use_mvcc),
         _query_results_by_query_id(),
-  _enable_visualization(enable_visualization) {}
+        _enable_visualization(enable_visualization) {}
 
   void run() {
     /**
@@ -177,19 +178,21 @@ class TpchBenchmark final {
         const auto& tpch_idx = tpch_idx_and_plans.first;
         const auto& lqps = tpch_idx_and_plans.second.lqps;
         const auto& pqps = tpch_idx_and_plans.second.pqps;
-        
+
         const auto tpch_idx_prefix = "TPCH-" + std::to_string(tpch_idx + 1) + "-";
 
         GraphvizConfig graphviz_config;
         graphviz_config.format = "svg";
-        
+
         for (auto lqp_idx = size_t{0}; lqp_idx < lqps.size(); ++lqp_idx) {
           const auto file_prefix = tpch_idx_prefix + "LQP-" + std::to_string(lqp_idx);
-          LQPVisualizer{graphviz_config, {}, {}, {}}.visualize({lqps[lqp_idx]}, file_prefix + ".dot", file_prefix + ".svg");
+          LQPVisualizer{graphviz_config, {}, {}, {}}.visualize({lqps[lqp_idx]}, file_prefix + ".dot",
+                                                               file_prefix + ".svg");
         }
         for (auto pqp_idx = size_t{0}; pqp_idx < pqps.size(); ++pqp_idx) {
           const auto file_prefix = tpch_idx_prefix + "PQP-" + std::to_string(pqp_idx);
-          SQLQueryPlanVisualizer{graphviz_config, {}, {}, {}}.visualize(*pqps[pqp_idx], file_prefix + ".dot", file_prefix + ".svg");
+          SQLQueryPlanVisualizer{graphviz_config, {}, {}, {}}.visualize(*pqps[pqp_idx], file_prefix + ".dot",
+                                                                        file_prefix + ".svg");
         }
       }
     }
