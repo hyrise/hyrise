@@ -19,7 +19,7 @@ namespace opossum {
 class FrameOfReferenceEncoder : public ColumnEncoder<FrameOfReferenceEncoder> {
  public:
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::FrameOfReference>;
-  static constexpr auto _uses_vector_compression = true;
+  static constexpr auto _uses_vector_compression = true;  // see base_column_encoder.hpp for details
 
   template <typename T>
   std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueColumn<T>>& value_column) {
