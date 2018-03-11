@@ -74,8 +74,8 @@ class FrameOfReferenceColumn : public BaseEncodedColumn {
   /**@}*/
 
  private:
-  const pmr_vector<T>& _block_minima;
-  const pmr_vector<bool>& _null_values;
+  const pmr_vector<T> _block_minima;
+  const pmr_vector<bool> _null_values;
   const std::unique_ptr<const BaseCompressedVector> _offset_values;
 };
 
