@@ -15,6 +15,8 @@ enum class CompressedVectorType : uint8_t;
  */
 class BaseEncodedColumn : public BaseColumn {
  public:
+  using BaseColumn::BaseColumn;
+
   // Encoded columns are immutable
   void append(const AllTypeVariant&) final;
 

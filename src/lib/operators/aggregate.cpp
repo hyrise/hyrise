@@ -348,9 +348,8 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
       // Partition by group columns
       for (const auto column_id : _groupby_column_ids) {
         auto base_column = chunk_in->get_column(column_id);
-        auto column_type = input_table->column_data_type(column_id);
 
-        resolve_data_and_column_type(column_type, *base_column, [&](auto type, auto& typed_column) {
+        resolve_data_and_column_type(*base_column, [&](auto type, auto& typed_column) {
           using ColumnDataType = typename decltype(type)::type;
 
           auto iterable = create_iterable_from_column<ColumnDataType>(typed_column);
