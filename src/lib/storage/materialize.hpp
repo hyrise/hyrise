@@ -11,8 +11,6 @@ namespace opossum {
 /**
  * @brief Materialization convenience functions.
  *
- * Can't be put into base_column.hpp because that would lead to circular includes.
- *
  * Use like:
  *
  * ```c++

@@ -85,9 +85,6 @@ void JoinIndex::_perform_join() {
     }
   }
 
-  auto left_data_type = _left_in_table->column_data_type(_left_column_id);
-  auto right_data_type = _right_in_table->column_data_type(_right_column_id);
-
   _pos_list_left = std::make_shared<PosList>();
   _pos_list_right = std::make_shared<PosList>();
 
@@ -115,7 +112,7 @@ void JoinIndex::_perform_join() {
     for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
       auto chunk_column_left = _left_in_table->get_chunk(chunk_id_left)->get_column(_left_column_id);
 
-      resolve_data_and_column_type(left_data_type, *chunk_column_left, [&](auto left_type, auto& typed_left_column) {
+      resolve_data_and_column_type(*chunk_column_left, [&](auto left_type, auto& typed_left_column) {
         using LeftType = typename decltype(left_type)::type;
 
         auto iterable_left = create_iterable_from_column<LeftType>(typed_left_column);
@@ -127,7 +124,7 @@ void JoinIndex::_perform_join() {
           });
         } else {
           // fallback to nested loop implementation
-          resolve_data_and_column_type(right_data_type, *column_right, [&](auto right_type, auto& typed_right_column) {
+          resolve_data_and_column_type(*column_right, [&](auto right_type, auto& typed_right_column) {
             using RightType = typename decltype(right_type)::type;
 
             // make sure that we do not compile invalid versions of these lambdas
