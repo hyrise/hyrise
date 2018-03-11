@@ -127,7 +127,7 @@ INSTANTIATE_TEST_CASE_P(
                       ColumnEncodingSpec{EncodingType::RunLength}),
     formatter);
 
-TEST_P(EncodedColumnTest, SequenciallyReadNotNullableIntColumn) {
+TEST_P(EncodedColumnTest, SequentiallyReadNotNullableIntColumn) {
   auto value_column = this->create_int_value_column();
   auto base_encoded_column = this->encode_value_column(DataType::Int, value_column);
 
@@ -147,7 +147,7 @@ TEST_P(EncodedColumnTest, SequenciallyReadNotNullableIntColumn) {
   });
 }
 
-TEST_P(EncodedColumnTest, SequenciallyReadNullableIntColumn) {
+TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumn) {
   auto value_column = this->create_int_w_null_value_column();
   auto base_encoded_column = this->encode_value_column(DataType::Int, value_column);
 
@@ -171,7 +171,7 @@ TEST_P(EncodedColumnTest, SequenciallyReadNullableIntColumn) {
   });
 }
 
-TEST_P(EncodedColumnTest, SequanciallyReadNullableIntColumnWithChunkOffsetsList) {
+TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumnWithChunkOffsetsList) {
   auto value_column = this->create_int_w_null_value_column();
   auto base_encoded_column = this->encode_value_column(DataType::Int, value_column);
 
@@ -197,7 +197,7 @@ TEST_P(EncodedColumnTest, SequanciallyReadNullableIntColumnWithChunkOffsetsList)
   });
 }
 
-TEST_P(EncodedColumnTest, SequanciallyReadNullableIntColumnWithShuffledChunkOffsetsList) {
+TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumnWithShuffledChunkOffsetsList) {
   auto value_column = this->create_int_w_null_value_column();
   auto base_encoded_column = this->encode_value_column(DataType::Int, value_column);
 

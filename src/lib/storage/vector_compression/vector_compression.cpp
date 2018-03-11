@@ -34,9 +34,10 @@ std::unique_ptr<BaseVectorCompressor> create_encoder_by_type(VectorCompressionTy
 
 }  // namespace
 
-std::unique_ptr<BaseCompressedVector> compress_vector(const pmr_vector<uint32_t>& vector, VectorCompressionType type,
-                                                      const PolymorphicAllocator<size_t>& alloc,
-                                                      const UncompressedVectorInfo& meta_info) {
+std::unique_ptr<const BaseCompressedVector> compress_vector(const pmr_vector<uint32_t>& vector,
+                                                            const VectorCompressionType type,
+                                                            const PolymorphicAllocator<size_t>& alloc,
+                                                            const UncompressedVectorInfo& meta_info) {
   auto encoder = create_encoder_by_type(type);
   return encoder->encode(vector, alloc, meta_info);
 }

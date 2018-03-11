@@ -36,7 +36,7 @@ class SimdBp128Vector : public CompressedVector<SimdBp128Vector> {
   SimdBp128Iterator _on_begin() const;
   SimdBp128Iterator _on_end() const;
 
-  std::unique_ptr<BaseCompressedVector> _on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const;
+  std::unique_ptr<const BaseCompressedVector> _on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const;
 
  private:
   friend class SimdBp128Decompressor;

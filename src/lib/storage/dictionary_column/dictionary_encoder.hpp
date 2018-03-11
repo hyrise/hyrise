@@ -93,7 +93,7 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
     auto encoded_attribute_vector = compress_vector(attribute_vector, vector_compression_type(), alloc, {max_value});
 
     auto dictionary_sptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(dictionary));
-    auto attribute_vector_sptr = std::shared_ptr<BaseCompressedVector>(std::move(encoded_attribute_vector));
+    auto attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(encoded_attribute_vector));
     return std::allocate_shared<DictionaryColumn<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
                                                      ValueID{null_value_id});
   }
