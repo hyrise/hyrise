@@ -43,6 +43,12 @@ class BaseColumnEncoder {
 
   /**
    * @defgroup Interface for selecting the used vector compression type
+   *
+   * Many encoding schemes use the following principle to compress data:
+   * Replace a set of large integers (or values of any data type) with
+   * a set of mostly smaller integers using an invertible transformation.
+   * Compress the resulting set using vector compression (null suppression).
+   *
    * @{
    */
 

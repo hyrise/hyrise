@@ -24,7 +24,7 @@ class BaseCompressedVector;
  * as an offset from the block’s minimum value. These offsets,
  * which can ideally be represented by fewer bits, are then
  * compressed using vector compression (null suppression).
- * FOR encoding on its own withou vector compression, does not
+ * FOR encoding on its own without vector compression does not
  * add any benefit.
  */
 template <typename T, typename = std::enable_if_t<encoding_supports_data_type(
