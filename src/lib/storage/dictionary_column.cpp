@@ -46,10 +46,11 @@ size_t DictionaryColumn<T>::size() const {
 
 template <typename T>
 std::shared_ptr<BaseColumn> DictionaryColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
-  auto new_attribute_vector_ptr = std::shared_ptr<BaseCompressedVector>(_attribute_vector->copy_using_allocator(alloc));
+  auto new_attribute_vector_ptr = _attribute_vector->copy_using_allocator(alloc);
+  auto new_attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(new_attribute_vector_ptr));
   auto new_dictionary = pmr_vector<T>{*_dictionary, alloc};
   auto new_dictionary_ptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(new_dictionary));
-  return std::allocate_shared<DictionaryColumn<T>>(alloc, new_dictionary_ptr, new_attribute_vector_ptr, _null_value_id);
+  return std::allocate_shared<DictionaryColumn<T>>(alloc, new_dictionary_ptr, new_attribute_vector_sptr, _null_value_id);
 }
 
 template <typename T>
