@@ -1,9 +1,9 @@
 #include "frame_of_reference_column.hpp"
 
+#include "resolve_type.hpp"
+#include "storage/vector_compression/base_compressed_vector.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
-
-#include "storage/vector_compression/base_compressed_vector.hpp"
 
 namespace opossum {
 
