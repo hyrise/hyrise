@@ -9,6 +9,7 @@
 
 // Include your encoded column file here!
 #include "storage/dictionary_column.hpp"
+#include "storage/frame_of_reference_column.hpp"
 #include "storage/run_length_column.hpp"
 
 #include "storage/encoding_type.hpp"
@@ -25,9 +26,10 @@ namespace hana = boost::hana;
  *
  * Note: Add your encoded column class here!
  */
-constexpr auto encoded_column_for_type =
-    hana::make_map(hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, template_c<DictionaryColumn>),
-                   hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, template_c<RunLengthColumn>));
+constexpr auto encoded_column_for_type = hana::make_map(
+    hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, template_c<DictionaryColumn>),
+    hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, template_c<RunLengthColumn>),
+    hana::make_pair(enum_c<EncodingType, EncodingType::FrameOfReference>, template_c<FrameOfReferenceColumn>));
 
 /**
  * @brief Resolves the type of an encoded column.
@@ -41,7 +43,7 @@ void resolve_encoded_column_type(const BaseEncodedColumn& column, const Functor&
   // Iterate over all pairs in the map
   hana::fold(encoded_column_for_type, false, [&](auto match_found, auto encoded_column_pair) {
     const auto encoding_type_c = hana::first(encoded_column_pair);
-    const auto column_template_t = hana::second(encoded_column_pair);
+    const auto column_template_c = hana::second(encoded_column_pair);
 
     constexpr auto encoding_type = hana::value(encoding_type_c);
 
@@ -54,7 +56,7 @@ void resolve_encoded_column_type(const BaseEncodedColumn& column, const Functor&
 
       // Compile only if ColumnDataType is supported
       if constexpr(hana::value(data_type_supported)) {
-        using ColumnTemplateType = typename decltype(column_template_t)::type;
+        using ColumnTemplateType = typename decltype(column_template_c)::type;
         using ColumnType = typename ColumnTemplateType::template _template<ColumnDataType>;
         functor(static_cast<const ColumnType&>(column));
       }
