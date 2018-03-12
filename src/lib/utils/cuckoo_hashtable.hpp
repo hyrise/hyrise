@@ -18,7 +18,7 @@ where it is a temporary object for probing. There is no need to delete elements 
 */
 template <typename T>
 class HashTable : private Noncopyable {
-  static const size_t NUMBER_OF_HASH_FUNCTIONS = 3;
+  static const size_t NUMBER_OF_HASH_FUNCTIONS = 4;
 
  public:
   explicit HashTable(size_t input_table_size) : _input_table_size(input_table_size) {
