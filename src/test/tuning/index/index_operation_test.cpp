@@ -19,14 +19,15 @@ class IndexOperationTest : public BaseTest {
 
   // Drops existing table and creates one table for testing with default contents
   void _ensure_pristine_table() {
-    _table = std::make_shared<Table>(3);
-    _table->add_column("column_name", DataType::Int);
+    TableColumnDefinitions column_definitions;
+    column_definitions.emplace_back("column_name", DataType::Int);
+    _table = std::make_shared<Table>(column_definitions, TableType::Data, 3, UseMvcc::Yes);
     _table->append({0});
     _table->append({1});
     _table->append({2});
 
     auto chunk = _table->get_chunk(ChunkID{0});
-    ChunkEncoder::encode_chunk(chunk, _table->column_types());
+    ChunkEncoder::encode_chunk(chunk, _table->column_data_types());
 
     auto& storage_manager = StorageManager::get();
     if (storage_manager.has_table("table_name")) {

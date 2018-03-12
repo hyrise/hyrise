@@ -18,7 +18,7 @@ class IndexEvaluatorTest : public BaseTest {
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("col_1", DataType::Int);
     column_definitions.emplace_back("col_2", DataType::String);
-    auto t = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+    auto t = std::make_shared<Table>(column_definitions, TableType::Data, 10, UseMvcc::Yes);
     t->append({1, "1"});
     t->append({2, "2"});
     t->append({3, "3"});
