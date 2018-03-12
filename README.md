@@ -99,7 +99,7 @@ Contact: firstname.lastname@hpi.de
 -	Moritz   Eyssen
 -	Martin   Fischer
 -	Pedro    Flemming
-- Adrian   Holfter
+-	Adrian   Holfter
 -	Sven     Ihde
 -	Michael  Janke
 -	Max      Jendruk
@@ -110,11 +110,11 @@ Contact: firstname.lastname@hpi.de
 -	Torben   Meyer
 -	Leander  Neiß
 -	David    Schumann
-- Arthur   Silber
+-	Arthur   Silber
 -	Daniel   Stolpe
 -	Jonathan Striebel
 -	Nils     Thamm
 -	Carsten  Walther
-- Lukas    Wenzel
+-	Lukas    Wenzel
 -	Fabian   Wiebe
 -	Tim      Zimmermann
