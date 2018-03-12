@@ -23,13 +23,15 @@ void Tuner::add_evaluator(std::unique_ptr<AbstractEvaluator>&& evaluator) {
 void Tuner::remove_evaluator(std::size_t index) {
   if (index < _evaluators.size()) {
     _evaluators.erase(_evaluators.begin() + index);
+    return;
   }
+  Fail("index out of bounds");
 }
 
 const std::vector<std::unique_ptr<AbstractEvaluator>>& Tuner::evaluators() const { return _evaluators; }
 
 void Tuner::set_selector(std::unique_ptr<AbstractSelector>&& selector) {
-  Assert(selector, "Tried to add an invalid evaluator.");
+  Assert(selector, "Tried to add an invalid selector.");
   _selector = std::move(selector);
 }
 

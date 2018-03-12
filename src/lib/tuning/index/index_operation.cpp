@@ -45,23 +45,15 @@ void IndexOperation::_create_index() {
 
 void IndexOperation::_delete_index() {
   auto table = StorageManager::get().get_table(_column.table_name);
-
-  IndexInfo chosen_index_info{std::vector<ColumnID>{}, "", ColumnIndexType::Invalid};
   for (auto index_info : table->get_indexes()) {
     // The index name is ignored in comparison, as it seems not to be used anywhere
     if (index_info.type == _type && index_info.column_ids == _column.column_ids) {
-      chosen_index_info = index_info;
-      break;
+      table->remove_index(index_info);
+      _invalidate_cache();
+      return;
     }
   }
-
-  if (chosen_index_info.type == ColumnIndexType::Invalid) {
-    Fail("Index to be deleted was not found");
-  }
-
-  table->remove_index(chosen_index_info);
-
-  _invalidate_cache();
+  Fail("Index to be deleted was not found");
 }
 
 void IndexOperation::_invalidate_cache() {

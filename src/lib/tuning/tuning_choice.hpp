@@ -41,7 +41,7 @@ class TuningChoice {
 
   /**
    * Convenience accessors for desirability() that in their default implementation
-   * return the performance benetfts expected from accepting or rejecting this choice.
+   * return the performance benefits expected from accepting or rejecting this choice.
    */
   virtual float accept_desirability() const;
   virtual float reject_desirability() const;
