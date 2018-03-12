@@ -193,7 +193,7 @@ Table table{column_definitions, TableType::Data, 2};
   table.append({1});
   auto chunk = table.get_chunk(ChunkID{0});
 
-  ChunkEncoder::encode_chunk(chunk, table.column_types());
+  ChunkEncoder::encode_chunk(chunk, table.column_data_types());
 
   EXPECT_EQ(table.get_indexes().size(), 0u);
 

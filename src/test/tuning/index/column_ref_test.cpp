@@ -13,8 +13,9 @@ namespace opossum {
 class ColumnRefTest : public BaseTest {
  protected:
   void SetUp() override {
-    auto table = std::make_shared<Table>();
-    table->add_column("column_name", DataType::Int);
+    TableColumnDefinitions column_definitions;
+    column_definitions.emplace_back("column_name", DataType::Int);
+    auto table = std::make_shared<Table>(column_definitions, TableType::Data);
     StorageManager::get().add_table("table_name", table);
   }
 

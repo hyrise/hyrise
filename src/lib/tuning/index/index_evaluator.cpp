@@ -47,7 +47,7 @@ uintptr_t IndexEvaluator::_predict_memory_cost(const IndexChoice& index_evaluati
   // Sum up column data type widths
   size_t value_bytes = 0;
   for (const auto column_id : index_evaluation.column_ref.column_ids) {
-    const auto data_type = table->column_type(column_id);
+    const auto data_type = table->column_data_type(column_id);
     opossum::resolve_data_type(data_type, [&](auto boost_type) {
       using ColumnDataType = typename decltype(boost_type)::type;
       // This assumes that elements are self-contained

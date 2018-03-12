@@ -15,10 +15,10 @@ class IndexEvaluatorTest : public BaseTest {
  protected:
   void SetUp() override {
     _evaluator = std::make_shared<IndexEvaluator>();
-
-    auto t = std::make_shared<Table>(10);
-    t->add_column("col_1", DataType::Int);
-    t->add_column("col_2", DataType::String);
+    TableColumnDefinitions column_definitions;
+    column_definitions.emplace_back("col_1", DataType::Int);
+    column_definitions.emplace_back("col_2", DataType::String);
+    auto t = std::make_shared<Table>(column_definitions, TableType::Data, 10);
     t->append({1, "1"});
     t->append({2, "2"});
     t->append({3, "3"});
