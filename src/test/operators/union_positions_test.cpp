@@ -278,39 +278,19 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
   auto column_right_0_2 = std::make_shared<ReferenceColumn>(_table_10_ints, ColumnID{0}, pos_list_right_0_1);
   auto column_right_1_2 = std::make_shared<ReferenceColumn>(_table_10_ints, ColumnID{0}, pos_list_right_1_1);
 
-  auto table_left = std::make_shared<Table>(3);
-  table_left->add_column_definition("a", DataType::Int);
-  table_left->add_column_definition("b", DataType::Float);
-  table_left->add_column_definition("c", DataType::Int);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int);
+  column_definitions.emplace_back("b", DataType::Float);
+  column_definitions.emplace_back("c", DataType::Int);
+  auto table_left = std::make_shared<Table>(column_definitions, TableType::References, 3);
 
-  auto chunk_left_0 = std::make_shared<Chunk>();
-  chunk_left_0->add_column(column_left_0_0);
-  chunk_left_0->add_column(column_left_0_1);
-  chunk_left_0->add_column(column_left_0_2);
-  table_left->emplace_chunk(std::move(chunk_left_0));
+  table_left->append_chunk(ChunkColumns({column_left_0_0, column_left_0_1, column_left_0_2}));
+  table_left->append_chunk(ChunkColumns({column_left_1_0, column_left_1_1, column_left_1_2}));
 
-  auto chunk_left_1 = std::make_shared<Chunk>();
-  chunk_left_1->add_column(column_left_1_0);
-  chunk_left_1->add_column(column_left_1_1);
-  chunk_left_1->add_column(column_left_1_2);
-  table_left->emplace_chunk(std::move(chunk_left_1));
+  auto table_right = std::make_shared<Table>(column_definitions, TableType::References, 4);
 
-  auto table_right = std::make_shared<Table>(4);
-  table_right->add_column_definition("a", DataType::Int);
-  table_right->add_column_definition("b", DataType::Float);
-  table_right->add_column_definition("c", DataType::Int);
-
-  auto chunk_right_0 = std::make_shared<Chunk>();
-  chunk_right_0->add_column(column_right_0_0);
-  chunk_right_0->add_column(column_right_0_1);
-  chunk_right_0->add_column(column_right_0_2);
-  table_right->emplace_chunk(std::move(chunk_right_0));
-
-  auto chunk_right_1 = std::make_shared<Chunk>();
-  chunk_right_1->add_column(column_right_1_0);
-  chunk_right_1->add_column(column_right_1_1);
-  chunk_right_1->add_column(column_right_1_2);
-  table_right->emplace_chunk(std::move(chunk_right_1));
+  table_right->append_chunk(ChunkColumns({column_right_0_0, column_right_0_1, column_right_0_2}));
+  table_right->append_chunk(ChunkColumns({column_right_1_0, column_right_1_1, column_right_1_2}));
 
   auto table_wrapper_left_op = std::make_shared<TableWrapper>(table_left);
   auto table_wrapper_right_op = std::make_shared<TableWrapper>(table_right);

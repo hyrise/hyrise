@@ -9,6 +9,7 @@
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/union_positions.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -63,5 +64,36 @@ TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
 
   auto expected_result = load_table("src/test/tables/joinoperators/int_inner_join.tbl", 2);
   EXPECT_TABLE_EQ_UNORDERED(expected_result, tasks.back()->get_operator()->get_output());
+}
+TEST_F(OperatorTaskTest, MakeDiamondShape) {
+  auto gt_a = std::make_shared<GetTable>("table_a");
+  auto scan_a = std::make_shared<TableScan>(gt_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+  auto scan_b = std::make_shared<TableScan>(scan_a, ColumnID{1}, PredicateCondition::LessThan, 1000);
+  auto scan_c = std::make_shared<TableScan>(scan_a, ColumnID{1}, PredicateCondition::GreaterThan, 2000);
+  auto union_positions = std::make_shared<UnionPositions>(scan_b, scan_c);
+
+  auto tasks = OperatorTask::make_tasks_from_operator(union_positions);
+
+  ASSERT_EQ(tasks.size(), 5u);
+  EXPECT_EQ(tasks[0]->get_operator(), gt_a);
+  EXPECT_EQ(tasks[1]->get_operator(), scan_a);
+  EXPECT_EQ(tasks[2]->get_operator(), scan_b);
+  EXPECT_EQ(tasks[3]->get_operator(), scan_c);
+  EXPECT_EQ(tasks[4]->get_operator(), union_positions);
+
+  std::vector<std::shared_ptr<AbstractTask>> expected_successors_0({tasks[1]});
+  EXPECT_EQ(tasks[0]->successors(), expected_successors_0);
+
+  std::vector<std::shared_ptr<AbstractTask>> expected_successors_1({tasks[2], tasks[3]});
+  EXPECT_EQ(tasks[1]->successors(), expected_successors_1);
+
+  std::vector<std::shared_ptr<AbstractTask>> expected_successors_2({tasks[4]});
+  EXPECT_EQ(tasks[2]->successors(), expected_successors_2);
+
+  std::vector<std::shared_ptr<AbstractTask>> expected_successors_3({tasks[4]});
+  EXPECT_EQ(tasks[3]->successors(), expected_successors_3);
+
+  std::vector<std::shared_ptr<AbstractTask>> expected_successors_4{};
+  EXPECT_EQ(tasks[4]->successors(), expected_successors_4);
 }
 }  // namespace opossum

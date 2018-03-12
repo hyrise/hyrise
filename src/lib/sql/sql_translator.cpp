@@ -42,11 +42,17 @@ namespace opossum {
 
 PredicateCondition translate_operator_type_to_predicate_condition(const hsql::OperatorType operator_type) {
   static const std::unordered_map<const hsql::OperatorType, const PredicateCondition> operator_to_predicate_condition =
-      {{hsql::kOpEquals, PredicateCondition::Equals},       {hsql::kOpNotEquals, PredicateCondition::NotEquals},
-       {hsql::kOpGreater, PredicateCondition::GreaterThan}, {hsql::kOpGreaterEq, PredicateCondition::GreaterThanEquals},
-       {hsql::kOpLess, PredicateCondition::LessThan},       {hsql::kOpLessEq, PredicateCondition::LessThanEquals},
-       {hsql::kOpBetween, PredicateCondition::Between},     {hsql::kOpLike, PredicateCondition::Like},
-       {hsql::kOpNotLike, PredicateCondition::NotLike},     {hsql::kOpIsNull, PredicateCondition::IsNull}};
+      {{hsql::kOpEquals, PredicateCondition::Equals},
+       {hsql::kOpNotEquals, PredicateCondition::NotEquals},
+       {hsql::kOpGreater, PredicateCondition::GreaterThan},
+       {hsql::kOpGreaterEq, PredicateCondition::GreaterThanEquals},
+       {hsql::kOpLess, PredicateCondition::LessThan},
+       {hsql::kOpLessEq, PredicateCondition::LessThanEquals},
+       {hsql::kOpBetween, PredicateCondition::Between},
+       {hsql::kOpLike, PredicateCondition::Like},
+       {hsql::kOpNotLike, PredicateCondition::NotLike},
+       {hsql::kOpIsNull, PredicateCondition::IsNull},
+       {hsql::kOpIn, PredicateCondition::In}};
 
   auto it = operator_to_predicate_condition.find(operator_type);
   DebugAssert(it != operator_to_predicate_condition.end(), "Filter expression clause operator is not yet supported.");
@@ -188,7 +194,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
     if (insert.type == hsql::kInsertValues) {
       DebugAssert(insert.values != nullptr, "Insert: no values given");
 
-      Assert(data_types_match_expr_types(target_table->column_types(), *insert.values), "Insert: Column type mismatch");
+      Assert(data_types_match_expr_types(target_table->column_data_types(), *insert.values),
+             "Insert: Column type mismatch");
 
       // In the case of INSERT ... VALUES (...), simply create a
       current_result_node = _translate_projection(*insert.values, current_result_node);
@@ -212,7 +219,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
         // when inserting values, simply translate the literal expression
         const auto& hsql_expr = *(*insert.values)[insert_column_index];
 
-        Assert(literal_matches_data_type(hsql_expr, target_table->column_types()[column_id]),
+        Assert(literal_matches_data_type(hsql_expr, target_table->column_data_types()[column_id]),
                "Insert: Column type mismatch");
 
         projections[column_id] = HSQLExprTranslator::to_lqp_expression(hsql_expr, nullptr);
@@ -812,12 +819,23 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_projection(
   std::vector<std::shared_ptr<LQPExpression>> select_column_expressions;
 
   for (const auto* select_column_hsql_expr : select_list) {
-    const auto expr = HSQLExprTranslator::to_lqp_expression(*select_column_hsql_expr, input_node);
+    std::shared_ptr<LQPExpression> expr;
+
+    // For subselects, recursively translate the term to an LQPNode and add its root to an LQPExpression
+    if (select_column_hsql_expr->select) {
+      auto alias = select_column_hsql_expr->alias != nullptr
+                       ? std::optional<std::string>(select_column_hsql_expr->alias)
+                       : std::nullopt;
+      auto subselect_node = _translate_select(*select_column_hsql_expr->select);
+      expr = LQPExpression::create_subselect(subselect_node, alias);
+    } else {
+      expr = HSQLExprTranslator::to_lqp_expression(*select_column_hsql_expr, input_node);
+    }
 
     DebugAssert(expr->type() == ExpressionType::Star || expr->type() == ExpressionType::Column ||
                     expr->is_arithmetic_operator() || expr->type() == ExpressionType::Literal ||
-                    expr->type() == ExpressionType::Placeholder,
-                "Only column references, star-selects, and arithmetic expressions supported for now.");
+                    expr->type() == ExpressionType::Subselect || expr->type() == ExpressionType::Placeholder,
+                "Only column references, star-selects, subselects and arithmetic expressions supported for now.");
 
     if (expr->type() == ExpressionType::Star) {
       // Resolve `SELECT *` or `SELECT prefix.*` to columns.
@@ -903,7 +921,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_limit(const hsql::Lim
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     const hsql::Expr& hsql_expr, bool allow_function_columns,
     const std::function<LQPColumnReference(const hsql::Expr&)>& resolve_column,
-    const std::shared_ptr<AbstractLQPNode>& input_node) const {
+    const std::shared_ptr<AbstractLQPNode>& input_node) {
   DebugAssert(hsql_expr.expr != nullptr, "hsql malformed");
 
   /**
@@ -943,8 +961,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     return hsql_expr.isType(hsql::kExprColumnRef) ||
            (allow_function_columns && hsql_expr.isType(hsql::kExprFunctionRef));
   };
-
-  // TODO(anybody): handle IN with join
 
   auto predicate_negated = (hsql_expr.opType == hsql::kOpNot);
 
@@ -1006,6 +1022,22 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     value2 = boost::get<AllTypeVariant>(value2_all_parameter_variant);
 
     Assert(refers_to_column(*column_ref_hsql_expr), "For BETWEENS, hsql_expr.expr has to refer to a column");
+  } else if (predicate_condition == PredicateCondition::In) {
+    // Handle IN by using a semi join
+    Assert(hsql_expr.select, "The IN operand only supports subqueries so far");
+    // TODO(anybody): Also support lists of literals
+    auto subselect_node = _translate_select(*hsql_expr.select);
+
+    const auto left_column = resolve_column(*column_ref_hsql_expr);
+    Assert(subselect_node->output_column_references().size() == 1, "You can only check IN on one column");
+    auto right_column = subselect_node->output_column_references()[0];
+    const auto column_references = std::make_pair(left_column, right_column);
+
+    auto join_node = std::make_shared<JoinNode>(JoinMode::Semi, column_references, PredicateCondition::Equals);
+    join_node->set_left_input(input_node);
+    join_node->set_right_input(subselect_node);
+
+    return join_node;
   } else if (predicate_condition != PredicateCondition::IsNull &&
              predicate_condition != PredicateCondition::IsNotNull) {
     /**
@@ -1025,6 +1057,13 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     column_ref_hsql_expr = operands_switched ? hsql_expr.expr2 : hsql_expr.expr;
   }
 
+  /**
+   * the argument passed to resolve_column() here:
+   * the expr referring to the main column to be scanned, e.g. "p_income" in `WHERE 5 > p_income`
+   * or "p_a" in `WHERE p_a > p_b`
+   */
+  const auto column_id = resolve_column(*column_ref_hsql_expr);
+
   auto current_node = input_node;
   auto has_nested_expression = false;
 
@@ -1033,6 +1072,31 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     value = NULL_VALUE;
   } else if (refers_to_column(*value_ref_hsql_expr)) {
     value = resolve_column(*value_ref_hsql_expr);
+  } else if (value_ref_hsql_expr->select) {
+    // If a subselect is present, add the result of the subselect to the table using a projection
+    const auto column_references = input_node->output_column_references();
+    const auto original_column_expressions = LQPExpression::create_columns(column_references);
+
+    auto subselect_node = _translate_select(*value_ref_hsql_expr->select);
+    auto subselect_expression = LQPExpression::create_subselect(subselect_node);
+
+    auto column_expressions = original_column_expressions;
+    column_expressions.push_back(subselect_expression);
+
+    auto expand_projection_node = std::make_shared<ProjectionNode>(column_expressions);
+    expand_projection_node->set_left_input(input_node);
+
+    // Compare against the column containing the subselect result
+    auto subselect_column_id = ColumnID(column_expressions.size() - 1);
+    auto predicate_node =
+        std::make_shared<PredicateNode>(column_id, predicate_condition, subselect_column_id, std::nullopt);
+    predicate_node->set_left_input(expand_projection_node);
+
+    // Remove the column containing the subselect result
+    auto reduce_projection_node = std::make_shared<ProjectionNode>(original_column_expressions);
+    reduce_projection_node->set_left_input(predicate_node);
+
+    return reduce_projection_node;
   } else if (value_ref_hsql_expr->type == hsql::kExprOperator) {
     /**
      * If there is a nested expression (e.g. 1233 + 1) instead of a column reference or literal,
@@ -1052,13 +1116,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
   } else {
     value = HSQLExprTranslator::to_all_parameter_variant(*value_ref_hsql_expr);
   }
-
-  /**
-   * the argument passed to resolve_column() here:
-   * the expr referring to the main column to be scanned, e.g. "p_income" in `WHERE 5 > p_income`
-   * or "p_a" in `WHERE p_a > p_b`
-   */
-  const auto column_id = resolve_column(*column_ref_hsql_expr);
 
   auto predicate_node = PredicateNode::make(column_id, predicate_condition, value, value2);
   predicate_node->set_left_input(current_node);

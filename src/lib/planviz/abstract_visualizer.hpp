@@ -21,7 +21,7 @@ struct GraphvizConfig {
 };
 
 struct VizGraphInfo {
-  std::string bg_color = "transparent";
+  std::string bg_color = "black";
   std::string rankdir = "BT";
   double ratio = 0.5;
 };

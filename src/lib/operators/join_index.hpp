@@ -25,10 +25,13 @@ class JoinIndex : public AbstractJoinOperator {
             const JoinMode mode, const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition scan_type);
 
   const std::string name() const override;
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args = {}) const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
+
+  std::shared_ptr<AbstractOperator> _on_recreate(
+      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
 
   void _perform_join();
 
@@ -46,8 +49,8 @@ class JoinIndex : public AbstractJoinOperator {
 
   void _create_table_structure();
 
-  void _write_output_chunk(std::shared_ptr<Chunk> output_chunk, const std::shared_ptr<const Table> input_table,
-                           std::shared_ptr<PosList> pos_list);
+  void _write_output_columns(ChunkColumns& output_columns, const std::shared_ptr<const Table> input_table,
+                             std::shared_ptr<PosList> pos_list);
 
   std::shared_ptr<Table> _output_table;
   std::shared_ptr<const Table> _left_in_table;

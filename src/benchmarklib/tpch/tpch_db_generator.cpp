@@ -65,8 +65,6 @@ class TableBuilder {
   TableBuilder(size_t chunk_size, const boost::hana::tuple<DataTypes...>& column_types,
                const boost::hana::tuple<Strings...>& column_names, opossum::UseMvcc use_mvcc)
       : _use_mvcc(use_mvcc) {
-    _table = std::make_shared<opossum::Table>(chunk_size);
-
     /**
      * Create a tuple ((column_name0, column_type0), (column_name1, column_type1), ...) so we can iterate over the
      * columns.
@@ -80,11 +78,14 @@ class TableBuilder {
         column_types, column_names);
 
     // Iterate over the column types/names and create the columns.
-    boost::hana::fold_left(column_names_and_data_types, _table, [](auto table, auto column_name_and_type) {
-      table->add_column_definition(column_name_and_type[boost::hana::llong_c<0>],
-                                   column_name_and_type[boost::hana::llong_c<1>]);
-      return table;
-    });
+    opossum::TableColumnDefinitions column_definitions;
+    boost::hana::fold_left(column_names_and_data_types, column_definitions,
+                           [](auto& column_definitions, auto column_name_and_type) -> decltype(auto) {
+                             column_definitions.emplace_back(column_name_and_type[boost::hana::llong_c<0>],
+                                                             column_name_and_type[boost::hana::llong_c<1>]);
+                             return column_definitions;
+                           });
+    _table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, chunk_size, use_mvcc);
   }
 
   std::shared_ptr<opossum::Table> finish_table() {
@@ -119,15 +120,15 @@ class TableBuilder {
   size_t _current_chunk_row_count() const { return _column_vectors[boost::hana::llong_c<0>].size(); }
 
   void _emit_chunk() {
-    auto chunk = std::make_shared<opossum::Chunk>(_use_mvcc);
+    opossum::ChunkColumns chunk_columns;
 
     // Create a column from each column vector and add it to the Chunk, then re-initialize the vector
     boost::hana::for_each(_column_vectors, [&](auto&& vector) {
       using T = typename std::decay_t<decltype(vector)>::value_type;
-      chunk->add_column(std::make_shared<opossum::ValueColumn<T>>(std::move(vector)));
+      chunk_columns.push_back(std::make_shared<opossum::ValueColumn<T>>(std::move(vector)));
       vector = std::decay_t<decltype(vector)>();
     });
-    _table->emplace_chunk(std::move(chunk));
+    _table->append_chunk(chunk_columns);
   }
 };
 

@@ -89,8 +89,6 @@ void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::st
 std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query) {
   sqlite3_stmt* result_row;
 
-  auto result_table = std::make_shared<Table>();
-
   std::vector<std::string> queries;
   boost::algorithm::split(queries, sql_query, boost::is_any_of(";"));
 
@@ -124,7 +122,7 @@ std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query
     throw std::runtime_error(error_message);
   }
 
-  _create_columns(result_table, result_row, sqlite3_column_count(result_row));
+  auto result_table = _create_table(result_row, sqlite3_column_count(result_row));
 
   sqlite3_reset(result_row);
 
@@ -136,7 +134,7 @@ std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query
   return result_table;
 }
 
-void SQLiteWrapper::_create_columns(std::shared_ptr<Table> table, sqlite3_stmt* result_row, int column_count) {
+std::shared_ptr<Table> SQLiteWrapper::_create_table(sqlite3_stmt* result_row, int column_count) {
   std::vector<bool> col_nullable(column_count, false);
   std::vector<std::string> col_types(column_count, "");
   std::vector<std::string> col_names(column_count, "");
@@ -182,6 +180,7 @@ void SQLiteWrapper::_create_columns(std::shared_ptr<Table> table, sqlite3_stmt* 
   }
 
   if (!no_result) {
+    TableColumnDefinitions column_definitions;
     for (int i = 0; i < column_count; ++i) {
       if (col_types[i].empty()) {
         // Hyrise does not have explicit NULL columns
@@ -189,9 +188,13 @@ void SQLiteWrapper::_create_columns(std::shared_ptr<Table> table, sqlite3_stmt* 
       }
 
       const auto data_type = data_type_to_string.right.at(col_types[i]);
-      table->add_column(col_names[i], data_type, col_nullable[i]);
+      column_definitions.emplace_back(col_names[i], data_type, col_nullable[i]);
     }
+
+    return std::make_shared<Table>(column_definitions, TableType::Data);
   }
+
+  return nullptr;
 }
 
 void SQLiteWrapper::_add_row(std::shared_ptr<Table> table, sqlite3_stmt* result_row, int column_count) {

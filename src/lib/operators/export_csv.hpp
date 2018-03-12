@@ -13,7 +13,7 @@ namespace opossum {
 
 class ReferenceColumn;
 
-/*
+/**
  * With the ExportCsv operator, selected tables of a database
  * can be exported to csv files. A valid input can either be
  * a table from the storage manager or a result of a different operator.
@@ -26,7 +26,7 @@ class ReferenceColumn;
  */
 class ExportCsv : public AbstractReadOnlyOperator {
  public:
-  /*
+  /**
    * Generates a new ExportCsv operator.
    * @param in          The input for this operator. Must be another operator,
    *                    whose output is used as output for the table. If exporting
@@ -36,9 +36,9 @@ class ExportCsv : public AbstractReadOnlyOperator {
    */
   explicit ExportCsv(const std::shared_ptr<const AbstractOperator> in, const std::string& filename);
 
-  // cannot move-assign because of const members
-  ExportCsv& operator=(ExportCsv&&) = delete;
+  const std::string name() const override;
 
+ protected:
   /*
    * Executes the export process.
    * During this process, two files are created: <table_name>.csv and <table_name>.csv.meta
@@ -85,10 +85,9 @@ class ExportCsv : public AbstractReadOnlyOperator {
    */
   std::shared_ptr<const Table> _on_execute() override;
 
-  /*
-   * Name of the operator is ExportCsv
-   */
-  const std::string name() const override;
+  std::shared_ptr<AbstractOperator> _on_recreate(
+      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
 
  private:
   // Name of the output file
@@ -96,14 +95,5 @@ class ExportCsv : public AbstractReadOnlyOperator {
 
   static void _generate_meta_info_file(const std::shared_ptr<const Table>& table, const std::string& meta_file);
   static void _generate_content_file(const std::shared_ptr<const Table>& table, const std::string& csv_file);
-
-  template <typename T>
-  class ExportCsvVisitor;
-
-  struct ExportCsvContext : ColumnVisitableContext {
-    explicit ExportCsvContext(CsvWriter& csv_writer) : csv_writer(csv_writer) {}
-    CsvWriter& csv_writer;
-    ChunkOffset current_row;
-  };
 };
 }  // namespace opossum

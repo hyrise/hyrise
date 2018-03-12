@@ -2,9 +2,9 @@
 
 namespace opossum {
 
-std::unique_ptr<BaseCompressedVector> FixedSizeByteAlignedCompressor::encode(const pmr_vector<uint32_t>& vector,
-                                                                             const PolymorphicAllocator<size_t>& alloc,
-                                                                             const UncompressedVectorInfo& meta_info) {
+std::unique_ptr<const BaseCompressedVector> FixedSizeByteAlignedCompressor::encode(
+    const pmr_vector<uint32_t>& vector, const PolymorphicAllocator<size_t>& alloc,
+    const UncompressedVectorInfo& meta_info) {
   const auto max_value = meta_info.max_value ? *meta_info.max_value : _find_max_value(vector);
   return _encode_using_max_value(alloc, vector, max_value);
 }

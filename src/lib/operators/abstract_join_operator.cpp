@@ -29,8 +29,8 @@ const std::string AbstractJoinOperator::description(DescriptionMode description_
   std::string column_name_left = std::string("Col #") + std::to_string(_column_ids.first);
   std::string column_name_right = std::string("Col #") + std::to_string(_column_ids.second);
 
-  if (_input_table_left()) column_name_left = _input_table_left()->column_name(_column_ids.first);
-  if (_input_table_right()) column_name_right = _input_table_right()->column_name(_column_ids.second);
+  if (input_table_left()) column_name_left = input_table_left()->column_name(_column_ids.first);
+  if (input_table_right()) column_name_right = input_table_right()->column_name(_column_ids.second);
 
   const auto separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
 

@@ -845,15 +845,65 @@ const char* const tpch_query_21 =
       l3.l_receiptdate > l3.l_commitdate ) AND s_nationkey = n_nationkey AND n_name = 'SAUDI ARABIA' GROUP BY s_name
       ORDER BY numwait DESC, s_name;)";
 
+/**
+ * TPC-H 22
+ *
+ * Original:
+ *
+ * SELECT
+ *     CNTRYCODE,
+ *     COUNT(*) AS NUMCUST,
+ *     SUM(C_ACCTBAL) AS TOTACCTBAL
+ * FROM (
+ *     SELECT
+ *         SUBSTRING(C_PHONE,1,2) AS CNTRYCODE,
+ *         C_ACCTBAL
+ *     FROM
+ *         CUSTOMER
+ *    WHERE
+ *         SUBSTRING(C_PHONE,1,2) IN ('13', '31', '23', '29', '30', '18', '17')
+ *         AND C_ACCTBAL > (
+ *             SELECT
+ *                 AVG(C_ACCTBAL)
+ *             FROM
+ *                 CUSTOMER
+ *             WHERE
+ *                 C_ACCTBAL > 0.00
+ *                 AND SUBSTRING(C_PHONE,1,2) IN ('13', '31', '23', '29', '30', '18', '17')
+ *         )
+ *         AND NOT EXISTS (
+ *             SELECT
+ *                 *
+ *             FROM
+ *                 ORDERS
+ *             WHERE
+ *                 O_CUSTKEY = C_CUSTKEY
+ *         )
+ * ) AS CUSTSALE
+ * GROUP BY
+ *     CNTRYCODE
+ * ORDER BY
+ *     CNTRYCODE
+ */
+const char* const tpch_query_22 =
+    R"(SELECT CNTRYCODE, COUNT(*) AS NUMCUST, SUM(C_ACCTBAL) AS TOTACCTBAL
+       FROM (SELECT SUBSTRING(C_PHONE,1,2) AS CNTRYCODE, C_ACCTBAL
+       FROM CUSTOMER WHERE SUBSTRING(C_PHONE,1,2) IN ('13', '31', '23', '29', '30', '18', '17') AND
+       C_ACCTBAL > (SELECT AVG(C_ACCTBAL) FROM CUSTOMER WHERE C_ACCTBAL > 0.00 AND
+       SUBSTRING(C_PHONE,1,2) IN ('13', '31', '23', '29', '30', '18', '17')) AND
+       NOT EXISTS ( SELECT * FROM ORDERS WHERE O_CUSTKEY = C_CUSTKEY)) AS CUSTSALE
+       GROUP BY CNTRYCODE
+       ORDER BY CNTRYCODE;)";
+
 }  // namespace
 
 namespace opossum {
 
-const char* tpch_queries[21] = {
-    tpch_query_1,  tpch_query_2,  tpch_query_3,  tpch_query_4,  tpch_query_5,  tpch_query_6,  tpch_query_7,
-    tpch_query_8,  tpch_query_9,  tpch_query_10, tpch_query_11, tpch_query_12, tpch_query_13, tpch_query_14,
-    tpch_query_15, tpch_query_16, tpch_query_17, tpch_query_18, tpch_query_19, tpch_query_20, tpch_query_21,
-};
+const char* tpch_queries[NUM_TPCH_QUERIES] = {tpch_query_1,  tpch_query_2,  tpch_query_3,  tpch_query_4,  tpch_query_5,
+                                              tpch_query_6,  tpch_query_7,  tpch_query_8,  tpch_query_9,  tpch_query_10,
+                                              tpch_query_11, tpch_query_12, tpch_query_13, tpch_query_14, tpch_query_15,
+                                              tpch_query_16, tpch_query_17, tpch_query_18, tpch_query_19, tpch_query_20,
+                                              tpch_query_21, tpch_query_22};
 
 size_t tpch_supported_queries[NUM_SUPPORTED_TPCH_QUERIES] = {
     0,
@@ -875,6 +925,10 @@ size_t tpch_supported_queries[NUM_SUPPORTED_TPCH_QUERIES] = {
     // 19, /* Enable once we support Subselects in WHERE condition */
     // 20, /* Enable once we support Exists and Subselect in WHERE condition */
     // 21 /* Enable once we support SUBSTRING, IN and EXISTS */
+    /* Enable once we support SUBSTRING, IN, EXISTS,
+     * and both uncorrelated and correlated Subselects in WHERE condition
+     */
+    // 22
 };
 
 }  // namespace opossum
