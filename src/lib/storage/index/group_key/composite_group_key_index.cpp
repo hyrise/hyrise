@@ -19,8 +19,8 @@
 
 namespace opossum {
 
-uintptr_t CompositeGroupKeyIndex::predict_memory_consumption(ChunkOffset row_count, ChunkOffset value_count,
-                                                             uint32_t value_bytes) {
+size_t CompositeGroupKeyIndex::predict_memory_consumption(ChunkOffset row_count, ChunkOffset value_count,
+                                                          uint32_t value_bytes) {
   return ((row_count + value_count) * sizeof(ChunkOffset) + value_count * value_bytes);
 }
 
@@ -110,7 +110,7 @@ BaseIndex::Iterator CompositeGroupKeyIndex::_cbegin() const { return _position_l
 
 BaseIndex::Iterator CompositeGroupKeyIndex::_cend() const { return _position_list.cend(); }
 
-uintptr_t CompositeGroupKeyIndex::_memory_consumption() const {
+size_t CompositeGroupKeyIndex::_memory_consumption() const {
   uintptr_t byte_count = _keys.size() * _keys.key_size();
   byte_count += _key_offsets.size() * sizeof(ChunkOffset);
   byte_count += _position_list.size() * sizeof(ChunkOffset);

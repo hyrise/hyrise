@@ -10,8 +10,8 @@
 
 namespace opossum {
 
-uintptr_t BaseIndex::predict_memory_consumption(ColumnIndexType type, ChunkOffset row_count, ChunkOffset value_count,
-                                                uint32_t value_bytes) {
+size_t BaseIndex::predict_memory_consumption(ColumnIndexType type, ChunkOffset row_count, ChunkOffset value_count,
+                                             uint32_t value_bytes) {
   switch (type) {
     case ColumnIndexType::GroupKey:
       return GroupKeyIndex::predict_memory_consumption(row_count, value_count, value_bytes);
@@ -55,7 +55,7 @@ BaseIndex::Iterator BaseIndex::cbegin() const { return _cbegin(); }
 
 BaseIndex::Iterator BaseIndex::cend() const { return _cend(); }
 
-uintptr_t BaseIndex::memory_consumption() const { return _memory_consumption(); }
+size_t BaseIndex::memory_consumption() const { return _memory_consumption(); }
 
 ColumnIndexType BaseIndex::type() const { return _type; }
 

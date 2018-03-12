@@ -37,7 +37,7 @@ class IndexEvaluatorTest : public BaseTest {
   void TearDown() override { StorageManager::get().drop_table("t"); }
 
   void _inspect_lqp_operator(const std::shared_ptr<const AbstractLQPNode>& op, size_t query_frequency) {
-    return _evaluator->_inspect_lqp_operator(op, query_frequency);
+    return _evaluator->_inspect_lqp_node(op, query_frequency);
   }
 
   void _inspect_pqp_operator(const std::shared_ptr<const AbstractOperator>& op, size_t query_frequency) {

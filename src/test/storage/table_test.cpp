@@ -186,9 +186,9 @@ TEST_F(StorageTableTest, MemoryUsageEstimation) {
 
 TEST_F(StorageTableTest, CreateRemoveIndex) {
   // because the group key index only works on dictionary columns, we create a separate table and compress it
-TableColumnDefinitions column_definitions;
-column_definitions.emplace_back("col_1", DataType::Int);
-Table table{column_definitions, TableType::Data, 2};
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("col_1", DataType::Int);
+  Table table{column_definitions, TableType::Data, 2};
   table.append({0});
   table.append({1});
   auto chunk = table.get_chunk(ChunkID{0});

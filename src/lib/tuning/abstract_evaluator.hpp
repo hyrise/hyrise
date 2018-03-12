@@ -8,8 +8,8 @@
 namespace opossum {
 
 /**
- * An AbstractEvaluator analyzes the current system state and proposes a list
- * of TuningChoices that might improve the system performance.
+ * An AbstractEvaluator analyzes the current system state and proposes an
+ * unordered list of TuningChoices that might improve the system performance.
  */
 class AbstractEvaluator {
  public:

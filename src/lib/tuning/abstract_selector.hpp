@@ -14,8 +14,9 @@ namespace opossum {
  *
  * It considers a cost budget that the entire operation sequence as well as any
  * continuous subsequence from the beginning must not exceed.
- * The operation sequence is prioritized by expected performance impact on the system,
- * so that the most beneficial operations come before less useful operations.
+ * The operation sequence is prioritized by the expected performance improvement
+ * (desirability) on the system, so that the most beneficial operations come
+ * before less useful operations.
  *
  * The underlying problem relates to the knapsack problem, but goes beyond that
  * in scope (e.g. choices invalidating other choices).
@@ -26,7 +27,7 @@ class AbstractSelector {
  public:
   virtual ~AbstractSelector() {}
   /**
-   * Determine the index operation sequence as specified above based on the
+   * Determine the tuning operation sequence as specified above based on the
    * given list of choices and the budget value.
    */
   virtual std::vector<std::shared_ptr<TuningOperation>> select(

@@ -42,14 +42,14 @@ class BaseIndex : private Noncopyable {
    * Predicts the memory consumption in bytes of creating an index with the specific index implementation <type>
    * on a Chunk with the following statistics:
    *
-   * rowCount - overall number of rows
-   * valueCount - number of distinct values
-   * bytesPerValue - (average) size of a single value in bytes
+   * row_count - overall number of rows
+   * value_count - number of distinct values
+   * value_bytes - (average) size of a single value in bytes
    *
    * If no prediction is possible, this shall fail.
    */
-  static uintptr_t predict_memory_consumption(ColumnIndexType type, ChunkOffset row_count, ChunkOffset value_count,
-                                              uint32_t value_bytes);
+  static size_t predict_memory_consumption(ColumnIndexType type, ChunkOffset row_count, ChunkOffset value_count,
+                                           uint32_t value_bytes);
 
   /**
    * Creates an index on all given columns. Since all indices are composite indices the order of
@@ -120,11 +120,9 @@ class BaseIndex : private Noncopyable {
   Iterator cend() const;
 
   /**
-   * Returns the memory consumption of this Index in MiB
-   *
-   * If it can not be determined, numeric_limits<float>::quiet_NaN() should be returned.
+   * Returns the memory consumption of this Index in bytes
    */
-  uintptr_t memory_consumption() const;
+  size_t memory_consumption() const;
 
   ColumnIndexType type() const;
 
@@ -138,7 +136,7 @@ class BaseIndex : private Noncopyable {
   virtual Iterator _cbegin() const = 0;
   virtual Iterator _cend() const = 0;
   virtual std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const = 0;
-  virtual uintptr_t _memory_consumption() const = 0;
+  virtual size_t _memory_consumption() const = 0;
 
  private:
   const ColumnIndexType _type;

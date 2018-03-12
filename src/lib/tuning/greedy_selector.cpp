@@ -88,8 +88,9 @@ std::vector<std::shared_ptr<TuningOperation>> GreedySelector::select(
   // Select the most desirable operations first
   // always maintaining the cost budget
   while (sorted_choices.size() > 0) {
-    if (sorted_choices.front()->reject_desirability() > sorted_choices.back()->accept_desirability()) {
-      LOG_DEBUG("Rejecting " << *sorted_choices.front() << " is most beneficial.");
+    auto best_choice = sorted_choices.front();
+    if (best_choice->reject_desirability() > sorted_choices.back()->accept_desirability()) {
+      LOG_DEBUG("Rejecting " << *best_choice << " is most beneficial.");
 
       /*
        * Rejecting a choice can only reduce cost_balance (i.e. free up resources)
@@ -100,10 +101,10 @@ std::vector<std::shared_ptr<TuningOperation>> GreedySelector::select(
        * nothing will be changed.
        */
 
-      LOG_DEBUG(" ! Reject " << *sorted_choices.front());
-      operations.push_back(sorted_choices.front()->reject());
-      cost_balance += sorted_choices.front()->reject_cost();
-      desirability_balance += sorted_choices.front()->reject_desirability();
+      LOG_DEBUG(" ! Reject " << *best_choice);
+      operations.push_back(best_choice->reject());
+      cost_balance += best_choice->reject_cost();
+      desirability_balance += best_choice->reject_desirability();
       sorted_choices.pop_front();
 
     } else {

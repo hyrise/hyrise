@@ -90,7 +90,7 @@ class BaseIndexEvaluator : public AbstractEvaluator {
  protected:
   void _inspect_query_cache();
   void _inspect_pqp_operator(const std::shared_ptr<const AbstractOperator>& op, size_t query_frequency);
-  void _inspect_lqp_operator(const std::shared_ptr<const AbstractLQPNode>& op, size_t query_frequency);
+  void _inspect_lqp_node(const std::shared_ptr<const AbstractLQPNode>& op, size_t query_frequency);
   void _aggregate_access_records();
   void _add_existing_indexes();
   void _add_new_indexes();

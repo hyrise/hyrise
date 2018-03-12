@@ -75,19 +75,17 @@ void BaseIndexEvaluator::_inspect_query_cache() {
   _access_records.clear();
 
   /*
-   * ToDo(anybody): The cache interface could be improved by introducing values() method in
-   * AbstractCache interface and implement in all subclasses
-   *  const auto& query_plan_cache = SQLQueryOperator::get_query_plan_cache().cache();
-   * -> so this implementation could be independent of the actual cache implementation
+   * ToDo(anybody): The cache interface could be improved by introducing
+   * some kind of accessor to the cached elements, like a values() method or an
+   * iterator, to the AbstractCache interface, so this implementation could be
+   * independent of the actual cache implementation.
+   * See issue #756: https://github.com/hyrise/hyrise/issues/756
    */
   const auto& lqp_cache = SQLQueryCache<std::shared_ptr<AbstractLQPNode>>::get();
   // We cannot use dynamic_pointer_cast here because SQLQueryCache.cache() returns a reference, not a pointer
   auto gdfs_cache_ptr =
       dynamic_cast<const GDFSCache<std::string, std::shared_ptr<AbstractLQPNode>>*>(&(lqp_cache.cache()));
-  if (!gdfs_cache_ptr) {
-    LOG_WARN("BaseIndexEvaluator can only analyze GDFSCache instances! Evaluations may be useless...");
-    return;
-  }
+  Assert(gdfs_cache_ptr, "BaseIndexEvaluator can only analyze GDFSCache instances.");
 
   const auto& fibonacci_heap = gdfs_cache_ptr->queue();
 
@@ -102,12 +100,11 @@ void BaseIndexEvaluator::_inspect_query_cache() {
   for (; cache_iterator != cache_end; ++cache_iterator) {
     const auto& entry = *cache_iterator;
     LOG_DEBUG("  -> Query '" << entry.key << "' frequency: " << entry.frequency << " priority: " << entry.priority);
-    _inspect_lqp_operator(entry.value, entry.frequency);
+    _inspect_lqp_node(entry.value, entry.frequency);
   }
-}
+}  // namespace opossum
 
-void BaseIndexEvaluator::_inspect_lqp_operator(const std::shared_ptr<const AbstractLQPNode>& op,
-                                               size_t query_frequency) {
+void BaseIndexEvaluator::_inspect_lqp_node(const std::shared_ptr<const AbstractLQPNode>& op, size_t query_frequency) {
   std::list<const std::shared_ptr<const AbstractLQPNode>> queue;
   queue.push_back(op);
   while (!queue.empty()) {
