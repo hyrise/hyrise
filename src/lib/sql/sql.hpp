@@ -13,9 +13,7 @@ namespace opossum {
 class Optimizer;
 
 /**
- * Builder for SQLPipeline[Statement]s with configuration options. Favour this interface over calling the
- * SQLPipeline[Statement] constructors with their long parameter list. See SQLPipeline[Statement] doc for these classes,
- * in short SQLPipeline ist for queries with multiple statement, SQLPipelineStatement for single statement queries.
+ * Interface for the configured execution of SQL.
  *
  * Minimal usage:
  *      SQL{"SELECT * FROM t;"}.pipeline().get_result_table()
@@ -29,6 +27,10 @@ class Optimizer;
  * Defaults:
  *  - MVCC is enabled
  *  - The default Optimizer (Optimizer::create_default_optimizer() is used.
+ *
+ * Favour this interface over calling the SQLPipeline[Statement] constructors with their long parameter list.
+ * See SQLPipeline[Statement] doc for these classes, in short SQLPipeline ist for queries with multiple statement,
+ * SQLPipelineStatement for single statement queries.
  */
 class SQL final {
  public:
