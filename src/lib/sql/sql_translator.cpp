@@ -396,14 +396,16 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::Join
 
   auto left_qualified_column_name = HSQLExprTranslator::to_qualified_column_name(*join_condition->expr);
   auto right_qualified_column_name = HSQLExprTranslator::to_qualified_column_name(*join_condition->expr2);
+  auto predicate_condition = translate_operator_type_to_predicate_condition(join_condition->opType);
+
   const auto left_in_left_node = _get_side(left_node, right_node, join_condition->expr) == LQPInputSide::Left;
   if (!left_in_left_node) {
     std::swap(left_qualified_column_name, right_qualified_column_name);
+    predicate_condition = get_predicate_condition_for_reverse_order(predicate_condition);
   }
 
   const auto column_references = std::make_pair(*left_node->find_column(left_qualified_column_name),
                                                 *right_node->find_column(right_qualified_column_name));
-  auto predicate_condition = translate_operator_type_to_predicate_condition(join_condition->opType);
   auto join_node = JoinNode::make(join_mode, column_references, predicate_condition);
   join_node->set_left_input(left_node);
   join_node->set_right_input(right_node);

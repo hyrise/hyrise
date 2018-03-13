@@ -709,12 +709,12 @@ TEST_F(SQLTranslatorTest, NonJoinConditionAmbiguous) {
 }
 
 TEST_F(SQLTranslatorTest, ColumnsOfJoinConditionPermuted) {
-  const auto query = "SELECT * FROM table_a JOIN table_b ON table_b.a = table_a.b";
+  const auto query = "SELECT * FROM table_a JOIN table_b ON table_b.a < table_a.b";
   auto result_node = compile_query(query);
 
   // clang-format off
   const auto expected = ProjectionNode::make_pass_through(
-    JoinNode::make(JoinMode::Inner, LQPColumnReferencePair {_table_a_b, _table_b_a}, PredicateCondition::Equals,
+    JoinNode::make(JoinMode::Inner, LQPColumnReferencePair {_table_a_b, _table_b_a}, PredicateCondition::GreaterThan,
       _stored_table_node_a,
       _stored_table_node_b));
   // clang-format on
