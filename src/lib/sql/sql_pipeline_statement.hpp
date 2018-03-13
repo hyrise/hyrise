@@ -31,34 +31,7 @@ using PreparedStatementCache = std::shared_ptr<SQLQueryCache<SQLQueryPlan>>;
  */
 class SQLPipelineStatement : public Noncopyable {
  public:
-  // Constructors for creation from SQL string
-  explicit SQLPipelineStatement(const std::string& sql, const UseMvcc use_mvcc = UseMvcc::Yes);
-
-  // No explicit transaction context constructors
-  SQLPipelineStatement(const std::string& sql, const std::shared_ptr<Optimizer>& optimizer,
-                       const UseMvcc use_mvcc = UseMvcc::Yes);
-
-  SQLPipelineStatement(const std::string& sql, const PreparedStatementCache& prepared_statements,
-                       const UseMvcc use_mvcc = UseMvcc::Yes);
-
-  SQLPipelineStatement(const std::string& sql, const std::shared_ptr<Optimizer>& optimizer,
-                       const PreparedStatementCache& prepared_statements, const UseMvcc use_mvcc = UseMvcc::Yes);
-
-  // Explicit transaction context constructors
-  SQLPipelineStatement(const std::string& sql, const std::shared_ptr<TransactionContext>& transaction_context);
-
-  SQLPipelineStatement(const std::string& sql, const std::shared_ptr<Optimizer>& optimizer,
-                       const std::shared_ptr<TransactionContext>& transaction_context);
-
-  SQLPipelineStatement(const std::string& sql, const PreparedStatementCache& prepared_statements,
-                       const std::shared_ptr<TransactionContext>& transaction_context);
-
-  SQLPipelineStatement(const std::string& sql, const std::shared_ptr<Optimizer>& optimizer,
-                       const PreparedStatementCache& prepared_statements,
-                       const std::shared_ptr<TransactionContext>& transaction_context);
-
-  // Constructor for creation from SQLParseResult statement.
-  // This should be called from SQLPipeline and not by the user directly.
+  // Prefer using the SQL builder interface for constructing SQLPipelineStatements conveniently
   SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                        const UseMvcc use_mvcc, const std::shared_ptr<TransactionContext>& transaction_context,
                        const std::shared_ptr<Optimizer>& optimizer, const PreparedStatementCache& prepared_statements);

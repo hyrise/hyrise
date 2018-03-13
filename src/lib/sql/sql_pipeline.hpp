@@ -32,30 +32,9 @@ namespace opossum {
  */
 class SQLPipeline : public Noncopyable {
  public:
-  // No explicit transaction context constructors
-  explicit SQLPipeline(const std::string& sql, const UseMvcc use_mvcc = UseMvcc::Yes);
-
-  SQLPipeline(const std::string& sql, const std::shared_ptr<Optimizer>& optimizer,
-              const UseMvcc use_mvcc = UseMvcc::Yes);
-
-  SQLPipeline(const std::string& sql, const PreparedStatementCache& prepared_statements,
-              const UseMvcc use_mvcc = UseMvcc::Yes);
-
-  SQLPipeline(const std::string& sql, const std::shared_ptr<Optimizer>& optimizer,
-              const PreparedStatementCache& prepared_statements, const UseMvcc use_mvcc = UseMvcc::Yes);
-
-  // Explicit transaction context constructors
-  SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context);
-
-  SQLPipeline(const std::string& sql, const std::shared_ptr<Optimizer>& optimizer,
-              std::shared_ptr<TransactionContext> transaction_context);
-
-  SQLPipeline(const std::string& sql, const PreparedStatementCache& prepared_statements,
-              std::shared_ptr<TransactionContext> transaction_context);
-
-  SQLPipeline(const std::string& sql, const std::shared_ptr<Optimizer>& optimizer,
-              const PreparedStatementCache& prepared_statements,
-              std::shared_ptr<TransactionContext> transaction_context);
+  // Prefer using the SQL builder interface for constructing SQLPipelines conveniently
+  SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context, const UseMvcc use_mvcc,
+              const std::shared_ptr<Optimizer>& optimizer, const PreparedStatementCache& prepared_statements);
 
   // Returns the SQL string for each statement.
   const std::vector<std::string>& get_sql_strings();
@@ -100,9 +79,6 @@ class SQLPipeline : public Noncopyable {
   std::chrono::microseconds execution_time_microseconds();
 
  private:
-  SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context, const UseMvcc use_mvcc,
-              const std::shared_ptr<Optimizer>& optimizer, const PreparedStatementCache& prepared_statements);
-
   std::vector<std::shared_ptr<SQLPipelineStatement>> _sql_pipeline_statements;
 
   std::shared_ptr<TransactionContext> _transaction_context;
@@ -116,13 +92,14 @@ class SQLPipeline : public Noncopyable {
   std::vector<std::shared_ptr<SQLQueryPlan>> _query_plans;
   std::vector<std::vector<std::shared_ptr<OperatorTask>>> _tasks;
   std::shared_ptr<const Table> _result_table;
+
   // Indicates whether get_result_table has been run successfully
-  bool _pipeline_was_executed = false;
+  bool _pipeline_was_executed{false};
 
   // Indicates whether translating a statement in the pipeline requires the execution of a previous statement
   // e.g. CREATE VIEW foo AS SELECT * FROM bar; SELECT * FROM foo;
   // --> requires execution of first statement before the second one can be translated
-  bool _requires_execution;
+  bool _requires_execution{false};
 
   std::shared_ptr<SQLPipelineStatement> _failed_pipeline_statement;
 
