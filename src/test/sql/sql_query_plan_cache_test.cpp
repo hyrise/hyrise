@@ -4,6 +4,7 @@
 
 #include "base_test.hpp"
 
+#include "sql/sql.hpp"
 #include "sql/gdfs_cache.hpp"
 #include "sql/lru_cache.hpp"
 #include "sql/lru_k_cache.hpp"
@@ -29,7 +30,7 @@ class SQLQueryPlanCacheTest : public BaseTest {
   }
 
   void execute_query(const std::string& query) {
-    SQLPipelineStatement pipeline_statement{query};
+    auto pipeline_statement = SQL{query}.pipeline_statement();
     pipeline_statement.get_result_table();
 
     if (pipeline_statement.query_plan_cache_hit()) {
@@ -51,7 +52,7 @@ TEST_F(SQLQueryPlanCacheTest, SQLQueryPlanCacheTest) {
   EXPECT_FALSE(cache.has(Q2));
 
   // Execute a query and cache its plan.
-  SQLPipelineStatement pipeline_statement{Q1, UseMvcc::No};
+  SQL{Q1, UseMvcc::No};
   pipeline_statement.get_result_table();
   cache.set(Q1, *(pipeline_statement.get_query_plan()));
 

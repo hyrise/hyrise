@@ -11,6 +11,7 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
 #include "sql/sql_pipeline_statement.hpp"
+#include "sql/sql.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
@@ -30,7 +31,7 @@ class SQLQueryPlanTest : public BaseTest {
 TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneTest) {
   std::string query1 = "SELECT a FROM table_a;";
 
-  SQLPipelineStatement pipeline_statement{query1, UseMvcc::No};
+  auto pipeline_statement = SQL{query1}.pipeline_statement();
 
   // Get the query plan.
   const auto& plan1 = pipeline_statement.get_query_plan();

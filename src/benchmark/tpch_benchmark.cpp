@@ -11,6 +11,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
+#include "sql/sql.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "tpch/tpch_db_generator.hpp"
 #include "tpch/tpch_queries.hpp"
@@ -200,7 +201,7 @@ class TpchBenchmark final {
         const auto query_benchmark_begin = std::chrono::steady_clock::now();
 
         // Execute the query, we don't care about the results
-        SQLPipeline{opossum::tpch_queries[query_id], _use_mvcc}.get_result_table();
+        SQL{opossum::tpch_queries[query_id]}.set_use_mvcc(_use_mvcc).pipeline().get_result_table();
 
         const auto query_benchmark_end = std::chrono::steady_clock::now();
 
@@ -221,7 +222,7 @@ class TpchBenchmark final {
       BenchmarkState state{_max_num_query_runs, _max_duration};
       while (state.keep_running()) {
         // Execute the query, we don't care about the results
-        SQLPipeline{sql, _use_mvcc}.get_result_table();
+        SQL{sql}.set_use_mvcc(_use_mvcc).pipeline().get_result_table();
       }
 
       QueryBenchmarkResult result;

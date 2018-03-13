@@ -14,11 +14,12 @@
 #include "optimizer/strategy/constant_calculation_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "sql/sql_pipeline.hpp"
+#include "sql/sql.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace {
 std::shared_ptr<opossum::AbstractLQPNode> compile_query(const std::string& query) {
-  return opossum::SQLPipeline{query, opossum::UseMvcc::No}.get_unoptimized_logical_plans().at(0);
+  return opossum::SQL{query}.pipeline().get_unoptimized_logical_plans().at(0);
 }
 }  // namespace
 
