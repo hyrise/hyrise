@@ -394,33 +394,15 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::Join
       Fail("Join condition must be a simple comparison operator.");
   }
 
-  const auto left_qualified_column_name = HSQLExprTranslator::to_qualified_column_name(*join_condition->expr);
-  const auto right_qualified_column_name = HSQLExprTranslator::to_qualified_column_name(*join_condition->expr2);
+  auto left_qualified_column_name = HSQLExprTranslator::to_qualified_column_name(*join_condition->expr);
+  auto right_qualified_column_name = HSQLExprTranslator::to_qualified_column_name(*join_condition->expr2);
+  const auto left_in_left_node = _get_side(left_node, right_node, join_condition->expr) == LQPInputSide::Left;
+  if (!left_in_left_node) {
+    std::swap(left_qualified_column_name, right_qualified_column_name);
+  }
 
-  /**
-   * `x_in_y_node` indicates whether the column identifier on the `x` side in the join expression is in the input node
-   * on
-   * the `y` side of the join. So in the query
-   * `SELECT * FROM T1 JOIN T2 on person_id == customer_id`
-   * We have to check whether `person_id` belongs to T1 (left_in_left_node == true) or to T2
-   * (left_in_right_node == true). Later we make sure that one and only one of them is true, otherwise we either have
-   * ambiguity or the column is simply not existing.
-   */
-  const auto left_in_left_node = left_node->find_column(left_qualified_column_name);
-  const auto left_in_right_node = right_node->find_column(left_qualified_column_name);
-  const auto right_in_left_node = left_node->find_column(right_qualified_column_name);
-  const auto right_in_right_node = right_node->find_column(right_qualified_column_name);
-
-  Assert(static_cast<bool>(left_in_left_node) ^ static_cast<bool>(left_in_right_node),
-         std::string("Left operand ") + left_qualified_column_name.as_string() +
-             " must be in exactly one of the input nodes");
-  Assert(static_cast<bool>(right_in_left_node) ^ static_cast<bool>(right_in_right_node),
-         std::string("Right operand ") + right_qualified_column_name.as_string() +
-             " must be in exactly one of the input nodes");
-
-  const auto column_references = left_in_left_node ? std::make_pair(*left_in_left_node, *right_in_right_node)
-                                                   : std::make_pair(*left_in_right_node, *right_in_left_node);
-
+  const auto column_references = std::make_pair(*left_node->find_column(left_qualified_column_name),
+                                                *right_node->find_column(right_qualified_column_name));
   auto predicate_condition = translate_operator_type_to_predicate_condition(join_condition->opType);
   auto join_node = JoinNode::make(join_mode, column_references, predicate_condition);
   join_node->set_left_input(left_node);
@@ -434,15 +416,11 @@ LQPInputSide SQLTranslator::_get_side(const std::shared_ptr<AbstractLQPNode>& le
                                       const std::shared_ptr<AbstractLQPNode>& right_node, const hsql::Expr* expr) {
   DebugAssert(expr && expr->type == hsql::kExprColumnRef, "only applicable to columnar expressions");
   const auto qualified = HSQLExprTranslator::to_qualified_column_name(*expr);
-  if (left_node->find_column(qualified)) {
-    return LQPInputSide::Left;
-  }
-
-  if (right_node->find_column(qualified)) {
-    return LQPInputSide::Right;
-  }
-
-  Fail("Column not found: " + qualified.as_string());
+  const auto left = left_node->find_column(qualified);
+  const auto right = right_node->find_column(qualified);
+  Assert(left.has_value() ^ right.has_value(),
+         std::string("Column '") + qualified.as_string() + "' was not found or is not unique");
+  return left ? LQPInputSide::Left : LQPInputSide::Right;
 }
 
 void SQLTranslator::_get_sides_from_operator_expressions(const std::vector<const hsql::Expr*>& operators,

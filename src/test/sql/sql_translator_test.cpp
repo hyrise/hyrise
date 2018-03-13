@@ -698,4 +698,28 @@ TEST_F(SQLTranslatorTest, MultipleJoinConditionsOnBothSides) {
   EXPECT_LQP_EQ(expected, result_node);
 }
 
+TEST_F(SQLTranslatorTest, JoinConditionAmbiguous) {
+  const auto query = "SELECT * FROM table_a JOIN table_b ON a = b";
+  EXPECT_THROW(compile_query(query), std::runtime_error);
+}
+
+TEST_F(SQLTranslatorTest, NonJoinConditionAmbiguous) {
+  const auto query = "SELECT * FROM table_a JOIN table_b ON table_a.a = table_b.a AND a = 3";
+  EXPECT_THROW(compile_query(query), std::runtime_error);
+}
+
+TEST_F(SQLTranslatorTest, ColumnsOfJoinConditionPermuted) {
+  const auto query = "SELECT * FROM table_a JOIN table_b ON table_b.a = table_a.b";
+  auto result_node = compile_query(query);
+
+  // clang-format off
+  const auto expected = ProjectionNode::make_pass_through(
+    JoinNode::make(JoinMode::Inner, LQPColumnReferencePair {_table_a_b, _table_b_a}, PredicateCondition::Equals,
+      _stored_table_node_a,
+      _stored_table_node_b));
+  // clang-format on
+
+  EXPECT_LQP_EQ(expected, result_node);
+}
+
 }  // namespace opossum
