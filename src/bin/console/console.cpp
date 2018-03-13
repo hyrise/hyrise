@@ -30,6 +30,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
+#include "sql/sql.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
@@ -220,9 +221,14 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
 bool Console::_initialize_pipeline(const std::string& sql) {
   try {
     if (_explicitly_created_transaction_context != nullptr) {
-      _sql_pipeline = std::make_unique<SQLPipeline>(sql, _prepared_statements, _explicitly_created_transaction_context);
+      _sql_pipeline =
+          std::make_unique<SQLPipeline>(SQL{sql}
+                                            .set_prepared_statement_cache(_prepared_statements)
+                                            .set_transaction_context(_explicitly_created_transaction_context)
+                                            .pipeline());
     } else {
-      _sql_pipeline = std::make_unique<SQLPipeline>(sql, _prepared_statements);
+      _sql_pipeline =
+          std::make_unique<SQLPipeline>(SQL{sql}.set_prepared_statement_cache(_prepared_statements).pipeline());
     }
   } catch (const std::exception& exception) {
     out(std::string(exception.what()) + '\n');
