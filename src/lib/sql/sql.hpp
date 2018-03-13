@@ -47,7 +47,12 @@ class SQL final {
   SQL& disable_mvcc();
 
   SQLPipeline pipeline() const;
-  SQLPipelineStatement pipeline_statement() const;
+
+  /**
+   * @param parsed_sql  for usage from SQLPipeline to pass along to SQLPipelineStatement, everyone else leaves this as
+   *                    nullptr
+   */
+  SQLPipelineStatement pipeline_statement(std::shared_ptr<hsql::SQLParserResult> parsed_sql = nullptr) const;
 
  private:
   const std::string _sql;

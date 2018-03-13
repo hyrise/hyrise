@@ -116,16 +116,14 @@ TEST_F(SQLPipelineStatementTest, SimpleCreationWithCustomTransactionContext) {
 }
 
 TEST_F(SQLPipelineStatementTest, SimpleParsedCreation) {
-  SQLPipelineStatement sql_pipeline{
-      _select_query_a, _select_parse_result, UseMvcc::Yes, nullptr, Optimizer::create_default_optimizer(), nullptr};
+  auto sql_pipeline = SQL{_select_query_a}.pipeline_statement(_select_parse_result);
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline.get_parsed_sql_statement().get(), _select_parse_result.get());
 }
 
 TEST_F(SQLPipelineStatementTest, SimpleParsedCreationWithoutMVCC) {
-  SQLPipelineStatement sql_pipeline{
-      _select_query_a, _select_parse_result, UseMvcc::No, nullptr, Optimizer::create_default_optimizer(), nullptr};
+  auto sql_pipeline = SQL{_select_query_a}.disable_mvcc().pipeline_statement(_select_parse_result);
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline.get_parsed_sql_statement().get(), _select_parse_result.get());
@@ -133,16 +131,14 @@ TEST_F(SQLPipelineStatementTest, SimpleParsedCreationWithoutMVCC) {
 
 TEST_F(SQLPipelineStatementTest, SimpleParsedCreationWithCustomTransactionContext) {
   auto context = TransactionManager::get().new_transaction_context();
-  SQLPipelineStatement sql_pipeline{
-      _select_query_a, _select_parse_result, UseMvcc::Yes, context, Optimizer::create_default_optimizer(), nullptr};
+  auto sql_pipeline = SQL{_select_query_a}.set_transaction_context(context).pipeline_statement(_select_parse_result);
 
   EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
   EXPECT_EQ(sql_pipeline.get_parsed_sql_statement().get(), _select_parse_result.get());
 }
 
 TEST_F(SQLPipelineStatementTest, SimpleParsedCreationTooManyStatements) {
-  EXPECT_THROW(SQLPipelineStatement(_multi_statement_dependant, _multi_statement_parse_result, UseMvcc::No, nullptr,
-                                    Optimizer::create_default_optimizer(), nullptr),
+  EXPECT_THROW(SQL(_multi_statement_dependant).disable_mvcc().pipeline_statement(_multi_statement_parse_result),
                std::exception);
 }
 
