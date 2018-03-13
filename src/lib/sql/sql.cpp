@@ -34,10 +34,10 @@ SQLPipeline SQL::pipeline() const {
   return {_sql, _transaction_context, _use_mvcc, optimizer, _prepared_statements};
 }
 
-SQLPipelineStatement SQL::pipeline_statement() const {
+SQLPipelineStatement SQL::pipeline_statement(std::shared_ptr<hsql::SQLParserResult> parsed_sql) const {
   auto optimizer = _optimizer ? _optimizer : Optimizer::create_default_optimizer();
 
-  return {_sql, nullptr, _use_mvcc, _transaction_context, optimizer, _prepared_statements};
+  return {_sql, parsed_sql, _use_mvcc, _transaction_context, optimizer, _prepared_statements};
 }
 
 }  // namespace opossum
