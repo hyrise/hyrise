@@ -85,7 +85,7 @@ TEST_F(SQLPipelineTest, SimpleCreation) {
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationWithoutMVCC) {
-  auto sql_pipeline = SQL{_select_query_a}.pipeline(),
+  auto sql_pipeline = SQL{_select_query_a}.pipeline();
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline.statement_count(), 1u);
@@ -107,7 +107,7 @@ TEST_F(SQLPipelineTest, SimpleCreationMulti) {
 }
 
 TEST_F(SQLPipelineTest, SimpleCreationWithoutMVCCMulti) {
-  auto sql_pipeline = SQL{_multi_statement_query}.pipeline();
+  auto sql_pipeline = SQL{_multi_statement_query}.disable_mvcc().pipeline();
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline.statement_count(), 2u);
@@ -115,7 +115,7 @@ TEST_F(SQLPipelineTest, SimpleCreationWithoutMVCCMulti) {
 
 TEST_F(SQLPipelineTest, SimpleCreationWithCustomTransactionContextMulti) {
   auto context = TransactionManager::get().new_transaction_context();
-  auto sql_pipeline = SQL{}.pipeline(); _multi_statement_query, context;
+  auto sql_pipeline = SQL{_multi_statement_query}.set_transaction_context(context).pipeline();
 
   EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
   EXPECT_EQ(sql_pipeline.statement_count(), 2u);
@@ -133,13 +133,26 @@ TEST_F(SQLPipelineTest, ConstructorCombinations) {
 
   // No transaction context
   EXPECT_NO_THROW(SQL(_select_query_a).set_optimizer(optimizer).set_use_mvcc(UseMvcc::Yes).pipeline());
-  EXPECT_NO_THROW(SQL(_select_query_a).set_prepared_statement_cache(prepared_cache).set_use_mvcc(UseMvcc::No).pipeline());
-  EXPECT_NO_THROW(SQL(_select_query_a).set_optimizer(optimizer).set_prepared_statement_cache(prepared_cache).set_use_mvcc(UseMvcc::Yes).pipeline());
+  EXPECT_NO_THROW(
+      SQL(_select_query_a).set_prepared_statement_cache(prepared_cache).set_use_mvcc(UseMvcc::No).pipeline());
+  EXPECT_NO_THROW(SQL(_select_query_a)
+                      .set_optimizer(optimizer)
+                      .set_prepared_statement_cache(prepared_cache)
+                      .set_use_mvcc(UseMvcc::Yes)
+                      .pipeline());
 
   // With transaction context
-  EXPECT_NO_THROW(SQL(_select_query_a).set_transaction_context(transaction_context).set_optimizer(optimizer).set_use_mvcc(UseMvcc::Yes).pipeline());
-  EXPECT_NO_THROW(SQL(_select_query_a).set_transaction_context(transaction_context).set_prepared_statement_cache(prepared_cache).set_use_mvcc(UseMvcc::No).pipeline());
-  EXPECT_NO_THROW(SQL(_select_query_a).set_transaction_context(transaction_context).set_optimizer(optimizer).set_prepared_statement_cache(prepared_cache).set_use_mvcc(UseMvcc::Yes).pipeline());
+  EXPECT_NO_THROW(SQL(_select_query_a)
+                      .set_transaction_context(transaction_context)
+                      .set_optimizer(optimizer)
+                      .set_use_mvcc(UseMvcc::Yes)
+                      .pipeline());
+  EXPECT_NO_THROW(SQL(_select_query_a)
+                      .set_transaction_context(transaction_context)
+                      .set_optimizer(optimizer)
+                      .set_prepared_statement_cache(prepared_cache)
+                      .set_use_mvcc(UseMvcc::Yes)
+                      .pipeline());
 }
 
 TEST_F(SQLPipelineTest, GetParsedSQLStatements) {
@@ -325,7 +338,7 @@ TEST_F(SQLPipelineTest, GetResultTable) {
 }
 
 TEST_F(SQLPipelineTest, GetResultTableMultiple) {
-  auto sql_pipeline = SQL{}.pipeline(); _multi_statement_query;
+  auto sql_pipeline = SQL{_multi_statement_query}.pipeline();
   const auto& table = sql_pipeline.get_result_table();
 
   EXPECT_TABLE_EQ_UNORDERED(table, _table_a_multi)

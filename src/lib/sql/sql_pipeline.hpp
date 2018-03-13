@@ -32,6 +32,7 @@ namespace opossum {
  */
 class SQLPipeline : public Noncopyable {
  public:
+  // Prefer using the SQL builder interface for constructing SQLPipelines conveniently
   SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context, const UseMvcc use_mvcc,
               const std::shared_ptr<Optimizer>& optimizer, const PreparedStatementCache& prepared_statements);
 

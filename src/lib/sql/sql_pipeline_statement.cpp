@@ -11,8 +11,8 @@
 #include "optimizer/optimizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/hsql_expr_translator.hpp"
-#include "sql/sql_query_plan.hpp"
 #include "sql/sql.hpp"
+#include "sql/sql_query_plan.hpp"
 #include "sql/sql_translator.hpp"
 #include "utils/assert.hpp"
 
@@ -30,8 +30,10 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
       _optimizer(optimizer),
       _parsed_sql_statement(std::move(parsed_sql)),
       _prepared_statements(prepared_statements) {
+  Assert(!_parsed_sql_statement || _parsed_sql_statement->size() == 1,
+         "SQLPipelineStatement must hold exactly one SQL statement");
   DebugAssert(!_sql_string.empty(), "An SQLPipelineStatement should always contain a SQL statement string for caching");
-  DebugAssert(transaction_context->phase() == TransactionPhase::Active,
+  DebugAssert(!_transaction_context || transaction_context->phase() == TransactionPhase::Active,
               "The transaction context cannot have been committed already.");
   DebugAssert(!_transaction_context || use_mvcc == UseMvcc::Yes,
               "Transaction context without MVCC enabled makes no sense");
