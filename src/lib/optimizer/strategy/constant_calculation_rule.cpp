@@ -30,11 +30,11 @@ bool ConstantCalculationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
 void ConstantCalculationRule::_calculate_expressions_in_tree(
     const std::shared_ptr<AbstractLQPNode>& node,
     std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map) {
-  if (node->left_child()) {
-    _calculate_expressions_in_tree(node->left_child(), column_reference_to_value_map);
+  if (node->left_input()) {
+    _calculate_expressions_in_tree(node->left_input(), column_reference_to_value_map);
   }
-  if (node->right_child()) {
-    _calculate_expressions_in_tree(node->right_child(), column_reference_to_value_map);
+  if (node->right_input()) {
+    _calculate_expressions_in_tree(node->right_input(), column_reference_to_value_map);
   }
 
   if (node->type() != LQPNodeType::Projection) {
@@ -73,11 +73,11 @@ bool ConstantCalculationRule::_replace_column_references_in_tree(
     const std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map) {
   auto tree_changed = false;
 
-  if (node->left_child()) {
-    tree_changed |= _replace_column_references_in_tree(node->left_child(), column_reference_to_value_map);
+  if (node->left_input()) {
+    tree_changed |= _replace_column_references_in_tree(node->left_input(), column_reference_to_value_map);
   }
-  if (node->right_child()) {
-    tree_changed |= _replace_column_references_in_tree(node->right_child(), column_reference_to_value_map);
+  if (node->right_input()) {
+    tree_changed |= _replace_column_references_in_tree(node->right_input(), column_reference_to_value_map);
   }
 
   if (node->type() == LQPNodeType::Predicate) {
@@ -127,17 +127,17 @@ bool ConstantCalculationRule::_remove_columns_from_projections(
     const std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map) {
   auto tree_changed = false;
 
-  if (node->left_child()) {
-    tree_changed |= _remove_columns_from_projections(node->left_child(), column_reference_to_value_map);
+  if (node->left_input()) {
+    tree_changed |= _remove_columns_from_projections(node->left_input(), column_reference_to_value_map);
   }
-  if (node->right_child()) {
-    tree_changed |= _remove_columns_from_projections(node->right_child(), column_reference_to_value_map);
+  if (node->right_input()) {
+    tree_changed |= _remove_columns_from_projections(node->right_input(), column_reference_to_value_map);
   }
 
   if (node->type() == LQPNodeType::Projection) {
-    for (const auto& parent_node : node->parents()) {
+    for (const auto& output_node : node->outputs()) {
       // We only want to remove columns from Projections from which we know they are not referenced anymore
-      if (parent_node->type() != LQPNodeType::Predicate && parent_node->type() != LQPNodeType::Projection) {
+      if (output_node->type() != LQPNodeType::Predicate && output_node->type() != LQPNodeType::Projection) {
         return tree_changed;
       }
     }

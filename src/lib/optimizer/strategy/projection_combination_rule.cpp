@@ -13,7 +13,7 @@ std::string ProjectionCombinationRule::name() const { return "Projection Combina
 
 bool ProjectionCombinationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   if (node->type() != LQPNodeType::Projection) {
-    return _apply_to_children(node);
+    return _apply_to_inputs(node);
   }
 
   std::vector<std::shared_ptr<ProjectionNode>> projection_nodes;
@@ -23,31 +23,31 @@ bool ProjectionCombinationRule::apply_to(const std::shared_ptr<AbstractLQPNode>&
   while (current_node->type() == LQPNodeType::Projection) {
     projection_nodes.emplace_back(std::static_pointer_cast<ProjectionNode>(current_node));
 
-    DebugAssert(current_node->left_child(), "LQP invalid: ProjectionNode must have a left child.");
-    DebugAssert(!current_node->right_child(), "LQP invalid: ProjectionNode can not have a right child.");
+    DebugAssert(current_node->left_input(), "LQP invalid: ProjectionNode must have a left input.");
+    DebugAssert(!current_node->right_input(), "LQP invalid: ProjectionNode can not have a right input.");
 
-    current_node = current_node->left_child();
+    current_node = current_node->left_input();
 
-    if (current_node->parents().size() > 1) {
+    if (current_node->outputs().size() > 1) {
       break;
     }
   }
 
   if (projection_nodes.size() > 1) {
     const auto combined_projection_node = _combine_projection_nodes(projection_nodes);
-    _apply_to_children(combined_projection_node);
+    _apply_to_inputs(combined_projection_node);
     return true;
   }
 
-  return _apply_to_children(node);
+  return _apply_to_inputs(node);
 }
 
 std::shared_ptr<ProjectionNode> ProjectionCombinationRule::_combine_projection_nodes(
     std::vector<std::shared_ptr<ProjectionNode>>& projection_nodes) const {
-  // Store original child and parents
-  auto left_child = projection_nodes.back()->left_child();
-  const auto parents = projection_nodes.front()->parents();
-  const auto child_sides = projection_nodes.front()->get_child_sides();
+  // Store original input and outputs
+  auto left_input = projection_nodes.back()->left_input();
+  const auto outputs = projection_nodes.front()->outputs();
+  const auto input_sides = projection_nodes.front()->get_input_sides();
 
   auto column_expressions = std::vector<std::shared_ptr<LQPExpression>>();
   for (const auto expression : projection_nodes.front()->column_expressions()) {
@@ -78,12 +78,12 @@ std::shared_ptr<ProjectionNode> ProjectionCombinationRule::_combine_projection_n
 
   auto projection_node = std::make_shared<ProjectionNode>(column_expressions);
 
-  // Ensure that parents and child are chained back to the new node correctly
-  left_child->clear_parents();
-  projection_node->set_left_child(left_child);
+  // Ensure that outputs and input are chained back to the new node correctly
+  left_input->outputs();
+  projection_node->set_left_input(left_input);
 
-  for (size_t parent_idx = 0; parent_idx < parents.size(); ++parent_idx) {
-    parents[parent_idx]->set_child(child_sides[parent_idx], projection_node);
+  for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
+    outputs[output_idx]->set_input(input_sides[output_idx], projection_node);
   }
 
   return projection_node;

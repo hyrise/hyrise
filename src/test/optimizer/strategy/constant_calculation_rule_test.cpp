@@ -67,16 +67,16 @@ TEST_F(ConstantCalculationRuleTest, ResolveExpressionInProjectionTest) {
   const auto resolved = StrategyBaseTest::apply_rule(_rule, result_node);
 
   EXPECT_EQ(resolved->type(), LQPNodeType::Insert);
-  EXPECT_FALSE(resolved->right_child());
+  EXPECT_FALSE(resolved->right_input());
 
-  ASSERT_EQ(resolved->left_child()->type(), LQPNodeType::Projection);
-  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(resolved->left_child());
-  EXPECT_FALSE(projection_node->right_child());
+  ASSERT_EQ(resolved->left_input()->type(), LQPNodeType::Projection);
+  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(resolved->left_input());
+  EXPECT_FALSE(projection_node->right_input());
   EXPECT_EQ(projection_node->column_expressions().size(), 2u);
   EXPECT_EQ(projection_node->column_expressions()[0]->type(), ExpressionType::Literal);
   EXPECT_EQ(projection_node->column_expressions()[1]->type(), ExpressionType::Literal);
 
-  EXPECT_EQ(projection_node->left_child()->type(), LQPNodeType::StoredTable);
+  EXPECT_EQ(projection_node->left_input()->type(), LQPNodeType::StoredTable);
 }
 
 TEST_F(ConstantCalculationRuleTest, ResolveMultipleExpressionsTest) {
@@ -87,25 +87,25 @@ TEST_F(ConstantCalculationRuleTest, ResolveMultipleExpressionsTest) {
   const auto resolved = StrategyBaseTest::apply_rule(_rule, result_node);
 
   EXPECT_EQ(resolved->type(), LQPNodeType::Projection);
-  EXPECT_EQ(resolved->left_child()->type(), LQPNodeType::Projection);
-  EXPECT_FALSE(resolved->right_child());
+  EXPECT_EQ(resolved->left_input()->type(), LQPNodeType::Projection);
+  EXPECT_FALSE(resolved->right_input());
 
-  ASSERT_EQ(resolved->left_child()->left_child()->type(), LQPNodeType::Predicate);
-  const auto predicate_node_1 = std::dynamic_pointer_cast<PredicateNode>(resolved->left_child()->left_child());
-  EXPECT_FALSE(predicate_node_1->right_child());
+  ASSERT_EQ(resolved->left_input()->left_input()->type(), LQPNodeType::Predicate);
+  const auto predicate_node_1 = std::dynamic_pointer_cast<PredicateNode>(resolved->left_input()->left_input());
+  EXPECT_FALSE(predicate_node_1->right_input());
   EXPECT_EQ(predicate_node_1->predicate_condition(), PredicateCondition::Equals);
 
-  EXPECT_EQ(predicate_node_1->left_child()->type(), LQPNodeType::Projection);
-  EXPECT_EQ(predicate_node_1->left_child()->left_child()->type(), LQPNodeType::Projection);
-  EXPECT_EQ(predicate_node_1->left_child()->left_child()->left_child()->type(), LQPNodeType::Projection);
+  EXPECT_EQ(predicate_node_1->left_input()->type(), LQPNodeType::Projection);
+  EXPECT_EQ(predicate_node_1->left_input()->left_input()->type(), LQPNodeType::Projection);
+  EXPECT_EQ(predicate_node_1->left_input()->left_input()->left_input()->type(), LQPNodeType::Projection);
 
-  ASSERT_EQ(predicate_node_1->left_child()->left_child()->left_child()->left_child()->type(), LQPNodeType::Predicate);
+  ASSERT_EQ(predicate_node_1->left_input()->left_input()->left_input()->left_input()->type(), LQPNodeType::Predicate);
   const auto predicate_node_2 = std::dynamic_pointer_cast<PredicateNode>(
-      predicate_node_1->left_child()->left_child()->left_child()->left_child());
-  EXPECT_FALSE(predicate_node_2->right_child());
+      predicate_node_1->left_input()->left_input()->left_input()->left_input());
+  EXPECT_FALSE(predicate_node_2->right_input());
   EXPECT_EQ(predicate_node_2->predicate_condition(), PredicateCondition::Equals);
 
-  const auto original_node = predicate_node_2->left_child()->left_child();
+  const auto original_node = predicate_node_2->left_input()->left_input();
 
   EXPECT_EQ(predicate_node_1->column_reference(), LQPColumnReference(original_node, ColumnID{0}));
   ASSERT_TRUE(is_variant(predicate_node_1->value()));

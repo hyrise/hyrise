@@ -45,8 +45,8 @@ TEST_F(ProjectionCombinationRuleTest, CombineProjections) {
   const auto combined = StrategyBaseTest::apply_rule(_rule, result_node);
 
   ASSERT_EQ(combined->type(), LQPNodeType::Projection);
-  EXPECT_EQ(combined->left_child()->type(), LQPNodeType::Join);
-  EXPECT_FALSE(combined->right_child());
+  EXPECT_EQ(combined->left_input()->type(), LQPNodeType::Join);
+  EXPECT_FALSE(combined->right_input());
 
   const auto projection_node = std::static_pointer_cast<ProjectionNode>(combined);
   EXPECT_EQ(projection_node->column_expressions().size(), 2u);
@@ -68,7 +68,7 @@ TEST_F(ProjectionCombinationRuleTest, WithReorderingsAndAliases) {
   const auto combined = StrategyBaseTest::apply_rule(_rule, result_node);
 
   ASSERT_EQ(combined->type(), LQPNodeType::Projection);
-  EXPECT_EQ(combined->left_child()->type(), LQPNodeType::Predicate);
+  EXPECT_EQ(combined->left_input()->type(), LQPNodeType::Predicate);
 
   const auto projection_node = std::static_pointer_cast<ProjectionNode>(combined);
   ASSERT_EQ(projection_node->column_expressions().size(), 2u);
@@ -77,7 +77,7 @@ TEST_F(ProjectionCombinationRuleTest, WithReorderingsAndAliases) {
 
   EXPECT_EQ(projection_node->column_expressions()[0]->value(), AllTypeVariant{20});
 
-  const auto original_node = projection_node->left_child()->left_child();
+  const auto original_node = projection_node->left_input()->left_input();
   EXPECT_EQ(projection_node->column_expressions()[1]->column_reference(),
             LQPColumnReference(original_node, ColumnID{1}));
 }
@@ -104,20 +104,20 @@ TEST_F(ProjectionCombinationRuleTest, WithAggregate) {
   ASSERT_EQ(projection_node_1->column_expressions().size(), 1u);
   EXPECT_EQ(projection_node_1->column_expressions()[0]->type(), ExpressionType::Column);
 
-  ASSERT_EQ(projection_node_1->left_child()->type(), LQPNodeType::Aggregate);
-  const auto aggregate_node = std::static_pointer_cast<AggregateNode>(projection_node_1->left_child());
+  ASSERT_EQ(projection_node_1->left_input()->type(), LQPNodeType::Aggregate);
+  const auto aggregate_node = std::static_pointer_cast<AggregateNode>(projection_node_1->left_input());
   EXPECT_EQ(projection_node_1->column_expressions()[0]->column_reference(),
             LQPColumnReference(aggregate_node, ColumnID{0}));
 
-  ASSERT_EQ(aggregate_node->left_child()->type(), LQPNodeType::Projection);
-  const auto projection_node_2 = std::static_pointer_cast<ProjectionNode>(aggregate_node->left_child());
+  ASSERT_EQ(aggregate_node->left_input()->type(), LQPNodeType::Projection);
+  const auto projection_node_2 = std::static_pointer_cast<ProjectionNode>(aggregate_node->left_input());
   ASSERT_EQ(projection_node_2->column_expressions().size(), 2u);
   ASSERT_EQ(projection_node_2->column_expressions()[0]->type(), ExpressionType::Literal);
   ASSERT_EQ(projection_node_2->column_expressions()[1]->type(), ExpressionType::Column);
 
   EXPECT_EQ(projection_node_2->column_expressions()[0]->value(), AllTypeVariant{100});
 
-  const auto original_node = projection_node_2->left_child();
+  const auto original_node = projection_node_2->left_input();
   EXPECT_EQ(projection_node_2->column_expressions()[1]->column_reference(),
             LQPColumnReference(original_node, ColumnID{0}));
 }
@@ -141,28 +141,28 @@ TEST_F(ProjectionCombinationRuleTest, WithJoin) {
   const auto combined = StrategyBaseTest::apply_rule(_rule, result_node);
 
   EXPECT_EQ(combined->type(), LQPNodeType::Projection);
-  EXPECT_EQ(combined->left_child()->type(), LQPNodeType::Join);
+  EXPECT_EQ(combined->left_input()->type(), LQPNodeType::Join);
 
-  ASSERT_EQ(combined->left_child()->left_child()->type(), LQPNodeType::Projection);
-  const auto projection_node_1 = std::static_pointer_cast<ProjectionNode>(combined->left_child()->left_child());
+  ASSERT_EQ(combined->left_input()->left_input()->type(), LQPNodeType::Projection);
+  const auto projection_node_1 = std::static_pointer_cast<ProjectionNode>(combined->left_input()->left_input());
   ASSERT_EQ(projection_node_1->column_expressions().size(), 2u);
   ASSERT_EQ(projection_node_1->column_expressions()[0]->type(), ExpressionType::Column);
   ASSERT_EQ(projection_node_1->column_expressions()[1]->type(), ExpressionType::Column);
 
-  const auto original_node_1 = projection_node_1->left_child()->left_child()->left_child();
+  const auto original_node_1 = projection_node_1->left_input()->left_input()->left_input();
   EXPECT_EQ(projection_node_1->column_expressions()[0]->column_reference(),
             LQPColumnReference(original_node_1, ColumnID{0}));
   EXPECT_EQ(projection_node_1->column_expressions()[1]->column_reference(),
             LQPColumnReference(original_node_1, ColumnID{1}));
 
-  ASSERT_EQ(combined->left_child()->right_child()->left_child()->left_child()->type(), LQPNodeType::Projection);
+  ASSERT_EQ(combined->left_input()->right_input()->left_input()->left_input()->type(), LQPNodeType::Projection);
   const auto projection_node_2 =
-      std::static_pointer_cast<ProjectionNode>(combined->left_child()->right_child()->left_child()->left_child());
+      std::static_pointer_cast<ProjectionNode>(combined->left_input()->right_input()->left_input()->left_input());
   ASSERT_EQ(projection_node_2->column_expressions().size(), 2u);
   ASSERT_EQ(projection_node_2->column_expressions()[0]->type(), ExpressionType::Column);
   ASSERT_EQ(projection_node_2->column_expressions()[1]->type(), ExpressionType::Column);
 
-  const auto original_node_2 = projection_node_2->left_child()->left_child()->left_child();
+  const auto original_node_2 = projection_node_2->left_input()->left_input()->left_input();
   EXPECT_EQ(projection_node_2->column_expressions()[0]->column_reference(),
             LQPColumnReference(original_node_2, ColumnID{0}));
   EXPECT_EQ(projection_node_2->column_expressions()[1]->column_reference(),
