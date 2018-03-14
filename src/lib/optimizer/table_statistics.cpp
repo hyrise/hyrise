@@ -17,7 +17,10 @@
 namespace opossum {
 
 TableStatistics::TableStatistics(const std::shared_ptr<Table> table)
-    : _table(table), _table_type(table->type()), _row_count(table->row_count()), _column_statistics(table->column_count()) {}
+    : _table(table),
+      _table_type(table->type()),
+      _row_count(table->row_count()),
+      _column_statistics(table->column_count()) {}
 
 TableStatistics::TableStatistics(const TableType table_type, float row_count,
                                  const std::vector<std::shared_ptr<BaseColumnStatistics>>& column_statistics)

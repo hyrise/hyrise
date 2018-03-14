@@ -39,7 +39,8 @@ struct TwoColumnSelectivityResult;
  */
 class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStatistics> {
  public:
-  explicit BaseColumnStatistics(const DataType data_type, const float non_null_value_ratio = 1.f) : _data_type(data_type), _non_null_value_ratio(non_null_value_ratio) {}
+  explicit BaseColumnStatistics(const DataType data_type, const float non_null_value_ratio = 1.f)
+      : _data_type(data_type), _non_null_value_ratio(non_null_value_ratio) {}
   virtual ~BaseColumnStatistics() = default;
 
   /**

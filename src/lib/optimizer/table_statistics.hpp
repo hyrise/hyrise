@@ -7,9 +7,9 @@
 #include <utility>
 #include <vector>
 
-#include "types.hpp"
 #include "all_parameter_variant.hpp"
 #include "optimizer/base_column_statistics.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -62,7 +62,8 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
    * Create the TableStatistics by explicitly specifying its underlying data. Intended for statistics tests or to
    * supply mocked statistics to a MockNode
    */
-  TableStatistics(const TableType table_type, float row_count, const std::vector<std::shared_ptr<BaseColumnStatistics>>& column_statistics);
+  TableStatistics(const TableType table_type, float row_count,
+                  const std::vector<std::shared_ptr<BaseColumnStatistics>>& column_statistics);
 
   TableType table_type() const;
 
