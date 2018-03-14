@@ -132,7 +132,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   for (const auto& column_expression : _column_expressions) {
     TableColumnDefinition column_definition;
 
-    // For subselects, we need to execeute the subquery in order to use the result table later
+    // For subselects, we need to execute the subquery in order to use the result table later
     if (column_expression->is_subselect() && !column_expression->has_subselect_table()) {
       SQLQueryPlan query_plan;
       query_plan.add_tree_by_root(column_expression->subselect_operator());
