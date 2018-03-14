@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include "types.hpp"
 #include "all_parameter_variant.hpp"
 #include "optimizer/base_column_statistics.hpp"
 
@@ -61,7 +62,9 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
    * Create the TableStatistics by explicitly specifying its underlying data. Intended for statistics tests or to
    * supply mocked statistics to a MockNode
    */
-  TableStatistics(float row_count, const std::vector<std::shared_ptr<BaseColumnStatistics>>& column_statistics);
+  TableStatistics(const TableType table_type, float row_count, const std::vector<std::shared_ptr<BaseColumnStatistics>>& column_statistics);
+
+  TableType table_type() const;
 
   /**
    * Returns the expected row_count of the output of the corresponding operator.
@@ -140,6 +143,8 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
   // not const as table pointer can be reset once all column statistics have been created
   // (e.g. for composite tables resulting from joins)
   std::weak_ptr<Table> _table;
+
+  TableType _table_type;
 
   // row count is not an integer as it is a predicted value
   // it is multiplied with selectivity factor of a corresponding operator to predict the operator's output
