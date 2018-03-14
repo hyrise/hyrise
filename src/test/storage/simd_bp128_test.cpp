@@ -54,7 +54,7 @@ class SimdBp128Test : public BaseTest, public ::testing::WithParamInterface<uint
     return sequence;
   }
 
-  std::unique_ptr<BaseCompressedVector> encode(const pmr_vector<uint32_t>& vector) {
+  std::unique_ptr<const BaseCompressedVector> encode(const pmr_vector<uint32_t>& vector) {
     auto encoder = SimdBp128Compressor{};
     auto encoded_vector = encoder.encode(vector, vector.get_allocator());
     EXPECT_EQ(encoded_vector->size(), vector.size());
@@ -78,7 +78,7 @@ TEST_P(SimdBp128Test, DecodeSequenceUsingIterators) {
   const auto sequence = generate_sequence(4'200);
   const auto encoded_sequence_base = encode(sequence);
 
-  auto encoded_sequence = dynamic_cast<SimdBp128Vector*>(encoded_sequence_base.get());
+  auto encoded_sequence = dynamic_cast<const SimdBp128Vector*>(encoded_sequence_base.get());
   EXPECT_NE(encoded_sequence, nullptr);
 
   auto seq_it = sequence.cbegin();

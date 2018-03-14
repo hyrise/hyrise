@@ -16,9 +16,10 @@ namespace opossum {
 class OperatorsPrintTest : public BaseTest {
  protected:
   void SetUp() override {
-    t = std::make_shared<Table>(Table(chunk_size));
-    t->add_column("col_1", DataType::Int);
-    t->add_column("col_2", DataType::String);
+    TableColumnDefinitions column_definitions;
+    column_definitions.emplace_back("col_1", DataType::Int);
+    column_definitions.emplace_back("col_2", DataType::String);
+    t = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
     StorageManager::get().add_table(table_name, t);
 
     gt = std::make_shared<GetTable>(table_name);
@@ -65,8 +66,6 @@ TEST_F(OperatorsPrintTest, EmptyTable) {
   EXPECT_TRUE(output_str.find("col_2") != std::string::npos);
   EXPECT_TRUE(output_str.find("int") != std::string::npos);
   EXPECT_TRUE(output_str.find("string") != std::string::npos);
-
-  EXPECT_TRUE(output_str.find("Empty chunk.") != std::string::npos);
 }
 
 TEST_F(OperatorsPrintTest, FilledTable) {

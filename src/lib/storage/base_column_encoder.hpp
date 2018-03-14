@@ -26,6 +26,8 @@ namespace hana = boost::hana;
  */
 class BaseColumnEncoder {
  public:
+  virtual ~BaseColumnEncoder() = default;
+
   /**
    * @brief Returns true if the encoder supports the given data type.
    */
@@ -43,6 +45,12 @@ class BaseColumnEncoder {
 
   /**
    * @defgroup Interface for selecting the used vector compression type
+   *
+   * Many encoding schemes use the following principle to compress data:
+   * Replace a set of large integers (or values of any data type) with
+   * a set of mostly smaller integers using an invertible transformation.
+   * Compress the resulting set using vector compression (null suppression).
+   *
    * @{
    */
 
@@ -60,7 +68,7 @@ class ColumnEncoder : public BaseColumnEncoder {
    */
   bool supports(DataType data_type) const final {
     bool result{};
-    resolve_data_type(data_type, [&](auto type_obj) { result = this->supports(type_obj); });
+    resolve_data_type(data_type, [&](auto data_type_c) { result = this->supports(data_type_c); });
     return result;
   }
 
@@ -68,15 +76,15 @@ class ColumnEncoder : public BaseColumnEncoder {
   std::shared_ptr<BaseEncodedColumn> encode(const std::shared_ptr<const BaseValueColumn>& column,
                                             DataType data_type) final {
     auto encoded_column = std::shared_ptr<BaseEncodedColumn>{};
-    resolve_data_type(data_type, [&](auto type_obj) {
-      const auto data_type_supported = this->supports(type_obj);
+    resolve_data_type(data_type, [&](auto data_type_c) {
+      const auto data_type_supported = this->supports(data_type_c);
       // clang-format off
-      if constexpr (decltype(data_type_supported)::value) {
+      if constexpr (hana::value(data_type_supported)) {
         /**
          * The templated method encode() where the actual encoding happens
          * is only instantiated for data types supported by the encoding type.
          */
-        encoded_column = this->encode(column, type_obj);
+        encoded_column = this->encode(column, data_type_c);
       } else {
         Fail("Passed data type not supported by encoding.");
       }
@@ -109,7 +117,7 @@ class ColumnEncoder : public BaseColumnEncoder {
    * Since this method is used in compile-time expression,
    * it cannot simply return bool.
    *
-   * Hint: Use decltype(result)::value if you want to use the result
+   * Hint: Use hana::value() if you want to use the result
    *       in a constant expression such as constexpr-if.
    */
   template <typename ColumnDataType>
@@ -124,8 +132,8 @@ class ColumnEncoder : public BaseColumnEncoder {
    */
   template <typename ColumnDataType>
   std::shared_ptr<BaseEncodedColumn> encode(const std::shared_ptr<const BaseValueColumn>& base_value_column,
-                                            hana::basic_type<ColumnDataType> data_type) {
-    static_assert(decltype(supports(data_type))::value);
+                                            hana::basic_type<ColumnDataType> data_type_c) {
+    static_assert(decltype(supports(data_type_c))::value);
 
     const auto value_column = std::dynamic_pointer_cast<const ValueColumn<ColumnDataType>>(base_value_column);
     Assert(value_column != nullptr, "Value column must have passed data type.");

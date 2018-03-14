@@ -10,8 +10,10 @@
 #include <utility>
 #include <vector>
 
-#include "storage/base_deprecated_dictionary_column.hpp"
-#include "storage/deprecated_dictionary_column/base_attribute_vector.hpp"
+#include "storage/base_dictionary_column.hpp"
+#include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/base_vector_decompressor.hpp"
+#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp"
 #include "utils/assert.hpp"
 #include "variable_length_key_proxy.hpp"
 
@@ -34,15 +36,19 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
   // cast and check columns
   _indexed_columns.reserve(indexed_columns.size());
   for (const auto& column : indexed_columns) {
-    auto dict_column = std::dynamic_pointer_cast<const BaseDeprecatedDictionaryColumn>(column);
-    DebugAssert(static_cast<bool>(dict_column), "CompositeGroupKeyIndex only works with DictionaryColumns");
+    auto dict_column = std::dynamic_pointer_cast<const BaseDictionaryColumn>(column);
+    DebugAssert(static_cast<bool>(dict_column), "CompositeGroupKeyIndex only works with dictionary columns.");
+    DebugAssert(is_fixed_size_byte_aligned(dict_column->compressed_vector_type()),
+                "CompositeGroupKeyIndex only works with fixed-size byte-aligned compressed attribute vectors.");
     _indexed_columns.emplace_back(dict_column);
   }
 
   // retrieve amount of memory consumed by each concatenated key
-  CompositeKeyLength bytes_per_key = std::accumulate(
-      _indexed_columns.begin(), _indexed_columns.end(), 0u,
-      [](auto key_length, const auto& column) { return key_length + column->attribute_vector()->width(); });
+  auto bytes_per_key = std::accumulate(
+      _indexed_columns.begin(), _indexed_columns.end(), CompositeKeyLength{0u},
+      [](auto key_length, const auto& column) {
+        return key_length + byte_width_for_fixed_size_byte_aligned_type(column->compressed_vector_type());
+      });
 
   // create concatenated keys and save their positions
   // at this point duplicated keys may be created, they will be handled later
@@ -50,11 +56,23 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
   auto keys = std::vector<VariableLengthKey>(column_size);
   _position_list.resize(column_size);
 
+  auto attribute_vector_widths_and_decompressors = [&]() {
+    auto decompressors =
+        std::vector<std::pair<size_t, std::unique_ptr<BaseVectorDecompressor>>>(_indexed_columns.size());
+
+    std::transform(_indexed_columns.cbegin(), _indexed_columns.cend(), decompressors.begin(), [](const auto& column) {
+      const auto byte_width = byte_width_for_fixed_size_byte_aligned_type(column->compressed_vector_type());
+      auto decompressor = column->attribute_vector()->create_base_decoder();
+      return std::make_pair(byte_width, std::move(decompressor));
+    });
+
+    return decompressors;
+  }();
+
   for (ChunkOffset chunk_offset = 0; chunk_offset < column_size; ++chunk_offset) {
     auto concatenated_key = VariableLengthKey(bytes_per_key);
-    for (const auto& column : _indexed_columns) {
-      const auto& attribute_vector = column->attribute_vector();
-      concatenated_key.shift_and_set(attribute_vector->get(chunk_offset), attribute_vector->width() * CHAR_BIT);
+    for (const auto & [ byte_width, decompressor ] : attribute_vector_widths_and_decompressors) {
+      concatenated_key.shift_and_set(decompressor->get(chunk_offset), byte_width * CHAR_BIT);
     }
     keys[chunk_offset] = std::move(concatenated_key);
     _position_list[chunk_offset] = chunk_offset;
@@ -104,7 +122,8 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
   // retrieve the partial keys for every value except for the last one and append them into one partial-key
   for (size_t column = 0; column < values.size() - 1; ++column) {
     auto partial_key = _indexed_columns[column]->lower_bound(values[column]);
-    auto bits_of_partial_key = _indexed_columns[column]->attribute_vector()->width() * CHAR_BIT;
+    auto bits_of_partial_key =
+        byte_width_for_fixed_size_byte_aligned_type(_indexed_columns[column]->compressed_vector_type()) * CHAR_BIT;
     result.shift_and_set(partial_key, bits_of_partial_key);
   }
 
@@ -113,13 +132,16 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
   const auto& column_for_last_value = _indexed_columns[values.size() - 1];
   auto&& partial_key = is_upper_bound ? column_for_last_value->upper_bound(values.back())
                                       : column_for_last_value->lower_bound(values.back());
-  auto bits_of_partial_key = column_for_last_value->attribute_vector()->width() * CHAR_BIT;
+  auto bits_of_partial_key =
+      byte_width_for_fixed_size_byte_aligned_type(column_for_last_value->compressed_vector_type()) * CHAR_BIT;
   result.shift_and_set(partial_key, bits_of_partial_key);
 
   // fill empty space of key with zeros if less values than columns were provided
-  auto empty_bits =
-      std::accumulate(_indexed_columns.cbegin() + values.size(), _indexed_columns.cend(), static_cast<uint8_t>(0u),
-                      [](auto value, auto column) { return value + column->attribute_vector()->width() * CHAR_BIT; });
+  auto empty_bits = std::accumulate(
+      _indexed_columns.cbegin() + values.size(), _indexed_columns.cend(), static_cast<uint8_t>(0u),
+      [](auto value, auto column) {
+        return value + byte_width_for_fixed_size_byte_aligned_type(column->compressed_vector_type()) * CHAR_BIT;
+      });
   result <<= empty_bits;
 
   return result;

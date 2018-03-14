@@ -48,10 +48,11 @@ class SQLPipelineTest : public BaseTest {
     _table_b = load_table("src/test/tables/int_float2.tbl", 2);
     StorageManager::get().add_table("table_b", _table_b);
 
-    _join_result = std::make_shared<Table>();
-    _join_result->add_column("a", DataType::Int);
-    _join_result->add_column("b", DataType::Float);
-    _join_result->add_column("bb", DataType::Float);
+    TableColumnDefinitions column_definitions;
+    column_definitions.emplace_back("a", DataType::Int);
+    column_definitions.emplace_back("b", DataType::Float);
+    column_definitions.emplace_back("bb", DataType::Float);
+    _join_result = std::make_shared<Table>(column_definitions, TableType::Data);
     _join_result->append({12345, 458.7f, 456.7f});
     _join_result->append({12345, 458.7f, 457.7f});
 
@@ -121,6 +122,23 @@ TEST_F(SQLPipelineTest, SimpleCreationWithCustomTransactionContextMulti) {
 
 TEST_F(SQLPipelineTest, SimpleCreationInvalid) {
   EXPECT_THROW(SQLPipeline sql_pipeline{_multi_statement_invalid}, std::exception);
+}
+
+TEST_F(SQLPipelineTest, ConstructorCombinations) {
+  // Simple sanity test for all other constructor options
+  const auto optimizer = Optimizer::create_default_optimizer();
+  auto prepared_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
+  auto transaction_context = TransactionManager::get().new_transaction_context();
+
+  // No transaction context
+  EXPECT_NO_THROW(SQLPipeline(_select_query_a, optimizer, UseMvcc::Yes));
+  EXPECT_NO_THROW(SQLPipeline(_select_query_a, prepared_cache, UseMvcc::No));
+  EXPECT_NO_THROW(SQLPipeline(_select_query_a, optimizer, prepared_cache, UseMvcc::Yes));
+
+  // With transaction context
+  EXPECT_NO_THROW(SQLPipeline(_select_query_a, optimizer, transaction_context));
+  EXPECT_NO_THROW(SQLPipeline(_select_query_a, prepared_cache, transaction_context));
+  EXPECT_NO_THROW(SQLPipeline(_select_query_a, optimizer, prepared_cache, transaction_context));
 }
 
 TEST_F(SQLPipelineTest, GetParsedSQLStatements) {
@@ -350,7 +368,7 @@ TEST_F(SQLPipelineTest, GetResultTableBadQuery) {
 }
 
 TEST_F(SQLPipelineTest, GetResultTableNoOutput) {
-  const auto sql = "UPDATE table_a SET a = 1 WHERE a < 5";
+  const auto sql = "UPDATE table_a SET a = 1 WHERE a < 150";
   SQLPipeline sql_pipeline{sql};
 
   const auto& table = sql_pipeline.get_result_table();

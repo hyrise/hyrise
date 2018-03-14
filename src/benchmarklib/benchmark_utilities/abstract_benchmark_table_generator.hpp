@@ -51,18 +51,14 @@ class AbstractBenchmarkTableGenerator {
    * @param generator_function  a lambda function to generate a vector of values for this column
    */
   template <typename T>
-  void add_column(std::shared_ptr<opossum::Table> table, std::string name,
+  void add_column(std::vector<opossum::ChunkColumns>& columns_by_chunk,
+                  opossum::TableColumnDefinitions& column_definitions, std::string name,
                   std::shared_ptr<std::vector<size_t>> cardinalities,
                   const std::function<std::vector<T>(std::vector<size_t>)>& generator_function) {
-    /**
-     * We have to add Chunks when we add the first column.
-     * This has to be done after the first column was created and added,
-     * because empty Chunks would be pruned right away.
-     */
-    bool is_first_column = table->column_count() == 0;
+    bool is_first_column = column_definitions.size() == 0;
 
     auto data_type = opossum::data_type_from_type<T>();
-    table->add_column_definition(name, data_type);
+    column_definitions.emplace_back(name, data_type);
 
     /**
      * Calculate the total row count for this column based on the cardinalities of the influencing tables.
@@ -115,13 +111,11 @@ class AbstractBenchmarkTableGenerator {
           auto value_column = std::make_shared<opossum::ValueColumn<T>>(std::move(column));
 
           if (is_first_column) {
-            auto chunk = std::make_shared<opossum::Chunk>(opossum::UseMvcc::Yes);
-            chunk->add_column(value_column);
-            table->emplace_chunk(std::move(chunk));
+            columns_by_chunk.emplace_back();
+            columns_by_chunk.back().push_back(value_column);
           } else {
             opossum::ChunkID chunk_id{static_cast<uint32_t>(row_index / _chunk_size)};
-            auto chunk = table->get_chunk(chunk_id);
-            chunk->add_column(value_column);
+            columns_by_chunk[chunk_id].push_back(value_column);
           }
 
           // reset column
@@ -138,13 +132,11 @@ class AbstractBenchmarkTableGenerator {
 
       // add Chunk if it is the first column, e.g. WAREHOUSE_ID in the example above
       if (is_first_column) {
-        auto chunk = std::make_shared<opossum::Chunk>(opossum::UseMvcc::Yes);
-        chunk->add_column(value_column);
-        table->emplace_chunk(std::move(chunk));
+        columns_by_chunk.emplace_back();
+        columns_by_chunk.back().push_back(value_column);
       } else {
         opossum::ChunkID chunk_id{static_cast<uint32_t>(row_index / _chunk_size)};
-        auto chunk = table->get_chunk(chunk_id);
-        chunk->add_column(value_column);
+        columns_by_chunk[chunk_id].push_back(value_column);
       }
     }
   }
@@ -161,12 +153,13 @@ class AbstractBenchmarkTableGenerator {
    * @param generator_function  a lambda function to generate a value for this column
    */
   template <typename T>
-  void add_column(std::shared_ptr<opossum::Table> table, std::string name,
+  void add_column(std::vector<opossum::ChunkColumns>& columns_by_chunk,
+                  opossum::TableColumnDefinitions& column_definitions, std::string name,
                   std::shared_ptr<std::vector<size_t>> cardinalities,
                   const std::function<T(std::vector<size_t>)>& generator_function) {
     const std::function<std::vector<T>(std::vector<size_t>)> wrapped_generator_function =
         [generator_function](std::vector<size_t> indices) { return std::vector<T>({generator_function(indices)}); };
-    add_column(table, name, cardinalities, wrapped_generator_function);
+    add_column(columns_by_chunk, column_definitions, name, cardinalities, wrapped_generator_function);
   }
 };
 }  // namespace benchmark_utilities

@@ -126,7 +126,7 @@ TEST_F(SQLQueryPlanCacheTest, AutomaticQueryOperatorCacheGDFS) {
   EXPECT_EQ(9u, _query_plan_cache_hits);
 }
 
-// Test query plan cache with GDFS implementation.
+// Test query plan cache with LRUK implementation.
 TEST_F(SQLQueryPlanCacheTest, AutomaticQueryOperatorCacheLRUK2) {
   auto& cache = SQLQueryCache<SQLQueryPlan>::get();
   cache.replace_cache_impl<LRUKCache<2, std::string, SQLQueryPlan>>(2);

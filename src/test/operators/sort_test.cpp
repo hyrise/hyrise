@@ -51,8 +51,8 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
 };
 
 // As long as two implementation of dictionary encoding exist, this ensure to run the tests for both.
-INSTANTIATE_TEST_CASE_P(DictionaryEncodingTypes, OperatorsSortTest,
-                        ::testing::Values(EncodingType::DeprecatedDictionary, EncodingType::Dictionary), formatter);
+INSTANTIATE_TEST_CASE_P(DictionaryEncodingTypes, OperatorsSortTest, ::testing::Values(EncodingType::Dictionary),
+                        formatter);
 
 TEST_P(OperatorsSortTest, AscendingSortOfOneColumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
@@ -212,29 +212,6 @@ TEST_P(OperatorsSortTest, DescendingSortOfOneDictColumn) {
   sort->execute();
 
   EXPECT_TABLE_EQ_ORDERED(sort->get_output(), expected_result);
-}
-
-TEST_P(OperatorsSortTest, SortTableWithRefandValueColumns) {
-  auto table_wrapper1 = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
-  auto table_wrapper2 = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float2.tbl", 2));
-  table_wrapper1->execute();
-  table_wrapper2->execute();
-
-  auto ts2 = std::make_shared<TableScan>(table_wrapper2, ColumnID{0}, PredicateCondition::GreaterThan, 12);
-  ts2->execute();
-
-  auto union_all = std::make_shared<UnionAll>(table_wrapper1, ts2);
-  union_all->execute();
-
-  EXPECT_TABLE_EQ_UNORDERED(union_all->get_output(),
-                            load_table("src/test/tables/int_float__int_float2_filtered__union.tbl", 2));
-
-  auto sort = std::make_shared<Sort>(union_all, ColumnID{1});
-  sort->execute();
-
-  EXPECT_TABLE_EQ_ORDERED(
-      sort->get_output(),
-      load_table("src/test/tables/int_float__int_float2_filtered__union__sorted.tbl", Chunk::MAX_SIZE));
 }
 
 }  // namespace opossum

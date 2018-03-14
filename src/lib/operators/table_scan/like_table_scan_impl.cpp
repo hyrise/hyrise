@@ -13,10 +13,8 @@
 #include <vector>
 
 #include "storage/column_iterables/constant_value_iterable.hpp"
+#include "storage/column_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/create_iterable_from_column.hpp"
-#include "storage/deprecated_dictionary_column.hpp"
-#include "storage/deprecated_dictionary_column/deprecated_attribute_vector_iterable.hpp"
-#include "storage/dictionary_column/attribute_vector_iterable.hpp"
 #include "storage/resolve_encoded_column_type.hpp"
 #include "storage/value_column.hpp"
 #include "storage/value_column/value_column_iterable.hpp"
@@ -29,7 +27,7 @@ LikeTableScanImpl::LikeTableScanImpl(std::shared_ptr<const Table> in_table, cons
       _right_wildcard{right_wildcard},
       _invert_results(predicate_condition == PredicateCondition::NotLike) {
   // convert the given SQL-like search term into a c++11 regex to use it for the actual matching
-  auto regex_string = _sqllike_to_regex(_right_wildcard);
+  auto regex_string = sqllike_to_regex(_right_wildcard);
   _regex = std::regex{regex_string, std::regex_constants::icase};  // case insensitivity
 }
 
@@ -52,18 +50,6 @@ void LikeTableScanImpl::handle_column(const BaseValueColumn& base_column,
   });
 }
 
-void LikeTableScanImpl::handle_column(const BaseDeprecatedDictionaryColumn& base_column,
-                                      std::shared_ptr<ColumnVisitableContext> base_context) {
-  const auto& left_column = static_cast<const DeprecatedDictionaryColumn<std::string>&>(base_column);
-  _handle_dictionary_column(left_column, base_context);
-}
-
-void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
-                                      std::shared_ptr<ColumnVisitableContext> base_context) {
-  const auto& left_column = static_cast<const DictionaryColumn<std::string>&>(base_column);
-  _handle_dictionary_column(left_column, base_context);
-}
-
 void LikeTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
                                       std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
@@ -83,9 +69,33 @@ void LikeTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
   });
 }
 
-template <typename DictionaryColumnType>
-void LikeTableScanImpl::_handle_dictionary_column(const DictionaryColumnType& left_column,
-                                                  std::shared_ptr<ColumnVisitableContext> base_context) {
+std::string LikeTableScanImpl::sqllike_to_regex(std::string sqllike) {
+  constexpr auto replace_by = std::array<std::pair<const char*, const char*>, 15u>{{{".", "\\."},
+                                                                                    {"^", "\\^"},
+                                                                                    {"$", "\\$"},
+                                                                                    {"+", "\\+"},
+                                                                                    {"?", "\\?"},
+                                                                                    {"(", "\\("},
+                                                                                    {")", "\\"},
+                                                                                    {"{", "\\{"},
+                                                                                    {"}", "\\}"},
+                                                                                    {"\\", "\\\\"},
+                                                                                    {"|", "\\|"},
+                                                                                    {".", "\\."},
+                                                                                    {"*", "\\*"},
+                                                                                    {"%", ".*"},
+                                                                                    {"_", "."}}};
+
+  for (const auto& pair : replace_by) {
+    boost::replace_all(sqllike, pair.first, pair.second);
+  }
+
+  return "^" + sqllike + "$";
+}
+
+void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
+                                      std::shared_ptr<ColumnVisitableContext> base_context) {
+  const auto& left_column = static_cast<const DictionaryColumn<std::string>&>(base_column);
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
@@ -95,7 +105,7 @@ void LikeTableScanImpl::_handle_dictionary_column(const DictionaryColumnType& le
   const auto& match_count = result.first;
   const auto& dictionary_matches = result.second;
 
-  auto attribute_vector_iterable = _create_attribute_vector_iterable(left_column);
+  auto attribute_vector_iterable = create_iterable_from_attribute_vector(left_column);
 
   // Regex matches all
   if (match_count == dictionary_matches.size()) {
@@ -136,30 +146,6 @@ std::pair<size_t, std::vector<bool>> LikeTableScanImpl::_find_matches_in_diction
   }
 
   return result;
-}
-
-std::string LikeTableScanImpl::_sqllike_to_regex(std::string sqllike) {
-  constexpr auto replace_by = std::array<std::pair<const char*, const char*>, 15u>{{{".", "\\."},
-                                                                                    {"^", "\\^"},
-                                                                                    {"$", "\\$"},
-                                                                                    {"+", "\\+"},
-                                                                                    {"?", "\\?"},
-                                                                                    {"(", "\\("},
-                                                                                    {")", "\\"},
-                                                                                    {"{", "\\{"},
-                                                                                    {"}", "\\}"},
-                                                                                    {"\\", "\\\\"},
-                                                                                    {"|", "\\|"},
-                                                                                    {".", "\\."},
-                                                                                    {"*", "\\*"},
-                                                                                    {"%", ".*"},
-                                                                                    {"_", "."}}};
-
-  for (const auto& pair : replace_by) {
-    boost::replace_all(sqllike, pair.first, pair.second);
-  }
-
-  return "^" + sqllike + "$";
 }
 
 }  // namespace opossum

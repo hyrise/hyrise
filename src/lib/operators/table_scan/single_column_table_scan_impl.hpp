@@ -13,9 +13,6 @@
 
 namespace opossum {
 
-class BaseDeprecatedDictionaryColumn;
-class BaseDictionaryColumn;
-
 /**
  * @brief Compares one column to a constant value
  *
@@ -33,9 +30,6 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
 
   void handle_column(const BaseValueColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
 
-  void handle_column(const BaseDeprecatedDictionaryColumn& base_column,
-                     std::shared_ptr<ColumnVisitableContext> base_context) override;
-
   void handle_column(const BaseDictionaryColumn& base_column,
                      std::shared_ptr<ColumnVisitableContext> base_context) override;
 
@@ -50,20 +44,11 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
    * @{
    */
 
-  // The following methods are templated for as long as two dictionary column implementations exist.
+  ValueID _get_search_value_id(const BaseDictionaryColumn& column) const;
 
-  template <typename BaseDictionaryColumnType>
-  void _handle_dictionary_column(const BaseDictionaryColumnType& left_column,
-                                 std::shared_ptr<ColumnVisitableContext> base_context);
+  bool _right_value_matches_all(const BaseDictionaryColumn& column, const ValueID search_value_id) const;
 
-  template <typename BaseDictionaryColumnType>
-  ValueID _get_search_value_id(const BaseDictionaryColumnType& column) const;
-
-  template <typename BaseDictionaryColumnType>
-  bool _right_value_matches_all(const BaseDictionaryColumnType& column, const ValueID search_value_id) const;
-
-  template <typename BaseDictionaryColumnType>
-  bool _right_value_matches_none(const BaseDictionaryColumnType& column, const ValueID search_value_id) const;
+  bool _right_value_matches_none(const BaseDictionaryColumn& column, const ValueID search_value_id) const;
 
   template <typename Functor>
   void _with_operator_for_dict_column_scan(const PredicateCondition predicate_condition, const Functor& func) const {
@@ -90,7 +75,6 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
         Fail("Unsupported comparison type encountered");
     }
   }
-
   /**@}*/
 
  private:

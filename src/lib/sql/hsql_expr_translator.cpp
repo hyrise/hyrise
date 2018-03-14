@@ -32,6 +32,9 @@ std::shared_ptr<LQPExpression> HSQLExprTranslator::to_lqp_expression(
     right = to_lqp_expression(*expr.expr2, input_node);
   }
 
+  // Since subselects need recursive translation, they are handled in SQLTranslator to avoid circular inclusion
+  DebugAssert(expr.type != hsql::kExprSelect, "Subselects should be handled in SQLTranslator.");
+
   switch (expr.type) {
     case hsql::kExprOperator: {
       auto operator_type = operator_type_to_expression_type.at(expr.opType);
@@ -100,21 +103,6 @@ std::shared_ptr<LQPExpression> HSQLExprTranslator::to_lqp_expression(
       node = LQPExpression::create_select_star(table_name);
       break;
     }
-    case hsql::kExprSelect:
-      /**
-       * Current problem with Subselect:
-       *
-       * For now we split Expressions and LQP Nodes into two separate trees.
-       * The only connection is the PredicateNode that contains an Expression.
-       *
-       * When we translate Subselects, the naive approach would be to add another member to the Expression,
-       * which is a Pointer to the root node of the LQP of the Subselect, so usually a ProjectionNode.
-       *
-       * Right now, I cannot estimate the consequences of such a circular reference for the optimizer rules.
-       */
-      // TODO(mp): translate as soon as SQLTranslator is merged
-      Fail("Subselects are not supported yet.");
-      return nullptr;  // Make compiler happy
     default:
       Fail("Unsupported expression type");
       return nullptr;  // Make compiler happy
