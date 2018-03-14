@@ -14,7 +14,7 @@
 
 namespace opossum {
 
-ShowTables::ShowTables() : AbstractReadOnlyOperator(OperatorType::DropView) {}
+ShowTables::ShowTables() : AbstractReadOnlyOperator(OperatorType::ShowTables) {}
 
 const std::string ShowTables::name() const { return "ShowTables"; }
 
