@@ -683,4 +683,19 @@ TEST_F(SQLPipelineStatementTest, CacheQueryPlan) {
   EXPECT_TRUE(cache.has(_select_query_a));
 }
 
+TEST_F(SQLPipelineStatementTest, NoDataDefinitionCaching) {
+  const std::string create_query = "CREATE VIEW count_view1 AS SELECT a, COUNT(DISTINCT b) FROM table_a GROUP BY a;";
+  SQLPipelineStatement create_pipeline{create_query};
+  create_pipeline.get_result_table();
+
+  const std::string drop_query = "DROP VIEW count_view1";
+  SQLPipelineStatement drop_pipeline{drop_query};
+  drop_pipeline.get_result_table();
+
+  SQLPipelineStatement create_again_pipeline{create_query};
+
+  // The CREATE VIEW should not be cached. If this fails, it was cached because recreate is not implemented for VIEWS
+  EXPECT_NO_THROW(create_again_pipeline.get_result_table());
+}
+
 }  // namespace opossum
