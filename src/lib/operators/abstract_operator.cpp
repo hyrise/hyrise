@@ -14,9 +14,11 @@
 
 namespace opossum {
 
-AbstractOperator::AbstractOperator(const std::shared_ptr<const AbstractOperator> left,
+AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator> left,
                                    const std::shared_ptr<const AbstractOperator> right)
-    : _input_left(left), _input_right(right) {}
+    : _type(type), _input_left(left), _input_right(right) {}
+
+OperatorType AbstractOperator::type() const { return _type; }
 
 void AbstractOperator::execute() {
   DebugAssert(!_output, "Operator has already been executed");

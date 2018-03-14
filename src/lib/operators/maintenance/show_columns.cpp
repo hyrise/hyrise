@@ -16,7 +16,8 @@
 
 namespace opossum {
 
-ShowColumns::ShowColumns(const std::string& table_name) : _table_name(table_name) {}
+ShowColumns::ShowColumns(const std::string& table_name)
+    : AbstractReadOnlyOperator(OperatorType::DropView), _table_name(table_name) {}
 
 const std::string ShowColumns::name() const { return "ShowColumns"; }
 
