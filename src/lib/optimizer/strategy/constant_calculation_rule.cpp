@@ -87,11 +87,11 @@ bool ConstantCalculationRule::_replace_column_references_in_tree(
     // referring to the column which contains the Expression we resolved before.
     if (is_lqp_column_reference(predicate_node->value())) {
       const auto column_reference = boost::get<LQPColumnReference>(predicate_node->value());
-      if (column_reference_to_value_map.find(column_reference) != column_reference_to_value_map.end()) {
+      auto iter = column_reference_to_value_map.find(column_reference);
+      if (iter != column_reference_to_value_map.end()) {
         // We replace the LQPColumnReference with the actual result of the Expression it was referring to.
         auto new_predicate_node =
-            std::make_shared<PredicateNode>(predicate_node->column_reference(), predicate_node->predicate_condition(),
-                                            column_reference_to_value_map.at(column_reference));
+            std::make_shared<PredicateNode>(predicate_node->column_reference(), predicate_node->predicate_condition(), iter->second, predicate_node->value2());
         predicate_node->replace_with(new_predicate_node);
         tree_changed = true;
       }
@@ -99,20 +99,18 @@ bool ConstantCalculationRule::_replace_column_references_in_tree(
   } else if (node->type() == LQPNodeType::Projection) {
     auto projection_node = std::static_pointer_cast<ProjectionNode>(node);
     auto new_column_expressions = std::vector<std::shared_ptr<LQPExpression>>();
-    auto expression_replaced = false;
+    auto projection_node_changed = false;
 
     for (const auto expression : projection_node->column_expressions()) {
-      if (expression->type() == ExpressionType::Column &&
-          column_reference_to_value_map.find(expression->column_reference()) != column_reference_to_value_map.end()) {
-        new_column_expressions.push_back(
-            LQPExpression::create_literal(column_reference_to_value_map.at(expression->column_reference())));
-        expression_replaced = true;
-      } else {
-        new_column_expressions.push_back(expression);
+      auto new_expression = _replace_column_reference_in_expression(expression, column_reference_to_value_map);
+      new_column_expressions.push_back(new_expression);
+
+      if (new_expression.get() != expression.get()) {
+        projection_node_changed = true;
       }
     }
 
-    if (expression_replaced) {
+    if (projection_node_changed) {
       auto new_projection_node = std::make_shared<ProjectionNode>(new_column_expressions);
       projection_node->replace_with(new_projection_node);
       tree_changed = true;
@@ -120,6 +118,37 @@ bool ConstantCalculationRule::_replace_column_references_in_tree(
   }
 
   return tree_changed;
+}
+
+std::shared_ptr<LQPExpression> ConstantCalculationRule::_replace_column_reference_in_expression(const std::shared_ptr<LQPExpression>& expression, const std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map) {
+  if (expression->type() == ExpressionType::Column) {
+    auto iter = column_reference_to_value_map.find(expression->column_reference());
+    if (iter == column_reference_to_value_map.end()) {
+      return expression;
+    }
+
+    return LQPExpression::create_literal(iter->second);
+  }
+
+  if (expression->is_unary_operator()) {
+    auto input = _replace_column_reference_in_expression(expression->left_child(), column_reference_to_value_map);
+    return LQPExpression::create_unary_operator(expression->type(), input, expression->alias());
+  }
+
+  if (expression->is_binary_operator()) {
+    auto left_child = expression->left_child();
+    auto right_child = expression->right_child();
+    auto new_left_child = _replace_column_reference_in_expression(left_child, column_reference_to_value_map);
+    auto new_right_child = _replace_column_reference_in_expression(right_child, column_reference_to_value_map);
+
+    if (left_child == new_left_child && right_child == new_right_child) {
+      return expression;
+    }
+
+    return LQPExpression::create_binary_operator(expression->type(), new_left_child, new_right_child, expression->alias());
+  }
+
+  return expression;
 }
 
 bool ConstantCalculationRule::_remove_columns_from_projections(
