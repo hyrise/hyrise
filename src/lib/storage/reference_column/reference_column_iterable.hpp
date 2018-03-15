@@ -70,7 +70,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
           _chunk_offset{chunk_offset} {}
 
     // End Iterator
-    Iterator(const ChunkOffset chunk_offset) : Iterator(ColumnID{0u}, nullptr, nullptr, chunk_offset) {}
+    explicit Iterator(const ChunkOffset chunk_offset) : Iterator(ColumnID{0u}, nullptr, nullptr, chunk_offset) {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -80,13 +80,13 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
     bool equal(const Iterator& other) const { return _chunk_offset == other._chunk_offset; }
 
     ColumnIteratorValue<T> dereference() const {
-      const auto row_id = (*_pos_list)[_chunk_offset];  // NOLINT
+      const auto row_id = (*_pos_list)[_chunk_offset];
 
       if (row_id.is_null()) {
         return {T{}, true, _chunk_offset};
       }
 
-      const auto [chunk_id, chunk_offset] = row_id;
+      const auto [chunk_id, chunk_offset] = row_id;  // NOLINT
 
       const auto column = _table->get_chunk(chunk_id)->get_column(_column_id);
       const auto variant_value = (*column)[chunk_offset];
