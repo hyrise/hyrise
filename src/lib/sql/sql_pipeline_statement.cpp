@@ -234,8 +234,8 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
     _prepared_statements->set(prepared_statement->name, *_query_plan);
   }
 
-  // Cache newly created plan for the according sql statement (only if not already cached or is not data definition)
-  if (!_query_plan_cache_hit && !statement->isDataDefinitionStatement()) {
+  // Cache newly created plan for the according sql statement (only if not already cached)
+  if (!_query_plan_cache_hit) {
     SQLQueryCache<SQLQueryPlan>::get().set(_sql_string, *_query_plan);
   }
 
