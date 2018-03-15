@@ -138,9 +138,9 @@ INSERT INTO mixed_null SELECT a, b, c, d FROM mixed WHERE a = 'c' AND b > 15; IN
 
 
 -- VIEWS disabled because of #367
--- CREATE VIEW count_view1 AS SELECT a, COUNT(DISTINCT b) FROM groupby_int_1gb_1agg_null GROUP BY a; SELECT * FROM count_view;
--- CREATE VIEW count_view2 AS SELECT a, COUNT(DISTINCT b) FROM groupby_int_1gb_1agg_null GROUP BY a; SELECT * FROM count_view WHERE a > 10;
--- CREATE VIEW count_view3 (foo, bar) AS SELECT a, COUNT(DISTINCT b) FROM groupby_int_1gb_1agg_null GROUP BY a; SELECT * FROM count_view WHERE a > 10;
+CREATE VIEW count_view1 AS SELECT int_a, COUNT(DISTINCT int_b) FROM int_int_int GROUP BY int_a; SELECT * FROM count_view1;
+CREATE VIEW count_view2 AS SELECT int_a, COUNT(DISTINCT int_b) FROM int_int_int GROUP BY int_a; SELECT * FROM count_view2 WHERE int_a > 10;
+CREATE VIEW count_view3 (foo, bar) AS SELECT int_a, COUNT(DISTINCT int_b) FROM int_int_int GROUP BY int_a; SELECT * FROM count_view3 WHERE foo > 10;
 
 -- NULL Semantics
 SELECT * FROM mixed WHERE b IS NOT NULL;
