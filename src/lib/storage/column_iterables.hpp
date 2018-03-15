@@ -119,7 +119,7 @@ class ColumnIterable {
     for_each([&](const auto& value) { container.push_back(value.is_null()); });
   }
 
-  /** @} */
+  /**@}*/
 
  private:
   const Derived& _self() const { return static_cast<const Derived&>(*this); }

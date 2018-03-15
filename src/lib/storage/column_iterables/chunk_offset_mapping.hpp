@@ -27,4 +27,11 @@ using ChunkOffsetsByChunkID = std::unordered_map<ChunkID, ChunkOffsetsList>;
 
 ChunkOffsetsByChunkID split_pos_list_by_chunk_id(const PosList& pos_list);
 
+/**
+ * @brief Converts a PosList into a ChunkOffsetsList
+ *
+ * Returns std::nullopt if the position list references more than one chunk or result would be empty
+ */
+std::optional<std::pair<ChunkID, ChunkOffsetsList>> to_chunk_id_and_chunk_offsets_list(const PosList& pos_list);
+
 }  // namespace opossum
