@@ -12,6 +12,8 @@ namespace opossum {
  * @brief Materializes a table
  *
  * Forwards value columns. Turns all other columns into value columns.
+ *
+ * The operator does not copy the MVCC columns of the input table.
  */
 class Materialize : public AbstractReadOnlyOperator {
  public:
