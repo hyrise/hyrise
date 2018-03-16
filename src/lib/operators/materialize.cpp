@@ -36,7 +36,6 @@ std::shared_ptr<const Table> Materialize::_on_execute() {
 
   for (ChunkID chunk_id{0u}; chunk_id < in_table->chunk_count(); ++chunk_id) {
     auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
-
       const auto in_chunk = in_table->get_chunk(chunk_id);
 
       // The new chunk is allocated on the same node

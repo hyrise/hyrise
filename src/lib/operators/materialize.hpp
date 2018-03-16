@@ -17,7 +17,7 @@ namespace opossum {
  */
 class Materialize : public AbstractReadOnlyOperator {
  public:
-  Materialize(const std::shared_ptr<const AbstractOperator> in);
+  explicit Materialize(const std::shared_ptr<const AbstractOperator> in);
 
   const std::string name() const final;
   const std::string description(DescriptionMode description_mode) const final;
