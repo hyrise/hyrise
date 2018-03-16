@@ -253,6 +253,7 @@ set(
     sql/sql_translator.cpp
     sql/sql_translator.hpp
     storage/base_column_encoder.hpp
+    storage/base_column.cpp
     storage/base_column.hpp
     storage/base_dictionary_column.cpp
     storage/base_dictionary_column.hpp
@@ -285,6 +286,10 @@ set(
     storage/dictionary_column/dictionary_encoder.hpp
     storage/dictionary_column.hpp
     storage/encoding_type.hpp
+    storage/frame_of_reference_column.hpp
+    storage/frame_of_reference_column.cpp
+    storage/frame_of_reference/frame_of_reference_encoder.hpp
+    storage/frame_of_reference/frame_of_reference_iterable.hpp
     storage/mvcc_columns.cpp
     storage/mvcc_columns.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp

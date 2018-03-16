@@ -39,7 +39,8 @@ struct TwoColumnSelectivityResult;
  */
 class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStatistics> {
  public:
-  explicit BaseColumnStatistics(const float non_null_value_ratio = 1.f) : _non_null_value_ratio(non_null_value_ratio) {}
+  explicit BaseColumnStatistics(const DataType data_type, const float non_null_value_ratio = 1.f)
+      : _data_type(data_type), _non_null_value_ratio(non_null_value_ratio) {}
   virtual ~BaseColumnStatistics() = default;
 
   /**
@@ -73,6 +74,8 @@ class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStati
       const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
       const std::optional<AllTypeVariant>& value2 = std::nullopt) = 0;
 
+  DataType data_type() const;
+
   /**
    * Gets distinct count of column.
    * See _distinct_count declaration in column_statistics.hpp for explanation of float type.
@@ -95,6 +98,8 @@ class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStati
   float null_value_ratio() const;
 
  protected:
+  const DataType _data_type;
+
   // Column statistics uses the non-null value ratio for calculation of selectivity.
   // Table statistics uses the null value ratio when calculating join statistics.
   float _non_null_value_ratio;
