@@ -22,10 +22,12 @@ class Materialize : public AbstractReadOnlyOperator {
   const std::string name() const final;
   const std::string description(DescriptionMode description_mode) const final;
 
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args = {}) const final;
-
  protected:
   std::shared_ptr<const Table> _on_execute() final;
+
+  std::shared_ptr<AbstractOperator> _on_recreate(
+      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& recreated_input_right) const final;
 };
 
 }  // namespace opossum
