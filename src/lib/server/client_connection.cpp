@@ -10,7 +10,7 @@ using opossum::then_operator::then;
 
 const auto ignore_sent_bytes = [](uint64_t sent_bytes) {};
 
-ClientConnection::ClientConnection(tcp::socket socket) : _socket(std::move(socket)) {
+ClientConnection::ClientConnection(boost::asio::ip::tcp::socket socket) : _socket(std::move(socket)) {
   _response_buffer.reserve(_max_response_size);
 }
 

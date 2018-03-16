@@ -5,8 +5,6 @@
 
 namespace opossum {
 
-using boost::asio::ip::tcp;
-
 class Server {
  public:
   Server(boost::asio::io_service& io_service, uint16_t port);
@@ -16,8 +14,8 @@ class Server {
   void start_session(boost::system::error_code error);
 
   boost::asio::io_service& _io_service;
-  tcp::acceptor _acceptor;
-  tcp::socket _socket;
+  boost::asio::ip::tcp::acceptor _acceptor;
+  boost::asio::ip::tcp::socket _socket;
 };
 
 }  // namespace opossum

@@ -14,8 +14,6 @@
 
 namespace opossum {
 
-using boost::asio::ip::tcp;
-
 template <typename TConnection, typename TTaskRunner>
 class ServerSessionImpl {
  public:

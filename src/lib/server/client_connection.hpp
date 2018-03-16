@@ -7,8 +7,6 @@
 
 namespace opossum {
 
-using boost::asio::ip::tcp;
-
 using ByteBuffer = std::vector<char>;
 struct InputPacket;
 struct OutputPacket;
@@ -28,7 +26,7 @@ struct ColumnDescription {
 // because the ASIO socket is hard to mock, so there are no tests for this class
 class ClientConnection {
  public:
-  explicit ClientConnection(tcp::socket socket);
+  explicit ClientConnection(boost::asio::ip::tcp::socket socket);
 
   boost::future<uint32_t> receive_startup_packet_header();
   boost::future<void> receive_startup_packet_body(uint32_t size);
@@ -58,7 +56,7 @@ class ClientConnection {
   boost::future<uint64_t> _send_bytes_async(std::shared_ptr<OutputPacket> packet, bool flush = false);
   boost::future<uint64_t> _flush_async();
 
-  tcp::socket _socket;
+  boost::asio::ip::tcp::socket _socket;
 
   // Max 2048 bytes per IP packet sent
   uint32_t _max_response_size = 2048;

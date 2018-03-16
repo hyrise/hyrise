@@ -13,7 +13,9 @@ namespace opossum {
 using opossum::then_operator::then;
 
 Server::Server(boost::asio::io_service& io_service, uint16_t port)
-    : _io_service(io_service), _acceptor(io_service, tcp::endpoint(tcp::v4(), port)), _socket(io_service) {
+    : _io_service(io_service),
+      _acceptor(io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
+      _socket(io_service) {
   accept_next_connection();
 }
 
