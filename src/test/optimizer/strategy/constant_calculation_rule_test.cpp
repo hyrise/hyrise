@@ -61,22 +61,28 @@ TEST_F(ConstantCalculationRuleTest, ResolveExpressionInPredicateTest) {
 }
 
 TEST_F(ConstantCalculationRuleTest, ResolveExpressionInProjectionTest) {
-  const auto query = "INSERT INTO table_a (a, b) SELECT 10, 0.5 FROM table_a;";
+  const auto query = "SELECT * FROM (SELECT 1 + 4, 6 AS a, b FROM table_a) AS foo WHERE a > 3";
   const auto result_node = compile_query(query);
 
   const auto resolved = StrategyBaseTest::apply_rule(_rule, result_node);
 
-  EXPECT_EQ(resolved->type(), LQPNodeType::Insert);
-  EXPECT_FALSE(resolved->right_input());
-
-  ASSERT_EQ(resolved->left_input()->type(), LQPNodeType::Projection);
-  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(resolved->left_input());
+  ASSERT_EQ(resolved->type(), LQPNodeType::Projection);
+  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(resolved);
   EXPECT_FALSE(projection_node->right_input());
-  EXPECT_EQ(projection_node->column_expressions().size(), 2u);
+  EXPECT_EQ(projection_node->column_expressions().size(), 3u);
   EXPECT_EQ(projection_node->column_expressions()[0]->type(), ExpressionType::Literal);
-  EXPECT_EQ(projection_node->column_expressions()[1]->type(), ExpressionType::Literal);
+  EXPECT_EQ(projection_node->column_expressions()[1]->type(), ExpressionType::Column);
+  EXPECT_EQ(projection_node->column_expressions()[2]->type(), ExpressionType::Column);
 
-  EXPECT_EQ(projection_node->left_input()->type(), LQPNodeType::StoredTable);
+  EXPECT_EQ(projection_node->left_input()->type(), LQPNodeType::Predicate);
+  ASSERT_EQ(projection_node->left_input()->left_input()->type(), LQPNodeType::Projection);
+  const auto projection_node_2 = std::dynamic_pointer_cast<ProjectionNode>(projection_node->left_input()->left_input());
+  EXPECT_FALSE(projection_node_2->right_input());
+  EXPECT_EQ(projection_node_2->column_expressions().size(), 2u);
+  EXPECT_EQ(projection_node_2->column_expressions()[0]->type(), ExpressionType::Literal);
+  EXPECT_EQ(projection_node_2->column_expressions()[1]->type(), ExpressionType::Column);
+
+  EXPECT_EQ(projection_node_2->left_input()->type(), LQPNodeType::StoredTable);
 }
 
 TEST_F(ConstantCalculationRuleTest, ResolveMultipleExpressionsTest) {
