@@ -9,7 +9,8 @@
 
 namespace opossum {
 
-DropView::DropView(const std::string& view_name) : _view_name(view_name) {}
+DropView::DropView(const std::string& view_name)
+    : AbstractReadOnlyOperator(OperatorType::DropView), _view_name(view_name) {}
 
 const std::string DropView::name() const { return "DropView"; }
 
