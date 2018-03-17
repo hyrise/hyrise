@@ -8,27 +8,36 @@
 
 #include "operators/materialize.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
-class MaterializeTest : public BaseTest {
- protected:
-  virtual void SetUp() {
-    _table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 3);
 
-    _table_wrapper = std::make_shared<TableWrapper>(_table);
-    _table_wrapper->execute();
-  }
+class OperatorsMaterializeTest : public BaseTest {};
 
-  std::shared_ptr<Table> _table;
-  std::shared_ptr<TableWrapper> _table_wrapper;
-};
+TEST_F(OperatorsMaterializeTest, MaterializeUncompressedTable) {
+  auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 3);
 
-TEST_F(MaterializeTest, MaterializeTable) {
-  auto materialize = std::make_shared<Materialize>(_table_wrapper);
+  auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->execute();
+
+  auto materialize = std::make_shared<Materialize>(table_wrapper);
   materialize->execute();
 
-  EXPECT_TABLE_EQ_ORDERED(materialize->get_output(), _table);
+  EXPECT_TABLE_EQ_ORDERED(materialize->get_output(), table);
+}
+
+TEST_F(OperatorsMaterializeTest, MaterializeCompressedTable) {
+  auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 3);
+  ChunkEncoder::encode_all_chunks(table, EncodingType::Dictionary);
+
+  auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->execute();
+
+  auto materialize = std::make_shared<Materialize>(table_wrapper);
+  materialize->execute();
+
+  EXPECT_TABLE_EQ_ORDERED(materialize->get_output(), table);
 }
 
 }  // namespace opossum
