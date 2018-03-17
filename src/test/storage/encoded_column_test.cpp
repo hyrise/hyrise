@@ -23,6 +23,7 @@ namespace opossum {
 
 class EncodedColumnTest : public BaseTestWithParam<ColumnEncodingSpec> {
  protected:
+  static constexpr auto min_value = 1;
   static constexpr auto max_value = 1'024;
 
  protected:
@@ -44,7 +45,7 @@ class EncodedColumnTest : public BaseTestWithParam<ColumnEncodingSpec> {
     auto values = pmr_concurrent_vector<int32_t>(row_count());
 
     std::default_random_engine engine{};
-    std::uniform_int_distribution<int32_t> dist{0u, max_value};
+    std::uniform_int_distribution<int32_t> dist{min_value, max_value};
 
     for (auto& elem : values) {
       elem = dist(engine);
@@ -58,7 +59,7 @@ class EncodedColumnTest : public BaseTestWithParam<ColumnEncodingSpec> {
     auto null_values = pmr_concurrent_vector<bool>(row_count());
 
     std::default_random_engine engine{};
-    std::uniform_int_distribution<int32_t> dist{0u, max_value};
+    std::uniform_int_distribution<int32_t> dist{min_value, max_value};
     std::bernoulli_distribution bernoulli_dist{0.3};
 
     for (auto i = 0u; i < row_count(); ++i) {

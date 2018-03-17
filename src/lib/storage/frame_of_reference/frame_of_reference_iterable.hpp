@@ -1,6 +1,7 @@
 #pragma once
 
 #include <type_traits>
+#include <iostream>
 
 #include <emmintrin.h>
 
@@ -33,7 +34,8 @@ class SimdIterator : public BaseColumnIterator<SimdIterator<OffsetValueIteratorT
         _null_value_it{null_value_begin},
         _offset_value_it{offset_value_begin},
         _offset_value_end{offset_value_end},
-        _chunk_offset{0u} {
+        _chunk_offset{0u},
+        _current_block_it{_current_block.cend()} {
     _decode_next_block();
   }
 
@@ -43,7 +45,19 @@ class SimdIterator : public BaseColumnIterator<SimdIterator<OffsetValueIteratorT
       : _null_value_it{null_value_end},
         _offset_value_it{offset_value_begin},
         _offset_value_end{offset_value_end},
-        _chunk_offset{0u} {}
+        _chunk_offset{0u},
+        _current_block_it{_current_block.cend()} {}
+
+  SimdIterator(const SimdIterator& other)
+      : _block_minimum_it{other._block_minimum_it},
+        _null_value_it{other._null_value_it},
+        _offset_value_it{other._offset_value_it},
+        _offset_value_end{other._offset_value_end},
+        _chunk_offset{other._chunk_offset},
+        _current_block{other._current_block},
+        _current_block_it{_current_block.cbegin()} {
+    _current_block_it += std::distance(other._current_block.cbegin(), other._current_block_it);
+  }
 
  private:
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -71,12 +85,9 @@ class SimdIterator : public BaseColumnIterator<SimdIterator<OffsetValueIteratorT
       *current_block_it = static_cast<ValueT>(*_offset_value_it);
     }
 
-    const auto curret_block_end = current_block_it;
-    const auto current_block_size = std::distance(_current_block.begin(), curret_block_end);
+    const auto current_block_end = current_block_it;
 
-    // Ceiling of integer division
-    // static const auto div_ceil = [](auto x, auto y) { return (x + y - 1u) / y; };
-
+    const auto current_block_size = std::distance(_current_block.begin(), current_block_end);
     static constexpr auto num_simd_width = 4u;
 
     auto minimum_reg = _mm_set1_epi32(*_block_minimum_it);
