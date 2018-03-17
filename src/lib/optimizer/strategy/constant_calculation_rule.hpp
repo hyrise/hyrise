@@ -31,7 +31,9 @@ class ConstantCalculationRule : public AbstractRule {
   bool _replace_column_references_in_tree(
       const std::shared_ptr<AbstractLQPNode>& node,
       const std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map);
-  std::shared_ptr<LQPExpression> _replace_column_references_in_expression(const std::shared_ptr<LQPExpression>& expression, const std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map);
+  std::shared_ptr<LQPExpression> _replace_column_references_in_expression(
+      const std::shared_ptr<LQPExpression>& expression,
+      const std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map);
   bool _remove_columns_from_projections(
       const std::shared_ptr<AbstractLQPNode>& node,
       const std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map);

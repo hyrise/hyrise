@@ -95,7 +95,8 @@ bool ConstantCalculationRule::_replace_column_references_in_tree(
       if (iter != column_reference_to_value_map.end()) {
         // We replace the LQPColumnReference with the actual result of the Expression it was referring to.
         auto new_predicate_node =
-            std::make_shared<PredicateNode>(predicate_node->column_reference(), predicate_node->predicate_condition(), iter->second, predicate_node->value2());
+            std::make_shared<PredicateNode>(predicate_node->column_reference(), predicate_node->predicate_condition(),
+                                            iter->second, predicate_node->value2());
         predicate_node->replace_with(new_predicate_node);
         tree_changed = true;
       }
@@ -124,7 +125,9 @@ bool ConstantCalculationRule::_replace_column_references_in_tree(
   return tree_changed;
 }
 
-std::shared_ptr<LQPExpression> ConstantCalculationRule::_replace_column_references_in_expression(const std::shared_ptr<LQPExpression>& expression, const std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map) {
+std::shared_ptr<LQPExpression> ConstantCalculationRule::_replace_column_references_in_expression(
+    const std::shared_ptr<LQPExpression>& expression,
+    const std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map) {
   if (expression->type() == ExpressionType::Column) {
     auto iter = column_reference_to_value_map.find(expression->column_reference());
     if (iter == column_reference_to_value_map.end()) {
@@ -149,7 +152,8 @@ std::shared_ptr<LQPExpression> ConstantCalculationRule::_replace_column_referenc
       return expression;
     }
 
-    return LQPExpression::create_binary_operator(expression->type(), new_left_child, new_right_child, expression->alias());
+    return LQPExpression::create_binary_operator(expression->type(), new_left_child, new_right_child,
+                                                 expression->alias());
   }
 
   return expression;
