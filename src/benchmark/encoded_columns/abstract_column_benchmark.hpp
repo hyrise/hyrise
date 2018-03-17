@@ -68,12 +68,10 @@ class AbstractColumnBenchmark {
   }
 
   const BenchmarkState benchmark_table_scan(const std::shared_ptr<BaseColumn>& base_column, const int32_t select_eq) {
-    auto chunk = std::make_shared<Chunk>();
-    chunk->add_column(base_column);
+    auto column_definitions = TableColumnDefinitions{{"a", DataType::Int}};
+    auto table = std::make_shared<Table>(column_definitions, TableType::Data, base_column->size());
 
-    auto table = std::make_shared<Table>();
-    table->add_column_definition("a", DataType::Int);
-    table->emplace_chunk(chunk);
+    table->append_chunk({base_column});
 
     auto wrapped_table = std::make_shared<TableWrapper>(table);
     wrapped_table->execute();

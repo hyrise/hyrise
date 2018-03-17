@@ -12,7 +12,6 @@ inline std::string to_string(EncodingType encoding_type) {
   static const auto string_for_type = std::map<EncodingType, std::string>{
     { EncodingType::Unencoded, "Unencoded" },
     { EncodingType::Dictionary, "Dictionary" },
-    { EncodingType::DeprecatedDictionary, "Dictionary (Deprecated)" },
     { EncodingType::RunLength, "Run Length" },
     { EncodingType::FrameOfReference, "FOR" }};
 

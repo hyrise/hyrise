@@ -77,26 +77,18 @@ std::shared_ptr<PosList> AbstractColumnBenchmark::_generate_pos_list(ChunkOffset
 std::shared_ptr<const AbstractOperator> AbstractColumnBenchmark::_get_filtered_table(
     const std::shared_ptr<BaseColumn>& base_column, const float point_access_factor) {
   auto referenced_table = [&]() {
-    auto chunk = std::make_shared<Chunk>();
-    chunk->add_column(base_column);
-
-    auto table = std::make_shared<Table>();
-    table->add_column_definition("a", DataType::Int);
-    table->emplace_chunk(chunk);
+    auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int}}, TableType::Data, base_column->size());
+    table->append_chunk({base_column});
 
     return table;
   }();
 
   auto wrapped_table = [&]() {
     auto pos_list = _generate_pos_list(base_column->size(), point_access_factor);
-    auto ref_column = std::make_shared<ReferenceColumn>(referenced_table, ColumnID{0u}, pos_list, PosListType::SingleChunk);
+    auto ref_column = std::make_shared<ReferenceColumn>(referenced_table, ColumnID{0u}, pos_list);
 
-    auto chunk = std::make_shared<Chunk>();
-    chunk->add_column(ref_column);
-
-    auto table = std::make_shared<Table>();
-    table->add_column_definition("a", DataType::Int);
-    table->emplace_chunk(chunk);
+    auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int}}, TableType::References, base_column->size());
+    table->append_chunk({ref_column});
 
     auto wrapped_table = std::make_shared<TableWrapper>(table);
     wrapped_table->execute();
