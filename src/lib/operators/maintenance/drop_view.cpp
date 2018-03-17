@@ -17,8 +17,7 @@ const std::string DropView::name() const { return "DropView"; }
 std::shared_ptr<AbstractOperator> DropView::_on_recreate(
     const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
     const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  Fail("This operator cannot be recreated");
-  // ... because it makes no sense to do so.
+  return std::make_shared<DropView>(_view_name);
 }
 
 std::shared_ptr<const Table> DropView::_on_execute() {
