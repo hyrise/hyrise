@@ -27,7 +27,7 @@ class ConstantCalculationRule : public AbstractRule {
 
  private:
   void _calculate_expressions_in_lqp(const std::shared_ptr<AbstractLQPNode>& node,
-                                      std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map);
+                                     std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map);
   bool _replace_column_references_in_lqp(
       const std::shared_ptr<AbstractLQPNode>& node,
       const std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map);
