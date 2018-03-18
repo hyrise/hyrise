@@ -173,7 +173,7 @@ bool ConstantCalculationRule::_remove_columns_from_projections(
 
   if (node->type() == LQPNodeType::Projection) {
     for (const auto& output_node : node->outputs()) {
-      // We only want to remove columns from Projections from which we know they are not referenced anymore
+      // Don't remove any columns if this is the result node
       if (output_node->type() == LQPNodeType::Root) {
         return tree_changed;
       }
