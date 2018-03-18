@@ -21,20 +21,20 @@ std::string ConstantCalculationRule::name() const { return "Constant Calculation
 
 bool ConstantCalculationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   auto column_reference_to_value_map = std::map<LQPColumnReference, AllTypeVariant>();
-  _calculate_expressions_in_tree(node, column_reference_to_value_map);
-  auto tree_changed = _replace_column_references_in_tree(node, column_reference_to_value_map);
-  tree_changed |= _remove_columns_from_projections(node, column_reference_to_value_map);
-  return tree_changed;
+  _calculate_expressions_in_lqp(node, column_reference_to_value_map);
+  auto lqp_changed = _replace_column_references_in_lqp(node, column_reference_to_value_map);
+  lqp_changed |= _remove_columns_from_projections(node, column_reference_to_value_map);
+  return lqp_changed;
 }
 
-void ConstantCalculationRule::_calculate_expressions_in_tree(
+void ConstantCalculationRule::_calculate_expressions_in_lqp(
     const std::shared_ptr<AbstractLQPNode>& node,
     std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map) {
   if (node->left_input()) {
-    _calculate_expressions_in_tree(node->left_input(), column_reference_to_value_map);
+    _calculate_expressions_in_lqp(node->left_input(), column_reference_to_value_map);
   }
   if (node->right_input()) {
-    _calculate_expressions_in_tree(node->right_input(), column_reference_to_value_map);
+    _calculate_expressions_in_lqp(node->right_input(), column_reference_to_value_map);
   }
 
   if (node->type() != LQPNodeType::Projection) {
@@ -72,16 +72,16 @@ void ConstantCalculationRule::_calculate_expressions_in_tree(
   }
 }
 
-bool ConstantCalculationRule::_replace_column_references_in_tree(
+bool ConstantCalculationRule::_replace_column_references_in_lqp(
     const std::shared_ptr<AbstractLQPNode>& node,
     const std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map) {
-  auto tree_changed = false;
+  auto lqp_changed = false;
 
   if (node->left_input()) {
-    tree_changed |= _replace_column_references_in_tree(node->left_input(), column_reference_to_value_map);
+    lqp_changed |= _replace_column_references_in_lqp(node->left_input(), column_reference_to_value_map);
   }
   if (node->right_input()) {
-    tree_changed |= _replace_column_references_in_tree(node->right_input(), column_reference_to_value_map);
+    lqp_changed |= _replace_column_references_in_lqp(node->right_input(), column_reference_to_value_map);
   }
 
   if (node->type() == LQPNodeType::Predicate) {
@@ -98,7 +98,7 @@ bool ConstantCalculationRule::_replace_column_references_in_tree(
             std::make_shared<PredicateNode>(predicate_node->column_reference(), predicate_node->predicate_condition(),
                                             iter->second, predicate_node->value2());
         predicate_node->replace_with(new_predicate_node);
-        tree_changed = true;
+        lqp_changed = true;
       }
     }
   } else if (node->type() == LQPNodeType::Projection) {
@@ -118,11 +118,11 @@ bool ConstantCalculationRule::_replace_column_references_in_tree(
     if (projection_node_changed) {
       auto new_projection_node = std::make_shared<ProjectionNode>(new_column_expressions);
       projection_node->replace_with(new_projection_node);
-      tree_changed = true;
+      lqp_changed = true;
     }
   }
 
-  return tree_changed;
+  return lqp_changed;
 }
 
 std::shared_ptr<LQPExpression> ConstantCalculationRule::_replace_column_references_in_expression(
@@ -162,20 +162,20 @@ std::shared_ptr<LQPExpression> ConstantCalculationRule::_replace_column_referenc
 bool ConstantCalculationRule::_remove_columns_from_projections(
     const std::shared_ptr<AbstractLQPNode>& node,
     const std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map) {
-  auto tree_changed = false;
+  auto lqp_changed = false;
 
   if (node->left_input()) {
-    tree_changed |= _remove_columns_from_projections(node->left_input(), column_reference_to_value_map);
+    lqp_changed |= _remove_columns_from_projections(node->left_input(), column_reference_to_value_map);
   }
   if (node->right_input()) {
-    tree_changed |= _remove_columns_from_projections(node->right_input(), column_reference_to_value_map);
+    lqp_changed |= _remove_columns_from_projections(node->right_input(), column_reference_to_value_map);
   }
 
   if (node->type() == LQPNodeType::Projection) {
     for (const auto& output_node : node->outputs()) {
       // Don't remove any columns if this is the result node
       if (output_node->type() == LQPNodeType::Root) {
-        return tree_changed;
+        return lqp_changed;
       }
     }
 
@@ -199,11 +199,11 @@ bool ConstantCalculationRule::_remove_columns_from_projections(
       } else {
         projection_node->remove_from_tree();
       }
-      tree_changed = true;
+      lqp_changed = true;
     }
   }
 
-  return tree_changed;
+  return lqp_changed;
 }
 
 std::optional<DataType> ConstantCalculationRule::_get_type_of_expression(
