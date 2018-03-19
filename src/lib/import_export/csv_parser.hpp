@@ -13,9 +13,10 @@ namespace opossum {
 class Table;
 class Chunk;
 
-/*
- * Creates a Table with values of the parsed csv file <filename> and the corresponding meta file
- * <filename>.meta
+/**
+ * Creates a Table with values of the parsed csv file <filename> and
+ * the corresponding meta file <filename>.meta
+ *
  * The files are parsed according to RFC 4180 if not otherwise specified. [https://tools.ietf.org/html/rfc4180]
  * For non-RFC 4180, all linebreaks within quoted strings are further escaped with an escape character.
  * For the structure of the meta csv file see export_csv.hpp
@@ -55,10 +56,11 @@ class CsvParser {
    * @param      csv_chunk  String_view on one chunk of the CSV.
    * @param      field_ends Positions of the field ends of the given \p csv_chunk.
    * @param      table      Empty table created by _process_meta_file.
-   * @param[out] chunk      Empty chunk, to be filled with fields found in \p csv_chunk.
+   * @param[out] columns    The columns of the chunk, to be populated with data
+   * @returns               The number of rows in the chunk
    */
-  void _parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends, const Table& table,
-                         const std::shared_ptr<Chunk>& chunk);
+  size_t _parse_into_chunk(std::string_view csv_chunk, const std::vector<size_t>& field_ends, const Table& table,
+                           ChunkColumns& columns);
 
   /*
    * @param field The field that needs to be modified to be RFC 4180 compliant.

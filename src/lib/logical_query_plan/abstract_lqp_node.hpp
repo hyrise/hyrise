@@ -131,6 +131,11 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
   std::shared_ptr<AbstractLQPNode> input(LQPInputSide side) const;
 
+  /**
+   * @returns the number of inputs
+   */
+  size_t input_count() const;
+
   void set_input(LQPInputSide side, const std::shared_ptr<AbstractLQPNode>& input);
   // @}
 

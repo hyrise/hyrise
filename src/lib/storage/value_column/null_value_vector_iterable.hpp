@@ -73,9 +73,6 @@ class NullValueVectorIterable : public PointAccessibleColumnIterable<NullValueVe
     ColumnIteratorNullValue dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET)
-        return ColumnIteratorNullValue{true, chunk_offsets.into_referencing};
-
       return ColumnIteratorNullValue{_null_values[chunk_offsets.into_referenced], chunk_offsets.into_referencing};
     }
 

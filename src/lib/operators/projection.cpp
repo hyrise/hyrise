@@ -11,6 +11,10 @@
 #include "constant_mappings.hpp"
 #include "operators/pqp_expression.hpp"
 #include "resolve_type.hpp"
+
+#include "scheduler/current_scheduler.hpp"
+#include "sql/sql_query_plan.hpp"
+
 #include "storage/create_iterable_from_column.hpp"
 #include "storage/materialize.hpp"
 #include "storage/reference_column.hpp"
@@ -19,7 +23,7 @@
 namespace opossum {
 
 Projection::Projection(const std::shared_ptr<const AbstractOperator> in, const ColumnExpressions& column_expressions)
-    : AbstractReadOnlyOperator(in), _column_expressions(column_expressions) {}
+    : AbstractReadOnlyOperator(OperatorType::Projection, in), _column_expressions(column_expressions) {}
 
 const std::string Projection::name() const { return "Projection"; }
 
@@ -37,47 +41,69 @@ const std::string Projection::description(DescriptionMode description_mode) cons
 
 const Projection::ColumnExpressions& Projection::column_expressions() const { return _column_expressions; }
 
-std::shared_ptr<AbstractOperator> Projection::recreate(const std::vector<AllParameterVariant>& args) const {
+std::shared_ptr<AbstractOperator> Projection::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
   ColumnExpressions new_column_expressions;
 
   for (const auto& column_expression : _column_expressions) {
+    std::shared_ptr<PQPExpression> new_column_expression = column_expression;
+
     if (column_expression->type() == ExpressionType::Placeholder) {
       auto value_placeholder = column_expression->value_placeholder();
 
       if (value_placeholder.index() < args.size()) {
         const auto& parameter_variant = args[value_placeholder.index()];
         auto value = boost::get<AllTypeVariant>(parameter_variant);
-        new_column_expressions.emplace_back(column_expression->set_placeholder_value(value));
+        new_column_expression = column_expression->copy_with_placeholder_value(value);
       }
-    } else {
-      new_column_expressions.emplace_back(column_expression);
+    } else if (column_expression->type() == ExpressionType::Subselect) {
+      const auto new_subselect_operator = column_expression->subselect_operator()->recreate(args);
+      new_column_expression = PQPExpression::create_subselect(new_subselect_operator, column_expression->alias());
     }
+
+    new_column_expressions.push_back(new_column_expression);
   }
 
-  return std::make_shared<Projection>(_input_left->recreate(args), new_column_expressions);
+  return std::make_shared<Projection>(recreated_input_left, new_column_expressions);
 }
 
 template <typename T>
-void Projection::_create_column(boost::hana::basic_type<T> type, const std::shared_ptr<Chunk>& chunk,
-                                const ChunkID chunk_id, const std::shared_ptr<PQPExpression>& expression,
-                                std::shared_ptr<const Table> input_table_left, bool reuse_column_from_input) {
+std::shared_ptr<BaseColumn> Projection::_create_column(boost::hana::basic_type<T> type, const ChunkID chunk_id,
+                                                       const std::shared_ptr<PQPExpression>& expression,
+                                                       std::shared_ptr<const Table> input_table_left,
+                                                       bool reuse_column_from_input) {
   // check whether term is a just a simple column and bypass this column
   if (reuse_column_from_input) {
     // we have to use get_mutable_column here because we cannot add a const column to the chunk
-    auto bypassed_column = input_table_left->get_chunk(chunk_id)->get_mutable_column(expression->column_id());
-    return chunk->add_column(bypassed_column);
+    return input_table_left->get_chunk(chunk_id)->get_mutable_column(expression->column_id());
   }
-
-  std::shared_ptr<BaseColumn> column;
 
   if (expression->is_null_literal()) {
     // fill a nullable column with NULLs
     auto row_count = input_table_left->get_chunk(chunk_id)->size();
     auto null_values = pmr_concurrent_vector<bool>(row_count, true);
-    // Explicitly pass T{} because in some cases it won't initialize otherwise
+    // explicitly pass T{} because in some cases it won't initialize otherwise
     auto values = pmr_concurrent_vector<T>(row_count, T{});
 
-    column = std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
+    return std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
+  } else if (expression->type() == ExpressionType::Subselect) {
+    // since we are only extracting one value from the subselect
+    // table, using Table::get_value is not a performance issue
+    PerformanceWarningDisabler performance_warning_disabler;
+
+    // the subquery result table can only contain exactly one column with one row
+    // since we checked for this at subquery execution time we can make some assumptions here
+    const auto subselect_table = expression->subselect_table();
+    const auto subselect_value = subselect_table->get_value<T>(ColumnID(0), 0u);
+
+    auto row_count = input_table_left->get_chunk(chunk_id)->size();
+
+    // materialize the result of the subquery for every row in the input table
+    auto null_values = pmr_concurrent_vector<bool>(row_count, false);
+    auto values = pmr_concurrent_vector<T>(row_count, subselect_value);
+
+    return std::make_shared<ValueColumn<T>>(std::move(values), std::move(null_values));
   } else {
     // fill a value column with the specified expression
     auto values = _evaluate_expression<T>(expression, input_table_left, chunk_id);
@@ -92,58 +118,92 @@ void Projection::_create_column(boost::hana::basic_type<T> type, const std::shar
       null_values.push_back(value.first);
     }
 
-    column = std::make_shared<ValueColumn<T>>(std::move(non_null_values), std::move(null_values));
+    return std::make_shared<ValueColumn<T>>(std::move(non_null_values), std::move(null_values));
   }
-
-  chunk->add_column(column);
 }
 
 std::shared_ptr<const Table> Projection::_on_execute() {
-  auto output = std::make_shared<Table>();
-  auto reuse_column_from_input = true;
+  auto reuse_columns_from_input = true;
 
-  // Prepare terms and output table for each column to project
+  /**
+   * Determine the TableColumnDefinitions and create empty output table from them
+   */
+  TableColumnDefinitions column_definitions;
   for (const auto& column_expression : _column_expressions) {
-    std::string name;
+    TableColumnDefinition column_definition;
 
+    // For subselects, we need to execute the subquery in order to use the result table later
+    if (column_expression->is_subselect() && !column_expression->has_subselect_table()) {
+      SQLQueryPlan query_plan;
+      query_plan.add_tree_by_root(column_expression->subselect_operator());
+
+      auto transaction_context = this->transaction_context();
+      if (transaction_context) {
+        query_plan.set_transaction_context(transaction_context);
+      }
+
+      const auto tasks = query_plan.create_tasks();
+      CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+
+      auto result_table = tasks.back()->get_operator()->get_output();
+      DebugAssert(result_table->column_count() == 1, "Subselect table must have exactly one column.");
+
+      Assert(result_table->row_count() == 1,
+             "Subselect returned " + std::to_string(result_table->row_count()) + " rows instead of one");
+
+      column_expression->set_subselect_table(result_table);
+    }
+
+    // Determine column name
     if (column_expression->alias()) {
-      name = *column_expression->alias();
+      column_definition.name = *column_expression->alias();
     } else if (column_expression->type() == ExpressionType::Column) {
-      name = _input_table_left()->column_name(column_expression->column_id());
+      column_definition.name = input_table_left()->column_name(column_expression->column_id());
     } else if (column_expression->is_arithmetic_operator() || column_expression->type() == ExpressionType::Literal) {
-      name = column_expression->to_string(_input_table_left()->column_names());
+      column_definition.name = column_expression->to_string(input_table_left()->column_names());
+    } else if (column_expression->is_subselect()) {
+      column_definition.name = column_expression->subselect_table()->column_names()[0];
     } else {
       Fail("Expression type is not supported.");
     }
 
     if (column_expression->type() != ExpressionType::Column) {
-      reuse_column_from_input = false;
+      reuse_columns_from_input = false;
     }
 
-    const auto type = _get_type_of_expression(column_expression, _input_table_left());
+    const auto type = _get_type_of_expression(column_expression, input_table_left());
     if (type == DataType::Null) {
       // in case of a NULL literal, simply add a nullable int column
-      output->add_column_definition(name, DataType::Int, true);
+      column_definition.data_type = DataType::Int;
+      column_definition.nullable = true;
     } else {
-      output->add_column_definition(name, type);
+      column_definition.data_type = type;
     }
+
+    column_definitions.emplace_back(column_definition);
   }
 
-  for (ChunkID chunk_id{0}; chunk_id < _input_table_left()->chunk_count(); ++chunk_id) {
-    // fill the new table
-    auto chunk_out = std::make_shared<Chunk>();
+  const auto table_type = reuse_columns_from_input ? input_table_left()->type() : TableType::Data;
+  auto output_table = std::make_shared<Table>(column_definitions, table_type, input_table_left()->max_chunk_size());
+
+  /**
+   * Perform the projection
+   */
+  for (ChunkID chunk_id{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
+    ChunkColumns output_columns;
 
     for (uint16_t expression_index = 0u; expression_index < _column_expressions.size(); ++expression_index) {
-      resolve_data_type(output->column_type(ColumnID{expression_index}), [&](auto type) {
-        _create_column(type, chunk_out, chunk_id, _column_expressions[expression_index], _input_table_left(),
-                       reuse_column_from_input);
+      resolve_data_type(output_table->column_data_type(ColumnID{expression_index}), [&](auto type) {
+        const auto column = _create_column(type, chunk_id, _column_expressions[expression_index], input_table_left(),
+                                           reuse_columns_from_input);
+        output_columns.push_back(column);
       });
     }
 
-    output->emplace_chunk(std::move(chunk_out));
+    output_table->append_chunk(output_columns);
   }
 
-  return output;
+  return output_table;
 }
 
 DataType Projection::_get_type_of_expression(const std::shared_ptr<PQPExpression>& expression,
@@ -151,8 +211,14 @@ DataType Projection::_get_type_of_expression(const std::shared_ptr<PQPExpression
   if (expression->type() == ExpressionType::Literal || expression->type() == ExpressionType::Placeholder) {
     return data_type_from_all_type_variant(expression->value());
   }
+  if (expression->type() == ExpressionType::Placeholder) {
+    return data_type_from_all_type_variant(expression->value());
+  }
   if (expression->type() == ExpressionType::Column) {
-    return table->column_type(expression->column_id());
+    return table->column_data_type(expression->column_id());
+  }
+  if (expression->type() == ExpressionType::Subselect) {
+    return expression->subselect_table()->column_data_type(ColumnID(0));
   }
 
   Assert(expression->is_arithmetic_operator(),

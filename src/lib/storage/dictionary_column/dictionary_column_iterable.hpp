@@ -98,9 +98,6 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
     ColumnIteratorValue<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET)
-        return ColumnIteratorValue<T>{T{}, true, chunk_offsets.into_referencing};
-
       const auto value_id = _attribute_decoder.get(chunk_offsets.into_referenced);
       const auto is_null = (value_id == _null_value_id);
 

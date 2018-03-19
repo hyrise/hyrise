@@ -6,7 +6,6 @@
 
 #include "storage/chunk.hpp"
 #include "storage/column_iterables/chunk_offset_mapping.hpp"
-#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/table.hpp"
@@ -16,9 +15,8 @@ namespace opossum {
 
 BaseSingleColumnTableScanImpl::BaseSingleColumnTableScanImpl(std::shared_ptr<const Table> in_table,
                                                              const ColumnID left_column_id,
-                                                             const PredicateCondition predicate_condition,
-                                                             const bool skip_null_row_ids)
-    : BaseTableScanImpl{in_table, left_column_id, predicate_condition}, _skip_null_row_ids{skip_null_row_ids} {}
+                                                             const PredicateCondition predicate_condition)
+    : BaseTableScanImpl{in_table, left_column_id, predicate_condition} {}
 
 PosList BaseSingleColumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
   const auto chunk = _in_table->get_chunk(chunk_id);
@@ -38,7 +36,7 @@ void BaseSingleColumnTableScanImpl::handle_column(const ReferenceColumn& left_co
   const ChunkID chunk_id = context->_chunk_id;
   auto& matches_out = context->_matches_out;
 
-  auto chunk_offsets_by_chunk_id = split_pos_list_by_chunk_id(*left_column.pos_list(), _skip_null_row_ids);
+  auto chunk_offsets_by_chunk_id = split_pos_list_by_chunk_id(*left_column.pos_list());
 
   // Visit each referenced column
   for (auto& pair : chunk_offsets_by_chunk_id) {

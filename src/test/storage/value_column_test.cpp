@@ -69,9 +69,9 @@ TEST_F(StorageValueColumnTest, AppendNullValueWhenNotNullable) {
 }
 
 TEST_F(StorageValueColumnTest, AppendNullValueWhenNullable) {
-  vc_int = ValueColumn<int>{true};
-  vc_str = ValueColumn<std::string>{true};
-  vc_double = ValueColumn<double>{true};
+  auto vc_int = ValueColumn<int>{true};
+  auto vc_str = ValueColumn<std::string>{true};
+  auto vc_double = ValueColumn<double>{true};
 
   EXPECT_TRUE(vc_int.is_nullable());
   EXPECT_TRUE(vc_str.is_nullable());
@@ -83,9 +83,9 @@ TEST_F(StorageValueColumnTest, AppendNullValueWhenNullable) {
 }
 
 TEST_F(StorageValueColumnTest, ArraySubscriptOperatorReturnsNullValue) {
-  vc_int = ValueColumn<int>{true};
-  vc_str = ValueColumn<std::string>{true};
-  vc_double = ValueColumn<double>{true};
+  auto vc_int = ValueColumn<int>{true};
+  auto vc_str = ValueColumn<std::string>{true};
+  auto vc_double = ValueColumn<double>{true};
 
   vc_int.append(NULL_VALUE);
   vc_str.append(NULL_VALUE);

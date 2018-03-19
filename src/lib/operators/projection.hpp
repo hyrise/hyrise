@@ -12,7 +12,6 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "storage/chunk.hpp"
-#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "types.hpp"
 
@@ -22,8 +21,6 @@ class PQPExpression;
 
 /**
  * Operator to select a subset of the set of all columns found in the table
- *
- * Note: Projection does not support null values at the moment
  */
 class Projection : public AbstractReadOnlyOperator {
  public:
@@ -36,8 +33,6 @@ class Projection : public AbstractReadOnlyOperator {
 
   const ColumnExpressions& column_expressions() const;
 
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const override;
-
   /**
    * The dummy table is used for literal projections that have no input table.
    * This was introduce to allow queries like INSERT INTO tbl VALUES (1, 2, 3);
@@ -49,8 +44,7 @@ class Projection : public AbstractReadOnlyOperator {
    */
   class DummyTable : public Table {
    public:
-    DummyTable() : Table(Chunk::MAX_SIZE) {
-      add_column("dummy", DataType::Int);
+    DummyTable() : Table(TableColumnDefinitions{{"dummy", DataType::Int}}, TableType::Data) {
       append(std::vector<AllTypeVariant>{0});
     }
   };
@@ -61,9 +55,10 @@ class Projection : public AbstractReadOnlyOperator {
   ColumnExpressions _column_expressions;
 
   template <typename T>
-  static void _create_column(boost::hana::basic_type<T> type, const std::shared_ptr<Chunk>& chunk,
-                             const ChunkID chunk_id, const std::shared_ptr<PQPExpression>& expression,
-                             std::shared_ptr<const Table> input_table_left, bool reuse_column_from_input);
+  static std::shared_ptr<BaseColumn> _create_column(boost::hana::basic_type<T> type, const ChunkID chunk_id,
+                                                    const std::shared_ptr<PQPExpression>& expression,
+                                                    std::shared_ptr<const Table> input_table_left,
+                                                    bool reuse_column_from_input);
 
   static DataType _get_type_of_expression(const std::shared_ptr<PQPExpression>& expression,
                                           const std::shared_ptr<const Table>& table);
@@ -78,6 +73,10 @@ class Projection : public AbstractReadOnlyOperator {
       const ChunkID chunk_id);
 
   std::shared_ptr<const Table> _on_execute() override;
+
+  std::shared_ptr<AbstractOperator> _on_recreate(
+      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
 };
 
 }  // namespace opossum

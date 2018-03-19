@@ -30,9 +30,14 @@ namespace opossum {
 class TableStatisticsMock : public TableStatistics {
  public:
   // we don't need a shared_ptr<Table> for this mock, so just set a nullptr
-  TableStatisticsMock() : TableStatistics(std::make_shared<Table>()) { _row_count = 0; }
+  TableStatisticsMock() : TableStatistics(std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data)) {
+    _row_count = 0;
+  }
 
-  explicit TableStatisticsMock(float row_count) : TableStatistics(std::make_shared<Table>()) { _row_count = row_count; }
+  explicit TableStatisticsMock(float row_count)
+      : TableStatistics(std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data)) {
+    _row_count = row_count;
+  }
 
   std::shared_ptr<TableStatistics> predicate_statistics(const ColumnID column_id,
                                                         const PredicateCondition predicate_condition,
@@ -63,7 +68,7 @@ class PredicateReorderingTest : public StrategyBaseTest {
          std::make_shared<ColumnStatistics<int32_t>>(ColumnID{1}, 5, 50, 60),
          std::make_shared<ColumnStatistics<int32_t>>(ColumnID{2}, 2, 110, 1100)});
 
-    auto table_statistics = std::make_shared<TableStatistics>(100, column_statistics);
+    auto table_statistics = std::make_shared<TableStatistics>(TableType::Data, 100, column_statistics);
 
     _mock_node = MockNode::make(table_statistics);
 
@@ -259,8 +264,8 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
    * The mocked table has one column of int32_ts with the value range 0..100
    */
   auto column_statistics = std::make_shared<ColumnStatistics<int32_t>>(ColumnID{0}, 100.0f, 0.0f, 100.0f);
-  auto table_statistics =
-      std::make_shared<TableStatistics>(100, std::vector<std::shared_ptr<BaseColumnStatistics>>{column_statistics});
+  auto table_statistics = std::make_shared<TableStatistics>(
+      TableType::Data, 100, std::vector<std::shared_ptr<BaseColumnStatistics>>{column_statistics});
 
   auto table_0 = MockNode::make(table_statistics);
   auto table_1 = MockNode::make(table_statistics);
@@ -310,8 +315,8 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
    * The mocked table has one column of int32_ts with the value range 0..100
    */
   auto column_statistics = std::make_shared<ColumnStatistics<int32_t>>(ColumnID{0}, 100.0f, 0.0f, 100.0f);
-  auto table_statistics =
-      std::make_shared<TableStatistics>(100, std::vector<std::shared_ptr<BaseColumnStatistics>>{column_statistics});
+  auto table_statistics = std::make_shared<TableStatistics>(
+      TableType::Data, 100, std::vector<std::shared_ptr<BaseColumnStatistics>>{column_statistics});
 
   auto table_node = MockNode::make(table_statistics);
   auto union_node = UnionNode::make(UnionMode::Positions);

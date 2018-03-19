@@ -446,6 +446,66 @@ TEST_F(SQLTranslatorTest, Update) {
   EXPECT_LQP_EQ(lqp, result_node);
 }
 
+TEST_F(SQLTranslatorTest, WhereSubquery) {
+  const auto query = "SELECT * FROM table_a WHERE a < (SELECT MAX(a) FROM table_b);";
+  auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
+  const auto final_projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
+
+  EXPECT_EQ(final_projection_node->left_input()->type(), LQPNodeType::Projection);
+  const auto reduce_projection_node = std::dynamic_pointer_cast<ProjectionNode>(final_projection_node->left_input());
+  EXPECT_EQ(reduce_projection_node->output_column_references().size(),
+            final_projection_node->output_column_references().size());
+
+  EXPECT_EQ(reduce_projection_node->left_input()->type(), LQPNodeType::Predicate);
+  const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(reduce_projection_node->left_input());
+  EXPECT_EQ(predicate_node->predicate_condition(), PredicateCondition::LessThan);
+
+  EXPECT_EQ(predicate_node->left_input()->type(), LQPNodeType::Projection);
+  const auto expand_projection_node = std::dynamic_pointer_cast<ProjectionNode>(predicate_node->left_input());
+  EXPECT_EQ(expand_projection_node->output_column_references().size(), 3u);
+
+  const auto subselect_expression = expand_projection_node->column_expressions().back();
+  EXPECT_EQ(subselect_expression->type(), ExpressionType::Subselect);
+}
+
+TEST_F(SQLTranslatorTest, InSubquery) {
+  const auto query = "SELECT * FROM table_a WHERE a IN (SELECT a FROM table_b);";
+  auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
+  const auto final_projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
+
+  EXPECT_EQ(final_projection_node->left_input()->type(), LQPNodeType::Join);
+  const auto semi_join_node = std::dynamic_pointer_cast<JoinNode>(final_projection_node->left_input());
+  EXPECT_EQ(semi_join_node->join_mode(), JoinMode::Semi);
+
+  const auto table_a_node = semi_join_node->left_input();
+  ASSERT_STORED_TABLE_NODE(table_a_node, "table_a");
+
+  EXPECT_EQ(semi_join_node->right_input()->type(), LQPNodeType::Projection);
+
+  const auto table_b_node = semi_join_node->right_input()->left_input();
+  ASSERT_STORED_TABLE_NODE(table_b_node, "table_b");
+}
+
+TEST_F(SQLTranslatorTest, InSubquerySeveralColumns) {
+  const auto query = "SELECT * FROM table_a WHERE a IN (SELECT * FROM table_b);";
+  EXPECT_THROW(compile_query(query), std::runtime_error);
+}
+
+TEST_F(SQLTranslatorTest, SelectSubquery) {
+  const auto query = "SELECT a, (SELECT MAX(b) FROM table_b) FROM table_a;";
+  auto result_node = compile_query(query);
+
+  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
+  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
+
+  const auto subselect_expression = projection_node->column_expressions().back();
+  EXPECT_EQ(subselect_expression->type(), ExpressionType::Subselect);
+}
+
 TEST_F(SQLTranslatorTest, MixedAggregateAndGroupBySelectList) {
   /**
    * Test:

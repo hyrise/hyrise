@@ -13,6 +13,8 @@
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "operators/union_positions.hpp"
+#include "sql/sql_pipeline_statement.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -37,7 +39,7 @@ class RecreationTest : public BaseTest {
     _table_wrapper_c->execute();
     _table_wrapper_d->execute();
 
-    _test_get_table = std::make_shared<Table>(2);
+    _test_get_table = std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data, 2);
     StorageManager::get().add_table("aNiceTestTable", _test_get_table);
   }
 
@@ -160,6 +162,49 @@ TEST_F(RecreationTest, RecreationTableScan) {
   recreated_scan->mutable_input_left()->execute();
   recreated_scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(recreated_scan->get_output(), expected_result);
+}
+
+TEST_F(RecreationTest, DiamondShape) {
+  auto scan_a = std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
+  auto scan_b = std::make_shared<TableScan>(scan_a, ColumnID{1}, PredicateCondition::LessThan, 1000);
+  auto scan_c = std::make_shared<TableScan>(scan_a, ColumnID{1}, PredicateCondition::GreaterThan, 2000);
+  auto union_positions = std::make_shared<UnionPositions>(scan_b, scan_c);
+
+  auto recreated_pqp = union_positions->recreate();
+
+  EXPECT_EQ(recreated_pqp->input_left()->input_left(), recreated_pqp->input_right()->input_left());
+}
+
+TEST_F(RecreationTest, Subselect) {
+  // Due to the nested structure of the subselect, it makes sense to keep this more high level than the other tests in
+  // this suite. The test is very confusing and error-prone with explicit operators as above.
+  const auto table = load_table("src/test/tables/int_int_int.tbl", 2);
+  StorageManager::get().add_table("table_3int", table);
+
+  const std::string subselect_query = "SELECT * FROM table_3int WHERE a = (SELECT MAX(b) FROM table_3int)";
+  const TableColumnDefinitions column_definitions = {{"a", DataType::Int}, {"b", DataType::Int}, {"c", DataType::Int}};
+
+  SQLPipelineStatement sql_pipeline{subselect_query, UseMvcc::No};
+  const auto first_result = sql_pipeline.get_result_table();
+
+  // Quick sanity check to see that the original query is correct
+  auto expected_first = std::make_shared<Table>(column_definitions, TableType::Data);
+  expected_first->append({10, 10, 10});
+  EXPECT_TABLE_EQ_UNORDERED(first_result, expected_first);
+
+  SQLPipelineStatement{"INSERT INTO table_3int VALUES (11, 11, 11)"}.get_result_table();
+
+  const auto recreated_plan = sql_pipeline.get_query_plan()->recreate();
+  const auto tasks = recreated_plan.create_tasks();
+  CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+
+  const auto recreated_result = tasks.back()->get_operator()->get_output();
+
+  auto expected_recreated = std::make_shared<Table>(column_definitions, TableType::Data);
+  expected_recreated->append({11, 10, 11});
+  expected_recreated->append({11, 11, 11});
+
+  EXPECT_TABLE_EQ_UNORDERED(recreated_result, expected_recreated);
 }
 
 }  // namespace opossum

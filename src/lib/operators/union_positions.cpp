@@ -17,7 +17,7 @@
  * ### UnionPositions implementation
  * The UnionPositions Operator turns each input table into a ReferenceMatrix.
  * The rows in the ReferenceMatrices (see below) need to be sorted in order for them to be merged, that is,
- * performing the UnionPositions  operation.
+ * performing the UnionPositions operation.
  * Since sorting a multi-column matrix by rows would require a lot of value-copying, for each ReferenceMatrix, a
  * VirtualPosList is created.
  * Each element of this VirtualPosList references a row in a ReferenceMatrix by index. This way, if two values need to
@@ -57,10 +57,12 @@ namespace opossum {
 
 UnionPositions::UnionPositions(const std::shared_ptr<const AbstractOperator>& left,
                                const std::shared_ptr<const AbstractOperator>& right)
-    : AbstractReadOnlyOperator(left, right) {}
+    : AbstractReadOnlyOperator(OperatorType::UnionPositions, left, right) {}
 
-std::shared_ptr<AbstractOperator> UnionPositions::recreate(const std::vector<AllParameterVariant>& args) const {
-  return std::make_shared<UnionPositions>(input_left()->recreate(args), input_right()->recreate(args));
+std::shared_ptr<AbstractOperator> UnionPositions::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+  return std::make_shared<UnionPositions>(recreated_input_left, recreated_input_right);
 }
 
 const std::string UnionPositions::name() const { return "UnionPositions"; }
@@ -74,19 +76,19 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   /**
    * For each input, create a ReferenceMatrix
    */
-  auto reference_matrix_left = _build_reference_matrix(_input_table_left());
-  auto reference_matrix_right = _build_reference_matrix(_input_table_right());
+  auto reference_matrix_left = _build_reference_matrix(input_table_left());
+  auto reference_matrix_right = _build_reference_matrix(input_table_right());
 
   /**
    * Init the virtual pos lists
    */
-  VirtualPosList virtual_pos_list_left(_input_table_left()->row_count(), 0u);
+  VirtualPosList virtual_pos_list_left(input_table_left()->row_count(), 0u);
   std::iota(virtual_pos_list_left.begin(), virtual_pos_list_left.end(), 0u);
-  VirtualPosList virtual_pos_list_right(_input_table_right()->row_count(), 0u);
+  VirtualPosList virtual_pos_list_right(input_table_right()->row_count(), 0u);
   std::iota(virtual_pos_list_right.begin(), virtual_pos_list_right.end(), 0u);
 
   /**
-   * Sort the virtual pos lists, that they bring the rows in their respective ReferenceMatrix into order.
+   * Sort the virtual pos lists so that they bring the rows in their respective ReferenceMatrix into order.
    * This is necessary for merging them.
    * PERFORMANCE NOTE: These sorts take the vast majority of time spend in this Operator
    */
@@ -104,9 +106,10 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   const auto num_rows_right = virtual_pos_list_right.size();
 
   // Somewhat random way to decide on a chunk size.
-  const auto out_chunk_size = std::max(_input_table_left()->max_chunk_size(), _input_table_right()->max_chunk_size());
+  const auto out_chunk_size = std::max(input_table_left()->max_chunk_size(), input_table_right()->max_chunk_size());
 
-  auto out_table = Table::create_with_layout_from(_input_table_left(), out_chunk_size);
+  auto out_table =
+      std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References, out_chunk_size);
 
   std::vector<std::shared_ptr<PosList>> pos_lists(reference_matrix_left.size());
   std::generate(pos_lists.begin(), pos_lists.end(), [&] { return std::make_shared<PosList>(); });
@@ -120,21 +123,21 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
 
   // Turn 'pos_lists' into a new chunk and append it to the table
   const auto emit_chunk = [&]() {
-    auto chunk = std::make_shared<Chunk>();
+    ChunkColumns output_columns;
 
     for (size_t pos_lists_idx = 0; pos_lists_idx < pos_lists.size(); ++pos_lists_idx) {
       const auto segment_column_id_begin = _column_segment_offsets[pos_lists_idx];
       const auto segment_column_id_end = pos_lists_idx >= _column_segment_offsets.size() - 1
-                                             ? _input_table_left()->column_count()
+                                             ? input_table_left()->column_count()
                                              : _column_segment_offsets[pos_lists_idx + 1];
       for (auto column_id = segment_column_id_begin; column_id < segment_column_id_end; ++column_id) {
         auto ref_column = std::make_shared<ReferenceColumn>(
             _referenced_tables[pos_lists_idx], _referenced_column_ids[column_id], pos_lists[pos_lists_idx]);
-        chunk->add_column(ref_column);
+        output_columns.push_back(ref_column);
       }
     }
 
-    out_table->emplace_chunk(std::move(chunk));
+    out_table->append_chunk(output_columns);
   };
 
   /**
@@ -190,30 +193,29 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
 }
 
 std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
-  DebugAssert(Table::layouts_equal(_input_table_left(), _input_table_right()),
+  DebugAssert(input_table_left()->column_definitions() == input_table_right()->column_definitions(),
               "Input tables don't have the same layout");
 
   // Later code relies on input tables containing columns
-  if (_input_table_left()->column_count() == 0) {
-    return _input_table_left();
+  if (input_table_left()->column_count() == 0) {
+    return input_table_left();
   }
 
   /**
    * Later code relies on both tables having > 0 rows. If one doesn't, we can just return the other as the result of
    * the operator
    */
-  if (_input_table_left()->row_count() == 0) {
-    return _input_table_right();
+  if (input_table_left()->row_count() == 0) {
+    return input_table_right();
   }
-  if (_input_table_right()->row_count() == 0) {
-    return _input_table_left();
+  if (input_table_right()->row_count() == 0) {
+    return input_table_left();
   }
 
   /**
    * Both tables must contain only ReferenceColumns
    */
-  Assert(_input_table_left()->get_type() == TableType::References &&
-             _input_table_right()->get_type() == TableType::References,
+  Assert(input_table_left()->type() == TableType::References && input_table_right()->type() == TableType::References,
          "UnionPositions doesn't support non-reference tables yet");
 
   /**
@@ -234,8 +236,8 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
       }
     }
   };
-  add_column_segments(_input_table_left());
-  add_column_segments(_input_table_right());
+  add_column_segments(input_table_left());
+  add_column_segments(input_table_right());
 
   std::sort(_column_segment_offsets.begin(), _column_segment_offsets.end());
   const auto unique_end_iter = std::unique(_column_segment_offsets.begin(), _column_segment_offsets.end());
@@ -245,7 +247,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    * Identify the tables referenced in each column segment (verification that this is the same for all chunks happens
    * in the #if IS_DEBUG block below)
    */
-  const auto first_chunk_left = _input_table_left()->get_chunk(ChunkID{0});
+  const auto first_chunk_left = input_table_left()->get_chunk(ChunkID{0});
   for (const auto& segment_begin : _column_segment_offsets) {
     const auto column = first_chunk_left->get_column(segment_begin);
     const auto ref_column = std::static_pointer_cast<const ReferenceColumn>(column);
@@ -256,7 +258,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    * Identify the column_ids referenced by each column (verification that this is the same for all chunks happens
    * in the #if IS_DEBUG block below)
    */
-  for (auto column_id = ColumnID{0}; column_id < _input_table_left()->column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < input_table_left()->column_count(); ++column_id) {
     const auto column = first_chunk_left->get_column(column_id);
     const auto ref_column = std::static_pointer_cast<const ReferenceColumn>(column);
     _referenced_column_ids.emplace_back(ref_column->referenced_column_id());
@@ -300,8 +302,8 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
       }
     }
   };
-  verify_column_segments_in_all_chunks(_input_table_left());
-  verify_column_segments_in_all_chunks(_input_table_right());
+  verify_column_segments_in_all_chunks(input_table_left());
+  verify_column_segments_in_all_chunks(input_table_right());
 #endif
 
   return nullptr;

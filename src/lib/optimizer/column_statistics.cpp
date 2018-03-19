@@ -12,6 +12,7 @@
 #include "all_parameter_variant.hpp"
 #include "operators/aggregate.hpp"
 #include "operators/table_wrapper.hpp"
+#include "resolve_type.hpp"
 #include "storage/table.hpp"
 #include "table_statistics.hpp"
 #include "type_cast.hpp"
@@ -21,12 +22,12 @@ namespace opossum {
 
 template <typename ColumnType>
 ColumnStatistics<ColumnType>::ColumnStatistics(const ColumnID column_id, const std::weak_ptr<Table> table)
-    : _column_id(column_id), _table(table) {}
+    : BaseColumnStatistics(data_type_from_type<ColumnType>()), _column_id(column_id), _table(table) {}
 
 template <typename ColumnType>
 ColumnStatistics<ColumnType>::ColumnStatistics(const ColumnID column_id, float distinct_count, const ColumnType min,
                                                const ColumnType max, const float non_null_value_ratio)
-    : BaseColumnStatistics(non_null_value_ratio),
+    : BaseColumnStatistics(data_type_from_type<ColumnType>(), non_null_value_ratio),
       _column_id(column_id),
       _table(std::weak_ptr<Table>()),
       _distinct_count(distinct_count),

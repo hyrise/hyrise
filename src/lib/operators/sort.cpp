@@ -14,7 +14,7 @@ namespace opossum {
 
 Sort::Sort(const std::shared_ptr<const AbstractOperator> in, const ColumnID column_id, const OrderByMode order_by_mode,
            const size_t output_chunk_size)
-    : AbstractReadOnlyOperator(in),
+    : AbstractReadOnlyOperator(OperatorType::Sort, in),
       _column_id(column_id),
       _order_by_mode(order_by_mode),
       _output_chunk_size(output_chunk_size) {}
@@ -25,14 +25,16 @@ OrderByMode Sort::order_by_mode() const { return _order_by_mode; }
 
 const std::string Sort::name() const { return "Sort"; }
 
-std::shared_ptr<AbstractOperator> Sort::recreate(const std::vector<AllParameterVariant>& args) const {
-  return std::make_shared<Sort>(_input_left->recreate(args), _column_id, _order_by_mode, _output_chunk_size);
+std::shared_ptr<AbstractOperator> Sort::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+  return std::make_shared<Sort>(recreated_input_left, _column_id, _order_by_mode, _output_chunk_size);
 }
 
 std::shared_ptr<const Table> Sort::_on_execute() {
-  _impl = make_unique_by_data_type<AbstractReadOnlyOperatorImpl, SortImpl>(_input_table_left()->column_type(_column_id),
-                                                                           _input_table_left(), _column_id,
-                                                                           _order_by_mode, _output_chunk_size);
+  _impl = make_unique_by_data_type<AbstractReadOnlyOperatorImpl, SortImpl>(
+      input_table_left()->column_data_type(_column_id), input_table_left(), _column_id, _order_by_mode,
+      _output_chunk_size);
   return _impl->_on_execute();
 }
 
@@ -50,7 +52,7 @@ class Sort::SortImplMaterializeOutput {
 
   std::shared_ptr<const Table> execute() {
     // First we create a new table as the output
-    auto output = Table::create_with_layout_from(_table_in, _output_chunk_size);
+    auto output = std::make_shared<Table>(_table_in->column_definitions(), TableType::Data, _output_chunk_size);
 
     // We have decided against duplicating MVCC columns in https://github.com/hyrise/hyrise/issues/408
 
@@ -66,12 +68,12 @@ class Sort::SortImplMaterializeOutput {
 
     const auto chunk_count_out = div_ceil(row_count_out, _output_chunk_size);
 
-    auto chunks_out = std::vector<std::shared_ptr<Chunk>>(chunk_count_out);
-    std::generate(chunks_out.begin(), chunks_out.end(), []() { return std::make_shared<Chunk>(); });
+    // Vector of columns for each chunk
+    std::vector<ChunkColumns> output_columns_by_chunk(chunk_count_out);
 
     // Materialize column-wise
     for (ColumnID column_id{0u}; column_id < output->column_count(); ++column_id) {
-      const auto column_data_type = output->column_type(column_id);
+      const auto column_data_type = output->column_data_type(column_id);
 
       resolve_data_type(column_data_type, [&](auto type) {
         using ColumnDataType = typename decltype(type)::type;
@@ -82,7 +84,7 @@ class Sort::SortImplMaterializeOutput {
                       []() { return std::make_shared<ValueColumn<ColumnDataType>>(true); });
 
         auto column_it = columns_out.begin();
-        auto chunk_it = chunks_out.begin();
+        auto chunk_it = output_columns_by_chunk.begin();
         auto chunk_offset_out = 0u;
         for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
           const auto[chunk_id, chunk_offset] = _row_id_value_vector->at(row_index).first;
@@ -99,7 +101,7 @@ class Sort::SortImplMaterializeOutput {
           // Check if value column is full
           if (chunk_offset_out >= _output_chunk_size) {
             chunk_offset_out = 0u;
-            (*chunk_it)->add_column(*column_it);
+            chunk_it->push_back(*column_it);
             ++column_it;
             ++chunk_it;
           }
@@ -107,13 +109,13 @@ class Sort::SortImplMaterializeOutput {
 
         // Last column has not been added
         if (chunk_offset_out > 0u) {
-          (*chunk_it)->add_column(*column_it);
+          chunk_it->push_back(*column_it);
         }
       });
     }
 
-    for (auto& chunk : chunks_out) {
-      output->emplace_chunk(std::move(chunk));
+    for (auto& columns : output_columns_by_chunk) {
+      output->append_chunk(columns);
     }
 
     return output;

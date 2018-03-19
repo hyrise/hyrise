@@ -11,7 +11,6 @@
 #include "gtest/gtest.h"
 #include "types.hpp"
 
-#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp"
 
@@ -130,14 +129,14 @@ TEST_F(AdaptiveRadixTreeIndexTest, VectorOfRandomInts) {
   auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseColumn>>({column}));
 
   for (auto i : {0, 2, 4, 8, 12, 14, 60, 64, 128, 130, 1024, 1026, 2048, 2050, 4096, 8190, 8192, 8194, 16382, 16384}) {
-    EXPECT_EQ(column->get(*index->lower_bound({i})), i);
-    EXPECT_EQ(column->get(*index->lower_bound({i + 1})), i + 2);
-    EXPECT_EQ(column->get(*index->upper_bound({i})), i + 2);
-    EXPECT_EQ(column->get(*index->upper_bound({i + 1})), i + 2);
+    EXPECT_EQ((*column)[*index->lower_bound({i})], AllTypeVariant{i});
+    EXPECT_EQ((*column)[*index->lower_bound({i + 1})], AllTypeVariant{i + 2});
+    EXPECT_EQ((*column)[*index->upper_bound({i})], AllTypeVariant{i + 2});
+    EXPECT_EQ((*column)[*index->upper_bound({i + 1})], AllTypeVariant{i + 2});
 
     auto expected_lower = i;
     for (auto it = index->lower_bound({i}); it < index->lower_bound({i + 20}); ++it) {
-      EXPECT_EQ(column->get(*it), expected_lower);
+      EXPECT_EQ((*column)[*it], AllTypeVariant{expected_lower});
       expected_lower += 2;
     }
   }

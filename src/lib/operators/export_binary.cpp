@@ -7,11 +7,10 @@
 #include <vector>
 
 #include "import_export/binary.hpp"
-#include "storage/deprecated_dictionary_column/fitted_attribute_vector.hpp"
 #include "storage/dictionary_column.hpp"
-#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
-#include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/reference_column.hpp"
+#include "storage/vector_compression/compressed_vector_type.hpp"
+#include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
@@ -123,7 +122,7 @@ void _export_value(std::ofstream& ofstream, const T& value) {
 namespace opossum {
 
 ExportBinary::ExportBinary(const std::shared_ptr<const AbstractOperator> in, const std::string& filename)
-    : AbstractReadOnlyOperator(in), _filename(filename) {}
+    : AbstractReadOnlyOperator(OperatorType::ExportBinary, in), _filename(filename) {}
 
 const std::string ExportBinary::name() const { return "ExportBinary"; }
 
@@ -142,6 +141,12 @@ std::shared_ptr<const Table> ExportBinary::_on_execute() {
   return _input_left->get_output();
 }
 
+std::shared_ptr<AbstractOperator> ExportBinary::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+  return std::make_shared<ExportBinary>(recreated_input_left, _filename);
+}
+
 void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream) {
   _export_value(ofstream, static_cast<ChunkOffset>(table->max_chunk_size()));
   _export_value(ofstream, static_cast<ChunkID>(table->chunk_count()));
@@ -149,16 +154,16 @@ void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std:
 
   std::vector<std::string> column_types(table->column_count());
   std::vector<std::string> column_names(table->column_count());
-  std::vector<bool> column_nullables(table->column_count());
+  std::vector<bool> columns_are_nullable(table->column_count());
 
   // Transform column types and copy column names in order to write them to the file.
   for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-    column_types[column_id] = data_type_to_string.left.at(table->column_type(column_id));
+    column_types[column_id] = data_type_to_string.left.at(table->column_data_type(column_id));
     column_names[column_id] = table->column_name(column_id);
-    column_nullables[column_id] = table->column_is_nullable(column_id);
+    columns_are_nullable[column_id] = table->column_is_nullable(column_id);
   }
   _export_values(ofstream, column_types);
-  _export_values(ofstream, column_nullables);
+  _export_values(ofstream, columns_are_nullable);
   _export_string_values<ColumnNameLength>(ofstream, column_names);
 }
 
@@ -171,7 +176,7 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
 
   // Iterating over all columns of this chunk and exporting them
   for (ColumnID column_id{0}; column_id < chunk->column_count(); column_id++) {
-    auto visitor = make_unique_by_data_type<ColumnVisitable, ExportBinaryVisitor>(table->column_type(column_id));
+    auto visitor = make_unique_by_data_type<ColumnVisitable, ExportBinaryVisitor>(table->column_data_type(column_id));
     chunk->get_column(column_id)->visit(*visitor, context);
   }
 }
@@ -231,12 +236,6 @@ void ExportBinary::ExportBinaryVisitor<std::string>::handle_column(
 
   _export_values(context->ofstream, string_lengths);
   context->ofstream << values.rdbuf();
-}
-
-template <typename T>
-void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseDeprecatedDictionaryColumn& base_column,
-                                                         std::shared_ptr<ColumnVisitableContext> base_context) {
-  Fail("Does not support the deprecated dictionary column any longer.");
 }
 
 template <typename T>
@@ -301,7 +300,7 @@ void ExportBinary::ExportBinaryVisitor<T>::_export_attribute_vector(std::ofstrea
       _export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint32_t>&>(attribute_vector).data());
       return;
     case CompressedVectorType::FixedSize2ByteAligned:
-     _export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint16_t>&>(attribute_vector).data());
+      _export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint16_t>&>(attribute_vector).data());
       return;
     case CompressedVectorType::FixedSize1ByteAligned:
       _export_values(ofstream, dynamic_cast<const FixedSizeByteAlignedVector<uint8_t>&>(attribute_vector).data());
