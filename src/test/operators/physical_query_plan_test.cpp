@@ -14,7 +14,8 @@ namespace opossum {
 class PhysicalQueryPlanTest : public BaseTest {};
 
 TEST_F(PhysicalQueryPlanTest, Print) {
-  StorageManager::get().add_table("id_int_int_int_100", load_table("src/test/tables/sqlite/id_int_int_int_100.tbl", 20));
+  StorageManager::get().add_table("id_int_int_int_100",
+                                  load_table("src/test/tables/sqlite/id_int_int_int_100.tbl", 20));
 
   auto get_table = std::make_shared<GetTable>("id_int_int_int_100");
   auto table_scan_a = std::make_shared<TableScan>(get_table, ColumnID{0}, PredicateCondition::GreaterThan, 20);
