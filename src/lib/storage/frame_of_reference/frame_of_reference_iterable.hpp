@@ -1,9 +1,6 @@
 #pragma once
 
 #include <type_traits>
-#include <iostream>
-
-#include <emmintrin.h>
 
 #include "storage/column_iterables.hpp"
 
@@ -11,110 +8,6 @@
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace opossum {
-
-namespace detail {
-
-template <typename OffsetValueIteratorT>
-class SimdIterator : public BaseColumnIterator<SimdIterator<OffsetValueIteratorT>, ColumnIteratorValue<int32_t>> {
- public:
-  using ValueT = int32_t;
-
-  static constexpr auto block_size = FrameOfReferenceColumn<ValueT>::block_size;
-
-  using BlockMinimumIterator = typename pmr_vector<ValueT>::const_iterator;
-  using NullValueIterator = typename pmr_vector<bool>::const_iterator;
-  using CurrentBlock = std::array<ValueT, block_size>;
-  using CurrentBlockIterator = typename CurrentBlock::const_iterator;
-
- public:
-  // Begin Iterator
-  explicit SimdIterator(BlockMinimumIterator block_minimum_begin, NullValueIterator null_value_begin,
-                        OffsetValueIteratorT offset_value_begin, OffsetValueIteratorT offset_value_end)
-      : _block_minimum_it{block_minimum_begin},
-        _null_value_it{null_value_begin},
-        _offset_value_it{offset_value_begin},
-        _offset_value_end{offset_value_end},
-        _chunk_offset{0u},
-        _current_block_it{_current_block.cend()} {
-    _decode_next_block();
-  }
-
-  // End iterator
-  explicit SimdIterator(NullValueIterator null_value_end, OffsetValueIteratorT offset_value_begin,
-                        OffsetValueIteratorT offset_value_end)
-      : _null_value_it{null_value_end},
-        _offset_value_it{offset_value_begin},
-        _offset_value_end{offset_value_end},
-        _chunk_offset{0u},
-        _current_block_it{_current_block.cend()} {}
-
-  SimdIterator(const SimdIterator& other)
-      : _block_minimum_it{other._block_minimum_it},
-        _null_value_it{other._null_value_it},
-        _offset_value_it{other._offset_value_it},
-        _offset_value_end{other._offset_value_end},
-        _chunk_offset{other._chunk_offset},
-        _current_block{other._current_block},
-        _current_block_it{_current_block.cbegin()} {
-    _current_block_it += std::distance(other._current_block.cbegin(), other._current_block_it);
-  }
-
- private:
-  friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
-
-  void increment() {
-    ++_null_value_it;
-    ++_current_block_it;
-    ++_chunk_offset;
-
-    if (_current_block_it == _current_block.cend()) {
-      _decode_next_block();
-    }
-  }
-
-  bool equal(const SimdIterator& other) const { return _null_value_it == other._null_value_it; }
-
-  ColumnIteratorValue<ValueT> dereference() const {
-    return {*_current_block_it, *_null_value_it, _chunk_offset};
-  }
-
- private:
-  void _decode_next_block() {
-    auto current_block_it = _current_block.begin();
-    for (; current_block_it != _current_block.end() && _offset_value_it != _offset_value_end; ++current_block_it, ++_offset_value_it) {
-      *current_block_it = static_cast<ValueT>(*_offset_value_it);
-    }
-
-    const auto current_block_end = current_block_it;
-
-    const auto current_block_size = std::distance(_current_block.begin(), current_block_end);
-    static constexpr auto num_simd_width = 4u;
-
-    auto minimum_reg = _mm_set1_epi32(*_block_minimum_it);
-    ++_block_minimum_it;
-
-    for (auto i = 0u; i < current_block_size; i += num_simd_width) {
-      auto data_ptr = reinterpret_cast<__m128i*>(_current_block.data() + i);
-
-      auto offset_value_reg = _mm_loadu_si128(data_ptr);
-      auto value_reg = _mm_add_epi32(minimum_reg, offset_value_reg);
-      _mm_storeu_si128(data_ptr, value_reg);
-    }
-
-    _current_block_it = _current_block.cbegin();
-  }
-
- private:
-  BlockMinimumIterator _block_minimum_it;
-  NullValueIterator _null_value_it;
-  OffsetValueIteratorT _offset_value_it;
-  OffsetValueIteratorT _offset_value_end;
-  ChunkOffset _chunk_offset;
-  CurrentBlock _current_block;
-  CurrentBlockIterator _current_block_it;
-};
-
-}  // detail
 
 template <typename T>
 class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfReferenceIterable<T>> {
@@ -125,8 +18,7 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
   void _on_with_iterators(const Functor& functor) const {
     resolve_compressed_vector_type(_column.offset_values(), [&](const auto& offset_values) {
       using OffsetValueIteratorT = decltype(offset_values.cbegin());
-
-      using IteratorT = std::conditional_t<std::is_same_v<int32_t, T>, detail::SimdIterator<OffsetValueIteratorT>, Iterator<OffsetValueIteratorT>>;
+      using IteratorT = Iterator<OffsetValueIteratorT>;
 
       auto begin = IteratorT{_column.block_minima().cbegin(), _column.null_values().cbegin(),
                              offset_values.cbegin(), offset_values.cend()};
@@ -167,17 +59,16 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
    public:
     // Begin Iterator
     explicit Iterator(BlockMinimumIterator block_minimum_begin, NullValueIterator null_value_begin,
-                      OffsetValueIteratorT offset_value_begin, OffsetValueIteratorT offset_value_end)
+                      OffsetValueIteratorT offset_value_begin)
         : _block_minimum_it{block_minimum_begin},
-          _offset_value_it{offset_value_begin},
           _null_value_it{null_value_begin},
+          _offset_value_it{offset_value_begin},
           _index_within_frame{0u},
           _chunk_offset{0u} {}
 
     // End iterator
-    explicit Iterator(NullValueIterator null_value_end, OffsetValueIteratorT offset_value_begin,
-                      OffsetValueIteratorT offset_value_end)
-        : Iterator{{}, null_value_end, offset_value_begin, offset_value_end} {}
+    explicit Iterator(NullValueIterator null_value_end, OffsetValueIteratorT offset_value_end)
+        : Iterator{{}, null_value_end, offset_value_end} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -203,8 +94,8 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
 
    private:
     BlockMinimumIterator _block_minimum_it;
-    OffsetValueIteratorT _offset_value_it;
     NullValueIterator _null_value_it;
+    OffsetValueIteratorT _offset_value_it;
     size_t _index_within_frame;
     ChunkOffset _chunk_offset;
   };
