@@ -72,7 +72,7 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
   VizEdgeInfo info = edge_info;
 
   // Create label if custom label is not specified
-  if (edge_info.label.empty()) {
+  if (info.label.empty()) {
     try {
       row_count = from->get_statistics()->row_count();
       pen_width = std::fmax(1, std::ceil(std::log10(row_count) / 2));
