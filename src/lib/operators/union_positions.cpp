@@ -57,7 +57,7 @@ namespace opossum {
 
 UnionPositions::UnionPositions(const std::shared_ptr<const AbstractOperator>& left,
                                const std::shared_ptr<const AbstractOperator>& right)
-    : AbstractReadOnlyOperator(left, right) {}
+    : AbstractReadOnlyOperator(OperatorType::UnionPositions, left, right) {}
 
 std::shared_ptr<AbstractOperator> UnionPositions::_on_recreate(
     const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,

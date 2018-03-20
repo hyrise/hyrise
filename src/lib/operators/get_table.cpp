@@ -12,7 +12,7 @@
 
 namespace opossum {
 
-GetTable::GetTable(const std::string& name) : _name(name) {}
+GetTable::GetTable(const std::string& name) : AbstractReadOnlyOperator(OperatorType::GetTable), _name(name) {}
 
 const std::string GetTable::name() const { return "GetTable"; }
 

@@ -27,7 +27,7 @@ namespace opossum {
 JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator> left,
                      const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
                      const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition predicate_condition)
-    : AbstractJoinOperator(left, right, mode, column_ids, predicate_condition) {
+    : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, column_ids, predicate_condition) {
   DebugAssert(mode != JoinMode::Cross, "Cross Join is not supported by index join.");
 }
 

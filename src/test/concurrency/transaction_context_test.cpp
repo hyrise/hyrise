@@ -30,7 +30,7 @@ class TransactionContextTest : public BaseTest {
  */
 class CommitFuncOp : public AbstractReadWriteOperator {
  public:
-  explicit CommitFuncOp(std::function<void()> func) : _func{func} {}
+  explicit CommitFuncOp(std::function<void()> func) : AbstractReadWriteOperator(OperatorType::Mock), _func{func} {}
 
   const std::string name() const override { return "CommitOp"; }
 

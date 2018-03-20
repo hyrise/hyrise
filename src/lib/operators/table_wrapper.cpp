@@ -6,7 +6,8 @@
 
 namespace opossum {
 
-TableWrapper::TableWrapper(const std::shared_ptr<const Table> table) : _table(table) {}
+TableWrapper::TableWrapper(const std::shared_ptr<const Table> table)
+    : AbstractReadOnlyOperator(OperatorType::TableWrapper), _table(table) {}
 
 const std::string TableWrapper::name() const { return "TableWrapper"; }
 

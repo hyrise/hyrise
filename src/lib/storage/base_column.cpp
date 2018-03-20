@@ -1,3 +1,4 @@
+
 #include "base_column.hpp"
 
 namespace opossum {

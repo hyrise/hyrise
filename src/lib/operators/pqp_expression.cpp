@@ -100,7 +100,7 @@ bool PQPExpression::operator==(const PQPExpression& other) const {
   return _column_id == other._column_id;
 }
 
-std::shared_ptr<PQPExpression> PQPExpression::set_placeholder_value(const AllTypeVariant& value) {
+std::shared_ptr<PQPExpression> PQPExpression::copy_with_placeholder_value(const AllTypeVariant& value) {
   auto copy = create_literal(value, _alias);
   copy->_column_id = _column_id;
   return copy;
