@@ -211,6 +211,9 @@ DataType Projection::_get_type_of_expression(const std::shared_ptr<PQPExpression
   if (expression->type() == ExpressionType::Literal || expression->type() == ExpressionType::Placeholder) {
     return data_type_from_all_type_variant(expression->value());
   }
+  if (expression->type() == ExpressionType::Placeholder) {
+    return data_type_from_all_type_variant(expression->value());
+  }
   if (expression->type() == ExpressionType::Column) {
     return table->column_data_type(expression->column_id());
   }

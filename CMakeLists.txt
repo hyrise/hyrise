@@ -77,6 +77,9 @@ find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
 find_package(Curses REQUIRED)
 find_package(Sqlite3 REQUIRED)
+find_package(Boost REQUIRED COMPONENTS system thread)
+add_definitions(-DBOOST_THREAD_VERSION=5)
+
 
 if(${LLVM_FOUND})
     # FindLLVM does not provide a LLVM_LIBRARY or LLVM_LIBRARIES output variable, so we have to build it ourselves
