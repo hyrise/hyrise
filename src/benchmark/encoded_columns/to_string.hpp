@@ -20,7 +20,7 @@ inline std::string to_string(EncodingType encoding_type) {
 
 inline std::string to_string(VectorCompressionType type) {
   static const auto string_for_type = std::map<VectorCompressionType, std::string>{
-    { VectorCompressionType::FixedSizeByteAligned, "Fixed-size byte-aligned" },
+    { VectorCompressionType::FixedSizeByteAligned, "FSBA" },
     { VectorCompressionType::SimdBp128, "SIMD-BP128" }};
 
   return string_for_type.at(type);

@@ -21,9 +21,9 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
       using IteratorT = Iterator<OffsetValueIteratorT>;
 
       auto begin = IteratorT{_column.block_minima().cbegin(), _column.null_values().cbegin(),
-                             offset_values.cbegin(), offset_values.cend()};
+                             offset_values.cbegin()};
 
-      auto end = IteratorT{_column.null_values().cend(), offset_values.cbegin(), offset_values.cend()};
+      auto end = IteratorT{_column.null_values().cend(), offset_values.cend()};
 
       functor(begin, end);
     });

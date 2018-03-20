@@ -20,15 +20,16 @@ namespace opossum {
 class SingleDistributionBenchmark : public AbstractColumnBenchmark {
  public:
   static const auto row_count = 1'000'000;
-  static const auto max_value = (1u << 14) - 1;
-  static const auto sorted = false;
+  static const auto max_value = (1u << 5) - 3u;
+  static const auto sorted = true;
   static constexpr auto null_fraction = 0.0f;
-  static constexpr auto name = "Uniform from 0 to 2^14 - 1";
-  static constexpr auto comment = "FOR vs. rest";
+  static constexpr auto name = "Uniform";
+  static constexpr auto unique_count_exp = "5";
+  static constexpr auto comment = "Memory Usage";
 
  private:
   std::vector<ColumnEncodingSpec> _encoding_specs() {
-    return { {EncodingType::Dictionary}, {EncodingType::Dictionary, VectorCompressionType::SimdBp128}, {EncodingType::FrameOfReference}, {EncodingType::FrameOfReference, VectorCompressionType::SimdBp128} };
+    return { {EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned}, {EncodingType::Dictionary, VectorCompressionType::SimdBp128}, {EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned}, {EncodingType::FrameOfReference, VectorCompressionType::SimdBp128}, {EncodingType::RunLength} };
   }
 
   void _generate_statistics(const ValueColumn<int32_t>& value_column);

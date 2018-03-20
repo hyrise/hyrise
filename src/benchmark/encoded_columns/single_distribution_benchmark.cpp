@@ -80,6 +80,7 @@ void SingleDistributionBenchmark::_create_report() const {
       {"max_value", max_value},
       {"null_fraction", null_fraction},
       {"sorted", sorted},
+      {"unique_count_exp", unique_count_exp},
       {"comment", comment}};
 
   nlohmann::json report{{"context", context}, {"benchmarks", benchmarks}};

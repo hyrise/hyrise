@@ -24,7 +24,7 @@ EncodingType from_string<EncodingType>(const std::string& str) {
 template <>
 VectorCompressionType from_string<VectorCompressionType>(const std::string& str) {
   static const auto type_for_string = std::map<std::string, VectorCompressionType>{
-    { "Fixed-size byte-aligned", VectorCompressionType::FixedSizeByteAligned },
+    { "FSBA", VectorCompressionType::FixedSizeByteAligned },
     { "SIMD-BP128", VectorCompressionType::SimdBp128 }};
 
   return type_for_string.at(str);
