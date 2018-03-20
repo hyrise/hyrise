@@ -53,14 +53,19 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
     for (const auto& column_expression : projection->column_expressions()) {
       if (column_expression->is_subselect()) {
         _build_subtree(column_expression->subselect_node(), visualized_nodes);
-        _build_dataflow(column_expression->subselect_node(), node);
+
+        auto edge_info = _default_edge;
+        edge_info.label = "Scalar Subquery";
+        edge_info.style = "dashed";
+        _build_dataflow(column_expression->subselect_node(), node, edge_info);
       }
     }
   }
 }
 
 void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from,
-                                    const std::shared_ptr<AbstractLQPNode>& to) {
+                                    const std::shared_ptr<AbstractLQPNode>& to,
+                                    const VizEdgeInfo& edge_info) {
   float row_count, row_percentage = 100.0f;
   double pen_width;
 
@@ -93,11 +98,16 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
     label_stream << "no est.";
   }
 
-  VizEdgeInfo info = _default_edge;
-  info.label = label_stream.str();
+  VizEdgeInfo info = edge_info;
+  info.label = edge_info.label.empty() ? label_stream.str() : edge_info.label;
   info.pen_width = pen_width;
 
   _add_edge(from, to, info);
+}
+
+void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from,
+                                    const std::shared_ptr<AbstractLQPNode>& to) {
+  return _build_dataflow(from, to, _default_edge);
 }
 
 }  // namespace opossum
