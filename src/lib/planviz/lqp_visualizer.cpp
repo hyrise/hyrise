@@ -69,38 +69,42 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
   float row_count, row_percentage = 100.0f;
   double pen_width;
 
-  try {
-    row_count = from->get_statistics()->row_count();
-    pen_width = std::fmax(1, std::ceil(std::log10(row_count) / 2));
-  } catch (...) {
-    // statistics don't exist for this edge
-    row_count = NAN;
-    pen_width = 1.0;
-  }
-
-  if (from->left_input()) {
-    try {
-      float input_count = from->left_input()->get_statistics()->row_count();
-      if (from->right_input()) {
-        input_count *= from->right_input()->get_statistics()->row_count();
-      }
-      row_percentage = 100 * row_count / input_count;
-    } catch (...) {
-      // Couldn't create statistics. Using default value of 100%
-    }
-  }
-
-  std::ostringstream label_stream;
-  if (!isnan(row_count)) {
-    label_stream << " " << std::fixed << std::setprecision(1) << row_count << " row(s) | " << row_percentage
-                 << "% estd.";
-  } else {
-    label_stream << "no est.";
-  }
-
   VizEdgeInfo info = edge_info;
-  info.label = edge_info.label.empty() ? label_stream.str() : edge_info.label;
-  info.pen_width = pen_width;
+
+  // Create label if custom label is not specified
+  if (edge_info.label.empty()) {
+    try {
+      row_count = from->get_statistics()->row_count();
+      pen_width = std::fmax(1, std::ceil(std::log10(row_count) / 2));
+    } catch (...) {
+      // statistics don't exist for this edge
+      row_count = NAN;
+      pen_width = 1.0;
+    }
+
+    if (from->left_input()) {
+      try {
+        float input_count = from->left_input()->get_statistics()->row_count();
+        if (from->right_input()) {
+          input_count *= from->right_input()->get_statistics()->row_count();
+        }
+        row_percentage = 100 * row_count / input_count;
+      } catch (...) {
+        // Couldn't create statistics. Using default value of 100%
+      }
+    }
+
+    std::ostringstream label_stream;
+    if (!isnan(row_count)) {
+      label_stream << " " << std::fixed << std::setprecision(1) << row_count << " row(s) | " << row_percentage
+                   << "% estd.";
+    } else {
+      label_stream << "no est.";
+    }
+
+    info.label = label_stream.str();
+    info.pen_width = pen_width;
+  }
 
   _add_edge(from, to, info);
 }
