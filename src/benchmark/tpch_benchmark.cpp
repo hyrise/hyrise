@@ -213,7 +213,7 @@ class TpchBenchmark final {
   // For visualization, if enabled, plans are saved for each query idx and visualized once the benchmarking is done
   const bool _enable_visualization;
   struct QueryPlans final {
-    // std::vector<>s, since TPCH-15 contains multiple statements
+    // std::vector<>s, since TPCH-15 contains multiple statements (CREATE VIEW and SELECT)
     std::vector<std::shared_ptr<AbstractLQPNode>> lqps;
     std::vector<std::shared_ptr<SQLQueryPlan>> pqps;
   };
