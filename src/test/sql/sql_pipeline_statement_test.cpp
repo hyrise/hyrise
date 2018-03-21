@@ -132,7 +132,8 @@ TEST_F(SQLPipelineStatementTest, SimpleParsedCreation) {
 }
 
 TEST_F(SQLPipelineStatementTest, SimpleParsedCreationWithoutMVCC) {
-  auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.disable_mvcc().create_pipeline_statement(_select_parse_result);
+  auto sql_pipeline =
+      SQLPipelineBuilder{_select_query_a}.disable_mvcc().create_pipeline_statement(_select_parse_result);
 
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline.get_parsed_sql_statement().get(), _select_parse_result.get());
@@ -141,14 +142,16 @@ TEST_F(SQLPipelineStatementTest, SimpleParsedCreationWithoutMVCC) {
 TEST_F(SQLPipelineStatementTest, SimpleParsedCreationWithCustomTransactionContext) {
   auto context = TransactionManager::get().new_transaction_context();
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.with_transaction_context(context).create_pipeline_statement(
-  _select_parse_result);
+      _select_parse_result);
 
   EXPECT_EQ(sql_pipeline.transaction_context().get(), context.get());
   EXPECT_EQ(sql_pipeline.get_parsed_sql_statement().get(), _select_parse_result.get());
 }
 
 TEST_F(SQLPipelineStatementTest, SimpleParsedCreationTooManyStatements) {
-  EXPECT_THROW(SQLPipelineBuilder(_multi_statement_dependant).disable_mvcc().pipeline_statement(_multi_statement_parse_result),
+  EXPECT_THROW(SQLPipelineBuilder(_multi_statement_dependant)
+                   .disable_mvcc()
+                   .create_pipeline_statement(_multi_statement_parse_result),
                std::exception);
 }
 
@@ -164,37 +167,40 @@ TEST_F(SQLPipelineStatementTest, ConstructorCombinations) {
   EXPECT_EQ(sql_pipeline1.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline1.get_sql_string(), _select_query_a);
 
-  auto sql_pipeline2 =
-  SQLPipelineBuilder{_select_query_a}.with_prepared_statement_cache(
-  prepared_cache).disable_mvcc().create_pipeline_statement();
+  auto sql_pipeline2 = SQLPipelineBuilder{_select_query_a}
+                           .with_prepared_statement_cache(prepared_cache)
+                           .disable_mvcc()
+                           .create_pipeline_statement();
   EXPECT_EQ(sql_pipeline2.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline2.get_sql_string(), _select_query_a);
 
-  auto sql_pipeline3 =
-  SQLPipelineBuilder{_select_query_a}.with_optimizer(optimizer).with_optimizer(
-  prepared_cache).create_pipeline_statement();
+  auto sql_pipeline3 = SQLPipelineBuilder{_select_query_a}
+                           .with_optimizer(optimizer)
+                           .with_prepared_statement_cache(prepared_cache)
+                           .create_pipeline_statement();
   EXPECT_EQ(sql_pipeline3.transaction_context(), nullptr);
   EXPECT_EQ(sql_pipeline3.get_sql_string(), _select_query_a);
 
   // With transaction context
-  auto sql_pipeline4 =
-  SQLPipelineBuilder{_select_query_a}.with_optimizer(optimizer).with_optimizer(
-  transaction_context).create_pipeline_statement();
+  auto sql_pipeline4 = SQLPipelineBuilder{_select_query_a}
+                           .with_optimizer(optimizer)
+                           .with_transaction_context(transaction_context)
+                           .create_pipeline_statement();
   EXPECT_EQ(sql_pipeline4.transaction_context(), transaction_context);
   EXPECT_EQ(sql_pipeline4.get_sql_string(), _select_query_a);
 
   auto sql_pipeline5 = SQLPipelineBuilder{_select_query_a}
-  .with_prepared_statement_cache(prepared_cache)
-  .with_prepared_statement_cache(transaction_context)
-  .create_pipeline_statement();
+                           .with_prepared_statement_cache(prepared_cache)
+                           .with_transaction_context(transaction_context)
+                           .create_pipeline_statement();
   EXPECT_EQ(sql_pipeline5.transaction_context(), transaction_context);
   EXPECT_EQ(sql_pipeline5.get_sql_string(), _select_query_a);
 
   auto sql_pipeline6 = SQLPipelineBuilder{_select_query_a}
-  .with_optimizer(optimizer)
-  .with_optimizer(prepared_cache)
-  .with_optimizer(transaction_context)
-  .create_pipeline_statement();
+                           .with_optimizer(optimizer)
+                           .with_prepared_statement_cache(prepared_cache)
+                           .with_transaction_context(transaction_context)
+                           .create_pipeline_statement();
   EXPECT_EQ(sql_pipeline6.transaction_context(), transaction_context);
   EXPECT_EQ(sql_pipeline6.get_sql_string(), _select_query_a);
 }
@@ -518,9 +524,9 @@ TEST_F(SQLPipelineStatementTest, PreparedStatementPrepare) {
   auto prepared_statement_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
 
   const std::string prepared_statement = "PREPARE x1 FROM 'SELECT * FROM table_a WHERE a = ?'";
-  auto sql_pipeline =
-  SQLPipelineBuilder{prepared_statement}.with_prepared_statement_cache(
-  prepared_statement_cache).create_pipeline_statement();
+  auto sql_pipeline = SQLPipelineBuilder{prepared_statement}
+                          .with_prepared_statement_cache(prepared_statement_cache)
+                          .create_pipeline_statement();
 
   sql_pipeline.get_query_plan();
 
@@ -534,17 +540,17 @@ TEST_F(SQLPipelineStatementTest, PreparedStatementExecute) {
   auto prepared_statement_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
 
   const std::string prepared_statement = "PREPARE x1 FROM 'SELECT * FROM table_a WHERE a = ?'";
-  auto prepare_sql_pipeline =
-  SQLPipelineBuilder{prepared_statement}.with_prepared_statement_cache(
-  prepared_statement_cache).create_pipeline_statement();
+  auto prepare_sql_pipeline = SQLPipelineBuilder{prepared_statement}
+                                  .with_prepared_statement_cache(prepared_statement_cache)
+                                  .create_pipeline_statement();
   prepare_sql_pipeline.get_result_table();
 
   EXPECT_EQ(prepared_statement_cache->size(), 1u);
 
   const std::string execute_statement = "EXECUTE x1 (123)";
-  auto execute_sql_pipeline =
-  SQLPipelineBuilder{execute_statement}.with_prepared_statement_cache(
-  prepared_statement_cache).create_pipeline_statement();
+  auto execute_sql_pipeline = SQLPipelineBuilder{execute_statement}
+                                  .with_prepared_statement_cache(prepared_statement_cache)
+                                  .create_pipeline_statement();
   const auto& table = execute_sql_pipeline.get_result_table();
 
   auto expected = std::make_shared<Table>(_int_float_column_definitions, TableType::Data);
@@ -557,17 +563,17 @@ TEST_F(SQLPipelineStatementTest, PreparedStatementMultiPlaceholderExecute) {
   auto prepared_statement_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
 
   const std::string prepared_statement = "PREPARE x1 FROM 'SELECT * FROM table_a WHERE a = ? OR (a > ? AND b < ?)'";
-  auto prepare_sql_pipeline =
-  SQLPipelineBuilder{prepared_statement}.with_prepared_statement_cache(
-  prepared_statement_cache).create_pipeline_statement();
+  auto prepare_sql_pipeline = SQLPipelineBuilder{prepared_statement}
+                                  .with_prepared_statement_cache(prepared_statement_cache)
+                                  .create_pipeline_statement();
   prepare_sql_pipeline.get_result_table();
 
   EXPECT_EQ(prepared_statement_cache->size(), 1u);
 
   const std::string execute_statement = "EXECUTE x1 (123, 10000, 500)";
-  auto execute_sql_pipeline =
-  SQLPipelineBuilder{execute_statement}.with_prepared_statement_cache(
-  prepared_statement_cache).create_pipeline_statement();
+  auto execute_sql_pipeline = SQLPipelineBuilder{execute_statement}
+                                  .with_prepared_statement_cache(prepared_statement_cache)
+                                  .create_pipeline_statement();
   const auto& table = execute_sql_pipeline.get_result_table();
 
   auto expected = std::make_shared<Table>(_int_float_column_definitions, TableType::Data);
@@ -585,15 +591,15 @@ TEST_F(SQLPipelineStatementTest, MultiplePreparedStatementsExecute) {
   const std::string prepared_statement_multi =
       "PREPARE x_multi FROM 'SELECT * FROM table_a WHERE a = ? OR (a > ? AND b < ?)'";
 
-  auto prepare_sql_pipeline1 =
-  SQLPipelineBuilder{prepared_statement1}.with_prepared_statement_cache(
-  prepared_statement_cache).create_pipeline_statement();
-  auto prepare_sql_pipeline2 =
-  SQLPipelineBuilder{prepared_statement2}.with_prepared_statement_cache(
-  prepared_statement_cache).create_pipeline_statement();
-  auto prepare_sql_pipeline_multi =
-  SQLPipelineBuilder{prepared_statement_multi}.with_prepared_statement_cache(
-  prepared_statement_cache).create_pipeline_statement();
+  auto prepare_sql_pipeline1 = SQLPipelineBuilder{prepared_statement1}
+                                   .with_prepared_statement_cache(prepared_statement_cache)
+                                   .create_pipeline_statement();
+  auto prepare_sql_pipeline2 = SQLPipelineBuilder{prepared_statement2}
+                                   .with_prepared_statement_cache(prepared_statement_cache)
+                                   .create_pipeline_statement();
+  auto prepare_sql_pipeline_multi = SQLPipelineBuilder{prepared_statement_multi}
+                                        .with_prepared_statement_cache(prepared_statement_cache)
+                                        .create_pipeline_statement();
 
   prepare_sql_pipeline1.get_result_table();
   prepare_sql_pipeline2.get_result_table();
@@ -613,23 +619,26 @@ TEST_F(SQLPipelineStatementTest, MultiplePreparedStatementsExecute) {
   const std::string execute_statement_multi = "EXECUTE x_multi (123, 10000, 500)";
   const std::string execute_statement_multi_invalid = "EXECUTE x_multi (123, 10000, 500, 100)";  // too many arguments
 
-  EXPECT_THROW(SQLPipelineBuilder(execute_statement1_invalid).pipeline_statement().get_result_table(), std::runtime_error);
-  EXPECT_THROW(SQLPipelineBuilder(execute_statement2_invalid).pipeline_statement().get_result_table(), std::runtime_error);
-  EXPECT_THROW(SQLPipelineBuilder(execute_statement_multi_invalid).pipeline_statement().get_result_table(), std::runtime_error);
+  EXPECT_THROW(SQLPipelineBuilder(execute_statement1_invalid).create_pipeline_statement().get_result_table(),
+               std::runtime_error);
+  EXPECT_THROW(SQLPipelineBuilder(execute_statement2_invalid).create_pipeline_statement().get_result_table(),
+               std::runtime_error);
+  EXPECT_THROW(SQLPipelineBuilder(execute_statement_multi_invalid).create_pipeline_statement().get_result_table(),
+               std::runtime_error);
 
-  auto execute_sql_pipeline1 =
-  SQLPipelineBuilder{execute_statement1}.with_prepared_statement_cache(
-  prepared_statement_cache).create_pipeline_statement();
+  auto execute_sql_pipeline1 = SQLPipelineBuilder{execute_statement1}
+                                   .with_prepared_statement_cache(prepared_statement_cache)
+                                   .create_pipeline_statement();
   const auto& table1 = execute_sql_pipeline1.get_result_table();
 
-  auto execute_sql_pipeline2 =
-  SQLPipelineBuilder{execute_statement2}.with_prepared_statement_cache(
-  prepared_statement_cache).create_pipeline_statement();
+  auto execute_sql_pipeline2 = SQLPipelineBuilder{execute_statement2}
+                                   .with_prepared_statement_cache(prepared_statement_cache)
+                                   .create_pipeline_statement();
   const auto& table2 = execute_sql_pipeline2.get_result_table();
 
-  auto execute_sql_pipeline_multi =
-  SQLPipelineBuilder{execute_statement_multi}.with_prepared_statement_cache(
-  prepared_statement_cache).create_pipeline_statement();
+  auto execute_sql_pipeline_multi = SQLPipelineBuilder{execute_statement_multi}
+                                        .with_prepared_statement_cache(prepared_statement_cache)
+                                        .create_pipeline_statement();
   const auto& table_multi = execute_sql_pipeline_multi.get_result_table();
 
   // x1 result
@@ -654,17 +663,17 @@ TEST_F(SQLPipelineStatementTest, PreparedInsertStatementExecute) {
   auto prepared_statement_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
 
   const std::string prepared_statement = "PREPARE x1 FROM 'INSERT INTO table_a VALUES (?, ?)'";
-  auto prepare_sql_pipeline =
-  SQLPipelineBuilder{prepared_statement}.with_prepared_statement_cache(
-  prepared_statement_cache).create_pipeline_statement();
+  auto prepare_sql_pipeline = SQLPipelineBuilder{prepared_statement}
+                                  .with_prepared_statement_cache(prepared_statement_cache)
+                                  .create_pipeline_statement();
   prepare_sql_pipeline.get_result_table();
 
   EXPECT_EQ(prepared_statement_cache->size(), 1u);
 
   const std::string execute_statement = "EXECUTE x1 (1, 0.75)";
-  auto execute_sql_pipeline =
-  SQLPipelineBuilder{execute_statement}.with_prepared_statement_cache(
-  prepared_statement_cache).create_pipeline_statement();
+  auto execute_sql_pipeline = SQLPipelineBuilder{execute_statement}
+                                  .with_prepared_statement_cache(prepared_statement_cache)
+                                  .create_pipeline_statement();
   execute_sql_pipeline.get_result_table();
 
   auto select_sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
@@ -677,17 +686,17 @@ TEST_F(SQLPipelineStatementTest, PreparedUpdateStatementExecute) {
   auto prepared_statement_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
 
   const std::string prepared_statement = "PREPARE x1 FROM 'UPDATE table_a SET a = ? WHERE a = ?'";
-  auto prepare_sql_pipeline =
-  SQLPipelineBuilder{prepared_statement}.with_prepared_statement_cache(
-  prepared_statement_cache).create_pipeline_statement();
+  auto prepare_sql_pipeline = SQLPipelineBuilder{prepared_statement}
+                                  .with_prepared_statement_cache(prepared_statement_cache)
+                                  .create_pipeline_statement();
   prepare_sql_pipeline.get_result_table();
 
   EXPECT_EQ(prepared_statement_cache->size(), 1u);
 
   const std::string execute_statement = "EXECUTE x1 (1, 123)";
-  auto execute_sql_pipeline =
-  SQLPipelineBuilder{execute_statement}.with_prepared_statement_cache(
-  prepared_statement_cache).create_pipeline_statement();
+  auto execute_sql_pipeline = SQLPipelineBuilder{execute_statement}
+                                  .with_prepared_statement_cache(prepared_statement_cache)
+                                  .create_pipeline_statement();
   execute_sql_pipeline.get_result_table();
 
   auto select_sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
@@ -705,17 +714,17 @@ TEST_F(SQLPipelineStatementTest, PreparedDeleteStatementExecute) {
   auto prepared_statement_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
 
   const std::string prepared_statement = "PREPARE x1 FROM 'DELETE FROM table_a WHERE a = ?'";
-  auto prepare_sql_pipeline =
-  SQLPipelineBuilder{prepared_statement}.with_prepared_statement_cache(
-  prepared_statement_cache).create_pipeline_statement();
+  auto prepare_sql_pipeline = SQLPipelineBuilder{prepared_statement}
+                                  .with_prepared_statement_cache(prepared_statement_cache)
+                                  .create_pipeline_statement();
   prepare_sql_pipeline.get_result_table();
 
   EXPECT_EQ(prepared_statement_cache->size(), 1u);
 
   const std::string execute_statement = "EXECUTE x1 (123)";
-  auto execute_sql_pipeline =
-  SQLPipelineBuilder{execute_statement}.with_prepared_statement_cache(
-  prepared_statement_cache).create_pipeline_statement();
+  auto execute_sql_pipeline = SQLPipelineBuilder{execute_statement}
+                                  .with_prepared_statement_cache(prepared_statement_cache)
+                                  .create_pipeline_statement();
   execute_sql_pipeline.get_result_table();
 
   auto select_sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
@@ -740,7 +749,7 @@ TEST_F(SQLPipelineStatementTest, CacheQueryPlan) {
 TEST_F(SQLPipelineStatementTest, RecreateSubselectFromCache) {
   const std::string subselect_query = "SELECT * FROM table_int WHERE a = (SELECT MAX(b) FROM table_int)";
 
-  SQLPipelineStatement first_subselect_sql_pipeline{subselect_query};
+  auto first_subselect_sql_pipeline = SQLPipelineBuilder{subselect_query}.create_pipeline_statement();
   const auto first_subselect_result = first_subselect_sql_pipeline.get_result_table();
 
   auto expected_first_result = std::make_shared<Table>(_int_int_int_column_definitions, TableType::Data);
@@ -748,9 +757,9 @@ TEST_F(SQLPipelineStatementTest, RecreateSubselectFromCache) {
 
   EXPECT_TABLE_EQ_UNORDERED(first_subselect_result, expected_first_result);
 
-  SQLPipelineStatement{"INSERT INTO table_int VALUES (11, 11, 11)"}.get_result_table();
+  SQLPipelineBuilder{"INSERT INTO table_int VALUES (11, 11, 11)"}.create_pipeline_statement().get_result_table();
 
-  SQLPipelineStatement second_subselect_sql_pipeline{subselect_query};
+  auto second_subselect_sql_pipeline = SQLPipelineBuilder{subselect_query}.create_pipeline_statement();
   const auto second_subselect_result = second_subselect_sql_pipeline.get_result_table();
 
   auto expected_second_result = std::make_shared<Table>(_int_int_int_column_definitions, TableType::Data);

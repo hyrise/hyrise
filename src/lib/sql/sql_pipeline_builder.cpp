@@ -9,18 +9,19 @@ SQLPipelineBuilder& SQLPipelineBuilder::with_mvcc(const UseMvcc use_mvcc) {
   return *this;
 }
 
-SQLPipelineBuilder& SQLPipelineBuilder::with_optimizer(const std::shared_ptr<Optimizer> &optimizer) {
+SQLPipelineBuilder& SQLPipelineBuilder::with_optimizer(const std::shared_ptr<Optimizer>& optimizer) {
   _optimizer = optimizer;
   return *this;
 }
 
-SQLPipelineBuilder& SQLPipelineBuilder::with_prepared_statement_cache(const PreparedStatementCache &prepared_statements) {
+SQLPipelineBuilder& SQLPipelineBuilder::with_prepared_statement_cache(
+    const PreparedStatementCache& prepared_statements) {
   _prepared_statements = prepared_statements;
   return *this;
 }
 
 SQLPipelineBuilder& SQLPipelineBuilder::with_transaction_context(
-const std::shared_ptr<TransactionContext> &transaction_context) {
+    const std::shared_ptr<TransactionContext>& transaction_context) {
   _transaction_context = transaction_context;
   _use_mvcc = UseMvcc::Yes;
 
@@ -35,7 +36,8 @@ SQLPipeline SQLPipelineBuilder::create_pipeline() const {
   return {_sql, _transaction_context, _use_mvcc, optimizer, _prepared_statements};
 }
 
-SQLPipelineStatement SQLPipelineBuilder::create_pipeline_statement(std::shared_ptr<hsql::SQLParserResult> parsed_sql) const {
+SQLPipelineStatement SQLPipelineBuilder::create_pipeline_statement(
+    std::shared_ptr<hsql::SQLParserResult> parsed_sql) const {
   auto optimizer = _optimizer ? _optimizer : Optimizer::create_default_optimizer();
 
   return {_sql, parsed_sql, _use_mvcc, _transaction_context, optimizer, _prepared_statements};

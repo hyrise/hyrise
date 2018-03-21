@@ -13,8 +13,8 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/strategy/constant_calculation_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
-#include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace {

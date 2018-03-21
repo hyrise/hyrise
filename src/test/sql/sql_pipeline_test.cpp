@@ -15,8 +15,8 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace {
@@ -132,27 +132,30 @@ TEST_F(SQLPipelineTest, ConstructorCombinations) {
   auto transaction_context = TransactionManager::get().new_transaction_context();
 
   // No transaction context
-  EXPECT_NO_THROW(SQLPipelineBuilder(_select_query_a).set_optimizer(optimizer).set_use_mvcc(UseMvcc::Yes).pipeline());
   EXPECT_NO_THROW(
-      SQLPipelineBuilder(_select_query_a).set_prepared_statement_cache(prepared_cache).set_use_mvcc(UseMvcc::No).pipeline());
+      SQLPipelineBuilder(_select_query_a).with_optimizer(optimizer).with_mvcc(UseMvcc::Yes).create_pipeline());
   EXPECT_NO_THROW(SQLPipelineBuilder(_select_query_a)
-                  .with_optimizer(optimizer)
-                  .with_optimizer(prepared_cache)
-                  .with_mvcc(UseMvcc::Yes)
-                  .create_pipeline());
+                      .with_prepared_statement_cache(prepared_cache)
+                      .with_mvcc(UseMvcc::No)
+                      .create_pipeline());
+  EXPECT_NO_THROW(SQLPipelineBuilder(_select_query_a)
+                      .with_optimizer(optimizer)
+                      .with_prepared_statement_cache(prepared_cache)
+                      .with_mvcc(UseMvcc::Yes)
+                      .create_pipeline());
 
   // With transaction context
   EXPECT_NO_THROW(SQLPipelineBuilder(_select_query_a)
-                  .with_transaction_context(transaction_context)
-                  .with_transaction_context(optimizer)
-                  .with_mvcc(UseMvcc::Yes)
-                  .create_pipeline());
+                      .with_transaction_context(transaction_context)
+                      .with_optimizer(optimizer)
+                      .with_mvcc(UseMvcc::Yes)
+                      .create_pipeline());
   EXPECT_NO_THROW(SQLPipelineBuilder(_select_query_a)
-                  .with_transaction_context(transaction_context)
-                  .with_transaction_context(optimizer)
-                  .with_transaction_context(prepared_cache)
-                  .with_mvcc(UseMvcc::Yes)
-                  .create_pipeline());
+                      .with_transaction_context(transaction_context)
+                      .with_optimizer(optimizer)
+                      .with_prepared_statement_cache(prepared_cache)
+                      .with_mvcc(UseMvcc::Yes)
+                      .create_pipeline());
 }
 
 TEST_F(SQLPipelineTest, GetParsedSQLStatements) {

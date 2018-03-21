@@ -223,12 +223,11 @@ bool Console::_initialize_pipeline(const std::string& sql) {
     if (_explicitly_created_transaction_context != nullptr) {
       _sql_pipeline =
           std::make_unique<SQLPipeline>(SQLPipelineBuilder{sql}
-                                        .with_prepared_statement_cache(_prepared_statements)
-                                        .with_prepared_statement_cache(_explicitly_created_transaction_context)
-                                        .create_pipeline());
+                                            .with_prepared_statement_cache(_prepared_statements)
+                                            .with_prepared_statement_cache(_explicitly_created_transaction_context)
+                                            .create_pipeline());
     } else {
-      _sql_pipeline =
-          std::make_unique<SQLPipeline>(
+      _sql_pipeline = std::make_unique<SQLPipeline>(
           SQLPipelineBuilder{sql}.with_prepared_statement_cache(_prepared_statements).create_pipeline());
     }
   } catch (const std::exception& exception) {
