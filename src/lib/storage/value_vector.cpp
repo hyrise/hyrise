@@ -13,11 +13,9 @@ namespace opossum {
 
 void FixedStringVector::push_back(const std::string& string) {
   const auto pos = _chars.size();
+  // Default value of inserted elements using resize is null terminator ('\0')
   _chars.resize(_chars.size() + _string_length);
-  string.copy(&_chars[pos], _string_length);
-  if (string.size() < _string_length) {
-    std::fill(_chars.begin() + pos + string.size(), _chars.begin() + pos + _string_length, '\0');
-  }
+  string.copy(&_chars[pos], string.size());
 }
 
 FixedString FixedStringVector::at(const ChunkOffset chunk_offset) {

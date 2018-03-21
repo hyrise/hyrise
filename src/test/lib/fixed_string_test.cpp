@@ -13,6 +13,7 @@ TEST_F(FixedStringTest, StringLength) {
   FixedString str1 = FixedString(std::string("astring"));
 
   EXPECT_EQ(str1.size(), 7u);
+  EXPECT_EQ(str1.maximum_length(), 7u);
 }
 
 TEST_F(FixedStringTest, CharvectorToString) {
@@ -39,15 +40,11 @@ TEST_F(FixedStringTest, Constructors) {
 }
 
 TEST_F(FixedStringTest, CompareStrings) {
-  std::vector<char> a{'a', 'b', 'c', 'f'};
-  std::vector<char> b{'b', 'b', 'c', 'f'};
-
-  auto str1 = FixedString(&a[0], 4);
-  auto str2 = FixedString(&b[0], 4);
-  auto str3 = FixedString(&b[0], 4);
-
-  EXPECT_TRUE(str1 < str2);
-  EXPECT_TRUE(str2 == str3);
+  EXPECT_TRUE(FixedString("abcd") < FixedString("bbcd"));
+  EXPECT_TRUE(FixedString("abcd") < FixedString("bcd"));
+  EXPECT_TRUE(FixedString("abc") < FixedString("abcd"));
+  EXPECT_TRUE(FixedString("abcd") == FixedString("abcd"));
+  EXPECT_FALSE(FixedString("abcd") == FixedString("abc"));
 }
 
 TEST_F(FixedStringTest, CompareStringsRef) {

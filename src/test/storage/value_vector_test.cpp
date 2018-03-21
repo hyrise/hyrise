@@ -28,6 +28,9 @@ TEST_F(FixedStringVectorTest, AtOperatorFixedString) {
   valuevector.push_back("opossum");
 
   EXPECT_EQ(valuevector.at(0).string(), "abc");
+  EXPECT_EQ(valuevector.at(0).size(), 3u);
+  EXPECT_EQ(valuevector.at(0).maximum_length(), 6u);
+
   EXPECT_EQ(valuevector.at(1).string(), "string");
   EXPECT_EQ(valuevector.at(2).string(), "opossu");
 }
