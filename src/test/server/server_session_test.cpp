@@ -6,6 +6,7 @@
 #include "../base_test.hpp"
 #include "mock_connection.hpp"
 #include "mock_task_runner.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 
 namespace opossum {
 
@@ -78,7 +79,7 @@ class ServerSessionTest : public BaseTest {
     // We don't mock the SQL Pipeline, so we have to provide a query that executes successfully
     auto t = load_table("src/test/tables/int.tbl", 10);
     StorageManager::get().add_table("foo", t);
-    return std::make_shared<SQLPipeline>("SELECT * FROM foo;");
+    return std::make_shared<SQLPipeline>(SQLPipelineBuilder{"SELECT * FROM foo;"}.create_pipeline());
   }
 
   std::shared_ptr<TestConnection> _connection;
