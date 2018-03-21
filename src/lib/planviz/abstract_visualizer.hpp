@@ -39,7 +39,7 @@ struct VizEdgeInfo {
   std::string color = "white";
   std::string font_color = "white";
   double pen_width = 1.0;
-  std::string style;
+  std::string style = "solid";
 };
 
 template <typename GraphBase>
