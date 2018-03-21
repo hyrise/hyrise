@@ -19,8 +19,8 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 #include "scheduler/topology.hpp"
-#include "sql/sql.hpp"
 #include "sql/sql_pipeline.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sqlite_wrapper.hpp"
 #include "storage/storage_manager.hpp"
@@ -86,7 +86,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner_queries.sql");
   const std::string query = GetParam();
 
-  auto sql_pipeline = SQL{query}.pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{query}.create_pipeline();
   const auto& result_table = sql_pipeline.get_result_table();
 
   auto sqlite_result_table = _sqlite->execute_query(query);

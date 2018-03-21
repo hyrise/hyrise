@@ -32,7 +32,7 @@ namespace opossum {
  */
 class SQLPipeline : public Noncopyable {
  public:
-  // Prefer using the SQL builder interface for constructing SQLPipelines conveniently
+  // Prefer using the SQLPipelineBuilder interface for constructing SQLPipelines conveniently
   SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context, const UseMvcc use_mvcc,
               const std::shared_ptr<Optimizer>& optimizer, const PreparedStatementCache& prepared_statements);
 
@@ -56,14 +56,14 @@ class SQLPipeline : public Noncopyable {
   const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& get_tasks();
 
   // Executes all tasks, waits for them to finish, and returns the resulting table of the last statement.
-  const std::shared_ptr<const Table>& get_result_table();
+  std::shared_ptr<const Table> get_result_table();
 
   // Returns the TransactionContext that was passed to the SQLPipelineStatement, or nullptr if none was passed in.
-  const std::shared_ptr<TransactionContext>& transaction_context() const;
+  std::shared_ptr<TransactionContext> transaction_context() const;
 
   // This returns the SQLPipelineStatement that caused this pipeline to throw an error.
   // If there is no failed statement, this fails
-  const std::shared_ptr<SQLPipelineStatement>& failed_pipeline_statement() const;
+  std::shared_ptr<SQLPipelineStatement> failed_pipeline_statement() const;
 
   // Returns the number of SQLPipelineStatements present in this pipeline
   size_t statement_count() const;
@@ -81,8 +81,8 @@ class SQLPipeline : public Noncopyable {
  private:
   std::vector<std::shared_ptr<SQLPipelineStatement>> _sql_pipeline_statements;
 
-  std::shared_ptr<TransactionContext> _transaction_context;
-  std::shared_ptr<Optimizer> _optimizer;
+  const std::shared_ptr<TransactionContext> _transaction_context;
+  const std::shared_ptr<Optimizer> _optimizer;
 
   // Execution results
   std::vector<std::string> _sql_strings;

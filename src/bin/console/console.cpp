@@ -30,7 +30,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "sql/sql.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
@@ -222,13 +222,13 @@ bool Console::_initialize_pipeline(const std::string& sql) {
   try {
     if (_explicitly_created_transaction_context != nullptr) {
       _sql_pipeline =
-          std::make_unique<SQLPipeline>(SQL{sql}
-                                            .set_prepared_statement_cache(_prepared_statements)
-                                            .set_transaction_context(_explicitly_created_transaction_context)
-                                            .pipeline());
+          std::make_unique<SQLPipeline>(SQLPipelineBuilder{sql}
+                                            .with_prepared_statement_cache(_prepared_statements)
+                                            .with_transaction_context(_explicitly_created_transaction_context)
+                                            .create_pipeline());
     } else {
-      _sql_pipeline =
-          std::make_unique<SQLPipeline>(SQL{sql}.set_prepared_statement_cache(_prepared_statements).pipeline());
+      _sql_pipeline = std::make_unique<SQLPipeline>(
+          SQLPipelineBuilder{sql}.with_prepared_statement_cache(_prepared_statements).create_pipeline());
     }
   } catch (const std::exception& exception) {
     out(std::string(exception.what()) + '\n');
@@ -778,7 +778,7 @@ char* Console::command_generator_tpcc(const char* text, int state) {
 }
 
 bool Console::_handle_rollback() {
-  auto& failed_pipeline = _sql_pipeline->failed_pipeline_statement();
+  auto failed_pipeline = _sql_pipeline->failed_pipeline_statement();
   if (failed_pipeline->transaction_context() && failed_pipeline->transaction_context()->aborted()) {
     out("The transaction has been rolled back.\n");
     _explicitly_created_transaction_context = nullptr;

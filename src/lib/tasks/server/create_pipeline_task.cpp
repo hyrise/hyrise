@@ -2,7 +2,7 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include "sql/sql_pipeline.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 
 namespace opossum {
 
@@ -10,7 +10,7 @@ void CreatePipelineTask::_on_execute() {
   auto result = std::make_unique<CreatePipelineResult>();
 
   try {
-    result->sql_pipeline = std::make_shared<SQLPipeline>(_sql);
+    result->sql_pipeline = std::make_shared<SQLPipeline>(SQLPipelineBuilder{_sql}.create_pipeline());
   } catch (const std::exception& exception) {
     // Try LOAD file_name table_name
     if (_allow_load_table && _is_load_table()) {

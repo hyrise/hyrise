@@ -243,8 +243,8 @@ set(
     sql/lru_cache.hpp
     sql/lru_k_cache.hpp
     sql/random_cache.hpp
-    sql/sql.cpp
-    sql/sql.hpp
+    sql/sql_pipeline_builder.cpp
+    sql/sql_pipeline_builder.hpp
     sql/sql_pipeline.cpp
     sql/sql_pipeline.hpp
     sql/sql_pipeline_statement.cpp
