@@ -2,7 +2,7 @@
 
 #include <optional>
 
-#include "abstract_expression.hpp"
+#include "expression/abstract_expression.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
 
 namespace opossum {

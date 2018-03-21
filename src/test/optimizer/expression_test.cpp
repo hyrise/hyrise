@@ -6,7 +6,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "abstract_expression.hpp"
+#include "expression/abstract_expression.hpp"
 #include "operators/pqp_expression.hpp"
 #include "storage/table.hpp"
 

@@ -4,7 +4,7 @@
 #include <sstream>
 
 #include "abstract_read_only_operator.hpp"
-#include "case_expression.hpp"
+#include "expression/case_expression.hpp"
 
 namespace opossum {
 

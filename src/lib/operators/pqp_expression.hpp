@@ -2,7 +2,7 @@
 
 #include <optional>
 
-#include "abstract_expression.hpp"
+#include "expression/abstract_expression.hpp"
 #include "abstract_operator.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"

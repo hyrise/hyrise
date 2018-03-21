@@ -1,8 +1,8 @@
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
-    abstract_expression.cpp
-    abstract_expression.hpp
+    expression/abstract_expression.cpp
+    expression/abstract_expression.hpp
     all_parameter_variant.cpp
     all_parameter_variant.hpp
     all_type_variant.cpp
@@ -15,7 +15,7 @@ set(
     concurrency/transaction_manager.hpp
     constant_mappings.cpp
     constant_mappings.hpp
-    case_expression.hpp
+    expression/case_expression.hpp
     import_export/binary.hpp
     import_export/csv_converter.cpp
     import_export/csv_converter.hpp

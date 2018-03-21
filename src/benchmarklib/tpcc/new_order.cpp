@@ -10,7 +10,7 @@
 
 #include "helper.hpp"
 
-#include "abstract_expression.hpp"
+#include "expression/abstract_expression.hpp"
 #include "concurrency/commit_context.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"

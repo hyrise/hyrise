@@ -7,7 +7,7 @@
 #include "../../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "abstract_expression.hpp"
+#include "expression/abstract_expression.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
 #include "logical_query_plan/predicate_node.hpp"
