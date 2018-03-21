@@ -62,20 +62,11 @@ void _export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values
   ofstream.write(reinterpret_cast<const char*>(values.data()), values.size() * sizeof(T));
 }
 
-// template <typename T>
-// void _export_values(std::ofstream& ofstream, const opossum::ValueVector<T>& value_vector) {
-//   ofstream.write(reinterpret_cast<const char*>(value_vector.data()), value_vector.size() * sizeof(T));
-// }
-
 // specialized implementation for string values
-// template <>
-// void _export_values(std::ofstream& ofstream, const opossum::ValueVector<std::string>& value_vector) {
-//   _export_string_values(ofstream, value_vector.values());
-// }
-// template <>
-// void _export_values(std::ofstream& ofstream, const opossum::ValueVector<opossum::FixedString>& value_vector) {
-//   ofstream.write(reinterpret_cast<const char*>(value_vector.data()), value_vector.size());
-// }
+template <>
+void _export_values(std::ofstream& ofstream, const opossum::pmr_vector<std::string>& values) {
+  _export_string_values(ofstream, values);
+}
 template <>
 void _export_values(std::ofstream& ofstream, const std::vector<std::string>& values) {
   _export_string_values(ofstream, values);
