@@ -49,6 +49,7 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
     _build_dataflow(right_input, node);
   }
 
+  // Visualize subselects
   if (const auto projection = std::dynamic_pointer_cast<ProjectionNode>(node)) {
     for (const auto& column_expression : projection->column_expressions()) {
       if (column_expression->is_subselect()) {
