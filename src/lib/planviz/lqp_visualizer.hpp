@@ -27,8 +27,6 @@ class LQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<Abst
                       std::unordered_set<std::shared_ptr<const AbstractLQPNode>>& visualized_nodes);
 
   void _build_dataflow(const std::shared_ptr<AbstractLQPNode>& from, const std::shared_ptr<AbstractLQPNode>& to);
-  void _build_dataflow(const std::shared_ptr<AbstractLQPNode>& from, const std::shared_ptr<AbstractLQPNode>& to,
-                       const VizEdgeInfo& edge_info);
 };
 
 }  // namespace opossum
