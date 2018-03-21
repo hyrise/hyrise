@@ -24,7 +24,7 @@ struct dictionary_vector {
 
 template <>
 struct dictionary_vector<FixedString> {
-  using type = ValueVector<FixedString>;
+  using type = FixedStringVector;
 };
 
 template <typename T>
