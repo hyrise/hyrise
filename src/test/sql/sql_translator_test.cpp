@@ -23,7 +23,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "null_value.hpp"
-#include "sql/sql.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
@@ -32,7 +32,7 @@ using namespace std::string_literals;  // NOLINT
 
 namespace {
 std::shared_ptr<opossum::AbstractLQPNode> compile_query(const std::string& query) {
-  return opossum::SQL{query}.disable_mvcc().pipeline().get_unoptimized_logical_plans().at(0);
+  return opossum::SQLPipelineBuilder{query}.disable_mvcc().create_pipeline().get_unoptimized_logical_plans().at(0);
 }
 
 void load_test_tables() {

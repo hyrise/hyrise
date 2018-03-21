@@ -5,7 +5,7 @@
 #include "SQLParser.h"
 #include "benchmark/benchmark.h"
 #include "logical_query_plan/lqp_translator.hpp"
-#include "sql/sql.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
@@ -65,7 +65,7 @@ class SQLBenchmark : public BenchmarkBasicFixture {
     SQLQueryCache<SQLQueryPlan>::get().resize(16);
 
     while (st.KeepRunning()) {
-      auto pipeline_statement = SQL{query}.pipeline_statement();
+      auto pipeline_statement = SQLPipelineBuilder{query}.create_pipeline_statement();
       pipeline_statement.get_query_plan();
     }
   }

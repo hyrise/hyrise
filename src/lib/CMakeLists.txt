@@ -219,6 +219,22 @@ set(
     scheduler/topology.hpp
     scheduler/worker.cpp
     scheduler/worker.hpp
+    server/server.cpp
+    server/server.hpp
+    server/server_session.cpp
+    server/server_session.hpp
+    server/postgres_wire_handler.cpp
+    server/postgres_wire_handler.hpp
+    server/query_response_builder.cpp
+    server/query_response_builder.hpp
+    server/task_runner.hpp
+    server/then_operator.hpp
+    server/types.hpp
+    server/client_connection.cpp
+    server/client_connection.hpp
+    server/use_boost_future.hpp
+    server/use_boost_future_impl.hpp
+    server/use_boost_future_legacy_impl.hpp
     sql/abstract_cache.hpp
     sql/gdfs_cache.hpp
     sql/gds_cache.hpp
@@ -227,8 +243,8 @@ set(
     sql/lru_cache.hpp
     sql/lru_k_cache.hpp
     sql/random_cache.hpp
-    sql/sql.cpp
-    sql/sql.hpp
+    sql/sql_pipeline_builder.cpp
+    sql/sql_pipeline_builder.hpp
     sql/sql_pipeline.cpp
     sql/sql_pipeline.hpp
     sql/sql_pipeline_statement.cpp
@@ -353,6 +369,17 @@ set(
     tasks/chunk_migration_task.hpp
     tasks/migration_preparation_task.cpp
     tasks/migration_preparation_task.hpp
+    tasks/server/abstract_server_task.hpp
+    tasks/server/bind_server_prepared_statement_task.cpp
+    tasks/server/bind_server_prepared_statement_task.hpp
+    tasks/server/create_pipeline_task.cpp
+    tasks/server/create_pipeline_task.hpp
+    tasks/server/execute_server_prepared_statement_task.cpp
+    tasks/server/execute_server_prepared_statement_task.hpp
+    tasks/server/execute_server_query_task.cpp
+    tasks/server/execute_server_query_task.hpp
+    tasks/server/load_server_file_task.cpp
+    tasks/server/load_server_file_task.hpp
     type_cast.hpp
     type_comparison.hpp
     types.hpp

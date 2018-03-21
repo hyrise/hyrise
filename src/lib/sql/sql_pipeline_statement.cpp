@@ -11,7 +11,7 @@
 #include "optimizer/optimizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/hsql_expr_translator.hpp"
-#include "sql/sql.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "sql/sql_translator.hpp"
 #include "utils/assert.hpp"
@@ -79,7 +79,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
     // If this is as PreparedStatement, we want to translate the actual query and not the PREPARE FROM ... part.
     // However, that part is not yet parsed, so we need to parse the raw string from the PreparedStatement.
     Assert(_prepared_statements, "Cannot prepare statement without prepared statement cache.");
-    parsed_sql = SQL{prepared_statement->query}.pipeline_statement().get_parsed_sql_statement();
+    parsed_sql = SQLPipelineBuilder{prepared_statement->query}.create_pipeline_statement().get_parsed_sql_statement();
     _num_parameters = static_cast<uint16_t>(parsed_sql->parameters().size());
   }
 

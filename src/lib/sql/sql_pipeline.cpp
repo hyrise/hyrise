@@ -108,6 +108,7 @@ const std::vector<std::shared_ptr<hsql::SQLParserResult>>& SQLPipeline::get_pars
 
   return _parsed_sql_statements;
 }
+
 const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_unoptimized_logical_plans() {
   if (!_unoptimized_logical_plans.empty()) {
     return _unoptimized_logical_plans;
@@ -213,7 +214,7 @@ const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_
   return _tasks;
 }
 
-const std::shared_ptr<const Table>& SQLPipeline::get_result_table() {
+std::shared_ptr<const Table> SQLPipeline::get_result_table() {
   if (_pipeline_was_executed) {
     return _result_table;
   }
@@ -233,9 +234,9 @@ const std::shared_ptr<const Table>& SQLPipeline::get_result_table() {
   return _result_table;
 }
 
-const std::shared_ptr<TransactionContext>& SQLPipeline::transaction_context() const { return _transaction_context; }
+std::shared_ptr<TransactionContext> SQLPipeline::transaction_context() const { return _transaction_context; }
 
-const std::shared_ptr<SQLPipelineStatement>& SQLPipeline::failed_pipeline_statement() const {
+std::shared_ptr<SQLPipelineStatement> SQLPipeline::failed_pipeline_statement() const {
   return _failed_pipeline_statement;
 }
 

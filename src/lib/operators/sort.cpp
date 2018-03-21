@@ -14,7 +14,7 @@ namespace opossum {
 
 Sort::Sort(const std::shared_ptr<const AbstractOperator> in, const ColumnID column_id, const OrderByMode order_by_mode,
            const size_t output_chunk_size)
-    : AbstractReadOnlyOperator(in),
+    : AbstractReadOnlyOperator(OperatorType::Sort, in),
       _column_id(column_id),
       _order_by_mode(order_by_mode),
       _output_chunk_size(output_chunk_size) {}

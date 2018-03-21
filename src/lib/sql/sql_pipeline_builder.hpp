@@ -16,13 +16,13 @@ class Optimizer;
  * Interface for the configured execution of SQL.
  *
  * Minimal usage:
- *      SQL{"SELECT * FROM t;"}.pipeline().get_result_table()
+ *      SQLPipelineBuilder{"SELECT * FROM t;"}.create_pipeline().get_result_table()
  *
  * With custom Optimizer and TransactionContext:
- *      SQL{query}.
- *          set_optimizer(optimizer).
- *          set_transaction_context(tc).
- *          pipeline();
+ *      SQLPipelineBuilder{query}.
+ *          with_optimizer(optimizer).
+ *          with_transaction_context(tc).
+ *          create_pipeline();
  *
  * Defaults:
  *  - MVCC is enabled
@@ -32,27 +32,27 @@ class Optimizer;
  * See SQLPipeline[Statement] doc for these classes, in short SQLPipeline ist for queries with multiple statement,
  * SQLPipelineStatement for single statement queries.
  */
-class SQL final {
+class SQLPipelineBuilder final {
  public:
-  explicit SQL(const std::string& sql);
+  explicit SQLPipelineBuilder(const std::string& sql);
 
-  SQL& set_use_mvcc(const UseMvcc use_mvcc);
-  SQL& set_optimizer(const std::shared_ptr<Optimizer>& optimizer);
-  SQL& set_prepared_statement_cache(const PreparedStatementCache& prepared_statements);
-  SQL& set_transaction_context(const std::shared_ptr<TransactionContext>& transaction_context);
+  SQLPipelineBuilder& with_mvcc(const UseMvcc use_mvcc);
+  SQLPipelineBuilder& with_optimizer(const std::shared_ptr<Optimizer> &optimizer);
+  SQLPipelineBuilder& with_prepared_statement_cache(const PreparedStatementCache &prepared_statements);
+  SQLPipelineBuilder& with_transaction_context(const std::shared_ptr<TransactionContext> &transaction_context);
 
   /**
    * Short for set_use_mvcc(UseMvcc::No)
    */
-  SQL& disable_mvcc();
+  SQLPipelineBuilder& disable_mvcc();
 
-  SQLPipeline pipeline() const;
+  SQLPipeline create_pipeline() const;
 
   /**
    * @param parsed_sql  for usage from SQLPipeline to pass along to SQLPipelineStatement, everyone else leaves this as
    *                    nullptr
    */
-  SQLPipelineStatement pipeline_statement(std::shared_ptr<hsql::SQLParserResult> parsed_sql = nullptr) const;
+  SQLPipelineStatement create_pipeline_statement(std::shared_ptr<hsql::SQLParserResult> parsed_sql = nullptr) const;
 
  private:
   const std::string _sql;

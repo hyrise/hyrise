@@ -16,7 +16,7 @@ namespace opossum {
 IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator> in, const ColumnIndexType index_type,
                      const std::vector<ColumnID> left_column_ids, const PredicateCondition predicate_condition,
                      const std::vector<AllTypeVariant> right_values, const std::vector<AllTypeVariant> right_values2)
-    : AbstractReadOnlyOperator{in},
+    : AbstractReadOnlyOperator{OperatorType::IndexScan, in},
       _index_type{index_type},
       _left_column_ids{left_column_ids},
       _predicate_condition{predicate_condition},

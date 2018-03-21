@@ -27,7 +27,7 @@ namespace opossum {
 JoinNestedLoop::JoinNestedLoop(const std::shared_ptr<const AbstractOperator> left,
                                const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
                                const ColumnIDPair& column_ids, const PredicateCondition predicate_condition)
-    : AbstractJoinOperator(left, right, mode, column_ids, predicate_condition) {}
+    : AbstractJoinOperator(OperatorType::JoinNestedLoop, left, right, mode, column_ids, predicate_condition) {}
 
 const std::string JoinNestedLoop::name() const { return "JoinNestedLoop"; }
 

@@ -10,7 +10,7 @@ let "exitcode |= $?"
 # Conceptual: find | parallel python cpplint \| grep -v \| test \${PIPESTATUS[0]} -eq 0
 #             ^      ^        ^                 ^          ^
 #             |      |        |                 |          |
-#             |      |        |                 |          Get the return code of the first pipeline item (here: cpplint)
+#             |      |        |                 |          Get the return code of the first create_pipeline item (here: cpplint)
 #             |      |        |                 Removes the prints for files without errors
 #             |      |        Regular call of cpplint with options
 #             |      Runs the following in parallel
