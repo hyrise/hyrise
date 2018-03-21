@@ -12,7 +12,7 @@
 namespace opossum {
 
 Limit::Limit(const std::shared_ptr<const AbstractOperator> in, const size_t num_rows)
-    : AbstractReadOnlyOperator(in), _num_rows(num_rows) {}
+    : AbstractReadOnlyOperator(OperatorType::Limit, in), _num_rows(num_rows) {}
 
 const std::string Limit::name() const { return "Limit"; }
 

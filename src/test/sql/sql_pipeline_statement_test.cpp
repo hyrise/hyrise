@@ -45,6 +45,9 @@ class SQLPipelineStatementTest : public BaseTest {
     _table_b = load_table("src/test/tables/int_float2.tbl", 2);
     StorageManager::get().add_table("table_b", _table_b);
 
+    _table_int = load_table("src/test/tables/int_int_int.tbl", 2);
+    StorageManager::get().add_table("table_int", _table_int);
+
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("a", DataType::Int);
     column_definitions.emplace_back("b", DataType::Float);
@@ -57,6 +60,10 @@ class SQLPipelineStatementTest : public BaseTest {
     _int_float_column_definitions.emplace_back("a", DataType::Int);
     _int_float_column_definitions.emplace_back("b", DataType::Float);
 
+    _int_int_int_column_definitions.emplace_back("a", DataType::Int);
+    _int_int_int_column_definitions.emplace_back("b", DataType::Int);
+    _int_int_int_column_definitions.emplace_back("c", DataType::Int);
+
     _select_parse_result = std::make_shared<hsql::SQLParserResult>();
     hsql::SQLParser::parse(_select_query_a, _select_parse_result.get());
 
@@ -68,9 +75,11 @@ class SQLPipelineStatementTest : public BaseTest {
 
   std::shared_ptr<Table> _table_a;
   std::shared_ptr<Table> _table_b;
+  std::shared_ptr<Table> _table_int;
   std::shared_ptr<Table> _join_result;
 
   TableColumnDefinitions _int_float_column_definitions;
+  TableColumnDefinitions _int_int_int_column_definitions;
 
   const std::string _select_query_a = "SELECT * FROM table_a";
   const std::string _invalid_sql = "SELECT FROM table_a";
@@ -705,6 +714,29 @@ TEST_F(SQLPipelineStatementTest, CacheQueryPlan) {
   const auto& cache = SQLQueryCache<SQLQueryPlan>::get();
   EXPECT_EQ(cache.size(), 1u);
   EXPECT_TRUE(cache.has(_select_query_a));
+}
+
+TEST_F(SQLPipelineStatementTest, RecreateSubselectFromCache) {
+  const std::string subselect_query = "SELECT * FROM table_int WHERE a = (SELECT MAX(b) FROM table_int)";
+
+  SQLPipelineStatement first_subselect_sql_pipeline{subselect_query};
+  const auto first_subselect_result = first_subselect_sql_pipeline.get_result_table();
+
+  auto expected_first_result = std::make_shared<Table>(_int_int_int_column_definitions, TableType::Data);
+  expected_first_result->append({10, 10, 10});
+
+  EXPECT_TABLE_EQ_UNORDERED(first_subselect_result, expected_first_result);
+
+  SQLPipelineStatement{"INSERT INTO table_int VALUES (11, 11, 11)"}.get_result_table();
+
+  SQLPipelineStatement second_subselect_sql_pipeline{subselect_query};
+  const auto second_subselect_result = second_subselect_sql_pipeline.get_result_table();
+
+  auto expected_second_result = std::make_shared<Table>(_int_int_int_column_definitions, TableType::Data);
+  expected_second_result->append({11, 10, 11});
+  expected_second_result->append({11, 11, 11});
+
+  EXPECT_TABLE_EQ_UNORDERED(second_subselect_result, expected_second_result);
 }
 
 }  // namespace opossum

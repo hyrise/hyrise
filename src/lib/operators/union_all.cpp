@@ -10,7 +10,7 @@
 namespace opossum {
 UnionAll::UnionAll(const std::shared_ptr<const AbstractOperator> left_in,
                    const std::shared_ptr<const AbstractOperator> right_in)
-    : AbstractReadOnlyOperator(left_in, right_in) {
+    : AbstractReadOnlyOperator(OperatorType::UnionAll, left_in, right_in) {
   // nothing to do here
 }
 

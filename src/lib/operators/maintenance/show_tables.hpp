@@ -11,6 +11,8 @@ namespace opossum {
 // maintenance operator to get all table names stored by the StorageManager
 class ShowTables : public AbstractReadOnlyOperator {
  public:
+  ShowTables();
+
   const std::string name() const override;
 
  protected:
