@@ -224,7 +224,7 @@ bool Console::_initialize_pipeline(const std::string& sql) {
       _sql_pipeline =
           std::make_unique<SQLPipeline>(SQLPipelineBuilder{sql}
                                             .with_prepared_statement_cache(_prepared_statements)
-                                            .with_prepared_statement_cache(_explicitly_created_transaction_context)
+                                            .with_transaction_context(_explicitly_created_transaction_context)
                                             .create_pipeline());
     } else {
       _sql_pipeline = std::make_unique<SQLPipeline>(
@@ -778,7 +778,7 @@ char* Console::command_generator_tpcc(const char* text, int state) {
 }
 
 bool Console::_handle_rollback() {
-  auto& failed_pipeline = _sql_pipeline->failed_pipeline_statement();
+  auto failed_pipeline = _sql_pipeline->failed_pipeline_statement();
   if (failed_pipeline->transaction_context() && failed_pipeline->transaction_context()->aborted()) {
     out("The transaction has been rolled back.\n");
     _explicitly_created_transaction_context = nullptr;
