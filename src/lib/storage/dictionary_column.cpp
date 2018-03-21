@@ -53,7 +53,7 @@ std::shared_ptr<BaseColumn> DictionaryColumn<T>::copy_using_allocator(const Poly
   auto new_attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(new_attribute_vector_ptr));
   auto new_dictionary = dictionary_vector_t<T>{*_dictionary, alloc};
   auto new_dictionary_ptr = std::allocate_shared<dictionary_vector_t<T>>(alloc, std::move(new_dictionary));
-  return std::allocate_shared<DictionaryColumn<T>>(alloc, new_dictionary_ptr, new_attribute_vector_sptr, _null_value_id);                                                 _null_value_id);
+  return std::allocate_shared<DictionaryColumn<T>>(alloc, new_dictionary_ptr, new_attribute_vector_sptr, _null_value_id);
 }
 
 template <typename T>
