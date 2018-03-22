@@ -68,13 +68,13 @@ const auto jit_less_than_equals = [](const auto a, const auto b) -> decltype(a <
 const auto jit_greater_than = [](const auto a, const auto b) -> decltype(a > b) { return a > b; };
 const auto jit_greater_than_equals = [](const auto a, const auto b) -> decltype(a >= b) { return a >= b; };
 
-const auto jit_like = [](const std::string& a, const std::string& b) -> bool {
+const auto jit_like = [](const std::string a, const std::string b) -> bool {
   const auto regex_string = LikeTableScanImpl::sqllike_to_regex(b);
   const auto regex = std::regex{regex_string, std::regex_constants::icase};
   return std::regex_match(a, regex);
 };
 
-const auto jit_not_like = [](const std::string& a, const std::string& b) -> bool {
+const auto jit_not_like = [](const std::string a, const std::string b) -> bool {
   const auto regex_string = LikeTableScanImpl::sqllike_to_regex(b);
   const auto regex = std::regex{regex_string, std::regex_constants::icase};
   return !std::regex_match(a, regex);
@@ -141,8 +141,6 @@ DataType jit_compute_type(const T& op_func, const DataType lhs, const DataType r
   const auto combined_types = static_cast<uint8_t>(lhs) << 8 | static_cast<uint8_t>(rhs);
   switch (combined_types) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_TYPE_CASE, (JIT_DATA_TYPE_INFO)(JIT_DATA_TYPE_INFO))
-    default:
-      Fail("unreachable");
   }
 }
 
