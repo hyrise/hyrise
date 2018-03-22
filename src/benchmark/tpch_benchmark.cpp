@@ -14,6 +14,7 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
 #include "sql/sql_pipeline.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "tpch/tpch_db_generator.hpp"
 #include "tpch/tpch_queries.hpp"
 
@@ -272,7 +273,7 @@ class TpchBenchmark final {
   void _execute_query(const size_t tpch_query_idx) {
     const auto& sql = opossum::tpch_queries[tpch_query_idx];
 
-    SQLPipeline pipeline{sql, _use_mvcc};
+    auto pipeline = SQLPipelineBuilder{sql}.with_mvcc(_use_mvcc).create_pipeline();
     // Execute the query, we don't care about the results
     pipeline.get_result_table();
 
