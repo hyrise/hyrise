@@ -11,9 +11,9 @@
 
 namespace opossum {
 
-/* This file contains the type dispatching mechanisms that allow generic operations on JitMaterializedValues.
+/* This file contains the type dispatching mechanisms that allow generic operations on JitTupleValues.
  *
- * Each binary operation takes three JitMaterializedValues as parameters: a left input (lhs), a right input (rhs) and an
+ * Each binary operation takes three JitTupleValues as parameters: a left input (lhs), a right input (rhs) and an
  * output (result). Each value has one of the supported data types and can be
  * nullable or non-nullable. This leaves us with (number_of_datatypes * 2) ^ 2 combinations for each operation.
  *
@@ -44,36 +44,63 @@ namespace opossum {
 
 #define JIT_COMPUTE_CASE(r, types)                                                                                   \
   case static_cast<uint8_t>(JIT_GET_ENUM_VALUE(0, types)) << 8 | static_cast<uint8_t>(JIT_GET_ENUM_VALUE(1, types)): \
-    catching_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(), rhs.get<JIT_GET_DATA_TYPE(1, types)>(), result);           \
+    catching_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(context),                                                     \
+                  rhs.get<JIT_GET_DATA_TYPE(1, types)>(context), result);                                            \
     break;
 
 #define JIT_COMPUTE_TYPE_CASE(r, types)                                                                              \
   case static_cast<uint8_t>(JIT_GET_ENUM_VALUE(0, types)) << 8 | static_cast<uint8_t>(JIT_GET_ENUM_VALUE(1, types)): \
     return catching_func(JIT_GET_DATA_TYPE(0, types)(), JIT_GET_DATA_TYPE(1, types)());
 
+#define JIT_HASH_CASE(r, types)                                                                                        \
+  case JIT_GET_ENUM_VALUE(0, types):                                                                                   \
+    return std::hash<JIT_GET_DATA_TYPE(0, types)>()(value.get<JIT_GET_DATA_TYPE(0, types)>(context));
+
+#define JIT_EQUALS_CASE(r, types)                                                                                     \
+  case JIT_GET_ENUM_VALUE(0, types):                                                                                  \
+    return lhs.get<JIT_GET_DATA_TYPE(0, types)>(context) == rhs.get<JIT_GET_DATA_TYPE(0, types)>(rhs_index, context);
+
+#define JIT_ASSIGN_CASE(r, types)                                                                                     \
+  case static_cast<uint8_t>(JIT_GET_ENUM_VALUE(0, types)) << 8 | static_cast<uint8_t>(JIT_GET_ENUM_VALUE(1, types)):  \
+    return to.set<JIT_GET_DATA_TYPE(1, types)>(from.get<JIT_GET_DATA_TYPE(0, types)>(context), to_index, context);
+
+#define JIT_GROW_BY_ONE_CASE(r, types)                                                                                \
+  case JIT_GET_ENUM_VALUE(0, types):                                                                                  \
+    return value.grow_by_one<JIT_GET_DATA_TYPE(0, types)>(context);
+
+#define JIT_AGGREGATE_COMPUTE_CASE(r, types)                                                                                \
+  case JIT_GET_ENUM_VALUE(0, types):                                                                                  \
+    rhs.set<JIT_GET_DATA_TYPE(0, types)>(op_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(context), rhs.get<JIT_GET_DATA_TYPE(0, types)>(rhs_index, context)), rhs_index, context); \
+    break;
+
+//return rhs.set<JIT_GET_DATA_TYPE(0, types)>(rhs_index, op_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(context), rhs.get<JIT_GET_DATA_TYPE(0, types)>(rhs_index, context)), context);
+
 /* Arithmetic operators */
-const auto jit_addition = [](const auto a, const auto b) -> decltype(a + b) { return a + b; };
-const auto jit_subtraction = [](const auto a, const auto b) -> decltype(a - b) { return a - b; };
-const auto jit_multiplication = [](const auto a, const auto b) -> decltype(a * b) { return a * b; };
-const auto jit_division = [](const auto a, const auto b) -> decltype(a / b) { return a / b; };
-const auto jit_modulo = [](const auto a, const auto b) -> decltype(a % b) { return a % b; };
-const auto jit_power = [](const auto a, const auto b) -> decltype(std::pow(a, b)) { return std::pow(a, b); };
+const auto jit_addition = [](const auto& a, const auto& b) -> decltype(a + b) { return a + b; };
+const auto jit_subtraction = [](const auto& a, const auto& b) -> decltype(a - b) { return a - b; };
+const auto jit_multiplication = [](const auto& a, const auto& b) -> decltype(a * b) { return a * b; };
+const auto jit_division = [](const auto& a, const auto& b) -> decltype(a / b) { return a / b; };
+const auto jit_modulo = [](const auto& a, const auto& b) -> decltype(a % b) { return a % b; };
+const auto jit_power = [](const auto& a, const auto& b) -> decltype(std::pow(a, b)) { return std::pow(a, b); };
+const auto jit_maximum = [](const auto& a, const auto& b) -> decltype(std::max(a, b)) { return std::max(a, b); };
+const auto jit_minimum = [](const auto& a, const auto& b) -> decltype(std::min(a, b)) { return std::min(a, b); };
+const auto jit_increment = [](const auto& a, const auto& b) -> decltype(b + 1) { return b + 1; };
 
 /* Comparison operators */
-const auto jit_equals = [](const auto a, const auto b) -> decltype(a == b) { return a == b; };
-const auto jit_not_equals = [](const auto a, const auto b) -> decltype(a != b) { return a != b; };
-const auto jit_less_than = [](const auto a, const auto b) -> decltype(a < b) { return a < b; };
-const auto jit_less_than_equals = [](const auto a, const auto b) -> decltype(a <= b) { return a <= b; };
-const auto jit_greater_than = [](const auto a, const auto b) -> decltype(a > b) { return a > b; };
-const auto jit_greater_than_equals = [](const auto a, const auto b) -> decltype(a >= b) { return a >= b; };
+const auto jit_equals = [](const auto& a, const auto& b) -> decltype(a == b) { return a == b; };
+const auto jit_not_equals = [](const auto& a, const auto& b) -> decltype(a != b) { return a != b; };
+const auto jit_less_than = [](const auto& a, const auto& b) -> decltype(a < b) { return a < b; };
+const auto jit_less_than_equals = [](const auto& a, const auto& b) -> decltype(a <= b) { return a <= b; };
+const auto jit_greater_than = [](const auto& a, const auto& b) -> decltype(a > b) { return a > b; };
+const auto jit_greater_than_equals = [](const auto& a, const auto& b) -> decltype(a >= b) { return a >= b; };
 
-const auto jit_like = [](const std::string a, const std::string b) -> bool {
+const auto jit_like = [](const std::string& a, const std::string& b) -> bool {
   const auto regex_string = LikeTableScanImpl::sqllike_to_regex(b);
   const auto regex = std::regex{regex_string, std::regex_constants::icase};
   return std::regex_match(a, regex);
 };
 
-const auto jit_not_like = [](const std::string a, const std::string b) -> bool {
+const auto jit_not_like = [](const std::string& a, const std::string& b) -> bool {
   const auto regex_string = LikeTableScanImpl::sqllike_to_regex(b);
   const auto regex = std::regex{regex_string, std::regex_constants::icase};
   return !std::regex_match(a, regex);
@@ -89,7 +116,7 @@ struct InvalidTypeCatcher : Functor {
 
   template <typename... Ts>
   Result operator()(const Ts...) const {
-    Fail("invalid combination of types for operation");
+    Fail("Invalid types for operation.");
   }
 };
 
@@ -98,11 +125,12 @@ struct InvalidTypeCatcher : Functor {
 // lot of work for the JIT compiler. If we let the JIT compiler do the inlining instead, it is able to prune the
 // function to the relevant case during inlining. This allows for faster jitting.
 template <typename T>
-__attribute__((noinline)) void jit_compute(const T& op_func, const JitMaterializedValue& lhs,
-                                           const JitMaterializedValue& rhs, JitMaterializedValue& result) {
+void jit_compute(const T& op_func, const JitTupleValue& lhs, const JitTupleValue& rhs, const JitTupleValue& result,
+                 JitRuntimeContext& context) {
   // Handle NULL values and return if either input is NULL.
-  result.set_is_null(lhs.is_null() || rhs.is_null());
-  if (result.is_null()) {
+  const bool result_is_null = lhs.is_null(context) || rhs.is_null(context);
+  result.set_is_null(result_is_null, context);
+  if (result_is_null) {
     return;
   }
 
@@ -111,18 +139,14 @@ __attribute__((noinline)) void jit_compute(const T& op_func, const JitMaterializ
   const auto store_result_wrapper = [&](const auto& typed_lhs, const auto& typed_rhs, auto& result) -> decltype(
       op_func(typed_lhs, typed_rhs), void()) {
     using ResultType = decltype(op_func(typed_lhs, typed_rhs));
-    result.template set<ResultType>(op_func(typed_lhs, typed_rhs));
+    context.tuple.template set<ResultType>(result.tuple_index(), op_func(typed_lhs, typed_rhs));
   };
 
   const auto catching_func = InvalidTypeCatcher<decltype(store_result_wrapper), void>(store_result_wrapper);
 
   // The type information from the lhs and rhs are combined into a single value for dispatching without nesting.
   const auto combined_types = static_cast<uint8_t>(lhs.data_type()) << 8 | static_cast<uint8_t>(rhs.data_type());
-  switch (combined_types) {
-    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_CASE, (DATA_TYPE_INFO)(DATA_TYPE_INFO))
-    default:
-      Fail("unreachable");
-  }
+  switch (combined_types) { BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_CASE, (JIT_DATA_TYPE_INFO)(JIT_DATA_TYPE_INFO)) }
 }
 
 template <typename T>
@@ -137,70 +161,46 @@ DataType jit_compute_type(const T& op_func, const DataType lhs, const DataType r
   };
 
   const auto catching_func =
-      InvalidTypeCatcher<decltype(determine_return_type_wrapper), DataType>(determine_return_type_wrapper);
+          InvalidTypeCatcher<decltype(determine_return_type_wrapper), DataType>(determine_return_type_wrapper);
 
   // The type information from the lhs and rhs are combined into a single value for dispatching without nesting.
   const auto combined_types = static_cast<uint8_t>(lhs) << 8 | static_cast<uint8_t>(rhs);
   switch (combined_types) {
-    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_TYPE_CASE, (DATA_TYPE_INFO)(DATA_TYPE_INFO))
+    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_TYPE_CASE, (JIT_DATA_TYPE_INFO)(JIT_DATA_TYPE_INFO))
     default:
       Fail("unreachable");
   }
 }
 
-void jit_not(const JitMaterializedValue& lhs, JitMaterializedValue& result) {
-  DebugAssert(lhs.data_type() == DataType::Bool && result.data_type() == DataType::Bool, "invalid type for operation");
-  result.set<bool>(!lhs.get<bool>());
-  result.set_is_null(lhs.is_null());
-}
+void jit_not(const JitTupleValue& lhs, const JitTupleValue& result, JitRuntimeContext& context);
+void jit_and(const JitTupleValue& lhs, const JitTupleValue& rhs, const JitTupleValue& result,
+             JitRuntimeContext& context);
+void jit_or(const JitTupleValue& lhs, const JitTupleValue& rhs, const JitTupleValue& result,
+            JitRuntimeContext& context);
+void jit_is_null(const JitTupleValue& lhs, const JitTupleValue& result, JitRuntimeContext& context);
+void jit_is_not_null(const JitTupleValue& lhs, const JitTupleValue& result, JitRuntimeContext& context);
 
-void jit_and(const JitMaterializedValue& lhs, const JitMaterializedValue& rhs, JitMaterializedValue& result) {
-  DebugAssert(
-      lhs.data_type() == DataType::Bool && rhs.data_type() == DataType::Bool && result.data_type() == DataType::Bool,
-      "invalid type for operation");
+__attribute__((noinline)) uint64_t jit_hash(const JitTupleValue& value, JitRuntimeContext& context);
 
-  // three-valued logic AND
-  if (lhs.is_null()) {
-    result.set<bool>(false);
-    result.set_is_null(rhs.is_null() || rhs.get<bool>());
-  } else {
-    result.set<bool>(lhs.get<bool>() && rhs.get<bool>());
-    result.set_is_null(lhs.get<bool>() && rhs.is_null());
+__attribute__((noinline)) bool jit_aggregate_equals(const JitTupleValue& lhs, const JitHashmapValue& rhs, const size_t rhs_index, JitRuntimeContext& context);
+
+__attribute__((noinline)) void jit_assign(const JitTupleValue& from, const JitHashmapValue& to, const size_t to_index, JitRuntimeContext& context);
+
+__attribute__((noinline)) size_t jit_grow_by_one(const JitHashmapValue& value, JitRuntimeContext& context);
+
+template <typename T>
+__attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const JitTupleValue& lhs, const JitHashmapValue& rhs, const size_t rhs_index,
+                 JitRuntimeContext& context) {
+  if (lhs.is_null(context)) { return; }
+
+  switch (rhs.data_type()) {
+    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_AGGREGATE_COMPUTE_CASE, (JIT_DATA_TYPE_INFO))
+    default:
+      break;
   }
-}
-
-void jit_or(const JitMaterializedValue& lhs, const JitMaterializedValue& rhs, JitMaterializedValue& result) {
-  DebugAssert(
-      lhs.data_type() == DataType::Bool && rhs.data_type() == DataType::Bool && result.data_type() == DataType::Bool,
-      "invalid type for operation");
-
-  // three-valued logic OR
-  if (lhs.is_null()) {
-    result.set<bool>(true);
-    result.set_is_null(rhs.is_null() || !rhs.get<bool>());
-  } else {
-    result.set<bool>(lhs.get<bool>() || rhs.get<bool>());
-    result.set_is_null(!lhs.get<bool>() && rhs.is_null());
-  }
-}
-
-void jit_is_null(const JitMaterializedValue& lhs, JitMaterializedValue& result) {
-  DebugAssert(result.data_type() == DataType::Bool, "invalid type for operation");
-
-  result.set_is_null(false);
-  result.set<bool>(lhs.is_null());
-}
-
-void jit_is_not_null(const JitMaterializedValue& lhs, JitMaterializedValue& result) {
-  DebugAssert(result.data_type() == DataType::Bool, "invalid type for operation");
-
-  result.set_is_null(false);
-  result.set<bool>(!lhs.is_null());
 }
 
 // cleanup
-#undef JIT_GET_ENUM_VALUE
-#undef JIT_GET_DATA_TYPE
 #undef JIT_COMPUTE_CASE
 #undef JIT_COMPUTE_TYPE_CASE
 
