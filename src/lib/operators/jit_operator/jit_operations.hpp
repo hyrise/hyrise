@@ -53,23 +53,20 @@ namespace opossum {
     return catching_func(JIT_GET_DATA_TYPE(0, types)(), JIT_GET_DATA_TYPE(1, types)());
 
 /* Arithmetic operators */
-const auto jit_addition = [](const auto& a, const auto& b) -> decltype(a + b) { return a + b; };
-const auto jit_subtraction = [](const auto& a, const auto& b) -> decltype(a - b) { return a - b; };
-const auto jit_multiplication = [](const auto& a, const auto& b) -> decltype(a * b) { return a * b; };
-const auto jit_division = [](const auto& a, const auto& b) -> decltype(a / b) { return a / b; };
-const auto jit_modulo = [](const auto& a, const auto& b) -> decltype(a % b) { return a % b; };
-const auto jit_power = [](const auto& a, const auto& b) -> decltype(std::pow(a, b)) { return std::pow(a, b); };
-const auto jit_maximum = [](const auto& a, const auto& b) -> decltype(std::max(a, b)) { return std::max(a, b); };
-const auto jit_minimum = [](const auto& a, const auto& b) -> decltype(std::min(a, b)) { return std::min(a, b); };
-const auto jit_increment = [](const auto& a, const auto& b) -> decltype(b + 1) { return b + 1; };
+const auto jit_addition = [](const auto a, const auto b) -> decltype(a + b) { return a + b; };
+const auto jit_subtraction = [](const auto a, const auto b) -> decltype(a - b) { return a - b; };
+const auto jit_multiplication = [](const auto a, const auto b) -> decltype(a * b) { return a * b; };
+const auto jit_division = [](const auto a, const auto b) -> decltype(a / b) { return a / b; };
+const auto jit_modulo = [](const auto a, const auto b) -> decltype(a % b) { return a % b; };
+const auto jit_power = [](const auto a, const auto b) -> decltype(std::pow(a, b)) { return std::pow(a, b); };
 
 /* Comparison operators */
-const auto jit_equals = [](const auto& a, const auto& b) -> decltype(a == b) { return a == b; };
-const auto jit_not_equals = [](const auto& a, const auto& b) -> decltype(a != b) { return a != b; };
-const auto jit_less_than = [](const auto& a, const auto& b) -> decltype(a < b) { return a < b; };
-const auto jit_less_than_equals = [](const auto& a, const auto& b) -> decltype(a <= b) { return a <= b; };
-const auto jit_greater_than = [](const auto& a, const auto& b) -> decltype(a > b) { return a > b; };
-const auto jit_greater_than_equals = [](const auto& a, const auto& b) -> decltype(a >= b) { return a >= b; };
+const auto jit_equals = [](const auto a, const auto b) -> decltype(a == b) { return a == b; };
+const auto jit_not_equals = [](const auto a, const auto b) -> decltype(a != b) { return a != b; };
+const auto jit_less_than = [](const auto a, const auto b) -> decltype(a < b) { return a < b; };
+const auto jit_less_than_equals = [](const auto a, const auto b) -> decltype(a <= b) { return a <= b; };
+const auto jit_greater_than = [](const auto a, const auto b) -> decltype(a > b) { return a > b; };
+const auto jit_greater_than_equals = [](const auto a, const auto b) -> decltype(a >= b) { return a >= b; };
 
 const auto jit_like = [](const std::string& a, const std::string& b) -> bool {
   const auto regex_string = LikeTableScanImpl::sqllike_to_regex(b);
@@ -93,7 +90,7 @@ struct InvalidTypeCatcher : Functor {
 
   template <typename... Ts>
   Result operator()(const Ts...) const {
-    Fail("Invalid types for operation.");
+    Fail("Invalid combination of types for operation.");
   }
 };
 
@@ -158,6 +155,8 @@ void jit_is_null(const JitTupleValue& lhs, const JitTupleValue& result, JitRunti
 void jit_is_not_null(const JitTupleValue& lhs, const JitTupleValue& result, JitRuntimeContext& context);
 
 // cleanup
+#undef JIT_GET_ENUM_VALUE
+#undef JIT_GET_DATA_TYPE
 #undef JIT_COMPUTE_CASE
 #undef JIT_COMPUTE_TYPE_CASE
 

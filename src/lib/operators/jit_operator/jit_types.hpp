@@ -77,7 +77,7 @@ class JitVariantVector {
   }
 
   template <typename T>
-  T get(const size_t index);
+  T get(const size_t index) const;
   template <typename T>
   void set(const size_t index, const T value);
   bool is_null(const size_t index) { return _is_null[index]; }
@@ -123,11 +123,14 @@ class JitTupleValue {
   T get(JitRuntimeContext& context) const {
     return context.tuple.get<T>(_tuple_index);
   }
+
   template <typename T>
   void set(const T value, JitRuntimeContext& context) const {
     context.tuple.set<T>(_tuple_index, value);
   }
+
   inline bool is_null(JitRuntimeContext& context) const { return _is_nullable && context.tuple.is_null(_tuple_index); }
+
   inline void set_is_null(const bool is_null, JitRuntimeContext& context) const {
     context.tuple.set_is_null(_tuple_index, is_null);
   }

@@ -2,11 +2,11 @@
 
 namespace opossum {
 
-#define JIT_VARIANT_VECTOR_GET(r, d, type)         \
-  template <>                                      \
-  BOOST_PP_TUPLE_ELEM(3, 0, type)                  \
-  JitVariantVector::get(const size_t index) {      \
-    return BOOST_PP_TUPLE_ELEM(3, 1, type)[index]; \
+#define JIT_VARIANT_VECTOR_GET(r, d, type)          \
+  template <>                                       \
+  BOOST_PP_TUPLE_ELEM(3, 0, type)                   \
+  JitVariantVector::get(const size_t index) const { \
+    return BOOST_PP_TUPLE_ELEM(3, 1, type)[index];  \
   }
 
 #define JIT_VARIANT_VECTOR_SET(r, d, type)                                                      \
