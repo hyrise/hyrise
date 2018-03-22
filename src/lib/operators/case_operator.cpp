@@ -46,7 +46,7 @@ std::pair<bool, ResultDataType> materialize_case_result(
 namespace opossum {
 
 CaseOperator::CaseOperator(const std::shared_ptr<AbstractOperator>& input, const Expressions& case_expressions)
-    : AbstractReadOnlyOperator(input), _case_expressions(std::move(case_expressions)) {}
+    : AbstractReadOnlyOperator(OperatorType::Case, input), _case_expressions(std::move(case_expressions)) {}
 
 const std::string CaseOperator::name() const { return "Case"; }
 
