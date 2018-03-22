@@ -642,6 +642,27 @@ std::vector<std::shared_ptr<LQPExpression>> SQLTranslator::_retrieve_having_aggr
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
     const hsql::SelectStatement& select, const std::shared_ptr<AbstractLQPNode>& input_node) {
+  if (select.groupBy) {
+    for (const auto* group_by_hsql_expr : *select.groupBy->columns) {
+      const auto group_by_expression = HSQLExprTranslator::to_lqp_expression(*group_by_hsql_expr, input_node);
+      const auto vcolumn = pre_aggregate_expression_cache.put(group_by_expression, group_by_hsql_expr->alias);
+      aggregate_expression_cache.put(group_by_expression, group_by_hsql_expr->alias);
+    }
+  }
+
+  for (const auto* select_column_hsql_expr : *select.selectList) {
+    const auto select_column_expr = HSQLExprTranslator::to_lqp_expression(*select_column_hsql_expr, input_node);
+
+    _split_up_expression_into_aggregate_phases(select_column_expr, pre_aggregate_expression_cache,
+                                               aggregate_expression_cache,
+                                               post_aggregate_expression_cache);
+  }
+
+  auto pre_aggregate_projection = ...
+  auto aggregate = ...
+  auto having = ...
+  auto post_aggregate_projection = ...
+
   /**
    * This function creates the following node structure:
    *
