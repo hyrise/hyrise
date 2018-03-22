@@ -29,9 +29,7 @@ std::shared_ptr<Table> JitWriteTuple::create_output_table(const uint32_t max_chu
   return std::make_shared<Table>(column_definitions, TableType::Data, max_chunk_size);
 }
 
-void JitWriteTuple::before_query(Table& out_table, JitRuntimeContext& context) const {
-  _create_output_chunk(context);
-}
+void JitWriteTuple::before_query(Table& out_table, JitRuntimeContext& context) const { _create_output_chunk(context); }
 
 void JitWriteTuple::after_chunk(Table& out_table, JitRuntimeContext& context) const {
   if (context.out_chunk.size() > 0 && context.out_chunk[0]->size() > 0) {
@@ -55,7 +53,7 @@ void JitWriteTuple::_create_output_chunk(JitRuntimeContext& context) const {
   context.outputs.clear();
 
   // Create new value columns and add them to the runtime context to make them accessible by the column writers
-  for (const auto &output_column : _output_columns) {
+  for (const auto& output_column : _output_columns) {
     const auto data_type = output_column.tuple_value.data_type();
     const auto is_nullable = output_column.tuple_value.is_nullable();
 
@@ -67,10 +65,10 @@ void JitWriteTuple::_create_output_chunk(JitRuntimeContext& context) const {
 
       if (is_nullable) {
         context.outputs.push_back(std::make_shared<JitColumnWriter<ValueColumn<ColumnDataType>, ColumnDataType, true>>(
-                column, output_column.tuple_value));
+            column, output_column.tuple_value));
       } else {
         context.outputs.push_back(std::make_shared<JitColumnWriter<ValueColumn<ColumnDataType>, ColumnDataType, false>>(
-                column, output_column.tuple_value));
+            column, output_column.tuple_value));
       }
     });
   }

@@ -77,15 +77,11 @@ class JitVariantVector {
   }
 
   template <typename T>
-  T get(const size_t index);
+  T get(const size_t index) const;
   template <typename T>
   void set(const size_t index, const T value);
   bool is_null(const size_t index) { return _is_null[index]; }
   void set_is_null(const size_t index, const bool is_null) { _is_null[index] = is_null; }
-  template <typename T>
-  size_t grow_by_one();
-  template <typename T>
-  std::vector<T>& get_vector();
 
  private:
   BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_MEMBER, _, JIT_DATA_TYPE_INFO)
@@ -114,12 +110,14 @@ struct JitRuntimeContext {
 // context.
 class JitTupleValue {
  public:
-  JitHashmapValue(const DataType data_type, const bool is_nullable, const size_t column_index)
-          : _data_type{data_type}, _is_nullable{is_nullable}, _column_index{column_index} {}
+  JitTupleValue(const DataType data_type, const bool is_nullable, const size_t tuple_index)
+      : _data_type{data_type}, _is_nullable{is_nullable}, _tuple_index{tuple_index} {}
+  JitTupleValue(const std::pair<const DataType, const bool> data_type, const size_t tuple_index)
+      : _data_type{data_type.first}, _is_nullable{data_type.second}, _tuple_index{tuple_index} {}
 
   DataType data_type() const { return _data_type; }
   bool is_nullable() const { return _is_nullable; }
-  size_t column_index() const { return _column_index; }
+  size_t tuple_index() const { return _tuple_index; }
 
   template <typename T>
   T get(JitRuntimeContext& context) const {
@@ -140,7 +138,7 @@ class JitTupleValue {
  private:
   const DataType _data_type;
   const bool _is_nullable;
-  const size_t _column_index;
+  const size_t _tuple_index;
 };
 
 // cleanup
