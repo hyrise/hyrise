@@ -421,9 +421,10 @@ if (NOT DISABLE_JIT_SUPPORT)
     include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
     set(JIT_EMBEDDED_SOURCES
         # Files listed here will be embedded into the binary as LLVM-IR
-        operators/jit_operator/jit_operations.hpp
         operators/jit_operator/jit_types.cpp
         operators/jit_operator/jit_types.hpp
+        operators/jit_operator/jit_operations.cpp
+        operators/jit_operator/jit_operations.hpp
         operators/jit_operator/operators/jit_abstract_operator.hpp
         operators/jit_operator/operators/jit_abstract_sink.hpp
         operators/jit_operator/operators/jit_compute.cpp

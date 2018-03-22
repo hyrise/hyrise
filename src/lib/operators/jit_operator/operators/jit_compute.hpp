@@ -25,7 +25,7 @@ class JitExpression {
   std::string to_string() const;
 
   ExpressionType expression_type() const { return _expression_type; }
-  JitTupleValue result() const { return _result_value; }
+  const JitTupleValue& result() const { return _result_value; }
 
   void compute(JitRuntimeContext& context) const;
 

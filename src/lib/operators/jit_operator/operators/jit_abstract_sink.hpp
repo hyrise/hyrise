@@ -18,8 +18,10 @@ class JitAbstractSink : public JitAbstractOperator {
  public:
   virtual ~JitAbstractSink() = default;
 
-  // Is called
-  virtual void before_query(Table& out_table, JitRuntimeContext& context) {}
+  virtual std::shared_ptr<Table> create_output_table(const uint32_t max_chunk_size) const = 0;
+  virtual void before_query(Table& out_table, JitRuntimeContext& context) const {}
+  virtual void after_query(Table& out_table, JitRuntimeContext& context) const {}
+
   virtual void after_chunk(Table& out_table, JitRuntimeContext& context) const {}
 };
 

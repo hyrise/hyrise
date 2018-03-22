@@ -10,7 +10,7 @@ namespace opossum {
  */
 class BaseJitColumnWriter {
  public:
-  virtual void write_value() const = 0;
+  virtual void write_value(JitRuntimeContext& context) const = 0;
 };
 
 /* JitColumnWriters provide a template-free interface to store tuple values in ValueColumns in the output table.
@@ -28,23 +28,21 @@ class BaseJitColumnWriter {
 template <typename ValueColumn, typename DataType, bool Nullable>
 class JitColumnWriter : public BaseJitColumnWriter {
  public:
-  JitColumnWriter(const std::shared_ptr<ValueColumn>& column, const JitMaterializedValue& tuple_value)
+  JitColumnWriter(const std::shared_ptr<ValueColumn>& column, const JitTupleValue& tuple_value)
       : _column{column}, _tuple_value{tuple_value} {}
 
-  void write_value() const {
-    const auto value = _tuple_value.template get<DataType>();
-    _column->values().push_back(value);
+  void write_value(JitRuntimeContext& context) const {
+    _column->values().push_back(context.tuple.get<DataType>(_tuple_value.tuple_index()));
     // clang-format off
     if constexpr (Nullable) {
-      const auto is_null = _tuple_value.is_null();
-      _column->null_values().push_back(is_null);
+      _column->null_values().push_back(context.tuple.is_null(_tuple_value.tuple_index()));
     }
     // clang-format on
   }
 
  private:
   std::shared_ptr<ValueColumn> _column;
-  const JitMaterializedValue _tuple_value;
+  const JitTupleValue _tuple_value;
 };
 
 struct JitOutputColumn {
@@ -62,7 +60,8 @@ class JitWriteTuple : public JitAbstractSink {
  public:
   std::string description() const final;
 
-  void before_query(Table& out_table, JitRuntimeContext& context) final;
+  std::shared_ptr<Table> create_output_table(const uint32_t max_chunk_size) const final;
+  void before_query(Table& out_table, JitRuntimeContext& context) const final;
   void after_chunk(Table& out_table, JitRuntimeContext& context) const final;
 
   void add_output_column(const std::string& column_name, const JitTupleValue& tuple_value);

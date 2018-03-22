@@ -44,9 +44,7 @@ namespace opossum {
  * Each JitTupleValue encapsulates information about how to access a single value in the runtime tuple. However, the
  * JitTupleValues are part of the JitOperator and must thus not store a reference to the JitRuntimeContext. So while
  * they "know" how to access values in the runtime tuple, they do not have the means to do so.
- * Only by passing the runtime context to a JitTupleValue, a JitMaterializedValue is created.
- * This materialized value contains a reference to the underlying vector and finally allows the operator to access a
- * data value.
+ * Only by passing the runtime context to a JitTupleValue allows the value to be accessed.
  */
 
 /* The JitVariantVector can be used in two ways:
@@ -79,11 +77,15 @@ class JitVariantVector {
   }
 
   template <typename T>
-  T get(const size_t index) const;
+  T get(const size_t index);
   template <typename T>
   void set(const size_t index, const T value);
   bool is_null(const size_t index) { return _is_null[index]; }
   void set_is_null(const size_t index, const bool is_null) { _is_null[index] = is_null; }
+  template <typename T>
+  size_t grow_by_one();
+  template <typename T>
+  std::vector<T>& get_vector();
 
  private:
   BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_MEMBER, _, JIT_DATA_TYPE_INFO)
@@ -93,6 +95,11 @@ class JitVariantVector {
 class BaseJitColumnReader;
 class BaseJitColumnWriter;
 
+struct JitRuntimeHashmap {
+  std::unordered_map<uint64_t, std::vector<size_t>> indices;
+  std::vector<JitVariantVector> values;
+};
+
 // The structure encapsulates all data available to the JitOperator at runtime,
 // but NOT during code specialization.
 struct JitRuntimeContext {
@@ -101,65 +108,76 @@ struct JitRuntimeContext {
   JitVariantVector tuple;
   std::vector<std::shared_ptr<BaseJitColumnReader>> inputs;
   std::vector<std::shared_ptr<BaseJitColumnWriter>> outputs;
-  std::shared_ptr<Chunk> out_chunk;
-};
-
-// A JitMaterializedValue is a wrapper to access an actual value in the runtime context.
-// While a JitTupleValue is only an abstract representation of the value (knowing how to access it, but not being able
-// to actually do so), the JitMaterializedValue can access the value.
-// It is usually created from a JitTupleValue by providing the context at runtime.
-struct JitMaterializedValue {
-  JitMaterializedValue(const DataType data_type, const bool is_nullable, const size_t vector_index,
-                       JitVariantVector& vector)
-      : _data_type{data_type}, _is_nullable{is_nullable}, _vector_index{vector_index}, _vector{vector} {}
-
-  DataType data_type() const { return _data_type; }
-  bool is_nullable() const { return _is_nullable; }
-
-  template <typename T>
-  const T get() const {
-    return _vector.get<T>(_vector_index);
-  }
-  template <typename T>
-  void set(const T value) {
-    _vector.set<T>(_vector_index, value);
-  }
-  bool is_null() const { return _is_nullable && _vector.is_null(_vector_index); }
-  void set_is_null(const bool is_null) const { _vector.set_is_null(_vector_index, is_null); }
-
- private:
-  const DataType _data_type;
-  const bool _is_nullable;
-  const size_t _vector_index;
-  JitVariantVector& _vector;
+  JitRuntimeHashmap hashmap;
+  ChunkColumns out_chunk;
 };
 
 // The JitTupleValue represents a value in the runtime tuple.
 // The JitTupleValue has information about the DataType and index of the value it represents, but it does NOT have
 // a reference to the runtime tuple with the actual values.
-// however, this is enough for the jit engine to optimize any operation involving the value.
+// However, this is enough for the jit engine to optimize any operation involving the value.
 // It only knows how to access the value, once it gets converted to a JitMaterializedValue by providing the runtime
 // context.
 class JitTupleValue {
  public:
   JitTupleValue(const DataType data_type, const bool is_nullable, const size_t tuple_index)
-      : _data_type{data_type}, _is_nullable{is_nullable}, _tuple_index{tuple_index} {}
+          : _data_type{data_type}, _is_nullable{is_nullable}, _tuple_index{tuple_index} {}
   JitTupleValue(const std::pair<const DataType, const bool> data_type, const size_t tuple_index)
-      : _data_type{data_type.first}, _is_nullable{data_type.second}, _tuple_index{tuple_index} {}
+          : _data_type{data_type.first}, _is_nullable{data_type.second}, _tuple_index{tuple_index} {}
 
   DataType data_type() const { return _data_type; }
   bool is_nullable() const { return _is_nullable; }
   size_t tuple_index() const { return _tuple_index; }
 
-  // Converts this abstract value into an actually accessible value
-  JitMaterializedValue materialize(JitRuntimeContext& context) const {
-    return JitMaterializedValue(_data_type, _is_nullable, _tuple_index, context.tuple);
+  template <typename T>
+  T get(JitRuntimeContext& context) const {
+    return context.tuple.get<T>(_tuple_index);
+  }
+  template <typename T>
+  void set(const T value, JitRuntimeContext& context) const {
+    context.tuple.set<T>(_tuple_index, value);
+  }
+  inline bool is_null(JitRuntimeContext& context) const { return _is_nullable && context.tuple.is_null(_tuple_index); }
+  inline void set_is_null(const bool is_null, JitRuntimeContext& context) const {
+    context.tuple.set_is_null(_tuple_index, is_null);
   }
 
  private:
   const DataType _data_type;
   const bool _is_nullable;
   const size_t _tuple_index;
+};
+
+class JitHashmapValue {
+ public:
+  JitHashmapValue(const DataType data_type, const bool is_nullable, const size_t column_index)
+          : _data_type{data_type}, _is_nullable{is_nullable}, _column_index{column_index} {}
+
+  DataType data_type() const { return _data_type; }
+  bool is_nullable() const { return _is_nullable; }
+  size_t column_index() const { return _column_index; }
+
+  template <typename T>
+  T get(const size_t index, JitRuntimeContext& context) const {
+    return context.hashmap.values[_column_index].get<T>(index);
+  }
+  template <typename T>
+  void set(const T value, const size_t index, JitRuntimeContext& context) const {
+    context.hashmap.values[_column_index].set<T>(index, value);
+  }
+  inline bool is_null(const size_t index, JitRuntimeContext& context) const { return _is_nullable && context.hashmap.values[_column_index].is_null(index); }
+  inline void set_is_null(const bool is_null, const size_t index, JitRuntimeContext& context) const {
+    context.hashmap.values[_column_index].set_is_null(index, is_null);
+  }
+  template <typename T>
+  size_t grow_by_one(JitRuntimeContext& context) {
+    return context.hashmap.values[_column_index].grow_by_one<T>();
+  }
+
+ private:
+  const DataType _data_type;
+  const bool _is_nullable;
+  const size_t _column_index;
 };
 
 // cleanup

@@ -38,95 +38,90 @@ void JitExpression::compute(JitRuntimeContext& context) const {
     return;
   }
 
-  auto left_value = _left_child->result().materialize(context);
-  auto result_value = _result_value.materialize(context);
   _left_child->compute(context);
 
   if (!_is_binary_operator()) {
     switch (_expression_type) {
       case ExpressionType::Not:
-        jit_not(left_value, result_value);
+        jit_not(_left_child->result(), _result_value, context);
         break;
       case ExpressionType::IsNull:
-        jit_is_null(left_value, result_value);
+        jit_is_null(_left_child->result(), _result_value, context);
         break;
       case ExpressionType::IsNotNull:
-        jit_is_not_null(left_value, result_value);
+        jit_is_not_null(_left_child->result(), _result_value, context);
         break;
-
       default:
-        Fail("expression type is not supported yet");
+        // TODO(johannes)
+        break;
     }
     return;
   }
 
-  auto right_value = _right_child->result().materialize(context);
   _right_child->compute(context);
 
   switch (_expression_type) {
     case ExpressionType::Addition:
-      jit_compute(jit_addition, left_value, right_value, result_value);
+      jit_compute(jit_addition, _left_child->result(), _right_child->result(), _result_value, context);
       break;
     case ExpressionType::Subtraction:
-      jit_compute(jit_subtraction, left_value, right_value, result_value);
+      jit_compute(jit_subtraction, _left_child->result(), _right_child->result(), _result_value, context);
       break;
     case ExpressionType::Multiplication:
-      jit_compute(jit_multiplication, left_value, right_value, result_value);
+      jit_compute(jit_multiplication, _left_child->result(), _right_child->result(), _result_value, context);
       break;
     case ExpressionType::Division:
-      jit_compute(jit_division, left_value, right_value, result_value);
+      jit_compute(jit_division, _left_child->result(), _right_child->result(), _result_value, context);
       break;
     case ExpressionType::Modulo:
-      jit_compute(jit_modulo, left_value, right_value, result_value);
+      jit_compute(jit_modulo, _left_child->result(), _right_child->result(), _result_value, context);
       break;
     case ExpressionType::Power:
-      jit_compute(jit_power, left_value, right_value, result_value);
+      jit_compute(jit_power, _left_child->result(), _right_child->result(), _result_value, context);
       break;
 
     case ExpressionType::Equals:
-      jit_compute(jit_equals, left_value, right_value, result_value);
+      jit_compute(jit_equals, _left_child->result(), _right_child->result(), _result_value, context);
       break;
     case ExpressionType::NotEquals:
-      jit_compute(jit_not_equals, left_value, right_value, result_value);
+      jit_compute(jit_not_equals, _left_child->result(), _right_child->result(), _result_value, context);
       break;
     case ExpressionType::GreaterThan:
-      jit_compute(jit_greater_than, left_value, right_value, result_value);
+      jit_compute(jit_greater_than, _left_child->result(), _right_child->result(), _result_value, context);
       break;
     case ExpressionType::GreaterThanEquals:
-      jit_compute(jit_greater_than_equals, left_value, right_value, result_value);
+      jit_compute(jit_greater_than_equals, _left_child->result(), _right_child->result(), _result_value, context);
       break;
     case ExpressionType::LessThan:
-      jit_compute(jit_less_than, left_value, right_value, result_value);
+      jit_compute(jit_less_than, _left_child->result(), _right_child->result(), _result_value, context);
       break;
     case ExpressionType::LessThanEquals:
-      jit_compute(jit_less_than_equals, left_value, right_value, result_value);
+      jit_compute(jit_less_than_equals, _left_child->result(), _right_child->result(), _result_value, context);
       break;
     case ExpressionType::Like:
-      jit_compute(jit_like, left_value, right_value, result_value);
+      jit_compute(jit_like, _left_child->result(), _right_child->result(), _result_value, context);
       break;
     case ExpressionType::NotLike:
-      jit_compute(jit_not_like, left_value, right_value, result_value);
+      jit_compute(jit_not_like, _left_child->result(), _right_child->result(), _result_value, context);
       break;
 
     case ExpressionType::And:
-      jit_and(left_value, right_value, result_value);
+      jit_and(_left_child->result(), _right_child->result(), _result_value, context);
       break;
     case ExpressionType::Or:
-      jit_or(left_value, right_value, result_value);
+      jit_or(_left_child->result(), _right_child->result(), _result_value, context);
       break;
-
     default:
-      Fail("expression type not supported");
+      // TODO(johannes)
+      break;
   }
 }
 
 std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
-  const auto left_result = _left_child->result();
-
   if (!_is_binary_operator()) {
     switch (_expression_type) {
       case ExpressionType::Not:
-        return std::make_pair(DataType::Bool, left_result.is_nullable());
+        return std::make_pair(DataType::Bool, _left_child->result().is_nullable());
       case ExpressionType::IsNull:
       case ExpressionType::IsNotNull:
         return std::make_pair(DataType::Bool, false);
@@ -135,27 +130,31 @@ std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
     }
   }
 
-  const auto right_result = _right_child->result();
   DataType result_data_type;
-
   switch (_expression_type) {
     case ExpressionType::Addition:
-      result_data_type = jit_compute_type(jit_addition, left_result.data_type(), right_result.data_type());
+      result_data_type =
+          jit_compute_type(jit_addition, _left_child->result().data_type(), _right_child->result().data_type());
       break;
     case ExpressionType::Subtraction:
-      result_data_type = jit_compute_type(jit_subtraction, left_result.data_type(), right_result.data_type());
+      result_data_type =
+          jit_compute_type(jit_subtraction, _left_child->result().data_type(), _right_child->result().data_type());
       break;
     case ExpressionType::Multiplication:
-      result_data_type = jit_compute_type(jit_multiplication, left_result.data_type(), right_result.data_type());
+      result_data_type =
+          jit_compute_type(jit_multiplication, _left_child->result().data_type(), _right_child->result().data_type());
       break;
     case ExpressionType::Division:
-      result_data_type = jit_compute_type(jit_division, left_result.data_type(), right_result.data_type());
+      result_data_type =
+          jit_compute_type(jit_division, _left_child->result().data_type(), _right_child->result().data_type());
       break;
     case ExpressionType::Modulo:
-      result_data_type = jit_compute_type(jit_modulo, left_result.data_type(), right_result.data_type());
+      result_data_type =
+          jit_compute_type(jit_modulo, _left_child->result().data_type(), _right_child->result().data_type());
       break;
     case ExpressionType::Power:
-      result_data_type = jit_compute_type(jit_power, left_result.data_type(), right_result.data_type());
+      result_data_type =
+          jit_compute_type(jit_power, _left_child->result().data_type(), _right_child->result().data_type());
       break;
     case ExpressionType::Equals:
     case ExpressionType::NotEquals:
@@ -173,7 +172,7 @@ std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
       Fail("expression type not supported");
   }
 
-  return std::make_pair(result_data_type, left_result.is_nullable() || right_result.is_nullable());
+  return std::make_pair(result_data_type, _left_child->result().is_nullable() || _right_child->result().is_nullable());
 }
 
 bool JitExpression::_is_binary_operator() const {

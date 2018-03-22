@@ -18,7 +18,7 @@ std::string JitReadTuple::description() const {
   return desc.str();
 }
 
-void JitReadTuple::before_query(const Table& in_table, JitRuntimeContext& context) {
+void JitReadTuple::before_query(const Table& in_table, JitRuntimeContext& context) const {
   // Create a runtime tuple of the appropriate size
   context.tuple.resize(_num_tuple_values);
 
@@ -27,7 +27,7 @@ void JitReadTuple::before_query(const Table& in_table, JitRuntimeContext& contex
     auto data_type = input_literal.tuple_value.data_type();
     resolve_data_type(data_type, [&](auto type) {
       using DataType = typename decltype(type)::type;
-      input_literal.tuple_value.materialize(context).set<DataType>(boost::get<DataType>(input_literal.value));
+      context.tuple.set<DataType>(input_literal.tuple_value.tuple_index(), boost::get<DataType>(input_literal.value));
     });
   }
 }
@@ -39,18 +39,17 @@ void JitReadTuple::before_chunk(const Table& in_table, const Chunk& in_chunk, Ji
   for (const auto& input_column : _input_columns) {
     const auto column_id = input_column.column_id;
     const auto column = in_chunk.get_column(column_id);
-    const auto data_type = in_table.column_type(column_id);
     const auto is_nullable = in_table.column_is_nullable(column_id);
-    resolve_data_and_column_type(data_type, *column, [&](auto type, auto& typed_column) {
+    resolve_data_and_column_type(*column, [&](auto type, auto& typed_column) {
       using ColumnDataType = typename decltype(type)::type;
       create_iterable_from_column<ColumnDataType>(typed_column).with_iterators([&](auto it, auto end) {
         using IteratorType = decltype(it);
         if (is_nullable) {
-          context.inputs.push_back(std::make_shared<JitColumnReader<IteratorType, ColumnDataType, true>>(
-              it, input_column.tuple_value.materialize(context)));
+          context.inputs.push_back(
+              std::make_shared<JitColumnReader<IteratorType, ColumnDataType, true>>(it, input_column.tuple_value));
         } else {
-          context.inputs.push_back(std::make_shared<JitColumnReader<IteratorType, ColumnDataType, false>>(
-              it, input_column.tuple_value.materialize(context)));
+          context.inputs.push_back(
+              std::make_shared<JitColumnReader<IteratorType, ColumnDataType, false>>(it, input_column.tuple_value));
         }
       });
     });
@@ -61,22 +60,21 @@ void JitReadTuple::execute(JitRuntimeContext& context) const {
   for (; context.chunk_offset < context.chunk_size; ++context.chunk_offset) {
     // We read from and advance all column iterators, before passing the tuple on to the next operator.
     for (const auto& input : context.inputs) {
-      input->read_value();
+      input->read_value(context);
     }
     _emit(context);
   }
 }
 
-JitTupleValue JitReadTuple::add_input_column(const Table& table, const ColumnID column_id) {
-  // There is no need to add an input column twice
+JitTupleValue JitReadTuple::add_input_column(const DataType data_type, const bool is_nullable,
+                                             const ColumnID column_id) {
+  // There is no need to add the same input column twice.
   const auto it = std::find_if(_input_columns.begin(), _input_columns.end(),
                                [&column_id](const auto& input_column) { return input_column.column_id == column_id; });
   if (it != _input_columns.end()) {
     return it->tuple_value;
   }
 
-  const auto data_type = table.column_type(column_id);
-  const auto is_nullable = table.column_is_nullable(column_id);
   const auto tuple_value = JitTupleValue(data_type, is_nullable, _num_tuple_values++);
   _input_columns.push_back({column_id, tuple_value});
   return tuple_value;

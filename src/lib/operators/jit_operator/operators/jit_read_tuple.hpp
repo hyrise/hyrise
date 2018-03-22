@@ -12,7 +12,7 @@ namespace opossum {
  */
 class BaseJitColumnReader {
  public:
-  virtual void read_value() = 0;
+  virtual void read_value(JitRuntimeContext& context) = 0;
 };
 
 /* JitColumnReaders wrap the column iterable interface used by most operators and makes it accessible
@@ -38,27 +38,27 @@ class BaseJitColumnReader {
 template <typename Iterator, typename DataType, bool Nullable>
 class JitColumnReader : public BaseJitColumnReader {
  public:
-  JitColumnReader(const Iterator& iterator, const JitMaterializedValue& tuple_value)
+  JitColumnReader(const Iterator& iterator, const JitTupleValue& tuple_value)
       : _iterator{iterator}, _tuple_value{tuple_value} {}
 
-  void read_value() {
+  void read_value(JitRuntimeContext& context) {
     const auto& value = *_iterator;
     ++_iterator;
     // clang-format off
     if constexpr (Nullable) {
-      _tuple_value.set_is_null(value.is_null());
+      context.tuple.set_is_null(_tuple_value.tuple_index(), value.is_null());
       if (!value.is_null()) {
-        _tuple_value.template set<DataType>(value.value());
+        context.tuple.set<DataType>(_tuple_value.tuple_index(), value.value());
       }
     } else {
-      _tuple_value.template set<DataType>(value.value());
+      context.tuple.set<DataType>(_tuple_value.tuple_index(), value.value());
     }
     // clang-format on
   }
 
  private:
   Iterator _iterator;
-  JitMaterializedValue _tuple_value;
+  JitTupleValue _tuple_value;
 };
 
 struct JitInputColumn {
@@ -84,10 +84,10 @@ class JitReadTuple : public JitAbstractOperator {
  public:
   std::string description() const final;
 
-  void before_query(const Table& in_table, JitRuntimeContext& context);
+  void before_query(const Table& in_table, JitRuntimeContext& context) const;
   void before_chunk(const Table& in_table, const Chunk& in_chunk, JitRuntimeContext& context) const;
 
-  JitTupleValue add_input_column(const Table& table, const ColumnID column_id);
+  JitTupleValue add_input_column(const DataType data_type, const bool is_nullable, const ColumnID column_id);
   JitTupleValue add_literal_value(const AllTypeVariant& value);
   size_t add_temorary_value();
 
