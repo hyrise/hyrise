@@ -16,7 +16,7 @@ class InsertNode : public EnableMakeForLQPNode<InsertNode>, public AbstractLQPNo
   explicit InsertNode(const std::string table_name);
 
   std::string description() const override;
-  bool subtree_is_read_only() const override;
+  bool subplan_is_read_only() const override;
 
   bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
@@ -24,8 +24,8 @@ class InsertNode : public EnableMakeForLQPNode<InsertNode>, public AbstractLQPNo
 
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_child,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_child) const override;
+      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
+      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
   const std::string _table_name;
 };
 

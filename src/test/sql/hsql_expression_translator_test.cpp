@@ -213,7 +213,7 @@ TEST_F(HSQLExpressionTranslatorTest, DISABLED_ExpressionIn /* #279 */) {
 
   EXPECT_EQ(expression->type(), ExpressionType::In);
   EXPECT_EQ(expression->left_child()->type(), ExpressionType::Column);
-  EXPECT_EQ(expression->right_child()->type(), ExpressionType::Select);
+  EXPECT_EQ(expression->right_child()->type(), ExpressionType::Subselect);
 }
 
 // TODO(mp): Subselects are not supported yet
@@ -222,7 +222,7 @@ TEST_F(HSQLExpressionTranslatorTest, DISABLED_ExpressionExist /* #279 */) {
   auto expression = compile_where_expression(query);
 
   EXPECT_EQ(expression->type(), ExpressionType::Exists);
-  EXPECT_EQ(expression->left_child()->type(), ExpressionType::Select);
+  EXPECT_EQ(expression->left_child()->type(), ExpressionType::Subselect);
 }
 
 // TODO(mp): implement, CASE not supported yet

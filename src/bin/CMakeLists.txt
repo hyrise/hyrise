@@ -7,6 +7,15 @@ add_executable(
 target_link_libraries(
     hyriseServer
     hyrise
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_THREAD_LIBRARY}
+    boost_program_options
+)
+target_include_directories(
+    hyriseServer
+
+    PUBLIC
+    ${Boost_INCLUDE_DIRS}
 )
 
 # Configure playground

@@ -17,11 +17,16 @@
 namespace opossum {
 
 TableStatistics::TableStatistics(const std::shared_ptr<Table> table)
-    : _table(table), _row_count(table->row_count()), _column_statistics(table->column_count()) {}
+    : _table(table),
+      _table_type(table->type()),
+      _row_count(table->row_count()),
+      _column_statistics(table->column_count()) {}
 
-TableStatistics::TableStatistics(float row_count,
+TableStatistics::TableStatistics(const TableType table_type, float row_count,
                                  const std::vector<std::shared_ptr<BaseColumnStatistics>>& column_statistics)
-    : _row_count(row_count), _column_statistics(column_statistics) {}
+    : _table_type(table_type), _row_count(row_count), _column_statistics(column_statistics) {}
+
+TableType TableStatistics::table_type() const { return _table_type; }
 
 float TableStatistics::row_count() const { return _row_count; }
 
@@ -83,6 +88,8 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const Col
         old_column_statistics->estimate_selectivity_for_predicate(predicate_condition, casted_value, value2);
   }
 
+  clone->_table_type = TableType::References;
+
   clone->_column_statistics[column_id] = column_statistics_container.column_statistics;
 
   clone->_row_count *= column_statistics_container.selectivity;
@@ -100,6 +107,7 @@ std::shared_ptr<TableStatistics> TableStatistics::generate_cross_join_statistics
 
   // create copy of this as this should not be adapted for current join
   auto join_table_stats = std::make_shared<TableStatistics>(*this);
+  join_table_stats->_table_type = TableType::References;
 
   // make space in output for column statistics of right right table and copy them to output
   join_table_stats->_column_statistics.resize(_column_statistics.size() + right_table_stats->_column_statistics.size());
@@ -258,13 +266,13 @@ void TableStatistics::increment_invalid_row_count(uint64_t count) { _approx_inva
 
 std::shared_ptr<BaseColumnStatistics> TableStatistics::_get_or_generate_column_statistics(
     const ColumnID column_id) const {
-  if (_column_statistics[column_id]) {
+  if (column_id < _column_statistics.size() && _column_statistics[column_id]) {
     return _column_statistics[column_id];
   }
 
   auto table = _table.lock();
   DebugAssert(table != nullptr, "Corresponding table of table statistics is deleted.");
-  auto column_type = table->column_type(column_id);
+  auto column_type = table->column_data_type(column_id);
   auto column_statistics =
       make_shared_by_data_type<BaseColumnStatistics, ColumnStatistics>(column_type, column_id, _table);
   _column_statistics[column_id] = column_statistics;

@@ -167,6 +167,11 @@ bool AbstractExpression<DerivedExpression>::is_null_literal() const {
 }
 
 template <typename DerivedExpression>
+bool AbstractExpression<DerivedExpression>::is_subselect() const {
+  return _type == ExpressionType::Subselect;
+}
+
+template <typename DerivedExpression>
 bool AbstractExpression<DerivedExpression>::is_operand() const {
   return _type == ExpressionType::Literal || _type == ExpressionType::Column;
 }
@@ -193,7 +198,7 @@ const std::string AbstractExpression<DerivedExpression>::description() const {
       }
       desc << "]";
       break;
-    case ExpressionType::Select:
+    case ExpressionType::Subselect:
       desc << "[" << alias_string << "]";
       break;
     default: {}
@@ -244,6 +249,8 @@ std::string AbstractExpression<DerivedExpression>::to_string(
         return "\"" + boost::get<std::string>(value()) + "\"";
       }
       return type_cast<std::string>(value());
+    case ExpressionType::Placeholder:
+      return "?";
     case ExpressionType::Column:
       Fail("This should be handled in derived AbstractExpression type");
       return "";
@@ -252,6 +259,8 @@ std::string AbstractExpression<DerivedExpression>::to_string(
              _aggregate_function_arguments[0]->to_string(input_column_names, true) + ")";
     case ExpressionType::Star:
       return std::string("*");
+    case ExpressionType::Subselect:
+      return "subquery";
     default:
       // Handled further down.
       break;
@@ -261,19 +270,19 @@ std::string AbstractExpression<DerivedExpression>::to_string(
          "To generate expression string, Expressions need to be operators or operands (which are already covered "
          "further up).");
 
-  Assert(left_child(), "Operator needs left child.");
+  Assert(left_child(), "Operator needs left input.");
 
   std::string result;
   const auto left_column_name = left_child()->to_string(input_column_names, false);
   const auto& op = expression_type_to_operator_string.at(_type);
 
   if (is_binary_operator()) {
-    Assert(right_child(), "Binary Operator needs both children.");
+    Assert(right_child(), "Binary Operator needs both inputs.");
 
     const auto right_column_name = right_child()->to_string(input_column_names, false);
     result = left_column_name + " " + op + " " + right_column_name;
   } else {
-    Assert(!right_child(), "Unary Operator can only have left child.");
+    Assert(!right_child(), "Unary Operator can only have left input.");
 
     result = op + " " + left_column_name;
   }

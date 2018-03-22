@@ -14,6 +14,40 @@ class OperatorTask;
 class Table;
 class TransactionContext;
 
+enum class OperatorType {
+  Aggregate,
+  Delete,
+  Difference,
+  ExportBinary,
+  ExportCsv,
+  GetTable,
+  ImportBinary,
+  ImportCsv,
+  IndexScan,
+  Insert,
+  JoinHash,
+  JoinIndex,
+  JoinNestedLoop,
+  JoinSortMerge,
+  Limit,
+  Print,
+  Product,
+  Projection,
+  Sort,
+  TableScan,
+  TableWrapper,
+  UnionAll,
+  UnionPositions,
+  Update,
+  Validate,
+  CreateView,
+  DropView,
+  ShowColumns,
+  ShowTables,
+
+  Mock  // for Tests that need to Mock operators
+};
+
 // AbstractOperator is the abstract super class for all operators.
 // All operators have up to two input tables and one output table.
 // Their lifecycle has three phases:
@@ -30,15 +64,12 @@ class TransactionContext;
 
 class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, private Noncopyable {
  public:
-  AbstractOperator(const std::shared_ptr<const AbstractOperator> left = nullptr,
+  AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator> left = nullptr,
                    const std::shared_ptr<const AbstractOperator> right = nullptr);
 
   virtual ~AbstractOperator() = default;
 
-  // we need to explicitly set the move constructor to default when
-  // we overwrite the copy constructor
-  AbstractOperator(AbstractOperator&&) = default;
-  AbstractOperator& operator=(AbstractOperator&&) = default;
+  OperatorType type() const;
 
   // Overriding implementations need to call on_operator_started/finished() on the _transaction_context as well
   virtual void execute();
@@ -73,14 +104,14 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::shared_ptr<AbstractOperator> mutable_input_left() const;
   std::shared_ptr<AbstractOperator> mutable_input_right() const;
 
+  // Return the output tables of the inputs
+  std::shared_ptr<const Table> input_table_left() const;
+  std::shared_ptr<const Table> input_table_right() const;
+
   struct PerformanceData {
     uint64_t walltime_ns = 0;  // time spent in nanoseconds executing this operator
   };
   const AbstractOperator::PerformanceData& performance_data() const;
-
-  // Gets and sets the associated operator task (if any)
-  std::shared_ptr<OperatorTask> operator_task();
-  void set_operator_task(const std::shared_ptr<OperatorTask>&);
 
   void print(std::ostream& stream = std::cout) const;
 
@@ -98,8 +129,16 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   void _print_impl(std::ostream& out, std::vector<bool>& levels,
                    std::unordered_map<const AbstractOperator*, size_t>& id_by_operator, size_t& id_counter) const;
 
-  std::shared_ptr<const Table> _input_table_left() const;
-  std::shared_ptr<const Table> _input_table_right() const;
+  // Looks itself up in @param recreated_ops to support diamond shapes in PQPs, if not found calls _on_recreate()
+  std::shared_ptr<AbstractOperator> _recreate_impl(
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& recreated_ops,
+      const std::vector<AllParameterVariant>& args) const;
+
+  virtual std::shared_ptr<AbstractOperator> _on_recreate(
+      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& recreated_input_right) const = 0;
+
+  const OperatorType _type;
 
   // Shared pointers to input operators, can be nullptr.
   std::shared_ptr<const AbstractOperator> _input_left;

@@ -54,9 +54,11 @@ class OperatorsExportBinaryTest : public BaseTest {
 };
 
 TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
-  table = std::make_shared<Table>(30000);
-  table->add_column("FirstColumn", DataType::Int);
-  table->add_column("SecondColumn", DataType::String);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("FirstColumn", DataType::Int);
+  column_definitions.emplace_back("SecondColumn", DataType::String);
+
+  table = std::make_shared<Table>(column_definitions, TableType::Data, 30000);
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
@@ -67,8 +69,10 @@ TEST_F(OperatorsExportBinaryTest, TwoColumnsNoValues) {
 }
 
 TEST_F(OperatorsExportBinaryTest, SingleChunkSingleFloatColumn) {
-  auto table = std::make_shared<Table>(5);
-  table->add_column("a", DataType::Float);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Float);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
   table->append({5.5f});
   table->append({13.0f});
   table->append({16.2f});
@@ -82,8 +86,10 @@ TEST_F(OperatorsExportBinaryTest, SingleChunkSingleFloatColumn) {
   EXPECT_TRUE(compare_files("src/test/binary/SingleChunkSingleFloatColumn.bin", filename));
 }
 TEST_F(OperatorsExportBinaryTest, MultipleChunkSingleFloatColumn) {
-  auto table = std::make_shared<Table>(2);
-  table->add_column("a", DataType::Float);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Float);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   table->append({5.5f});
   table->append({13.0f});
   table->append({16.2f});
@@ -98,8 +104,10 @@ TEST_F(OperatorsExportBinaryTest, MultipleChunkSingleFloatColumn) {
 }
 
 TEST_F(OperatorsExportBinaryTest, StringValueColumn) {
-  auto table = std::make_shared<Table>(5);
-  table->add_column("a", DataType::String);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
   table->append({"This"});
   table->append({"is"});
   table->append({"a"});
@@ -115,14 +123,16 @@ TEST_F(OperatorsExportBinaryTest, StringValueColumn) {
 }
 
 TEST_F(OperatorsExportBinaryTest, StringDictionaryColumn) {
-  auto table = std::make_shared<Table>(10);
-  table->add_column("a", DataType::String);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
   table->append({"This"});
   table->append({"is"});
   table->append({"a"});
   table->append({"test"});
 
-  ChunkEncoder::encode_all_chunks(table);
+  ChunkEncoder::encode_all_chunks(table, EncodingType::Dictionary);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
@@ -134,12 +144,15 @@ TEST_F(OperatorsExportBinaryTest, StringDictionaryColumn) {
 }
 
 TEST_F(OperatorsExportBinaryTest, AllTypesValueColumn) {
-  auto table = std::make_shared<opossum::Table>(2);
-  table->add_column("a", DataType::String);
-  table->add_column("b", DataType::Int);
-  table->add_column("c", DataType::Long);
-  table->add_column("d", DataType::Float);
-  table->add_column("e", DataType::Double);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("b", DataType::Int);
+  column_definitions.emplace_back("c", DataType::Long);
+  column_definitions.emplace_back("d", DataType::Float);
+  column_definitions.emplace_back("e", DataType::Double);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+
   table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
@@ -154,18 +167,21 @@ TEST_F(OperatorsExportBinaryTest, AllTypesValueColumn) {
   EXPECT_TRUE(compare_files("src/test/binary/AllTypesValueColumn.bin", filename));
 }
 TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryColumn) {
-  auto table = std::make_shared<opossum::Table>(2);
-  table->add_column("a", DataType::String);
-  table->add_column("b", DataType::Int);
-  table->add_column("c", DataType::Long);
-  table->add_column("d", DataType::Float);
-  table->add_column("e", DataType::Double);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("b", DataType::Int);
+  column_definitions.emplace_back("c", DataType::Long);
+  column_definitions.emplace_back("d", DataType::Float);
+  column_definitions.emplace_back("e", DataType::Double);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+
   table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
-  ChunkEncoder::encode_all_chunks(table);
+  ChunkEncoder::encode_all_chunks(table, EncodingType::Dictionary);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
@@ -176,19 +192,23 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryColumn) {
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files("src/test/binary/AllTypesDictionaryColumn.bin", filename));
 }
+
 TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
-  auto table = std::make_shared<opossum::Table>(2);
-  table->add_column("a", DataType::String);
-  table->add_column("b", DataType::Int);
-  table->add_column("c", DataType::Long);
-  table->add_column("d", DataType::Float);
-  table->add_column("e", DataType::Double);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("b", DataType::Int);
+  column_definitions.emplace_back("c", DataType::Long);
+  column_definitions.emplace_back("d", DataType::Float);
+  column_definitions.emplace_back("e", DataType::Double);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+
   table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
   table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
 
-  ChunkEncoder::encode_chunks(table, {ChunkID{0}});
+  ChunkEncoder::encode_chunks(table, {ChunkID{0}}, EncodingType::Dictionary);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
@@ -203,12 +223,15 @@ TEST_F(OperatorsExportBinaryTest, AllTypesMixColumn) {
 // different from a exported table with ValueColumns and the same content.
 // They only differ in the table's chunk size. The result table of a scan has no chunk size limit.
 TEST_F(OperatorsExportBinaryTest, AllTypesReferenceColumn) {
-  auto table = std::make_shared<opossum::Table>(2);
-  table->add_column("a", DataType::String);
-  table->add_column("b", DataType::Int);
-  table->add_column("c", DataType::Long);
-  table->add_column("d", DataType::Float);
-  table->add_column("e", DataType::Double);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("b", DataType::Int);
+  column_definitions.emplace_back("c", DataType::Long);
+  column_definitions.emplace_back("d", DataType::Float);
+  column_definitions.emplace_back("e", DataType::Double);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+
   table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
@@ -228,8 +251,10 @@ TEST_F(OperatorsExportBinaryTest, AllTypesReferenceColumn) {
 }
 
 TEST_F(OperatorsExportBinaryTest, EmptyStringsValueColumn) {
-  auto table = std::make_shared<opossum::Table>(10);
-  table->add_column("a", DataType::String);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
   table->append({""});
   table->append({""});
   table->append({""});
@@ -247,15 +272,17 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsValueColumn) {
 }
 
 TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionaryColumn) {
-  auto table = std::make_shared<opossum::Table>(10);
-  table->add_column("a", DataType::String);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
   table->append({""});
   table->append({""});
   table->append({""});
   table->append({""});
   table->append({""});
 
-  ChunkEncoder::encode_all_chunks(table);
+  ChunkEncoder::encode_all_chunks(table, EncodingType::Dictionary);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
@@ -268,12 +295,14 @@ TEST_F(OperatorsExportBinaryTest, EmptyStringsDictionaryColumn) {
 }
 
 TEST_F(OperatorsExportBinaryTest, AllTypesNullValues) {
-  auto table = std::make_shared<opossum::Table>();
-  table->add_column("a", DataType::Int, true);
-  table->add_column("b", DataType::Float, true);
-  table->add_column("c", DataType::Long, true);
-  table->add_column("d", DataType::String, true);
-  table->add_column("e", DataType::Double, true);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, true);
+  column_definitions.emplace_back("b", DataType::Float, true);
+  column_definitions.emplace_back("c", DataType::Long, true);
+  column_definitions.emplace_back("d", DataType::String, true);
+  column_definitions.emplace_back("e", DataType::Double, true);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data);
 
   table->append({opossum::NULL_VALUE, 1.1f, 100, "one", 1.11});
   table->append({2, opossum::NULL_VALUE, 200, "two", 2.22});
@@ -292,12 +321,14 @@ TEST_F(OperatorsExportBinaryTest, AllTypesNullValues) {
 }
 
 TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryNullValues) {
-  auto table = std::make_shared<opossum::Table>();
-  table->add_column("a", DataType::Int, true);
-  table->add_column("b", DataType::Float, true);
-  table->add_column("c", DataType::Long, true);
-  table->add_column("d", DataType::String, true);
-  table->add_column("e", DataType::Double, true);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::Int, true);
+  column_definitions.emplace_back("b", DataType::Float, true);
+  column_definitions.emplace_back("c", DataType::Long, true);
+  column_definitions.emplace_back("d", DataType::String, true);
+  column_definitions.emplace_back("e", DataType::Double, true);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data);
 
   table->append({opossum::NULL_VALUE, 1.1f, 100, "one", 1.11});
   table->append({2, opossum::NULL_VALUE, 200, "two", 2.22});
@@ -305,7 +336,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryNullValues) {
   table->append({4, 4.4f, 400, opossum::NULL_VALUE, 4.44});
   table->append({5, 5.5f, 500, "five", opossum::NULL_VALUE});
 
-  ChunkEncoder::encode_all_chunks(table);
+  ChunkEncoder::encode_all_chunks(table, EncodingType::Dictionary);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();

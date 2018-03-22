@@ -30,8 +30,8 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
-#include "sql/sql_planner.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
@@ -115,6 +115,8 @@ Console::Console()
   for (auto it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it) {
     _tpcc_commands.push_back(it->first);
   }
+
+  _prepared_statements = std::make_shared<SQLQueryCache<SQLQueryPlan>>(DefaultCacheCapacity);
 }
 
 Console& Console::get() {
@@ -219,9 +221,14 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
 bool Console::_initialize_pipeline(const std::string& sql) {
   try {
     if (_explicitly_created_transaction_context != nullptr) {
-      _sql_pipeline = std::make_unique<SQLPipeline>(sql, _explicitly_created_transaction_context);
+      _sql_pipeline =
+          std::make_unique<SQLPipeline>(SQLPipelineBuilder{sql}
+                                            .with_prepared_statement_cache(_prepared_statements)
+                                            .with_transaction_context(_explicitly_created_transaction_context)
+                                            .create_pipeline());
     } else {
-      _sql_pipeline = std::make_unique<SQLPipeline>(sql);
+      _sql_pipeline = std::make_unique<SQLPipeline>(
+          SQLPipelineBuilder{sql}.with_prepared_statement_cache(_prepared_statements).create_pipeline());
     }
   } catch (const std::exception& exception) {
     out(std::string(exception.what()) + '\n');
@@ -402,7 +409,11 @@ int Console::load_table(const std::string& args) {
     }
   } else if (extension == "tbl") {
     try {
-      auto table = opossum::load_table(filepath, Chunk::MAX_SIZE);
+      // We used this chunk size in order to be able to test chunk pruning
+      // on sizeable data sets. This should probably be made configurable
+      // at some point.
+      static constexpr auto default_chunk_size = 500'000u;
+      auto table = opossum::load_table(filepath, default_chunk_size);
       auto& storage_manager = StorageManager::get();
       if (storage_manager.has_table(tablename)) {
         storage_manager.drop_table(tablename);
@@ -767,7 +778,7 @@ char* Console::command_generator_tpcc(const char* text, int state) {
 }
 
 bool Console::_handle_rollback() {
-  auto& failed_pipeline = _sql_pipeline->failed_pipeline_statement();
+  auto failed_pipeline = _sql_pipeline->failed_pipeline_statement();
   if (failed_pipeline->transaction_context() && failed_pipeline->transaction_context()->aborted()) {
     out("The transaction has been rolled back.\n");
     _explicitly_created_transaction_context = nullptr;

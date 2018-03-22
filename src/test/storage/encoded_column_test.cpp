@@ -23,12 +23,25 @@ namespace opossum {
 
 class EncodedColumnTest : public BaseTestWithParam<ColumnEncodingSpec> {
  protected:
-  static constexpr auto row_count = 16'384u;
   static constexpr auto max_value = 1'024;
 
  protected:
+  size_t row_count() {
+    static constexpr auto default_row_count = size_t{1u} << 14;
+
+    const auto encoding_spec = GetParam();
+
+    switch (encoding_spec.encoding_type) {
+      case EncodingType::FrameOfReference:
+        // fill three blocks and a bit more
+        return FrameOfReferenceColumn<int32_t>::block_size * (3.3);
+      default:
+        return default_row_count;
+    }
+  }
+
   std::shared_ptr<ValueColumn<int32_t>> create_int_value_column() {
-    auto values = pmr_concurrent_vector<int32_t>(row_count);
+    auto values = pmr_concurrent_vector<int32_t>(row_count());
 
     std::default_random_engine engine{};
     std::uniform_int_distribution<int32_t> dist{0u, max_value};
@@ -41,14 +54,14 @@ class EncodedColumnTest : public BaseTestWithParam<ColumnEncodingSpec> {
   }
 
   std::shared_ptr<ValueColumn<int32_t>> create_int_w_null_value_column() {
-    auto values = pmr_concurrent_vector<int32_t>(row_count);
-    auto null_values = pmr_concurrent_vector<bool>(row_count);
+    auto values = pmr_concurrent_vector<int32_t>(row_count());
+    auto null_values = pmr_concurrent_vector<bool>(row_count());
 
     std::default_random_engine engine{};
     std::uniform_int_distribution<int32_t> dist{0u, max_value};
     std::bernoulli_distribution bernoulli_dist{0.3};
 
-    for (auto i = 0u; i < row_count; ++i) {
+    for (auto i = 0u; i < row_count(); ++i) {
       values[i] = dist(engine);
       null_values[i] = bernoulli_dist(engine);
     }
@@ -62,7 +75,7 @@ class EncodedColumnTest : public BaseTestWithParam<ColumnEncodingSpec> {
     std::default_random_engine engine{};
     std::bernoulli_distribution bernoulli_dist{0.5};
 
-    for (auto into_referencing = 0u, into_referenced = 0u; into_referenced < row_count; ++into_referenced) {
+    for (auto into_referencing = 0u, into_referenced = 0u; into_referenced < row_count(); ++into_referenced) {
       if (bernoulli_dist(engine)) {
         list.push_back({into_referencing++, into_referenced});
       }
@@ -109,11 +122,12 @@ INSTANTIATE_TEST_CASE_P(
     ColumnEncodingSpecs, EncodedColumnTest,
     ::testing::Values(ColumnEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
                       ColumnEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-                      ColumnEncodingSpec{EncodingType::RunLength},
-                      ColumnEncodingSpec{EncodingType::DeprecatedDictionary}),
+                      ColumnEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128},
+                      ColumnEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned},
+                      ColumnEncodingSpec{EncodingType::RunLength}),
     formatter);
 
-TEST_P(EncodedColumnTest, SequenciallyReadNotNullableIntColumn) {
+TEST_P(EncodedColumnTest, SequentiallyReadNotNullableIntColumn) {
   auto value_column = this->create_int_value_column();
   auto base_encoded_column = this->encode_value_column(DataType::Int, value_column);
 
@@ -133,7 +147,7 @@ TEST_P(EncodedColumnTest, SequenciallyReadNotNullableIntColumn) {
   });
 }
 
-TEST_P(EncodedColumnTest, SequenciallyReadNullableIntColumn) {
+TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumn) {
   auto value_column = this->create_int_w_null_value_column();
   auto base_encoded_column = this->encode_value_column(DataType::Int, value_column);
 
@@ -157,7 +171,7 @@ TEST_P(EncodedColumnTest, SequenciallyReadNullableIntColumn) {
   });
 }
 
-TEST_P(EncodedColumnTest, SequanciallyReadNullableIntColumnWithChunkOffsetsList) {
+TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumnWithChunkOffsetsList) {
   auto value_column = this->create_int_w_null_value_column();
   auto base_encoded_column = this->encode_value_column(DataType::Int, value_column);
 
@@ -183,7 +197,7 @@ TEST_P(EncodedColumnTest, SequanciallyReadNullableIntColumnWithChunkOffsetsList)
   });
 }
 
-TEST_P(EncodedColumnTest, SequanciallyReadNullableIntColumnWithShuffledChunkOffsetsList) {
+TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumnWithShuffledChunkOffsetsList) {
   auto value_column = this->create_int_w_null_value_column();
   auto base_encoded_column = this->encode_value_column(DataType::Int, value_column);
 

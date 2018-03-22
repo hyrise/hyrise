@@ -11,27 +11,29 @@
 namespace opossum {
 Product::Product(const std::shared_ptr<const AbstractOperator> left,
                  const std::shared_ptr<const AbstractOperator> right)
-    : AbstractReadOnlyOperator(left, right) {}
+    : AbstractReadOnlyOperator(OperatorType::Product, left, right) {}
 
 const std::string Product::name() const { return "Product"; }
 
 std::shared_ptr<const Table> Product::_on_execute() {
-  auto output = std::make_shared<Table>();
+  TableColumnDefinitions column_definitions;
 
   // add columns from left table to output
-  for (ColumnID column_id{0}; column_id < _input_table_left()->column_count(); ++column_id) {
-    output->add_column_definition(_input_table_left()->column_name(column_id),
-                                  _input_table_left()->column_type(column_id));
+  for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
+    column_definitions.emplace_back(input_table_left()->column_name(column_id),
+                                    input_table_left()->column_data_type(column_id));
   }
 
   // add columns from right table to output
-  for (ColumnID column_id{0}; column_id < _input_table_right()->column_count(); ++column_id) {
-    output->add_column_definition(_input_table_right()->column_name(column_id),
-                                  _input_table_right()->column_type(column_id));
+  for (ColumnID column_id{0}; column_id < input_table_right()->column_count(); ++column_id) {
+    column_definitions.emplace_back(input_table_right()->column_name(column_id),
+                                    input_table_right()->column_data_type(column_id));
   }
 
-  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _input_table_left()->chunk_count(); ++chunk_id_left) {
-    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < _input_table_right()->chunk_count(); ++chunk_id_right) {
+  auto output = std::make_shared<Table>(column_definitions, TableType::References);
+
+  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < input_table_left()->chunk_count(); ++chunk_id_left) {
+    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < input_table_right()->chunk_count(); ++chunk_id_right) {
       add_product_of_two_chunks(output, chunk_id_left, chunk_id_right);
     }
   }
@@ -40,10 +42,8 @@ std::shared_ptr<const Table> Product::_on_execute() {
 }
 
 void Product::add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID chunk_id_left, ChunkID chunk_id_right) {
-  const auto chunk_left = _input_table_left()->get_chunk(chunk_id_left);
-  const auto chunk_right = _input_table_right()->get_chunk(chunk_id_right);
-
-  auto output_chunk = std::make_shared<Chunk>();
+  const auto chunk_left = input_table_left()->get_chunk(chunk_id_left);
+  const auto chunk_right = input_table_right()->get_chunk(chunk_id_right);
 
   // we use an approach here in which we do not have nested loops for left and right but create both sides separately
   // When the result looks like this:
@@ -59,11 +59,13 @@ void Product::add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID c
   std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> calculated_pos_lists_left;
   std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> calculated_pos_lists_right;
 
+  ChunkColumns output_columns;
+  auto is_left_side = true;
+
   for (const auto& chunk_in : {chunk_left, chunk_right}) {
     // reusing the same code for left and right side - using a reference_wrapper is ugly, but better than code
     // duplication
-    bool is_left_side = chunk_in == chunk_left;
-    auto table = is_left_side ? _input_table_left() : _input_table_right();
+    auto table = is_left_side ? input_table_left() : input_table_right();
 
     for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {
       std::shared_ptr<const Table> referenced_table;
@@ -75,7 +77,7 @@ void Product::add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID c
         referenced_column = ref_col_in->referenced_column_id();
         pos_list_in = ref_col_in->pos_list();
       } else {
-        referenced_table = is_left_side ? _input_table_left() : _input_table_right();
+        referenced_table = is_left_side ? input_table_left() : input_table_right();
         referenced_column = column_id;
       }
 
@@ -96,10 +98,17 @@ void Product::add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID c
           }
         }
       }
-      output_chunk->add_column(std::make_shared<ReferenceColumn>(referenced_table, referenced_column, pos_list_out));
+      output_columns.push_back(std::make_shared<ReferenceColumn>(referenced_table, referenced_column, pos_list_out));
     }
+
+    is_left_side = false;
   }
 
-  output->emplace_chunk(std::move(output_chunk));
+  output->append_chunk(output_columns);
+}
+std::shared_ptr<AbstractOperator> Product::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+  return std::make_shared<Product>(recreated_input_left, recreated_input_right);
 }
 }  // namespace opossum

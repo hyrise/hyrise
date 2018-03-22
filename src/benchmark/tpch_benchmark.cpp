@@ -8,16 +8,19 @@
 #include "SQLParserResult.h"
 #include "cxxopts.hpp"
 #include "json.hpp"
+#include "planviz/lqp_visualizer.hpp"
+#include "planviz/sql_query_plan_visualizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
 #include "sql/sql_pipeline.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "tpch/tpch_db_generator.hpp"
 #include "tpch/tpch_queries.hpp"
 
 /**
- * This benchmark measures Hyrise's performance executing the TPC-H queries, it doesn't (yet) support running the TPC-H
- * benchmark as it is specified.
+ * This benchmark measures Hyrise's performance executing the TPC-H *queries*, it doesn't (yet) support running the
+ * TPC-H *benchmark* exactly as it is specified.
  * (Among other things, the TPC-H requires performing data refreshes and has strict requirements for the number of
  * sessions running in parallel. See http://www.tpc.org/tpch/default.asp for more info)
  * The benchmark offers a wide range of options (scale_factor, chunk_size, ...) but most notably it offers two modes:
@@ -125,7 +128,8 @@ class TpchBenchmark final {
  public:
   TpchBenchmark(const BenchmarkMode benchmark_mode, std::vector<QueryID> query_ids,
                 const opossum::ChunkOffset chunk_size, const float scale_factor, const size_t max_num_query_runs,
-                const Duration max_duration, const std::optional<std::string>& output_file_path, const UseMvcc use_mvcc)
+                const Duration max_duration, const std::optional<std::string>& output_file_path, const UseMvcc use_mvcc,
+                const bool enable_visualization)
       : _benchmark_mode(benchmark_mode),
         _query_ids(std::move(query_ids)),
         _chunk_size(chunk_size),
@@ -134,7 +138,8 @@ class TpchBenchmark final {
         _max_duration(max_duration),
         _output_file_path(output_file_path),
         _use_mvcc(use_mvcc),
-        _query_results_by_query_id() {}
+        _query_results_by_query_id(),
+        _enable_visualization(enable_visualization) {}
 
   void run() {
     /**
@@ -165,6 +170,33 @@ class TpchBenchmark final {
     } else {
       _create_report(std::cout);
     }
+
+    /**
+     * Visualize query plans
+     */
+    if (_enable_visualization) {
+      for (const auto tpch_idx_and_plans : _query_plans) {
+        const auto& tpch_idx = tpch_idx_and_plans.first;
+        const auto& lqps = tpch_idx_and_plans.second.lqps;
+        const auto& pqps = tpch_idx_and_plans.second.pqps;
+
+        const auto tpch_idx_prefix = "TPCH-" + std::to_string(tpch_idx + 1) + "-";
+
+        GraphvizConfig graphviz_config;
+        graphviz_config.format = "svg";
+
+        for (auto lqp_idx = size_t{0}; lqp_idx < lqps.size(); ++lqp_idx) {
+          const auto file_prefix = tpch_idx_prefix + "LQP-" + std::to_string(lqp_idx);
+          LQPVisualizer{graphviz_config, {}, {}, {}}.visualize({lqps[lqp_idx]}, file_prefix + ".dot",
+                                                               file_prefix + ".svg");
+        }
+        for (auto pqp_idx = size_t{0}; pqp_idx < pqps.size(); ++pqp_idx) {
+          const auto file_prefix = tpch_idx_prefix + "PQP-" + std::to_string(pqp_idx);
+          SQLQueryPlanVisualizer{graphviz_config, {}, {}, {}}.visualize(*pqps[pqp_idx], file_prefix + ".dot",
+                                                                        file_prefix + ".svg");
+        }
+      }
+    }
   }
 
  private:
@@ -178,6 +210,15 @@ class TpchBenchmark final {
   const UseMvcc _use_mvcc;
 
   BenchmarkResults _query_results_by_query_id;
+
+  // For visualization, if enabled, plans are saved for each query idx and visualized once the benchmarking is done
+  const bool _enable_visualization;
+  struct QueryPlans final {
+    // std::vector<>s, since TPCH-15 contains multiple statements (CREATE VIEW and SELECT)
+    std::vector<std::shared_ptr<AbstractLQPNode>> lqps;
+    std::vector<std::shared_ptr<SQLQueryPlan>> pqps;
+  };
+  std::unordered_map<size_t, QueryPlans> _query_plans;
 
   // Run benchmark in BenchmarkMode::PermutedQuerySets mode
   void _benchmark_permuted_query_sets() {
@@ -200,7 +241,7 @@ class TpchBenchmark final {
         const auto query_benchmark_begin = std::chrono::steady_clock::now();
 
         // Execute the query, we don't care about the results
-        SQLPipeline{opossum::tpch_queries[query_id], _use_mvcc}.get_result_table();
+        _execute_query(query_id);
 
         const auto query_benchmark_end = std::chrono::steady_clock::now();
 
@@ -216,12 +257,9 @@ class TpchBenchmark final {
     for (const auto query_id : _query_ids) {
       out() << "- Benchmarking Query " << (query_id + 1) << std::endl;
 
-      const auto sql = opossum::tpch_queries[query_id];
-
       BenchmarkState state{_max_num_query_runs, _max_duration};
       while (state.keep_running()) {
-        // Execute the query, we don't care about the results
-        SQLPipeline{sql, _use_mvcc}.get_result_table();
+        _execute_query(query_id);
       }
 
       QueryBenchmarkResult result;
@@ -229,6 +267,24 @@ class TpchBenchmark final {
       result.duration = std::chrono::high_resolution_clock::now() - state.begin;
 
       _query_results_by_query_id.emplace(query_id, result);
+    }
+  }
+
+  void _execute_query(const size_t tpch_query_idx) {
+    const auto& sql = opossum::tpch_queries[tpch_query_idx];
+
+    auto pipeline = SQLPipelineBuilder{sql}.with_mvcc(_use_mvcc).create_pipeline();
+    // Execute the query, we don't care about the results
+    pipeline.get_result_table();
+
+    // If necessary, keep plans for visualization
+    if (_enable_visualization) {
+      const auto query_plans_iter = _query_plans.find(tpch_query_idx);
+      if (query_plans_iter == _query_plans.end()) {
+        Assert(pipeline.get_query_plans().size() == 1, "Expected exactly one SQLQueryPlan");
+        QueryPlans plans{pipeline.get_optimized_logical_plans(), pipeline.get_query_plans()};
+        _query_plans.emplace(tpch_query_idx, plans);
+      }
     }
   }
 
@@ -288,6 +344,7 @@ int main(int argc, char* argv[]) {
   auto benchmark_mode_str = std::string{"IndividualQueries"};
   auto enable_mvcc = false;
   auto enable_scheduler = false;
+  auto enable_visualization = false;
 
   cxxopts::Options cli_options_description{"TPCH Benchmark", ""};
 
@@ -303,6 +360,7 @@ int main(int argc, char* argv[]) {
     ("m,mode", "IndividualQueries or PermutedQuerySets, default is IndividualQueries", cxxopts::value<std::string>(benchmark_mode_str)->default_value(benchmark_mode_str)) // NOLINT
     ("mvcc", "Enable or disable MVCC", cxxopts::value<bool>(enable_mvcc)->default_value("false")) // NOLINT
     ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>(enable_scheduler)->default_value("false")) // NOLINT
+    ("visualize", "Create a visualization image of one LQP and PQP for each TPCH query", cxxopts::value<bool>(enable_visualization)->default_value("false")) // NOLINT
     ("queries", "Specify queries to run, default is all that are supported", cxxopts::value<std::vector<opossum::QueryID>>()); // NOLINT
   // clang-format on
 
@@ -377,11 +435,25 @@ int main(int argc, char* argv[]) {
   }
   opossum::out() << "- Running benchmark in '" << benchmark_mode_str << "' mode" << std::endl;
 
+  opossum::out() << "- Visualization is " << (enable_visualization ? "on" : "off") << std::endl;
+
   // Run the benchmark
-  opossum::TpchBenchmark(benchmark_mode, query_ids, chunk_size, scale_factor, num_iterations,
-                         std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{timeout_duration}),
-                         output_file_path, enable_mvcc ? opossum::UseMvcc::Yes : opossum::UseMvcc::No)
-      .run();
+
+  // clang-format off
+  opossum::TpchBenchmark tpch_benchmark{
+      benchmark_mode,
+      query_ids,
+      chunk_size,
+      scale_factor,
+      num_iterations,
+      std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{timeout_duration}),
+      output_file_path,
+      enable_mvcc ? opossum::UseMvcc::Yes : opossum::UseMvcc::No,
+      enable_visualization
+  };
+  // clang-format on
+
+  tpch_benchmark.run();
 
   return 0;
 }

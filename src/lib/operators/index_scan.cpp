@@ -16,7 +16,7 @@ namespace opossum {
 IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator> in, const ColumnIndexType index_type,
                      const std::vector<ColumnID> left_column_ids, const PredicateCondition predicate_condition,
                      const std::vector<AllTypeVariant> right_values, const std::vector<AllTypeVariant> right_values2)
-    : AbstractReadOnlyOperator{in},
+    : AbstractReadOnlyOperator{OperatorType::IndexScan, in},
       _index_type{index_type},
       _left_column_ids{left_column_ids},
       _predicate_condition{predicate_condition},
@@ -28,11 +28,11 @@ const std::string IndexScan::name() const { return "IndexScan"; }
 void IndexScan::set_included_chunk_ids(const std::vector<ChunkID>& chunk_ids) { _included_chunk_ids = chunk_ids; }
 
 std::shared_ptr<const Table> IndexScan::_on_execute() {
-  _in_table = _input_table_left();
+  _in_table = input_table_left();
 
   _validate_input();
 
-  _out_table = Table::create_with_layout_from(_in_table);
+  _out_table = std::make_shared<Table>(_in_table->column_definitions(), TableType::References);
 
   std::mutex output_mutex;
 
@@ -54,23 +54,31 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   return _out_table;
 }
 
+std::shared_ptr<AbstractOperator> IndexScan::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+  return std::make_shared<IndexScan>(recreated_input_left, _index_type, _left_column_ids, _predicate_condition,
+                                     _right_values, _right_values2);
+}
+
 std::shared_ptr<JobTask> IndexScan::_create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex) {
   auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
     const auto matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id));
 
     const auto chunk = _in_table->get_chunk(chunk_id);
-    // The output chunk is allocated on the same NUMA node as the input chunk. Also, the AccessCounter is
+    // The output chunk is allocated on the same NUMA node as the input chunk. Also, the ChunkAccessCounter is
     // reused to track accesses of the output chunk. Accesses of derived chunks are counted towards the
     // original chunk.
-    auto chunk_out = std::make_shared<Chunk>(chunk->get_allocator(), chunk->access_counter());
+
+    ChunkColumns columns;
 
     for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
       auto ref_column_out = std::make_shared<ReferenceColumn>(_in_table, column_id, matches_out);
-      chunk_out->add_column(ref_column_out);
+      columns.push_back(ref_column_out);
     }
 
     std::lock_guard<std::mutex> lock(output_mutex);
-    _out_table->emplace_chunk(std::move(chunk_out));
+    _out_table->append_chunk(columns, chunk->get_allocator(), chunk->access_counter());
   });
 
   job_task->schedule();
@@ -88,7 +96,7 @@ void IndexScan::_validate_input() {
            "Count mismatch: left column IDs and right values don’t have same size.");
   }
 
-  Assert(_in_table->get_type() == TableType::Data, "IndexScan only supports persistent tables right now.");
+  Assert(_in_table->type() == TableType::Data, "IndexScan only supports persistent tables right now.");
 }
 
 PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {

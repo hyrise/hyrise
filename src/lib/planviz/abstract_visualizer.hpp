@@ -21,7 +21,7 @@ struct GraphvizConfig {
 };
 
 struct VizGraphInfo {
-  std::string bg_color = "transparent";
+  std::string bg_color = "black";
   std::string rankdir = "BT";
   double ratio = 0.5;
 };
@@ -39,6 +39,7 @@ struct VizEdgeInfo {
   std::string color = "white";
   std::string font_color = "white";
   double pen_width = 1.0;
+  std::string style = "solid";
 };
 
 template <typename GraphBase>
@@ -78,6 +79,7 @@ class AbstractVisualizer {
     _add_property("fontcolor", &VizEdgeInfo::font_color);
     _add_property("label", &VizEdgeInfo::label);
     _add_property("penwidth", &VizEdgeInfo::pen_width);
+    _add_property("style", &VizEdgeInfo::style);
   }
 
   void visualize(const GraphBase& graph_base, const std::string& graph_filename, const std::string& img_filename) {
