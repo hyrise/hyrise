@@ -9,6 +9,7 @@
 
 #include "constant_mappings.hpp"
 #include "logical_query_plan/lqp_expression.hpp"
+#include "sql/sql_translator.hpp"
 #include "utils/assert.hpp"
 
 #include "SQLParser.h"
@@ -31,9 +32,6 @@ std::shared_ptr<LQPExpression> HSQLExprTranslator::to_lqp_expression(
   if (expr.expr2 != nullptr) {
     right = to_lqp_expression(*expr.expr2, input_node);
   }
-
-  // Since subselects need recursive translation, they are handled in SQLTranslator to avoid circular inclusion
-  DebugAssert(expr.type != hsql::kExprSelect, "Subselects should be handled in SQLTranslator.");
 
   switch (expr.type) {
     case hsql::kExprOperator: {
@@ -103,9 +101,13 @@ std::shared_ptr<LQPExpression> HSQLExprTranslator::to_lqp_expression(
       node = LQPExpression::create_select_star(table_name);
       break;
     }
+
+    case hsql::kExprSelect: {
+      const auto lqp = SQLTranslator{}.translate_select(*expr.select);
+      return std::make_shared<SelectExpression>(lqp);
+    }
     default:
       Fail("Unsupported expression type");
-      return nullptr;  // Make compiler happy
   }
 
   return node;

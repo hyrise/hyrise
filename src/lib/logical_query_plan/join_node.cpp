@@ -79,6 +79,21 @@ const std::vector<LQPColumnReference>& JoinNode::output_column_references() cons
   return *_output_column_references;
 }
 
+const std::vector<std::shared_ptr<LQPExpression>>& JoinNode::output_column_expressions() const {
+  if (!_output_column_expressions) {
+    Assert(left_input() && right_input(), "Can't perform action without inputs");
+
+    _output_column_expressions->emplace();
+    _output_column_expressions->insert(_output_column_expressions->end(),
+      left_input()->output_column_expressions().begin(),
+      left_input()->output_column_expressions().end());
+    _output_column_expressions->insert(_output_column_expressions->end(),
+      right_input()->output_column_expressions().begin(),
+                                       right_input()->output_column_expressions().end());
+  }
+  return *_output_column_expressions;
+}
+
 std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
   if (_join_mode == JoinMode::Cross) {

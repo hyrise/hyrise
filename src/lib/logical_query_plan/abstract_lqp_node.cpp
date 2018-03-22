@@ -227,6 +227,28 @@ const std::vector<LQPColumnReference>& AbstractLQPNode::output_column_references
   return *_output_column_references;
 }
 
+const std::vector<std::shared_ptr<LQPExpression>>& AbstractLQPNode::output_column_expressions() const {
+  /**
+   * Default implementation of output_column_expressions() will return the Expressions of the left_input if it exists,
+   * otherwise will pretend that all Columns originate in this node.
+   * Nodes with both inputs need to override this as the default implementation can't cover their behaviour.
+   */
+
+  if (!_output_column_expressions) {
+    Assert(!right_input(), "Nodes that have two inputs must override this method");
+    if (left_input()) {
+      _output_column_expressions = left_input()->output_column_expressions();
+    } else {
+      _output_column_expressions.emplace();
+      for (const auto& column_reference : output_column_references()) {
+        _output_column_expressions->emplace_back(std::make_shared<ColumnExpression>(column_reference));
+      }
+    }
+  }
+
+  return *_output_column_references;
+}
+
 std::optional<LQPColumnReference> AbstractLQPNode::find_column(const QualifiedColumnName& qualified_column_name) const {
   /**
    * If this node carries an alias that is different from that of the NamedColumnReference, we can't resolve the column

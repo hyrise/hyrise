@@ -4,10 +4,9 @@
 
 namespace opossum {
 
-class SelectExpression;
-
-class ExistsExpression : public AbstractExpression {
-  explicit ExistsExpression(const std::shared_ptr<SelectExpression>& select);
+class ValuePlaceholderExpression : public AbstractExpression {
+ public:
+  explicit ValuePlaceholderExpression(const ValuePlaceholder value_placeholder);
 
   /**
    * @defgroup Overrides for AbstractExpression
@@ -17,7 +16,7 @@ class ExistsExpression : public AbstractExpression {
   std::shared_ptr<AbstractExpression> resolve_expression_columns() const override;
   /**@}*/
 
-  std::shared_ptr<SelectExpression> select;
+  ValuePlaceholder value_placeholder;
 };
 
 }  // namespace opossum

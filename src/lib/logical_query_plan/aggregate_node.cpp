@@ -140,6 +140,20 @@ const std::vector<LQPColumnReference>& AggregateNode::output_column_references()
   return *_output_column_references;
 }
 
+const std::vector<std::shared_ptr<LQPExpression>>& AggregateNode::output_column_expressions() const {
+  if (!_output_column_expressions) {
+    _output_column_expressions->emplace();
+    _output_column_expressions->reserve(output_column_count());
+    for (const auto& groupby_column : _groupby_column_references) {
+      _output_column_expressions->emplace_back(std::make_shared<ColumnExpression>(groupby_column));
+    }
+    for (const auto& aggregate_expression : _aggregate_expressions) {
+      _output_column_expressions->emplace_back(aggregate_expression->clone()->resolve_expression_columns());
+    }
+  }
+  return *_output_column_expressions;
+}
+
 LQPColumnReference AggregateNode::get_column_by_expression(const std::shared_ptr<LQPExpression>& expression) const {
   const auto column_id = find_column_by_expression(expression);
   DebugAssert(column_id, "Expression could not be resolved.");

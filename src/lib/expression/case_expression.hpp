@@ -4,6 +4,7 @@
 
 #include "boost/variant.hpp"
 
+#include "abstract_expression.hpp"
 #include "resolve_type.hpp"
 #include "types.hpp"
 
@@ -51,8 +52,8 @@ struct CaseWhenClause final {
   ThenType then;
 };
 
-struct AbstractCaseExpression {
-  explicit AbstractCaseExpression(const DataType result_data_type) : result_data_type(result_data_type) {}
+class AbstractCaseExpression : public AbstractExpression {
+  explicit AbstractCaseExpression(const DataType result_data_type) : AbstractExpression(ExpressionType::Case), result_data_type(result_data_type) {}
   virtual ~AbstractCaseExpression() = default;
 
   const DataType result_data_type;
@@ -70,6 +71,17 @@ struct CaseExpression : public AbstractCaseExpression {
       : AbstractCaseExpression(data_type_from_type<ResultDataType>()),
         clauses(clauses),
         else_(else_) {}  // NOLINT - lint thinks else_(else_) is wrong
+
+  /**
+   * @defgroup Overrides for AbstractExpression
+   * @{
+   */
+  std::shared_ptr<AbstractExpression> deep_copy() const {
+
+  }
+
+  std::shared_ptr<AbstractExpression> resolve_expression_columns() const override;
+  /**@}*/
 
   std::vector<ClauseType> clauses;
   ElseType else_;

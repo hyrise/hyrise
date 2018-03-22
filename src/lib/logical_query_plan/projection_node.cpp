@@ -84,6 +84,17 @@ const std::vector<std::string>& ProjectionNode::output_column_names() const {
   return *_output_column_names;
 }
 
+const std::vector<std::shared_ptr<LQPExpression>>& ProjectionNode::output_column_expressions() const {
+  if (!_output_column_expressions) {
+    _output_column_expressions->emplace();
+    _output_column_expressions->reserve(output_column_count());
+    for (const auto& expression : _column_expressions) {
+      _output_column_expressions->emplace_back(expression->clone()->resolve_expression_columns());
+    }
+  }
+  return *_output_column_expressions;
+}
+
 std::string ProjectionNode::get_verbose_column_name(ColumnID column_id) const {
   DebugAssert(left_input(), "Need input to generate name");
   DebugAssert(column_id < _column_expressions.size(), "ColumnID out of range");

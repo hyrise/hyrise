@@ -54,6 +54,21 @@ const std::vector<LQPColumnReference>& UnionNode::output_column_references() con
   return *_output_column_references;
 }
 
+const std::vector<std::shared_ptr<LQPExpression>>& UnionNode::output_column_expressions() const {
+  if (!_output_column_expressions) {
+    Assert(left_input() && right_input(), "Can't perform action without inputs");
+    Assert(left_input()->output_column_references() == right_input()->output_column_references(),
+                "Input layouts differ.");
+
+    _output_column_expressions->emplace();
+    _output_column_expressions->insert(_output_column_expressions->end(),
+                                       left_input()->output_column_expressions().begin(),
+                                       left_input()->output_column_expressions().end());
+  }
+
+  return *_output_column_expressions;
+}
+
 std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
   Fail("Statistics for UNION not yet implemented");

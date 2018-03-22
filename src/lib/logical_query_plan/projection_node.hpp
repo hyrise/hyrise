@@ -28,6 +28,7 @@ class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public Abstr
 
   const std::vector<LQPColumnReference>& output_column_references() const override;
   const std::vector<std::string>& output_column_names() const override;
+  const std::vector<std::shared_ptr<LQPExpression>>& output_column_expressions() const override;
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
 

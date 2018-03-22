@@ -178,6 +178,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   virtual const std::vector<LQPColumnReference>& output_column_references() const;
 
   /**
+   * @returns the Expressions that produce the Columns of this node. If a column is the result of the expressions of
+   *          multiple nodes, the entire, nested Expression is returned
+   */
+  virtual const std::vector<std::shared_ptr<LQPExpression>>& output_column_expressions() const;
+
+  /**
    * @return the number of Columns this node outputs. Same as output_column_names().size()
    */
   size_t output_column_count() const;
@@ -339,6 +345,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
   // mutable, so it can be lazily initialized in output_column_references() overrides
   mutable std::optional<std::vector<LQPColumnReference>> _output_column_references;
+  mutable std::optional<std::vector<std::shared_ptr<LQPExpression>>> _output_column_expressions;
 
   /**
    * If qualified_column_name.table_name is the alias set for this subtree, remove the table_name so that we

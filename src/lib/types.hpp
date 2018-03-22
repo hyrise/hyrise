@@ -194,59 +194,9 @@ enum class PredicateCondition {
   IsNotNull
 };
 
-enum class ExpressionType {
-  /*Any literal value*/
-  Literal,
-  /*A star as in SELECT * FROM ...*/
-  Star,
-  /*A parameter used in PreparedStatements*/
-  Placeholder,
-  /*An identifier for a column*/
-  Column,
-  /*An identifier for a function, such as COUNT, MIN, MAX*/
-  Function,
-
-  /*A subselect*/
-  Subselect,
-
-  /*Arithmetic operators*/
-  Addition,
-  Subtraction,
-  Multiplication,
-  Division,
-  Modulo,
-  Power,
-
-  /*Logical operators*/
-  Equals,
-  NotEquals,
-  LessThan,
-  LessThanEquals,
-  GreaterThan,
-  GreaterThanEquals,
-  Like,
-  NotLike,
-  And,
-  Or,
-  Between,
-  Not,
-
-  /*Set operators*/
-  In,
-  Exists,
-
-  /*Others*/
-  IsNull,
-  IsNotNull,
-  Case,
-  Hint
-};
-
 enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self, Semi, Anti };
 
 enum class UnionMode { Positions };
-
-enum class AggregateFunction { Min, Max, Sum, Avg, Count, CountDistinct };
 
 enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
 
