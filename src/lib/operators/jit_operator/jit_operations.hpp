@@ -44,36 +44,13 @@ namespace opossum {
 
 #define JIT_COMPUTE_CASE(r, types)                                                                                   \
   case static_cast<uint8_t>(JIT_GET_ENUM_VALUE(0, types)) << 8 | static_cast<uint8_t>(JIT_GET_ENUM_VALUE(1, types)): \
-    catching_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(context),                                                     \
-                  rhs.get<JIT_GET_DATA_TYPE(1, types)>(context), result);                                            \
+    catching_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(context), rhs.get<JIT_GET_DATA_TYPE(1, types)>(context),      \
+                  result);                                                                                           \
     break;
 
 #define JIT_COMPUTE_TYPE_CASE(r, types)                                                                              \
   case static_cast<uint8_t>(JIT_GET_ENUM_VALUE(0, types)) << 8 | static_cast<uint8_t>(JIT_GET_ENUM_VALUE(1, types)): \
     return catching_func(JIT_GET_DATA_TYPE(0, types)(), JIT_GET_DATA_TYPE(1, types)());
-
-#define JIT_HASH_CASE(r, types)                                                                                        \
-  case JIT_GET_ENUM_VALUE(0, types):                                                                                   \
-    return std::hash<JIT_GET_DATA_TYPE(0, types)>()(value.get<JIT_GET_DATA_TYPE(0, types)>(context));
-
-#define JIT_EQUALS_CASE(r, types)                                                                                     \
-  case JIT_GET_ENUM_VALUE(0, types):                                                                                  \
-    return lhs.get<JIT_GET_DATA_TYPE(0, types)>(context) == rhs.get<JIT_GET_DATA_TYPE(0, types)>(rhs_index, context);
-
-#define JIT_ASSIGN_CASE(r, types)                                                                                     \
-  case static_cast<uint8_t>(JIT_GET_ENUM_VALUE(0, types)) << 8 | static_cast<uint8_t>(JIT_GET_ENUM_VALUE(1, types)):  \
-    return to.set<JIT_GET_DATA_TYPE(1, types)>(from.get<JIT_GET_DATA_TYPE(0, types)>(context), to_index, context);
-
-#define JIT_GROW_BY_ONE_CASE(r, types)                                                                                \
-  case JIT_GET_ENUM_VALUE(0, types):                                                                                  \
-    return value.grow_by_one<JIT_GET_DATA_TYPE(0, types)>(context);
-
-#define JIT_AGGREGATE_COMPUTE_CASE(r, types)                                                                                \
-  case JIT_GET_ENUM_VALUE(0, types):                                                                                  \
-    rhs.set<JIT_GET_DATA_TYPE(0, types)>(op_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(context), rhs.get<JIT_GET_DATA_TYPE(0, types)>(rhs_index, context)), rhs_index, context); \
-    break;
-
-//return rhs.set<JIT_GET_DATA_TYPE(0, types)>(rhs_index, op_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(context), rhs.get<JIT_GET_DATA_TYPE(0, types)>(rhs_index, context)), context);
 
 /* Arithmetic operators */
 const auto jit_addition = [](const auto& a, const auto& b) -> decltype(a + b) { return a + b; };
@@ -139,7 +116,7 @@ void jit_compute(const T& op_func, const JitTupleValue& lhs, const JitTupleValue
   const auto store_result_wrapper = [&](const auto& typed_lhs, const auto& typed_rhs, auto& result) -> decltype(
       op_func(typed_lhs, typed_rhs), void()) {
     using ResultType = decltype(op_func(typed_lhs, typed_rhs));
-    context.tuple.template set<ResultType>(result.tuple_index(), op_func(typed_lhs, typed_rhs));
+    result.template set<ResultType>(op_func(typed_lhs, typed_rhs), context);
   };
 
   const auto catching_func = InvalidTypeCatcher<decltype(store_result_wrapper), void>(store_result_wrapper);
@@ -161,7 +138,7 @@ DataType jit_compute_type(const T& op_func, const DataType lhs, const DataType r
   };
 
   const auto catching_func =
-          InvalidTypeCatcher<decltype(determine_return_type_wrapper), DataType>(determine_return_type_wrapper);
+      InvalidTypeCatcher<decltype(determine_return_type_wrapper), DataType>(determine_return_type_wrapper);
 
   // The type information from the lhs and rhs are combined into a single value for dispatching without nesting.
   const auto combined_types = static_cast<uint8_t>(lhs) << 8 | static_cast<uint8_t>(rhs);
@@ -179,26 +156,6 @@ void jit_or(const JitTupleValue& lhs, const JitTupleValue& rhs, const JitTupleVa
             JitRuntimeContext& context);
 void jit_is_null(const JitTupleValue& lhs, const JitTupleValue& result, JitRuntimeContext& context);
 void jit_is_not_null(const JitTupleValue& lhs, const JitTupleValue& result, JitRuntimeContext& context);
-
-__attribute__((noinline)) uint64_t jit_hash(const JitTupleValue& value, JitRuntimeContext& context);
-
-__attribute__((noinline)) bool jit_aggregate_equals(const JitTupleValue& lhs, const JitHashmapValue& rhs, const size_t rhs_index, JitRuntimeContext& context);
-
-__attribute__((noinline)) void jit_assign(const JitTupleValue& from, const JitHashmapValue& to, const size_t to_index, JitRuntimeContext& context);
-
-__attribute__((noinline)) size_t jit_grow_by_one(const JitHashmapValue& value, JitRuntimeContext& context);
-
-template <typename T>
-__attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const JitTupleValue& lhs, const JitHashmapValue& rhs, const size_t rhs_index,
-                 JitRuntimeContext& context) {
-  if (lhs.is_null(context)) { return; }
-
-  switch (rhs.data_type()) {
-    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_AGGREGATE_COMPUTE_CASE, (JIT_DATA_TYPE_INFO))
-    default:
-      break;
-  }
-}
 
 // cleanup
 #undef JIT_COMPUTE_CASE
