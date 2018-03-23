@@ -43,8 +43,16 @@ TEST_F(FixedStringTest, CompareStrings) {
   EXPECT_TRUE(FixedString("abcd") < FixedString("bbcd"));
   EXPECT_TRUE(FixedString("abcd") < FixedString("bcd"));
   EXPECT_TRUE(FixedString("abc") < FixedString("abcd"));
+  EXPECT_TRUE(FixedString("abc\0") < FixedString("abcd"));
+  EXPECT_FALSE(FixedString("abcdd") < FixedString("abcd"));
+  EXPECT_FALSE(FixedString("abcdd") < FixedString("abcd\0"));
+  EXPECT_FALSE(FixedString("abcd") < FixedString("abcd"));
+
   EXPECT_TRUE(FixedString("abcd") == FixedString("abcd"));
+  EXPECT_TRUE(FixedString("abcd\0") == FixedString("abcd"));
   EXPECT_FALSE(FixedString("abcd") == FixedString("abc"));
+  EXPECT_FALSE(FixedString("abc") == FixedString("abcd"));
+  EXPECT_FALSE(FixedString("abc") == FixedString("bbcd"));
 }
 
 TEST_F(FixedStringTest, CompareStringsRef) {
