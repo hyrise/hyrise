@@ -17,6 +17,12 @@ TEST_F(FixedStringVectorTest, SubscriptOperatorFixedString) {
 
   EXPECT_EQ(valuevector[0], "abc");
   EXPECT_EQ(valuevector[1], "string");
+  if (IS_DEBUG) {
+    EXPECT_THROW(valuevector.push_back("opossum"), std::exception);
+  } else {
+    valuevector.push_back("opossum");
+    EXPECT_EQ(valuevector[2], "opossu");
+  }
 }
 
 TEST_F(FixedStringVectorTest, AtOperatorFixedString) {
@@ -29,6 +35,13 @@ TEST_F(FixedStringVectorTest, AtOperatorFixedString) {
   EXPECT_EQ(valuevector.at(0).maximum_length(), 6u);
 
   EXPECT_EQ(valuevector.at(1).string(), "string");
+
+  if (IS_DEBUG) {
+    EXPECT_THROW(valuevector.push_back("opossum"), std::exception);
+  } else {
+    valuevector.push_back("opossum");
+    EXPECT_EQ(valuevector.at(2).string(), "opossu");
+  }
 }
 
 TEST_F(FixedStringVectorTest, IteratorFixedString) {
@@ -41,7 +54,7 @@ TEST_F(FixedStringVectorTest, IteratorFixedString) {
   }
 
   EXPECT_EQ(valuevector[0], "abcde");
-}
+  }
 
 TEST_F(FixedStringVectorTest, IteratorConstFixedString) {
   auto valuevector = FixedStringVector(4u);
