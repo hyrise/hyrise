@@ -454,7 +454,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     auto new_pos_list = std::make_shared<PosList>();
     for (const auto& row : *pos_list) {
       if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
-        new_pos_list->push_back(RowID{ChunkID{0}, INVALID_CHUNK_OFFSET});
+        new_pos_list->push_back(RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET});
       } else {
         new_pos_list->push_back((*input_pos_lists[row.chunk_id])[row.chunk_offset]);
       }
