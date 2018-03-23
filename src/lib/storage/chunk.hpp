@@ -66,7 +66,7 @@ class Chunk : private Noncopyable {
    * Atomically accesses and returns the column at a given position
    *
    * Note: Concurrently with the execution of operators,
-   *       ValueColumns might be exchanged with DictionaryColumns.
+   *       ValueColumns might be replaced with BaseEncodedColumns.
    *       Therefore, if you hold a pointer to a column, you can
    *       continue to use it without any inconsistencies.
    *       However, if you call get_column again, be aware that
