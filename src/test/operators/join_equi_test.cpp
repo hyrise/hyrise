@@ -49,7 +49,8 @@ TYPED_TEST(JoinEquiTest, LeftJoin) {
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinIntFloat) {
-  if (std::is_same<TypeParam, JoinSortMerge>::value) {
+  if (std::is_same<TypeParam, JoinSortMerge>::value ||
+    std::is_same<TypeParam, JoinMPSM>::value) {
     return;
   }
 
@@ -65,7 +66,8 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntFloat) {
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinIntDouble) {
-  if (std::is_same<TypeParam, JoinSortMerge>::value) {
+  if (std::is_same<TypeParam, JoinSortMerge>::value ||
+      std::is_same<TypeParam, JoinMPSM>::value) {
     return;
   }
 
