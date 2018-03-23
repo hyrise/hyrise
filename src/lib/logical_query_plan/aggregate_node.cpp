@@ -148,7 +148,7 @@ const std::vector<std::shared_ptr<LQPExpression>>& AggregateNode::output_column_
       _output_column_expressions->emplace_back(std::make_shared<ColumnExpression>(groupby_column));
     }
     for (const auto& aggregate_expression : _aggregate_expressions) {
-      _output_column_expressions->emplace_back(aggregate_expression->clone()->resolve_expression_columns());
+      _output_column_expressions->emplace_back(aggregate_expression->clone()->deep_resolve_column_expressions());
     }
   }
   return *_output_column_expressions;

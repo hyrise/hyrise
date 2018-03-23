@@ -15,25 +15,33 @@ set(
     constant_mappings.hpp
     expression/abstract_expression.cpp
     expression/abstract_expression.hpp
-    expression/function_expression.cpp
-    expression/function_expression.hpp
+    expression/aggregate_expression.cpp
+    expression/aggregate_expression.hpp
+    expression/aliased_expression.hpp
     expression/arithmetic_expression.cpp
     expression/arithmetic_expression.hpp
+    expression/case_expression.cpp
     expression/case_expression.hpp
     expression/column_expression.cpp
     expression/column_expression.hpp
     expression/exists_expression.cpp
     expression/exists_expression.hpp
+    expression/function_expression.cpp
+    expression/function_expression.hpp
     expression/in_expression.cpp
     expression/in_expression.hpp
     expression/logical_expression.cpp
     expression/logical_expression.hpp
-    expression/value_placeholder_expression.cpp
-    expression/value_placeholder_expression.hpp
+    expression/null_expression.cpp
+    expression/null_expression.hpp
+    expression/predicate_expression.cpp
+    expression/predicate_expression.hpp
     expression/select_expression.cpp
     expression/select_expression.hpp
     expression/value_expression.cpp
     expression/value_expression.hpp
+    expression/value_placeholder_expression.cpp
+    expression/value_placeholder_expression.hpp
     import_export/binary.hpp
     import_export/csv_converter.cpp
     import_export/csv_converter.hpp

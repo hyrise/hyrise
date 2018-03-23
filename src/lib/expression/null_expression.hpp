@@ -4,11 +4,9 @@
 
 namespace opossum {
 
-class AbstractLQPNode;
-
-class SelectExpression : public AbstractExpression {
+class NullExpression : public AbstractExpression {
  public:
-  SelectExpression(const std::shared_ptr<AbstractLQPNode>& lqp);
+  NullExpression();
 
   /**
    * @defgroup Overrides for AbstractExpression
@@ -18,8 +16,6 @@ class SelectExpression : public AbstractExpression {
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::shared_ptr<AbstractExpression> deep_resolve_column_expressions() override;
   /**@}*/
-
-  std::shared_ptr<AbstractLQPNode> lqp;
 };
 
 }  // namespace opossum

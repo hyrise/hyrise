@@ -21,7 +21,7 @@ std::shared_ptr<ProjectionNode> ProjectionNode::make_pass_through(const std::sha
   return projection_node;
 }
 
-ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<LQPExpression>>& column_expressions)
+ProjectionNode::ProjectionNode(const std::vector<AliasedExpression>& column_expressions)
     : AbstractLQPNode(LQPNodeType::Projection), _column_expressions(column_expressions) {}
 
 std::string ProjectionNode::description() const {
@@ -59,7 +59,7 @@ std::shared_ptr<AbstractLQPNode> ProjectionNode::_deep_copy_impl(
   return ProjectionNode::make(column_expressions);
 }
 
-const std::vector<std::shared_ptr<LQPExpression>>& ProjectionNode::column_expressions() const {
+const std::vector<AliasedExpression>& ProjectionNode::column_expressions() const {
   return _column_expressions;
 }
 
@@ -89,7 +89,7 @@ const std::vector<std::shared_ptr<LQPExpression>>& ProjectionNode::output_column
     _output_column_expressions->emplace();
     _output_column_expressions->reserve(output_column_count());
     for (const auto& expression : _column_expressions) {
-      _output_column_expressions->emplace_back(expression->clone()->resolve_expression_columns());
+      _output_column_expressions->emplace_back(expression.expression->clone()->deep_resolve_column_expressions());
     }
   }
   return *_output_column_expressions;
@@ -99,7 +99,7 @@ std::string ProjectionNode::get_verbose_column_name(ColumnID column_id) const {
   DebugAssert(left_input(), "Need input to generate name");
   DebugAssert(column_id < _column_expressions.size(), "ColumnID out of range");
 
-  const auto& column_expression = _column_expressions[column_id];
+  const auto& column_expression = _column_expressions[column_id].expression;
 
   if (column_expression->alias()) {
     return *column_expression->alias();

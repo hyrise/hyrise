@@ -1,18 +1,15 @@
 #pragma once
 
 #include "abstract_expression.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
-enum class LogicalOperator {
-  And,
-  Or,
-  Not
-};
-
-class LogicalExpression : public AbstractExpression {
+class PredicateExpression : public AbstractExpression {
  public:
-  LogicalExpression(const LogicalOperator logical_operator, const std::shared_ptr<AbstractExpression>& left_operand, const std::shared_ptr<AbstractExpression>& right_operand);
+  PredicateExpression(const PredicateCondition predicate_condition,
+                      const std::shared_ptr<AbstractExpression>& left_operand,
+                      const std::shared_ptr<AbstractExpression>& right_operand);
 
   /**
    * @defgroup Overrides for AbstractExpression
@@ -23,7 +20,7 @@ class LogicalExpression : public AbstractExpression {
   std::shared_ptr<AbstractExpression> deep_resolve_column_expressions() override;
   /**@}*/
 
-  LogicalOperator logical_operator;
+  PredicateCondition predicate_condition;
   std::shared_ptr<AbstractExpression> left_operand;
   std::shared_ptr<AbstractExpression> right_operand;
 };

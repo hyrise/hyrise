@@ -4,13 +4,13 @@
 
 namespace opossum {
 
-enum class FunctionType {
-  Substring, Extract
+enum class AggregateType {
+  Min, Max, Sum, Avg, Count, CountDistinct
 };
 
-class FunctionExpression : public AbstractExpression {
+class AggregateExpression : public AbstractExpression {
  public:
-  FunctionExpression(const FunctionType function_type,
+  AggregateExpression(const AggregateType aggregate_type,
                       const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
 
   /**
@@ -22,7 +22,7 @@ class FunctionExpression : public AbstractExpression {
   std::shared_ptr<AbstractExpression> deep_resolve_column_expressions() override;
   /**@}*/
 
-  FunctionType function_type;
+  AggregateType aggregate_type;
   std::vector<std::shared_ptr<AbstractExpression>> arguments;
 };
 

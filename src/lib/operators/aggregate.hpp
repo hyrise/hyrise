@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
+#include "expression/aggregate_expression.hpp"
 #include "resolve_type.hpp"
 #include "storage/column_visitable.hpp"
 #include "storage/reference_column.hpp"
@@ -27,14 +28,12 @@ struct GroupByContext;
  * function they use. COUNT() is the exception that doesn't use a Column, which is why column is optional
  * Optionally, an alias can be specified to use as the output name.
  */
-template <typename ColumnReferenceType>
-struct AggregateColumnDefinitionTemplate {
-  AggregateColumnDefinitionTemplate(const std::optional<ColumnReferenceType>& column, const AggregateFunction function,
-                                    const std::optional<std::string>& alias = std::nullopt)
+struct AggregateColumnDefinition final {
+  AggregateColumnDefinition(const FunctionType function, const std::optional<ColumnID>& column, const std::optional<std::string>& alias = std::nullopt)
       : column(column), function(function), alias(alias) {}
 
-  std::optional<ColumnReferenceType> column;
-  AggregateFunction function;
+  FunctionType function;
+  std::optional<ColumnID> column;
   std::optional<std::string> alias;
 };
 
@@ -61,8 +60,6 @@ struct AggregateResult {
 The key type that is used for the aggregation map.
 */
 using AggregateKey = std::vector<AllTypeVariant>;
-
-using AggregateColumnDefinition = AggregateColumnDefinitionTemplate<ColumnID>;
 
 /**
  * Types that are used for the special COUNT(*) and DISTINCT implementations

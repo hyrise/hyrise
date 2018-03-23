@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "abstract_lqp_node.hpp"
+#include "expression/aliased_expression.hpp"
 
 namespace opossum {
 
@@ -20,9 +21,9 @@ class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public Abstr
  public:
   static std::shared_ptr<ProjectionNode> make_pass_through(const std::shared_ptr<AbstractLQPNode>& child);
 
-  explicit ProjectionNode(const std::vector<std::shared_ptr<LQPExpression>>& column_expressions);
+  explicit ProjectionNode(const std::vector<AliasedExpression>& column_expressions);
 
-  const std::vector<std::shared_ptr<LQPExpression>>& column_expressions() const;
+  const std::vector<AliasedExpression>& column_expressions() const;
 
   std::string description() const override;
 
@@ -41,7 +42,7 @@ class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public Abstr
   void _on_input_changed() override;
 
  private:
-  std::vector<std::shared_ptr<LQPExpression>> _column_expressions;
+  const std::vector<AliasedExpression> _column_expressions;
 
   mutable std::optional<std::vector<std::string>> _output_column_names;
 

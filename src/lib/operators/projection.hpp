@@ -11,20 +11,19 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
+#include "expression/aliased_expression.hpp"
 #include "storage/chunk.hpp"
 #include "storage/reference_column.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-class PQPExpression;
-
 /**
  * Operator to select a subset of the set of all columns found in the table
  */
 class Projection : public AbstractReadOnlyOperator {
  public:
-  using ColumnExpressions = std::vector<std::shared_ptr<PQPExpression>>;
+  using ColumnExpressions = std::vector<AliasedExpression>;
 
   Projection(const std::shared_ptr<const AbstractOperator> in, const ColumnExpressions& column_expressions);
 
