@@ -25,7 +25,7 @@ namespace opossum {
 JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator> left,
                    const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
                    const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition op)
-    : AbstractJoinOperator(left, right, mode, column_ids, op) {
+    : AbstractJoinOperator(OperatorType::JoinMPSM, left, right, mode, column_ids, op) {
   // Validate the parameters
   DebugAssert(mode != JoinMode::Cross, "This operator does not support cross joins.");
   DebugAssert(left != nullptr, "The left input operator is null.");
