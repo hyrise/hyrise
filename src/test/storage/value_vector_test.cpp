@@ -14,25 +14,21 @@ TEST_F(FixedStringVectorTest, SubscriptOperatorFixedString) {
   auto valuevector = FixedStringVector(6u);
   valuevector.push_back("abc");
   valuevector.push_back("string");
-  valuevector.push_back("opossum");
 
   EXPECT_EQ(valuevector[0], "abc");
   EXPECT_EQ(valuevector[1], "string");
-  EXPECT_EQ(valuevector[2], "opossu");
 }
 
 TEST_F(FixedStringVectorTest, AtOperatorFixedString) {
   auto valuevector = FixedStringVector(6u);
   valuevector.push_back("abc");
   valuevector.push_back("string");
-  valuevector.push_back("opossum");
 
   EXPECT_EQ(valuevector.at(0).string(), "abc");
   EXPECT_EQ(valuevector.at(0).size(), 3u);
   EXPECT_EQ(valuevector.at(0).maximum_length(), 6u);
 
   EXPECT_EQ(valuevector.at(1).string(), "string");
-  EXPECT_EQ(valuevector.at(2).string(), "opossu");
 }
 
 TEST_F(FixedStringVectorTest, IteratorFixedString) {

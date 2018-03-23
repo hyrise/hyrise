@@ -14,7 +14,6 @@
 #include "storage/vector_compression/vector_compression.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
-#include <type_traits>
 
 namespace opossum {
 
@@ -38,13 +37,14 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
     const auto& values = value_column->values();
     const auto alloc = values.get_allocator();
 
-    if constexpr(_enable_fixed_strings && std::is_same<T, std::string>::value) {
-      const auto fixed_string_length = _calculate_fixed_string_length(values);
-      if (fixed_string_length != 0) {
-        // Use FixedString for dictionary compression
-        // return _on_encode_fixed_string();
+    if
+      constexpr(_enable_fixed_strings && std::is_same<T, std::string>::value) {
+        const auto fixed_string_length = _calculate_fixed_string_length(values);
+        if (fixed_string_length != 0) {
+          // Use FixedString for dictionary compression
+          // return _on_encode_fixed_string();
+        }
       }
-    }
 
     auto dictionary = dictionary_vector_t<T>{values.cbegin(), values.cend(), alloc};
 
