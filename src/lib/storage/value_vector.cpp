@@ -22,25 +22,19 @@ FixedString FixedStringVector::at(const ChunkOffset chunk_offset) {
   return FixedString(&_chars.at(chunk_offset * _string_length), _string_length);
 }
 
-FixedStringVector::iterator FixedStringVector::begin() noexcept {
-  return iterator(_string_length, _chars, 0);
-}
+FixedStringVector::iterator FixedStringVector::begin() noexcept { return iterator(_string_length, _chars, 0); }
 
 FixedStringVector::iterator FixedStringVector::end() noexcept {
   return iterator(_string_length, _chars, _chars.size());
 }
 
-FixedStringVector::iterator FixedStringVector::begin() const noexcept {
-  return iterator(_string_length, _chars, 0);
-}
+FixedStringVector::iterator FixedStringVector::begin() const noexcept { return iterator(_string_length, _chars, 0); }
 
 FixedStringVector::iterator FixedStringVector::end() const noexcept {
   return iterator(_string_length, _chars, _chars.size());
 }
 
-FixedStringVector::iterator FixedStringVector::cbegin() const noexcept {
-  return iterator(_string_length, _chars, 0);
-}
+FixedStringVector::iterator FixedStringVector::cbegin() const noexcept { return iterator(_string_length, _chars, 0); }
 
 FixedStringVector::iterator FixedStringVector::cend() const noexcept {
   return iterator(_string_length, _chars, _chars.size());
