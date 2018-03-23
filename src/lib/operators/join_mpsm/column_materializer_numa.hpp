@@ -168,7 +168,6 @@ class ColumnMaterializer {
     auto value_ids = column.attribute_vector();
     auto dict = column.dictionary();
 
-
     auto iterable = create_iterable_from_column(column);
     iterable.for_each([&](const auto& column_value) {
       const auto row_id = RowID{chunk_id, column_value.chunk_offset()};

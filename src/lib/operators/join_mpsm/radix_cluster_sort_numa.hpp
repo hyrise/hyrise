@@ -51,8 +51,8 @@ template <typename T>
 class RadixClusterSortNUMA {
  public:
   RadixClusterSortNUMA(const std::shared_ptr<const Table> left, const std::shared_ptr<const Table> right,
-                       const std::pair<ColumnID, ColumnID>& column_ids,
-                       const bool materialize_null_left, const bool materialize_null_right, size_t cluster_count)
+                       const std::pair<ColumnID, ColumnID>& column_ids, const bool materialize_null_left,
+                       const bool materialize_null_right, size_t cluster_count)
       : _input_table_left{left},
         _input_table_right{right},
         _left_column_id{column_ids.first},
@@ -213,16 +213,17 @@ class RadixClusterSortNUMA {
     // Move each entry into its appropriate cluster in parallel
     std::vector<std::shared_ptr<AbstractTask>> cluster_jobs;
     for (size_t chunk_number = 0; chunk_number < num_chunks; ++chunk_number) {
-      auto job = std::make_shared<JobTask>([chunk_number, &output_table, &input_chunks, &numa_partition_information, &clusterer] {
-        auto& chunk_information = numa_partition_information.chunk_information[chunk_number];
-        for (auto& entry : (*input_chunks._chunk_columns[chunk_number])) {
-          auto cluster_id = clusterer(entry.value);
-          auto& output_cluster = output_table._chunk_columns[cluster_id];
-          auto& insert_position = chunk_information.insert_position[cluster_id];
-          (*output_cluster)[insert_position] = entry;
-          ++insert_position;
-        }
-      });
+      auto job = std::make_shared<JobTask>(
+          [chunk_number, &output_table, &input_chunks, &numa_partition_information, &clusterer] {
+            auto& chunk_information = numa_partition_information.chunk_information[chunk_number];
+            for (auto& entry : (*input_chunks._chunk_columns[chunk_number])) {
+              auto cluster_id = clusterer(entry.value);
+              auto& output_cluster = output_table._chunk_columns[cluster_id];
+              auto& insert_position = chunk_information.insert_position[cluster_id];
+              (*output_cluster)[insert_position] = entry;
+              ++insert_position;
+            }
+          });
       cluster_jobs.push_back(job);
       job->schedule(node_id, SchedulePriority::Unstealable);
     }
@@ -334,7 +335,7 @@ class RadixClusterSortNUMA {
     RadixClusterOutput<T> output;
 
     // Sort the chunks of the input tables in the non-equi cases
-    ColumnMaterializer<T> left_column_materializer( _materialize_null_left);
+    ColumnMaterializer<T> left_column_materializer(_materialize_null_left);
     ColumnMaterializer<T> right_column_materializer(_materialize_null_right);
     auto materialization_left = left_column_materializer.materialize(_input_table_left, _left_column_id);
     auto materialization_right = right_column_materializer.materialize(_input_table_right, _right_column_id);

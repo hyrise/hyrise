@@ -52,7 +52,7 @@ std::shared_ptr<AbstractOperator> JoinMPSM::_on_recreate(
     const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
     const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
   return std::make_shared<JoinMPSM>(recreated_input_left, recreated_input_right, _mode, _column_ids,
-                                         _predicate_condition);
+                                    _predicate_condition);
 }
 
 const std::string JoinMPSM::name() const { return "Join MPSM"; }
@@ -122,11 +122,11 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   **/
   struct TableRange {
     TableRange(TablePosition start_position, TablePosition end_position) : start{start_position}, end{end_position} {
-      DebugAssert( start.partition == end.partition, "Table ranges are only allowed over the same position");
+      DebugAssert(start.partition == end.partition, "Table ranges are only allowed over the same position");
     }
     TableRange(NodeID partition, ClusterID cluster, size_t start_index, size_t end_index)
         : start{TablePosition(partition, cluster, start_index)}, end{TablePosition(partition, cluster, end_index)} {
-      DebugAssert( start.partition == end.partition, "Table ranges are only allowed over the same position");
+      DebugAssert(start.partition == end.partition, "Table ranges are only allowed over the same position");
     }
 
     TablePosition start;
@@ -470,9 +470,9 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   std::shared_ptr<const Table> _on_execute() {
     bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
     bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
-    auto radix_clusterer = RadixClusterSortNUMA<T>(
-        _mpsm_join.input_table_left(), _mpsm_join.input_table_right(), _mpsm_join._column_ids,
-        include_null_left, include_null_right, _cluster_count);
+    auto radix_clusterer =
+        RadixClusterSortNUMA<T>(_mpsm_join.input_table_left(), _mpsm_join.input_table_right(), _mpsm_join._column_ids,
+                                include_null_left, include_null_right, _cluster_count);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
     _sorted_left_table = std::move(sort_output.clusters_left);

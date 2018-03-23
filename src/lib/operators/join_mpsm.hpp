@@ -33,7 +33,6 @@ class JoinMPSM : public AbstractJoinOperator {
       const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
       const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
 
-
   template <typename T>
   class JoinMPSMImpl;
 
