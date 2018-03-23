@@ -27,7 +27,8 @@ class FixedString {
   FixedString(char* mem, size_t string_length) : _mem(mem), _maximum_length(string_length), _owns_memory(false) {}
 
   // Create a FixedString with an existing one
-  FixedString(const FixedString& other) : _mem(new char[other._maximum_length]{}), _maximum_length(other._maximum_length) {
+  FixedString(const FixedString& other)
+      : _mem(new char[other._maximum_length]{}), _maximum_length(other._maximum_length) {
     std::memcpy(_mem, other._mem, _maximum_length);
   }
 
@@ -37,10 +38,11 @@ class FixedString {
 
   // Copy assign
   FixedString& operator=(const FixedString& other) {
-    DebugAssert(other.maximum_length() <= _maximum_length, "Other FixedString is longer than current maximum string length");
+    DebugAssert(other.maximum_length() <= _maximum_length,
+                "Other FixedString is longer than current maximum string length");
     const auto copied_length = other.maximum_length() < _maximum_length ? other.maximum_length() : _maximum_length;
     other._copy_to(_mem, copied_length);
-    // Fill unused fields of char array with null terminator, in order to overwrite the content of 
+    // Fill unused fields of char array with null terminator, in order to overwrite the content of
     // the old FixedString. This is especially important if the old FixedString was longer than the other FixedString.
     if (copied_length < _maximum_length) {
       memset(_mem + copied_length, '\0', _maximum_length - copied_length);
@@ -66,9 +68,22 @@ class FixedString {
     }
   }
 
-  // Compare FixedStrings by comparing the underlying char arrays
-  bool operator<(const FixedString& other) const { return memcmp(_mem, other._mem, _maximum_length) < 0; }
-  bool operator==(const FixedString& other) const { return memcmp(_mem, other._mem, _maximum_length) == 0; }
+  // Compare FixedStrings by comparing the underlying char arrays.
+  // If one FixedString is longer than the other FixedString and the beginning of the longer FixedString
+  // is equal to the other FixedString, the shorter FixedString is smaller.
+  // Example: "defg" < "defghi"
+  bool operator<(const FixedString& other) const {
+    const auto smallest_length = size() < other.size() ? size() : other.size();
+    const auto result = memcmp(_mem, other._mem, smallest_length);
+    if (result == 0) return size() < other.size();
+    return result < 0;
+  }
+
+  // The FixedStrings must have the same length to be equal
+  bool operator==(const FixedString& other) const {
+    if (size() != other.size()) return false;
+    return memcmp(_mem, other._mem, size()) == 0;
+  }
 
   // Prints FixedString as string
   friend std::ostream& operator<<(std::ostream& os, const FixedString& obj) { return os << obj.string(); }
