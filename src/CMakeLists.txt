@@ -56,6 +56,7 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/src/lib/
 
     ${TBB_INCLUDE_DIR}
+    ${Boost_INCLUDE_DIRS}
 )
 
 if (NOT DISABLE_JIT_SUPPORT)

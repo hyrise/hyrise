@@ -91,7 +91,7 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
 };
 
 Insert::Insert(const std::string& target_table_name, const std::shared_ptr<AbstractOperator>& values_to_insert)
-    : AbstractReadWriteOperator(values_to_insert), _target_table_name(target_table_name) {}
+    : AbstractReadWriteOperator(OperatorType::Insert, values_to_insert), _target_table_name(target_table_name) {}
 
 const std::string Insert::name() const { return "Insert"; }
 

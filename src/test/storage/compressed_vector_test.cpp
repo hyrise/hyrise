@@ -48,7 +48,7 @@ class CompressedVectorTest : public BaseTestWithParam<VectorCompressionType> {
     return sequence;
   }
 
-  std::unique_ptr<BaseCompressedVector> encode(const pmr_vector<uint32_t>& vector) {
+  std::unique_ptr<const BaseCompressedVector> encode(const pmr_vector<uint32_t>& vector) {
     const auto compression_type = GetParam();
 
     auto encoded_vector = compress_vector(vector, compression_type, {}, {max()});

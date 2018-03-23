@@ -124,6 +124,9 @@ class AbstractExpression : public std::enable_shared_from_this<DerivedExpression
 
   // Returns true if the expression is a NULL literal.
   bool is_null_literal() const;
+
+  // Returns true if the expression is a subselect.
+  bool is_subselect() const;
   // @}
 
   // @{

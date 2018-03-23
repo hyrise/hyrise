@@ -28,27 +28,22 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
 
   void increment() {
     ++_absolute_index;
-    ++_current_block_index;
+    ++_current_meta_block_index;
 
-    if (_current_block_index >= Packing::block_size && _absolute_index < _size) {
-      ++_current_meta_info_index;
-
-      if (_current_meta_info_index >= Packing::blocks_in_meta_block) {
-        _read_meta_info();
-        _unpack_block();
-      } else {
-        _unpack_block();
-      }
+    if (_current_meta_block_index >= Packing::meta_block_size && _absolute_index < _size) {
+      _unpack_next_meta_block();
     }
   }
 
   bool equal(const SimdBp128Iterator& other) const { return _absolute_index == other._absolute_index; }
 
-  uint32_t dereference() const { return (*_current_block)[_current_block_index]; }
+  uint32_t dereference() const { return (*_current_meta_block)[_current_meta_block_index]; }
 
  private:
+  void _unpack_next_meta_block();
+
   void _read_meta_info();
-  void _unpack_block();
+  void _unpack_block(uint8_t meta_info_index);
 
  private:
   const pmr_vector<uint128_t>* _data;
@@ -58,10 +53,9 @@ class SimdBp128Iterator : public BaseCompressedVectorIterator<SimdBp128Iterator>
   size_t _absolute_index;
 
   std::array<uint8_t, Packing::blocks_in_meta_block> _current_meta_info;
-  size_t _current_meta_info_index;
 
-  const std::unique_ptr<std::array<uint32_t, Packing::block_size>> _current_block;
-  size_t _current_block_index;
+  const std::unique_ptr<std::array<uint32_t, Packing::meta_block_size>> _current_meta_block;
+  size_t _current_meta_block_index;
 };
 
 }  // namespace opossum

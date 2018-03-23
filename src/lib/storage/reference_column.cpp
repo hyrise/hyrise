@@ -12,7 +12,10 @@ namespace opossum {
 
 ReferenceColumn::ReferenceColumn(const std::shared_ptr<const Table> referenced_table,
                                  const ColumnID referenced_column_id, const std::shared_ptr<const PosList> pos)
-    : _referenced_table(referenced_table), _referenced_column_id(referenced_column_id), _pos_list(pos) {
+    : BaseColumn(referenced_table->column_data_type(referenced_column_id)),
+      _referenced_table(referenced_table),
+      _referenced_column_id(referenced_column_id),
+      _pos_list(pos) {
   DebugAssert(referenced_table->type() == TableType::Data, "Referenced table must be Data Table");
 }
 

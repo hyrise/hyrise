@@ -13,6 +13,8 @@ class BaseCompressedVector;
  */
 class BaseDictionaryColumn : public BaseEncodedColumn {
  public:
+  using BaseEncodedColumn::BaseEncodedColumn;
+
   EncodingType encoding_type() const final;
 
   void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
