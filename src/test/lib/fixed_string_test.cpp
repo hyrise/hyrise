@@ -11,9 +11,12 @@ class FixedStringTest : public BaseTest {};
 
 TEST_F(FixedStringTest, StringLength) {
   FixedString str1 = FixedString(std::string("astring"));
+  FixedString str2 = FixedString(std::string("astring\0\0", 9));
 
   EXPECT_EQ(str1.size(), 7u);
   EXPECT_EQ(str1.maximum_length(), 7u);
+  EXPECT_EQ(str2.size(), 7u);
+  EXPECT_EQ(str2.maximum_length(), 9u);
 }
 
 TEST_F(FixedStringTest, CharvectorToString) {

@@ -51,7 +51,10 @@ class FixedString {
   }
 
   // Returns the length of the string
-  size_t size() const { return string().size(); }
+  size_t size() const {
+    const auto position = std::find(_mem, _mem + _maximum_length, '\0');
+    return std::distance(_mem, position);
+  }
 
   // Returns the maixmum possible size of storable strings
   size_t maximum_length() const { return _maximum_length; }
