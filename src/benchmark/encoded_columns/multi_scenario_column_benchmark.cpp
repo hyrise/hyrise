@@ -1,5 +1,6 @@
-#include "multi_distribution_column_benchmark.hpp"
+#include "multi_scenario_column_benchmark.hpp"
 
+#include <random>
 #include <algorithm>
 #include <ctime>
 #include <cmath>
@@ -12,17 +13,19 @@
 #include "storage/column_encoding_utils.hpp"
 #include "storage/base_column_encoder.hpp"
 #include "storage/value_column/value_column_iterable.hpp"
+#include "storage/base_column.hpp"
+#include "storage/chunk_encoder.hpp"
+#include "storage/value_column.hpp"
 
 #include "from_string.hpp"
 
 namespace opossum {
 
-MultiDistributionColumnBenchmark::MultiDistributionColumnBenchmark(CalibrationType calibration_type,
-                                                                   nlohmann::json description)
-    : _calibration_type(calibration_type), _description(std::move(description)), _context(_description["context"]) {}
+MultiScenarioColumnBenchmark::MultiScenarioColumnBenchmark(nlohmann::json description)
+    : _description(std::move(description)), _context(_description["context"]) {}
 
-void MultiDistributionColumnBenchmark::run() {
-  std::cout << "Benchmark started: " << to_string(_calibration_type) << std::endl;
+void MultiScenarioColumnBenchmark::run() {
+  std::cout << "Benchmark started." << std::endl;
 
   auto remaining_count = _description["benchmarks"].size();
   for (auto& benchmark : _description["benchmarks"]) {
@@ -47,8 +50,10 @@ void MultiDistributionColumnBenchmark::run() {
     const auto encoding_type_str = _value_or_default(benchmark, "encoding_type").get<std::string>();
     const auto encoding_type = from_string<EncodingType>(encoding_type_str);
 
+    auto allocated_memory = std::size_t{0u};
     const auto encoded_column = [&]() -> std::shared_ptr<BaseColumn> {
       if (encoding_type == EncodingType::Unencoded) {
+        allocated_memory = std::ceil(value_column->size() * (sizeof(int32_t)));
         return value_column;
       }
 
@@ -63,45 +68,59 @@ void MultiDistributionColumnBenchmark::run() {
         encoder->set_vector_compression(vector_compression_type);
       }
 
-      return encoder->encode(value_column, DataType::Int);
+      const auto [encoded_column, am] =
+          memory_consumption([&]() { return encoder->encode(value_column, DataType::Int); });
+
+      allocated_memory = am;
+      return encoded_column;
     }();
 
-    // Get any value that is not NULL
-    const auto select_eq = [&]() {
-      for (auto row_id = 0u; row_id < value_column->size(); ++row_id) {
-        if (!value_column->is_null(row_id))
-          return value_column->get(row_id);
-      }
+    benchmark["allocated_memory"] = allocated_memory;
 
-      Fail("Ups");
+    [[maybe_unused]] const auto get_median = [](auto& results) {
+      const auto median_index = results.size() / 2u;
+      std::nth_element(results.begin(), results.begin() + median_index, results.end());
+      return results[median_index];
+    };
+
+    const auto get_mean = [](const auto& results) {
+      using ValueT = typename std::decay_t<decltype(results)>::value_type;
+      auto sum = std::accumulate(results.cbegin(), results.cend(), ValueT{0});
+      return sum / results.size();
+    };
+
+    benchmark["decompression_runtime"] = [&]() {
+      auto benchmark_state = benchmark_decompression_with_iterable(encoded_column);
+      std::cout << "Decompression Iteration Count: " << benchmark_state.num_iterations() << std::endl;
+      auto results_in_ms = to_ms(benchmark_state.results());
+      return get_mean(results_in_ms);
     }();
 
-    const auto point_access_factor = _value_or_default(benchmark, "point_access_factor").get<float>();
-
-    auto benchmark_state = [&]() {
-      switch (_calibration_type) {
-        case CalibrationType::CompleteTableScan:
-          return benchmark_table_scan(encoded_column, select_eq);
-        case CalibrationType::FilteredTableScan:
-          return benchmark_table_scan(encoded_column, select_eq, point_access_factor);
-        case CalibrationType::Materialization:
-          return benchmark_materialize(encoded_column, point_access_factor);
-        default:
-          Fail("Unrecognized type.");
-      }
+    benchmark["partial_decompression_runtime"] = [&]() {
+      auto benchmark_state = benchmark_decompression_with_iterable(encoded_column, 0.2f);
+      std::cout << "Partial Decompression Iteration Count: " << benchmark_state.num_iterations() << std::endl;
+      auto results_in_ms = to_ms(benchmark_state.results());
+      return get_mean(results_in_ms);
     }();
 
-    auto results_in_ms = to_ms(benchmark_state.results());
+    benchmark["distribution"] = "Uniform (w/ runs)";
+    // benchmark["distribution"] = "Uniform";
 
-    benchmark["runtime"] = std::move(results_in_ms);
+    // const auto first_quartile_value = static_cast<int32_t>(std::round(max_value * 0.25));
+    const auto first_quartile_value = static_cast<int32_t>(std::round(65'535 * 0.25));
 
-    std::cout << "Iterations: " << benchmark_state.num_iterations() << std::endl;
+    benchmark["table_scan_runtime"] = [&]() {
+      auto benchmark_state = benchmark_table_scan(encoded_column, first_quartile_value, PredicateCondition::LessThan);
+      std::cout << "Table Scan Iteration Count: " << benchmark_state.num_iterations() << std::endl;
+      auto results_in_ms = to_ms(benchmark_state.results());
+      return get_mean(results_in_ms);
+    }();
   }
 
-  _output_as_json(_description);
+  _output_as_csv(_description);
 }
 
-void MultiDistributionColumnBenchmark::_output_as_json(nlohmann::json& data) {
+void MultiScenarioColumnBenchmark::_output_as_json(nlohmann::json& data) {
   /**
    * Generate YY-MM-DD hh:mm::ss
    */
@@ -121,7 +140,7 @@ void MultiDistributionColumnBenchmark::_output_as_json(nlohmann::json& data) {
   output_file << std::setw(2) << data << std::endl;
 }
 
-void MultiDistributionColumnBenchmark::_output_as_csv(const nlohmann::json& data) {
+void MultiScenarioColumnBenchmark::_output_as_csv(const nlohmann::json& data) {
   auto benchmarks_out = data["benchmarks"];
 
   for (auto& benchmark : benchmarks_out) {
@@ -156,7 +175,7 @@ void MultiDistributionColumnBenchmark::_output_as_csv(const nlohmann::json& data
   auto local_time = *std::localtime(&current_time);
 
   std::stringstream file_name;
-  file_name << to_string(_calibration_type) << '_' << std::put_time(&local_time, "%Y-%m-%d_%H-%M-%S") << ".csv";
+  file_name << "multi_scenarios_" << std::put_time(&local_time, "%Y-%m-%d_%H-%M-%S") << ".csv";
 
   auto output_file = std::ofstream(file_name.str());
 
@@ -179,36 +198,23 @@ void MultiDistributionColumnBenchmark::_output_as_csv(const nlohmann::json& data
   for (const auto& benchmark : benchmarks_out) {
     const auto& benchmark_object = benchmark.get<nlohmann::json::object_t>();
 
-    const auto benchmark_runtimes_it = benchmark_object.find("runtime");
-    const auto& runtimes = benchmark_runtimes_it->second;
+    for (auto benchmark_it = benchmark_object.cbegin(); benchmark_it != benchmark_object.cend(); ++benchmark_it) {
+      const auto& value = benchmark_it->second;
 
-    for (auto runtime_it = runtimes.cbegin(); runtime_it != runtimes.cend(); ++runtime_it) {
-      for (auto benchmark_it = benchmark_object.cbegin(); benchmark_it != benchmark_object.cend(); ++benchmark_it) {
+      output_file << value;
 
-        const auto& value = [&]() {
-          if (benchmark_it == benchmark_runtimes_it) {
-            return *runtime_it;
-          } else {
-            return benchmark_it->second;
-          }
-        }();
-
-        output_file << value;
-
-        auto next_benchmark_it = benchmark_it;
-        if (++next_benchmark_it != benchmark_object.cend()) {
-          output_file << ',';
-        } else {
-          output_file << std::endl;
-        }
+      auto next_benchmark_it = benchmark_it;
+      if (++next_benchmark_it != benchmark_object.cend()) {
+        output_file << ',';
+      } else {
+        output_file << std::endl;
       }
     }
-
   }
 }
 
-void MultiDistributionColumnBenchmark::_generate_statistics(nlohmann::json& benchmark,
-                                                            std::shared_ptr<ValueColumn<int32_t>> value_column) {
+void MultiScenarioColumnBenchmark::_generate_statistics(nlohmann::json& benchmark,
+                                                        std::shared_ptr<ValueColumn<int32_t>> value_column) {
   auto run_count = 0;
   auto value_set = std::set<AllTypeVariant>{};
 
@@ -227,15 +233,13 @@ void MultiDistributionColumnBenchmark::_generate_statistics(nlohmann::json& benc
   }
 
   const auto unique_count = value_set.size();
-  const auto selectivity = 1.0 / unique_count;
 
   benchmark["run_count"] = run_count;
   benchmark["unique_count"] = unique_count;
-  benchmark["selectivity"] = selectivity;
 }
 
-nlohmann::json MultiDistributionColumnBenchmark::_value_or_default(const nlohmann::json& benchmark,
-                                                                   const std::string& key) const {
+nlohmann::json MultiScenarioColumnBenchmark::_value_or_default(const nlohmann::json& benchmark,
+                                                               const std::string& key) const {
   const auto benchmark_it = benchmark.find(key);
   if (benchmark_it == benchmark.end()) {
     const auto context_it = _context.find(key);

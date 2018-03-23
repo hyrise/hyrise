@@ -15,6 +15,7 @@
 #include "storage/base_column.hpp"
 #include "storage/create_iterable_from_column.hpp"
 #include "storage/reference_column.hpp"
+#include "storage/column_iterables/chunk_offset_mapping.hpp"
 
 #include "benchmark_state.hpp"
 #include "benchmark_memory_resource.hpp"
@@ -38,8 +39,8 @@ class AbstractColumnBenchmark {
   virtual void run() = 0;
 
  protected:
-  static constexpr auto max_num_iterations = 100u;
-  static constexpr auto max_duration = std::chrono::seconds{4};
+  static constexpr auto max_num_iterations = 200u;
+  static constexpr auto max_duration = std::chrono::seconds{5};
 
  protected:
   PolymorphicAllocator<size_t> get_alloc() const;
@@ -67,7 +68,37 @@ class AbstractColumnBenchmark {
     return benchmark_state;
   }
 
-  const BenchmarkState benchmark_table_scan(const std::shared_ptr<BaseColumn>& base_column, const int32_t select_eq) {
+  const BenchmarkState benchmark_decompression_with_iterable(const std::shared_ptr<BaseColumn>& base_column, const float point_access_factor) const {
+    auto benchmark_state = BenchmarkState{max_num_iterations, max_duration};
+
+    const auto chunk_offsets_list = _generate_chunk_offsets_list(base_column->size(), point_access_factor);
+
+    resolve_column_type<int32_t>(*base_column, [&](auto& typed_column) {
+      using ColumnT = std::decay_t<decltype(typed_column)>;
+
+      if constexpr (!std::is_same_v<ColumnT, ReferenceColumn>) {
+        while (benchmark_state.keep_running()) {
+
+          benchmark_state.measure([&]() {
+            auto iterable = create_iterable_from_column<int32_t>(typed_column);
+
+            iterable.for_each(&chunk_offsets_list, [&](auto value) {
+              if (value.is_null()) return;
+              sum += value.value();
+            });
+          });
+        }
+      } else {
+        Fail("Ups");
+      }
+    });
+
+
+    return benchmark_state;
+  }
+
+  const BenchmarkState benchmark_table_scan(const std::shared_ptr<BaseColumn>& base_column, const int32_t right_value,
+                                            PredicateCondition predicate_condition = PredicateCondition::Equals) {
     auto column_definitions = TableColumnDefinitions{{"a", DataType::Int}};
     auto table = std::make_shared<Table>(column_definitions, TableType::Data, base_column->size());
 
@@ -79,8 +110,8 @@ class AbstractColumnBenchmark {
     auto benchmark_state = BenchmarkState{max_num_iterations, max_duration};
 
     while (benchmark_state.keep_running()) {
-      auto table_scan = std::make_shared<TableScan>(wrapped_table, ColumnID{0u}, PredicateCondition::Equals,
-                                                    AllTypeVariant{select_eq});
+      auto table_scan = std::make_shared<TableScan>(wrapped_table, ColumnID{0u}, predicate_condition,
+                                                    AllTypeVariant{right_value});
       benchmark_state.measure([&]() {
         table_scan->execute();
       });
@@ -91,15 +122,16 @@ class AbstractColumnBenchmark {
 
   const BenchmarkState benchmark_table_scan(
       const std::shared_ptr<BaseColumn>& base_column,
-      const int32_t select_eq,
-      const float point_access_factor) {
+      const int32_t right_value,
+      const float point_access_factor,
+      PredicateCondition predicate_condition = PredicateCondition::Equals) {
     auto benchmark_state = BenchmarkState{max_num_iterations, max_duration};
 
     while (benchmark_state.keep_running()) {
       auto filtered_table = _get_filtered_table(base_column, point_access_factor);
 
-      auto table_scan = std::make_shared<TableScan>(filtered_table, ColumnID{0u}, PredicateCondition::Equals,
-                                                    AllTypeVariant{select_eq});
+      auto table_scan = std::make_shared<TableScan>(filtered_table, ColumnID{0u}, predicate_condition,
+                                                    AllTypeVariant{right_value});
 
       benchmark_state.measure([&]() {
         table_scan->execute();
@@ -140,12 +172,18 @@ class AbstractColumnBenchmark {
   static std::vector<double> to_ms(const std::vector<Duration>& durations);
 
  private:
-  static std::shared_ptr<PosList> _generate_pos_list(ChunkOffset row_count, float point_access_factor);
+  std::pair<ChunkOffset, std::vector<bool>> _generate_access_bitmap(ChunkOffset row_count,
+                                                                    float point_access_factor) const;
 
-  static std::shared_ptr<const AbstractOperator> _get_filtered_table(const std::shared_ptr<BaseColumn>& base_column,
-                                                                     const float point_access_factor);
+  std::shared_ptr<PosList> _generate_pos_list(ChunkOffset row_count, float point_access_factor) const;
+
+  ChunkOffsetsList _generate_chunk_offsets_list(ChunkOffset row_count, float point_access_factor) const;
+
+  std::shared_ptr<const AbstractOperator> _get_filtered_table(const std::shared_ptr<BaseColumn>& base_column,
+                                                              const float point_access_factor) const;
 
  private:
+  const uint32_t _random_seed;
   std::unique_ptr<BenchmarkMemoryResource> _memory_resource;
 };
 

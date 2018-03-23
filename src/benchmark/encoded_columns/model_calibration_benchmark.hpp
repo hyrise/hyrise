@@ -14,9 +14,9 @@
 
 namespace opossum {
 
-class MultiDistributionColumnBenchmark : public AbstractColumnBenchmark {
+class ModelCalibrationBenchmark : public AbstractColumnBenchmark {
  public:
-  MultiDistributionColumnBenchmark(CalibrationType calibration_type, nlohmann::json description);
+  ModelCalibrationBenchmark(CalibrationType calibration_type, nlohmann::json description);
 
   void run() final;
 

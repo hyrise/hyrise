@@ -11,19 +11,21 @@
 
 namespace opossum {
 
-AbstractColumnBenchmark::AbstractColumnBenchmark() {
+AbstractColumnBenchmark::AbstractColumnBenchmark() : _random_seed{std::random_device{}()} {
   static const auto numa_node = 35;
   _memory_resource = std::make_unique<BenchmarkMemoryResource>(numa_node);
 }
 
 auto AbstractColumnBenchmark::get_generator(const DistributionInfo& info) const -> std::function<ValueColumnPtr()> {
-  auto column_generator = benchmark_utilities::ArithmeticColumnGenerator<int32_t>{get_alloc()};
+  auto column_generator = benchmark_utilities::ArithmeticColumnGenerator<int32_t>{get_alloc(), _random_seed};
   column_generator.set_row_count(info.row_count);
   column_generator.set_sorted(info.sorted);
   column_generator.set_null_fraction(info.null_fraction);
 
   return [column_generator, max_value = info.max_value]() {
-    return column_generator.uniformly_distributed_column(0, max_value);
+    // return column_generator.uniformly_distributed_column(0, max_value);
+    return column_generator.uniformly_distributed_column_with_runs(0, 65'535, max_value);
+    //return column_generator.normally_distributed_column(8, max_value, 0.1, 20.0);
   };
 }
 
@@ -54,14 +56,20 @@ std::vector<double> AbstractColumnBenchmark::to_ms(const std::vector<Duration>& 
   return result;
 }
 
-std::shared_ptr<PosList> AbstractColumnBenchmark::_generate_pos_list(ChunkOffset row_count, float point_access_factor) {
-  const auto num_positions = static_cast<ChunkOffset>(row_count * point_access_factor);
+std::pair<ChunkOffset, std::vector<bool>> AbstractColumnBenchmark::_generate_access_bitmap(ChunkOffset row_count,
+                                                                                           float point_access_factor) const {
+  const auto num_positions = static_cast<ChunkOffset>(std::round(row_count * point_access_factor));
   auto accesses = std::vector<bool>(row_count, false);
   std::fill_n(accesses.begin(), num_positions, true);
 
-  auto random_device = std::random_device{};
-  std::default_random_engine engine{random_device()};
+  std::default_random_engine engine{_random_seed};
   std::shuffle(accesses.begin(), accesses.end(), engine);
+
+  return {num_positions, accesses};
+}
+
+std::shared_ptr<PosList> AbstractColumnBenchmark::_generate_pos_list(ChunkOffset row_count, float point_access_factor) const {
+  const auto [num_positions, accesses] = _generate_access_bitmap(row_count, point_access_factor);
 
   auto pos_list = PosList{};
   pos_list.reserve(num_positions);
@@ -74,8 +82,23 @@ std::shared_ptr<PosList> AbstractColumnBenchmark::_generate_pos_list(ChunkOffset
   return std::make_shared<PosList>(std::move(pos_list));
 }
 
+ChunkOffsetsList AbstractColumnBenchmark::_generate_chunk_offsets_list(ChunkOffset row_count,
+                                                                       float point_access_factor) const {
+  const auto [num_positions, accesses] = _generate_access_bitmap(row_count, point_access_factor);
+
+  auto chunk_offsets_list = ChunkOffsetsList{};
+  chunk_offsets_list.reserve(num_positions);
+
+  for (ChunkOffset chunk_offset{0}; chunk_offset < row_count; ++chunk_offset) {
+    const auto access = accesses[chunk_offset];
+    if (access) chunk_offsets_list.push_back({chunk_offset, chunk_offset});
+  }
+
+  return chunk_offsets_list;
+}
+
 std::shared_ptr<const AbstractOperator> AbstractColumnBenchmark::_get_filtered_table(
-    const std::shared_ptr<BaseColumn>& base_column, const float point_access_factor) {
+    const std::shared_ptr<BaseColumn>& base_column, const float point_access_factor) const {
   auto referenced_table = [&]() {
     auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int}}, TableType::Data, base_column->size());
     table->append_chunk({base_column});

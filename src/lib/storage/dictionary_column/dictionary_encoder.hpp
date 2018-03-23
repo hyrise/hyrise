@@ -88,7 +88,7 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
     }
 
     // We need to increment the dictionary size here because of possible null values.
-    const auto max_value = dictionary.size() + 1u;
+    const auto max_value = value_column->is_nullable() ? dictionary.size() : dictionary.size() - 1u;
 
     auto encoded_attribute_vector = compress_vector(attribute_vector, vector_compression_type(), alloc, {max_value});
 

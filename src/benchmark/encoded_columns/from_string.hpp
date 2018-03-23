@@ -8,10 +8,10 @@
 namespace opossum {
 
 template <typename T>
-T from_string(const std::string& str);
+inline T from_string(const std::string& str);
 
 template <>
-EncodingType from_string<EncodingType>(const std::string& str) {
+inline EncodingType from_string<EncodingType>(const std::string& str) {
   static const auto type_for_string = std::map<std::string, EncodingType>{
     { "Unencoded", EncodingType::Unencoded },
     { "Dictionary", EncodingType::Dictionary },
@@ -22,7 +22,7 @@ EncodingType from_string<EncodingType>(const std::string& str) {
 }
 
 template <>
-VectorCompressionType from_string<VectorCompressionType>(const std::string& str) {
+inline VectorCompressionType from_string<VectorCompressionType>(const std::string& str) {
   static const auto type_for_string = std::map<std::string, VectorCompressionType>{
     { "FSBA", VectorCompressionType::FixedSizeByteAligned },
     { "SIMD-BP128", VectorCompressionType::SimdBp128 }};

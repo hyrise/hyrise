@@ -69,10 +69,14 @@ add_executable(hyriseEncodedColumnBenchmark
     encoded_columns/clear_cache.cpp
     encoded_columns/clear_cache.hpp
     encoded_columns/from_string.hpp
+    encoded_columns/generate_benchmark_scenarios.cpp
+    encoded_columns/generate_benchmark_scenarios.hpp
     encoded_columns/generate_calibration_description.cpp
     encoded_columns/generate_calibration_description.hpp
-    encoded_columns/multi_distribution_column_benchmark.cpp
-    encoded_columns/multi_distribution_column_benchmark.hpp
+    encoded_columns/model_calibration_benchmark.cpp
+    encoded_columns/model_calibration_benchmark.hpp
+    encoded_columns/multi_scenario_column_benchmark.cpp
+    encoded_columns/multi_scenario_column_benchmark.hpp
     encoded_columns/single_distribution_benchmark.cpp
     encoded_columns/single_distribution_benchmark.hpp
     encoded_columns/to_string.hpp

@@ -23,6 +23,7 @@ PosList BaseSingleColumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
   const auto left_column = chunk->get_column(_left_column_id);
 
   auto matches_out = PosList{};
+  matches_out.reserve(left_column->size());
   auto context = std::make_shared<Context>(chunk_id, matches_out);
 
   left_column->visit(*this, context);

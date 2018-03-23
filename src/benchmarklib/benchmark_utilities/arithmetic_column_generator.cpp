@@ -28,8 +28,9 @@ auto get_uniform_dist(const T min, const T max) {
 using namespace opossum;
 
 template <typename T>
-ArithmeticColumnGenerator<T>::ArithmeticColumnGenerator(PolymorphicAllocator<size_t> alloc)
-    : _data_type{data_type_from_type<T>()},
+ArithmeticColumnGenerator<T>::ArithmeticColumnGenerator(PolymorphicAllocator<size_t> alloc, const uint32_t random_seed)
+    : _random_seed{random_seed},
+      _data_type{data_type_from_type<T>()},
       _alloc{alloc},
       _row_count{1'000'000},
       _sorted{false},
@@ -52,7 +53,7 @@ void ArithmeticColumnGenerator<T>::set_null_fraction(float fraction) {
 
 template <typename T>
 std::shared_ptr<ValueColumn<T>> ArithmeticColumnGenerator<T>::uniformly_distributed_column(const T min, const T max) const {
-  std::mt19937 gen{};
+  std::mt19937 gen{_random_seed};
   auto dist = get_uniform_dist(min, max);
 
   auto values = pmr_concurrent_vector<T>(_row_count, _alloc);
@@ -79,8 +80,60 @@ std::shared_ptr<ValueColumn<T>> ArithmeticColumnGenerator<T>::uniformly_distribu
 }
 
 template <typename T>
+std::shared_ptr<opossum::ValueColumn<T>> ArithmeticColumnGenerator<T>::uniformly_distributed_column_with_runs(
+    const T min, const T max, const T run_length_mean) const {
+  std::mt19937 gen{_random_seed};
+  auto dist = get_uniform_dist(min, max);
+  auto run_length_dist = std::poisson_distribution<size_t>{static_cast<double>(run_length_mean)};
+
+  auto values = pmr_concurrent_vector<T>(_row_count, _alloc);
+
+  auto i = size_t{0u};
+  while (i < _row_count) {
+    const auto value = dist(gen);
+    const auto run_length = std::max(run_length_dist(gen), size_t{1u});
+
+    const auto end = std::min((i + run_length), size_t{_row_count});
+    for (; i < end; ++i) {
+      values[i] = value;
+    }
+  }
+
+  return column_from_values(std::move(values));
+}
+
+template <typename T>
+std::shared_ptr<opossum::ValueColumn<T>> ArithmeticColumnGenerator<T>::normally_distributed_column(
+    const T mean, const T outlier_mean, const double outlier_factor, const double std_dev) const {
+  const auto round_if_integral = [](auto value) {
+    if constexpr (std::is_integral_v<T>) {
+      return std::round(value);
+    } else {
+      return value;
+    }
+  };
+
+  std::mt19937 gen{_random_seed};
+  auto dist = std::normal_distribution<double>{static_cast<double>(mean), std_dev};
+  auto outlier_dist = std::normal_distribution<double>{static_cast<double>(outlier_mean), std_dev};
+
+  auto is_outlier_dist = std::bernoulli_distribution{outlier_factor};
+
+  auto values = pmr_concurrent_vector<T>(_row_count, _alloc);
+
+  for (auto i = 0u; i < _row_count; ++i) {
+    const auto is_outlier = is_outlier_dist(gen) ? 1u : 0u;
+    const auto value = static_cast<T>(round_if_integral(dist(gen)));
+    const auto outlier_value = static_cast<T>(round_if_integral(outlier_dist(gen)));
+    values[i] = (!is_outlier * value) + (is_outlier * outlier_value);
+  }
+
+  return column_from_values(std::move(values));
+}
+
+template <typename T>
 opossum::pmr_concurrent_vector<bool> ArithmeticColumnGenerator<T>::generate_null_values() const {
-  std::mt19937 gen{};
+  std::mt19937 gen{_random_seed};
 
   auto null_values = pmr_concurrent_vector<bool>(_row_count, false, _alloc);
 

@@ -4,13 +4,15 @@
 #include <algorithm>
 
 #include "single_distribution_benchmark.hpp"
-#include "multi_distribution_column_benchmark.hpp"
+#include "model_calibration_benchmark.hpp"
+#include "multi_scenario_column_benchmark.hpp"
 #include "generate_calibration_description.hpp"
+#include "generate_benchmark_scenarios.hpp"
 
 int main(int argc, char const *argv[]) {
   nlohmann::json description;
 
-  const auto calibration_type = opossum::CalibrationType::CompleteTableScan;
+  [[maybe_unused]] const auto calibration_type = opossum::CalibrationType::CompleteTableScan;
 
   if (argc > 1) {
     const auto file_name = argv[1];
@@ -21,10 +23,12 @@ int main(int argc, char const *argv[]) {
     file_stream >> description;
   } else {
     description = opossum::generate_calibration_description(calibration_type);
+    description = opossum::generate_benchmark_scenarios();
   }
 
-  // auto benchmark = opossum::MultiDistributionColumnBenchmark{calibration_type, std::move(description)};
-  auto benchmark = opossum::SingleDistributionBenchmark{};
+  auto benchmark = opossum::MultiScenarioColumnBenchmark{std::move(description)};
+  // auto benchmark = opossum::ModelCalibrationBenchmark{calibration_type, std::move(description)};
+  // auto benchmark = opossum::SingleDistributionBenchmark{};
   benchmark.run();
 
   return 0;
