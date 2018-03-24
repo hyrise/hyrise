@@ -99,6 +99,7 @@ BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinSortMerge)
 BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinIndex)->Iterations(1)->Apply(BenchmarkJoinFixture::ChunkSizeInUni);
 BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinIndex)->Iterations(1)->Apply(BenchmarkJoinFixture::ChunkSizeInNormal);
 BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinIndex)->Iterations(1)->Apply(BenchmarkJoinFixture::ChunkSizeInPareto);
+BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinIndex)->Iterations(1)->Apply(BenchmarkJoinFixture::ChunkSizeInUniNUMA);
 BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinMPSM)->Iterations(1)->Apply(BenchmarkJoinFixture::ChunkSizeInUni);
 BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinMPSM)->Iterations(1)->Apply(BenchmarkJoinFixture::ChunkSizeInUniNUMA);
 
