@@ -18,6 +18,7 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
+#include "storage/numa_placement_manager.hpp"
 
 #include "types.hpp"
 
@@ -78,9 +79,8 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
   return table;
 }
 
-std::shared_ptr<Table> TableGenerator::generate_table(
-    const std::vector<ColumnDataDistribution>& column_data_distributions, const size_t num_rows,
-    const size_t chunk_size, std::optional<EncodingType> encoding_type) {
+std::shared_ptr<Table> TableGenerator::generate_table(const std::vector<ColumnDataDistribution>& column_data_distributions, const size_t num_rows,
+    const size_t chunk_size, std::optional<EncodingType> encoding_type, bool use_multiple_partitions) {
   const auto num_columns = column_data_distributions.size();
   const auto num_chunks = std::ceil(static_cast<double>(num_rows) / static_cast<double>(chunk_size));
 
@@ -156,9 +156,20 @@ std::shared_ptr<Table> TableGenerator::generate_table(
       columns.push_back(std::make_shared<ValueColumn<int>>(std::move(value_vectors[column_index])));
       value_vectors[column_index] = tbb::concurrent_vector<int>(chunk_size);
 
+
+
       // add full chunk to table
       if (column_index == num_columns - 1) {
-        table->append_chunk(columns);
+        std::optional<PolymorphicAllocator<Chunk>> allocator;
+        if(use_multiple_partitions){
+           // compute on which node to create the chunk
+           auto num_numa_nodes = NUMAPlacementManager::get().topology()->nodes().size();
+           auto current_node = chunk_index % num_numa_nodes;
+
+           // create an allocator for the node
+           allocator = std::optional<PolymorphicAllocator<Chunk>>{PolymorphicAllocator<Chunk>{NUMAPlacementManager::get().get_memory_resource(current_node)}};
+        }
+        table->append_chunk(columns, allocator);
       }
     }
   }

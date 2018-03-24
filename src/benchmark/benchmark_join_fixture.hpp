@@ -14,6 +14,7 @@ class BenchmarkJoinFixture : public benchmark::Fixture {
   void TearDown(::benchmark::State&) override;
 
   static void ChunkSizeInUni(benchmark::internal::Benchmark* b);
+  static void ChunkSizeInUniNUMA(benchmark::internal::Benchmark* b);
   static void ChunkSizeInPareto(benchmark::internal::Benchmark* b);
   static void ChunkSizeInNormal(benchmark::internal::Benchmark* b);
 
@@ -21,7 +22,7 @@ class BenchmarkJoinFixture : public benchmark::Fixture {
   void clear_cache();
 
  protected:
-  std::shared_ptr<TableWrapper> _tw_small_uni1, _tw_small_uni2;
+  std::shared_ptr<TableWrapper> _table_wrapper_1, _table_wrapper_2;
   ChunkID _data_size;
 };
 

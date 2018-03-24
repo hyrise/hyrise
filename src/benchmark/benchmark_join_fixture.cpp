@@ -20,6 +20,8 @@ void BenchmarkJoinFixture::SetUp(::benchmark::State& state) {
 
   DataDistributionType right_distribution = static_cast<DataDistributionType>(state.range(2));
 
+  bool use_multiple_nodes = static_cast<bool>(state.range(3));
+
   auto left_config = ColumnDataDistribution::make_uniform_config(0.0, 10000);
 
   ColumnDataDistribution right_config;
@@ -37,9 +39,9 @@ void BenchmarkJoinFixture::SetUp(::benchmark::State& state) {
 
   // TODO(anyone): replace with EncodingType::Dictionary once joins (especially index join) support these
   auto table_1 = table_generator->generate_table(std::vector<ColumnDataDistribution>{left_config}, state.range(0),
-                                                 state.range(0) / 4, EncodingType::Dictionary);
+                                                 state.range(0) / 4, EncodingType::Dictionary, use_multiple_nodes);
   auto table_2 = table_generator->generate_table(std::vector<ColumnDataDistribution>{right_config}, state.range(1),
-                                                 state.range(1) / 4, EncodingType::Dictionary);
+                                                 state.range(1) / 4, EncodingType::Dictionary, use_multiple_nodes);
 
   for (auto table : {table_1, table_2}) {
     for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
@@ -53,10 +55,10 @@ void BenchmarkJoinFixture::SetUp(::benchmark::State& state) {
     }
   }
 
-  _tw_small_uni1 = std::make_shared<TableWrapper>(table_1);
-  _tw_small_uni2 = std::make_shared<TableWrapper>(table_2);
-  _tw_small_uni1->execute();
-  _tw_small_uni2->execute();
+  _table_wrapper_1 = std::make_shared<TableWrapper>(table_1);
+  _table_wrapper_2 = std::make_shared<TableWrapper>(table_2);
+  _table_wrapper_1->execute();
+  _table_wrapper_2->execute();
 }
 
 void BenchmarkJoinFixture::TearDown(::benchmark::State&) { opossum::StorageManager::get().reset(); }
@@ -67,7 +69,19 @@ void BenchmarkJoinFixture::ChunkSizeInUni(benchmark::internal::Benchmark* b) {
       // make sure we do not overrun our memory capacity
       if (static_cast<uint64_t>(left_size) * static_cast<uint64_t>(right_size) <= 1e9) {
         b->Args({left_size, right_size,
-                 static_cast<int>(DataDistributionType::Uniform)});  // left size, right size, distribution
+                 static_cast<int>(DataDistributionType::Uniform), false});  // left size, right size, distribution
+      }
+    }
+  }
+}
+
+void BenchmarkJoinFixture::ChunkSizeInUniNUMA(benchmark::internal::Benchmark* b) {
+  for (int left_size : {100, 1000, 10000, 100000, 1000000}) {
+    for (int right_size : {100, 1000, 10000, 100000, 1000000, 5000000}) {
+      // make sure we do not overrun our memory capacity
+      if (static_cast<uint64_t>(left_size) * static_cast<uint64_t>(right_size) <= 1e9) {
+        b->Args({left_size, right_size,
+                 static_cast<int>(DataDistributionType::Uniform), true});  // left size, right size, distribution
       }
     }
   }
@@ -79,7 +93,7 @@ void BenchmarkJoinFixture::ChunkSizeInNormal(benchmark::internal::Benchmark* b) 
       // make sure we do not overrun our memory capacity
       if (static_cast<uint64_t>(left_size) * static_cast<uint64_t>(right_size) <= 1e9) {
         b->Args({left_size, right_size,
-                 static_cast<int>(DataDistributionType::NormalSkewed)});  // left size, right size, distribution
+                 static_cast<int>(DataDistributionType::NormalSkewed), false});  // left size, right size, distribution
       }
     }
   }
@@ -90,7 +104,7 @@ void BenchmarkJoinFixture::ChunkSizeInPareto(benchmark::internal::Benchmark* b) 
       // make sure we do not overrun our memory capacity
       if (static_cast<uint64_t>(left_size) * static_cast<uint64_t>(right_size) <= 1e9) {
         b->Args({left_size, right_size,
-                 static_cast<int>(DataDistributionType::Pareto)});  // left size, right size, distribution
+                 static_cast<int>(DataDistributionType::Pareto), false});  // left size, right size, distribution
       }
     }
   }
