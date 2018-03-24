@@ -69,6 +69,7 @@ void JitReadTuple::execute(JitRuntimeContext& context) const {
 JitTupleValue JitReadTuple::add_input_column(const DataType data_type, const bool is_nullable,
                                              const ColumnID column_id) {
   // There is no need to add the same input column twice.
+  // If the same column is requested for the second time, we return the JitTupleValue created previously.
   const auto it = std::find_if(_input_columns.begin(), _input_columns.end(),
                                [&column_id](const auto& input_column) { return input_column.column_id == column_id; });
   if (it != _input_columns.end()) {
@@ -89,7 +90,7 @@ JitTupleValue JitReadTuple::add_literal_value(const AllTypeVariant& value) {
   return tuple_value;
 }
 
-size_t JitReadTuple::add_temorary_value() {
+size_t JitReadTuple::add_temporary_value() {
   // Somebody wants to store a temporary value in the runtime tuple. We don't really care about the value itself,
   // but have to remember to make some space for it when we create the runtime tuple.
   return _num_tuple_values++;
