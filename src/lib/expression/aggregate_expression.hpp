@@ -13,17 +13,12 @@ class AggregateExpression : public AbstractExpression {
   AggregateExpression(const AggregateType aggregate_type,
                       const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
 
-  /**
-   * @defgroup Overrides for AbstractExpression
-   * @{
-   */
-  bool deep_equals(const AbstractExpression& expression) const override;
   std::shared_ptr<AbstractExpression> deep_copy() const override;
-  std::shared_ptr<AbstractExpression> deep_resolve_column_expressions() override;
-  /**@}*/
 
   AggregateType aggregate_type;
-  std::vector<std::shared_ptr<AbstractExpression>> arguments;
+
+ protected:
+  bool _shallow_equals(const AbstractExpression& expression) const override;
 };
 
 } // namespace opossum

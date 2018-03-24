@@ -5,24 +5,17 @@
 namespace opossum {
 
 ExistsExpression::ExistsExpression(const std::shared_ptr<SelectExpression>& select):
-  AbstractExpression(ExpressionType::Exists), select(select) {
+  AbstractExpression(ExpressionType::Exists, {select}) {
 
 }
 
-bool ExistsExpression::deep_equals(const AbstractExpression& expression) const {
-  if (type != expression.type) return false;
-
-  const auto& exists_expression = static_cast<const ExistsExpression&>(expression);
-  return select->deep_equals(*exists_expression.select);
+const std::shared_ptr<SelectExpression>& ExistsExpression::select() const {
+  Assert(arguments[0]->type == ExpressionType::Select, "Expected to contains Select Expression");
+  return std::static_pointer_cast<SelectExpression>(arguments[0]);
 }
 
 std::shared_ptr<AbstractExpression> ExistsExpression::deep_copy() const {
-  return std::make_shared<ExistsExpression>(select->deep_copy());
-}
-
-std::shared_ptr<AbstractExpression> ExistsExpression::deep_resolve_column_expressions() {
-  select = select.deep_resolve_column_expressions();
-  return shared_from_this();
+  return std::make_shared<ExistsExpression>(select());
 }
 
 }  // namespace opossum

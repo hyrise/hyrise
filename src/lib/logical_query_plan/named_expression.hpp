@@ -6,10 +6,10 @@
 
 namespace opossum {
 
-class AliasedExpression final {
+class NamedExpression final {
  public:
-  AliasedExpression(const std::shared_ptr<AbstractExpression>& expression, const std::optional<std::string>& alias = std::nullopt):
-    _expression(expression), _alias(alias) {}
+  NamedExpression(const std::shared_ptr<AbstractExpression>& expression, const std::optional<std::string>& alias = std::nullopt):
+  _expression(expression), _alias(alias) {}
 
   std::shared_ptr<AbstractExpression> expression;
   std::optional<std::string> alias;

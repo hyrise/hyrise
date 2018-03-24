@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "abstract_lqp_node.hpp"
-#include "expression/aliased_expression.hpp"
 
 namespace opossum {
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <memory>
 
 #include "types.hpp"
@@ -12,30 +13,27 @@ enum class ExpressionType {
 
 class AbstractExpression : public std::enable_shared_from_this<AbstractExpression> {
  public:
-  explicit AbstractExpression(const ExpressionType type): type(type) {}
+  explicit AbstractExpression(const ExpressionType type, const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
   virtual ~AbstractExpression() = default;
 
-  virtual bool deep_equals(const AbstractExpression& expression) const = 0;
+  bool deep_equals(const AbstractExpression& expression) const;
+
+  virtual bool requires_calculation() const;
   virtual std::shared_ptr<AbstractExpression> deep_copy() const = 0;
 
-  /**
-   * Used for creating the complete Expression that created a Column
-   * @return `B`                    if `this` is a ColumnExpression pointing to a Column defined by
-   *                                non-ColumnExpression `B`
-   *          shared_from_this()    otherwise
-   */
-  virtual std::shared_ptr<AbstractExpression> deep_resolve_column_expressions() = 0;
-
   const ExpressionType type;
+  std::vector<std::shared_ptr<AbstractExpression>> arguments;
+
+ protected:
+  virtual bool _shallow_equals(const AbstractExpression& expression) const;
 };
 
+bool deep_equals_expressions(const std::vector<std::shared_ptr<AbstractExpression>>& expressions_a, const std::vector<std::shared_ptr<AbstractExpression>>& expressions_b);
 
-//if (arguments.size() != aggregate_expression.arguments.size()) return false;
+std::vector<std::shared_ptr<AbstractExpression>> deep_copy_expressions(const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
-//for (auto argument_idx = size_t{0}; argument_idx < arguments.size(); ++argument_idx) {
-//if (!arguments[argument_idx]->deep_equals(*aggregate_expression.arguments[argument_idx])) return false;
-//}
+using ExpressionVisitor = std::function<bool(std::shared_ptr<AbstractExpression>&)>;
 
-//return true;
+void visit_expression(std::shared_ptr<AbstractExpression>& expression, const ExpressionVisitor& visitor);
 
 }  // namespace opossum

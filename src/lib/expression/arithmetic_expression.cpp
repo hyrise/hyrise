@@ -1,29 +1,26 @@
 #include "arithmetic_expression.hpp"
 
-#include "utils/assert.hpp"
-
 namespace opossum {
 
-ArithmeticExpression::ArithmeticExpression(const ArithmeticOperator arithmetic_operator, const std::shared_ptr<AbstractExpression>& left_operand, const std::shared_ptr<AbstractExpression>& right_operand):
-AbstractExpression(ExpressionType::Arithmetic), arithmetic_operator(arithmetic_operator), left_operand(left_operand), right_operand(right_operand) {}
+ArithmeticExpression::ArithmeticExpression(const ArithmeticOperator arithmetic_operator,
+                                           const std::shared_ptr<AbstractExpression>& left_operand,
+                                           const std::shared_ptr<AbstractExpression>& right_operand):
+AbstractExpression(ExpressionType::Arithmetic, {left_operand, right_operand}), arithmetic_operator(arithmetic_operator) {}
 
-bool ArithmeticExpression::deep_equals(const AbstractExpression& expression) const {
-  if (type != expression.type) return false;
+const std::shared_ptr<AbstractExpression>& ArithmeticExpression::left_operand() const {
+  return arguments[0];
+}
 
-  const auto& arithmetic_expression = static_cast<const ArithmeticExpression&>(expression);
-  if (arithmetic_operator != arithmetic_expression.arithmetic_operator) return false;
-  return deep_equals_expressions({left_operand, right_operand}, {arithmetic_expression.left_operand, arithmetic_expression.right_operand});
+const std::shared_ptr<AbstractExpression>& ArithmeticExpression::right_operand() const {
+  return arguments[1];
 }
 
 std::shared_ptr<AbstractExpression> ArithmeticExpression::deep_copy() const {
-  return std::make_shared<ArithmeticExpression>(arithmetic_operator, left_operand->deep_copy(), right_operand->deep_copy());
+  return std::make_shared<ArithmeticExpression>(arithmetic_operator, left_operand()->deep_copy(), left_operand()->deep_copy());
 }
 
-std::shared_ptr<AbstractExpression> ArithmeticExpression::deep_resolve_column_expressions() {
-  left_operand = left_operand->deep_resolve_column_expressions();
-  right_operand = right_operand->deep_resolve_column_expressions();
-
-  return shared_from_this();
+bool ArithmeticExpression::_shallow_equals(const AbstractExpression& expression) const {
+  return arithmetic_operator == static_cast<const ArithmeticExpression&>(expression).arithmetic_operator;
 }
 
 }  // namespace opossum

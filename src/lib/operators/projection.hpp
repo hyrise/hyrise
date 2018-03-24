@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-#include "expression/aliased_expression.hpp"
 #include "storage/chunk.hpp"
 #include "storage/reference_column.hpp"
 #include "types.hpp"

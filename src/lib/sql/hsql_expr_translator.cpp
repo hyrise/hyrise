@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
-#include "logical_query_plan/lqp_expression.hpp"
 #include "sql/sql_translator.hpp"
 #include "utils/assert.hpp"
 

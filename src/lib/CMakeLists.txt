@@ -17,7 +17,6 @@ set(
     expression/abstract_expression.hpp
     expression/aggregate_expression.cpp
     expression/aggregate_expression.hpp
-    expression/aliased_expression.hpp
     expression/arithmetic_expression.cpp
     expression/arithmetic_expression.hpp
     expression/case_expression.cpp
@@ -73,12 +72,11 @@ set(
     logical_query_plan/logical_plan_root_node.hpp
     logical_query_plan/lqp_column_reference.cpp
     logical_query_plan/lqp_column_reference.hpp
-    logical_query_plan/lqp_expression.cpp
-    logical_query_plan/lqp_expression.hpp
     logical_query_plan/lqp_translator.cpp
     logical_query_plan/lqp_translator.hpp
     logical_query_plan/mock_node.cpp
     logical_query_plan/mock_node.hpp
+    logical_query_plan/named_expression.hpp
     logical_query_plan/predicate_node.cpp
     logical_query_plan/predicate_node.hpp
     logical_query_plan/projection_node.cpp

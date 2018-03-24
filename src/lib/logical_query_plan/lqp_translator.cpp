@@ -15,7 +15,6 @@
 #include "insert_node.hpp"
 #include "join_node.hpp"
 #include "limit_node.hpp"
-#include "lqp_expression.hpp"
 #include "operators/aggregate.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"

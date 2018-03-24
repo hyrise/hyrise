@@ -8,13 +8,12 @@
 #include <unordered_map>
 #include <vector>
 
+#include "expression/abstract_expression.hpp"
 #include "lqp_column_reference.hpp"
-#include "lqp_expression.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-struct ColumnID;
 class TableStatistics;
 
 enum class LQPNodeType {
@@ -69,13 +68,6 @@ struct QualifiedColumnName {
  * The LQP is created by the SQLTranslator and can optionally be further processed by the Optimizer.
  * The LQPTranslator creates the actual executable Operator-DAG. We are very careful that the LQP remains semantically
  * the same whether it was optimized or not.
- *
- * Design decision:
- * We decided to have mutable Nodes for now. By that we can apply rules without creating new nodes for every
- * optimization rule.
- *
- * We do not want people to copy an LQP node as a copy would still have the same inputs. Instead, they should use
- * deep_copy().
  */
 class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, private Noncopyable {
  public:
@@ -179,9 +171,9 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
   /**
    * @returns the Expressions that produce the Columns of this node. If a column is the result of the expressions of
-   *          multiple nodes, the entire, nested Expression is returned
+   *          multiple nodes, the entire, nested, Expression is returned
    */
-  virtual const std::vector<std::shared_ptr<LQPExpression>>& output_column_expressions() const;
+  virtual const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const;
 
   /**
    * @return the number of Columns this node outputs. Same as output_column_names().size()
@@ -212,6 +204,16 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    */
   virtual std::shared_ptr<const AbstractLQPNode> find_table_name_origin(const std::string& table_name) const;
   // @}
+
+  /**
+   * @return The ColumnReference that was created with @param expression, std::nullopt otherwise
+   */
+  std::optional<LQPColumnReference> find_column(const AbstractExpression& expression) const;
+
+  /**
+   * Convenience method for (*find_column()), DebugAssert()s that the qualified_column_name could be resolved
+   */
+  LQPColumnReference get_column(const AbstractExpression& expression) const;
 
   /**
    * @return The leftmost output ColumnID that stems from column_reference, or std::nullopt if none does
@@ -275,12 +277,11 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * @{
    */
   /**
-   * @return the @param expression (you will probably want to pass in a deep_copy), with all ColumnReferences pointing
-   * to their equivalent in a deep_copy()ed LQP
+   * Makes all ColumnExpressions points to their equivalent in a copied LQP
    */
-  static std::shared_ptr<LQPExpression> adapt_expression_to_different_lqp(
-      const std::shared_ptr<LQPExpression>& expression, const std::shared_ptr<AbstractLQPNode>& original_lqp,
-      const std::shared_ptr<AbstractLQPNode>& copied_lqp);
+  static void adapt_expression_to_different_lqp(
+      AbstractExpression& expression, const AbstractLQPNode& original_lqp,
+      AbstractLQPNode& copied_lqp);
 
   /**
    * @param copied_lqp must be a deep copy of original_lqp
@@ -288,8 +289,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * @return the ColumnReference equivalent to column_reference within the copied_lqp subtree
    */
   static LQPColumnReference adapt_column_reference_to_different_lqp(
-      const LQPColumnReference& column_reference, const std::shared_ptr<AbstractLQPNode>& original_lqp,
-      const std::shared_ptr<AbstractLQPNode>& copied_lqp);
+      const LQPColumnReference& column_reference, const AbstractLQPNode& original_lqp,
+      AbstractLQPNode& copied_lqp);
   /**
    * @}
    */
@@ -345,7 +346,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
   // mutable, so it can be lazily initialized in output_column_references() overrides
   mutable std::optional<std::vector<LQPColumnReference>> _output_column_references;
-  mutable std::optional<std::vector<std::shared_ptr<LQPExpression>>> _output_column_expressions;
+  mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _output_column_expressions;
 
   /**
    * If qualified_column_name.table_name is the alias set for this subtree, remove the table_name so that we
@@ -357,13 +358,13 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
   /** Utility to compare vectors of Expressions from different LQPs */
   static bool _equals(const AbstractLQPNode& lqp_left,
-                      const std::vector<std::shared_ptr<LQPExpression>>& expressions_left,
+                      const std::vector<std::shared_ptr<AbstractExpression>>& expressions_left,
                       const AbstractLQPNode& lqp_right,
-                      const std::vector<std::shared_ptr<LQPExpression>>& expressions_right);
+                      const std::vector<std::shared_ptr<AbstractExpression>>& expressions_right);
 
   /** Utility to compare two Expressions from different LQPs */
-  static bool _equals(const AbstractLQPNode& lqp_left, const std::shared_ptr<const LQPExpression>& expression_left,
-                      const AbstractLQPNode& lqp_right, const std::shared_ptr<const LQPExpression>& expression_right);
+  static bool _equals(const AbstractLQPNode& lqp_left, const AbstractExpression>& expression_left,
+                      const AbstractLQPNode& lqp_right, const AbstractExpression& expression_right);
 
   /** Utility to compare vectors of LQPColumnReferences from different LQPs */
   static bool _equals(const AbstractLQPNode& lqp_left, const std::vector<LQPColumnReference>& column_references_left,

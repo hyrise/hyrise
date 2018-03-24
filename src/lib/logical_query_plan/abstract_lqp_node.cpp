@@ -11,6 +11,7 @@
 
 #include "lqp_column_reference.hpp"
 #include "types.hpp"
+#include "expression/column_expression.hpp"
 #include "utils/assert.hpp"
 #include "utils/print_directed_acyclic_graph.hpp"
 
@@ -31,15 +32,15 @@ std::string QualifiedColumnName::as_string() const {
 AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type) : _type(node_type) {}
 
 LQPColumnReference AbstractLQPNode::adapt_column_reference_to_different_lqp(
-    const LQPColumnReference& column_reference, const std::shared_ptr<AbstractLQPNode>& original_lqp,
-    const std::shared_ptr<AbstractLQPNode>& copied_lqp) {
+    const LQPColumnReference& column_reference, const AbstractLQPNode& original_lqp,
+    AbstractLQPNode& copied_lqp) {
   /**
    * Map a ColumnReference to the same ColumnReference in a different LQP, by
    * (1) Figuring out the ColumnID it has in the original node
    * (2) Returning the ColumnReference at that ColumnID in the copied node
    */
-  const auto output_column_id = original_lqp->get_output_column_id(column_reference);
-  return copied_lqp->output_column_references()[output_column_id];
+  const auto output_column_id = original_lqp.get_output_column_id(column_reference);
+  return copied_lqp.output_column_references()[output_column_id];
 }
 
 std::vector<std::shared_ptr<AbstractLQPNode>> AbstractLQPNode::outputs() const {
@@ -227,7 +228,7 @@ const std::vector<LQPColumnReference>& AbstractLQPNode::output_column_references
   return *_output_column_references;
 }
 
-const std::vector<std::shared_ptr<LQPExpression>>& AbstractLQPNode::output_column_expressions() const {
+const std::vector<std::shared_ptr<AbstractExpression>>& AbstractLQPNode::output_column_expressions() const {
   /**
    * Default implementation of output_column_expressions() will return the Expressions of the left_input if it exists,
    * otherwise will pretend that all Columns originate in this node.
@@ -241,7 +242,7 @@ const std::vector<std::shared_ptr<LQPExpression>>& AbstractLQPNode::output_colum
     } else {
       _output_column_expressions.emplace();
       for (const auto& column_reference : output_column_references()) {
-        _output_column_expressions->emplace_back(std::make_shared<ColumnExpression>(column_reference));
+        _output_column_expressions->emplace_back(std::make_shared<LQPColumnExpression>(column_reference));
       }
     }
   }
@@ -338,6 +339,20 @@ std::shared_ptr<const AbstractLQPNode> AbstractLQPNode::find_table_name_origin(c
   }
 
   return table_name_origin_in_left_input;
+}
+
+std::optional<LQPColumnReference> AbstractLQPNode::find_column(const AbstractExpression& expression) const {
+  const auto& output_column_expressions = this->output_column_expressions();
+  for (auto column_id = ColumnID{0}; column_id < output_column_count(); ++column_id) {
+    if (output_column_expressions[column_id]->deep_equals(expression)) return output_column_references()[column_id];
+  }
+  return std::nullopt;
+}
+
+LQPColumnReference AbstractLQPNode::get_column(const AbstractExpression& expression) const {
+  const auto column = find_column(expression);
+  DebugAssert(column, "Couldn't resolve Column");
+  return *column;
 }
 
 std::optional<ColumnID> AbstractLQPNode::find_output_column_id(const LQPColumnReference& column_reference) const {
@@ -506,24 +521,16 @@ void AbstractLQPNode::_add_output_pointer(const std::shared_ptr<AbstractLQPNode>
   _outputs.emplace_back(output);
 }
 
-std::shared_ptr<LQPExpression> AbstractLQPNode::adapt_expression_to_different_lqp(
-    const std::shared_ptr<LQPExpression>& expression, const std::shared_ptr<AbstractLQPNode>& original_lqp,
-    const std::shared_ptr<AbstractLQPNode>& copied_lqp) {
-  if (!expression) return nullptr;
-
-  if (expression->type() == ExpressionType::Column) {
-    expression->set_column_reference(
-        adapt_column_reference_to_different_lqp(expression->column_reference(), original_lqp, copied_lqp));
-  }
-
-  for (auto& argument_expression : expression->aggregate_function_arguments()) {
-    adapt_expression_to_different_lqp(argument_expression, original_lqp, copied_lqp);
-  }
-
-  adapt_expression_to_different_lqp(expression->left_child(), original_lqp, copied_lqp);
-  adapt_expression_to_different_lqp(expression->right_child(), original_lqp, copied_lqp);
-
-  return expression;
+void AbstractLQPNode::adapt_expression_to_different_lqp(
+    AbstractExpression& expression, const AbstractLQPNode& original_lqp,
+    AbstractLQPNode& copied_lqp) {
+  visit_expression(expression, [](auto& sub_expression) {
+    if (sub_expression->type == ExpressionType::Column) {
+      auto& column_reference = std::static_pointer_cast<LQPColumnExpression>(sub_expression)->column;
+      column_reference = adapt_column_reference_to_different_lqp(column_reference, original_lqp, copied_lqp)
+    }
+    return true;
+  });
 }
 
 std::optional<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>>
@@ -550,13 +557,13 @@ AbstractLQPNode::_find_first_subplan_mismatch_impl(const std::shared_ptr<const A
 }
 
 bool AbstractLQPNode::_equals(const AbstractLQPNode& lqp_left,
-                              const std::vector<std::shared_ptr<LQPExpression>>& expressions_left,
+                              const std::vector<std::shared_ptr<AbstractExpression>>& expressions_left,
                               const AbstractLQPNode& lqp_right,
-                              const std::vector<std::shared_ptr<LQPExpression>>& expressions_right) {
+                              const std::vector<std::shared_ptr<AbstractExpression>>& expressions_right) {
   if (expressions_left.size() != expressions_right.size()) return false;
 
   for (size_t expression_idx = 0; expression_idx < expressions_left.size(); ++expression_idx) {
-    if (!_equals(lqp_left, expressions_left[expression_idx], lqp_right, expressions_right[expression_idx]))
+    if (!_equals(lqp_left, *expressions_left[expression_idx], lqp_right, *expressions_right[expression_idx]))
       return false;
   }
 
@@ -564,38 +571,16 @@ bool AbstractLQPNode::_equals(const AbstractLQPNode& lqp_left,
 }
 
 bool AbstractLQPNode::_equals(const AbstractLQPNode& lqp_left,
-                              const std::shared_ptr<const LQPExpression>& expression_left,
+                              const AbstractExpression& expression_left,
                               const AbstractLQPNode& lqp_right,
-                              const std::shared_ptr<const LQPExpression>& expression_right) {
-  if (!expression_left && !expression_right) return true;
-  if (!expression_left || !expression_right) return false;
-  if (*expression_left == *expression_right) return true;
-  if (expression_left->type() != expression_right->type()) return false;
-  if (expression_left->aggregate_function_arguments().size() != expression_right->aggregate_function_arguments().size())
-    return false;
+                              const AbstractExpression& expression_right) {
+  // We're just creating a temporary expression pointing to lqp right, we won't use it to manipulate lqp_right.
+  auto& mutable_lqp_right = const_cast<AbstractLQPNode&>(lqp_right);
 
-  const auto type = expression_left->type();
+  auto left_expression_adapted_to_right_lqp = expression_left.deep_copy();
+  adapt_expression_to_different_lqp(*left_expression_adapted_to_right_lqp, lqp_left, mutable_lqp_right);
 
-  if (expression_left->alias() != expression_right->alias()) return false;
-
-  if (type == ExpressionType::Column) {
-    return _equals(lqp_left, expression_left->column_reference(), lqp_right, expression_right->column_reference());
-  }
-
-  if (type == ExpressionType::Function) {
-    if (expression_left->aggregate_function() != expression_right->aggregate_function()) return false;
-
-    for (size_t arg_idx = 0; arg_idx < expression_left->aggregate_function_arguments().size(); ++arg_idx) {
-      if (!_equals(lqp_left, expression_left->aggregate_function_arguments()[arg_idx], lqp_right,
-                   expression_right->aggregate_function_arguments()[arg_idx]))
-        return false;
-    }
-  }
-
-  if (!_equals(lqp_left, expression_left->left_child(), lqp_right, expression_right->left_child())) return false;
-  if (!_equals(lqp_left, expression_left->right_child(), lqp_right, expression_right->right_child())) return false;
-
-  return true;
+  return left_expression_adapted_to_right_lqp->deep_equals(expression_right);
 }
 
 bool AbstractLQPNode::_equals(const AbstractLQPNode& lqp_left,
@@ -617,7 +602,7 @@ bool AbstractLQPNode::_equals(const AbstractLQPNode& lqp_left, const LQPColumnRe
   auto& mutable_lqp_left = const_cast<AbstractLQPNode&>(lqp_left);
   auto& mutable_lqp_right = const_cast<AbstractLQPNode&>(lqp_right);
   const auto column_reference_left_adapted_to_right = AbstractLQPNode::adapt_column_reference_to_different_lqp(
-      column_reference_left, mutable_lqp_left.shared_from_this(), mutable_lqp_right.shared_from_this());
+      column_reference_left, mutable_lqp_left, mutable_lqp_right);
 
   return column_reference_left_adapted_to_right == column_reference_right;
 }

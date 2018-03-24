@@ -2,7 +2,6 @@
 
 #include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/lqp_expression.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

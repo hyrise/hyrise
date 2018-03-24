@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 
-#include "lqp_expression.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

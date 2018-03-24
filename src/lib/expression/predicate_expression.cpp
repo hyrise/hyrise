@@ -1,29 +1,26 @@
 #include "predicate_expression.hpp"
 
-#include "utils/assert.hpp"
-
 namespace opossum {
 
-PredicateExpression::PredicateExpression(const PredicateCondition predicate_condition, const std::shared_ptr<AbstractExpression>& left_operand, const std::shared_ptr<AbstractExpression>& right_operand):
-AbstractExpression(ExpressionType::Predicate), predicate_condition(predicate_condition), left_operand(left_operand), right_operand(right_operand) {}
+PredicateExpression::PredicateExpression(const PredicateCondition predicate_condition,
+                                     const std::shared_ptr<AbstractExpression>& left_operand,
+                                     const std::shared_ptr<AbstractExpression>& right_operand):
+AbstractExpression(ExpressionType::Predicate, {left_operand, right_operand}), predicate_condition(predicate_condition) {}
 
-bool PredicateExpression::deep_equals(const AbstractExpression& expression) const {
-  if (type != expression.type) return false;
+const std::shared_ptr<AbstractExpression>& PredicateExpression::left_operand() const {
+  return arguments[0];
+}
 
-  const auto& predicate_expression = static_cast<const PredicateExpression&>(expression);
-  if (predicate_condition != predicate_expression.predicate_condition) return false;
-  return deep_equals_expressions({left_operand, right_operand}, {predicate_expression.left_operand, predicate_expression.right_operand});
+const std::shared_ptr<AbstractExpression>& PredicateExpression::right_operand() const {
+  return arguments[1];
 }
 
 std::shared_ptr<AbstractExpression> PredicateExpression::deep_copy() const {
-  return std::make_shared<PredicateExpression>(predicate_condition, left_operand->deep_copy(), right_operand->deep_copy());
+  return std::make_shared<PredicateExpression>(predicate_condition, left_operand()->deep_copy(), left_operand()->deep_copy());
 }
 
-std::shared_ptr<AbstractExpression> PredicateExpression::deep_resolve_column_expressions() {
-  left_operand = left_operand->deep_resolve_column_expressions();
-  right_operand = right_operand->deep_resolve_column_expressions();
-
-  return shared_from_this();
+bool PredicateExpression::_shallow_equals(const AbstractExpression& expression) const {
+  return predicate_condition == static_cast<const PredicateExpression&>(expression).predicate_condition;
 }
 
 }  // namespace opossum

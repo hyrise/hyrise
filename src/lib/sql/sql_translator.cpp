@@ -19,7 +19,6 @@
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
-#include "logical_query_plan/lqp_expression.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/show_columns_node.hpp"
@@ -594,7 +593,16 @@ const hsql::SelectStatement &select, const std::shared_ptr<AbstractLQPNode> &inp
   // Identify pre aggregate expressions in the SELECT list
   for (const auto& select_expression : select_expressions) {
     // A single select_expression might need several pre aggregate expressions
-    const auto sub_pre_aggregate_expressions = get_pre_aggregate_expressions(select_expression);
+    auto sub_pre_aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+
+    visit_expression(select_expression, [&](auto& expression) {
+      if (expression.type() != ExpressionType::Aggregate) return true;
+      const auto& aggregate_expression = std::static_pointer_cast<AggregateExpression>(expression);
+      sub_pre_aggregate_expressions.insert(sub_pre_aggregate_expressions.end(),
+      aggregate_expression->arguments.begin(), aggregate_expression->arguments.end());
+      return false;
+    });
+
     for (const auto& sub_pre_aggregate_expression : sub_pre_aggregate_expressions) {
       if (sub_pre_aggregate_expression->requires_calculation()) {
         pre_aggregate_projection_expressions.emplace_back(sub_pre_aggregate_expression);
@@ -611,38 +619,31 @@ const hsql::SelectStatement &select, const std::shared_ptr<AbstractLQPNode> &inp
 
   // Build aggregate expressions accessing the pre aggregate expressions
   std::vector<std::shared_ptr<const LQPExpression>> aggregate_expressions;
-  for (const auto& select_expression : select_expressions) {
+  for (auto& select_expression : select_expressions) {
     // A single select_expression might need several aggregate expressions
-    auto aggregate_expressions = get_aggregate_expressions(select_expression);
 
-    for (auto& aggregate_expression : aggregate_expressions) {
-      std::vector<std::shared_ptr<const LQPExpression>> aggregate_arguments;
-      aggregate_arguments.reserve(aggregate_expression->arguments().size());
+    visit_expression(select_expression, [&](auto& expression) {
+      if (expression.type() != ExpressionType::Aggregate) return true;
+      const auto& aggregate_expression = std::static_pointer_cast<AggregateExpression>(expression);
 
-      for (const auto& argument : aggregate_expression->arguments()) {
+      for (const auto& argument : aggregate_expression->arguments) {
         if (argument->requires_calculation()) {
-          const auto column = pre_aggregate_projection->get_output_column_by_expression(argument);
-          aggregate_arguments.emplace_back(std::make_shared<ColumnExpression>(column));
-        } else {
-          aggregate_arguments.emplace_back(argument);
+          const auto column = current_node->get_column(argument);
+          argument = std::make_shared<LQPColumnExpression>(column);
         }
       }
 
-      aggregate_expression->set_arguments(aggregate_arguments);
       aggregate_expressions.emplace_back(aggregate_expression);
-    }
+
+      return false;
+    });
   }
 
   // Build groupby column references accessing the pre aggregate expressions
   std::vector<LQPColumnReference> group_by_columns;
   group_by_columns.reserve(group_by_expressions.size());
   for (auto& group_by_expression : group_by_expressions) {
-    if (group_by_expression->type() == ExpressionType::Column) {
-      const auto column_expression = std::static_pointer_cast<ColumnExpression>(group_by_expression);
-      group_by_columns.emplace_back(column_expression->column());
-    } else {
-      group_by_columns.emplace_back(pre_aggregate_projection->get_column(group_by_expression));
-    }
+    group_by_columns.emplace_back(current_node->get_column(group_by_expression));
   }
 
   // Build Aggregate
@@ -652,14 +653,13 @@ const hsql::SelectStatement &select, const std::shared_ptr<AbstractLQPNode> &inp
 
   // Make SELECT expressions use Aggregate results
   auto post_aggregate_expressions = select_expressions;
-  for (const auto& select_expression : post_aggregate_expressions) {
-    // A single select_expression might need several aggregate expressions
-    auto aggregate_expressions = get_aggregate_expressions(select_expression);
+  for (auto& select_expression : post_aggregate_expressions) {
+    visit_expression(select_expression, [&](auto& expression) {
+      if (expression.type() != ExpressionType::Aggregate) return true;
+      expression = std::make_shared<LQPColumnExpression>(current_node->get_column(expression));
 
-    for (auto& aggregate_expression : aggregate_expressions) {
-      const auto column = aggregate->get_column(aggregate_expressions);
-      aggregate_expression = std::make_shared<ColumnExpression>(column);
-    }
+      return false;
+    });
   }
 
   post_aggregate_expressions.insert(post_aggregate_expressions.end(),
@@ -697,13 +697,13 @@ const hsql::SelectStatement &select, const std::shared_ptr<AbstractLQPNode> &inp
         for (const auto& origin_column : origin_node->output_column_references()) {
           const auto input_node_column_id = input_node->find_output_column_id(origin_column);
           if (input_node_column_id) {
-            output_expressions.emplace_back(std::make_shared<ColumnExpression>(origin_column));
+            output_expressions.emplace_back(std::make_shared<LQPColumnExpression>(origin_column));
           }
         }
       } else {
         // If there is no table qualifier take all columns from the input.
         for (const auto& column : input_node->output_column_references()) {
-          output_expressions.emplace_back(std::make_shared<ColumnExpression>(column));
+          output_expressions.emplace_back(std::make_shared<LQPColumnExpression>(column));
         }
       }
     }

@@ -7,7 +7,6 @@
 #include "base_test.hpp"
 
 #include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/lqp_expression.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "storage/storage_manager.hpp"
 #include "types.hpp"

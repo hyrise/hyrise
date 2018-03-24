@@ -9,16 +9,12 @@ class ValueExpression : public AbstractExpression {
  public:
   explicit ValueExpression(const AllTypeVariant& value);
 
-  /**
-   * @defgroup Overrides for AbstractExpression
-   * @{
-   */
-  bool deep_equals(const AbstractExpression& expression) const override;
   std::shared_ptr<AbstractExpression> deep_copy() const override;
-  std::shared_ptr<AbstractExpression> deep_resolve_column_expressions() override;
-  /**@}*/
-
+  
   AllTypeVariant value;
+
+ protected:
+  bool _shallow_equals(const AbstractExpression& expression) const override;
 };
 
 }  // namespace opossum

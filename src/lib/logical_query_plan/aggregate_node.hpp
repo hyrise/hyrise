@@ -6,8 +6,8 @@
 #include <vector>
 
 #include "abstract_lqp_node.hpp"
-#include "expression/aliased_expression.hpp"
 #include "lqp_column_reference.hpp"
+#include "named_expression.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -21,17 +21,17 @@ namespace opossum {
  */
 class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public AbstractLQPNode {
  public:
-  explicit AggregateNode(const std::vector<LQPColumnReference>& groupby_column_references,
-                         const std::vector<AliasedExpression>& aggregate_expressions);
+  AggregateNode(const std::vector<LQPColumnReference>& groupby_column_references,
+                         const std::vector<NamedExpression>& named_aggregate_expressions);
 
-  const std::vector<std::shared_ptr<LQPExpression>>& aggregate_expressions() const;
+  const std::vector<NamedExpression>& aggregate_expressions() const;
   const std::vector<LQPColumnReference>& groupby_column_references() const;
 
   std::string description() const override;
 
   const std::vector<std::string>& output_column_names() const override;
   const std::vector<LQPColumnReference>& output_column_references() const override;
-  const std::vector<std::shared_ptr<LQPExpression>>& output_column_expressions() const override;
+  const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const override;
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
@@ -44,7 +44,7 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
   void _on_input_changed() override;
 
  private:
-  const std::vector<AliasedExpression> _aggregate_expressions;
+  std::vector<NamedExpression> _named_aggregate_expressions;
   std::vector<LQPColumnReference> _groupby_column_references;
 
   mutable std::optional<std::vector<std::string>> _output_column_names;

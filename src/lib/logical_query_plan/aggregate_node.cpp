@@ -7,19 +7,19 @@
 #include <string>
 #include <vector>
 
-#include "lqp_expression.hpp"
+#include "expression/column_expression.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-AggregateNode::AggregateNode(const std::vector<std::shared_ptr<LQPExpression>>& aggregate_expressions,
-                             const std::vector<LQPColumnReference>& groupby_column_references)
+AggregateNode::AggregateNode(const std::vector<LQPColumnReference>& groupby_column_references,
+                             const std::vector<NamedExpression>& named_aggregate_expressions)
     : AbstractLQPNode(LQPNodeType::Aggregate),
-      _aggregate_expressions(aggregate_expressions),
+      _named_aggregate_expressions(named_aggregate_expressions),
       _groupby_column_references(groupby_column_references) {
-  for ([[gnu::unused]] const auto& expression : aggregate_expressions) {
-    DebugAssert(expression->type() == ExpressionType::Function, "Aggregate expression must be a function.");
+  for ([[gnu::unused]] const auto& named_expression : named_aggregate_expressions) {
+    DebugAssert(named_expression.expression->type() == ExpressionType::Aggregate, "Aggregate expression must be an Aggregate.");
   }
 }
 
@@ -28,11 +28,11 @@ std::shared_ptr<AbstractLQPNode> AggregateNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
   Assert(left_input(), "Can't clone without input, need it to adapt column references");
 
-  std::vector<std::shared_ptr<LQPExpression>> aggregate_expressions;
-  aggregate_expressions.reserve(_aggregate_expressions.size());
-  for (const auto& expression : _aggregate_expressions) {
-    aggregate_expressions.emplace_back(
-        adapt_expression_to_different_lqp(expression->deep_copy(), left_input(), copied_left_input));
+  std::vector<NamedExpression> named_aggregate_expressions;
+  named_aggregate_expressions.reserve(_named_aggregate_expressions.size());
+  for (const auto& named_expression : _named_aggregate_expressions) {
+    named_aggregate_expressions.emplace_back(
+        adapt_expression_to_different_lqp(named_expression.expression->deep_copy(), left_input(), copied_left_input), named_expression.alias);
   }
 
   std::vector<LQPColumnReference> groupby_column_references;
@@ -140,60 +140,18 @@ const std::vector<LQPColumnReference>& AggregateNode::output_column_references()
   return *_output_column_references;
 }
 
-const std::vector<std::shared_ptr<LQPExpression>>& AggregateNode::output_column_expressions() const {
+const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::output_column_expressions() const {
   if (!_output_column_expressions) {
     _output_column_expressions->emplace();
     _output_column_expressions->reserve(output_column_count());
     for (const auto& groupby_column : _groupby_column_references) {
-      _output_column_expressions->emplace_back(std::make_shared<ColumnExpression>(groupby_column));
+      _output_column_expressions->emplace_back(std::make_shared<LQPColumnExpression>(groupby_column));
     }
     for (const auto& aggregate_expression : _aggregate_expressions) {
       _output_column_expressions->emplace_back(aggregate_expression->clone()->deep_resolve_column_expressions());
     }
   }
   return *_output_column_expressions;
-}
-
-LQPColumnReference AggregateNode::get_column_by_expression(const std::shared_ptr<LQPExpression>& expression) const {
-  const auto column_id = find_column_by_expression(expression);
-  DebugAssert(column_id, "Expression could not be resolved.");
-  return *column_id;
-}
-
-std::optional<LQPColumnReference> AggregateNode::find_column_by_expression(
-    const std::shared_ptr<LQPExpression>& expression) const {
-  /**
-   * This function does NOT need to check whether an expression is ambiguous.
-   * It is only used when translating the HAVING clause.
-   * If two expressions are equal, they must refer to the same result.
-   * Not checking ambiguity allows perfectly valid queries like:
-   *  SELECT a, MAX(b), MAX(b) FROM t GROUP BY a HAVING MAX(b) > 0
-   */
-  if (expression->type() == ExpressionType::Column) {
-    const auto iter = std::find_if(_groupby_column_references.begin(), _groupby_column_references.end(),
-                                   [&](const auto& groupby_column_reference) {
-                                     return expression->column_reference() == groupby_column_reference;
-                                   });
-
-    if (iter != _groupby_column_references.end()) {
-      const auto column_id = static_cast<ColumnID>(std::distance(_groupby_column_references.begin(), iter));
-      DebugAssert(column_id < output_column_count(), "ColumnID out of range");
-      return output_column_references()[column_id];
-    }
-  } else if (expression->type() == ExpressionType::Function) {
-    const auto iter =
-        std::find_if(_aggregate_expressions.begin(), _aggregate_expressions.end(), [&](const auto& other) {
-          DebugAssert(other, "Aggregate expressions can not be nullptr!");
-          return *expression == *other;
-        });
-
-    if (iter != _aggregate_expressions.end()) {
-      const auto idx = std::distance(_aggregate_expressions.begin(), iter);
-      return LQPColumnReference{shared_from_this(), static_cast<ColumnID>(idx + _groupby_column_references.size())};
-    }
-  }
-
-  return std::nullopt;
 }
 
 bool AggregateNode::shallow_equals(const AbstractLQPNode& rhs) const {

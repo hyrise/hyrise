@@ -7,7 +7,6 @@
 #include <string>
 #include <vector>
 
-#include "lqp_expression.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
