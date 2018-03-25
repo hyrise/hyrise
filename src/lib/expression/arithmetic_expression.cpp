@@ -1,5 +1,7 @@
 #include "arithmetic_expression.hpp"
 
+#include <sstream>
+
 namespace opossum {
 
 ArithmeticExpression::ArithmeticExpression(const ArithmeticOperator arithmetic_operator,
@@ -17,6 +19,14 @@ const std::shared_ptr<AbstractExpression>& ArithmeticExpression::right_operand()
 
 std::shared_ptr<AbstractExpression> ArithmeticExpression::deep_copy() const {
   return std::make_shared<ArithmeticExpression>(arithmetic_operator, left_operand()->deep_copy(), left_operand()->deep_copy());
+}
+
+std::string ArithmeticExpression::description() const {
+  std::stringstream stream;
+
+  Fail("Todo");
+
+  return stream.str();
 }
 
 bool ArithmeticExpression::_shallow_equals(const AbstractExpression& expression) const {

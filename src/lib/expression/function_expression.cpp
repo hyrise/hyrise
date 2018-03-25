@@ -2,6 +2,8 @@
 
 #include "utils/assert.hpp"
 
+#include <sstream>
+
 namespace opossum {
 
 FunctionExpression::FunctionExpression(const FunctionType function_type,
@@ -10,6 +12,14 @@ AbstractExpression(ExpressionType::Function, arguments) {}
 
 std::shared_ptr<AbstractExpression> FunctionExpression::deep_copy() const {
   return std::make_shared<FunctionExpression>(function_type, deep_copy_expressions(arguments));
+}
+
+std::string FunctionExpression::description() const {
+  std::stringstream stream;
+
+  Fail("Todo");
+
+  return stream.str();
 }
 
 bool FunctionExpression::_shallow_equals(const AbstractExpression& expression) const {

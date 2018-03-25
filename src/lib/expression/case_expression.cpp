@@ -1,5 +1,7 @@
 #include "case_expression.hpp"
 
+#include <sstream>
+
 namespace opossum {
 
 CaseExpression::CaseExpression(const std::shared_ptr<AbstractExpression>& when,
@@ -17,6 +19,14 @@ const std::shared_ptr<AbstractExpression>& CaseExpression::then() const {
 
 const std::shared_ptr<AbstractExpression>& CaseExpression::else_() const {
   return arguments[2];
+}
+
+std::string CaseExpression::description() const {
+  std::stringstream stream;
+
+  Fail("Todo");
+
+  return stream.str();
 }
 
 std::shared_ptr<AbstractExpression> CaseExpression::deep_copy() const {

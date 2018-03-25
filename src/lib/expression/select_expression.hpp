@@ -12,6 +12,7 @@ class SelectExpression : public AbstractExpression {
 
   bool requires_calculation() const override;
   std::shared_ptr<AbstractExpression> deep_copy() const override;
+  std::string description() const override;
 
   std::shared_ptr<AbstractLQPNode> lqp;
 

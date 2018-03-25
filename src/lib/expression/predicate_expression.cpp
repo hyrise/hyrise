@@ -1,5 +1,7 @@
 #include "predicate_expression.hpp"
 
+#include <sstream>
+
 namespace opossum {
 
 PredicateExpression::PredicateExpression(const PredicateCondition predicate_condition,
@@ -17,6 +19,14 @@ const std::shared_ptr<AbstractExpression>& PredicateExpression::right_operand() 
 
 std::shared_ptr<AbstractExpression> PredicateExpression::deep_copy() const {
   return std::make_shared<PredicateExpression>(predicate_condition, left_operand()->deep_copy(), left_operand()->deep_copy());
+}
+
+std::string PredicateExpression::description() const {
+  std::stringstream stream;
+
+  Fail("Todo");
+
+  return stream.str();
 }
 
 bool PredicateExpression::_shallow_equals(const AbstractExpression& expression) const {

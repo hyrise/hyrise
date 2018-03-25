@@ -1,5 +1,7 @@
 #include "value_expression.hpp"
 
+#include <sstream>
+
 namespace opossum {
 
 ValueExpression::ValueExpression(const AllTypeVariant& value): AbstractExpression(ExpressionType::Value, {}), value(value) {
@@ -8,6 +10,13 @@ ValueExpression::ValueExpression(const AllTypeVariant& value): AbstractExpressio
 
 std::shared_ptr<AbstractExpression> ValueExpression::deep_copy() const  {
   return std::make_shared<ValueExpression>(value);
+}
+
+std::string ValueExpression::description() const {
+  std::stringstream stream;
+
+  Fail("Todo");
+  return stream.str();
 }
 
 bool ValueExpression::_shallow_equals(const AbstractExpression& expression) const {

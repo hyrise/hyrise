@@ -11,6 +11,8 @@
 
 #include "storage/encoding_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
+#include "expression/abstract_expression.hpp"
+#include "expression/aggregate_expression.hpp"
 
 namespace opossum {
 
@@ -139,14 +141,14 @@ const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
 
 const std::unordered_map<UnionMode, std::string> union_mode_to_string = {{UnionMode::Positions, "UnionPositions"}};
 
-const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string =
-    make_bimap<AggregateFunction, std::string>({
-        {AggregateFunction::Min, "MIN"},
-        {AggregateFunction::Max, "MAX"},
-        {AggregateFunction::Sum, "SUM"},
-        {AggregateFunction::Avg, "AVG"},
-        {AggregateFunction::Count, "COUNT"},
-        {AggregateFunction::CountDistinct, "COUNT DISTINCT"},
+const boost::bimap<AggregateType, std::string> aggregate_type_to_string =
+    make_bimap<AggregateType, std::string>({
+        {AggregateType::Min, "MIN"},
+        {AggregateType::Max, "MAX"},
+        {AggregateType::Sum, "SUM"},
+        {AggregateType::Avg, "AVG"},
+        {AggregateType::Count, "COUNT"},
+        {AggregateType::CountDistinct, "COUNT DISTINCT"},
     });
 
 const boost::bimap<DataType, std::string> data_type_to_string =

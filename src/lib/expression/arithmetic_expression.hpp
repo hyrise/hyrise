@@ -22,6 +22,8 @@ class ArithmeticExpression : public AbstractExpression {
 
   ArithmeticOperator arithmetic_operator;
 
+  std::string description() const override;
+
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
 };

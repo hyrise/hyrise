@@ -10,6 +10,7 @@ class ValueExpression : public AbstractExpression {
   explicit ValueExpression(const AllTypeVariant& value);
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
+  std::string description() const override;
   
   AllTypeVariant value;
 

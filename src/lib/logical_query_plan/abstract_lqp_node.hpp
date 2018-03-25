@@ -10,6 +10,7 @@
 
 #include "expression/abstract_expression.hpp"
 #include "lqp_column_reference.hpp"
+#include "named_expression.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -358,12 +359,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
   /** Utility to compare vectors of Expressions from different LQPs */
   static bool _equals(const AbstractLQPNode& lqp_left,
-                      const std::vector<std::shared_ptr<AbstractExpression>>& expressions_left,
+                      const std::vector<NamedExpression>& named_expressions_left,
                       const AbstractLQPNode& lqp_right,
-                      const std::vector<std::shared_ptr<AbstractExpression>>& expressions_right);
+                      const std::vector<NamedExpression>& named_expressions_right);
 
   /** Utility to compare two Expressions from different LQPs */
-  static bool _equals(const AbstractLQPNode& lqp_left, const AbstractExpression>& expression_left,
+  static bool _equals(const AbstractLQPNode& lqp_left, const AbstractExpression& expression_left,
                       const AbstractLQPNode& lqp_right, const AbstractExpression& expression_right);
 
   /** Utility to compare vectors of LQPColumnReferences from different LQPs */

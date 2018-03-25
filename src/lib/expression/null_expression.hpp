@@ -9,6 +9,7 @@ class NullExpression : public AbstractExpression {
   NullExpression();
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
+  std::string description() const override;
 };
 
 }  // namespace opossum

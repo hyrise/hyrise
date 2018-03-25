@@ -1,5 +1,7 @@
 #include "in_expression.hpp"
 
+#include <sstream>
+
 namespace opossum {
 
 InExpression::InExpression(const std::shared_ptr<AbstractExpression>& value, const std::shared_ptr<AbstractExpression>& set):
@@ -17,5 +19,12 @@ std::shared_ptr<AbstractExpression> InExpression::deep_copy() const {
   return std::make_shared<AbstractExpression>(value()->deep_copy(), set()->deep_copy());
 }
 
+std::string InExpression::description() const {
+  std::stringstream stream;
+
+  Fail("Todo");
+
+  return stream.str();
+}
 
 }  // namespace opossum

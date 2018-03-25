@@ -31,22 +31,23 @@ std::shared_ptr<AbstractLQPNode> AggregateNode::_deep_copy_impl(
   std::vector<NamedExpression> named_aggregate_expressions;
   named_aggregate_expressions.reserve(_named_aggregate_expressions.size());
   for (const auto& named_expression : _named_aggregate_expressions) {
-    named_aggregate_expressions.emplace_back(
-        adapt_expression_to_different_lqp(named_expression.expression->deep_copy(), left_input(), copied_left_input), named_expression.alias);
+    auto expression_copy = named_expression.expression->deep_copy();
+    adapt_expression_to_different_lqp(*expression_copy, *left_input(), *copied_left_input);
+    named_aggregate_expressions.emplace_back(expression_copy, named_expression.alias);
   }
 
   std::vector<LQPColumnReference> groupby_column_references;
   groupby_column_references.reserve(_groupby_column_references.size());
   for (const auto& groupby_column_reference : _groupby_column_references) {
     groupby_column_references.emplace_back(
-        adapt_column_reference_to_different_lqp(groupby_column_reference, left_input(), copied_left_input));
+        adapt_column_reference_to_different_lqp(groupby_column_reference, *left_input(), *copied_left_input));
   }
 
-  return AggregateNode::make(aggregate_expressions, groupby_column_references);
+  return AggregateNode::make(named_aggregate_expressions, groupby_column_references);
 }
 
-const std::vector<std::shared_ptr<LQPExpression>>& AggregateNode::aggregate_expressions() const {
-  return _aggregate_expressions;
+const std::vector<NamedExpression>& AggregateNode::named_aggregate_expressions() const {
+  return _named_aggregate_expressions;
 }
 
 const std::vector<LQPColumnReference>& AggregateNode::groupby_column_references() const {
@@ -58,28 +59,11 @@ std::string AggregateNode::description() const {
 
   s << "[Aggregate] ";
 
-  std::vector<std::string> verbose_column_names;
-  if (left_input()) {
-    verbose_column_names = left_input()->get_verbose_column_names();
-  }
-
-  auto stream_aggregate = [&](const std::shared_ptr<LQPExpression>& aggregate_expr) {
-    s << aggregate_expr->to_string(verbose_column_names);
-
-    if (aggregate_expr->alias()) {
-      s << " AS \"" << (*aggregate_expr->alias()) << "\"";
+  for (auto aggregate_idx = size_t{0}; aggregate_idx < _named_aggregate_expressions.size(); ++aggregate_idx) {
+    s << _named_aggregate_expressions[aggregate_idx].to_string();
+    if (aggregate_idx + 1 < _named_aggregate_expressions.size()) {
+      s << ", ";
     }
-  };
-
-  auto aggregates_it = _aggregate_expressions.begin();
-  if (aggregates_it != _aggregate_expressions.end()) {
-    stream_aggregate(*aggregates_it);
-    ++aggregates_it;
-  }
-
-  for (; aggregates_it != _aggregate_expressions.end(); ++aggregates_it) {
-    s << ", ";
-    stream_aggregate(*aggregates_it);
   }
 
   if (!_groupby_column_references.empty()) {
@@ -106,17 +90,7 @@ std::string AggregateNode::get_verbose_column_name(ColumnID column_id) const {
   const auto aggregate_column_id = column_id - _groupby_column_references.size();
   DebugAssert(aggregate_column_id < _aggregate_expressions.size(), "ColumnID out of range");
 
-  const auto& aggregate_expression = _aggregate_expressions[aggregate_column_id];
-
-  if (aggregate_expression->alias()) {
-    return *aggregate_expression->alias();
-  }
-
-  if (left_input()) {
-    return aggregate_expression->to_string(left_input()->get_verbose_column_names());
-  } else {
-    return aggregate_expression->to_string();
-  }
+  return _named_aggregate_expressions[aggregate_column_id].to_string();
 }
 
 void AggregateNode::_on_input_changed() {
@@ -147,8 +121,8 @@ const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::output_co
     for (const auto& groupby_column : _groupby_column_references) {
       _output_column_expressions->emplace_back(std::make_shared<LQPColumnExpression>(groupby_column));
     }
-    for (const auto& aggregate_expression : _aggregate_expressions) {
-      _output_column_expressions->emplace_back(aggregate_expression->clone()->deep_resolve_column_expressions());
+    for (const auto& named_aggregate_expression : _named_aggregate_expressions) {
+      _output_column_expressions->emplace_back(named_aggregate_expression->deep_copy());
     }
   }
   return *_output_column_expressions;

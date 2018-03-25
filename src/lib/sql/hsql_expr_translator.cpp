@@ -60,8 +60,8 @@ std::shared_ptr<LQPExpression> HSQLExprTranslator::to_lqp_expression(
       // convert to upper-case to find mapping
       std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) { return std::toupper(c); });
 
-      const auto aggregate_function_iter = aggregate_function_to_string.right.find(name);
-      DebugAssert(aggregate_function_iter != aggregate_function_to_string.right.end(),
+      const auto aggregate_function_iter = aggregate_type_to_string.right.find(name);
+      DebugAssert(aggregate_function_iter != aggregate_type_to_string.right.end(),
                   std::string("No such aggregate function '") + name + "'");
 
       auto aggregate_function = aggregate_function_iter->second;
@@ -138,6 +138,23 @@ LQPColumnReference HSQLExprTranslator::to_column_reference(const hsql::Expr& hsq
   Assert(hsql_expr.isType(hsql::kExprColumnRef), "Input needs to be column ref");
   const auto qualified_column_name = to_qualified_column_name(hsql_expr);
   const auto column_reference = input_node->find_column(qualified_column_name);
+
+  if (!column_reference) {
+    std::optional<LQPColumnReference> column_reference_in_left_input;
+    std::optional<LQPColumnReference> column_reference_in_right_input;
+    if (input_node->left_input()) {
+      column_reference_in_left_input = input_node->left_input()->find_column(qualified_column_name);
+    }
+    if (input_node->right_input()) {
+      column_reference_in_right_input = input_node->right_input()->find_column(qualified_column_name);
+    }
+
+    if (column_reference_in_left_input && !column_reference_in_right_input) {
+      return column_reference_in_left_input;
+    } else if (!column_reference_in_left_input && column_reference_in_right_input) {
+      return column_reference_in_right_input;
+    }
+  }
 
   Assert(column_reference, "Couldn't resolve named column reference '" + qualified_column_name.as_string() + "'");
 

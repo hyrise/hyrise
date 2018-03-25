@@ -557,13 +557,13 @@ AbstractLQPNode::_find_first_subplan_mismatch_impl(const std::shared_ptr<const A
 }
 
 bool AbstractLQPNode::_equals(const AbstractLQPNode& lqp_left,
-                              const std::vector<std::shared_ptr<AbstractExpression>>& expressions_left,
+                              const std::vector<NamedExpression>& named_expressions_left,
                               const AbstractLQPNode& lqp_right,
-                              const std::vector<std::shared_ptr<AbstractExpression>>& expressions_right) {
-  if (expressions_left.size() != expressions_right.size()) return false;
+                              const std::vector<NamedExpression>& named_expressions_right) {
+  if (named_expressions_left.size() != named_expressions_right.size()) return false;
 
-  for (size_t expression_idx = 0; expression_idx < expressions_left.size(); ++expression_idx) {
-    if (!_equals(lqp_left, *expressions_left[expression_idx], lqp_right, *expressions_right[expression_idx]))
+  for (size_t expression_idx = 0; expression_idx < named_expressions_left.size(); ++expression_idx) {
+    if (!_equals(lqp_left, *named_expressions_left[expression_idx].expression, lqp_right, *named_expressions_right[expression_idx].expression))
       return false;
   }
 

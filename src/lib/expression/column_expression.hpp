@@ -15,6 +15,10 @@ class ColumnExpression : public AbstractExpression {
     return std::make_shared<ColumnExpression>(column);
   }
 
+  std::string description() const override {
+    Fail("Todo");
+  }
+
   ColumnReference column;
 
  protected:

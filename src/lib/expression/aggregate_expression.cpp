@@ -1,6 +1,9 @@
 #include "aggregate_expression.hpp"
 
+#include <sstream>
+
 #include "utils/assert.hpp"
+#include "constant_mappings.hpp"
 
 namespace opossum {
 
@@ -10,6 +13,14 @@ AggregateExpression::AggregateExpression(const AggregateType aggregate_type,
 
 std::shared_ptr<AbstractExpression> AggregateExpression::deep_copy() const {
   return std::make_shared<AggregateExpression>(aggregate_type, deep_copy_expressions(arguments));
+}
+
+std::string AggregateExpression::description() const {
+  std::stringstream stream;
+
+  Fail("Todo");
+
+  return stream.str();
 }
 
 bool AggregateExpression::_shallow_equals(const AbstractExpression& expression) const {

@@ -22,9 +22,9 @@ namespace opossum {
 class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public AbstractLQPNode {
  public:
   AggregateNode(const std::vector<LQPColumnReference>& groupby_column_references,
-                         const std::vector<NamedExpression>& named_aggregate_expressions);
+                const std::vector<NamedExpression>& named_aggregate_expressions);
 
-  const std::vector<NamedExpression>& aggregate_expressions() const;
+  const std::vector<NamedExpression>& named_aggregate_expressions() const;
   const std::vector<LQPColumnReference>& groupby_column_references() const;
 
   std::string description() const override;

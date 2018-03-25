@@ -21,6 +21,8 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   virtual bool requires_calculation() const;
   virtual std::shared_ptr<AbstractExpression> deep_copy() const = 0;
 
+  virtual std::string description() const = 0;
+
   const ExpressionType type;
   std::vector<std::shared_ptr<AbstractExpression>> arguments;
 
