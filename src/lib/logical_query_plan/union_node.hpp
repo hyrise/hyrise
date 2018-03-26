@@ -33,6 +33,7 @@ class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
       const std::shared_ptr<AbstractLQPNode>& copied_left_input,
       const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
+  std::optional<std::string> _output_column_table_alias(const ColumnID column_id) const override;
 
  private:
   UnionMode _union_mode;

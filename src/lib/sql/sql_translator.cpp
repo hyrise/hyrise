@@ -9,6 +9,8 @@
 #include <vector>
 
 #include "expression/abstract_expression.hpp"
+#include "expression/aggregate_expression.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -317,7 +319,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select(const hsql::Sel
     current_result_node = _translate_where(*select.whereClause, current_result_node);
   }
 
-  current_result_node = _translate_select_and_aggregates(select, current_result_node);
+  current_result_node = _translate_expressions(select, current_result_node);
 
   if (select.order != nullptr) {
     current_result_node = _translate_order_by(*select.order, current_result_node);
@@ -560,21 +562,12 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_where(const hsql::Exp
       input_node);
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_and_aggregates(
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_expressions(
 const hsql::SelectStatement &select, const std::shared_ptr<AbstractLQPNode> &input_node) {
   auto current_node = input_node;
 
-  // Translate SELECT list into LQPExpressions, ignoring wildcards for now
-  auto select_expressions = std::vector<std::shared_ptr<LQPExpression>>{};
-  for (const auto& hsql_select_expr : *select.selectList) {
-    if (hsql_select_expr->type == hsql::kExprStar) continue;
-
-    const auto select_expression = HSQLExprTranslator::to_lqp_expression(*hsql_select_expr, input_node);
-    select_expressions.emplace_back(select_expression);
-  }
-
-  // Translate GROUP BY list into LQPExpressions
-  auto group_by_expressions = std::vector<std::shared_ptr<LQPExpression>>{};
+  // Gather all expression required for GROUP BY
+  auto group_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>();
   if (select.groupBy && select.groupBy->columns) {
     group_by_expressions.reserve(select.groupBy->columns->size());
     for (const auto* group_by_hsql_expr : *select.groupBy->columns) {
@@ -582,53 +575,52 @@ const hsql::SelectStatement &select, const std::shared_ptr<AbstractLQPNode> &inp
     }
   }
 
-  //
-  auto pre_aggregate_projection_expressions = input_node->output_column_expressions();
+  auto input_and_group_by_expressions = current_node->output_column_expressions();
 
-  // Identify pre aggregate expressions in the GROUP BY list
-  pre_aggregate_projection_expressions.insert(pre_aggregate_projection_expressions.end(),
-                                              group_by_expressions.begin(),
-                                              group_by_expressions.end());
+  current_node = ProjectionNode::make(pre_group_by_expressions, current_node);
 
-  // Identify pre aggregate expressions in the SELECT list
-  for (const auto& select_expression : select_expressions) {
-    // A single select_expression might need several pre aggregate expressions
-    auto sub_pre_aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+  auto pre_groupby_projection = current_node;
 
-    visit_expression(select_expression, [&](auto& expression) {
-      if (expression.type() != ExpressionType::Aggregate) return true;
+  // Identify all expressions needed for SELECT and HAVING
+  auto expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+  auto select_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+  for (const auto& hsql_select_expr : *select.selectList) {
+    if (hsql_select_expr->type == hsql::kExprStar) continue;
+
+    const auto expression = HSQLExprTranslator::to_lqp_expression(*hsql_select_expr, current_node);
+    expressions.emplace_back(expression);
+    select_expressions.emplace_back(expression);
+  }
+
+  // Identify pre aggregate expressions
+  auto pre_aggregate_expressions = current_node->output_column_expressions();
+  for (const auto& expression : expressions) {
+    visit_expression(*expression, [&](auto& sub_expression) {
+      if (sub_expression.type != ExpressionType::Aggregate) return true;
       const auto& aggregate_expression = std::static_pointer_cast<AggregateExpression>(expression);
-      sub_pre_aggregate_expressions.insert(sub_pre_aggregate_expressions.end(),
-      aggregate_expression->arguments.begin(), aggregate_expression->arguments.end());
+
+      for (const auto& argument : aggregate_expression->arguments) {
+        if (argument->requires_calculation()) {
+          pre_aggregate_expressions.emplace_back(argument);
+        }
+      }
       return false;
     });
-
-    for (const auto& sub_pre_aggregate_expression : sub_pre_aggregate_expressions) {
-      if (sub_pre_aggregate_expression->requires_calculation()) {
-        pre_aggregate_projection_expressions.emplace_back(sub_pre_aggregate_expression);
-      }
-    }
   }
 
   // Build pre_aggregate_projection
-  const auto pre_aggregate_projection_required = input_node->output_column_expressions().size() !=
-    pre_aggregate_projection_expressions.size();
-  if (pre_aggregate_projection_required) {
-    current_node = ProjectionNode::make(pre_aggregate_projection_expressions, input_node);
-  }
+  current_node = ProjectionNode::make(pre_aggregate_expressions, current_node);
 
   // Build aggregate expressions accessing the pre aggregate expressions
   std::vector<std::shared_ptr<const LQPExpression>> aggregate_expressions;
-  for (auto& select_expression : select_expressions) {
-    // A single select_expression might need several aggregate expressions
-
-    visit_expression(select_expression, [&](auto& expression) {
+  for (auto& expression : expressions) {
+    visit_expression(*expression, [&](auto& expression) {
       if (expression.type() != ExpressionType::Aggregate) return true;
       const auto& aggregate_expression = std::static_pointer_cast<AggregateExpression>(expression);
 
       for (const auto& argument : aggregate_expression->arguments) {
         if (argument->requires_calculation()) {
-          const auto column = current_node->get_column(argument);
+          const auto column = current_node->get_column(*argument);
           argument = std::make_shared<LQPColumnExpression>(column);
         }
       }
@@ -643,13 +635,19 @@ const hsql::SelectStatement &select, const std::shared_ptr<AbstractLQPNode> &inp
   std::vector<LQPColumnReference> group_by_columns;
   group_by_columns.reserve(group_by_expressions.size());
   for (auto& group_by_expression : group_by_expressions) {
-    group_by_columns.emplace_back(current_node->get_column(group_by_expression));
+    group_by_columns.emplace_back(current_node->get_column(*group_by_expression));
   }
 
   // Build Aggregate
   if (!aggregate_expressions.empty() || !group_by_columns.empty()) {
-    current_node = AggregateNode::make(aggregate_expressions, group_by_columns, current_node);
+    current_node = AggregateNode::make(group_by_columns, aggregate_expressions, current_node);
   }
+
+  // Build having
+  if (select.groupBy && select.groupBy->having) {
+    current_node = _translate_predicate(*select.groupBy->having, current_node);
+  }
+
 
   // Make SELECT expressions use Aggregate results
   auto post_aggregate_expressions = select_expressions;
@@ -670,11 +668,6 @@ const hsql::SelectStatement &select, const std::shared_ptr<AbstractLQPNode> &inp
                                     aggregate_expressions.end());
 
   current_node = ProjectionNode::make(post_aggregate_expressions, current_node);
-
-  // Build having
-  if (select.groupBy && select.groupBy->having) {
-    current_node = _translate_predicate(*select.groupBy->having, current_node);
-  }
 
   //
   std::vector<std::shared_ptr<LQPExpression>> output_expressions;

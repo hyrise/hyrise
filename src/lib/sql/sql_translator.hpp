@@ -45,8 +45,8 @@ class SQLTranslator final : public Noncopyable {
   std::shared_ptr<AbstractLQPNode> _translate_where(const hsql::Expr& expr,
                                                     const std::shared_ptr<AbstractLQPNode>& input_node);
 
-  std::shared_ptr<AbstractLQPNode> _translate_select_and_aggregates(const hsql::SelectStatement &select,
-                                                                    const std::shared_ptr<AbstractLQPNode> &input_node);
+  std::shared_ptr<AbstractLQPNode> _translate_expressions(const hsql::SelectStatement &select,
+                                                          const std::shared_ptr<AbstractLQPNode> &input_node);
 
   std::shared_ptr<AbstractLQPNode> _translate_order_by(const std::vector<hsql::OrderDescription*>& order_list,
                                                        const std::shared_ptr<AbstractLQPNode>& input_node);

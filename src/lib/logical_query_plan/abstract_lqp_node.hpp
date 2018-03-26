@@ -51,6 +51,8 @@ struct QualifiedColumnName {
   QualifiedColumnName(const std::string& column_name, const std::optional<std::string>& table_name =
                                                           std::nullopt);  // NOLINT - Implicit conversion is intended
 
+  bool operator==(const QualifiedColumnName& rhs) const;
+
   std::string as_string() const;
 
   std::string column_name;
@@ -164,6 +166,11 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * @returns the names of the columns this node outputs without any alias added by this node
    */
   virtual const std::vector<std::string>& output_column_names() const;
+
+  /**
+   * @returns the names and prefixes of the columns that this node outputs
+   */
+  virtual const std::vector<QualifiedColumnName>& qualified_output_column_names() const;
 
   /**
    * @returns the ColumnReferences of the columns this node outputs
@@ -335,6 +342,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    */
   virtual void _on_input_changed() {}
 
+  /**
+   * @pre    AbstractLQPNode will only call this if it has no _table_alias and the column is not created by this node
+   * @return the table alias of a column, either set by this node or the subplan that the column stems from
+   */
+  virtual std::optional<std::string> _output_column_table_alias_impl(const ColumnID column_id) const;
+
   // Used to easily differentiate between node types without pointer casts.
   LQPNodeType _type;
 
@@ -348,6 +361,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   // mutable, so it can be lazily initialized in output_column_references() overrides
   mutable std::optional<std::vector<LQPColumnReference>> _output_column_references;
   mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _output_column_expressions;
+  mutable std::optional<std::vector<QualifiedColumnName>> _qualified_output_column_names;
 
   /**
    * If qualified_column_name.table_name is the alias set for this subtree, remove the table_name so that we

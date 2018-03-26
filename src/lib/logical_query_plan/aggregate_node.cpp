@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "expression/column_expression.hpp"
+#include "expression/abstract_column_expression.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

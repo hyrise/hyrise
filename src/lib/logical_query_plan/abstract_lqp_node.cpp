@@ -11,7 +11,7 @@
 
 #include "lqp_column_reference.hpp"
 #include "types.hpp"
-#include "expression/column_expression.hpp"
+#include "expression/abstract_column_expression.hpp"
 #include "utils/assert.hpp"
 #include "utils/print_directed_acyclic_graph.hpp"
 
@@ -21,6 +21,10 @@ class TableStatistics;
 
 QualifiedColumnName::QualifiedColumnName(const std::string& column_name, const std::optional<std::string>& table_name)
     : column_name(column_name), table_name(table_name) {}
+
+bool QualifiedColumnName::operator==(const QualifiedColumnName& rhs) const {
+  return column_name == rhs.column_name && table_name == rhs.table_name;
+}
 
 std::string QualifiedColumnName::as_string() const {
   std::stringstream ss;
@@ -204,6 +208,29 @@ const std::vector<std::string>& AbstractLQPNode::output_column_names() const {
   DebugAssert(left_input() && !right_input(),
               "Node has no or two inputs and therefore needs to override this function.");
   return left_input()->output_column_names();
+}
+
+const std::vector<QualifiedColumnName>& AbstractLQPNode::qualified_output_column_names() const {
+  DebugAssert(!right_input(), "Node has no or two inputs and therefore needs to override this function.");
+  if (!_qualified_output_column_names) {
+    _qualified_output_column_names->emplace(output_column_count());
+
+    if (_table_alias) {
+      for (auto column_id = ColumnID{0}; column_id < output_column_count(); ++column_id) {
+        _qualified_output_column_names[column_id] = QualifiedColumnName{output_column_names()[column_id], _table_alias};
+      }
+    } else {
+      for (auto column_id = ColumnID{0}; column_id < output_column_count(); ++column_id) {
+        if (output_column_references()[column_id].original_node().get() == this) {
+          _qualified_output_column_names[column_id] = QualifiedColumnName{output_column_names()[column_id]};
+        } else {
+          _qualified_output_column_names[column_id] = QualifiedColumnName{output_column_names()[column_id], _output_column_table_alias_impl(column_id)};
+        }
+      }
+    }
+  }
+
+  return *_qualified_output_column_names;
 }
 
 const std::vector<LQPColumnReference>& AbstractLQPNode::output_column_references() const {
@@ -497,6 +524,7 @@ std::optional<QualifiedColumnName> AbstractLQPNode::_resolve_local_table_name(
 void AbstractLQPNode::_input_changed() {
   _statistics.reset();
   _output_column_references.reset();
+  _qualified_output_column_names.reset();
 
   _on_input_changed();
   for (auto& output : outputs()) {
@@ -628,6 +656,20 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy(PreviousCopiesMap& 
   previous_copies.emplace(shared_from_this(), deep_copy);
 
   return deep_copy;
+}
+
+std::optional<std::string> AbstractLQPNode::_output_column_table_alias_impl(const ColumnID column_id) const {
+  DebugAssert(column_id < output_column_count(), "ColumnID out of range");
+  DebugAssert(!right_input(), "Nodes with both inputs need to override");
+
+  if (_table_alias) return _table_alias;
+
+  if (output_column_references()[column_id].original_node().get() == this) return std::nullopt;
+
+  if (left_input()) {
+    return left_input()->qualified_output_column_names()[column_id].table_name;
+  }
+  return std::nullopt;
 }
 
 }  // namespace opossum

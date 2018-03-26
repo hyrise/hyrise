@@ -81,4 +81,14 @@ bool UnionNode::shallow_equals(const AbstractLQPNode& rhs) const {
   return _union_mode == union_node._union_mode;
 }
 
+std::optional<std::string> UnionNode::_output_column_table_alias(const ColumnID column_id) const {
+  DebugAssert(left_input() && right_input(), "Inputs need to be set");
+  DebugAssert(column_id < output_column_count(), "ColumnID out of range");
+
+  const auto table_alias =  left_input()->qualified_output_column_names()[column_id].table_name;
+  DebugAssert(table_alias == right_input()->qualified_output_column_names()[column_id].table_name, "Input mismatch");
+
+  return table_alias;
+}
+
 }  // namespace opossum

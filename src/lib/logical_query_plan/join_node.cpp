@@ -47,6 +47,18 @@ std::shared_ptr<AbstractLQPNode> JoinNode::_deep_copy_impl(
   }
 }
 
+std::optional<std::string> JoinNode::_output_column_table_alias(const ColumnID column_id) const {
+  DebugAssert(left_input() && right_input(), "Inputs need to be set");
+  DebugAssert(column_id < output_column_count(), "ColumnID out of range");
+
+  if (column_id <= left_input()->output_column_count()) {
+    return left_input()->qualified_output_column_names()[column_id].table_name;
+  }
+
+  const auto column_id_in_right_input = static_cast<ColumnID>(column_id - left_input()->output_column_count());
+  return right_input()->qualified_output_column_names()[column_id_in_right_input].table_name;
+}
+
 std::string JoinNode::description() const {
   Assert(left_input() && right_input(), "Can't generate description if inputren aren't set");
 

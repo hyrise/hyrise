@@ -21,8 +21,8 @@ set(
     expression/arithmetic_expression.hpp
     expression/case_expression.cpp
     expression/case_expression.hpp
-    expression/column_expression.cpp
-    expression/column_expression.hpp
+    expression/abstract_column_expression.cpp
+    expression/abstract_column_expression.hpp
     expression/exists_expression.cpp
     expression/exists_expression.hpp
     expression/function_expression.cpp
@@ -31,10 +31,14 @@ set(
     expression/in_expression.hpp
     expression/logical_expression.cpp
     expression/logical_expression.hpp
+    expression/lqp_column_expression.cpp
+    expression/lqp_column_expression.hpp
     expression/null_expression.cpp
     expression/null_expression.hpp
     expression/predicate_expression.cpp
     expression/predicate_expression.hpp
+    expression/pqp_column_expression.cpp
+    expression/pqp_column_expression.hpp
     expression/select_expression.cpp
     expression/select_expression.hpp
     expression/value_expression.cpp
