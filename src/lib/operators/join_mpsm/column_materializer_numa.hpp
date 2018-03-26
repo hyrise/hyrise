@@ -57,9 +57,9 @@ using MaterializedNUMAPartitionList = std::vector<MaterializedNUMAPartition<T>>;
  * the construction of pos lists for the algorithms that are using this class.
  **/
 template <typename T>
-class ColumnMaterializer {
+class ColumnMaterializerNUMA {
  public:
-  explicit ColumnMaterializer(bool materialize_null) : _materialize_null{materialize_null} {}
+  explicit ColumnMaterializerNUMA(bool materialize_null) : _materialize_null{materialize_null} {}
 
  public:
   /**

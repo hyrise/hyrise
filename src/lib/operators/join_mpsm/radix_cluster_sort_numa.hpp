@@ -335,8 +335,8 @@ class RadixClusterSortNUMA {
     RadixClusterOutput<T> output;
 
     // Sort the chunks of the input tables in the non-equi cases
-    ColumnMaterializer<T> left_column_materializer(_materialize_null_left);
-    ColumnMaterializer<T> right_column_materializer(_materialize_null_right);
+    ColumnMaterializerNUMA<T> left_column_materializer(_materialize_null_left);
+    ColumnMaterializerNUMA<T> right_column_materializer(_materialize_null_right);
     auto materialization_left = left_column_materializer.materialize(_input_table_left, _left_column_id);
     auto materialization_right = right_column_materializer.materialize(_input_table_right, _right_column_id);
     auto materialized_left_columns = std::move(materialization_left.first);
