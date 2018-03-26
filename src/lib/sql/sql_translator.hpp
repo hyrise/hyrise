@@ -14,6 +14,7 @@
 
 namespace opossum {
 
+class JoinNode;
 class AggregateNode;
 class LQPExpression;
 
@@ -85,6 +86,10 @@ class SQLTranslator final : public Noncopyable {
                                                        const std::shared_ptr<AbstractLQPNode>& input_node);
 
   std::shared_ptr<AbstractLQPNode> _translate_join(const hsql::JoinDefinition& select);
+
+  void _insert_nonjoin_predicates(const std::shared_ptr<JoinNode>& join_node,
+                                  const std::vector<const hsql::Expr*>& left_conditions,
+                                  const std::vector<const hsql::Expr*>& right_conditions);
 
   /**
    * Given a set of input expressions which may contain zero, one, or two column expressions as children,

@@ -409,9 +409,45 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::Join
   auto join_node = JoinNode::make(join_mode, column_references, predicate_condition);
   join_node->set_left_input(left_node);
   join_node->set_right_input(right_node);
-  _insert_predicates_before(join_node, left_conditions);
-  _insert_predicates_before(join_node, right_conditions, LQPInputSide::Right);
+  _insert_nonjoin_predicates(join_node, left_conditions, right_conditions);
   return join_node;
+}
+
+void SQLTranslator::_insert_nonjoin_predicates(const std::shared_ptr<JoinNode>& join_node,
+                                               const std::vector<const hsql::Expr*>& left_conditions,
+                                               const std::vector<const hsql::Expr*>& right_conditions) {
+  /*
+   * Concerning the inner join, no restrictions apply to non-join-predicates.
+   * Both a push-down or push-up (placing predicate nodes in between one of the
+   * join input nodes or placing them after the join, respectively) would be
+   * legit.
+   *
+   * For left outer and right outer join types, the situation is different.
+   * In a left outer join the left side is known as "preserve-side" and the
+   * right side as "null-supplying side" (vice versa for right outer join).
+   *
+   * Filtering on the preserve-side cannot be external to the join since all
+   * tuples of the preserve-side are part of the outer-join's ouptut relation.
+   * All predicates in the join condition simply state if the RHS tuple
+   * components are padded with NULLs or with matching tuples from RHS.
+   *
+   * For instance, the query "select * from A left join B on a = 404;"
+   * contains all tuples of A padded with NULLs representing the tuple
+   * components of B, even if the value '404' is not present.
+   */
+  if (join_node->join_mode() == JoinMode::Inner) {
+    _insert_predicates_before(join_node, left_conditions);
+    _insert_predicates_before(join_node, right_conditions, LQPInputSide::Right);
+  } else if (join_node->join_mode() == JoinMode::Left) {
+    Assert(left_conditions.empty(), "Multiple join conditions not supported (preserve side)");
+    _insert_predicates_before(join_node, right_conditions, LQPInputSide::Right);
+  } else if (join_node->join_mode() == JoinMode::Right) {
+    _insert_predicates_before(join_node, left_conditions);
+    Assert(right_conditions.empty(), "Multiple join conditions not supported (preserve side)");
+  } else {
+    Assert(left_conditions.empty() && right_conditions.empty(),
+           "Cannot translate nonjoin conditions for this join mode");
+  }
 }
 
 LQPInputSide SQLTranslator::_get_side(const std::shared_ptr<AbstractLQPNode>& left_node,
