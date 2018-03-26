@@ -5,9 +5,9 @@
 #include "benchmark/benchmark.h"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
+#include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
-#include "operators/join_mpsm.hpp"
 #include "operators/table_wrapper.hpp"
 
 namespace opossum {
@@ -45,14 +45,14 @@ BENCHMARK_DEFINE_F(BenchmarkJoinFixture, BM_JoinSortMerge)(benchmark::State& sta
 BENCHMARK_DEFINE_F(BenchmarkJoinFixture, BM_JoinMPSM)(benchmark::State& state) {
   clear_cache();
 
-  auto warm_up = std::make_shared<JoinMPSM>(_table_wrapper_1, _table_wrapper_2, JoinMode::Inner,
-                                                 std::pair<ColumnID, ColumnID>{ColumnID{0}, ColumnID{0}},
-                                                 PredicateCondition::Equals);
+  auto warm_up =
+      std::make_shared<JoinMPSM>(_table_wrapper_1, _table_wrapper_2, JoinMode::Inner,
+                                 std::pair<ColumnID, ColumnID>{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals);
   warm_up->execute();
   while (state.KeepRunning()) {
-    auto table_scan = std::make_shared<JoinMPSM>(_table_wrapper_1, _table_wrapper_2, JoinMode::Inner,
-                                                      std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}),
-                                                      PredicateCondition::Equals);
+    auto table_scan =
+        std::make_shared<JoinMPSM>(_table_wrapper_1, _table_wrapper_2, JoinMode::Inner,
+                                   std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
     table_scan->execute();
   }
 }
@@ -102,7 +102,9 @@ BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinSortMerge)
 BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinIndex)->Iterations(1)->Apply(BenchmarkJoinFixture::ChunkSizeInUni);
 BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinIndex)->Iterations(1)->Apply(BenchmarkJoinFixture::ChunkSizeInNormal);
 BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinIndex)->Iterations(1)->Apply(BenchmarkJoinFixture::ChunkSizeInPareto);
-BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinIndex)->Iterations(1)->Apply(BenchmarkJoinFixture::ChunkSizeInUniNUMA);
+BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinIndex)
+    ->Iterations(1)
+    ->Apply(BenchmarkJoinFixture::ChunkSizeInUniNUMA);
 BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinMPSM)->Iterations(1)->Apply(BenchmarkJoinFixture::ChunkSizeInUni);
 BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinMPSM)->Iterations(1)->Apply(BenchmarkJoinFixture::ChunkSizeInUniNUMA);
 

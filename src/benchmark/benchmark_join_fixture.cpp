@@ -68,8 +68,8 @@ void BenchmarkJoinFixture::ChunkSizeInUni(benchmark::internal::Benchmark* b) {
     for (int right_size : {100, 1000, 10000, 100000, 1000000, 5000000}) {
       // make sure we do not overrun our memory capacity
       if (static_cast<uint64_t>(left_size) * static_cast<uint64_t>(right_size) <= 1e9) {
-        b->Args({left_size, right_size,
-                 static_cast<int>(DataDistributionType::Uniform), false});  // left size, right size, distribution
+        b->Args({left_size, right_size, static_cast<int>(DataDistributionType::Uniform),
+                 false});  // left size, right size, distribution
       }
     }
   }
@@ -80,8 +80,8 @@ void BenchmarkJoinFixture::ChunkSizeInUniNUMA(benchmark::internal::Benchmark* b)
     for (int right_size : {100, 1000, 10000, 100000, 1000000, 5000000}) {
       // make sure we do not overrun our memory capacity
       if (static_cast<uint64_t>(left_size) * static_cast<uint64_t>(right_size) <= 1e9) {
-        b->Args({left_size, right_size,
-                 static_cast<int>(DataDistributionType::Uniform), true});  // left size, right size, distribution
+        b->Args({left_size, right_size, static_cast<int>(DataDistributionType::Uniform),
+                 true});  // left size, right size, distribution
       }
     }
   }
@@ -92,8 +92,8 @@ void BenchmarkJoinFixture::ChunkSizeInNormal(benchmark::internal::Benchmark* b) 
     for (int right_size : {100, 1000, 10000, 100000, 1000000, 5000000}) {
       // make sure we do not overrun our memory capacity
       if (static_cast<uint64_t>(left_size) * static_cast<uint64_t>(right_size) <= 1e9) {
-        b->Args({left_size, right_size,
-                 static_cast<int>(DataDistributionType::NormalSkewed), false});  // left size, right size, distribution
+        b->Args({left_size, right_size, static_cast<int>(DataDistributionType::NormalSkewed),
+                 false});  // left size, right size, distribution
       }
     }
   }
@@ -103,8 +103,8 @@ void BenchmarkJoinFixture::ChunkSizeInPareto(benchmark::internal::Benchmark* b) 
     for (int right_size : {100, 1000, 10000, 100000, 1000000, 5000000}) {
       // make sure we do not overrun our memory capacity
       if (static_cast<uint64_t>(left_size) * static_cast<uint64_t>(right_size) <= 1e9) {
-        b->Args({left_size, right_size,
-                 static_cast<int>(DataDistributionType::Pareto), false});  // left size, right size, distribution
+        b->Args({left_size, right_size, static_cast<int>(DataDistributionType::Pareto),
+                 false});  // left size, right size, distribution
       }
     }
   }
