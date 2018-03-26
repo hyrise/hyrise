@@ -92,6 +92,9 @@ BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinSortMerge)
     ->Apply(BenchmarkJoinFixture::ChunkSizeInUni);
 BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinSortMerge)
     ->Iterations(1)
+    ->Apply(BenchmarkJoinFixture::ChunkSizeInUniNUMA);
+BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinSortMerge)
+    ->Iterations(1)
     ->Apply(BenchmarkJoinFixture::ChunkSizeInNormal);
 BENCHMARK_REGISTER_F(BenchmarkJoinFixture, BM_JoinSortMerge)
     ->Iterations(1)
