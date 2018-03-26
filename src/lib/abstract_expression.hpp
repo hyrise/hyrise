@@ -196,7 +196,4 @@ class AbstractExpression : public std::enable_shared_from_this<DerivedExpression
   friend class PQPExpression;  // For creating OperatorExpressions from LQPExpressions
 };
 
-// Returns true if an expression of this type requires two children.
-bool is_binary_operator_type(const ExpressionType type);
-
 }  // namespace opossum
