@@ -19,6 +19,7 @@
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
 
+// A cluster is a chunk of values which agree on their last bits
 STRONG_TYPEDEF(size_t, ClusterID);
 
 namespace opossum {
@@ -101,7 +102,8 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   std::vector<std::vector<std::shared_ptr<PosList>>> _output_pos_lists_right;
 
   /**
-   * The TablePosition is a utility struct that is used to define a specific position in a sorted input table.
+   * The TablePosition is a utility struct that is used during the merge phase to identify the
+   * elements in our sorted temporary list by position.
   **/
   struct TableRange;
   struct TablePosition {

@@ -115,7 +115,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   std::vector<std::shared_ptr<PosList>> _output_pos_lists_right;
 
   /**
-   * The TablePosition is a utility struct that is used to define a specific position in a sorted input table.
+   * The TablePosition is a utility struct that is used during the merge phase to identify the
+   * elements in our sorted temporary list by position.
   **/
   struct TableRange;
   struct TablePosition {
