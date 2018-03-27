@@ -39,8 +39,7 @@ function(EMBED_LLVM OUTPUT_FILE)
     file(WRITE ${CPP_BUNDLE_FILE} "")
     foreach(FILE ${INPUT_FILES})
         message(STATUS "Adding ${FILE} to LLVM bundle")
-        get_filename_component(ABSOLUTE_FILE ${FILE} ABSOLUTE)
-        file(APPEND ${CPP_BUNDLE_FILE} "#include \"${ABSOLUTE_FILE}\"\n")
+        file(APPEND ${CPP_BUNDLE_FILE} "#include \"${FILE}\"\n")
     endforeach()
 
     # Step 2: Compiling input files to LLVM-IR

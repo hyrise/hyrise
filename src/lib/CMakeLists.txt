@@ -425,6 +425,18 @@ if (NOT DISABLE_JIT_SUPPORT)
         operators/jit_operator/jit_operations.hpp
         operators/jit_operator/jit_types.cpp
         operators/jit_operator/jit_types.hpp
+        operators/jit_operator/operators/abstract_jittable.hpp
+        operators/jit_operator/operators/abstract_jittable_sink.hpp
+        operators/jit_operator/operators/jit_compute.cpp
+        operators/jit_operator/operators/jit_compute.hpp
+        operators/jit_operator/operators/jit_expression.cpp
+        operators/jit_operator/operators/jit_expression.hpp
+        operators/jit_operator/operators/jit_filter.cpp
+        operators/jit_operator/operators/jit_filter.hpp
+        operators/jit_operator/operators/jit_read_tuple.cpp
+        operators/jit_operator/operators/jit_read_tuple.hpp
+        operators/jit_operator/operators/jit_write_tuple.cpp
+        operators/jit_operator/operators/jit_write_tuple.hpp
     )
     embed_llvm(LLVM_BUNDLE_FILE ${JIT_EMBEDDED_SOURCES})
     set(

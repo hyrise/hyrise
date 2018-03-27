@@ -141,6 +141,8 @@ DataType jit_compute_type(const T& op_func, const DataType lhs, const DataType r
   const auto combined_types = static_cast<uint8_t>(lhs) << 8 | static_cast<uint8_t>(rhs);
   switch (combined_types) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_TYPE_CASE, (JIT_DATA_TYPE_INFO)(JIT_DATA_TYPE_INFO))
+    default:
+      return DataType::Null;  // unreachable
   }
 }
 
