@@ -39,9 +39,9 @@ void BenchmarkJoinFixture::SetUp(::benchmark::State& state) {
 
   // TODO(anyone): replace with EncodingType::Dictionary once joins (especially index join) support these
   auto table_1 = table_generator->generate_table(std::vector<ColumnDataDistribution>{left_config}, state.range(0),
-                                                 state.range(0) / 4, EncodingType::Dictionary, use_multiple_nodes);
+                                                 state.range(0) / 50, EncodingType::Dictionary, use_multiple_nodes);
   auto table_2 = table_generator->generate_table(std::vector<ColumnDataDistribution>{right_config}, state.range(1),
-                                                 state.range(1) / 4, EncodingType::Dictionary, use_multiple_nodes);
+                                                 state.range(1) / 50, EncodingType::Dictionary, use_multiple_nodes);
 
   for (auto table : {table_1, table_2}) {
     for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {

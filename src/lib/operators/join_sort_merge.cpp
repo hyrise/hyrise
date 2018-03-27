@@ -676,7 +676,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     _add_output_columns(output_columns, _sort_merge_join.input_table_right(), output_right);
 
     // Build the output_table with one Chunk
-    auto output_column_definitions = concatenated(_sort_merge_join.input_table_left()->column_definitions(),
+    auto output_column_definitions = concatenate(_sort_merge_join.input_table_left()->column_definitions(),
                                                   _sort_merge_join.input_table_right()->column_definitions());
     auto output_table = std::make_shared<Table>(output_column_definitions, TableType::References);
 

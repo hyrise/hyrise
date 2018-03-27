@@ -22,6 +22,19 @@
 // A cluster is a chunk of values which agree on their last bits
 STRONG_TYPEDEF(size_t, ClusterID);
 
+/**
+   * This class is the entry point to the Multi Phase Sort Merge Join, which is a variant of the Sort Merge Join
+   * built for higher performance on NUMA Systems. It is implemented to reduce random reads between NUMA Nodes so
+   * as to not incur overhead through inter node communication.
+   * The algorithmic NUMA awareness stems from the algorithm clustering the values according to their
+   * n least significant bits, where n is the number of numa nodes. For the LHS the values in the clusters are then
+   * reshuffled so that each NUMA Node holds one cluster which is sorted. For the RHS the clusters are simply
+   * partitioned and then sorted per partition. This enables the join to perform only linear reads and writes between
+   * NUMA clusters, avoiding the latency assiociated with these operations.
+   * The implementation of NUMA awareness hinges on explicitly allocating data on NUMA nodes using pmr_allocators and
+   * scheduling operations to always run on the same node as the data.
+**/
+
 namespace opossum {
 JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator> left,
                    const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
@@ -61,9 +74,9 @@ const std::string JoinMPSM::name() const { return "Join MPSM"; }
 template <typename T>
 class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
  public:
-  JoinMPSMImpl<T>(JoinMPSM& sort_merge_join, ColumnID left_column_id, ColumnID right_column_id,
+  JoinMPSMImpl<T>(JoinMPSM& mpsm_join, ColumnID left_column_id, ColumnID right_column_id,
                   const PredicateCondition op, JoinMode mode)
-      : _mpsm_join{sort_merge_join},
+      : _mpsm_join{mpsm_join},
         _left_column_id{left_column_id},
         _right_column_id{right_column_id},
         _op{op},
@@ -509,7 +522,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     _add_output_columns(output_columns, _mpsm_join.input_table_right(), output_right);
 
     // Build the output_table with one Chunk
-    auto output_column_definitions = concatenated(_mpsm_join.input_table_left()->column_definitions(),
+    auto output_column_definitions = concatenate(_mpsm_join.input_table_left()->column_definitions(),
                                                   _mpsm_join.input_table_right()->column_definitions());
     auto output_table = std::make_shared<Table>(output_column_definitions, TableType::References);
 
