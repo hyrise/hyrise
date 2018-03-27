@@ -74,8 +74,8 @@ const std::string JoinMPSM::name() const { return "Join MPSM"; }
 template <typename T>
 class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
  public:
-  JoinMPSMImpl<T>(JoinMPSM& mpsm_join, ColumnID left_column_id, ColumnID right_column_id,
-                  const PredicateCondition op, JoinMode mode)
+  JoinMPSMImpl<T>(JoinMPSM& mpsm_join, ColumnID left_column_id, ColumnID right_column_id, const PredicateCondition op,
+                  JoinMode mode)
       : _mpsm_join{mpsm_join},
         _left_column_id{left_column_id},
         _right_column_id{right_column_id},
@@ -523,7 +523,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
     // Build the output_table with one Chunk
     auto output_column_definitions = concatenate(_mpsm_join.input_table_left()->column_definitions(),
-                                                  _mpsm_join.input_table_right()->column_definitions());
+                                                 _mpsm_join.input_table_right()->column_definitions());
     auto output_table = std::make_shared<Table>(output_column_definitions, TableType::References);
 
     output_table->append_chunk(output_columns);
