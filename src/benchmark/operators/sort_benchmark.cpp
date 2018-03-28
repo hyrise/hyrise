@@ -9,7 +9,7 @@
 namespace opossum {
 
 BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_Sort_ChunkSizeOut)(benchmark::State& state) {
-  const auto chunk_size_out = static_cast<size_t>(state.range(1));
+  const auto chunk_size_out = static_cast<ChunkID>(state.range(1));
   clear_cache();
 
   auto warm_up =
