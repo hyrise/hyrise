@@ -18,21 +18,30 @@ std::string to_string(CalibrationType type) {
 
 nlohmann::json generate_calibration_description(CalibrationType type) {
   const auto context = [&]() {
+    auto c = nlohmann::json{
+      {"null_fraction", 0.0f},
+      {"sorted", false},
+      {"row_count", 1'000'000}};
+
     switch (type) {
       case CalibrationType::CompleteTableScan:
-        return nlohmann::json{{"point_access_factor", 0.0f}};
-      case CalibrationType::FilteredTableScan:
-        return nlohmann::json{{"null_fraction", 0.0f}};
-      case CalibrationType::Materialization:
-        return nlohmann::json{{"null_fraction", 0.0f}};
+        c["point_access_factor"] = 1.0f;
+        break;
       default:
-        Fail("Unrecognized type encountered.");
+        break;
     }
+
+    return c;
   }();
 
   const auto max_values = [&]() {
-    auto v = std::vector<int>(20u);
-    std::generate(v.begin(), v.end(), [n=2u]() mutable { return (1u << n++) - 1u; });
+    auto v = std::vector<int>(40u);
+    std::generate(v.begin(), v.end(), [n=2u, h=false]() mutable {
+      const auto res = static_cast<int>(h) * (1u << (n - 1u)) + (1u << n) - 1u;
+      if (h) ++n;
+      h = !h;
+      return res;
+    });
     return v;
   }();
 
@@ -50,67 +59,53 @@ nlohmann::json generate_calibration_description(CalibrationType type) {
     }
   }();
 
-  static const auto row_counts = std::vector<int>{1'000'000};
-  static const auto null_fractions = std::vector<float>{0.0};
-  static const auto sorteds = std::vector<bool>{false};
+  static const auto row_counts = std::vector<int>{};
+  static const auto null_fractions = std::vector<float>{};
+  static const auto sorteds = std::vector<bool>{};
 
   static const auto encodings = std::vector<nlohmann::json>{
     {{"encoding_type", "Unencoded"}},
-    {{"encoding_type", "Dictionary"}, {"vector_compression_type", "Fixed-size byte-aligned"}},
-    {{"encoding_type", "FOR"}, {"vector_compression_type", "Fixed-size byte-aligned"}},
-    // {{"encoding_type", "Dictionary"}, {"vector_compression_type", "SIMD-BP128"}},
-    /*{{"encoding_type", "Run Length"}}*/};
+    {{"encoding_type", "Dictionary"}, {"vector_compression_type", "FSBA"}},
+    {{"encoding_type", "Dictionary"}, {"vector_compression_type", "SIMD-BP128"}},
+    {{"encoding_type", "FOR"}, {"vector_compression_type", "FSBA"}},
+    {{"encoding_type", "FOR"}, {"vector_compression_type", "SIMD-BP128"}}};
 
   nlohmann::json benchmarks;
 
   switch (type) {
     case CalibrationType::CompleteTableScan:
       for (auto encoding : encodings)
-        for (auto row_count : row_counts)
-          for (auto max_value : max_values)
-            for (auto null_fraction : null_fractions)
-              for (bool sorted : sorteds) {
-                auto benchmark = nlohmann::json{
-                    {"row_count", row_count},
-                    {"max_value", max_value},
-                    {"null_fraction", null_fraction},
-                    {"sorted", sorted}};
+        for (auto max_value : max_values) {
+          auto benchmark = nlohmann::json{
+              {"max_value", max_value}};
 
-                benchmark.insert(encoding.begin(), encoding.end());
-                benchmarks.push_back(benchmark);
-              }
+          benchmark.insert(encoding.begin(), encoding.end());
+          benchmarks.push_back(benchmark);
+        }
       break;
     case CalibrationType::FilteredTableScan:
       for (auto encoding : encodings)
-        for (auto row_count : row_counts)
-          for (auto max_value : max_values)
-            for (auto point_access_factor : point_access_factors)
-              for (bool sorted : sorteds) {
-                auto benchmark = nlohmann::json{
-                    {"row_count", row_count},
-                    {"max_value", max_value},
-                    {"point_access_factor", point_access_factor},
-                    {"sorted", sorted}};
+        for (auto max_value : max_values)
+          for (auto point_access_factor : point_access_factors) {
+            auto benchmark = nlohmann::json{
+                {"max_value", max_value},
+                {"point_access_factor", point_access_factor}};
 
-                benchmark.insert(encoding.begin(), encoding.end());
-                benchmarks.push_back(benchmark);
-              }
+            benchmark.insert(encoding.begin(), encoding.end());
+            benchmarks.push_back(benchmark);
+          }
       break;
     case CalibrationType::Materialization:
       for (auto encoding : encodings)
-          for (auto row_count : row_counts)
-            for (auto max_value : max_values)
-              for (auto point_access_factor : point_access_factors)
-                for (bool sorted : sorteds) {
-                  auto benchmark = nlohmann::json{
-                      {"row_count", row_count},
-                      {"max_value", max_value},
-                      {"point_access_factor", point_access_factor},
-                      {"sorted", sorted}};
+        for (auto max_value : max_values)
+          for (auto point_access_factor : point_access_factors) {
+            auto benchmark = nlohmann::json{
+                {"max_value", max_value},
+                {"point_access_factor", point_access_factor}};
 
-                  benchmark.insert(encoding.begin(), encoding.end());
-                  benchmarks.push_back(benchmark);
-                }
+            benchmark.insert(encoding.begin(), encoding.end());
+            benchmarks.push_back(benchmark);
+          }
       break;
     default:
       Fail("Unrecognized type encountered.");

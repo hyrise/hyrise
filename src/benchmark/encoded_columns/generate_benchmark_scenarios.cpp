@@ -13,25 +13,25 @@ nlohmann::json generate_benchmark_scenarios() {
     {"null_fraction", 0.0},
     {"row_count", 1'000'000}};
 
-  // const auto max_values = [&]() {
-  //   auto v = std::vector<int>(21u);
-  //   std::generate(v.begin(), v.end(), [n=0u]() mutable {
-  //     const auto max_value = (1u << n) - 1u;
-  //     n += 1;
-  //     return max_value;
-  //   });
-  //   return v;
-  // }();
-
   const auto max_values = [&]() {
-    auto v = std::vector<int>(18u);
+    auto v = std::vector<int>(21u);
     std::generate(v.begin(), v.end(), [n=0u]() mutable {
-      const auto max_value = (1u << n);
+      const auto max_value = (1u << n) - 1u;
       n += 1;
       return max_value;
     });
     return v;
   }();
+
+  // const auto max_values = [&]() {
+  //   auto v = std::vector<int>(18u);
+  //   std::generate(v.begin(), v.end(), [n=0u]() mutable {
+  //     const auto max_value = (1u << n);
+  //     n += 1;
+  //     return max_value;
+  //   });
+  //   return v;
+  // }();
 
   static const auto encodings = std::vector<nlohmann::json>{
     {{"encoding_type", "Unencoded"}},

@@ -29,55 +29,55 @@ PosList ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
 
   auto matches_out = PosList{};
 
-  resolve_data_and_column_type(*left_column, [&](auto left_type, auto& typed_left_column) {
-    resolve_data_and_column_type(*right_column, [&](auto right_type, auto& typed_right_column) {
-      using LeftColumnType = typename std::decay<decltype(typed_left_column)>::type;
-      using RightColumnType = typename std::decay<decltype(typed_right_column)>::type;
+  // resolve_data_and_column_type(*left_column, [&](auto left_type, auto& typed_left_column) {
+  //   resolve_data_and_column_type(*right_column, [&](auto right_type, auto& typed_right_column) {
+  //     using LeftColumnType = typename std::decay<decltype(typed_left_column)>::type;
+  //     using RightColumnType = typename std::decay<decltype(typed_right_column)>::type;
 
-      using LeftType = typename decltype(left_type)::type;
-      using RightType = typename decltype(right_type)::type;
+  //     using LeftType = typename decltype(left_type)::type;
+  //     using RightType = typename decltype(right_type)::type;
 
-      /**
-       * This generic lambda is instantiated for each type (int, long, etc.) and
-       * each column type (value, dictionary, reference column) per column!
-       * That’s 3x5 combinations each and 15x15=225 in total. However, not all combinations are valid or possible.
-       * Only data columns (value, dictionary) or reference columns will be compared, as a table with both data and
-       * reference columns is ruled out. Moreover it is not possible to compare strings to any of the four numerical
-       * data types. Therefore, we need to check for these cases and exclude them via the constexpr-if which
-       * reduces the number of combinations to 85.
-       */
+  //     /**
+  //      * This generic lambda is instantiated for each type (int, long, etc.) and
+  //      * each column type (value, dictionary, reference column) per column!
+  //      * That’s 3x5 combinations each and 15x15=225 in total. However, not all combinations are valid or possible.
+  //      * Only data columns (value, dictionary) or reference columns will be compared, as a table with both data and
+  //      * reference columns is ruled out. Moreover it is not possible to compare strings to any of the four numerical
+  //      * data types. Therefore, we need to check for these cases and exclude them via the constexpr-if which
+  //      * reduces the number of combinations to 85.
+  //      */
 
-      constexpr auto left_is_reference_column = (std::is_same<LeftColumnType, ReferenceColumn>{});
-      constexpr auto right_is_reference_column = (std::is_same<RightColumnType, ReferenceColumn>{});
+  //     constexpr auto left_is_reference_column = (std::is_same<LeftColumnType, ReferenceColumn>{});
+  //     constexpr auto right_is_reference_column = (std::is_same<RightColumnType, ReferenceColumn>{});
 
-      constexpr auto neither_is_reference_column = !left_is_reference_column && !right_is_reference_column;
-      constexpr auto both_are_reference_columns = left_is_reference_column && right_is_reference_column;
+  //     constexpr auto neither_is_reference_column = !left_is_reference_column && !right_is_reference_column;
+  //     constexpr auto both_are_reference_columns = left_is_reference_column && right_is_reference_column;
 
-      constexpr auto left_is_string_column = (std::is_same<LeftType, std::string>{});
-      constexpr auto right_is_string_column = (std::is_same<RightType, std::string>{});
+  //     constexpr auto left_is_string_column = (std::is_same<LeftType, std::string>{});
+  //     constexpr auto right_is_string_column = (std::is_same<RightType, std::string>{});
 
-      constexpr auto neither_is_string_column = !left_is_string_column && !right_is_string_column;
-      constexpr auto both_are_string_columns = left_is_string_column && right_is_string_column;
+  //     constexpr auto neither_is_string_column = !left_is_string_column && !right_is_string_column;
+  //     constexpr auto both_are_string_columns = left_is_string_column && right_is_string_column;
 
-      // clang-format off
-      if constexpr((neither_is_reference_column || both_are_reference_columns) &&
-                   (neither_is_string_column || both_are_string_columns)) {
-        auto left_column_iterable = create_iterable_from_column<LeftType>(typed_left_column);
-        auto right_column_iterable = create_iterable_from_column<RightType>(typed_right_column);
+  //     // clang-format off
+  //     if constexpr((neither_is_reference_column || both_are_reference_columns) &&
+  //                  (neither_is_string_column || both_are_string_columns)) {
+  //       auto left_column_iterable = create_iterable_from_column<LeftType>(typed_left_column);
+  //       auto right_column_iterable = create_iterable_from_column<RightType>(typed_right_column);
 
-        left_column_iterable.with_iterators([&](auto left_it, auto left_end) {
-          right_column_iterable.with_iterators([&](auto right_it, auto right_end) {
-            with_comparator(_predicate_condition, [&](auto comparator) {
-              this->_binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
-            });
-          });
-        });
-      } else {
-        Fail("Invalid column combination detected!");   // NOLINT - cpplint.py does not know about constexpr
-      }
-      // clang-format on
-    });
-  });
+  //       left_column_iterable.with_iterators([&](auto left_it, auto left_end) {
+  //         right_column_iterable.with_iterators([&](auto right_it, auto right_end) {
+  //           with_comparator(_predicate_condition, [&](auto comparator) {
+  //             this->_binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
+  //           });
+  //         });
+  //       });
+  //     } else {
+  //       Fail("Invalid column combination detected!");   // NOLINT - cpplint.py does not know about constexpr
+  //     }
+  //     // clang-format on
+  //   });
+  // });
 
   return matches_out;
 }

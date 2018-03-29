@@ -23,11 +23,11 @@ int main(int argc, char const *argv[]) {
     file_stream >> description;
   } else {
     description = opossum::generate_calibration_description(calibration_type);
-    description = opossum::generate_benchmark_scenarios();
+    // description = opossum::generate_benchmark_scenarios();
   }
 
-  auto benchmark = opossum::MultiScenarioColumnBenchmark{std::move(description)};
-  // auto benchmark = opossum::ModelCalibrationBenchmark{calibration_type, std::move(description)};
+  // auto benchmark = opossum::MultiScenarioColumnBenchmark{std::move(description)};
+  auto benchmark = opossum::ModelCalibrationBenchmark{calibration_type, std::move(description)};
   // auto benchmark = opossum::SingleDistributionBenchmark{};
   benchmark.run();
 

@@ -89,25 +89,25 @@ void MultiScenarioColumnBenchmark::run() {
       return sum / results.size();
     };
 
-    benchmark["decompression_runtime"] = [&]() {
-      auto benchmark_state = benchmark_decompression_with_iterable(encoded_column);
-      std::cout << "Decompression Iteration Count: " << benchmark_state.num_iterations() << std::endl;
-      auto results_in_ms = to_ms(benchmark_state.results());
-      return get_mean(results_in_ms);
-    }();
+    // benchmark["decompression_runtime"] = [&]() {
+    //   auto benchmark_state = benchmark_decompression_with_iterable(encoded_column);
+    //   std::cout << "Decompression Iteration Count: " << benchmark_state.num_iterations() << std::endl;
+    //   auto results_in_ms = to_ms(benchmark_state.results());
+    //   return get_mean(results_in_ms);
+    // }();
 
-    benchmark["partial_decompression_runtime"] = [&]() {
-      auto benchmark_state = benchmark_decompression_with_iterable(encoded_column, 0.2f);
-      std::cout << "Partial Decompression Iteration Count: " << benchmark_state.num_iterations() << std::endl;
-      auto results_in_ms = to_ms(benchmark_state.results());
-      return get_mean(results_in_ms);
-    }();
+    // benchmark["partial_decompression_runtime"] = [&]() {
+    //   auto benchmark_state = benchmark_decompression_with_iterable(encoded_column, 0.2f);
+    //   std::cout << "Partial Decompression Iteration Count: " << benchmark_state.num_iterations() << std::endl;
+    //   auto results_in_ms = to_ms(benchmark_state.results());
+    //   return get_mean(results_in_ms);
+    // }();
 
-    benchmark["distribution"] = "Uniform (w/ runs)";
-    // benchmark["distribution"] = "Uniform";
+    // benchmark["distribution"] = "Uniform (w/ runs)";
+    benchmark["distribution"] = "dynamic polymorphism";
 
-    // const auto first_quartile_value = static_cast<int32_t>(std::round(max_value * 0.25));
-    const auto first_quartile_value = static_cast<int32_t>(std::round(65'535 * 0.25));
+    const auto first_quartile_value = static_cast<int32_t>(std::round(max_value * 0.25));
+    // const auto first_quartile_value = static_cast<int32_t>(std::round(65'535 * 0.25));
 
     benchmark["table_scan_runtime"] = [&]() {
       auto benchmark_state = benchmark_table_scan(encoded_column, first_quartile_value, PredicateCondition::LessThan);

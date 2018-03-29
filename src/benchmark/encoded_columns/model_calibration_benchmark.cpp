@@ -98,7 +98,7 @@ void ModelCalibrationBenchmark::run() {
     std::cout << "Iterations: " << benchmark_state.num_iterations() << std::endl;
   }
 
-  _output_as_json(_description);
+  _output_as_csv(_description);
 }
 
 void ModelCalibrationBenchmark::_output_as_json(nlohmann::json& data) {

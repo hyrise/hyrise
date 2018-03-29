@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-AbstractColumnBenchmark::AbstractColumnBenchmark() : _random_seed{std::random_device{}()} {
+AbstractColumnBenchmark::AbstractColumnBenchmark() : _random_seed{static_cast<uint32_t>(23459012390u)} {
   static const auto numa_node = 35;
   _memory_resource = std::make_unique<BenchmarkMemoryResource>(numa_node);
 }
@@ -23,8 +23,8 @@ auto AbstractColumnBenchmark::get_generator(const DistributionInfo& info) const 
   column_generator.set_null_fraction(info.null_fraction);
 
   return [column_generator, max_value = info.max_value]() {
-    // return column_generator.uniformly_distributed_column(0, max_value);
-    return column_generator.uniformly_distributed_column_with_runs(0, 65'535, max_value);
+    return column_generator.uniformly_distributed_column(0, max_value);
+    // return column_generator.uniformly_distributed_column_with_runs(0, max_value, 4);
     //return column_generator.normally_distributed_column(8, max_value, 0.1, 20.0);
   };
 }
