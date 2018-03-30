@@ -48,4 +48,7 @@ void materialize_nulls(const BaseColumn& column, Container& container) {
   });
 }
 
+// Materialize a BaseColumn into a Value Column. Creates a copy of the data, even if the @param column is a ValueColumn
+std::shared_ptr<BaseColumn> materialize_as_value_column(const BaseColumn& column);
+
 }  // namespace opossum

@@ -16,6 +16,7 @@ class TransactionContext;
 
 enum class OperatorType {
   Aggregate,
+  Case,
   Delete,
   Difference,
   ExportBinary,

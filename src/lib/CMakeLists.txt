@@ -15,6 +15,7 @@ set(
     concurrency/transaction_manager.hpp
     constant_mappings.cpp
     constant_mappings.hpp
+    case_expression.hpp
     import_export/binary.hpp
     import_export/csv_converter.cpp
     import_export/csv_converter.hpp
@@ -81,6 +82,8 @@ set(
     operators/abstract_read_write_operator.hpp
     operators/aggregate.cpp
     operators/aggregate.hpp
+    operators/case_operator.cpp
+    operators/case_operator.hpp
     operators/delete.cpp
     operators/delete.hpp
     operators/difference.cpp
@@ -288,6 +291,8 @@ set(
     storage/dictionary_column/dictionary_encoder.hpp
     storage/dictionary_column.hpp
     storage/encoding_type.hpp
+    storage/materialize.cpp
+    storage/materialize.hpp
     storage/frame_of_reference_column.hpp
     storage/frame_of_reference_column.cpp
     storage/frame_of_reference/frame_of_reference_encoder.hpp

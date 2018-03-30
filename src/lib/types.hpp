@@ -266,4 +266,7 @@ class Noncopyable {
   const Noncopyable& operator=(const Noncopyable&) = delete;
 };
 
+// Dummy type, can be used to overload functions with a variant accepting a Null value
+struct Null {};
+
 }  // namespace opossum
