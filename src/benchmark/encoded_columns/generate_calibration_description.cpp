@@ -45,6 +45,14 @@ nlohmann::json generate_calibration_description(CalibrationType type) {
     return v;
   }();
 
+  // const auto max_values = [&]() {
+  //   auto v = std::vector<int>(20u);
+  //   std::generate(v.begin(), v.end(), [n=2u]() mutable {
+  //     return (1u << n++) - 1u;
+  //   });
+  //   return v;
+  // }();
+
   const auto point_access_factors = [&]() {
     switch (type) {
       case CalibrationType::FilteredTableScan: {
@@ -52,8 +60,9 @@ nlohmann::json generate_calibration_description(CalibrationType type) {
         std::transform(max_values.cbegin(), max_values.cend(), factors.begin(), [](auto max_value) { return 1.0f / max_value; });
         return factors;
       }
-      case CalibrationType::Materialization:
+      case CalibrationType::Materialization: {
         return std::vector<float>{0.000005f, 0.00001f, 0.00005f, 0.0001f, 0.0005f, 0.001f};
+      }
       default:
         return std::vector<float>{};
     }
