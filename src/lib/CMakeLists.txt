@@ -282,6 +282,8 @@ set(
     storage/column_visitable.hpp
     storage/create_iterable_from_column.hpp
     storage/create_iterable_from_column.ipp
+    storage/defragment_reference_table.cpp
+    storage/defragment_reference_table.hpp
     storage/dictionary_column/attribute_vector_iterable.hpp
     storage/dictionary_column.cpp
     storage/dictionary_column/dictionary_column_iterable.hpp

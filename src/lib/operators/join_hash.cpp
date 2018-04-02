@@ -15,6 +15,7 @@
 #include "scheduler/job_task.hpp"
 #include "storage/column_visitable.hpp"
 #include "storage/create_iterable_from_column.hpp"
+#include "storage/defragment_reference_table.hpp"
 #include "type_cast.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
@@ -76,7 +77,18 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   _impl = make_unique_by_data_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
       build_input->column_data_type(build_column_id), probe_input->column_data_type(probe_column_id), build_operator,
       probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped);
-  return _impl->_on_execute();
+  auto output_table = _impl->_on_execute();
+
+  /**
+   * Defragment the output table - this is a performance optimization done because JoinHash is notorious for producing
+   * many Chunks (>500 seen) and performing badly on many Chunks (see loop nesting in _partition_radix_parallel)
+   */
+
+  // Somewhat arbitrarily chose min chunk size for the defragmentation. We want no Chunks smaller than that.
+  constexpr auto min_chunk_size = 10'000;
+  auto defragmented_table = defragment_reference_table(output_table, min_chunk_size, output_table->max_chunk_size());
+
+  return defragmented_table;
 }
 
 void JoinHash::_on_cleanup() { _impl.reset(); }

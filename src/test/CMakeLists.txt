@@ -118,6 +118,7 @@ set(
     storage/materialize_test.cpp
     storage/multi_column_index_test.cpp
     storage/compressed_vector_test.cpp
+    storage/defragment_reference_table_test.cpp
     storage/numa_placement_test.cpp
     storage/reference_column_test.cpp
     storage/simd_bp128_test.cpp
