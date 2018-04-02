@@ -47,7 +47,16 @@
 
 namespace {
 
-// Buffer for program state
+/**
+ * Buffer for program state
+ *
+ * We use this to make Ctrl+C work on all platforms by jumping back into main() from the Ctrl+C signal handler. This
+ * was the only way to get this to work on all platforms inclusing macOS.
+ * See here (https://github.com/hyrise/hyrise/pull/198#discussion_r135539719) for a discussion about this.
+ *
+ * The known caveats of goto/longjmp aside, this will probably also cause problems (queries continuing to run in the
+ * background) when the scheduler/multithreading is enabled.
+ */
 sigjmp_buf jmp_env;
 
 // Returns a string containing a timestamp of the current date and time
@@ -638,7 +647,8 @@ void Console::handle_signal(int sig) {
     console._multiline_input = "";
     console.set_prompt("!> ");
     console._verbose = false;
-    // Restore program state stored in jmp_env set with sigsetjmp(2)
+    // Restore program state stored in jmp_env set with sigsetjmp(2).
+    // See comment on jmp_env for details
     siglongjmp(jmp_env, 1);
   }
 }
@@ -841,6 +851,7 @@ int main(int argc, char** argv) {
   }
 
   // Set jmp_env to current program state in preparation for siglongjmp(2)
+  // See comment on jmp_env for details
   while (sigsetjmp(jmp_env, 1) != 0) {
   }
 
