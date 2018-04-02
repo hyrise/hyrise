@@ -60,6 +60,7 @@ set(
     operators/maintenance/drop_view_test.cpp
     operators/maintenance/show_columns_test.cpp
     operators/maintenance/show_tables_test.cpp
+    operators/materialize_test.cpp
     operators/print_test.cpp
     operators/product_test.cpp
     operators/projection_test.cpp

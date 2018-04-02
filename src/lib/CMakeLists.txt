@@ -120,6 +120,8 @@ set(
     operators/maintenance/show_columns.hpp
     operators/maintenance/show_tables.cpp
     operators/maintenance/show_tables.hpp
+    operators/materialize.cpp
+    operators/materialize.hpp
     operators/pqp_expression.cpp
     operators/pqp_expression.hpp
     operators/print.cpp
