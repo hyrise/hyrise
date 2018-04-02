@@ -189,6 +189,8 @@ set(
     optimizer/strategy/predicate_pushdown_rule.cpp
     optimizer/strategy/predicate_reordering_rule.cpp
     optimizer/strategy/predicate_reordering_rule.hpp
+    optimizer/strategy/projection_combination_rule.cpp
+    optimizer/strategy/projection_combination_rule.hpp
     optimizer/strategy/rule_batch.cpp
     optimizer/strategy/rule_batch.hpp
     optimizer/table_statistics.cpp

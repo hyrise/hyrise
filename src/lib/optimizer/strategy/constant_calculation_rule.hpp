@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -25,9 +26,17 @@ class ConstantCalculationRule : public AbstractRule {
   bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) override;
 
  private:
-  bool _replace_expression_in_outputs(const std::shared_ptr<AbstractLQPNode>& node,
-                                      const LQPColumnReference& expression_column, const AllTypeVariant& value);
-  void _remove_column_from_projection(const std::shared_ptr<ProjectionNode>& node, ColumnID column_id);
+  void _calculate_expressions_in_lqp(const std::shared_ptr<AbstractLQPNode>& node,
+                                     std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map);
+  bool _replace_column_references_in_lqp(
+      const std::shared_ptr<AbstractLQPNode>& node,
+      const std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map);
+  std::shared_ptr<LQPExpression> _replace_column_references_in_expression(
+      const std::shared_ptr<LQPExpression>& expression,
+      const std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map);
+  bool _remove_columns_from_projections(
+      const std::shared_ptr<AbstractLQPNode>& node,
+      const std::map<LQPColumnReference, AllTypeVariant>& column_reference_to_value_map);
 
   std::optional<DataType> _get_type_of_expression(const std::shared_ptr<LQPExpression>& expression) const;
 
