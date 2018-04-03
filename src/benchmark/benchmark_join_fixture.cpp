@@ -38,12 +38,12 @@ void BenchmarkJoinFixture::SetUp(::benchmark::State& state) {
   }
 
   // TODO(anyone): replace with EncodingType::Dictionary once joins (especially index join) support these
-  const auto left_chunk_size = state.range(0) / 50;
+  const auto left_chunk_size = static_cast<ChunkID>(state.range(0) / 50);
   Assert(left_chunk_size > 0, "The left chunk size is 0 or less, can not generate such a table");
   auto table_1 = table_generator->generate_table(std::vector<ColumnDataDistribution>{left_config}, state.range(0),
                                                  left_chunk_size, EncodingType::Dictionary, use_multiple_nodes);
 
-  const auto right_chunk_size = state.range(1) / 50;
+  const auto right_chunk_size = static_cast<ChunkID>(state.range(1) / 50);
   Assert(right_chunk_size > 0, "The right chunk size is 0 or less, can not generate such a table");
   auto table_2 = table_generator->generate_table(std::vector<ColumnDataDistribution>{right_config}, state.range(1),
                                                  right_chunk_size, EncodingType::Dictionary, use_multiple_nodes);
