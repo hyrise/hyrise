@@ -162,6 +162,8 @@ std::shared_ptr<Table> TableGenerator::generate_table(
       // add full chunk to table
       if (column_index == num_columns - 1) {
         std::optional<PolymorphicAllocator<Chunk>> allocator;
+
+#if HYRISE_NUMA_SUPPORT
         if (use_multiple_partitions) {
           // compute on which node to create the chunk
           auto num_numa_nodes = NUMAPlacementManager::get().topology()->nodes().size();
@@ -171,6 +173,8 @@ std::shared_ptr<Table> TableGenerator::generate_table(
           allocator = std::optional<PolymorphicAllocator<Chunk>>{
               PolymorphicAllocator<Chunk>{NUMAPlacementManager::get().get_memory_resource(current_node)}};
         }
+#endif
+
         table->append_chunk(columns, allocator);
       }
     }

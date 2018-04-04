@@ -15,7 +15,11 @@
 #include "scheduler/job_task.hpp"
 #include "storage/column_visitable.hpp"
 #include "storage/dictionary_column.hpp"
+
+#if HYRISE_NUMA_SUPPORT
 #include "storage/numa_placement_manager.hpp"
+#endif
+
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
 
@@ -172,9 +176,13 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   * The number of clusters must be a power of two, i.e. 1, 2, 4, 8, 16...
   **/
   ClusterID _determine_number_of_clusters() {
-    // Get the next lower power of two of the bigger chunk number
+// Get the next lower power of two of the bigger chunk number
+#if HYRISE_NUMA_SUPPORT
     const size_t numa_nodes = NUMAPlacementManager::get().topology()->nodes().size();
     return static_cast<ClusterID>(std::pow(2, std::floor(std::log2(numa_nodes))));
+#else
+    return ClusterID{1};
+#endif
   }
 
   /**

@@ -8,7 +8,11 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_column.hpp"
+#if HYRISE_NUMA_SUPPORT
 #include "storage/numa_placement_manager.hpp"
+#else
+#include "utils/boost_default_memory_resource.cpp"
+#endif
 #include "types.hpp"
 #include "utils/numa_memory_resource.hpp"
 
@@ -37,8 +41,13 @@ struct MaterializedNUMAPartition {
 
   explicit MaterializedNUMAPartition(NodeID node_id, size_t reserve_size)
       : _node_id{node_id},
+#if HYRISE_NUMA_SUPPORT
         _alloc{NUMAPlacementManager::get().get_memory_resource(node_id)},
-        _chunk_columns(reserve_size) {}
+#else
+        _alloc{boost::container::pmr::get_default_resource()},
+#endif
+        _chunk_columns(reserve_size) {
+  }
 
   MaterializedNUMAPartition() {}
 
@@ -70,11 +79,16 @@ class ColumnMaterializerNUMA {
   std::pair<std::unique_ptr<MaterializedNUMAPartitionList<T>>, std::unique_ptr<PosList>> materialize(
       std::shared_ptr<const Table> input, ColumnID column_id) {
     auto output = std::make_unique<MaterializedNUMAPartitionList<T>>();
-    // ensure we have enough lists to represent the NUMA Nodes
+// ensure we have enough lists to represent the NUMA Nodes
+#if HYRISE_NUMA_SUPPORT
     const auto topology = NUMAPlacementManager::get().topology();
-    output->reserve(topology->nodes().size());
+    const auto node_count = topology->nodes().size();
+    output->reserve(node_count);
+#else
+    const auto node_count = 1;
+#endif
 
-    for (NodeID node_id{0}; node_id < topology->nodes().size(); node_id++) {
+    for (NodeID node_id{0}; node_id < node_count; node_id++) {
       // The vectors only contain pointers so the higher bound estimate won't really hurt us here
       // Also we shrink this in the end
       output->emplace_back(MaterializedNUMAPartition<T>{node_id, input->chunk_count()});

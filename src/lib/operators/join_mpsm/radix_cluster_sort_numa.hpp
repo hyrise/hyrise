@@ -8,8 +8,6 @@
 
 #include "column_materializer_numa.hpp"
 #include "resolve_type.hpp"
-#include "storage/numa_placement_manager.hpp"
-#include "utils/numa_memory_resource.hpp"
 
 namespace opossum {
 
