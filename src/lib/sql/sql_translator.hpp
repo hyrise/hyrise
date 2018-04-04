@@ -44,11 +44,11 @@ class SQLTranslator final : public Noncopyable {
   std::shared_ptr<AbstractLQPNode> _translate_where(const hsql::Expr& expr,
                                                     const std::shared_ptr<AbstractLQPNode>& input_node);
 
-  std::shared_ptr<AbstractLQPNode> _translate_expressions(const hsql::SelectStatement &select,
-                                                          const std::shared_ptr<AbstractLQPNode> &input_node);
+  std::shared_ptr<AbstractLQPNode> _translate_select_groupby_having(const hsql::SelectStatement &select,
+                                                                    const std::shared_ptr<AbstractLQPNode> &input_node);
 
   std::shared_ptr<AbstractLQPNode> _translate_order_by(const std::vector<hsql::OrderDescription*>& order_list,
-                                                       const std::shared_ptr<AbstractLQPNode>& input_node);
+                                                       std::shared_ptr<AbstractLQPNode> current_node);
 
   std::shared_ptr<AbstractLQPNode> _translate_join(const hsql::JoinDefinition& select);
 
@@ -72,9 +72,13 @@ class SQLTranslator final : public Noncopyable {
   std::shared_ptr<AbstractLQPNode> _translate_table_ref_alias(const std::shared_ptr<AbstractLQPNode>& node,
                                                               const hsql::TableRef& table);
 
+  enum class FilterRows {
+    Yes, No
+  };
 
-  std::shared_ptr<AbstractLQPNode> _translate_predicate_expression(
-  const std::shared_ptr<AbstractExpression> &expression, std::shared_ptr<AbstractLQPNode> current_node) const;
+  std::shared_ptr<AbstractLQPNode> _translate_expression(
+  const std::shared_ptr<AbstractExpression> &expression, std::shared_ptr<AbstractLQPNode> current_node,
+  const FilterRows filter_rows) const;
 
   std::shared_ptr<AbstractLQPNode> _prune_expressions(const std::shared_ptr<AbstractLQPNode>& node,
                                                               const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const;

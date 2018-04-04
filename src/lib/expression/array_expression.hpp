@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-class ArrayExpression : public AbstractPredicateExpression {
+class ArrayExpression : public AbstractExpression {
  public:
   ArrayExpression(const std::vector<std::shared_ptr<AbstractExpression>>& values);
 

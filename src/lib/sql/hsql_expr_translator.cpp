@@ -10,12 +10,14 @@
 #include "constant_mappings.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "expression/aggregate_expression.hpp"
+#include "expression/array_expression.hpp"
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/function_expression.hpp"
 #include "expression/is_null_expression.hpp"
 #include "expression/logical_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
+#include "expression/not_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "expression/value_placeholder_expression.hpp"
 #include "expression/lqp_select_expression.hpp"
@@ -39,8 +41,7 @@ const std::unordered_map<hsql::OperatorType, ArithmeticOperator> hsql_arithmetic
 
 const std::unordered_map<hsql::OperatorType, LogicalOperator> hsql_logical_operators = {
   {hsql::kOpAnd, LogicalOperator::And},
-  {hsql::kOpOr, LogicalOperator::Or},
-  {hsql::kOpNot, LogicalOperator::Not}
+  {hsql::kOpOr, LogicalOperator::Or}
 };
 
 const std::unordered_map<hsql::OperatorType, PredicateCondition> hsql_predicate_condition = {
@@ -66,6 +67,14 @@ std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
 
   std::shared_ptr<LQPExpression> left;
   std::shared_ptr<LQPExpression> right;
+
+  std::vector<std::shared_ptr<AbstractExpression>> arguments;
+  if (expr.exprList) {
+    arguments.reserve(expr.exprList->size());
+    for (const auto *hsql_argument : *(expr.exprList)) {
+      arguments.emplace_back(translate_hsql_expr(*hsql_argument, nodes));
+    }
+  }
 
   if (expr.expr) {
     left = translate_hsql_expr(*expr.expr, nodes);
@@ -115,12 +124,6 @@ std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
 
     case hsql::kExprFunctionRef: {
       Assert(expr.exprList, "FunctionRef has no exprList. Bug in sqlparser?");
-
-      std::vector<std::shared_ptr<AbstractExpression>> arguments;
-      arguments.reserve(expr.exprList->size());
-      for (const auto* hsql_argument : *(expr.exprList)) {
-        arguments.emplace_back(translate_hsql_expr(*hsql_argument, nodes));
-      }
 
       // convert to upper-case to find mapping
       std::transform(name.begin(), name.end(), name.begin(), [](const auto c) { return std::toupper(c); });
@@ -174,8 +177,13 @@ std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
 
       const auto logical_iter = hsql_logical_operators.find(expr.opType);
       if (logical_iter != hsql_logical_operators.end()) {
-        Assert(left && right || (left && logical_iter->second == LogicalOperator::Not), "Wrong number of arguments. Bug in sqlparser?");
+        Assert(left && right), "Wrong number of arguments. Bug in sqlparser?");
         return std::make_shared<LogicalExpression>(logical_iter->second, left, right);
+      }
+
+      if (expr.opType == hsql::kOpNot){
+        Assert(left && !right), "Wrong number of arguments. Bug in sqlparser?");
+        return std::make_shared<NotExpression>(left);
       }
 
       Fail("Unsupported expression type");
@@ -186,8 +194,11 @@ std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
       return std::make_shared<LQPSelectExpression>(lqp);
     }
 
+    case hsql::kExprArray: {
+      return std::make_shared<ArrayExpression>(arguments);
+    }
+
     case hsql::kExprHint:
-    case hsql::kExprArray:
     case hsql::kExprStar:
     case hsql::kExprArrayIndex:
       Fail("Can't translate this hsql expression into a Hyrise expression");

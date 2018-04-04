@@ -6,8 +6,7 @@ namespace opossum {
 
 enum class LogicalOperator {
   And,
-  Or,
-  Not
+  Or
 };
 
 class LogicalExpression : public AbstractExpression {
