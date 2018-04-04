@@ -8,164 +8,189 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
+#include "expression/arithmetic_expression.hpp"
+#include "expression/aggregate_expression.hpp"
+#include "expression/between_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/function_expression.hpp"
+#include "expression/is_null_expression.hpp"
+#include "expression/logical_expression.hpp"
+#include "expression/lqp_column_expression.hpp"
+#include "expression/value_expression.hpp"
+#include "expression/value_placeholder_expression.hpp"
+#include "expression/lqp_select_expression.hpp"
 #include "sql/sql_translator.hpp"
 #include "utils/assert.hpp"
 
 #include "SQLParser.h"
 
+namespace {
+
+using namespace opossum; // NOLINT
+
+const std::unordered_map<hsql::OperatorType, ArithmeticOperator> hsql_arithmetic_operators = {
+  {hsql::kOpPlus, ArithmeticOperator::Addition},
+  {hsql::kOpMinus, ArithmeticOperator::Subtraction},
+  {hsql::kOpAsterisk, ArithmeticOperator::Multiplication},
+  {hsql::kOpSlash, ArithmeticOperator::Division},
+  {hsql::kOpPercentage, ArithmeticOperator::Modulo},
+  {hsql::kOpCaret, ArithmeticOperator::Power},
+};
+
+const std::unordered_map<hsql::OperatorType, LogicalOperator> hsql_logical_operators = {
+  {hsql::kOpAnd, LogicalOperator::And},
+  {hsql::kOpOr, LogicalOperator::Or},
+  {hsql::kOpNot, LogicalOperator::Not}
+};
+
+const std::unordered_map<hsql::OperatorType, PredicateCondition> hsql_predicate_condition = {
+  {hsql::kOpBetween, PredicateCondition::Between},
+  {hsql::kOpEquals, PredicateCondition::Equals},
+  {hsql::kOpNotEquals, PredicateCondition::NotEquals},
+  {hsql::kOpLess, PredicateCondition::LessThan},
+  {hsql::kOpLessEq, PredicateCondition::LessThanEquals},
+  {hsql::kOpGreater, PredicateCondition::GreaterThan},
+  {hsql::kOpGreaterEq, PredicateCondition::GreaterThanEquals},
+  {hsql::kOpLike, PredicateCondition::Like},
+  {hsql::kOpNotLike, PredicateCondition::NotLike},
+  {hsql::kOpIsNull, PredicateCondition::IsNull}
+};
+
+} // namespace
+
 namespace opossum {
 
-std::shared_ptr<LQPExpression> HSQLExprTranslator::to_lqp_expression(
-    const hsql::Expr& expr, const std::shared_ptr<AbstractLQPNode>& input_node) {
+std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
+                                                        const std::vector<std::shared_ptr<AbstractLQPNode>>& nodes) {
   auto name = expr.name != nullptr ? std::string(expr.name) : "";
-  auto alias = expr.alias != nullptr ? std::optional<std::string>(expr.alias) : std::nullopt;
 
-  std::shared_ptr<LQPExpression> node;
   std::shared_ptr<LQPExpression> left;
   std::shared_ptr<LQPExpression> right;
 
-  if (expr.expr != nullptr) {
-    left = to_lqp_expression(*expr.expr, input_node);
+  if (expr.expr) {
+    left = translate_hsql_expr(*expr.expr, nodes);
   }
 
-  if (expr.expr2 != nullptr) {
-    right = to_lqp_expression(*expr.expr2, input_node);
+  if (expr.expr2) {
+    right = translate_hsql_expr(*expr.expr2, nodes);
   }
 
   switch (expr.type) {
-    case hsql::kExprOperator: {
-      auto operator_type = operator_type_to_expression_type.at(expr.opType);
-      node = LQPExpression::create_binary_operator(operator_type, left, right, alias);
-      break;
-    }
-    case hsql::kExprColumnRef: {
-      DebugAssert(input_node != nullptr, "Input node needs to be set");
-      DebugAssert(expr.name != nullptr, "hsql::Expr::name needs to be set");
+    case hsql::kExprLiteralFloat:
+      return std::make_shared<ValueExpression>(expr.fval);
 
-      auto table_name = expr.table != nullptr ? std::optional<std::string>(std::string(expr.table)) : std::nullopt;
-      QualifiedColumnName qualified_column_name{name, table_name};
-      auto column_reference = input_node->get_column(qualified_column_name);
-      node = LQPExpression::create_column(column_reference, alias);
-      break;
-    }
-    case hsql::kExprFunctionRef: {
-      std::vector<std::shared_ptr<LQPExpression>> aggregate_function_arguments;
-      for (auto elem : *(expr.exprList)) {
-        aggregate_function_arguments.emplace_back(to_lqp_expression(*elem, input_node));
+    case hsql::kExprLiteralString:
+      Assert(expr.name, "No value given for string literal");
+      return std::make_shared<ValueExpression>(*expr.name);
+
+    case hsql::kExprLiteralInt:
+      if (static_cast<int32_t>(expr.ival) == expr.ival) {
+        return std::make_shared<ValueExpression>(static_cast<int32_t>(expr.ival));
+      } else {
+        return std::make_shared<ValueExpression>(expr.ival);
       }
 
-      // This is currently for aggregate functions only, hence checking for arguments
-      DebugAssert(aggregate_function_arguments.size(), "Aggregate functions must have arguments");
+    case hsql::kExprLiteralNull:
+      return std::make_shared<ValueExpression>(NullValue{});
+
+    case hsql::kExprParameter:
+      return std::make_shared<ValuePlaceholderExpression>(ValuePlaceholder{static_cast<uint16_t>(expr.ival)});
+
+    case hsql::kExprColumnRef: {
+      const auto table_name = expr.table ? std::optional<std::string>(std::string(expr.table)) : std::nullopt;
+      const auto qualified_column_name = QualifiedColumnName{name, table_name};
+
+      auto column_reference = std::optional<LQPColumnReference>{};
+      for (const auto& node : nodes) {
+        const auto column_reference2 = node->find_column(qualified_column_name);
+        if (column_reference2) {
+          Assert(!column_reference || column_reference == column_reference2, std::string{"Ambiguous identifier '"} + qualified_column_name.as_string() + "'");
+          column_reference = column_reference2;
+        }
+      }
+      Assert(column_reference, std::string{"Couldn't resolve identifier '"} + qualified_column_name.as_string() + "'");
+
+      return std::make_shared<LQPColumnExpression>(column_reference);
+    }
+
+    case hsql::kExprFunctionRef: {
+      Assert(expr.exprList, "FunctionRef has no exprList. Bug in sqlparser?");
+
+      std::vector<std::shared_ptr<AbstractExpression>> arguments;
+      arguments.reserve(expr.exprList->size());
+      for (const auto* hsql_argument : *(expr.exprList)) {
+        arguments.emplace_back(translate_hsql_expr(*hsql_argument, nodes));
+      }
 
       // convert to upper-case to find mapping
-      std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) { return std::toupper(c); });
+      std::transform(name.begin(), name.end(), name.begin(), [](const auto c) { return std::toupper(c); });
 
-      const auto aggregate_function_iter = aggregate_type_to_string.right.find(name);
-      DebugAssert(aggregate_function_iter != aggregate_type_to_string.right.end(),
-                  std::string("No such aggregate function '") + name + "'");
+      const auto aggregate_iter = aggregate_type_to_string.right.find(name);
+      if (aggregate_iter != aggregate_type_to_string.right.end()) {
+        auto aggregate_function = aggregate_iter->second;
 
-      auto aggregate_function = aggregate_function_iter->second;
-
-      if (aggregate_function == AggregateFunction::Count && expr.distinct) {
-        aggregate_function = AggregateFunction::CountDistinct;
-      }
-
-      node = LQPExpression::create_aggregate_function(aggregate_function, aggregate_function_arguments, alias);
-      break;
-    }
-    case hsql::kExprLiteralFloat:
-      node = LQPExpression::create_literal(expr.fval, alias);
-      break;
-    case hsql::kExprLiteralInt: {
-      AllTypeVariant value;
-      if (static_cast<int32_t>(expr.ival) == expr.ival) {
-        value = static_cast<int32_t>(expr.ival);
+        if (aggregate_function == AggregateType::Count && expr.distinct) {
+          aggregate_function = AggregateType::CountDistinct;
+        }
+        return std::make_shared<AggregateExpression>(aggregate_function, arguments);
       } else {
-        value = expr.ival;
+        const auto function_iter = function_type_to_string.right.find(name);
+
+        if (function_iter != function_type_to_string.right.end()) {
+          return std::make_shared<FunctionExpression>(function_iter->second, arguments);
+        } else {
+          Fail(std::string{"Couldn't resolve function '"} + name + "'");
+        }
       }
-      node = LQPExpression::create_literal(value, alias);
-      break;
     }
-    case hsql::kExprLiteralString:
-      node = LQPExpression::create_literal(name, alias);
-      break;
-    case hsql::kExprLiteralNull:
-      node = LQPExpression::create_literal(NULL_VALUE);
-      break;
-    case hsql::kExprParameter:
-      node = LQPExpression::create_value_placeholder(ValuePlaceholder{static_cast<uint16_t>(expr.ival)});
-      break;
-    case hsql::kExprStar: {
-      const auto table_name = expr.table != nullptr ? std::optional<std::string>(expr.table) : std::nullopt;
-      node = LQPExpression::create_select_star(table_name);
-      break;
+
+    case hsql::kExprOperator: {
+      const auto arithmetic_iter = hsql_arithmetic_operators.find(expr.opType);
+      if (arithmetic_iter != hsql_arithmetic_operators.end()) {
+        Assert(left && right, "Didn't receive two arguments for binary expression. Bug in sqlparser?");
+        return std::make_shared<ArithmeticExpression>(arithmetic_iter->second, left, right);
+      }
+
+      const auto predicate_iter = hsql_predicate_condition.find(expr.opType);
+      if (predicate_iter != hsql_predicate_condition.end()) {
+        const auto predicate_condition = predicate_iter->second;
+
+        if (predicate_condition == PredicateCondition::Between) {
+          Assert(left && !right, "Illegal arguments for BETWEEN. Bug in sqlparser?");
+          Assert(expr.exprList && (*expr.exprList)[0] && (*expr.exprList)[1], "Illegal arguments for BETWEEN. Bug in sqlparser?");
+
+          const auto lower_bound = translate_hsql_expr(*(*expr.exprList)[0], nodes);
+          const auto upper_bound = translate_hsql_expr(*(*expr.exprList)[1], nodes);
+
+          return std::make_shared<BetweenExpression>(left, lower_bound, upper_bound);
+        } else if (predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull) {
+          Assert(left && !right, "Illegal arguments for IsNull/IsNotNull. Bug in sqlparser?");
+          return std::make_shared<IsNullExpression>(predicate_condition, left);
+        } else {
+          Assert(left && right, "Illegal arguments for IsNull/IsNotNull. Bug in sqlparser?");
+          return std::make_shared<BinaryPredicateExpression>(predicate_condition, left, right);
+        }
+      }
+
+      const auto logical_iter = hsql_logical_operators.find(expr.opType);
+      if (logical_iter != hsql_logical_operators.end()) {
+        Assert(left && right || (left && logical_iter->second == LogicalOperator::Not), "Wrong number of arguments. Bug in sqlparser?");
+        return std::make_shared<LogicalExpression>(logical_iter->second, left, right);
+      }
+
+      Fail("Unsupported expression type");
     }
 
     case hsql::kExprSelect: {
       const auto lqp = SQLTranslator{}.translate_select(*expr.select);
-      return std::make_shared<SelectExpression>(lqp);
+      return std::make_shared<LQPSelectExpression>(lqp);
     }
-    default:
-      Fail("Unsupported expression type");
+
+    case hsql::kExprHint:
+    case hsql::kExprArray:
+    case hsql::kExprStar:
+    case hsql::kExprArrayIndex:
+      Fail("Can't translate this hsql expression into a Hyrise expression");
   }
-
-  return node;
-}
-
-AllParameterVariant HSQLExprTranslator::to_all_parameter_variant(
-    const hsql::Expr& expr, const std::optional<std::shared_ptr<AbstractLQPNode>>& input_node) {
-  switch (expr.type) {
-    case hsql::kExprLiteralInt:
-      return AllTypeVariant(expr.ival);
-    case hsql::kExprLiteralFloat:
-      return AllTypeVariant(expr.fval);
-    case hsql::kExprLiteralString:
-      return AllTypeVariant(expr.name);
-    case hsql::kExprLiteralNull:
-      return NULL_VALUE;
-    case hsql::kExprParameter:
-      return ValuePlaceholder(expr.ival);
-    case hsql::kExprColumnRef:
-      Assert(input_node, "Cannot generate ColumnID without input_node");
-      return HSQLExprTranslator::to_column_reference(expr, *input_node);
-    default:
-      Fail("Could not translate expression: type not supported.");
-  }
-}
-
-LQPColumnReference HSQLExprTranslator::to_column_reference(const hsql::Expr& hsql_expr,
-                                                           const std::shared_ptr<AbstractLQPNode>& input_node) {
-  Assert(hsql_expr.isType(hsql::kExprColumnRef), "Input needs to be column ref");
-  const auto qualified_column_name = to_qualified_column_name(hsql_expr);
-  const auto column_reference = input_node->find_column(qualified_column_name);
-
-  if (!column_reference) {
-    std::optional<LQPColumnReference> column_reference_in_left_input;
-    std::optional<LQPColumnReference> column_reference_in_right_input;
-    if (input_node->left_input()) {
-      column_reference_in_left_input = input_node->left_input()->find_column(qualified_column_name);
-    }
-    if (input_node->right_input()) {
-      column_reference_in_right_input = input_node->right_input()->find_column(qualified_column_name);
-    }
-
-    if (column_reference_in_left_input && !column_reference_in_right_input) {
-      return column_reference_in_left_input;
-    } else if (!column_reference_in_left_input && column_reference_in_right_input) {
-      return column_reference_in_right_input;
-    }
-  }
-
-  Assert(column_reference, "Couldn't resolve named column reference '" + qualified_column_name.as_string() + "'");
-
-  return *column_reference;
-}
-
-QualifiedColumnName HSQLExprTranslator::to_qualified_column_name(const hsql::Expr& hsql_expr) {
-  DebugAssert(hsql_expr.isType(hsql::kExprColumnRef), "Expression type can't be converted into column identifier");
-  DebugAssert(hsql_expr.name != nullptr, "hsql::Expr::name needs to be set");
-
-  return QualifiedColumnName{hsql_expr.name,
-                             hsql_expr.table == nullptr ? std::nullopt : std::optional<std::string>(hsql_expr.table)};
 }
 }  // namespace opossum

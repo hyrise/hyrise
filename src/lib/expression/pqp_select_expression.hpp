@@ -4,17 +4,17 @@
 
 namespace opossum {
 
-class AbstractLQPNode;
+class AbstractOperator;
 
-class SelectExpression : public AbstractExpression {
+class PQPSelectExpression : public AbstractExpression {
  public:
-  explicit SelectExpression(const std::shared_ptr<AbstractLQPNode>& lqp);
+  explicit PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp);
 
   bool requires_calculation() const override;
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string description() const override;
 
-  std::shared_ptr<AbstractLQPNode> lqp;
+  std::shared_ptr<AbstractOperator> pqp;
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;

@@ -54,7 +54,7 @@ const std::vector<LQPColumnReference>& UnionNode::output_column_references() con
   return *_output_column_references;
 }
 
-const std::vector<std::shared_ptr<LQPExpression>>& UnionNode::output_column_expressions() const {
+const std::vector<std::shared_ptr<AbstractExpression>>& UnionNode::output_column_expressions() const {
   if (!_output_column_expressions) {
     Assert(left_input() && right_input(), "Can't perform action without inputs");
     Assert(left_input()->output_column_references() == right_input()->output_column_references(),
@@ -79,16 +79,6 @@ bool UnionNode::shallow_equals(const AbstractLQPNode& rhs) const {
   const auto& union_node = static_cast<const UnionNode&>(rhs);
 
   return _union_mode == union_node._union_mode;
-}
-
-std::optional<std::string> UnionNode::_output_column_table_alias(const ColumnID column_id) const {
-  DebugAssert(left_input() && right_input(), "Inputs need to be set");
-  DebugAssert(column_id < output_column_count(), "ColumnID out of range");
-
-  const auto table_alias =  left_input()->qualified_output_column_names()[column_id].table_name;
-  DebugAssert(table_alias == right_input()->qualified_output_column_names()[column_id].table_name, "Input mismatch");
-
-  return table_alias;
 }
 
 }  // namespace opossum

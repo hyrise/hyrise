@@ -4,12 +4,12 @@
 
 namespace opossum {
 
-class SelectExpression;
+class LQPSelectExpression;
 
 class ExistsExpression : public AbstractExpression {
-  explicit ExistsExpression(const std::shared_ptr<SelectExpression>& select);
+  explicit ExistsExpression(const std::shared_ptr<LQPSelectExpression>& select);
 
-  const std::shared_ptr<SelectExpression>& select() const;
+  const std::shared_ptr<LQPSelectExpression>& select() const;
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string description() const override;

@@ -9,8 +9,13 @@
 #include <vector>
 
 #include "expression/abstract_expression.hpp"
+#include "expression/abstract_predicate_expression.hpp"
 #include "expression/aggregate_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/logical_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
+#include "expression/not_expression.hpp"
+#include "expression/value_expression.hpp"
 #include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -41,54 +46,7 @@
 
 namespace opossum {
 
-PredicateCondition translate_operator_type_to_predicate_condition(const hsql::OperatorType operator_type) {
-  static const std::unordered_map<const hsql::OperatorType, const PredicateCondition> operator_to_predicate_condition =
-      {{hsql::kOpEquals, PredicateCondition::Equals},
-       {hsql::kOpNotEquals, PredicateCondition::NotEquals},
-       {hsql::kOpGreater, PredicateCondition::GreaterThan},
-       {hsql::kOpGreaterEq, PredicateCondition::GreaterThanEquals},
-       {hsql::kOpLess, PredicateCondition::LessThan},
-       {hsql::kOpLessEq, PredicateCondition::LessThanEquals},
-       {hsql::kOpBetween, PredicateCondition::Between},
-       {hsql::kOpLike, PredicateCondition::Like},
-       {hsql::kOpNotLike, PredicateCondition::NotLike},
-       {hsql::kOpIsNull, PredicateCondition::IsNull},
-       {hsql::kOpIn, PredicateCondition::In}};
-
-  auto it = operator_to_predicate_condition.find(operator_type);
-  DebugAssert(it != operator_to_predicate_condition.end(), "Filter expression clause operator is not yet supported.");
-  return it->second;
-}
-
-PredicateCondition get_predicate_condition_for_reverse_order(const PredicateCondition predicate_condition) {
-  /**
-   * If we switch the sides for the expressions, we might have to change the operator that is used for the predicate.
-   * This function returns the respective PredicateCondition.
-   *
-   * Example:
-   *     SELECT * FROM t WHERE 1 > a
-   *  -> SELECT * FROM t WHERE a < 1
-   *
-   *    but:
-   *     SELECT * FROM t WHERE 1 = a
-   *  -> SELECT * FROM t WHERE a = 1
-   */
-  static const std::unordered_map<const PredicateCondition, const PredicateCondition>
-      predicate_condition_for_reverse_order = {
-          {PredicateCondition::GreaterThan, PredicateCondition::LessThan},
-          {PredicateCondition::LessThan, PredicateCondition::GreaterThan},
-          {PredicateCondition::GreaterThanEquals, PredicateCondition::LessThanEquals},
-          {PredicateCondition::LessThanEquals, PredicateCondition::GreaterThanEquals}};
-
-  auto it = predicate_condition_for_reverse_order.find(predicate_condition);
-  if (it != predicate_condition_for_reverse_order.end()) {
-    return it->second;
-  }
-
-  return predicate_condition;
-}
-
-JoinMode translate_join_type_to_join_mode(const hsql::JoinType join_type) {
+JoinMode translate_join_mode(const hsql::JoinType join_type) {
   static const std::unordered_map<const hsql::JoinType, const JoinMode> join_type_to_mode = {
       {hsql::kJoinInner, JoinMode::Inner}, {hsql::kJoinFull, JoinMode::Outer},      {hsql::kJoinLeft, JoinMode::Left},
       {hsql::kJoinRight, JoinMode::Right}, {hsql::kJoinNatural, JoinMode::Natural}, {hsql::kJoinCross, JoinMode::Cross},
@@ -316,7 +274,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select(const hsql::Sel
   auto current_result_node = _translate_table_ref(*select.fromTable);
 
   if (select.whereClause != nullptr) {
-    current_result_node = _translate_where(*select.whereClause, current_result_node);
+    current_result_node = _translate_predicates(*select.whereClause, current_result_node);
   }
 
   current_result_node = _translate_expressions(select, current_result_node);
@@ -325,7 +283,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select(const hsql::Sel
     current_result_node = _translate_order_by(*select.order, current_result_node);
   }
 
-  // TODO(anybody): Translate TOP.
   if (select.limit != nullptr) {
     current_result_node = _translate_limit(*select.limit, current_result_node);
   }
@@ -334,7 +291,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select(const hsql::Sel
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::JoinDefinition& join) {
-  const auto join_mode = translate_join_type_to_join_mode(join.type);
+  const auto join_mode = translate_join_mode(join.type);
 
   if (join_mode == JoinMode::Natural) {
     return _translate_natural_join(join);
@@ -401,7 +358,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::Join
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_natural_join(const hsql::JoinDefinition& join) {
-  DebugAssert(translate_join_type_to_join_mode(join.type) == JoinMode::Natural, "join must be a natural join");
+  DebugAssert(translate_join_mode(join.type) == JoinMode::Natural, "join must be a natural join");
 
   const auto& left_node = _translate_table_ref(*join.left);
   const auto& right_node = _translate_table_ref(*join.right);
@@ -746,39 +703,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
     const std::shared_ptr<AbstractLQPNode>& input_node) {
   DebugAssert(hsql_expr.expr != nullptr, "hsql malformed");
 
-  /**
-   * From the hsql-expr describing the scan condition, construct the parameters for a PredicateNode
-   * (resulting in e.g. a TableScan). allow_function_columns and resolve_column are helper params making
-   * _resolve_predicate_params() usable for both WHERE and HAVING.
-   *
-   * TODO(anybody): think about how this can be supported as well.
-   *
-   * * Example:
-   *     SELECT * FROM t WHERE 1 BETWEEN a AND 3
-   *  -> SELECT * FROM t WHERE a <= 1
-   *
-   *     SELECT * FROM t WHERE 3 BETWEEN 1 AND a
-   *  -> SELECT * FROM t WHERE a >= 3
-   *
-   *  The biggest question is how to introduce this in the code nicely.
-   *
-   *
-   * # Supported:
-   * SELECT a, SUM(B) FROM t GROUP BY a HAVING SUM(B) > 0
-   * This query is fine because the expression used in the HAVING clause is part of the SELECT list.
-   * We first translate the SELECT list, which will result in an Aggregate operator that creates a column for the sum.
-   * We can subsequently access that column when we translate the HAVING expression here.
-   *
-   * # Unsupported:
-   * SELECT a, SUM(B) FROM t GROUP BY a HAVING AVG(B) > 0
-   * This query cannot be translated at the moment because the Aggregate does not produce an output column for the AVG.
-   * Therefore, the filter expression cannot be translated, because the TableScan operator is not able to compute
-   * aggregates on its own.
-   *
-   * TODO(anybody): extend support for those HAVING clauses.
-   * One option is to add them to the Aggregate and then use a Projection to remove them from the result.
-   */
-
   const auto refers_to_column = [allow_function_columns](const hsql::Expr& hsql_expr) {
     return hsql_expr.isType(hsql::kExprColumnRef) ||
            (allow_function_columns && hsql_expr.isType(hsql::kExprFunctionRef));
@@ -1021,6 +945,72 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(
   auto validate_node = ValidateNode::make();
   validate_node->set_left_input(input_node);
   return validate_node;
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
+const std::shared_ptr<AbstractExpression> &expression,
+std::shared_ptr<AbstractLQPNode> current_node) const {
+  if (expression->type == ExpressionType::Predicate) {
+    for (const auto& argument : expression->arguments) {
+      current_node = _translate_predicate_expression(argument, current_node);
+    }
+
+    const auto predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(expression);
+
+    return PredicateNode::make(predicate_expression, current_node);
+  }
+
+  if (expression->type == ExpressionType::Logical) {
+    const auto logical_expression = std::static_pointer_cast<LogicalExpression>(expression);
+
+    switch (logical_expression->logical_operator) {
+      case LogicalOperator::And: {
+        current_node = _translate_predicate_expression(logical_expression->left_operand(), current_node);
+        return _translate_predicate_expression(logical_expression->right_operand(), current_node);
+      }
+      case LogicalOperator::Or: {
+        const auto input_expressions = current_node->output_column_expressions();
+
+        const auto left_input = _translate_predicate_expression(logical_expression->left_operand(), current_node);
+        const auto right_input = _translate_predicate_expression(logical_expression->left_operand(), current_node);
+
+        // For Union to work we need to eliminate all potential temporary columns added in the branches of the Union
+        // E.g. "a+b" in "a+b > 5 OR a < 3"
+        return UnionNode::make(UnionMode::Positions,
+          _prune_expressions(left_input, input_expressions),
+                               _prune_expressions(right_input, input_expressions));
+      }
+    }
+  }
+
+  if (expression->type == ExpressionType::Not) {
+    // Fallback implementation for NOT, for now
+    current_node = _add_expression(current_node, expression);
+    return PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
+    PredicateCondition::NotEquals, expression, std::make_shared<ValueExpression>(0)));
+  }
+
+  // The required expression is already available or doesn't need to be computed (e.g. when it is a literal)
+  if (!expression->requires_calculation() || current_node->find_column(expression)) return current_node;
+
+  // The required expression needs to be computed
+  return _add_expression(current_node, expression);
+}
+
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_prune_expressions(const std::shared_ptr<AbstractLQPNode>& node,
+                                                            const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const {
+  if (deep_equals_expressions(node->output_column_expressions(), expressions)) return node;
+  return ProjectionNode::make(expressions, node);
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expression(const std::shared_ptr<AbstractLQPNode>& node,
+                                                 const std::shared_ptr<AbstractExpression>& expression) const {
+  Assert(expression->type != ExpressionType::Aggregate, "Aggregate used in illegal location");
+
+  auto expressions = node->output_column_expressions();
+  expressions.emplace_back(expression);
+  return ProjectionNode::make(expressions, node);
 }
 
 }  // namespace opossum

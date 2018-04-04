@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "abstract_lqp_node.hpp"
+#include "plan_column_definition.hpp"
 
 namespace opossum {
 
@@ -20,15 +21,15 @@ class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public Abstr
  public:
   static std::shared_ptr<ProjectionNode> make_pass_through(const std::shared_ptr<AbstractLQPNode>& child);
 
-  explicit ProjectionNode(const std::vector<AliasedExpression>& column_expressions);
+  explicit ProjectionNode(const std::vector<PlanColumnDefinition>& column_definitions);
 
-  const std::vector<AliasedExpression>& column_expressions() const;
+  const std::vector<PlanColumnDefinition>& column_definitions() const;
 
   std::string description() const override;
 
   const std::vector<LQPColumnReference>& output_column_references() const override;
   const std::vector<std::string>& output_column_names() const override;
-  const std::vector<std::shared_ptr<LQPExpression>>& output_column_expressions() const override;
+  const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const override;
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
@@ -41,7 +42,7 @@ class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public Abstr
   void _on_input_changed() override;
 
  private:
-  const std::vector<AliasedExpression> _column_expressions;
+  const std::vector<PlanColumnDefinition> _column_definitions;
 
   mutable std::optional<std::vector<std::string>> _output_column_names;
 

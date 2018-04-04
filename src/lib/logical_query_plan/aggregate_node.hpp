@@ -7,7 +7,7 @@
 
 #include "abstract_lqp_node.hpp"
 #include "lqp_column_reference.hpp"
-#include "named_expression.hpp"
+#include "plan_column_definition.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -22,9 +22,9 @@ namespace opossum {
 class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public AbstractLQPNode {
  public:
   AggregateNode(const std::vector<LQPColumnReference>& groupby_column_references,
-                const std::vector<NamedExpression>& named_aggregate_expressions);
+                const std::vector<PlanColumnDefinition>& aggregate_column_definitions);
 
-  const std::vector<NamedExpression>& named_aggregate_expressions() const;
+  const std::vector<PlanColumnDefinition>& aggregate_column_definitions() const;
   const std::vector<LQPColumnReference>& groupby_column_references() const;
 
   std::string description() const override;
@@ -44,7 +44,7 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
   void _on_input_changed() override;
 
  private:
-  std::vector<NamedExpression> _named_aggregate_expressions;
+  std::vector<PlanColumnDefinition> _aggregate_column_definitions;
   std::vector<LQPColumnReference> _groupby_column_references;
 
   mutable std::optional<std::vector<std::string>> _output_column_names;

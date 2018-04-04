@@ -8,34 +8,34 @@
 #include <vector>
 
 #include "types.hpp"
+#include "expression/lqp_column_expression.hpp"
+#include "expression/lqp_select_expression.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
 std::shared_ptr<ProjectionNode> ProjectionNode::make_pass_through(const std::shared_ptr<AbstractLQPNode>& input) {
-  std::vector<std::shared_ptr<LQPExpression>> expressions =
-      LQPExpression::create_columns(input->output_column_references());
-  const auto projection_node = ProjectionNode::make(expressions);
-  projection_node->set_left_input(input);
+  std::vector<PlanColumnDefinition> column_definitions;
+  column_definitions.reserve(input->output_column_count());
+  for (const auto& column_reference : input->output_column_references()) {
+    column_definitions.emplace_back(std::make_shared<LQPColumnReference>(column_reference));
+  }
+
+  const auto projection_node = ProjectionNode::make(column_definitions, input);
   return projection_node;
 }
 
-ProjectionNode::ProjectionNode(const std::vector<AliasedExpression>& column_expressions)
-    : AbstractLQPNode(LQPNodeType::Projection), _column_expressions(column_expressions) {}
+ProjectionNode::ProjectionNode(const std::vector<PlanColumnDefinition>& column_definitions)
+    : AbstractLQPNode(LQPNodeType::Projection), _column_definitions(column_definitions) {}
 
 std::string ProjectionNode::description() const {
   std::ostringstream desc;
 
   desc << "[Projection] ";
 
-  std::vector<std::string> verbose_column_names;
-  if (left_input()) {
-    verbose_column_names = left_input()->get_verbose_column_names();
-  }
-
-  for (size_t column_idx = 0; column_idx < _column_expressions.size(); ++column_idx) {
-    desc << _column_expressions[column_idx]->to_string(verbose_column_names);
-    if (column_idx + 1 < _column_expressions.size()) {
+  for (size_t column_idx = 0; column_idx < _column_definitions.size(); ++column_idx) {
+    desc << _column_definitions[column_idx].description();
+    if (column_idx + 1 < _column_definitions.size()) {
       desc << ", ";
     }
   }
@@ -48,18 +48,19 @@ std::shared_ptr<AbstractLQPNode> ProjectionNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
   Assert(left_input() && copied_left_input, "Can't deep copy without input to adjust ColumnReferences");
 
-  std::vector<std::shared_ptr<LQPExpression>> column_expressions;
-  column_expressions.reserve(_column_expressions.size());
-  for (const auto& expression : _column_expressions) {
-    column_expressions.emplace_back(
-        adapt_expression_to_different_lqp(expression->deep_copy(), left_input(), copied_left_input));
+  std::vector<std::shared_ptr<PlanColumnDefinition>> column_definitions;
+  column_definitions.reserve(_column_definitions.size());
+  for (const auto& column_definition : _column_definitions) {
+    auto expression = column_definition.expression->deep_copy();
+    adapt_expression_to_different_lqp(*expression, *left_input(), *copied_left_input)
+    column_definitions.emplace_back(expression, column_definition.alias);
   }
 
-  return ProjectionNode::make(column_expressions);
+  return ProjectionNode::make(column_definitions);
 }
 
-const std::vector<AliasedExpression>& ProjectionNode::column_expressions() const {
-  return _column_expressions;
+const std::vector<PlanColumnDefinition>& ProjectionNode::column_definitions() const {
+  return _column_definitions;
 }
 
 void ProjectionNode::_on_input_changed() {
@@ -83,12 +84,12 @@ const std::vector<std::string>& ProjectionNode::output_column_names() const {
   return *_output_column_names;
 }
 
-const std::vector<std::shared_ptr<LQPExpression>>& ProjectionNode::output_column_expressions() const {
+const std::vector<std::shared_ptr<AbstractExpression>>& ProjectionNode::output_column_expressions() const {
   if (!_output_column_expressions) {
     _output_column_expressions->emplace();
     _output_column_expressions->reserve(output_column_count());
-    for (const auto& expression : _column_expressions) {
-      _output_column_expressions->emplace_back(expression.expression->clone()->deep_resolve_column_expressions());
+    for (const auto& column_definition : _column_definitions) {
+      _output_column_expressions->emplace_back(column_definition.expression);
     }
   }
   return *_output_column_expressions;
@@ -96,19 +97,15 @@ const std::vector<std::shared_ptr<LQPExpression>>& ProjectionNode::output_column
 
 std::string ProjectionNode::get_verbose_column_name(ColumnID column_id) const {
   DebugAssert(left_input(), "Need input to generate name");
-  DebugAssert(column_id < _column_expressions.size(), "ColumnID out of range");
+  DebugAssert(column_id < _output_column_expressions.size(), "ColumnID out of range");
 
-  const auto& column_expression = _column_expressions[column_id].expression;
+  const auto& column_expression = _output_column_expressions[column_id].expression;
 
   if (column_expression->alias()) {
     return *column_expression->alias();
   }
-
-  if (left_input()) {
-    return column_expression->to_string(left_input()->output_column_names());
-  } else {
-    return column_expression->to_string();
-  }
+  
+  return column_expression->description();
 }
 
 bool ProjectionNode::shallow_equals(const AbstractLQPNode& rhs) const {
@@ -116,8 +113,8 @@ bool ProjectionNode::shallow_equals(const AbstractLQPNode& rhs) const {
   const auto& projection_node = dynamic_cast<const ProjectionNode&>(rhs);
 
   Assert(left_input() && rhs.left_input(), "Can't compare column references without inputs");
-  return _equals(*left_input(), _column_expressions, *projection_node.left_input(),
-                 projection_node._column_expressions);
+  return _equals(*left_input(), _column_definitions, *projection_node.left_input(),
+                 projection_node._column_definitions);
 }
 
 void ProjectionNode::_update_output() const {
@@ -132,48 +129,37 @@ void ProjectionNode::_update_output() const {
   DebugAssert(left_input(), "Can't set output without input");
 
   _output_column_names.emplace();
-  _output_column_names->reserve(_column_expressions.size());
+  _output_column_names->reserve(_column_definitions.size());
 
   _output_column_references.emplace();
-  _output_column_references->reserve(_column_expressions.size());
+  _output_column_references->reserve(_column_definitions.size());
 
   auto column_id = ColumnID{0};
-  for (const auto& expression : _column_expressions) {
+  for (const auto& column_definition : _column_definitions) {
     // If the expression defines an alias, use it as the output column name.
     // If it does not, we have to handle it differently, depending on the type of the expression.
-    if (expression->alias()) {
-      _output_column_names->emplace_back(*expression->alias());
+    if (column_definition.alias) {
+      _output_column_names->emplace_back(*column_definition.alias);
+    } else {
+      _output_column_names->emplace_back(column_definition.expression->description());
     }
-
-    if (expression->type() == ExpressionType::Column) {
+    
+    const auto& expression = column_definition.expression;
+    
+    if (expression->type == ExpressionType::Column) {
       DebugAssert(left_input(), "ProjectionNode needs a input.");
 
-      _output_column_references->emplace_back(expression->column_reference());
+      const auto column_expression = std::static_pointer_cast<LQPColumnExpression>(expression);
+      DebugAssert(column_expression->column_reference, "Can't use unresolved ColumnExpression here");
 
-      if (!expression->alias()) {
-        const auto input_column_id = left_input()->get_output_column_id(expression->column_reference());
-        const auto& column_name = left_input()->output_column_names()[input_column_id];
-        _output_column_names->emplace_back(column_name);
-      }
-
-    } else if (expression->type() == ExpressionType::Literal || expression->type() == ExpressionType::Placeholder ||
-               expression->is_arithmetic_operator()) {
-      _output_column_references->emplace_back(shared_from_this(), column_id);
-
-      if (!expression->alias()) {
-        _output_column_names->emplace_back(expression->to_string(left_input()->output_column_names()));
-      }
-
-    } else if (expression->type() == ExpressionType::Subselect) {
-      auto node = expression->subselect_node();
+      _output_column_references->emplace_back(column_expression->column_reference);
+    } else if (expression->type == ExpressionType::Select) {
+      auto select_expression = std::static_pointer_cast<LQPSelectExpression>(expression);
+      auto node = select_expression->lqp;
 
       _output_column_references->emplace_back(node, ColumnID(0));
-
-      if (!expression->alias()) {
-        _output_column_names->emplace_back(expression->to_string());
-      }
     } else {
-      Fail("Only column references, arithmetic expressions, subqueries and literals supported for now.");
+      _output_column_references->emplace_back(shared_from_this(), column_id);
     }
 
     column_id++;

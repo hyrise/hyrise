@@ -2,14 +2,15 @@
 
 #include "abstract_expression.hpp"
 #include "types.hpp"
+#include "abstract_predicate_expression.hpp"
 
 namespace opossum {
 
-class PredicateExpression : public AbstractExpression {
+class BinaryPredicateExpression : public AbstractPredicateExpression {
  public:
-  PredicateExpression(const PredicateCondition predicate_condition,
-                      const std::shared_ptr<AbstractExpression>& left_operand,
-                      const std::shared_ptr<AbstractExpression>& right_operand);
+  BinaryPredicateExpression(const PredicateCondition predicate_condition,
+                            const std::shared_ptr<AbstractExpression>& left_operand,
+                            const std::shared_ptr<AbstractExpression>& right_operand);
 
   const std::shared_ptr<AbstractExpression>& left_operand() const;
   const std::shared_ptr<AbstractExpression>& right_operand() const;

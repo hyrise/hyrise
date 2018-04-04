@@ -8,19 +8,22 @@
 #include <vector>
 
 #include "expression/abstract_column_expression.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
 AggregateNode::AggregateNode(const std::vector<LQPColumnReference>& groupby_column_references,
-                             const std::vector<NamedExpression>& named_aggregate_expressions)
+                             const std::vector<PlanColumnDefinition>& aggregate_column_definitions)
     : AbstractLQPNode(LQPNodeType::Aggregate),
-      _named_aggregate_expressions(named_aggregate_expressions),
+      _aggregate_column_definitions(aggregate_column_definitions),
       _groupby_column_references(groupby_column_references) {
-  for ([[gnu::unused]] const auto& named_expression : named_aggregate_expressions) {
-    DebugAssert(named_expression.expression->type() == ExpressionType::Aggregate, "Aggregate expression must be an Aggregate.");
+#if IS_DEBUG
+  for (const auto& aggregate_column_definition : _aggregate_column_definitions) {
+    DebugAssert(aggregate_column_definition.expression->type == ExpressionType::Aggregate, "Aggregate expression must be an Aggregate.");
   }
+#endif
 }
 
 std::shared_ptr<AbstractLQPNode> AggregateNode::_deep_copy_impl(
@@ -28,12 +31,12 @@ std::shared_ptr<AbstractLQPNode> AggregateNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
   Assert(left_input(), "Can't clone without input, need it to adapt column references");
 
-  std::vector<NamedExpression> named_aggregate_expressions;
-  named_aggregate_expressions.reserve(_named_aggregate_expressions.size());
-  for (const auto& named_expression : _named_aggregate_expressions) {
-    auto expression_copy = named_expression.expression->deep_copy();
+  std::vector<PlanColumnDefinition> aggregate_column_definitions;
+  aggregate_column_definitions.reserve(_aggregate_column_definitions.size());
+  for (const auto& aggregate_column_definition : _aggregate_column_definitions) {
+    auto expression_copy = aggregate_column_definition.expression->deep_copy();
     adapt_expression_to_different_lqp(*expression_copy, *left_input(), *copied_left_input);
-    named_aggregate_expressions.emplace_back(expression_copy, named_expression.alias);
+    aggregate_column_definitions.emplace_back(expression_copy, aggregate_column_definition.alias);
   }
 
   std::vector<LQPColumnReference> groupby_column_references;
@@ -43,11 +46,11 @@ std::shared_ptr<AbstractLQPNode> AggregateNode::_deep_copy_impl(
         adapt_column_reference_to_different_lqp(groupby_column_reference, *left_input(), *copied_left_input));
   }
 
-  return AggregateNode::make(named_aggregate_expressions, groupby_column_references);
+  return AggregateNode::make(groupby_column_references, aggregate_column_definitions);
 }
 
-const std::vector<NamedExpression>& AggregateNode::named_aggregate_expressions() const {
-  return _named_aggregate_expressions;
+const std::vector<PlanColumnDefinition>& AggregateNode::aggregate_column_definitions() const {
+  return _aggregate_column_definitions;
 }
 
 const std::vector<LQPColumnReference>& AggregateNode::groupby_column_references() const {
@@ -59,9 +62,9 @@ std::string AggregateNode::description() const {
 
   s << "[Aggregate] ";
 
-  for (auto aggregate_idx = size_t{0}; aggregate_idx < _named_aggregate_expressions.size(); ++aggregate_idx) {
-    s << _named_aggregate_expressions[aggregate_idx].to_string();
-    if (aggregate_idx + 1 < _named_aggregate_expressions.size()) {
+  for (auto aggregate_idx = size_t{0}; aggregate_idx < _aggregate_column_definitions.size(); ++aggregate_idx) {
+    s << _aggregate_column_definitions[aggregate_idx].description();
+    if (aggregate_idx + 1 < _aggregate_column_definitions.size()) {
       s << ", ";
     }
   }
@@ -90,7 +93,7 @@ std::string AggregateNode::get_verbose_column_name(ColumnID column_id) const {
   const auto aggregate_column_id = column_id - _groupby_column_references.size();
   DebugAssert(aggregate_column_id < _aggregate_expressions.size(), "ColumnID out of range");
 
-  return _named_aggregate_expressions[aggregate_column_id].to_string();
+  return _aggregate_column_definitions[aggregate_column_id].description();
 }
 
 void AggregateNode::_on_input_changed() {
@@ -121,8 +124,8 @@ const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::output_co
     for (const auto& groupby_column : _groupby_column_references) {
       _output_column_expressions->emplace_back(std::make_shared<LQPColumnExpression>(groupby_column));
     }
-    for (const auto& named_aggregate_expression : _named_aggregate_expressions) {
-      _output_column_expressions->emplace_back(named_aggregate_expression->deep_copy());
+    for (const auto& aggregate_column_definition : _aggregate_column_definitions) {
+      _output_column_expressions->emplace_back(aggregate_column_definition.expression);
     }
   }
   return *_output_column_expressions;
@@ -133,7 +136,7 @@ bool AggregateNode::shallow_equals(const AbstractLQPNode& rhs) const {
   const auto& aggregate_node = static_cast<const AggregateNode&>(rhs);
 
   Assert(left_input() && rhs.left_input(), "Can't compare column references without inputs");
-  return _equals(*left_input(), _aggregate_expressions, *rhs.left_input(), aggregate_node.aggregate_expressions()) &&
+  return _equals(*left_input(), _aggregate_column_definitions, *rhs.left_input(), aggregate_node.aggregate_column_definitions()) &&
          _equals(*left_input(), _groupby_column_references, *rhs.left_input(),
                  aggregate_node.groupby_column_references());
 }
@@ -150,13 +153,13 @@ void AggregateNode::_update_output() const {
   DebugAssert(left_input(), "Can't set output without input");
 
   _output_column_names.emplace();
-  _output_column_names->reserve(_groupby_column_references.size() + _aggregate_expressions.size());
+  _output_column_names->reserve(_groupby_column_references.size() + _aggregate_column_definitions.size());
 
   _output_column_references.emplace();
-  _output_column_references->reserve(_groupby_column_references.size() + _aggregate_expressions.size());
+  _output_column_references->reserve(_groupby_column_references.size() + _aggregate_column_definitions.size());
 
   /**
-   * Set output column ids and names.
+   * Set output column references and names.
    *
    * The Aggregate operator will put all GROUP BY columns in the output table at the beginning,
    * so we first handle those, and afterwards add the column information for the aggregate functions.
@@ -169,13 +172,13 @@ void AggregateNode::_update_output() const {
   }
 
   auto column_id = static_cast<ColumnID>(_groupby_column_references.size());
-  for (const auto& aggregate_expression : _aggregate_expressions) {
-    DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Expression must be a function.");
+  for (const auto& aggregate_column_definition : _aggregate_column_definitions) {
+    DebugAssert(aggregate_column_definition.expression->type == ExpressionType::Aggregate, "Expression must be a aggregate.");
 
     std::string column_name;
 
-    if (aggregate_expression->alias()) {
-      column_name = *aggregate_expression->alias();
+    if (aggregate_column_definition.alias) {
+      column_name = *aggregate_column_definition.alias;
     } else {
       /**
        * If the aggregate function has no alias defined in the query, we simply parse the expression back to a string.
@@ -183,7 +186,7 @@ void AggregateNode::_update_output() const {
        * This might result in multiple output columns with the same name, but we accept that.
        * Other DBs behave similarly (e.g. MySQL).
        */
-      column_name = aggregate_expression->to_string(left_input()->output_column_names());
+      column_name = aggregate_column_definition.expression->description();
     }
 
     _output_column_names->emplace_back(column_name);

@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "expression/abstract_expression.hpp"
+#include "plan_column_definition.hpp"
 #include "lqp_column_reference.hpp"
-#include "named_expression.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -166,11 +166,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * @returns the names of the columns this node outputs without any alias added by this node
    */
   virtual const std::vector<std::string>& output_column_names() const;
-
-  /**
-   * @returns the names and prefixes of the columns that this node outputs
-   */
-  virtual const std::vector<QualifiedColumnName>& qualified_output_column_names() const;
 
   /**
    * @returns the ColumnReferences of the columns this node outputs
@@ -342,12 +337,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    */
   virtual void _on_input_changed() {}
 
-  /**
-   * @pre    AbstractLQPNode will only call this if it has no _table_alias and the column is not created by this node
-   * @return the table alias of a column, either set by this node or the subplan that the column stems from
-   */
-  virtual std::optional<std::string> _output_column_table_alias_impl(const ColumnID column_id) const;
-
   // Used to easily differentiate between node types without pointer casts.
   LQPNodeType _type;
 
@@ -373,9 +362,9 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
   /** Utility to compare vectors of Expressions from different LQPs */
   static bool _equals(const AbstractLQPNode& lqp_left,
-                      const std::vector<NamedExpression>& named_expressions_left,
+                      const std::vector<PlanColumnDefinition>& column_definitions_left,
                       const AbstractLQPNode& lqp_right,
-                      const std::vector<NamedExpression>& named_expressions_right);
+                      const std::vector<PlanColumnDefinition>& column_definitions_right);
 
   /** Utility to compare two Expressions from different LQPs */
   static bool _equals(const AbstractLQPNode& lqp_left, const AbstractExpression& expression_left,

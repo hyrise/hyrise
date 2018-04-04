@@ -8,7 +8,9 @@ enum class ArithmeticOperator {
   Addition,
   Subtraction,
   Multiplication,
-  Division
+  Division,
+  Modulo,
+  Power
 };
 
 class ArithmeticExpression : public AbstractExpression {

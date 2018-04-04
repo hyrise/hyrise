@@ -1,19 +1,19 @@
 #include "exists_expression.hpp"
 
-#include "select_expression.hpp"
+#include "lqp_select_expression.hpp"
 
 #include <sstream>
 
 namespace opossum {
 
-ExistsExpression::ExistsExpression(const std::shared_ptr<SelectExpression>& select):
+ExistsExpression::ExistsExpression(const std::shared_ptr<LQPSelectExpression>& select):
   AbstractExpression(ExpressionType::Exists, {select}) {
 
 }
 
-const std::shared_ptr<SelectExpression>& ExistsExpression::select() const {
+const std::shared_ptr<LQPSelectExpression>& ExistsExpression::select() const {
   Assert(arguments[0]->type == ExpressionType::Select, "Expected to contains Select Expression");
-  return std::static_pointer_cast<SelectExpression>(arguments[0]);
+  return std::static_pointer_cast<LQPSelectExpression>(arguments[0]);
 }
 
 std::string ExistsExpression::description() const {

@@ -32,7 +32,6 @@ class SQLTranslator final : public Noncopyable {
    */
   explicit constexpr SQLTranslator(bool validate = true) : _validate{validate} {}
 
-  // Translates the given SQL result.
   std::vector<std::shared_ptr<AbstractLQPNode>> translate_parse_result(const hsql::SQLParserResult& result);
 
   std::shared_ptr<AbstractLQPNode> translate_statement(const hsql::SQLStatement& statement);
@@ -73,13 +72,15 @@ class SQLTranslator final : public Noncopyable {
   std::shared_ptr<AbstractLQPNode> _translate_table_ref_alias(const std::shared_ptr<AbstractLQPNode>& node,
                                                               const hsql::TableRef& table);
 
-  /**
-   * Helper function to avoid code duplication for WHERE and HAVING
-   */
-  std::shared_ptr<AbstractLQPNode> _translate_predicate(
-      const hsql::Expr& hsql_expr, bool allow_function_columns,
-      const std::function<LQPColumnReference(const hsql::Expr&)>& resolve_column,
-      const std::shared_ptr<AbstractLQPNode>& input_node);
+
+  std::shared_ptr<AbstractLQPNode> _translate_predicate_expression(
+  const std::shared_ptr<AbstractExpression> &expression, std::shared_ptr<AbstractLQPNode> current_node) const;
+
+  std::shared_ptr<AbstractLQPNode> _prune_expressions(const std::shared_ptr<AbstractLQPNode>& node,
+                                                              const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const;
+
+  std::shared_ptr<AbstractLQPNode> _add_expression(const std::shared_ptr<AbstractLQPNode>& node,
+                                                              const std::shared_ptr<AbstractExpression>& expression) const;
 
   std::shared_ptr<AbstractLQPNode> _translate_show(const hsql::ShowStatement& show_statement);
 

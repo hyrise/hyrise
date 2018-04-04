@@ -5,7 +5,6 @@
 #include "boost/variant.hpp"
 
 #include "abstract_expression.hpp"
-#include "null_expression.hpp"
 #include "resolve_type.hpp"
 #include "types.hpp"
 

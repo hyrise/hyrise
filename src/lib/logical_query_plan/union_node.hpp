@@ -21,7 +21,7 @@ class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode
 
   const std::vector<std::string>& output_column_names() const override;
   const std::vector<LQPColumnReference>& output_column_references() const override;
-  const std::vector<std::shared_ptr<LQPExpression>>& output_column_expressions() const override;
+  const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const override;
 
   std::shared_ptr<TableStatistics> derive_statistics_from(
       const std::shared_ptr<AbstractLQPNode>& left_input,
@@ -33,7 +33,6 @@ class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
       const std::shared_ptr<AbstractLQPNode>& copied_left_input,
       const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
-  std::optional<std::string> _output_column_table_alias(const ColumnID column_id) const override;
 
  private:
   UnionMode _union_mode;

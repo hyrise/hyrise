@@ -5,6 +5,8 @@ set(
     all_parameter_variant.hpp
     all_type_variant.cpp
     all_type_variant.hpp
+    plan_column_definition.cpp
+    plan_column_definition.hpp
     concurrency/commit_context.cpp
     concurrency/commit_context.hpp
     concurrency/transaction_context.cpp
@@ -19,6 +21,10 @@ set(
     expression/aggregate_expression.hpp
     expression/arithmetic_expression.cpp
     expression/arithmetic_expression.hpp
+    expression/between_expression.cpp
+    expression/between_expression.hpp
+    expression/binary_predicate_expression.cpp
+    expression/binary_predicate_expression.hpp
     expression/case_expression.cpp
     expression/case_expression.hpp
     expression/abstract_column_expression.cpp
@@ -29,18 +35,20 @@ set(
     expression/function_expression.hpp
     expression/in_expression.cpp
     expression/in_expression.hpp
+    expression/is_null_expression.cpp
+    expression/is_null_expression.hpp
     expression/logical_expression.cpp
     expression/logical_expression.hpp
     expression/lqp_column_expression.cpp
     expression/lqp_column_expression.hpp
-    expression/null_expression.cpp
-    expression/null_expression.hpp
-    expression/predicate_expression.cpp
-    expression/predicate_expression.hpp
+    expression/abstract_predicate_expression.cpp
+    expression/abstract_predicate_expression.hpp
+    expression/pqp_select_expression.cpp
+    expression/pqp_select_expression.cpp
     expression/pqp_column_expression.cpp
     expression/pqp_column_expression.hpp
-    expression/select_expression.cpp
-    expression/select_expression.hpp
+    expression/lqp_select_expression.cpp
+    expression/lqp_select_expression.hpp
     expression/value_expression.cpp
     expression/value_expression.hpp
     expression/value_placeholder_expression.cpp
@@ -80,7 +88,6 @@ set(
     logical_query_plan/lqp_translator.hpp
     logical_query_plan/mock_node.cpp
     logical_query_plan/mock_node.hpp
-    logical_query_plan/named_expression.hpp
     logical_query_plan/predicate_node.cpp
     logical_query_plan/predicate_node.hpp
     logical_query_plan/projection_node.cpp

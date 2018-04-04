@@ -12,7 +12,9 @@ enum class LogicalOperator {
 
 class LogicalExpression : public AbstractExpression {
  public:
-  LogicalExpression(const LogicalOperator logical_operator, const std::shared_ptr<AbstractExpression>& left_operand, const std::shared_ptr<AbstractExpression>& right_operand);
+  LogicalExpression(const LogicalOperator logical_operator,
+                    const std::shared_ptr<AbstractExpression>& left_operand,
+                    const std::shared_ptr<AbstractExpression>& right_operand);
 
   const std::shared_ptr<AbstractExpression>& left_operand() const;
   const std::shared_ptr<AbstractExpression>& right_operand() const;

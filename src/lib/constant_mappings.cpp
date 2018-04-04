@@ -94,28 +94,6 @@ const std::unordered_map<OrderByMode, std::string> order_by_mode_to_string = {
     {OrderByMode::Ascending, "Ascending"}, {OrderByMode::Descending, "Descending"},
 };
 
-const std::unordered_map<hsql::OperatorType, ExpressionType> operator_type_to_expression_type = {
-    {hsql::kOpPlus, ExpressionType::Addition},
-    {hsql::kOpMinus, ExpressionType::Subtraction},
-    {hsql::kOpAsterisk, ExpressionType::Multiplication},
-    {hsql::kOpSlash, ExpressionType::Division},
-    {hsql::kOpPercentage, ExpressionType::Modulo},
-    {hsql::kOpCaret, ExpressionType::Power},
-    {hsql::kOpBetween, ExpressionType::Between},
-    {hsql::kOpEquals, ExpressionType::Equals},
-    {hsql::kOpNotEquals, ExpressionType::NotEquals},
-    {hsql::kOpLess, ExpressionType::LessThan},
-    {hsql::kOpLessEq, ExpressionType::LessThanEquals},
-    {hsql::kOpGreater, ExpressionType::GreaterThan},
-    {hsql::kOpGreaterEq, ExpressionType::GreaterThanEquals},
-    {hsql::kOpLike, ExpressionType::Like},
-    {hsql::kOpNotLike, ExpressionType::NotLike},
-    {hsql::kOpCase, ExpressionType::Case},
-    {hsql::kOpExists, ExpressionType::Exists},
-    {hsql::kOpIn, ExpressionType::In},
-    {hsql::kOpIsNull, ExpressionType::IsNull},
-    {hsql::kOpOr, ExpressionType::Or},
-};
 
 const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mode = {
     {hsql::kOrderAsc, OrderByMode::Ascending}, {hsql::kOrderDesc, OrderByMode::Descending},
@@ -150,6 +128,12 @@ const boost::bimap<AggregateType, std::string> aggregate_type_to_string =
         {AggregateType::Count, "COUNT"},
         {AggregateType::CountDistinct, "COUNT DISTINCT"},
     });
+
+const boost::bimap<FunctionType, std::string> function_type_to_string =
+make_bimap<FunctionType, std::string>({
+                                       {FunctionType::Extract, "EXTRACT"},
+                                       {FunctionType::Substring, "SUM"}
+});
 
 const boost::bimap<DataType, std::string> data_type_to_string =
     hana::fold(data_type_enum_string_pairs, boost::bimap<DataType, std::string>{},
