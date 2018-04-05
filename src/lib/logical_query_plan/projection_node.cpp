@@ -141,7 +141,7 @@ void ProjectionNode::_update_output() const {
     if (column_definition.alias) {
       _output_column_names->emplace_back(*column_definition.alias);
     } else {
-      _output_column_names->emplace_back(column_definition.expression->description());
+      _output_column_names->emplace_back(column_definition.expression->as_column_name());
     }
     
     const auto& expression = column_definition.expression;

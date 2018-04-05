@@ -13,7 +13,7 @@ PlanColumnDefinition::PlanColumnDefinition(const std::shared_ptr<AbstractExpress
 
 std::string PlanColumnDefinition::description() const {
   std::stringstream stream;
-  stream << expression->description();
+  stream << expression->as_column_name();
   if (alias) {
     stream << " AS " << *alias;
   }

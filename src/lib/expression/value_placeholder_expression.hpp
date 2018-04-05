@@ -10,7 +10,7 @@ class ValuePlaceholderExpression : public AbstractExpression {
   explicit ValuePlaceholderExpression(const ValuePlaceholder& value_placeholder);
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
-  std::string description() const override;
+  std::string as_column_name() const override;
 
   ValuePlaceholder value_placeholder;
 

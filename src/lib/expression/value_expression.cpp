@@ -12,7 +12,7 @@ std::shared_ptr<AbstractExpression> ValueExpression::deep_copy() const  {
   return std::make_shared<ValueExpression>(value);
 }
 
-std::string ValueExpression::description() const {
+std::string ValueExpression::as_column_name() const {
   std::stringstream stream;
 
   Fail("Todo");

@@ -16,7 +16,7 @@ const std::shared_ptr<LQPSelectExpression>& ExistsExpression::select() const {
   return std::static_pointer_cast<LQPSelectExpression>(arguments[0]);
 }
 
-std::string ExistsExpression::description() const {
+std::string ExistsExpression::as_column_name() const {
   std::stringstream stream;
 
   Fail("Todo");

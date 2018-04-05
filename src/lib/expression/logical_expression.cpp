@@ -21,7 +21,7 @@ std::shared_ptr<AbstractExpression> LogicalExpression::deep_copy() const {
   return std::make_shared<LogicalExpression>(logical_operator, left_operand()->deep_copy(), left_operand()->deep_copy());
 }
 
-std::string LogicalExpression::description() const {
+std::string LogicalExpression::as_column_name() const {
   std::stringstream stream;
 
 

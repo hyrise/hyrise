@@ -14,7 +14,7 @@ class AggregateExpression : public AbstractExpression {
                       const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
-  std::string description() const override;
+  std::string as_column_name() const override;
 
   AggregateType aggregate_type;
 

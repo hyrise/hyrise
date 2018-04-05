@@ -12,7 +12,7 @@ std::shared_ptr<AbstractExpression> ValuePlaceholderExpression::deep_copy() cons
   return std::make_shared<ValuePlaceholderExpression>(value_placeholder);
 }
 
-std::string ValuePlaceholderExpression::description() const {
+std::string ValuePlaceholderExpression::as_column_name() const {
   std::stringstream stream;
 
   Fail("Todo");

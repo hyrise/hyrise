@@ -265,10 +265,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::Join
   const auto right_in_right_node = right_node->find_column(*right_operand_expression);
 
   Assert(static_cast<bool>(left_in_left_node) ^ static_cast<bool>(left_in_right_node),
-         std::string("Left operand ") + left_operand_expression->description() +
+         std::string("Left operand ") + left_operand_expression->as_column_name() +
              " must be in exactly one of the input nodes");
   Assert(static_cast<bool>(right_in_left_node) ^ static_cast<bool>(right_in_right_node),
-         std::string("Right operand ") + right_operand_expression->description() +
+         std::string("Right operand ") + right_operand_expression->as_column_name() +
              " must be in exactly one of the input nodes");
 
   if (left_in_right_node) {

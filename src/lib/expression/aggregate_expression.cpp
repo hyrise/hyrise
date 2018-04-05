@@ -15,7 +15,7 @@ std::shared_ptr<AbstractExpression> AggregateExpression::deep_copy() const {
   return std::make_shared<AggregateExpression>(aggregate_type, deep_copy_expressions(arguments));
 }
 
-std::string AggregateExpression::description() const {
+std::string AggregateExpression::as_column_name() const {
   std::stringstream stream;
 
   Fail("Todo");

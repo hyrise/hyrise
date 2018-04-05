@@ -21,7 +21,7 @@ std::shared_ptr<AbstractExpression> ArithmeticExpression::deep_copy() const {
   return std::make_shared<ArithmeticExpression>(arithmetic_operator, left_operand()->deep_copy(), left_operand()->deep_copy());
 }
 
-std::string ArithmeticExpression::description() const {
+std::string ArithmeticExpression::as_column_name() const {
   std::stringstream stream;
 
   Fail("Todo");

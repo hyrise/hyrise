@@ -14,7 +14,7 @@ std::shared_ptr<AbstractExpression> FunctionExpression::deep_copy() const {
   return std::make_shared<FunctionExpression>(function_type, deep_copy_expressions(arguments));
 }
 
-std::string FunctionExpression::description() const {
+std::string FunctionExpression::as_column_name() const {
   std::stringstream stream;
 
   Fail("Todo");

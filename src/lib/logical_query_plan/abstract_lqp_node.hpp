@@ -344,16 +344,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   virtual std::optional<QualifiedColumnName> _resolve_local_table_name(
       const QualifiedColumnName& qualified_column_name) const;
 
-  /** Utility to compare vectors of Expressions from different LQPs */
-  static bool _equals(const AbstractLQPNode& lqp_left,
-                      const std::vector<PlanColumnDefinition>& column_definitions_left,
-                      const AbstractLQPNode& lqp_right,
-                      const std::vector<PlanColumnDefinition>& column_definitions_right);
-
-  /** Utility to compare two Expressions from different LQPs */
-  static bool _equals(const AbstractLQPNode& lqp_left, const AbstractExpression& expression_left,
-                      const AbstractLQPNode& lqp_right, const AbstractExpression& expression_right);
-
   /** Utility to compare vectors of LQPColumnReferences from different LQPs */
   static bool _equals(const AbstractLQPNode& lqp_left, const std::vector<LQPColumnReference>& column_references_left,
                       const AbstractLQPNode& lqp_right, const std::vector<LQPColumnReference>& column_references_right);

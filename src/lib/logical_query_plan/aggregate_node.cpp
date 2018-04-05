@@ -49,55 +49,22 @@ const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::aggregate
 std::string AggregateNode::description() const {
   std::ostringstream stream;
 
-  stream << "[Aggregate] " << expressions_descriptions(_aggregate_expressions);
-  stream << " GROUP BY [" << expressions_descriptions(_group_by_expressions) << "]";
+  stream << "[Aggregate] " << expression_column_names(_aggregate_expressions);
+  stream << " GROUP BY [" << expression_column_names(_group_by_expressions) << "]";
 
   return stream.str();
-}
-
-std::string AggregateNode::get_verbose_column_name(ColumnID column_id) const {
-  DebugAssert(left_input(), "Need input to generate name");
-
-  if (column_id < _groupby_column_references.size()) {
-    return _groupby_column_references[column_id].description();
-  }
-
-  const auto aggregate_column_id = column_id - _groupby_column_references.size();
-  DebugAssert(aggregate_column_id < _aggregate_expressions.size(), "ColumnID out of range");
-
-  return _aggregate_column_definitions[aggregate_column_id].description();
-}
-
-void AggregateNode::_on_input_changed() {
-  DebugAssert(!right_input(), "AggregateNode can't have a right input.");
-
-  _output_column_names.reset();
-}
-
-const std::vector<std::string>& AggregateNode::output_column_names() const {
-  Assert(left_input(), "Input not set, can't know output column names without it");
-  if (!_output_column_names) {
-    _update_output();
-  }
-  return *_output_column_names;
-}
-
-const std::vector<LQPColumnReference>& AggregateNode::output_column_references() const {
-  if (!_output_column_references) {
-    _update_output();
-  }
-  return *_output_column_references;
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::output_column_expressions() const {
   if (!_output_column_expressions) {
     _output_column_expressions->emplace();
     _output_column_expressions->reserve(output_column_count());
-    for (const auto& groupby_column : _groupby_column_references) {
-      _output_column_expressions->emplace_back(std::make_shared<LQPColumnExpression>(groupby_column));
+
+    for (const auto& group_by_expression : _group_by_expressions) {
+      _output_column_expressions->emplace_back(group_by_expression);
     }
-    for (const auto& aggregate_column_definition : _aggregate_column_definitions) {
-      _output_column_expressions->emplace_back(aggregate_column_definition.expression);
+    for (const auto& aggregate_expression : _aggregate_expressions) {
+      _output_column_expressions->emplace_back(aggregate_expression);
     }
   }
   return *_output_column_expressions;

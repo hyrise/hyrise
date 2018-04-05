@@ -15,7 +15,7 @@ namespace opossum {
       return std::make_shared<ArrayExpression>(deep_copy_expressions(arguments));
   }
 
-  std::string ArrayExpression::description() const {
+  std::string ArrayExpression::as_column_name() const {
     Fail("Notyetimplemented");
     return "";
   }

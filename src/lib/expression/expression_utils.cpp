@@ -28,6 +28,14 @@ bool deep_equals_expressions(const std::vector<std::shared_ptr<AbstractExpressio
   return true;
 }
 
+bool deep_equals_expressions(const AbstractLQPNode& lqp_left,
+                             const std::vector<std::shared_ptr<AbstractExpression>>& expressions_left,
+                             const AbstractLQPNode& lqp_right,
+                             const std::vector<std::shared_ptr<AbstractExpression>>& expressions_right);
+
+bool deep_equals_expressions(const AbstractLQPNode& lqp_left, const AbstractExpression& expression_left,
+                             const AbstractLQPNode& lqp_right, const AbstractExpression& expression_right);
+
 std::vector<std::shared_ptr<AbstractExpression>> deep_copy_expressions(const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
   std::vector<std::shared_ptr<AbstractExpression>> copies;
   copies.reserve(expressions.size());
@@ -54,9 +62,15 @@ AbstractLQPNode& copied_lqp) {
   return copied_expressions;
 }
 
-std::string expressions_descriptions(const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
+std::string expression_column_names(const std::vector<std::shared_ptr<AbstractExpression>> &expressions) {
   std::stringstream stream;
-  for (auto expression_idx x=s)
+  for (auto expression_idx = size_t{0}; expression_idx < expressions.size(); ++expression_idx) {
+    stream << expressions[expression_idx];
+    if (expression_idx + 1 < expressions.size()) {
+      stream << ", ";
+    }
+  }
+  return stream.str();
 }
 
 void visit_expression(std::shared_ptr<AbstractExpression>& expression, const ExpressionVisitor& visitor) {
