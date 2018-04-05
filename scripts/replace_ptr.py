@@ -7,10 +7,10 @@ def process(file_path):
     out_lines = []
 
     regex_repl_pairs = [
-        (re.compile("std::shared_ptr<([a-zA-Z]*)>"), r"\1SPtr"),
-        (re.compile("std::shared_ptr<const ([a-zA-Z]*)>"), r"\1CSPtr"),
-        (re.compile("std::weak_ptr<([a-zA-Z]*)>"), r"\1WPtr"),
-        (re.compile("std::weak_ptr<const ([a-zA-Z]*)>"), r"\1CWPtr")
+        (re.compile("std::shared_ptr<([a-zA-Z]*)(<([a-zA-Z]*)>)?>"), r"\1SPtr\2"),
+        (re.compile("std::shared_ptr<const ([a-zA-Z]*)(<([a-zA-Z]*)>)?>"), r"\1CSPtr\2"),
+        (re.compile("std::weak_ptr<([a-zA-Z]*)(<([a-zA-Z]*)>)?>"), r"\1WPtr\2"),
+        (re.compile("std::weak_ptr<const ([a-zA-Z]*)(<([a-zA-Z]*)>)?>"), r"\1CWPtr\2"),
     ]
 
     with open(file_path) as file:
