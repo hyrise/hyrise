@@ -28,11 +28,10 @@ def process(file_path):
             if out_line != in_line:
                 print("{} -> {}".format(in_line, out_line))
 
-            #out_lines.append(line)
+            out_lines.append(out_line)
 
-
-    #with open(file_name, "w") as file:
-    #    file.writelines(out_lines)
+    with open(file_path, "w") as file:
+        file.writelines(out_lines)
 
 
 
