@@ -4,6 +4,8 @@ import os
 class_names = set()
 
 def process(file_path):
+    print("Processing {}".format(file_path))
+
     out_lines = []
 
     regex_repl_pairs = [
@@ -25,8 +27,8 @@ def process(file_path):
 
                 out_line, _ = regex.subn(repl, out_line)
 
-            if out_line != in_line:
-                print("{} -> {}".format(in_line, out_line))
+            #if out_line != in_line:
+            #    print("{} -> {}".format(in_line, out_line))
 
             out_lines.append(out_line)
 
