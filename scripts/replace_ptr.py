@@ -9,7 +9,7 @@ def process(file_path):
     out_lines = []
 
     regex_repl_pairs = [
-        (re.compile("std::shared_ptr<(opossum::)?([a-zA-Z]*)(<(opossum::)?(_[a-zA-Z0-9]*)>)?>"), r"\1\2SPtr\3"),
+        (re.compile("std::shared_ptr<(opossum::)?([a-zA-Z]*)(<(opossum::)?([_a-zA-Z0-9]*)>)?>"), r"\1\2SPtr\3"),
         (re.compile("std::shared_ptr<const (opossum::)?([:a-zA-Z]*)(<(opossum::)?([_a-zA-Z0-9]*)>)?>"), r"\1\2CSPtr\3"),
         (re.compile("std::weak_ptr<(opossum::)?([:a-zA-Z]*)(<(opossum::)?([_a-zA-Z0-9]*)>)?>"), r"\1\2WPtr\2\3"),
         (re.compile("std::weak_ptr<const (opossum::)?([:a-zA-Z]*)(<(opossum::)?([_a-zA-Z0-9]*)>)?>"), r"\1\2CWPtr\3"),
@@ -40,8 +40,8 @@ def process(file_path):
 if __name__ == "__main__":
     directories = ["src"]
 
-    for root_directoy in directories:
-        for root, _, file_names in os.walk(root_directoy):
+    for root_directory in directories:
+        for root, _, file_names in os.walk(root_directory):
             for file_name in file_names:
                 if file_name == "create_ptr_aliases.hpp":
                     continue
