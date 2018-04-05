@@ -36,7 +36,7 @@ def process(file_path):
 
 
 if __name__ == "__main__":
-    directories = ["src/lib", "src/test"]
+    directories = ["src"]
 
     for root_directoy in directories:
         for root, _, file_names in os.walk(root_directoy):
