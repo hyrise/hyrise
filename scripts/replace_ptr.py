@@ -44,7 +44,8 @@ if __name__ == "__main__":
                 if file_name == "create_ptr_aliases.hpp":
                     continue
 
-                process(os.path.join(root, file_name))
+                if file_name.endswith(("cpp", "hpp")):
+                    process(os.path.join(root, file_name))
 
     for class_name in class_names:
         print("Class {}".format(class_name))
