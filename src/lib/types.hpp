@@ -178,7 +178,6 @@ class ValuePlaceholder {
   uint16_t _index;
 };
 
-// TODO(anyone): integrate and replace with ExpressionType
 enum class PredicateCondition {
   Equals,
   NotEquals,
@@ -186,13 +185,15 @@ enum class PredicateCondition {
   LessThanEquals,
   GreaterThan,
   GreaterThanEquals,
-  Between,  // Currently, OpBetween is not handled by a single scan. The LQPTranslator creates two scans.
+  Between,
   In,
   Like,
   NotLike,
   IsNull,
   IsNotNull
 };
+
+// PredicateCondition flip_predicate_condition(const PredicateCondition predicate_condition);
 
 enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self, Semi, Anti };
 

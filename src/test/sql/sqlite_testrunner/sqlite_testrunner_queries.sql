@@ -134,7 +134,9 @@ INSERT INTO id_int_int_int_100 (id, a, b, c) SELECT 100, 1, 2, 3 FROM id_int_int
 INSERT INTO id_int_int_int_100 (b, id, c, a) SELECT 2, 100, 3, 1 FROM id_int_int_int_100; SELECT * FROM id_int_int_int_100;
 
 -- INSERT ... INTO ... (with regular queries)
-INSERT INTO mixed_null SELECT a, b, c, d FROM mixed WHERE a = 'c' AND b > 15; INSERT INTO mixed_null SELECT a, b, c, d FROM mixed WHERE d = 'caoe'; INSERT INTO mixed_null (b, c, a, d) SELECT b, c, a, d FROM mixed WHERE id < 13; SELECT * FROM mixed_null;
+INSERT INTO mixed_null SELECT a, b, c, d FROM mixed WHERE a = 'c' AND b > 15;
+INSERT INTO mixed_null SELECT a, b, c, d FROM mixed WHERE d = 'caoe';
+INSERT INTO mixed_null (b, c, a, d) SELECT b, c, a, d FROM mixed WHERE id < 13; SELECT * FROM mixed_null;
 
 
 -- VIEWS disabled because of #367

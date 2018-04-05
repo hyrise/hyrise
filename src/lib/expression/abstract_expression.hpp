@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "types.hpp"
+#include "expression_utils.hpp"
 
 namespace opossum {
 
@@ -29,13 +30,5 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
  protected:
   virtual bool _shallow_equals(const AbstractExpression& expression) const;
 };
-
-bool deep_equals_expressions(const std::vector<std::shared_ptr<AbstractExpression>>& expressions_a, const std::vector<std::shared_ptr<AbstractExpression>>& expressions_b);
-
-std::vector<std::shared_ptr<AbstractExpression>> deep_copy_expressions(const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
-
-using ExpressionVisitor = std::function<bool(std::shared_ptr<AbstractExpression>&)>;
-
-void visit_expression(std::shared_ptr<AbstractExpression>& expression, const ExpressionVisitor& visitor);
 
 }  // namespace opossum

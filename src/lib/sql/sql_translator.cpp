@@ -5,6 +5,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -92,167 +93,93 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_statement(const hsql::
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::InsertStatement& insert) {
-  const std::string table_name{insert.tableName};
+  const auto table_name = std::string{insert.tableName};
   auto target_table = StorageManager::get().get_table(table_name);
+  auto target_table_node = std::make_shared<StoredTableNode>(table_name);
 
-  Assert(target_table != nullptr, "Insert: Invalid table name");
+  Assert(target_table, "INSERT: Invalid table name");
 
-  std::shared_ptr<AbstractLQPNode> current_result_node;
+  // Plan that generates the data to insert
+  auto insert_data_node = std::shared_ptr<AbstractLQPNode>{};
 
-  // Check for SELECT ... INTO .. query
+  // Check for `INSERT ... INTO newtable FROM oldtable WHERE condition` query
   if (insert.type == hsql::kInsertSelect) {
-    DebugAssert(insert.select != nullptr, "Insert: no select statement given");
-    current_result_node = translate_select(*insert.select);
+    Assert(insert.select, "INSERT INTO ... SELECT ...: No SELECT statement given");
+
+    insert_data_node = translate_select(*insert.select);
   } else {
-    current_result_node = DummyTableNode::make();
+    Assert(insert.values, "INSERT INTO ... VALUES: No values given");
+
+    std::vector<std::shared_ptr<AbstractExpression>> value_expressions(insert.values->size());
+    for (const auto* value : *insert.values) {
+      value_expressions.emplace_back(translate_hsql_expr(*value, {}));
+    }
+
+    insert_data_node = ProjectionNode::make(value_expressions, DummyTableNode::make());
   }
 
-  // Lambda to compare a DataType to the type of an hqsl::Expr
-  auto literal_matches_data_type = [](const hsql::Expr& expr, const DataType& column_type) {
-    switch (column_type) {
-      case DataType::Int:
-        return expr.isType(hsql::kExprLiteralInt);
-      case DataType::Long:
-        return expr.isType(hsql::kExprLiteralInt);
-      case DataType::Float:
-        return expr.isType(hsql::kExprLiteralFloat);
-      case DataType::Double:
-        return expr.isType(hsql::kExprLiteralFloat);
-      case DataType::String:
-        return expr.isType(hsql::kExprLiteralString);
-      case DataType::Null:
-        return expr.isType(hsql::kExprLiteralNull);
-      default:
-        return false;
-    }
-  };
+  if (insert.columns) {
+    Assert(insert.columns->size() == insert_data_node->output_column_count(), "INSERT: Target column count and number of input columns mismatch");
 
-  // Lambda to compare a vector of DataType to the types of a vector of hqsl::Expr
-  auto data_types_match_expr_types = [&](const std::vector<DataType>& data_types,
-                                         const std::vector<hsql::Expr*>& expressions) {
-    auto data_types_it = data_types.begin();
-    auto expressions_it = expressions.begin();
-
-    while (data_types_it != data_types.end() && expressions_it != expressions.end()) {
-      if (!literal_matches_data_type(*(*expressions_it), *data_types_it) &&
-          !(*expressions_it)->isType(hsql::kExprParameter)) {
-        // if this is a PreparedStatement, we don't have a mismatch
-        return false;
-      }
-      data_types_it++;
-      expressions_it++;
-    }
-
-    return true;
-  };
-
-  if (!insert.columns) {
-    // No column order given. Assuming all columns in regular order.
-    // For SELECT ... INTO we are basically done because can use the above node as input.
-
-    if (insert.type == hsql::kInsertValues) {
-      DebugAssert(insert.values != nullptr, "Insert: no values given");
-
-      Assert(data_types_match_expr_types(target_table->column_data_types(), *insert.values),
-             "Insert: Column type mismatch");
-
-      // In the case of INSERT ... VALUES (...), simply create a
-      current_result_node = _translate_projection(*insert.values, current_result_node);
-    }
-
-    Assert(current_result_node->output_column_count() == target_table->column_count(), "Insert: Column count mismatch");
-  } else {
     // Certain columns have been specified. In this case we create a new expression list
     // for the Projection, so that it contains as many columns as the target table.
 
     // pre-fill new projection list with NULLs
-    std::vector<std::shared_ptr<LQPExpression>> projections(target_table->column_count(),
-                                                            LQPExpression::create_literal(NULL_VALUE));
+    std::vector<std::shared_ptr<AbstractExpression>> expressions(target_table->column_count(),
+                                                            std::make_shared<ValueExpression>(NullValue{}));
 
-    ColumnID insert_column_index{0};
+    ColumnID source_column_idx{0};
     for (const auto& column_name : *insert.columns) {
       // retrieve correct ColumnID from the target table
-      auto column_id = target_table->column_id_by_name(column_name);
-
-      if (insert.type == hsql::kInsertValues) {
-        // when inserting values, simply translate the literal expression
-        const auto& hsql_expr = *(*insert.values)[insert_column_index];
-
-        Assert(literal_matches_data_type(hsql_expr, target_table->column_data_types()[column_id]),
-               "Insert: Column type mismatch");
-
-        projections[column_id] = HSQLExprTranslator::to_lqp_expression(hsql_expr, nullptr);
-      } else {
-        DebugAssert(insert.type == hsql::kInsertSelect, "Unexpected Insert type");
-        DebugAssert(insert_column_index < current_result_node->output_column_count(), "ColumnID out of range");
-        // when projecting from another table, create a column reference expression
-        projections[column_id] =
-            LQPExpression::create_column(current_result_node->output_column_references()[insert_column_index]);
-      }
-
-      ++insert_column_index;
+      const auto target_column_id = target_table->column_id_by_name(column_name);
+      expressions[target_column_id] = insert_data_node->output_column_expressions()[source_column_idx];
+      ++source_column_idx;
     }
 
     // create projection and add to the node chain
-    auto projection_node = ProjectionNode::make(projections);
-    projection_node->set_left_input(current_result_node);
-
-    current_result_node = projection_node;
+    insert_data_node = ProjectionNode::make(expressions, insert_data_node);
   }
 
-  auto insert_node = InsertNode::make(table_name);
-  insert_node->set_left_input(current_result_node);
+  Assert(insert_data_node->output_column_count() == target_table->column_count(), "INSERT: Column count mismatch");
+  // DataType checking has to be done at runtime, as Query could still contains Placeholder with unspecified type
 
-  return insert_node;
+  return InsertNode::make(table_name, insert_data_node);
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::DeleteStatement& del) {
-  std::shared_ptr<AbstractLQPNode> current_result_node = StoredTableNode::make(del.tableName);
-  current_result_node = _validate_if_active(current_result_node);
-  if (del.expr) {
-    current_result_node = _translate_where(*del.expr, current_result_node);
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::DeleteStatement& delete_) {
+  auto data_to_delete_node = StoredTableNode::make(delete_.tableName);
+  data_to_delete_node = _validate_if_active(data_to_delete_node);
+  if (delete_.expr) {
+    const auto delete_where_expression = translate_hsql_expr(*delete_.expr, {data_to_delete_node});
+    data_to_delete_node = _translate_predicate_expression(delete_where_expression, data_to_delete_node);
   }
 
-  auto delete_node = DeleteNode::make(del.tableName);
-  delete_node->set_left_input(current_result_node);
-
-  return delete_node;
+  return DeleteNode::make(delete_.tableName, data_to_delete_node);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::UpdateStatement& update) {
-  std::shared_ptr<AbstractLQPNode> current_values_node = _translate_table_ref(*update.table);
+  std::shared_ptr<AbstractLQPNode> target_references_node = _translate_table_ref(*update.table);
   if (update.where) {
-    current_values_node = _translate_where(*update.where, current_values_node);
+    const auto where_expression = translate_hsql_expr(*update.where, {target_references_node});
+    target_references_node = _translate_predicate_expression(where_expression, {target_references_node});
   }
 
   // The update operator wants ReferenceColumns on its left side
   // TODO(anyone): fix this
-  Assert(!std::dynamic_pointer_cast<StoredTableNode>(current_values_node),
+  Assert(!std::dynamic_pointer_cast<StoredTableNode>(target_references_node),
          "Unconditional updates are currently not supported");
 
-  std::vector<std::shared_ptr<LQPExpression>> update_expressions;
-  update_expressions.reserve(current_values_node->output_column_count());
+  auto update_expressions = target_references_node->output_column_expressions();
 
-  // pre-fill with regular column references
-  for (ColumnID column_idx{0}; column_idx < current_values_node->output_column_count(); ++column_idx) {
-    update_expressions.emplace_back(
-        LQPExpression::create_column(current_values_node->output_column_references()[column_idx]));
+  for (const auto* update_clause : *update.updates) {
+    const auto column_reference = target_references_node->get_column(QualifiedColumnName{update_clause->column});
+    const auto column_id = target_references_node->get_output_column_id(column_reference);
+
+    auto value_expression = translate_hsql_expr(*update_clause->value, {target_references_node});
+    update_expressions[column_id] = value_expression;
   }
 
-  // now update with new values
-  for (auto& sql_expr : *update.updates) {
-    const auto named_column_ref = QualifiedColumnName{sql_expr->column, std::nullopt};
-    const auto column_reference = current_values_node->get_column(named_column_ref);
-    const auto column_id = current_values_node->get_output_column_id(column_reference);
-
-    auto expr = HSQLExprTranslator::to_lqp_expression(*sql_expr->value, current_values_node);
-    update_expressions[column_id] = expr;
-  }
-
-  std::shared_ptr<AbstractLQPNode> update_node = UpdateNode::make((update.table)->name, update_expressions);
-  update_node->set_left_input(current_values_node);
-
-  return update_node;
+  return UpdateNode::make((update.table)->name, update_expressions, target_references_node);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select(const hsql::SelectStatement &select) {
@@ -271,24 +198,24 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select(const hsql::Sel
   Assert(select.unionSelect == nullptr, "Set operations (UNION/INTERSECT/...) are not supported yet");
   Assert(!select.selectDistinct, "DISTINCT is not yet supported");
 
-  auto current_result_node = _translate_table_ref(*select.fromTable);
+  auto current_node = _translate_table_ref(*select.fromTable);
 
   if (select.whereClause != nullptr) {
-    const auto where_expression = translate_hsql_expr(*select.whereClause, {current_result_node});
-    current_result_node = _translate_expression(where_expression, current_result_node, FilterRows::Yes);
+    const auto where_expression = translate_hsql_expr(*select.whereClause, {current_node});
+    current_node = _translate_predicate_expression(where_expression, current_node);
   }
 
-  current_result_node = _translate_select_groupby_having(select, current_result_node);
+  current_node = _translate_select_groupby_having(select, current_node);
 
   if (select.order != nullptr) {
-    current_result_node = _translate_order_by(*select.order, current_result_node);
+    current_node = _translate_order_by(*select.order, current_node);
   }
 
   if (select.limit != nullptr) {
-    current_result_node = _translate_limit(*select.limit, current_result_node);
+    current_node = LimitNode::make(select.limit->limit, current_node);
   }
 
-  return current_result_node;
+  return current_node;
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::JoinDefinition& join) {
@@ -304,25 +231,24 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::Join
   const hsql::Expr& condition = *join.condition;
 
   Assert(condition.type == hsql::kExprOperator, "Join condition must be operator.");
+
+  const auto join_condition_expression = translate_hsql_expr(condition, {left_node, right_node});
+  Assert(join_condition_expression->type == ExpressionType::Predicate, "Join condition must be predicate");
+
+  const auto join_condition_predicate_expression =
+    std::static_pointer_cast<AbstractPredicateExpression>(join_condition_expression);
   // The Join operators only support simple comparisons for now.
-  switch (condition.opType) {
-    case hsql::kOpEquals:
-    case hsql::kOpNotEquals:
-    case hsql::kOpLess:
-    case hsql::kOpLessEq:
-    case hsql::kOpGreater:
-    case hsql::kOpGreaterEq:
+  switch (join_condition_predicate_expression->predicate_condition) {
+    case PredicateCondition::Equals: case PredicateCondition::NotEquals: case PredicateCondition::LessThan:
+    case PredicateCondition::LessThanEquals:  case PredicateCondition::GreaterThan:
+    case PredicateCondition::GreaterThanEquals:
       break;
     default:
       Fail("Join condition must be a simple comparison operator.");
   }
-  Assert(condition.expr && condition.expr->type == hsql::kExprColumnRef,
-         "Left arg of join condition must be column ref");
-  Assert(condition.expr2 && condition.expr2->type == hsql::kExprColumnRef,
-         "Right arg of join condition must be column ref");
 
-  const auto left_qualified_column_name = HSQLExprTranslator::to_qualified_column_name(*condition.expr);
-  const auto right_qualified_column_name = HSQLExprTranslator::to_qualified_column_name(*condition.expr2);
+  const auto left_operand_expression = translate_hsql_expr(*condition.expr, {left_node, right_node});
+  const auto right_operand_expression = translate_hsql_expr(*condition.expr2, {left_node, right_node});
 
   /**
    * `x_in_y_node` indicates whether the column identifier on the `x` side in the join expression is in the input node
@@ -333,36 +259,36 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::Join
    * (left_in_right_node == true). Later we make sure that one and only one of them is true, otherwise we either have
    * ambiguity or the column is simply not existing.
    */
-  const auto left_in_left_node = left_node->find_column(left_qualified_column_name);
-  const auto left_in_right_node = right_node->find_column(left_qualified_column_name);
-  const auto right_in_left_node = left_node->find_column(right_qualified_column_name);
-  const auto right_in_right_node = right_node->find_column(right_qualified_column_name);
+  const auto left_in_left_node = left_node->find_column(*left_operand_expression);
+  const auto left_in_right_node = right_node->find_column(*left_operand_expression);
+  const auto right_in_left_node = left_node->find_column(*right_operand_expression);
+  const auto right_in_right_node = right_node->find_column(*right_operand_expression);
 
   Assert(static_cast<bool>(left_in_left_node) ^ static_cast<bool>(left_in_right_node),
-         std::string("Left operand ") + left_qualified_column_name.as_string() +
+         std::string("Left operand ") + left_operand_expression->description() +
              " must be in exactly one of the input nodes");
   Assert(static_cast<bool>(right_in_left_node) ^ static_cast<bool>(right_in_right_node),
-         std::string("Right operand ") + right_qualified_column_name.as_string() +
+         std::string("Right operand ") + right_operand_expression->description() +
              " must be in exactly one of the input nodes");
 
-  const auto column_references = left_in_left_node ? std::make_pair(*left_in_left_node, *right_in_right_node)
-                                                   : std::make_pair(*left_in_right_node, *right_in_left_node);
+  if (left_in_right_node) {
+    std::swap(left_node, right_node);
+  }
 
-  // Joins currently only support one simple condition (i.e., not multiple conditions).
-  auto predicate_condition = translate_operator_type_to_predicate_condition(condition.opType);
+  const auto join_expressions = std::make_pair(left_operand_expression, right_operand_expression);
 
-  auto join_node = JoinNode::make(join_mode, column_references, predicate_condition);
-  join_node->set_left_input(left_node);
-  join_node->set_right_input(right_node);
-
-  return join_node;
+  return JoinNode::make(join_mode,
+                        join_expressions,
+                        join_condition_predicate_expression->predicate_condition,
+                        left_node,
+                        right_node);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_natural_join(const hsql::JoinDefinition& join) {
   DebugAssert(translate_join_mode(join.type) == JoinMode::Natural, "join must be a natural join");
 
-  const auto& left_node = _translate_table_ref(*join.left);
-  const auto& right_node = _translate_table_ref(*join.right);
+  const auto left_node = _translate_table_ref(*join.left);
+  const auto right_node = _translate_table_ref(*join.right);
 
   // we need copies that we can sort on.
   auto left_column_names = left_node->output_column_names();
@@ -377,89 +303,84 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_natural_join(const hs
 
   Assert(!join_column_names.empty(), "No matching columns for natural join found");
 
-  std::shared_ptr<AbstractLQPNode> return_node = JoinNode::make(JoinMode::Cross);
-  return_node->set_left_input(left_node);
-  return_node->set_right_input(right_node);
+  auto current_node = JoinNode::make(JoinMode::Cross, left_node, right_node);
 
   for (const auto& join_column_name : join_column_names) {
-    auto left_column_reference = left_node->get_column({join_column_name});
-    auto right_column_reference = right_node->get_column({join_column_name});
-    auto predicate = PredicateNode::make(left_column_reference, PredicateCondition::Equals, right_column_reference);
-    predicate->set_left_input(return_node);
-    return_node = predicate;
+    const auto left_column_reference = left_node->get_column({join_column_name});
+    const auto right_column_reference = right_node->get_column({join_column_name});
+
+    current_node = PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
+    PredicateCondition::Equals,
+    std::make_shared<LQPColumnExpression>(left_column_reference),
+    std::make_shared<LQPColumnExpression>(right_column_reference)
+    ), current_node);
   }
 
   // We need to collect the column origins so that we can remove the duplicate columns used in the join condition
-  std::vector<LQPColumnReference> column_references;
-  for (auto column_id = ColumnID{0u}; column_id < return_node->output_column_count(); ++column_id) {
-    const auto& column_name = return_node->output_column_names()[column_id];
+  std::vector<std::shared_ptr<AbstractExpression>> column_expressions;
+  for (auto column_id = ColumnID{0u}; column_id < current_node->output_column_count(); ++column_id) {
+    const auto& column_name = current_node->output_column_names()[column_id];
 
     if (static_cast<size_t>(column_id) >= left_node->output_column_count() &&
         std::find(join_column_names.begin(), join_column_names.end(), column_name) != join_column_names.end()) {
       continue;
     }
 
-    const auto& column_reference = return_node->output_column_references()[column_id];
-    column_references.emplace_back(column_reference);
+    column_expressions.emplace_back(current_node->output_column_expressions()[column_id]);
   }
 
-  const auto column_expressions = LQPExpression::create_columns(column_references);
-
-  auto projection = ProjectionNode::make(column_expressions);
-  projection->set_left_input(return_node);
-
-  return projection;
+  return ProjectionNode::make(column_expressions, current_node);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_cross_product(const std::vector<hsql::TableRef*>& tables) {
   DebugAssert(!tables.empty(), "Cannot translate cross product without tables");
   auto product = _translate_table_ref(*tables.front());
 
-  for (size_t i = 1; i < tables.size(); i++) {
-    auto next_node = _translate_table_ref(*tables[i]);
-
-    auto new_product = JoinNode::make(JoinMode::Cross);
-    new_product->set_left_input(product);
-    new_product->set_right_input(next_node);
-
-    product = new_product;
+  for (auto table_idx = size_t{0}; table_idx < tables.size(); ++table_idx) {
+    const auto node = _translate_table_ref(*tables[table_idx]);
+    product = JoinNode::make(JoinMode::Cross, product, node);
   }
 
   return product;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref_alias(const std::shared_ptr<AbstractLQPNode>& node,
-                                                                           const hsql::TableRef& table) {
-  // Add a new projection node for table alias with column alias declarations
-  // e.g. select * from foo as bar(a, b)
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_column_renamings(
+const std::shared_ptr<AbstractLQPNode> &node,
+const hsql::TableRef &table) {
+
+  // Check this here instead of on the caller side
   if (!table.alias || !table.alias->columns) {
     return node;
   }
 
-  DebugAssert(table.type == hsql::kTableName || table.type == hsql::kTableSelect,
-              "Aliases are only applicable to table names and subselects");
+  // Add a new projection node for table alias with column alias declarations
+  // e.g. select * from foo as bar(a, b)
+
+  Assert(table.type == hsql::kTableName || table.type == hsql::kTableSelect,
+         "Aliases are only applicable to table names and subselects");
 
   // To stick to the sql standard there must be an alias for every column of the renamed table
   // https://www.contrib.andrew.cmu.edu/~shadow/sql/sql1992.txt 6.3
   Assert(table.alias->columns->size() == node->output_column_count(),
          "The number of column aliases must match the number of columns");
 
-  auto& column_references = node->output_column_references();
-  std::vector<std::shared_ptr<LQPExpression>> projections;
-  projections.reserve(table.alias->columns->size());
-  size_t column_id = 0;
-  for (const char* column : *(table.alias->columns)) {
-    projections.push_back(LQPExpression::create_column(column_references.at(column_id), std::string(column)));
-    ++column_id;
+  const auto& column_expressions = node->output_column_expressions();
+  std::vector<PlanColumnDefinition> column_definitions;
+  column_definitions.reserve(column_expressions.size());
+
+  auto column_idx = size_t{0};
+  for (const auto* alias : *(table.alias->columns)) {
+    column_definitions.emplace_back(column_expressions[column_idx], alias);
+    ++column_idx;
   }
-  auto projection_node = ProjectionNode::make(projections);
-  projection_node->set_left_input(node);
-  return projection_node;
+
+  return ProjectionNode::make(column_definitions, node);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql::TableRef& table) {
-  auto alias = table.alias ? std::optional<std::string>(table.alias->name) : std::nullopt;
+  const auto alias = table.alias ? std::optional<std::string>(table.alias->name) : std::nullopt;
   std::shared_ptr<AbstractLQPNode> node;
+
   switch (table.type) {
     case hsql::kTableName:
       if (StorageManager::get().has_table(table.name)) {
@@ -468,7 +389,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql:
          */
         auto stored_table_node = StoredTableNode::make(table.name);
         stored_table_node->set_alias(alias);
-        return _translate_table_ref_alias(_validate_if_active(stored_table_node), table);
+        return _translate_column_renamings(_validate_if_active(stored_table_node), table);
       } else if (StorageManager::get().has_view(table.name)) {
         node = StorageManager::get().get_view(table.name);
         Assert(!_validate || node->subplan_is_validated(), "Trying to add non-validated view to validated query");
@@ -479,7 +400,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql:
     case hsql::kTableSelect:
       node = translate_select(*table.select);
       Assert(alias, "Every derived table must have its own alias");
-      node = _translate_table_ref_alias(node, table);
+      node = _translate_column_renamings(node, table);
       break;
     case hsql::kTableJoin:
       node = _translate_join(*table.join);
@@ -495,170 +416,115 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql:
   return node;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_where(const hsql::Expr& expr,
-                                                                 const std::shared_ptr<AbstractLQPNode>& input_node) {
-  DebugAssert(expr.isType(hsql::kExprOperator), "Filter expression clause has to be of type operator!");
-
-  /**
-   * If the expression is a nested expression, recursively resolve
-   */
-  if (expr.opType == hsql::kOpOr) {
-    auto union_unique_node = UnionNode::make(UnionMode::Positions);
-    union_unique_node->set_left_input(_translate_where(*expr.expr, input_node));
-    union_unique_node->set_right_input(_translate_where(*expr.expr2, input_node));
-    return union_unique_node;
-  }
-
-  if (expr.opType == hsql::kOpAnd) {
-    auto filter_node = _translate_where(*expr.expr, input_node);
-    return _translate_where(*expr.expr2, filter_node);
-  }
-
-  return _translate_predicate(
-      expr, false,
-      [&](const hsql::Expr& hsql_expr) { return HSQLExprTranslator::to_column_reference(hsql_expr, input_node); },
-      input_node);
-}
-
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_groupby_having(
 const hsql::SelectStatement &select, const std::shared_ptr<AbstractLQPNode> &input_node) {
   auto current_node = input_node;
 
-  // Gather all expression required for GROUP BY
-  auto group_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>();
+  const auto input_expressions = current_node->output_column_expressions();
+  auto pre_aggregate_expressions = std::unordered_set<std::shared_ptr<AbstractExpression>, ExpressionHash, ExpressionEquals>{
+  input_expressions.begin(), input_expressions.end()
+  };
+  auto aggregate_expressions = std::unordered_set<std::shared_ptr<AbstractExpression>, ExpressionHash, ExpressionEquals>{
+  };
+
+  // Add all expressions required for GROUP BY
+  auto group_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   if (select.groupBy && select.groupBy->columns) {
-    group_by_expressions.reserve(select.groupBy->columns->size());
+    pre_aggregate_expressions.reserve(pre_aggregate_expressions.size() + select.groupBy->columns->size());
     for (const auto* group_by_hsql_expr : *select.groupBy->columns) {
-      group_by_expressions.emplace_back(HSQLExprTranslator::to_lqp_expression(*group_by_hsql_expr, input_node));
+      const auto group_by_expression = translate_hsql_expr(*group_by_hsql_expr, {current_node});
+      group_by_expressions.emplace_back(group_by_expression);
+      pre_aggregate_expressions.insert(group_by_expression);
     }
   }
 
-  auto input_and_group_by_expressions = current_node->output_column_expressions();
+  // Visitor that identifies aggregates and their arguments
+  const auto find_aggregates_and_arguments = [&](auto& sub_expression) {
+    if (sub_expression.type != ExpressionType::Aggregate) return true;
+    auto aggregate_expression = std::static_pointer_cast<AggregateExpression>(sub_expression);
+    aggregate_expressions.insert(aggregate_expression);
 
-  current_node = ProjectionNode::make(pre_group_by_expressions, current_node);
+    for (const auto& argument : aggregate_expression->arguments) {
+      if (argument->requires_calculation()) {
+        pre_aggregate_expressions.insert(argument);
+      }
+    }
+    return false;
+  };
 
-  auto pre_groupby_projection = current_node;
-
-  // Identify all expressions needed for SELECT and HAVING
-  auto expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
-  auto select_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
-  for (const auto& hsql_select_expr : *select.selectList) {
-    if (hsql_select_expr->type == hsql::kExprStar) continue;
-
-    const auto expression = HSQLExprTranslator::to_lqp_expression(*hsql_select_expr, current_node);
-    expressions.emplace_back(expression);
-    select_expressions.emplace_back(expression);
+  // Gather all aggregates and arguments from having
+  auto having_expression = std::shared_ptr<AbstractExpression>{};
+  if (select.groupBy && select.groupBy->having) {
+    having_expression = translate_hsql_expr(*select.groupBy->having, {current_node});
+    visit_expression(having_expression, find_aggregates_and_arguments);
   }
 
-  // Identify pre aggregate expressions
-  auto pre_aggregate_expressions = current_node->output_column_expressions();
-  for (const auto& expression : expressions) {
-    visit_expression(*expression, [&](auto& sub_expression) {
-      if (sub_expression.type != ExpressionType::Aggregate) return true;
-      const auto& aggregate_expression = std::static_pointer_cast<AggregateExpression>(expression);
-
-      for (const auto& argument : aggregate_expression->arguments) {
-        if (argument->requires_calculation()) {
-          pre_aggregate_expressions.emplace_back(argument);
-        }
-      }
-      return false;
-    });
+  // Identify all aggregates and arguments needed for SELECT and build the select_list_elements
+  std::vector<std::shared_ptr<AbstractExpression>> select_list_elements;
+  for (const auto& hsql_select_expr : *select.selectList) {
+    if (hsql_select_expr->type == hsql::kExprStar) {
+      select_list_elements.emplace_back(nullptr);
+    } else {
+      auto expression = translate_hsql_expr(*hsql_select_expr, {current_node});
+      visit_expression(expression, find_aggregates_and_arguments);
+      select_list_elements.emplace_back(expression);
+    }
   }
 
   // Build pre_aggregate_projection
-  current_node = ProjectionNode::make(pre_aggregate_expressions, current_node);
+  current_node = ProjectionNode::make(std::vector<std::shared_ptr<AbstractExpression>>(
+  pre_aggregate_expressions.begin(), pre_aggregate_expressions.end()
+  ), current_node);
 
-  // Build aggregate expressions accessing the pre aggregate expressions
-  std::vector<std::shared_ptr<const LQPExpression>> aggregate_expressions;
-  for (auto& expression : expressions) {
-    visit_expression(*expression, [&](auto& expression) {
-      if (expression.type() != ExpressionType::Aggregate) return true;
-      const auto& aggregate_expression = std::static_pointer_cast<AggregateExpression>(expression);
-
-      for (const auto& argument : aggregate_expression->arguments) {
-        if (argument->requires_calculation()) {
-          const auto column = current_node->get_column(*argument);
-          argument = std::make_shared<LQPColumnExpression>(column);
-        }
-      }
-
-      aggregate_expressions.emplace_back(aggregate_expression);
-
-      return false;
-    });
-  }
-
-  // Build groupby column references accessing the pre aggregate expressions
-  std::vector<LQPColumnReference> group_by_columns;
-  group_by_columns.reserve(group_by_expressions.size());
-  for (auto& group_by_expression : group_by_expressions) {
-    group_by_columns.emplace_back(current_node->get_column(*group_by_expression));
-  }
 
   // Build Aggregate
-  if (!aggregate_expressions.empty() || !group_by_columns.empty()) {
-    current_node = AggregateNode::make(group_by_columns, aggregate_expressions, current_node);
+  if (!aggregate_expressions.empty() || !group_by_expressions.empty()) {
+    current_node = AggregateNode::make(group_by_expressions, aggregate_expressions, current_node);
   }
 
   // Build having
-  if (select.groupBy && select.groupBy->having) {
-    current_node = _translate_predicate(*select.groupBy->having, current_node);
+  if (having_expression) {
+    current_node = _translate_predicate_expression(having_expression, current_node);
   }
 
+  // Create output_expressions from SELECT list, including column wildcards
+  std::vector<std::shared_ptr<AbstractExpression>> output_expressions;
+  std::unordered_map<std::shared_ptr<AbstractExpression>, std::string> column_aliases;
 
-  // Make SELECT expressions use Aggregate results
-  auto post_aggregate_expressions = select_expressions;
-  for (auto& select_expression : post_aggregate_expressions) {
-    visit_expression(select_expression, [&](auto& expression) {
-      if (expression.type() != ExpressionType::Aggregate) return true;
-      expression = std::make_shared<LQPColumnExpression>(current_node->get_column(expression));
+  auto output_column_id = ColumnID{0};
 
-      return false;
-    });
-  }
+  for (auto select_list_idx = size_t{0}; select_list_idx < select.selectList->size(); ++select_list_idx) {
+    const auto* hsql_expr = (*select.selectList)[select_list_idx];
 
-  post_aggregate_expressions.insert(post_aggregate_expressions.end(),
-                                    group_by_expressions.begin(),
-                                    group_by_expressions.end());
-  post_aggregate_expressions.insert(post_aggregate_expressions.end(),
-                                    aggregate_expressions.begin(),
-                                    aggregate_expressions.end());
-
-  current_node = ProjectionNode::make(post_aggregate_expressions, current_node);
-
-  //
-  std::vector<std::shared_ptr<LQPExpression>> output_expressions;
-  for (const auto& hsql_expr : *select.selectList) {
     if (hsql_expr->type == hsql::kExprStar) {
       if (hsql_expr->table) {
-        /**
-         * Otherwise only take columns that belong to that qualifier.
-         *
-         * Consider `SELECT t1.* FROM (SELECT a,b FROM t) AS t1`
-         *
-         * First, we retrieve the node (`origin_node`) that "creates" "t1". Then, in the for loop, for every Column that
-         * `origin_node` outputs, we check whether it "reaches" the input_node
-         * (it may get discarded by a Projection/Aggregate along the way). If it is still contained in the input_node
-         * it gets added to the list of Columns that the Projection outputs.
-         */
-        auto origin_node = input_node->find_table_name_origin(hsql_expr->table);
-        Assert(origin_node, "Couldn't resolve '" + std::string(hsql_expr->table) + "'.*");
-
-        for (const auto& origin_column : origin_node->output_column_references()) {
-          const auto input_node_column_id = input_node->find_output_column_id(origin_column);
-          if (input_node_column_id) {
-            output_expressions.emplace_back(std::make_shared<LQPColumnExpression>(origin_column));
-          }
+        const auto expressions = current_node->find_expressions_from_table_name(*hsql_expr->table);
+        output_expressions.reserve(output_expressions.size() + expressions.size());
+        for (const auto& expression : expressions) {
+          output_expressions.emplace_back(expression);
         }
       } else {
-        // If there is no table qualifier take all columns from the input.
-        for (const auto& column : input_node->output_column_references()) {
-          output_expressions.emplace_back(std::make_shared<LQPColumnExpression>(column));
+        if (select.groupBy) {
+          output_expressions.reserve(output_expressions.size() + group_by_expressions.size());
+          for (const auto& group_by_expression : group_by_expressions) {
+            output_expressions.emplace_back(group_by_expression);
+          }
+        } else {
+          const auto& input_expressions = input_node->output_column_expressions();
+          output_expressions.reserve(output_expressions.size() + input_expressions.size());
+          for (const auto& input_expression : input_expressions) {
+            output_expressions.emplace_back(input_expression);
+          }
         }
       }
     }
+    output_expressions.emplace_back(select_list_elements[select_list_idx]);
+
+    if (hsql_expr->alias) {
+      column_aliases[select_list_elements[select_list_idx]] = hsql_expr->alias;
+    }
   }
+
   current_node = ProjectionNode::make(output_expressions, current_node);
 
   return current_node;
@@ -677,206 +543,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_order_by(
     const auto order_by_mode = order_type_to_order_by_mode.at(order_description->type);
     order_by_definitions.emplace_back(order_by_expression, order_by_mode);
 
-    if (!current_node->find_column(order_by_expression) && order_by_expression->requires_calculation()) {
-      current_node = _add_expression(current_node, order_by_expression);
+    if (!current_node->find_column(*order_by_expression) && order_by_expression->requires_calculation()) {
+      current_node = _add_expression_if_unavailable(current_node, order_by_expression);
     }
   }
 
   auto sort_node = SortNode::make(order_by_definitions, current_node);
 
   return sort_node;
-}
-
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_limit(const hsql::LimitDescription& limit,
-                                                                 const std::shared_ptr<AbstractLQPNode>& input_node) {
-  return LimitNode::make(limit.limit, input_node);
-}
-
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
-    const hsql::Expr& hsql_expr, bool allow_function_columns,
-    const std::function<LQPColumnReference(const hsql::Expr&)>& resolve_column,
-    const std::shared_ptr<AbstractLQPNode>& input_node) {
-  DebugAssert(hsql_expr.expr != nullptr, "hsql malformed");
-
-  const auto refers_to_column = [allow_function_columns](const hsql::Expr& hsql_expr) {
-    return hsql_expr.isType(hsql::kExprColumnRef) ||
-           (allow_function_columns && hsql_expr.isType(hsql::kExprFunctionRef));
-  };
-
-  auto predicate_negated = (hsql_expr.opType == hsql::kOpNot);
-
-  const auto* column_ref_hsql_expr = hsql_expr.expr;
-  PredicateCondition predicate_condition;
-
-  if (predicate_negated) {
-    Assert(hsql_expr.expr != nullptr, "NOT operator without further expressions");
-    predicate_condition = translate_operator_type_to_predicate_condition(hsql_expr.expr->opType);
-
-    /**
-     * It should be possible for any predicate to be negated with "NOT",
-     * e.g., WHERE NOT a > 5. However, this is currently not supported.
-     * Right now we only use `kOpNot` to detect and set the `OpIsNotNull` predicate condition.
-     */
-    Assert(predicate_condition == PredicateCondition::IsNull, "Only IS NULL can be negated");
-
-    if (predicate_condition == PredicateCondition::IsNull) {
-      predicate_condition = PredicateCondition::IsNotNull;
-    }
-
-    // change column reference to the correct expression
-    column_ref_hsql_expr = hsql_expr.expr->expr;
-  } else {
-    predicate_condition = translate_operator_type_to_predicate_condition(hsql_expr.opType);
-  }
-
-  // Indicates whether to use expr.expr or expr.expr2 as the main column to reference
-  auto operands_switched = false;
-
-  /**
-   * value_ref_hsql_expr = the expr referring to the value of the scan, e.g. the 5 in `WHERE 5 > p_income`, but also
-   * the secondary column p_b in a scan like `WHERE p_a > p_b`
-   */
-  const hsql::Expr* value_ref_hsql_expr = nullptr;
-
-  std::optional<AllTypeVariant> value2;  // Left uninitialized for predicates that are not BETWEEN
-
-  if (predicate_condition == PredicateCondition::Between) {
-    /**
-     * Translate expressions of the form `column_or_aggregate BETWEEN value AND value2`.
-     * Both value and value2 can be any kind of literal, while value might also be a column or a placeholder.
-     * As per the TODO below, value2 cannot be neither of those, YET
-     */
-
-    Assert(hsql_expr.exprList->size() == 2, "Need two arguments for BETWEEEN");
-
-    const auto* expr0 = (*hsql_expr.exprList)[0];
-    const auto* expr1 = (*hsql_expr.exprList)[1];
-    DebugAssert(expr0 != nullptr && expr1 != nullptr, "hsql malformed");
-
-    value_ref_hsql_expr = expr0;
-
-    // TODO(anybody): TableScan does not support AllParameterVariant as second value.
-    // This would be required to use BETWEEN in a prepared statement,
-    // or to do a BETWEEN scan for three columns (a BETWEEN b and c).
-    const auto value2_all_parameter_variant = HSQLExprTranslator::to_all_parameter_variant(*expr1);
-    Assert(is_variant(value2_all_parameter_variant), "Value2 of a Predicate has to be AllTypeVariant");
-    value2 = boost::get<AllTypeVariant>(value2_all_parameter_variant);
-
-    Assert(refers_to_column(*column_ref_hsql_expr), "For BETWEENS, hsql_expr.expr has to refer to a column");
-  } else if (predicate_condition == PredicateCondition::In) {
-    // Handle IN by using a semi join
-    Assert(hsql_expr.select, "The IN operand only supports subqueries so far");
-    // TODO(anybody): Also support lists of literals
-    auto subselect_node = translate_select(*hsql_expr.select);
-
-    const auto left_column = resolve_column(*column_ref_hsql_expr);
-    Assert(subselect_node->output_column_references().size() == 1, "You can only check IN on one column");
-    auto right_column = subselect_node->output_column_references()[0];
-    const auto column_references = std::make_pair(left_column, right_column);
-
-    auto join_node = std::make_shared<JoinNode>(JoinMode::Semi, column_references, PredicateCondition::Equals);
-    join_node->set_left_input(input_node);
-    join_node->set_right_input(subselect_node);
-
-    return join_node;
-  } else if (predicate_condition != PredicateCondition::IsNull &&
-             predicate_condition != PredicateCondition::IsNotNull) {
-    /**
-     * For logical operators (>, >=, <, ...), thanks to the strict interface of PredicateNode/TableScan, we have to
-     * determine whether the left (expr.expr) or the right (expr.expr2) expr refers to the Column/AggregateFunction
-     * or the other one.
-     */
-    DebugAssert(hsql_expr.expr2 != nullptr, "hsql malformed");
-
-    if (!refers_to_column(*hsql_expr.expr)) {
-      Assert(refers_to_column(*hsql_expr.expr2), "One side of the expression has to refer to a column.");
-      operands_switched = true;
-      predicate_condition = get_predicate_condition_for_reverse_order(predicate_condition);
-    }
-
-    value_ref_hsql_expr = operands_switched ? hsql_expr.expr : hsql_expr.expr2;
-    column_ref_hsql_expr = operands_switched ? hsql_expr.expr2 : hsql_expr.expr;
-  }
-
-  /**
-   * the argument passed to resolve_column() here:
-   * the expr referring to the main column to be scanned, e.g. "p_income" in `WHERE 5 > p_income`
-   * or "p_a" in `WHERE p_a > p_b`
-   */
-  const auto column_id = resolve_column(*column_ref_hsql_expr);
-
-  auto current_node = input_node;
-  auto has_nested_expression = false;
-
-  AllParameterVariant value;
-  if (predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull) {
-    value = NULL_VALUE;
-  } else if (refers_to_column(*value_ref_hsql_expr)) {
-    value = resolve_column(*value_ref_hsql_expr);
-  } else if (value_ref_hsql_expr->select) {
-    // If a subselect is present, add the result of the subselect to the table using a projection
-    const auto column_references = input_node->output_column_references();
-    const auto original_column_expressions = LQPExpression::create_columns(column_references);
-
-    auto subselect_node = translate_select(*value_ref_hsql_expr->select);
-    auto subselect_expression = LQPExpression::create_subselect(subselect_node);
-
-    auto column_expressions = original_column_expressions;
-    column_expressions.push_back(subselect_expression);
-
-    auto expand_projection_node = std::make_shared<ProjectionNode>(column_expressions);
-    expand_projection_node->set_left_input(input_node);
-
-    // Compare against the column containing the subselect result
-    auto subselect_column_id = ColumnID(column_expressions.size() - 1);
-    auto predicate_node =
-        std::make_shared<PredicateNode>(column_id, predicate_condition, subselect_column_id, std::nullopt);
-    predicate_node->set_left_input(expand_projection_node);
-
-    // Remove the column containing the subselect result
-    auto reduce_projection_node = std::make_shared<ProjectionNode>(original_column_expressions);
-    reduce_projection_node->set_left_input(predicate_node);
-
-    return reduce_projection_node;
-  } else if (value_ref_hsql_expr->type == hsql::kExprOperator) {
-    /**
-     * If there is a nested expression (e.g. 1233 + 1) instead of a column reference or literal,
-     * we need to add a Projection node that handles this before adding the PredicateNode.
-     */
-    auto column_expressions = LQPExpression::create_columns(current_node->output_column_references());
-    column_expressions.push_back(HSQLExprTranslator::to_lqp_expression(*value_ref_hsql_expr, current_node));
-
-    auto projection_node = std::make_shared<ProjectionNode>(column_expressions);
-    projection_node->set_left_input(current_node);
-    current_node = projection_node;
-    has_nested_expression = true;
-
-    DebugAssert(column_expressions.size() <= std::numeric_limits<uint16_t>::max(),
-                "Number of column expressions cannot exceed maximum value of ColumnID.");
-    value = LQPColumnReference(current_node, ColumnID{static_cast<uint16_t>(column_expressions.size() - 1)});
-  } else {
-    value = HSQLExprTranslator::to_all_parameter_variant(*value_ref_hsql_expr);
-  }
-
-  auto predicate_node = PredicateNode::make(column_id, predicate_condition, value, value2);
-  predicate_node->set_left_input(current_node);
-
-  current_node = predicate_node;
-
-  /**
-   * The ProjectionNode we added previously (if we have a nested expression)
-   * added a column expression for that expression, which we need to remove here.
-   */
-  if (has_nested_expression) {
-    auto column_expressions = LQPExpression::create_columns(current_node->output_column_references());
-    column_expressions.pop_back();
-
-    auto projection_node = std::make_shared<ProjectionNode>(column_expressions);
-    projection_node->set_left_input(current_node);
-    current_node = projection_node;
-  }
-
-  return current_node;
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
@@ -942,57 +616,51 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(
   return validate_node;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_expression(
-const std::shared_ptr<AbstractExpression> &expression,
-std::shared_ptr<AbstractLQPNode> current_node, const FilterRows filter_rows) const {
-  if (filter_rows == FilterRows::Yes) {
-    if (expression->type == ExpressionType::Predicate) {
-      for (const auto &argument : expression->arguments) {
-        current_node = _translate_expression(argument, current_node);
-      }
-
-      const auto predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(expression);
-
-      return PredicateNode::make(predicate_expression, current_node);
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
+  const std::shared_ptr<AbstractExpression> &expression,
+  std::shared_ptr<AbstractLQPNode> current_node) const {
+  if (expression->type == ExpressionType::Predicate) {
+    for (const auto &argument : expression->arguments) {
+      current_node = _translate_predicate_expression(argument, current_node);
     }
 
-    if (expression->type == ExpressionType::Logical) {
-      const auto logical_expression = std::static_pointer_cast<LogicalExpression>(expression);
+    const auto predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(expression);
 
-      switch (logical_expression->logical_operator) {
-        case LogicalOperator::And: {
-          current_node = _translate_expression(logical_expression->left_operand(), current_node);
-          return _translate_expression(logical_expression->right_operand(), current_node);
-        }
-        case LogicalOperator::Or: {
-          const auto input_expressions = current_node->output_column_expressions();
+    return PredicateNode::make(predicate_expression, current_node);
+  }
 
-          const auto left_input = _translate_expression(logical_expression->left_operand(), current_node);
-          const auto right_input = _translate_expression(logical_expression->left_operand(), current_node);
+  if (expression->type == ExpressionType::Logical) {
+    const auto logical_expression = std::static_pointer_cast<LogicalExpression>(expression);
 
-          // For Union to work we need to eliminate all potential temporary columns added in the branches of the Union
-          // E.g. "a+b" in "a+b > 5 OR a < 3"
-          return UnionNode::make(UnionMode::Positions,
-                                 _prune_expressions(left_input, input_expressions),
-                                 _prune_expressions(right_input, input_expressions));
-        }
+    switch (logical_expression->logical_operator) {
+      case LogicalOperator::And: {
+        current_node = _translate_predicate_expression(logical_expression->left_operand(), current_node);
+        return _translate_predicate_expression(logical_expression->right_operand(), current_node);
       }
-    }
+      case LogicalOperator::Or: {
+        const auto input_expressions = current_node->output_column_expressions();
 
-    if (expression->type == ExpressionType::Not) {
-      // Fallback implementation for NOT, for now
-      current_node = _add_expression(current_node, expression);
-      return PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
-      PredicateCondition::NotEquals, expression, std::make_shared<ValueExpression>(0)));
+        const auto left_input = _translate_predicate_expression(logical_expression->left_operand(), current_node);
+        const auto right_input = _translate_predicate_expression(logical_expression->left_operand(), current_node);
+
+        // For Union to work we need to eliminate all potential temporary columns added in the branches of the Union
+        // E.g. "a+b" in "a+b > 5 OR a < 3"
+        return UnionNode::make(UnionMode::Positions,
+                               _prune_expressions(left_input, input_expressions),
+                               _prune_expressions(right_input, input_expressions));
+      }
     }
   }
 
+  if (expression->type == ExpressionType::Not) {
+    // Fallback implementation for NOT, for now
+    current_node = _add_expression_if_unavailable(current_node, expression);
+    return PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
+    PredicateCondition::NotEquals, expression, std::make_shared<ValueExpression>(0)));
+  }
 
-  // The required expression is already available or doesn't need to be computed (e.g. when it is a literal)
-  if (!expression->requires_calculation() || current_node->find_column(expression)) return current_node;
-
-  // The required expression needs to be computed
-  return _add_expression(current_node, expression);
+  Assert(expression->type != ExpressionType::Aggregate, "Aggregate used in illegal location");
+  return _add_expression_if_unavailable(current_node, expression);
 }
 
 
@@ -1002,9 +670,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_prune_expressions(const std::sh
   return ProjectionNode::make(expressions, node);
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expression(const std::shared_ptr<AbstractLQPNode>& node,
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expression_if_unavailable(const std::shared_ptr<AbstractLQPNode>& node,
                                                  const std::shared_ptr<AbstractExpression>& expression) const {
-  Assert(expression->type != ExpressionType::Aggregate, "Aggregate used in illegal location");
+  // The required expression is already available or doesn't need to be computed (e.g. when it is a literal)
+  if (!expression->requires_calculation() || node->find_column(expression)) return node;
 
   auto expressions = node->output_column_expressions();
   expressions.emplace_back(expression);

@@ -9,19 +9,20 @@
 
 #include "expression/abstract_column_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
+#include "expression/expression_utils.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-AggregateNode::AggregateNode(const std::vector<LQPColumnReference>& groupby_column_references,
-                             const std::vector<PlanColumnDefinition>& aggregate_column_definitions)
+AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpression>>& group_by_expressions,
+                             const std::vector<std::shared_ptr<AbstractExpression>>& aggregate_expressions)
     : AbstractLQPNode(LQPNodeType::Aggregate),
-      _aggregate_column_definitions(aggregate_column_definitions),
-      _groupby_column_references(groupby_column_references) {
+      _group_by_expressions(group_by_expressions),
+      _aggregate_expressions(aggregate_expressions) {
 #if IS_DEBUG
-  for (const auto& aggregate_column_definition : _aggregate_column_definitions) {
-    DebugAssert(aggregate_column_definition.expression->type == ExpressionType::Aggregate, "Aggregate expression must be an Aggregate.");
+  for (const auto& aggregate_expression : _aggregate_expressions) {
+    DebugAssert(aggregate_expression->type == ExpressionType::Aggregate, "Aggregate expression must be an Aggregate.");
   }
 #endif
 }
@@ -31,56 +32,27 @@ std::shared_ptr<AbstractLQPNode> AggregateNode::_deep_copy_impl(
     const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
   Assert(left_input(), "Can't clone without input, need it to adapt column references");
 
-  std::vector<PlanColumnDefinition> aggregate_column_definitions;
-  aggregate_column_definitions.reserve(_aggregate_column_definitions.size());
-  for (const auto& aggregate_column_definition : _aggregate_column_definitions) {
-    auto expression_copy = aggregate_column_definition.expression->deep_copy();
-    adapt_expression_to_different_lqp(*expression_copy, *left_input(), *copied_left_input);
-    aggregate_column_definitions.emplace_back(expression_copy, aggregate_column_definition.alias);
-  }
+  const auto group_by_expressions = deep_copy_expressions(_group_by_expressions, *this, *copied_left_input);
+  const auto aggregate_expressions = deep_copy_expressions(_aggregate_expressions, *this, *copied_left_input);
 
-  std::vector<LQPColumnReference> groupby_column_references;
-  groupby_column_references.reserve(_groupby_column_references.size());
-  for (const auto& groupby_column_reference : _groupby_column_references) {
-    groupby_column_references.emplace_back(
-        adapt_column_reference_to_different_lqp(groupby_column_reference, *left_input(), *copied_left_input));
-  }
-
-  return AggregateNode::make(groupby_column_references, aggregate_column_definitions);
+  return AggregateNode::make(group_by_expressions, aggregate_expressions);
 }
 
-const std::vector<PlanColumnDefinition>& AggregateNode::aggregate_column_definitions() const {
-  return _aggregate_column_definitions;
+const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::group_by_expressions() const {
+  return _group_by_expressions;
 }
 
-const std::vector<LQPColumnReference>& AggregateNode::groupby_column_references() const {
-  return _groupby_column_references;
+const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::aggregate_expressions() const {
+  return _aggregate_expressions;
 }
 
 std::string AggregateNode::description() const {
-  std::ostringstream s;
+  std::ostringstream stream;
 
-  s << "[Aggregate] ";
+  stream << "[Aggregate] " << expressions_descriptions(_aggregate_expressions);
+  stream << " GROUP BY [" << expressions_descriptions(_group_by_expressions) << "]";
 
-  for (auto aggregate_idx = size_t{0}; aggregate_idx < _aggregate_column_definitions.size(); ++aggregate_idx) {
-    s << _aggregate_column_definitions[aggregate_idx].description();
-    if (aggregate_idx + 1 < _aggregate_column_definitions.size()) {
-      s << ", ";
-    }
-  }
-
-  if (!_groupby_column_references.empty()) {
-    s << " GROUP BY [";
-    for (size_t group_by_idx = 0; group_by_idx < _groupby_column_references.size(); ++group_by_idx) {
-      s << _groupby_column_references[group_by_idx].description();
-      if (group_by_idx + 1 < _groupby_column_references.size()) {
-        s << ", ";
-      }
-    }
-    s << "]";
-  }
-
-  return s.str();
+  return stream.str();
 }
 
 std::string AggregateNode::get_verbose_column_name(ColumnID column_id) const {

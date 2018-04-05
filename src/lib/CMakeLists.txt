@@ -33,6 +33,8 @@ set(
     expression/abstract_column_expression.hpp
     expression/exists_expression.cpp
     expression/exists_expression.hpp
+    expression/expression_utils.cpp
+    expression/expression_utils.hpp
     expression/function_expression.cpp
     expression/function_expression.hpp
     expression/in_expression.cpp
@@ -76,6 +78,7 @@ set(
     logical_query_plan/drop_view_node.hpp
     logical_query_plan/dummy_table_node.cpp
     logical_query_plan/dummy_table_node.hpp
+    logical_query_plan/enable_make_for_lqp_node.hpp
     logical_query_plan/insert_node.cpp
     logical_query_plan/insert_node.hpp
     logical_query_plan/join_node.cpp
@@ -94,6 +97,8 @@ set(
     logical_query_plan/predicate_node.hpp
     logical_query_plan/projection_node.cpp
     logical_query_plan/projection_node.hpp
+    logical_query_plan/qualified_column_name.cpp
+    logical_query_plan/qualified_column_name.hpp
     logical_query_plan/show_columns_node.cpp
     logical_query_plan/show_columns_node.hpp
     logical_query_plan/show_tables_node.cpp

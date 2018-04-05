@@ -20,20 +20,6 @@ namespace opossum {
 
 class TableStatistics;
 
-QualifiedColumnName::QualifiedColumnName(const std::string& column_name, const std::optional<std::string>& table_name)
-    : column_name(column_name), table_name(table_name) {}
-
-bool QualifiedColumnName::operator==(const QualifiedColumnName& rhs) const {
-  return column_name == rhs.column_name && table_name == rhs.table_name;
-}
-
-std::string QualifiedColumnName::as_string() const {
-  std::stringstream ss;
-  if (table_name) ss << *table_name << ".";
-  ss << column_name;
-  return ss.str();
-}
-
 AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type) : _type(node_type) {}
 
 LQPColumnReference AbstractLQPNode::adapt_column_reference_to_different_lqp(
@@ -525,18 +511,6 @@ void AbstractLQPNode::_remove_output_pointer(const std::shared_ptr<AbstractLQPNo
 void AbstractLQPNode::_add_output_pointer(const std::shared_ptr<AbstractLQPNode>& output) {
   // Having the same output multiple times is allowed, e.g. for self joins
   _outputs.emplace_back(output);
-}
-
-void AbstractLQPNode::adapt_expression_to_different_lqp(
-    AbstractExpression& expression, const AbstractLQPNode& original_lqp,
-    AbstractLQPNode& copied_lqp) {
-  visit_expression(expression, [](auto& sub_expression) {
-    if (sub_expression->type == ExpressionType::Column) {
-      auto& column_reference = std::static_pointer_cast<LQPColumnExpression>(sub_expression)->column;
-      column_reference = adapt_column_reference_to_different_lqp(column_reference, original_lqp, copied_lqp)
-    }
-    return true;
-  });
 }
 
 std::optional<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>>

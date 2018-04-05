@@ -41,9 +41,6 @@ class SQLTranslator final : public Noncopyable {
  protected:
   std::shared_ptr<AbstractLQPNode> _translate_table_ref(const hsql::TableRef& table);
 
-  std::shared_ptr<AbstractLQPNode> _translate_where(const hsql::Expr& expr,
-                                                    const std::shared_ptr<AbstractLQPNode>& input_node);
-
   std::shared_ptr<AbstractLQPNode> _translate_select_groupby_having(const hsql::SelectStatement &select,
                                                                     const std::shared_ptr<AbstractLQPNode> &input_node);
 
@@ -56,9 +53,6 @@ class SQLTranslator final : public Noncopyable {
 
   std::shared_ptr<AbstractLQPNode> _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
 
-  std::shared_ptr<AbstractLQPNode> _translate_limit(const hsql::LimitDescription& limit,
-                                                    const std::shared_ptr<AbstractLQPNode>& input_node);
-
   std::shared_ptr<AbstractLQPNode> _translate_insert(const hsql::InsertStatement& insert);
 
   std::shared_ptr<AbstractLQPNode> _translate_delete(const hsql::DeleteStatement& del);
@@ -69,21 +63,22 @@ class SQLTranslator final : public Noncopyable {
 
   std::shared_ptr<AbstractLQPNode> _translate_drop(const hsql::DropStatement& update);
 
-  std::shared_ptr<AbstractLQPNode> _translate_table_ref_alias(const std::shared_ptr<AbstractLQPNode>& node,
-                                                              const hsql::TableRef& table);
+  /**
+   * Translate column renamings such as
+   *    SELECT (<SUBSELECT>) (name_column_a, name_column_b) ....
+   * OR
+   *    SELECT ... FROM foo AS bar(name_column_a, name_column_b) ...
+   */
+  std::shared_ptr<AbstractLQPNode> _translate_column_renamings(const std::shared_ptr<AbstractLQPNode> &node,
+                                                               const hsql::TableRef &table);
 
-  enum class FilterRows {
-    Yes, No
-  };
-
-  std::shared_ptr<AbstractLQPNode> _translate_expression(
-  const std::shared_ptr<AbstractExpression> &expression, std::shared_ptr<AbstractLQPNode> current_node,
-  const FilterRows filter_rows) const;
+  std::shared_ptr<AbstractLQPNode> _translate_predicate_expression(
+  const std::shared_ptr<AbstractExpression> &expression, std::shared_ptr<AbstractLQPNode> current_node) const;
 
   std::shared_ptr<AbstractLQPNode> _prune_expressions(const std::shared_ptr<AbstractLQPNode>& node,
                                                               const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const;
 
-  std::shared_ptr<AbstractLQPNode> _add_expression(const std::shared_ptr<AbstractLQPNode>& node,
+  std::shared_ptr<AbstractLQPNode> _add_expression_if_unavailable(const std::shared_ptr<AbstractLQPNode>& node,
                                                               const std::shared_ptr<AbstractExpression>& expression) const;
 
   std::shared_ptr<AbstractLQPNode> _translate_show(const hsql::ShowStatement& show_statement);

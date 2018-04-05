@@ -21,11 +21,11 @@ namespace opossum {
  */
 class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public AbstractLQPNode {
  public:
-  AggregateNode(const std::vector<LQPColumnReference>& groupby_column_references,
-                const std::vector<PlanColumnDefinition>& aggregate_column_definitions);
+  AggregateNode(const std::vector<std::shared_ptr<AbstractExpression>>& group_by_expressions,
+                const std::vector<std::shared_ptr<AbstractExpression>>& aggregate_expressions);
 
-  const std::vector<PlanColumnDefinition>& aggregate_column_definitions() const;
-  const std::vector<LQPColumnReference>& groupby_column_references() const;
+  const std::vector<std::shared_ptr<AbstractExpression>>& group_by_expressions() const;
+  const std::vector<std::shared_ptr<AbstractExpression>>& aggregate_expressions() const;
 
   std::string description() const override;
 
@@ -44,8 +44,8 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
   void _on_input_changed() override;
 
  private:
-  std::vector<PlanColumnDefinition> _aggregate_column_definitions;
-  std::vector<LQPColumnReference> _groupby_column_references;
+  std::vector<std::shared_ptr<AbstractExpression>> _group_by_expressions;
+  std::vector<std::shared_ptr<AbstractExpression>> _aggregate_expressions;
 
   mutable std::optional<std::vector<std::string>> _output_column_names;
 
