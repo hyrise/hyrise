@@ -41,6 +41,9 @@ if __name__ == "__main__":
     for root_directoy in directories:
         for root, _, file_names in os.walk(root_directoy):
             for file_name in file_names:
+                if file_name == "create_ptr_aliases.hpp":
+                    continue
+
                 process(os.path.join(root, file_name))
 
     for class_name in class_names:
