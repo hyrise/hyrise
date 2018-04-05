@@ -22,7 +22,8 @@ def process(file_path):
             for regex, repl in regex_repl_pairs:
                 m = regex.match(in_line)
                 while m is not None:
-                    class_names.add(m.group(1))
+                    print(m.groups())
+                    class_names.add(m.group(2))
                     m = regex.match(in_line, pos=m.pos + 1)
 
                 out_line, _ = regex.subn(repl, out_line)
