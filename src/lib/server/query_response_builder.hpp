@@ -4,6 +4,7 @@
 
 #include "server/client_connection.hpp"
 #include "storage/table.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 

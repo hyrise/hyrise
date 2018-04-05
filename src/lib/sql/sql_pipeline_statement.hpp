@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-using PreparedStatementCache = SQLQueryCacheSPtr<SQLQueryPlan>;
+using PreparedStatementCache = std::shared_ptr<SQLQueryPlan>;
 
 /**
  * This is the unified interface to handle SQL queries and related operations.

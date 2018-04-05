@@ -67,13 +67,18 @@ class AbstractFilter;
 class AbstractRule;
 class JoinNode;
 class UnionNode;
+class SQLPipeline;
+class SQLQueryPlan;
+class AggregateNode;
 struct OutputPacket;
 
 template<typename> class ValueColumn;
 template<typename> class DictionaryColumn;
-template<typename> class SQLQueryCache;
 
+CREATE_PTR_ALIASES(AggregateNode)
 CREATE_PTR_ALIASES(OutputPacket)
+CREATE_PTR_ALIASES(SQLPipeline)
+CREATE_PTR_ALIASES(SQLQueryPlan)
 CREATE_PTR_ALIASES(JoinNode)
 CREATE_PTR_ALIASES(UnionNode)
 CREATE_PTR_ALIASES(AbstractFilter)
@@ -130,5 +135,4 @@ CREATE_PTR_ALIASES(JitExpression)
 
 CREATE_TEMPLATE_PTR_ALIASES(DictionaryColumn)
 CREATE_TEMPLATE_PTR_ALIASES(ValueColumn)
-CREATE_TEMPLATE_PTR_ALIASES(SQLQueryCache)
 }

@@ -144,7 +144,7 @@ class Console {
 
   std::unique_ptr<SQLPipeline> _sql_pipeline;
   TransactionContextSPtr _explicitly_created_transaction_context;
-  SQLQueryCacheSPtr<SQLQueryPlan> _prepared_statements;
+  std::shared_ptr<SQLQueryPlan> _prepared_statements;
 };
 
 }  // namespace opossum
