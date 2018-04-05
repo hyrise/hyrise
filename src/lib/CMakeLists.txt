@@ -406,6 +406,7 @@ set(
     utils/performance_warning.cpp
     utils/performance_warning.hpp
     utils/print_directed_acyclic_graph.hpp
+    utils/create_ptr_aliases.hpp
     utils/scoped_locking_ptr.hpp
     utils/template_type.hpp
 )
