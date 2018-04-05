@@ -22,7 +22,7 @@ class Worker;
  */
 class ProcessingUnit final : public std::enable_shared_from_this<ProcessingUnit> {
  public:
-  ProcessingUnit(std::shared_ptr<TaskQueue> queue, std::shared_ptr<UidAllocator> worker_id_allocator, CpuID cpu_id);
+  ProcessingUnit(TaskQueueSPtr queue, UidAllocatorSPtr worker_id_allocator, CpuID cpu_id);
 
   bool shutdown_flag() const;
 
@@ -64,12 +64,12 @@ class ProcessingUnit final : public std::enable_shared_from_this<ProcessingUnit>
   uint64_t num_finished_tasks() const;
 
  private:
-  std::shared_ptr<TaskQueue> _queue;
-  std::shared_ptr<UidAllocator> _worker_id_allocator;
+  TaskQueueSPtr _queue;
+  UidAllocatorSPtr _worker_id_allocator;
   CpuID _cpu_id;
   std::mutex _mutex;  // Synchronizes access to _threads, _workers
   std::vector<std::thread> _threads;
-  std::vector<std::shared_ptr<Worker>> _workers;
+  std::vector<WorkerSPtr> _workers;
   std::atomic_bool _shutdown_flag{false};
   std::atomic<WorkerID> _active_worker_token{INVALID_WORKER_ID};
   std::mutex _hibernation_mutex;
@@ -78,5 +78,5 @@ class ProcessingUnit final : public std::enable_shared_from_this<ProcessingUnit>
   std::atomic<uint64_t> _num_finished_tasks{0};
 };
 
-CREATE_PTR_ALIASES(ProcessingUnit)
+
 }  // namespace opossum

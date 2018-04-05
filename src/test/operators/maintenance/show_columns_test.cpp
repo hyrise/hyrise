@@ -40,7 +40,7 @@ TEST_F(ShowColumnsTest, CanShowColumns) {
   auto sc = std::make_shared<ShowColumns>("int_float_double_string");
   sc->execute();
 
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/show_columns/int_float_double_string.tbl", 3);
+  TableSPtr expected_result = load_table("src/test/tables/show_columns/int_float_double_string.tbl", 3);
   EXPECT_TABLE_EQ_ORDERED(sc->get_output(), expected_result);
 }
 
@@ -48,7 +48,7 @@ TEST_F(ShowColumnsTest, CanShowColumnsWithNull) {
   auto sc = std::make_shared<ShowColumns>("int_float_with_null");
   sc->execute();
 
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/show_columns/int_float_with_null.tbl", 3);
+  TableSPtr expected_result = load_table("src/test/tables/show_columns/int_float_with_null.tbl", 3);
   EXPECT_TABLE_EQ_ORDERED(sc->get_output(), expected_result);
 }
 

@@ -50,7 +50,7 @@ class JoinGraphBuilderTest : public ::testing::Test {
     const auto sum_expression = LQPExpression::create_aggregate_function(
         AggregateFunction::Sum, {LQPExpression::create_column(_mock_node_a_x1)}, "sum_a");
 
-    _aggregate_node_a = std::make_shared<AggregateNode>(std::vector<std::shared_ptr<LQPExpression>>{sum_expression},
+    _aggregate_node_a = std::make_shared<AggregateNode>(std::vector<LQPExpressionSPtr>{sum_expression},
                                                         std::vector<LQPColumnReference>{_mock_node_a_x2});
 
     _aggregate_node_a->set_left_input(_mock_node_a);
@@ -77,7 +77,7 @@ class JoinGraphBuilderTest : public ::testing::Test {
     _union_node_a = std::make_shared<UnionNode>(UnionMode::Positions);
     _union_node_b = std::make_shared<UnionNode>(UnionMode::Positions);
 
-    _projection_node_a = std::make_shared<ProjectionNode>(std::vector<std::shared_ptr<LQPExpression>>{
+    _projection_node_a = std::make_shared<ProjectionNode>(std::vector<LQPExpressionSPtr>{
         LQPExpression::create_column(_mock_node_c_z1), LQPExpression::create_column(_mock_node_b_y1)});
 
     _lqp = _projection_node_a;
@@ -108,28 +108,28 @@ class JoinGraphBuilderTest : public ::testing::Test {
     _join_graph = JoinGraphBuilder{}(_lqp);  // NOLINT
   }
 
-  std::string to_string(const std::shared_ptr<const AbstractJoinPlanPredicate>& predicate) {
+  std::string to_string(const AbstractJoinPlanPredicateCSPtr& predicate) {
     std::stringstream stream;
     predicate->print(stream);
     return stream.str();
   }
 
-  std::shared_ptr<AggregateNode> _aggregate_node_a;
-  std::shared_ptr<JoinNode> _join_node_a, _join_node_b;
-  std::shared_ptr<MockNode> _mock_node_a, _mock_node_b, _mock_node_c;
-  std::shared_ptr<PredicateNode> _predicate_node_a, _predicate_node_b, _predicate_node_c, _predicate_node_d;
-  std::shared_ptr<PredicateNode> _predicate_node_e, _predicate_node_f, _predicate_node_g, _predicate_node_h;
-  std::shared_ptr<PredicateNode> _predicate_node_i, _predicate_node_j;
-  std::shared_ptr<UnionNode> _union_node_a, _union_node_b;
-  std::shared_ptr<JoinNode> _inner_join_node_a;
-  std::shared_ptr<JoinNode> _cross_join_node_a;
-  std::shared_ptr<ProjectionNode> _projection_node_a;
-  std::shared_ptr<AbstractLQPNode> _lqp;
+  AggregateNodeSPtr _aggregate_node_a;
+  JoinNodeSPtr _join_node_a, _join_node_b;
+  MockNodeSPtr _mock_node_a, _mock_node_b, _mock_node_c;
+  PredicateNodeSPtr _predicate_node_a, _predicate_node_b, _predicate_node_c, _predicate_node_d;
+  PredicateNodeSPtr _predicate_node_e, _predicate_node_f, _predicate_node_g, _predicate_node_h;
+  PredicateNodeSPtr _predicate_node_i, _predicate_node_j;
+  UnionNodeSPtr _union_node_a, _union_node_b;
+  JoinNodeSPtr _inner_join_node_a;
+  JoinNodeSPtr _cross_join_node_a;
+  ProjectionNodeSPtr _projection_node_a;
+  AbstractLQPNodeSPtr _lqp;
 
   LQPColumnReference _mock_node_a_x1, _mock_node_a_x2, _sum_mock_node_a_x1, _mock_node_b_y1, _mock_node_b_y2,
       _mock_node_c_z1;
 
-  std::shared_ptr<JoinGraph> _join_graph;
+  JoinGraphSPtr _join_graph;
 };
 
 TEST_F(JoinGraphBuilderTest, ComplexLQP) {

@@ -24,6 +24,6 @@ std::vector<T> _split(const std::string& str, char delimiter) {
   return internal;
 }
 
-std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_size = Chunk::MAX_SIZE);
+TableSPtr load_table(const std::string& file_name, size_t chunk_size = Chunk::MAX_SIZE);
 
 }  // namespace opossum

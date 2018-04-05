@@ -20,14 +20,14 @@ class GroupKeyIndexTest : public BaseTest {
   void SetUp() override {
     dict_col = BaseTest::create_dict_column_by_type<std::string>(
         DataType::String, {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"});
-    index = std::make_shared<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>({dict_col}));
+    index = std::make_shared<GroupKeyIndex>(std::vector<BaseColumnCSPtr>({dict_col}));
 
     index_offsets = &(index->_index_offsets);
     index_postings = &(index->_index_postings);
   }
 
-  std::shared_ptr<GroupKeyIndex> index = nullptr;
-  std::shared_ptr<BaseColumn> dict_col = nullptr;
+  GroupKeyIndexSPtr index = nullptr;
+  BaseColumnSPtr dict_col = nullptr;
 
   /**
    * Use pointers to inner data structures of CompositeGroupKeyIndex in order to bypass the

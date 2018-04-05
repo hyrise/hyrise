@@ -68,8 +68,8 @@ namespace opossum {
  */
 class UnionPositions : public AbstractReadOnlyOperator {
  public:
-  UnionPositions(const std::shared_ptr<const AbstractOperator>& left,
-                 const std::shared_ptr<const AbstractOperator>& right);
+  UnionPositions(const AbstractOperatorCSPtr& left,
+                 const AbstractOperatorCSPtr& right);
 
   const std::string name() const override;
 
@@ -87,11 +87,11 @@ class UnionPositions : public AbstractReadOnlyOperator {
     bool operator()(size_t left, size_t right) const;
   };
 
-  std::shared_ptr<const Table> _on_execute() override;
+  TableCSPtr _on_execute() override;
 
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  AbstractOperatorSPtr _on_recreate(
+      const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+      const AbstractOperatorSPtr& recreated_input_right) const override;
 
   /**
    * Validates the input AND initializes some utility data it uses (_column_segment_offsets, _referenced_tables,
@@ -103,9 +103,9 @@ class UnionPositions : public AbstractReadOnlyOperator {
    * @returns the result table of the operator if one or both of the inputs was empty and we don't actually need to
    *    execute the operatopr. nullptr otherwise.
    */
-  std::shared_ptr<const Table> _prepare_operator();
+  TableCSPtr _prepare_operator();
 
-  UnionPositions::ReferenceMatrix _build_reference_matrix(const std::shared_ptr<const Table>& input_table) const;
+  UnionPositions::ReferenceMatrix _build_reference_matrix(const TableCSPtr& input_table) const;
   bool _compare_reference_matrix_rows(const ReferenceMatrix& left_matrix, size_t left_row_idx,
                                       const ReferenceMatrix& right_matrix, size_t right_row_idx) const;
 
@@ -113,7 +113,7 @@ class UnionPositions : public AbstractReadOnlyOperator {
   std::vector<ColumnID> _column_segment_offsets;
 
   // For each column segment, the table its pos_list references
-  std::vector<std::shared_ptr<const Table>> _referenced_tables;
+  std::vector<TableCSPtr> _referenced_tables;
 
   // For each column_idx in the input tables, specifies the referenced column in the referenced table
   std::vector<ColumnID> _referenced_column_ids;

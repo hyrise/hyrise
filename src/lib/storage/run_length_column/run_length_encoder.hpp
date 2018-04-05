@@ -18,7 +18,7 @@ class RunLengthEncoder : public ColumnEncoder<RunLengthEncoder> {
   static constexpr auto _uses_vector_compression = false;
 
   template <typename T>
-  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueColumn<T>>& value_column) {
+  BaseEncodedColumnSPtr _on_encode(const ValueColumnCSPtr<T>& value_column) {
     const auto alloc = value_column->values().get_allocator();
 
     auto values = pmr_vector<T>{alloc};

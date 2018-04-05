@@ -22,18 +22,18 @@ class LQPColumnReference;
 class ConstantCalculationRule : public AbstractRule {
  public:
   std::string name() const override;
-  bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) override;
+  bool apply_to(const AbstractLQPNodeSPtr& node) override;
 
  private:
-  bool _replace_expression_in_outputs(const std::shared_ptr<AbstractLQPNode>& node,
+  bool _replace_expression_in_outputs(const AbstractLQPNodeSPtr& node,
                                       const LQPColumnReference& expression_column, const AllTypeVariant& value);
-  void _remove_column_from_projection(const std::shared_ptr<ProjectionNode>& node, ColumnID column_id);
+  void _remove_column_from_projection(const ProjectionNodeSPtr& node, ColumnID column_id);
 
-  std::optional<DataType> _get_type_of_expression(const std::shared_ptr<LQPExpression>& expression) const;
+  std::optional<DataType> _get_type_of_expression(const LQPExpressionSPtr& expression) const;
 
   template <typename T>
   std::optional<AllTypeVariant> _calculate_expression(boost::hana::basic_type<T> type,
-                                                      const std::shared_ptr<LQPExpression>& expression) const;
+                                                      const LQPExpressionSPtr& expression) const;
 };
 
 }  // namespace opossum

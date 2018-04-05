@@ -11,7 +11,7 @@ def process(file_path):
     regex_repl_pairs = [
         (re.compile("std::shared_ptr<(opossum::)?([a-zA-Z]*)(<([:_a-zA-Z0-9]*)>)?>"), r"\1\2SPtr\3"),
         (re.compile("std::shared_ptr<const (opossum::)?([:a-zA-Z]*)(<([:_a-zA-Z0-9]*)>)?>"), r"\1\2CSPtr\3"),
-        (re.compile("std::weak_ptr<(opossum::)?([:a-zA-Z]*)(<([:_a-zA-Z0-9]*)>)?>"), r"\1\2WPtr\2\3"),
+        (re.compile("std::weak_ptr<(opossum::)?([:a-zA-Z]*)(<([:_a-zA-Z0-9]*)>)?>"), r"\1\2WPtr\3"),
         (re.compile("std::weak_ptr<const (opossum::)?([:a-zA-Z]*)(<([:_a-zA-Z0-9]*)>)?>"), r"\1\2CWPtr\3"),
     ]
 

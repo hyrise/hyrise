@@ -41,7 +41,7 @@ std::string OrderStatusParams::to_string() const {
 OrderStatusResult AbstractOrderStatusImpl::run_transaction(const OrderStatusParams& params) {
   OrderStatusResult result;
 
-  opossum::TransactionManager::get().run_transaction([&](std::shared_ptr<opossum::TransactionContext> t_context) {
+  opossum::TransactionManager::get().run_transaction([&](opossum::TransactionContextSPtr t_context) {
     if (params.order_status_by == OrderStatusBy::CustomerLastName) {
       auto get_customer_tasks = get_customer_by_name(params.c_last, params.c_d_id, params.c_w_id);
       execute_tasks_with_context(get_customer_tasks, t_context);

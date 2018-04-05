@@ -35,7 +35,7 @@ class ColumnStatisticsTest : public BaseTest {
 
   // For single value scans (i.e. all but BETWEEN)
   template <typename T>
-  void predict_selectivities_and_compare(const std::shared_ptr<ColumnStatistics<T>>& column_statistic,
+  void predict_selectivities_and_compare(const ColumnStatisticsSPtr<T>& column_statistic,
                                          const PredicateCondition predicate_condition, const std::vector<T>& values,
                                          const std::vector<float>& expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
@@ -47,8 +47,8 @@ class ColumnStatisticsTest : public BaseTest {
   }
 
   // For two column scans (type of value1 is ColumnID)
-  void predict_selectivities_and_compare(const std::shared_ptr<Table>& table,
-                                         const std::vector<std::shared_ptr<BaseColumnStatistics>>& column_statistics,
+  void predict_selectivities_and_compare(const TableSPtr& table,
+                                         const std::vector<BaseColumnStatisticsSPtr>& column_statistics,
                                          const PredicateCondition predicate_condition) {
     auto table_wrapper = std::make_shared<TableWrapper>(table);
     table_wrapper->execute();
@@ -69,7 +69,7 @@ class ColumnStatisticsTest : public BaseTest {
 
   // For BETWEEN
   template <typename T>
-  void predict_selectivities_and_compare(const std::shared_ptr<ColumnStatistics<T>>& column_statistic,
+  void predict_selectivities_and_compare(const ColumnStatisticsSPtr<T>& column_statistic,
                                          const PredicateCondition predicate_condition,
                                          const std::vector<std::pair<T, T>>& values,
                                          const std::vector<float>& expected_selectivities) {
@@ -83,7 +83,7 @@ class ColumnStatisticsTest : public BaseTest {
 
   template <typename T>
   void predict_selectivities_for_stored_procedures_and_compare(
-      const std::shared_ptr<ColumnStatistics<T>>& column_statistic, const PredicateCondition predicate_condition,
+      const ColumnStatisticsSPtr<T>& column_statistic, const PredicateCondition predicate_condition,
       const std::vector<T>& values2, const std::vector<float>& expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
     for (const auto& value2 : values2) {
@@ -93,13 +93,13 @@ class ColumnStatisticsTest : public BaseTest {
     }
   }
 
-  std::shared_ptr<Table> _table_with_different_column_types;
-  std::shared_ptr<ColumnStatistics<int32_t>> _column_statistics_int;
-  std::shared_ptr<ColumnStatistics<float>> _column_statistics_float;
-  std::shared_ptr<ColumnStatistics<double>> _column_statistics_double;
-  std::shared_ptr<ColumnStatistics<std::string>> _column_statistics_string;
-  std::shared_ptr<Table> _table_uniform_distribution;
-  std::vector<std::shared_ptr<BaseColumnStatistics>> _column_statistics_uniform_columns;
+  TableSPtr _table_with_different_column_types;
+  ColumnStatisticsSPtr<int32_t> _column_statistics_int;
+  ColumnStatisticsSPtr<float> _column_statistics_float;
+  ColumnStatisticsSPtr<double> _column_statistics_double;
+  ColumnStatisticsSPtr<std::string> _column_statistics_string;
+  TableSPtr _table_uniform_distribution;
+  std::vector<BaseColumnStatisticsSPtr> _column_statistics_uniform_columns;
 
   //  {below min, min, middle, max, above max}
   std::vector<int32_t> _int_values{0, 1, 3, 6, 7};

@@ -11,12 +11,12 @@
 
 namespace opossum {
 
-Delete::Delete(const std::string& table_name, const std::shared_ptr<const AbstractOperator>& values_to_delete)
+Delete::Delete(const std::string& table_name, const AbstractOperatorCSPtr& values_to_delete)
     : AbstractReadWriteOperator{OperatorType::Delete, values_to_delete}, _table_name{table_name} {}
 
 const std::string Delete::name() const { return "Delete"; }
 
-std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionContext> context) {
+TableCSPtr Delete::_on_execute(TransactionContextSPtr context) {
   DebugAssert(_execution_input_valid(context), "Input to Delete isn't valid");
 
   context->register_read_write_operator(std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));
@@ -96,7 +96,7 @@ void Delete::_on_rollback_records() {
  * values_to_delete must be a table with at least one chunk, containing at least one ReferenceColumn
  * that all reference the table specified by table_name.
  */
-bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& context) const {
+bool Delete::_execution_input_valid(const TransactionContextSPtr& context) const {
   if (context == nullptr) return false;
 
   const auto values_to_delete = input_table_left();
@@ -122,9 +122,9 @@ bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
   return true;
 }
 
-std::shared_ptr<AbstractOperator> Delete::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+AbstractOperatorSPtr Delete::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+    const AbstractOperatorSPtr& recreated_input_right) const {
   return std::make_shared<Delete>(_table_name, recreated_input_left);
 }
 

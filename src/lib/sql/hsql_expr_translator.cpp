@@ -15,14 +15,14 @@
 
 namespace opossum {
 
-std::shared_ptr<LQPExpression> HSQLExprTranslator::to_lqp_expression(
-    const hsql::Expr& expr, const std::shared_ptr<AbstractLQPNode>& input_node) {
+LQPExpressionSPtr HSQLExprTranslator::to_lqp_expression(
+    const hsql::Expr& expr, const AbstractLQPNodeSPtr& input_node) {
   auto name = expr.name != nullptr ? std::string(expr.name) : "";
   auto alias = expr.alias != nullptr ? std::optional<std::string>(expr.alias) : std::nullopt;
 
-  std::shared_ptr<LQPExpression> node;
-  std::shared_ptr<LQPExpression> left;
-  std::shared_ptr<LQPExpression> right;
+  LQPExpressionSPtr node;
+  LQPExpressionSPtr left;
+  LQPExpressionSPtr right;
 
   if (expr.expr != nullptr) {
     left = to_lqp_expression(*expr.expr, input_node);
@@ -52,7 +52,7 @@ std::shared_ptr<LQPExpression> HSQLExprTranslator::to_lqp_expression(
       break;
     }
     case hsql::kExprFunctionRef: {
-      std::vector<std::shared_ptr<LQPExpression>> aggregate_function_arguments;
+      std::vector<LQPExpressionSPtr> aggregate_function_arguments;
       for (auto elem : *(expr.exprList)) {
         aggregate_function_arguments.emplace_back(to_lqp_expression(*elem, input_node));
       }
@@ -112,7 +112,7 @@ std::shared_ptr<LQPExpression> HSQLExprTranslator::to_lqp_expression(
 }
 
 AllParameterVariant HSQLExprTranslator::to_all_parameter_variant(
-    const hsql::Expr& expr, const std::optional<std::shared_ptr<AbstractLQPNode>>& input_node) {
+    const hsql::Expr& expr, const std::optional<AbstractLQPNodeSPtr>& input_node) {
   switch (expr.type) {
     case hsql::kExprLiteralInt:
       return AllTypeVariant(expr.ival);
@@ -133,7 +133,7 @@ AllParameterVariant HSQLExprTranslator::to_all_parameter_variant(
 }
 
 LQPColumnReference HSQLExprTranslator::to_column_reference(const hsql::Expr& hsql_expr,
-                                                           const std::shared_ptr<AbstractLQPNode>& input_node) {
+                                                           const AbstractLQPNodeSPtr& input_node) {
   Assert(hsql_expr.isType(hsql::kExprColumnRef), "Input needs to be column ref");
   const auto qualified_column_name = to_qualified_column_name(hsql_expr);
   const auto column_reference = input_node->find_column(qualified_column_name);

@@ -16,8 +16,8 @@ class TableStatisticsJoinTest : public BaseTest {
   // Because of Operator::get_output() returns a const table, we need another way of adding statistics to it. Here
   // you go, have some nice boilerplate....
   struct TableWithStatistics {
-    std::shared_ptr<const Table> table;
-    std::shared_ptr<TableStatistics> statistics;
+    TableCSPtr table;
+    TableStatisticsSPtr statistics;
   };
 
   void SetUp() override {

@@ -22,7 +22,7 @@ class BaseEncodedColumn : public BaseColumn {
   void append(const AllTypeVariant&) final;
 
   // calls the column-specific handler in an operator (visitor pattern)
-  void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
+  void visit(ColumnVisitable& visitable, ColumnVisitableContextSPtr context = nullptr) const override;
 
   virtual EncodingType encoding_type() const = 0;
 
@@ -33,6 +33,6 @@ class BaseEncodedColumn : public BaseColumn {
   virtual CompressedVectorType compressed_vector_type() const;
 };
 
-CREATE_PTR_ALIASES(BaseEncodedColumn)
+
 
 }  // namespace opossum

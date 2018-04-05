@@ -20,7 +20,7 @@ namespace {
  *
  * Add your column encoder here!
  */
-static const auto encoder_for_type = std::map<EncodingType, std::shared_ptr<BaseColumnEncoder>>{
+static const auto encoder_for_type = std::map<EncodingType, BaseColumnEncoderSPtr>{
     {EncodingType::Dictionary, std::make_shared<DictionaryEncoder>()},
     {EncodingType::RunLength, std::make_shared<RunLengthEncoder>()},
     {EncodingType::FrameOfReference, std::make_shared<FrameOfReferenceEncoder>()}};
@@ -37,8 +37,8 @@ std::unique_ptr<BaseColumnEncoder> create_encoder(EncodingType encoding_type) {
   return encoder->create_new();
 }
 
-std::shared_ptr<BaseEncodedColumn> encode_column(EncodingType encoding_type, DataType data_type,
-                                                 std::shared_ptr<const BaseValueColumn> column,
+BaseEncodedColumnSPtr encode_column(EncodingType encoding_type, DataType data_type,
+                                                 BaseValueColumnCSPtr column,
                                                  std::optional<VectorCompressionType> zero_suppression_type) {
   auto encoder = create_encoder(encoding_type);
 

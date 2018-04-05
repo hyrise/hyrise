@@ -22,7 +22,7 @@ namespace opossum {
 class Sort : public AbstractReadOnlyOperator {
  public:
   // The parameter chunk_size sets the chunk size of the output table, which will always be materialized
-  Sort(const std::shared_ptr<const AbstractOperator> in, const ColumnID column_id,
+  Sort(const AbstractOperatorCSPtr in, const ColumnID column_id,
        const OrderByMode order_by_mode = OrderByMode::Ascending, const size_t output_chunk_size = Chunk::MAX_SIZE);
 
   ColumnID column_id() const;
@@ -31,11 +31,11 @@ class Sort : public AbstractReadOnlyOperator {
   const std::string name() const override;
 
  protected:
-  std::shared_ptr<const Table> _on_execute() override;
+  TableCSPtr _on_execute() override;
   void _on_cleanup() override;
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  AbstractOperatorSPtr _on_recreate(
+      const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+      const AbstractOperatorSPtr& recreated_input_right) const override;
 
   // The operator is separated in three different classes. SortImpl is the common templated implementation of the
   // operator. SortImpl* und SortImplMaterializeOutput are extra classes for the visitor pattern. They fulfill a certain

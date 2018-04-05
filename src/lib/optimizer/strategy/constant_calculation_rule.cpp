@@ -18,7 +18,7 @@ namespace opossum {
 
 std::string ConstantCalculationRule::name() const { return "Constant Calculation Rule"; }
 
-bool ConstantCalculationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
+bool ConstantCalculationRule::apply_to(const AbstractLQPNodeSPtr& node) {
   if (node->type() != LQPNodeType::Projection) {
     return _apply_to_inputs(node);
   }
@@ -60,7 +60,7 @@ bool ConstantCalculationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   return _apply_to_inputs(node);
 }
 
-bool ConstantCalculationRule::_replace_expression_in_outputs(const std::shared_ptr<AbstractLQPNode>& node,
+bool ConstantCalculationRule::_replace_expression_in_outputs(const AbstractLQPNodeSPtr& node,
                                                              const LQPColumnReference& expression_column,
                                                              const AllTypeVariant& value) {
   auto output_plan_changed = false;
@@ -88,7 +88,7 @@ bool ConstantCalculationRule::_replace_expression_in_outputs(const std::shared_p
   return output_plan_changed;
 }
 
-void ConstantCalculationRule::_remove_column_from_projection(const std::shared_ptr<ProjectionNode>& node,
+void ConstantCalculationRule::_remove_column_from_projection(const ProjectionNodeSPtr& node,
                                                              ColumnID column_id) {
   auto column_expressions = node->column_expressions();
   column_expressions.erase(column_expressions.begin() + column_id);
@@ -98,7 +98,7 @@ void ConstantCalculationRule::_remove_column_from_projection(const std::shared_p
 }
 
 std::optional<DataType> ConstantCalculationRule::_get_type_of_expression(
-    const std::shared_ptr<LQPExpression>& expression) const {
+    const LQPExpressionSPtr& expression) const {
   if (expression->type() == ExpressionType::Literal) {
     return data_type_from_all_type_variant(expression->value());
   }
@@ -119,7 +119,7 @@ std::optional<DataType> ConstantCalculationRule::_get_type_of_expression(
 
 template <typename T>
 std::optional<AllTypeVariant> ConstantCalculationRule::_calculate_expression(
-    boost::hana::basic_type<T> type, const std::shared_ptr<LQPExpression>& expression) const {
+    boost::hana::basic_type<T> type, const LQPExpressionSPtr& expression) const {
   if (expression->type() == ExpressionType::Literal) {
     return expression->value();
   }

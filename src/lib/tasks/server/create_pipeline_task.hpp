@@ -9,7 +9,7 @@ namespace opossum {
 class SQLPipeline;
 
 struct CreatePipelineResult {
-  std::shared_ptr<SQLPipeline> sql_pipeline;
+  SQLPipelineSPtr sql_pipeline;
   std::optional<std::pair<std::string, std::string>> load_table;
 };
 

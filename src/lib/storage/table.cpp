@@ -15,7 +15,7 @@
 
 namespace opossum {
 
-std::shared_ptr<Table> Table::create_dummy_table(const TableColumnDefinitions& column_definitions) {
+TableSPtr Table::create_dummy_table(const TableColumnDefinitions& column_definitions) {
   return std::make_shared<Table>(column_definitions, TableType::Data);
 }
 
@@ -116,16 +116,16 @@ bool Table::empty() const { return row_count() == 0u; }
 
 ChunkID Table::chunk_count() const { return static_cast<ChunkID>(_chunks.size()); }
 
-const std::vector<std::shared_ptr<Chunk>>& Table::chunks() const { return _chunks; }
+const std::vector<ChunkSPtr>& Table::chunks() const { return _chunks; }
 
 uint32_t Table::max_chunk_size() const { return _max_chunk_size; }
 
-std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
+ChunkSPtr Table::get_chunk(ChunkID chunk_id) {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   return _chunks[chunk_id];
 }
 
-std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
+ChunkCSPtr Table::get_chunk(ChunkID chunk_id) const {
   DebugAssert(chunk_id < _chunks.size(), "ChunkID " + std::to_string(chunk_id) + " out of range");
   return _chunks[chunk_id];
 }
@@ -141,7 +141,7 @@ const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
 }
 
 void Table::append_chunk(const ChunkColumns& columns, const std::optional<PolymorphicAllocator<Chunk>>& alloc,
-                         const std::shared_ptr<ChunkAccessCounter>& access_counter) {
+                         const ChunkAccessCounterSPtr& access_counter) {
   const auto chunk_size = columns.empty() ? 0u : columns[0]->size();
 
 #if IS_DEBUG
@@ -159,7 +159,7 @@ void Table::append_chunk(const ChunkColumns& columns, const std::optional<Polymo
   }
 #endif
 
-  std::shared_ptr<MvccColumns> mvcc_columns;
+  MvccColumnsSPtr mvcc_columns;
 
   if (_use_mvcc == UseMvcc::Yes) {
     mvcc_columns = std::make_shared<MvccColumns>(chunk_size);

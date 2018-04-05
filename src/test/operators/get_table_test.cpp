@@ -18,7 +18,7 @@ class OperatorsGetTableTest : public BaseTest {
     manager.add_table("tableWithValues", load_table("src/test/tables/int_float2.tbl", 1u));
   }
 
-  std::shared_ptr<Table> _test_table;
+  TableSPtr _test_table;
 };
 
 TEST_F(OperatorsGetTableTest, GetOutput) {

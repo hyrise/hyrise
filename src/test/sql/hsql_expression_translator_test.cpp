@@ -34,7 +34,7 @@ class HSQLExpressionTranslatorTest : public BaseTest {
    * Hopefully this is fixed once hsql::SQLParser uses Smart Pointers as proposed in #55 in hyrise/sql-parser.
    * TODO(anyone): refactor these two methods
    */
-  std::shared_ptr<LQPExpression> compile_where_expression(const std::string& query) {
+  LQPExpressionSPtr compile_where_expression(const std::string& query) {
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
 
@@ -54,7 +54,7 @@ class HSQLExpressionTranslatorTest : public BaseTest {
     }
   }
 
-  std::vector<std::shared_ptr<LQPExpression>> compile_select_expression(const std::string& query) {
+  std::vector<LQPExpressionSPtr> compile_select_expression(const std::string& query) {
     hsql::SQLParserResult parse_result;
     hsql::SQLParser::parseSQLString(query, &parse_result);
 
@@ -63,7 +63,7 @@ class HSQLExpressionTranslatorTest : public BaseTest {
     }
 
     const auto* statement = parse_result.getStatements().at(0);
-    std::vector<std::shared_ptr<LQPExpression>> expressions;
+    std::vector<LQPExpressionSPtr> expressions;
 
     switch (statement->type()) {
       case hsql::kStmtSelect: {
@@ -79,7 +79,7 @@ class HSQLExpressionTranslatorTest : public BaseTest {
   }
 
   HSQLExprTranslator _translator;
-  std::shared_ptr<AbstractLQPNode> _stored_table_node;
+  AbstractLQPNodeSPtr _stored_table_node;
 };
 
 TEST_F(HSQLExpressionTranslatorTest, ArithmeticExpression) {

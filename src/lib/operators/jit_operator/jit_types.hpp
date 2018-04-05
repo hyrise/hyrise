@@ -97,8 +97,8 @@ struct JitRuntimeContext {
   uint32_t chunk_size;
   ChunkOffset chunk_offset;
   JitVariantVector tuple;
-  std::vector<std::shared_ptr<BaseJitColumnReader>> inputs;
-  std::vector<std::shared_ptr<BaseJitColumnWriter>> outputs;
+  std::vector<BaseJitColumnReaderSPtr> inputs;
+  std::vector<BaseJitColumnWriterSPtr> outputs;
   ChunkColumns out_chunk;
 };
 

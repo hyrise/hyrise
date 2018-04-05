@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_size) {
+TableSPtr load_table(const std::string& file_name, size_t chunk_size) {
   std::ifstream infile(file_name);
   Assert(infile.is_open(), "load_table: Could not find file " + file_name);
 
@@ -35,7 +35,7 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
     const auto data_type = data_type_to_string.right.at(col_types[i]);
     column_definitions.emplace_back(col_names[i], data_type, col_nullable[i]);
   }
-  std::shared_ptr<Table> test_table =
+  TableSPtr test_table =
       std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
 
   while (std::getline(infile, line)) {

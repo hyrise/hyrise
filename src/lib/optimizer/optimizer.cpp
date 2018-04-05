@@ -12,7 +12,7 @@
 
 namespace opossum {
 
-std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
+OptimizerSPtr Optimizer::create_default_optimizer() {
   auto optimizer = std::make_shared<Optimizer>(10);
 
   RuleBatch main_batch(RuleBatchExecutionPolicy::Iterative);
@@ -35,7 +35,7 @@ Optimizer::Optimizer(const uint32_t max_num_iterations) : _max_num_iterations(ma
 
 void Optimizer::add_rule_batch(RuleBatch rule_batch) { _rule_batches.emplace_back(std::move(rule_batch)); }
 
-std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<AbstractLQPNode>& input) const {
+AbstractLQPNodeSPtr Optimizer::optimize(const AbstractLQPNodeSPtr& input) const {
   // Add explicit root node, so the rules can freely change the tree below it without having to maintain a root node
   // to return to the Optimizer
   const auto root_node = LogicalPlanRootNode::make();

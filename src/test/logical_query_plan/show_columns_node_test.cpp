@@ -12,7 +12,7 @@ class ShowColumnsNodeTest : public BaseTest {
  protected:
   void SetUp() override { _show_columns_node = ShowColumnsNode::make("table_a"); }
 
-  std::shared_ptr<ShowColumnsNode> _show_columns_node;
+  ShowColumnsNodeSPtr _show_columns_node;
 };
 
 TEST_F(ShowColumnsNodeTest, Description) {

@@ -8,15 +8,15 @@
 #include "utils/assert.hpp"
 
 namespace opossum {
-UnionAll::UnionAll(const std::shared_ptr<const AbstractOperator> left_in,
-                   const std::shared_ptr<const AbstractOperator> right_in)
+UnionAll::UnionAll(const AbstractOperatorCSPtr left_in,
+                   const AbstractOperatorCSPtr right_in)
     : AbstractReadOnlyOperator(OperatorType::UnionAll, left_in, right_in) {
   // nothing to do here
 }
 
 const std::string UnionAll::name() const { return "UnionAll"; }
 
-std::shared_ptr<const Table> UnionAll::_on_execute() {
+TableCSPtr UnionAll::_on_execute() {
   DebugAssert(input_table_left()->column_definitions() == input_table_right()->column_definitions(),
               "Input tables must have same number of columns");
   DebugAssert(input_table_left()->type() == input_table_left()->type(), "Input tables must have the same type");
@@ -43,9 +43,9 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
 
   return output;
 }
-std::shared_ptr<AbstractOperator> UnionAll::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+AbstractOperatorSPtr UnionAll::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+    const AbstractOperatorSPtr& recreated_input_right) const {
   return std::make_shared<UnionAll>(recreated_input_left, recreated_input_right);
 }
 }  // namespace opossum

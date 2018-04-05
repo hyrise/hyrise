@@ -21,7 +21,7 @@
 namespace opossum {
 
 template <typename ColumnType>
-ColumnStatistics<ColumnType>::ColumnStatistics(const ColumnID column_id, const std::weak_ptr<Table> table)
+ColumnStatistics<ColumnType>::ColumnStatistics(const ColumnID column_id, const TableWPtrTable table)
     : BaseColumnStatistics(data_type_from_type<ColumnType>()), _column_id(column_id), _table(table) {}
 
 template <typename ColumnType>
@@ -29,7 +29,7 @@ ColumnStatistics<ColumnType>::ColumnStatistics(const ColumnID column_id, float d
                                                const ColumnType max, const float non_null_value_ratio)
     : BaseColumnStatistics(data_type_from_type<ColumnType>(), non_null_value_ratio),
       _column_id(column_id),
-      _table(std::weak_ptr<Table>()),
+      _table(TableWPtr()),
       _distinct_count(distinct_count),
       _min(min),
       _max(max) {}
@@ -54,7 +54,7 @@ float ColumnStatistics<ColumnType>::distinct_count() const {
 }
 
 template <typename ColumnType>
-std::shared_ptr<BaseColumnStatistics> ColumnStatistics<ColumnType>::clone() const {
+BaseColumnStatisticsSPtr ColumnStatistics<ColumnType>::clone() const {
   return std::make_shared<ColumnStatistics>(*this);
 }
 
@@ -100,7 +100,7 @@ void ColumnStatistics<ColumnType>::_initialize_min_max() const {
 }
 
 template <typename ColumnType>
-std::shared_ptr<BaseColumnStatistics> ColumnStatistics<ColumnType>::_this_without_null_values() {
+BaseColumnStatisticsSPtr ColumnStatistics<ColumnType>::_this_without_null_values() {
   if (_non_null_value_ratio == 1.f) {
     return shared_from_this();
   }
@@ -312,7 +312,7 @@ ColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_p
 template <typename ColumnType>
 TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_for_two_column_predicate(
     const PredicateCondition predicate_condition,
-    const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
+    const BaseColumnStatisticsSPtr& right_base_column_statistics,
     const std::optional<AllTypeVariant>& value2) {
   /**
    * Calculate expected selectivity by looking at what ratio of values of both columns are in the overlapping value
@@ -515,7 +515,7 @@ TwoColumnSelectivityResult ColumnStatistics<ColumnType>::estimate_selectivity_fo
 template <>
 TwoColumnSelectivityResult ColumnStatistics<std::string>::estimate_selectivity_for_two_column_predicate(
     const PredicateCondition predicate_condition,
-    const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
+    const BaseColumnStatisticsSPtr& right_base_column_statistics,
     const std::optional<AllTypeVariant>& value2) {
   // TODO(anybody) implement special case for strings
   auto right_stats = std::dynamic_pointer_cast<ColumnStatistics<std::string>>(right_base_column_statistics);

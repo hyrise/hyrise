@@ -20,9 +20,9 @@ namespace opossum {
 // The last chunk offset is reserved for NULL as used in ReferenceColumns.
 const ChunkOffset Chunk::MAX_SIZE = std::numeric_limits<ChunkOffset>::max() - 1;
 
-Chunk::Chunk(const ChunkColumns& columns, std::shared_ptr<MvccColumns> mvcc_columns,
+Chunk::Chunk(const ChunkColumns& columns, MvccColumnsSPtr mvcc_columns,
              const std::optional<PolymorphicAllocator<Chunk>>& alloc,
-             const std::shared_ptr<ChunkAccessCounter> access_counter)
+             const ChunkAccessCounterSPtr access_counter)
     : _columns(columns), _mvcc_columns(mvcc_columns), _access_counter(access_counter) {
 #if IS_DEBUG
   const auto chunk_size = columns.empty() ? 0u : columns[0]->size();
@@ -40,7 +40,7 @@ bool Chunk::is_mutable() const {
                      [](const auto& column) { return std::dynamic_pointer_cast<BaseValueColumn>(column) != nullptr; });
 }
 
-void Chunk::replace_column(size_t column_id, std::shared_ptr<BaseColumn> column) {
+void Chunk::replace_column(size_t column_id, BaseColumnSPtr column) {
   std::atomic_store(&_columns.at(column_id), column);
 }
 
@@ -62,11 +62,11 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
   }
 }
 
-std::shared_ptr<BaseColumn> Chunk::get_mutable_column(ColumnID column_id) const {
+BaseColumnSPtr Chunk::get_mutable_column(ColumnID column_id) const {
   return std::atomic_load(&_columns.at(column_id));
 }
 
-std::shared_ptr<const BaseColumn> Chunk::get_column(ColumnID column_id) const {
+BaseColumnCSPtr Chunk::get_column(ColumnID column_id) const {
   return std::atomic_load(&_columns.at(column_id));
 }
 
@@ -95,21 +95,21 @@ SharedScopedLockingPtr<const MvccColumns> Chunk::mvcc_columns() const {
   return {*_mvcc_columns, _mvcc_columns->_mutex};
 }
 
-std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(
-    const std::vector<std::shared_ptr<const BaseColumn>>& columns) const {
-  auto result = std::vector<std::shared_ptr<BaseIndex>>();
+std::vector<BaseIndexSPtr> Chunk::get_indices(
+    const std::vector<BaseColumnCSPtr>& columns) const {
+  auto result = std::vector<BaseIndexSPtr>();
   std::copy_if(_indices.cbegin(), _indices.cend(), std::back_inserter(result),
                [&](const auto& index) { return index->is_index_for(columns); });
   return result;
 }
 
-std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(const std::vector<ColumnID> column_ids) const {
+std::vector<BaseIndexSPtr> Chunk::get_indices(const std::vector<ColumnID> column_ids) const {
   auto columns = get_columns_for_ids(column_ids);
   return get_indices(columns);
 }
 
-std::shared_ptr<BaseIndex> Chunk::get_index(const ColumnIndexType index_type,
-                                            const std::vector<std::shared_ptr<const BaseColumn>>& columns) const {
+BaseIndexSPtr Chunk::get_index(const ColumnIndexType index_type,
+                                            const std::vector<BaseColumnCSPtr>& columns) const {
   auto index_it = std::find_if(_indices.cbegin(), _indices.cend(), [&](const auto& index) {
     return index->is_index_for(columns) && index->type() == index_type;
   });
@@ -117,13 +117,13 @@ std::shared_ptr<BaseIndex> Chunk::get_index(const ColumnIndexType index_type,
   return (index_it == _indices.cend()) ? nullptr : *index_it;
 }
 
-std::shared_ptr<BaseIndex> Chunk::get_index(const ColumnIndexType index_type,
+BaseIndexSPtr Chunk::get_index(const ColumnIndexType index_type,
                                             const std::vector<ColumnID> column_ids) const {
   auto columns = get_columns_for_ids(column_ids);
   return get_index(index_type, columns);
 }
 
-void Chunk::remove_index(std::shared_ptr<BaseIndex> index) {
+void Chunk::remove_index(BaseIndexSPtr index) {
   auto it = std::find(_indices.cbegin(), _indices.cend(), index);
   DebugAssert(it != _indices.cend(), "Trying to remove a non-existing index");
   _indices.erase(it);
@@ -185,7 +185,7 @@ size_t Chunk::estimate_memory_usage() const {
   return bytes;
 }
 
-std::vector<std::shared_ptr<const BaseColumn>> Chunk::get_columns_for_ids(
+std::vector<BaseColumnCSPtr> Chunk::get_columns_for_ids(
     const std::vector<ColumnID>& column_ids) const {
   DebugAssert(([&]() {
                 for (auto column_id : column_ids)
@@ -194,16 +194,16 @@ std::vector<std::shared_ptr<const BaseColumn>> Chunk::get_columns_for_ids(
               }()),
               "Column IDs not within range [0, column_count()).");
 
-  auto columns = std::vector<std::shared_ptr<const BaseColumn>>{};
+  auto columns = std::vector<BaseColumnCSPtr>{};
   columns.reserve(column_ids.size());
   std::transform(column_ids.cbegin(), column_ids.cend(), std::back_inserter(columns),
                  [&](const auto& column_id) { return get_column(column_id); });
   return columns;
 }
 
-std::shared_ptr<ChunkStatistics> Chunk::statistics() const { return _statistics; }
+ChunkStatisticsSPtr Chunk::statistics() const { return _statistics; }
 
-void Chunk::set_statistics(std::shared_ptr<ChunkStatistics> chunk_statistics) {
+void Chunk::set_statistics(ChunkStatisticsSPtr chunk_statistics) {
   DebugAssert(chunk_statistics->statistics().size() == column_count(),
               "ChunkStatistics must have same column amount as Chunk");
   _statistics = chunk_statistics;

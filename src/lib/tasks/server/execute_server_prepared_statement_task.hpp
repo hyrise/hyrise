@@ -9,15 +9,15 @@ class TransactionContext;
 class Table;
 
 // This task takes a query plan of a prepared statement and executes it.
-class ExecuteServerPreparedStatementTask : public AbstractServerTask<std::shared_ptr<const Table>> {
+class ExecuteServerPreparedStatementTask : public AbstractServerTask<TableCSPtr> {
  public:
-  explicit ExecuteServerPreparedStatementTask(std::shared_ptr<SQLQueryPlan> prepared_plan)
+  explicit ExecuteServerPreparedStatementTask(SQLQueryPlanSPtr prepared_plan)
       : _prepared_plan(std::move(prepared_plan)) {}
 
  protected:
   void _on_execute() override;
 
-  std::shared_ptr<SQLQueryPlan> _prepared_plan;
+  SQLQueryPlanSPtr _prepared_plan;
 };
 
 }  // namespace opossum

@@ -51,7 +51,7 @@ class GroupKeyIndex : public BaseIndex {
   GroupKeyIndex(GroupKeyIndex&&) = default;
   GroupKeyIndex& operator=(GroupKeyIndex&&) = default;
 
-  explicit GroupKeyIndex(const std::vector<std::shared_ptr<const BaseColumn>> index_columns);
+  explicit GroupKeyIndex(const std::vector<BaseColumnCSPtr> index_columns);
 
  private:
   Iterator _lower_bound(const std::vector<AllTypeVariant>& values) const final;
@@ -69,10 +69,10 @@ class GroupKeyIndex : public BaseIndex {
    */
   Iterator _get_postings_iterator_at(ValueID value_id) const;
 
-  std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const;
+  std::vector<BaseColumnCSPtr> _get_index_columns() const;
 
  private:
-  const std::shared_ptr<const BaseDictionaryColumn> _index_column;
+  const BaseDictionaryColumnCSPtr _index_column;
   std::vector<std::size_t> _index_offsets;   // maps value-ids to offsets in _index_postings
   std::vector<ChunkOffset> _index_postings;  // records positions in the attribute vector
 };

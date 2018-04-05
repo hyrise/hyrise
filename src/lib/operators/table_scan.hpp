@@ -19,7 +19,7 @@ class TableScan : public AbstractReadOnlyOperator {
   friend class LQPTranslatorTest;
 
  public:
-  TableScan(const std::shared_ptr<const AbstractOperator> in, ColumnID left_column_id,
+  TableScan(const AbstractOperatorCSPtr in, ColumnID left_column_id,
             const PredicateCondition predicate_condition, const AllParameterVariant right_parameter);
 
   ~TableScan();
@@ -48,11 +48,11 @@ class TableScan : public AbstractReadOnlyOperator {
   const std::string description(DescriptionMode description_mode) const override;
 
  protected:
-  std::shared_ptr<const Table> _on_execute() override;
+  TableCSPtr _on_execute() override;
 
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  AbstractOperatorSPtr _on_recreate(
+      const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+      const AbstractOperatorSPtr& recreated_input_right) const override;
 
   void _on_cleanup() override;
 
@@ -65,9 +65,9 @@ class TableScan : public AbstractReadOnlyOperator {
 
   std::vector<ChunkID> _excluded_chunk_ids;
 
-  std::shared_ptr<const Table> _in_table;
+  TableCSPtr _in_table;
   std::unique_ptr<BaseTableScanImpl> _impl;
-  std::shared_ptr<Table> _output_table;
+  TableSPtr _output_table;
 };
 
 }  // namespace opossum

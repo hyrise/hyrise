@@ -16,13 +16,13 @@
 
 namespace opossum {
 
-void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& data_types,
+void ChunkEncoder::encode_chunk(const ChunkSPtr& chunk, const std::vector<DataType>& data_types,
                                 const ChunkEncodingSpec& chunk_encoding_spec) {
   Assert((data_types.size() == chunk->column_count()), "Number of column types must match the chunk’s column count.");
   Assert((chunk_encoding_spec.size() == chunk->column_count()),
          "Number of column encoding specs must match the chunk’s column count.");
 
-  std::vector<std::shared_ptr<ChunkColumnStatistics>> column_statistics;
+  std::vector<ChunkColumnStatisticsSPtr> column_statistics;
   for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
     const auto spec = chunk_encoding_spec[column_id];
 
@@ -49,13 +49,13 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
   }
 }
 
-void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& data_types,
+void ChunkEncoder::encode_chunk(const ChunkSPtr& chunk, const std::vector<DataType>& data_types,
                                 const ColumnEncodingSpec& column_encoding_spec) {
   const auto chunk_encoding_spec = ChunkEncodingSpec{chunk->column_count(), column_encoding_spec};
   encode_chunk(chunk, data_types, chunk_encoding_spec);
 }
 
-void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids,
+void ChunkEncoder::encode_chunks(const TableSPtr& table, const std::vector<ChunkID>& chunk_ids,
                                  const std::map<ChunkID, ChunkEncodingSpec>& chunk_encoding_specs) {
   const auto data_types = table->column_data_types();
 
@@ -69,7 +69,7 @@ void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std:
   }
 }
 
-void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids,
+void ChunkEncoder::encode_chunks(const TableSPtr& table, const std::vector<ChunkID>& chunk_ids,
                                  const ColumnEncodingSpec& column_encoding_spec) {
   const auto data_types = table->column_data_types();
 
@@ -81,7 +81,7 @@ void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std:
   }
 }
 
-void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
+void ChunkEncoder::encode_all_chunks(const TableSPtr& table,
                                      const std::vector<ChunkEncodingSpec>& chunk_encoding_specs) {
   const auto column_types = table->column_data_types();
   const auto chunk_count = static_cast<size_t>(table->chunk_count());
@@ -95,7 +95,7 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
   }
 }
 
-void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
+void ChunkEncoder::encode_all_chunks(const TableSPtr& table,
                                      const ColumnEncodingSpec& column_encoding_spec) {
   const auto column_types = table->column_data_types();
 

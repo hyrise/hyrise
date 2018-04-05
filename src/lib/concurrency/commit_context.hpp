@@ -39,22 +39,22 @@ class CommitContext : private Noncopyable {
 
   bool has_next() const;
 
-  std::shared_ptr<CommitContext> next();
-  std::shared_ptr<const CommitContext> next() const;
+  CommitContextSPtr next();
+  CommitContextCSPtr next() const;
 
   /**
    * Tries to set the next context. Returns false if it has already
    * been set. Throws error if its commit id isn't equal to this context's
    * commit id + 1.
    */
-  bool try_set_next(const std::shared_ptr<CommitContext>& next);
+  bool try_set_next(const CommitContextSPtr& next);
 
  private:
   const CommitID _commit_id;
   std::atomic<bool> _pending;  // true if context is waiting to be committed
-  std::shared_ptr<CommitContext> _next;
+  CommitContextSPtr _next;
   std::function<void()> _callback;
 };
 
-CREATE_PTR_ALIASES(CommitContext)
+
 }  // namespace opossum

@@ -22,7 +22,7 @@ class IndexScan : public AbstractReadOnlyOperator {
   friend class LQPTranslatorTest;
 
  public:
-  IndexScan(const std::shared_ptr<const AbstractOperator> in, const ColumnIndexType index_type,
+  IndexScan(const AbstractOperatorCSPtr in, const ColumnIndexType index_type,
             const std::vector<ColumnID> left_column_ids, const PredicateCondition predicate_condition,
             const std::vector<AllTypeVariant> right_values, const std::vector<AllTypeVariant> right_values2 = {});
 
@@ -36,14 +36,14 @@ class IndexScan : public AbstractReadOnlyOperator {
   void set_included_chunk_ids(const std::vector<ChunkID>& chunk_ids);
 
  protected:
-  std::shared_ptr<const Table> _on_execute() final;
+  TableCSPtr _on_execute() final;
 
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  AbstractOperatorSPtr _on_recreate(
+      const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+      const AbstractOperatorSPtr& recreated_input_right) const override;
 
   void _validate_input();
-  std::shared_ptr<JobTask> _create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex);
+  JobTaskSPtr _create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex);
   PosList _scan_chunk(const ChunkID chunk_id);
 
  private:
@@ -55,8 +55,8 @@ class IndexScan : public AbstractReadOnlyOperator {
 
   std::vector<ChunkID> _included_chunk_ids;
 
-  std::shared_ptr<const Table> _in_table;
-  std::shared_ptr<Table> _out_table;
+  TableCSPtr _in_table;
+  TableSPtr _out_table;
 };
 
 }  // namespace opossum

@@ -98,9 +98,9 @@ JoinMode translate_join_type_to_join_mode(const hsql::JoinType join_type) {
   return it->second;
 }
 
-std::vector<std::shared_ptr<AbstractLQPNode>> SQLTranslator::translate_parse_result(
+std::vector<AbstractLQPNodeSPtr> SQLTranslator::translate_parse_result(
     const hsql::SQLParserResult& result) {
-  std::vector<std::shared_ptr<AbstractLQPNode>> result_nodes;
+  std::vector<AbstractLQPNodeSPtr> result_nodes;
   const std::vector<hsql::SQLStatement*>& statements = result.getStatements();
 
   for (const hsql::SQLStatement* stmt : statements) {
@@ -111,7 +111,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> SQLTranslator::translate_parse_res
   return result_nodes;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_statement(const hsql::SQLStatement& statement) {
+AbstractLQPNodeSPtr SQLTranslator::translate_statement(const hsql::SQLStatement& statement) {
   switch (statement.type()) {
     case hsql::kStmtSelect:
       return _translate_select(static_cast<const hsql::SelectStatement&>(statement));
@@ -132,13 +132,13 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_statement(const hsql::
   }
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::InsertStatement& insert) {
+AbstractLQPNodeSPtr SQLTranslator::_translate_insert(const hsql::InsertStatement& insert) {
   const std::string table_name{insert.tableName};
   auto target_table = StorageManager::get().get_table(table_name);
 
   Assert(target_table != nullptr, "Insert: Invalid table name");
 
-  std::shared_ptr<AbstractLQPNode> current_result_node;
+  AbstractLQPNodeSPtr current_result_node;
 
   // Check for SELECT ... INTO .. query
   if (insert.type == hsql::kInsertSelect) {
@@ -207,7 +207,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
     // for the Projection, so that it contains as many columns as the target table.
 
     // pre-fill new projection list with NULLs
-    std::vector<std::shared_ptr<LQPExpression>> projections(target_table->column_count(),
+    std::vector<LQPExpressionSPtr> projections(target_table->column_count(),
                                                             LQPExpression::create_literal(NULL_VALUE));
 
     ColumnID insert_column_index{0};
@@ -247,8 +247,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
   return insert_node;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::DeleteStatement& del) {
-  std::shared_ptr<AbstractLQPNode> current_result_node = StoredTableNode::make(del.tableName);
+AbstractLQPNodeSPtr SQLTranslator::_translate_delete(const hsql::DeleteStatement& del) {
+  AbstractLQPNodeSPtr current_result_node = StoredTableNode::make(del.tableName);
   current_result_node = _validate_if_active(current_result_node);
   if (del.expr) {
     current_result_node = _translate_where(*del.expr, current_result_node);
@@ -260,8 +260,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
   return delete_node;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::UpdateStatement& update) {
-  std::shared_ptr<AbstractLQPNode> current_values_node = _translate_table_ref(*update.table);
+AbstractLQPNodeSPtr SQLTranslator::_translate_update(const hsql::UpdateStatement& update) {
+  AbstractLQPNodeSPtr current_values_node = _translate_table_ref(*update.table);
   if (update.where) {
     current_values_node = _translate_where(*update.where, current_values_node);
   }
@@ -271,7 +271,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   Assert(!std::dynamic_pointer_cast<StoredTableNode>(current_values_node),
          "Unconditional updates are currently not supported");
 
-  std::vector<std::shared_ptr<LQPExpression>> update_expressions;
+  std::vector<LQPExpressionSPtr> update_expressions;
   update_expressions.reserve(current_values_node->output_column_count());
 
   // pre-fill with regular column references
@@ -290,13 +290,13 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
     update_expressions[column_id] = expr;
   }
 
-  std::shared_ptr<AbstractLQPNode> update_node = UpdateNode::make((update.table)->name, update_expressions);
+  AbstractLQPNodeSPtr update_node = UpdateNode::make((update.table)->name, update_expressions);
   update_node->set_left_input(current_values_node);
 
   return update_node;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select(const hsql::SelectStatement& select) {
+AbstractLQPNodeSPtr SQLTranslator::_translate_select(const hsql::SelectStatement& select) {
   // SQL Orders of Operations: http://www.bennadel.com/blog/70-sql-query-order-of-operations.htm
   // 1. FROM clause (incl. JOINs and subselects that are part of this)
   // 2. WHERE clause
@@ -352,7 +352,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select(const hsql::Se
   return current_result_node;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::JoinDefinition& join) {
+AbstractLQPNodeSPtr SQLTranslator::_translate_join(const hsql::JoinDefinition& join) {
   const auto join_mode = translate_join_type_to_join_mode(join.type);
 
   if (join_mode == JoinMode::Natural) {
@@ -419,7 +419,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::Join
   return join_node;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_natural_join(const hsql::JoinDefinition& join) {
+AbstractLQPNodeSPtr SQLTranslator::_translate_natural_join(const hsql::JoinDefinition& join) {
   DebugAssert(translate_join_type_to_join_mode(join.type) == JoinMode::Natural, "join must be a natural join");
 
   const auto& left_node = _translate_table_ref(*join.left);
@@ -438,7 +438,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_natural_join(const hs
 
   Assert(!join_column_names.empty(), "No matching columns for natural join found");
 
-  std::shared_ptr<AbstractLQPNode> return_node = JoinNode::make(JoinMode::Cross);
+  AbstractLQPNodeSPtr return_node = JoinNode::make(JoinMode::Cross);
   return_node->set_left_input(left_node);
   return_node->set_right_input(right_node);
 
@@ -472,7 +472,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_natural_join(const hs
   return projection;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_cross_product(const std::vector<hsql::TableRef*>& tables) {
+AbstractLQPNodeSPtr SQLTranslator::_translate_cross_product(const std::vector<hsql::TableRef*>& tables) {
   DebugAssert(!tables.empty(), "Cannot translate cross product without tables");
   auto product = _translate_table_ref(*tables.front());
 
@@ -489,7 +489,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_cross_product(const s
   return product;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref_alias(const std::shared_ptr<AbstractLQPNode>& node,
+AbstractLQPNodeSPtr SQLTranslator::_translate_table_ref_alias(const AbstractLQPNodeSPtr& node,
                                                                            const hsql::TableRef& table) {
   // Add a new projection node for table alias with column alias declarations
   // e.g. select * from foo as bar(a, b)
@@ -506,7 +506,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref_alias(const
          "The number of column aliases must match the number of columns");
 
   auto& column_references = node->output_column_references();
-  std::vector<std::shared_ptr<LQPExpression>> projections;
+  std::vector<LQPExpressionSPtr> projections;
   projections.reserve(table.alias->columns->size());
   size_t column_id = 0;
   for (const char* column : *(table.alias->columns)) {
@@ -518,9 +518,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref_alias(const
   return projection_node;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql::TableRef& table) {
+AbstractLQPNodeSPtr SQLTranslator::_translate_table_ref(const hsql::TableRef& table) {
   auto alias = table.alias ? std::optional<std::string>(table.alias->name) : std::nullopt;
-  std::shared_ptr<AbstractLQPNode> node;
+  AbstractLQPNodeSPtr node;
   switch (table.type) {
     case hsql::kTableName:
       if (StorageManager::get().has_table(table.name)) {
@@ -556,8 +556,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql:
   return node;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_where(const hsql::Expr& expr,
-                                                                 const std::shared_ptr<AbstractLQPNode>& input_node) {
+AbstractLQPNodeSPtr SQLTranslator::_translate_where(const hsql::Expr& expr,
+                                                                 const AbstractLQPNodeSPtr& input_node) {
   DebugAssert(expr.isType(hsql::kExprOperator), "Filter expression clause has to be of type operator!");
 
   /**
@@ -581,9 +581,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_where(const hsql::Exp
       input_node);
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_having(const hsql::Expr& expr,
-                                                                  const std::shared_ptr<AggregateNode>& aggregate_node,
-                                                                  const std::shared_ptr<AbstractLQPNode>& input_node) {
+AbstractLQPNodeSPtr SQLTranslator::_translate_having(const hsql::Expr& expr,
+                                                                  const AggregateNodeSPtr& aggregate_node,
+                                                                  const AbstractLQPNodeSPtr& input_node) {
   DebugAssert(expr.isType(hsql::kExprOperator), "Filter expression clause has to be of type operator!");
 
   if (expr.opType == hsql::kOpOr) {
@@ -611,9 +611,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_having(const hsql::Ex
  * Retrieves all aggregate functions used by the HAVING clause.
  * This is use by _translate_having to add missing aggregations to the Aggregate operator.
  */
-std::vector<std::shared_ptr<LQPExpression>> SQLTranslator::_retrieve_having_aggregates(
-    const hsql::Expr& expr, const std::shared_ptr<AbstractLQPNode>& input_node) {
-  std::vector<std::shared_ptr<LQPExpression>> expressions;
+std::vector<LQPExpressionSPtr> SQLTranslator::_retrieve_having_aggregates(
+    const hsql::Expr& expr, const AbstractLQPNodeSPtr& input_node) {
+  std::vector<LQPExpressionSPtr> expressions;
 
   if (expr.type == hsql::kExprFunctionRef) {
     // We found an aggregate function. Translate and add to the list
@@ -640,8 +640,8 @@ std::vector<std::shared_ptr<LQPExpression>> SQLTranslator::_retrieve_having_aggr
   return expressions;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
-    const hsql::SelectStatement& select, const std::shared_ptr<AbstractLQPNode>& input_node) {
+AbstractLQPNodeSPtr SQLTranslator::_translate_aggregate(
+    const hsql::SelectStatement& select, const AbstractLQPNodeSPtr& input_node) {
   /**
    * This function creates the following node structure:
    *
@@ -668,7 +668,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
   /**
    * Build the groupby_aliasing_node
    */
-  std::vector<std::shared_ptr<LQPExpression>> groupby_aliasing_expressions;
+  std::vector<LQPExpressionSPtr> groupby_aliasing_expressions;
   groupby_aliasing_expressions.reserve(input_node->output_column_count());
   for (auto input_column_id = ColumnID{0}; input_column_id < input_node->output_column_count(); ++input_column_id) {
     groupby_aliasing_expressions.emplace_back(
@@ -719,7 +719,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
   /**
    * Parse the SELECT list for aggregates and remember the order of the output_columns
    */
-  std::vector<std::shared_ptr<LQPExpression>> aggregate_expressions;
+  std::vector<LQPExpressionSPtr> aggregate_expressions;
   aggregate_expressions.reserve(select_list.size());
 
   for (const auto* select_column_hsql_expr : select_list) {
@@ -792,7 +792,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
   /**
    * Create the ProjectionNode
    */
-  std::vector<std::shared_ptr<LQPExpression>> projection_expressions;
+  std::vector<LQPExpressionSPtr> projection_expressions;
   for (const auto& output_column : output_columns) {
     DebugAssert(output_column.first < aggregate_node->output_column_count(), "ColumnID out of range");
     const auto column_reference = aggregate_node->output_column_references()[output_column.first];
@@ -814,12 +814,12 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
   return projection_node;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_projection(
-    const std::vector<hsql::Expr*>& select_list, const std::shared_ptr<AbstractLQPNode>& input_node) {
-  std::vector<std::shared_ptr<LQPExpression>> select_column_expressions;
+AbstractLQPNodeSPtr SQLTranslator::_translate_projection(
+    const std::vector<hsql::Expr*>& select_list, const AbstractLQPNodeSPtr& input_node) {
+  std::vector<LQPExpressionSPtr> select_column_expressions;
 
   for (const auto* select_column_hsql_expr : select_list) {
-    std::shared_ptr<LQPExpression> expr;
+    LQPExpressionSPtr expr;
 
     // For subselects, recursively translate the term to an LQPNode and add its root to an LQPExpression
     if (select_column_hsql_expr->select) {
@@ -884,8 +884,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_projection(
   return projection_node;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_order_by(
-    const std::vector<hsql::OrderDescription*>& order_list, const std::shared_ptr<AbstractLQPNode>& input_node) {
+AbstractLQPNodeSPtr SQLTranslator::_translate_order_by(
+    const std::vector<hsql::OrderDescription*>& order_list, const AbstractLQPNodeSPtr& input_node) {
   if (order_list.empty()) {
     return input_node;
   }
@@ -911,17 +911,17 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_order_by(
   return sort_node;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_limit(const hsql::LimitDescription& limit,
-                                                                 const std::shared_ptr<AbstractLQPNode>& input_node) {
+AbstractLQPNodeSPtr SQLTranslator::_translate_limit(const hsql::LimitDescription& limit,
+                                                                 const AbstractLQPNodeSPtr& input_node) {
   auto limit_node = LimitNode::make(limit.limit);
   limit_node->set_left_input(input_node);
   return limit_node;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
+AbstractLQPNodeSPtr SQLTranslator::_translate_predicate(
     const hsql::Expr& hsql_expr, bool allow_function_columns,
     const std::function<LQPColumnReference(const hsql::Expr&)>& resolve_column,
-    const std::shared_ptr<AbstractLQPNode>& input_node) {
+    const AbstractLQPNodeSPtr& input_node) {
   DebugAssert(hsql_expr.expr != nullptr, "hsql malformed");
 
   /**
@@ -1138,7 +1138,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate(
   return current_node;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
+AbstractLQPNodeSPtr SQLTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
   switch (show_statement.type) {
     case hsql::ShowType::kShowTables:
       return ShowTablesNode::make();
@@ -1149,7 +1149,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::Show
   }
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::CreateStatement& create_statement) {
+AbstractLQPNodeSPtr SQLTranslator::_translate_create(const hsql::CreateStatement& create_statement) {
   switch (create_statement.type) {
     case hsql::CreateType::kCreateView: {
       auto view = _translate_select((const hsql::SelectStatement&)*create_statement.select);
@@ -1160,7 +1160,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::Cr
                "Number of Columns in CREATE VIEW does not match SELECT statement");
 
         // Create a list of renamed column expressions
-        std::vector<std::shared_ptr<LQPExpression>> projections;
+        std::vector<LQPExpressionSPtr> projections;
         ColumnID column_id{0};
         for (const auto& alias : *create_statement.viewColumns) {
           const auto column_reference = view->output_column_references()[column_id];
@@ -1182,7 +1182,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::Cr
   }
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::DropStatement& drop_statement) {
+AbstractLQPNodeSPtr SQLTranslator::_translate_drop(const hsql::DropStatement& drop_statement) {
   switch (drop_statement.type) {
     case hsql::DropType::kDropView: {
       return DropViewNode::make(drop_statement.name);
@@ -1192,8 +1192,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::Drop
   }
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(
-    const std::shared_ptr<AbstractLQPNode>& input_node) {
+AbstractLQPNodeSPtr SQLTranslator::_validate_if_active(
+    const AbstractLQPNodeSPtr& input_node) {
   if (!_validate) return input_node;
 
   auto validate_node = ValidateNode::make();

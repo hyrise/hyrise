@@ -17,25 +17,25 @@
 
 namespace opossum {
 
-ExportCsv::ExportCsv(const std::shared_ptr<const AbstractOperator> in, const std::string& filename)
+ExportCsv::ExportCsv(const AbstractOperatorCSPtr in, const std::string& filename)
     : AbstractReadOnlyOperator(OperatorType::ExportCsv, in), _filename(filename) {}
 
 const std::string ExportCsv::name() const { return "ExportCSV"; }
 
-std::shared_ptr<const Table> ExportCsv::_on_execute() {
+TableCSPtr ExportCsv::_on_execute() {
   _generate_meta_info_file(_input_left->get_output(), _filename + CsvMeta::META_FILE_EXTENSION);
   _generate_content_file(_input_left->get_output(), _filename);
 
   return _input_left->get_output();
 }
 
-std::shared_ptr<AbstractOperator> ExportCsv::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+AbstractOperatorSPtr ExportCsv::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+    const AbstractOperatorSPtr& recreated_input_right) const {
   return std::make_shared<ExportCsv>(recreated_input_left, _filename);
 }
 
-void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table>& table, const std::string& meta_file_path) {
+void ExportCsv::_generate_meta_info_file(const TableCSPtr& table, const std::string& meta_file_path) {
   CsvMeta meta{};
   meta.chunk_size = table->max_chunk_size();
 
@@ -55,7 +55,7 @@ void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table>& tab
   meta_file_stream << std::setw(4) << meta_json << std::endl;
 }
 
-void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table, const std::string& csv_file) {
+void ExportCsv::_generate_content_file(const TableCSPtr& table, const std::string& csv_file) {
   /**
    * A naively exported csv file is a materialized file in row format.
    * This offers some advantages, but also disadvantages.

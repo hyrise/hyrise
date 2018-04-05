@@ -11,7 +11,7 @@ namespace opossum {
 
 using opossum::then_operator::then;
 
-std::vector<ColumnDescription> QueryResponseBuilder::build_row_description(const std::shared_ptr<const Table> table) {
+std::vector<ColumnDescription> QueryResponseBuilder::build_row_description(const TableCSPtr table) {
   std::vector<ColumnDescription> result;
 
   const auto& column_names = table->column_names();
@@ -78,7 +78,7 @@ std::string QueryResponseBuilder::build_command_complete_message(hsql::Statement
   }
 }
 
-std::string QueryResponseBuilder::build_execution_info_message(std::shared_ptr<SQLPipeline> sql_pipeline) {
+std::string QueryResponseBuilder::build_execution_info_message(SQLPipelineSPtr sql_pipeline) {
   return "Compilation time (µs): " + std::to_string(sql_pipeline->compile_time_microseconds().count()) +
          "\nExecution time (µs): " + std::to_string(sql_pipeline->execution_time_microseconds().count());
 }

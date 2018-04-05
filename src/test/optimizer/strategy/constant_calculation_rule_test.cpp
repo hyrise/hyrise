@@ -18,7 +18,7 @@
 #include "storage/storage_manager.hpp"
 
 namespace {
-std::shared_ptr<opossum::AbstractLQPNode> compile_query(const std::string& query) {
+opossum::AbstractLQPNodeSPtr compile_query(const std::string& query) {
   return opossum::SQLPipelineBuilder{query}.disable_mvcc().create_pipeline().get_unoptimized_logical_plans().at(0);
 }
 }  // namespace
@@ -32,7 +32,7 @@ class ConstantCalculationRuleTest : public StrategyBaseTest {
     _rule = std::make_shared<ConstantCalculationRule>();
   }
 
-  std::shared_ptr<ConstantCalculationRule> _rule;
+  ConstantCalculationRuleSPtr _rule;
 };
 
 TEST_F(ConstantCalculationRuleTest, ResolveExpressionTest) {

@@ -11,13 +11,13 @@
 namespace opossum {
 
 UpdateNode::UpdateNode(const std::string& table_name,
-                       const std::vector<std::shared_ptr<LQPExpression>>& column_expressions)
+                       const std::vector<LQPExpressionSPtr>& column_expressions)
     : AbstractLQPNode(LQPNodeType::Update), _table_name(table_name), _column_expressions(column_expressions) {}
 
-std::shared_ptr<AbstractLQPNode> UpdateNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-    const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
-  std::vector<std::shared_ptr<LQPExpression>> column_expressions(_column_expressions.size());
+AbstractLQPNodeSPtr UpdateNode::_deep_copy_impl(
+    const AbstractLQPNodeSPtr& copied_left_input,
+    const AbstractLQPNodeSPtr& copied_right_input) const {
+  std::vector<LQPExpressionSPtr> column_expressions(_column_expressions.size());
   column_expressions.reserve(_column_expressions.size());
 
   for (const auto& expression : column_expressions) {
@@ -53,7 +53,7 @@ std::string UpdateNode::description() const {
 
 bool UpdateNode::subplan_is_read_only() const { return false; }
 
-const std::vector<std::shared_ptr<LQPExpression>>& UpdateNode::column_expressions() const {
+const std::vector<LQPExpressionSPtr>& UpdateNode::column_expressions() const {
   return _column_expressions;
 }
 

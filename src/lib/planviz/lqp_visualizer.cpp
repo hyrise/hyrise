@@ -21,16 +21,16 @@ LQPVisualizer::LQPVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_
     : AbstractVisualizer(std::move(graphviz_config), std::move(graph_info), std::move(vertex_info),
                          std::move(edge_info)) {}
 
-void LQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractLQPNode>>& lqp_roots) {
-  std::unordered_set<std::shared_ptr<const AbstractLQPNode>> visualized_nodes;
+void LQPVisualizer::_build_graph(const std::vector<AbstractLQPNodeSPtr>& lqp_roots) {
+  std::unordered_set<AbstractLQPNodeCSPtr> visualized_nodes;
 
   for (const auto& root : lqp_roots) {
     _build_subtree(root, visualized_nodes);
   }
 }
 
-void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
-                                   std::unordered_set<std::shared_ptr<const AbstractLQPNode>>& visualized_nodes) {
+void LQPVisualizer::_build_subtree(const AbstractLQPNodeSPtr& node,
+                                   std::unordered_set<AbstractLQPNodeCSPtr>& visualized_nodes) {
   // Avoid drawing dataflows/ops redundantly in diamond shaped Nodes
   if (visualized_nodes.find(node) != visualized_nodes.end()) return;
   visualized_nodes.insert(node);
@@ -64,8 +64,8 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
   }
 }
 
-void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from,
-                                    const std::shared_ptr<AbstractLQPNode>& to) {
+void LQPVisualizer::_build_dataflow(const AbstractLQPNodeSPtr& from,
+                                    const AbstractLQPNodeSPtr& to) {
   float row_count, row_percentage = 100.0f;
   double pen_width;
 

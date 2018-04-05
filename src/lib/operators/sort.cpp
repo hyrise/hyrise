@@ -12,7 +12,7 @@
 
 namespace opossum {
 
-Sort::Sort(const std::shared_ptr<const AbstractOperator> in, const ColumnID column_id, const OrderByMode order_by_mode,
+Sort::Sort(const AbstractOperatorCSPtr in, const ColumnID column_id, const OrderByMode order_by_mode,
            const size_t output_chunk_size)
     : AbstractReadOnlyOperator(OperatorType::Sort, in),
       _column_id(column_id),
@@ -25,13 +25,13 @@ OrderByMode Sort::order_by_mode() const { return _order_by_mode; }
 
 const std::string Sort::name() const { return "Sort"; }
 
-std::shared_ptr<AbstractOperator> Sort::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+AbstractOperatorSPtr Sort::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+    const AbstractOperatorSPtr& recreated_input_right) const {
   return std::make_shared<Sort>(recreated_input_left, _column_id, _order_by_mode, _output_chunk_size);
 }
 
-std::shared_ptr<const Table> Sort::_on_execute() {
+TableCSPtr Sort::_on_execute() {
   _impl = make_unique_by_data_type<AbstractReadOnlyOperatorImpl, SortImpl>(
       input_table_left()->column_data_type(_column_id), input_table_left(), _column_id, _order_by_mode,
       _output_chunk_size);
@@ -45,12 +45,12 @@ template <typename SortColumnType>
 class Sort::SortImplMaterializeOutput {
  public:
   // creates a new table with reference columns
-  SortImplMaterializeOutput(std::shared_ptr<const Table> in,
+  SortImplMaterializeOutput(TableCSPtr in,
                             std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> id_value_map,
                             const size_t output_chunk_size)
       : _table_in(in), _output_chunk_size(output_chunk_size), _row_id_value_vector(id_value_map) {}
 
-  std::shared_ptr<const Table> execute() {
+  TableCSPtr execute() {
     // First we create a new table as the output
     auto output = std::make_shared<Table>(_table_in->column_definitions(), TableType::Data, _output_chunk_size);
 
@@ -79,7 +79,7 @@ class Sort::SortImplMaterializeOutput {
         using ColumnDataType = typename decltype(type)::type;
 
         // Initialize value columns
-        auto columns_out = std::vector<std::shared_ptr<ValueColumn<ColumnDataType>>>(chunk_count_out);
+        auto columns_out = std::vector<ValueColumnSPtr<ColumnDataType>>(chunk_count_out);
         std::generate(columns_out.begin(), columns_out.end(),
                       []() { return std::make_shared<ValueColumn<ColumnDataType>>(true); });
 
@@ -121,7 +121,7 @@ class Sort::SortImplMaterializeOutput {
     return output;
   }
 
-  const std::shared_ptr<const Table> _table_in;
+  const TableCSPtr _table_in;
   const size_t _output_chunk_size;
   const std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> _row_id_value_vector;
 };
@@ -132,7 +132,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
  public:
   using RowIDValuePair = std::pair<RowID, SortColumnType>;
 
-  SortImpl(const std::shared_ptr<const Table> table_in, const ColumnID column_id,
+  SortImpl(const TableCSPtr table_in, const ColumnID column_id,
            const OrderByMode order_by_mode = OrderByMode::Ascending, const size_t output_chunk_size = 0)
       : _table_in(table_in),
         _column_id(column_id),
@@ -143,7 +143,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     _null_value_rows = std::make_shared<std::vector<RowIDValuePair>>();
   }
 
-  std::shared_ptr<const Table> _on_execute() override {
+  TableCSPtr _on_execute() override {
     // 1. Prepare Sort: Creating rowid-value-Structure
     _materialize_sort_column();
 
@@ -205,7 +205,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
                      [comparator](RowIDValuePair a, RowIDValuePair b) { return comparator(a.second, b.second); });
   }
 
-  const std::shared_ptr<const Table> _table_in;
+  const TableCSPtr _table_in;
 
   // column to sort by
   const ColumnID _column_id;

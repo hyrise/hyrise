@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator> in, const ColumnIndexType index_type,
+IndexScan::IndexScan(const AbstractOperatorCSPtr in, const ColumnIndexType index_type,
                      const std::vector<ColumnID> left_column_ids, const PredicateCondition predicate_condition,
                      const std::vector<AllTypeVariant> right_values, const std::vector<AllTypeVariant> right_values2)
     : AbstractReadOnlyOperator{OperatorType::IndexScan, in},
@@ -27,7 +27,7 @@ const std::string IndexScan::name() const { return "IndexScan"; }
 
 void IndexScan::set_included_chunk_ids(const std::vector<ChunkID>& chunk_ids) { _included_chunk_ids = chunk_ids; }
 
-std::shared_ptr<const Table> IndexScan::_on_execute() {
+TableCSPtr IndexScan::_on_execute() {
   _in_table = input_table_left();
 
   _validate_input();
@@ -36,7 +36,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   std::mutex output_mutex;
 
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  auto jobs = std::vector<AbstractTaskSPtr>{};
   if (_included_chunk_ids.empty()) {
     jobs.reserve(_in_table->chunk_count());
     for (auto chunk_id = ChunkID{0u}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
@@ -54,14 +54,14 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   return _out_table;
 }
 
-std::shared_ptr<AbstractOperator> IndexScan::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+AbstractOperatorSPtr IndexScan::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+    const AbstractOperatorSPtr& recreated_input_right) const {
   return std::make_shared<IndexScan>(recreated_input_left, _index_type, _left_column_ids, _predicate_condition,
                                      _right_values, _right_values2);
 }
 
-std::shared_ptr<JobTask> IndexScan::_create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex) {
+JobTaskSPtr IndexScan::_create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex) {
   auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
     const auto matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id));
 

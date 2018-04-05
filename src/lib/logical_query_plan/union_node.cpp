@@ -12,9 +12,9 @@ namespace opossum {
 
 UnionNode::UnionNode(UnionMode union_mode) : AbstractLQPNode(LQPNodeType::Union), _union_mode(union_mode) {}
 
-std::shared_ptr<AbstractLQPNode> UnionNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-    const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
+AbstractLQPNodeSPtr UnionNode::_deep_copy_impl(
+    const AbstractLQPNodeSPtr& copied_left_input,
+    const AbstractLQPNodeSPtr& copied_right_input) const {
   return UnionNode::make(_union_mode);
 }
 
@@ -54,8 +54,8 @@ const std::vector<LQPColumnReference>& UnionNode::output_column_references() con
   return *_output_column_references;
 }
 
-std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
-    const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
+TableStatisticsSPtr UnionNode::derive_statistics_from(
+    const AbstractLQPNodeSPtr& left_input, const AbstractLQPNodeSPtr& right_input) const {
   Fail("Statistics for UNION not yet implemented");
 }
 

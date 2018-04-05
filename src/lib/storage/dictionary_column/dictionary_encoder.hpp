@@ -27,7 +27,7 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
   static constexpr auto _uses_vector_compression = true;  // see base_column_encoder.hpp for details
 
   template <typename T>
-  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueColumn<T>>& value_column) {
+  BaseEncodedColumnSPtr _on_encode(const ValueColumnCSPtr<T>& value_column) {
     // See: https://goo.gl/MCM5rr
     // Create dictionary (enforce uniqueness and sorting)
     const auto& values = value_column->values();
@@ -93,7 +93,7 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
     auto encoded_attribute_vector = compress_vector(attribute_vector, vector_compression_type(), alloc, {max_value});
 
     auto dictionary_sptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(dictionary));
-    auto attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(encoded_attribute_vector));
+    auto attribute_vector_sptr = BaseCompressedVectorCSPtr(std::move(encoded_attribute_vector));
     return std::allocate_shared<DictionaryColumn<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
                                                      ValueID{null_value_id});
   }

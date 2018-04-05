@@ -15,19 +15,19 @@
 #include "utils/assert.hpp"
 
 namespace opossum {
-Difference::Difference(const std::shared_ptr<const AbstractOperator> left_in,
-                       const std::shared_ptr<const AbstractOperator> right_in)
+Difference::Difference(const AbstractOperatorCSPtr left_in,
+                       const AbstractOperatorCSPtr right_in)
     : AbstractReadOnlyOperator(OperatorType::Difference, left_in, right_in) {}
 
 const std::string Difference::name() const { return "Difference"; }
 
-std::shared_ptr<AbstractOperator> Difference::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+AbstractOperatorSPtr Difference::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+    const AbstractOperatorSPtr& recreated_input_right) const {
   return std::make_shared<Difference>(recreated_input_left, recreated_input_right);
 }
 
-std::shared_ptr<const Table> Difference::_on_execute() {
+TableCSPtr Difference::_on_execute() {
   DebugAssert(input_table_left()->column_definitions() == input_table_right()->column_definitions(),
               "Input tables must have same number of columns");
 
@@ -69,7 +69,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     ChunkColumns output_columns;
 
     // creating a map to share pos_lists (see table_scan.hpp)
-    std::unordered_map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> out_pos_list_map;
+    std::unordered_map<PosListCSPtr, PosListSPtr> out_pos_list_map;
 
     for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); column_id++) {
       const auto base_column = in_chunk->get_column(column_id);
@@ -78,7 +78,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
           input_table_left()->get_chunk(chunk_id)->get_column(column_id));
       auto out_column_id = column_id;
       auto out_referenced_table = input_table_left();
-      std::shared_ptr<const PosList> in_pos_list;
+      PosListCSPtr in_pos_list;
 
       if (referenced_column) {
         // if the input column was a reference column then the output column must reference the same values/objects
@@ -88,7 +88,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
       }
 
       // automatically creates the entry if it does not exist
-      std::shared_ptr<PosList>& pos_list_out = out_pos_list_map[in_pos_list];
+      PosListSPtr& pos_list_out = out_pos_list_map[in_pos_list];
 
       if (!pos_list_out) {
         pos_list_out = std::make_shared<PosList>();

@@ -61,9 +61,9 @@ class CompositeGroupKeyIndexTest : public BaseTest {
         DataType::String, {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"});
 
     _index_int_str = std::make_shared<CompositeGroupKeyIndex>(
-        std::vector<std::shared_ptr<const BaseColumn>>{_column_int, _column_str});
+        std::vector<BaseColumnCSPtr>{_column_int, _column_str});
     _index_str_int = std::make_shared<CompositeGroupKeyIndex>(
-        std::vector<std::shared_ptr<const BaseColumn>>{_column_str, _column_int});
+        std::vector<BaseColumnCSPtr>{_column_str, _column_int});
 
     _keys_int_str = &(_index_int_str->_keys);
     _keys_str_int = &(_index_str_int->_keys);
@@ -76,10 +76,10 @@ class CompositeGroupKeyIndexTest : public BaseTest {
   }
 
  protected:
-  std::shared_ptr<CompositeGroupKeyIndex> _index_int_str;
-  std::shared_ptr<CompositeGroupKeyIndex> _index_str_int;
-  std::shared_ptr<BaseColumn> _column_int;
-  std::shared_ptr<BaseColumn> _column_str;
+  CompositeGroupKeyIndexSPtr _index_int_str;
+  CompositeGroupKeyIndexSPtr _index_str_int;
+  BaseColumnSPtr _column_int;
+  BaseColumnSPtr _column_str;
 
   /**
    * Use pointers to inner data structures of CompositeGroupKeyIndex in order to bypass the

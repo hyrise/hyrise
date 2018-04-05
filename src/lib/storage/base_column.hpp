@@ -33,10 +33,10 @@ class BaseColumn : private Noncopyable {
   virtual size_t size() const = 0;
 
   // calls the column-specific handler in an operator (visitor pattern)
-  virtual void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const = 0;
+  virtual void visit(ColumnVisitable& visitable, ColumnVisitableContextSPtr context = nullptr) const = 0;
 
   // Copies a column using a new allocator. This is useful for placing the column on a new NUMA node.
-  virtual std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const = 0;
+  virtual BaseColumnSPtr copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const = 0;
 
   // Estimate how much memory the Column is using. Might be inaccurate, especially if the column contains non-primitive
   // data, such as strings who memory usage is implementation defined
@@ -46,5 +46,5 @@ class BaseColumn : private Noncopyable {
   const DataType _data_type;
 };
 
-CREATE_PTR_ALIASES(BaseColumn)
+
 }  // namespace opossum

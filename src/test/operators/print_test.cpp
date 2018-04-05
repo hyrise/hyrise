@@ -32,17 +32,17 @@ class OperatorsPrintTest : public BaseTest {
 
   uint32_t chunk_size = 10;
 
-  std::shared_ptr<GetTable>(gt);
-  std::shared_ptr<Table> t = nullptr;
+  GetTableSPtr(gt);
+  TableSPtr t = nullptr;
 };
 
 // class used to make protected methods visible without
 // modifying the base class with testing code.
 class PrintWrapper : public Print {
-  std::shared_ptr<const Table> tab;
+  TableCSPtr tab;
 
  public:
-  explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in) : Print(in), tab(in->get_output()) {}
+  explicit PrintWrapper(const AbstractOperatorSPtr in) : Print(in), tab(in->get_output()) {}
   std::vector<uint16_t> test_column_string_widths(uint16_t min, uint16_t max) {
     return _column_string_widths(min, max, tab);
   }

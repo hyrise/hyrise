@@ -14,13 +14,13 @@ DropView::DropView(const std::string& view_name)
 
 const std::string DropView::name() const { return "DropView"; }
 
-std::shared_ptr<AbstractOperator> DropView::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+AbstractOperatorSPtr DropView::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+    const AbstractOperatorSPtr& recreated_input_right) const {
   return std::make_shared<DropView>(_view_name);
 }
 
-std::shared_ptr<const Table> DropView::_on_execute() {
+TableCSPtr DropView::_on_execute() {
   StorageManager::get().drop_view(_view_name);
 
   return std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data);  // Dummy table

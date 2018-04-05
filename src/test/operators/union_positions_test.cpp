@@ -25,8 +25,8 @@ class UnionPositionsTest : public BaseTest {
     StorageManager::get().add_table("int_int", load_table("src/test/tables/int_int.tbl", 2));
   }
 
-  std::shared_ptr<Table> _table_10_ints;
-  std::shared_ptr<Table> _table_int_float4;
+  TableSPtr _table_10_ints;
+  TableSPtr _table_int_float4;
 };
 
 TEST_F(UnionPositionsTest, SelfUnionSimple) {

@@ -23,8 +23,8 @@
 
 namespace opossum {
 
-JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
-                   const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+JoinHash::JoinHash(const AbstractOperatorCSPtr left,
+                   const AbstractOperatorCSPtr right, const JoinMode mode,
                    const ColumnIDPair& column_ids, const PredicateCondition predicate_condition)
     : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, column_ids, predicate_condition) {
   DebugAssert(predicate_condition == PredicateCondition::Equals, "Operator not supported by Hash Join.");
@@ -32,16 +32,16 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
 
 const std::string JoinHash::name() const { return "JoinHash"; }
 
-std::shared_ptr<AbstractOperator> JoinHash::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+AbstractOperatorSPtr JoinHash::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+    const AbstractOperatorSPtr& recreated_input_right) const {
   return std::make_shared<JoinHash>(recreated_input_left, recreated_input_right, _mode, _column_ids,
                                     _predicate_condition);
 }
 
-std::shared_ptr<const Table> JoinHash::_on_execute() {
-  std::shared_ptr<const AbstractOperator> build_operator;
-  std::shared_ptr<const AbstractOperator> probe_operator;
+TableCSPtr JoinHash::_on_execute() {
+  AbstractOperatorCSPtr build_operator;
+  AbstractOperatorCSPtr probe_operator;
   ColumnID build_column_id;
   ColumnID probe_column_id;
 
@@ -88,7 +88,7 @@ using Hash = uint32_t;
 template <typename LeftType, typename RightType>
 class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  public:
-  JoinHashImpl(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
+  JoinHashImpl(const AbstractOperatorCSPtr left, const AbstractOperatorCSPtr right,
                const JoinMode mode, const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
                const bool inputs_swapped)
       : _left(left),
@@ -101,13 +101,13 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   virtual ~JoinHashImpl() = default;
 
  protected:
-  const std::shared_ptr<const AbstractOperator> _left, _right;
+  const AbstractOperatorCSPtr _left, _right;
   const JoinMode _mode;
   const ColumnIDPair _column_ids;
   const PredicateCondition _predicate_condition;
 
   const bool _inputs_swapped;
-  std::shared_ptr<Table> _output_table;
+  TableSPtr _output_table;
 
   const unsigned int _partitioning_seed = 13;
   const size_t _radix_bits = 9;
@@ -115,7 +115,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   // Determine correct type for hashing
   using HashedType = typename JoinHashTraits<LeftType, RightType>::HashType;
 
-  using PosLists = std::vector<std::shared_ptr<const PosList>>;
+  using PosLists = std::vector<PosListCSPtr>;
   using PosListsByColumn = std::vector<std::shared_ptr<PosLists>>;
 
   /*
@@ -162,7 +162,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   }
 
   template <typename T>
-  std::shared_ptr<Partition<T>> _materialize_input(const std::shared_ptr<const Table> in_table, ColumnID column_id,
+  std::shared_ptr<Partition<T>> _materialize_input(const TableCSPtr in_table, ColumnID column_id,
                                                    std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
                                                    bool keep_nulls = false) {
     // list of all elements that will be partitioned
@@ -191,7 +191,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     histograms = std::vector<std::shared_ptr<std::vector<size_t>>>();
     histograms.resize(chunk_offsets.size());
 
-    std::vector<std::shared_ptr<AbstractTask>> jobs;
+    std::vector<AbstractTaskSPtr> jobs;
     jobs.reserve(in_table->chunk_count());
 
     for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); ++chunk_id) {
@@ -317,7 +317,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       offset = next_offset;
     }
 
-    std::vector<std::shared_ptr<AbstractTask>> jobs;
+    std::vector<AbstractTaskSPtr> jobs;
     jobs.reserve(offsets.size());
 
     for (ChunkID chunk_id{0}; chunk_id < offsets.size(); ++chunk_id) {
@@ -374,7 +374,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   */
   void _build(const RadixContainer<LeftType>& radix_container,
               std::vector<std::shared_ptr<HashTable<HashedType>>>& hashtables) {
-    std::vector<std::shared_ptr<AbstractTask>> jobs;
+    std::vector<AbstractTaskSPtr> jobs;
     jobs.reserve(radix_container.partition_offsets.size() - 1);
 
     for (size_t current_partition_id = 0; current_partition_id < (radix_container.partition_offsets.size() - 1);
@@ -415,7 +415,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   void _probe(const RadixContainer<RightType>& radix_container,
               const std::vector<std::shared_ptr<HashTable<HashedType>>>& hashtables,
               std::vector<PosList>& pos_list_left, std::vector<PosList>& pos_list_right) {
-    std::vector<std::shared_ptr<AbstractTask>> jobs;
+    std::vector<AbstractTaskSPtr> jobs;
     jobs.reserve(radix_container.partition_offsets.size() - 1);
 
     /*
@@ -501,7 +501,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   void _probe_semi_anti(const RadixContainer<RightType>& radix_container,
                         const std::vector<std::shared_ptr<HashTable<HashedType>>>& hashtables,
                         std::vector<PosList>& pos_lists) {
-    std::vector<std::shared_ptr<AbstractTask>> jobs;
+    std::vector<AbstractTaskSPtr> jobs;
     jobs.reserve(radix_container.partition_offsets.size() - 1);
 
     for (size_t current_partition_id = 0; current_partition_id < (radix_container.partition_offsets.size() - 1);
@@ -555,7 +555,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     CurrentScheduler::wait_for_tasks(jobs);
   }
 
-  std::shared_ptr<const Table> _on_execute() override {
+  TableCSPtr _on_execute() override {
     /*
     Preparing output table by adding columns from left table.
     */
@@ -722,7 +722,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   }
 
   // See usage in _on_execute() for doc.
-  static PosListsByColumn setup_pos_lists_by_column(const std::shared_ptr<const Table> input_table) {
+  static PosListsByColumn setup_pos_lists_by_column(const TableCSPtr input_table) {
     DebugAssert(input_table->type() == TableType::References, "Function only works for reference tables");
 
     std::map<PosLists, std::shared_ptr<PosLists>> shared_pos_lists_by_pos_lists;
@@ -753,15 +753,15 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     return pos_lists_by_column;
   }
 
-  static void write_output_columns(ChunkColumns& output_columns, const std::shared_ptr<const Table> input_table,
+  static void write_output_columns(ChunkColumns& output_columns, const TableCSPtr input_table,
                                    const PosListsByColumn& input_pos_list_ptrs_sptrs_by_column, PosList& pos_list) {
-    std::map<std::shared_ptr<PosLists>, std::shared_ptr<PosList>> output_pos_list_cache;
+    std::map<std::shared_ptr<PosLists>, PosListSPtr> output_pos_list_cache;
 
     // Add columns from input table to output chunk
     for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
       if (input_table->type() == TableType::References) {
         if (input_table->chunk_count() > 0) {
-          std::shared_ptr<BaseColumn> column;
+          BaseColumnSPtr column;
           const auto& input_table_pos_lists = input_pos_list_ptrs_sptrs_by_column[column_id];
 
           auto iter = output_pos_list_cache.find(input_table_pos_lists);

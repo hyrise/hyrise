@@ -134,7 +134,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_client_
 
 template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_send_simple_query_response(
-    std::shared_ptr<SQLPipeline> sql_pipeline) {
+    SQLPipelineSPtr sql_pipeline) {
   auto result_table = sql_pipeline->get_result_table();
 
   auto send_row_data = [=]() {
@@ -173,7 +173,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_
            [=]() { return _connection->send_notice("Successfully loaded " + table_name); };
   };
 
-  auto execute_sql_pipeline = [=](std::shared_ptr<SQLPipeline> sql_pipeline) {
+  auto execute_sql_pipeline = [=](SQLPipelineSPtr sql_pipeline) {
     auto task = std::make_shared<ExecuteServerQueryTask>(sql_pipeline);
     return _task_runner->dispatch_server_task(task) >> then >> [=]() { return sql_pipeline; };
   };
@@ -187,7 +187,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_
       return load_table_file(result->load_table.value().first, result->load_table.value().second);
     } else {
       return execute_sql_pipeline(result->sql_pipeline) >> then >>
-             [=](std::shared_ptr<SQLPipeline> sql_pipeline) { return _send_simple_query_response(sql_pipeline); };
+             [=](SQLPipelineSPtr sql_pipeline) { return _send_simple_query_response(sql_pipeline); };
     }
   };
 }
@@ -238,7 +238,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_bind_co
   auto task = std::make_shared<BindServerPreparedStatementTask>(sql_pipeline, std::move(packet.params));
   return _task_runner->dispatch_server_task(task) >> then >>
          [=](std::unique_ptr<SQLQueryPlan> query_plan) {
-           std::shared_ptr<SQLQueryPlan> shared_query_plan = std::move(query_plan);
+           SQLQueryPlanSPtr shared_query_plan = std::move(query_plan);
            auto portal = std::make_pair(statement_type, shared_query_plan);
            _portals.insert(std::make_pair(portal_name, portal));
          } >>
@@ -282,7 +282,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_execute
   query_plan->set_transaction_context(_transaction);
 
   return _task_runner->dispatch_server_task(std::make_shared<ExecuteServerPreparedStatementTask>(query_plan)) >> then >>
-         [=](std::shared_ptr<const Table> result_table) {
+         [=](TableCSPtr result_table) {
            // The behavior is a little different compared to SimpleQueryCommand: Send a 'No Data' response
            if (!result_table)
              return _connection->send_status_message(NetworkMessageType::NoDataResponse) >> then >>

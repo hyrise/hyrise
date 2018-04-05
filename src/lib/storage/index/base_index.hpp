@@ -61,7 +61,7 @@ class BaseIndex : private Noncopyable {
    * The index is NOT considered to be applicable for columns A, DABC, BAD etc.
    * @return true if the given columns are covered by the index.
    */
-  bool is_index_for(const std::vector<std::shared_ptr<const BaseColumn>>& columns) const;
+  bool is_index_for(const std::vector<BaseColumnCSPtr>& columns) const;
 
   /**
    * Searches for the first entry within the chunk that is equal or greater than the given values.
@@ -118,12 +118,12 @@ class BaseIndex : private Noncopyable {
   virtual Iterator _upper_bound(const std::vector<AllTypeVariant>&) const = 0;
   virtual Iterator _cbegin() const = 0;
   virtual Iterator _cend() const = 0;
-  virtual std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const = 0;
+  virtual std::vector<BaseColumnCSPtr> _get_index_columns() const = 0;
 
  private:
   const ColumnIndexType _type;
 };
 
-CREATE_PTR_ALIASES(BaseIndex)
+
 
 }  // namespace opossum

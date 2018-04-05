@@ -151,7 +151,7 @@ void TransactionContext::_mark_as_pending_and_try_commit(std::function<void(Tran
               }()),
               "All read/write operators need to have been committed.");
 
-  auto context_weak_ptr = std::weak_ptr<TransactionContext>{this->shared_from_this()};
+  auto context_weak_ptr = TransactionContextWPtr{this->shared_from_this()};
   _commit_context->make_pending(_transaction_id, [context_weak_ptr, callback](auto transaction_id) {
     // If the transaction context still exists, set its phase to Committed.
     if (auto context_ptr = context_weak_ptr.lock()) {

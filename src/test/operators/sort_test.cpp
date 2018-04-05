@@ -42,7 +42,7 @@ class OperatorsSortTest : public BaseTest, public ::testing::WithParamInterface<
   }
 
  protected:
-  std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_null, _table_wrapper_dict, _table_wrapper_null_dict;
+  TableWrapperSPtr _table_wrapper, _table_wrapper_null, _table_wrapper_dict, _table_wrapper_null_dict;
   EncodingType _encoding_type;
 };
 
@@ -55,7 +55,7 @@ INSTANTIATE_TEST_CASE_P(DictionaryEncodingTypes, OperatorsSortTest, ::testing::V
                         formatter);
 
 TEST_P(OperatorsSortTest, AscendingSortOfOneColumn) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
 
   auto sort = std::make_shared<Sort>(_table_wrapper, ColumnID{0}, OrderByMode::Ascending, 2u);
   sort->execute();
@@ -64,7 +64,7 @@ TEST_P(OperatorsSortTest, AscendingSortOfOneColumn) {
 }
 
 TEST_P(OperatorsSortTest, AscendingSortOFilteredColumn) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered_sorted.tbl", 2);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_filtered_sorted.tbl", 2);
 
   auto input = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 1));
   input->execute();
@@ -79,7 +79,7 @@ TEST_P(OperatorsSortTest, AscendingSortOFilteredColumn) {
 }
 
 TEST_P(OperatorsSortTest, AscendingSortOfOneColumnWithoutChunkSize) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
 
   auto sort = std::make_shared<Sort>(_table_wrapper, ColumnID{0}, OrderByMode::Ascending);
   sort->execute();
@@ -88,7 +88,7 @@ TEST_P(OperatorsSortTest, AscendingSortOfOneColumnWithoutChunkSize) {
 }
 
 TEST_P(OperatorsSortTest, DoubleSortOfOneColumn) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
 
   auto sort1 = std::make_shared<Sort>(_table_wrapper, ColumnID{0}, OrderByMode::Descending, 2u);
   sort1->execute();
@@ -100,7 +100,7 @@ TEST_P(OperatorsSortTest, DoubleSortOfOneColumn) {
 }
 
 TEST_P(OperatorsSortTest, DescendingSortOfOneColumn) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_reverse.tbl", 2);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_reverse.tbl", 2);
 
   auto sort = std::make_shared<Sort>(_table_wrapper, ColumnID{0}, OrderByMode::Descending, 2u);
   sort->execute();
@@ -112,7 +112,7 @@ TEST_P(OperatorsSortTest, MultipleColumnSortIsStable) {
   auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float4.tbl", 2));
   table_wrapper->execute();
 
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float2_sorted.tbl", 2);
+  TableSPtr expected_result = load_table("src/test/tables/int_float2_sorted.tbl", 2);
 
   // we want the output to be sorted after column a and in second place after column b.
   // So first we sort after column b and then after column a.
@@ -129,7 +129,7 @@ TEST_P(OperatorsSortTest, MultipleColumnSortIsStableMixedOrder) {
   auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float4.tbl", 2));
   table_wrapper->execute();
 
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float2_sorted_mixed.tbl", 2);
+  TableSPtr expected_result = load_table("src/test/tables/int_float2_sorted_mixed.tbl", 2);
 
   // we want the output to be sorted after column a and in second place after column b.
   // So first we sort after column b and then after column a.
@@ -143,7 +143,7 @@ TEST_P(OperatorsSortTest, MultipleColumnSortIsStableMixedOrder) {
 }
 
 TEST_P(OperatorsSortTest, AscendingSortOfOneColumnWithNull) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_null_sorted_asc.tbl", 2);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_null_sorted_asc.tbl", 2);
 
   auto sort = std::make_shared<Sort>(_table_wrapper_null, ColumnID{0}, OrderByMode::Ascending, 2u);
   sort->execute();
@@ -152,7 +152,7 @@ TEST_P(OperatorsSortTest, AscendingSortOfOneColumnWithNull) {
 }
 
 TEST_P(OperatorsSortTest, DescendingSortOfOneColumnWithNull) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_null_sorted_desc.tbl", 2);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_null_sorted_desc.tbl", 2);
 
   auto sort = std::make_shared<Sort>(_table_wrapper_null, ColumnID{0}, OrderByMode::Descending, 2u);
   sort->execute();
@@ -161,7 +161,7 @@ TEST_P(OperatorsSortTest, DescendingSortOfOneColumnWithNull) {
 }
 
 TEST_P(OperatorsSortTest, AscendingSortOfOneColumnWithNullsLast) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_null_sorted_asc_nulls_last.tbl", 2);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_null_sorted_asc_nulls_last.tbl", 2);
 
   auto sort = std::make_shared<Sort>(_table_wrapper_null, ColumnID{0}, OrderByMode::AscendingNullsLast, 2u);
   sort->execute();
@@ -170,7 +170,7 @@ TEST_P(OperatorsSortTest, AscendingSortOfOneColumnWithNullsLast) {
 }
 
 TEST_P(OperatorsSortTest, DescendingSortOfOneColumnWithNullsLast) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_null_sorted_desc_nulls_last.tbl", 2);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_null_sorted_desc_nulls_last.tbl", 2);
 
   auto sort = std::make_shared<Sort>(_table_wrapper_null, ColumnID{0}, OrderByMode::DescendingNullsLast, 2u);
   sort->execute();
@@ -179,7 +179,7 @@ TEST_P(OperatorsSortTest, DescendingSortOfOneColumnWithNullsLast) {
 }
 
 TEST_P(OperatorsSortTest, AscendingSortOfOneDictColumnWithNull) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_null_sorted_asc.tbl", 2);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_null_sorted_asc.tbl", 2);
 
   auto sort = std::make_shared<Sort>(_table_wrapper_null_dict, ColumnID{0}, OrderByMode::Ascending, 2u);
   sort->execute();
@@ -188,7 +188,7 @@ TEST_P(OperatorsSortTest, AscendingSortOfOneDictColumnWithNull) {
 }
 
 TEST_P(OperatorsSortTest, DescendingSortOfOneDictColumnWithNull) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_null_sorted_desc.tbl", 2);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_null_sorted_desc.tbl", 2);
 
   auto sort = std::make_shared<Sort>(_table_wrapper_null_dict, ColumnID{0}, OrderByMode::Descending, 2u);
   sort->execute();
@@ -197,7 +197,7 @@ TEST_P(OperatorsSortTest, DescendingSortOfOneDictColumnWithNull) {
 }
 
 TEST_P(OperatorsSortTest, AscendingSortOfOneDictColumn) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_sorted.tbl", 2);
 
   auto sort = std::make_shared<Sort>(_table_wrapper_dict, ColumnID{0}, OrderByMode::Ascending, 2u);
   sort->execute();
@@ -206,7 +206,7 @@ TEST_P(OperatorsSortTest, AscendingSortOfOneDictColumn) {
 }
 
 TEST_P(OperatorsSortTest, DescendingSortOfOneDictColumn) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_reverse.tbl", 2);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_reverse.tbl", 2);
 
   auto sort = std::make_shared<Sort>(_table_wrapper_dict, ColumnID{0}, OrderByMode::Descending, 2u);
   sort->execute();

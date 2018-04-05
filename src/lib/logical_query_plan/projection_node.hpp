@@ -19,11 +19,11 @@ struct ColumnID;
  */
 class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public AbstractLQPNode {
  public:
-  static std::shared_ptr<ProjectionNode> make_pass_through(const std::shared_ptr<AbstractLQPNode>& child);
+  static ProjectionNodeSPtr make_pass_through(const AbstractLQPNodeSPtr& child);
 
-  explicit ProjectionNode(const std::vector<std::shared_ptr<LQPExpression>>& column_expressions);
+  explicit ProjectionNode(const std::vector<LQPExpressionSPtr>& column_expressions);
 
-  const std::vector<std::shared_ptr<LQPExpression>>& column_expressions() const;
+  const std::vector<LQPExpressionSPtr>& column_expressions() const;
 
   std::string description() const override;
 
@@ -35,19 +35,19 @@ class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public Abstr
   bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
+  AbstractLQPNodeSPtr _deep_copy_impl(
+      const AbstractLQPNodeSPtr& copied_left_input,
+      const AbstractLQPNodeSPtr& copied_right_input) const override;
   void _on_input_changed() override;
 
  private:
-  std::vector<std::shared_ptr<LQPExpression>> _column_expressions;
+  std::vector<LQPExpressionSPtr> _column_expressions;
 
   mutable std::optional<std::vector<std::string>> _output_column_names;
 
   void _update_output() const;
 };
 
-CREATE_PTR_ALIASES(ProjectionNode)
+
 
 }  // namespace opossum

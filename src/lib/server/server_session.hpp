@@ -17,7 +17,7 @@ namespace opossum {
 template <typename TConnection, typename TTaskRunner>
 class ServerSessionImpl {
  public:
-  explicit ServerSessionImpl(std::shared_ptr<TConnection> connection, std::shared_ptr<TTaskRunner> task_runner)
+  explicit ServerSessionImpl(TConnectionSPtr connection, TTaskRunnerSPtr task_runner)
       : _connection(connection), _task_runner(task_runner) {}
 
   boost::future<void> start();
@@ -34,15 +34,15 @@ class ServerSessionImpl {
   boost::future<void> _handle_sync_command();
   boost::future<void> _handle_flush_command();
 
-  boost::future<void> _send_simple_query_response(std::shared_ptr<SQLPipeline> sql_pipeline);
+  boost::future<void> _send_simple_query_response(SQLPipelineSPtr sql_pipeline);
 
-  std::shared_ptr<TConnection> _connection;
-  std::shared_ptr<TTaskRunner> _task_runner;
+  TConnectionSPtr _connection;
+  TTaskRunnerSPtr _task_runner;
 
-  std::shared_ptr<TransactionContext> _transaction;
-  std::unordered_map<std::string, std::shared_ptr<SQLPipeline>> _prepared_statements;
+  TransactionContextSPtr _transaction;
+  std::unordered_map<std::string, SQLPipelineSPtr> _prepared_statements;
   // TODO(lawben): The type of _portals will change when prepared statements are supported in the SQLPipeline
-  std::unordered_map<std::string, std::pair<hsql::StatementType, std::shared_ptr<SQLQueryPlan>>> _portals;
+  std::unordered_map<std::string, std::pair<hsql::StatementType, SQLQueryPlanSPtr>> _portals;
 };
 
 // The corresponding template instantiation takes place in the .cpp

@@ -11,20 +11,20 @@
 
 namespace opossum {
 
-Limit::Limit(const std::shared_ptr<const AbstractOperator> in, const size_t num_rows)
+Limit::Limit(const AbstractOperatorCSPtr in, const size_t num_rows)
     : AbstractReadOnlyOperator(OperatorType::Limit, in), _num_rows(num_rows) {}
 
 const std::string Limit::name() const { return "Limit"; }
 
-std::shared_ptr<AbstractOperator> Limit::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+AbstractOperatorSPtr Limit::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+    const AbstractOperatorSPtr& recreated_input_right) const {
   return std::make_shared<Limit>(recreated_input_left, _num_rows);
 }
 
 size_t Limit::num_rows() const { return _num_rows; }
 
-std::shared_ptr<const Table> Limit::_on_execute() {
+TableCSPtr Limit::_on_execute() {
   const auto input_table = input_table_left();
 
   auto output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
@@ -39,7 +39,7 @@ std::shared_ptr<const Table> Limit::_on_execute() {
     for (ColumnID column_id{0}; column_id < input_table->column_count(); column_id++) {
       const auto input_base_column = input_chunk->get_column(column_id);
       auto output_pos_list = std::make_shared<PosList>(output_chunk_row_count);
-      std::shared_ptr<const Table> referenced_table;
+      TableCSPtr referenced_table;
       ColumnID output_column_id = column_id;
 
       if (auto input_ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(input_base_column)) {

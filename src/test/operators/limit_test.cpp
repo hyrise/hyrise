@@ -59,8 +59,8 @@ class OperatorsLimitTest : public BaseTest {
     EXPECT_TABLE_EQ_ORDERED(limit->get_output(), expected_result);
   }
 
-  std::shared_ptr<TableWrapper> _table_wrapper;
-  std::shared_ptr<AbstractOperator> _input_operator;
+  TableWrapperSPtr _table_wrapper;
+  AbstractOperatorSPtr _input_operator;
 };
 
 TEST_F(OperatorsLimitTest, Limit1ValueColumn) {

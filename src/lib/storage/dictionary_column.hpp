@@ -20,7 +20,7 @@ template <typename T>
 class DictionaryColumn : public BaseDictionaryColumn {
  public:
   explicit DictionaryColumn(const std::shared_ptr<const pmr_vector<T>>& dictionary,
-                            const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
+                            const BaseCompressedVectorCSPtr& attribute_vector,
                             const ValueID null_value_id);
 
   // returns an underlying dictionary
@@ -35,7 +35,7 @@ class DictionaryColumn : public BaseDictionaryColumn {
 
   size_t size() const final;
 
-  std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
+  BaseColumnSPtr copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
   size_t estimate_memory_usage() const final;
   /**@}*/
@@ -56,7 +56,7 @@ class DictionaryColumn : public BaseDictionaryColumn {
 
   size_t unique_values_count() const final;
 
-  std::shared_ptr<const BaseCompressedVector> attribute_vector() const final;
+  BaseCompressedVectorCSPtr attribute_vector() const final;
 
   const ValueID null_value_id() const final;
 
@@ -64,10 +64,8 @@ class DictionaryColumn : public BaseDictionaryColumn {
 
  protected:
   const std::shared_ptr<const pmr_vector<T>> _dictionary;
-  const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
+  const BaseCompressedVectorCSPtr _attribute_vector;
   const ValueID _null_value_id;
 };
-
-CREATE_TEMPLATE_PTR_ALIASES(DictionaryColumn)
 
 }  // namespace opossum

@@ -59,7 +59,7 @@ class JoinIndexTest : public BaseTest {
     _table_wrapper_n->execute();
   }
 
-  std::shared_ptr<TableWrapper> load_table_with_index(const std::string& filename, const size_t chunk_size) {
+  TableWrapperSPtr load_table_with_index(const std::string& filename, const size_t chunk_size) {
     auto table = load_table(filename, chunk_size);
 
     // TODO(anyone): replace with EncodingType::Dictionary as soon as all index types support new compression
@@ -79,12 +79,12 @@ class JoinIndexTest : public BaseTest {
   }
 
   // builds and executes the given Join and checks correctness of the output
-  void test_join_output(const std::shared_ptr<const AbstractOperator> left,
-                        const std::shared_ptr<const AbstractOperator> right,
+  void test_join_output(const AbstractOperatorCSPtr left,
+                        const AbstractOperatorCSPtr right,
                         const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition predicate_condition,
                         const JoinMode mode, const std::string& file_name, size_t chunk_size) {
     // load expected results from file
-    std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
+    TableSPtr expected_result = load_table(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
 
     // build and execute join
@@ -95,7 +95,7 @@ class JoinIndexTest : public BaseTest {
     EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);
   }
 
-  std::shared_ptr<TableWrapper> _table_wrapper_a, _table_wrapper_b, _table_wrapper_c, _table_wrapper_d,
+  TableWrapperSPtr _table_wrapper_a, _table_wrapper_b, _table_wrapper_c, _table_wrapper_d,
       _table_wrapper_e, _table_wrapper_f, _table_wrapper_g, _table_wrapper_h, _table_wrapper_i, _table_wrapper_j,
       _table_wrapper_k, _table_wrapper_l, _table_wrapper_m, _table_wrapper_n;
 };

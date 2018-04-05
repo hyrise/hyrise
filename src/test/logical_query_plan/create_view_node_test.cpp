@@ -12,8 +12,8 @@ class CreateViewNodeTest : public ::testing::Test {
     _create_view_node = std::make_shared<CreateViewNode>("some_view", _view_node);
   }
 
-  std::shared_ptr<CreateViewNode> _create_view_node;
-  std::shared_ptr<MockNode> _view_node;
+  CreateViewNodeSPtr _create_view_node;
+  MockNodeSPtr _view_node;
 };
 
 TEST_F(CreateViewNodeTest, ShallowEquals) {

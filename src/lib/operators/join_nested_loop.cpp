@@ -24,21 +24,21 @@ namespace opossum {
  * so only use this for testing or benchmarking purposes.
  */
 
-JoinNestedLoop::JoinNestedLoop(const std::shared_ptr<const AbstractOperator> left,
-                               const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+JoinNestedLoop::JoinNestedLoop(const AbstractOperatorCSPtr left,
+                               const AbstractOperatorCSPtr right, const JoinMode mode,
                                const ColumnIDPair& column_ids, const PredicateCondition predicate_condition)
     : AbstractJoinOperator(OperatorType::JoinNestedLoop, left, right, mode, column_ids, predicate_condition) {}
 
 const std::string JoinNestedLoop::name() const { return "JoinNestedLoop"; }
 
-std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+AbstractOperatorSPtr JoinNestedLoop::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+    const AbstractOperatorSPtr& recreated_input_right) const {
   return std::make_shared<JoinNestedLoop>(recreated_input_left, recreated_input_right, _mode, _column_ids,
                                           _predicate_condition);
 }
 
-std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
+TableCSPtr JoinNestedLoop::_on_execute() {
   PerformanceWarning("Nested Loop Join used");
 
   _create_table_structure();
@@ -220,11 +220,11 @@ void JoinNestedLoop::_perform_join() {
   _output_table->append_chunk(columns);
 }
 
-void JoinNestedLoop::_write_output_chunks(ChunkColumns& columns, const std::shared_ptr<const Table> input_table,
-                                          std::shared_ptr<PosList> pos_list) {
+void JoinNestedLoop::_write_output_chunks(ChunkColumns& columns, const TableCSPtr input_table,
+                                          PosListSPtr pos_list) {
   // Add columns from table to output chunk
   for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
-    std::shared_ptr<BaseColumn> column;
+    BaseColumnSPtr column;
 
     if (input_table->type() == TableType::References) {
       if (input_table->chunk_count() > 0) {

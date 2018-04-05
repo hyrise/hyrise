@@ -9,13 +9,13 @@
 #include "storage/reference_column.hpp"
 
 namespace opossum {
-Product::Product(const std::shared_ptr<const AbstractOperator> left,
-                 const std::shared_ptr<const AbstractOperator> right)
+Product::Product(const AbstractOperatorCSPtr left,
+                 const AbstractOperatorCSPtr right)
     : AbstractReadOnlyOperator(OperatorType::Product, left, right) {}
 
 const std::string Product::name() const { return "Product"; }
 
-std::shared_ptr<const Table> Product::_on_execute() {
+TableCSPtr Product::_on_execute() {
   TableColumnDefinitions column_definitions;
 
   // add columns from left table to output
@@ -41,7 +41,7 @@ std::shared_ptr<const Table> Product::_on_execute() {
   return output;
 }
 
-void Product::add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID chunk_id_left, ChunkID chunk_id_right) {
+void Product::add_product_of_two_chunks(TableSPtr output, ChunkID chunk_id_left, ChunkID chunk_id_right) {
   const auto chunk_left = input_table_left()->get_chunk(chunk_id_left);
   const auto chunk_right = input_table_right()->get_chunk(chunk_id_right);
 
@@ -56,8 +56,8 @@ void Product::add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID c
   // we can first repeat each line on the left side #rightSide times and then repeat the ascending sequence for the
   // right side #leftSide times
 
-  std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> calculated_pos_lists_left;
-  std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> calculated_pos_lists_right;
+  std::map<PosListCSPtr, PosListSPtr> calculated_pos_lists_left;
+  std::map<PosListCSPtr, PosListSPtr> calculated_pos_lists_right;
 
   ChunkColumns output_columns;
   auto is_left_side = true;
@@ -68,9 +68,9 @@ void Product::add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID c
     auto table = is_left_side ? input_table_left() : input_table_right();
 
     for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {
-      std::shared_ptr<const Table> referenced_table;
+      TableCSPtr referenced_table;
       ColumnID referenced_column;
-      std::shared_ptr<const PosList> pos_list_in;
+      PosListCSPtr pos_list_in;
 
       if (auto ref_col_in = std::dynamic_pointer_cast<const ReferenceColumn>(chunk_in->get_column(column_id))) {
         referenced_table = ref_col_in->referenced_table();
@@ -106,9 +106,9 @@ void Product::add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID c
 
   output->append_chunk(output_columns);
 }
-std::shared_ptr<AbstractOperator> Product::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+AbstractOperatorSPtr Product::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+    const AbstractOperatorSPtr& recreated_input_right) const {
   return std::make_shared<Product>(recreated_input_left, recreated_input_right);
 }
 }  // namespace opossum

@@ -26,19 +26,19 @@ class Insert;
  */
 class Update : public AbstractReadWriteOperator {
  public:
-  explicit Update(const std::string& table_to_update_name, std::shared_ptr<AbstractOperator> fields_to_update,
-                  std::shared_ptr<AbstractOperator> update_values);
+  explicit Update(const std::string& table_to_update_name, AbstractOperatorSPtr fields_to_update,
+                  AbstractOperatorSPtr update_values);
 
   ~Update();
 
   const std::string name() const override;
 
  protected:
-  std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
-  bool _execution_input_valid(const std::shared_ptr<TransactionContext>& context) const;
+  TableCSPtr _on_execute(TransactionContextSPtr context) override;
+  AbstractOperatorSPtr _on_recreate(
+      const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+      const AbstractOperatorSPtr& recreated_input_right) const override;
+  bool _execution_input_valid(const TransactionContextSPtr& context) const;
 
   // Commit happens in Insert and Delete operators
   void _on_commit_records(const CommitID cid) override {}
@@ -48,7 +48,7 @@ class Update : public AbstractReadWriteOperator {
 
  protected:
   const std::string _table_to_update_name;
-  std::shared_ptr<Delete> _delete;
-  std::shared_ptr<Insert> _insert;
+  DeleteSPtr _delete;
+  InsertSPtr _insert;
 };
 }  // namespace opossum

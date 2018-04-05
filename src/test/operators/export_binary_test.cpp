@@ -49,7 +49,7 @@ class OperatorsExportBinaryTest : public BaseTest {
     return ((iterator_original == end) && (iterator_created == end));
   }
 
-  std::shared_ptr<Table> table;
+  TableSPtr table;
   const std::string filename = test_data_path + "export_test.bin";
 };
 

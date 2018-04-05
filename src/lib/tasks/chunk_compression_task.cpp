@@ -36,7 +36,7 @@ void ChunkCompressionTask::_on_execute() {
   }
 }
 
-bool ChunkCompressionTask::chunk_is_completed(const std::shared_ptr<Chunk>& chunk, const uint32_t max_chunk_size) {
+bool ChunkCompressionTask::chunk_is_completed(const ChunkSPtr& chunk, const uint32_t max_chunk_size) {
   if (chunk->size() != max_chunk_size) return false;
 
   auto mvcc_columns = chunk->mvcc_columns();

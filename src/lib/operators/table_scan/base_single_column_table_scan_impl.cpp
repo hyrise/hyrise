@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-BaseSingleColumnTableScanImpl::BaseSingleColumnTableScanImpl(std::shared_ptr<const Table> in_table,
+BaseSingleColumnTableScanImpl::BaseSingleColumnTableScanImpl(TableCSPtr in_table,
                                                              const ColumnID left_column_id,
                                                              const PredicateCondition predicate_condition)
     : BaseTableScanImpl{in_table, left_column_id, predicate_condition} {}
@@ -31,7 +31,7 @@ PosList BaseSingleColumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
 }
 
 void BaseSingleColumnTableScanImpl::handle_column(const ReferenceColumn& left_column,
-                                                  std::shared_ptr<ColumnVisitableContext> base_context) {
+                                                  ColumnVisitableContextSPtr base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const ChunkID chunk_id = context->_chunk_id;
   auto& matches_out = context->_matches_out;

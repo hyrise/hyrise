@@ -17,7 +17,7 @@ class BaseDictionaryColumn : public BaseEncodedColumn {
 
   EncodingType encoding_type() const final;
 
-  void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
+  void visit(ColumnVisitable& visitable, ColumnVisitableContextSPtr context = nullptr) const override;
 
   /**
    * @brief Returns index (i.e. ValueID) of first dictionary entry >= search value
@@ -40,7 +40,7 @@ class BaseDictionaryColumn : public BaseEncodedColumn {
    */
   virtual size_t unique_values_count() const = 0;
 
-  virtual std::shared_ptr<const BaseCompressedVector> attribute_vector() const = 0;
+  virtual BaseCompressedVectorCSPtr attribute_vector() const = 0;
 
   /**
    * @brief Returns encoding specific null value ID

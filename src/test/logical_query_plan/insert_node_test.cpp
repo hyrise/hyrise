@@ -12,7 +12,7 @@ class InsertNodeTest : public BaseTest {
  protected:
   void SetUp() override { _insert_node = InsertNode::make("table_a"); }
 
-  std::shared_ptr<InsertNode> _insert_node;
+  InsertNodeSPtr _insert_node;
 };
 
 TEST_F(InsertNodeTest, Description) { EXPECT_EQ(_insert_node->description(), "[Insert] Into table 'table_a'"); }

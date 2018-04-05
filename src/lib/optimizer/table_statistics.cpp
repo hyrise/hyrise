@@ -16,14 +16,14 @@
 
 namespace opossum {
 
-TableStatistics::TableStatistics(const std::shared_ptr<Table> table)
+TableStatistics::TableStatistics(const TableSPtr table)
     : _table(table),
       _table_type(table->type()),
       _row_count(table->row_count()),
       _column_statistics(table->column_count()) {}
 
 TableStatistics::TableStatistics(const TableType table_type, float row_count,
-                                 const std::vector<std::shared_ptr<BaseColumnStatistics>>& column_statistics)
+                                 const std::vector<BaseColumnStatisticsSPtr>& column_statistics)
     : _table_type(table_type), _row_count(row_count), _column_statistics(column_statistics) {}
 
 TableType TableStatistics::table_type() const { return _table_type; }
@@ -32,13 +32,13 @@ float TableStatistics::row_count() const { return _row_count; }
 
 uint64_t TableStatistics::approx_valid_row_count() const { return row_count() - _approx_invalid_row_count; }
 
-const std::vector<std::shared_ptr<BaseColumnStatistics>>& TableStatistics::column_statistics() const {
+const std::vector<BaseColumnStatisticsSPtr>& TableStatistics::column_statistics() const {
   // Lazily initialize column statistics
   _create_all_column_statistics();
   return _column_statistics;
 }
 
-std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const ColumnID column_id,
+TableStatisticsSPtr TableStatistics::predicate_statistics(const ColumnID column_id,
                                                                        const PredicateCondition predicate_condition,
                                                                        const AllParameterVariant& value,
                                                                        const std::optional<AllTypeVariant>& value2) {
@@ -97,8 +97,8 @@ std::shared_ptr<TableStatistics> TableStatistics::predicate_statistics(const Col
   return clone;
 }
 
-std::shared_ptr<TableStatistics> TableStatistics::generate_cross_join_statistics(
-    const std::shared_ptr<TableStatistics>& right_table_stats) {
+TableStatisticsSPtr TableStatistics::generate_cross_join_statistics(
+    const TableStatisticsSPtr& right_table_stats) {
   // create all not yet created column statistics as there is no mapping in join table statistics from table to columns
   // A join result can consist of columns of two different tables. Therefore, the reference to the table cannot be
   // stored within the table statistics but instead in the column statistics.
@@ -123,8 +123,8 @@ std::shared_ptr<TableStatistics> TableStatistics::generate_cross_join_statistics
   return join_table_stats;
 }
 
-std::shared_ptr<TableStatistics> TableStatistics::generate_predicated_join_statistics(
-    const std::shared_ptr<TableStatistics>& right_table_stats, const JoinMode mode, const ColumnIDPair column_ids,
+TableStatisticsSPtr TableStatistics::generate_predicated_join_statistics(
+    const TableStatisticsSPtr& right_table_stats, const JoinMode mode, const ColumnIDPair column_ids,
     const PredicateCondition predicate_condition) {
   DebugAssert(mode != JoinMode::Cross, "Use function generate_cross_join_statistics for cross joins.");
   DebugAssert(mode != JoinMode::Natural, "Natural joins are not supported by statistics component.");
@@ -264,7 +264,7 @@ std::shared_ptr<TableStatistics> TableStatistics::generate_predicated_join_stati
 
 void TableStatistics::increment_invalid_row_count(uint64_t count) { _approx_invalid_row_count += count; }
 
-std::shared_ptr<BaseColumnStatistics> TableStatistics::_get_or_generate_column_statistics(
+BaseColumnStatisticsSPtr TableStatistics::_get_or_generate_column_statistics(
     const ColumnID column_id) const {
   if (column_id < _column_statistics.size() && _column_statistics[column_id]) {
     return _column_statistics[column_id];
@@ -293,7 +293,7 @@ void TableStatistics::_reset_table_ptr() {
 }
 
 float TableStatistics::_calculate_added_null_values_for_outer_join(
-    const float row_count, const std::shared_ptr<BaseColumnStatistics> col_stats,
+    const float row_count, const BaseColumnStatisticsSPtr col_stats,
     const float predicate_column_distinct_count) const {
   float null_value_no = col_stats->null_value_ratio() * row_count;
   if (col_stats->distinct_count() != 0.f) {
@@ -303,8 +303,8 @@ float TableStatistics::_calculate_added_null_values_for_outer_join(
 }
 
 void TableStatistics::_adjust_null_value_ratio_for_outer_join(
-    const std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_begin,
-    const std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_end, const float row_count,
+    const std::vector<BaseColumnStatisticsSPtr>::iterator col_begin,
+    const std::vector<BaseColumnStatisticsSPtr>::iterator col_end, const float row_count,
     const float null_value_no, const float new_row_count) {
   if (null_value_no == 0) {
     return;

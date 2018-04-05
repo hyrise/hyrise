@@ -56,10 +56,10 @@ class ValueColumn : public BaseValueColumn {
   size_t size() const final;
 
   // Visitor pattern, see base_column.hpp
-  void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
+  void visit(ColumnVisitable& visitable, ColumnVisitableContextSPtr context = nullptr) const override;
 
   // Copies a ValueColumn using a new allocator. This is useful for placing the ValueColumn on a new NUMA node.
-  std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
+  BaseColumnSPtr copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
 
   size_t estimate_memory_usage() const override;
 
@@ -72,5 +72,4 @@ class ValueColumn : public BaseValueColumn {
   std::optional<pmr_concurrent_vector<bool>> _null_values;
 };
 
-CREATE_TEMPLATE_PTR_ALIASES(ValueColumn)
 }  // namespace opossum

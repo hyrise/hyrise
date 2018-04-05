@@ -25,16 +25,16 @@ namespace opossum {
  */
 class JoinHash : public AbstractJoinOperator {
  public:
-  JoinHash(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
+  JoinHash(const AbstractOperatorCSPtr left, const AbstractOperatorCSPtr right,
            const JoinMode mode, const ColumnIDPair& column_ids, const PredicateCondition predicate_condition);
 
   const std::string name() const override;
 
  protected:
-  std::shared_ptr<const Table> _on_execute() override;
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  TableCSPtr _on_execute() override;
+  AbstractOperatorSPtr _on_recreate(
+      const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+      const AbstractOperatorSPtr& recreated_input_right) const override;
   void _on_cleanup() override;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;

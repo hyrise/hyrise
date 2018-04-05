@@ -29,7 +29,7 @@ constexpr float INDEX_SCAN_ROW_COUNT_THRESHOLD = 1000.0f;
 
 std::string IndexScanRule::name() const { return "Index Scan Rule"; }
 
-bool IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
+bool IndexScanRule::apply_to(const AbstractLQPNodeSPtr& node) {
   if (node->type() == LQPNodeType::Predicate) {
     const auto& child = node->left_input();
 
@@ -51,7 +51,7 @@ bool IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
 }
 
 bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,
-                                              const std::shared_ptr<PredicateNode>& predicate_node) const {
+                                              const PredicateNodeSPtr& predicate_node) const {
   if (!_is_single_column_index(index_info)) return false;
 
   if (index_info.type != ColumnIndexType::GroupKey) return false;

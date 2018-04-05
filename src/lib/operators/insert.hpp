@@ -21,21 +21,21 @@ class TransactionContext;
  */
 class Insert : public AbstractReadWriteOperator {
  public:
-  explicit Insert(const std::string& target_table_name, const std::shared_ptr<AbstractOperator>& values_to_insert);
+  explicit Insert(const std::string& target_table_name, const AbstractOperatorSPtr& values_to_insert);
 
   const std::string name() const override;
 
  protected:
-  std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  TableCSPtr _on_execute(TransactionContextSPtr context) override;
+  AbstractOperatorSPtr _on_recreate(
+      const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+      const AbstractOperatorSPtr& recreated_input_right) const override;
   void _on_commit_records(const CommitID cid) override;
   void _on_rollback_records() override;
 
  private:
   const std::string _target_table_name;
-  std::shared_ptr<Table> _target_table;
+  TableSPtr _target_table;
 
   PosList _inserted_rows;
 };

@@ -320,7 +320,7 @@ void Console::out(const std::string& output, bool console_print) {
   _log.flush();
 }
 
-void Console::out(std::shared_ptr<const Table> table, uint32_t flags) {
+void Console::out(TableCSPtr table, uint32_t flags) {
   int size_y, size_x;
   rl_get_screen_size(&size_y, &size_x);
 
@@ -516,7 +516,7 @@ int Console::visualize(const std::string& input) {
 
   // Visualize the Logical Query Plan
   if (mode == lqp_string || mode == lqpopt_string) {
-    std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
+    std::vector<AbstractLQPNodeSPtr> lqp_roots;
 
     try {
       if (!no_execute) {

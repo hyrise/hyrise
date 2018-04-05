@@ -25,8 +25,8 @@ class SortNodeTest : public BaseTest {
         SortNode::make(std::vector<OrderByDefinition>{OrderByDefinition{_a_a, OrderByMode::Ascending}}, _table_node);
   }
 
-  std::shared_ptr<StoredTableNode> _table_node;
-  std::shared_ptr<SortNode> _sort_node;
+  StoredTableNodeSPtr _table_node;
+  SortNodeSPtr _sort_node;
   LQPColumnReference _a_a, _a_b, _a_c;
 };
 

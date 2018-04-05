@@ -23,13 +23,13 @@ class MultiColumnIndexTest : public BaseTest {
         DataType::String, {"foo", "bar", "baz", "foo", "bar", "baz", "foo", "bar", "baz", "foo"});
 
     index_int_str =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dict_col_int, dict_col_str});
+        std::make_shared<DerivedIndex>(std::vector<BaseColumnCSPtr>{dict_col_int, dict_col_str});
     index_str_int =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dict_col_str, dict_col_int});
+        std::make_shared<DerivedIndex>(std::vector<BaseColumnCSPtr>{dict_col_str, dict_col_int});
   }
 
   template <class Iterator>
-  static std::vector<std::vector<AllTypeVariant>> result_as_vector(const std::vector<std::shared_ptr<BaseColumn>> cols,
+  static std::vector<std::vector<AllTypeVariant>> result_as_vector(const std::vector<BaseColumnSPtr> cols,
                                                                    Iterator begin, Iterator end) {
     std::vector<std::vector<AllTypeVariant>> result{};
     for (auto iter(std::move(begin)); iter != end; ++iter) {
@@ -42,10 +42,10 @@ class MultiColumnIndexTest : public BaseTest {
     return result;
   }
 
-  std::shared_ptr<BaseIndex> index_int_str = nullptr;
-  std::shared_ptr<BaseIndex> index_str_int = nullptr;
-  std::shared_ptr<BaseColumn> dict_col_int = nullptr;
-  std::shared_ptr<BaseColumn> dict_col_str = nullptr;
+  BaseIndexSPtr index_int_str = nullptr;
+  BaseIndexSPtr index_str_int = nullptr;
+  BaseColumnSPtr dict_col_int = nullptr;
+  BaseColumnSPtr dict_col_str = nullptr;
 };
 
 // List of indices to test

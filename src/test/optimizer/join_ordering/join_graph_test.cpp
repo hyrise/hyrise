@@ -10,8 +10,8 @@ using namespace std::string_literals;  // NOLINT
 
 class JoinGraphTest : public ::testing::Test {
  public:
-  static bool contains_predicate(const std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>>& predicates,
-                                 const std::shared_ptr<const AbstractJoinPlanPredicate>& predicate) {
+  static bool contains_predicate(const std::vector<AbstractJoinPlanPredicateCSPtr>& predicates,
+                                 const AbstractJoinPlanPredicateCSPtr& predicate) {
     for (const auto& predicate2 : predicates) {
       if (predicate2->type() != predicate->type()) continue;
 

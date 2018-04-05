@@ -17,10 +17,10 @@ namespace opossum {
 class JitExpression {
  public:
   explicit JitExpression(const JitTupleValue& tuple_value);
-  JitExpression(const std::shared_ptr<const JitExpression>& child, const ExpressionType expression_type,
+  JitExpression(const JitExpressionCSPtr& child, const ExpressionType expression_type,
                 const size_t result_tuple_index);
-  JitExpression(const std::shared_ptr<const JitExpression>& left_child, const ExpressionType expression_type,
-                const std::shared_ptr<const JitExpression>& right_child, const size_t result_tuple_index);
+  JitExpression(const JitExpressionCSPtr& left_child, const ExpressionType expression_type,
+                const JitExpressionCSPtr& right_child, const size_t result_tuple_index);
 
   std::string to_string() const;
 
@@ -39,8 +39,8 @@ class JitExpression {
  private:
   std::pair<const DataType, const bool> _compute_result_type();
 
-  const std::shared_ptr<const JitExpression> _left_child;
-  const std::shared_ptr<const JitExpression> _right_child;
+  const JitExpressionCSPtr _left_child;
+  const JitExpressionCSPtr _right_child;
   const ExpressionType _expression_type;
   const JitTupleValue _result_value;
 };

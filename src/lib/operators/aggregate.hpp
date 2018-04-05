@@ -77,7 +77,7 @@ using DistinctAggregateType = int8_t;
  */
 class Aggregate : public AbstractReadOnlyOperator {
  public:
-  Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateColumnDefinition>& aggregates,
+  Aggregate(const AbstractOperatorSPtr in, const std::vector<AggregateColumnDefinition>& aggregates,
             const std::vector<ColumnID> groupby_column_ids);
 
   const std::vector<AggregateColumnDefinition>& aggregates() const;
@@ -91,21 +91,21 @@ class Aggregate : public AbstractReadOnlyOperator {
   void write_aggregate_output(ColumnID column_index);
 
  protected:
-  std::shared_ptr<const Table> _on_execute() override;
+  TableCSPtr _on_execute() override;
 
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  AbstractOperatorSPtr _on_recreate(
+      const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+      const AbstractOperatorSPtr& recreated_input_right) const override;
 
   template <typename ColumnType>
   static void _create_aggregate_context(boost::hana::basic_type<ColumnType> type,
-                                        std::shared_ptr<ColumnVisitableContext>& aggregate_context,
+                                        ColumnVisitableContextSPtr& aggregate_context,
                                         AggregateFunction function);
 
   template <typename ColumnType>
   static void _create_aggregate_visitor(boost::hana::basic_type<ColumnType> type,
-                                        std::shared_ptr<ColumnVisitable>& builder,
-                                        std::shared_ptr<ColumnVisitableContext> context,
+                                        ColumnVisitableSPtr& builder,
+                                        ColumnVisitableContextSPtr context,
                                         std::shared_ptr<GroupByContext> groupby_context, AggregateFunction function);
 
   template <typename ColumnType>
@@ -115,21 +115,21 @@ class Aggregate : public AbstractReadOnlyOperator {
   template <typename ColumnDataType, AggregateFunction function>
   void _aggregate_column(ChunkID chunk_id, ColumnID column_index, const BaseColumn& base_column);
 
-  std::shared_ptr<ColumnVisitableContext> _create_aggregate_context(const DataType data_type,
+  ColumnVisitableContextSPtr _create_aggregate_context(const DataType data_type,
                                                                     const AggregateFunction function) const;
 
   template <typename ColumnDataType, AggregateFunction aggregate_function>
-  std::shared_ptr<ColumnVisitableContext> _create_aggregate_context_impl() const;
+  ColumnVisitableContextSPtr _create_aggregate_context_impl() const;
 
   const std::vector<AggregateColumnDefinition> _aggregates;
   const std::vector<ColumnID> _groupby_column_ids;
 
-  std::shared_ptr<Table> _output;
+  TableSPtr _output;
   TableColumnDefinitions _output_column_definitions;
   ChunkColumns _output_columns;
 
   ChunkColumns _groupby_columns;
-  std::vector<std::shared_ptr<ColumnVisitableContext>> _contexts_per_column;
+  std::vector<ColumnVisitableContextSPtr> _contexts_per_column;
   std::vector<std::shared_ptr<std::vector<AggregateKey>>> _keys_per_chunk;
 };
 

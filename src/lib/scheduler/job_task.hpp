@@ -38,5 +38,5 @@ class JobTask : public AbstractTask {
   std::function<void()> _fn;
 };
 
-CREATE_PTR_ALIASES(JobTask)
+
 }  // namespace opossum

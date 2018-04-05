@@ -24,8 +24,8 @@ namespace {
 // could break if something is changed within the optimizer.
 // It assumes that for the query: SELECT * from a, b WHERE a.a = b.a will be translated to a Cross Join with a filter
 // predicate and then optimized to a Join.
-std::function<bool(const std::shared_ptr<opossum::AbstractLQPNode>&)> contains_cross =
-    [](const std::shared_ptr<opossum::AbstractLQPNode>& node) {
+std::function<bool(const opossum::AbstractLQPNodeSPtr&)> contains_cross =
+    [](const opossum::AbstractLQPNodeSPtr& node) {
       if (node->type() != opossum::LQPNodeType::Join) return false;
       if (auto join_node = std::dynamic_pointer_cast<opossum::JoinNode>(node)) {
         return join_node->join_mode() == opossum::JoinMode::Cross;
@@ -73,10 +73,10 @@ class SQLPipelineStatementTest : public BaseTest {
     SQLQueryCache<SQLQueryPlan>::get().clear();
   }
 
-  std::shared_ptr<Table> _table_a;
-  std::shared_ptr<Table> _table_b;
-  std::shared_ptr<Table> _table_int;
-  std::shared_ptr<Table> _join_result;
+  TableSPtr _table_a;
+  TableSPtr _table_b;
+  TableSPtr _table_int;
+  TableSPtr _join_result;
 
   TableColumnDefinitions _int_float_column_definitions;
   TableColumnDefinitions _int_int_int_column_definitions;
@@ -94,7 +94,7 @@ class SQLPipelineStatementTest : public BaseTest {
   std::shared_ptr<hsql::SQLParserResult> _select_parse_result;
   std::shared_ptr<hsql::SQLParserResult> _multi_statement_parse_result;
 
-  static bool _contains_validate(const std::vector<std::shared_ptr<OperatorTask>>& tasks) {
+  static bool _contains_validate(const std::vector<OperatorTaskSPtr>& tasks) {
     for (const auto& task : tasks) {
       if (std::dynamic_pointer_cast<Validate>(task->get_operator())) return true;
     }
@@ -307,7 +307,7 @@ TEST_F(SQLPipelineStatementTest, GetOptimizedLQPDoesNotInfluenceUnoptimizedLQP) 
 
   // The optimizer works on the original LQP nodes which could be modified during optimization.
   // Copy the structure to check that it is equal after optimizing.
-  std::shared_ptr<AbstractLQPNode> unoptimized_copy = unoptimized_lqp->deep_copy();
+  AbstractLQPNodeSPtr unoptimized_copy = unoptimized_lqp->deep_copy();
 
   // Optimize the LQP node
   sql_pipeline.get_optimized_logical_plan();
@@ -355,7 +355,7 @@ TEST_F(SQLPipelineStatementTest, GetQueryPlanJoinWithFilter) {
   const auto& plan = sql_pipeline.get_query_plan();
   const auto& roots = plan->tree_roots();
 
-  auto is_join_op = [](const std::shared_ptr<const AbstractOperator>& node) {
+  auto is_join_op = [](const AbstractOperatorCSPtr& node) {
     return static_cast<bool>(std::dynamic_pointer_cast<const AbstractJoinOperator>(node));
   };
 

@@ -21,7 +21,7 @@
 namespace opossum {
 
 template <typename T>
-static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_dictionary(const pmr_vector<T>& dictionary) {
+static ChunkColumnStatisticsSPtr build_statistics_from_dictionary(const pmr_vector<T>& dictionary) {
   auto statistics = std::make_shared<ChunkColumnStatistics>();
   // only create statistics when the compressed dictionary is not empty
   if (!dictionary.empty()) {
@@ -40,9 +40,9 @@ static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_dictionary(c
   return statistics;
 }
 
-std::shared_ptr<ChunkColumnStatistics> ChunkColumnStatistics::build_statistics(DataType data_type,
-                                                                               std::shared_ptr<BaseColumn> column) {
-  std::shared_ptr<ChunkColumnStatistics> statistics;
+ChunkColumnStatisticsSPtr ChunkColumnStatistics::build_statistics(DataType data_type,
+                                                                               BaseColumnSPtr column) {
+  ChunkColumnStatisticsSPtr statistics;
   resolve_data_and_column_type(*column, [&statistics](auto type, auto& typed_column) {
     using ColumnType = typename std::decay<decltype(typed_column)>::type;
     using DataTypeT = typename decltype(type)::type;
@@ -74,7 +74,7 @@ std::shared_ptr<ChunkColumnStatistics> ChunkColumnStatistics::build_statistics(D
   });
   return statistics;
 }
-void ChunkColumnStatistics::add_filter(std::shared_ptr<AbstractFilter> filter) { _filters.emplace_back(filter); }
+void ChunkColumnStatistics::add_filter(AbstractFilterSPtr filter) { _filters.emplace_back(filter); }
 
 bool ChunkColumnStatistics::can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const {
   for (const auto& filter : _filters) {

@@ -15,8 +15,8 @@ class AbstractScheduler;
  */
 class CurrentScheduler {
  public:
-  static const std::shared_ptr<AbstractScheduler>& get();
-  static void set(const std::shared_ptr<AbstractScheduler>& instance);
+  static const AbstractSchedulerSPtr& get();
+  static void set(const AbstractSchedulerSPtr& instance);
 
   /**
    * The System runs without a Scheduler in most Tests and with one almost everywhere else. Tasks need to work
@@ -38,7 +38,7 @@ class CurrentScheduler {
   static void schedule_and_wait_for_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks);
 
  private:
-  static std::shared_ptr<AbstractScheduler> _instance;
+  static AbstractSchedulerSPtr _instance;
 };
 
 template <typename TaskType>

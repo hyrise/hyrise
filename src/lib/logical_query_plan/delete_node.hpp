@@ -22,9 +22,9 @@ class DeleteNode : public EnableMakeForLQPNode<DeleteNode>, public AbstractLQPNo
   const std::string& table_name() const;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
+  AbstractLQPNodeSPtr _deep_copy_impl(
+      const AbstractLQPNodeSPtr& copied_left_input,
+      const AbstractLQPNodeSPtr& copied_right_input) const override;
   const std::string _table_name;
 };
 

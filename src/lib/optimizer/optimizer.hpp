@@ -21,13 +21,13 @@ class AbstractLQPNode;
  */
 class Optimizer final {
  public:
-  static std::shared_ptr<Optimizer> create_default_optimizer();
+  static OptimizerSPtr create_default_optimizer();
 
   explicit Optimizer(const uint32_t max_num_iterations);
 
   void add_rule_batch(RuleBatch rule_batch);
 
-  std::shared_ptr<AbstractLQPNode> optimize(const std::shared_ptr<AbstractLQPNode>& input) const;
+  AbstractLQPNodeSPtr optimize(const AbstractLQPNodeSPtr& input) const;
 
  private:
   std::vector<RuleBatch> _rule_batches;
@@ -36,6 +36,6 @@ class Optimizer final {
   uint32_t _max_num_iterations = 10;
 };
 
-CREATE_PTR_ALIASES(Optimizer)
+
 
 }  // namespace opossum

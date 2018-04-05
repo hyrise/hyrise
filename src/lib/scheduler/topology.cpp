@@ -23,7 +23,7 @@ void TopologyNode::print(std::ostream& stream) const {
   stream << "]";
 }
 
-std::shared_ptr<Topology> Topology::create_fake_numa_topology(uint32_t max_num_workers, uint32_t workers_per_node) {
+TopologySPtr Topology::create_fake_numa_topology(uint32_t max_num_workers, uint32_t workers_per_node) {
   auto max_num_threads = std::thread::hardware_concurrency();
 
   /**
@@ -58,7 +58,7 @@ std::shared_ptr<Topology> Topology::create_fake_numa_topology(uint32_t max_num_w
   return std::make_shared<Topology>(std::move(nodes), num_workers);
 }
 
-std::shared_ptr<Topology> Topology::create_numa_topology(uint32_t max_num_cores) {
+TopologySPtr Topology::create_numa_topology(uint32_t max_num_cores) {
 #if !HYRISE_NUMA_SUPPORT
   return create_fake_numa_topology(max_num_cores);
 #else

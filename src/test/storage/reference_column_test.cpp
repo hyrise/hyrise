@@ -46,7 +46,7 @@ class ReferenceColumnTest : public BaseTest {
   }
 
  public:
-  std::shared_ptr<opossum::Table> _test_table, _test_table_dict;
+  opossum::TableSPtr _test_table, _test_table_dict;
 };
 
 TEST_F(ReferenceColumnTest, IsImmutable) {

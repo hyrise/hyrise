@@ -48,7 +48,7 @@ class JoinDetectionRuleTest : public StrategyBaseTest, public ::testing::WithPar
     _rule = std::make_shared<JoinDetectionRule>();
   }
 
-  uint8_t _count_cross_joins(const std::shared_ptr<AbstractLQPNode>& node) {
+  uint8_t _count_cross_joins(const AbstractLQPNodeSPtr& node) {
     uint8_t count = 0u;
     if (node->type() == LQPNodeType::Join) {
       const auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
@@ -67,8 +67,8 @@ class JoinDetectionRuleTest : public StrategyBaseTest, public ::testing::WithPar
     return count;
   }
 
-  std::shared_ptr<StoredTableNode> _table_node_a, _table_node_b, _table_node_c;
-  std::shared_ptr<JoinDetectionRule> _rule;
+  StoredTableNodeSPtr _table_node_a, _table_node_b, _table_node_c;
+  JoinDetectionRuleSPtr _rule;
 
   LQPColumnReference _a_a, _a_b, _b_a, _b_b, _c_a, _c_b;
 };
@@ -144,7 +144,7 @@ TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
   const auto predicate_node = PredicateNode::make(_a_a, PredicateCondition::Equals, _b_a);
   predicate_node->set_left_input(cross_join_node);
 
-  const std::vector<std::shared_ptr<LQPExpression>> columns = {LQPExpression::create_column(_a_a)};
+  const std::vector<LQPExpressionSPtr> columns = {LQPExpression::create_column(_a_a)};
   const auto projection_node = ProjectionNode::make(columns);
   projection_node->set_left_input(predicate_node);
 
@@ -178,7 +178,7 @@ TEST_F(JoinDetectionRuleTest, NoPredicate) {
   cross_join_node->set_left_input(_table_node_a);
   cross_join_node->set_right_input(_table_node_b);
 
-  const std::vector<std::shared_ptr<LQPExpression>> columns = {LQPExpression::create_column(_a_a)};
+  const std::vector<LQPExpressionSPtr> columns = {LQPExpression::create_column(_a_a)};
   const auto projection_node = ProjectionNode::make(columns);
   projection_node->set_left_input(cross_join_node);
 
@@ -217,7 +217,7 @@ TEST_F(JoinDetectionRuleTest, NoMatchingPredicate) {
   const auto predicate_node = PredicateNode::make(_a_a, PredicateCondition::Equals, _a_b);
   predicate_node->set_left_input(cross_join_node);
 
-  const std::vector<std::shared_ptr<LQPExpression>> columns = {LQPExpression::create_column(_a_a)};
+  const std::vector<LQPExpressionSPtr> columns = {LQPExpression::create_column(_a_a)};
   const auto projection_node = ProjectionNode::make(columns);
   projection_node->set_left_input(predicate_node);
 
@@ -255,7 +255,7 @@ TEST_F(JoinDetectionRuleTest, NonCrossJoin) {
   const auto predicate_node = PredicateNode::make(_a_a, PredicateCondition::Equals, _b_a);
   predicate_node->set_left_input(join_node);
 
-  const std::vector<std::shared_ptr<LQPExpression>> columns = {LQPExpression::create_column(_a_a)};
+  const std::vector<LQPExpressionSPtr> columns = {LQPExpression::create_column(_a_a)};
   const auto projection_node = ProjectionNode::make(columns);
   projection_node->set_left_input(predicate_node);
 
@@ -308,7 +308,7 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins) {
   const auto predicate_node = PredicateNode::make(_a_a, PredicateCondition::Equals, _b_a);
   predicate_node->set_left_input(join_node2);
 
-  const std::vector<std::shared_ptr<LQPExpression>> columns = {LQPExpression::create_column(_a_a)};
+  const std::vector<LQPExpressionSPtr> columns = {LQPExpression::create_column(_a_a)};
   const auto projection_node = ProjectionNode::make(columns);
   projection_node->set_left_input(predicate_node);
 
@@ -408,7 +408,7 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins2) {
   const auto predicate_node = PredicateNode::make(_c_a, PredicateCondition::Equals, _a_a);
   predicate_node->set_left_input(join_node2);
 
-  const std::vector<std::shared_ptr<LQPExpression>> columns = {LQPExpression::create_column(_a_a)};
+  const std::vector<LQPExpressionSPtr> columns = {LQPExpression::create_column(_a_a)};
   const auto projection_node = ProjectionNode::make(columns);
   projection_node->set_left_input(predicate_node);
 
@@ -450,7 +450,7 @@ TEST_F(JoinDetectionRuleTest, NoOptimizationAcrossProjection) {
   join_node->set_left_input(_table_node_a);
   join_node->set_right_input(_table_node_b);
 
-  const std::vector<std::shared_ptr<LQPExpression>> columns = {LQPExpression::create_column(_a_a),
+  const std::vector<LQPExpressionSPtr> columns = {LQPExpression::create_column(_a_a),
                                                                LQPExpression::create_column(_b_a)};
   const auto projection_node = ProjectionNode::make(columns);
   projection_node->set_left_input(join_node);
@@ -490,7 +490,7 @@ TEST_F(JoinDetectionRuleTest, NoJoinDetectionAcrossProjections) {
   join_node->set_left_input(_table_node_a);
   join_node->set_right_input(_table_node_b);
 
-  const std::vector<std::shared_ptr<LQPExpression>> columns = {LQPExpression::create_column(_a_a),
+  const std::vector<LQPExpressionSPtr> columns = {LQPExpression::create_column(_a_a),
                                                                LQPExpression::create_column(_b_a)};
   const auto projection_node = ProjectionNode::make(columns);
   projection_node->set_left_input(join_node);

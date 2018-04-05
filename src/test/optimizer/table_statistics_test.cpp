@@ -18,8 +18,8 @@ class TableStatisticsTest : public BaseTest {
   // Because of Operator::get_output() returns a const table, we need another way of adding statistics to it. Here
   // you go, have some nice boilerplate....
   struct TableWithStatistics {
-    std::shared_ptr<const Table> table;
-    std::shared_ptr<TableStatistics> statistics;
+    TableCSPtr table;
+    TableStatisticsSPtr statistics;
   };
 
   void SetUp() override {
@@ -40,7 +40,7 @@ class TableStatisticsTest : public BaseTest {
     auto table_wrapper = std::make_shared<TableWrapper>(table_with_statistics.table);
     table_wrapper->execute();
 
-    std::shared_ptr<TableScan> table_scan;
+    TableScanSPtr table_scan;
     if (predicate_condition == PredicateCondition::Between) {
       auto first_table_scan =
           std::make_shared<TableScan>(table_wrapper, column_id, PredicateCondition::GreaterThanEquals, value);

@@ -52,8 +52,8 @@ class IterablesTest : public BaseTest {
     table_with_null = load_table("src/test/tables/int_float_with_null.tbl", Chunk::MAX_SIZE);
   }
 
-  std::shared_ptr<Table> table;
-  std::shared_ptr<Table> table_with_null;
+  TableSPtr table;
+  TableSPtr table_with_null;
 };
 
 TEST_F(IterablesTest, ValueColumnIteratorWithIterators) {

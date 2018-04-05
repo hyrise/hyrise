@@ -9,7 +9,7 @@ SQLPipelineBuilder& SQLPipelineBuilder::with_mvcc(const UseMvcc use_mvcc) {
   return *this;
 }
 
-SQLPipelineBuilder& SQLPipelineBuilder::with_optimizer(const std::shared_ptr<Optimizer>& optimizer) {
+SQLPipelineBuilder& SQLPipelineBuilder::with_optimizer(const OptimizerSPtr& optimizer) {
   _optimizer = optimizer;
   return *this;
 }
@@ -21,7 +21,7 @@ SQLPipelineBuilder& SQLPipelineBuilder::with_prepared_statement_cache(
 }
 
 SQLPipelineBuilder& SQLPipelineBuilder::with_transaction_context(
-    const std::shared_ptr<TransactionContext>& transaction_context) {
+    const TransactionContextSPtr& transaction_context) {
   _transaction_context = transaction_context;
   _use_mvcc = UseMvcc::Yes;
 

@@ -65,8 +65,8 @@ enum class OperatorType {
 
 class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, private Noncopyable {
  public:
-  AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator> left = nullptr,
-                   const std::shared_ptr<const AbstractOperator> right = nullptr);
+  AbstractOperator(const OperatorType type, const AbstractOperatorCSPtr left = nullptr,
+                   const AbstractOperatorCSPtr right = nullptr);
 
   virtual ~AbstractOperator() = default;
 
@@ -76,7 +76,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   virtual void execute();
 
   // returns the result of the operator
-  std::shared_ptr<const Table> get_output() const;
+  TableCSPtr get_output() const;
 
   virtual const std::string name() const = 0;
   virtual const std::string description(DescriptionMode description_mode = DescriptionMode::SingleLine) const;
@@ -84,30 +84,29 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // This only checks if the operator has/had a transaction context without having to convert the weak_ptr
   bool transaction_context_is_set() const;
 
-  std::shared_ptr<TransactionContext> transaction_context() const;
-  void set_transaction_context(std::weak_ptr<TransactionContext> transaction_context);
+  TransactionContextSPtr transaction_context() const;void set_transaction_context(TransactionContextWPtr transaction_context);
 
   // Calls set_transaction_context on itself and both input operators recursively
-  void set_transaction_context_recursively(std::weak_ptr<TransactionContext> transaction_context);
+  void set_transaction_context_recursively(TransactionContextWPtr transaction_context);
 
   // Returns a new instance of the same operator with the same configuration.
   // The given arguments are used to replace the ValuePlaceholder objects within the new operator, if applicable.
   // Recursively recreates the input operators and passes the argument list along.
   // An operator needs to implement this method in order to be cacheable.
-  virtual std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args = {}) const;
+  virtual AbstractOperatorSPtr recreate(const std::vector<AllParameterVariant>& args = {}) const;
 
   // Get the input operators.
-  std::shared_ptr<const AbstractOperator> input_left() const;
-  std::shared_ptr<const AbstractOperator> input_right() const;
+  AbstractOperatorCSPtr input_left() const;
+  AbstractOperatorCSPtr input_right() const;
 
   // Return input operators.
   // Note: these methods cast away const for the return shared_ptr of AbstractOperator.
-  std::shared_ptr<AbstractOperator> mutable_input_left() const;
-  std::shared_ptr<AbstractOperator> mutable_input_right() const;
+  AbstractOperatorSPtr mutable_input_left() const;
+  AbstractOperatorSPtr mutable_input_right() const;
 
   // Return the output tables of the inputs
-  std::shared_ptr<const Table> input_table_left() const;
-  std::shared_ptr<const Table> input_table_right() const;
+  TableCSPtr input_table_left() const;
+  TableCSPtr input_table_right() const;
 
   struct PerformanceData {
     uint64_t walltime_ns = 0;  // time spent in nanoseconds executing this operator
@@ -120,7 +119,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier
   // asynchronous execution
-  virtual std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) = 0;
+  virtual TableCSPtr _on_execute(TransactionContextSPtr context) = 0;
 
   // method that allows operator-specific cleanups for temporary data.
   // separate from _on_execute for readability and as a reminder to
@@ -131,31 +130,31 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
                    std::unordered_map<const AbstractOperator*, size_t>& id_by_operator, size_t& id_counter) const;
 
   // Looks itself up in @param recreated_ops to support diamond shapes in PQPs, if not found calls _on_recreate()
-  std::shared_ptr<AbstractOperator> _recreate_impl(
-      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& recreated_ops,
+  AbstractOperatorSPtr _recreate_impl(
+      std::unordered_map<const AbstractOperator*, AbstractOperatorSPtr>& recreated_ops,
       const std::vector<AllParameterVariant>& args) const;
 
-  virtual std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const = 0;
+  virtual AbstractOperatorSPtr _on_recreate(
+      const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+      const AbstractOperatorSPtr& recreated_input_right) const = 0;
 
   const OperatorType _type;
 
   // Shared pointers to input operators, can be nullptr.
-  std::shared_ptr<const AbstractOperator> _input_left;
-  std::shared_ptr<const AbstractOperator> _input_right;
+  AbstractOperatorCSPtr _input_left;
+  AbstractOperatorCSPtr _input_right;
 
   // Is nullptr until the operator is executed
-  std::shared_ptr<const Table> _output;
+  TableCSPtr _output;
 
   // Weak pointer breaks cyclical dependency between operators and context
-  std::optional<std::weak_ptr<TransactionContext>> _transaction_context;
+  std::optional<TransactionContextWPtr> _transaction_context;
 
   PerformanceData _performance_data;
 
-  std::weak_ptr<OperatorTask> _operator_task;
+  OperatorTaskWPtr _operator_task;
 };
 
-CREATE_PTR_ALIASES(AbstractOperator)
+
 
 }  // namespace opossum

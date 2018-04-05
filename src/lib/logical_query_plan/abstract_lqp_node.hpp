@@ -44,7 +44,7 @@ enum class LQPInputSide { Left, Right };
 
 // Describes the output of a Node and which of the output's inputs a node is
 struct LQPOutputRelation {
-  std::shared_ptr<AbstractLQPNode> output;
+  AbstractLQPNodeSPtr output;
   LQPInputSide input_side{LQPInputSide::Left};
 };
 
@@ -83,7 +83,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   explicit AbstractLQPNode(LQPNodeType node_type);
 
   // Creates a deep copy
-  std::shared_ptr<AbstractLQPNode> deep_copy() const;
+  AbstractLQPNodeSPtr deep_copy() const;
 
   // @{
   /**
@@ -98,7 +98,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   /**
    * Locks all outputs and returns them as shared_ptrs
    */
-  std::vector<std::shared_ptr<AbstractLQPNode>> outputs() const;
+  std::vector<AbstractLQPNodeSPtr> outputs() const;
 
   /**
    * @return {{outputs()[0], get_input_sides()[0]}, ..., {outputs()[n-1], get_input_sides()[n-1]}}
@@ -110,34 +110,34 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    */
   size_t output_count() const;
 
-  void remove_output(const std::shared_ptr<AbstractLQPNode>& output);
+  void remove_output(const AbstractLQPNodeSPtr& output);
   void clear_outputs();
 
   /**
    * @pre this has has @param output as an output
    * @return whether this is the left or right input in the specified output.
    */
-  LQPInputSide get_input_side(const std::shared_ptr<AbstractLQPNode>& output) const;
+  LQPInputSide get_input_side(const AbstractLQPNodeSPtr& output) const;
 
   /**
    * @returns {get_output_side(outputs()[0], ..., get_output_side(outputs()[n-1])}
    */
   std::vector<LQPInputSide> get_input_sides() const;
 
-  std::shared_ptr<AbstractLQPNode> left_input() const;
-  void set_left_input(const std::shared_ptr<AbstractLQPNode>& left);
+  AbstractLQPNodeSPtr left_input() const;
+  void set_left_input(const AbstractLQPNodeSPtr& left);
 
-  std::shared_ptr<AbstractLQPNode> right_input() const;
-  void set_right_input(const std::shared_ptr<AbstractLQPNode>& right);
+  AbstractLQPNodeSPtr right_input() const;
+  void set_right_input(const AbstractLQPNodeSPtr& right);
 
-  std::shared_ptr<AbstractLQPNode> input(LQPInputSide side) const;
+  AbstractLQPNodeSPtr input(LQPInputSide side) const;
 
   /**
    * @returns the number of inputs
    */
   size_t input_count() const;
 
-  void set_input(LQPInputSide side, const std::shared_ptr<AbstractLQPNode>& input);
+  void set_input(LQPInputSide side, const AbstractLQPNodeSPtr& input);
   // @}
 
   LQPNodeType type() const;
@@ -161,11 +161,11 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    *
    * Inheriting nodes are free to override AbstractLQPNode::derive_statistics_from().
    */
-  void set_statistics(const std::shared_ptr<TableStatistics>& statistics);
-  const std::shared_ptr<TableStatistics> get_statistics();
-  virtual std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractLQPNode>& left_input,
-      const std::shared_ptr<AbstractLQPNode>& right_input = nullptr) const;
+  void set_statistics(const TableStatisticsSPtr& statistics);
+  const TableStatisticsSPtr get_statistics();
+  virtual TableStatisticsSPtr derive_statistics_from(
+      const AbstractLQPNodeSPtr& left_input,
+      const AbstractLQPNodeSPtr& right_input = nullptr) const;
   // @}
 
   /**
@@ -205,7 +205,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * @return the StoredTableNode that is called table_name or any that carries it as an alias in this subtree.
    *         nullptr if the no such node exists.
    */
-  virtual std::shared_ptr<const AbstractLQPNode> find_table_name_origin(const std::string& table_name) const;
+  virtual AbstractLQPNodeCSPtr find_table_name_origin(const std::string& table_name) const;
   // @}
 
   /**
@@ -230,7 +230,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * Replaces 'this' node with @param replacement_node node.
    * @pre replacement_node has neither output nor inputs
    */
-  void replace_with(const std::shared_ptr<AbstractLQPNode>& replacement_node);
+  void replace_with(const AbstractLQPNodeSPtr& replacement_node);
 
   /**
    * Sets the table alias for this subtree, see _table_alias for details.
@@ -273,9 +273,9 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * @return the @param expression (you will probably want to pass in a deep_copy), with all ColumnReferences pointing
    * to their equivalent in a deep_copy()ed LQP
    */
-  static std::shared_ptr<LQPExpression> adapt_expression_to_different_lqp(
-      const std::shared_ptr<LQPExpression>& expression, const std::shared_ptr<AbstractLQPNode>& original_lqp,
-      const std::shared_ptr<AbstractLQPNode>& copied_lqp);
+  static LQPExpressionSPtr adapt_expression_to_different_lqp(
+      const LQPExpressionSPtr& expression, const AbstractLQPNodeSPtr& original_lqp,
+      const AbstractLQPNodeSPtr& copied_lqp);
 
   /**
    * @param copied_lqp must be a deep copy of original_lqp
@@ -283,8 +283,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * @return the ColumnReference equivalent to column_reference within the copied_lqp subtree
    */
   static LQPColumnReference adapt_column_reference_to_different_lqp(
-      const LQPColumnReference& column_reference, const std::shared_ptr<AbstractLQPNode>& original_lqp,
-      const std::shared_ptr<AbstractLQPNode>& copied_lqp);
+      const LQPColumnReference& column_reference, const AbstractLQPNodeSPtr& original_lqp,
+      const AbstractLQPNodeSPtr& copied_lqp);
   /**
    * @}
    */
@@ -303,24 +303,24 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * @return std::nullopt if the LQPs were equal. A pair of a node in this LQP and a node in the rhs LQP that were first
    *         discovered to differ.
    */
-  std::optional<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>>
-  find_first_subplan_mismatch(const std::shared_ptr<const AbstractLQPNode>& rhs) const;
+  std::optional<std::pair<AbstractLQPNodeCSPtr, AbstractLQPNodeCSPtr>>
+  find_first_subplan_mismatch(const AbstractLQPNodeCSPtr& rhs) const;
   // @}
 
  protected:
   // Holds the actual implementation of deep_copy
   using PreviousCopiesMap =
-      std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>;
-  std::shared_ptr<AbstractLQPNode> _deep_copy(PreviousCopiesMap& previous_copies) const;
+      std::unordered_map<AbstractLQPNodeCSPtr, AbstractLQPNodeSPtr>;
+  AbstractLQPNodeSPtr _deep_copy(PreviousCopiesMap& previous_copies) const;
 
   /**
    * Override and create a DEEP copy of this LQP node. Used for reusing LQPs, e.g., in views.
    * @param left_input and @param right_input are deep copies of the left and right input respectively, used for deep-copying
    * ColumnReferences
    */
-  virtual std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const = 0;
+  virtual AbstractLQPNodeSPtr _deep_copy_impl(
+      const AbstractLQPNodeSPtr& copied_left_input,
+      const AbstractLQPNodeSPtr& copied_right_input) const = 0;
 
   /**
    * In derived nodes, clear all data that depends on inputs and only set it lazily on request (see, e.g.
@@ -351,13 +351,13 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
 
   /** Utility to compare vectors of Expressions from different LQPs */
   static bool _equals(const AbstractLQPNode& lqp_left,
-                      const std::vector<std::shared_ptr<LQPExpression>>& expressions_left,
+                      const std::vector<LQPExpressionSPtr>& expressions_left,
                       const AbstractLQPNode& lqp_right,
-                      const std::vector<std::shared_ptr<LQPExpression>>& expressions_right);
+                      const std::vector<LQPExpressionSPtr>& expressions_right);
 
   /** Utility to compare two Expressions from different LQPs */
-  static bool _equals(const AbstractLQPNode& lqp_left, const std::shared_ptr<const LQPExpression>& expression_left,
-                      const AbstractLQPNode& lqp_right, const std::shared_ptr<const LQPExpression>& expression_right);
+  static bool _equals(const AbstractLQPNode& lqp_left, const LQPExpressionCSPtr& expression_left,
+                      const AbstractLQPNode& lqp_right, const LQPExpressionCSPtr& expression_right);
 
   /** Utility to compare vectors of LQPColumnReferences from different LQPs */
   static bool _equals(const AbstractLQPNode& lqp_left, const std::vector<LQPColumnReference>& column_references_left,
@@ -368,30 +368,30 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
                       const AbstractLQPNode& lqp_right, const LQPColumnReference& column_reference_right);
 
  private:
-  std::vector<std::weak_ptr<AbstractLQPNode>> _outputs;
-  std::array<std::shared_ptr<AbstractLQPNode>, 2> _inputs;
-  std::shared_ptr<TableStatistics> _statistics;
+  std::vector<AbstractLQPNodeWPtr> _outputs;
+  std::array<AbstractLQPNodeSPtr, 2> _inputs;
+  TableStatisticsSPtr _statistics;
 
   /**
    * Reset statistics, call _on_input_changed() for node specific behaviour and call _input_changed() on outputs
    */
   void _input_changed();
 
-  static std::optional<std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>>
-  _find_first_subplan_mismatch_impl(const std::shared_ptr<const AbstractLQPNode>& lhs,
-                                    const std::shared_ptr<const AbstractLQPNode>& rhs);
+  static std::optional<std::pair<AbstractLQPNodeCSPtr, AbstractLQPNodeCSPtr>>
+  _find_first_subplan_mismatch_impl(const AbstractLQPNodeCSPtr& lhs,
+                                    const AbstractLQPNodeCSPtr& rhs);
 
   // @{
   /**
    * Add or remove a output without manipulating this outputs input ptr. For internal usage in set_left_input(),
    * set_right_input(), remove_output
    */
-  void _remove_output_pointer(const std::shared_ptr<AbstractLQPNode>& output);
-  void _add_output_pointer(const std::shared_ptr<AbstractLQPNode>& output);
+  void _remove_output_pointer(const AbstractLQPNodeSPtr& output);
+  void _add_output_pointer(const AbstractLQPNodeSPtr& output);
   // @}
 };
 
-CREATE_PTR_ALIASES(AbstractLQPNode)
+
 
 /**
  * LQP node types should derive from this in order to enable the <NodeType>::make() function that allows for a clean
@@ -419,10 +419,10 @@ class EnableMakeForLQPNode {
     // - using nesting instead of && because both sides of the && would need to be valid
     // - redundant else paths instead of one fallthrough at the end, because it too, needs to be valid.
     if constexpr (sizeof...(Args) > 0) {
-      if constexpr (std::is_convertible_v<NthTypeOf<sizeof...(Args)-1, Args...>, std::shared_ptr<AbstractLQPNode>>) {
+      if constexpr (std::is_convertible_v<NthTypeOf<sizeof...(Args)-1, Args...>, AbstractLQPNodeSPtr>) {
         auto args_tuple = std::forward_as_tuple(args...);
         if constexpr (sizeof...(Args) > 1) {
-          if constexpr (std::is_convertible_v<NthTypeOf<sizeof...(Args)-2, Args...>, std::shared_ptr<AbstractLQPNode>>) {  // NOLINT - too long, but better than breaking
+          if constexpr (std::is_convertible_v<NthTypeOf<sizeof...(Args)-2, Args...>, AbstractLQPNodeSPtr>) {  // NOLINT - too long, but better than breaking
             // last two arguments are shared_ptr<AbstractLQPNode>
             auto node = make_impl(args_tuple, std::make_index_sequence<sizeof...(Args) - 2>());
             node->set_left_input(std::get<sizeof...(Args) - 2>(args_tuple));

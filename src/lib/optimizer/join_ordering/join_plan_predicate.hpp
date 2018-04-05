@@ -29,7 +29,7 @@ class AbstractJoinPlanPredicate {
    * Find all vertices in @param vertices that are accessed by the predicate and return their indices as a JoinVertexSet
    */
   virtual JoinVertexSet get_accessed_vertex_set(
-      const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices) const = 0;
+      const std::vector<AbstractLQPNodeSPtr>& vertices) const = 0;
 
   /**
    * @param enclosing_braces whether the predicate should be printed with enclosing braces as in "(a == b)"
@@ -45,19 +45,19 @@ class AbstractJoinPlanPredicate {
  */
 class JoinPlanLogicalPredicate : public AbstractJoinPlanPredicate {
  public:
-  JoinPlanLogicalPredicate(const std::shared_ptr<const AbstractJoinPlanPredicate>& left_operand,
+  JoinPlanLogicalPredicate(const AbstractJoinPlanPredicateCSPtr& left_operand,
                            JoinPlanPredicateLogicalOperator logical_operator,
-                           const std::shared_ptr<const AbstractJoinPlanPredicate>& right_operand);
+                           const AbstractJoinPlanPredicateCSPtr& right_operand);
 
-  JoinVertexSet get_accessed_vertex_set(const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices) const override;
+  JoinVertexSet get_accessed_vertex_set(const std::vector<AbstractLQPNodeSPtr>& vertices) const override;
 
   void print(std::ostream& stream = std::cout, const bool enclosing_braces = false) const override;
 
   bool operator==(const JoinPlanLogicalPredicate& rhs) const;
 
-  const std::shared_ptr<const AbstractJoinPlanPredicate> left_operand;
+  const AbstractJoinPlanPredicateCSPtr left_operand;
   const JoinPlanPredicateLogicalOperator logical_operator;
-  const std::shared_ptr<const AbstractJoinPlanPredicate> right_operand;
+  const AbstractJoinPlanPredicateCSPtr right_operand;
 };
 
 /**
@@ -68,7 +68,7 @@ class JoinPlanAtomicPredicate : public AbstractJoinPlanPredicate {
   JoinPlanAtomicPredicate(const LQPColumnReference& left_operand, const PredicateCondition predicate_condition,
                           const AllParameterVariant& right_operand);
 
-  JoinVertexSet get_accessed_vertex_set(const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices) const override;
+  JoinVertexSet get_accessed_vertex_set(const std::vector<AbstractLQPNodeSPtr>& vertices) const override;
 
   void print(std::ostream& stream = std::cout, const bool enclosing_braces = false) const override;
 

@@ -8,11 +8,11 @@ RuleBatch::RuleBatch(RuleBatchExecutionPolicy execution_policy) : _execution_pol
 
 RuleBatchExecutionPolicy RuleBatch::execution_policy() const { return _execution_policy; }
 
-const std::vector<std::shared_ptr<AbstractRule>>& RuleBatch::rules() const { return _rules; }
+const std::vector<AbstractRuleSPtr>& RuleBatch::rules() const { return _rules; }
 
-void RuleBatch::add_rule(const std::shared_ptr<AbstractRule>& rule) { _rules.emplace_back(rule); }
+void RuleBatch::add_rule(const AbstractRuleSPtr& rule) { _rules.emplace_back(rule); }
 
-bool RuleBatch::apply_rules_to(const std::shared_ptr<AbstractLQPNode>& root_node) const {
+bool RuleBatch::apply_rules_to(const AbstractLQPNodeSPtr& root_node) const {
   auto lqp_changed = false;
 
   for (auto& rule : _rules) {

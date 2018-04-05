@@ -23,7 +23,7 @@ namespace opossum {
 
 class TPCHTest : public BaseTestWithParam<size_t> {
  protected:
-  std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
+  SQLiteWrapperSPtr _sqlite_wrapper;
 
   void SetUp() override {
     // Chosen rather arbitrarily

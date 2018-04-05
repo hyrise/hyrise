@@ -7,7 +7,7 @@ namespace opossum {
 
 BaseIndex::BaseIndex(const ColumnIndexType type) : _type{type} {}
 
-bool BaseIndex::is_index_for(const std::vector<std::shared_ptr<const BaseColumn>>& columns) const {
+bool BaseIndex::is_index_for(const std::vector<BaseColumnCSPtr>& columns) const {
   auto index_columns = _get_index_columns();
   if (columns.size() > index_columns.size()) return false;
   if (columns.empty()) return false;

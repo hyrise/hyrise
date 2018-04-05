@@ -23,15 +23,15 @@ StoredTableNode::StoredTableNode(const std::string& table_name, const std::optio
   set_alias(alias);
 }
 
-std::shared_ptr<AbstractLQPNode> StoredTableNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-    const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
+AbstractLQPNodeSPtr StoredTableNode::_deep_copy_impl(
+    const AbstractLQPNodeSPtr& copied_left_input,
+    const AbstractLQPNodeSPtr& copied_right_input) const {
   return StoredTableNode::make(_table_name);
 }
 
 std::string StoredTableNode::description() const { return "[StoredTable] Name: '" + _table_name + "'"; }
 
-std::shared_ptr<const AbstractLQPNode> StoredTableNode::find_table_name_origin(const std::string& table_name) const {
+AbstractLQPNodeCSPtr StoredTableNode::find_table_name_origin(const std::string& table_name) const {
   if (_table_alias) {
     return *_table_alias == table_name ? shared_from_this() : nullptr;
   }
@@ -41,8 +41,8 @@ std::shared_ptr<const AbstractLQPNode> StoredTableNode::find_table_name_origin(c
 
 const std::vector<std::string>& StoredTableNode::output_column_names() const { return _output_column_names; }
 
-std::shared_ptr<TableStatistics> StoredTableNode::derive_statistics_from(
-    const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
+TableStatisticsSPtr StoredTableNode::derive_statistics_from(
+    const AbstractLQPNodeSPtr& left_input, const AbstractLQPNodeSPtr& right_input) const {
   DebugAssert(!left_input && !right_input, "StoredTableNode must be leaf");
   return StorageManager::get().get_table(_table_name)->table_statistics();
 }

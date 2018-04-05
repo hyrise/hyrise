@@ -48,11 +48,11 @@ class LQPTranslatorTest : public BaseTest {
     ChunkEncoder::encode_all_chunks(StorageManager::get().get_table("table_int_float_chunked"));
   }
 
-  const std::vector<ChunkID> get_included_chunk_ids(const std::shared_ptr<const IndexScan>& index_scan) {
+  const std::vector<ChunkID> get_included_chunk_ids(const IndexScanCSPtr& index_scan) {
     return index_scan->_included_chunk_ids;
   }
 
-  const std::vector<ChunkID> get_excluded_chunk_ids(const std::shared_ptr<const TableScan>& table_scan) {
+  const std::vector<ChunkID> get_excluded_chunk_ids(const TableScanCSPtr& table_scan) {
     return table_scan->_excluded_chunk_ids;
   }
 };
@@ -227,7 +227,7 @@ TEST_F(LQPTranslatorTest, ProjectionNode) {
    * Build LQP and translate to PQP
    */
   const auto stored_table_node = StoredTableNode::make("table_int_float");
-  const auto expressions = std::vector<std::shared_ptr<LQPExpression>>{
+  const auto expressions = std::vector<LQPExpressionSPtr>{
       LQPExpression::create_column(LQPColumnReference(stored_table_node, ColumnID{0}), {"a"})};
   auto projection_node = ProjectionNode::make(expressions);
   projection_node->set_left_input(stored_table_node);
@@ -323,7 +323,7 @@ TEST_F(LQPTranslatorTest, AggregateNodeNoArithmetics) {
       AggregateFunction::Sum, {LQPExpression::create_column(LQPColumnReference(stored_table_node, ColumnID{0}))},
       {"sum_of_a"});
 
-  auto aggregate_node = AggregateNode::make(std::vector<std::shared_ptr<LQPExpression>>{sum_expression},
+  auto aggregate_node = AggregateNode::make(std::vector<LQPExpressionSPtr>{sum_expression},
                                             std::vector<LQPColumnReference>{});
   aggregate_node->set_left_input(stored_table_node);
 
@@ -362,7 +362,7 @@ TEST_F(LQPTranslatorTest, AggregateNodeWithArithmetics) {
   auto sum_expression =
       LQPExpression::create_aggregate_function(AggregateFunction::Sum, {expr_multiplication}, {"sum_of_b_times_two"});
   auto aggregate_node =
-      AggregateNode::make(std::vector<std::shared_ptr<LQPExpression>>{sum_expression},
+      AggregateNode::make(std::vector<LQPExpressionSPtr>{sum_expression},
                           std::vector<LQPColumnReference>{LQPColumnReference(stored_table_node, ColumnID{0})});
   aggregate_node->set_left_input(stored_table_node);
 
@@ -525,7 +525,7 @@ TEST_F(LQPTranslatorTest, ProjectionWithSubselect) {
   auto table_node = std::make_shared<StoredTableNode>("table_int_float2");
   auto subselect_node = std::make_shared<StoredTableNode>("table_int_float");
 
-  const auto expressions = std::vector<std::shared_ptr<LQPExpression>>{
+  const auto expressions = std::vector<LQPExpressionSPtr>{
       LQPExpression::create_column(LQPColumnReference(table_node, ColumnID{0})),
       LQPExpression::create_subselect(subselect_node)};
 

@@ -27,11 +27,11 @@ TransactionManager::TransactionManager()
 
 CommitID TransactionManager::last_commit_id() const { return _last_commit_id; }
 
-std::shared_ptr<TransactionContext> TransactionManager::new_transaction_context() {
+TransactionContextSPtr TransactionManager::new_transaction_context() {
   return std::make_shared<TransactionContext>(_next_transaction_id++, _last_commit_id);
 }
 
-void TransactionManager::run_transaction(const std::function<void(std::shared_ptr<TransactionContext>)>& fn) {
+void TransactionManager::run_transaction(const std::function<void(TransactionContextSPtr)>& fn) {
   auto transaction_context = new_transaction_context();
 
   fn(transaction_context);
@@ -53,9 +53,9 @@ void TransactionManager::run_transaction(const std::function<void(std::shared_pt
  * the small while-loop. As soon as it is done, _last_commit_context will point to a commit
  * context with no successor and they will be able to leave this loop.
  */
-std::shared_ptr<CommitContext> TransactionManager::_new_commit_context() {
+CommitContextSPtr TransactionManager::_new_commit_context() {
   auto current_context = std::atomic_load(&_last_commit_context);
-  auto next_context = std::shared_ptr<CommitContext>();
+  auto next_context = CommitContextSPtr();
 
   auto success = false;
   while (!success) {
@@ -81,7 +81,7 @@ std::shared_ptr<CommitContext> TransactionManager::_new_commit_context() {
   return next_context;
 }
 
-void TransactionManager::_try_increment_last_commit_id(std::shared_ptr<CommitContext> context) {
+void TransactionManager::_try_increment_last_commit_id(CommitContextSPtr context) {
   auto current_context = context;
 
   while (current_context->is_pending()) {

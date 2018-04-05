@@ -13,7 +13,7 @@ struct MockRule : public AbstractRule {
 
   std::string name() const override { return "MockNode"; }
 
-  bool apply_to(const std::shared_ptr<AbstractLQPNode>& root) override {
+  bool apply_to(const AbstractLQPNodeSPtr& root) override {
     num_iterations = num_iterations > 0 ? num_iterations - 1 : 0;
     return num_iterations != 0;
   }

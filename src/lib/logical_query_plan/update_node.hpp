@@ -16,23 +16,23 @@ class LQPExpression;
 class UpdateNode : public EnableMakeForLQPNode<UpdateNode>, public AbstractLQPNode {
  public:
   explicit UpdateNode(const std::string& table_name,
-                      const std::vector<std::shared_ptr<LQPExpression>>& column_expressions);
+                      const std::vector<LQPExpressionSPtr>& column_expressions);
 
   std::string description() const override;
   bool subplan_is_read_only() const override;
 
   const std::string& table_name() const;
 
-  const std::vector<std::shared_ptr<LQPExpression>>& column_expressions() const;
+  const std::vector<LQPExpressionSPtr>& column_expressions() const;
 
   bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
+  AbstractLQPNodeSPtr _deep_copy_impl(
+      const AbstractLQPNodeSPtr& copied_left_input,
+      const AbstractLQPNodeSPtr& copied_right_input) const override;
   const std::string _table_name;
-  std::vector<std::shared_ptr<LQPExpression>> _column_expressions;
+  std::vector<LQPExpressionSPtr> _column_expressions;
 };
 
 }  // namespace opossum

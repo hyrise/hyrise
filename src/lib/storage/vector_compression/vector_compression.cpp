@@ -17,7 +17,7 @@ namespace {
  *
  * Add your vector compressor here!
  */
-static const auto vector_compressor_for_type = std::map<VectorCompressionType, std::shared_ptr<BaseVectorCompressor>>{
+static const auto vector_compressor_for_type = std::map<VectorCompressionType, BaseVectorCompressorSPtr>{
     {VectorCompressionType::FixedSizeByteAligned, std::make_shared<FixedSizeByteAlignedCompressor>()},
     {VectorCompressionType::SimdBp128, std::make_shared<SimdBp128Compressor>()}};
 

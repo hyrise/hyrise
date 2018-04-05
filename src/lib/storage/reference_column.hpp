@@ -20,8 +20,8 @@ class ReferenceColumn : public BaseColumn {
  public:
   // creates a reference column
   // the parameters specify the positions and the referenced column
-  ReferenceColumn(const std::shared_ptr<const Table> referenced_table, const ColumnID referenced_column_id,
-                  const std::shared_ptr<const PosList> pos);
+  ReferenceColumn(const TableCSPtr referenced_table, const ColumnID referenced_column_id,
+                  const PosListCSPtr pos);
 
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
 
@@ -29,16 +29,16 @@ class ReferenceColumn : public BaseColumn {
 
   size_t size() const final;
 
-  const std::shared_ptr<const PosList> pos_list() const;
-  const std::shared_ptr<const Table> referenced_table() const;
+  const PosListCSPtr pos_list() const;
+  const TableCSPtr referenced_table() const;
 
   ColumnID referenced_column_id() const;
 
   // visitor pattern, see base_column.hpp
-  void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
+  void visit(ColumnVisitable& visitable, ColumnVisitableContextSPtr context = nullptr) const override;
 
   template <typename ContextClass>
-  void visit_dereferenced(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> ctx) const {
+  void visit_dereferenced(ColumnVisitable& visitable, ColumnVisitableContextSPtr ctx) const {
     /*
     The pos_list might be unsorted. In that case, we would have to jump around from chunk to chunk.
     One-chunk-at-a-time processing should be faster. For this, we place a pair {chunk_offset, original_position}
@@ -69,19 +69,19 @@ class ReferenceColumn : public BaseColumn {
     }
   }
 
-  std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
+  BaseColumnSPtr copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
 
   size_t estimate_memory_usage() const override;
 
  protected:
   // After an operator finishes, its shared_ptr reference to the table gets deleted. Thus, the ReferenceColumns need
   // their own shared_ptrs
-  const std::shared_ptr<const Table> _referenced_table;
+  const TableCSPtr _referenced_table;
 
   const ColumnID _referenced_column_id;
 
   // The position list can be shared amongst multiple columns
-  const std::shared_ptr<const PosList> _pos_list;
+  const PosListCSPtr _pos_list;
 };
 
 }  // namespace opossum

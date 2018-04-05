@@ -22,7 +22,7 @@
 
 namespace opossum {
 
-Projection::Projection(const std::shared_ptr<const AbstractOperator> in, const ColumnExpressions& column_expressions)
+Projection::Projection(const AbstractOperatorCSPtr in, const ColumnExpressions& column_expressions)
     : AbstractReadOnlyOperator(OperatorType::Projection, in), _column_expressions(column_expressions) {}
 
 const std::string Projection::name() const { return "Projection"; }
@@ -41,13 +41,13 @@ const std::string Projection::description(DescriptionMode description_mode) cons
 
 const Projection::ColumnExpressions& Projection::column_expressions() const { return _column_expressions; }
 
-std::shared_ptr<AbstractOperator> Projection::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+AbstractOperatorSPtr Projection::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+    const AbstractOperatorSPtr& recreated_input_right) const {
   ColumnExpressions new_column_expressions;
 
   for (const auto& column_expression : _column_expressions) {
-    std::shared_ptr<PQPExpression> new_column_expression = column_expression;
+    PQPExpressionSPtr new_column_expression = column_expression;
 
     if (column_expression->type() == ExpressionType::Placeholder) {
       auto value_placeholder = column_expression->value_placeholder();
@@ -69,9 +69,9 @@ std::shared_ptr<AbstractOperator> Projection::_on_recreate(
 }
 
 template <typename T>
-std::shared_ptr<BaseColumn> Projection::_create_column(boost::hana::basic_type<T> type, const ChunkID chunk_id,
-                                                       const std::shared_ptr<PQPExpression>& expression,
-                                                       std::shared_ptr<const Table> input_table_left,
+BaseColumnSPtr Projection::_create_column(boost::hana::basic_type<T> type, const ChunkID chunk_id,
+                                                       const PQPExpressionSPtr& expression,
+                                                       TableCSPtr input_table_left,
                                                        bool reuse_column_from_input) {
   // check whether term is a just a simple column and bypass this column
   if (reuse_column_from_input) {
@@ -122,7 +122,7 @@ std::shared_ptr<BaseColumn> Projection::_create_column(boost::hana::basic_type<T
   }
 }
 
-std::shared_ptr<const Table> Projection::_on_execute() {
+TableCSPtr Projection::_on_execute() {
   auto reuse_columns_from_input = true;
 
   /**
@@ -206,8 +206,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   return output_table;
 }
 
-DataType Projection::_get_type_of_expression(const std::shared_ptr<PQPExpression>& expression,
-                                             const std::shared_ptr<const Table>& table) {
+DataType Projection::_get_type_of_expression(const PQPExpressionSPtr& expression,
+                                             const TableCSPtr& table) {
   if (expression->type() == ExpressionType::Literal || expression->type() == ExpressionType::Placeholder) {
     return data_type_from_all_type_variant(expression->value());
   }
@@ -242,7 +242,7 @@ DataType Projection::_get_type_of_expression(const std::shared_ptr<PQPExpression
 
 template <typename T>
 const pmr_concurrent_vector<std::pair<bool, T>> Projection::_evaluate_expression(
-    const std::shared_ptr<PQPExpression>& expression, const std::shared_ptr<const Table> table,
+    const PQPExpressionSPtr& expression, const TableCSPtr table,
     const ChunkID chunk_id) {
   /**
    * Handle Literal
@@ -321,7 +321,7 @@ const pmr_concurrent_vector<std::pair<bool, T>> Projection::_evaluate_expression
 }
 
 // returns the singleton dummy table used for literal projections
-std::shared_ptr<Table> Projection::dummy_table() {
+TableSPtr Projection::dummy_table() {
   static auto shared_dummy = std::make_shared<DummyTable>();
   return shared_dummy;
 }

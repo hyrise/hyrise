@@ -54,7 +54,7 @@ class HashTable : private Noncopyable {
   All the matching RowIDs are returned in row_ids.
   */
   template <typename S>
-  std::shared_ptr<PosList> get(S value) {
+  PosListSPtr get(S value) {
     for (size_t i = 0; i < NUMBER_OF_HASH_FUNCTIONS; i++) {
       auto position = hash<S>(i, value);
       auto element = _hashtables[i][position];
@@ -71,7 +71,7 @@ class HashTable : private Noncopyable {
   */
   struct HashElement {
     T value;
-    std::shared_ptr<PosList> row_ids;
+    PosListSPtr row_ids;
   };
 
   /*

@@ -24,7 +24,7 @@ ImportCsv::ImportCsv(const std::string& filename, const std::optional<CsvMeta> c
 
 const std::string ImportCsv::name() const { return "ImportCSV"; }
 
-std::shared_ptr<const Table> ImportCsv::_on_execute() {
+TableCSPtr ImportCsv::_on_execute() {
   if (_tablename && StorageManager::get().has_table(*_tablename)) {
     return StorageManager::get().get_table(*_tablename);
   }
@@ -34,7 +34,7 @@ std::shared_ptr<const Table> ImportCsv::_on_execute() {
   Assert(file.is_open(), "ImportCsv: Could not find file " + _filename);
   file.close();
 
-  std::shared_ptr<Table> table;
+  TableSPtr table;
   CsvParser parser;
   table = parser.parse(_filename, _csv_meta);
 
@@ -45,9 +45,9 @@ std::shared_ptr<const Table> ImportCsv::_on_execute() {
   return table;
 }
 
-std::shared_ptr<AbstractOperator> ImportCsv::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+AbstractOperatorSPtr ImportCsv::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+    const AbstractOperatorSPtr& recreated_input_right) const {
   return std::make_shared<ImportCsv>(_filename, _tablename, _csv_meta);
 }
 

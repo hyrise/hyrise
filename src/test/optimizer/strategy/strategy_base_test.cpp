@@ -10,8 +10,8 @@
 
 namespace opossum {
 
-std::shared_ptr<AbstractLQPNode> StrategyBaseTest::apply_rule(const std::shared_ptr<AbstractRule>& rule,
-                                                              const std::shared_ptr<AbstractLQPNode>& input) {
+AbstractLQPNodeSPtr StrategyBaseTest::apply_rule(const AbstractRuleSPtr& rule,
+                                                              const AbstractLQPNodeSPtr& input) {
   // Add explicit root node
   const auto root_node = LogicalPlanRootNode::make();
   root_node->set_left_input(input);

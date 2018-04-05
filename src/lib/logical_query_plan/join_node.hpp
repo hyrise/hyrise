@@ -36,9 +36,9 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   const std::vector<std::string>& output_column_names() const override;
   const std::vector<LQPColumnReference>& output_column_references() const override;
 
-  std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractLQPNode>& left_input,
-      const std::shared_ptr<AbstractLQPNode>& right_input) const override;
+  TableStatisticsSPtr derive_statistics_from(
+      const AbstractLQPNodeSPtr& left_input,
+      const AbstractLQPNodeSPtr& right_input) const override;
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
@@ -46,9 +46,9 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
 
  protected:
   void _on_input_changed() override;
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
+  AbstractLQPNodeSPtr _deep_copy_impl(
+      const AbstractLQPNodeSPtr& copied_left_input,
+      const AbstractLQPNodeSPtr& copied_right_input) const override;
 
  private:
   JoinMode _join_mode;

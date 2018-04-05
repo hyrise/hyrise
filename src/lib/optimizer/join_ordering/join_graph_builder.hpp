@@ -34,13 +34,13 @@ class JoinGraphBuilder final {
    *
    * Need an instance of the shared_ptr to keep the ref count > 0
    */
-  std::shared_ptr<JoinGraph> operator()(const std::shared_ptr<AbstractLQPNode>& lqp);
+  JoinGraphSPtr operator()(const AbstractLQPNodeSPtr& lqp);
 
  private:
   /**
    * Traverse the LQP recursively identifying predicates and vertices along the way
    */
-  void _traverse(const std::shared_ptr<AbstractLQPNode>& node);
+  void _traverse(const AbstractLQPNodeSPtr& node);
 
   /**
    * A subgraph in the LQP consisting of UnionNodes and PredicateNodes can be translated into a single complex predicate
@@ -60,16 +60,16 @@ class JoinGraphBuilder final {
    *  _parse_predicate() and _parse_union() perform this conversion, calling each other recursively
    */
   struct PredicateParseResult {
-    PredicateParseResult(const std::shared_ptr<AbstractLQPNode>& base_node,
-                         const std::shared_ptr<const AbstractJoinPlanPredicate>& predicate)
+    PredicateParseResult(const AbstractLQPNodeSPtr& base_node,
+                         const AbstractJoinPlanPredicateCSPtr& predicate)
         : base_node(base_node), predicate(predicate) {}
 
-    std::shared_ptr<AbstractLQPNode> base_node;
-    std::shared_ptr<const AbstractJoinPlanPredicate> predicate;
+    AbstractLQPNodeSPtr base_node;
+    AbstractJoinPlanPredicateCSPtr predicate;
   };
 
-  PredicateParseResult _parse_predicate(const std::shared_ptr<AbstractLQPNode>& node) const;
-  PredicateParseResult _parse_union(const std::shared_ptr<UnionNode>& union_node) const;
+  PredicateParseResult _parse_predicate(const AbstractLQPNodeSPtr& node) const;
+  PredicateParseResult _parse_union(const UnionNodeSPtr& union_node) const;
 
   /**
    * Returns whether a node of the given type is a JoinGraph vertex in all cases. This is true for all node types that
@@ -77,7 +77,7 @@ class JoinGraphBuilder final {
    */
   bool _lqp_node_type_is_vertex(const LQPNodeType node_type) const;
 
-  std::vector<std::shared_ptr<AbstractLQPNode>> _vertices;
-  std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>> _predicates;
+  std::vector<AbstractLQPNodeSPtr> _vertices;
+  std::vector<AbstractJoinPlanPredicateCSPtr> _predicates;
 };
 }  // namespace opossum

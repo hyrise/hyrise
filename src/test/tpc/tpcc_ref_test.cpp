@@ -123,7 +123,7 @@ class TpccRefTest : public BaseTest {
   }
 
  protected:
-  std::unordered_map<std::string, std::shared_ptr<TransactionTestImpl>> _transaction_impls;
+  std::unordered_map<std::string, TransactionTestImplSPtr> _transaction_impls;
 };
 
 TEST_F(TpccRefTest, SimulationScenario) {

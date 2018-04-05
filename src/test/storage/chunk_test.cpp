@@ -36,11 +36,11 @@ class StorageChunkTest : public BaseTest {
     c = std::make_shared<Chunk>(empty_columns);
   }
 
-  std::shared_ptr<Chunk> c;
-  std::shared_ptr<BaseValueColumn> vc_int = nullptr;
-  std::shared_ptr<BaseValueColumn> vc_str = nullptr;
-  std::shared_ptr<BaseColumn> dc_int = nullptr;
-  std::shared_ptr<BaseColumn> dc_str = nullptr;
+  ChunkSPtr c;
+  BaseValueColumnSPtr vc_int = nullptr;
+  BaseValueColumnSPtr vc_str = nullptr;
+  BaseColumnSPtr dc_int = nullptr;
+  BaseColumnSPtr dc_str = nullptr;
 };
 
 TEST_F(StorageChunkTest, AddColumnToChunk) {
@@ -89,10 +89,10 @@ TEST_F(StorageChunkTest, AddIndexByColumnID) {
 
 TEST_F(StorageChunkTest, AddIndexByColumnPointer) {
   c = std::make_shared<Chunk>(ChunkColumns({dc_int, dc_str}));
-  auto index_int = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_int});
-  auto index_str = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_str});
+  auto index_int = c->create_index<GroupKeyIndex>(std::vector<BaseColumnCSPtr>{dc_int});
+  auto index_str = c->create_index<GroupKeyIndex>(std::vector<BaseColumnCSPtr>{dc_str});
   auto index_int_str =
-      c->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_int, dc_str});
+      c->create_index<CompositeGroupKeyIndex>(std::vector<BaseColumnCSPtr>{dc_int, dc_str});
   EXPECT_TRUE(index_int);
   EXPECT_TRUE(index_str);
   EXPECT_TRUE(index_int_str);
@@ -100,10 +100,10 @@ TEST_F(StorageChunkTest, AddIndexByColumnPointer) {
 
 TEST_F(StorageChunkTest, GetIndexByColumnID) {
   c = std::make_shared<Chunk>(ChunkColumns({dc_int, dc_str}));
-  auto index_int = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_int});
-  auto index_str = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_str});
+  auto index_int = c->create_index<GroupKeyIndex>(std::vector<BaseColumnCSPtr>{dc_int});
+  auto index_str = c->create_index<GroupKeyIndex>(std::vector<BaseColumnCSPtr>{dc_str});
   auto index_int_str =
-      c->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_int, dc_str});
+      c->create_index<CompositeGroupKeyIndex>(std::vector<BaseColumnCSPtr>{dc_int, dc_str});
 
   EXPECT_EQ(c->get_index(ColumnIndexType::GroupKey, std::vector<ColumnID>{ColumnID{0}}), index_int);
   EXPECT_EQ(c->get_index(ColumnIndexType::CompositeGroupKey, std::vector<ColumnID>{ColumnID{0}}), index_int_str);
@@ -115,28 +115,28 @@ TEST_F(StorageChunkTest, GetIndexByColumnID) {
 
 TEST_F(StorageChunkTest, GetIndexByColumnPointer) {
   c = std::make_shared<Chunk>(ChunkColumns({dc_int, dc_str}));
-  auto index_int = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_int});
-  auto index_str = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_str});
+  auto index_int = c->create_index<GroupKeyIndex>(std::vector<BaseColumnCSPtr>{dc_int});
+  auto index_str = c->create_index<GroupKeyIndex>(std::vector<BaseColumnCSPtr>{dc_str});
   auto index_int_str =
-      c->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_int, dc_str});
+      c->create_index<CompositeGroupKeyIndex>(std::vector<BaseColumnCSPtr>{dc_int, dc_str});
 
-  EXPECT_EQ(c->get_index(ColumnIndexType::GroupKey, std::vector<std::shared_ptr<const BaseColumn>>{dc_int}), index_int);
-  EXPECT_EQ(c->get_index(ColumnIndexType::CompositeGroupKey, std::vector<std::shared_ptr<const BaseColumn>>{dc_int}),
+  EXPECT_EQ(c->get_index(ColumnIndexType::GroupKey, std::vector<BaseColumnCSPtr>{dc_int}), index_int);
+  EXPECT_EQ(c->get_index(ColumnIndexType::CompositeGroupKey, std::vector<BaseColumnCSPtr>{dc_int}),
             index_int_str);
   EXPECT_EQ(
-      c->get_index(ColumnIndexType::CompositeGroupKey, std::vector<std::shared_ptr<const BaseColumn>>{dc_int, dc_str}),
+      c->get_index(ColumnIndexType::CompositeGroupKey, std::vector<BaseColumnCSPtr>{dc_int, dc_str}),
       index_int_str);
-  EXPECT_EQ(c->get_index(ColumnIndexType::GroupKey, std::vector<std::shared_ptr<const BaseColumn>>{dc_str}), index_str);
-  EXPECT_EQ(c->get_index(ColumnIndexType::CompositeGroupKey, std::vector<std::shared_ptr<const BaseColumn>>{dc_str}),
+  EXPECT_EQ(c->get_index(ColumnIndexType::GroupKey, std::vector<BaseColumnCSPtr>{dc_str}), index_str);
+  EXPECT_EQ(c->get_index(ColumnIndexType::CompositeGroupKey, std::vector<BaseColumnCSPtr>{dc_str}),
             nullptr);
 }
 
 TEST_F(StorageChunkTest, GetIndicesByColumnIDs) {
   c = std::make_shared<Chunk>(ChunkColumns({dc_int, dc_str}));
-  auto index_int = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_int});
-  auto index_str = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_str});
+  auto index_int = c->create_index<GroupKeyIndex>(std::vector<BaseColumnCSPtr>{dc_int});
+  auto index_str = c->create_index<GroupKeyIndex>(std::vector<BaseColumnCSPtr>{dc_str});
   auto index_int_str =
-      c->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_int, dc_str});
+      c->create_index<CompositeGroupKeyIndex>(std::vector<BaseColumnCSPtr>{dc_int, dc_str});
 
   auto ind_col_0 = c->get_indices(std::vector<ColumnID>{ColumnID{0}});
   // Make sure it finds both the single-column index as well as the multi-column index
@@ -151,17 +151,17 @@ TEST_F(StorageChunkTest, GetIndicesByColumnIDs) {
 
 TEST_F(StorageChunkTest, GetIndicesByColumnPointers) {
   c = std::make_shared<Chunk>(ChunkColumns({dc_int, dc_str}));
-  auto index_int = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_int});
-  auto index_str = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_str});
+  auto index_int = c->create_index<GroupKeyIndex>(std::vector<BaseColumnCSPtr>{dc_int});
+  auto index_str = c->create_index<GroupKeyIndex>(std::vector<BaseColumnCSPtr>{dc_str});
   auto index_int_str =
-      c->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_int, dc_str});
+      c->create_index<CompositeGroupKeyIndex>(std::vector<BaseColumnCSPtr>{dc_int, dc_str});
 
-  auto ind_col_0 = c->get_indices(std::vector<std::shared_ptr<const BaseColumn>>{dc_int});
+  auto ind_col_0 = c->get_indices(std::vector<BaseColumnCSPtr>{dc_int});
   // Make sure it finds both the single-column index as well as the multi-column index
   EXPECT_NE(std::find(ind_col_0.cbegin(), ind_col_0.cend(), index_int), ind_col_0.cend());
   EXPECT_NE(std::find(ind_col_0.cbegin(), ind_col_0.cend(), index_int_str), ind_col_0.cend());
 
-  auto ind_col_1 = c->get_indices(std::vector<std::shared_ptr<const BaseColumn>>{dc_str});
+  auto ind_col_1 = c->get_indices(std::vector<BaseColumnCSPtr>{dc_str});
   // Make sure it only finds the single-column index
   EXPECT_NE(std::find(ind_col_1.cbegin(), ind_col_1.cend(), index_str), ind_col_1.cend());
   EXPECT_EQ(std::find(ind_col_1.cbegin(), ind_col_1.cend(), index_int_str), ind_col_1.cend());
@@ -169,10 +169,10 @@ TEST_F(StorageChunkTest, GetIndicesByColumnPointers) {
 
 TEST_F(StorageChunkTest, RemoveIndex) {
   c = std::make_shared<Chunk>(ChunkColumns({dc_int, dc_str}));
-  auto index_int = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_int});
-  auto index_str = c->create_index<GroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_str});
+  auto index_int = c->create_index<GroupKeyIndex>(std::vector<BaseColumnCSPtr>{dc_int});
+  auto index_str = c->create_index<GroupKeyIndex>(std::vector<BaseColumnCSPtr>{dc_str});
   auto index_int_str =
-      c->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const BaseColumn>>{dc_int, dc_str});
+      c->create_index<CompositeGroupKeyIndex>(std::vector<BaseColumnCSPtr>{dc_int, dc_str});
 
   c->remove_index(index_int);
   auto ind_col_0 = c->get_indices(std::vector<ColumnID>{ColumnID{0}});

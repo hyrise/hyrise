@@ -43,16 +43,16 @@ class JoinDetectionRule : public AbstractRule {
  protected:
   std::string name() const override;
 
-  bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) override;
+  bool apply_to(const AbstractLQPNodeSPtr& node) override;
 
  private:
   struct JoinCondition {
-    std::shared_ptr<PredicateNode> predicate_node;
+    PredicateNodeSPtr predicate_node;
     LQPColumnReference left_column_reference;
     LQPColumnReference right_column_reference;
   };
 
-  std::optional<JoinCondition> _find_predicate_for_cross_join(const std::shared_ptr<JoinNode>& cross_join);
+  std::optional<JoinCondition> _find_predicate_for_cross_join(const JoinNodeSPtr& cross_join);
 
   /**
    * Used to check whether a Predicate working on the ColumnIDs left and right could be used as a JoinCondition

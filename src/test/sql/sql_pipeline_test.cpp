@@ -24,8 +24,8 @@ namespace {
 // could break if something is changed within the optimizer.
 // It assumes that for the query: SELECT * from a, b WHERE a.a = b.a will be translated to a Cross Join with a filter
 // predicate and then optimized to a Join.
-std::function<bool(const std::shared_ptr<opossum::AbstractLQPNode>&)> contains_cross =
-    [](const std::shared_ptr<opossum::AbstractLQPNode>& node) {
+std::function<bool(const opossum::AbstractLQPNodeSPtr&)> contains_cross =
+    [](const opossum::AbstractLQPNodeSPtr& node) {
       if (node->type() != opossum::LQPNodeType::Join) return false;
       if (auto join_node = std::dynamic_pointer_cast<opossum::JoinNode>(node)) {
         return join_node->join_mode() == opossum::JoinMode::Cross;
@@ -60,10 +60,10 @@ class SQLPipelineTest : public BaseTest {
     SQLQueryCache<SQLQueryPlan>::get().clear();
   }
 
-  std::shared_ptr<Table> _table_a;
-  std::shared_ptr<Table> _table_a_multi;
-  std::shared_ptr<Table> _table_b;
-  std::shared_ptr<Table> _join_result;
+  TableSPtr _table_a;
+  TableSPtr _table_a_multi;
+  TableSPtr _table_b;
+  TableSPtr _join_result;
 
   const std::string _select_query_a = "SELECT * FROM table_a";
   const std::string _invalid_sql = "SELECT FROM table_a";

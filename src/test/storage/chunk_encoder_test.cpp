@@ -36,7 +36,7 @@ class ChunkEncoderTest : public BaseTest {
   }
 
  protected:
-  void verify_encoding(const std::shared_ptr<Chunk>& chunk, const ChunkEncodingSpec& spec) {
+  void verify_encoding(const ChunkSPtr& chunk, const ChunkEncodingSpec& spec) {
     for (auto column_id = ColumnID{0u}; column_id < chunk->column_count(); ++column_id) {
       const auto column = chunk->get_column(column_id);
       const auto column_spec = spec.at(column_id);
@@ -53,7 +53,7 @@ class ChunkEncoderTest : public BaseTest {
   }
 
  protected:
-  std::shared_ptr<Table> _table;
+  TableSPtr _table;
 };
 
 TEST_F(ChunkEncoderTest, EncodeSingleChunk) {

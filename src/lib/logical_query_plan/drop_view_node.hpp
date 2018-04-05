@@ -23,9 +23,9 @@ class DropViewNode : public EnableMakeForLQPNode<DropViewNode>, public AbstractL
   const std::string& view_name() const;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
+  AbstractLQPNodeSPtr _deep_copy_impl(
+      const AbstractLQPNodeSPtr& copied_left_input,
+      const AbstractLQPNodeSPtr& copied_right_input) const override;
 
  private:
   const std::string _view_name;

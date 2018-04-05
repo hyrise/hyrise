@@ -19,16 +19,16 @@ class TaskRunner {
   explicit TaskRunner(boost::asio::io_service& io_service) : _io_service(io_service) {}
 
   template <typename TResult>
-  auto dispatch_server_task(std::shared_ptr<TResult> task) -> decltype(task->get_future());
+  auto dispatch_server_task(TResultSPtr task) -> decltype(task->get_future());
 
  protected:
   boost::asio::io_service& _io_service;
 };
 
 template <typename TResult>
-auto TaskRunner::dispatch_server_task(std::shared_ptr<TResult> task) -> decltype(task->get_future()) {
+auto TaskRunner::dispatch_server_task(TResultSPtr task) -> decltype(task->get_future()) {
   using opossum::then_operator::then;
-  using TaskList = std::vector<std::shared_ptr<AbstractTask>>;
+  using TaskList = std::vector<AbstractTaskSPtr>;
 
   CurrentScheduler::schedule_tasks(TaskList({task}));
 

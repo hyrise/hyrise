@@ -16,7 +16,7 @@
 
 namespace opossum {
 
-AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<const BaseColumn>>& index_columns)
+AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<BaseColumnCSPtr>& index_columns)
     : BaseIndex{get_index_type_of<AdaptiveRadixTreeIndex>()},
       _index_column(std::dynamic_pointer_cast<const BaseDictionaryColumn>(index_columns.front())) {
   DebugAssert(static_cast<bool>(_index_column), "AdaptiveRadixTree only works with dictionary columns for now");
@@ -61,7 +61,7 @@ BaseIndex::Iterator AdaptiveRadixTreeIndex::_cbegin() const { return _chunk_offs
 
 BaseIndex::Iterator AdaptiveRadixTreeIndex::_cend() const { return _chunk_offsets.cend(); }
 
-std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
+ARTNodeSPtr AdaptiveRadixTreeIndex::_bulk_insert(
     const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values) {
   DebugAssert(!(values.empty()), "Index on empty column is not defined");
   _chunk_offsets.reserve(values.size());
@@ -69,7 +69,7 @@ std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
   return _bulk_insert(values, static_cast<size_t>(0u), begin);
 }
 
-std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
+ARTNodeSPtr AdaptiveRadixTreeIndex::_bulk_insert(
     const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values, size_t depth, BaseIndex::Iterator& it) {
   // This is the anchor of the recursion: if all values have the same key, create a leaf.
   if (std::all_of(values.begin(), values.end(), [&values](const std::pair<BinaryComparable, ChunkOffset>& pair) {
@@ -99,7 +99,7 @@ std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
   }
 
   // call recursively for each non-empty partition and gather the children
-  std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>> children;
+  std::vector<std::pair<uint8_t, ARTNodeSPtr>> children;
 
   for (uint16_t partition_id = 0; partition_id < partitions.size(); ++partition_id) {
     if (!partitions[partition_id].empty()) {
@@ -120,7 +120,7 @@ std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
   }
 }
 
-std::vector<std::shared_ptr<const BaseColumn>> AdaptiveRadixTreeIndex::_get_index_columns() const {
+std::vector<BaseColumnCSPtr> AdaptiveRadixTreeIndex::_get_index_columns() const {
   return {_index_column};
 }
 

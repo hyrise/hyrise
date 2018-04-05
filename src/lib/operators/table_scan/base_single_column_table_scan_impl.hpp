@@ -25,12 +25,12 @@ class AttributeVectorIterable;
  */
 class BaseSingleColumnTableScanImpl : public BaseTableScanImpl, public ColumnVisitable {
  public:
-  BaseSingleColumnTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
+  BaseSingleColumnTableScanImpl(TableCSPtr in_table, const ColumnID left_column_id,
                                 const PredicateCondition predicate_condition);
 
   PosList scan_chunk(ChunkID chunk_id) override;
 
-  void handle_column(const ReferenceColumn& left_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
+  void handle_column(const ReferenceColumn& left_column, ColumnVisitableContextSPtr base_context) override;
 
  protected:
   /**

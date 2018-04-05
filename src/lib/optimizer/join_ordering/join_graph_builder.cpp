@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-std::shared_ptr<JoinGraph> JoinGraphBuilder::operator()(const std::shared_ptr<AbstractLQPNode>& lqp) {
+JoinGraphSPtr JoinGraphBuilder::operator()(const AbstractLQPNodeSPtr& lqp) {
   /**
    * Traverse the LQP until the first non-vertex type (e.g. a UnionNode) is found or a node doesn't have precisely
    * one input. This way, we traverse past Sort/Aggregate etc. nodes that later form the "outputs" of the JoinGraph
@@ -28,7 +28,7 @@ std::shared_ptr<JoinGraph> JoinGraphBuilder::operator()(const std::shared_ptr<Ab
   return JoinGraph::from_predicates(std::move(_vertices), std::move(output_relations), _predicates);
 }
 
-void JoinGraphBuilder::_traverse(const std::shared_ptr<AbstractLQPNode>& node) {
+void JoinGraphBuilder::_traverse(const AbstractLQPNodeSPtr& node) {
   // Makes it possible to call _traverse() on inputren without checking whether they exist first.
   if (!node) {
     return;
@@ -110,11 +110,11 @@ void JoinGraphBuilder::_traverse(const std::shared_ptr<AbstractLQPNode>& node) {
 }
 
 JoinGraphBuilder::PredicateParseResult JoinGraphBuilder::_parse_predicate(
-    const std::shared_ptr<AbstractLQPNode>& node) const {
+    const AbstractLQPNodeSPtr& node) const {
   if (node->type() == LQPNodeType::Predicate) {
     const auto predicate_node = std::static_pointer_cast<const PredicateNode>(node);
 
-    std::shared_ptr<const AbstractJoinPlanPredicate> left_predicate;
+    AbstractJoinPlanPredicateCSPtr left_predicate;
 
     if (predicate_node->value2()) {
       DebugAssert(predicate_node->predicate_condition() == PredicateCondition::Between, "Expected between");
@@ -151,7 +151,7 @@ JoinGraphBuilder::PredicateParseResult JoinGraphBuilder::_parse_predicate(
 }
 
 JoinGraphBuilder::PredicateParseResult JoinGraphBuilder::_parse_union(
-    const std::shared_ptr<UnionNode>& union_node) const {
+    const UnionNodeSPtr& union_node) const {
   DebugAssert(union_node->left_input() && union_node->right_input(),
               "UnionNode needs both inputren set in order to be parsed");
 

@@ -9,15 +9,15 @@ namespace opossum {
 JitExpression::JitExpression(const JitTupleValue& tuple_value)
     : _expression_type{ExpressionType::Column}, _result_value{tuple_value} {}
 
-JitExpression::JitExpression(const std::shared_ptr<const JitExpression>& child, const ExpressionType expression_type,
+JitExpression::JitExpression(const JitExpressionCSPtr& child, const ExpressionType expression_type,
                              const size_t result_tuple_index)
     : _left_child{child},
       _expression_type{expression_type},
       _result_value{JitTupleValue(_compute_result_type(), result_tuple_index)} {}
 
-JitExpression::JitExpression(const std::shared_ptr<const JitExpression>& left_child,
+JitExpression::JitExpression(const JitExpressionCSPtr& left_child,
                              const ExpressionType expression_type,
-                             const std::shared_ptr<const JitExpression>& right_child, const size_t result_tuple_index)
+                             const JitExpressionCSPtr& right_child, const size_t result_tuple_index)
     : _left_child{left_child},
       _right_child{right_child},
       _expression_type{expression_type},

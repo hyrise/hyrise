@@ -55,7 +55,7 @@ size_t FrameOfReferenceColumn<T, U>::size() const {
 }
 
 template <typename T, typename U>
-std::shared_ptr<BaseColumn> FrameOfReferenceColumn<T, U>::copy_using_allocator(
+BaseColumnSPtr FrameOfReferenceColumn<T, U>::copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
   auto new_block_minima = pmr_vector<T>{_block_minima, alloc};
   auto new_null_values = pmr_vector<bool>{_null_values, alloc};

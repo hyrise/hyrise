@@ -19,7 +19,7 @@ class AbstractJittableSink : public AbstractJittable {
   virtual ~AbstractJittableSink() = default;
 
   // This function is responsible to create the output table with appropriate column definitions.
-  virtual std::shared_ptr<Table> create_output_table(const uint32_t max_chunk_size) const = 0;
+  virtual TableSPtr create_output_table(const uint32_t max_chunk_size) const = 0;
 
   // This function is called by the JitOperator after all operators in the chain have been connected and just before
   // the execution of the pipeline starts (i.e. _execute() is called on the first operator for the first Chunk).

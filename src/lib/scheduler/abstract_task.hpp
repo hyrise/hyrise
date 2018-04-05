@@ -57,12 +57,12 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
    * Make this Task the dependency of another
    * @param successor Task that will be executed after this
    */
-  void set_as_predecessor_of(std::shared_ptr<AbstractTask> successor);
+  void set_as_predecessor_of(AbstractTaskSPtr successor);
 
   /**
    * @return the successors of this Task
    */
-  const std::vector<std::shared_ptr<AbstractTask>>& successors() const;
+  const std::vector<AbstractTaskSPtr>& successors() const;
 
   /**
    * Node ids are changed when moving the Task between nodes (e.g. during work stealing)
@@ -135,7 +135,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
 
   // For dependencies
   std::atomic_uint _predecessor_counter{0};
-  std::vector<std::shared_ptr<AbstractTask>> _successors;
+  std::vector<AbstractTaskSPtr> _successors;
 
   // For making sure a task gets only scheduled and enqueued once, respectively
   // A Task is scheduled once schedule() is called and enqueued, which is an internal process, once it has been added
@@ -154,6 +154,6 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   std::atomic_bool _started{false};
 };
 
-CREATE_PTR_ALIASES(AbstractTask)
+
 
 }  // namespace opossum

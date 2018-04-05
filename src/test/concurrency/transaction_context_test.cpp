@@ -35,14 +35,14 @@ class CommitFuncOp : public AbstractReadWriteOperator {
   const std::string name() const override { return "CommitOp"; }
 
  protected:
-  std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override {
+  TableCSPtr _on_execute(TransactionContextSPtr context) override {
     context->register_read_write_operator(std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));
     return nullptr;
   }
 
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override {
+  AbstractOperatorSPtr _on_recreate(
+      const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+      const AbstractOperatorSPtr& recreated_input_right) const override {
     Fail("Unexpected function call");
   }
 

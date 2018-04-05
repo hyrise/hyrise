@@ -32,8 +32,8 @@ namespace opossum {
 *    and handled at once. If a join-match is identified, the corresponding row_ids are noted for the output.
 * -> Using the join result, the output table is built using pos lists referencing the original tables.
 **/
-JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator> left,
-                             const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+JoinSortMerge::JoinSortMerge(const AbstractOperatorCSPtr left,
+                             const AbstractOperatorCSPtr right, const JoinMode mode,
                              const ColumnIDPair& column_ids, const PredicateCondition op)
     : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, column_ids, op) {
   // Validate the parameters
@@ -48,14 +48,14 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator> left,
               "Outer joins are not implemented for not-equals joins.");
 }
 
-std::shared_ptr<AbstractOperator> JoinSortMerge::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+AbstractOperatorSPtr JoinSortMerge::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+    const AbstractOperatorSPtr& recreated_input_right) const {
   return std::make_shared<JoinSortMerge>(recreated_input_left, recreated_input_right, _mode, _column_ids,
                                          _predicate_condition);
 }
 
-std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
+TableCSPtr JoinSortMerge::_on_execute() {
   // Check column types
   const auto& left_column_type = input_table_left()->column_data_type(_column_ids.first);
   DebugAssert(left_column_type == input_table_right()->column_data_type(_column_ids.second),
@@ -111,8 +111,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   size_t _cluster_count;
 
   // Contains the output row ids for each cluster
-  std::vector<std::shared_ptr<PosList>> _output_pos_lists_left;
-  std::vector<std::shared_ptr<PosList>> _output_pos_lists_right;
+  std::vector<PosListSPtr> _output_pos_lists_left;
+  std::vector<PosListSPtr> _output_pos_lists_right;
 
   /**
    * The TablePosition is a utility struct that is used to define a specific position in a sorted input table.
@@ -528,7 +528,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Performs the join on all clusters in parallel.
   **/
   void _perform_join() {
-    std::vector<std::shared_ptr<AbstractTask>> jobs;
+    std::vector<AbstractTaskSPtr> jobs;
 
     // Parallel join for each cluster
     for (size_t cluster_number = 0; cluster_number < _cluster_count; ++cluster_number) {
@@ -551,7 +551,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Concatenates a vector of pos lists into a single new pos list.
   **/
-  std::shared_ptr<PosList> _concatenate_pos_lists(std::vector<std::shared_ptr<PosList>>& pos_lists) {
+  PosListSPtr _concatenate_pos_lists(std::vector<PosListSPtr>& pos_lists) {
     auto output = std::make_shared<PosList>();
 
     // Determine the required space
@@ -572,8 +572,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Adds the columns from an input table to the output table
   **/
-  void _add_output_columns(ChunkColumns& output_columns, std::shared_ptr<const Table> input_table,
-                           std::shared_ptr<const PosList> pos_list) {
+  void _add_output_columns(ChunkColumns& output_columns, TableCSPtr input_table,
+                           PosListCSPtr pos_list) {
     auto column_count = input_table->column_count();
     for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
       // Add the column data (in the form of a poslist)
@@ -607,10 +607,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Turns a pos list that is pointing to reference column entries into a pos list pointing to the original table.
   * This is done because there should not be any reference columns referencing reference columns.
   **/
-  std::shared_ptr<PosList> _dereference_pos_list(std::shared_ptr<const Table> input_table, ColumnID column_id,
-                                                 std::shared_ptr<const PosList> pos_list) {
+  PosListSPtr _dereference_pos_list(TableCSPtr input_table, ColumnID column_id,
+                                                 PosListCSPtr pos_list) {
     // Get all the input pos lists so that we only have to pointer cast the columns once
-    auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
+    auto input_pos_lists = std::vector<PosListCSPtr>();
     for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
       auto b_column = input_table->get_chunk(chunk_id)->get_column(column_id);
       auto r_column = std::dynamic_pointer_cast<const ReferenceColumn>(b_column);
@@ -634,7 +634,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Executes the SortMergeJoin operator.
   **/
-  std::shared_ptr<const Table> _on_execute() {
+  TableCSPtr _on_execute() {
     bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
     bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
     auto radix_clusterer = RadixClusterSort<T>(

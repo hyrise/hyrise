@@ -36,7 +36,7 @@ class JoinSemiAntiTest : public JoinTest {
     _table_wrapper_semi_b->execute();
   }
 
-  std::shared_ptr<TableWrapper> _table_wrapper_semi_a, _table_wrapper_semi_b;
+  TableWrapperSPtr _table_wrapper_semi_a, _table_wrapper_semi_b;
 };
 
 TEST_F(JoinSemiAntiTest, SemiJoin) {

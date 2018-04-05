@@ -76,7 +76,7 @@ class Console {
    * @param output The output table.
    * @param flags  Flags for the Print operator.
    */
-  void out(std::shared_ptr<const Table> table, uint32_t flags = 0);
+  void out(TableCSPtr table, uint32_t flags = 0);
 
   /*
    * Handler for SIGINT signal (caused by CTRL-C key sequence).
@@ -143,8 +143,8 @@ class Console {
   bool _verbose;
 
   std::unique_ptr<SQLPipeline> _sql_pipeline;
-  std::shared_ptr<TransactionContext> _explicitly_created_transaction_context;
-  std::shared_ptr<SQLQueryCache<SQLQueryPlan>> _prepared_statements;
+  TransactionContextSPtr _explicitly_created_transaction_context;
+  SQLQueryCacheSPtr<SQLQueryPlan> _prepared_statements;
 };
 
 }  // namespace opossum

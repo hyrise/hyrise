@@ -28,8 +28,8 @@ class OperatorsProjectionBenchmark : public BenchmarkBasicFixture {
   }
 
  protected:
-  std::shared_ptr<TableScan> _table_ref;
-  std::vector<std::shared_ptr<AbstractOperator>> _tables;
+  TableScanSPtr _table_ref;
+  std::vector<AbstractOperatorSPtr> _tables;
   int _column_type;
 };
 

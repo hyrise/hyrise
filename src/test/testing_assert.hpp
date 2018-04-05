@@ -41,30 +41,30 @@ enum class FloatComparisonMode { RelativeDifference, AbsoluteDifference };
  * Functions implementing the functionality of our custom macros defined at the bottom of this file.
  */
 
-bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
-                       const std::shared_ptr<const Table>& expected_table, OrderSensitivity order_sensitivity,
+bool check_table_equal(const TableCSPtr& opossum_table,
+                       const TableCSPtr& expected_table, OrderSensitivity order_sensitivity,
                        TypeCmpMode type_cmp_mode, FloatComparisonMode float_comparison_mode);
 
 // @}
 
-void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, PredicateCondition predicate_condition,
+void ASSERT_INNER_JOIN_NODE(const AbstractLQPNodeSPtr& node, PredicateCondition predicate_condition,
                             const LQPColumnReference& left_column_reference,
                             const LQPColumnReference& right_column_reference);
 
-void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node);
+void ASSERT_CROSS_JOIN_NODE(const AbstractLQPNodeSPtr& node);
 
-bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& output, LQPInputSide input_side,
-                   const std::shared_ptr<const AbstractLQPNode>& input);
+bool check_lqp_tie(const AbstractLQPNodeCSPtr& output, LQPInputSide input_side,
+                   const AbstractLQPNodeCSPtr& input);
 
 template <typename Functor>
-bool contained_in_lqp(const std::shared_ptr<AbstractLQPNode>& node, Functor contains_fn) {
+bool contained_in_lqp(const AbstractLQPNodeSPtr& node, Functor contains_fn) {
   if (node == nullptr) return false;
   if (contains_fn(node)) return true;
   return contained_in_lqp(node->left_input(), contains_fn) || contained_in_lqp(node->right_input(), contains_fn);
 }
 
 template <typename Functor>
-bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node, Functor contains_fn) {
+bool contained_in_query_plan(const AbstractOperatorCSPtr& node, Functor contains_fn) {
   if (node == nullptr) return false;
   if (contains_fn(node)) return true;
   return contained_in_query_plan(node->input_left(), contains_fn) ||

@@ -55,19 +55,19 @@
  */
 namespace opossum {
 
-UnionPositions::UnionPositions(const std::shared_ptr<const AbstractOperator>& left,
-                               const std::shared_ptr<const AbstractOperator>& right)
+UnionPositions::UnionPositions(const AbstractOperatorCSPtr& left,
+                               const AbstractOperatorCSPtr& right)
     : AbstractReadOnlyOperator(OperatorType::UnionPositions, left, right) {}
 
-std::shared_ptr<AbstractOperator> UnionPositions::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+AbstractOperatorSPtr UnionPositions::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+    const AbstractOperatorSPtr& recreated_input_right) const {
   return std::make_shared<UnionPositions>(recreated_input_left, recreated_input_right);
 }
 
 const std::string UnionPositions::name() const { return "UnionPositions"; }
 
-std::shared_ptr<const Table> UnionPositions::_on_execute() {
+TableCSPtr UnionPositions::_on_execute() {
   const auto early_result = _prepare_operator();
   if (early_result) {
     return early_result;
@@ -111,7 +111,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   auto out_table =
       std::make_shared<Table>(input_table_left()->column_definitions(), TableType::References, out_chunk_size);
 
-  std::vector<std::shared_ptr<PosList>> pos_lists(reference_matrix_left.size());
+  std::vector<PosListSPtr> pos_lists(reference_matrix_left.size());
   std::generate(pos_lists.begin(), pos_lists.end(), [&] { return std::make_shared<PosList>(); });
 
   // Adds the row `row_idx` from `reference_matrix` to the pos_lists we're currently building
@@ -192,7 +192,7 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   return out_table;
 }
 
-std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
+TableCSPtr UnionPositions::_prepare_operator() {
   DebugAssert(input_table_left()->column_definitions() == input_table_right()->column_definitions(),
               "Input tables don't have the same layout");
 
@@ -223,7 +223,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    * below)
    */
   const auto add_column_segments = [&](const auto& table) {
-    auto current_pos_list = std::shared_ptr<const PosList>();
+    auto current_pos_list = PosListCSPtr();
     const auto first_chunk = table->get_chunk(ChunkID{0});
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
       const auto column = first_chunk->get_column(column_id);
@@ -271,7 +271,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
    */
   const auto verify_column_segments_in_all_chunks = [&](const auto& table) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-      auto current_pos_list = std::shared_ptr<const PosList>();
+      auto current_pos_list = PosListCSPtr();
       size_t next_segment_id = 0;
       const auto chunk = table->get_chunk(chunk_id);
       for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
@@ -310,7 +310,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
 }
 
 UnionPositions::ReferenceMatrix UnionPositions::_build_reference_matrix(
-    const std::shared_ptr<const Table>& input_table) const {
+    const TableCSPtr& input_table) const {
   ReferenceMatrix reference_matrix;
   reference_matrix.resize(_column_segment_offsets.size());
   for (auto& pos_list : reference_matrix) {

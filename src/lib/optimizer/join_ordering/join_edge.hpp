@@ -24,9 +24,9 @@ class JoinEdge final {
   void print(std::ostream& stream = std::cout) const;
 
   const JoinVertexSet vertex_set;
-  std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>> predicates;
+  std::vector<AbstractJoinPlanPredicateCSPtr> predicates;
 };
 
-CREATE_PTR_ALIASES(JoinEdge)
+
 
 }  // namespace opossum

@@ -15,9 +15,9 @@ namespace opossum {
 
 class StorageDictionaryColumnTest : public BaseTest {
  protected:
-  std::shared_ptr<ValueColumn<int>> vc_int = std::make_shared<ValueColumn<int>>();
-  std::shared_ptr<ValueColumn<std::string>> vc_str = std::make_shared<ValueColumn<std::string>>();
-  std::shared_ptr<ValueColumn<double>> vc_double = std::make_shared<ValueColumn<double>>();
+  ValueColumnSPtr<int> vc_int = std::make_shared<ValueColumn<int>>();
+  ValueColumnSPtr<std::string> vc_str = std::make_shared<ValueColumn<std::string>>();
+  ValueColumnSPtr<double> vc_double = std::make_shared<ValueColumn<double>>();
 };
 
 TEST_F(StorageDictionaryColumnTest, CompressColumnInt) {

@@ -18,16 +18,16 @@ namespace opossum {
  */
 class Validate : public AbstractReadOnlyOperator {
  public:
-  explicit Validate(const std::shared_ptr<AbstractOperator> in);
+  explicit Validate(const AbstractOperatorSPtr in);
 
   const std::string name() const override;
 
  protected:
-  std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> transaction_context) override;
-  std::shared_ptr<const Table> _on_execute() override;
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  TableCSPtr _on_execute(TransactionContextSPtr transaction_context) override;
+  TableCSPtr _on_execute() override;
+  AbstractOperatorSPtr _on_recreate(
+      const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+      const AbstractOperatorSPtr& recreated_input_right) const override;
 };
 
 }  // namespace opossum

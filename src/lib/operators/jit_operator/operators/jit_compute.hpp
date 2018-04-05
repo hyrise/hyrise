@@ -10,14 +10,14 @@ namespace opossum {
  */
 class JitCompute : public AbstractJittable {
  public:
-  explicit JitCompute(const std::shared_ptr<const JitExpression>& expression);
+  explicit JitCompute(const JitExpressionCSPtr& expression);
 
   std::string description() const final;
 
  private:
   void _consume(JitRuntimeContext& context) const final;
 
-  std::shared_ptr<const JitExpression> _expression;
+  JitExpressionCSPtr _expression;
 };
 
 }  // namespace opossum
