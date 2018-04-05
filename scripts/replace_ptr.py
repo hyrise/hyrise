@@ -1,0 +1,48 @@
+import re
+import os
+
+class_names = set()
+
+def process(file_path):
+    out_lines = []
+
+    regex_repl_pairs = [
+        (re.compile("std::shared_ptr<([a-zA-Z]*)>"), r"\1SPtr"),
+        (re.compile("std::shared_ptr<const ([a-zA-Z]*)>"), r"\1CSPtr"),
+        (re.compile("std::weak_ptr<([a-zA-Z]*)>"), r"\1WPtr"),
+        (re.compile("std::weak_ptr<const ([a-zA-Z]*)>"), r"\1CWPtr")
+    ]
+
+    with open(file_path) as file:
+        for in_line in file.readlines():
+            out_line = in_line
+
+            for regex, repl in regex_repl_pairs:
+                m = regex.match(in_line)
+                while m is not None:
+                    class_names.add(m.group(1))
+                    m = regex.match(in_line, pos=m.pos + 1)
+
+                out_line, _ = regex.subn(repl, out_line)
+
+            if out_line != in_line:
+                print("{} -> {}".format(in_line, out_line))
+
+            #out_lines.append(line)
+
+
+    #with open(file_name, "w") as file:
+    #    file.writelines(out_lines)
+
+
+
+if __name__ == "__main__":
+    directories = ["src/lib", "src/test"]
+
+    for root_directoy in directories:
+        for root, _, file_names in os.walk(root_directoy):
+            for file_name in file_names:
+                process(os.path.join(root, file_name))
+
+    for class_name in class_names:
+        print("Class {}".format(class_name))
