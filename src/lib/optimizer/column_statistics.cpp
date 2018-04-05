@@ -21,7 +21,7 @@
 namespace opossum {
 
 template <typename ColumnType>
-ColumnStatistics<ColumnType>::ColumnStatistics(const ColumnID column_id, const TableWPtrTable table)
+ColumnStatistics<ColumnType>::ColumnStatistics(const ColumnID column_id, const TableWPtr table)
     : BaseColumnStatistics(data_type_from_type<ColumnType>()), _column_id(column_id), _table(table) {}
 
 template <typename ColumnType>

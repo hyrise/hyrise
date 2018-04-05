@@ -5,6 +5,8 @@
 
 #include <memory>
 
+#include "utils/create_ptr_aliases.hpp"
+
 namespace opossum {
 
 using ByteBuffer = std::vector<char>;

@@ -42,7 +42,6 @@ class ProcessingUnit;
 class BaseColumnStatistics;
 class Optimizer;
 class Base;
-class OutputPacket;
 class AbstractTask;
 class ProjectionNode;
 class BaseIndex;
@@ -67,11 +66,16 @@ class AbstractJoinPlanPredicate;
 class AbstractFilter;
 class AbstractRule;
 class JoinNode;
+class UnionNode;
+struct OutputPacket;
 
 template<typename> class ValueColumn;
 template<typename> class DictionaryColumn;
+template<typename> class SQLQueryCache;
 
+CREATE_PTR_ALIASES(OutputPacket)
 CREATE_PTR_ALIASES(JoinNode)
+CREATE_PTR_ALIASES(UnionNode)
 CREATE_PTR_ALIASES(AbstractFilter)
 CREATE_PTR_ALIASES(AbstractRule)
 CREATE_PTR_ALIASES(AbstractJoinPlanPredicate)
@@ -126,4 +130,5 @@ CREATE_PTR_ALIASES(JitExpression)
 
 CREATE_TEMPLATE_PTR_ALIASES(DictionaryColumn)
 CREATE_TEMPLATE_PTR_ALIASES(ValueColumn)
+CREATE_TEMPLATE_PTR_ALIASES(SQLQueryCache)
 }
