@@ -9,6 +9,7 @@
 #include "logical_query_plan/lqp_column_reference.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 

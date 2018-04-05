@@ -6,6 +6,7 @@
 #include "all_type_variant.hpp"
 #include "types.hpp"
 #include "utils/format_bytes.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -44,4 +45,6 @@ class BaseColumn : private Noncopyable {
  private:
   const DataType _data_type;
 };
+
+CREATE_PTR_ALIASES(BaseColumn)
 }  // namespace opossum

@@ -4,6 +4,7 @@
 
 #include "abstract_expression.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -49,4 +50,7 @@ class LQPExpression : public AbstractExpression<LQPExpression> {
   std::optional<LQPColumnReference> _column_reference;
   std::shared_ptr<AbstractLQPNode> _subselect_node;
 };
+
+CREATE_PTR_ALIASES(LQPExpression)
+
 }  // namespace opossum

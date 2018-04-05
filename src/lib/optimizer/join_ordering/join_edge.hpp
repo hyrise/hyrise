@@ -4,6 +4,7 @@
 #include <ostream>
 
 #include "join_vertex_set.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -25,5 +26,7 @@ class JoinEdge final {
   const JoinVertexSet vertex_set;
   std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>> predicates;
 };
+
+CREATE_PTR_ALIASES(JoinEdge)
 
 }  // namespace opossum

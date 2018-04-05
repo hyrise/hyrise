@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "types.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -152,5 +153,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   // To make sure a task is never executed twice
   std::atomic_bool _started{false};
 };
+
+CREATE_PTR_ALIASES(AbstractTask)
 
 }  // namespace opossum

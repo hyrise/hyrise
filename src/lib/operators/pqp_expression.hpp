@@ -6,6 +6,7 @@
 #include "abstract_operator.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -62,4 +63,6 @@ class PQPExpression : public AbstractExpression<PQPExpression> {
   std::shared_ptr<AbstractOperator> _subselect_operator;
   std::shared_ptr<const Table> _subselect_table;
 };
+
+CREATE_PTR_ALIASES(PQPExpression)
 }  // namespace opossum

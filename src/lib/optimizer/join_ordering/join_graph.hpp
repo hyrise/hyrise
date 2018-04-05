@@ -13,6 +13,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/join_ordering/join_plan_predicate.hpp"
 #include "types.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -70,4 +71,6 @@ class JoinGraph final {
   std::vector<LQPOutputRelation> output_relations;
   std::vector<std::shared_ptr<JoinEdge>> edges;
 };
+
+CREATE_PTR_ALIASES(JoinGraph)
 }  // namespace opossum

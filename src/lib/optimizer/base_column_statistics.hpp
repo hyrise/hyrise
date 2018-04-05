@@ -6,6 +6,7 @@
 #include <string>
 
 #include "all_type_variant.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -113,6 +114,8 @@ class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStati
   virtual std::ostream& _print_to_stream(std::ostream& os) const = 0;
   friend std::ostream& operator<<(std::ostream& os, BaseColumnStatistics& obj);
 };
+
+CREATE_PTR_ALIASES(BaseColumnStatistics)
 
 /**
  * Return type of selectivity functions for operations on one column.

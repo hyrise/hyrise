@@ -15,6 +15,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -166,4 +167,6 @@ class Table : private Noncopyable {
   std::unique_ptr<std::mutex> _append_mutex;
   std::vector<IndexInfo> _indexes;
 };
+
+CREATE_PTR_ALIASES(Table)
 }  // namespace opossum

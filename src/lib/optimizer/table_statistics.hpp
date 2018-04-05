@@ -10,6 +10,7 @@
 #include "all_parameter_variant.hpp"
 #include "optimizer/base_column_statistics.hpp"
 #include "types.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -161,6 +162,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
 
   friend std::ostream& operator<<(std::ostream& os, TableStatistics& obj);
 };
+CREATE_PTR_ALIASES(TableStatistics)
 
 std::ostream& operator<<(std::ostream& os, TableStatistics& obj);
 

@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "optimizer/strategy/rule_batch.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -34,5 +35,7 @@ class Optimizer final {
   // Rather arbitrary right now, atm all rules should be done after one iteration
   uint32_t _max_num_iterations = 10;
 };
+
+CREATE_PTR_ALIASES(Optimizer)
 
 }  // namespace opossum

@@ -5,6 +5,7 @@
 #include <unordered_map>
 
 #include "scheduler/abstract_task.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -41,4 +42,6 @@ class OperatorTask : public AbstractTask {
  private:
   std::shared_ptr<AbstractOperator> _op;
 };
+
+CREATE_PTR_ALIASES(OperatorTask)
 }  // namespace opossum

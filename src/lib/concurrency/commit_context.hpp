@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "types.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -54,4 +55,6 @@ class CommitContext : private Noncopyable {
   std::shared_ptr<CommitContext> _next;
   std::function<void()> _callback;
 };
+
+CREATE_PTR_ALIASES(CommitContext)
 }  // namespace opossum

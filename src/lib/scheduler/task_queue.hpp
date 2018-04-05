@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "types.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -42,5 +43,7 @@ class TaskQueue {
   std::array<tbb::concurrent_queue<std::shared_ptr<AbstractTask>>, NUM_PRIORITY_LEVELS> _queues;
   std::atomic_uint _num_tasks{0};
 };
+
+CREATE_PTR_ALIASES(TaskQueue)
 
 }  // namespace opossum

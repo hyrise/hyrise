@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "abstract_lqp_node.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -46,5 +47,7 @@ class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public Abstr
 
   void _update_output() const;
 };
+
+CREATE_PTR_ALIASES(ProjectionNode)
 
 }  // namespace opossum

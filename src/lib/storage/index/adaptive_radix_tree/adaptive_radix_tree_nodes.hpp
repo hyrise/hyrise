@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "adaptive_radix_tree_index.hpp"
-
+#include "utils/create_ptr_aliases.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -35,6 +35,8 @@ class ARTNode : private Noncopyable {
   virtual Iterator begin() const = 0;
   virtual Iterator end() const = 0;
 };
+
+CREATE_PTR_ALIASES(ARTNode)
 
 /**
  *

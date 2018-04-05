@@ -2,6 +2,7 @@
 
 #include "storage/base_column.hpp"
 #include "storage/encoding_type.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -31,5 +32,7 @@ class BaseEncodedColumn : public BaseColumn {
    */
   virtual CompressedVectorType compressed_vector_type() const;
 };
+
+CREATE_PTR_ALIASES(BaseEncodedColumn)
 
 }  // namespace opossum

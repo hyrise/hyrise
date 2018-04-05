@@ -43,7 +43,7 @@ if __name__ == "__main__":
     for root_directory in directories:
         for root, _, file_names in os.walk(root_directory):
             for file_name in file_names:
-                if file_name == "create_ptr_aliases.hpp":
+                if file_name == "create_ptr_aliases.hpp" or file_name == "resolve_type.hpp":
                     continue
 
                 if file_name.endswith(("cpp", "hpp")):

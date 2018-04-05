@@ -6,6 +6,7 @@
 #include "processing_unit.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -68,5 +69,7 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   WorkerID _id;
   CpuID _cpu_id;
 };
+
+CREATE_PTR_ALIASES(Worker)
 
 }  // namespace opossum

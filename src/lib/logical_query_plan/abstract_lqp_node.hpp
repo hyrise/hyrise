@@ -11,6 +11,7 @@
 #include "lqp_column_reference.hpp"
 #include "lqp_expression.hpp"
 #include "types.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -389,6 +390,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
   void _add_output_pointer(const std::shared_ptr<AbstractLQPNode>& output);
   // @}
 };
+
+CREATE_PTR_ALIASES(AbstractLQPNode)
 
 /**
  * LQP node types should derive from this in order to enable the <NodeType>::make() function that allows for a clean

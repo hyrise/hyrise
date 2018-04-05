@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "types.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -37,5 +38,7 @@ class AbstractScheduler {
  protected:
   std::shared_ptr<Topology> _topology;
 };
+
+CREATE_PTR_ALIASES(AbstractScheduler)
 
 }  // namespace opossum

@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "types.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -76,4 +77,6 @@ class ProcessingUnit final : public std::enable_shared_from_this<ProcessingUnit>
   std::atomic_uint _num_hibernated_workers{0};
   std::atomic<uint64_t> _num_finished_tasks{0};
 };
+
+CREATE_PTR_ALIASES(ProcessingUnit)
 }  // namespace opossum

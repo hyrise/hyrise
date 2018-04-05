@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "types.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -184,4 +185,6 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   mutable std::condition_variable _active_operators_cv;
   mutable std::mutex _active_operators_mutex;
 };
+
+CREATE_PTR_ALIASES(TransactionContext)
 }  // namespace opossum

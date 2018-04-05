@@ -7,6 +7,7 @@
 #include "column_index_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -122,4 +123,7 @@ class BaseIndex : private Noncopyable {
  private:
   const ColumnIndexType _type;
 };
+
+CREATE_PTR_ALIASES(BaseIndex)
+
 }  // namespace opossum

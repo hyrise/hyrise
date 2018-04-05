@@ -5,6 +5,7 @@
 
 #include "base_dictionary_column.hpp"
 #include "types.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -66,5 +67,7 @@ class DictionaryColumn : public BaseDictionaryColumn {
   const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
   const ValueID _null_value_id;
 };
+
+CREATE_TEMPLATE_PTR_ALIASES(DictionaryColumn)
 
 }  // namespace opossum

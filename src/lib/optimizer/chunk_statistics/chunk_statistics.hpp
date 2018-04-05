@@ -7,6 +7,7 @@
 #include "types.hpp"
 
 #include "optimizer/chunk_statistics/chunk_column_statistics.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -27,4 +28,6 @@ class ChunkStatistics final : public std::enable_shared_from_this<ChunkStatistic
  protected:
   std::vector<std::shared_ptr<ChunkColumnStatistics>> _statistics;
 };
+
+CREATE_PTR_ALIASES(ChunkStatistics)
 }  // namespace opossum

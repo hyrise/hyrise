@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "types.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -49,4 +50,6 @@ class Topology final {
   std::vector<TopologyNode> _nodes;
   size_t _num_cpus;
 };
+
+CREATE_PTR_ALIASES(Topology)
 }  // namespace opossum

@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "base_value_column.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -71,4 +72,5 @@ class ValueColumn : public BaseValueColumn {
   std::optional<pmr_concurrent_vector<bool>> _null_values;
 };
 
+CREATE_TEMPLATE_PTR_ALIASES(ValueColumn)
 }  // namespace opossum

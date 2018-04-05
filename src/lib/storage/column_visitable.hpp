@@ -2,6 +2,8 @@
 
 #include <memory>
 
+#include "utils/create_ptr_aliases.hpp"
+
 namespace opossum {
 
 class BaseColumn;
@@ -14,6 +16,8 @@ class ReferenceColumn;
 // By inheriting from ColumnVisitable, an AbstractOperator(Impl) can implement handle methods for all column
 // types. Unfortunately, we cannot easily overload handle() because ValueColumn<T> is templated.
 class ColumnVisitableContext {};
+CREATE_PTR_ALIASES(ColumnVisitableContext)
+
 class ColumnVisitable {
  public:
   virtual ~ColumnVisitable() = default;

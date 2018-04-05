@@ -3,6 +3,7 @@
 #include <functional>
 
 #include "abstract_task.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -36,4 +37,6 @@ class JobTask : public AbstractTask {
  private:
   std::function<void()> _fn;
 };
+
+CREATE_PTR_ALIASES(JobTask)
 }  // namespace opossum

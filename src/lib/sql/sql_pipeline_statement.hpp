@@ -9,6 +9,7 @@
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "storage/table.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -100,5 +101,7 @@ class SQLPipelineStatement : public Noncopyable {
   // Number of placeholders in prepared statement; default 0 becasue we assume no prepared statement
   uint16_t _num_parameters = 0;
 };
+
+CREATE_PTR_ALIASES(SQLPipelineStatement)
 
 }  // namespace opossum

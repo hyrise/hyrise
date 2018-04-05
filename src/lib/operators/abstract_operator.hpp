@@ -7,6 +7,7 @@
 
 #include "all_parameter_variant.hpp"
 #include "types.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -154,5 +155,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   std::weak_ptr<OperatorTask> _operator_task;
 };
+
+CREATE_PTR_ALIASES(AbstractOperator)
 
 }  // namespace opossum

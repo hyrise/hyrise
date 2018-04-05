@@ -7,6 +7,7 @@
 #include "types.hpp"
 
 #include "optimizer/chunk_statistics/abstract_filter.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -31,4 +32,6 @@ class ChunkColumnStatistics final {
  protected:
   std::vector<std::shared_ptr<AbstractFilter>> _filters;
 };
+
+CREATE_PTR_ALIASES(ChunkColumnStatistics)
 }  // namespace opossum
