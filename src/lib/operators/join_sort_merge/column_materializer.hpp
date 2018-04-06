@@ -8,6 +8,8 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_column.hpp"
+#include "storage/dictionary_column.hpp"
+#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -107,13 +109,12 @@ class ColumnMaterializer {
   /**
    * Specialization for dictionary columns
    */
-  std::shared_ptr<MaterializedColumn<T>> _materialize_column(const DeprecatedDictionaryColumn<T>& column,
-                                                             ChunkID chunk_id,
+  std::shared_ptr<MaterializedColumn<T>> _materialize_column(const DictionaryColumn<T>& column, ChunkID chunk_id,
                                                              std::unique_ptr<PosList>& null_rows_output) {
     auto output = MaterializedColumn<T>{};
     output.reserve(column.size());
 
-    auto value_ids = column.attribute_vector();
+    auto base_attribute_vector = column.attribute_vector();
     auto dict = column.dictionary();
 
     if (_sort) {
@@ -124,21 +125,25 @@ class ColumnMaterializer {
 
       // Reserve correct size of the vectors by assuming a uniform distribution
       for (auto& row : rows_with_value) {
-        row.reserve(value_ids->size() / dict->size());
+        row.reserve(base_attribute_vector->size() / dict->size());
       }
 
       // Collect the rows for each value id
-      for (ChunkOffset chunk_offset{0}; chunk_offset < value_ids->size(); ++chunk_offset) {
-        auto value_id = value_ids->get(chunk_offset);
+      resolve_compressed_vector_type(*base_attribute_vector, [&](const auto& attribute_vector) {
+        auto chunk_offset = ChunkOffset{0u};
+        auto value_id_it = attribute_vector.cbegin();
+        for (; value_id_it != attribute_vector.cend(); ++value_id_it, ++chunk_offset) {
+          auto value_id = *value_id_it;
 
-        if (value_id != NULL_VALUE_ID) {
-          rows_with_value[value_id].push_back(RowID{chunk_id, chunk_offset});
-        } else {
-          if (_materialize_null) {
-            null_rows_output->emplace_back(RowID{chunk_id, chunk_offset});
+          if (value_id != NULL_VALUE_ID) {
+            rows_with_value[value_id].push_back(RowID{chunk_id, chunk_offset});
+          } else {
+            if (_materialize_null) {
+              null_rows_output->push_back(RowID{chunk_id, chunk_offset});
+            }
           }
         }
-      }
+      });
 
       // Now that we know the row ids for every value, we can output all the materialized values in a sorted manner.
       ChunkOffset chunk_offset{0};

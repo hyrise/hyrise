@@ -17,7 +17,7 @@ class CreateViewTest : public BaseTest {
  protected:
   void SetUp() override {
     auto& sm = StorageManager::get();
-    auto t1 = std::make_shared<Table>();
+    auto t1 = std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data);
 
     sm.add_table("first_table", t1);
   }
@@ -30,11 +30,15 @@ TEST_F(CreateViewTest, OperatorName) {
   EXPECT_EQ(cv->name(), "CreateView");
 }
 
-TEST_F(CreateViewTest, CannotBeRecreated) {
+TEST_F(CreateViewTest, Recreate) {
   auto cv =
       std::make_shared<CreateView>("view_name", MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}}));
 
-  EXPECT_ANY_THROW(cv->recreate({}));
+  cv->execute();
+  EXPECT_NE(cv->get_output(), nullptr);
+
+  const auto recreated = cv->recreate();
+  EXPECT_EQ(recreated->get_output(), nullptr);
 }
 
 TEST_F(CreateViewTest, CanCreateViews) {

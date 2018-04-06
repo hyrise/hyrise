@@ -12,9 +12,7 @@ namespace opossum {
  */
 class AbstractReadOnlyOperator : public AbstractOperator {
  public:
-  AbstractReadOnlyOperator(const std::shared_ptr<const AbstractOperator> left = nullptr,
-                           const std::shared_ptr<const AbstractOperator> right = nullptr)
-      : AbstractOperator(left, right) {}
+  using AbstractOperator::AbstractOperator;
 
  protected:
   // This override exists so that all AbstractReadOnlyOperators can ignore the transaction context

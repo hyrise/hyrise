@@ -16,6 +16,15 @@ std::shared_ptr<PQPExpression> PQPExpression::create_column(const ColumnID colum
   return expression;
 }
 
+std::shared_ptr<PQPExpression> PQPExpression::create_subselect(std::shared_ptr<AbstractOperator> root_operator,
+                                                               const std::optional<std::string>& alias) {
+  auto expression = std::make_shared<PQPExpression>(ExpressionType::Subselect);
+  expression->_subselect_operator = root_operator;
+  expression->_alias = alias;
+
+  return expression;
+}
+
 PQPExpression::PQPExpression(const std::shared_ptr<LQPExpression>& lqp_expression,
                              const std::shared_ptr<AbstractLQPNode>& node)
     : AbstractExpression<PQPExpression>(lqp_expression->_type) {
@@ -52,6 +61,25 @@ ColumnID PQPExpression::column_id() const {
   return *_column_id;
 }
 
+std::shared_ptr<AbstractOperator> PQPExpression::subselect_operator() {
+  DebugAssert(_subselect_operator,
+              "Expression " + expression_type_to_string.at(_type) + " does not have a subselect operator");
+  return _subselect_operator;
+}
+
+std::shared_ptr<const Table> PQPExpression::subselect_table() {
+  DebugAssert(_subselect_table,
+              "Expression " + expression_type_to_string.at(_type) + " does not have a subselect table");
+  return _subselect_table;
+}
+
+bool PQPExpression::has_subselect_table() const { return _subselect_table != nullptr; }
+
+void PQPExpression::set_subselect_table(std::shared_ptr<const Table> table) {
+  DebugAssert(type() == ExpressionType::Subselect, "Table can only be set for subselect expressions.");
+  _subselect_table = table;
+}
+
 std::string PQPExpression::to_string(const std::optional<std::vector<std::string>>& input_column_names,
                                      bool is_root) const {
   if (type() == ExpressionType::Column) {
@@ -70,6 +98,12 @@ bool PQPExpression::operator==(const PQPExpression& other) const {
     return false;
   }
   return _column_id == other._column_id;
+}
+
+std::shared_ptr<PQPExpression> PQPExpression::copy_with_placeholder_value(const AllTypeVariant& value) {
+  auto copy = create_literal(value, _alias);
+  copy->_column_id = _column_id;
+  return copy;
 }
 
 void PQPExpression::_deep_copy_impl(const std::shared_ptr<PQPExpression>& copy) const { copy->_column_id = _column_id; }

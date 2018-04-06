@@ -17,14 +17,14 @@ std::unique_ptr<SimdBp128Decompressor> SimdBp128Vector::_on_create_decoder() con
   return std::make_unique<SimdBp128Decompressor>(*this);
 }
 
-SimdBp128Iterator SimdBp128Vector::_on_cbegin() const { return SimdBp128Iterator{&_data, _size, 0u}; }
+SimdBp128Iterator SimdBp128Vector::_on_begin() const { return SimdBp128Iterator{&_data, _size, 0u}; }
 
-SimdBp128Iterator SimdBp128Vector::_on_cend() const { return SimdBp128Iterator{nullptr, _size, _size}; }
+SimdBp128Iterator SimdBp128Vector::_on_end() const { return SimdBp128Iterator{nullptr, _size, _size}; }
 
-std::shared_ptr<BaseCompressedVector> SimdBp128Vector::_on_copy_using_allocator(
+std::unique_ptr<const BaseCompressedVector> SimdBp128Vector::_on_copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
   auto data_copy = pmr_vector<uint128_t>{_data, alloc};
-  return std::allocate_shared<SimdBp128Vector>(alloc, std::move(data_copy), _size);
+  return std::make_unique<SimdBp128Vector>(std::move(data_copy), _size);
 }
 
 }  // namespace opossum

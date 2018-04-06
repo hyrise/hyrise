@@ -9,8 +9,8 @@ namespace opossum {
 LimitNode::LimitNode(const size_t num_rows) : AbstractLQPNode(LQPNodeType::Limit), _num_rows(num_rows) {}
 
 std::shared_ptr<AbstractLQPNode> LimitNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& copied_left_child,
-    const std::shared_ptr<AbstractLQPNode>& copied_right_child) const {
+    const std::shared_ptr<AbstractLQPNode>& copied_left_input,
+    const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
   return LimitNode::make(_num_rows);
 }
 

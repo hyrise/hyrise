@@ -16,9 +16,10 @@ namespace opossum {
 class OperatorsValidateVisibilityTest : public BaseTest {
  protected:
   void SetUp() override {
-    t = std::make_shared<Table>(Table(chunk_size));
-    t->add_column("col_1", DataType::Int);
-    t->add_column("col_2", DataType::Int);
+    TableColumnDefinitions column_definitions;
+    column_definitions.emplace_back("col_1", DataType::Int);
+    column_definitions.emplace_back("col_2", DataType::Int);
+    t = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
     t->append({123, 456});
 
     StorageManager::get().add_table(table_name, t);
@@ -31,7 +32,7 @@ class OperatorsValidateVisibilityTest : public BaseTest {
 
   std::string table_name = "validateTestTable";
 
-  static const auto chunk_size = uint32_t{10};
+  static constexpr auto chunk_size = uint32_t{10};
 
   std::shared_ptr<GetTable>(gt);
   std::shared_ptr<Table> t;

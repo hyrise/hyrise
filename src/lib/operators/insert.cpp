@@ -91,7 +91,7 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
 };
 
 Insert::Insert(const std::string& target_table_name, const std::shared_ptr<AbstractOperator>& values_to_insert)
-    : AbstractReadWriteOperator(values_to_insert), _target_table_name(target_table_name) {}
+    : AbstractReadWriteOperator(OperatorType::Insert, values_to_insert), _target_table_name(target_table_name) {}
 
 const std::string Insert::name() const { return "Insert"; }
 
@@ -102,12 +102,12 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
   // These TypedColumnProcessors kind of retrieve the template parameter of the columns.
   auto typed_column_processors = std::vector<std::unique_ptr<AbstractTypedColumnProcessor>>();
-  for (const auto& column_type : _target_table->column_types()) {
+  for (const auto& column_type : _target_table->column_data_types()) {
     typed_column_processors.emplace_back(
         make_unique_by_data_type<AbstractTypedColumnProcessor, TypedColumnProcessor>(column_type));
   }
 
-  auto total_rows_to_insert = static_cast<uint32_t>(_input_table_left()->row_count());
+  auto total_rows_to_insert = static_cast<uint32_t>(input_table_left()->row_count());
 
   // First, allocate space for all the rows to insert. Do so while locking the table to prevent multiple threads
   // modifying the table's size simultaneously.
@@ -122,8 +122,8 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
     start_index = last_chunk->size();
 
     // If last chunk is compressed, add a new uncompressed chunk
-    if (std::dynamic_pointer_cast<const BaseEncodedColumn>(last_chunk->get_column(ColumnID{0})) != nullptr) {
-      _target_table->create_new_chunk();
+    if (!last_chunk->is_mutable()) {
+      _target_table->append_mutable_chunk();
       total_chunks_inserted++;
     }
 
@@ -133,7 +133,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       auto rows_to_insert_this_loop = std::min(_target_table->max_chunk_size() - current_chunk->size(), remaining_rows);
 
       // Resize MVCC vectors.
-      current_chunk->grow_mvcc_column_size_by(rows_to_insert_this_loop, Chunk::MAX_COMMIT_ID);
+      current_chunk->mvcc_columns()->grow_by(rows_to_insert_this_loop, MvccColumns::MAX_COMMIT_ID);
 
       // Resize current chunk to full size.
       auto old_size = current_chunk->size();
@@ -146,7 +146,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
       // Create new chunk if necessary.
       if (remaining_rows > 0) {
-        _target_table->create_new_chunk();
+        _target_table->append_mutable_chunk();
         total_chunks_inserted++;
       }
     }
@@ -170,7 +170,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
     // while target chunk is not full
     while (target_start_index != target_chunk->size()) {
-      const auto source_chunk = _input_table_left()->get_chunk(source_chunk_id);
+      const auto source_chunk = input_table_left()->get_chunk(source_chunk_id);
       auto num_to_insert = std::min(source_chunk->size() - source_chunk_start_index, still_to_insert);
       for (ColumnID column_id{0}; column_id < target_chunk->column_count(); ++column_id) {
         const auto& source_column = source_chunk->get_column(column_id);
@@ -229,8 +229,10 @@ void Insert::_on_rollback_records() {
   }
 }
 
-std::shared_ptr<AbstractOperator> Insert::recreate(const std::vector<AllParameterVariant>& args) const {
-  return std::make_shared<Insert>(_target_table_name, _input_left->recreate(args));
+std::shared_ptr<AbstractOperator> Insert::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+  return std::make_shared<Insert>(_target_table_name, recreated_input_left);
 }
 
 }  // namespace opossum

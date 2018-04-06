@@ -21,6 +21,9 @@ queryplan.png
 lqp*.png
 compile_times.txt
 
+# Ignore cmake user files
+*.txt.user
+
 # Ignore generated TPC{CH} tables.
 # Intentionally only for root dir, tests contain csv we check in
 /*.csv

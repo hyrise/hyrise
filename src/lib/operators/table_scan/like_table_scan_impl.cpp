@@ -13,10 +13,8 @@
 #include <vector>
 
 #include "storage/column_iterables/constant_value_iterable.hpp"
+#include "storage/column_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/create_iterable_from_column.hpp"
-#include "storage/deprecated_dictionary_column.hpp"
-#include "storage/deprecated_dictionary_column/deprecated_attribute_vector_iterable.hpp"
-#include "storage/dictionary_column/attribute_vector_iterable.hpp"
 #include "storage/resolve_encoded_column_type.hpp"
 #include "storage/value_column.hpp"
 #include "storage/value_column/value_column_iterable.hpp"
@@ -50,18 +48,6 @@ void LikeTableScanImpl::handle_column(const BaseValueColumn& base_column,
   left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
     this->_unary_scan(regex_match, left_it, left_end, chunk_id, matches_out);
   });
-}
-
-void LikeTableScanImpl::handle_column(const BaseDeprecatedDictionaryColumn& base_column,
-                                      std::shared_ptr<ColumnVisitableContext> base_context) {
-  const auto& left_column = static_cast<const DeprecatedDictionaryColumn<std::string>&>(base_column);
-  _handle_dictionary_column(left_column, base_context);
-}
-
-void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
-                                      std::shared_ptr<ColumnVisitableContext> base_context) {
-  const auto& left_column = static_cast<const DictionaryColumn<std::string>&>(base_column);
-  _handle_dictionary_column(left_column, base_context);
 }
 
 void LikeTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
@@ -107,9 +93,9 @@ std::string LikeTableScanImpl::sqllike_to_regex(std::string sqllike) {
   return "^" + sqllike + "$";
 }
 
-template <typename DictionaryColumnType>
-void LikeTableScanImpl::_handle_dictionary_column(const DictionaryColumnType& left_column,
-                                                  std::shared_ptr<ColumnVisitableContext> base_context) {
+void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
+                                      std::shared_ptr<ColumnVisitableContext> base_context) {
+  const auto& left_column = static_cast<const DictionaryColumn<std::string>&>(base_column);
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
@@ -119,7 +105,7 @@ void LikeTableScanImpl::_handle_dictionary_column(const DictionaryColumnType& le
   const auto& match_count = result.first;
   const auto& dictionary_matches = result.second;
 
-  auto attribute_vector_iterable = _create_attribute_vector_iterable(left_column);
+  auto attribute_vector_iterable = create_iterable_from_attribute_vector(left_column);
 
   // Regex matches all
   if (match_count == dictionary_matches.size()) {

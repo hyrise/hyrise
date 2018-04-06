@@ -13,7 +13,10 @@ namespace opossum {
 
 ImportCsv::ImportCsv(const std::string& filename, const std::optional<std::string> tablename,
                      const std::optional<CsvMeta> csv_meta)
-    : _filename(filename), _tablename(tablename), _csv_meta(csv_meta) {}
+    : AbstractReadOnlyOperator(OperatorType::ImportCsv),
+      _filename(filename),
+      _tablename(tablename),
+      _csv_meta(csv_meta) {}
 
 ImportCsv::ImportCsv(const std::string& filename, const std::optional<CsvMeta> csv_meta,
                      const std::optional<std::string> tablename)
@@ -40,6 +43,12 @@ std::shared_ptr<const Table> ImportCsv::_on_execute() {
   }
 
   return table;
+}
+
+std::shared_ptr<AbstractOperator> ImportCsv::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+  return std::make_shared<ImportCsv>(_filename, _tablename, _csv_meta);
 }
 
 }  // namespace opossum

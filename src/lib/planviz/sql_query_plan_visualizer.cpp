@@ -5,6 +5,7 @@
 #include "planviz/abstract_visualizer.hpp"
 #include "planviz/sql_query_plan_visualizer.hpp"
 #include "sql/sql_query_plan.hpp"
+#include "utils/format_duration.hpp"
 
 namespace opossum {
 
@@ -16,27 +17,31 @@ SQLQueryPlanVisualizer::SQLQueryPlanVisualizer(GraphvizConfig graphviz_config, V
                          std::move(edge_info)) {}
 
 void SQLQueryPlanVisualizer::_build_graph(const SQLQueryPlan& plan) {
+  std::unordered_set<std::shared_ptr<const AbstractOperator>> visualized_ops;
   for (const auto& root : plan.tree_roots()) {
-    _add_operator(root);
-    _build_subtree(root);
+    _build_subtree(root, visualized_ops);
   }
 }
 
-void SQLQueryPlanVisualizer::_build_subtree(const std::shared_ptr<const AbstractOperator>& op) {
+void SQLQueryPlanVisualizer::_build_subtree(
+    const std::shared_ptr<const AbstractOperator>& op,
+    std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
+  // Avoid drawing dataflows/ops redundantly in diamond shaped PQPs
+  if (visualized_ops.find(op) != visualized_ops.end()) return;
+  visualized_ops.insert(op);
+
   _add_operator(op);
 
   if (op->input_left() != nullptr) {
     auto left = op->input_left();
-    _add_operator(left);
+    _build_subtree(left, visualized_ops);
     _build_dataflow(left, op);
-    _build_subtree(left);
   }
 
   if (op->input_right() != nullptr) {
     auto right = op->input_right();
-    _add_operator(right);
+    _build_subtree(right, visualized_ops);
     _build_dataflow(right, op);
-    _build_subtree(right);
   }
 }
 
@@ -65,7 +70,7 @@ void SQLQueryPlanVisualizer::_add_operator(const std::shared_ptr<const AbstractO
 
   if (op->get_output()) {
     auto wall_time = op->performance_data().walltime_ns;
-    label += "\n\n" + std::to_string(wall_time) + " ns";
+    label += "\n\n" + format_duration(wall_time);
     info.pen_width = std::fmax(1, std::ceil(std::log10(wall_time) / 2));
   }
 
