@@ -1,8 +1,8 @@
 #pragma once
 
 #include "lqp_translator.hpp"
-#include "operators/jit_operator_wrapper.hpp"
 #include "operators/jit_operator/operators/jit_compute.hpp"
+#include "operators/jit_operator_wrapper.hpp"
 
 namespace opossum {
 
