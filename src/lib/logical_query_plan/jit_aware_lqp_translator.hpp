@@ -7,11 +7,11 @@
 namespace opossum {
 
 /* This class can be used as a drop-in replacement for the LQPTranslator.
- * The JitAwareLQPTranslator will try to translate multiple AbstractLQPNodes into a single JitOperator, whenever
+ * The JitAwareLQPTranslator will try to translate multiple AbstractLQPNodes into a single JitOperatorWrapper, whenever
  * that is possible and seems beneficial. Otherwise it will fall back to the LQPTranslator.
  *
  * It works in two steps:
- * 1) Determine, if we can/should add a JitOperator node here and which nodes we can replace:
+ * 1) Determine, if we can/should add a JitOperatorWrapper node here and which nodes we can replace:
  *    Starting from the current node, we perform a BFS through the query tree. For each node we will determine, whether
  *    it is jitable (based on the node's type and parameters). We will follow each branch of the tree until we hit a
  *    non-jitable node. Since StoredTableNodes are not jitable, this is guaranteed to happen for all branches.
@@ -19,7 +19,7 @@ namespace opossum {
  *    Once the BFS terminates, we only continue, if the number of jitable nodes is above some threshold and the
  *    set of non-jitable nodes we encountered only contains a single node. This is then used as the input
  *    node to the chain of jit operators.
- * 2) Once we know which nodes we want to jit, we can start building out JitOperator:
+ * 2) Once we know which nodes we want to jit, we can start building out JitOperatorWrapper:
  *    We start by adding a JitReadTuple node. This node is passed to all translation functions during the construction
  *    of further operators. If any jit operator depends on a column or literal value, this value is registered with the
  *    JitReadTuple operator. The operator returns a JitTupleValue that serves as a placeholder in the requesting

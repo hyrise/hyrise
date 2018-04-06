@@ -36,11 +36,11 @@ struct JitInputLiteral {
  */
 class JitReadTuple : public AbstractJittable {
   /* JitColumnReaders wrap the column iterable interface used by most operators and makes it accessible
-   * to the JitOperator.
+   * to the JitOperatorWrapper.
    *
    * Why we need this wrapper:
    * Most operators access data by creating a fixed number (usually one or two) of column iterables and
-   * then immediately use those iterators in a lambda. The JitOperator, on the other hand, processes
+   * then immediately use those iterators in a lambda. The JitOperatorWrapper, on the other hand, processes
    * data in a tuple-at-a-time fashion and thus needs access to an arbitrary number of column iterators
    * at the same time.
    *

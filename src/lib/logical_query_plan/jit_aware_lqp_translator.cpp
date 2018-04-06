@@ -31,7 +31,7 @@ std::shared_ptr<AbstractOperator> JitAwareLQPTranslator::translate_node(
     }
   });
 
-  // It does not make sense to create a JitOperator for fewer than 2 LQP nodes,
+  // It does not make sense to create a JitOperatorWrapper for fewer than 2 LQP nodes,
   // but we may want a better heuristic here
   if (num_jittable_nodes < 2 || input_nodes.size() != 1) {
     return LQPTranslator::translate_node(node);
@@ -39,7 +39,7 @@ std::shared_ptr<AbstractOperator> JitAwareLQPTranslator::translate_node(
 
   const auto input_node = *input_nodes.begin();
 
-  auto jit_operator = std::make_shared<JitOperator>(translate_node(input_node));
+  auto jit_operator = std::make_shared<JitOperatorWrapper>(translate_node(input_node));
   auto read_tuple = std::make_shared<JitReadTuple>();
   jit_operator->add_jit_operator(read_tuple);
 
