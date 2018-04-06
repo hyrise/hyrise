@@ -64,6 +64,7 @@ target_link_libraries(
     hyriseBenchmarkLib
     ncurses
     ${READLINE_LIBRARY}
+    ${FILESYSTEM_LIBRARY}
 )
 target_include_directories(
     hyriseConsole
