@@ -17,7 +17,7 @@ class AbstractJittable {
  public:
   virtual ~AbstractJittable() = default;
 
-  void set_next_operator(const std::shared_ptr<AbstractJittable>& next_operator) { _next_operator = next_operator; }
+  void set_next_operator(const AbstractJittableSPtr& next_operator) { _next_operator = next_operator; }
 
   virtual std::string description() const = 0;
 
@@ -27,7 +27,7 @@ class AbstractJittable {
  private:
   virtual void _consume(JitRuntimeContext& context) const = 0;
 
-  std::shared_ptr<AbstractJittable> _next_operator;
+  AbstractJittableSPtr _next_operator;
 };
 
 }  // namespace opossum

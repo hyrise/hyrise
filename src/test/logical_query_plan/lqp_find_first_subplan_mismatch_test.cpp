@@ -32,18 +32,18 @@ namespace opossum {
 class LQPFindSubplanMismatchTest : public ::testing::Test {
  protected:
   struct QueryNodes {
-    std::shared_ptr<ValidateNode> validate_node;
-    std::shared_ptr<StoredTableNode> stored_table_node_a;
-    std::shared_ptr<MockNode> mock_node_a;
-    std::shared_ptr<MockNode> mock_node_b;
-    std::shared_ptr<PredicateNode> predicate_node_a;
-    std::shared_ptr<PredicateNode> predicate_node_b;
-    std::shared_ptr<UnionNode> union_node;
-    std::shared_ptr<LimitNode> limit_node;
-    std::shared_ptr<JoinNode> join_node;
-    std::shared_ptr<AggregateNode> aggregate_node;
-    std::shared_ptr<SortNode> sort_node;
-    std::shared_ptr<ProjectionNode> projection_node;
+    ValidateNodeSPtr validate_node;
+    StoredTableNodeSPtr stored_table_node_a;
+    MockNodeSPtr mock_node_a;
+    MockNodeSPtr mock_node_b;
+    PredicateNodeSPtr predicate_node_a;
+    PredicateNodeSPtr predicate_node_b;
+    UnionNodeSPtr union_node;
+    LimitNodeSPtr limit_node;
+    JoinNodeSPtr join_node;
+    AggregateNodeSPtr aggregate_node;
+    SortNodeSPtr sort_node;
+    ProjectionNodeSPtr projection_node;
 
     LQPColumnReference table_a_a;
     LQPColumnReference table_b_a;
@@ -79,17 +79,17 @@ class LQPFindSubplanMismatchTest : public ::testing::Test {
         JoinNode::make(JoinMode::Inner, LQPColumnReferencePair{query_nodes.table_a_a, query_nodes.table_c_b},
                        PredicateCondition::Equals);
 
-    std::vector<std::shared_ptr<LQPExpression>> aggregates{LQPExpression::create_aggregate_function(
+    std::vector<LQPExpressionSPtr> aggregates{LQPExpression::create_aggregate_function(
         AggregateFunction::Sum, LQPExpression::create_columns({query_nodes.table_c_a}))};
     std::vector<LQPColumnReference> groupby_column_references{query_nodes.table_c_b};
     query_nodes.aggregate_node = AggregateNode::make(aggregates, groupby_column_references);
 
     query_nodes.sort_node = SortNode::make(OrderByDefinitions{{query_nodes.table_c_b, OrderByMode::Ascending}});
     query_nodes.projection_node = ProjectionNode::make(
-        std::vector<std::shared_ptr<LQPExpression>>{LQPExpression::create_column(query_nodes.table_a_a)});
+        std::vector<LQPExpressionSPtr>{LQPExpression::create_column(query_nodes.table_a_a)});
   }
 
-  std::shared_ptr<AbstractLQPNode> _build_query_lqp(QueryNodes& query_nodes) {
+  AbstractLQPNodeSPtr _build_query_lqp(QueryNodes& query_nodes) {
     query_nodes.validate_node->set_left_input(query_nodes.stored_table_node_a);
     query_nodes.predicate_node_a->set_left_input(query_nodes.validate_node);
     query_nodes.predicate_node_b->set_left_input(query_nodes.stored_table_node_a);
@@ -111,7 +111,7 @@ class LQPFindSubplanMismatchTest : public ::testing::Test {
   }
 
   QueryNodes _query_nodes_lhs, _query_nodes_rhs;
-  std::shared_ptr<AbstractLQPNode> _query_lqp_lhs, _query_lqp_rhs;
+  AbstractLQPNodeSPtr _query_lqp_lhs, _query_lqp_rhs;
 };
 
 TEST_F(LQPFindSubplanMismatchTest, EqualsTest) {

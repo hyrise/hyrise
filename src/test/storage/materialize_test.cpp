@@ -44,9 +44,9 @@ class MaterializeTest : public EncodingTest {
     return nulls;
   }
 
-  std::shared_ptr<const Table> _data_table;
-  std::shared_ptr<const Table> _references_table;
-  std::shared_ptr<const Table> _data_table_with_nulls;
+  TableCSPtr _data_table;
+  TableCSPtr _references_table;
+  TableCSPtr _data_table_with_nulls;
 };
 
 TEST_P(MaterializeTest, MaterializeIntData) {

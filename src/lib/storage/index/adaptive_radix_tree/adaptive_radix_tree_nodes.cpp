@@ -24,10 +24,10 @@ static const uint8_t INVALID_INDEX = 255u;
  * default value of the _partial_keys array is 255u
  */
 
-ARTNode4::ARTNode4(std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& children) {
+ARTNode4::ARTNode4(std::vector<std::pair<uint8_t, ARTNodeSPtr>>& children) {
   std::sort(children.begin(), children.end(),
-            [](const std::pair<uint8_t, std::shared_ptr<ARTNode>>& left,
-               const std::pair<uint8_t, std::shared_ptr<ARTNode>>& right) { return left.first < right.first; });
+            [](const std::pair<uint8_t, ARTNodeSPtr>& left,
+               const std::pair<uint8_t, ARTNodeSPtr>& right) { return left.first < right.first; });
   _partial_keys.fill(INVALID_INDEX);
   for (uint8_t i = 0u; i < children.size(); ++i) {
     _partial_keys[i] = children[i].first;
@@ -107,10 +107,10 @@ BaseIndex::Iterator ARTNode4::end() const {
  *
  */
 
-ARTNode16::ARTNode16(std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& children) {
+ARTNode16::ARTNode16(std::vector<std::pair<uint8_t, ARTNodeSPtr>>& children) {
   std::sort(children.begin(), children.end(),
-            [](const std::pair<uint8_t, std::shared_ptr<ARTNode>>& left,
-               const std::pair<uint8_t, std::shared_ptr<ARTNode>>& right) { return left.first < right.first; });
+            [](const std::pair<uint8_t, ARTNodeSPtr>& left,
+               const std::pair<uint8_t, ARTNodeSPtr>& right) { return left.first < right.first; });
   _partial_keys.fill(INVALID_INDEX);
   for (uint8_t i = 0u; i < children.size(); ++i) {
     _partial_keys[i] = children[i].first;
@@ -207,7 +207,7 @@ BaseIndex::Iterator ARTNode16::end() const {
  * 47 as this is the maximum index for _children.
  */
 
-ARTNode48::ARTNode48(const std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& children) {
+ARTNode48::ARTNode48(const std::vector<std::pair<uint8_t, ARTNodeSPtr>>& children) {
   _index_to_child.fill(INVALID_INDEX);
   for (uint8_t i = 0u; i < children.size(); ++i) {
     _index_to_child[children[i].first] = i;
@@ -302,7 +302,7 @@ BaseIndex::Iterator ARTNode48::end() const {
  *
  */
 
-ARTNode256::ARTNode256(const std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& children) {
+ARTNode256::ARTNode256(const std::vector<std::pair<uint8_t, ARTNodeSPtr>>& children) {
   for (uint16_t i = 0; i < children.size(); ++i) {
     _children[children[i].first] = children[i].second;
   }

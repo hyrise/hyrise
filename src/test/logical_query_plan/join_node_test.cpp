@@ -44,12 +44,12 @@ class JoinNodeTest : public BaseTest {
     _anti_join_node->set_right_input(_mock_node_b);
   }
 
-  std::shared_ptr<MockNode> _mock_node_a;
-  std::shared_ptr<MockNode> _mock_node_b;
-  std::shared_ptr<JoinNode> _inner_join_node;
-  std::shared_ptr<JoinNode> _semi_join_node;
-  std::shared_ptr<JoinNode> _anti_join_node;
-  std::shared_ptr<JoinNode> _join_node;
+  MockNodeSPtr _mock_node_a;
+  MockNodeSPtr _mock_node_b;
+  JoinNodeSPtr _inner_join_node;
+  JoinNodeSPtr _semi_join_node;
+  JoinNodeSPtr _anti_join_node;
+  JoinNodeSPtr _join_node;
   LQPColumnReference _t_a_a;
   LQPColumnReference _t_a_b;
   LQPColumnReference _t_a_c;

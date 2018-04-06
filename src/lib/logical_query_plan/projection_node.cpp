@@ -13,15 +13,15 @@
 
 namespace opossum {
 
-std::shared_ptr<ProjectionNode> ProjectionNode::make_pass_through(const std::shared_ptr<AbstractLQPNode>& input) {
-  std::vector<std::shared_ptr<LQPExpression>> expressions =
+ProjectionNodeSPtr ProjectionNode::make_pass_through(const AbstractLQPNodeSPtr& input) {
+  std::vector<LQPExpressionSPtr> expressions =
       LQPExpression::create_columns(input->output_column_references());
   const auto projection_node = ProjectionNode::make(expressions);
   projection_node->set_left_input(input);
   return projection_node;
 }
 
-ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<LQPExpression>>& column_expressions)
+ProjectionNode::ProjectionNode(const std::vector<LQPExpressionSPtr>& column_expressions)
     : AbstractLQPNode(LQPNodeType::Projection), _column_expressions(column_expressions) {}
 
 std::string ProjectionNode::description() const {
@@ -44,12 +44,12 @@ std::string ProjectionNode::description() const {
   return desc.str();
 }
 
-std::shared_ptr<AbstractLQPNode> ProjectionNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-    const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
+AbstractLQPNodeSPtr ProjectionNode::_deep_copy_impl(
+    const AbstractLQPNodeSPtr& copied_left_input,
+    const AbstractLQPNodeSPtr& copied_right_input) const {
   Assert(left_input() && copied_left_input, "Can't deep copy without input to adjust ColumnReferences");
 
-  std::vector<std::shared_ptr<LQPExpression>> column_expressions;
+  std::vector<LQPExpressionSPtr> column_expressions;
   column_expressions.reserve(_column_expressions.size());
   for (const auto& expression : _column_expressions) {
     column_expressions.emplace_back(
@@ -59,7 +59,7 @@ std::shared_ptr<AbstractLQPNode> ProjectionNode::_deep_copy_impl(
   return ProjectionNode::make(column_expressions);
 }
 
-const std::vector<std::shared_ptr<LQPExpression>>& ProjectionNode::column_expressions() const {
+const std::vector<LQPExpressionSPtr>& ProjectionNode::column_expressions() const {
   return _column_expressions;
 }
 

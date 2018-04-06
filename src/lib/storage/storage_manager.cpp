@@ -20,7 +20,7 @@ StorageManager& StorageManager::get() {
   return instance;
 }
 
-void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
+void StorageManager::add_table(const std::string& name, TableSPtr table) {
   Assert(_tables.find(name) == _tables.end(), "A table with the name " + name + " already exists");
   Assert(_views.find(name) == _views.end(), "Cannot add table " + name + " - a view with the same name already exists");
 
@@ -37,7 +37,7 @@ void StorageManager::drop_table(const std::string& name) {
   Assert(num_deleted == 1, "Error deleting table " + name + ": _erase() returned " + std::to_string(num_deleted) + ".");
 }
 
-std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const {
+TableSPtr StorageManager::get_table(const std::string& name) const {
   const auto iter = _tables.find(name);
   Assert(iter != _tables.end(), "No such table named '" + name + "'");
 
@@ -57,7 +57,7 @@ std::vector<std::string> StorageManager::table_names() const {
   return table_names;
 }
 
-void StorageManager::add_view(const std::string& name, std::shared_ptr<const AbstractLQPNode> view) {
+void StorageManager::add_view(const std::string& name, AbstractLQPNodeCSPtr view) {
   Assert(_tables.find(name) == _tables.end(),
          "Cannot add view " + name + " - a table with the same name already exists");
   Assert(_views.find(name) == _views.end(), "A view with the name " + name + " already exists");
@@ -70,7 +70,7 @@ void StorageManager::drop_view(const std::string& name) {
   Assert(num_deleted == 1, "Error deleting view " + name + ": _erase() returned " + std::to_string(num_deleted) + ".");
 }
 
-std::shared_ptr<AbstractLQPNode> StorageManager::get_view(const std::string& name) const {
+AbstractLQPNodeSPtr StorageManager::get_view(const std::string& name) const {
   const auto iter = _views.find(name);
   Assert(iter != _views.end(), "No such view named '" + name + "'");
 
@@ -113,7 +113,7 @@ void StorageManager::print(std::ostream& out) const {
 void StorageManager::reset() { get() = StorageManager(); }
 
 void StorageManager::export_all_tables_as_csv(const std::string& path) {
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  auto jobs = std::vector<AbstractTaskSPtr>{};
   jobs.reserve(_tables.size());
 
   for (auto& pair : _tables) {

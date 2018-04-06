@@ -37,7 +37,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
     using PosListIterator = PosList::const_iterator;
 
    public:
-    explicit Iterator(const std::shared_ptr<const Table> table, const ColumnID column_id,
+    explicit Iterator(const TableCSPtr table, const ColumnID column_id,
                       const PosListIterator& begin_pos_list_it, const PosListIterator& pos_list_it)
         : _table{table}, _column_id{column_id}, _begin_pos_list_it{begin_pos_list_it}, _pos_list_it{pos_list_it} {}
 
@@ -80,7 +80,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
     }
 
    private:
-    const std::shared_ptr<const Table> _table;
+    const TableCSPtr _table;
     const ColumnID _column_id;
 
     const PosListIterator _begin_pos_list_it;

@@ -55,7 +55,7 @@ class TransactionManager : private Noncopyable {
   /**
    * Creates a new transaction context
    */
-  std::shared_ptr<TransactionContext> new_transaction_context();
+  TransactionContextSPtr new_transaction_context();
 
   /**
    * Helper: Executes a function object within a context and commits or rolls it back afterwards.
@@ -67,7 +67,7 @@ class TransactionManager : private Noncopyable {
    * Usage: Call TransactionContext::rollback() within the
    *        function object if transaction should be rolled back.
    */
-  void run_transaction(const std::function<void(std::shared_ptr<TransactionContext>)>& fn);
+  void run_transaction(const std::function<void(TransactionContextSPtr)>& fn);
 
  private:
   friend class TransactionContext;
@@ -77,8 +77,8 @@ class TransactionManager : private Noncopyable {
   TransactionManager(TransactionManager&&) = delete;
   TransactionManager& operator=(TransactionManager&&) = delete;
 
-  std::shared_ptr<CommitContext> _new_commit_context();
-  void _try_increment_last_commit_id(std::shared_ptr<CommitContext> context);
+  CommitContextSPtr _new_commit_context();
+  void _try_increment_last_commit_id(CommitContextSPtr context);
 
  private:
   std::atomic<TransactionID> _next_transaction_id;
@@ -90,6 +90,6 @@ class TransactionManager : private Noncopyable {
   // been there "from the beginning of time".
   static constexpr auto INITIAL_COMMIT_ID = CommitID{1};
 
-  std::shared_ptr<CommitContext> _last_commit_context;
+  CommitContextSPtr _last_commit_context;
 };
 }  // namespace opossum

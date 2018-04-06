@@ -25,16 +25,16 @@ void CommitContext::fire_callback() {
 
 bool CommitContext::has_next() const { return next() != nullptr; }
 
-std::shared_ptr<CommitContext> CommitContext::next() { return std::atomic_load(&_next); }
+CommitContextSPtr CommitContext::next() { return std::atomic_load(&_next); }
 
-std::shared_ptr<const CommitContext> CommitContext::next() const { return std::atomic_load(&_next); }
+CommitContextCSPtr CommitContext::next() const { return std::atomic_load(&_next); }
 
-bool CommitContext::try_set_next(const std::shared_ptr<CommitContext>& next) {
+bool CommitContext::try_set_next(const CommitContextSPtr& next) {
   DebugAssert((next->commit_id() == commit_id() + 1u), "Next commit context's commit id needs to be incremented by 1.");
 
   if (has_next()) return false;
 
-  auto context_nullptr = std::shared_ptr<CommitContext>();
+  auto context_nullptr = CommitContextSPtr();
   return std::atomic_compare_exchange_strong(&_next, &context_nullptr, next);
 }
 

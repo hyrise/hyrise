@@ -112,12 +112,12 @@ void _export_value(std::ofstream& ofstream, const T& value) {
 
 namespace opossum {
 
-ExportBinary::ExportBinary(const std::shared_ptr<const AbstractOperator> in, const std::string& filename)
+ExportBinary::ExportBinary(const AbstractOperatorCSPtr in, const std::string& filename)
     : AbstractReadOnlyOperator(OperatorType::ExportBinary, in), _filename(filename) {}
 
 const std::string ExportBinary::name() const { return "ExportBinary"; }
 
-std::shared_ptr<const Table> ExportBinary::_on_execute() {
+TableCSPtr ExportBinary::_on_execute() {
   std::ofstream ofstream;
   ofstream.exceptions(std::ofstream::failbit | std::ofstream::badbit);
   ofstream.open(_filename, std::ios::binary);
@@ -132,13 +132,13 @@ std::shared_ptr<const Table> ExportBinary::_on_execute() {
   return _input_left->get_output();
 }
 
-std::shared_ptr<AbstractOperator> ExportBinary::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+AbstractOperatorSPtr ExportBinary::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+    const AbstractOperatorSPtr& recreated_input_right) const {
   return std::make_shared<ExportBinary>(recreated_input_left, _filename);
 }
 
-void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream) {
+void ExportBinary::_write_header(const TableCSPtr& table, std::ofstream& ofstream) {
   _export_value(ofstream, static_cast<ChunkOffset>(table->max_chunk_size()));
   _export_value(ofstream, static_cast<ChunkID>(table->chunk_count()));
   _export_value(ofstream, static_cast<ColumnID>(table->column_count()));
@@ -158,7 +158,7 @@ void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std:
   _export_string_values<ColumnNameLength>(ofstream, column_names);
 }
 
-void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::ofstream& ofstream,
+void ExportBinary::_write_chunk(const TableCSPtr& table, std::ofstream& ofstream,
                                 const ChunkID& chunk_id) {
   const auto chunk = table->get_chunk(chunk_id);
   const auto context = std::make_shared<ExportContext>(ofstream);
@@ -174,7 +174,7 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
 
 template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseValueColumn& base_column,
-                                                         std::shared_ptr<ColumnVisitableContext> base_context) {
+                                                         ColumnVisitableContextSPtr base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
   const auto& column = static_cast<const ValueColumn<T>&>(base_column);
 
@@ -189,7 +189,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseValueColumn& 
 
 template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::handle_column(const ReferenceColumn& ref_column,
-                                                         std::shared_ptr<ColumnVisitableContext> base_context) {
+                                                         ColumnVisitableContextSPtr base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
   // We materialize reference columns and save them as value columns
@@ -205,7 +205,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_column(const ReferenceColumn& 
 // handle_column implementation for string columns
 template <>
 void ExportBinary::ExportBinaryVisitor<std::string>::handle_column(
-    const ReferenceColumn& ref_column, std::shared_ptr<ColumnVisitableContext> base_context) {
+    const ReferenceColumn& ref_column, ColumnVisitableContextSPtr base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
   // We materialize reference columns and save them as value columns
@@ -231,7 +231,7 @@ void ExportBinary::ExportBinaryVisitor<std::string>::handle_column(
 
 template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseDictionaryColumn& base_column,
-                                                         std::shared_ptr<ColumnVisitableContext> base_context) {
+                                                         ColumnVisitableContextSPtr base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
   const auto& column = static_cast<const DictionaryColumn<T>&>(base_column);
 
@@ -278,7 +278,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseDictionaryCol
 
 template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseEncodedColumn& base_column,
-                                                         std::shared_ptr<ColumnVisitableContext> base_context) {
+                                                         ColumnVisitableContextSPtr base_context) {
   Fail("Binary export not implemented yet for encoded columns.");
 }
 

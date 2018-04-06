@@ -3,6 +3,8 @@
 #include <memory>
 #include <vector>
 
+#include "utils/create_ptr_aliases.hpp"
+
 namespace opossum {
 
 class AbstractRule;
@@ -16,14 +18,14 @@ class RuleBatch final {
   explicit RuleBatch(RuleBatchExecutionPolicy execution_policy);
 
   RuleBatchExecutionPolicy execution_policy() const;
-  const std::vector<std::shared_ptr<AbstractRule>>& rules() const;
+  const std::vector<AbstractRuleSPtr>& rules() const;
 
-  void add_rule(const std::shared_ptr<AbstractRule>& rule);
+  void add_rule(const AbstractRuleSPtr& rule);
 
-  bool apply_rules_to(const std::shared_ptr<AbstractLQPNode>& root_node) const;
+  bool apply_rules_to(const AbstractLQPNodeSPtr& root_node) const;
 
  private:
   const RuleBatchExecutionPolicy _execution_policy;
-  std::vector<std::shared_ptr<AbstractRule>> _rules;
+  std::vector<AbstractRuleSPtr> _rules;
 };
 }  // namespace opossum

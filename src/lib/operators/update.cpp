@@ -15,8 +15,8 @@
 
 namespace opossum {
 
-Update::Update(const std::string& table_to_update_name, std::shared_ptr<AbstractOperator> fields_to_update_op,
-               std::shared_ptr<AbstractOperator> update_values_op)
+Update::Update(const std::string& table_to_update_name, AbstractOperatorSPtr fields_to_update_op,
+               AbstractOperatorSPtr update_values_op)
     : AbstractReadWriteOperator(OperatorType::Update, fields_to_update_op, update_values_op),
       _table_to_update_name{table_to_update_name} {}
 
@@ -24,7 +24,7 @@ Update::~Update() = default;
 
 const std::string Update::name() const { return "Update"; }
 
-std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionContext> context) {
+TableCSPtr Update::_on_execute(TransactionContextSPtr context) {
   if (_input_left->get_output()->empty()) return nullptr;  // Subsequent code relies on there being at least one chunk
 
   DebugAssert((_execution_input_valid(context)), "Input to Update isn't valid");
@@ -41,7 +41,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
   auto insert_table = std::make_shared<Table>(insert_table_column_definitions, TableType::References);
 
   auto current_row_in_left_chunk = 0u;
-  auto current_pos_list = std::shared_ptr<const PosList>();
+  auto current_pos_list = PosListCSPtr();
   auto current_left_chunk_id = ChunkID{0};
 
   for (ChunkID chunk_id{0}; chunk_id < input_table_right()->chunk_count(); ++chunk_id) {
@@ -113,7 +113,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
  * that all reference the table specified by table_to_update_name. The column count and types in input_table_left
  * must match the count and types in input_table_right.
  */
-bool Update::_execution_input_valid(const std::shared_ptr<TransactionContext>& context) const {
+bool Update::_execution_input_valid(const TransactionContextSPtr& context) const {
   if (context == nullptr) return false;
 
   if (input_table_left()->column_count() != input_table_right()->column_count()) return false;
@@ -134,9 +134,9 @@ bool Update::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
   return true;
 }
 
-std::shared_ptr<AbstractOperator> Update::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+AbstractOperatorSPtr Update::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+    const AbstractOperatorSPtr& recreated_input_right) const {
   return std::make_shared<Update>(_table_to_update_name, recreated_input_left, recreated_input_right);
 }
 

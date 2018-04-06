@@ -185,7 +185,7 @@ void MigrationPreparationTask::_on_execute() {
     }
 
     // Schedule chunk migration tasks
-    auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+    auto jobs = std::vector<AbstractTaskSPtr>{};
     jobs.reserve(migration_candidates.size());
 
     for (const auto& migration_chunk : migration_candidates) {

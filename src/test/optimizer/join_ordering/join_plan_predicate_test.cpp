@@ -37,13 +37,13 @@ class JoinPlanPredicateTest : public ::testing::Test {
     return stream.str();
   }
 
-  std::shared_ptr<MockNode> _mock_node;
+  MockNodeSPtr _mock_node;
   LQPColumnReference _column_a;
   LQPColumnReference _column_b;
 
-  std::shared_ptr<AbstractJoinPlanPredicate> _predicate_a;
-  std::shared_ptr<AbstractJoinPlanPredicate> _predicate_b;
-  std::shared_ptr<AbstractJoinPlanPredicate> _predicate_c;
+  AbstractJoinPlanPredicateSPtr _predicate_a;
+  AbstractJoinPlanPredicateSPtr _predicate_b;
+  AbstractJoinPlanPredicateSPtr _predicate_c;
 };
 
 TEST_F(JoinPlanPredicateTest, Print) {

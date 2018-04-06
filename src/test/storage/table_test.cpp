@@ -20,7 +20,7 @@ class StorageTableTest : public BaseTest {
     t = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   }
 
-  std::shared_ptr<Table> t;
+  TableSPtr t;
   TableColumnDefinitions column_definitions;
 };
 
@@ -130,8 +130,8 @@ TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
 TEST_F(StorageTableTest, EmplaceChunk) {
   EXPECT_EQ(t->chunk_count(), 0u);
 
-  std::shared_ptr<BaseColumn> vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
-  std::shared_ptr<BaseColumn> vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
+  BaseColumnSPtr vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
+  BaseColumnSPtr vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
 
   t->append_chunk({vc_int, vc_str});
   EXPECT_EQ(t->chunk_count(), 1u);
@@ -142,8 +142,8 @@ TEST_F(StorageTableTest, EmplaceChunkAndAppend) {
 
   t->append({4, "Hello,"});
   EXPECT_EQ(t->chunk_count(), 1u);
-  std::shared_ptr<BaseColumn> vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
-  std::shared_ptr<BaseColumn> vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
+  BaseColumnSPtr vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
+  BaseColumnSPtr vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
   t->append_chunk(ChunkColumns{{vc_int, vc_str}});
   EXPECT_EQ(t->chunk_count(), 2u);
 }
@@ -152,13 +152,13 @@ TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
   EXPECT_EQ(t->chunk_count(), 0u);
 
   t->append({4, "Hello,"});
-  std::shared_ptr<BaseColumn> vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
-  std::shared_ptr<BaseColumn> vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
+  BaseColumnSPtr vc_int = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
+  BaseColumnSPtr vc_str = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
   t->append_chunk({vc_int, vc_str});
   EXPECT_EQ(t->chunk_count(), 2u);
 
-  std::shared_ptr<BaseColumn> vc_int2 = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
-  std::shared_ptr<BaseColumn> vc_str2 = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
+  BaseColumnSPtr vc_int2 = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::Int);
+  BaseColumnSPtr vc_str2 = make_shared_by_data_type<BaseColumn, ValueColumn>(DataType::String);
   t->append_chunk({vc_int, vc_str});
   EXPECT_EQ(t->chunk_count(), 3u);
 }

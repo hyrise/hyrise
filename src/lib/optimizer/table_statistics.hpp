@@ -10,6 +10,7 @@
 #include "all_parameter_variant.hpp"
 #include "optimizer/base_column_statistics.hpp"
 #include "types.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -50,7 +51,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
    * Creates a table statistics from a table.
    * This should only be done by the storage manager when adding a table to storage manager.
    */
-  explicit TableStatistics(const std::shared_ptr<Table> table);
+  explicit TableStatistics(const TableSPtr table);
 
   /**
    * Table statistics should not be copied by other actors.
@@ -63,7 +64,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
    * supply mocked statistics to a MockNode
    */
   TableStatistics(const TableType table_type, float row_count,
-                  const std::vector<std::shared_ptr<BaseColumnStatistics>>& column_statistics);
+                  const std::vector<BaseColumnStatisticsSPtr>& column_statistics);
 
   TableType table_type() const;
 
@@ -76,33 +77,33 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
   // Returns the number of valid rows (using approximate count of deleted rows)
   uint64_t approx_valid_row_count() const;
 
-  const std::vector<std::shared_ptr<BaseColumnStatistics>>& column_statistics() const;
+  const std::vector<BaseColumnStatisticsSPtr>& column_statistics() const;
 
   /**
    * Generate table statistics for the operator table scan table scan.
    */
-  virtual std::shared_ptr<TableStatistics> predicate_statistics(
+  virtual TableStatisticsSPtr predicate_statistics(
       const ColumnID column_id, const PredicateCondition predicate_condition, const AllParameterVariant& value,
       const std::optional<AllTypeVariant>& value2 = std::nullopt);
 
   /**
    * Generate table statistics for a cross join.
    */
-  virtual std::shared_ptr<TableStatistics> generate_cross_join_statistics(
-      const std::shared_ptr<TableStatistics>& right_table_stats);
+  virtual TableStatisticsSPtr generate_cross_join_statistics(
+      const TableStatisticsSPtr& right_table_stats);
 
   /**
    * Generate table statistics for joins with two column predicates.
    */
-  virtual std::shared_ptr<TableStatistics> generate_predicated_join_statistics(
-      const std::shared_ptr<TableStatistics>& right_table_stats, const JoinMode mode, const ColumnIDPair column_ids,
+  virtual TableStatisticsSPtr generate_predicated_join_statistics(
+      const TableStatisticsSPtr& right_table_stats, const JoinMode mode, const ColumnIDPair column_ids,
       const PredicateCondition predicate_condition);
 
   // Increases the (approximate) count of invalid rows in the table (caused by deletes).
   void increment_invalid_row_count(uint64_t count);
 
  protected:
-  std::shared_ptr<BaseColumnStatistics> _get_or_generate_column_statistics(const ColumnID column_id) const;
+  BaseColumnStatisticsSPtr _get_or_generate_column_statistics(const ColumnID column_id) const;
 
   void _create_all_column_statistics() const;
 
@@ -121,7 +122,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
    * @return Number of additional null values for columns of table 2.
    */
   float _calculate_added_null_values_for_outer_join(const float row_count,
-                                                    const std::shared_ptr<BaseColumnStatistics> col_stats,
+                                                    const BaseColumnStatisticsSPtr col_stats,
                                                     const float predicate_column_distinct_count) const;
 
   /**
@@ -134,8 +135,8 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
    * @param new_row_count: row count of the new join table
    */
   void _adjust_null_value_ratio_for_outer_join(
-      const std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_begin,
-      const std::vector<std::shared_ptr<BaseColumnStatistics>>::iterator col_end, const float row_count,
+      const std::vector<BaseColumnStatisticsSPtr>::iterator col_begin,
+      const std::vector<BaseColumnStatisticsSPtr>::iterator col_end, const float row_count,
       const float null_value_no, const float new_row_count);
 
   // Only available for statistics of tables in the StorageManager.
@@ -143,7 +144,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
   // Table --shared_ptr--> TableStatistics
   // not const as table pointer can be reset once all column statistics have been created
   // (e.g. for composite tables resulting from joins)
-  std::weak_ptr<Table> _table;
+  TableWPtr _table;
 
   TableType _table_type;
 
@@ -157,10 +158,11 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
   // It is simply used as an estimate for the optimizer, and therefore does not need to be exact.
   uint64_t _approx_invalid_row_count{0};
 
-  mutable std::vector<std::shared_ptr<BaseColumnStatistics>> _column_statistics;
+  mutable std::vector<BaseColumnStatisticsSPtr> _column_statistics;
 
   friend std::ostream& operator<<(std::ostream& os, TableStatistics& obj);
 };
+
 
 std::ostream& operator<<(std::ostream& os, TableStatistics& obj);
 

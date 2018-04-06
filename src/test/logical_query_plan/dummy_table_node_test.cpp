@@ -12,7 +12,7 @@ class DummyTableNodeTest : public BaseTest {
  protected:
   void SetUp() override { _dummy_table_node = DummyTableNode::make(); }
 
-  std::shared_ptr<DummyTableNode> _dummy_table_node;
+  DummyTableNodeSPtr _dummy_table_node;
 };
 
 TEST_F(DummyTableNodeTest, Description) { EXPECT_EQ(_dummy_table_node->description(), "[DummyTable]"); }

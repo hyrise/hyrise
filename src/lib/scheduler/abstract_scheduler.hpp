@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "types.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -16,10 +17,10 @@ class AbstractScheduler {
   friend class CurrentScheduler;
 
  public:
-  explicit AbstractScheduler(std::shared_ptr<Topology> topology);
+  explicit AbstractScheduler(TopologySPtr topology);
   virtual ~AbstractScheduler() = default;
 
-  const std::shared_ptr<Topology>& topology() const;
+  const TopologySPtr& topology() const;
 
   /**
    * Begin the schedulers lifecycle as the global Scheduler instance. In this method do work that can't be done before
@@ -29,13 +30,15 @@ class AbstractScheduler {
 
   virtual void finish() = 0;
 
-  virtual const std::vector<std::shared_ptr<TaskQueue>>& queues() const = 0;
+  virtual const std::vector<TaskQueueSPtr>& queues() const = 0;
 
-  virtual void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
+  virtual void schedule(AbstractTaskSPtr task, NodeID preferred_node_id = CURRENT_NODE_ID,
                         SchedulePriority priority = SchedulePriority::Normal) = 0;
 
  protected:
-  std::shared_ptr<Topology> _topology;
+  TopologySPtr _topology;
 };
+
+
 
 }  // namespace opossum

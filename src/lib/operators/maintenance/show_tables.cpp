@@ -18,13 +18,13 @@ ShowTables::ShowTables() : AbstractReadOnlyOperator(OperatorType::ShowTables) {}
 
 const std::string ShowTables::name() const { return "ShowTables"; }
 
-std::shared_ptr<AbstractOperator> ShowTables::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+AbstractOperatorSPtr ShowTables::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+    const AbstractOperatorSPtr& recreated_input_right) const {
   return std::make_shared<ShowTables>();
 }
 
-std::shared_ptr<const Table> ShowTables::_on_execute() {
+TableCSPtr ShowTables::_on_execute() {
   auto table = std::make_shared<Table>(TableColumnDefinitions{{"table_name", DataType::String}}, TableType::Data);
 
   const auto table_names = StorageManager::get().table_names();

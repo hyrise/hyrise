@@ -75,16 +75,16 @@ class ServerSessionTest : public BaseTest {
         .WillByDefault(Invoke([](const std::string&) { return boost::make_ready_future(); }));
   }
 
-  std::shared_ptr<SQLPipeline> _create_working_sql_pipeline() {
+  SQLPipelineSPtr _create_working_sql_pipeline() {
     // We don't mock the SQL Pipeline, so we have to provide a query that executes successfully
     auto t = load_table("src/test/tables/int.tbl", 10);
     StorageManager::get().add_table("foo", t);
     return std::make_shared<SQLPipeline>(SQLPipelineBuilder{"SELECT * FROM foo;"}.create_pipeline());
   }
 
-  std::shared_ptr<TestConnection> _connection;
-  std::shared_ptr<TestTaskRunner> _task_runner;
-  std::shared_ptr<TestServerSession> _session;
+  TestConnectionSPtr _connection;
+  TestTaskRunnerSPtr _task_runner;
+  TestServerSessionSPtr _session;
 };
 
 TEST_F(ServerSessionTest, SessionPerformsStartup) {
@@ -208,11 +208,11 @@ TEST_F(ServerSessionTest, SessionExecutesSimpleQueryCommand) {
   // The session creates a SQLPipeline using a scheduled task (we're providing a 'real' SQLPipeline in the result)
   auto create_pipeline_result = std::make_unique<CreatePipelineResult>();
   create_pipeline_result->sql_pipeline = _create_working_sql_pipeline();
-  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<CreatePipelineTask>>()))
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<CreatePipelineTaskSPtr>()))
       .WillOnce(Return(ByMove(boost::make_ready_future(std::move(create_pipeline_result)))));
 
   // The session executes the SQLPipeline using another scheduled task
-  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<ExecuteServerQueryTask>>()))
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<ExecuteServerQueryTaskSPtr>()))
       .WillOnce(Return(ByMove(boost::make_ready_future())));
 
   // It sends the result schema...
@@ -252,7 +252,7 @@ TEST_F(ServerSessionTest, SessionHandlesExtendedProtocolFlow) {
   auto sql_pipeline = _create_working_sql_pipeline();
   auto create_pipeline_result = std::make_unique<CreatePipelineResult>();
   create_pipeline_result->sql_pipeline = sql_pipeline;
-  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<CreatePipelineTask>>()))
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<CreatePipelineTaskSPtr>()))
       .WillOnce(Return(ByMove(boost::make_ready_future(std::move(create_pipeline_result)))));
 
   EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::ParseComplete));
@@ -270,7 +270,7 @@ TEST_F(ServerSessionTest, SessionHandlesExtendedProtocolFlow) {
   placeholder_plan->set_num_parameters(0);
   auto sql_query_plan = std::make_unique<SQLQueryPlan>(placeholder_plan->recreate({}));
 
-  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<BindServerPreparedStatementTask>>()))
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<BindServerPreparedStatementTaskSPtr>()))
       .WillOnce(Return(ByMove(boost::make_ready_future(std::move(sql_query_plan)))));
 
   EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::BindComplete));
@@ -284,7 +284,7 @@ TEST_F(ServerSessionTest, SessionHandlesExtendedProtocolFlow) {
       .WillOnce(Return(ByMove(boost::make_ready_future(std::string("")))));
 
   // The session executes the SQLPipeline using another scheduled task
-  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<ExecuteServerPreparedStatementTask>>()))
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<ExecuteServerPreparedStatementTaskSPtr>()))
       .WillOnce(Return(ByMove(boost::make_ready_future(sql_pipeline->get_result_table()))));
 
   // It sends the row data (one message per row)
@@ -321,11 +321,11 @@ TEST_F(ServerSessionTest, SessionHandlesLoadTableRequestInSimpleQueryCommand) {
   // The session schedules a CreatePipelineTask which is responsible for detecting the load table request
   auto create_pipeline_result = std::make_unique<CreatePipelineResult>();
   create_pipeline_result->load_table = std::make_pair("file name", "table name");
-  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<CreatePipelineTask>>()))
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<CreatePipelineTaskSPtr>()))
       .WillOnce(Return(ByMove(boost::make_ready_future(std::move(create_pipeline_result)))));
 
   // The session schedules a LoadServerFileTask
-  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<LoadServerFileTask>>()))
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<LoadServerFileTaskSPtr>()))
       .WillOnce(Return(ByMove(boost::make_ready_future())));
 
   EXPECT_CALL(*_connection, send_ready_for_query());
@@ -348,7 +348,7 @@ TEST_F(ServerSessionTest, SessionSendsErrorWhenRedefiningNamedStatement) {
 
   // For this test, we don't actually have to set the SQL Pipeline in the result
   auto create_pipeline_result = std::make_unique<CreatePipelineResult>();
-  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<CreatePipelineTask>>()))
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<CreatePipelineTaskSPtr>()))
       .WillOnce(Return(ByMove(boost::make_ready_future(std::move(create_pipeline_result)))));
 
   EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::ParseComplete));
@@ -404,7 +404,7 @@ TEST_F(ServerSessionTest, SessionSendsErrorWhenRedefiningNamedPortal) {
   auto sql_pipeline = _create_working_sql_pipeline();
   auto create_pipeline_result = std::make_unique<CreatePipelineResult>();
   create_pipeline_result->sql_pipeline = sql_pipeline;
-  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<CreatePipelineTask>>()))
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<CreatePipelineTaskSPtr>()))
       .WillOnce(Return(ByMove(boost::make_ready_future(std::move(create_pipeline_result)))));
 
   EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::ParseComplete));
@@ -421,7 +421,7 @@ TEST_F(ServerSessionTest, SessionSendsErrorWhenRedefiningNamedPortal) {
   placeholder_plan->set_num_parameters(0);
   auto sql_query_plan = std::make_unique<SQLQueryPlan>(placeholder_plan->recreate({}));
 
-  EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<BindServerPreparedStatementTask>>()))
+  EXPECT_CALL(*_task_runner, dispatch_server_task(An<BindServerPreparedStatementTaskSPtr>()))
       .WillOnce(Return(ByMove(boost::make_ready_future(std::move(sql_query_plan)))));
 
   EXPECT_CALL(*_connection, send_status_message(NetworkMessageType::BindComplete));

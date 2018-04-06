@@ -21,7 +21,7 @@ class StoredTableNodeTest : public BaseTest {
     _b = LQPColumnReference(_stored_table_node, ColumnID{1});
   }
 
-  std::shared_ptr<StoredTableNode> _stored_table_node;
+  StoredTableNodeSPtr _stored_table_node;
   LQPColumnReference _a, _b;
 };
 

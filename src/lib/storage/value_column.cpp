@@ -131,12 +131,12 @@ size_t ValueColumn<T>::size() const {
 }
 
 template <typename T>
-void ValueColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context) const {
+void ValueColumn<T>::visit(ColumnVisitable& visitable, ColumnVisitableContextSPtr context) const {
   visitable.handle_column(*this, std::move(context));
 }
 
 template <typename T>
-std::shared_ptr<BaseColumn> ValueColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+BaseColumnSPtr ValueColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   pmr_concurrent_vector<T> new_values(_values, alloc);
   if (is_nullable()) {
     pmr_concurrent_vector<bool> new_null_values(*_null_values, alloc);

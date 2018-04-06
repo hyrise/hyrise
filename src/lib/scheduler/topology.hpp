@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "types.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -33,9 +34,9 @@ class Topology final {
    * @param max_num_workers A values of zero indicates no limit
    * @param workers_per_node
    */
-  static std::shared_ptr<Topology> create_fake_numa_topology(uint32_t max_num_workers = 0,
+  static TopologySPtr create_fake_numa_topology(uint32_t max_num_workers = 0,
                                                              uint32_t workers_per_node = 1);
-  static std::shared_ptr<Topology> create_numa_topology(uint32_t max_num_cores = 0);
+  static TopologySPtr create_numa_topology(uint32_t max_num_cores = 0);
 
   Topology(std::vector<TopologyNode>&& nodes, size_t num_cpus) : _nodes(std::move(nodes)), _num_cpus(num_cpus) {}
 
@@ -49,4 +50,6 @@ class Topology final {
   std::vector<TopologyNode> _nodes;
   size_t _num_cpus;
 };
+
+
 }  // namespace opossum

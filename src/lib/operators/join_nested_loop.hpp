@@ -13,17 +13,17 @@ namespace opossum {
 
 class JoinNestedLoop : public AbstractJoinOperator {
  public:
-  JoinNestedLoop(const std::shared_ptr<const AbstractOperator> left,
-                 const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+  JoinNestedLoop(const AbstractOperatorCSPtr left,
+                 const AbstractOperatorCSPtr right, const JoinMode mode,
                  const ColumnIDPair& column_ids, const PredicateCondition predicate_condition);
 
   const std::string name() const override;
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  AbstractOperatorSPtr _on_recreate(
+      const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+      const AbstractOperatorSPtr& recreated_input_right) const override;
 
  protected:
-  std::shared_ptr<const Table> _on_execute() override;
+  TableCSPtr _on_execute() override;
 
   void _perform_join();
 
@@ -34,18 +34,18 @@ class JoinNestedLoop : public AbstractJoinOperator {
 
   void _create_table_structure();
 
-  void _write_output_chunks(ChunkColumns& columns, const std::shared_ptr<const Table> input_table,
-                            std::shared_ptr<PosList> pos_list);
+  void _write_output_chunks(ChunkColumns& columns, const TableCSPtr input_table,
+                            PosListSPtr pos_list);
 
-  std::shared_ptr<Table> _output_table;
-  std::shared_ptr<const Table> _left_in_table;
-  std::shared_ptr<const Table> _right_in_table;
+  TableSPtr _output_table;
+  TableCSPtr _left_in_table;
+  TableCSPtr _right_in_table;
   ColumnID _left_column_id;
   ColumnID _right_column_id;
 
   bool _is_outer_join;
-  std::shared_ptr<PosList> _pos_list_left;
-  std::shared_ptr<PosList> _pos_list_right;
+  PosListSPtr _pos_list_left;
+  PosListSPtr _pos_list_right;
 
   // for Full Outer, remember the matches on the right side
   std::set<RowID> _right_matches;

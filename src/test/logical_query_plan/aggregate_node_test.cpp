@@ -30,7 +30,7 @@ class AggregateNodeTest : public BaseTest {
 
     // SELECT a, c, SUM(a+b), SUM(a+c) AS some_sum [...] GROUP BY a, c
     // Columns are ordered as specified in the SELECT list
-    _aggregates = std::vector<std::shared_ptr<LQPExpression>>{
+    _aggregates = std::vector<LQPExpressionSPtr>{
         LQPExpression::create_aggregate_function(
             AggregateFunction::Sum,
             {LQPExpression::create_binary_operator(ExpressionType::Addition, _a_expr, _b_expr)}),
@@ -44,13 +44,13 @@ class AggregateNodeTest : public BaseTest {
     _aggregate_node->set_left_input(_mock_node);
   }
 
-  std::shared_ptr<MockNode> _mock_node;
-  std::shared_ptr<AggregateNode> _aggregate_node;
+  MockNodeSPtr _mock_node;
+  AggregateNodeSPtr _aggregate_node;
   LQPColumnReference _a;
   LQPColumnReference _b;
   LQPColumnReference _c;
-  std::shared_ptr<LQPExpression> _a_expr, _b_expr, _c_expr;
-  std::vector<std::shared_ptr<LQPExpression>> _aggregates;
+  LQPExpressionSPtr _a_expr, _b_expr, _c_expr;
+  std::vector<LQPExpressionSPtr> _aggregates;
   std::vector<LQPColumnReference> _groupby_columns;
 };
 
@@ -130,7 +130,7 @@ TEST_F(AggregateNodeTest, ShallowEquals) {
   EXPECT_TRUE(_aggregate_node->shallow_equals(*_aggregate_node));
 
   // Build a slightly different aggregate node
-  const auto aggregates_a = std::vector<std::shared_ptr<LQPExpression>>{
+  const auto aggregates_a = std::vector<LQPExpressionSPtr>{
       LQPExpression::create_aggregate_function(
           AggregateFunction::Min, {LQPExpression::create_binary_operator(ExpressionType::Addition, _a_expr, _b_expr)}),
       LQPExpression::create_aggregate_function(

@@ -9,7 +9,7 @@ class DropViewNodeTest : public ::testing::Test {
  public:
   void SetUp() override { _drop_view_node = DropViewNode::make("some_view"); }
 
-  std::shared_ptr<DropViewNode> _drop_view_node;
+  DropViewNodeSPtr _drop_view_node;
 };
 
 TEST_F(DropViewNodeTest, ShallowEquals) {

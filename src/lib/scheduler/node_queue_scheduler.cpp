@@ -17,7 +17,7 @@
 
 namespace opossum {
 
-NodeQueueScheduler::NodeQueueScheduler(std::shared_ptr<Topology> topology) : AbstractScheduler(topology) {
+NodeQueueScheduler::NodeQueueScheduler(TopologySPtr topology) : AbstractScheduler(topology) {
   _worker_id_allocator = std::make_shared<UidAllocator>();
 }
 
@@ -89,9 +89,9 @@ void NodeQueueScheduler::finish() {
   _shut_down = true;
 }
 
-const std::vector<std::shared_ptr<TaskQueue>>& NodeQueueScheduler::queues() const { return _queues; }
+const std::vector<TaskQueueSPtr>& NodeQueueScheduler::queues() const { return _queues; }
 
-void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id,
+void NodeQueueScheduler::schedule(AbstractTaskSPtr task, NodeID preferred_node_id,
                                   SchedulePriority priority) {
   /**
    * Add task to the queue of the preferred node.

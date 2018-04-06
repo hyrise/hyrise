@@ -23,12 +23,12 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   explicit MockNode(const ColumnDefinitions& column_definitions,
                     const std::optional<std::string>& alias = std::nullopt);
-  explicit MockNode(const std::shared_ptr<TableStatistics>& statistics,
+  explicit MockNode(const TableStatisticsSPtr& statistics,
                     const std::optional<std::string>& alias = std::nullopt);
 
   const std::vector<std::string>& output_column_names() const override;
 
-  const boost::variant<ColumnDefinitions, std::shared_ptr<TableStatistics>>& constructor_arguments() const;
+  const boost::variant<ColumnDefinitions, TableStatisticsSPtr>& constructor_arguments() const;
 
   std::string description() const override;
   std::string get_verbose_column_name(ColumnID column_id) const override;
@@ -36,14 +36,14 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
+  AbstractLQPNodeSPtr _deep_copy_impl(
+      const AbstractLQPNodeSPtr& copied_left_input,
+      const AbstractLQPNodeSPtr& copied_right_input) const override;
 
  private:
   std::vector<std::string> _output_column_names;
 
   // Constructor args to keep around for deep_copy()
-  boost::variant<ColumnDefinitions, std::shared_ptr<TableStatistics>> _constructor_arguments;
+  boost::variant<ColumnDefinitions, TableStatisticsSPtr> _constructor_arguments;
 };
 }  // namespace opossum

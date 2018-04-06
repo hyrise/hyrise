@@ -76,14 +76,14 @@ class LogicalQueryPlanTest : public BaseTest {
     _nodes[0]->set_left_input(_nodes[1]);
   }
 
-  std::array<std::shared_ptr<AbstractLQPNode>, 8> _nodes;
+  std::array<AbstractLQPNodeSPtr, 8> _nodes;
 
-  std::shared_ptr<MockNode> _mock_node_a;
-  std::shared_ptr<MockNode> _mock_node_b;
-  std::shared_ptr<PredicateNode> _predicate_node_a;
-  std::shared_ptr<PredicateNode> _predicate_node_b;
-  std::shared_ptr<ProjectionNode> _projection_node;
-  std::shared_ptr<JoinNode> _join_node;
+  MockNodeSPtr _mock_node_a;
+  MockNodeSPtr _mock_node_b;
+  PredicateNodeSPtr _predicate_node_a;
+  PredicateNodeSPtr _predicate_node_b;
+  ProjectionNodeSPtr _projection_node;
+  JoinNodeSPtr _join_node;
 
   LQPColumnReference _t_a_a;
   LQPColumnReference _t_a_b;
@@ -98,14 +98,14 @@ TEST_F(LogicalQueryPlanTest, SimpleOutputTest) {
 
   _predicate_node_a->set_left_input(_mock_node_a);
 
-  ASSERT_EQ(_mock_node_a->outputs(), std::vector<std::shared_ptr<AbstractLQPNode>>{_predicate_node_a});
+  ASSERT_EQ(_mock_node_a->outputs(), std::vector<AbstractLQPNodeSPtr>{_predicate_node_a});
   ASSERT_EQ(_predicate_node_a->left_input(), _mock_node_a);
   ASSERT_EQ(_predicate_node_a->right_input(), nullptr);
   ASSERT_TRUE(_predicate_node_a->outputs().empty());
 
   _projection_node->set_left_input(_predicate_node_a);
 
-  ASSERT_EQ(_predicate_node_a->outputs(), std::vector<std::shared_ptr<AbstractLQPNode>>{_projection_node});
+  ASSERT_EQ(_predicate_node_a->outputs(), std::vector<AbstractLQPNodeSPtr>{_projection_node});
   ASSERT_EQ(_projection_node->left_input(), _predicate_node_a);
   ASSERT_EQ(_projection_node->right_input(), nullptr);
   ASSERT_TRUE(_projection_node->outputs().empty());
@@ -116,7 +116,7 @@ TEST_F(LogicalQueryPlanTest, SimpleOutputTest) {
 TEST_F(LogicalQueryPlanTest, SimpleClearOutputs) {
   _predicate_node_a->set_left_input(_mock_node_a);
 
-  ASSERT_EQ(_mock_node_a->outputs(), std::vector<std::shared_ptr<AbstractLQPNode>>{_predicate_node_a});
+  ASSERT_EQ(_mock_node_a->outputs(), std::vector<AbstractLQPNodeSPtr>{_predicate_node_a});
   ASSERT_EQ(_predicate_node_a->left_input(), _mock_node_a);
   ASSERT_EQ(_predicate_node_a->right_input(), nullptr);
   ASSERT_TRUE(_predicate_node_a->outputs().empty());
@@ -136,21 +136,21 @@ TEST_F(LogicalQueryPlanTest, ChainSameNodesTest) {
 
   _predicate_node_a->set_left_input(_mock_node_a);
 
-  ASSERT_EQ(_mock_node_a->outputs(), std::vector<std::shared_ptr<AbstractLQPNode>>{_predicate_node_a});
+  ASSERT_EQ(_mock_node_a->outputs(), std::vector<AbstractLQPNodeSPtr>{_predicate_node_a});
   ASSERT_EQ(_predicate_node_a->left_input(), _mock_node_a);
   ASSERT_EQ(_predicate_node_a->right_input(), nullptr);
   ASSERT_TRUE(_predicate_node_a->outputs().empty());
 
   _predicate_node_b->set_left_input(_predicate_node_a);
 
-  ASSERT_EQ(_predicate_node_a->outputs(), std::vector<std::shared_ptr<AbstractLQPNode>>{_predicate_node_b});
+  ASSERT_EQ(_predicate_node_a->outputs(), std::vector<AbstractLQPNodeSPtr>{_predicate_node_b});
   ASSERT_EQ(_predicate_node_b->left_input(), _predicate_node_a);
   ASSERT_EQ(_predicate_node_b->right_input(), nullptr);
   ASSERT_TRUE(_predicate_node_b->outputs().empty());
 
   _projection_node->set_left_input(_predicate_node_b);
 
-  ASSERT_EQ(_predicate_node_b->outputs(), std::vector<std::shared_ptr<AbstractLQPNode>>{_projection_node});
+  ASSERT_EQ(_predicate_node_b->outputs(), std::vector<AbstractLQPNodeSPtr>{_projection_node});
   ASSERT_EQ(_projection_node->left_input(), _predicate_node_b);
   ASSERT_EQ(_projection_node->right_input(), nullptr);
   ASSERT_TRUE(_projection_node->outputs().empty());
@@ -168,8 +168,8 @@ TEST_F(LogicalQueryPlanTest, TwoInputsTest) {
   ASSERT_EQ(_join_node->right_input(), _mock_node_b);
   ASSERT_TRUE(_join_node->outputs().empty());
 
-  ASSERT_EQ(_mock_node_a->outputs(), std::vector<std::shared_ptr<AbstractLQPNode>>{_join_node});
-  ASSERT_EQ(_mock_node_b->outputs(), std::vector<std::shared_ptr<AbstractLQPNode>>{_join_node});
+  ASSERT_EQ(_mock_node_a->outputs(), std::vector<AbstractLQPNodeSPtr>{_join_node});
+  ASSERT_EQ(_mock_node_b->outputs(), std::vector<AbstractLQPNodeSPtr>{_join_node});
 }
 
 TEST_F(LogicalQueryPlanTest, AliasedSubqueryTest) {
@@ -315,7 +315,7 @@ TEST_F(LogicalQueryPlanTest, ColumnReferenceCloning) {
   const auto column_reference_b = LQPColumnReference{mock_node_b, ColumnID{0}};
 
   auto aggregate_node =
-      AggregateNode::make(std::vector<std::shared_ptr<LQPExpression>>({LQPExpression::create_aggregate_function(
+      AggregateNode::make(std::vector<LQPExpressionSPtr>({LQPExpression::create_aggregate_function(
                               AggregateFunction::Sum, {LQPExpression::create_column(column_reference_a)})}),
                           std::vector<LQPColumnReference>{{column_reference_b}});
 
@@ -380,7 +380,7 @@ TEST_F(LogicalQueryPlanTest, ColumnIDByColumnReference) {
   const auto column_reference_a = LQPColumnReference{mock_node_a, ColumnID{0}};
   const auto column_reference_b = LQPColumnReference{mock_node_a, ColumnID{1}};
   auto aggregate_node =
-      AggregateNode::make(std::vector<std::shared_ptr<LQPExpression>>({LQPExpression::create_aggregate_function(
+      AggregateNode::make(std::vector<LQPExpressionSPtr>({LQPExpression::create_aggregate_function(
                               AggregateFunction::Sum, {LQPExpression::create_column(column_reference_a)})}),
                           std::vector<LQPColumnReference>{{column_reference_b}});
 

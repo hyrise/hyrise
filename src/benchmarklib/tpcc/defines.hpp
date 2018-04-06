@@ -11,6 +11,6 @@ class OperatorTask;
 
 namespace tpcc {
 
-using TaskVector = std::vector<std::shared_ptr<opossum::OperatorTask>>;
+using TaskVector = std::vector<opossum::OperatorTaskSPtr>;
 
 }  // namespace tpcc

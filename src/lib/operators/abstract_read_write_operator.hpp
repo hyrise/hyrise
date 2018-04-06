@@ -29,8 +29,8 @@ enum class ReadWriteOperatorState {
 class AbstractReadWriteOperator : public AbstractOperator {
  public:
   explicit AbstractReadWriteOperator(const OperatorType type,
-                                     const std::shared_ptr<const AbstractOperator> left = nullptr,
-                                     const std::shared_ptr<const AbstractOperator> right = nullptr);
+                                     const AbstractOperatorCSPtr left = nullptr,
+                                     const AbstractOperatorCSPtr right = nullptr);
 
   void execute() override;
 
@@ -64,7 +64,7 @@ class AbstractReadWriteOperator : public AbstractOperator {
    *
    * @returns nullptr, since these operators do not create new intermediate results but modify existing tables
    */
-  std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override = 0;
+  TableCSPtr _on_execute(TransactionContextSPtr context) override = 0;
 
   /**
    * Commits the operator by applying the cid to the mvcc columns for all modified rows and unlocking them. The

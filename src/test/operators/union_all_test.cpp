@@ -25,12 +25,12 @@ class OperatorsUnionAllTest : public BaseTest {
     _table_wrapper_b->execute();
   }
 
-  std::shared_ptr<TableWrapper> _table_wrapper_a;
-  std::shared_ptr<TableWrapper> _table_wrapper_b;
+  TableWrapperSPtr _table_wrapper_a;
+  TableWrapperSPtr _table_wrapper_b;
 };
 
 TEST_F(OperatorsUnionAllTest, UnionOfValueTables) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_union.tbl", 2);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_union.tbl", 2);
 
   auto union_all = std::make_shared<UnionAll>(_table_wrapper_a, _table_wrapper_b);
   union_all->execute();
@@ -39,7 +39,7 @@ TEST_F(OperatorsUnionAllTest, UnionOfValueTables) {
 }
 
 TEST_F(OperatorsUnionAllTest, UnionOfValueReferenceTables) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_union.tbl", 2);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_union.tbl", 2);
 
   auto projection = std::make_shared<Projection>(
       _table_wrapper_a, Projection::ColumnExpressions{PQPExpression::create_column(ColumnID{0}),
@@ -54,7 +54,7 @@ TEST_F(OperatorsUnionAllTest, UnionOfValueReferenceTables) {
 
 TEST_F(OperatorsUnionAllTest, ThrowWrongColumnNumberException) {
   if (!IS_DEBUG) return;
-  std::shared_ptr<Table> test_table_c = load_table("src/test/tables/int.tbl", 2);
+  TableSPtr test_table_c = load_table("src/test/tables/int.tbl", 2);
   auto gt_c = std::make_shared<TableWrapper>(std::move(test_table_c));
   gt_c->execute();
 
@@ -65,7 +65,7 @@ TEST_F(OperatorsUnionAllTest, ThrowWrongColumnNumberException) {
 
 TEST_F(OperatorsUnionAllTest, ThrowWrongColumnOrderException) {
   if (!IS_DEBUG) return;
-  std::shared_ptr<Table> test_table_d = load_table("src/test/tables/float_int.tbl", 2);
+  TableSPtr test_table_d = load_table("src/test/tables/float_int.tbl", 2);
   auto gt_d = std::make_shared<TableWrapper>(std::move(test_table_d));
   gt_d->execute();
 

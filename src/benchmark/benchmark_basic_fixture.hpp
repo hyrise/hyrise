@@ -19,9 +19,9 @@ class BenchmarkBasicFixture : public benchmark::Fixture {
   void clear_cache();
 
  protected:
-  std::shared_ptr<TableWrapper> _table_wrapper_a;
-  std::shared_ptr<TableWrapper> _table_wrapper_b;
-  std::shared_ptr<TableWrapper> _table_dict_wrapper;
+  TableWrapperSPtr _table_wrapper_a;
+  TableWrapperSPtr _table_wrapper_b;
+  TableWrapperSPtr _table_dict_wrapper;
   ChunkID _chunk_size;
 };
 

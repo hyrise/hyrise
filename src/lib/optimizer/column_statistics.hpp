@@ -27,7 +27,7 @@ class ColumnStatistics : public BaseColumnStatistics {
    * @param column_id: id of corresponding column
    * @param table: table, which contains the column
    */
-  ColumnStatistics(const ColumnID column_id, const std::weak_ptr<Table> table);
+  ColumnStatistics(const ColumnID column_id, const TableWPtr table);
   /**
    * Create a new column statistics object from given parameters.
    * Distinct count, min and max are set during the creation. Non-null value ratio can be optionally set.
@@ -49,7 +49,7 @@ class ColumnStatistics : public BaseColumnStatistics {
 
   TwoColumnSelectivityResult estimate_selectivity_for_two_column_predicate(
       const PredicateCondition predicate_condition,
-      const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
+      const BaseColumnStatisticsSPtr& right_base_column_statistics,
       const std::optional<AllTypeVariant>& value2 = std::nullopt) override;
 
   /**
@@ -58,7 +58,7 @@ class ColumnStatistics : public BaseColumnStatistics {
    */
   float distinct_count() const override;
 
-  std::shared_ptr<BaseColumnStatistics> clone() const override;
+  BaseColumnStatisticsSPtr clone() const override;
 
  protected:
   std::ostream& _print_to_stream(std::ostream& os) const override;
@@ -69,7 +69,7 @@ class ColumnStatistics : public BaseColumnStatistics {
    * Returns a column statistics identical to this which does not have null values.
    * @return shared pointer of this or copy of this, if column has null values.
    */
-  std::shared_ptr<BaseColumnStatistics> _this_without_null_values();
+  BaseColumnStatisticsSPtr _this_without_null_values();
 
   /**
    * Create column statistics and estimate selectivity based on new range.
@@ -109,7 +109,7 @@ class ColumnStatistics : public BaseColumnStatistics {
   // Only available for statistics of tables in the StorageManager.
   // This is a weak_ptr, as
   // Table --shared_ptr--> TableStatistics --shared_ptr--> ColumnStatistics
-  const std::weak_ptr<Table> _table;
+  const TableWPtr _table;
 
   // those can be lazy initialized
 

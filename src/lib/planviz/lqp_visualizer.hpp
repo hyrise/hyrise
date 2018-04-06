@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-class LQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<AbstractLQPNode>>> {
+class LQPVisualizer : public AbstractVisualizer<std::vector<AbstractLQPNodeSPtr>> {
  public:
   LQPVisualizer();
 
@@ -21,12 +21,12 @@ class LQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<Abst
                 VizEdgeInfo edge_info);
 
  protected:
-  void _build_graph(const std::vector<std::shared_ptr<AbstractLQPNode>>& lqp_roots) override;
+  void _build_graph(const std::vector<AbstractLQPNodeSPtr>& lqp_roots) override;
 
-  void _build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
-                      std::unordered_set<std::shared_ptr<const AbstractLQPNode>>& visualized_nodes);
+  void _build_subtree(const AbstractLQPNodeSPtr& node,
+                      std::unordered_set<AbstractLQPNodeCSPtr>& visualized_nodes);
 
-  void _build_dataflow(const std::shared_ptr<AbstractLQPNode>& from, const std::shared_ptr<AbstractLQPNode>& to);
+  void _build_dataflow(const AbstractLQPNodeSPtr& from, const AbstractLQPNodeSPtr& to);
 };
 
 }  // namespace opossum

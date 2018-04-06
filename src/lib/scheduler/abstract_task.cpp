@@ -30,14 +30,14 @@ std::string AbstractTask::description() const {
 
 void AbstractTask::set_id(TaskID id) { _id = id; }
 
-void AbstractTask::set_as_predecessor_of(std::shared_ptr<AbstractTask> successor) {
+void AbstractTask::set_as_predecessor_of(AbstractTaskSPtr successor) {
   DebugAssert((!_is_scheduled), "Possible race: Don't set dependencies after the Task was scheduled");
 
   successor->_on_predecessor_added();
   _successors.emplace_back(successor);
 }
 
-const std::vector<std::shared_ptr<AbstractTask>>& AbstractTask::successors() const { return _successors; }
+const std::vector<AbstractTaskSPtr>& AbstractTask::successors() const { return _successors; }
 
 void AbstractTask::set_node_id(NodeID node_id) { _node_id = node_id; }
 
@@ -70,7 +70,7 @@ void AbstractTask::join() {
   if (CurrentScheduler::is_set()) {
     auto worker = Worker::get_this_thread_worker();
     if (worker) {
-      worker->_wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>({shared_from_this()}));
+      worker->_wait_for_tasks(std::vector<AbstractTaskSPtr>({shared_from_this()}));
       return;
     }
   }

@@ -82,7 +82,7 @@ class UidAllocator;
  */
 class NodeQueueScheduler : public AbstractScheduler {
  public:
-  explicit NodeQueueScheduler(std::shared_ptr<Topology> setup);
+  explicit NodeQueueScheduler(TopologySPtr setup);
   ~NodeQueueScheduler();
 
   /**
@@ -93,21 +93,21 @@ class NodeQueueScheduler : public AbstractScheduler {
 
   void finish() override;
 
-  const std::vector<std::shared_ptr<TaskQueue>>& queues() const override;
+  const std::vector<TaskQueueSPtr>& queues() const override;
 
   /**
    * @param task
    * @param preferred_node_id The Task will be initially added to this node, but might get stolen by other Nodes later
    * @param priority Determines whether tasks are inserted at the beginning or end of the queue.
    */
-  void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
+  void schedule(AbstractTaskSPtr task, NodeID preferred_node_id = CURRENT_NODE_ID,
                 SchedulePriority priority = SchedulePriority::Normal) override;
 
  private:
   std::atomic<TaskID> _task_counter{TaskID{0}};
-  std::shared_ptr<UidAllocator> _worker_id_allocator;
-  std::vector<std::shared_ptr<TaskQueue>> _queues;
-  std::vector<std::shared_ptr<ProcessingUnit>> _processing_units;
+  UidAllocatorSPtr _worker_id_allocator;
+  std::vector<TaskQueueSPtr> _queues;
+  std::vector<ProcessingUnitSPtr> _processing_units;
   std::atomic_bool _shut_down{false};
 };
 

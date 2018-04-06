@@ -19,8 +19,8 @@ class MockNodeTest : public BaseTest {
     _mock_node = MockNode::make(_statistics);
   }
 
-  std::shared_ptr<MockNode> _mock_node;
-  std::shared_ptr<TableStatistics> _statistics;
+  MockNodeSPtr _mock_node;
+  TableStatisticsSPtr _statistics;
 };
 
 TEST_F(MockNodeTest, Description) { EXPECT_EQ(_mock_node->description(), "[MockTable]"); }

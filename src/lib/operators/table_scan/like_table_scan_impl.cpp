@@ -21,7 +21,7 @@
 
 namespace opossum {
 
-LikeTableScanImpl::LikeTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
+LikeTableScanImpl::LikeTableScanImpl(TableCSPtr in_table, const ColumnID left_column_id,
                                      const PredicateCondition predicate_condition, const std::string& right_wildcard)
     : BaseSingleColumnTableScanImpl{in_table, left_column_id, predicate_condition},
       _right_wildcard{right_wildcard},
@@ -32,7 +32,7 @@ LikeTableScanImpl::LikeTableScanImpl(std::shared_ptr<const Table> in_table, cons
 }
 
 void LikeTableScanImpl::handle_column(const BaseValueColumn& base_column,
-                                      std::shared_ptr<ColumnVisitableContext> base_context) {
+                                      ColumnVisitableContextSPtr base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
@@ -51,7 +51,7 @@ void LikeTableScanImpl::handle_column(const BaseValueColumn& base_column,
 }
 
 void LikeTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
-                                      std::shared_ptr<ColumnVisitableContext> base_context) {
+                                      ColumnVisitableContextSPtr base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
@@ -94,7 +94,7 @@ std::string LikeTableScanImpl::sqllike_to_regex(std::string sqllike) {
 }
 
 void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
-                                      std::shared_ptr<ColumnVisitableContext> base_context) {
+                                      ColumnVisitableContextSPtr base_context) {
   const auto& left_column = static_cast<const DictionaryColumn<std::string>&>(base_column);
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;

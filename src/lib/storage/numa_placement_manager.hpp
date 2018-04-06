@@ -63,7 +63,7 @@ class NUMAPlacementManager {
 
   boost::container::pmr::memory_resource* get_memory_resource(int node_id);
 
-  const std::shared_ptr<Topology>& topology() const;
+  const TopologySPtr& topology() const;
   const Options& options() const;
 
   void resume();
@@ -75,10 +75,10 @@ class NUMAPlacementManager {
   NUMAPlacementManager(NUMAPlacementManager&&) = delete;
 
  protected:
-  explicit NUMAPlacementManager(const std::shared_ptr<Topology> topology = Topology::create_numa_topology());
+  explicit NUMAPlacementManager(const TopologySPtr topology = Topology::create_numa_topology());
 
   Options _options;
-  std::shared_ptr<Topology> _topology;
+  TopologySPtr _topology;
 
   std::vector<NUMAMemoryResource> _memory_resources;
   std::unique_ptr<PausableLoopThread> _collector_thread;

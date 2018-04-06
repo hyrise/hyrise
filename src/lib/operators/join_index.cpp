@@ -24,8 +24,8 @@ namespace opossum {
  * For the remaining join types or if no index is found it falls back to a nested loop join.
  */
 
-JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator> left,
-                     const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+JoinIndex::JoinIndex(const AbstractOperatorCSPtr left,
+                     const AbstractOperatorCSPtr right, const JoinMode mode,
                      const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition predicate_condition)
     : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, column_ids, predicate_condition) {
   DebugAssert(mode != JoinMode::Cross, "Cross Join is not supported by index join.");
@@ -33,14 +33,14 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator> left,
 
 const std::string JoinIndex::name() const { return "JoinIndex"; }
 
-std::shared_ptr<AbstractOperator> JoinIndex::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+AbstractOperatorSPtr JoinIndex::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+    const AbstractOperatorSPtr& recreated_input_right) const {
   return std::make_shared<JoinIndex>(recreated_input_left, recreated_input_right, _mode, _column_ids,
                                      _predicate_condition);
 }
 
-std::shared_ptr<const Table> JoinIndex::_on_execute() {
+TableCSPtr JoinIndex::_on_execute() {
   _create_table_structure();
 
   _perform_join();
@@ -100,7 +100,7 @@ void JoinIndex::_perform_join() {
     const auto indices = chunk_right->get_indices(std::vector<ColumnID>{_right_column_id});
     _right_matches[chunk_id_right].resize(chunk_right->size());
 
-    std::shared_ptr<BaseIndex> index = nullptr;
+    BaseIndexSPtr index = nullptr;
 
     if (indices.size() > 0) {
       // We assume the first index to be efficient for our join
@@ -193,7 +193,7 @@ void JoinIndex::_perform_join() {
 // join loop that joins two chunks of two columns using an iterator for the left, and an index for the right
 template <typename LeftIterator>
 void JoinIndex::_join_two_columns_using_index(LeftIterator left_it, LeftIterator left_end, const ChunkID chunk_id_left,
-                                              const ChunkID chunk_id_right, std::shared_ptr<BaseIndex> index) {
+                                              const ChunkID chunk_id_right, BaseIndexSPtr index) {
   for (; left_it != left_end; ++left_it) {
     const auto left_value = *left_it;
     if (left_value.is_null()) continue;
@@ -309,11 +309,11 @@ void JoinIndex::_append_matches(const BaseIndex::Iterator& range_begin, const Ba
   }
 }
 
-void JoinIndex::_write_output_columns(ChunkColumns& output_columns, const std::shared_ptr<const Table> input_table,
-                                      std::shared_ptr<PosList> pos_list) {
+void JoinIndex::_write_output_columns(ChunkColumns& output_columns, const TableCSPtr input_table,
+                                      PosListSPtr pos_list) {
   // Add columns from table to output chunk
   for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
-    std::shared_ptr<BaseColumn> column;
+    BaseColumnSPtr column;
 
     if (input_table->type() == TableType::References) {
       if (input_table->chunk_count() > 0) {

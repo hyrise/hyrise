@@ -23,7 +23,7 @@
 
 namespace opossum {
 
-std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::optional<CsvMeta>& csv_meta) {
+TableSPtr CsvParser::parse(const std::string& filename, const std::optional<CsvMeta>& csv_meta) {
   // If no meta info is given as a parameter, look for a json file
   if (csv_meta == std::nullopt) {
     _meta = process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION);
@@ -46,7 +46,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
 
   // Save chunks in list to avoid memory relocation
   std::list<ChunkColumns> columns_by_chunks;
-  std::vector<std::shared_ptr<JobTask>> tasks;
+  std::vector<JobTaskSPtr> tasks;
   std::vector<size_t> field_ends;
   while (_find_fields_in_chunk(content_view, *table.get(), field_ends)) {
     // create empty chunk
@@ -79,7 +79,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   return table;
 }
 
-std::shared_ptr<Table> CsvParser::_create_table_from_meta() {
+TableSPtr CsvParser::_create_table_from_meta() {
   TableColumnDefinitions colum_definitions;
   for (const auto& column_meta : _meta.columns) {
     auto column_name = column_meta.name;

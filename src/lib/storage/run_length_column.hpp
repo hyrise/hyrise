@@ -45,7 +45,7 @@ class RunLengthColumn : public BaseEncodedColumn {
 
   size_t size() const final;
 
-  std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
+  BaseColumnSPtr copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
   size_t estimate_memory_usage() const final;
 

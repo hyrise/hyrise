@@ -43,8 +43,8 @@ class RecreationTest : public BaseTest {
     StorageManager::get().add_table("aNiceTestTable", _test_get_table);
   }
 
-  std::shared_ptr<Table> _test_get_table;
-  std::shared_ptr<TableWrapper> _table_wrapper_a, _table_wrapper_b, _table_wrapper_c, _table_wrapper_d;
+  TableSPtr _test_get_table;
+  TableWrapperSPtr _table_wrapper_a, _table_wrapper_b, _table_wrapper_c, _table_wrapper_d;
 };
 
 template <typename T>
@@ -55,7 +55,7 @@ using JoinTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge>;
 TYPED_TEST_CASE(RecreationTestJoin, JoinTypes);
 
 TYPED_TEST(RecreationTestJoin, RecreationJoin) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/joinoperators/int_left_join.tbl", 1);
+  TableSPtr expected_result = load_table("src/test/tables/joinoperators/int_left_join.tbl", 1);
   EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
 
   // build and execute join
@@ -77,7 +77,7 @@ TYPED_TEST(RecreationTestJoin, RecreationJoin) {
 }
 
 TEST_F(RecreationTest, RecreationDifference) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 2);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 2);
 
   // build and execute difference
   auto difference = std::make_shared<Difference>(_table_wrapper_a, _table_wrapper_c);
@@ -110,7 +110,7 @@ TEST_F(RecreationTest, RecreationGetTable) {
 }
 
 TEST_F(RecreationTest, RecreationLimit) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int3_limit_1.tbl", 1);
+  TableSPtr expected_result = load_table("src/test/tables/int_int3_limit_1.tbl", 1);
 
   // build and execute limit
   auto limit = std::make_shared<Limit>(_table_wrapper_d, 1);
@@ -128,7 +128,7 @@ TEST_F(RecreationTest, RecreationLimit) {
 }
 
 TEST_F(RecreationTest, RecreationSort) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_sorted.tbl", 1);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_sorted.tbl", 1);
 
   // build and execute sort
   auto sort = std::make_shared<Sort>(_table_wrapper_a, ColumnID{0}, OrderByMode::Ascending, 2u);
@@ -146,7 +146,7 @@ TEST_F(RecreationTest, RecreationSort) {
 }
 
 TEST_F(RecreationTest, RecreationTableScan) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
 
   // build and execute table scan
   auto scan =

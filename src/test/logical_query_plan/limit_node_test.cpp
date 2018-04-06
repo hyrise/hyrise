@@ -12,7 +12,7 @@ class LimitNodeTest : public BaseTest {
  protected:
   void SetUp() override { _limit_node = LimitNode::make(10); }
 
-  std::shared_ptr<LimitNode> _limit_node;
+  LimitNodeSPtr _limit_node;
 };
 
 TEST_F(LimitNodeTest, Description) { EXPECT_EQ(_limit_node->description(), "[Limit] 10 rows"); }

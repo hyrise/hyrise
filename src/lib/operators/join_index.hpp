@@ -21,23 +21,23 @@ namespace opossum {
    */
 class JoinIndex : public AbstractJoinOperator {
  public:
-  JoinIndex(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
+  JoinIndex(const AbstractOperatorCSPtr left, const AbstractOperatorCSPtr right,
             const JoinMode mode, const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition scan_type);
 
   const std::string name() const override;
 
  protected:
-  std::shared_ptr<const Table> _on_execute() override;
+  TableCSPtr _on_execute() override;
 
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  AbstractOperatorSPtr _on_recreate(
+      const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+      const AbstractOperatorSPtr& recreated_input_right) const override;
 
   void _perform_join();
 
   template <typename LeftIterator>
   void _join_two_columns_using_index(LeftIterator left_it, LeftIterator left_end, const ChunkID chunk_id_left,
-                                     const ChunkID chunk_id_right, std::shared_ptr<BaseIndex> index);
+                                     const ChunkID chunk_id_right, BaseIndexSPtr index);
 
   template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
   void _join_two_columns_nested_loop(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
@@ -49,17 +49,17 @@ class JoinIndex : public AbstractJoinOperator {
 
   void _create_table_structure();
 
-  void _write_output_columns(ChunkColumns& output_columns, const std::shared_ptr<const Table> input_table,
-                             std::shared_ptr<PosList> pos_list);
+  void _write_output_columns(ChunkColumns& output_columns, const TableCSPtr input_table,
+                             PosListSPtr pos_list);
 
-  std::shared_ptr<Table> _output_table;
-  std::shared_ptr<const Table> _left_in_table;
-  std::shared_ptr<const Table> _right_in_table;
+  TableSPtr _output_table;
+  TableCSPtr _left_in_table;
+  TableCSPtr _right_in_table;
   ColumnID _left_column_id;
   ColumnID _right_column_id;
 
-  std::shared_ptr<PosList> _pos_list_left;
-  std::shared_ptr<PosList> _pos_list_right;
+  PosListSPtr _pos_list_left;
+  PosListSPtr _pos_list_right;
 
   // for left/right/outer joins
   // The outer vector enumerates chunks, the inner enumerates chunk_offsets

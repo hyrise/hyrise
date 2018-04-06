@@ -24,7 +24,7 @@ class TPCCBenchmarkFixture : public benchmark::Fixture {
  protected:
   tpcc::TpccTableGenerator _gen;
   tpcc::TpccRandomGenerator _random_gen;
-  std::map<std::string, std::shared_ptr<Table>> _tpcc_tables;
+  std::map<std::string, TableSPtr> _tpcc_tables;
 
   void clear_cache();
 };

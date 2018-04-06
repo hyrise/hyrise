@@ -25,18 +25,18 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
  protected:
   void SetUp() override { _encoding_type = GetParam(); }
 
-  std::shared_ptr<TableWrapper> get_table_op() {
+  TableWrapperSPtr get_table_op() {
     auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
     table_wrapper->execute();
     return table_wrapper;
   }
 
-  std::shared_ptr<TableWrapper> get_table_op_even_dict() {
+  TableWrapperSPtr get_table_op_even_dict() {
     TableColumnDefinitions table_column_definitions;
     table_column_definitions.emplace_back("a", DataType::Int);
     table_column_definitions.emplace_back("b", DataType::Int);
 
-    std::shared_ptr<Table> test_even_dict = std::make_shared<Table>(table_column_definitions, TableType::Data, 5);
+    TableSPtr test_even_dict = std::make_shared<Table>(table_column_definitions, TableType::Data, 5);
     for (int i = 0; i <= 24; i += 2) test_even_dict->append({i, 100 + i});
     ChunkEncoder::encode_chunks(test_even_dict, {ChunkID{0}, ChunkID{1}}, {_encoding_type});
 
@@ -46,18 +46,18 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     return table_wrapper_even_dict;
   }
 
-  std::shared_ptr<TableWrapper> get_table_op_null() {
+  TableWrapperSPtr get_table_op_null() {
     auto table_wrapper_null = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 2));
     table_wrapper_null->execute();
     return table_wrapper_null;
   }
 
-  std::shared_ptr<TableWrapper> get_table_op_part_dict() {
+  TableWrapperSPtr get_table_op_part_dict() {
     TableColumnDefinitions table_column_definitions;
     table_column_definitions.emplace_back("a", DataType::Int);
     table_column_definitions.emplace_back("b", DataType::Float);
 
-    std::shared_ptr<Table> table = std::make_shared<Table>(table_column_definitions, TableType::Data, 5);
+    TableSPtr table = std::make_shared<Table>(table_column_definitions, TableType::Data, 5);
 
     for (int i = 1; i < 20; ++i) {
       table->append({i, 100.1 + i});
@@ -71,12 +71,12 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     return table_wrapper;
   }
 
-  std::shared_ptr<TableWrapper> get_table_op_filtered() {
+  TableWrapperSPtr get_table_op_filtered() {
     TableColumnDefinitions table_column_definitions;
     table_column_definitions.emplace_back("a", DataType::Int);
     table_column_definitions.emplace_back("b", DataType::Float);
 
-    std::shared_ptr<Table> table = std::make_shared<Table>(table_column_definitions, TableType::References, 5);
+    TableSPtr table = std::make_shared<Table>(table_column_definitions, TableType::References, 5);
 
     const auto test_table_part_dict = get_table_op_part_dict()->get_output();
 
@@ -103,13 +103,13 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     return table_wrapper;
   }
 
-  std::shared_ptr<TableWrapper> get_table_op_with_n_dict_entries(const int num_entries) {
+  TableWrapperSPtr get_table_op_with_n_dict_entries(const int num_entries) {
     // Set up dictionary encoded table with a dictionary consisting of num_entries entries.
     TableColumnDefinitions table_column_definitions;
     table_column_definitions.emplace_back("a", DataType::Int);
     table_column_definitions.emplace_back("b", DataType::Float);
 
-    std::shared_ptr<Table> table = std::make_shared<Table>(table_column_definitions, TableType::Data);
+    TableSPtr table = std::make_shared<Table>(table_column_definitions, TableType::Data);
 
     for (int i = 0; i <= num_entries; i++) {
       table->append({i, 100.0f + i});
@@ -122,7 +122,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     return table_wrapper;
   }
 
-  std::shared_ptr<const Table> to_referencing_table(const std::shared_ptr<const Table>& table) {
+  TableCSPtr to_referencing_table(const TableCSPtr& table) {
     auto pos_list = std::make_shared<PosList>();
     pos_list->reserve(table->row_count());
 
@@ -151,7 +151,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     return table_out;
   }
 
-  std::shared_ptr<const Table> create_referencing_table_w_null_row_id(const bool references_dict_column) {
+  TableCSPtr create_referencing_table_w_null_row_id(const bool references_dict_column) {
     const auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
 
     if (references_dict_column) {
@@ -178,7 +178,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     return ref_table;
   }
 
-  void scan_for_null_values(const std::shared_ptr<AbstractOperator> in,
+  void scan_for_null_values(const AbstractOperatorSPtr in,
                             const std::map<PredicateCondition, std::vector<AllTypeVariant>>& tests) {
     for (const auto& test : tests) {
       const auto predicate_condition = test.first;
@@ -192,7 +192,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     }
   }
 
-  void ASSERT_COLUMN_EQ(std::shared_ptr<const Table> table, const ColumnID& column_id,
+  void ASSERT_COLUMN_EQ(TableCSPtr table, const ColumnID& column_id,
                         std::vector<AllTypeVariant> expected) {
     for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto chunk = table->get_chunk(chunk_id);
@@ -230,7 +230,7 @@ INSTANTIATE_TEST_CASE_P(DictionaryEncodingTypes, OperatorsTableScanTest, ::testi
                         formatter);
 
 TEST_P(OperatorsTableScanTest, DoubleScan) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered.tbl", 2);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_filtered.tbl", 2);
 
   auto scan_1 = std::make_shared<TableScan>(get_table_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   scan_1->execute();
@@ -250,7 +250,7 @@ TEST_P(OperatorsTableScanTest, EmptyResultScan) {
 }
 
 TEST_P(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 1);
 
   auto scan = std::make_shared<TableScan>(get_table_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   scan->execute();
@@ -318,7 +318,7 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedDictColumn) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanPartiallyCompressed) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_seq_filtered.tbl", 2);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_seq_filtered.tbl", 2);
 
   auto table_wrapper = get_table_op_part_dict();
   auto scan_1 = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, PredicateCondition::LessThan, 10);
@@ -328,7 +328,7 @@ TEST_P(OperatorsTableScanTest, ScanPartiallyCompressed) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanWeirdPosList) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_seq_filtered_onlyodd.tbl", 2);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_seq_filtered_onlyodd.tbl", 2);
 
   auto table_wrapper = get_table_op_filtered();
   auto scan_1 = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, PredicateCondition::LessThan, 10);

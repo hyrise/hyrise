@@ -21,24 +21,24 @@ namespace {
  * On worker threads, this references the Worker running on this thread, on all other threads, this is empty.
  * Uses a weak_ptr, because otherwise the ref-count of it would not reach zero within the main() scope of the program.
  */
-thread_local std::weak_ptr<opossum::Worker> this_thread_worker;
+thread_local opossum::WorkerWPtr this_thread_worker;
 }  // namespace
 
 namespace opossum {
 
-std::shared_ptr<Worker> Worker::get_this_thread_worker() { return ::this_thread_worker.lock(); }
+WorkerSPtr Worker::get_this_thread_worker() { return ::this_thread_worker.lock(); }
 
-Worker::Worker(std::weak_ptr<ProcessingUnit> processing_unit, std::shared_ptr<TaskQueue> queue, WorkerID id,
+Worker::Worker(ProcessingUnitWPtr processing_unit, TaskQueueSPtr queue, WorkerID id,
                CpuID cpu_id)
     : _processing_unit(processing_unit), _queue(queue), _id(id), _cpu_id(cpu_id) {}
 
 WorkerID Worker::id() const { return _id; }
 
-std::shared_ptr<TaskQueue> Worker::queue() const { return _queue; }
+TaskQueueSPtr Worker::queue() const { return _queue; }
 
 CpuID Worker::cpu_id() const { return _cpu_id; }
 
-std::weak_ptr<ProcessingUnit> Worker::processing_unit() const { return _processing_unit; }
+ProcessingUnitWPtr Worker::processing_unit() const { return _processing_unit; }
 
 void Worker::operator()() {
   DebugAssert((this_thread_worker.expired()), "Thread already has a worker");

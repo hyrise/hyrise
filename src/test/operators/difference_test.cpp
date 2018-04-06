@@ -26,12 +26,12 @@ class OperatorsDifferenceTest : public BaseTest {
     _table_wrapper_b->execute();
   }
 
-  std::shared_ptr<TableWrapper> _table_wrapper_a;
-  std::shared_ptr<TableWrapper> _table_wrapper_b;
+  TableWrapperSPtr _table_wrapper_a;
+  TableWrapperSPtr _table_wrapper_b;
 };
 
 TEST_F(OperatorsDifferenceTest, DifferenceOnValueTables) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 2);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 2);
 
   auto difference = std::make_shared<Difference>(_table_wrapper_a, _table_wrapper_b);
   difference->execute();
@@ -40,7 +40,7 @@ TEST_F(OperatorsDifferenceTest, DifferenceOnValueTables) {
 }
 
 TEST_F(OperatorsDifferenceTest, DifferneceOnReferenceTables) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 2);
+  TableSPtr expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 2);
 
   Projection::ColumnExpressions column_expressions(
       {PQPExpression::create_column(ColumnID{0}), PQPExpression::create_column(ColumnID{1})});

@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "types.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -110,7 +111,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
    * Add an operator to the list of read-write operators.
    * Update must not call this because it consists of a Delete and an Insert, which call this themselves.
    */
-  void register_read_write_operator(std::shared_ptr<AbstractReadWriteOperator> op) { _rw_operators.push_back(op); }
+  void register_read_write_operator(AbstractReadWriteOperatorSPtr op) { _rw_operators.push_back(op); }
 
   /**
    * @defgroup Update the counter of active operators
@@ -174,14 +175,16 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
  private:
   const TransactionID _transaction_id;
   const CommitID _snapshot_commit_id;
-  std::vector<std::shared_ptr<AbstractReadWriteOperator>> _rw_operators;
+  std::vector<AbstractReadWriteOperatorSPtr> _rw_operators;
 
   std::atomic<TransactionPhase> _phase;
-  std::shared_ptr<CommitContext> _commit_context;
+  CommitContextSPtr _commit_context;
 
   std::atomic_size_t _num_active_operators;
 
   mutable std::condition_variable _active_operators_cv;
   mutable std::mutex _active_operators_mutex;
 };
+
+
 }  // namespace opossum

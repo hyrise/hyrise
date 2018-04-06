@@ -34,7 +34,7 @@ class TpchDbGenerator final {
  public:
   explicit TpchDbGenerator(float scale_factor, uint32_t chunk_size = Chunk::MAX_SIZE);
 
-  std::unordered_map<TpchTable, std::shared_ptr<Table>> generate();
+  std::unordered_map<TpchTable, TableSPtr> generate();
 
   /**
    * Generate the TPCH tables and store them in the StorageManager

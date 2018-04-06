@@ -21,23 +21,23 @@ class SQLQueryPlan {
   SQLQueryPlan();
 
   // Add a new operator tree to the query plan by adding the root operator.
-  void add_tree_by_root(std::shared_ptr<AbstractOperator> op);
+  void add_tree_by_root(AbstractOperatorSPtr op);
 
   // Append all operator trees from the other plan.
   void append_plan(const SQLQueryPlan& other_plan);
 
   // Wrap all operator trees in tasks and return them.
-  std::vector<std::shared_ptr<OperatorTask>> create_tasks() const;
+  std::vector<OperatorTaskSPtr> create_tasks() const;
 
   // Returns the root nodes of all operator trees in the plan.
-  const std::vector<std::shared_ptr<AbstractOperator>>& tree_roots() const;
+  const std::vector<AbstractOperatorSPtr>& tree_roots() const;
 
   // Recreates the query plan with a new and equivalent set of operator trees.
   // The given list of arguments is passed to the recreate method of all operators to replace ValuePlaceholders.
   SQLQueryPlan recreate(const std::vector<AllParameterVariant>& arguments = {}) const;
 
   // Calls set_transaction_context_recursively on all roots.
-  void set_transaction_context(std::shared_ptr<TransactionContext> context);
+  void set_transaction_context(TransactionContextSPtr context);
 
   // Set the number of parameters that this query plan contains.
   void set_num_parameters(uint16_t num_parameters);
@@ -47,7 +47,7 @@ class SQLQueryPlan {
 
  protected:
   // Root nodes of all operator trees that this plan contains.
-  std::vector<std::shared_ptr<AbstractOperator>> _roots;
+  std::vector<AbstractOperatorSPtr> _roots;
 
   // Number of PlaceholderValues within the plan's operators.
   uint16_t _num_parameters;

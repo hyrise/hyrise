@@ -23,11 +23,11 @@ class PredicateNode;
 class ChunkPruningRule : public AbstractRule {
  public:
   std::string name() const override;
-  bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) override;
+  bool apply_to(const AbstractLQPNodeSPtr& node) override;
 
  protected:
-  std::set<ChunkID> _compute_exclude_list(const std::vector<std::shared_ptr<ChunkStatistics>>& stats,
-                                          std::shared_ptr<PredicateNode> predicate);
+  std::set<ChunkID> _compute_exclude_list(const std::vector<ChunkStatisticsSPtr>& stats,
+                                          PredicateNodeSPtr predicate);
 };
 
 }  // namespace opossum

@@ -24,7 +24,7 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     auto c_w_id = _random_gen.random_number(0, _gen._warehouse_size - 1);
 
     while (state.KeepRunning()) {
-      TransactionManager::get().run_transaction([&](std::shared_ptr<TransactionContext> t_context) {
+      TransactionManager::get().run_transaction([&](TransactionContextSPtr t_context) {
         auto get_customer_tasks = impl.get_customer_by_name(c_last, c_d_id, c_w_id);
         tpcc::execute_tasks_with_context(get_customer_tasks, t_context);
       });
@@ -39,7 +39,7 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     auto c_id = _random_gen.nurand(1023, 1, 3000);
 
     while (state.KeepRunning()) {
-      TransactionManager::get().run_transaction([&](std::shared_ptr<TransactionContext> t_context) {
+      TransactionManager::get().run_transaction([&](TransactionContextSPtr t_context) {
         auto get_customer_tasks = impl.get_customer_by_id(c_id, c_d_id, c_w_id);
         tpcc::execute_tasks_with_context(get_customer_tasks, t_context);
       });
@@ -54,7 +54,7 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     auto c_id = _random_gen.nurand(1023, 1, 3000);
 
     while (state.KeepRunning()) {
-      TransactionManager::get().run_transaction([&](std::shared_ptr<TransactionContext> t_context) {
+      TransactionManager::get().run_transaction([&](TransactionContextSPtr t_context) {
         auto get_order_tasks = impl.get_orders(c_id, c_d_id, c_w_id);
         tpcc::execute_tasks_with_context(get_order_tasks, t_context);
       });
@@ -68,7 +68,7 @@ class TPCCOrderStatusBenchmark : public TPCCBenchmarkFixture {
     auto c_w_id = _random_gen.random_number(0, _gen._warehouse_size - 1);
 
     while (state.KeepRunning()) {
-      TransactionManager::get().run_transaction([&](std::shared_ptr<TransactionContext> t_context) {
+      TransactionManager::get().run_transaction([&](TransactionContextSPtr t_context) {
         auto get_order_line_tasks = impl.get_order_lines(0, c_d_id, c_w_id);
         tpcc::execute_tasks_with_context(get_order_line_tasks, t_context);
       });

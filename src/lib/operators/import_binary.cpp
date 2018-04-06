@@ -71,7 +71,7 @@ T ImportBinary::_read_value(std::ifstream& file) {
   return result;
 }
 
-std::shared_ptr<const Table> ImportBinary::_on_execute() {
+TableCSPtr ImportBinary::_on_execute() {
   if (_tablename && StorageManager::get().has_table(*_tablename)) {
     return StorageManager::get().get_table(*_tablename);
   }
@@ -83,7 +83,7 @@ std::shared_ptr<const Table> ImportBinary::_on_execute() {
 
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
-  std::shared_ptr<Table> table;
+  TableSPtr table;
   ChunkID chunk_count;
   std::tie(table, chunk_count) = _read_header(file);
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -97,13 +97,13 @@ std::shared_ptr<const Table> ImportBinary::_on_execute() {
   return table;
 }
 
-std::shared_ptr<AbstractOperator> ImportBinary::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+AbstractOperatorSPtr ImportBinary::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+    const AbstractOperatorSPtr& recreated_input_right) const {
   return std::make_shared<ImportBinary>(_filename, _tablename);
 }
 
-std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstream& file) {
+std::pair<TableSPtr, ChunkID> ImportBinary::_read_header(std::ifstream& file) {
   const auto chunk_size = _read_value<ChunkOffset>(file);
   const auto chunk_count = _read_value<ChunkID>(file);
   const auto column_count = _read_value<ColumnID>(file);
@@ -122,7 +122,7 @@ std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstr
   return std::make_pair(table, chunk_count);
 }
 
-void ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& table) {
+void ImportBinary::_import_chunk(std::ifstream& file, TableSPtr& table) {
   const auto row_count = _read_value<ChunkOffset>(file);
 
   ChunkColumns output_columns;
@@ -133,9 +133,9 @@ void ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& ta
   table->append_chunk(output_columns);
 }
 
-std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, ChunkOffset row_count, DataType data_type,
+BaseColumnSPtr ImportBinary::_import_column(std::ifstream& file, ChunkOffset row_count, DataType data_type,
                                                          bool is_nullable) {
-  std::shared_ptr<BaseColumn> result;
+  BaseColumnSPtr result;
   resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
     result = _import_column<ColumnDataType>(file, row_count, is_nullable);
@@ -145,7 +145,7 @@ std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, Ch
 }
 
 template <typename ColumnDataType>
-std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, ChunkOffset row_count, bool is_nullable) {
+BaseColumnSPtr ImportBinary::_import_column(std::ifstream& file, ChunkOffset row_count, bool is_nullable) {
   const auto column_type = _read_value<BinaryColumnType>(file);
 
   switch (column_type) {
@@ -159,7 +159,7 @@ std::shared_ptr<BaseColumn> ImportBinary::_import_column(std::ifstream& file, Ch
   }
 }
 
-std::shared_ptr<BaseCompressedVector> ImportBinary::_import_attribute_vector(
+BaseCompressedVectorSPtr ImportBinary::_import_attribute_vector(
     std::ifstream& file, ChunkOffset row_count, AttributeVectorWidth attribute_vector_width) {
   switch (attribute_vector_width) {
     case 1:
@@ -174,7 +174,7 @@ std::shared_ptr<BaseCompressedVector> ImportBinary::_import_attribute_vector(
 }
 
 template <typename T>
-std::shared_ptr<ValueColumn<T>> ImportBinary::_import_value_column(std::ifstream& file, ChunkOffset row_count,
+ValueColumnSPtr<T> ImportBinary::_import_value_column(std::ifstream& file, ChunkOffset row_count,
                                                                    bool is_nullable) {
   // TODO(unknown): Ideally _read_values would directly write into a tbb::concurrent_vector so that no conversion is
   // needed
@@ -190,7 +190,7 @@ std::shared_ptr<ValueColumn<T>> ImportBinary::_import_value_column(std::ifstream
 }
 
 template <typename T>
-std::shared_ptr<DictionaryColumn<T>> ImportBinary::_import_dictionary_column(std::ifstream& file,
+DictionaryColumnSPtr<T> ImportBinary::_import_dictionary_column(std::ifstream& file,
                                                                              ChunkOffset row_count) {
   const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
   const auto dictionary_size = _read_value<ValueID>(file);

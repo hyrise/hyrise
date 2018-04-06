@@ -61,7 +61,7 @@ class JitWriteTuple : public AbstractJittableSink {
  public:
   std::string description() const final;
 
-  std::shared_ptr<Table> create_output_table(const uint32_t max_chunk_size) const final;
+  TableSPtr create_output_table(const uint32_t max_chunk_size) const final;
   void before_query(Table& out_table, JitRuntimeContext& context) const final;
   void after_chunk(Table& out_table, JitRuntimeContext& context) const final;
 

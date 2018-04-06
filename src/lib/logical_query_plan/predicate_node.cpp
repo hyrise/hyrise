@@ -20,9 +20,9 @@ PredicateNode::PredicateNode(const LQPColumnReference& column_reference, const P
       _value(value),
       _value2(value2) {}
 
-std::shared_ptr<AbstractLQPNode> PredicateNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-    const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
+AbstractLQPNodeSPtr PredicateNode::_deep_copy_impl(
+    const AbstractLQPNodeSPtr& copied_left_input,
+    const AbstractLQPNodeSPtr& copied_right_input) const {
   DebugAssert(left_input(), "Can't copy without input");
 
   auto value = _value;
@@ -83,8 +83,8 @@ ScanType PredicateNode::scan_type() const { return _scan_type; }
 
 void PredicateNode::set_scan_type(ScanType scan_type) { _scan_type = scan_type; }
 
-std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
-    const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
+TableStatisticsSPtr PredicateNode::derive_statistics_from(
+    const AbstractLQPNodeSPtr& left_input, const AbstractLQPNodeSPtr& right_input) const {
   DebugAssert(left_input && !right_input, "PredicateNode need left_input and no right_input");
 
   // If value references a Column, we have to resolve its ColumnID (same as for _column_reference below)

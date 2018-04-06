@@ -35,7 +35,7 @@ NewOrderResult AbstractNewOrderImpl::run_transaction(const NewOrderParams& param
   NewOrderResult result;
   std::vector<opossum::AllTypeVariant> row;
 
-  opossum::TransactionManager::get().run_transaction([&](std::shared_ptr<opossum::TransactionContext> t_context) {
+  opossum::TransactionManager::get().run_transaction([&](opossum::TransactionContextSPtr t_context) {
     /**
      * GET CUSTOMER AND WAREHOUSE TAX RATE
      */

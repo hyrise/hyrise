@@ -23,12 +23,12 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   const std::string& table_name() const;
 
   std::string description() const override;
-  std::shared_ptr<const AbstractLQPNode> find_table_name_origin(const std::string& table_name) const override;
+  AbstractLQPNodeCSPtr find_table_name_origin(const std::string& table_name) const override;
   const std::vector<std::string>& output_column_names() const override;
 
-  std::shared_ptr<TableStatistics> derive_statistics_from(
-      const std::shared_ptr<AbstractLQPNode>& left_input = nullptr,
-      const std::shared_ptr<AbstractLQPNode>& right_input = nullptr) const override;
+  TableStatisticsSPtr derive_statistics_from(
+      const AbstractLQPNodeSPtr& left_input = nullptr,
+      const AbstractLQPNodeSPtr& right_input = nullptr) const override;
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
 
@@ -38,9 +38,9 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
+  AbstractLQPNodeSPtr _deep_copy_impl(
+      const AbstractLQPNodeSPtr& copied_left_input,
+      const AbstractLQPNodeSPtr& copied_right_input) const override;
   void _on_input_changed() override;
   std::optional<QualifiedColumnName> _resolve_local_table_name(
       const QualifiedColumnName& qualified_column_name) const override;

@@ -24,9 +24,9 @@ class PQPExpression;
  */
 class Projection : public AbstractReadOnlyOperator {
  public:
-  using ColumnExpressions = std::vector<std::shared_ptr<PQPExpression>>;
+  using ColumnExpressions = std::vector<PQPExpressionSPtr>;
 
-  Projection(const std::shared_ptr<const AbstractOperator> in, const ColumnExpressions& column_expressions);
+  Projection(const AbstractOperatorCSPtr in, const ColumnExpressions& column_expressions);
 
   const std::string name() const override;
   const std::string description(DescriptionMode description_mode) const override;
@@ -49,19 +49,19 @@ class Projection : public AbstractReadOnlyOperator {
     }
   };
 
-  static std::shared_ptr<Table> dummy_table();
+  static TableSPtr dummy_table();
 
  protected:
   ColumnExpressions _column_expressions;
 
   template <typename T>
-  static std::shared_ptr<BaseColumn> _create_column(boost::hana::basic_type<T> type, const ChunkID chunk_id,
-                                                    const std::shared_ptr<PQPExpression>& expression,
-                                                    std::shared_ptr<const Table> input_table_left,
+  static BaseColumnSPtr _create_column(boost::hana::basic_type<T> type, const ChunkID chunk_id,
+                                                    const PQPExpressionSPtr& expression,
+                                                    TableCSPtr input_table_left,
                                                     bool reuse_column_from_input);
 
-  static DataType _get_type_of_expression(const std::shared_ptr<PQPExpression>& expression,
-                                          const std::shared_ptr<const Table>& table);
+  static DataType _get_type_of_expression(const PQPExpressionSPtr& expression,
+                                          const TableCSPtr& table);
 
   /**
    * This function evaluates the given expression on a single chunk.
@@ -69,14 +69,14 @@ class Projection : public AbstractReadOnlyOperator {
    */
   template <typename T>
   static const pmr_concurrent_vector<std::pair<bool, T>> _evaluate_expression(
-      const std::shared_ptr<PQPExpression>& expression, const std::shared_ptr<const Table> table,
+      const PQPExpressionSPtr& expression, const TableCSPtr table,
       const ChunkID chunk_id);
 
-  std::shared_ptr<const Table> _on_execute() override;
+  TableCSPtr _on_execute() override;
 
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  AbstractOperatorSPtr _on_recreate(
+      const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+      const AbstractOperatorSPtr& recreated_input_right) const override;
 };
 
 }  // namespace opossum

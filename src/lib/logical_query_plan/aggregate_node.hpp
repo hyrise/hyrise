@@ -24,10 +24,10 @@ namespace opossum {
  */
 class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public AbstractLQPNode {
  public:
-  explicit AggregateNode(const std::vector<std::shared_ptr<LQPExpression>>& aggregates,
+  explicit AggregateNode(const std::vector<LQPExpressionSPtr>& aggregates,
                          const std::vector<LQPColumnReference>& groupby_column_references);
 
-  const std::vector<std::shared_ptr<LQPExpression>>& aggregate_expressions() const;
+  const std::vector<LQPExpressionSPtr>& aggregate_expressions() const;
   const std::vector<LQPColumnReference>& groupby_column_references() const;
 
   std::string description() const override;
@@ -50,8 +50,8 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
    *
    * NOTE: These functions will possibly result in a full recursive traversal of the ancestors of this node.
    */
-  std::optional<LQPColumnReference> find_column_by_expression(const std::shared_ptr<LQPExpression>& expression) const;
-  LQPColumnReference get_column_by_expression(const std::shared_ptr<LQPExpression>& expression) const;
+  std::optional<LQPColumnReference> find_column_by_expression(const LQPExpressionSPtr& expression) const;
+  LQPColumnReference get_column_by_expression(const LQPExpressionSPtr& expression) const;
   // @}
 
   std::string get_verbose_column_name(ColumnID column_id) const override;
@@ -59,13 +59,13 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
   bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
+  AbstractLQPNodeSPtr _deep_copy_impl(
+      const AbstractLQPNodeSPtr& copied_left_input,
+      const AbstractLQPNodeSPtr& copied_right_input) const override;
   void _on_input_changed() override;
 
  private:
-  std::vector<std::shared_ptr<LQPExpression>> _aggregate_expressions;
+  std::vector<LQPExpressionSPtr> _aggregate_expressions;
   std::vector<LQPColumnReference> _groupby_column_references;
 
   mutable std::optional<std::vector<std::string>> _output_column_names;

@@ -14,23 +14,23 @@
 #include "scheduler/worker.hpp"
 
 namespace opossum {
-OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op) : _op(std::move(op)) {}
+OperatorTask::OperatorTask(AbstractOperatorSPtr op) : _op(std::move(op)) {}
 
 std::string OperatorTask::description() const {
   return "OperatorTask with id: " + std::to_string(id()) + " for op: " + _op->description();
 }
 
-const std::vector<std::shared_ptr<OperatorTask>> OperatorTask::make_tasks_from_operator(
-    std::shared_ptr<AbstractOperator> op) {
-  std::vector<std::shared_ptr<OperatorTask>> tasks;
-  std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<OperatorTask>> task_by_op;
+const std::vector<OperatorTaskSPtr> OperatorTask::make_tasks_from_operator(
+    AbstractOperatorSPtr op) {
+  std::vector<OperatorTaskSPtr> tasks;
+  std::unordered_map<AbstractOperatorSPtr, OperatorTaskSPtr> task_by_op;
   OperatorTask::_add_tasks_from_operator(op, tasks, task_by_op);
   return tasks;
 }
 
-std::shared_ptr<OperatorTask> OperatorTask::_add_tasks_from_operator(
-    std::shared_ptr<AbstractOperator> op, std::vector<std::shared_ptr<OperatorTask>>& tasks,
-    std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<OperatorTask>>& task_by_op) {
+OperatorTaskSPtr OperatorTask::_add_tasks_from_operator(
+    AbstractOperatorSPtr op, std::vector<OperatorTaskSPtr>& tasks,
+    std::unordered_map<AbstractOperatorSPtr, OperatorTaskSPtr>& task_by_op) {
   const auto task_by_op_it = task_by_op.find(op);
   if (task_by_op_it != task_by_op.end()) return task_by_op_it->second;
 
@@ -53,7 +53,7 @@ std::shared_ptr<OperatorTask> OperatorTask::_add_tasks_from_operator(
   return task;
 }
 
-const std::shared_ptr<AbstractOperator>& OperatorTask::get_operator() const { return _op; }
+const AbstractOperatorSPtr& OperatorTask::get_operator() const { return _op; }
 
 void OperatorTask::_on_execute() {
   auto context = _op->transaction_context();

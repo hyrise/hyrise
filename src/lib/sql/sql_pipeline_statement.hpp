@@ -9,10 +9,11 @@
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "storage/table.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
-using PreparedStatementCache = std::shared_ptr<SQLQueryCache<SQLQueryPlan>>;
+using PreparedStatementCache = std::shared_ptr<SQLQueryPlan>;
 
 /**
  * This is the unified interface to handle SQL queries and related operations.
@@ -33,8 +34,8 @@ class SQLPipelineStatement : public Noncopyable {
  public:
   // Prefer using the SQLPipelineBuilder for constructing SQLPipelineStatements conveniently
   SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
-                       const UseMvcc use_mvcc, const std::shared_ptr<TransactionContext>& transaction_context,
-                       const std::shared_ptr<Optimizer>& optimizer, const PreparedStatementCache& prepared_statements);
+                       const UseMvcc use_mvcc, const TransactionContextSPtr& transaction_context,
+                       const OptimizerSPtr& optimizer, const PreparedStatementCache& prepared_statements);
 
   // Returns the raw SQL string.
   const std::string& get_sql_string();
@@ -43,23 +44,23 @@ class SQLPipelineStatement : public Noncopyable {
   const std::shared_ptr<hsql::SQLParserResult>& get_parsed_sql_statement();
 
   // Returns all unoptimized LQP roots.
-  const std::shared_ptr<AbstractLQPNode>& get_unoptimized_logical_plan();
+  const AbstractLQPNodeSPtr& get_unoptimized_logical_plan();
 
   // Returns all optimized LQP roots.
-  const std::shared_ptr<AbstractLQPNode>& get_optimized_logical_plan();
+  const AbstractLQPNodeSPtr& get_optimized_logical_plan();
 
   // For now, this always uses the optimized LQP.
-  const std::shared_ptr<SQLQueryPlan>& get_query_plan();
+  const SQLQueryPlanSPtr& get_query_plan();
 
   // Returns all task sets that need to be executed for this query.
-  const std::vector<std::shared_ptr<OperatorTask>>& get_tasks();
+  const std::vector<OperatorTaskSPtr>& get_tasks();
 
   // Executes all tasks, waits for them to finish, and returns the resulting table.
-  const std::shared_ptr<const Table>& get_result_table();
+  const TableCSPtr& get_result_table();
 
   // Returns the TransactionContext that was either passed to or created by the SQLPipelineStatement.
   // This can be a nullptr if no transaction management is wanted.
-  const std::shared_ptr<TransactionContext>& transaction_context() const;
+  const TransactionContextSPtr& transaction_context() const;
 
   std::chrono::microseconds compile_time_microseconds() const;
   std::chrono::microseconds execution_time_microseconds() const;
@@ -77,17 +78,17 @@ class SQLPipelineStatement : public Noncopyable {
   const bool _auto_commit;
 
   // Might be the Statement's own transaction context, or the one shared by all Statements in a Pipeline
-  std::shared_ptr<TransactionContext> _transaction_context;
+  TransactionContextSPtr _transaction_context;
 
-  const std::shared_ptr<Optimizer> _optimizer;
+  const OptimizerSPtr _optimizer;
 
   // Execution results
   std::shared_ptr<hsql::SQLParserResult> _parsed_sql_statement;
-  std::shared_ptr<AbstractLQPNode> _unoptimized_logical_plan;
-  std::shared_ptr<AbstractLQPNode> _optimized_logical_plan;
-  std::shared_ptr<SQLQueryPlan> _query_plan;
-  std::vector<std::shared_ptr<OperatorTask>> _tasks;
-  std::shared_ptr<const Table> _result_table;
+  AbstractLQPNodeSPtr _unoptimized_logical_plan;
+  AbstractLQPNodeSPtr _optimized_logical_plan;
+  SQLQueryPlanSPtr _query_plan;
+  std::vector<OperatorTaskSPtr> _tasks;
+  TableCSPtr _result_table;
   // Assume there is an output table. Only change if nullptr is returned from execution.
   bool _query_has_output = true;
   bool _query_plan_cache_hit = false;

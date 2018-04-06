@@ -47,7 +47,7 @@ struct BindPacket {
 
 class PostgresWireHandler {
  public:
-  static std::shared_ptr<OutputPacket> new_output_packet(NetworkMessageType type);
+  static OutputPacketSPtr new_output_packet(NetworkMessageType type);
   static void write_output_packet_size(OutputPacket& packet);
 
   static uint32_t handle_startup_package(const InputPacket& packet);

@@ -37,7 +37,7 @@ class NUMAPlacementTest : public BaseTest {
 
   // Returns a vector that contains the counts of chunks per node.
   // The index of the vector represents the NodeID.
-  std::vector<size_t> count_chunks_by_node(const std::shared_ptr<Table>& table) {
+  std::vector<size_t> count_chunks_by_node(const TableSPtr& table) {
     std::vector<size_t> result(_node_count);
     const auto chunk_count = table->chunk_count();
     for (ChunkID i = ChunkID(0); i < chunk_count; i++) {
@@ -49,7 +49,7 @@ class NUMAPlacementTest : public BaseTest {
   }
 
   // Creates a table with a single column and increasing integers modulo 1000.
-  std::shared_ptr<Table> create_table(size_t num_chunks, size_t num_rows_per_chunk) {
+  TableSPtr create_table(size_t num_chunks, size_t num_rows_per_chunk) {
     auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data,
                                          num_rows_per_chunk, UseMvcc::Yes);
 

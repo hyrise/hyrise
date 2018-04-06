@@ -21,7 +21,7 @@ class BenchmarkJoinFixture : public benchmark::Fixture {
   void clear_cache();
 
  protected:
-  std::shared_ptr<TableWrapper> _tw_small_uni1, _tw_small_uni2;
+  TableWrapperSPtr _tw_small_uni1, _tw_small_uni2;
   ChunkID _data_size;
 };
 

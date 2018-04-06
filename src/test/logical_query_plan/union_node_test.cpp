@@ -24,8 +24,8 @@ class UnionNodeTest : public BaseTest {
     _union_node->set_right_input(_mock_node);
   }
 
-  std::shared_ptr<MockNode> _mock_node;
-  std::shared_ptr<UnionNode> _union_node;
+  MockNodeSPtr _mock_node;
+  UnionNodeSPtr _union_node;
   LQPColumnReference _a;
   LQPColumnReference _b;
   LQPColumnReference _c;

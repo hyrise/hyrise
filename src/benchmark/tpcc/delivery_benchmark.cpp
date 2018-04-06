@@ -26,7 +26,7 @@ namespace opossum {
 
 class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
  public:
-  inline std::vector<std::shared_ptr<OperatorTask>> get_new_order_id(const int d_id, const int w_id) {
+  inline std::vector<OperatorTaskSPtr> get_new_order_id(const int d_id, const int w_id) {
     /**
      * EXEC SQL DECLARE c_no CURSOR FOR
      * SELECT no_o_id
@@ -63,7 +63,7 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     return {t_gt, t_ts1, t_ts2, t_ts3, t_val, t_projection, t_sort};
   }
 
-  inline std::vector<std::shared_ptr<OperatorTask>> delete_from_new_order(const int no_o_id) {
+  inline std::vector<OperatorTaskSPtr> delete_from_new_order(const int no_o_id) {
     /**
      * EXEC SQL DELETE
      * FROM new_order
@@ -87,7 +87,7 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     return {t_gt, t_ts1, t_val, t_delete_op};
   }
 
-  inline std::vector<std::shared_ptr<OperatorTask>> get_order_id(const int d_id, const int w_id, const int no_o_id) {
+  inline std::vector<OperatorTaskSPtr> get_order_id(const int d_id, const int w_id, const int no_o_id) {
     /**
      * EXEC SQL SELECT o_c_id INTO :c_id
      * FROM orders
@@ -119,7 +119,7 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     return {t_gt, t_ts1, t_ts2, t_ts3, t_val, t_projection};
   }
 
-  inline std::vector<std::shared_ptr<OperatorTask>> update_order(const int d_id, const int w_id, const int no_o_id,
+  inline std::vector<OperatorTaskSPtr> update_order(const int d_id, const int w_id, const int no_o_id,
                                                                  const int o_carrier_id) {
     /**
      * EXEC SQL UPDATE orders
@@ -163,7 +163,7 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     return {t_gt, t_ts1, t_ts2, t_ts3, t_val, t_projection, t_updated_rows, t_update};
   }
 
-  inline std::vector<std::shared_ptr<OperatorTask>> update_order_line(const int d_id, const int w_id, const int no_o_id,
+  inline std::vector<OperatorTaskSPtr> update_order_line(const int d_id, const int w_id, const int no_o_id,
                                                                       const time_t datetime) {
     /**
      * EXEC SQL UPDATE order_line
@@ -206,7 +206,7 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     return {t_gt, t_ts1, t_ts2, t_ts3, t_val, t_projection, t_updated_rows, t_update};
   }
 
-  inline std::vector<std::shared_ptr<OperatorTask>> sum_of_order_line(const int d_id, const int w_id,
+  inline std::vector<OperatorTaskSPtr> sum_of_order_line(const int d_id, const int w_id,
                                                                       const int no_o_id) {
     /**
      * EXEC SQL SELECT SUM(ol_amount) INTO :ol_total
@@ -241,7 +241,7 @@ class TPCCDeliveryBenchmark : public TPCCBenchmarkFixture {
     return {t_gt, t_ts1, t_ts2, t_ts3, t_val, t_sum};
   }
 
-  inline std::vector<std::shared_ptr<OperatorTask>> update_customer(const float ol_total, const int d_id,
+  inline std::vector<OperatorTaskSPtr> update_customer(const float ol_total, const int d_id,
                                                                     const int w_id, const int c_id) {
     /**
      * EXEC SQL UPDATE customer

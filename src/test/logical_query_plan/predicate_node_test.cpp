@@ -19,8 +19,8 @@ class PredicateNodeTest : public BaseTest {
     _predicate_node->set_left_input(_table_node);
   }
 
-  std::shared_ptr<StoredTableNode> _table_node;
-  std::shared_ptr<PredicateNode> _predicate_node;
+  StoredTableNodeSPtr _table_node;
+  PredicateNodeSPtr _predicate_node;
 };
 
 TEST_F(PredicateNodeTest, Descriptions) {

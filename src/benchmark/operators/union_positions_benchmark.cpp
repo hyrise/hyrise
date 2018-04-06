@@ -22,7 +22,7 @@ constexpr auto GENERATED_TABLE_NUM_CHUNKS = 4;
  * Generate a random pos_list of length std::floor(pos_list_size) with ChunkIDs from [0,REFERENCED_TABLE_CHUNK_COUNT)
  * and ChunkOffsets within [0, std::floor(referenced_table_chunk_size))
  */
-std::shared_ptr<opossum::PosList> generate_pos_list(std::default_random_engine& random_engine,
+opossum::PosListSPtr generate_pos_list(std::default_random_engine& random_engine,
                                                     float referenced_table_chunk_size, float pos_list_size) {
   std::uniform_int_distribution<opossum::ChunkID::base_type> chunk_id_distribution(
       0, static_cast<opossum::ChunkID::base_type>(REFERENCED_TABLE_CHUNK_COUNT - 1));
@@ -76,11 +76,11 @@ class UnionPositionsBenchmarkFixture : public benchmark::Fixture {
  protected:
   std::random_device _random_device;
   mutable std::default_random_engine _random_engine;
-  std::shared_ptr<TableWrapper> _table_wrapper_left;
-  std::shared_ptr<TableWrapper> _table_wrapper_right;
-  std::shared_ptr<Table> _referenced_table;
+  TableWrapperSPtr _table_wrapper_left;
+  TableWrapperSPtr _table_wrapper_right;
+  TableSPtr _referenced_table;
 
-  std::shared_ptr<Table> _create_reference_table(size_t num_rows, size_t num_columns) const {
+  TableSPtr _create_reference_table(size_t num_rows, size_t num_columns) const {
     const auto num_rows_per_chunk = num_rows / GENERATED_TABLE_NUM_CHUNKS;
 
     TableColumnDefinitions column_definitions;
@@ -137,8 +137,8 @@ class UnionPositionsBaseLineBenchmarkFixture : public benchmark::Fixture {
  protected:
   std::random_device _random_device;
   std::default_random_engine _random_engine;
-  std::shared_ptr<PosList> _pos_list_left;
-  std::shared_ptr<PosList> _pos_list_right;
+  PosListSPtr _pos_list_left;
+  PosListSPtr _pos_list_right;
 };
 
 BENCHMARK_DEFINE_F(UnionPositionsBaseLineBenchmarkFixture, Benchmark)(::benchmark::State& state) {

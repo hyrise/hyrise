@@ -23,7 +23,7 @@
 
 namespace opossum {
 
-std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
+TableSPtr TableGenerator::generate_table(const ChunkID chunk_size,
                                                       std::optional<EncodingType> encoding_type) {
   std::vector<tbb::concurrent_vector<int>> value_vectors;
   auto vector_size = std::min(static_cast<size_t>(chunk_size), _num_rows);
@@ -78,7 +78,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
   return table;
 }
 
-std::shared_ptr<Table> TableGenerator::generate_table(
+TableSPtr TableGenerator::generate_table(
     const std::vector<ColumnDataDistribution>& column_data_distributions, const size_t num_rows,
     const size_t chunk_size, std::optional<EncodingType> encoding_type) {
   const auto num_columns = column_data_distributions.size();
@@ -94,7 +94,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
     column_definitions.emplace_back(column_name, DataType::Int);
     value_vectors.emplace_back(tbb::concurrent_vector<int>(chunk_size));
   }
-  std::shared_ptr<Table> table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
+  TableSPtr table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
 
   std::random_device rd;
   // using mt19937 because std::default_random engine is not guaranteed to be a sensible default

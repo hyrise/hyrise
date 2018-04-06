@@ -30,21 +30,21 @@ bool is_row_visible(CommitID our_tid, CommitID snapshot_commit_id, ChunkOffset c
 
 }  // namespace
 
-Validate::Validate(const std::shared_ptr<AbstractOperator> in) : AbstractReadOnlyOperator(OperatorType::Validate, in) {}
+Validate::Validate(const AbstractOperatorSPtr in) : AbstractReadOnlyOperator(OperatorType::Validate, in) {}
 
 const std::string Validate::name() const { return "Validate"; }
 
-std::shared_ptr<AbstractOperator> Validate::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+AbstractOperatorSPtr Validate::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+    const AbstractOperatorSPtr& recreated_input_right) const {
   return std::make_shared<Validate>(recreated_input_left);
 }
 
-std::shared_ptr<const Table> Validate::_on_execute() {
+TableCSPtr Validate::_on_execute() {
   Fail("Validate can't be called without a transaction context.");
 }
 
-std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionContext> transaction_context) {
+TableCSPtr Validate::_on_execute(TransactionContextSPtr transaction_context) {
   DebugAssert(transaction_context != nullptr, "Validate requires a valid TransactionContext.");
 
   const auto _in_table = input_table_left();
@@ -58,7 +58,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
     ChunkColumns output_columns;
     auto pos_list_out = std::make_shared<PosList>();
-    auto referenced_table = std::shared_ptr<const Table>();
+    auto referenced_table = TableCSPtr();
     const auto ref_col_in = std::dynamic_pointer_cast<const ReferenceColumn>(chunk_in->get_column(ColumnID{0}));
 
     // If the columns in this chunk reference a column, build a poslist for a reference column.

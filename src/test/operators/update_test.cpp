@@ -28,14 +28,14 @@ class OperatorsUpdateTest : public BaseTest {
 
   void TearDown() override { StorageManager::reset(); }
 
-  void helper(std::shared_ptr<GetTable> table_to_update, std::shared_ptr<GetTable> update_values,
-              std::shared_ptr<Table> expected_result);
+  void helper(GetTableSPtr table_to_update, GetTableSPtr update_values,
+              TableSPtr expected_result);
 
   std::string _table_name{"updateTestTable"};
 };
 
-void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std::shared_ptr<GetTable> update_values,
-                                 std::shared_ptr<Table> expected_result) {
+void OperatorsUpdateTest::helper(GetTableSPtr table_to_update, GetTableSPtr update_values,
+                                 TableSPtr expected_result) {
   auto t_context = TransactionManager::get().new_transaction_context();
 
   // Make input left actually referenced. Projection does NOT generate ReferenceColumns.
@@ -92,7 +92,7 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
 TEST_F(OperatorsUpdateTest, SelfUpdate) {
   auto gt = std::make_shared<GetTable>("updateTestTable");
   gt->execute();
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
+  TableSPtr expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
   helper(gt, gt, expected_result);
 }
 
@@ -106,7 +106,7 @@ TEST_F(OperatorsUpdateTest, NormalUpdate) {
   auto gt2 = std::make_shared<GetTable>("updateTestTable2");
   gt2->execute();
 
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
+  TableSPtr expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
   helper(gt, gt2, expected_result);
 }
 
@@ -120,7 +120,7 @@ TEST_F(OperatorsUpdateTest, MultipleChunksLeft) {
   auto gt2 = std::make_shared<GetTable>("updateTestTable2");
   gt2->execute();
 
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
+  TableSPtr expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
   helper(gt, gt2, expected_result);
 }
 
@@ -134,7 +134,7 @@ TEST_F(OperatorsUpdateTest, MultipleChunksRight) {
   auto gt2 = std::make_shared<GetTable>("updateTestTable2");
   gt2->execute();
 
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
+  TableSPtr expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
   helper(gt, gt2, expected_result);
 }
 
@@ -148,7 +148,7 @@ TEST_F(OperatorsUpdateTest, MultipleChunks) {
   auto gt2 = std::make_shared<GetTable>("updateTestTable2");
   gt2->execute();
 
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
+  TableSPtr expected_result = load_table("src/test/tables/int_int_same.tbl", 1);
   helper(gt, gt2, expected_result);
 }
 TEST_F(OperatorsUpdateTest, MissingChunks) {

@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "types.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -25,22 +26,24 @@ class TaskQueue {
 
   NodeID node_id() const;
 
-  void push(std::shared_ptr<AbstractTask> task, uint32_t priority);
+  void push(AbstractTaskSPtr task, uint32_t priority);
 
   /**
    * Returns a Tasks that is ready to be executed and removes it from the queue
    */
-  std::shared_ptr<AbstractTask> pull();
+  AbstractTaskSPtr pull();
 
   /**
    * Returns a Tasks that is ready to be executed and removes it from one of the stealable queues
    */
-  std::shared_ptr<AbstractTask> steal();
+  AbstractTaskSPtr steal();
 
  private:
   NodeID _node_id;
-  std::array<tbb::concurrent_queue<std::shared_ptr<AbstractTask>>, NUM_PRIORITY_LEVELS> _queues;
+  std::array<tbb::concurrent_queue<AbstractTaskSPtr>, NUM_PRIORITY_LEVELS> _queues;
   std::atomic_uint _num_tasks{0};
 };
+
+
 
 }  // namespace opossum

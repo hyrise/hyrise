@@ -35,13 +35,13 @@ class CsvParser {
    * @param csv_meta      Custom csv meta information which will be used instead of the default "filename" + ".json" meta.
    * @returns             The table that was created from the csv file.
    */
-  std::shared_ptr<Table> parse(const std::string& filename, const std::optional<CsvMeta>& csv_meta = std::nullopt);
+  TableSPtr parse(const std::string& filename, const std::optional<CsvMeta>& csv_meta = std::nullopt);
 
  protected:
   /*
    * Use the meta information stored in _meta to create a new table with according column description.
    */
-  std::shared_ptr<Table> _create_table_from_meta();
+  TableSPtr _create_table_from_meta();
 
   /*
    * @param      csv_content String_view on the remaining content of the CSV.

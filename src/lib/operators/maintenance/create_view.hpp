@@ -12,19 +12,19 @@ namespace opossum {
 // maintenance operator for the "CREATE VIEW" sql statement
 class CreateView : public AbstractReadOnlyOperator {
  public:
-  explicit CreateView(const std::string& view_name, std::shared_ptr<const AbstractLQPNode> lqp);
+  explicit CreateView(const std::string& view_name, AbstractLQPNodeCSPtr lqp);
 
   const std::string name() const override;
 
  protected:
-  std::shared_ptr<const Table> _on_execute() override;
+  TableCSPtr _on_execute() override;
 
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  AbstractOperatorSPtr _on_recreate(
+      const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+      const AbstractOperatorSPtr& recreated_input_right) const override;
 
  private:
   const std::string _view_name;
-  const std::shared_ptr<const AbstractLQPNode> _lqp;
+  const AbstractLQPNodeCSPtr _lqp;
 };
 }  // namespace opossum

@@ -9,8 +9,8 @@
 
 namespace tpcc {
 
-void execute_tasks_with_context(std::vector<std::shared_ptr<opossum::OperatorTask>>& tasks,
-                                std::shared_ptr<opossum::TransactionContext> t_context) {
+void execute_tasks_with_context(std::vector<opossum::OperatorTaskSPtr>& tasks,
+                                opossum::TransactionContextSPtr t_context) {
   for (auto& task : tasks) {
     task->get_operator()->set_transaction_context(t_context);
   }

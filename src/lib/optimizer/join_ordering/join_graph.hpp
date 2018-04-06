@@ -13,6 +13,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/join_ordering/join_plan_predicate.hpp"
 #include "types.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -35,39 +36,41 @@ class JoinGraph final {
   /**
    * Return the first JoinGraph found when recursively traversing the @param lqp
    */
-  static std::shared_ptr<JoinGraph> from_lqp(const std::shared_ptr<AbstractLQPNode>& lqp);
+  static JoinGraphSPtr from_lqp(const AbstractLQPNodeSPtr& lqp);
 
   /**
    * Converts the predicates into edges and creates a JoinGraph from them.
    */
-  static std::shared_ptr<JoinGraph> from_predicates(
-      std::vector<std::shared_ptr<AbstractLQPNode>> vertices, std::vector<LQPOutputRelation> output_relations,
-      const std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>>& predicates);
+  static JoinGraphSPtr from_predicates(
+      std::vector<AbstractLQPNodeSPtr> vertices, std::vector<LQPOutputRelation> output_relations,
+      const std::vector<AbstractJoinPlanPredicateCSPtr>& predicates);
 
   JoinGraph() = default;
-  JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>> vertices, std::vector<LQPOutputRelation> output_relations,
-            std::vector<std::shared_ptr<JoinEdge>> edges);
+  JoinGraph(std::vector<AbstractLQPNodeSPtr> vertices, std::vector<LQPOutputRelation> output_relations,
+            std::vector<JoinEdgeSPtr> edges);
 
   /**
    * Find all predicates that use exactly the nodes in vertex set
    */
-  std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>> find_predicates(const JoinVertexSet& vertex_set) const;
+  std::vector<AbstractJoinPlanPredicateCSPtr> find_predicates(const JoinVertexSet& vertex_set) const;
 
   /**
    * Find all predicates that "connect" the two vertex sets, i.e. have operands in both of them
    */
-  std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>> find_predicates(
+  std::vector<AbstractJoinPlanPredicateCSPtr> find_predicates(
       const JoinVertexSet& vertex_set_a, const JoinVertexSet& vertex_set_b) const;
 
   /**
    * Find the edge that exactly connects the vertices in vertex_set. Returns nullptr if no such edge exists.
    */
-  std::shared_ptr<JoinEdge> find_edge(const JoinVertexSet& vertex_set) const;
+  JoinEdgeSPtr find_edge(const JoinVertexSet& vertex_set) const;
 
   void print(std::ostream& stream = std::cout) const;
 
-  std::vector<std::shared_ptr<AbstractLQPNode>> vertices;
+  std::vector<AbstractLQPNodeSPtr> vertices;
   std::vector<LQPOutputRelation> output_relations;
-  std::vector<std::shared_ptr<JoinEdge>> edges;
+  std::vector<JoinEdgeSPtr> edges;
 };
+
+
 }  // namespace opossum

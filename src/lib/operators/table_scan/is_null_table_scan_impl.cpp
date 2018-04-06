@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-IsNullTableScanImpl::IsNullTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
+IsNullTableScanImpl::IsNullTableScanImpl(TableCSPtr in_table, const ColumnID left_column_id,
                                          const PredicateCondition& predicate_condition)
     : BaseSingleColumnTableScanImpl{in_table, left_column_id, predicate_condition} {
   DebugAssert(predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull,
@@ -21,7 +21,7 @@ IsNullTableScanImpl::IsNullTableScanImpl(std::shared_ptr<const Table> in_table, 
 }
 
 void IsNullTableScanImpl::handle_column(const ReferenceColumn& left_column,
-                                        std::shared_ptr<ColumnVisitableContext> base_context) {
+                                        ColumnVisitableContextSPtr base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   BaseSingleColumnTableScanImpl::handle_column(left_column, base_context);
 
@@ -36,7 +36,7 @@ void IsNullTableScanImpl::handle_column(const ReferenceColumn& left_column,
 }
 
 void IsNullTableScanImpl::handle_column(const BaseValueColumn& base_column,
-                                        std::shared_ptr<ColumnVisitableContext> base_context) {
+                                        ColumnVisitableContextSPtr base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 
@@ -59,7 +59,7 @@ void IsNullTableScanImpl::handle_column(const BaseValueColumn& base_column,
 }
 
 void IsNullTableScanImpl::handle_column(const BaseDictionaryColumn& left_column,
-                                        std::shared_ptr<ColumnVisitableContext> base_context) {
+                                        ColumnVisitableContextSPtr base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 
@@ -70,7 +70,7 @@ void IsNullTableScanImpl::handle_column(const BaseDictionaryColumn& left_column,
 }
 
 void IsNullTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
-                                        std::shared_ptr<ColumnVisitableContext> base_context) {
+                                        ColumnVisitableContextSPtr base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 

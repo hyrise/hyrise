@@ -8,6 +8,7 @@
 #include "compressed_vector_type.hpp"
 
 #include "types.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -114,5 +115,6 @@ class CompressedVector : public BaseCompressedVector {
  private:
   const Derived& _self() const { return static_cast<const Derived&>(*this); }
 };
+CREATE_TEMPLATE_PTR_ALIASES(CompressedVector)
 
 }  // namespace opossum

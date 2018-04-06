@@ -24,8 +24,8 @@ namespace opossum {
 
 class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:
-  AbstractJoinOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator> left,
-                       const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+  AbstractJoinOperator(const OperatorType type, const AbstractOperatorCSPtr left,
+                       const AbstractOperatorCSPtr right, const JoinMode mode,
                        const ColumnIDPair& column_ids, const PredicateCondition predicate_condition);
 
   JoinMode mode() const;
@@ -44,7 +44,7 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
   class AbstractJoinOperatorImpl : public AbstractReadOnlyOperatorImpl {
    public:
     virtual ~AbstractJoinOperatorImpl() = default;
-    virtual std::shared_ptr<const Table> _on_execute() = 0;
+    virtual TableCSPtr _on_execute() = 0;
   };
 };
 

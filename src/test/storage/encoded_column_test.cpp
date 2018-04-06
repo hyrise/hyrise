@@ -40,7 +40,7 @@ class EncodedColumnTest : public BaseTestWithParam<ColumnEncodingSpec> {
     }
   }
 
-  std::shared_ptr<ValueColumn<int32_t>> create_int_value_column() {
+  ValueColumnSPtr<int32_t> create_int_value_column() {
     auto values = pmr_concurrent_vector<int32_t>(row_count());
 
     std::default_random_engine engine{};
@@ -53,7 +53,7 @@ class EncodedColumnTest : public BaseTestWithParam<ColumnEncodingSpec> {
     return std::make_shared<ValueColumn<int32_t>>(std::move(values));
   }
 
-  std::shared_ptr<ValueColumn<int32_t>> create_int_w_null_value_column() {
+  ValueColumnSPtr<int32_t> create_int_w_null_value_column() {
     auto values = pmr_concurrent_vector<int32_t>(row_count());
     auto null_values = pmr_concurrent_vector<bool>(row_count());
 
@@ -95,8 +95,8 @@ class EncodedColumnTest : public BaseTestWithParam<ColumnEncodingSpec> {
   }
 
   template <typename T>
-  std::shared_ptr<BaseEncodedColumn> encode_value_column(DataType data_type,
-                                                         const std::shared_ptr<ValueColumn<T>>& value_column) {
+  BaseEncodedColumnSPtr encode_value_column(DataType data_type,
+                                                         const ValueColumnSPtr<T>& value_column) {
     const auto column_encoding_spec = GetParam();
     return encode_column(column_encoding_spec.encoding_type, data_type, value_column,
                          column_encoding_spec.vector_compression_type);

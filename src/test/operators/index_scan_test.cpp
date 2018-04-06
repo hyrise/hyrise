@@ -50,7 +50,7 @@ class OperatorsIndexScanTest : public BaseTest {
     _empty_table_wrapper->execute();
   }
 
-  void ASSERT_COLUMN_EQ(std::shared_ptr<const Table> table, const ColumnID& column_id,
+  void ASSERT_COLUMN_EQ(TableCSPtr table, const ColumnID& column_id,
                         std::vector<AllTypeVariant> expected) {
     for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto chunk = table->get_chunk(chunk_id);
@@ -75,8 +75,8 @@ class OperatorsIndexScanTest : public BaseTest {
     ASSERT_EQ(expected.size(), 0u);
   }
 
-  std::shared_ptr<TableWrapper> _table_wrapper;
-  std::shared_ptr<TableWrapper> _empty_table_wrapper;
+  TableWrapperSPtr _table_wrapper;
+  TableWrapperSPtr _empty_table_wrapper;
   std::vector<ChunkID> _chunk_ids;
   std::vector<ColumnID> _column_ids;
   ColumnIndexType _index_type;

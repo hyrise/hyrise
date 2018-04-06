@@ -28,7 +28,7 @@ NUMAPlacementManager& NUMAPlacementManager::get() {
   return instance;
 }
 
-NUMAPlacementManager::NUMAPlacementManager(const std::shared_ptr<Topology> topology) : _topology(topology) {
+NUMAPlacementManager::NUMAPlacementManager(const TopologySPtr topology) : _topology(topology) {
   // The NUMAPlacementManager must exist before any table is stored in the storage manager. Otherwise, we might migrate
   // parts of that table. On termination of the program, the NUMAPlacementManager would be destroyed first, taking the
   // memory sources with it. This means that the destructors of those tables would fail.
@@ -77,7 +77,7 @@ void NUMAPlacementManager::pause() {
 
 const NUMAPlacementManager::Options& NUMAPlacementManager::options() const { return _options; }
 
-const std::shared_ptr<Topology>& NUMAPlacementManager::topology() const { return _topology; }
+const TopologySPtr& NUMAPlacementManager::topology() const { return _topology; }
 
 }  // namespace opossum
 

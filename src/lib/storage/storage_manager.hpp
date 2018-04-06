@@ -20,13 +20,13 @@ class StorageManager : private Noncopyable {
   static StorageManager& get();
 
   // adds a table to the storage manager
-  void add_table(const std::string& name, std::shared_ptr<Table> table);
+  void add_table(const std::string& name, TableSPtr table);
 
   // removes the table from the storage manger
   void drop_table(const std::string& name);
 
   // returns the table instance with the given name
-  std::shared_ptr<Table> get_table(const std::string& name) const;
+  TableSPtr get_table(const std::string& name) const;
 
   // returns whether the storage manager holds a table with the given name
   bool has_table(const std::string& name) const;
@@ -35,13 +35,13 @@ class StorageManager : private Noncopyable {
   std::vector<std::string> table_names() const;
 
   // adds a view to the storage manager
-  void add_view(const std::string& name, std::shared_ptr<const AbstractLQPNode> view);
+  void add_view(const std::string& name, AbstractLQPNodeCSPtr view);
 
   // removes the view from the storage manger
   void drop_view(const std::string& name);
 
   // returns the view instance with the given name
-  std::shared_ptr<AbstractLQPNode> get_view(const std::string& name) const;
+  AbstractLQPNodeSPtr get_view(const std::string& name) const;
 
   // returns whether the storage manager holds a table with the given name
   bool has_view(const std::string& name) const;
@@ -67,7 +67,7 @@ class StorageManager : private Noncopyable {
   StorageManager() {}
   StorageManager& operator=(StorageManager&&) = default;
 
-  std::map<std::string, std::shared_ptr<Table>> _tables;
-  std::map<std::string, std::shared_ptr<const AbstractLQPNode>> _views;
+  std::map<std::string, TableSPtr> _tables;
+  std::map<std::string, AbstractLQPNodeCSPtr> _views;
 };
 }  // namespace opossum

@@ -14,17 +14,17 @@ namespace opossum {
  */
 class TableWrapper : public AbstractReadOnlyOperator {
  public:
-  explicit TableWrapper(const std::shared_ptr<const Table> table);
+  explicit TableWrapper(const TableCSPtr table);
 
   const std::string name() const override;
 
  protected:
-  std::shared_ptr<const Table> _on_execute() override;
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  TableCSPtr _on_execute() override;
+  AbstractOperatorSPtr _on_recreate(
+      const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+      const AbstractOperatorSPtr& recreated_input_right) const override;
 
   // Table to retrieve
-  const std::shared_ptr<const Table> _table;
+  const TableCSPtr _table;
 };
 }  // namespace opossum

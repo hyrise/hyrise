@@ -25,7 +25,7 @@ class OperatorTaskTest : public BaseTest {
     StorageManager::get().add_table("table_b", _test_table_b);
   }
 
-  std::shared_ptr<Table> _test_table_a, _test_table_b;
+  TableSPtr _test_table_a, _test_table_b;
 };
 
 TEST_F(OperatorTaskTest, BasicTasksFromOperatorTest) {
@@ -81,19 +81,19 @@ TEST_F(OperatorTaskTest, MakeDiamondShape) {
   EXPECT_EQ(tasks[3]->get_operator(), scan_c);
   EXPECT_EQ(tasks[4]->get_operator(), union_positions);
 
-  std::vector<std::shared_ptr<AbstractTask>> expected_successors_0({tasks[1]});
+  std::vector<AbstractTaskSPtr> expected_successors_0({tasks[1]});
   EXPECT_EQ(tasks[0]->successors(), expected_successors_0);
 
-  std::vector<std::shared_ptr<AbstractTask>> expected_successors_1({tasks[2], tasks[3]});
+  std::vector<AbstractTaskSPtr> expected_successors_1({tasks[2], tasks[3]});
   EXPECT_EQ(tasks[1]->successors(), expected_successors_1);
 
-  std::vector<std::shared_ptr<AbstractTask>> expected_successors_2({tasks[4]});
+  std::vector<AbstractTaskSPtr> expected_successors_2({tasks[4]});
   EXPECT_EQ(tasks[2]->successors(), expected_successors_2);
 
-  std::vector<std::shared_ptr<AbstractTask>> expected_successors_3({tasks[4]});
+  std::vector<AbstractTaskSPtr> expected_successors_3({tasks[4]});
   EXPECT_EQ(tasks[3]->successors(), expected_successors_3);
 
-  std::vector<std::shared_ptr<AbstractTask>> expected_successors_4{};
+  std::vector<AbstractTaskSPtr> expected_successors_4{};
   EXPECT_EQ(tasks[4]->successors(), expected_successors_4);
 }
 }  // namespace opossum

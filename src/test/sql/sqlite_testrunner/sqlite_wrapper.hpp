@@ -32,18 +32,18 @@ class SQLiteWrapper final {
    * @param sql_query Query to be executed
    * @returns An opossum Table containing the results of the executed query
    */
-  std::shared_ptr<Table> execute_query(const std::string& sql_query);
+  TableSPtr execute_query(const std::string& sql_query);
 
  protected:
   /*
    * Creates columns in given opossum table according to an sqlite intermediate statement (one result row).
    */
-  std::shared_ptr<Table> _create_table(sqlite3_stmt* result_row, int column_count);
+  TableSPtr _create_table(sqlite3_stmt* result_row, int column_count);
 
   /*
    * Adds a single row to given opossum table according to an sqlite intermediate statement (one result row).
    */
-  void _add_row(std::shared_ptr<Table> table, sqlite3_stmt* result_row, int column_count);
+  void _add_row(TableSPtr table, sqlite3_stmt* result_row, int column_count);
 
   sqlite3* _db;
 };

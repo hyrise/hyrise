@@ -7,9 +7,9 @@ namespace opossum {
 ShowColumnsNode::ShowColumnsNode(const std::string& table_name)
     : AbstractLQPNode(LQPNodeType::ShowColumns), _table_name(table_name) {}
 
-std::shared_ptr<AbstractLQPNode> ShowColumnsNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-    const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
+AbstractLQPNodeSPtr ShowColumnsNode::_deep_copy_impl(
+    const AbstractLQPNodeSPtr& copied_left_input,
+    const AbstractLQPNodeSPtr& copied_right_input) const {
   return ShowColumnsNode::make(_table_name);
 }
 

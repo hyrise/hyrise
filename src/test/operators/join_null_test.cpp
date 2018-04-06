@@ -44,8 +44,8 @@ class JoinNullTest : public JoinTest {
     _table_wrapper_a_null_dict->execute();
   }
 
-  std::shared_ptr<TableWrapper> _table_wrapper_a_null;
-  std::shared_ptr<TableWrapper> _table_wrapper_a_null_dict;
+  TableWrapperSPtr _table_wrapper_a_null;
+  TableWrapperSPtr _table_wrapper_a_null_dict;
 };
 
 using JoinNullTypes = ::testing::Types<JoinHash, JoinSortMerge, JoinNestedLoop>;

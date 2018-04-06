@@ -57,7 +57,7 @@ class OperatorsExportCsvTest : public BaseTest {
     return equality == 0;
   }
 
-  std::shared_ptr<Table> table;
+  TableSPtr table;
   const std::string filename = test_data_path + "export_test.csv";
   const std::string meta_filename = filename + CsvMeta::META_FILE_EXTENSION;
 };
@@ -157,7 +157,7 @@ TEST_F(OperatorsExportCsvTest, ExportAllTypes) {
   column_definitions.emplace_back("d", DataType::Long);
   column_definitions.emplace_back("e", DataType::Double);
 
-  std::shared_ptr<Table> new_table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+  TableSPtr new_table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
   new_table->append({1, "Hallo", 3.5f, static_cast<int64_t>(12), 2.333});
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(new_table));

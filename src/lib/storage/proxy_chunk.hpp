@@ -14,19 +14,19 @@ namespace opossum {
 // ChunkAccessCounter.
 class ProxyChunk {
  public:
-  explicit ProxyChunk(const std::shared_ptr<Chunk>& chunk);
+  explicit ProxyChunk(const ChunkSPtr& chunk);
   ~ProxyChunk();
 
-  const std::shared_ptr<Chunk> operator*() const { return _chunk; }
+  const ChunkSPtr operator*() const { return _chunk; }
 
-  const std::shared_ptr<Chunk> operator->() const { return _chunk; }
+  const ChunkSPtr operator->() const { return _chunk; }
 
-  operator const std::shared_ptr<Chunk>&() const { return _chunk; }
+  operator const ChunkSPtr&() const { return _chunk; }
 
   bool operator==(const ProxyChunk& rhs) const { return _chunk == rhs._chunk; }
 
  protected:
-  const std::shared_ptr<Chunk> _chunk;
+  const ChunkSPtr _chunk;
   const uint64_t _begin_rdtsc;
 };
 

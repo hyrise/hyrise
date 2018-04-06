@@ -21,13 +21,13 @@ enum class CompressedVectorType : uint8_t;
  */
 class ExportBinary : public AbstractReadOnlyOperator {
  public:
-  explicit ExportBinary(const std::shared_ptr<const AbstractOperator> in, const std::string& filename);
+  explicit ExportBinary(const AbstractOperatorCSPtr in, const std::string& filename);
 
   /**
    * Executes the export operator
    * @return The table that was also the input
    */
-  std::shared_ptr<const Table> _on_execute() final;
+  TableCSPtr _on_execute() final;
 
   /**
    * Name of the operator is ExportBinary
@@ -35,9 +35,9 @@ class ExportBinary : public AbstractReadOnlyOperator {
   const std::string name() const final;
 
  protected:
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  AbstractOperatorSPtr _on_recreate(
+      const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+      const AbstractOperatorSPtr& recreated_input_right) const override;
 
  private:
   // Path of the binary file
@@ -59,7 +59,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * @param table The table that is to be exported
    * @param ofstream The output stream for exporting
    */
-  static void _write_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream);
+  static void _write_header(const TableCSPtr& table, std::ofstream& ofstream);
 
   /**
    * Writes the contents of the chunk into the given ofstream.
@@ -77,7 +77,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * @param chunkId The id of the chunk that is to be worked on now
    *
    */
-  static void _write_chunk(const std::shared_ptr<const Table>& table, std::ofstream& ofstream, const ChunkID& chunk_id);
+  static void _write_chunk(const TableCSPtr& table, std::ofstream& ofstream, const ChunkID& chunk_id);
 
   template <typename T>
   class ExportBinaryVisitor;
@@ -112,7 +112,7 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    *
    */
-  void handle_column(const BaseValueColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) final;
+  void handle_column(const BaseValueColumn& base_column, ColumnVisitableContextSPtr base_context) final;
 
   /**
    * Reference Columns are dumped with the following layout, which is similar to value columns:
@@ -133,7 +133,7 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * @param base_column The Column to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
-  void handle_column(const ReferenceColumn& ref_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
+  void handle_column(const ReferenceColumn& ref_column, ColumnVisitableContextSPtr base_context) override;
 
   /**
    * Dictionary Columns are dumped with the following layout:
@@ -158,10 +158,10 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
   void handle_column(const BaseDictionaryColumn& base_column,
-                     std::shared_ptr<ColumnVisitableContext> base_context) override;
+                     ColumnVisitableContextSPtr base_context) override;
 
   void handle_column(const BaseEncodedColumn& base_column,
-                     std::shared_ptr<ColumnVisitableContext> base_context) override;
+                     ColumnVisitableContextSPtr base_context) override;
 
  private:
   // Chooses the right FixedSizeByteAlignedVector depending on the attribute_vector_width and exports it.

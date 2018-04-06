@@ -38,7 +38,7 @@ void ChunkMigrationTask::_on_execute() {
   }
 }
 
-bool ChunkMigrationTask::chunk_is_completed(const std::shared_ptr<const Chunk>& chunk, const uint32_t max_chunk_size) {
+bool ChunkMigrationTask::chunk_is_completed(const ChunkCSPtr& chunk, const uint32_t max_chunk_size) {
   if (chunk->size() != max_chunk_size) return false;
 
   if (chunk->has_mvcc_columns()) {

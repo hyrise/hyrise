@@ -6,6 +6,7 @@
 #include <string>
 
 #include "all_type_variant.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -71,7 +72,7 @@ class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStati
    */
   virtual TwoColumnSelectivityResult estimate_selectivity_for_two_column_predicate(
       const PredicateCondition predicate_condition,
-      const std::shared_ptr<BaseColumnStatistics>& right_base_column_statistics,
+      const BaseColumnStatisticsSPtr& right_base_column_statistics,
       const std::optional<AllTypeVariant>& value2 = std::nullopt) = 0;
 
   DataType data_type() const;
@@ -85,7 +86,7 @@ class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStati
   /**
    * Copies the derived object and returns a base class pointer to it.
    */
-  virtual std::shared_ptr<BaseColumnStatistics> clone() const = 0;
+  virtual BaseColumnStatisticsSPtr clone() const = 0;
 
   /**
    * Adjust null value ratio of a column after a left/right/full outer join.
@@ -114,23 +115,25 @@ class BaseColumnStatistics : public std::enable_shared_from_this<BaseColumnStati
   friend std::ostream& operator<<(std::ostream& os, BaseColumnStatistics& obj);
 };
 
+
+
 /**
  * Return type of selectivity functions for operations on one column.
  */
 struct ColumnSelectivityResult {
   float selectivity;
-  std::shared_ptr<BaseColumnStatistics> column_statistics;
+  BaseColumnStatisticsSPtr column_statistics;
 };
 
 /**
  * Return type of selectivity functions for operations on two columns.
  */
 struct TwoColumnSelectivityResult : public ColumnSelectivityResult {
-  TwoColumnSelectivityResult(float selectivity, const std::shared_ptr<BaseColumnStatistics>& column_stats,
-                             const std::shared_ptr<BaseColumnStatistics>& second_column_stats)
+  TwoColumnSelectivityResult(float selectivity, const BaseColumnStatisticsSPtr& column_stats,
+                             const BaseColumnStatisticsSPtr& second_column_stats)
       : ColumnSelectivityResult{selectivity, column_stats}, second_column_statistics(second_column_stats) {}
 
-  std::shared_ptr<BaseColumnStatistics> second_column_statistics;
+  BaseColumnStatisticsSPtr second_column_statistics;
 };
 
 std::ostream& operator<<(std::ostream& os, BaseColumnStatistics& obj);

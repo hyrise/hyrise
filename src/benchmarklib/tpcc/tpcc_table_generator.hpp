@@ -21,7 +21,7 @@ class Table;
 
 namespace tpcc {
 
-using TpccTableGeneratorFunctions = std::unordered_map<std::string, std::function<std::shared_ptr<opossum::Table>()>>;
+using TpccTableGeneratorFunctions = std::unordered_map<std::string, std::function<opossum::TableSPtr()>>;
 
 class TpccTableGenerator : public benchmark_utilities::AbstractBenchmarkTableGenerator {
   // following TPC-C v5.11.0
@@ -30,33 +30,33 @@ class TpccTableGenerator : public benchmark_utilities::AbstractBenchmarkTableGen
 
   virtual ~TpccTableGenerator() = default;
 
-  std::shared_ptr<opossum::Table> generate_items_table();
+  opossum::TableSPtr generate_items_table();
 
-  std::shared_ptr<opossum::Table> generate_warehouse_table();
+  opossum::TableSPtr generate_warehouse_table();
 
-  std::shared_ptr<opossum::Table> generate_stock_table();
+  opossum::TableSPtr generate_stock_table();
 
-  std::shared_ptr<opossum::Table> generate_district_table();
+  opossum::TableSPtr generate_district_table();
 
-  std::shared_ptr<opossum::Table> generate_customer_table();
+  opossum::TableSPtr generate_customer_table();
 
-  std::shared_ptr<opossum::Table> generate_history_table();
+  opossum::TableSPtr generate_history_table();
 
   typedef std::vector<std::vector<std::vector<size_t>>> order_line_counts_type;
 
   order_line_counts_type generate_order_line_counts();
 
-  std::shared_ptr<opossum::Table> generate_order_table(order_line_counts_type order_line_counts);
+  opossum::TableSPtr generate_order_table(order_line_counts_type order_line_counts);
 
-  std::shared_ptr<opossum::Table> generate_order_line_table(order_line_counts_type order_line_counts);
+  opossum::TableSPtr generate_order_line_table(order_line_counts_type order_line_counts);
 
-  std::shared_ptr<opossum::Table> generate_new_order_table();
+  opossum::TableSPtr generate_new_order_table();
 
-  std::map<std::string, std::shared_ptr<opossum::Table>> generate_all_tables();
+  std::map<std::string, opossum::TableSPtr> generate_all_tables();
 
   static TpccTableGeneratorFunctions tpcc_table_generator_functions();
 
-  static std::shared_ptr<opossum::Table> generate_tpcc_table(const std::string& tablename);
+  static opossum::TableSPtr generate_tpcc_table(const std::string& tablename);
 
   const size_t _warehouse_size;
   const time_t _current_date = std::time(0);

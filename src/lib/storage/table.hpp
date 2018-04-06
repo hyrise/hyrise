@@ -15,6 +15,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -25,7 +26,7 @@ class TableStatistics;
  */
 class Table : private Noncopyable {
  public:
-  static std::shared_ptr<Table> create_dummy_table(const TableColumnDefinitions& column_definitions);
+  static TableSPtr create_dummy_table(const TableColumnDefinitions& column_definitions);
 
   explicit Table(const TableColumnDefinitions& column_definitions, const TableType type,
                  const uint32_t max_chunk_size = Chunk::MAX_SIZE, const UseMvcc use_mvcc = UseMvcc::No);
@@ -77,11 +78,11 @@ class Table : private Noncopyable {
   ChunkID chunk_count() const;
 
   // Returns all Chunks
-  const std::vector<std::shared_ptr<Chunk>>& chunks() const;
+  const std::vector<ChunkSPtr>& chunks() const;
 
   // returns the chunk with the given id
-  std::shared_ptr<Chunk> get_chunk(ChunkID chunk_id);
-  std::shared_ptr<const Chunk> get_chunk(ChunkID chunk_id) const;
+  ChunkSPtr get_chunk(ChunkID chunk_id);
+  ChunkCSPtr get_chunk(ChunkID chunk_id) const;
   ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id);
   const ProxyChunk get_chunk_with_access_counting(ChunkID chunk_id) const;
 
@@ -92,7 +93,7 @@ class Table : private Noncopyable {
    * @param alloc
    */
   void append_chunk(const ChunkColumns& columns, const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
-                    const std::shared_ptr<ChunkAccessCounter>& access_counter = nullptr);
+                    const ChunkAccessCounterSPtr& access_counter = nullptr);
 
   // Create and append a Chunk consisting of ValueColumns.
   void append_mutable_chunk();
@@ -133,10 +134,10 @@ class Table : private Noncopyable {
 
   std::unique_lock<std::mutex> acquire_append_mutex();
 
-  void set_table_statistics(std::shared_ptr<TableStatistics> table_statistics) { _table_statistics = table_statistics; }
+  void set_table_statistics(TableStatisticsSPtr table_statistics) { _table_statistics = table_statistics; }
 
-  std::shared_ptr<TableStatistics> table_statistics() { return _table_statistics; }
-  std::shared_ptr<const TableStatistics> table_statistics() const { return _table_statistics; }
+  TableStatisticsSPtr table_statistics() { return _table_statistics; }
+  TableStatisticsCSPtr table_statistics() const { return _table_statistics; }
 
   std::vector<IndexInfo> get_indexes() const;
 
@@ -161,9 +162,11 @@ class Table : private Noncopyable {
   const TableType _type;
   const UseMvcc _use_mvcc;
   const uint32_t _max_chunk_size;
-  std::vector<std::shared_ptr<Chunk>> _chunks;
-  std::shared_ptr<TableStatistics> _table_statistics;
+  std::vector<ChunkSPtr> _chunks;
+  TableStatisticsSPtr _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;
   std::vector<IndexInfo> _indexes;
 };
+
+
 }  // namespace opossum

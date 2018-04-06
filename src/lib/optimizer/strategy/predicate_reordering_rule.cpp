@@ -16,11 +16,11 @@ namespace opossum {
 
 std::string PredicateReorderingRule::name() const { return "Predicate Reordering Rule"; }
 
-bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
+bool PredicateReorderingRule::apply_to(const AbstractLQPNodeSPtr& node) {
   auto reordered = false;
 
   if (node->type() == LQPNodeType::Predicate) {
-    std::vector<std::shared_ptr<PredicateNode>> predicate_nodes;
+    std::vector<PredicateNodeSPtr> predicate_nodes;
 
     // Gather adjacent PredicateNodes
     auto current_node = node;
@@ -53,7 +53,7 @@ bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   return reordered;
 }
 
-bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<PredicateNode>>& predicates) const {
+bool PredicateReorderingRule::_reorder_predicates(std::vector<PredicateNodeSPtr>& predicates) const {
   // Store original input and output
   auto input = predicates.back()->left_input();
   const auto outputs = predicates.front()->outputs();

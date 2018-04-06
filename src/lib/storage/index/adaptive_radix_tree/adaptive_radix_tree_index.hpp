@@ -37,7 +37,7 @@ class AdaptiveRadixTreeIndex : public BaseIndex {
   friend class AdaptiveRadixTreeIndexTest_BinaryComparableFromChunkOffset_Test;
 
  public:
-  explicit AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<const BaseColumn>>& index_columns);
+  explicit AdaptiveRadixTreeIndex(const std::vector<BaseColumnCSPtr>& index_columns);
 
   AdaptiveRadixTreeIndex(AdaptiveRadixTreeIndex&&) = default;
 
@@ -74,16 +74,16 @@ class AdaptiveRadixTreeIndex : public BaseIndex {
 
   Iterator _cend() const final;
 
-  std::shared_ptr<ARTNode> _bulk_insert(const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values);
+  ARTNodeSPtr _bulk_insert(const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values);
 
-  std::shared_ptr<ARTNode> _bulk_insert(const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values,
+  ARTNodeSPtr _bulk_insert(const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values,
                                         size_t depth, Iterator& it);
 
-  std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const;
+  std::vector<BaseColumnCSPtr> _get_index_columns() const;
 
-  const std::shared_ptr<const BaseDictionaryColumn> _index_column;
+  const BaseDictionaryColumnCSPtr _index_column;
   std::vector<ChunkOffset> _chunk_offsets;
-  std::shared_ptr<ARTNode> _root;
+  ARTNodeSPtr _root;
 };
 
 bool operator==(const AdaptiveRadixTreeIndex::BinaryComparable& left,

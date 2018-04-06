@@ -12,7 +12,7 @@ class ShowTablesNodeTest : public BaseTest {
  protected:
   void SetUp() override { _show_tables_node = ShowTablesNode::make(); }
 
-  std::shared_ptr<ShowTablesNode> _show_tables_node;
+  ShowTablesNodeSPtr _show_tables_node;
 };
 
 TEST_F(ShowTablesNodeTest, Description) { EXPECT_EQ(_show_tables_node->description(), "[ShowTables]"); }

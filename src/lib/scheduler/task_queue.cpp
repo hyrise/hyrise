@@ -14,7 +14,7 @@ bool TaskQueue::empty() const { return _num_tasks == 0; }
 
 NodeID TaskQueue::node_id() const { return _node_id; }
 
-void TaskQueue::push(std::shared_ptr<AbstractTask> task, uint32_t priority) {
+void TaskQueue::push(AbstractTaskSPtr task, uint32_t priority) {
   DebugAssert((priority < NUM_PRIORITY_LEVELS), "Illegal priority level");
 
   // Someone else was first to enqueue this task? No problem!
@@ -26,8 +26,8 @@ void TaskQueue::push(std::shared_ptr<AbstractTask> task, uint32_t priority) {
   _num_tasks++;
 }
 
-std::shared_ptr<AbstractTask> TaskQueue::pull() {
-  std::shared_ptr<AbstractTask> task;
+AbstractTaskSPtr TaskQueue::pull() {
+  AbstractTaskSPtr task;
   for (auto& queue : _queues) {
     queue.try_pop(task);
 
@@ -39,8 +39,8 @@ std::shared_ptr<AbstractTask> TaskQueue::pull() {
   return nullptr;
 }
 
-std::shared_ptr<AbstractTask> TaskQueue::steal() {
-  std::shared_ptr<AbstractTask> task;
+AbstractTaskSPtr TaskQueue::steal() {
+  AbstractTaskSPtr task;
   for (auto i : {SchedulePriority::High, SchedulePriority::Normal}) {
     auto& queue = _queues[static_cast<uint32_t>(i)];
     queue.try_pop(task);

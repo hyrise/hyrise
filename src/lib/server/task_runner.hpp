@@ -28,7 +28,7 @@ class TaskRunner {
 template <typename TResult>
 auto TaskRunner::dispatch_server_task(std::shared_ptr<TResult> task) -> decltype(task->get_future()) {
   using opossum::then_operator::then;
-  using TaskList = std::vector<std::shared_ptr<AbstractTask>>;
+  using TaskList = std::vector<AbstractTaskSPtr>;
 
   CurrentScheduler::schedule_tasks(TaskList({task}));
 

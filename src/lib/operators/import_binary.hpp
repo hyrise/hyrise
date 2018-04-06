@@ -37,11 +37,11 @@ class ImportBinary : public AbstractReadOnlyOperator {
    *
    * ¹ Zero or more chunks
    */
-  std::shared_ptr<const Table> _on_execute() final;
+  TableCSPtr _on_execute() final;
 
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  AbstractOperatorSPtr _on_recreate(
+      const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+      const AbstractOperatorSPtr& recreated_input_right) const override;
 
   // Returns the name of the operator
   const std::string name() const final;
@@ -64,7 +64,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * Column names          | std::string array                     |   Sum of lengths of all names
    *
    */
-  static std::pair<std::shared_ptr<Table>, ChunkID> _read_header(std::ifstream& file);
+  static std::pair<TableSPtr, ChunkID> _read_header(std::ifstream& file);
 
   /*
    * Creates a chunk from chunk information from the given file and adds it to the given table.
@@ -78,15 +78,15 @@ class ImportBinary : public AbstractReadOnlyOperator {
    *
    * ¹Number of columns is provided in the binary header
    */
-  static void _import_chunk(std::ifstream& file, std::shared_ptr<Table>& table);
+  static void _import_chunk(std::ifstream& file, TableSPtr& table);
 
   // Calls the right _import_column<ColumnDataType> depending on the given data_type.
-  static std::shared_ptr<BaseColumn> _import_column(std::ifstream& file, ChunkOffset row_count, DataType data_type,
+  static BaseColumnSPtr _import_column(std::ifstream& file, ChunkOffset row_count, DataType data_type,
                                                     bool is_nullable);
 
   // Reads the column type from the given file and chooses a column import function from it.
   template <typename ColumnDataType>
-  static std::shared_ptr<BaseColumn> _import_column(std::ifstream& file, ChunkOffset row_count, bool is_nullable);
+  static BaseColumnSPtr _import_column(std::ifstream& file, ChunkOffset row_count, bool is_nullable);
 
   /*
    * Imports a serialized ValueColumn from the given file.
@@ -114,7 +114,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    *
    */
   template <typename T>
-  static std::shared_ptr<ValueColumn<T>> _import_value_column(std::ifstream& file, ChunkOffset row_count,
+  static ValueColumnSPtr<T> _import_value_column(std::ifstream& file, ChunkOffset row_count,
                                                               bool is_nullable);
 
   /*
@@ -134,10 +134,10 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * °: This field is needed if the type of the column is NOT a string
    */
   template <typename T>
-  static std::shared_ptr<DictionaryColumn<T>> _import_dictionary_column(std::ifstream& file, ChunkOffset row_count);
+  static DictionaryColumnSPtr<T> _import_dictionary_column(std::ifstream& file, ChunkOffset row_count);
 
   // Calls the _import_attribute_vector<uintX_t> function that corresponds to the given attribute_vector_width.
-  static std::shared_ptr<BaseCompressedVector> _import_attribute_vector(std::ifstream& file, ChunkOffset row_count,
+  static BaseCompressedVectorSPtr _import_attribute_vector(std::ifstream& file, ChunkOffset row_count,
                                                                         AttributeVectorWidth attribute_vector_width);
 
   // Reads row_count many values from type T and returns them in a vector

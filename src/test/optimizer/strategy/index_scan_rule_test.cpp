@@ -39,7 +39,7 @@ class TableStatisticsMock : public TableStatistics {
     _row_count = row_count;
   }
 
-  std::shared_ptr<TableStatistics> predicate_statistics(const ColumnID column_id,
+  TableStatisticsSPtr predicate_statistics(const ColumnID column_id,
                                                         const PredicateCondition predicate_condition,
                                                         const AllParameterVariant& value,
                                                         const std::optional<AllTypeVariant>& value2) override {
@@ -66,7 +66,7 @@ class IndexScanRuleTest : public StrategyBaseTest {
     _rule = std::make_shared<IndexScanRule>();
   }
 
-  std::shared_ptr<IndexScanRule> _rule;
+  IndexScanRuleSPtr _rule;
 };
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {

@@ -10,7 +10,7 @@ namespace opossum {
 
 std::string PredicatePushdownRule::name() const { return "Predicate Pushdown Rule"; }
 
-bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
+bool PredicatePushdownRule::apply_to(const AbstractLQPNodeSPtr& node) {
   if (node->type() != LQPNodeType::Predicate) {
     return _apply_to_inputs(node);
   }
@@ -72,8 +72,8 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
   return false;
 }
 
-bool PredicatePushdownRule::_predicate_value_demotable(const std::shared_ptr<PredicateNode>& predicate_node,
-                                                   const std::shared_ptr<AbstractLQPNode>& node) const {
+bool PredicatePushdownRule::_predicate_value_demotable(const PredicateNodeSPtr& predicate_node,
+                                                   const AbstractLQPNodeSPtr& node) const {
   // The predicate must not be demoted if it combines columns of both join partners.
   // This can happen if the value to compare against is indeed another column ID
   // which references a table different from the filtered column's table.
@@ -95,13 +95,13 @@ bool PredicatePushdownRule::_predicate_value_demotable(const std::shared_ptr<Pre
   return true;
 }
 
-bool PredicatePushdownRule::_contained_in_left_subtree(const std::shared_ptr<AbstractLQPNode>& node,
+bool PredicatePushdownRule::_contained_in_left_subtree(const AbstractLQPNodeSPtr& node,
                                                        const LQPColumnReference& column) const {
   Assert(node->left_input(), "Node must have left input to compare column to");
   return _contained_in_node(node->left_input(), column);
 }
 
-bool PredicatePushdownRule::_contained_in_right_subtree(const std::shared_ptr<AbstractLQPNode>& node,
+bool PredicatePushdownRule::_contained_in_right_subtree(const AbstractLQPNodeSPtr& node,
                                                         const LQPColumnReference& column) const {
   if (node->right_input()) {
     return _contained_in_node(node->right_input(), column);
@@ -109,7 +109,7 @@ bool PredicatePushdownRule::_contained_in_right_subtree(const std::shared_ptr<Ab
   return false;
 }
 
-bool PredicatePushdownRule::_contained_in_node(const std::shared_ptr<AbstractLQPNode>& node,
+bool PredicatePushdownRule::_contained_in_node(const AbstractLQPNodeSPtr& node,
                                                const LQPColumnReference& column) const {
   const auto& columns = node->output_column_references();
   return std::find(columns.cbegin(), columns.cend(), column) != columns.cend();

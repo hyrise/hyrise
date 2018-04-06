@@ -31,9 +31,9 @@ JoinNode::JoinNode(const JoinMode join_mode, const LQPColumnReferencePair& join_
               "Specified JoinMode must specify neither column ids nor predicate condition.");
 }
 
-std::shared_ptr<AbstractLQPNode> JoinNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-    const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
+AbstractLQPNodeSPtr JoinNode::_deep_copy_impl(
+    const AbstractLQPNodeSPtr& copied_left_input,
+    const AbstractLQPNodeSPtr& copied_right_input) const {
   if (_join_mode == JoinMode::Cross || _join_mode == JoinMode::Natural) {
     return JoinNode::make(_join_mode);
   } else {
@@ -79,8 +79,8 @@ const std::vector<LQPColumnReference>& JoinNode::output_column_references() cons
   return *_output_column_references;
 }
 
-std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
-    const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
+TableStatisticsSPtr JoinNode::derive_statistics_from(
+    const AbstractLQPNodeSPtr& left_input, const AbstractLQPNodeSPtr& right_input) const {
   if (_join_mode == JoinMode::Cross) {
     return left_input->get_statistics()->generate_cross_join_statistics(right_input->get_statistics());
   } else {

@@ -15,9 +15,9 @@ OrderByDefinition::OrderByDefinition(const LQPColumnReference& column_reference,
 SortNode::SortNode(const OrderByDefinitions& order_by_definitions)
     : AbstractLQPNode(LQPNodeType::Sort), _order_by_definitions(order_by_definitions) {}
 
-std::shared_ptr<AbstractLQPNode> SortNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-    const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
+AbstractLQPNodeSPtr SortNode::_deep_copy_impl(
+    const AbstractLQPNodeSPtr& copied_left_input,
+    const AbstractLQPNodeSPtr& copied_right_input) const {
   OrderByDefinitions order_by_definitions;
   order_by_definitions.reserve(_order_by_definitions.size());
 

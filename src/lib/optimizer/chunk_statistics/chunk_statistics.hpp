@@ -7,6 +7,7 @@
 #include "types.hpp"
 
 #include "optimizer/chunk_statistics/chunk_column_statistics.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -15,9 +16,9 @@ namespace opossum {
  */
 class ChunkStatistics final : public std::enable_shared_from_this<ChunkStatistics> {
  public:
-  explicit ChunkStatistics(std::vector<std::shared_ptr<ChunkColumnStatistics>> statistics) : _statistics(statistics) {}
+  explicit ChunkStatistics(std::vector<ChunkColumnStatisticsSPtr> statistics) : _statistics(statistics) {}
 
-  const std::vector<std::shared_ptr<ChunkColumnStatistics>>& statistics() const { return _statistics; }
+  const std::vector<ChunkColumnStatisticsSPtr>& statistics() const { return _statistics; }
 
   /**
    * calls can_prune on the ChunkColumnStatistics corresponding to column_id
@@ -25,6 +26,8 @@ class ChunkStatistics final : public std::enable_shared_from_this<ChunkStatistic
   bool can_prune(const ColumnID column_id, const AllTypeVariant& value, const PredicateCondition predicate_type) const;
 
  protected:
-  std::vector<std::shared_ptr<ChunkColumnStatistics>> _statistics;
+  std::vector<ChunkColumnStatisticsSPtr> _statistics;
 };
+
+
 }  // namespace opossum

@@ -17,14 +17,14 @@ namespace opossum {
 
 std::string ChunkPruningRule::name() const { return "Chunk Pruning Rule"; }
 
-bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
+bool ChunkPruningRule::apply_to(const AbstractLQPNodeSPtr& node) {
   // we only want to follow chains of predicates
   if (node->type() != LQPNodeType::Predicate) {
     return _apply_to_inputs(node);
   }
   DebugAssert(node->input_count() == 1, "Predicate nodes should only have 1 input");
   // try to find a chain of predicate nodes that ends in a leaf
-  std::vector<std::shared_ptr<PredicateNode>> predicate_nodes;
+  std::vector<PredicateNodeSPtr> predicate_nodes;
 
   // Gather consecutive PredicateNodes
   auto current_node = node;
@@ -52,7 +52,7 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
    * A chain of predicates followed by a stored table node was found.
    */
   auto table = StorageManager::get().get_table(stored_table->table_name());
-  std::vector<std::shared_ptr<ChunkStatistics>> statistics;
+  std::vector<ChunkStatisticsSPtr> statistics;
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     statistics.push_back(table->get_chunk(chunk_id)->statistics());
   }
@@ -78,7 +78,7 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
 }
 
 std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
-    const std::vector<std::shared_ptr<ChunkStatistics>>& statistics, std::shared_ptr<PredicateNode> predicate) {
+    const std::vector<ChunkStatisticsSPtr>& statistics, PredicateNodeSPtr predicate) {
   if (!is_variant(predicate->value())) {
     return std::set<ChunkID>();
   }

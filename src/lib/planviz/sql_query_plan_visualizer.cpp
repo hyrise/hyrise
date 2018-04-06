@@ -17,15 +17,15 @@ SQLQueryPlanVisualizer::SQLQueryPlanVisualizer(GraphvizConfig graphviz_config, V
                          std::move(edge_info)) {}
 
 void SQLQueryPlanVisualizer::_build_graph(const SQLQueryPlan& plan) {
-  std::unordered_set<std::shared_ptr<const AbstractOperator>> visualized_ops;
+  std::unordered_set<AbstractOperatorCSPtr> visualized_ops;
   for (const auto& root : plan.tree_roots()) {
     _build_subtree(root, visualized_ops);
   }
 }
 
 void SQLQueryPlanVisualizer::_build_subtree(
-    const std::shared_ptr<const AbstractOperator>& op,
-    std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
+    const AbstractOperatorCSPtr& op,
+    std::unordered_set<AbstractOperatorCSPtr>& visualized_ops) {
   // Avoid drawing dataflows/ops redundantly in diamond shaped PQPs
   if (visualized_ops.find(op) != visualized_ops.end()) return;
   visualized_ops.insert(op);
@@ -45,8 +45,8 @@ void SQLQueryPlanVisualizer::_build_subtree(
   }
 }
 
-void SQLQueryPlanVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator>& from,
-                                             const std::shared_ptr<const AbstractOperator>& to) {
+void SQLQueryPlanVisualizer::_build_dataflow(const AbstractOperatorCSPtr& from,
+                                             const AbstractOperatorCSPtr& to) {
   VizEdgeInfo info = _default_edge;
 
   if (const auto& output = from->get_output()) {
@@ -64,7 +64,7 @@ void SQLQueryPlanVisualizer::_build_dataflow(const std::shared_ptr<const Abstrac
   _add_edge(from, to, info);
 }
 
-void SQLQueryPlanVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>& op) {
+void SQLQueryPlanVisualizer::_add_operator(const AbstractOperatorCSPtr& op) {
   VizVertexInfo info = _default_vertex;
   auto label = op->description(DescriptionMode::MultiLine);
 

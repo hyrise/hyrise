@@ -34,8 +34,8 @@ class OperatorsDeleteTest : public BaseTest {
   }
 
   std::string _table_name;
-  std::shared_ptr<GetTable> _gt;
-  std::shared_ptr<Table> _table;
+  GetTableSPtr _gt;
+  TableSPtr _table;
 
   void helper(bool commit);
 };

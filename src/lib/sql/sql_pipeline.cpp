@@ -5,8 +5,8 @@
 
 namespace opossum {
 
-SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context,
-                         const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
+SQLPipeline::SQLPipeline(const std::string& sql, TransactionContextSPtr transaction_context,
+                         const UseMvcc use_mvcc, const OptimizerSPtr& optimizer,
                          const PreparedStatementCache& prepared_statements)
     : _transaction_context(transaction_context), _optimizer(optimizer) {
   DebugAssert(!_transaction_context || _transaction_context->phase() == TransactionPhase::Active,
@@ -109,7 +109,7 @@ const std::vector<std::shared_ptr<hsql::SQLParserResult>>& SQLPipeline::get_pars
   return _parsed_sql_statements;
 }
 
-const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_unoptimized_logical_plans() {
+const std::vector<AbstractLQPNodeSPtr>& SQLPipeline::get_unoptimized_logical_plans() {
   if (!_unoptimized_logical_plans.empty()) {
     return _unoptimized_logical_plans;
   }
@@ -134,7 +134,7 @@ const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_unoptimize
   return _unoptimized_logical_plans;
 }
 
-const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_optimized_logical_plans() {
+const std::vector<AbstractLQPNodeSPtr>& SQLPipeline::get_optimized_logical_plans() {
   if (!_optimized_logical_plans.empty()) {
     return _optimized_logical_plans;
   }
@@ -164,7 +164,7 @@ const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_optimized_
   return _optimized_logical_plans;
 }
 
-const std::vector<std::shared_ptr<SQLQueryPlan>>& SQLPipeline::get_query_plans() {
+const std::vector<SQLQueryPlanSPtr>& SQLPipeline::get_query_plans() {
   if (!_query_plans.empty()) {
     return _query_plans;
   }
@@ -189,7 +189,7 @@ const std::vector<std::shared_ptr<SQLQueryPlan>>& SQLPipeline::get_query_plans()
   return _query_plans;
 }
 
-const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_tasks() {
+const std::vector<std::vector<OperatorTaskSPtr>>& SQLPipeline::get_tasks() {
   if (!_tasks.empty()) {
     return _tasks;
   }
@@ -214,7 +214,7 @@ const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_
   return _tasks;
 }
 
-std::shared_ptr<const Table> SQLPipeline::get_result_table() {
+TableCSPtr SQLPipeline::get_result_table() {
   if (_pipeline_was_executed) {
     return _result_table;
   }
@@ -234,9 +234,9 @@ std::shared_ptr<const Table> SQLPipeline::get_result_table() {
   return _result_table;
 }
 
-std::shared_ptr<TransactionContext> SQLPipeline::transaction_context() const { return _transaction_context; }
+TransactionContextSPtr SQLPipeline::transaction_context() const { return _transaction_context; }
 
-std::shared_ptr<SQLPipelineStatement> SQLPipeline::failed_pipeline_statement() const {
+SQLPipelineStatementSPtr SQLPipeline::failed_pipeline_statement() const {
   return _failed_pipeline_statement;
 }
 

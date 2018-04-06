@@ -57,10 +57,10 @@ struct ColumnDataDistribution {
 
 class TableGenerator {
  public:
-  std::shared_ptr<Table> generate_table(const ChunkID chunk_size,
+  TableSPtr generate_table(const ChunkID chunk_size,
                                         std::optional<EncodingType> encoding_type = std::nullopt);
 
-  std::shared_ptr<Table> generate_table(const std::vector<ColumnDataDistribution>& column_data_distributions,
+  TableSPtr generate_table(const std::vector<ColumnDataDistribution>& column_data_distributions,
                                         const size_t num_rows, const size_t chunk_size,
                                         std::optional<EncodingType> encoding_type = std::nullopt);
 

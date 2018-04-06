@@ -23,17 +23,17 @@ namespace opossum {
    */
 class JoinSortMerge : public AbstractJoinOperator {
  public:
-  JoinSortMerge(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
+  JoinSortMerge(const AbstractOperatorCSPtr left, const AbstractOperatorCSPtr right,
                 const JoinMode mode, const ColumnIDPair& column_ids, const PredicateCondition op);
 
   const std::string name() const override;
 
  protected:
-  std::shared_ptr<const Table> _on_execute() override;
+  TableCSPtr _on_execute() override;
   void _on_cleanup() override;
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  AbstractOperatorSPtr _on_recreate(
+      const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+      const AbstractOperatorSPtr& recreated_input_right) const override;
 
   template <typename T>
   class JoinSortMergeImpl;

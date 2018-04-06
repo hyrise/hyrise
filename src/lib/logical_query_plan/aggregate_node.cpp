@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-AggregateNode::AggregateNode(const std::vector<std::shared_ptr<LQPExpression>>& aggregate_expressions,
+AggregateNode::AggregateNode(const std::vector<LQPExpressionSPtr>& aggregate_expressions,
                              const std::vector<LQPColumnReference>& groupby_column_references)
     : AbstractLQPNode(LQPNodeType::Aggregate),
       _aggregate_expressions(aggregate_expressions),
@@ -23,12 +23,12 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<LQPExpression>>& 
   }
 }
 
-std::shared_ptr<AbstractLQPNode> AggregateNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-    const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
+AbstractLQPNodeSPtr AggregateNode::_deep_copy_impl(
+    const AbstractLQPNodeSPtr& copied_left_input,
+    const AbstractLQPNodeSPtr& copied_right_input) const {
   Assert(left_input(), "Can't clone without input, need it to adapt column references");
 
-  std::vector<std::shared_ptr<LQPExpression>> aggregate_expressions;
+  std::vector<LQPExpressionSPtr> aggregate_expressions;
   aggregate_expressions.reserve(_aggregate_expressions.size());
   for (const auto& expression : _aggregate_expressions) {
     aggregate_expressions.emplace_back(
@@ -45,7 +45,7 @@ std::shared_ptr<AbstractLQPNode> AggregateNode::_deep_copy_impl(
   return AggregateNode::make(aggregate_expressions, groupby_column_references);
 }
 
-const std::vector<std::shared_ptr<LQPExpression>>& AggregateNode::aggregate_expressions() const {
+const std::vector<LQPExpressionSPtr>& AggregateNode::aggregate_expressions() const {
   return _aggregate_expressions;
 }
 
@@ -63,7 +63,7 @@ std::string AggregateNode::description() const {
     verbose_column_names = left_input()->get_verbose_column_names();
   }
 
-  auto stream_aggregate = [&](const std::shared_ptr<LQPExpression>& aggregate_expr) {
+  auto stream_aggregate = [&](const LQPExpressionSPtr& aggregate_expr) {
     s << aggregate_expr->to_string(verbose_column_names);
 
     if (aggregate_expr->alias()) {
@@ -140,14 +140,14 @@ const std::vector<LQPColumnReference>& AggregateNode::output_column_references()
   return *_output_column_references;
 }
 
-LQPColumnReference AggregateNode::get_column_by_expression(const std::shared_ptr<LQPExpression>& expression) const {
+LQPColumnReference AggregateNode::get_column_by_expression(const LQPExpressionSPtr& expression) const {
   const auto column_id = find_column_by_expression(expression);
   DebugAssert(column_id, "Expression could not be resolved.");
   return *column_id;
 }
 
 std::optional<LQPColumnReference> AggregateNode::find_column_by_expression(
-    const std::shared_ptr<LQPExpression>& expression) const {
+    const LQPExpressionSPtr& expression) const {
   /**
    * This function does NOT need to check whether an expression is ambiguous.
    * It is only used when translating the HAVING clause.

@@ -45,7 +45,7 @@ class ChunkPruningTest : public StrategyBaseTest {
     storage_manager.add_table("uncompressed", load_table("src/test/tables/int_float2.tbl", 10u));
   }
 
-  std::shared_ptr<ChunkPruningRule> _rule;
+  ChunkPruningRuleSPtr _rule;
 };
 
 TEST_F(ChunkPruningTest, SimplePruningTest) {

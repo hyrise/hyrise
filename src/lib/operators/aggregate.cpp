@@ -19,7 +19,7 @@
 
 namespace opossum {
 
-Aggregate::Aggregate(const std::shared_ptr<AbstractOperator> in,
+Aggregate::Aggregate(const AbstractOperatorSPtr in,
                      const std::vector<AggregateColumnDefinition>& aggregates,
                      const std::vector<ColumnID> groupby_column_ids)
     : AbstractReadOnlyOperator(OperatorType::Aggregate, in),
@@ -68,9 +68,9 @@ const std::string Aggregate::description(DescriptionMode description_mode) const
   return desc.str();
 }
 
-std::shared_ptr<AbstractOperator> Aggregate::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+AbstractOperatorSPtr Aggregate::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const AbstractOperatorSPtr& recreated_input_left,
+    const AbstractOperatorSPtr& recreated_input_right) const {
   return std::make_shared<Aggregate>(recreated_input_left, _aggregates, _groupby_column_ids);
 }
 
@@ -78,13 +78,13 @@ std::shared_ptr<AbstractOperator> Aggregate::_on_recreate(
 Visitor context for the partitioning/grouping visitor
 */
 struct GroupByContext : ColumnVisitableContext {
-  GroupByContext(std::shared_ptr<const Table> t, ChunkID chunk, ColumnID column,
+  GroupByContext(TableCSPtr t, ChunkID chunk, ColumnID column,
                  std::shared_ptr<std::vector<AggregateKey>> keys)
       : table_in(t), chunk_id(chunk), column_id(column), hash_keys(keys) {}
 
   // constructor for use in ReferenceColumn::visit_dereferenced
-  GroupByContext(std::shared_ptr<BaseColumn>, const std::shared_ptr<const Table> referenced_table,
-                 std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
+  GroupByContext(BaseColumnSPtr, const TableCSPtr referenced_table,
+                 ColumnVisitableContextSPtr base_context, ChunkID chunk_id,
                  std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets)
       : table_in(referenced_table),
         chunk_id(chunk_id),
@@ -92,7 +92,7 @@ struct GroupByContext : ColumnVisitableContext {
         hash_keys(std::static_pointer_cast<GroupByContext>(base_context)->hash_keys),
         chunk_offsets_in(chunk_offsets) {}
 
-  std::shared_ptr<const Table> table_in;
+  TableCSPtr table_in;
   ChunkID chunk_id;
   const ColumnID column_id;
   std::shared_ptr<std::vector<AggregateKey>> hash_keys;
@@ -108,8 +108,8 @@ struct AggregateContext : ColumnVisitableContext {
   explicit AggregateContext(std::shared_ptr<GroupByContext> base_context) : groupby_context(base_context) {}
 
   // constructor for use in ReferenceColumn::visit_dereferenced
-  AggregateContext(std::shared_ptr<BaseColumn>, const std::shared_ptr<const Table>,
-                   std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
+  AggregateContext(BaseColumnSPtr, const TableCSPtr,
+                   ColumnVisitableContextSPtr base_context, ChunkID chunk_id,
                    std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets)
       : groupby_context(std::static_pointer_cast<AggregateContext>(base_context)->groupby_context),
         results(std::static_pointer_cast<AggregateContext>(base_context)->results) {
@@ -315,7 +315,7 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const
   });
 }
 
-std::shared_ptr<const Table> Aggregate::_on_execute() {
+TableCSPtr Aggregate::_on_execute() {
   auto input_table = input_table_left();
 
   // check for invalid aggregates
@@ -338,7 +338,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   */
   _keys_per_chunk = std::vector<std::shared_ptr<std::vector<AggregateKey>>>(input_table->chunk_count());
 
-  std::vector<std::shared_ptr<AbstractTask>> jobs;
+  std::vector<AbstractTaskSPtr> jobs;
   jobs.reserve(input_table->chunk_count());
 
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
@@ -379,7 +379,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   /*
   AGGREGATION PHASE
   */
-  _contexts_per_column = std::vector<std::shared_ptr<ColumnVisitableContext>>(_aggregates.size());
+  _contexts_per_column = std::vector<ColumnVisitableContextSPtr>(_aggregates.size());
 
   if (_aggregates.empty()) {
     /*
@@ -580,7 +580,7 @@ They are separate and templated to avoid compiler errors for invalid type/functi
 template <typename ColumnType, typename AggregateType, AggregateFunction func>
 typename std::enable_if<
     func == AggregateFunction::Min || func == AggregateFunction::Max || func == AggregateFunction::Sum, void>::type
-_write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
+_write_aggregate_values(ValueColumnSPtr<AggregateType> column,
                         std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType, ColumnType>>> results) {
   DebugAssert(column->is_nullable(), "Aggregate: Output column needs to be nullable");
 
@@ -601,7 +601,7 @@ _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
 // COUNT writes the aggregate counter
 template <typename ColumnType, typename AggregateType, AggregateFunction func>
 typename std::enable_if<func == AggregateFunction::Count, void>::type _write_aggregate_values(
-    std::shared_ptr<ValueColumn<AggregateType>> column,
+    ValueColumnSPtr<AggregateType> column,
     std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType, ColumnType>>> results) {
   DebugAssert(!column->is_nullable(), "Aggregate: Output column for COUNT shouldn't be nullable");
 
@@ -615,7 +615,7 @@ typename std::enable_if<func == AggregateFunction::Count, void>::type _write_agg
 // COUNT(DISTINCT) writes the number of distinct values
 template <typename ColumnType, typename AggregateType, AggregateFunction func>
 typename std::enable_if<func == AggregateFunction::CountDistinct, void>::type _write_aggregate_values(
-    std::shared_ptr<ValueColumn<AggregateType>> column,
+    ValueColumnSPtr<AggregateType> column,
     std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType, ColumnType>>> results) {
   DebugAssert(!column->is_nullable(), "Aggregate: Output column for COUNT shouldn't be nullable");
 
@@ -629,7 +629,7 @@ typename std::enable_if<func == AggregateFunction::CountDistinct, void>::type _w
 // AVG writes the calculated average from current aggregate and the aggregate counter
 template <typename ColumnType, typename AggregateType, AggregateFunction func>
 typename std::enable_if<func == AggregateFunction::Avg && std::is_arithmetic<AggregateType>::value, void>::type
-_write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
+_write_aggregate_values(ValueColumnSPtr<AggregateType> column,
                         std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType, ColumnType>>> results) {
   DebugAssert(column->is_nullable(), "Aggregate: Output column needs to be nullable");
 
@@ -650,7 +650,7 @@ _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
 // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
 template <typename ColumnType, typename AggregateType, AggregateFunction func>
 typename std::enable_if<func == AggregateFunction::Avg && !std::is_arithmetic<AggregateType>::value, void>::type
-    _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>>,
+    _write_aggregate_values(ValueColumnSPtr<AggregateType>,
                             std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType, ColumnType>>>) {
   Fail("Invalid aggregate");
 }
@@ -731,9 +731,9 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
   _output_columns.push_back(col);
 }
 
-std::shared_ptr<ColumnVisitableContext> Aggregate::_create_aggregate_context(const DataType data_type,
+ColumnVisitableContextSPtr Aggregate::_create_aggregate_context(const DataType data_type,
                                                                              const AggregateFunction function) const {
-  std::shared_ptr<ColumnVisitableContext> context;
+  ColumnVisitableContextSPtr context;
   resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
     switch (function) {
@@ -761,7 +761,7 @@ std::shared_ptr<ColumnVisitableContext> Aggregate::_create_aggregate_context(con
 }
 
 template <typename ColumnDataType, AggregateFunction aggregate_function>
-std::shared_ptr<ColumnVisitableContext> Aggregate::_create_aggregate_context_impl() const {
+ColumnVisitableContextSPtr Aggregate::_create_aggregate_context_impl() const {
   const auto context = std::make_shared<
       AggregateContext<ColumnDataType, typename AggregateTraits<ColumnDataType, aggregate_function>::aggregate_type>>();
   context->results = std::make_shared<typename decltype(context->results)::element_type>();

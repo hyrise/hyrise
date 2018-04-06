@@ -12,7 +12,7 @@ class DeleteNodeTest : public BaseTest {
  protected:
   void SetUp() override { _delete_node = DeleteNode::make("table_a"); }
 
-  std::shared_ptr<DeleteNode> _delete_node;
+  DeleteNodeSPtr _delete_node;
 };
 
 TEST_F(DeleteNodeTest, Description) { EXPECT_EQ(_delete_node->description(), "[Delete] Table: 'table_a'"); }

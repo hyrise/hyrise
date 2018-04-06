@@ -22,7 +22,7 @@ class FrameOfReferenceEncoder : public ColumnEncoder<FrameOfReferenceEncoder> {
   static constexpr auto _uses_vector_compression = true;  // see base_column_encoder.hpp for details
 
   template <typename T>
-  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueColumn<T>>& value_column) {
+  BaseEncodedColumnSPtr _on_encode(const ValueColumnCSPtr<T>& value_column) {
     const auto alloc = value_column->values().get_allocator();
 
     static constexpr auto block_size = FrameOfReferenceColumn<T>::block_size;

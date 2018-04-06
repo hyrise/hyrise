@@ -7,6 +7,7 @@
 #include "types.hpp"
 
 #include "optimizer/chunk_statistics/abstract_filter.hpp"
+#include "utils/create_ptr_aliases.hpp"
 
 namespace opossum {
 
@@ -18,10 +19,10 @@ class BaseColumn;
  */
 class ChunkColumnStatistics final {
  public:
-  static std::shared_ptr<ChunkColumnStatistics> build_statistics(DataType data_type,
-                                                                 std::shared_ptr<BaseColumn> column);
+  static ChunkColumnStatisticsSPtr build_statistics(DataType data_type,
+                                                                 BaseColumnSPtr column);
 
-  void add_filter(std::shared_ptr<AbstractFilter> filter);
+  void add_filter(AbstractFilterSPtr filter);
 
   /**
    * calls can_prune on each filter in this object
@@ -29,6 +30,8 @@ class ChunkColumnStatistics final {
   bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const;
 
  protected:
-  std::vector<std::shared_ptr<AbstractFilter>> _filters;
+  std::vector<AbstractFilterSPtr> _filters;
 };
+
+
 }  // namespace opossum

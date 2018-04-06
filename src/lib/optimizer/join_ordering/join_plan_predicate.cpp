@@ -8,7 +8,7 @@ namespace {
 using namespace opossum;  // NOLINT
 
 // Among the vertices, find the index of the one that contains column_reference
-size_t get_vertex_idx(const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices,
+size_t get_vertex_idx(const std::vector<AbstractLQPNodeSPtr>& vertices,
                       const LQPColumnReference& column_reference) {
   for (size_t vertex_idx = 0; vertex_idx < vertices.size(); ++vertex_idx) {
     if (vertices[vertex_idx]->find_output_column_id(column_reference)) return vertex_idx;
@@ -25,16 +25,16 @@ AbstractJoinPlanPredicate::AbstractJoinPlanPredicate(const JoinPlanPredicateType
 JoinPlanPredicateType AbstractJoinPlanPredicate::type() const { return _type; }
 
 JoinPlanLogicalPredicate::JoinPlanLogicalPredicate(
-    const std::shared_ptr<const AbstractJoinPlanPredicate>& left_operand,
+    const AbstractJoinPlanPredicateCSPtr& left_operand,
     JoinPlanPredicateLogicalOperator logical_operator,
-    const std::shared_ptr<const AbstractJoinPlanPredicate>& right_operand)
+    const AbstractJoinPlanPredicateCSPtr& right_operand)
     : AbstractJoinPlanPredicate(JoinPlanPredicateType::LogicalOperator),
       left_operand(left_operand),
       logical_operator(logical_operator),
       right_operand(right_operand) {}
 
 JoinVertexSet JoinPlanLogicalPredicate::get_accessed_vertex_set(
-    const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices) const {
+    const std::vector<AbstractLQPNodeSPtr>& vertices) const {
   return left_operand->get_accessed_vertex_set(vertices) | right_operand->get_accessed_vertex_set(vertices);
 }
 
@@ -71,7 +71,7 @@ JoinPlanAtomicPredicate::JoinPlanAtomicPredicate(const LQPColumnReference& left_
 }
 
 JoinVertexSet JoinPlanAtomicPredicate::get_accessed_vertex_set(
-    const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices) const {
+    const std::vector<AbstractLQPNodeSPtr>& vertices) const {
   JoinVertexSet vertex_set{vertices.size()};
   vertex_set.set(get_vertex_idx(vertices, left_operand));
   if (is_lqp_column_reference(right_operand)) {

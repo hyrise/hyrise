@@ -31,7 +31,7 @@
 using namespace std::string_literals;  // NOLINT
 
 namespace {
-std::shared_ptr<opossum::AbstractLQPNode> compile_query(const std::string& query) {
+opossum::AbstractLQPNodeSPtr compile_query(const std::string& query) {
   return opossum::SQLPipelineBuilder{query}.disable_mvcc().create_pipeline().get_unoptimized_logical_plans().at(0);
 }
 
@@ -60,9 +60,9 @@ class SQLTranslatorTest : public BaseTest {
   }
   void TearDown() override { StorageManager::reset(); }
 
-  std::shared_ptr<StoredTableNode> _stored_table_node_a;
-  std::shared_ptr<StoredTableNode> _stored_table_node_b;
-  std::shared_ptr<StoredTableNode> _stored_table_node_c;
+  StoredTableNodeSPtr _stored_table_node_a;
+  StoredTableNodeSPtr _stored_table_node_b;
+  StoredTableNodeSPtr _stored_table_node_c;
   LQPColumnReference _table_a_a;
   LQPColumnReference _table_a_b;
   LQPColumnReference _table_b_a;
@@ -381,7 +381,7 @@ TEST_F(SQLTranslatorTest, InsertValues) {
 
   const auto lqp = InsertNode::make(
       "table_a",
-      ProjectionNode::make(std::vector<std::shared_ptr<LQPExpression>>{value_a, value_b}, DummyTableNode::make()));
+      ProjectionNode::make(std::vector<LQPExpressionSPtr>{value_a, value_b}, DummyTableNode::make()));
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -395,7 +395,7 @@ TEST_F(SQLTranslatorTest, InsertValuesColumnReorder) {
 
   const auto lqp = InsertNode::make(
       "table_a",
-      ProjectionNode::make(std::vector<std::shared_ptr<LQPExpression>>{value_a, value_b}, DummyTableNode::make()));
+      ProjectionNode::make(std::vector<LQPExpressionSPtr>{value_a, value_b}, DummyTableNode::make()));
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -409,7 +409,7 @@ TEST_F(SQLTranslatorTest, InsertValuesIncompleteColumns) {
 
   const auto lqp = InsertNode::make(
       "table_a",
-      ProjectionNode::make(std::vector<std::shared_ptr<LQPExpression>>{value_a, value_b}, DummyTableNode::make()));
+      ProjectionNode::make(std::vector<LQPExpressionSPtr>{value_a, value_b}, DummyTableNode::make()));
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -441,7 +441,7 @@ TEST_F(SQLTranslatorTest, Update) {
   const auto update_b = LQPExpression::create_literal(3.2f);
 
   const auto lqp = UpdateNode::make(
-      "table_a", std::vector<std::shared_ptr<LQPExpression>>{update_a, update_b},
+      "table_a", std::vector<LQPExpressionSPtr>{update_a, update_b},
       PredicateNode::make(_table_a_a, PredicateCondition::GreaterThan, int64_t(1), _stored_table_node_a));
 
   EXPECT_LQP_EQ(lqp, result_node);
@@ -599,7 +599,7 @@ TEST_F(SQLTranslatorTest, CreateAliasView) {
 
   // clang-format off
   const auto view_node =
-  ProjectionNode::make(std::vector<std::shared_ptr<LQPExpression>>{alias_c, alias_d},
+  ProjectionNode::make(std::vector<LQPExpressionSPtr>{alias_c, alias_d},
     ProjectionNode::make_pass_through(
       PredicateNode::make(_table_a_a, PredicateCondition::Equals, "b",
         _stored_table_node_a)));

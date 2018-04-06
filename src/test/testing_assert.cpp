@@ -25,7 +25,7 @@ namespace {
 
 using Matrix = std::vector<std::vector<opossum::AllTypeVariant>>;
 
-Matrix _table_to_matrix(const std::shared_ptr<const opossum::Table>& table) {
+Matrix _table_to_matrix(const opossum::TableCSPtr& table) {
   // initialize matrix with table sizes, including column names/types
   Matrix matrix(table->row_count() + 2, std::vector<opossum::AllTypeVariant>(table->column_count()));
 
@@ -114,8 +114,8 @@ bool almost_equals(T left_val, T right_val, opossum::FloatComparisonMode float_c
 
 namespace opossum {
 
-bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
-                       const std::shared_ptr<const Table>& expected_table, OrderSensitivity order_sensitivity,
+bool check_table_equal(const TableCSPtr& opossum_table,
+                       const TableCSPtr& expected_table, OrderSensitivity order_sensitivity,
                        TypeCmpMode type_cmp_mode, FloatComparisonMode float_comparison_mode) {
   auto opossum_matrix = _table_to_matrix(opossum_table);
   auto expected_matrix = _table_to_matrix(expected_table);
@@ -256,7 +256,7 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   return true;
 }
 
-void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, PredicateCondition predicate_condition,
+void ASSERT_INNER_JOIN_NODE(const AbstractLQPNodeSPtr& node, PredicateCondition predicate_condition,
                             const LQPColumnReference& left_column_reference,
                             const LQPColumnReference& right_column_reference) {
   ASSERT_EQ(node->type(), LQPNodeType::Join);  // Can't cast otherwise
@@ -266,10 +266,10 @@ void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, Predic
   EXPECT_EQ(join_node->join_column_references(), std::make_pair(left_column_reference, right_column_reference));
 }
 
-void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node) {}
+void ASSERT_CROSS_JOIN_NODE(const AbstractLQPNodeSPtr& node) {}
 
-bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& output, LQPInputSide input_side,
-                   const std::shared_ptr<const AbstractLQPNode>& input) {
+bool check_lqp_tie(const AbstractLQPNodeCSPtr& output, LQPInputSide input_side,
+                   const AbstractLQPNodeCSPtr& input) {
   auto outputs = input->outputs();
   for (const auto& output2 : outputs) {
     if (!output2) {

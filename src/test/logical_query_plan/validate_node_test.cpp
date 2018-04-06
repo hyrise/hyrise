@@ -12,7 +12,7 @@ class ValidateNodeTest : public BaseTest {
  protected:
   void SetUp() override { _validate_node = ValidateNode::make(); }
 
-  std::shared_ptr<ValidateNode> _validate_node;
+  ValidateNodeSPtr _validate_node;
 };
 
 TEST_F(ValidateNodeTest, Description) { EXPECT_EQ(_validate_node->description(), "[Validate]"); }

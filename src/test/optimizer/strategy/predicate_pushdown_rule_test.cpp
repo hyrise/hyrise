@@ -35,8 +35,8 @@ class PredicatePushdownRuleTest : public StrategyBaseTest {
     _rule = std::make_shared<PredicatePushdownRule>();
   }
 
-  std::shared_ptr<PredicatePushdownRule> _rule;
-  std::shared_ptr<StoredTableNode> _table_a, _table_b, _table_c;
+  PredicatePushdownRuleSPtr _rule;
+  StoredTableNodeSPtr _table_a, _table_b, _table_c;
   LQPColumnReference _a_a, _a_b, _b_a, _b_b, _c_a, _c_b;
 };
 
