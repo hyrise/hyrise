@@ -32,7 +32,7 @@ function(EMBED_LLVM OUTPUT_FILE)
 
     # Setting up paths for the files that are being generated
     set(CPP_BUNDLE_FILE "${CMAKE_CURRENT_BINARY_DIR}/embed_llvm/jit_llvm_bundle.cpp")
-    set(LLVM_BUNDLE_FILE "${CMAKE_CURRENT_BINARY_DIR}/embed_llvm/jit_llvm_bundle.ll")
+    set(LLVM_BUNDLE_FILE "${CMAKE_CURRENT_BINARY_DIR}/embed_llvm/jit_llvm_bundle.bc")
     set(ASM_FILE "${CMAKE_CURRENT_BINARY_DIR}/embed_llvm/jit_llvm_bundle.s")
 
     # Step 1: Including all input files
@@ -46,7 +46,7 @@ function(EMBED_LLVM OUTPUT_FILE)
     set(FLAGS -std=c++17 -O3 -fwhole-program-vtables -flto ${CMAKE_CXX_FLAGS})
     add_custom_command(
         OUTPUT ${LLVM_BUNDLE_FILE}
-        COMMAND ${CMAKE_CXX_COMPILER} ${FLAGS} -c -S -emit-llvm -DSOURCE_PATH_SIZE -I${CMAKE_CURRENT_SOURCE_DIR} -I${PROJECT_SOURCE_DIR}/third_party/sql-parser/src -o ${LLVM_BUNDLE_FILE} ${CPP_BUNDLE_FILE}
+        COMMAND ${CMAKE_CXX_COMPILER} ${FLAGS} -c -emit-llvm -DSOURCE_PATH_SIZE -I${CMAKE_CURRENT_SOURCE_DIR} -I${PROJECT_SOURCE_DIR}/third_party/sql-parser/src -o ${LLVM_BUNDLE_FILE} ${CPP_BUNDLE_FILE}
         DEPENDS ${CPP_BUNDLE_FILE} ${INPUT_FILES})
     set_source_files_properties(${LLVM_BUNDLE_FILE} PROPERTIES GENERATED TRUE)
 
