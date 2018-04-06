@@ -443,8 +443,8 @@ if (NOT DISABLE_JIT_SUPPORT)
         SOURCES
         logical_query_plan/jit_aware_lqp_translator.cpp
         logical_query_plan/jit_aware_lqp_translator.hpp
-        operators/jit_operator.cpp
-        operators/jit_operator.hpp
+        operators/jit_operator_wrapper.cpp
+        operators/jit_operator_wrapper.hpp
         ${SOURCES}
         ${JIT_EMBEDDED_SOURCES}
         ${LLVM_BUNDLE_FILE})
