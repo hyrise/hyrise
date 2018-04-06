@@ -3,7 +3,7 @@
 namespace opossum {
 
 JitOperatorWrapper::JitOperatorWrapper(const std::shared_ptr<const AbstractOperator> left,
-                         const std::vector<std::shared_ptr<JitAbstractOperator>>& operators)
+                                       const std::vector<std::shared_ptr<JitAbstractOperator>>& operators)
     : AbstractReadOnlyOperator{left}, _operators{operators} {}
 
 const std::string JitOperatorWrapper::name() const { return "JitOperatorWrapper"; }

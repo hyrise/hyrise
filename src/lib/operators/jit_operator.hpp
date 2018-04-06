@@ -18,7 +18,7 @@ namespace opossum {
 class JitOperatorWrapper : public AbstractReadOnlyOperator {
  public:
   explicit JitOperatorWrapper(const std::shared_ptr<const AbstractOperator> left,
-                       const std::vector<std::shared_ptr<AbstractJittableSink>>& operators = {});
+                              const std::vector<std::shared_ptr<AbstractJittableSink>>& operators = {});
 
   const std::string name() const final;
   const std::string description(DescriptionMode description_mode) const final;

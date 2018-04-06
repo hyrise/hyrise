@@ -21,8 +21,8 @@ class AbstractJittableSink : public AbstractJittable {
   // This function is responsible to create the output table with appropriate column definitions.
   virtual std::shared_ptr<Table> create_output_table(const uint32_t max_chunk_size) const = 0;
 
-  // This function is called by the JitOperatorWrapper after all operators in the chain have been connected and just before
-  // the execution of the pipeline starts (i.e. _execute() is called on the first operator for the first Chunk).
+  // This function is called by the JitOperatorWrapper after all operators in the chain have been connected and just
+  // before the execution of the pipeline starts (i.e. _execute() is called on the first operator for the first Chunk).
   // It is used for operator initializations.
   virtual void before_query(Table& out_table, JitRuntimeContext& context) const {}
 
