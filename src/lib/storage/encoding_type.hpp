@@ -5,6 +5,7 @@
 #include <boost/hana/equal.hpp>
 #include <boost/hana/map.hpp>
 #include <boost/hana/pair.hpp>
+#include <boost/hana/tuple.hpp>
 #include <boost/hana/type.hpp>
 
 #include <cstdint>
@@ -16,7 +17,7 @@ namespace opossum {
 
 namespace hana = boost::hana;
 
-enum class EncodingType : uint8_t { Unencoded, DeprecatedDictionary, Dictionary, RunLength };
+enum class EncodingType : uint8_t { Unencoded, Dictionary, RunLength, FrameOfReference };
 
 /**
  * @brief Maps each encoding type to its supported data types
@@ -26,10 +27,10 @@ enum class EncodingType : uint8_t { Unencoded, DeprecatedDictionary, Dictionary,
  *
  * Use data_types if the encoding supports all data types.
  */
-constexpr auto supported_data_types_for_type =
-    hana::make_map(hana::make_pair(enum_c<EncodingType, EncodingType::DeprecatedDictionary>, data_types),
-                   hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, data_types),
-                   hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, data_types));
+constexpr auto supported_data_types_for_encoding_type = hana::make_map(
+    hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, data_types),
+    hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, data_types),
+    hana::make_pair(enum_c<EncodingType, EncodingType::FrameOfReference>, hana::tuple_t<int32_t, int64_t>));
 
 //  Example for an encoding that doesn’t support all data types:
 //  hane::make_pair(enum_c<EncodingType, EncodingType::NewEncoding>, hana::tuple_t<int32_t, int64_t>)
@@ -37,12 +38,12 @@ constexpr auto supported_data_types_for_type =
 /**
  * @return an integral constant implicitly convertible to bool
  *
- * Hint: Use decltype(result)::value if you want to use the result
+ * Hint: Use hana::value() if you want to use the result
  *       in a constant expression such as constexpr-if.
  */
 template <typename ColumnEncodingType, typename ColumnDataType>
-auto encoding_supports_data_type(ColumnEncodingType encoding_type, ColumnDataType data_type) {
-  return hana::contains(hana::at_key(supported_data_types_for_type, encoding_type), data_type);
+constexpr auto encoding_supports_data_type(ColumnEncodingType encoding_type, ColumnDataType data_type) {
+  return hana::contains(hana::at_key(supported_data_types_for_encoding_type, encoding_type), data_type);
 }
 
 }  // namespace opossum

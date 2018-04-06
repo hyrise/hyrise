@@ -19,7 +19,8 @@ class SQLQueryPlanVisualizer : public AbstractVisualizer<SQLQueryPlan> {
  protected:
   void _build_graph(const SQLQueryPlan& plan) override;
 
-  void _build_subtree(const std::shared_ptr<const AbstractOperator>& op);
+  void _build_subtree(const std::shared_ptr<const AbstractOperator>& op,
+                      std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops);
 
   void _build_dataflow(const std::shared_ptr<const AbstractOperator>& from,
                        const std::shared_ptr<const AbstractOperator>& to);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "jit_abstract_operator.hpp"
+#include "abstract_jittable.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table.hpp"
 
@@ -12,53 +12,7 @@ namespace opossum {
  */
 class BaseJitColumnReader {
  public:
-  virtual void read_value() = 0;
-};
-
-/* JitColumnReaders wrap the column iterable interface used by most operators and makes it accessible
- * to the JitOperator.
- *
- * Why we need this wrapper:
- * Most operators access data by creating a fixed number (usually one or two) of column iterables and
- * then immediately use those iterators in a lambda. The JitOperator, on the other hand, processes
- * data in a tuple-at-a-time fashion and thus needs access to an arbitrary number of column iterators
- * at the same time.
- *
- * We solve this problem by introducing a template-free super class to all column iterators. This allows us to
- * create an iterator for each input column (before processing each chunk) and store these iterators in a
- * common vector in the runtime context.
- * We then use JitColumnReader instances to access these iterators. JitColumnReaders are templated with the
- * type of iterator they are supposed to handle. They are initialized with an input_index and a tuple value.
- * When requested to read a value, they will access the iterator from the runtime context corresponding to their
- * input_index and copy the value to their JitTupleValue.
- *
- * All column readers have a common template-free base class. That allows us to store the column readers in a
- * vector as well and access all types of columns with a single interface.
- */
-template <typename Iterator, typename DataType, bool Nullable>
-class JitColumnReader : public BaseJitColumnReader {
- public:
-  JitColumnReader(const Iterator& iterator, const JitMaterializedValue& tuple_value)
-      : _iterator{iterator}, _tuple_value{tuple_value} {}
-
-  void read_value() {
-    const auto& value = *_iterator;
-    ++_iterator;
-    // clang-format off
-    if constexpr (Nullable) {
-      _tuple_value.set_is_null(value.is_null());
-      if (!value.is_null()) {
-        _tuple_value.template set<DataType>(value.value());
-      }
-    } else {
-      _tuple_value.template set<DataType>(value.value());
-    }
-    // clang-format on
-  }
-
- private:
-  Iterator _iterator;
-  JitMaterializedValue _tuple_value;
+  virtual void read_value(JitRuntimeContext& context) = 0;
 };
 
 struct JitInputColumn {
@@ -80,16 +34,63 @@ struct JitInputLiteral {
  *    another operator needs to store a temporary value in the runtime tuple,
  *    it can request a slot in the tuple from JitReadTuple.
  */
-class JitReadTuple : public JitAbstractOperator {
+class JitReadTuple : public AbstractJittable {
+  /* JitColumnReaders wrap the column iterable interface used by most operators and makes it accessible
+   * to the JitOperator.
+   *
+   * Why we need this wrapper:
+   * Most operators access data by creating a fixed number (usually one or two) of column iterables and
+   * then immediately use those iterators in a lambda. The JitOperator, on the other hand, processes
+   * data in a tuple-at-a-time fashion and thus needs access to an arbitrary number of column iterators
+   * at the same time.
+   *
+   * We solve this problem by introducing a template-free super class to all column iterators. This allows us to
+   * create an iterator for each input column (before processing each chunk) and store these iterators in a
+   * common vector in the runtime context.
+   * We then use JitColumnReader instances to access these iterators. JitColumnReaders are templated with the
+   * type of iterator they are supposed to handle. They are initialized with an input_index and a tuple value.
+   * When requested to read a value, they will access the iterator from the runtime context corresponding to their
+   * input_index and copy the value to their JitTupleValue.
+   *
+   * All column readers have a common template-free base class. That allows us to store the column readers in a
+   * vector as well and access all types of columns with a single interface.
+   */
+  template <typename Iterator, typename DataType, bool Nullable>
+  class JitColumnReader : public BaseJitColumnReader {
+   public:
+    JitColumnReader(const Iterator& iterator, const JitTupleValue& tuple_value)
+        : _iterator{iterator}, _tuple_value{tuple_value} {}
+
+    // Reads a value from the _iterator into the _tuple_value and increments the _iterator.
+    void read_value(JitRuntimeContext& context) {
+      const auto& value = *_iterator;
+      ++_iterator;
+      // clang-format off
+      if constexpr (Nullable) {
+        context.tuple.set_is_null(_tuple_value.tuple_index(), value.is_null());
+        if (!value.is_null()) {
+          context.tuple.set<DataType>(_tuple_value.tuple_index(), value.value());
+        }
+      } else {
+        context.tuple.set<DataType>(_tuple_value.tuple_index(), value.value());
+      }
+      // clang-format on
+    }
+
+   private:
+    Iterator _iterator;
+    JitTupleValue _tuple_value;
+  };
+
  public:
   std::string description() const final;
 
-  void before_query(const Table& in_table, JitRuntimeContext& context);
+  void before_query(const Table& in_table, JitRuntimeContext& context) const;
   void before_chunk(const Table& in_table, const Chunk& in_chunk, JitRuntimeContext& context) const;
 
   JitTupleValue add_input_column(const DataType data_type, const bool is_nullable, const ColumnID column_id);
   JitTupleValue add_literal_value(const AllTypeVariant& value);
-  size_t add_temorary_value();
+  size_t add_temporary_value();
 
   void execute(JitRuntimeContext& context) const;
 

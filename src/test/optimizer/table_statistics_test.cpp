@@ -222,4 +222,18 @@ TEST_F(TableStatisticsTest, DirectlyAccessColumnStatistics) {
   }
 }
 
+TEST_F(TableStatisticsTest, TableType) {
+  const auto table_a_statistics = _table_a_with_statistics.statistics;
+
+  EXPECT_EQ(table_a_statistics->table_type(), TableType::Data);
+
+  const auto post_predicate_statistics =
+      table_a_statistics->predicate_statistics(ColumnID{0}, PredicateCondition::Equals, 1);
+  const auto post_join_statistics = table_a_statistics->generate_predicated_join_statistics(
+      table_a_statistics, JoinMode::Inner, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals);
+
+  EXPECT_EQ(post_predicate_statistics->table_type(), TableType::References);
+  EXPECT_EQ(post_join_statistics->table_type(), TableType::References);
+}
+
 }  // namespace opossum

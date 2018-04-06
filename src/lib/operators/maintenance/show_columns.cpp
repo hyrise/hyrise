@@ -16,29 +16,33 @@
 
 namespace opossum {
 
-ShowColumns::ShowColumns(const std::string& table_name) : _table_name(table_name) {}
+ShowColumns::ShowColumns(const std::string& table_name)
+    : AbstractReadOnlyOperator(OperatorType::ShowColumns), _table_name(table_name) {}
 
 const std::string ShowColumns::name() const { return "ShowColumns"; }
 
-std::shared_ptr<AbstractOperator> ShowColumns::recreate(const std::vector<AllParameterVariant>& args) const {
+std::shared_ptr<AbstractOperator> ShowColumns::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
   return std::make_shared<ShowColumns>(_table_name);
 }
 
 std::shared_ptr<const Table> ShowColumns::_on_execute() {
-  auto out_table = std::make_shared<Table>();
-  out_table->add_column_definition("column_name", DataType::String);
-  out_table->add_column_definition("column_type", DataType::String);
-  out_table->add_column_definition("is_nullable", DataType::Int);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("column_name", DataType::String);
+  column_definitions.emplace_back("column_type", DataType::String);
+  column_definitions.emplace_back("is_nullable", DataType::Int);
+  auto out_table = std::make_shared<Table>(column_definitions, TableType::Data);
 
   const auto table = StorageManager::get().get_table(_table_name);
-  auto chunk = std::make_shared<Chunk>();
+  ChunkColumns columns;
 
   const auto& column_names = table->column_names();
   const auto vc_names = std::make_shared<ValueColumn<std::string>>(
       tbb::concurrent_vector<std::string>(column_names.begin(), column_names.end()));
-  chunk->add_column(vc_names);
+  columns.push_back(vc_names);
 
-  const auto& column_types = table->column_types();
+  const auto& column_types = table->column_data_types();
 
   auto data_types = tbb::concurrent_vector<std::string>{};
   for (const auto column_type : column_types) {
@@ -46,14 +50,14 @@ std::shared_ptr<const Table> ShowColumns::_on_execute() {
   }
 
   const auto vc_types = std::make_shared<ValueColumn<std::string>>(std::move(data_types));
-  chunk->add_column(vc_types);
+  columns.push_back(vc_types);
 
-  const auto& column_nullables = table->column_nullables();
+  const auto& column_nullables = table->columns_are_nullable();
   const auto vc_nullables = std::make_shared<ValueColumn<int32_t>>(
       tbb::concurrent_vector<int32_t>(column_nullables.begin(), column_nullables.end()));
-  chunk->add_column(vc_nullables);
+  columns.push_back(vc_nullables);
 
-  out_table->emplace_chunk(std::move(chunk));
+  out_table->append_chunk(columns);
 
   return out_table;
 }

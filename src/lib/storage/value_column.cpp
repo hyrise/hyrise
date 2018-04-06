@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "column_visitable.hpp"
+#include "resolve_type.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -15,21 +16,23 @@
 namespace opossum {
 
 template <typename T>
-ValueColumn<T>::ValueColumn(bool nullable) {
+ValueColumn<T>::ValueColumn(bool nullable) : BaseValueColumn(data_type_from_type<T>()) {
   if (nullable) _null_values = pmr_concurrent_vector<bool>();
 }
 
 template <typename T>
-ValueColumn<T>::ValueColumn(const PolymorphicAllocator<T>& alloc, bool nullable) : _values(alloc) {
+ValueColumn<T>::ValueColumn(const PolymorphicAllocator<T>& alloc, bool nullable)
+    : BaseValueColumn(data_type_from_type<T>()), _values(alloc) {
   if (nullable) _null_values = pmr_concurrent_vector<bool>(alloc);
 }
 
 template <typename T>
-ValueColumn<T>::ValueColumn(pmr_concurrent_vector<T>&& values) : _values(std::move(values)) {}
+ValueColumn<T>::ValueColumn(pmr_concurrent_vector<T>&& values)
+    : BaseValueColumn(data_type_from_type<T>()), _values(std::move(values)) {}
 
 template <typename T>
 ValueColumn<T>::ValueColumn(pmr_concurrent_vector<T>&& values, pmr_concurrent_vector<bool>&& null_values)
-    : _values(std::move(values)), _null_values(std::move(null_values)) {}
+    : BaseValueColumn(data_type_from_type<T>()), _values(std::move(values)), _null_values(std::move(null_values)) {}
 
 template <typename T>
 const AllTypeVariant ValueColumn<T>::operator[](const ChunkOffset chunk_offset) const {
@@ -101,18 +104,6 @@ const pmr_concurrent_vector<T>& ValueColumn<T>::values() const {
 template <typename T>
 pmr_concurrent_vector<T>& ValueColumn<T>::values() {
   return _values;
-}
-
-template <typename T>
-const pmr_concurrent_vector<std::optional<T>> ValueColumn<T>::materialize_values() const {
-  pmr_concurrent_vector<std::optional<T>> values(_values.size(), std::nullopt, _values.get_allocator());
-
-  for (ChunkOffset chunk_offset = 0; chunk_offset < _values.size(); ++chunk_offset) {
-    if (is_null(chunk_offset)) continue;
-    values[chunk_offset] = _values[chunk_offset];
-  }
-
-  return values;
 }
 
 template <typename T>

@@ -1,25 +1,19 @@
-#include <boost/algorithm/string.hpp>
-
-#include "SQLParser.h"
 #include "sql_pipeline.hpp"
+#include <boost/algorithm/string.hpp>
+#include <utility>
+#include "SQLParser.h"
 
 namespace opossum {
 
-SQLPipeline::SQLPipeline(const std::string& sql, const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer)
-    : SQLPipeline(sql, nullptr, use_mvcc, optimizer) {}
-
-SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<opossum::TransactionContext> transaction_context,
-                         const std::shared_ptr<Optimizer>& optimizer)
-    : SQLPipeline(sql, transaction_context, UseMvcc::Yes, optimizer) {
-  DebugAssert(transaction_context != nullptr, "Cannot pass nullptr as explicit transaction context.");
-  DebugAssert(transaction_context->phase() == TransactionPhase::Active,
-              "The transaction context cannot have been committed already.");
-}
-
-// Private constructor
 SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context,
-                         const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer)
+                         const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
+                         const PreparedStatementCache& prepared_statements)
     : _transaction_context(transaction_context), _optimizer(optimizer) {
+  DebugAssert(!_transaction_context || _transaction_context->phase() == TransactionPhase::Active,
+              "The transaction context cannot have been committed already.");
+  DebugAssert(!_transaction_context || use_mvcc == UseMvcc::Yes,
+              "Transaction context without MVCC enabled makes no sense");
+
   hsql::SQLParserResult parse_result;
   try {
     hsql::SQLParser::parse(sql, &parse_result);
@@ -71,8 +65,8 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
     const auto statement_string = boost::trim_copy(sql.substr(sql_string_offset, statement_string_length));
     sql_string_offset += statement_string_length;
 
-    auto pipeline_statement = std::make_shared<SQLPipelineStatement>(statement_string, std::move(parsed_statement),
-                                                                     use_mvcc, transaction_context, optimizer);
+    auto pipeline_statement = std::make_shared<SQLPipelineStatement>(
+        statement_string, std::move(parsed_statement), use_mvcc, transaction_context, optimizer, prepared_statements);
     _sql_pipeline_statements.push_back(std::move(pipeline_statement));
   }
 
@@ -114,6 +108,7 @@ const std::vector<std::shared_ptr<hsql::SQLParserResult>>& SQLPipeline::get_pars
 
   return _parsed_sql_statements;
 }
+
 const std::vector<std::shared_ptr<AbstractLQPNode>>& SQLPipeline::get_unoptimized_logical_plans() {
   if (!_unoptimized_logical_plans.empty()) {
     return _unoptimized_logical_plans;
@@ -219,7 +214,7 @@ const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_
   return _tasks;
 }
 
-const std::shared_ptr<const Table>& SQLPipeline::get_result_table() {
+std::shared_ptr<const Table> SQLPipeline::get_result_table() {
   if (_pipeline_was_executed) {
     return _result_table;
   }
@@ -239,9 +234,9 @@ const std::shared_ptr<const Table>& SQLPipeline::get_result_table() {
   return _result_table;
 }
 
-const std::shared_ptr<TransactionContext>& SQLPipeline::transaction_context() const { return _transaction_context; }
+std::shared_ptr<TransactionContext> SQLPipeline::transaction_context() const { return _transaction_context; }
 
-const std::shared_ptr<SQLPipelineStatement>& SQLPipeline::failed_pipeline_statement() const {
+std::shared_ptr<SQLPipelineStatement> SQLPipeline::failed_pipeline_statement() const {
   return _failed_pipeline_statement;
 }
 

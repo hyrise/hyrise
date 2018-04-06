@@ -12,6 +12,8 @@
 
 namespace opossum {
 
+using PreparedStatementCache = std::shared_ptr<SQLQueryCache<SQLQueryPlan>>;
+
 /**
  * This is the unified interface to handle SQL queries and related operations.
  * This should rarely be used directly - use SQLPipeline instead, as it creates the correct SQLPipelineStatement(s).
@@ -29,17 +31,10 @@ namespace opossum {
  */
 class SQLPipelineStatement : public Noncopyable {
  public:
-  // Constructors for creation from SQL string
-  explicit SQLPipelineStatement(const std::string& sql, const UseMvcc use_mvcc = UseMvcc::Yes,
-                                const std::shared_ptr<Optimizer>& optimizer = Optimizer::create_default_optimizer());
-  SQLPipelineStatement(const std::string& sql, const std::shared_ptr<TransactionContext>& transaction_context,
-                       const std::shared_ptr<Optimizer>& optimizer = Optimizer::create_default_optimizer());
-
-  // Constructor for creation from SQLParseResult statement.
-  // This should be called from SQLPipeline and not by the user directly.
+  // Prefer using the SQLPipelineBuilder for constructing SQLPipelineStatements conveniently
   SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                        const UseMvcc use_mvcc, const std::shared_ptr<TransactionContext>& transaction_context,
-                       const std::shared_ptr<Optimizer>& optimizer = Optimizer::create_default_optimizer());
+                       const std::shared_ptr<Optimizer>& optimizer, const PreparedStatementCache& prepared_statements);
 
   // Returns the raw SQL string.
   const std::string& get_sql_string();
@@ -84,7 +79,7 @@ class SQLPipelineStatement : public Noncopyable {
   // Might be the Statement's own transaction context, or the one shared by all Statements in a Pipeline
   std::shared_ptr<TransactionContext> _transaction_context;
 
-  std::shared_ptr<Optimizer> _optimizer;
+  const std::shared_ptr<Optimizer> _optimizer;
 
   // Execution results
   std::shared_ptr<hsql::SQLParserResult> _parsed_sql_statement;
@@ -100,6 +95,10 @@ class SQLPipelineStatement : public Noncopyable {
   // Execution times
   std::chrono::microseconds _compile_time_micros;
   std::chrono::microseconds _execution_time_micros;
+
+  PreparedStatementCache _prepared_statements;
+  // Number of placeholders in prepared statement; default 0 becasue we assume no prepared statement
+  uint16_t _num_parameters = 0;
 };
 
 }  // namespace opossum

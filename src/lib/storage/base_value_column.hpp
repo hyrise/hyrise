@@ -11,6 +11,8 @@ namespace opossum {
  */
 class BaseValueColumn : public BaseColumn {
  public:
+  using BaseColumn::BaseColumn;
+
   // returns true if column supports null values
   virtual bool is_nullable() const = 0;
 

@@ -109,9 +109,6 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
     ColumnIteratorValue<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET)
-        return ColumnIteratorValue<T>{T{}, true, chunk_offsets.into_referencing};
-
       const auto current_chunk_offset = chunk_offsets.into_referenced;
       const auto less_than_current = [current = current_chunk_offset](ChunkOffset offset) { return offset < current; };
 

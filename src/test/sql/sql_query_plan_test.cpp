@@ -10,6 +10,7 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -30,7 +31,7 @@ class SQLQueryPlanTest : public BaseTest {
 TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneTest) {
   std::string query1 = "SELECT a FROM table_a;";
 
-  SQLPipelineStatement pipeline_statement{query1, UseMvcc::No};
+  auto pipeline_statement = SQLPipelineBuilder{query1}.disable_mvcc().create_pipeline_statement();
 
   // Get the query plan.
   const auto& plan1 = pipeline_statement.get_query_plan();
@@ -65,7 +66,7 @@ TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneWithSchedulerTest) {
   std::string query1 = "SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9;";
 
   // Generate query plan.
-  SQLPipelineStatement pipeline_statement{query1, UseMvcc::No};
+  auto pipeline_statement = SQLPipelineBuilder{query1}.disable_mvcc().create_pipeline_statement();
 
   // Get the query plan template.
   const auto& tmpl = pipeline_statement.get_query_plan();

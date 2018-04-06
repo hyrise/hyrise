@@ -30,11 +30,13 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
     col_nullable.push_back(nullable);
   }
 
-  std::shared_ptr<Table> test_table = std::make_shared<Table>(chunk_size);
+  TableColumnDefinitions column_definitions;
   for (size_t i = 0; i < col_names.size(); i++) {
     const auto data_type = data_type_to_string.right.at(col_types[i]);
-    test_table->add_column(col_names[i], data_type, col_nullable[i]);
+    column_definitions.emplace_back(col_names[i], data_type, col_nullable[i]);
   }
+  std::shared_ptr<Table> test_table =
+      std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
 
   while (std::getline(infile, line)) {
     std::vector<AllTypeVariant> values = _split<AllTypeVariant>(line, '|');

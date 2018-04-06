@@ -3,10 +3,13 @@ add_executable(
 
     benchmark_basic_fixture.cpp
     benchmark_basic_fixture.hpp
+    benchmark_join_fixture.cpp
+    benchmark_join_fixture.hpp
     benchmark_main.cpp
     benchmark_template.cpp
     operators/aggregate_benchmark.cpp
     operators/difference_benchmark.cpp
+    operators/join_benchmark.cpp
     operators/product_benchmark.cpp
     operators/projection_benchmark.cpp
     operators/union_positions_benchmark.cpp
