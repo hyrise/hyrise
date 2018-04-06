@@ -64,7 +64,7 @@ JitRepository::JitRepository()
 }
 
 std::unique_ptr<llvm::Module> JitRepository::_parse_module(const std::string& module_string,
-                                                          llvm::LLVMContext& context) const {
+                                                           llvm::LLVMContext& context) const {
   llvm::SMDiagnostic error;
   const auto buffer = llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(module_string));
   auto module = llvm::parseIR(*buffer, error, context);

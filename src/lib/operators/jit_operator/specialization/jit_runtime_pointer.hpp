@@ -49,7 +49,8 @@ class JitConstantRuntimePointer : public JitKnownRuntimePointer {
 
 class JitOffsetRuntimePointer : public JitKnownRuntimePointer {
  public:
-  JitOffsetRuntimePointer(const JitKnownRuntimePointer::Ptr& base, const uint64_t offset) : _base{base}, _offset{offset} {}
+  JitOffsetRuntimePointer(const JitKnownRuntimePointer::Ptr& base, const uint64_t offset)
+      : _base{base}, _offset{offset} {}
 
   bool is_valid() const final { return _base->is_valid() && JitKnownRuntimePointer::is_valid(); }
   uint64_t address() const final { return _base->address() + _offset; }

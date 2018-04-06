@@ -3,8 +3,8 @@
 namespace opossum {
 
 JitOperatorWrapper::JitOperatorWrapper(const std::shared_ptr<const AbstractOperator> left, const bool use_jit,
-                         const std::vector<std::shared_ptr<AbstractJittable>>& operators)
-        : AbstractReadOnlyOperator{OperatorType::JitOperatorWrapper , left}, _use_jit{use_jit}, _operators{operators} {}
+                                       const std::vector<std::shared_ptr<AbstractJittable>>& operators)
+    : AbstractReadOnlyOperator{OperatorType::JitOperatorWrapper, left}, _use_jit{use_jit}, _operators{operators} {}
 
 const std::string JitOperatorWrapper::name() const { return "JitOperatorWrapper"; }
 
@@ -75,8 +75,8 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
 }
 
 std::shared_ptr<AbstractOperator> JitOperatorWrapper::_on_recreate(
-        const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-        const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
   // TODO(johannes)
   return nullptr;
 }

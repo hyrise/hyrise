@@ -35,7 +35,7 @@ void JitModule::specialize(const JitRuntimePointer::Ptr& runtime_this) {
   _optimize();
   //_runtime_values[&*_root_function->arg_begin()] = runtime_this;
   //_resolve_virtual_calls();
- // _optimize();
+  // _optimize();
 
   // llvm_utils::module_to_file("/tmp/after.ll", *_module);
 
@@ -43,27 +43,30 @@ void JitModule::specialize(const JitRuntimePointer::Ptr& runtime_this) {
 
   auto start = std::chrono::high_resolution_clock::now();
   _specialize(runtime_this);
-  auto runtime = std::round(std::chrono::duration<double, std::micro>(std::chrono::high_resolution_clock::now() - start).count());
+  auto runtime =
+      std::round(std::chrono::duration<double, std::micro>(std::chrono::high_resolution_clock::now() - start).count());
   std::cout << runtime << std::endl;
 
   start = std::chrono::high_resolution_clock::now();
   _optimize();
-  runtime = std::round(std::chrono::duration<double, std::micro>(std::chrono::high_resolution_clock::now() - start).count());
+  runtime =
+      std::round(std::chrono::duration<double, std::micro>(std::chrono::high_resolution_clock::now() - start).count());
   std::cout << runtime << std::endl;
 
   start = std::chrono::high_resolution_clock::now();
   _specialize(runtime_this);
-  runtime = std::round(std::chrono::duration<double, std::micro>(std::chrono::high_resolution_clock::now() - start).count());
+  runtime =
+      std::round(std::chrono::duration<double, std::micro>(std::chrono::high_resolution_clock::now() - start).count());
   std::cout << runtime << std::endl;
 
   start = std::chrono::high_resolution_clock::now();
   _optimize();
-  runtime = std::round(std::chrono::duration<double, std::micro>(std::chrono::high_resolution_clock::now() - start).count());
+  runtime =
+      std::round(std::chrono::duration<double, std::micro>(std::chrono::high_resolution_clock::now() - start).count());
   std::cout << runtime << std::endl;
 
   //_specialize(runtime_this);
   //_optimize();
-
 }
 
 void JitModule::_resolve_virtual_calls() {
@@ -78,7 +81,8 @@ void JitModule::_resolve_virtual_calls() {
       //std::cout << std::endl;
       // attempt to resolve virtual function call
       const auto called_value = call_site.getCalledValue();
-      const auto called_runtime_value = std::dynamic_pointer_cast<const JitKnownRuntimePointer>(_get_runtime_value(called_value));
+      const auto called_runtime_value =
+          std::dynamic_pointer_cast<const JitKnownRuntimePointer>(_get_runtime_value(called_value));
       if (called_runtime_value && called_runtime_value->is_valid()) {
         const auto vtable_index = called_runtime_value->up().total_offset() / _module->getDataLayout().getPointerSize();
         const auto instance = reinterpret_cast<JitRTTIHelper*>(called_runtime_value->up().up().base().address());
@@ -104,7 +108,7 @@ void JitModule::_resolve_virtual_calls() {
     //      _llvm_value_map[&fn] = _create_function_declaration(fn);
     //    }
     //  });
-   // }
+    // }
 
     // map called functions
     _visit<const llvm::Function>(function, [&](const auto& fn) {
@@ -136,8 +140,8 @@ void JitModule::_resolve_virtual_calls() {
     }
 
     //if (function.hasPersonalityFn()) {
-//      _root_function->setPersonalityFn(_llvm_value_map[function.getPersonalityFn()]);
-  //  }
+    //      _root_function->setPersonalityFn(_llvm_value_map[function.getPersonalityFn()]);
+    //  }
 
     call_sites.pop();
   }
@@ -218,22 +222,22 @@ void JitModule::_optimize() {
     branch_inst.setMetadata(18, nullptr);
   });
 
-//  const auto before_path = "/tmp/before.ll";
-//  const auto after_path = "/tmp/after.ll";
-//  const auto remarks_path = "/tmp/remarks.yml";
+  //  const auto before_path = "/tmp/before.ll";
+  //  const auto after_path = "/tmp/after.ll";
+  //  const auto remarks_path = "/tmp/remarks.yml";
 
-//  std::cout << "Running optimization" << std::endl
-//            << "  before:  " << before_path << std::endl
-//            << "  after:   " << after_path << std::endl
-//            << "  remarks: " << remarks_path << std::endl;
+  //  std::cout << "Running optimization" << std::endl
+  //            << "  before:  " << before_path << std::endl
+  //            << "  after:   " << after_path << std::endl
+  //            << "  remarks: " << remarks_path << std::endl;
 
-//  _rename_values();
-//  llvm_utils::module_to_file(before_path, *_module);
+  //  _rename_values();
+  //  llvm_utils::module_to_file(before_path, *_module);
 
   // TODO(johannes) remove later
-//  std::error_code error_code;
-//  llvm::raw_fd_ostream remarks_file(remarks_path, error_code, llvm::sys::fs::F_None);
-//  _repository.llvm_context()->setDiagnosticsOutputFile(std::make_unique<llvm::yaml::Output>(remarks_file));
+  //  std::error_code error_code;
+  //  llvm::raw_fd_ostream remarks_file(remarks_path, error_code, llvm::sys::fs::F_None);
+  //  _repository.llvm_context()->setDiagnosticsOutputFile(std::make_unique<llvm::yaml::Output>(remarks_file));
 
   const llvm::Triple module_triple(_module->getTargetTriple());
   const llvm::TargetLibraryInfoImpl target_lib_info(module_triple);
@@ -267,8 +271,8 @@ void JitModule::_optimize() {
   function_pass_manager.doFinalization();
   pass_manager.run(*_module);
 
-//  llvm_utils::module_to_file(after_path, *_module);
-//  _repository.llvm_context()->setDiagnosticsOutputFile(nullptr);
+  //  llvm_utils::module_to_file(after_path, *_module);
+  //  _repository.llvm_context()->setDiagnosticsOutputFile(nullptr);
 }
 
 void JitModule::_replace_loads_with_runtime_values() {
@@ -410,8 +414,8 @@ const JitRuntimePointer::Ptr& JitModule::_get_runtime_value(const llvm::Value* v
   } else if (const auto gep_inst = llvm::dyn_cast<llvm::GetElementPtrInst>(value)) {
     llvm::APInt offset(64, 0);
     if (gep_inst->accumulateConstantOffset(_module->getDataLayout(), offset)) {
-      if (const auto base =
-              std::dynamic_pointer_cast<const JitKnownRuntimePointer>(_get_runtime_value(gep_inst->getPointerOperand()))) {
+      if (const auto base = std::dynamic_pointer_cast<const JitKnownRuntimePointer>(
+              _get_runtime_value(gep_inst->getPointerOperand()))) {
         _runtime_values[value] = std::make_shared<JitOffsetRuntimePointer>(base, offset.getLimitedValue());
       }
     }

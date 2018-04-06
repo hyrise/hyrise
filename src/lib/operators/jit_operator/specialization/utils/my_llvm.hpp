@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -33,7 +34,6 @@
 #include "llvm/Support/GenericDomTree.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include <algorithm>
 
 #include "../jit_repository.hpp"
 // #include "jit_compiler.hpp"
@@ -47,5 +47,6 @@ struct InlineContext {
 };
 
 namespace llvm {
-  bool MyInlineFunction(CallSite CS, InlineFunctionInfo &IFI, AAResults *CalleeAAR, bool InsertLifetime, InlineContext& ctx);
+bool MyInlineFunction(CallSite CS, InlineFunctionInfo& IFI, AAResults* CalleeAAR, bool InsertLifetime,
+                      InlineContext& ctx);
 }

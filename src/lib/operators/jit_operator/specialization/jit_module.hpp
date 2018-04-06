@@ -5,8 +5,8 @@
 
 #include <stack>
 
-#include "jit_repository.hpp"
 #include "jit_compiler.hpp"
+#include "jit_repository.hpp"
 #include "jit_runtime_pointer.hpp"
 
 namespace opossum {
