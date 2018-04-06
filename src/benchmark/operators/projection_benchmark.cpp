@@ -73,7 +73,7 @@ BENCHMARK_DEFINE_F(OperatorsProjectionBenchmark, BM_ProjectionConstantTerm)(benc
 }
 
 static void CustomArguments(benchmark::internal::Benchmark* b) {
-  for (ChunkID chunk_size : {ChunkID(0), ChunkID(10000), ChunkID(100000)}) {
+  for (ChunkID chunk_size : {ChunkID(Chunk::MAX_SIZE), ChunkID(10000), ChunkID(100000)}) {
     for (int column_type = 0; column_type <= 2; column_type++) {
       b->Args({static_cast<int>(chunk_size), column_type});
     }
