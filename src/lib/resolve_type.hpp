@@ -10,7 +10,6 @@
 #include <utility>
 
 #include "all_type_variant.hpp"
-#include "storage/deprecated_dictionary_column.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/resolve_encoded_column_type.hpp"
 #include "storage/value_column.hpp"
@@ -231,14 +230,14 @@ std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnType>>::
  *   template <typename T>
  *   void process_column(hana::basic_type<T> type, ReferenceColumn& column);
  *
- *   resolve_data_and_column_type(data_type, base_column, [&](auto type, auto& typed_column) {
+ *   resolve_data_and_column_type(base_column, [&](auto type, auto& typed_column) {
  *     process_column(type, typed_column);
  *   });
  */
 template <typename Functor, typename BaseColumnType>  // BaseColumnType allows column to be const and non-const
 std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnType>>::value>
-    /*void*/ resolve_data_and_column_type(DataType data_type, BaseColumnType& column, const Functor& func) {
-  resolve_data_type(data_type, [&](auto type) {
+    /*void*/ resolve_data_and_column_type(BaseColumnType& column, const Functor& func) {
+  resolve_data_type(column.data_type(), [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
 
     resolve_column_type<ColumnDataType>(column, [&](auto& typed_column) { func(type, typed_column); });

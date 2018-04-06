@@ -12,7 +12,7 @@
 namespace opossum {
 
 Delete::Delete(const std::string& table_name, const std::shared_ptr<const AbstractOperator>& values_to_delete)
-    : AbstractReadWriteOperator{values_to_delete}, _table_name{table_name} {}
+    : AbstractReadWriteOperator{OperatorType::Delete, values_to_delete}, _table_name{table_name} {}
 
 const std::string Delete::name() const { return "Delete"; }
 
@@ -24,7 +24,7 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
   _table = StorageManager::get().get_table(_table_name);
   _transaction_id = context->transaction_id();
 
-  const auto values_to_delete = _input_table_left();
+  const auto values_to_delete = input_table_left();
 
   for (ChunkID chunk_id{0}; chunk_id < values_to_delete->chunk_count(); ++chunk_id) {
     const auto chunk = values_to_delete->get_chunk(chunk_id);
@@ -66,7 +66,7 @@ void Delete::_on_commit_records(const CommitID cid) {
 }
 
 void Delete::_finish_commit() {
-  const auto num_rows_deleted = _input_table_left()->row_count();
+  const auto num_rows_deleted = input_table_left()->row_count();
 
   const auto table_statistics = _table->table_statistics();
   if (table_statistics) {
@@ -99,7 +99,7 @@ void Delete::_on_rollback_records() {
 bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& context) const {
   if (context == nullptr) return false;
 
-  const auto values_to_delete = _input_table_left();
+  const auto values_to_delete = input_table_left();
 
   if (!StorageManager::get().has_table(_table_name)) return false;
 
@@ -122,8 +122,10 @@ bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
   return true;
 }
 
-std::shared_ptr<AbstractOperator> Delete::recreate(const std::vector<AllParameterVariant>& args) const {
-  return std::make_shared<Delete>(_table_name, _input_left->recreate(args));
+std::shared_ptr<AbstractOperator> Delete::_on_recreate(
+    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+  return std::make_shared<Delete>(_table_name, recreated_input_left);
 }
 
 }  // namespace opossum

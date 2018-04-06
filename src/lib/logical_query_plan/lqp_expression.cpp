@@ -16,6 +16,15 @@ std::shared_ptr<LQPExpression> LQPExpression::create_column(const LQPColumnRefer
   return expression;
 }
 
+std::shared_ptr<LQPExpression> LQPExpression::create_subselect(std::shared_ptr<AbstractLQPNode> root_node,
+                                                               const std::optional<std::string>& alias) {
+  auto expression = std::make_shared<LQPExpression>(ExpressionType::Subselect);
+  expression->_subselect_node = root_node;
+  expression->_alias = alias;
+
+  return expression;
+}
+
 std::vector<std::shared_ptr<LQPExpression>> LQPExpression::create_columns(
     const std::vector<LQPColumnReference>& column_references, const std::optional<std::vector<std::string>>& aliases) {
   std::vector<std::shared_ptr<LQPExpression>> column_expressions;
@@ -45,6 +54,11 @@ const LQPColumnReference& LQPExpression::column_reference() const {
 void LQPExpression::set_column_reference(const LQPColumnReference& column_reference) {
   Assert(_type == ExpressionType::Column, "Can't set an LQPColumnReference on a non-column");
   _column_reference = column_reference;
+}
+
+std::shared_ptr<AbstractLQPNode> LQPExpression::subselect_node() const {
+  DebugAssert(_subselect_node, "LPQNode does not contain a subselect node.");
+  return _subselect_node;
 }
 
 std::string LQPExpression::to_string(const std::optional<std::vector<std::string>>& input_column_names,

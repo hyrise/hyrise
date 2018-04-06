@@ -24,7 +24,7 @@ class AbstractLQPNode;
  *        \_[4] [MockTable] y
  *
  * The JoinGraph created from it would contain two vertices (x and y), one edge (between x and y, with the predicate
- * x2 <= y1) and one parent_relation (Projection, left child side)
+ * x2 <= y1) and one output_relation (Projection, left input side)
  */
 class JoinGraphBuilder final {
  public:

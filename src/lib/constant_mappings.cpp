@@ -57,7 +57,7 @@ const std::unordered_map<ExpressionType, std::string> expression_type_to_string 
     {ExpressionType::Placeholder, "Parameter"},
     {ExpressionType::Column, "Column"},
     {ExpressionType::Function, "Function"},
-    {ExpressionType::Select, "Select"},
+    {ExpressionType::Subselect, "Subselect"},
     /*Arithmetic operators*/
     {ExpressionType::Addition, "Addition"},
     {ExpressionType::Subtraction, "Subtraction"},
@@ -157,9 +157,9 @@ const boost::bimap<DataType, std::string> data_type_to_string =
                });
 
 const std::unordered_map<EncodingType, std::string> encoding_type_to_string = {
-    {EncodingType::DeprecatedDictionary, "Dictionary (Deprecated)"},
     {EncodingType::Dictionary, "Dictionary"},
     {EncodingType::RunLength, "RunLength"},
+    {EncodingType::FrameOfReference, "FrameOfReference"},
 };
 
 const std::unordered_map<VectorCompressionType, std::string> vector_compression_type_to_string = {

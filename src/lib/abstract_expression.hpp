@@ -124,6 +124,9 @@ class AbstractExpression : public std::enable_shared_from_this<DerivedExpression
 
   // Returns true if the expression is a NULL literal.
   bool is_null_literal() const;
+
+  // Returns true if the expression is a subselect.
+  bool is_subselect() const;
   // @}
 
   // @{
@@ -192,5 +195,8 @@ class AbstractExpression : public std::enable_shared_from_this<DerivedExpression
   friend class LQPExpression;
   friend class PQPExpression;  // For creating OperatorExpressions from LQPExpressions
 };
+
+// Returns true if an expression of this type requires two children.
+bool is_binary_operator_type(const ExpressionType type);
 
 }  // namespace opossum

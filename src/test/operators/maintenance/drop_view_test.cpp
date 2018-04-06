@@ -16,7 +16,7 @@ class DropViewTest : public BaseTest {
  protected:
   void SetUp() override {
     auto& sm = StorageManager::get();
-    auto t1 = std::make_shared<Table>();
+    auto t1 = std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data);
 
     sm.add_table("first_table", t1);
 
@@ -30,10 +30,14 @@ TEST_F(DropViewTest, OperatorName) {
   EXPECT_EQ(dv->name(), "DropView");
 }
 
-TEST_F(DropViewTest, CannotBeRecreated) {
+TEST_F(DropViewTest, Recreate) {
   auto dv = std::make_shared<DropView>("view_name");
 
-  EXPECT_ANY_THROW(dv->recreate({}));
+  dv->execute();
+  EXPECT_NE(dv->get_output(), nullptr);
+
+  const auto recreated = dv->recreate();
+  EXPECT_EQ(recreated->get_output(), nullptr);
 }
 
 TEST_F(DropViewTest, CanDropViews) {

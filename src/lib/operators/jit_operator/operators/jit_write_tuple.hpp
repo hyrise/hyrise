@@ -1,6 +1,6 @@
 #pragma once
 
-#include "jit_abstract_sink.hpp"
+#include "abstract_jittable_sink.hpp"
 
 namespace opossum {
 
@@ -10,41 +10,7 @@ namespace opossum {
  */
 class BaseJitColumnWriter {
  public:
-  virtual void write_value() const = 0;
-};
-
-/* JitColumnWriters provide a template-free interface to store tuple values in ValueColumns in the output table.
- *
- * All ValueColumns have BaseValueColumn as their template-free super class. This allows us to store shared pointers
- * to all output columns in vector in the runtime context.
- * We then use JitColumnWriter instances to access these columns. JitColumnWriters are templated with the
- * type of ValueColumn they are accessing. They are initialized with an output_index and a tuple value.
- * When requested to store a value, they will access the column from the runtime context corresponding to their
- * output_index and copy the value from their JitTupleValue.
- *
- * All column writers have a common template-free base class. That allows us to store the column writers in a
- * vector as well and access all types of columns with a single interface.
- */
-template <typename ValueColumn, typename DataType, bool Nullable>
-class JitColumnWriter : public BaseJitColumnWriter {
- public:
-  JitColumnWriter(const std::shared_ptr<ValueColumn>& column, const JitMaterializedValue& tuple_value)
-      : _column{column}, _tuple_value{tuple_value} {}
-
-  void write_value() const {
-    const auto value = _tuple_value.template get<DataType>();
-    _column->values().push_back(value);
-    // clang-format off
-    if constexpr (Nullable) {
-      const auto is_null = _tuple_value.is_null();
-      _column->null_values().push_back(is_null);
-    }
-    // clang-format on
-  }
-
- private:
-  std::shared_ptr<ValueColumn> _column;
-  const JitMaterializedValue _tuple_value;
+  virtual void write_value(JitRuntimeContext& context) const = 0;
 };
 
 struct JitOutputColumn {
@@ -58,11 +24,45 @@ struct JitOutputColumn {
  * 2) appending the current tuple to the current output chunk
  * 3) creating a new output chunks and adding output chunks to the output table
  */
-class JitWriteTuple : public JitAbstractSink {
+class JitWriteTuple : public AbstractJittableSink {
+  /* JitColumnWriters provide a template-free interface to store tuple values in ValueColumns in the output table.
+   *
+   * All ValueColumns have BaseValueColumn as their template-free super class. This allows us to store shared pointers
+   * to all output columns in vector in the runtime context.
+   * We then use JitColumnWriter instances to access these columns. JitColumnWriters are templated with the
+   * type of ValueColumn they are accessing. They are initialized with an output_index and a tuple value.
+   * When requested to store a value, they will access the column from the runtime context corresponding to their
+   * output_index and copy the value from their JitTupleValue.
+   *
+   * All column writers have a common template-free base class. That allows us to store the column writers in a
+   * vector as well and access all types of columns with a single interface.
+   */
+  template <typename ValueColumn, typename DataType, bool Nullable>
+  class JitColumnWriter : public BaseJitColumnWriter {
+   public:
+    JitColumnWriter(const std::shared_ptr<ValueColumn>& column, const JitTupleValue& tuple_value)
+        : _column{column}, _tuple_value{tuple_value} {}
+
+    // Reads the value from the _tuple_value and appends it to the output ValueColumn.
+    void write_value(JitRuntimeContext& context) const {
+      _column->values().push_back(context.tuple.get<DataType>(_tuple_value.tuple_index()));
+      // clang-format off
+      if constexpr (Nullable) {
+        _column->null_values().push_back(context.tuple.is_null(_tuple_value.tuple_index()));
+      }
+      // clang-format on
+    }
+
+   private:
+    std::shared_ptr<ValueColumn> _column;
+    const JitTupleValue _tuple_value;
+  };
+
  public:
   std::string description() const final;
 
-  void before_query(Table& out_table, JitRuntimeContext& context) final;
+  std::shared_ptr<Table> create_output_table(const uint32_t max_chunk_size) const final;
+  void before_query(Table& out_table, JitRuntimeContext& context) const final;
   void after_chunk(Table& out_table, JitRuntimeContext& context) const final;
 
   void add_output_column(const std::string& column_name, const JitTupleValue& tuple_value);

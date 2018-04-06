@@ -5,7 +5,6 @@
 #include "gtest/gtest.h"
 
 #include "operators/import_csv.hpp"
-#include "storage/base_deprecated_dictionary_column.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
@@ -50,8 +49,7 @@ TEST_F(OperatorsImportCsvTest, StringEscaping) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/string_escaped.csv");
   importer->execute();
 
-  auto expected_table = std::make_shared<Table>(5);
-  expected_table->add_column("a", DataType::String);
+  auto expected_table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::String}}, TableType::Data, 5);
   expected_table->append({"aa\"\"aa"});
   expected_table->append({"xx\"x"});
   expected_table->append({"yy,y"});
@@ -94,10 +92,8 @@ TEST_F(OperatorsImportCsvTest, EmptyStrings) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/empty_strings.csv");
   importer->execute();
 
-  auto expected_table = std::make_shared<Table>(5);
-  expected_table->add_column("a", DataType::String);
-  expected_table->add_column("b", DataType::String);
-  expected_table->add_column("c", DataType::String);
+  TableColumnDefinitions column_definitions{{"a", DataType::String}, {"b", DataType::String}, {"c", DataType::String}};
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
   for (int i = 0; i < 8; ++i) {
     expected_table->append({"", "", ""});
   }
@@ -110,9 +106,8 @@ TEST_F(OperatorsImportCsvTest, Parallel) {
   auto importer = std::make_shared<OperatorTask>(std::make_shared<ImportCsv>("src/test/csv/float_int_large.csv"));
   importer->schedule();
 
-  auto expected_table = std::make_shared<Table>(20);
-  expected_table->add_column("b", DataType::Float);
-  expected_table->add_column("a", DataType::Int);
+  TableColumnDefinitions column_definitions{{"b", DataType::Float}, {"a", DataType::Int}};
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 20);
 
   for (int i = 0; i < 100; ++i) {
     expected_table->append({458.7f, 12345});
@@ -130,10 +125,8 @@ TEST_F(OperatorsImportCsvTest, SemicolonSeparator) {
   auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
   importer->execute();
 
-  auto expected_table = std::make_shared<Table>(5);
-  expected_table->add_column("a", DataType::Int);
-  expected_table->add_column("b", DataType::Int);
-  expected_table->add_column("c", DataType::Int);
+  TableColumnDefinitions column_definitions{{"a", DataType::Int}, {"b", DataType::Int}, {"c", DataType::Int}};
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
   for (int i = 0; i < 8; ++i) {
     expected_table->append({1, 2, 3});
   }
@@ -166,9 +159,8 @@ TEST_F(OperatorsImportCsvTest, ChunkSizeZero) {
   EXPECT_EQ(importer->get_output()->get_chunk(ChunkID{0})->size(), 100U);
   EXPECT_EQ(importer->get_output()->chunk_count(), ChunkID{1});
 
-  auto expected_table = std::make_shared<Table>(20);
-  expected_table->add_column("b", DataType::Float);
-  expected_table->add_column("a", DataType::Int);
+  TableColumnDefinitions column_definitions{{"b", DataType::Float}, {"a", DataType::Int}};
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 20);
 
   for (int i = 0; i < 100; ++i) {
     expected_table->append({458.7f, 12345});
@@ -184,8 +176,8 @@ TEST_F(OperatorsImportCsvTest, StringEscapingNonRfc) {
   auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
   importer->execute();
 
-  auto expected_table = std::make_shared<Table>(5);
-  expected_table->add_column("a", DataType::String);
+  TableColumnDefinitions column_definitions{{"a", DataType::String}};
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
   expected_table->append({"aa\"\"aa"});
   expected_table->append({"xx\"x"});
   expected_table->append({"yy,y"});
@@ -198,10 +190,9 @@ TEST_F(OperatorsImportCsvTest, ImportNumericNullValues) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/float_int_with_null.csv");
   importer->execute();
 
-  auto expected_table = std::make_shared<Table>(3);
-  expected_table->add_column("a", DataType::Float, true);
-  expected_table->add_column("b", DataType::Int, false);
-  expected_table->add_column("c", DataType::Int, true);
+  TableColumnDefinitions column_definitions{
+      {"a", DataType::Float, true}, {"b", DataType::Int, false}, {"c", DataType::Int, true}};
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
 
   expected_table->append({458.7f, 12345, NULL_VALUE});
   expected_table->append({NULL_VALUE, 123, 456});
@@ -214,8 +205,8 @@ TEST_F(OperatorsImportCsvTest, ImportStringNullValues) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/string_with_null.csv");
   importer->execute();
 
-  auto expected_table = std::make_shared<Table>(5);
-  expected_table->add_column("a", DataType::String, true);
+  TableColumnDefinitions column_definitions{{"a", DataType::String, true}};
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
 
   expected_table->append({"xxx"});
   expected_table->append({"www"});
@@ -238,15 +229,17 @@ TEST_F(OperatorsImportCsvTest, WithAndWithoutQuotes) {
   auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
   importer->execute();
 
-  auto expected_table = std::make_shared<Table>(5);
-  expected_table->add_column("a", DataType::String);
-  expected_table->add_column("b", DataType::Int);
-  expected_table->add_column("c", DataType::Float);
-  expected_table->add_column("d", DataType::Double);
-  expected_table->add_column("e", DataType::String);
-  expected_table->add_column("f", DataType::Int);
-  expected_table->add_column("g", DataType::Float);
-  expected_table->add_column("h", DataType::Double);
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
+  column_definitions.emplace_back("b", DataType::Int);
+  column_definitions.emplace_back("c", DataType::Float);
+  column_definitions.emplace_back("d", DataType::Double);
+  column_definitions.emplace_back("e", DataType::String);
+  column_definitions.emplace_back("f", DataType::Int);
+  column_definitions.emplace_back("g", DataType::Float);
+  column_definitions.emplace_back("h", DataType::Double);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
+
   expected_table->append({"xxx", 23, 0.5, 24.23, "xxx", 23, 0.5, 24.23});
   expected_table->append({"yyy", 56, 7.4, 2.123, "yyy", 23, 7.4, 2.123});
 
@@ -260,8 +253,9 @@ TEST_F(OperatorsImportCsvTest, StringDoubleEscape) {
   auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
   importer->execute();
 
-  auto expected_table = std::make_shared<Table>(5);
-  expected_table->add_column("a", DataType::String);
+  TableColumnDefinitions column_definitions{{"a", DataType::String}};
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
+
   expected_table->append({"xxx\\\"xyz\\\""});
 
   EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
@@ -279,9 +273,8 @@ TEST_F(OperatorsImportCsvTest, AutoCompressChunks) {
   auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
   importer->execute();
 
-  auto expected_table = std::make_shared<Table>(20);
-  expected_table->add_column("b", DataType::Float);
-  expected_table->add_column("a", DataType::Int);
+  TableColumnDefinitions column_definitions{{"b", DataType::Float}, {"a", DataType::Int}};
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 20);
 
   for (int i = 0; i < 100; ++i) {
     expected_table->append({458.7f, 12345});
@@ -297,7 +290,7 @@ TEST_F(OperatorsImportCsvTest, AutoCompressChunks) {
     auto chunk = result_table->get_chunk(chunk_id);
     for (ColumnID column_id = ColumnID{0}; column_id < chunk->column_count(); ++column_id) {
       auto base_column = chunk->get_column(column_id);
-      auto dict_column = std::dynamic_pointer_cast<const BaseDeprecatedDictionaryColumn>(base_column);
+      auto dict_column = std::dynamic_pointer_cast<const BaseDictionaryColumn>(base_column);
 
       EXPECT_TRUE(dict_column != nullptr);
     }

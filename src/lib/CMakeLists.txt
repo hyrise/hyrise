@@ -102,6 +102,8 @@ set(
     operators/join_hash.cpp
     operators/join_hash/hash_traits.hpp
     operators/join_hash.hpp
+    operators/join_index.cpp
+    operators/join_index.hpp
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
     operators/join_sort_merge/column_materializer.hpp
@@ -153,6 +155,13 @@ set(
     operators/validate.hpp
     optimizer/base_column_statistics.cpp
     optimizer/base_column_statistics.hpp
+    optimizer/chunk_statistics/abstract_filter.hpp
+    optimizer/chunk_statistics/chunk_column_statistics.cpp
+    optimizer/chunk_statistics/chunk_column_statistics.hpp
+    optimizer/chunk_statistics/chunk_statistics.cpp
+    optimizer/chunk_statistics/chunk_statistics.hpp
+    optimizer/chunk_statistics/min_max_filter.hpp
+    optimizer/chunk_statistics/range_filter.hpp
     optimizer/column_statistics.cpp
     optimizer/column_statistics.hpp
     optimizer/join_ordering/join_edge.cpp
@@ -168,12 +177,16 @@ set(
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
     optimizer/strategy/abstract_rule.hpp
+    optimizer/strategy/chunk_pruning_rule.cpp
+    optimizer/strategy/chunk_pruning_rule.hpp
     optimizer/strategy/constant_calculation_rule.cpp
     optimizer/strategy/constant_calculation_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
     optimizer/strategy/index_scan_rule.hpp
     optimizer/strategy/join_detection_rule.cpp
     optimizer/strategy/join_detection_rule.hpp
+    optimizer/strategy/predicate_pushdown_rule.hpp
+    optimizer/strategy/predicate_pushdown_rule.cpp
     optimizer/strategy/predicate_reordering_rule.cpp
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/strategy/rule_batch.cpp
@@ -206,6 +219,22 @@ set(
     scheduler/topology.hpp
     scheduler/worker.cpp
     scheduler/worker.hpp
+    server/server.cpp
+    server/server.hpp
+    server/server_session.cpp
+    server/server_session.hpp
+    server/postgres_wire_handler.cpp
+    server/postgres_wire_handler.hpp
+    server/query_response_builder.cpp
+    server/query_response_builder.hpp
+    server/task_runner.hpp
+    server/then_operator.hpp
+    server/types.hpp
+    server/client_connection.cpp
+    server/client_connection.hpp
+    server/use_boost_future.hpp
+    server/use_boost_future_impl.hpp
+    server/use_boost_future_legacy_impl.hpp
     sql/abstract_cache.hpp
     sql/gdfs_cache.hpp
     sql/gds_cache.hpp
@@ -214,22 +243,20 @@ set(
     sql/lru_cache.hpp
     sql/lru_k_cache.hpp
     sql/random_cache.hpp
+    sql/sql_pipeline_builder.cpp
+    sql/sql_pipeline_builder.hpp
     sql/sql_pipeline.cpp
     sql/sql_pipeline.hpp
     sql/sql_pipeline_statement.cpp
     sql/sql_pipeline_statement.hpp
-    sql/sql_planner.cpp
-    sql/sql_planner.hpp
     sql/sql_query_cache.hpp
     sql/sql_query_plan.cpp
     sql/sql_query_plan.hpp
-    sql/sql_result_operator.cpp
-    sql/sql_result_operator.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
     storage/base_column_encoder.hpp
+    storage/base_column.cpp
     storage/base_column.hpp
-    storage/base_deprecated_dictionary_column.hpp
     storage/base_dictionary_column.cpp
     storage/base_dictionary_column.hpp
     storage/base_encoded_column.cpp
@@ -239,29 +266,34 @@ set(
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
     storage/chunk.hpp
+    storage/chunk_access_counter.cpp
+    storage/chunk_access_counter.hpp
     storage/column_encoding_utils.cpp
     storage/column_encoding_utils.hpp
+    storage/column_iterables.hpp
+    storage/column_iterables/any_column_iterable.hpp
+    storage/column_iterables/any_column_iterator.hpp
     storage/column_iterables/base_column_iterators.hpp
     storage/column_iterables/chunk_offset_mapping.cpp
     storage/column_iterables/chunk_offset_mapping.hpp
     storage/column_iterables/column_iterator_values.hpp
     storage/column_iterables/constant_value_iterable.hpp
-    storage/column_iterables.hpp
+    storage/column_iterables/create_iterable_from_attribute_vector.hpp
     storage/column_visitable.hpp
     storage/create_iterable_from_column.hpp
-    storage/deprecated_dictionary_column/base_attribute_vector.hpp
-    storage/deprecated_dictionary_column.cpp
-    storage/deprecated_dictionary_column/deprecated_attribute_vector_iterable.hpp
-    storage/deprecated_dictionary_column/deprecated_dictionary_column_iterable.hpp
-    storage/deprecated_dictionary_column/deprecated_dictionary_encoder.hpp
-    storage/deprecated_dictionary_column/fitted_attribute_vector.hpp
-    storage/deprecated_dictionary_column.hpp
+    storage/create_iterable_from_column.ipp
     storage/dictionary_column/attribute_vector_iterable.hpp
     storage/dictionary_column.cpp
     storage/dictionary_column/dictionary_column_iterable.hpp
     storage/dictionary_column/dictionary_encoder.hpp
     storage/dictionary_column.hpp
     storage/encoding_type.hpp
+    storage/frame_of_reference_column.hpp
+    storage/frame_of_reference_column.cpp
+    storage/frame_of_reference/frame_of_reference_encoder.hpp
+    storage/frame_of_reference/frame_of_reference_iterable.hpp
+    storage/mvcc_columns.cpp
+    storage/mvcc_columns.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
@@ -282,6 +314,7 @@ set(
     storage/index/group_key/variable_length_key_store.cpp
     storage/index/group_key/variable_length_key_store.hpp
     storage/index/index_info.hpp
+    storage/materialize.hpp
     storage/numa_placement_manager.cpp
     storage/numa_placement_manager.hpp
     storage/proxy_chunk.cpp
@@ -298,6 +331,8 @@ set(
     storage/storage_manager.hpp
     storage/table.cpp
     storage/table.hpp
+    storage/table_column_definition.cpp
+    storage/table_column_definition.hpp
     storage/value_column.cpp
     storage/value_column.hpp
     storage/value_column/null_value_vector_iterable.hpp
@@ -310,6 +345,7 @@ set(
     storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_compressor.hpp
     storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_decompressor.hpp
     storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp
+    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp
     storage/vector_compression/resolve_compressed_vector_type.hpp
     storage/vector_compression/simd_bp128/oversized_types.hpp
     storage/vector_compression/simd_bp128/simd_bp128_compressor.cpp
@@ -333,6 +369,17 @@ set(
     tasks/chunk_migration_task.hpp
     tasks/migration_preparation_task.cpp
     tasks/migration_preparation_task.hpp
+    tasks/server/abstract_server_task.hpp
+    tasks/server/bind_server_prepared_statement_task.cpp
+    tasks/server/bind_server_prepared_statement_task.hpp
+    tasks/server/create_pipeline_task.cpp
+    tasks/server/create_pipeline_task.hpp
+    tasks/server/execute_server_prepared_statement_task.cpp
+    tasks/server/execute_server_prepared_statement_task.hpp
+    tasks/server/execute_server_query_task.cpp
+    tasks/server/execute_server_query_task.hpp
+    tasks/server/load_server_file_task.cpp
+    tasks/server/load_server_file_task.hpp
     type_cast.hpp
     type_comparison.hpp
     types.hpp
@@ -346,6 +393,8 @@ set(
     utils/enum_constant.hpp
     utils/format_bytes.cpp
     utils/format_bytes.hpp
+    utils/format_duration.cpp
+    utils/format_duration.hpp
     utils/load_table.cpp
     utils/load_table.hpp
     utils/murmur_hash.cpp
@@ -372,13 +421,16 @@ if (NOT DISABLE_JIT_SUPPORT)
     include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
     set(JIT_EMBEDDED_SOURCES
         # Files listed here will be embedded into the binary as LLVM-IR
+        operators/jit_operator/jit_operations.cpp
         operators/jit_operator/jit_operations.hpp
         operators/jit_operator/jit_types.cpp
         operators/jit_operator/jit_types.hpp
-        operators/jit_operator/operators/jit_abstract_operator.hpp
-        operators/jit_operator/operators/jit_abstract_sink.hpp
+        operators/jit_operator/operators/abstract_jittable.hpp
+        operators/jit_operator/operators/abstract_jittable_sink.hpp
         operators/jit_operator/operators/jit_compute.cpp
         operators/jit_operator/operators/jit_compute.hpp
+        operators/jit_operator/operators/jit_expression.cpp
+        operators/jit_operator/operators/jit_expression.hpp
         operators/jit_operator/operators/jit_filter.cpp
         operators/jit_operator/operators/jit_filter.hpp
         operators/jit_operator/operators/jit_read_tuple.cpp
@@ -393,8 +445,6 @@ if (NOT DISABLE_JIT_SUPPORT)
         operators/jit_operator/specialization/utils/my_llvm.hpp
         logical_query_plan/jit_aware_lqp_translator.cpp
         logical_query_plan/jit_aware_lqp_translator.hpp
-        operators/jit_operator.cpp
-        operators/jit_operator.hpp
         operators/jit_operator/specialization/jit_compiler.cpp
         operators/jit_operator/specialization/jit_compiler.hpp
         operators/jit_operator/specialization/jit_module.cpp
@@ -402,10 +452,11 @@ if (NOT DISABLE_JIT_SUPPORT)
         operators/jit_operator/specialization/jit_repository.cpp
         operators/jit_operator/specialization/jit_repository.hpp
         operators/jit_operator/specialization/jit_runtime_pointer.hpp
+        operators/jit_operator_wrapper.cpp
+        operators/jit_operator_wrapper.hpp
         ${SOURCES}
         ${JIT_EMBEDDED_SOURCES}
-        ${LLVM_BUNDLE_FILE}
-    )
+        ${LLVM_BUNDLE_FILE})
     # Prevent clang from complaining about unused defines when compiling the assembly file
     set_property(SOURCE ${LLVM_BUNDLE_FILE} PROPERTY COMPILE_FLAGS -Qunused-arguments)
     set(LIBRARIES ${LIBRARIES} ${LLVM_LIBRARY})

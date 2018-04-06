@@ -14,11 +14,12 @@
 #include "optimizer/strategy/constant_calculation_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "sql/sql_pipeline.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace {
 std::shared_ptr<opossum::AbstractLQPNode> compile_query(const std::string& query) {
-  return opossum::SQLPipeline{query, opossum::UseMvcc::No}.get_unoptimized_logical_plans().at(0);
+  return opossum::SQLPipelineBuilder{query}.disable_mvcc().create_pipeline().get_unoptimized_logical_plans().at(0);
 }
 }  // namespace
 
@@ -41,19 +42,19 @@ TEST_F(ConstantCalculationRuleTest, ResolveExpressionTest) {
   const auto resolved = StrategyBaseTest::apply_rule(_rule, result_node);
 
   EXPECT_EQ(resolved->type(), LQPNodeType::Projection);
-  EXPECT_EQ(resolved->left_child()->type(), LQPNodeType::Projection);
-  EXPECT_FALSE(resolved->right_child());
+  EXPECT_EQ(resolved->left_input()->type(), LQPNodeType::Projection);
+  EXPECT_FALSE(resolved->right_input());
 
-  ASSERT_EQ(resolved->left_child()->left_child()->type(), LQPNodeType::Predicate);
-  const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(resolved->left_child()->left_child());
-  EXPECT_FALSE(predicate_node->right_child());
+  ASSERT_EQ(resolved->left_input()->left_input()->type(), LQPNodeType::Predicate);
+  const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(resolved->left_input()->left_input());
+  EXPECT_FALSE(predicate_node->right_input());
   EXPECT_EQ(predicate_node->predicate_condition(), PredicateCondition::Equals);
 
-  ASSERT_EQ(predicate_node->left_child()->type(), LQPNodeType::Projection);
-  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(predicate_node->left_child());
+  ASSERT_EQ(predicate_node->left_input()->type(), LQPNodeType::Projection);
+  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(predicate_node->left_input());
   EXPECT_EQ(projection_node->column_expressions().size(), 2u);
 
-  const auto original_node = projection_node->left_child();
+  const auto original_node = projection_node->left_input();
 
   ASSERT_TRUE(is_variant(predicate_node->value()));
   EXPECT_EQ(predicate_node->column_reference(), LQPColumnReference(original_node, ColumnID{0}));

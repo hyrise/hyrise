@@ -45,7 +45,7 @@ bool ChunkMigrationTask::chunk_is_completed(const std::shared_ptr<const Chunk>& 
     auto mvcc_columns = chunk->mvcc_columns();
 
     for (const auto begin_cid : mvcc_columns->begin_cids) {
-      if (begin_cid == Chunk::MAX_COMMIT_ID) return false;
+      if (begin_cid == MvccColumns::MAX_COMMIT_ID) return false;
     }
   }
 

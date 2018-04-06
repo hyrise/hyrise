@@ -8,10 +8,9 @@
 #include <vector>
 
 #include "adaptive_radix_tree_nodes.hpp"
-#include "storage/base_column.hpp"
-#include "storage/base_deprecated_dictionary_column.hpp"
-#include "storage/deprecated_dictionary_column/base_attribute_vector.hpp"
+#include "storage/base_dictionary_column.hpp"
 #include "storage/index/base_index.hpp"
+#include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -19,18 +18,23 @@ namespace opossum {
 
 AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<const BaseColumn>>& index_columns)
     : BaseIndex{get_index_type_of<AdaptiveRadixTreeIndex>()},
-      _index_column(std::dynamic_pointer_cast<const BaseDeprecatedDictionaryColumn>(index_columns.front())) {
-  DebugAssert(static_cast<bool>(_index_column), "AdaptiveRadixTree only works with DictionaryColumns for now");
+      _index_column(std::dynamic_pointer_cast<const BaseDictionaryColumn>(index_columns.front())) {
+  DebugAssert(static_cast<bool>(_index_column), "AdaptiveRadixTree only works with dictionary columns for now");
   DebugAssert((index_columns.size() == 1), "AdaptiveRadixTree only works with a single column");
 
-  // for each valueID in the attribute vector, create a pair consisting of a BinaryComparable of this valueID and its
-  // ChunkOffset (needed for bulk-inserting)
+  // For each value ID in the attribute vector, create a pair consisting of a BinaryComparable of
+  // this value ID and its ChunkOffset (needed for bulk-inserting).
   std::vector<std::pair<BinaryComparable, ChunkOffset>> pairs_to_insert;
   pairs_to_insert.reserve(_index_column->attribute_vector()->size());
-  for (ChunkOffset chunk_offset = 0u; chunk_offset < _index_column->attribute_vector()->size(); ++chunk_offset) {
-    pairs_to_insert.emplace_back(
-        std::make_pair(BinaryComparable(_index_column->attribute_vector()->get(chunk_offset)), chunk_offset));
-  }
+
+  resolve_compressed_vector_type(*_index_column->attribute_vector(), [&](const auto& attribute_vector) {
+    auto chunk_offset = ChunkOffset{0u};
+    auto value_id_it = attribute_vector.cbegin();
+    for (; value_id_it != attribute_vector.cend(); ++value_id_it, ++chunk_offset) {
+      pairs_to_insert.emplace_back(BinaryComparable(ValueID{*value_id_it}), chunk_offset);
+    }
+  });
+
   _root = _bulk_insert(pairs_to_insert);
 }
 

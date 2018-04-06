@@ -33,8 +33,9 @@ struct UncompressedVectorInfo final {
  *
  * @param meta_info optional struct that provides the encoding algorithms with additional information
  */
-std::unique_ptr<BaseCompressedVector> compress_vector(const pmr_vector<uint32_t>& vector, VectorCompressionType type,
-                                                      const PolymorphicAllocator<size_t>& alloc,
-                                                      const UncompressedVectorInfo& meta_info = {});
+std::unique_ptr<const BaseCompressedVector> compress_vector(const pmr_vector<uint32_t>& vector,
+                                                            const VectorCompressionType type,
+                                                            const PolymorphicAllocator<size_t>& alloc,
+                                                            const UncompressedVectorInfo& meta_info = {});
 
 }  // namespace opossum

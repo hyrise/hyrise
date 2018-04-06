@@ -49,23 +49,25 @@ class ValueColumnIterable : public PointAccessibleColumnIterable<ValueColumnIter
     using ValueIterator = typename pmr_concurrent_vector<T>::const_iterator;
 
    public:
-    explicit NonNullIterator(const ValueIterator& begin_value_it, const ValueIterator& value_it)
-        : _begin_value_it{begin_value_it}, _value_it(value_it) {}
+    explicit NonNullIterator(const ValueIterator begin_value_it, const ValueIterator value_it)
+        : _value_it{value_it}, _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, value_it))} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-    void increment() { ++_value_it; }
+    void increment() {
+      ++_value_it;
+      ++_chunk_offset;
+    }
     bool equal(const NonNullIterator& other) const { return _value_it == other._value_it; }
 
     NonNullColumnIteratorValue<T> dereference() const {
-      return NonNullColumnIteratorValue<T>{*_value_it,
-                                           static_cast<ChunkOffset>(std::distance(_begin_value_it, _value_it))};
+      return NonNullColumnIteratorValue<T>{*_value_it, _chunk_offset};
     }
 
    private:
-    const ValueIterator _begin_value_it;
     ValueIterator _value_it;
+    ChunkOffset _chunk_offset;
   };
 
   class Iterator : public BaseColumnIterator<Iterator, ColumnIteratorValue<T>> {
@@ -74,9 +76,11 @@ class ValueColumnIterable : public PointAccessibleColumnIterable<ValueColumnIter
     using NullValueIterator = pmr_concurrent_vector<bool>::const_iterator;
 
    public:
-    explicit Iterator(const ValueIterator& begin_value_it, const ValueIterator& value_it,
-                      const NullValueIterator& null_value_it)
-        : _begin_value_it{begin_value_it}, _value_it(value_it), _null_value_it{null_value_it} {}
+    explicit Iterator(const ValueIterator begin_value_it, const ValueIterator value_it,
+                      const NullValueIterator null_value_it)
+        : _value_it(value_it),
+          _null_value_it{null_value_it},
+          _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, value_it))} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -84,19 +88,19 @@ class ValueColumnIterable : public PointAccessibleColumnIterable<ValueColumnIter
     void increment() {
       ++_value_it;
       ++_null_value_it;
+      ++_chunk_offset;
     }
 
     bool equal(const Iterator& other) const { return _value_it == other._value_it; }
 
     ColumnIteratorValue<T> dereference() const {
-      return ColumnIteratorValue<T>{*_value_it, *_null_value_it,
-                                    static_cast<ChunkOffset>(std::distance(_begin_value_it, _value_it))};
+      return ColumnIteratorValue<T>{*_value_it, *_null_value_it, _chunk_offset};
     }
 
    private:
-    const ValueIterator _begin_value_it;
     ValueIterator _value_it;
     NullValueIterator _null_value_it;
+    ChunkOffset _chunk_offset;
   };
 
   class NonNullPointAccessIterator
@@ -114,9 +118,6 @@ class ValueColumnIterable : public PointAccessibleColumnIterable<ValueColumnIter
 
     ColumnIteratorValue<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
-
-      if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET)
-        return ColumnIteratorValue<T>{T{}, true, chunk_offsets.into_referencing};
 
       return ColumnIteratorValue<T>{_values[chunk_offsets.into_referenced], false, chunk_offsets.into_referencing};
     }
@@ -142,9 +143,6 @@ class ValueColumnIterable : public PointAccessibleColumnIterable<ValueColumnIter
 
     ColumnIteratorValue<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
-
-      if (chunk_offsets.into_referenced == INVALID_CHUNK_OFFSET)
-        return ColumnIteratorValue<T>{T{}, true, chunk_offsets.into_referencing};
 
       return ColumnIteratorValue<T>{_values[chunk_offsets.into_referenced], _null_values[chunk_offsets.into_referenced],
                                     chunk_offsets.into_referencing};

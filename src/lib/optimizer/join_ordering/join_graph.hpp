@@ -19,7 +19,7 @@ namespace opossum {
 class JoinEdge;
 
 /**
- * Represents a connected subgraph of an LQP, with the LQPNodes "above" contained in the parent_relations and the
+ * Represents a connected subgraph of an LQP, with the LQPNodes "above" contained in the output_relations and the
  * subplans "below" it being the vertices.
  * The JoinGraph clusters Predicates operating on the same set of vertices into JoinEdges.
  *
@@ -41,11 +41,11 @@ class JoinGraph final {
    * Converts the predicates into edges and creates a JoinGraph from them.
    */
   static std::shared_ptr<JoinGraph> from_predicates(
-      std::vector<std::shared_ptr<AbstractLQPNode>> vertices, std::vector<LQPParentRelation> parent_relations,
+      std::vector<std::shared_ptr<AbstractLQPNode>> vertices, std::vector<LQPOutputRelation> output_relations,
       const std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>>& predicates);
 
   JoinGraph() = default;
-  JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>> vertices, std::vector<LQPParentRelation> parent_relations,
+  JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>> vertices, std::vector<LQPOutputRelation> output_relations,
             std::vector<std::shared_ptr<JoinEdge>> edges);
 
   /**
@@ -67,7 +67,7 @@ class JoinGraph final {
   void print(std::ostream& stream = std::cout) const;
 
   std::vector<std::shared_ptr<AbstractLQPNode>> vertices;
-  std::vector<LQPParentRelation> parent_relations;
+  std::vector<LQPOutputRelation> output_relations;
   std::vector<std::shared_ptr<JoinEdge>> edges;
 };
 }  // namespace opossum
