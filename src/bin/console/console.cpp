@@ -5,9 +5,9 @@
 
 #include <readline/history.h>
 #include <readline/readline.h>
-#include <setjmp.h>
 #include <sys/stat.h>
 #include <chrono>
+#include <csetjmp>
 #include <csignal>
 #include <ctime>
 #include <iomanip>
@@ -16,6 +16,14 @@
 #include <regex>
 #include <string>
 #include <vector>
+
+#if __has_include(<filesystem>)
+#include <filesystem>
+namespace filesystem = std::filesystem;
+#else
+#include <experimental/filesystem>
+namespace filesystem = std::experimental::filesystem;
+#endif
 
 #include "SQLParser.h"
 #include "concurrency/transaction_context.hpp"
@@ -116,6 +124,7 @@ Console::Console()
   register_command("rollback", std::bind(&Console::rollback_transaction, this, std::placeholders::_1));
   register_command("commit", std::bind(&Console::commit_transaction, this, std::placeholders::_1));
   register_command("txinfo", std::bind(&Console::print_transaction_info, this, std::placeholders::_1));
+  register_command("pwd", std::bind(&Console::print_current_working_directory, this, std::placeholders::_1));
   register_command("setting", std::bind(&Console::change_runtime_setting, this, std::placeholders::_1));
 
   // Register words specifically for command completion purposes, e.g.
@@ -357,6 +366,7 @@ int Console::help(const std::string&) {
   out("  rollback                         - Roll back a manually created transaction\n");
   out("  commit                           - Commit a manually created transaction\n");
   out("  txinfo                           - Print information on the current transaction\n");
+  out("  pwd                              - Print current working directory\n");
   out("  quit                             - Exit the HYRISE Console\n");
   out("  help                             - Show this message\n\n");
   out("  setting [property] [value]       - Change a runtime setting\n\n");
@@ -708,6 +718,11 @@ int Console::print_transaction_info(const std::string& input) {
   const auto snapshot_commit_id = std::to_string(_explicitly_created_transaction_context->snapshot_commit_id());
   out("Active transaction: { transaction id = " + transaction_id + ", snapshot commit id = " + snapshot_commit_id +
       " }\n");
+  return ReturnCode::Ok;
+}
+
+int Console::print_current_working_directory(const std::string&) {
+  out(filesystem::current_path().string() + "\n");
   return ReturnCode::Ok;
 }
 
