@@ -17,6 +17,7 @@ namespace opossum {
 
 std::shared_ptr<AbstractOperator> JitAwareLQPTranslator::translate_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
+  //return LQPTranslator::translate_node(node);
   uint32_t num_jittable_nodes{0};
   std::unordered_set<std::shared_ptr<AbstractLQPNode>> input_nodes;
 
@@ -33,7 +34,7 @@ std::shared_ptr<AbstractOperator> JitAwareLQPTranslator::translate_node(
 
   // It does not make sense to create a JitOperator for fewer than 2 LQP nodes,
   // but we may want a better heuristic here
-  if (num_jittable_nodes < 2 || input_nodes.size() != 1) {
+  if (num_jittable_nodes < 1 || input_nodes.size() != 1) {
     return LQPTranslator::translate_node(node);
   }
 

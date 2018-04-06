@@ -98,8 +98,8 @@ struct InvalidTypeCatcher : Functor {
 // lot of work for the JIT compiler. If we let the JIT compiler do the inlining instead, it is able to prune the
 // function to the relevant case during inlining. This allows for faster jitting.
 template <typename T>
-__attribute__((noinline)) void jit_compute(const T& op_func, const JitMaterializedValue& lhs,
-                                           const JitMaterializedValue& rhs, JitMaterializedValue& result) {
+void jit_compute(const T& op_func, const JitMaterializedValue& lhs,
+                                                const JitMaterializedValue& rhs, JitMaterializedValue& result) {
   // Handle NULL values and return if either input is NULL.
   result.set_is_null(lhs.is_null() || rhs.is_null());
   if (result.is_null()) {

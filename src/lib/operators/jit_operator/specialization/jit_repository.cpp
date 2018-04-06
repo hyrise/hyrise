@@ -17,11 +17,11 @@ JitRepository& JitRepository::get() {
   return instance;
 }
 
-const llvm::Function* JitRepository::get_function(const std::string& name) const {
+llvm::Function* JitRepository::get_function(const std::string& name) const {
   return _functions.count(name) ? _functions.at(name) : nullptr;
 }
 
-const llvm::Function* JitRepository::get_vtable_entry(const std::string& class_name, const size_t index) const {
+llvm::Function* JitRepository::get_vtable_entry(const std::string& class_name, const size_t index) const {
   const auto vtable_name = vtable_prefix + class_name;
   if (_vtables.count(vtable_name) && _vtables.at(vtable_name).size() > index) {
     return _vtables.at(vtable_name)[index];
@@ -37,7 +37,7 @@ JitRepository::JitRepository()
   llvm::StripDebugInfo(*_module);
 
   // extract functions
-  for (const auto& function : *_module) {
+  for (auto& function : *_module) {
     const auto function_name = function.getName().str();
     if (!function.isDeclaration()) {
       _functions[function_name] = &function;
@@ -50,10 +50,10 @@ JitRepository::JitRepository()
       if (!global.hasInitializer()) {
         continue;
       }
-      if (const auto const_array = llvm::dyn_cast<llvm::ConstantArray>(global.getInitializer()->getOperand(0))) {
-        std::vector<const llvm::Function*> vtable;
-        for (uint32_t index = 2; index < const_array->getNumOperands(); ++index) {
-          vtable.push_back(_functions[const_array->getOperand(index)->getOperand(0)->getName().str()]);
+      if (auto array = llvm::dyn_cast<llvm::ConstantArray>(global.getInitializer()->getOperand(0))) {
+        std::vector<llvm::Function*> vtable;
+        for (uint32_t index = 2; index < array->getNumOperands(); ++index) {
+          vtable.push_back(_functions[array->getOperand(index)->getOperand(0)->getName().str()]);
         }
         _vtables[global.getName().str()] = vtable;
       }
