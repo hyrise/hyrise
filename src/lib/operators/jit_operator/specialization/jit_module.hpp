@@ -19,22 +19,19 @@ class JitRTTIHelper {
 
 class JitModule {
  public:
-  explicit JitModule(const std::string& root_function_name);
-
-  void specialize(const JitRuntimePointer::Ptr& runtime_this);
+  JitModule();
 
   template <typename T>
-  std::function<T> compile() {
-    const auto function_name = _root_function_name + "_";
-
-    // Strangely, llvm::verifyModule returns false for valid modules
-    // DebugAssert(!llvm::verifyModule(*_module, &llvm::dbgs()), "Module is invalid.");
-    // _compiler.add_module(llvm_utils::module_from_file("/tmp/final2.ll", _module->getContext()));
+  std::function<T> specialize(const std::string& root_function_name, const JitRuntimePointer::Ptr& runtime_this, const bool second_pass = false) {
+    const auto function_name = root_function_name + "_";
+    _specialize_impl(root_function_name, runtime_this, second_pass);
     _compiler.add_module(std::move(_module));
     return _compiler.find_symbol<T>(function_name);
   }
 
  private:
+  void _specialize_impl(const std::string& root_function_name, const JitRuntimePointer::Ptr& runtime_this, const bool second_pass = false);
+
   void _optimize(bool with_unroll);
 
   void _resolve_virtual_calls(const bool second_pass);
@@ -56,10 +53,10 @@ class JitModule {
   void _visit(std::function<void(T&)> fn);
 
   const JitRepository& _repository;
+  const std::shared_ptr<llvm::LLVMContext> _llvm_context;
   std::unique_ptr<llvm::Module> _module;
   JitCompiler _compiler;
 
-  const std::string _root_function_name;
   llvm::Function* _root_function;
   llvm::ValueToValueMapTy _llvm_value_map;
   std::unordered_map<const llvm::Value*, JitRuntimePointer::Ptr> _runtime_values;

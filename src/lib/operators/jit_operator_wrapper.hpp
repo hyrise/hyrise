@@ -9,12 +9,12 @@
 
 namespace opossum {
 
-/* The JitOperatorWrapper wraps a number of jitable operators and exposes them through Hyrise's default
+/* The JitOperatorWrapper wraps a number of jittable operators and exposes them through Hyrise's default
  * operator interface. This allows a number of jit operators to be seamlessly integrated with
  * the existing operator pipeline.
- * The JitOperatorWrapper is responsible for chaining the operators it contains, compiling code for the operators at runtime,
- * creating and managing the runtime context and calling hooks (before/after processing a chunk or the entire query)
- * on the its operators.
+ * The JitOperatorWrapper is responsible for chaining the operators it contains, compiling code for the operators at
+ * runtime, creating and managing the runtime context and calling hooks (before/after processing a chunk or the entire
+ * query) on the its operators.
  */
 class JitOperatorWrapper : public AbstractReadOnlyOperator {
  public:

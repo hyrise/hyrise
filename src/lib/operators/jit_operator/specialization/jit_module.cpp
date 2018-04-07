@@ -17,37 +17,31 @@
 
 namespace opossum {
 
-JitModule::JitModule(const std::string& root_function_name)
+JitModule::JitModule()
         : _repository{JitRepository::get()},
-          _module{std::make_unique<llvm::Module>(root_function_name, *_repository.llvm_context())},
-          _compiler{_repository.llvm_context()},
-          _root_function_name{root_function_name} {
+          _llvm_context{_repository.llvm_context()},
+          _module{std::make_unique<llvm::Module>("jit_module", *_llvm_context)},
+          _compiler{_llvm_context} {
   _module->setDataLayout(_compiler.data_layout());
 }
 
-void JitModule::specialize(const JitRuntimePointer::Ptr& runtime_this) {
-  const auto root_function = _repository.get_function(_root_function_name);
-  DebugAssert(root_function, "root function not found in repository");
+void JitModule::_specialize_impl(const std::string& root_function_name, const JitRuntimePointer::Ptr& runtime_this, const bool second_pass) {
+  const auto root_function = _repository.get_function(root_function_name);
+  DebugAssert(root_function, "Root function not found in repository.");
   _root_function = _clone_function(*root_function, "_");
 
-  // TODO
-  const auto second_pass = true;
-
-  _runtime_values[&*_root_function->arg_begin()] = runtime_this;
+  _runtime_values[_root_function->arg_begin()] = runtime_this;
   _resolve_virtual_calls(false);
   _replace_loads_with_runtime_values();
 
-  _optimize(second_pass);
-
   if (second_pass) {
+    _optimize(true);
     _runtime_values[&*_root_function->arg_begin()] = runtime_this;
     _resolve_virtual_calls(true);
     _replace_loads_with_runtime_values();
-    _optimize(false);
   }
 
-  int32_t num_instr = 0;
-  _visit<llvm::Instruction>([&](llvm::Instruction& inst) { num_instr++; });
+  _optimize(false);
 }
 
 void JitModule::_resolve_virtual_calls(const bool second_pass) {
