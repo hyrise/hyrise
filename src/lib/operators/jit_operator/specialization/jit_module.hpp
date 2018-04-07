@@ -3,6 +3,7 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Verifier.h>
 
+#include <operators/jit_operator/specialization/utils/llvm_utils.hpp>
 #include <stack>
 
 #include "jit_compiler.hpp"
@@ -28,19 +29,15 @@ class JitModule {
 
     // Strangely, llvm::verifyModule returns false for valid modules
     // DebugAssert(!llvm::verifyModule(*_module, &llvm::dbgs()), "Module is invalid.");
-
+    // _compiler.add_module(llvm_utils::module_from_file("/tmp/final2.ll", _module->getContext()));
     _compiler.add_module(std::move(_module));
     return _compiler.find_symbol<T>(function_name);
   }
 
  private:
-  bool _specialize(const JitRuntimePointer::Ptr& runtime_this);
+  void _optimize(bool with_unroll);
 
-  void _optimize();
-
-  void _resolve_virtual_calls();
-
-  void _adce();
+  void _resolve_virtual_calls(const bool second_pass);
 
   void _replace_loads_with_runtime_values();
 
@@ -51,8 +48,6 @@ class JitModule {
   llvm::GlobalVariable* _clone_global(const llvm::GlobalVariable& global);
 
   const JitRuntimePointer::Ptr& _get_runtime_value(const llvm::Value* value);
-
-  void _rename_values();
 
   template <typename T, typename U>
   void _visit(U& function, std::function<void(T&)> fn);
@@ -66,7 +61,6 @@ class JitModule {
 
   const std::string _root_function_name;
   llvm::Function* _root_function;
-  bool _modified;
   llvm::ValueToValueMapTy _llvm_value_map;
   std::unordered_map<const llvm::Value*, JitRuntimePointer::Ptr> _runtime_values;
 };

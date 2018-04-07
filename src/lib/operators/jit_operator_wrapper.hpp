@@ -5,6 +5,7 @@
 #include "abstract_read_only_operator.hpp"
 #include "jit_operator/operators/abstract_jittable_sink.hpp"
 #include "jit_operator/operators/jit_read_tuple.hpp"
+#include "jit_operator/specialization/jit_module.hpp"
 
 namespace opossum {
 
@@ -41,6 +42,7 @@ class JitOperatorWrapper : public AbstractReadOnlyOperator {
 
   const bool _use_jit;
   std::vector<std::shared_ptr<AbstractJittable>> _operators;
+  JitModule _module;
 };
 
 }  // namespace opossum

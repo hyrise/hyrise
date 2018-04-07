@@ -4,7 +4,7 @@ namespace opossum {
 
 JitOperatorWrapper::JitOperatorWrapper(const std::shared_ptr<const AbstractOperator> left, const bool use_jit,
                                        const std::vector<std::shared_ptr<AbstractJittable>>& operators)
-    : AbstractReadOnlyOperator{OperatorType::JitOperatorWrapper, left}, _use_jit{use_jit}, _operators{operators} {}
+    : AbstractReadOnlyOperator{OperatorType::JitOperatorWrapper, left}, _use_jit{use_jit}, _operators{operators}, _module{"_ZNK7opossum12JitReadTuple7executeERNS_17JitRuntimeContextE"} {}
 
 const std::string JitOperatorWrapper::name() const { return "JitOperatorWrapper"; }
 
@@ -51,8 +51,8 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
 
   std::function<void(const JitReadTuple*, JitRuntimeContext&)> execute_func;
   if (_use_jit) {
-    // TODO(johannes) code specialization will be added here in a later PR
-    execute_func = &JitReadTuple::execute;
+    _module.specialize(std::make_shared<JitConstantRuntimePointer>(_source().get()));
+    execute_func = _module.compile<void(const JitReadTuple*, JitRuntimeContext&)>();
   } else {
     execute_func = &JitReadTuple::execute;
   }

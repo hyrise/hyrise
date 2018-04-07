@@ -7,6 +7,7 @@
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/Regex.h>
+#include <llvm/Support/SourceMgr.h>
 
 #include <fstream>
 
