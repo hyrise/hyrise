@@ -181,7 +181,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     const size_t numa_nodes = NUMAPlacementManager::get().topology()->nodes().size();
     return static_cast<ClusterID>(std::pow(2, std::floor(std::log2(numa_nodes))));
 #else
-    return ClusterID{1};
+    return ClusterID{2};
 #endif
   }
 
