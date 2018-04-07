@@ -51,8 +51,7 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
 
   std::function<void(const JitReadTuple*, JitRuntimeContext&)> execute_func;
   if (_use_jit) {
-    //_module.specialize(std::make_shared<JitConstantRuntimePointer>(_source().get()));
-    //execute_func = _module.compile<void(const JitReadTuple*, JitRuntimeContext&)>();
+    // TODO(johannes) code specialization will be added here in a later PR
     execute_func = &JitReadTuple::execute;
   } else {
     execute_func = &JitReadTuple::execute;
@@ -77,7 +76,7 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
 std::shared_ptr<AbstractOperator> JitOperatorWrapper::_on_recreate(
     const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
     const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  // TODO(johannes)
+  // What should happen here? What are the semantics of recreate?
   return nullptr;
 }
 
