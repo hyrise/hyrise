@@ -49,37 +49,42 @@ std::shared_ptr<AbstractOperator> JitAwareLQPTranslator::translate_node(
     filter_node = filter_node->left_input();
   }
 
-  // If we can reach the input node without encountering a UnionNode or PredicateNode,
-  // there is no need to filter any tuples
-  if (filter_node != input_node) {
-    // However, if we do need to filter, we first convert the filter node to a JitExpression ...
-    const auto expression = _translate_to_jit_expression(filter_node, *read_tuple, input_node);
-    // make sure that expression get computed ...
-    jit_operator->add_jit_operator(std::make_shared<JitCompute>(expression));
-    // and then filter on the resulting boolean.
-    jit_operator->add_jit_operator(std::make_shared<JitFilter>(expression->result()));
-  }
-
-  // Identify the top-most projection node to determine the output columns
-  auto top_projection = node;
-  while (top_projection != input_node && top_projection->type() != LQPNodeType::Projection) {
-    top_projection = top_projection->left_input();
-  }
-
-  // Add a compute operator for each output column that computes the column value.
-  auto write_table = std::make_shared<JitWriteTuple>();
-  for (const auto& output_column :
-       boost::combine(top_projection->output_column_names(), top_projection->output_column_references())) {
-    const auto expression = _translate_to_jit_expression(output_column.get<1>(), *read_tuple, input_node);
-    // It the JitExpression is of type ExpressionType::Column, there is no need to add a compute node, since it
-    // would not compute anything anyway
-    if (expression->expression_type() != ExpressionType::Column) {
+  try {
+    // If we can reach the input node without encountering a UnionNode or PredicateNode,
+    // there is no need to filter any tuples
+    if (filter_node != input_node) {
+      // However, if we do need to filter, we first convert the filter node to a JitExpression ...
+      const auto expression = _translate_to_jit_expression(filter_node, *read_tuple, input_node);
+      // make sure that expression get computed ...
       jit_operator->add_jit_operator(std::make_shared<JitCompute>(expression));
+      // and then filter on the resulting boolean.
+      jit_operator->add_jit_operator(std::make_shared<JitFilter>(expression->result()));
     }
-    write_table->add_output_column(output_column.get<0>(), expression->result());
+
+    // Identify the top-most projection node to determine the output columns
+    auto top_projection = node;
+    while (top_projection != input_node && top_projection->type() != LQPNodeType::Projection) {
+      top_projection = top_projection->left_input();
+    }
+
+    // Add a compute operator for each output column that computes the column value.
+    auto write_table = std::make_shared<JitWriteTuple>();
+    for (const auto& output_column :
+         boost::combine(top_projection->output_column_names(), top_projection->output_column_references())) {
+      const auto expression = _translate_to_jit_expression(output_column.get<1>(), *read_tuple, input_node);
+      // It the JitExpression is of type ExpressionType::Column, there is no need to add a compute node, since it
+      // would not compute anything anyway
+      if (expression->expression_type() != ExpressionType::Column) {
+        jit_operator->add_jit_operator(std::make_shared<JitCompute>(expression));
+      }
+      write_table->add_output_column(output_column.get<0>(), expression->result());
+    }
+    jit_operator->add_jit_operator(write_table);
+    return jit_operator;
+  } catch (const std::exception& exception) {
+    // If JitOperatorWrapper creation fails, we fall back to the regular LQPTranslator
+    return LQPTranslator::translate_node(node);
   }
-  jit_operator->add_jit_operator(write_table);
-  return jit_operator;
 }
 
 std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_translate_to_jit_expression(
