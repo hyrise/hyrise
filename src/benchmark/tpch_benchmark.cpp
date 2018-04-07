@@ -175,12 +175,12 @@ class TpchBenchmark final {
      * Visualize query plans
      */
     if (_enable_visualization) {
-      for (const auto tpch_idx_and_plans : _query_plans) {
+      for (const auto& tpch_idx_and_plans : _query_plans) {
         const auto& tpch_idx = tpch_idx_and_plans.first;
         const auto& lqps = tpch_idx_and_plans.second.lqps;
         const auto& pqps = tpch_idx_and_plans.second.pqps;
 
-        const auto tpch_idx_prefix = "TPCH-" + std::to_string(tpch_idx + 1) + "-";
+        const auto tpch_idx_prefix = "TPCH-" + std::to_string(tpch_idx) + "-";
 
         GraphvizConfig graphviz_config;
         graphviz_config.format = "svg";
@@ -255,7 +255,7 @@ class TpchBenchmark final {
   // Run benchmark in BenchmarkMode::IndividualQueries mode
   void _benchmark_individual_queries() {
     for (const auto query_id : _query_ids) {
-      out() << "- Benchmarking Query " << (query_id + 1) << std::endl;
+      out() << "- Benchmarking Query " << (query_id) << std::endl;
 
       BenchmarkState state{_max_num_query_runs, _max_duration};
       while (state.keep_running()) {
@@ -271,7 +271,7 @@ class TpchBenchmark final {
   }
 
   void _execute_query(const size_t tpch_query_idx) {
-    const auto& sql = opossum::tpch_queries[tpch_query_idx];
+    const auto& sql = opossum::tpch_queries.at(tpch_query_idx);
 
     auto pipeline = SQLPipelineBuilder{sql}.with_mvcc(_use_mvcc).create_pipeline();
     // Execute the query, we don't care about the results
@@ -301,7 +301,7 @@ class TpchBenchmark final {
       const auto time_per_query = duration_ns / query_result.num_iterations;
 
       nlohmann::json benchmark{
-          {"name", "TPC-H " + std::to_string(query_id + 1)},
+          {"name", "TPC-H " + std::to_string(query_id)},
           {"iterations", query_result.num_iterations},
           {"real_time", time_per_query},
           {"cpu_time", time_per_query},
@@ -410,15 +410,15 @@ int main(int argc, char* argv[]) {
   if (cli_parse_result.count("queries")) {
     const auto cli_query_ids = cli_parse_result["queries"].as<std::vector<opossum::QueryID>>();
     for (const auto cli_query_id : cli_query_ids) {
-      query_ids.emplace_back(cli_query_id - 1);  // Offset because TPC-H query 1 has index 0
+      query_ids.emplace_back(cli_query_id);
     }
   } else {
-    std::copy(std::begin(opossum::tpch_supported_queries), std::end(opossum::tpch_supported_queries),
-              std::back_inserter(query_ids));
+    std::transform(opossum::tpch_queries.begin(), opossum::tpch_queries.end(), std::back_inserter(query_ids),
+                   [](auto& pair) { return pair.first; });
   }
   opossum::out() << "- Benchmarking Queries ";
   for (const auto query_id : query_ids) {
-    opossum::out() << (query_id + 1) << " ";
+    opossum::out() << (query_id) << " ";
   }
   opossum::out() << std::endl;
 
