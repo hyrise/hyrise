@@ -55,25 +55,22 @@ class AbstractColumnStatistics {
    * Estimate a Column-Value Predicate, e.g. "a > 5"
    */
   virtual ColumnValueEstimate estimate_predicate_with_value(
-    const PredicateCondition predicate_condition,
-    const AllTypeVariant& value,
-    const std::optional<AllTypeVariant>& value2 = std::nullopt) const = 0;
+      const PredicateCondition predicate_condition, const AllTypeVariant& value,
+      const std::optional<AllTypeVariant>& value2 = std::nullopt) const = 0;
 
   /**
    * Estimate a Column-ValuePlacehoder Predicate, e.g. "a > ?"
    * Since the value of the ValuePlaceholder (naturally) isn't known, has to resort to magic values.
    */
   virtual ColumnValueEstimate estimate_predicate_with_value_placeholder(
-    const PredicateCondition predicate_condition,
-    const ValuePlaceholder& value,
-    const std::optional<AllTypeVariant>& value2 = std::nullopt) const = 0;
+      const PredicateCondition predicate_condition, const ValuePlaceholder& value,
+      const std::optional<AllTypeVariant>& value2 = std::nullopt) const = 0;
 
   /**
    * Estimate a Column-Column Predicate, e.g. "a > b"
    */
   virtual ColumnColumnEstimate estimate_predicate_with_column(
-  const PredicateCondition predicate_condition,
-  const AbstractColumnStatistics& right_column_statistics) const = 0;
+      const PredicateCondition predicate_condition, const AbstractColumnStatistics& right_column_statistics) const = 0;
   /** @} */
 
   virtual std::string description() const = 0;

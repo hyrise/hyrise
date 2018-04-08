@@ -7,8 +7,8 @@
 
 #include "operators/join_nested_loop.hpp"
 #include "operators/table_wrapper.hpp"
-#include "statistics/table_statistics.hpp"
 #include "statistics/generate_table_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 
 namespace opossum {
 
@@ -23,7 +23,8 @@ class TableStatisticsJoinTest : public BaseTest {
 
   void SetUp() override {
     auto table_uniform_distribution = load_table("src/test/tables/int_equal_distribution.tbl", Chunk::MAX_SIZE);
-    _table_uniform_distribution_with_stats.statistics = std::make_shared<TableStatistics>(generate_table_statistics(*table_uniform_distribution));
+    _table_uniform_distribution_with_stats.statistics =
+        std::make_shared<TableStatistics>(generate_table_statistics(*table_uniform_distribution));
     table_uniform_distribution->set_table_statistics(_table_uniform_distribution_with_stats.statistics);
     _table_uniform_distribution_with_stats.table = table_uniform_distribution;
   }
@@ -39,7 +40,7 @@ class TableStatisticsJoinTest : public BaseTest {
     for (ColumnID::base_type column_1 = 0; column_1 < table_with_statistics.table->column_count(); ++column_1) {
       for (ColumnID::base_type column_2 = 0; column_2 < table_with_statistics.table->column_count(); ++column_2) {
         auto column_ids = std::make_pair(ColumnID{column_1}, ColumnID{column_2});
-        auto join_stats =  std::make_shared<TableStatistics>(table_with_statistics.statistics->estimate_predicated_join(
+        auto join_stats = std::make_shared<TableStatistics>(table_with_statistics.statistics->estimate_predicated_join(
             *table_with_statistics.statistics, mode, column_ids, predicate_condition));
         auto join =
             std::make_shared<JoinNestedLoop>(table_wrapper, table_wrapper, mode, column_ids, predicate_condition);
@@ -60,7 +61,7 @@ class TableStatisticsJoinTest : public BaseTest {
     for (ColumnID::base_type column_1 = 0; column_1 < table_with_statistics.table->column_count(); ++column_1) {
       for (ColumnID::base_type column_2 = 0; column_2 < table_with_statistics.table->column_count(); ++column_2) {
         auto column_ids = std::make_pair(ColumnID{column_1}, ColumnID{column_2});
-        auto join_stats =  std::make_shared<TableStatistics>(table_with_statistics.statistics->estimate_predicated_join(
+        auto join_stats = std::make_shared<TableStatistics>(table_with_statistics.statistics->estimate_predicated_join(
             *table_with_statistics.statistics, mode, column_ids, predicate_condition));
         auto cached_row_count = row_counts.at(table_with_statistics.table->column_count() * column_1 + column_2);
         EXPECT_FLOAT_EQ(cached_row_count, join_stats->row_count());

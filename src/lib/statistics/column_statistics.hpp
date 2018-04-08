@@ -5,8 +5,8 @@
 #include <ostream>
 #include <string>
 
-#include "all_type_variant.hpp"
 #include "abstract_column_statistics.hpp"
+#include "all_type_variant.hpp"
 
 namespace opossum {
 
@@ -16,10 +16,8 @@ namespace opossum {
 template <typename ColumnDataType>
 class ColumnStatistics : public AbstractColumnStatistics {
  public:
-  ColumnStatistics(const float null_value_ratio,
-                    const float distinct_count,
-                    const ColumnDataType min,
-                    const ColumnDataType max);
+  ColumnStatistics(const float null_value_ratio, const float distinct_count, const ColumnDataType min,
+                   const ColumnDataType max);
 
   /**
    * @defgroup Member access
@@ -35,18 +33,16 @@ class ColumnStatistics : public AbstractColumnStatistics {
    */
   std::shared_ptr<AbstractColumnStatistics> clone() const override;
   ColumnValueEstimate estimate_predicate_with_value(
-    const PredicateCondition predicate_condition,
-    const AllTypeVariant& value,
-    const std::optional<AllTypeVariant>& value2 = std::nullopt) const override;
+      const PredicateCondition predicate_condition, const AllTypeVariant& value,
+      const std::optional<AllTypeVariant>& value2 = std::nullopt) const override;
 
   ColumnValueEstimate estimate_predicate_with_value_placeholder(
-    const PredicateCondition predicate_condition,
-    const ValuePlaceholder& value,
-    const std::optional<AllTypeVariant>& value2 = std::nullopt) const override;
+      const PredicateCondition predicate_condition, const ValuePlaceholder& value,
+      const std::optional<AllTypeVariant>& value2 = std::nullopt) const override;
 
   ColumnColumnEstimate estimate_predicate_with_column(
-    const PredicateCondition predicate_condition,
-    const AbstractColumnStatistics& right_column_statistics) const override;
+      const PredicateCondition predicate_condition,
+      const AbstractColumnStatistics& right_column_statistics) const override;
 
   std::string description() const override;
   /** @} */
@@ -76,8 +72,6 @@ class ColumnStatistics : public AbstractColumnStatistics {
    */
   ColumnValueEstimate estimate_not_equals_with_value(const ColumnDataType value) const;
   /** @} */
-
-
 
  private:
   ColumnDataType _min;

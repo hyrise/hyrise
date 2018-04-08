@@ -2,35 +2,28 @@
 
 #include <sstream>
 
-#include "all_type_variant.hpp"
-#include "all_parameter_variant.hpp"
 #include "abstract_column_statistics.hpp"
+#include "all_parameter_variant.hpp"
+#include "all_type_variant.hpp"
 
 namespace opossum {
 
-TableStatistics::TableStatistics(const TableType table_type, const float row_count, const std::vector<std::shared_ptr<const AbstractColumnStatistics>>& column_statistics):
-  _table_type(table_type), _row_count(row_count), _column_statistics(column_statistics) {
+TableStatistics::TableStatistics(const TableType table_type, const float row_count,
+                                 const std::vector<std::shared_ptr<const AbstractColumnStatistics>>& column_statistics)
+    : _table_type(table_type), _row_count(row_count), _column_statistics(column_statistics) {}
 
-}
+TableType TableStatistics::table_type() const { return _table_type; }
 
-TableType TableStatistics::table_type() const {
-  return _table_type;
-}
-
-float TableStatistics::row_count() const {
-  return _row_count;
-}
+float TableStatistics::row_count() const { return _row_count; }
 
 const std::vector<std::shared_ptr<const AbstractColumnStatistics>>& TableStatistics::column_statistics() const {
   return _column_statistics;
 }
 
-TableStatistics TableStatistics::estimate_predicate(
-  const ColumnID column_id,
-  const PredicateCondition predicate_condition,
-  const AllParameterVariant& value,
-  const std::optional<AllTypeVariant>& value2) const {
-
+TableStatistics TableStatistics::estimate_predicate(const ColumnID column_id,
+                                                    const PredicateCondition predicate_condition,
+                                                    const AllParameterVariant& value,
+                                                    const std::optional<AllTypeVariant>& value2) const {
   // Early out, the code below would fail for _row_count == 0
   if (_row_count == 0) return {*this};
 
@@ -46,7 +39,8 @@ TableStatistics TableStatistics::estimate_predicate(
 
   // TODO(anybody) we don't do (Not)Like estimations yet, thus resort to magic numbers
   if (predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike) {
-    const auto selectivity = predicate_condition == PredicateCondition::Like ? DEFAULT_LIKE_SELECTIVITY : 1.0f - DEFAULT_LIKE_SELECTIVITY;
+    const auto selectivity =
+        predicate_condition == PredicateCondition::Like ? DEFAULT_LIKE_SELECTIVITY : 1.0f - DEFAULT_LIKE_SELECTIVITY;
     return {TableType::References, _row_count * selectivity, _column_statistics};
   }
 
@@ -59,7 +53,8 @@ TableStatistics TableStatistics::estimate_predicate(
   if (is_column_id(value)) {
     const auto value_column_id = boost::get<ColumnID>(value);
 
-    const auto estimation = left_operand_column_statistics->estimate_predicate_with_column(predicate_condition, *_column_statistics[value_column_id]);
+    const auto estimation = left_operand_column_statistics->estimate_predicate_with_column(
+        predicate_condition, *_column_statistics[value_column_id]);
 
     predicated_column_statistics[column_id] = estimation.left_column_statistics;
     predicated_column_statistics[value_column_id] = estimation.right_column_statistics;
@@ -67,7 +62,8 @@ TableStatistics TableStatistics::estimate_predicate(
   } else if (is_variant(value)) {
     const auto variant_value = boost::get<AllTypeVariant>(value);
 
-    const auto estimate = left_operand_column_statistics->estimate_predicate_with_value(predicate_condition, variant_value);
+    const auto estimate =
+        left_operand_column_statistics->estimate_predicate_with_value(predicate_condition, variant_value);
 
     predicated_column_statistics[column_id] = estimate.column_statistics;
     predicated_row_count *= estimate.selectivity;
@@ -75,7 +71,8 @@ TableStatistics TableStatistics::estimate_predicate(
     Assert(is_placeholder(value), "AllParameterVariant type is not implemented in statistics component.");
     const auto value_placeholder = boost::get<ValuePlaceholder>(value);
 
-    const auto estimate = left_operand_column_statistics->estimate_predicate_with_value_placeholder(predicate_condition, value_placeholder);
+    const auto estimate = left_operand_column_statistics->estimate_predicate_with_value_placeholder(predicate_condition,
+                                                                                                    value_placeholder);
 
     predicated_column_statistics[column_id] = estimate.column_statistics;
     predicated_row_count *= estimate.selectivity;
@@ -84,9 +81,7 @@ TableStatistics TableStatistics::estimate_predicate(
   return {TableType::References, predicated_row_count, predicated_column_statistics};
 }
 
-TableStatistics TableStatistics::estimate_cross_join(
-  const TableStatistics& right_table_statistics) const {
-
+TableStatistics TableStatistics::estimate_cross_join(const TableStatistics& right_table_statistics) const {
   /**
    * Cross Join Estimation is simple:
    *    cross_joined_row_count:             The product of both input row counts
@@ -108,11 +103,9 @@ TableStatistics TableStatistics::estimate_cross_join(
   return {TableType::References, cross_joined_row_count, cross_joined_column_statistics};
 }
 
-TableStatistics TableStatistics::estimate_predicated_join(
-  const TableStatistics& right_table_statistics,
-  const JoinMode mode,
-  const ColumnIDPair column_ids,
-  const PredicateCondition predicate_condition) const {
+TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics& right_table_statistics,
+                                                          const JoinMode mode, const ColumnIDPair column_ids,
+                                                          const PredicateCondition predicate_condition) const {
   Assert(mode != JoinMode::Cross, "Use function estimate_cross_join for cross joins.");
   Assert(mode != JoinMode::Natural, "Natural joins are not supported by statistics component.");
 
@@ -176,8 +169,7 @@ TableStatistics TableStatistics::estimate_predicated_join(
 
   // For self joins right_table_statistics should be this.
   if (mode == JoinMode::Self) {
-    Assert(this == &right_table_statistics,
-                "Self joins should pass the same table as right_table_statistics again.");
+    Assert(this == &right_table_statistics, "Self joins should pass the same table as right_table_statistics again.");
   }
 
   // copy column statistics and calculate cross join row count
@@ -187,8 +179,7 @@ TableStatistics TableStatistics::estimate_predicated_join(
   auto& left_col_stats = _column_statistics[column_ids.first];
   auto& right_col_stats = right_table_statistics._column_statistics[column_ids.second];
 
-  auto stats_container =
-  left_col_stats->estimate_predicate_with_column(predicate_condition, *right_col_stats);
+  auto stats_container = left_col_stats->estimate_predicate_with_column(predicate_condition, *right_col_stats);
 
   // apply predicate selectivity to cross join
   join_table_stats._row_count *= stats_container.selectivity;
@@ -206,9 +197,9 @@ TableStatistics TableStatistics::estimate_predicated_join(
   };
 
   auto adjust_null_value_ratio_for_outer_join = [&](
-  const std::vector<std::shared_ptr<const AbstractColumnStatistics>>::iterator col_begin,
-  const std::vector<std::shared_ptr<const AbstractColumnStatistics>>::iterator col_end, const float row_count,
-  const float null_value_no, const float new_row_count) {
+      const std::vector<std::shared_ptr<const AbstractColumnStatistics>>::iterator col_begin,
+      const std::vector<std::shared_ptr<const AbstractColumnStatistics>>::iterator col_end, const float row_count,
+      const float null_value_no, const float new_row_count) {
     if (null_value_no == 0) {
       return;
     }
@@ -226,24 +217,25 @@ TableStatistics TableStatistics::estimate_predicated_join(
 
   // calculate how many null values need to be added to columns from the left table for right/outer joins
   auto left_null_value_no = calculate_added_null_values_for_outer_join(
-  right_table_statistics.row_count(), right_col_stats, stats_container.right_column_statistics->distinct_count());
+      right_table_statistics.row_count(), right_col_stats, stats_container.right_column_statistics->distinct_count());
   // calculate how many null values need to be added to columns from the right table for left/outer joins
   auto right_null_value_no = calculate_added_null_values_for_outer_join(
-  row_count(), left_col_stats, stats_container.left_column_statistics->distinct_count());
+      row_count(), left_col_stats, stats_container.left_column_statistics->distinct_count());
 
   // prepare two _adjust_null_value_ratio_for_outer_join calls, executed in the switch statement below
 
   // a) add null values to columns from the right table for left outer join
   auto apply_left_outer_join = [&]() {
     adjust_null_value_ratio_for_outer_join(join_table_stats._column_statistics.begin() + _column_statistics.size(),
-                                            join_table_stats._column_statistics.end(), right_table_statistics.row_count(),
-                                            right_null_value_no, join_table_stats.row_count());
+                                           join_table_stats._column_statistics.end(),
+                                           right_table_statistics.row_count(), right_null_value_no,
+                                           join_table_stats.row_count());
   };
   // b) add null values to columns from the left table for right outer
   auto apply_right_outer_join = [&]() {
     adjust_null_value_ratio_for_outer_join(join_table_stats._column_statistics.begin(),
-                                            join_table_stats._column_statistics.begin() + _column_statistics.size(),
-                                            row_count(), left_null_value_no, join_table_stats.row_count());
+                                           join_table_stats._column_statistics.begin() + _column_statistics.size(),
+                                           row_count(), left_null_value_no, join_table_stats.row_count());
   };
 
   switch (mode) {

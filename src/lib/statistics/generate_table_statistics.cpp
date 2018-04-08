@@ -2,13 +2,12 @@
 
 #include <set>
 
-#include "storage/table.hpp"
 #include "abstract_column_statistics.hpp"
+#include "column_statistics.hpp"
+#include "resolve_type.hpp"
 #include "storage/create_iterable_from_column.hpp"
 #include "storage/table.hpp"
-#include "column_statistics.hpp"
 #include "table_statistics.hpp"
-#include "resolve_type.hpp"
 
 namespace opossum {
 
@@ -40,21 +39,26 @@ TableStatistics generate_table_statistics(const Table& table) {
         });
       }
 
-      const auto null_value_ratio = table.row_count() > 0 ? static_cast<float>(null_value_count) / static_cast<float>(table.row_count()) : 0.0f;
+      const auto null_value_ratio =
+          table.row_count() > 0 ? static_cast<float>(null_value_count) / static_cast<float>(table.row_count()) : 0.0f;
       const auto distinct_count = static_cast<float>(min_max_set.size());
 
       auto min = ColumnDataType{};
       auto max = ColumnDataType{};
 
-      if constexpr (std::is_arithmetic_v<ColumnDataType>) {
+      // clang format doesn't deal with constexpr nicely
+      // clang-format off
+      if constexpr(std::is_arithmetic_v<ColumnDataType>) {
         min = min_max_set.empty() ? std::numeric_limits<float>::min() : *min_max_set.begin();
         max = min_max_set.empty() ? std::numeric_limits<float>::max() : *min_max_set.rbegin();
       } else {
         min = min_max_set.empty() ? min : *min_max_set.begin();
         max = min_max_set.empty() ? max : *min_max_set.rbegin();
       }
+      // clang-format on
 
-      column_statistics.emplace_back(std::make_shared<ColumnStatistics<ColumnDataType>>(null_value_ratio, distinct_count, min, max));
+      column_statistics.emplace_back(
+          std::make_shared<ColumnStatistics<ColumnDataType>>(null_value_ratio, distinct_count, min, max));
     });
   }
 

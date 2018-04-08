@@ -15,9 +15,9 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
-#include "statistics/column_statistics.hpp"
 #include "optimizer/strategy/predicate_reordering_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
+#include "statistics/column_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -111,7 +111,6 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
   EXPECT_LQP_EQ(reordered_input_lqp, expected_optimized_lqp);
 }
-
 
 TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
   std::shared_ptr<Table> table_a = load_table("src/test/tables/int_float4.tbl", 2);

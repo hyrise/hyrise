@@ -8,8 +8,8 @@
 #include "gtest/gtest.h"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "statistics/generate_table_statistics.hpp"
 #include "statistics/column_statistics.hpp"
+#include "statistics/generate_table_statistics.hpp"
 
 namespace opossum {
 
@@ -18,10 +18,14 @@ class ColumnStatisticsTest : public BaseTest {
   void SetUp() override {
     _table_with_different_column_types = load_table("src/test/tables/int_float_double_string.tbl", Chunk::MAX_SIZE);
     auto table_statistics1 = generate_table_statistics(*_table_with_different_column_types);
-    _column_statistics_int = std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(std::const_pointer_cast<AbstractColumnStatistics>(table_statistics1.column_statistics()[0]));
-    _column_statistics_float = std::dynamic_pointer_cast<ColumnStatistics<float>>(std::const_pointer_cast<AbstractColumnStatistics>(table_statistics1.column_statistics()[1]));
-    _column_statistics_double = std::dynamic_pointer_cast<ColumnStatistics<double>>(std::const_pointer_cast<AbstractColumnStatistics>(table_statistics1.column_statistics()[2]));
-    _column_statistics_string = std::dynamic_pointer_cast<ColumnStatistics<std::string>>(std::const_pointer_cast<AbstractColumnStatistics>(table_statistics1.column_statistics()[3]));
+    _column_statistics_int = std::dynamic_pointer_cast<ColumnStatistics<int32_t>>(
+        std::const_pointer_cast<AbstractColumnStatistics>(table_statistics1.column_statistics()[0]));
+    _column_statistics_float = std::dynamic_pointer_cast<ColumnStatistics<float>>(
+        std::const_pointer_cast<AbstractColumnStatistics>(table_statistics1.column_statistics()[1]));
+    _column_statistics_double = std::dynamic_pointer_cast<ColumnStatistics<double>>(
+        std::const_pointer_cast<AbstractColumnStatistics>(table_statistics1.column_statistics()[2]));
+    _column_statistics_string = std::dynamic_pointer_cast<ColumnStatistics<std::string>>(
+        std::const_pointer_cast<AbstractColumnStatistics>(table_statistics1.column_statistics()[3]));
 
     _table_uniform_distribution = load_table("src/test/tables/int_equal_distribution.tbl", Chunk::MAX_SIZE);
     auto table_statistics2 = generate_table_statistics(*_table_uniform_distribution);
@@ -42,9 +46,10 @@ class ColumnStatisticsTest : public BaseTest {
   }
 
   // For two column scans (type of value1 is ColumnID)
-  void predict_selectivities_and_compare(const std::shared_ptr<Table>& table,
-                                         const std::vector<std::shared_ptr<const AbstractColumnStatistics>>& column_statistics,
-                                         const PredicateCondition predicate_condition) {
+  void predict_selectivities_and_compare(
+      const std::shared_ptr<Table>& table,
+      const std::vector<std::shared_ptr<const AbstractColumnStatistics>>& column_statistics,
+      const PredicateCondition predicate_condition) {
     auto table_wrapper = std::make_shared<TableWrapper>(table);
     table_wrapper->execute();
     auto row_count = table->row_count();
@@ -367,21 +372,24 @@ TEST_F(ColumnStatisticsTest, NonNullRatioOneColumnTest) {
   EXPECT_FLOAT_EQ(result.selectivity, 0.f);
 
   predicate_condition = PredicateCondition::Between;
-  result = _column_statistics_int->estimate_predicate_with_value(predicate_condition, AllTypeVariant(2),
-                                                                      AllTypeVariant(4));
+  result =
+      _column_statistics_int->estimate_predicate_with_value(predicate_condition, AllTypeVariant(2), AllTypeVariant(4));
   EXPECT_FLOAT_EQ(result.selectivity, 0.75f * 3.f / 6.f);
   result = _column_statistics_float->estimate_predicate_with_value(predicate_condition, AllTypeVariant(4.f),
-                                                                        AllTypeVariant(6.f));
+                                                                   AllTypeVariant(6.f));
   EXPECT_FLOAT_EQ(result.selectivity, 0.5f * 2.f / 5.f);
   result = _column_statistics_string->estimate_predicate_with_value(predicate_condition, AllTypeVariant("c"),
-                                                                         AllTypeVariant("d"));
+                                                                    AllTypeVariant("d"));
   EXPECT_FLOAT_EQ(result.selectivity, 0.f);
 }
 
 TEST_F(ColumnStatisticsTest, NonNullRatioTwoColumnTest) {
-  auto stats_0 = std::const_pointer_cast<AbstractColumnStatistics>( _column_statistics_uniform_columns[0]);  // values from 0 to 5
-  auto stats_1 = std::const_pointer_cast<AbstractColumnStatistics>( _column_statistics_uniform_columns[1]);  // values from 0 to 2
-  auto stats_2 = std::const_pointer_cast<AbstractColumnStatistics>( _column_statistics_uniform_columns[2]);  // values from 1 to 2
+  auto stats_0 =
+      std::const_pointer_cast<AbstractColumnStatistics>(_column_statistics_uniform_columns[0]);  // values from 0 to 5
+  auto stats_1 =
+      std::const_pointer_cast<AbstractColumnStatistics>(_column_statistics_uniform_columns[1]);  // values from 0 to 2
+  auto stats_2 =
+      std::const_pointer_cast<AbstractColumnStatistics>(_column_statistics_uniform_columns[2]);  // values from 1 to 2
 
   stats_0->set_null_value_ratio(0.1);   // non-null value ratio: 0.9
   stats_1->set_null_value_ratio(0.2);   // non-null value ratio: 0.8

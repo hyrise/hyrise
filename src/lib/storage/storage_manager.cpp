@@ -8,9 +8,9 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/export_csv.hpp"
 #include "operators/table_wrapper.hpp"
+#include "scheduler/job_task.hpp"
 #include "statistics/generate_table_statistics.hpp"
 #include "statistics/table_statistics.hpp"
-#include "scheduler/job_task.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
