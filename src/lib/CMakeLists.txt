@@ -235,6 +235,14 @@ set(
     server/use_boost_future.hpp
     server/use_boost_future_impl.hpp
     server/use_boost_future_legacy_impl.hpp
+    statistics/abstract_column_statistics2.cpp
+    statistics/abstract_column_statistics2.hpp
+    statistics/column_statistics2.cpp
+    statistics/column_statistics2.cpp
+    statistics/generate_table_statistics.cpp
+    statistics/generate_table_statistics.hpp
+    statistics/table_statistics2.cpp
+    statistics/table_statistics2.hpp
     sql/abstract_cache.hpp
     sql/gdfs_cache.hpp
     sql/gds_cache.hpp
