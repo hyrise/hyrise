@@ -1,0 +1,67 @@
+#pragma once
+
+#include <llvm/IR/Module.h>
+#include <llvm/IR/Verifier.h>
+
+#include <operators/jit_operator/specialization/utils/llvm_utils.hpp>
+#include <stack>
+
+#include "jit_compiler.hpp"
+#include "jit_repository.hpp"
+#include "jit_runtime_pointer.hpp"
+
+namespace opossum {
+
+/* This is a helper class to retrieve the class name from a raw pointer using RTTI.
+ * The class has a single virtual method.
+ * A raw pointer can be cast to a pointer of this class to be used with RTTI.
+ */
+class JitRTTIHelper {
+ private:
+  virtual void _() const {}
+};
+
+struct SpecializationContext {
+  std::string root_function_name;
+  std::unique_ptr<llvm::Module> module;
+  llvm::Function* root_function;
+  llvm::ValueToValueMapTy llvm_value_map;
+  std::unordered_map<const llvm::Value*, JitRuntimePointer::Ptr> runtime_value_map;
+};
+
+class JitCodeSpecializer {
+ public:
+  JitCodeSpecializer();
+
+  template <typename T>
+  std::function<T> specialize_function(const std::string& root_function_name, const JitRuntimePointer::Ptr& runtime_this, const bool two_passes) {
+    _specialize_function_impl(root_function_name, runtime_this, two_passes);
+    return _compiler.find_symbol<T>(root_function_name + "_");
+  }
+
+ private:
+  void _specialize_function_impl(const std::string& root_function_name, const JitRuntimePointer::Ptr& runtime_this, const bool two_passes);
+
+  void _inline_function_calls(SpecializationContext& context, const bool two_passes) const;
+
+  void _perform_load_substitution(SpecializationContext& context) const;
+
+  void _optimize(SpecializationContext& context, const bool unroll_loops) const;
+
+  llvm::Function* _create_function_declaration(SpecializationContext& context, const llvm::Function& function, const std::string& suffix = "") const;
+
+  llvm::Function* _clone_function(SpecializationContext& context, const llvm::Function& function, const std::string& suffix = "") const;
+
+  llvm::GlobalVariable* _clone_global_variable(SpecializationContext& context, const llvm::GlobalVariable& global_variable) const;
+
+  const JitRuntimePointer::Ptr& _get_runtime_value(SpecializationContext& context, const llvm::Value* value) const;
+
+  template <typename T, typename U>
+  void _visit(U& function, std::function<void(T&)> fn) const;
+
+  const JitRepository& _repository;
+  const std::shared_ptr<llvm::LLVMContext> _llvm_context;
+  JitCompiler _compiler;
+};
+
+}  // namespace opossum

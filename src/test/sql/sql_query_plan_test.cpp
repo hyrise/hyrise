@@ -81,7 +81,7 @@ TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneWithSchedulerTest) {
 
   //auto cloned_tasks2 = tmpl->recreate().create_tasks();
   //for (auto task : cloned_tasks2) {
-    //task->schedule();
+  //task->schedule();
   //}
 
   CurrentScheduler::get()->finish();

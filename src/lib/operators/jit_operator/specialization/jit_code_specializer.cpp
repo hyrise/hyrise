@@ -1,4 +1,4 @@
-#include "jit_module.hpp"
+#include "jit_code_specializer.hpp"
 
 #include <queue>
 
@@ -6,61 +6,71 @@
 #include <llvm/Analysis/TargetTransformInfo.h>
 #include <llvm/Linker/IRMover.h>
 #include <llvm/Support/YAMLTraits.h>
+#include <llvm/Transforms/IPO/ForceFunctionAttrs.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Utils/Cloning.h>
-#include <llvm/Transforms/IPO/ForceFunctionAttrs.h>
 
 #include "utils/llvm_utils.hpp"
 #include "utils/my_llvm.hpp"
 
-
 namespace opossum {
 
-JitModule::JitModule()
-        : _repository{JitRepository::get()},
-          _llvm_context{_repository.llvm_context()},
-          _module{std::make_unique<llvm::Module>("jit_module", *_llvm_context)},
-          _compiler{_llvm_context} {
-  _module->setDataLayout(_compiler.data_layout());
-}
+JitCodeSpecializer::JitCodeSpecializer()
+    : _repository{JitRepository::get()},
+      _llvm_context{_repository.llvm_context()},
+      _compiler{_llvm_context} {}
 
-void JitModule::_specialize_impl(const std::string& root_function_name, const JitRuntimePointer::Ptr& runtime_this, const bool second_pass) {
+void JitCodeSpecializer::_specialize_function_impl(const std::string& root_function_name, const JitRuntimePointer::Ptr& runtime_this, const bool two_passes) {
+  SpecializationContext context;
+  context.root_function_name = root_function_name;
+  context.module = std::make_unique<llvm::Module>(root_function_name, *_llvm_context);
+  context.module->setDataLayout(_compiler.data_layout());
+
   const auto root_function = _repository.get_function(root_function_name);
   DebugAssert(root_function, "Root function not found in repository.");
-  _root_function = _clone_function(*root_function, "_");
+  auto x = _clone_function(context, *root_function, "_");
 
-  _runtime_values[_root_function->arg_begin()] = runtime_this;
-  _resolve_virtual_calls(false);
-  _replace_loads_with_runtime_values();
+  context.runtime_value_map[context.root_function->arg_begin()] = runtime_this;
 
-  if (second_pass) {
-    _optimize(true);
-    _runtime_values[&*_root_function->arg_begin()] = runtime_this;
-    _resolve_virtual_calls(true);
-    _replace_loads_with_runtime_values();
+  if (two_passes) {
+    context.runtime_value_map[context.root_function->arg_begin()] = runtime_this;
+    _inline_function_calls(context, false);
+    _perform_load_substitution(context);
+    _optimize(context, true);
+    context.runtime_value_map.clear();
+    context.runtime_value_map[context.root_function->arg_begin()] = runtime_this;
+    _inline_function_calls(context, true);
+    _perform_load_substitution(context);
+    _optimize(context, false);
+  } else {
+    context.runtime_value_map[context.root_function->arg_begin()] = runtime_this;
+    _inline_function_calls(context, false);
+    _perform_load_substitution(context);
+    _optimize(context, false);
   }
 
-  _optimize(false);
+  // TESTING ONLY
+  int counter = 0;
+  _visit<llvm::Instruction>(x, [&](llvm::Instruction& inst) { counter++; });
+  std::cout << "TestCounter: " << counter << std::endl;
+
+  _compiler.add_module(std::move(context.module));
 }
 
-void JitModule::_resolve_virtual_calls(const bool second_pass) {
-  std::queue<llvm::CallSite> call_sites;
-  _visit<llvm::CallInst>([&](llvm::CallInst& inst) { call_sites.push(llvm::CallSite(&inst)); });
-  _visit<llvm::InvokeInst>([&](llvm::InvokeInst& inst) { call_sites.push(llvm::CallSite(&inst)); });
-  //uint32_t counter = 0;
-  //llvm_utils::module_to_file("/tmp/after_" + std::to_string(counter++) + ".ll", *_module);
+void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context, const bool two_passes) const {
+  /*std::queue<llvm::CallSite> call_sites;
+
+  _visit<llvm::CallInst>(context.root_function, [&](llvm::CallInst& inst) { call_sites.push(llvm::CallSite(&inst)); });
+  _visit<llvm::InvokeInst>(context.root_function, [&](llvm::InvokeInst& inst) { call_sites.push(llvm::CallSite(&inst)); });
+
   while (!call_sites.empty()) {
     auto& call_site = call_sites.front();
     if (call_site.isIndirectCall()) {
-      //call_site.getCalledValue()->print(llvm::outs(), true);
-      //std::cout << std::endl;
-      // attempt to resolve virtual function call
       const auto called_value = call_site.getCalledValue();
-      const auto called_runtime_value =
-              std::dynamic_pointer_cast<const JitKnownRuntimePointer>(_get_runtime_value(called_value));
+      const auto called_runtime_value = std::dynamic_pointer_cast<const JitKnownRuntimePointer>(_get_runtime_value(called_value));
       if (called_runtime_value && called_runtime_value->is_valid()) {
-        const auto vtable_index = called_runtime_value->up().total_offset() / _module->getDataLayout().getPointerSize();
+        const auto vtable_index = called_runtime_value->up().total_offset() / context.module->getDataLayout().getPointerSize();
         const auto instance = reinterpret_cast<JitRTTIHelper*>(called_runtime_value->up().up().base().address());
         const auto class_name = typeid(*instance).name();
         if (const auto repo_function = _repository.get_vtable_entry(class_name, vtable_index)) {
@@ -75,118 +85,61 @@ void JitModule::_resolve_virtual_calls(const bool second_pass) {
 
     auto& function = *call_site.getCalledFunction();
     auto function_name = function.getName().str();
-    //std::cerr << "name: " << function_name << std::endl;
-    auto x = !boost::starts_with(function.getName().str(), "_ZNK7opossum") && !boost::starts_with(function.getName().str(), "_ZN7opossum") && function.getName().str() != "__clang_call_terminate";
-    //std::cerr << "X: " << x << std::endl;
+    auto x = !boost::starts_with(function.getName().str(), "_ZNK7opossum") &&
+             !boost::starts_with(function.getName().str(), "_ZN7opossum") &&
+             function.getName().str() != "__clang_call_terminate";
     if (x) {
-      _llvm_value_map[&function] = _create_function_declaration(function);
+      context.llvm_value_map[&function] = _create_function_declaration(function);
       call_sites.pop();
       continue;
     }
-
-    //std::cerr << "about to inline " << function.getName().str() << std::endl;
 
     auto arg = call_site.arg_begin();
-    auto y = arg->get()->getType()->isPointerTy() && !_get_runtime_value(arg->get())->is_valid() && function.getName().str() != "__clang_call_terminate";
-    //std::cerr << "Y: " << y << std::endl;
-    if (y && !second_pass) {
+    auto y = arg->get()->getType()->isPointerTy() && !_get_runtime_value(arg->get())->is_valid() &&
+             function.getName().str() != "__clang_call_terminate";
+
+    if (y && !two_passes) {
       call_sites.pop();
       continue;
     }
 
-    _llvm_value_map.clear();
-    // map personality function
-    //if (function.hasPersonalityFn()) {
-    //  _visit<llvm::Function>(*function.getPersonalityFn(), [&](const auto& fn) {
-    //    if (!_llvm_value_map.count(&fn)) {
-    //      _llvm_value_map[&fn] = _create_function_declaration(fn);
-    //    }
-    //  });
-    // }
+    context.llvm_value_map.clear();
 
     // map called functions
     _visit<const llvm::Function>(function, [&](const auto& fn) {
-      if (fn.isDeclaration() && !_llvm_value_map.count(&fn)) {
-        _llvm_value_map[&fn] = _create_function_declaration(fn);
+      if (fn.isDeclaration() && !context.llvm_value_map.count(&fn)) {
+        context.llvm_value_map[&fn] = _create_function_declaration(fn);
       }
     });
 
     // map global variables
     _visit<const llvm::GlobalVariable>(function, [&](auto& global) {
-      if (!_llvm_value_map.count(&global)) {
-        _llvm_value_map[&global] = _clone_global(global);
+      if (!context.llvm_value_map.count(&global)) {
+        context.llvm_value_map[&global] = _clone_global(global);
       }
     });
 
-    // map function args
+    // map function arguments
     auto function_arg = function.arg_begin();
     auto call_arg = call_site.arg_begin();
     for (; function_arg != function.arg_end() && call_arg != call_site.arg_end(); ++function_arg, ++call_arg) {
-      _llvm_value_map[function_arg] = call_arg->get();
+      context.llvm_value_map[function_arg] = call_arg->get();
     }
 
     llvm::InlineFunctionInfo info;
-    InlineContext ctx{_module.get(), _runtime_values, _llvm_value_map};
-    std::cerr << "inlining: " << function.getName().str() << std::endl;
+    InlineContext ctx{context.module.get(), context.runtime_value_map, context.llvm_value_map};
     if (llvm::MyInlineFunction(call_site, info, nullptr, false, ctx)) {
       for (const auto& new_call_site : info.InlinedCallSites) {
         call_sites.push(new_call_site);
       }
     }
 
-    //if (function.hasPersonalityFn()) {
-    //      _root_function->setPersonalityFn(_llvm_value_map[function.getPersonalityFn()]);
-    //  }
-
     call_sites.pop();
-    //llvm_utils::module_to_file("/tmp/after_" + std::to_string(counter++) + ".ll", *_module);
-  }
+  }*/
 }
 
-void JitModule::_optimize(bool with_unroll) {
-  _runtime_values.clear();
-
-  _visit<llvm::BranchInst>([&](llvm::BranchInst& branch_inst) {
-    // TODO(johannes) properly identify unrolling metadata
-    branch_inst.setMetadata(18, nullptr);
-  });
-
-  //  const auto before_path = "/tmp/before.ll";
-  //  const auto after_path = "/tmp/after.ll";
-  //const auto remarks_path = "/tmp/remarks.yml";
-
-  //  std::cout << "Running optimization" << std::endl
-  //            << "  before:  " << before_path << std::endl
-  //            << "  after:   " << after_path << std::endl
-  //            << "  remarks: " << remarks_path << std::endl;
-
-  //  _rename_values();
-  //  llvm_utils::module_to_file(before_path, *_module);
-
-  const llvm::Triple module_triple(_module->getTargetTriple());
-  const llvm::TargetLibraryInfoImpl target_lib_info(module_triple);
-
-  llvm::legacy::PassManager pass_manager;
-  pass_manager.add(new llvm::TargetLibraryInfoWrapperPass(target_lib_info));
-  pass_manager.add(llvm::createTargetTransformInfoWrapperPass(_compiler.target_machine().getTargetIRAnalysis()));
-  llvm::PassManagerBuilder pass_builder;
-  pass_builder.OptLevel = 1;
-  pass_builder.SizeLevel = 0;
-  pass_builder.DisableUnitAtATime = true;
-  pass_builder.DisableUnrollLoops = true;
-  pass_builder.LoopVectorize = false;
-  pass_builder.SLPVectorize = false;
-
-  _compiler.target_machine().adjustPassManager(pass_builder);
-  pass_builder.addFunctionSimplificationPasses(pass_manager);
-  if (with_unroll) {
-    pass_manager.add(llvm::createLoopUnrollPass(3, 1000000000, -1, 0));
-  }
-  pass_manager.run(*_module);
-}
-
-void JitModule::_replace_loads_with_runtime_values() {
-  _visit<llvm::LoadInst>([&](llvm::LoadInst& inst) {
+void JitCodeSpecializer::_perform_load_substitution(SpecializationContext& context) const {
+  /*_visit<llvm::LoadInst>([&](llvm::LoadInst& inst) {
     const auto runtime_pointer =
             std::dynamic_pointer_cast<const JitKnownRuntimePointer>(_get_runtime_value(inst.getPointerOperand()));
     if (!runtime_pointer || !runtime_pointer->is_valid()) {
@@ -206,21 +159,50 @@ void JitModule::_replace_loads_with_runtime_values() {
       const auto value = *reinterpret_cast<double*>(address);
       inst.replaceAllUsesWith(llvm::ConstantFP::get(inst.getType(), value));
     }
-  });
+  });*/
 }
 
-llvm::Function* JitModule::_create_function_declaration(const llvm::Function& function, const std::string& suffix) {
-  if (auto fn = _module->getFunction(function.getName())) {
+void JitCodeSpecializer::_optimize(SpecializationContext& context, const bool unroll_loops) const {
+ /* _visit<llvm::BranchInst>(context.root_function, [&](llvm::BranchInst& branch_inst) {
+    // TODO(johannes) properly identify unrolling metadata
+    branch_inst.setMetadata(18, nullptr);
+  });
+
+  const llvm::Triple module_triple(context.module->getTargetTriple());
+  const llvm::TargetLibraryInfoImpl target_lib_info(module_triple);
+
+  llvm::legacy::PassManager pass_manager;
+  pass_manager.add(new llvm::TargetLibraryInfoWrapperPass(target_lib_info));
+  pass_manager.add(llvm::createTargetTransformInfoWrapperPass(_compiler.target_machine().getTargetIRAnalysis()));
+  llvm::PassManagerBuilder pass_builder;
+  pass_builder.OptLevel = 1;
+  pass_builder.SizeLevel = 0;
+  pass_builder.DisableUnitAtATime = true;
+  pass_builder.DisableUnrollLoops = true;
+  pass_builder.LoopVectorize = false;
+  pass_builder.SLPVectorize = false;
+
+  _compiler.target_machine().adjustPassManager(pass_builder);
+  pass_builder.addFunctionSimplificationPasses(pass_manager);
+  if (with_unroll) {
+    pass_manager.add(llvm::createLoopUnrollPass(3, 1000000000, -1, 0));
+  }
+  pass_manager.run(*context.module);*/
+}
+
+llvm::Function* JitCodeSpecializer::_create_function_declaration(SpecializationContext& context, const llvm::Function& function, const std::string& suffix) const {
+  /*if (auto fn = _module->getFunction(function.getName())) {
     return fn;
   }
   const auto declaration = llvm::Function::Create(llvm::cast<llvm::FunctionType>(function.getValueType()),
                                                   function.getLinkage(), function.getName() + suffix, _module.get());
   declaration->copyAttributesFrom(&function);
-  return declaration;
+  return declaration;*/
+  return nullptr;
 }
 
-llvm::Function* JitModule::_clone_function(const llvm::Function& function, const std::string& suffix) {
-  const auto cloned_function = _create_function_declaration(function, suffix);
+llvm::Function* JitCodeSpecializer::_clone_function(SpecializationContext& context, const llvm::Function& function, const std::string& suffix) const {
+  /*const auto cloned_function = _create_function_declaration(function, suffix);
 
   // map personality function
   if (function.hasPersonalityFn()) {
@@ -260,11 +242,12 @@ llvm::Function* JitModule::_clone_function(const llvm::Function& function, const
     cloned_function->setPersonalityFn(llvm::MapValue(function.getPersonalityFn(), _llvm_value_map));
   }
 
-  return cloned_function;
+  return cloned_function;*/
+  return nullptr;
 }
 
-llvm::GlobalVariable* JitModule::_clone_global(const llvm::GlobalVariable& global) {
-  if (auto gb = _module->getGlobalVariable(global.getName())) {
+llvm::GlobalVariable* JitCodeSpecializer::_clone_global_variable(SpecializationContext& context, const llvm::GlobalVariable& global_variable) const {
+  /*if (auto gb = _module->getGlobalVariable(global.getName())) {
     return gb;
   }
 
@@ -287,14 +270,15 @@ llvm::GlobalVariable* JitModule::_clone_global(const llvm::GlobalVariable& globa
     }
   }
 
-  return cloned_global;
+  return cloned_global;*/
+  return nullptr;
 }
 
-const JitRuntimePointer::Ptr& JitModule::_get_runtime_value(const llvm::Value* value) {
+const JitRuntimePointer::Ptr& JitCodeSpecializer::_get_runtime_value(SpecializationContext& context, const llvm::Value* value) const {
   //value->print(llvm::outs(), true);
   // std::cout << std::endl;
   // try serving from cache
-  if (_runtime_values.count(value)) {
+  /*if (_runtime_values.count(value)) {
     return _runtime_values[value];
   }
 
@@ -336,11 +320,12 @@ const JitRuntimePointer::Ptr& JitModule::_get_runtime_value(const llvm::Value* v
     _runtime_values[value] = std::make_shared<JitRuntimePointer>();
   }
 
-  return _runtime_values[value];
+  return _runtime_values[value];*/
+  throw "error";
 }
 
 template <typename T, typename U>
-void JitModule::_visit(U& element, std::function<void(T&)> fn) {
+void JitCodeSpecializer::_visit(U& element, std::function<void(T&)> fn) const {
   // clang-format off
   if constexpr(std::is_same_v<std::remove_const_t<U>, llvm::Module>) {
     for (auto& function : element) {
@@ -376,11 +361,6 @@ void JitModule::_visit(U& element, std::function<void(T&)> fn) {
     }
   }
   // clang-format on
-}
-
-template <typename T>
-void JitModule::_visit(std::function<void(T&)> fn) {
-  _visit(*_root_function, fn);
 }
 
 }  // namespace opossum
