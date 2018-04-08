@@ -1,27 +1,31 @@
-#include "table_statistics2.hpp"
+#include "table_statistics.hpp"
 
 #include <sstream>
 
 #include "all_type_variant.hpp"
 #include "all_parameter_variant.hpp"
-#include "abstract_column_statistics2.hpp"
+#include "abstract_column_statistics.hpp"
 
 namespace opossum {
 
-TableStatistics2::TableStatistics2(const float row_count, const std::vector<std::shared_ptr<const AbstractColumnStatistics2>>& column_statistics):
-  _row_count(row_count), _column_statistics(column_statistics) {
+TableStatistics::TableStatistics(const TableType table_type, const float row_count, const std::vector<std::shared_ptr<const AbstractColumnStatistics>>& column_statistics):
+  _table_type(table_type), _row_count(row_count), _column_statistics(column_statistics) {
 
 }
 
-float TableStatistics2::row_count() const {
+TableType TableStatistics::table_type() const {
+  return _table_type;
+}
+
+float TableStatistics::row_count() const {
   return _row_count;
 }
 
-const std::vector<std::shared_ptr<const AbstractColumnStatistics2>>& TableStatistics2::column_statistics() const {
+const std::vector<std::shared_ptr<const AbstractColumnStatistics>>& TableStatistics::column_statistics() const {
   return _column_statistics;
 }
 
-TableStatistics2 TableStatistics2::estimate_predicate(
+TableStatistics TableStatistics::estimate_predicate(
   const ColumnID column_id,
   const PredicateCondition predicate_condition,
   const AllParameterVariant& value,
@@ -43,7 +47,7 @@ TableStatistics2 TableStatistics2::estimate_predicate(
   // TODO(anybody) we don't do (Not)Like estimations yet, thus resort to magic numbers
   if (predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike) {
     const auto selectivity = predicate_condition == PredicateCondition::Like ? DEFAULT_LIKE_SELECTIVITY : 1.0f - DEFAULT_LIKE_SELECTIVITY;
-    return {_row_count * selectivity, _column_statistics};
+    return {TableType::References, _row_count * selectivity, _column_statistics};
   }
 
   // Create copies to modify below and insert into result
@@ -77,11 +81,11 @@ TableStatistics2 TableStatistics2::estimate_predicate(
     predicated_row_count *= estimate.selectivity;
   }
 
-  return {predicated_row_count, predicated_column_statistics};
+  return {TableType::References, predicated_row_count, predicated_column_statistics};
 }
 
-TableStatistics2 TableStatistics2::estimate_cross_join(
-  const TableStatistics2& right_table_statistics) const {
+TableStatistics TableStatistics::estimate_cross_join(
+  const TableStatistics& right_table_statistics) const {
 
   /**
    * Cross Join Estimation is simple:
@@ -101,15 +105,15 @@ TableStatistics2 TableStatistics2::estimate_cross_join(
 
   auto cross_joined_row_count = _row_count * right_table_statistics._row_count;
 
-  return {cross_joined_row_count, cross_joined_column_statistics};
+  return {TableType::References, cross_joined_row_count, cross_joined_column_statistics};
 }
 
-TableStatistics2 TableStatistics2::estimate_predicated_join(
-  const TableStatistics2& right_table_statistics,
+TableStatistics TableStatistics::estimate_predicated_join(
+  const TableStatistics& right_table_statistics,
   const JoinMode mode,
   const ColumnIDPair column_ids,
   const PredicateCondition predicate_condition) const {
-  Assert(mode != JoinMode::Cross, "Use function generate_cross_join_statistics for cross joins.");
+  Assert(mode != JoinMode::Cross, "Use function estimate_cross_join for cross joins.");
   Assert(mode != JoinMode::Natural, "Natural joins are not supported by statistics component.");
 
   /**
@@ -192,7 +196,7 @@ TableStatistics2 TableStatistics2::estimate_predicated_join(
   ColumnID new_right_column_id{static_cast<ColumnID::base_type>(_column_statistics.size() + column_ids.second)};
 
   auto calculate_added_null_values_for_outer_join = [&](const float row_count,
-                                                        const std::shared_ptr<const AbstractColumnStatistics2> col_stats,
+                                                        const std::shared_ptr<const AbstractColumnStatistics> col_stats,
                                                         const float predicate_column_distinct_count) {
     float null_value_no = col_stats->null_value_ratio() * row_count;
     if (col_stats->distinct_count() != 0.f) {
@@ -202,8 +206,8 @@ TableStatistics2 TableStatistics2::estimate_predicated_join(
   };
 
   auto adjust_null_value_ratio_for_outer_join = [&](
-  const std::vector<std::shared_ptr<const AbstractColumnStatistics2>>::iterator col_begin,
-  const std::vector<std::shared_ptr<const AbstractColumnStatistics2>>::iterator col_end, const float row_count,
+  const std::vector<std::shared_ptr<const AbstractColumnStatistics>>::iterator col_begin,
+  const std::vector<std::shared_ptr<const AbstractColumnStatistics>>::iterator col_end, const float row_count,
   const float null_value_no, const float new_row_count) {
     if (null_value_no == 0) {
       return;
@@ -216,7 +220,7 @@ TableStatistics2 TableStatistics2::estimate_predicated_join(
       float right_null_value_ratio = (column_null_value_no + null_value_no) / new_row_count;
 
       // We just created these column statistics and are therefore qualified to modify them
-      std::const_pointer_cast<AbstractColumnStatistics2>(*col_itr)->set_null_value_ratio(right_null_value_ratio);
+      std::const_pointer_cast<AbstractColumnStatistics>(*col_itr)->set_null_value_ratio(right_null_value_ratio);
     }
   };
 
@@ -274,7 +278,7 @@ TableStatistics2 TableStatistics2::estimate_predicated_join(
   return join_table_stats;
 }
 
-std::string TableStatistics2::description() const {
+std::string TableStatistics::description() const {
   std::stringstream stream;
 
   stream << "Table Stats " << std::endl;

@@ -6,7 +6,7 @@
 #include <string>
 
 #include "all_type_variant.hpp"
-#include "abstract_column_statistics2.hpp"
+#include "abstract_column_statistics.hpp"
 
 namespace opossum {
 
@@ -14,9 +14,9 @@ namespace opossum {
  * @tparam ColumnDataType   the DataType of the values in the Column that these statistics represent
  */
 template <typename ColumnDataType>
-class ColumnStatistics2 : public AbstractColumnStatistics2 {
+class ColumnStatistics : public AbstractColumnStatistics {
  public:
-  ColumnStatistics2(const float null_value_ratio,
+  ColumnStatistics(const float null_value_ratio,
                     const float distinct_count,
                     const ColumnDataType min,
                     const ColumnDataType max);
@@ -30,10 +30,10 @@ class ColumnStatistics2 : public AbstractColumnStatistics2 {
   /** @} */
 
   /**
-   * @defgroup Implementations for AbstractColumnStatistics2
+   * @defgroup Implementations for AbstractColumnStatistics
    * @{
    */
-  std::shared_ptr<AbstractColumnStatistics2> clone() const override;
+  std::shared_ptr<AbstractColumnStatistics> clone() const override;
   ColumnValueEstimate estimate_predicate_with_value(
     const PredicateCondition predicate_condition,
     const AllTypeVariant& value,
@@ -46,7 +46,7 @@ class ColumnStatistics2 : public AbstractColumnStatistics2 {
 
   ColumnColumnEstimate estimate_predicate_with_column(
     const PredicateCondition predicate_condition,
-    const AbstractColumnStatistics2& right_column_statistics) const override;
+    const AbstractColumnStatistics& right_column_statistics) const override;
 
   std::string description() const override;
   /** @} */

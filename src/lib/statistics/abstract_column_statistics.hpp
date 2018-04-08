@@ -7,23 +7,23 @@
 
 namespace opossum {
 
-class AbstractColumnStatistics2;
+class AbstractColumnStatistics;
 
 struct ColumnValueEstimate {
   float selectivity{0.0f};
-  std::shared_ptr<AbstractColumnStatistics2> column_statistics;
+  std::shared_ptr<AbstractColumnStatistics> column_statistics;
 };
 
 struct ColumnColumnEstimate {
   float selectivity{0.0f};
-  std::shared_ptr<AbstractColumnStatistics2> left_column_statistics;
-  std::shared_ptr<AbstractColumnStatistics2> right_column_statistics;
+  std::shared_ptr<AbstractColumnStatistics> left_column_statistics;
+  std::shared_ptr<AbstractColumnStatistics> right_column_statistics;
 };
 
-class AbstractColumnStatistics2 {
+class AbstractColumnStatistics {
  public:
-  AbstractColumnStatistics2(const DataType data_type, const float null_value_ratio, const float distinct_count);
-  virtual ~AbstractColumnStatistics2() = default;
+  AbstractColumnStatistics(const DataType data_type, const float null_value_ratio, const float distinct_count);
+  virtual ~AbstractColumnStatistics() = default;
 
   /**
    * @defgroup Member access
@@ -40,12 +40,12 @@ class AbstractColumnStatistics2 {
   /**
    * @return a clone of the concrete ColumnStatistics object
    */
-  virtual std::shared_ptr<AbstractColumnStatistics2> clone() const = 0;
+  virtual std::shared_ptr<AbstractColumnStatistics> clone() const = 0;
 
   /**
    * @return a clone() of this, with the null_value_ratio set to 0
    */
-  std::shared_ptr<AbstractColumnStatistics2> without_null_values() const;
+  std::shared_ptr<AbstractColumnStatistics> without_null_values() const;
 
   /**
    * @defgroup Cardinality estimation
@@ -73,7 +73,7 @@ class AbstractColumnStatistics2 {
    */
   virtual ColumnColumnEstimate estimate_predicate_with_column(
   const PredicateCondition predicate_condition,
-  const AbstractColumnStatistics2& right_column_statistics) const = 0;
+  const AbstractColumnStatistics& right_column_statistics) const = 0;
   /** @} */
 
   virtual std::string description() const = 0;

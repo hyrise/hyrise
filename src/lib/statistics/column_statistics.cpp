@@ -1,35 +1,35 @@
-#include "column_statistics2.hpp"
+#include "column_statistics.hpp"
 
 #include <sstream>
 
 #include "resolve_type.hpp"
 #include "type_cast.hpp"
-#include "table_statistics2.hpp"
+#include "table_statistics.hpp"
 
 namespace opossum {
 
 template<typename ColumnDataType>
-ColumnStatistics2<ColumnDataType>::ColumnStatistics2(const float null_value_ratio,
+ColumnStatistics<ColumnDataType>::ColumnStatistics(const float null_value_ratio,
                  const float distinct_count,
                  const ColumnDataType min,
                  const ColumnDataType max):
-  AbstractColumnStatistics2(data_type_from_type<ColumnDataType>(), null_value_ratio, distinct_count), _min(min), _max(max) {
-
+  AbstractColumnStatistics(data_type_from_type<ColumnDataType>(), null_value_ratio, distinct_count), _min(min), _max(max) {
+  Assert(null_value_ratio >= 0.0f && null_value_ratio <= 1.0f, "NullValueRatio out of range");
 }
 
 template<typename ColumnDataType>
-ColumnDataType ColumnStatistics2<ColumnDataType>::min() const {return _min;}
+ColumnDataType ColumnStatistics<ColumnDataType>::min() const {return _min;}
 
 template<typename ColumnDataType>
-ColumnDataType ColumnStatistics2<ColumnDataType>::max() const {return _max;}
+ColumnDataType ColumnStatistics<ColumnDataType>::max() const {return _max;}
 
 template<typename ColumnDataType>
-std::shared_ptr<AbstractColumnStatistics2> ColumnStatistics2<ColumnDataType>::clone() const {
-  return std::make_shared<ColumnStatistics2<ColumnDataType>>(null_value_ratio(), distinct_count(), _min, _max);
+std::shared_ptr<AbstractColumnStatistics> ColumnStatistics<ColumnDataType>::clone() const {
+  return std::make_shared<ColumnStatistics<ColumnDataType>>(null_value_ratio(), distinct_count(), _min, _max);
 }
 
 template<typename ColumnDataType>
-ColumnValueEstimate ColumnStatistics2<ColumnDataType>::estimate_predicate_with_value(
+ColumnValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_value(
   const PredicateCondition predicate_condition,
   const AllTypeVariant& variant_value,
   const std::optional<AllTypeVariant>& value2) const {
@@ -67,8 +67,14 @@ ColumnValueEstimate ColumnStatistics2<ColumnDataType>::estimate_predicate_with_v
     }
     case PredicateCondition::GreaterThanEquals: return estimate_range(value, _max);
 
+    case PredicateCondition::Between: {
+      DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
+      auto casted_value2 = type_cast<ColumnDataType>(*value2);
+      return estimate_range(value, casted_value2);
+    }
+
     default:
-      Fail("Illegal PredicateCondition");
+      Fail("Estimation not implemented for request PredicateCondition");
   }
 }
 
@@ -76,7 +82,7 @@ ColumnValueEstimate ColumnStatistics2<ColumnDataType>::estimate_predicate_with_v
  * Specialization for strings as they cannot be used in subtractions.
  */
 template<>
-ColumnValueEstimate ColumnStatistics2<std::string>::estimate_predicate_with_value(
+ColumnValueEstimate ColumnStatistics<std::string>::estimate_predicate_with_value(
   const PredicateCondition predicate_condition,
   const AllTypeVariant& variant_value,
   const std::optional<AllTypeVariant>& value2) const {
@@ -99,7 +105,7 @@ ColumnValueEstimate ColumnStatistics2<std::string>::estimate_predicate_with_valu
 }
 
 template<typename ColumnDataType>
-ColumnValueEstimate ColumnStatistics2<ColumnDataType>::estimate_predicate_with_value_placeholder(
+ColumnValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_value_placeholder(
   const PredicateCondition predicate_condition,
   const ValuePlaceholder& value,
   const std::optional<AllTypeVariant>& value2) const {
@@ -114,19 +120,41 @@ ColumnValueEstimate ColumnStatistics2<ColumnDataType>::estimate_predicate_with_v
     case PredicateCondition::GreaterThan:
     case PredicateCondition::GreaterThanEquals: {
       auto column_statistics =
-       std::make_shared<ColumnStatistics2<ColumnDataType>>(0.0f, distinct_count() * TableStatistics2::DEFAULT_OPEN_ENDED_SELECTIVITY,
+       std::make_shared<ColumnStatistics<ColumnDataType>>(0.0f, distinct_count() * TableStatistics::DEFAULT_OPEN_ENDED_SELECTIVITY,
                                          _min, _max);
-      return {non_null_value_ratio() * TableStatistics2::DEFAULT_OPEN_ENDED_SELECTIVITY, column_statistics};
+      return {non_null_value_ratio() * TableStatistics::DEFAULT_OPEN_ENDED_SELECTIVITY, column_statistics};
     }
-    default:
-      Fail("Illegal PredicateCondition");
+    case PredicateCondition::Between: {
+      // since the value2 is known,
+      // first, statistics for the operation <= value are calculated
+      // then, the open ended selectivity is applied on the result
+      DebugAssert(static_cast<bool>(value2), "Operator BETWEEN should get two parameters, second is missing!");
+      auto casted_value2 = type_cast<ColumnDataType>(*value2);
+      auto output = estimate_range(_min, casted_value2);
+      // return, if value2 < min
+      if (output.selectivity == 0.f) {
+        return output;
+      }
+      // create statistics, if value2 >= max
+      if (output.column_statistics.get() == this) {
+        output.column_statistics = std::make_shared<ColumnStatistics>(0.0f, distinct_count(),
+                                                                      _min, _max);
+      }
+      // apply default selectivity for open ended
+      output.selectivity *= TableStatistics::DEFAULT_OPEN_ENDED_SELECTIVITY;
+      // column statistics have just been created, therefore, cast to the column type cannot fail
+      auto column_statistics = std::dynamic_pointer_cast<ColumnStatistics<ColumnDataType>>(output.column_statistics);
+      column_statistics->_distinct_count *= TableStatistics::DEFAULT_OPEN_ENDED_SELECTIVITY;
+      return output;
+    }
+    default: { return {non_null_value_ratio(), without_null_values()}; }
   }
 }
 
 template<typename ColumnDataType>
-ColumnColumnEstimate ColumnStatistics2<ColumnDataType>::estimate_predicate_with_column(
+ColumnColumnEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_column(
   const PredicateCondition predicate_condition,
-  const AbstractColumnStatistics2& abstract_right_column_statistics) const {
+  const AbstractColumnStatistics& abstract_right_column_statistics) const {
 
   /**
    * Calculate expected selectivity by looking at what ratio of values of both columns are in the overlapping value
@@ -180,7 +208,7 @@ ColumnColumnEstimate ColumnStatistics2<ColumnDataType>::estimate_predicate_with_
 
   Assert(_data_type == abstract_right_column_statistics.data_type(), "Cannot compare columns of different type");
 
-  const auto& right_column_statistics = static_cast<const ColumnStatistics2<ColumnDataType>&>(abstract_right_column_statistics);
+  const auto& right_column_statistics = static_cast<const ColumnStatistics<ColumnDataType>&>(abstract_right_column_statistics);
 
   // if columns have no distinct values, they can only have null values which cannot be selected with this predicate
   if (distinct_count() == 0 || right_column_statistics.distinct_count() == 0) {
@@ -278,16 +306,16 @@ ColumnColumnEstimate ColumnStatistics2<ColumnDataType>::estimate_predicate_with_
     case PredicateCondition::Equals: {
       auto overlapping_distinct_count = std::min(left_overlapping_distinct_count, right_overlapping_distinct_count);
 
-      auto new_left_column_stats = std::make_shared<ColumnStatistics2>(0.0f, overlapping_distinct_count,
+      auto new_left_column_stats = std::make_shared<ColumnStatistics>(0.0f, overlapping_distinct_count,
                                                                       overlapping_range_min, overlapping_range_max);
-      auto new_right_column_stats = std::make_shared<ColumnStatistics2>(
+      auto new_right_column_stats = std::make_shared<ColumnStatistics>(
       0.0f, overlapping_distinct_count, overlapping_range_min, overlapping_range_max);
       return {combined_non_null_ratio * equal_values_ratio, new_left_column_stats, new_right_column_stats};
     }
     case PredicateCondition::NotEquals: {
-      auto new_left_column_stats = std::make_shared<ColumnStatistics2>(0.0f, distinct_count(),
+      auto new_left_column_stats = std::make_shared<ColumnStatistics>(0.0f, distinct_count(),
                                                                       _min, _max);
-      auto new_right_column_stats = std::make_shared<ColumnStatistics2>(
+      auto new_right_column_stats = std::make_shared<ColumnStatistics>(
       0.0f, right_column_statistics.distinct_count(), right_column_statistics._min,
       right_column_statistics._max);
       return {combined_non_null_ratio * (1.f - equal_values_ratio), new_left_column_stats, new_right_column_stats};
@@ -323,13 +351,13 @@ ColumnColumnEstimate ColumnStatistics2<ColumnDataType>::estimate_predicate_with_
  * Specialization for strings as they cannot be used in subtractions.
  */
 template <>
-ColumnColumnEstimate ColumnStatistics2<std::string>::estimate_predicate_with_column(
+ColumnColumnEstimate ColumnStatistics<std::string>::estimate_predicate_with_column(
 const PredicateCondition predicate_condition,
-const AbstractColumnStatistics2& abstract_right_column_statistics) const {
+const AbstractColumnStatistics& abstract_right_column_statistics) const {
   // TODO(anybody) implement special case for strings
   Assert(_data_type == abstract_right_column_statistics.data_type(), "Cannot compare columns of different type");
 
-  const auto& right_column_statistics = static_cast<const ColumnStatistics2<std::string>&>(abstract_right_column_statistics);
+  const auto& right_column_statistics = static_cast<const ColumnStatistics<std::string>&>(abstract_right_column_statistics);
 
   // if columns have no distinct values, they can only have null values which cannot be selected with this predicate
   if (distinct_count() == 0 || right_column_statistics.distinct_count() == 0) {
@@ -341,7 +369,7 @@ const AbstractColumnStatistics2& abstract_right_column_statistics) const {
 }
 
 template <typename ColumnDataType>
-std::string ColumnStatistics2<ColumnDataType>::description() const {
+std::string ColumnStatistics<ColumnDataType>::description() const {
   std::stringstream stream;
   stream << "Col Stats: " << std::endl;
   stream << "  dist.    " << _distinct_count << std::endl;
@@ -352,7 +380,7 @@ std::string ColumnStatistics2<ColumnDataType>::description() const {
 }
 
 template <typename ColumnDataType>
-float ColumnStatistics2<ColumnDataType>::estimate_range_selectivity(const ColumnDataType minimum, const ColumnDataType maximum) const {
+float ColumnStatistics<ColumnDataType>::estimate_range_selectivity(const ColumnDataType minimum, const ColumnDataType maximum) const {
   // minimum must be smaller or equal than maximum
   // distinction between integers and decimals
   // for integers the number of possible integers is used within the inclusive ranges
@@ -370,13 +398,13 @@ float ColumnStatistics2<ColumnDataType>::estimate_range_selectivity(const Column
  * Specialization for strings as they cannot be used in subtractions.
  */
 template <>
-float ColumnStatistics2<std::string>::estimate_range_selectivity(const std::string minimum, const std::string maximum) const {
+float ColumnStatistics<std::string>::estimate_range_selectivity(const std::string minimum, const std::string maximum) const {
   // TODO(anyone) implement selectivity for range approximation for column type string.
   return (maximum < minimum) ? 0.f : 1.f;
 }
 
 template <typename ColumnDataType>
-ColumnValueEstimate ColumnStatistics2<ColumnDataType>::estimate_range(const ColumnDataType minimum,
+ColumnValueEstimate ColumnStatistics<ColumnDataType>::estimate_range(const ColumnDataType minimum,
                                                                                  const ColumnDataType maximum) const {
   // NOTE: minimum can be greater than maximum (e.g. a predicate >= 2 on a column with only values of 1)
   // new minimum/maximum of table cannot be smaller/larger than the current minimum/maximum
@@ -390,32 +418,32 @@ ColumnValueEstimate ColumnStatistics2<ColumnDataType>::estimate_range(const Colu
   if (common_min <= common_max) {
     selectivity = estimate_range_selectivity(common_min, common_max);
   }
-  auto column_statistics = std::make_shared<ColumnStatistics2<ColumnDataType>>(0.0f, selectivity * distinct_count(), common_min, common_max);
+  auto column_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>(0.0f, selectivity * distinct_count(), common_min, common_max);
   return {non_null_value_ratio() * selectivity, column_statistics};
 }
 
 template <typename ColumnDataType>
-ColumnValueEstimate ColumnStatistics2<ColumnDataType>::estimate_equals_with_value(const ColumnDataType value) const {
+ColumnValueEstimate ColumnStatistics<ColumnDataType>::estimate_equals_with_value(const ColumnDataType value) const {
   DebugAssert(distinct_count() > 0, "Distinct count has to be greater zero");
   float new_distinct_count = 1.f;
   if (value < _min || value > _max) {
     new_distinct_count = 0.f;
   }
-  auto column_statistics = std::make_shared<ColumnStatistics2<ColumnDataType>>(0.0f, new_distinct_count, value, value);
+  auto column_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>(0.0f, new_distinct_count, value, value);
   return {non_null_value_ratio() * new_distinct_count / distinct_count(), column_statistics};
 }
 
 template <typename ColumnDataType>
-ColumnValueEstimate ColumnStatistics2<ColumnDataType>::estimate_not_equals_with_value(const ColumnDataType value) const {
+ColumnValueEstimate ColumnStatistics<ColumnDataType>::estimate_not_equals_with_value(const ColumnDataType value) const {
   DebugAssert(distinct_count() > 0, "Distinct count has to be greater zero");
   if (value < _min || value > _max) {
     return {non_null_value_ratio(), without_null_values()};
   }
-  auto column_statistics = std::make_shared<ColumnStatistics2<ColumnDataType>>(0.0f, distinct_count() - 1, _min,
+  auto column_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>(0.0f, distinct_count() - 1, _min,
                                                               _max);
   return {non_null_value_ratio() * (1 - 1.f / distinct_count()), column_statistics};
 }
 
-EXPLICITLY_INSTANTIATE_DATA_TYPES(ColumnStatistics2);
+EXPLICITLY_INSTANTIATE_DATA_TYPES(ColumnStatistics);
 
 }
