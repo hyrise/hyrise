@@ -34,13 +34,15 @@ class JitCodeSpecializer {
   JitCodeSpecializer();
 
   template <typename T>
-  std::function<T> specialize_function(const std::string& root_function_name, const JitRuntimePointer::Ptr& runtime_this, const bool two_passes) {
+  std::function<T> specialize_function(const std::string& root_function_name,
+                                       const JitRuntimePointer::Ptr& runtime_this, const bool two_passes) {
     _specialize_function_impl(root_function_name, runtime_this, two_passes);
     return _compiler.find_symbol<T>(root_function_name + "_");
   }
 
  private:
-  void _specialize_function_impl(const std::string& root_function_name, const JitRuntimePointer::Ptr& runtime_this, const bool two_passes);
+  void _specialize_function_impl(const std::string& root_function_name, const JitRuntimePointer::Ptr& runtime_this,
+                                 const bool two_passes);
 
   void _inline_function_calls(SpecializationContext& context, const bool two_passes) const;
 
@@ -48,11 +50,14 @@ class JitCodeSpecializer {
 
   void _optimize(SpecializationContext& context, const bool unroll_loops) const;
 
-  llvm::Function* _create_function_declaration(SpecializationContext& context, const llvm::Function& function, const std::string& suffix = "") const;
+  llvm::Function* _create_function_declaration(SpecializationContext& context, const llvm::Function& function,
+                                               const std::string& suffix = "") const;
 
-  llvm::Function* _clone_function(SpecializationContext& context, const llvm::Function& function, const std::string& suffix = "") const;
+  llvm::Function* _clone_function(SpecializationContext& context, const llvm::Function& function,
+                                  const std::string& suffix = "") const;
 
-  llvm::GlobalVariable* _clone_global_variable(SpecializationContext& context, const llvm::GlobalVariable& global_variable) const;
+  llvm::GlobalVariable* _clone_global_variable(SpecializationContext& context,
+                                               const llvm::GlobalVariable& global_variable) const;
 
   const JitRuntimePointer::Ptr& _get_runtime_value(SpecializationContext& context, const llvm::Value* value) const;
 

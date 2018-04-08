@@ -59,8 +59,6 @@ JitRepository::JitRepository()
       }
     }
   }
-
-  // _dump(std::cout);
 }
 
 std::unique_ptr<llvm::Module> JitRepository::_parse_module(const std::string& module_string,
@@ -71,30 +69,9 @@ std::unique_ptr<llvm::Module> JitRepository::_parse_module(const std::string& mo
 
   if (error.getFilename() != "") {
     error.print("", llvm::errs(), true);
-    Fail("an LLVM error occured while parsing the embedded LLVM-IR");
+    Fail("An LLVM error occured while parsing the embedded LLVM bitcode.");
   }
   return module;
-}
-
-void JitRepository::_dump(std::ostream& os) const {
-  os << "IR Repository" << std::endl;
-  os << "--- functions ---" << std::endl;
-  for (const auto& fn : _functions) {
-    os << fn.first << std::endl;
-  }
-
-  os << std::endl << "--- vtables ---" << std::endl;
-  for (const auto& vtable : _vtables) {
-    os << vtable.first << std::endl;
-    for (const auto& function : vtable.second) {
-      if (function) {
-        os << "  " << function->getName().str() << std::endl;
-      } else {
-        os << "  -" << std::endl;
-      }
-    }
-    os << std::endl;
-  }
 }
 
 }  // namespace opossum
