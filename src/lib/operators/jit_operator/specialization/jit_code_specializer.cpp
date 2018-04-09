@@ -2,6 +2,8 @@
 
 #include <queue>
 
+#include <boost/algorithm/string/predicate.hpp>
+
 #include <llvm/Analysis/GlobalsModRef.h>
 #include <llvm/Analysis/TargetTransformInfo.h>
 #include <llvm/Linker/IRMover.h>

@@ -3,7 +3,6 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Verifier.h>
 
-#include <operators/jit_operator/specialization/utils/llvm_utils.hpp>
 #include <stack>
 
 #include "jit_compiler.hpp"
