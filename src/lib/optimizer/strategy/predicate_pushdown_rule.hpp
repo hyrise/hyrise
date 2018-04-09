@@ -23,7 +23,7 @@ class PredicatePushdownRule : public AbstractRule {
 
  protected:
   bool _predicate_value_demotable(const std::shared_ptr<PredicateNode>& predicate_node,
-                              const std::shared_ptr<AbstractLQPNode>& node) const;
+                                  const std::shared_ptr<AbstractLQPNode>& node) const;
   bool _contained_in_left_subtree(const std::shared_ptr<AbstractLQPNode>& node, const LQPColumnReference& column) const;
   bool _contained_in_right_subtree(const std::shared_ptr<AbstractLQPNode>& node,
                                    const LQPColumnReference& column) const;
