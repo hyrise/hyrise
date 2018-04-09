@@ -8,6 +8,7 @@
 #include "jit_compiler.hpp"
 #include "jit_repository.hpp"
 #include "jit_runtime_pointer.hpp"
+#include "llvm/llvm_extensions.hpp"
 
 namespace opossum {
 
@@ -18,14 +19,6 @@ namespace opossum {
 class JitRTTIHelper {
  private:
   virtual void _() const {}
-};
-
-struct SpecializationContext {
-  std::string root_function_name;
-  std::unique_ptr<llvm::Module> module;
-  llvm::Function* root_function;
-  llvm::ValueToValueMapTy llvm_value_map;
-  std::unordered_map<const llvm::Value*, JitRuntimePointer::Ptr> runtime_value_map;
 };
 
 class JitCodeSpecializer {

@@ -13,7 +13,7 @@
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 
-#include "utils/my_llvm.hpp"
+#include "llvm/llvm_extensions.hpp"
 
 namespace opossum {
 
@@ -128,8 +128,8 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context, 
     }
 
     llvm::InlineFunctionInfo info;
-    InlineContext ctx{context.module.get(), context.runtime_value_map, context.llvm_value_map};
-    if (llvm::MyInlineFunction(call_site, info, nullptr, false, ctx)) {
+    // SpecializationContext ctx{context.module.get(), context.runtime_value_map, context.llvm_value_map};
+    if (InlineFunction(call_site, info, nullptr, false, context)) {
       for (const auto& new_call_site : info.InlinedCallSites) {
         call_sites.push(new_call_site);
       }
@@ -291,7 +291,8 @@ const JitRuntimePointer::Ptr& JitCodeSpecializer::_get_runtime_value(Specializat
       switch (constant_expr->getOpcode()) {
         case llvm::Instruction::IntToPtr:
           if (const auto address = llvm::dyn_cast<llvm::ConstantInt>(constant_expr->getOperand(0))) {
-            context.runtime_value_map[value] = std::make_shared<JitConstantRuntimePointer>(address->getValue().getLimitedValue());
+            context.runtime_value_map[value] =
+                std::make_shared<JitConstantRuntimePointer>(address->getValue().getLimitedValue());
           }
           break;
         default:
@@ -314,8 +315,8 @@ const JitRuntimePointer::Ptr& JitCodeSpecializer::_get_runtime_value(Specializat
       }
     }
   } else if (const auto bitcast_inst = llvm::dyn_cast<llvm::BitCastInst>(value)) {
-    if (const auto base =
-            std::dynamic_pointer_cast<const JitKnownRuntimePointer>(_get_runtime_value(context, bitcast_inst->getOperand(0)))) {
+    if (const auto base = std::dynamic_pointer_cast<const JitKnownRuntimePointer>(
+            _get_runtime_value(context, bitcast_inst->getOperand(0)))) {
       context.runtime_value_map[value] = std::make_shared<JitOffsetRuntimePointer>(base, 0L);
     }
   }

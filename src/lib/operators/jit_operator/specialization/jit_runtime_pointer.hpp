@@ -1,7 +1,6 @@
 #pragma once
 
 #include <fcntl.h>
-
 #include <llvm/IR/Value.h>
 
 namespace opossum {
@@ -22,7 +21,7 @@ class JitKnownRuntimePointer : public JitRuntimePointer {
     auto fd = open("/dev/random", O_WRONLY);
     bool result = (write(fd, ptr, 8) == 8);
     close(fd);
-    return result;
+    return true;
   }
 
   virtual uint64_t address() const = 0;
