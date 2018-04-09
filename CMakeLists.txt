@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
 project(Hyrise)
 
+set(CMAKE_EXE_LINKER_FLAGS -Wl,--export-dynamic)
 option(ENABLE_UNSUPPORTED_COMPILER "Set to ON to build Hyrise even if the compiler is not supported. Default: OFF" OFF)
 function(compiler_not_supported message)
     if (${ENABLE_UNSUPPORTED_COMPILER})
