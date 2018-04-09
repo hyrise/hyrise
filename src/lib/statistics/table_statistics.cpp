@@ -270,6 +270,11 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
   return join_table_stats;
 }
 
+TableStatistics TableStatistics::estimate_disjunction(const TableStatistics& right_table_statistics) const {
+  // TODO(anybody) this is just a dummy implementation
+  return {row_count() + right_table_statistics.row_count() * DEFAULT_DISJUNCTION_SELECTIVITY, column_statistics()};
+}
+
 std::string TableStatistics::description() const {
   std::stringstream stream;
 

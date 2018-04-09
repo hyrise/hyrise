@@ -20,6 +20,8 @@ class TableStatistics final {
   // P. Griffiths Selinger, 1979
   static constexpr auto DEFAULT_LIKE_SELECTIVITY = 0.1f;
   static constexpr auto DEFAULT_OPEN_ENDED_SELECTIVITY = 1.f / 3.f;
+  // Made up magic number
+  static constexpr auto DEFAULT_DISJUNCTION_SELECTIVITY = 0.2f;
 
   TableStatistics(const TableType table_type, const float row_count,
                   const std::vector<std::shared_ptr<const AbstractColumnStatistics>>& column_statistics);
@@ -47,6 +49,7 @@ class TableStatistics final {
   TableStatistics estimate_predicated_join(const TableStatistics& right_table_statistics, const JoinMode mode,
                                            const ColumnIDPair column_ids,
                                            const PredicateCondition predicate_condition) const;
+  TableStatistics estimate_disjunction(const TableStatistics& right_table_statistics) const;
   /** @} */
 
   std::string description() const;
