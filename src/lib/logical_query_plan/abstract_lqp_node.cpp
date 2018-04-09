@@ -31,7 +31,9 @@ std::string QualifiedColumnName::as_string() const {
 AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type) : _type(node_type) {}
 
 AbstractLQPNode::~AbstractLQPNode() {
-  Assert(_outputs.empty(), "Bug detected. There are outputs that should still reference to this node. Thus this node shouldn't get deleted");
+  Assert(
+      _outputs.empty(),
+      "Bug detected. There are outputs that should still reference to this node. Thus this node shouldn't get deleted");
   if (_inputs[0]) _inputs[0]->_remove_output_pointer(*this);
   if (_inputs[1]) _inputs[1]->_remove_output_pointer(*this);
 }
@@ -474,9 +476,8 @@ void AbstractLQPNode::_input_changed() {
 }
 
 void AbstractLQPNode::_remove_output_pointer(const AbstractLQPNode& output) {
-  const auto iter =
-      std::find_if(_outputs.begin(), _outputs.end(), [&](const auto& other) {
-        /**
+  const auto iter = std::find_if(_outputs.begin(), _outputs.end(), [&](const auto& other) {
+    /**
          * HACK! We're checking for other.expired() here as well when looking for `output`
          * If nothing else breaks the only way we might get `other.expired()` to be true is if `other` is the expired
          * weak_ptr<> to output - and thus the element we're looking for - in the following scenario:
@@ -487,8 +488,8 @@ void AbstractLQPNode::_remove_output_pointer(const AbstractLQPNode& output) {
          * node_b.reset(); // ~AbstractLQPNode() will call `node_a_remove_output_pointer(node_b)`
          *                 // But we can't lock node_b anymore, since its ref count is already 0
          */
-        return &output == other.lock().get() || other.expired();
-      });
+    return &output == other.lock().get() || other.expired();
+  });
   DebugAssert(iter != _outputs.end(), "Specified output node is not actually a output node of this node.");
 
   /**
