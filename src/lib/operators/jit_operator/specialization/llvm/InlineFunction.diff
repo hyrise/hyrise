@@ -1,0 +1,37 @@
+14a15,18
+> // clang-format off
+> 
+> #include "llvm_extensions.hpp"
+> 
+52c56
+< EnableNoAliasConversion("enable-noalias-to-md-conversion", cl::init(true),
+---
+> EnableNoAliasConversion("opossum-enable-noalias-to-md-conversion", cl::init(true),
+57c61
+< PreserveAlignmentAssumptions("preserve-alignment-assumptions-during-inlining",
+---
+> PreserveAlignmentAssumptions("opossum-preserve-alignment-assumptions-during-inlining",
+1456,1457c1460,1462
+< bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
+<                           AAResults *CalleeAAR, bool InsertLifetime) {
+---
+> bool opossum::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
+>                           AAResults *CalleeAAR, bool InsertLifetime,
+>                           opossum::SpecializationContext& Context) {
+1589c1594
+<     ValueToValueMapTy VMap;
+---
+>     ValueToValueMapTy VMap = Context.llvm_value_map;
+1629c1634
+<     CloneAndPruneFunctionInto(Caller, CalledFunc, VMap,
+---
+>     opossum::CloneAndPruneFunctionInto(Caller, CalledFunc, VMap,
+1631c1636
+<                               &InlinedFunctionInfo, TheCall);
+---
+>                               &InlinedFunctionInfo, TheCall, Context);
+2282a2288,2291
+> 
+> template constexpr bool llvm::DominatorTreeBase<llvm::BasicBlock, false>::IsPostDominator;
+> 
+> // clang-format on

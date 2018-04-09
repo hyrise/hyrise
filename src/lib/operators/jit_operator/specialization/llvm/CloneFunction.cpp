@@ -13,10 +13,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// clang-format off
-
-#include "llvm_extensions.hpp"
-
 #include <map>
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -244,19 +240,16 @@ struct PruningFunctionCloner {
   bool ModuleLevelChanges;
   const char* NameSuffix;
   ClonedCodeInfo* CodeInfo;
-  opossum::SpecializationContext& Context;
 
  public:
   PruningFunctionCloner(Function* newFunc, const Function* oldFunc, ValueToValueMapTy& valueMap,
-                        bool moduleLevelChanges, const char* nameSuffix, ClonedCodeInfo* codeInfo,
-                        opossum::SpecializationContext& context)
+                        bool moduleLevelChanges, const char* nameSuffix, ClonedCodeInfo* codeInfo)
       : NewFunc(newFunc),
         OldFunc(oldFunc),
         VMap(valueMap),
         ModuleLevelChanges(moduleLevelChanges),
         NameSuffix(nameSuffix),
-        CodeInfo(codeInfo),
-        Context(context) {}
+        CodeInfo(codeInfo) {}
 
   /// The specified block is found to be reachable, clone it and
   /// anything that it can reach.
@@ -352,10 +345,6 @@ void PruningFunctionCloner::CloneBlock(const BasicBlock* BB, BasicBlock::const_i
         Cond = dyn_cast_or_null<ConstantInt>(V);
       }
 
-      if (!Cond) {
-        Cond = dyn_cast_or_null<ConstantInt>(opossum::ResolveCondition(BI->getCondition(), Context));
-      }
-
       // Constant fold to uncond branch!
       if (Cond) {
         BasicBlock* Dest = BI->getSuccessor(!Cond->getZExtValue());
@@ -371,11 +360,6 @@ void PruningFunctionCloner::CloneBlock(const BasicBlock* BB, BasicBlock::const_i
       Value* V = VMap.lookup(SI->getCondition());
       Cond = dyn_cast_or_null<ConstantInt>(V);
     }
-
-    if (!Cond) {
-      Cond = dyn_cast_or_null<ConstantInt>(opossum::ResolveCondition(SI->getCondition(), Context));
-    }
-
     if (Cond) {  // Constant fold to uncond branch!
       SwitchInst::ConstCaseHandle Case = *SI->findCaseValue(Cond);
       BasicBlock* Dest = const_cast<BasicBlock*>(Case.getCaseSuccessor());
@@ -410,10 +394,10 @@ void PruningFunctionCloner::CloneBlock(const BasicBlock* BB, BasicBlock::const_i
 /// This works like CloneAndPruneFunctionInto, except that it does not clone the
 /// entire function. Instead it starts at an instruction provided by the caller
 /// and copies (and prunes) only the code reachable from that instruction.
-void opossum::CloneAndPruneIntoFromInst(Function* NewFunc, const Function* OldFunc, const Instruction* StartingInst,
-                                       ValueToValueMapTy& VMap, bool ModuleLevelChanges,
-                                       SmallVectorImpl<ReturnInst*>& Returns, const char* NameSuffix,
-                                       ClonedCodeInfo* CodeInfo, opossum::SpecializationContext& Context) {
+void llvm::CloneAndPruneIntoFromInst(Function* NewFunc, const Function* OldFunc, const Instruction* StartingInst,
+                                     ValueToValueMapTy& VMap, bool ModuleLevelChanges,
+                                     SmallVectorImpl<ReturnInst*>& Returns, const char* NameSuffix,
+                                     ClonedCodeInfo* CodeInfo) {
   assert(NameSuffix && "NameSuffix cannot be null!");
 
   ValueMapTypeRemapper* TypeMapper = nullptr;
@@ -426,7 +410,7 @@ void opossum::CloneAndPruneIntoFromInst(Function* NewFunc, const Function* OldFu
     for (const Argument& II : OldFunc->args()) assert(VMap.count(&II) && "No mapping from source argument specified!");
 #endif
 
-  PruningFunctionCloner PFC(NewFunc, OldFunc, VMap, ModuleLevelChanges, NameSuffix, CodeInfo, Context);
+  PruningFunctionCloner PFC(NewFunc, OldFunc, VMap, ModuleLevelChanges, NameSuffix, CodeInfo);
   const BasicBlock* StartingBB;
   if (StartingInst)
     StartingBB = StartingInst->getParent();
@@ -665,12 +649,11 @@ void opossum::CloneAndPruneIntoFromInst(Function* NewFunc, const Function* OldFu
 /// constant arguments cause a significant amount of code in the callee to be
 /// dead.  Since this doesn't produce an exact copy of the input, it can't be
 /// used for things like CloneFunction or CloneModule.
-void opossum::CloneAndPruneFunctionInto(Function* NewFunc, const Function* OldFunc, ValueToValueMapTy& VMap,
-                                        bool ModuleLevelChanges, SmallVectorImpl<ReturnInst*>& Returns,
-                                        const char* NameSuffix, ClonedCodeInfo* CodeInfo, Instruction* TheCall,
-                                        opossum::SpecializationContext& Context) {
-  opossum::CloneAndPruneIntoFromInst(NewFunc, OldFunc, &OldFunc->front().front(), VMap, ModuleLevelChanges, Returns,
-                               NameSuffix, CodeInfo, Context);
+void llvm::CloneAndPruneFunctionInto(Function* NewFunc, const Function* OldFunc, ValueToValueMapTy& VMap,
+                                     bool ModuleLevelChanges, SmallVectorImpl<ReturnInst*>& Returns,
+                                     const char* NameSuffix, ClonedCodeInfo* CodeInfo, Instruction* TheCall) {
+  CloneAndPruneIntoFromInst(NewFunc, OldFunc, &OldFunc->front().front(), VMap, ModuleLevelChanges, Returns, NameSuffix,
+                            CodeInfo);
 }
 
 /// \brief Remaps instructions in \p Blocks using the mapping in \p VMap.
@@ -770,5 +753,3 @@ BasicBlock* llvm::DuplicateInstructionsInSplitBetween(BasicBlock* BB, BasicBlock
 
   return NewBB;
 }
-
-// clang-format on
