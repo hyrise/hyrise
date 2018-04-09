@@ -83,13 +83,9 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
     _num_parameters = static_cast<uint16_t>(parsed_sql->parameters().size());
   }
 
-  try {
-    const auto lqp_roots = SQLTranslator{_use_mvcc == UseMvcc::Yes}.translate_parse_result(*parsed_sql);
-    DebugAssert(lqp_roots.size() == 1, "LQP translation returned no or more than one LQP root for a single statement.");
-    _unoptimized_logical_plan = lqp_roots.front();
-  } catch (const std::exception& exception) {
-    throw std::runtime_error("Error while compiling query plan:\n  " + std::string(exception.what()));
-  }
+  const auto lqp_roots = SQLTranslator{_use_mvcc == UseMvcc::Yes}.translate_parse_result(*parsed_sql);
+  DebugAssert(lqp_roots.size() == 1, "LQP translation returned no or more than one LQP root for a single statement.");
+  _unoptimized_logical_plan = lqp_roots.front();
 
   return _unoptimized_logical_plan;
 }
@@ -100,11 +96,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   }
 
   const auto& unoptimized_lqp = get_unoptimized_logical_plan();
-  try {
-    _optimized_logical_plan = _optimizer->optimize(unoptimized_lqp);
-  } catch (const std::exception& exception) {
-    throw std::runtime_error("Error while optimizing query plan:\n  " + std::string(exception.what()));
-  }
+  _optimized_logical_plan = _optimizer->optimize(unoptimized_lqp);
 
   // The optimizer works on the original unoptimized LQP nodes. After optimizing, the unoptimized version is also
   // optimized, which could lead to subtle bugs. optimized_logical_plan holds the original values now.
@@ -138,49 +130,45 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
     }
   };
 
-  try {
-    if (const auto cached_plan = SQLQueryCache<SQLQueryPlan>::get().try_get(_sql_string)) {
-      // Handle query plan if statement has been cached
-      auto& plan = *cached_plan;
+  if (const auto cached_plan = SQLQueryCache<SQLQueryPlan>::get().try_get(_sql_string)) {
+    // Handle query plan if statement has been cached
+    auto& plan = *cached_plan;
 
-      DebugAssert(!plan.tree_roots().empty(), "QueryPlan retrieved from cache is empty.");
-      assert_same_mvcc_mode(plan);
+    DebugAssert(!plan.tree_roots().empty(), "QueryPlan retrieved from cache is empty.");
+    assert_same_mvcc_mode(plan);
 
-      _query_plan->append_plan(plan.recreate());
-      _query_plan_cache_hit = true;
-    } else if (const auto* execute_statement = dynamic_cast<const hsql::ExecuteStatement*>(statement)) {
-      // Handle query plan if we are executing a prepared statement
-      Assert(_prepared_statements, "Cannot execute statement without prepared statement cache.");
-      const auto plan = _prepared_statements->try_get(execute_statement->name);
+    _query_plan->append_plan(plan.recreate());
+    _query_plan_cache_hit = true;
+  } else if (const auto* execute_statement = dynamic_cast<const hsql::ExecuteStatement*>(statement)) {
+    // Handle query plan if we are executing a prepared statement
+    Assert(_prepared_statements, "Cannot execute statement without prepared statement cache.");
+    const auto plan = _prepared_statements->try_get(execute_statement->name);
 
-      Assert(plan, "Requested prepared statement does not exist!");
-      assert_same_mvcc_mode(*plan);
+    Assert(plan, "Requested prepared statement does not exist!");
+    assert_same_mvcc_mode(*plan);
 
-      // Get list of arguments from EXECUTE statement.
-      std::vector<AllParameterVariant> arguments;
-      if (execute_statement->parameters != nullptr) {
-        for (const auto* expr : *execute_statement->parameters) {
-          arguments.push_back(HSQLExprTranslator::to_all_parameter_variant(*expr));
-        }
+    // Get list of arguments from EXECUTE statement.
+    std::vector<AllParameterVariant> arguments;
+    if (execute_statement->parameters != nullptr) {
+      for (const auto* expr : *execute_statement->parameters) {
+        arguments.push_back(HSQLExprTranslator::to_all_parameter_variant(*expr));
       }
-
-      Assert(arguments.size() == plan->num_parameters(),
-             "Number of arguments provided does not match expected number of arguments.");
-
-      _query_plan->append_plan(plan->recreate(arguments));
-    } else {
-      // "Normal" mode in which the query plan is created
-      const auto& lqp = get_optimized_logical_plan();
-      _query_plan->add_tree_by_root(LQPTranslator{}.translate_node(lqp));
-
-      // Set number of parameters to match later in case of prepared statement
-      _query_plan->set_num_parameters(_num_parameters);
     }
 
-    if (_use_mvcc == UseMvcc::Yes) _query_plan->set_transaction_context(_transaction_context);
-  } catch (const std::exception& exception) {
-    throw std::runtime_error("Error while translating query plan:\n  " + std::string(exception.what()));
+    Assert(arguments.size() == plan->num_parameters(),
+           "Number of arguments provided does not match expected number of arguments.");
+
+    _query_plan->append_plan(plan->recreate(arguments));
+  } else {
+    // "Normal" mode in which the query plan is created
+    const auto& lqp = get_optimized_logical_plan();
+    _query_plan->add_tree_by_root(LQPTranslator{}.translate_node(lqp));
+
+    // Set number of parameters to match later in case of prepared statement
+    _query_plan->set_num_parameters(_num_parameters);
   }
+
+  if (_use_mvcc == UseMvcc::Yes) _query_plan->set_transaction_context(_transaction_context);
 
   if (const auto* prepared_statement = dynamic_cast<const hsql::PrepareStatement*>(statement)) {
     Assert(_prepared_statements, "Cannot prepare statement without prepared statement cache.");
@@ -207,13 +195,8 @@ const std::vector<std::shared_ptr<OperatorTask>>& SQLPipelineStatement::get_task
   DebugAssert(query_plan->tree_roots().size() == 1,
               "Physical query qlan creation returned no or more than one plan for a single statement.");
 
-  try {
-    const auto& root = query_plan->tree_roots().front();
-    _tasks = OperatorTask::make_tasks_from_operator(root);
-  } catch (const std::exception& exception) {
-    throw std::runtime_error("Error while creating tasks:\n  " + std::string(exception.what()));
-  }
-
+  const auto& root = query_plan->tree_roots().front();
+  _tasks = OperatorTask::make_tasks_from_operator(root);
   return _tasks;
 }
 
@@ -235,12 +218,7 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
     return _result_table;
   }
 
-  try {
-    CurrentScheduler::schedule_and_wait_for_tasks(tasks);
-  } catch (const std::exception& exception) {
-    if (_use_mvcc == UseMvcc::Yes) _transaction_context->rollback();
-    throw std::runtime_error("Error while executing tasks:\n  " + std::string(exception.what()));
-  }
+  CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 
   if (_auto_commit) {
     _transaction_context->commit();
