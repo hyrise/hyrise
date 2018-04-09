@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-//clang-format off
+// clang-format off
 
 #include "llvm_extensions.hpp"
 
@@ -2050,4 +2050,4 @@ bool opossum::InlineFunction(CallSite CS, InlineFunctionInfo& IFI, AAResults* Ca
 
 template constexpr bool llvm::DominatorTreeBase<llvm::BasicBlock, false>::IsPostDominator;
 
-//clang-format on
+// clang-format on

@@ -24,10 +24,10 @@ void CloneAndPruneFunctionInto(llvm::Function* NewFunc, const llvm::Function* Ol
                                const char* NameSuffix, llvm::ClonedCodeInfo* CodeInfo, llvm::Instruction* TheCall,
                                SpecializationContext& Context);
 
-void CloneAndPruneIntoFromInst(llvm::Function* NewFunc, const llvm::Function* OldFunc, const llvm::Instruction* StartingInst,
-                               llvm::ValueToValueMapTy& VMap, bool ModuleLevelChanges,
-                               llvm::SmallVectorImpl<llvm::ReturnInst*>& Returns, const char* NameSuffix,
-                               llvm::ClonedCodeInfo* CodeInfo, SpecializationContext& Context);
+void CloneAndPruneIntoFromInst(llvm::Function* NewFunc, const llvm::Function* OldFunc,
+                               const llvm::Instruction* StartingInst, llvm::ValueToValueMapTy& VMap,
+                               bool ModuleLevelChanges, llvm::SmallVectorImpl<llvm::ReturnInst*>& Returns,
+                               const char* NameSuffix, llvm::ClonedCodeInfo* CodeInfo, SpecializationContext& Context);
 
 llvm::Constant* ResolveCondition(llvm::Value* Value, SpecializationContext& Context);
 

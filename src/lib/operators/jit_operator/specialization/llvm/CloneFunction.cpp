@@ -13,7 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-//clang-format off
+// clang-format off
 
 #include "llvm_extensions.hpp"
 
@@ -771,4 +771,4 @@ BasicBlock* llvm::DuplicateInstructionsInSplitBetween(BasicBlock* BB, BasicBlock
   return NewBB;
 }
 
-//clang-format on
+// clang-format on

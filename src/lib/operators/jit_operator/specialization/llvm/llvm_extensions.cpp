@@ -23,7 +23,7 @@ const JitRuntimePointer::Ptr& _get_runtime_value(const llvm::Value* c_value, Spe
         case llvm::Instruction::IntToPtr:
           if (const auto address = llvm::dyn_cast<llvm::ConstantInt>(constant_expr->getOperand(0))) {
             context.runtime_value_map[value] =
-                    std::make_shared<JitConstantRuntimePointer>(address->getValue().getLimitedValue());
+                std::make_shared<JitConstantRuntimePointer>(address->getValue().getLimitedValue());
           }
           break;
         default:
@@ -59,8 +59,8 @@ const JitRuntimePointer::Ptr& _get_runtime_value(const llvm::Value* c_value, Spe
   return context.runtime_value_map[value];
 }
 
-llvm::Constant* MyConstantFoldInstruction(llvm::Instruction* I, llvm::ArrayRef<llvm::Constant*> Ops, const llvm::DataLayout& DL,
-                                    const llvm::TargetLibraryInfo* TLI) {
+llvm::Constant* MyConstantFoldInstruction(llvm::Instruction* I, llvm::ArrayRef<llvm::Constant*> Ops,
+                                          const llvm::DataLayout& DL, const llvm::TargetLibraryInfo* TLI) {
   // Handle PHI nodes quickly here...
   if (auto* PN = llvm::dyn_cast<llvm::PHINode>(I)) {
     return nullptr;
@@ -73,24 +73,27 @@ llvm::Constant* MyConstantFoldInstruction(llvm::Instruction* I, llvm::ArrayRef<l
 
   if (auto* IVI = llvm::dyn_cast<llvm::InsertValueInst>(I)) {
     return llvm::ConstantExpr::getInsertValue(llvm::cast<llvm::Constant>(IVI->getAggregateOperand()),
-                                        llvm::cast<llvm::Constant>(IVI->getInsertedValueOperand()), IVI->getIndices());
+                                              llvm::cast<llvm::Constant>(IVI->getInsertedValueOperand()),
+                                              IVI->getIndices());
   }
 
   if (auto* EVI = llvm::dyn_cast<llvm::ExtractValueInst>(I)) {
-    return llvm::ConstantExpr::getExtractValue(llvm::cast<llvm::Constant>(EVI->getAggregateOperand()), EVI->getIndices());
+    return llvm::ConstantExpr::getExtractValue(llvm::cast<llvm::Constant>(EVI->getAggregateOperand()),
+                                               EVI->getIndices());
   }
 
   return llvm::ConstantFoldInstOperands(I, Ops, DL, TLI);
 }
 
-llvm::Constant* make_constant(llvm::Value* value, SpecializationContext& context, std::unordered_set<llvm::Value*>& failed) {
+llvm::Constant* make_constant(llvm::Value* value, SpecializationContext& context,
+                              std::unordered_set<llvm::Value*>& failed) {
   if (failed.count(value)) return nullptr;
   //value->print(llvm::outs(), true);
   //std::cout << std::endl;
   if (auto const_value = llvm::dyn_cast<llvm::Constant>(value)) return const_value;
   if (auto load = llvm::dyn_cast<llvm::LoadInst>(value)) {
     const auto runtime_pointer =
-            std::dynamic_pointer_cast<const JitKnownRuntimePointer>(_get_runtime_value(load->getPointerOperand(), context));
+        std::dynamic_pointer_cast<const JitKnownRuntimePointer>(_get_runtime_value(load->getPointerOperand(), context));
     if (runtime_pointer && runtime_pointer->is_valid()) {
       const auto address = runtime_pointer->address();
       if (load->getType()->isIntegerTy()) {
@@ -120,9 +123,9 @@ llvm::Constant* make_constant(llvm::Value* value, SpecializationContext& context
   return nullptr;
 }
 
-llvm::Constant* ResolveCondition(llvm::Value* Value, SpecializationContext &Context) {
+llvm::Constant* ResolveCondition(llvm::Value* Value, SpecializationContext& Context) {
   std::unordered_set<llvm::Value*> failed;
   return make_constant(Value, Context, failed);
 }
 
-} // namespace opossum
+}  // namespace opossum
