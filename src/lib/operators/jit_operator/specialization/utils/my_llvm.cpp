@@ -3,7 +3,7 @@
 #include <unordered_set>
 
 #include <algorithm>
-#include <c++/v1/queue>
+#include <queue>
 #include <map>
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SetVector.h"
