@@ -184,7 +184,7 @@ TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
 TEST_F(SQLTranslatorTest, AggregateWithInvalidGroupBy) {
   // Cannot select b without it being in the GROUP BY clause.
   const auto query = "SELECT b, SUM(b) AS s FROM table_a GROUP BY a;";
-  EXPECT_THROW(compile_query(query), std::runtime_error);
+  EXPECT_THROW(compile_query(query), std::logic_error);
 }
 
 TEST_F(SQLTranslatorTest, AggregateWithExpression) {
@@ -427,10 +427,10 @@ TEST_F(SQLTranslatorTest, InsertSubquery) {
 
 TEST_F(SQLTranslatorTest, InsertInvalidDataType) {
   auto query = "INSERT INTO table_a VALUES (10, 11);";
-  EXPECT_THROW(compile_query(query), std::runtime_error);
+  EXPECT_THROW(compile_query(query), std::logic_error);
 
   query = "INSERT INTO table_a (b, a) VALUES (10, 12.5);";
-  EXPECT_THROW(compile_query(query), std::runtime_error);
+  EXPECT_THROW(compile_query(query), std::logic_error);
 }
 
 TEST_F(SQLTranslatorTest, Update) {
@@ -493,7 +493,7 @@ TEST_F(SQLTranslatorTest, InSubquery) {
 
 TEST_F(SQLTranslatorTest, InSubquerySeveralColumns) {
   const auto query = "SELECT * FROM table_a WHERE a IN (SELECT * FROM table_b);";
-  EXPECT_THROW(compile_query(query), std::runtime_error);
+  EXPECT_THROW(compile_query(query), std::logic_error);
 }
 
 TEST_F(SQLTranslatorTest, SelectSubquery) {
@@ -621,12 +621,12 @@ TEST_F(SQLTranslatorTest, DropView) {
 
 TEST_F(SQLTranslatorTest, AccessInvalidColumn) {
   const auto query = "SELECT * FROM table_a WHERE invalidname = 0;";
-  EXPECT_THROW(compile_query(query), std::runtime_error);
+  EXPECT_THROW(compile_query(query), std::logic_error);
 }
 
 TEST_F(SQLTranslatorTest, AccessInvalidTable) {
   const auto query = "SELECT * FROM invalid_table;";
-  EXPECT_THROW(compile_query(query), std::runtime_error);
+  EXPECT_THROW(compile_query(query), std::logic_error);
 }
 
 TEST_F(SQLTranslatorTest, ColumnAlias) {

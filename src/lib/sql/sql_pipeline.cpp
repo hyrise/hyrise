@@ -181,6 +181,10 @@ std::shared_ptr<const Table> SQLPipeline::get_result_table() {
 
   for (auto& pipeline_statement : _sql_pipeline_statements) {
     pipeline_statement->get_result_table();
+    if (_transaction_context && _transaction_context->aborted()) {
+      _failed_pipeline_statement = pipeline_statement;
+      return nullptr;
+    }
   }
 
   _result_table = _sql_pipeline_statements.back()->get_result_table();
