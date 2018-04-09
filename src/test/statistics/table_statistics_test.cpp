@@ -4,7 +4,7 @@
 #include <utility>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "all_parameter_variant.hpp"
 #include "gtest/gtest.h"
 #include "operators/table_scan.hpp"

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "all_type_variant.hpp"
-#include "optimizer/chunk_statistics/abstract_filter.hpp"
+#include "abstract_filter.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 
