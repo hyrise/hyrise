@@ -63,7 +63,7 @@ class TableGenerator {
   std::shared_ptr<Table> generate_table(const std::vector<ColumnDataDistribution>& column_data_distributions,
                                         const size_t num_rows, const size_t chunk_size,
                                         std::optional<EncodingType> encoding_type = std::nullopt,
-                                        bool use_multiple_partitions = false);
+                                        bool use_multiple_numa_nodes = false);
 
  protected:
   const size_t _num_columns = 10;
