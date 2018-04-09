@@ -14,5 +14,4 @@ class Table;
  */
 TableStatistics generate_table_statistics(const Table& table);
 
-
 }  // namespace opossum

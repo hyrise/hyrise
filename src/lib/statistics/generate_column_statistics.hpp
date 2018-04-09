@@ -3,17 +3,17 @@
 #include <unordered_set>
 
 #include "abstract_column_statistics.hpp"
-#include "storage/table.hpp"
+#include "column_statistics.hpp"
 #include "resolve_type.hpp"
 #include "storage/create_iterable_from_column.hpp"
-#include "column_statistics.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 
 /**
  * Generate the statistics of a single column. Used by generate_table_statistics()
  */
-template<typename ColumnDataType>
+template <typename ColumnDataType>
 std::shared_ptr<AbstractColumnStatistics> generate_column_statistics(const Table& table, const ColumnID column_id) {
   std::unordered_set<ColumnDataType> distinct_set;
 
@@ -40,7 +40,7 @@ std::shared_ptr<AbstractColumnStatistics> generate_column_statistics(const Table
   }
 
   const auto null_value_ratio =
-  table.row_count() > 0 ? static_cast<float>(null_value_count) / static_cast<float>(table.row_count()) : 0.0f;
+      table.row_count() > 0 ? static_cast<float>(null_value_count) / static_cast<float>(table.row_count()) : 0.0f;
   const auto distinct_count = static_cast<float>(distinct_set.size());
 
   if (distinct_count == 0.0f) {
@@ -51,7 +51,8 @@ std::shared_ptr<AbstractColumnStatistics> generate_column_statistics(const Table
   return std::make_shared<ColumnStatistics<ColumnDataType>>(null_value_ratio, distinct_count, min, max);
 }
 
-template<>
-std::shared_ptr<AbstractColumnStatistics> generate_column_statistics<std::string>(const Table& table, const ColumnID column_id);
+template <>
+std::shared_ptr<AbstractColumnStatistics> generate_column_statistics<std::string>(const Table& table,
+                                                                                  const ColumnID column_id);
 
 }  // namespace opossum

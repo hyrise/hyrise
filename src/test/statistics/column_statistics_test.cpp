@@ -3,8 +3,8 @@
 #include <utility>
 #include <vector>
 
-#include "base_test.hpp"
 #include "all_parameter_variant.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"

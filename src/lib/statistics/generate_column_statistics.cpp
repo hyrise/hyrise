@@ -6,8 +6,9 @@ namespace opossum {
  * Specialisation for strings since they don't have numerical_limits and that's what the unspecialised implementation
  * uses.
  */
-template<>
-std::shared_ptr<AbstractColumnStatistics> generate_column_statistics<std::string>(const Table& table, const ColumnID column_id) {
+template <>
+std::shared_ptr<AbstractColumnStatistics> generate_column_statistics<std::string>(const Table& table,
+                                                                                  const ColumnID column_id) {
   std::unordered_set<std::string> distinct_set;
 
   auto null_value_count = size_t{0};
@@ -38,11 +39,10 @@ std::shared_ptr<AbstractColumnStatistics> generate_column_statistics<std::string
   }
 
   const auto null_value_ratio =
-  table.row_count() > 0 ? static_cast<float>(null_value_count) / static_cast<float>(table.row_count()) : 0.0f;
+      table.row_count() > 0 ? static_cast<float>(null_value_count) / static_cast<float>(table.row_count()) : 0.0f;
   const auto distinct_count = static_cast<float>(distinct_set.size());
 
   return std::make_shared<ColumnStatistics<std::string>>(null_value_ratio, distinct_count, min, max);
 }
-
 
 }  // namespace opossum
