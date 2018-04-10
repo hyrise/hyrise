@@ -16,9 +16,9 @@ namespace opossum {
  * Otherwise the end() iterator is returned, that the constraints are not satisfied
  * by any continuous subsequence starting at sorted_choices.begin().
  */
-const std::list<std::shared_ptr<TuningChoice>>::const_iterator sacrifice_choices(
-    const std::list<std::shared_ptr<TuningChoice>>& sorted_choices, float required_cost_delta,
-    float acceptible_desirability_delta = -std::numeric_limits<float>::infinity()) {
+const std::list<std::shared_ptr<TuningChoice>>::const_iterator determine_choices_to_sacrifice(
+            const std::list<std::shared_ptr<TuningChoice>> &sorted_choices, float required_cost_delta,
+            float acceptible_desirability_delta = -std::numeric_limits<float>::infinity()) {
   auto desirability_delta = 0.0f;
   auto cost_delta = 0.0f;
 
@@ -75,7 +75,7 @@ std::vector<std::shared_ptr<TuningOperation>> GreedyTuningSelector::select(
   // If current state exceeds cost_budget,
   // reject the least desirable choices to reduce cost_balance.
   if (cost_balance > cost_budget) {
-    const auto sacrifice_until = sacrifice_choices(sorted_choices, cost_budget - cost_balance);
+    const auto sacrifice_until = determine_choices_to_sacrifice(sorted_choices, cost_budget - cost_balance);
     if (sacrifice_until == sorted_choices.cend()) {
       // Cost budget is impossible to maintain
       return operations;
@@ -115,8 +115,9 @@ std::vector<std::shared_ptr<TuningOperation>> GreedyTuningSelector::select(
        */
 
       const auto sacrifice_until =
-          sacrifice_choices(sorted_choices, cost_budget - cost_balance - sorted_choices.back()->accept_cost(),
-                            -sorted_choices.back()->accept_desirability());
+              determine_choices_to_sacrifice(sorted_choices,
+                                             cost_budget - cost_balance - sorted_choices.back()->accept_cost(),
+                                             -sorted_choices.back()->accept_desirability());
       if (sacrifice_until == sorted_choices.cend()) {
         // Reject this choice as required cost would sacrifice more desirability
         operations.push_back(sorted_choices.back()->reject());
