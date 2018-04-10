@@ -7,8 +7,8 @@
 FIND_PATH(PQ_INCLUDE_DIR NAME libpq-fe.h HINTS
     "$ENV{LIB_DIR}/include"
     "$ENV{LIB_DIR}/include/liqpq"
-    "$ENV{LIB_DIR}/include/potgres"
-    "$ENV{LIB_DIR}/include/potgres/liqpq"
+    "$ENV{LIB_DIR}/include/potgresql"
+    "$ENV{LIB_DIR}/include/potgresql/liqpq"
     "$ENV{INCLUDE}"
 )
 
