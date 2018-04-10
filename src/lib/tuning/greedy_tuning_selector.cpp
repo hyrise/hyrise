@@ -8,6 +8,7 @@
 
 namespace opossum {
 
+namespace {
 /*
  * This subroutine scans the least desirable available choices until the
  * accumulated reject_cost() is lower than a required value.
@@ -16,7 +17,7 @@ namespace opossum {
  * Otherwise the end() iterator is returned, that the constraints are not satisfied
  * by any continuous subsequence starting at sorted_choices.begin().
  */
-const std::list<std::shared_ptr<TuningChoice>>::const_iterator determine_choices_to_sacrifice(
+std::list<std::shared_ptr<TuningChoice>>::const_iterator determine_choices_to_sacrifice(
     const std::list<std::shared_ptr<TuningChoice>>& sorted_choices, float required_cost_delta,
     float acceptible_desirability_delta = -std::numeric_limits<float>::infinity()) {
   auto desirability_delta = 0.0f;
@@ -37,6 +38,8 @@ const std::list<std::shared_ptr<TuningChoice>>::const_iterator determine_choices
   }
   return sorted_choices.cend();
 }
+
+} // anonymous namespace
 
 std::vector<std::shared_ptr<TuningOperation>> GreedyTuningSelector::select(
     const std::vector<std::shared_ptr<TuningChoice>>& choices, float cost_budget) {
