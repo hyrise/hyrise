@@ -1,4 +1,4 @@
-#include "base_index_evaluator.hpp"
+#include "abstract_index_evaluator.hpp"
 
 #include <algorithm>
 #include <list>
@@ -21,9 +21,9 @@
 
 namespace opossum {
 
-BaseIndexEvaluator::BaseIndexEvaluator() {}
+AbstractIndexEvaluator::AbstractIndexEvaluator() {}
 
-void BaseIndexEvaluator::evaluate(std::vector<std::shared_ptr<TuningChoice>>& choices) {
+void AbstractIndexEvaluator::evaluate(std::vector<std::shared_ptr<TuningChoice>>& choices) {
   // Allow concrete implementation to initialize
   _setup();
 
@@ -53,11 +53,11 @@ void BaseIndexEvaluator::evaluate(std::vector<std::shared_ptr<TuningChoice>>& ch
   }
 }
 
-void BaseIndexEvaluator::_setup() {}
+void AbstractIndexEvaluator::_setup() {}
 
-void BaseIndexEvaluator::_process_access_record(const BaseIndexEvaluator::AccessRecord&) {}
+void AbstractIndexEvaluator::_process_access_record(const AbstractIndexEvaluator::AccessRecord&) {}
 
-uintptr_t BaseIndexEvaluator::_existing_memory_cost(const IndexChoice& index_choice) const {
+uintptr_t AbstractIndexEvaluator::_existing_memory_cost(const IndexChoice& index_choice) const {
   const auto table = StorageManager::get().get_table(index_choice.column_ref.table_name);
   uintptr_t memory_cost = 0u;
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
@@ -70,7 +70,8 @@ uintptr_t BaseIndexEvaluator::_existing_memory_cost(const IndexChoice& index_cho
   return memory_cost;
 }
 
-std::vector<BaseIndexEvaluator::AccessRecord> BaseIndexEvaluator::_inspect_query_cache_and_generate_access_records() {
+std::vector<AbstractIndexEvaluator::AccessRecord>
+AbstractIndexEvaluator::_inspect_query_cache_and_generate_access_records() {
   std::vector<AccessRecord> access_records{};
 
   /*
@@ -84,7 +85,7 @@ std::vector<BaseIndexEvaluator::AccessRecord> BaseIndexEvaluator::_inspect_query
   // We cannot use dynamic_pointer_cast here because SQLQueryCache.cache() returns a reference, not a pointer
   auto gdfs_cache_ptr =
       dynamic_cast<const GDFSCache<std::string, std::shared_ptr<AbstractLQPNode>>*>(&(lqp_cache.cache()));
-  Assert(gdfs_cache_ptr, "BaseIndexEvaluator can only analyze GDFSCache instances.");
+  Assert(gdfs_cache_ptr, "AbstractIndexEvaluator can only analyze GDFSCache instances.");
 
   const auto& fibonacci_heap = gdfs_cache_ptr->queue();
 
@@ -102,8 +103,8 @@ std::vector<BaseIndexEvaluator::AccessRecord> BaseIndexEvaluator::_inspect_query
   return access_records;
 }  // namespace opossum
 
-void BaseIndexEvaluator::_inspect_lqp_node(const std::shared_ptr<const AbstractLQPNode>& op, size_t query_frequency,
-                                           std::vector<AccessRecord>& access_records) {
+void AbstractIndexEvaluator::_inspect_lqp_node(const std::shared_ptr<const AbstractLQPNode>& op, size_t query_frequency,
+                                               std::vector<AccessRecord>& access_records) {
   std::list<const std::shared_ptr<const AbstractLQPNode>> queue;
   queue.push_back(op);
   while (!queue.empty()) {
@@ -153,7 +154,7 @@ void BaseIndexEvaluator::_inspect_lqp_node(const std::shared_ptr<const AbstractL
   }
 }
 
-std::set<ColumnRef> BaseIndexEvaluator::_aggregate_access_records(const std::vector<AccessRecord>& access_records) {
+std::set<ColumnRef> AbstractIndexEvaluator::_aggregate_access_records(const std::vector<AccessRecord>& access_records) {
   std::set<ColumnRef> new_indexes{};
   for (const auto& access_record : access_records) {
     new_indexes.insert(access_record.column_ref);
@@ -162,8 +163,8 @@ std::set<ColumnRef> BaseIndexEvaluator::_aggregate_access_records(const std::vec
   return new_indexes;
 }
 
-void BaseIndexEvaluator::_add_choices_for_existing_indexes(std::vector<IndexChoice>& choices,
-                                                           std::set<ColumnRef>& new_indexes) {
+void AbstractIndexEvaluator::_add_choices_for_existing_indexes(std::vector<IndexChoice>& choices,
+                                                               std::set<ColumnRef>& new_indexes) {
   for (const auto& table_name : StorageManager::get().table_names()) {
     const auto& table = StorageManager::get().get_table(table_name);
 
@@ -177,8 +178,8 @@ void BaseIndexEvaluator::_add_choices_for_existing_indexes(std::vector<IndexChoi
   }
 }
 
-void BaseIndexEvaluator::_add_choices_for_new_indexes(std::vector<IndexChoice>& choices,
-                                                      const std::set<ColumnRef>& new_indexes) {
+void AbstractIndexEvaluator::_add_choices_for_new_indexes(std::vector<IndexChoice>& choices,
+                                                          const std::set<ColumnRef>& new_indexes) {
   for (const auto& column_ref : new_indexes) {
     choices.emplace_back(column_ref, false);
   }

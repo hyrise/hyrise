@@ -7,14 +7,14 @@
 
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"
-#include "tuning/index/base_index_evaluator.hpp"
+#include "tuning/index/abstract_index_evaluator.hpp"
 #include "tuning/index/column_ref.hpp"
 #include "tuning/index/index_choice.hpp"
 
 namespace opossum {
 
 /**
- * This is the default implementation of a BaseIndexEvaluator.
+ * This is the default implementation of an AbstractIndexEvaluator.
  *
  * It only considers single-column indexes for now.
  *
@@ -27,7 +27,7 @@ namespace opossum {
  * Cost is determined by the memory footprint of a specific index. It is either
  * read directly from an existing index or estimated for a non-existing index.
  */
-class IndexEvaluator : public BaseIndexEvaluator {
+class IndexEvaluator : public AbstractIndexEvaluator {
   friend class IndexEvaluatorTest;
 
  public:

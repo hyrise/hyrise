@@ -14,7 +14,7 @@ IndexEvaluator::IndexEvaluator() {}
 
 void IndexEvaluator::_setup() { _saved_work.clear(); }
 
-void IndexEvaluator::_process_access_record(const BaseIndexEvaluator::AccessRecord& record) {
+void IndexEvaluator::_process_access_record(const AbstractIndexEvaluator::AccessRecord& record) {
   const auto table_statistics = StorageManager::get().get_table(record.column_ref.table_name)->table_statistics();
   // ToDo(anyone) adapt for multi column indices...
   const auto predicate_statistics =

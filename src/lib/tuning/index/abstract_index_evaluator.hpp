@@ -15,14 +15,14 @@
 namespace opossum {
 
 /**
- * The BaseIndexEvaluator is a base class with helper functions for various index evaluators that differ
+ * The AbstractIndexEvaluator is a base class with helper functions for various index evaluators that differ
  * in the concrete algorithms used to determine index desirability and memory cost.
  *
  * It encapsulates the common behaviour of analyzing the systems query cache for
  * operations that might benefit from an index on a specific column
  * and of searching for already existing indices.
  */
-class BaseIndexEvaluator : public AbstractEvaluator {
+class AbstractIndexEvaluator : public AbstractEvaluator {
   friend class IndexEvaluatorTest;
 
  protected:
@@ -45,7 +45,7 @@ class BaseIndexEvaluator : public AbstractEvaluator {
   };
 
  public:
-  BaseIndexEvaluator();
+  AbstractIndexEvaluator();
 
   void evaluate(std::vector<std::shared_ptr<TuningChoice>>& choices) final;
 

@@ -386,8 +386,8 @@ set(
     tuning/abstract_selector.hpp
     tuning/greedy_selector.cpp
     tuning/greedy_selector.hpp
-    tuning/index/base_index_evaluator.cpp
-    tuning/index/base_index_evaluator.hpp
+    tuning/index/abstract_index_evaluator.cpp
+    tuning/index/abstract_index_evaluator.hpp
     tuning/index/column_ref.cpp
     tuning/index/column_ref.hpp
     tuning/index/index_evaluator.cpp

@@ -39,11 +39,11 @@ class IndexEvaluatorTest : public BaseTest {
   void TearDown() override { StorageManager::get().drop_table("t"); }
 
   void _inspect_lqp_operator(const std::shared_ptr<const AbstractLQPNode>& op, size_t query_frequency,
-                             std::vector<BaseIndexEvaluator::AccessRecord>& access_records) {
+                             std::vector<AbstractIndexEvaluator::AccessRecord>& access_records) {
     _evaluator->_inspect_lqp_node(op, query_frequency, access_records);
   }
 
-  std::vector<BaseIndexEvaluator::AccessRecord>& _access_records() { return _evaluator->_access_records; }
+  std::vector<AbstractIndexEvaluator::AccessRecord>& _access_records() { return _evaluator->_access_records; }
 
   std::shared_ptr<IndexEvaluator> _evaluator;
 };
