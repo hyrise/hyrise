@@ -8,12 +8,12 @@
 namespace opossum {
 
 /**
- * An AbstractEvaluator analyzes the current system state and proposes an
+ * An AbstractTuningEvaluator analyzes the current system state and proposes an
  * unordered list of TuningChoices that might improve the system performance.
  */
-class AbstractEvaluator {
+class AbstractTuningEvaluator {
  public:
-  virtual ~AbstractEvaluator() {}
+  virtual ~AbstractTuningEvaluator() {}
   /**
    * Generate TuningChoices and append them to the given vector.
    */

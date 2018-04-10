@@ -7,14 +7,14 @@
 
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"
-#include "tuning/index/abstract_index_evaluator.hpp"
+#include "tuning/index/abstract_index_tuning_evaluator.hpp"
 #include "tuning/index/column_ref.hpp"
-#include "tuning/index/index_choice.hpp"
+#include "tuning/index/index_tuning_choice.hpp"
 
 namespace opossum {
 
 /**
- * This is the default implementation of an AbstractIndexEvaluator.
+ * This is the default implementation of an AbstractIndexTuningEvaluator.
  *
  * It only considers single-column indexes for now.
  *
@@ -27,18 +27,18 @@ namespace opossum {
  * Cost is determined by the memory footprint of a specific index. It is either
  * read directly from an existing index or estimated for a non-existing index.
  */
-class IndexEvaluator : public AbstractIndexEvaluator {
-  friend class IndexEvaluatorTest;
+class IndexTuningEvaluator : public AbstractIndexTuningEvaluator {
+  friend class IndexTuningEvaluatorTest;
 
  public:
-  IndexEvaluator();
+  IndexTuningEvaluator();
 
  protected:
   void _setup() final;
   void _process_access_record(const AccessRecord& record) final;
-  ColumnIndexType _propose_index_type(const IndexChoice& index_evaluation) const final;
-  uintptr_t _predict_memory_cost(const IndexChoice& index_evaluation) const final;
-  float _get_saved_work(const IndexChoice& index_evaluation) const final;
+  ColumnIndexType _propose_index_type(const IndexTuningChoice& index_evaluation) const final;
+  uintptr_t _predict_memory_cost(const IndexTuningChoice& index_evaluation) const final;
+  float _get_saved_work(const IndexTuningChoice& index_evaluation) const final;
 
   std::map<ColumnRef, float> _saved_work;
 };

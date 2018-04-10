@@ -1,4 +1,4 @@
-#include "abstract_index_evaluator.hpp"
+#include "abstract_index_tuning_evaluator.hpp"
 
 #include <algorithm>
 #include <list>
@@ -21,9 +21,9 @@
 
 namespace opossum {
 
-AbstractIndexEvaluator::AbstractIndexEvaluator() {}
+AbstractIndexTuningEvaluator::AbstractIndexTuningEvaluator() {}
 
-void AbstractIndexEvaluator::evaluate(std::vector<std::shared_ptr<TuningChoice>>& choices) {
+void AbstractIndexTuningEvaluator::evaluate(std::vector<std::shared_ptr<TuningChoice>>& choices) {
   // Allow concrete implementation to initialize
   _setup();
 
@@ -49,15 +49,15 @@ void AbstractIndexEvaluator::evaluate(std::vector<std::shared_ptr<TuningChoice>>
     index_choice.saved_work = _get_saved_work(index_choice);
 
     // Transfer results to choices vector
-    choices.push_back(std::make_shared<IndexChoice>(index_choice));
+    choices.push_back(std::make_shared<IndexTuningChoice>(index_choice));
   }
 }
 
-void AbstractIndexEvaluator::_setup() {}
+void AbstractIndexTuningEvaluator::_setup() {}
 
-void AbstractIndexEvaluator::_process_access_record(const AbstractIndexEvaluator::AccessRecord&) {}
+void AbstractIndexTuningEvaluator::_process_access_record(const AbstractIndexTuningEvaluator::AccessRecord&) {}
 
-uintptr_t AbstractIndexEvaluator::_existing_memory_cost(const IndexChoice& index_choice) const {
+uintptr_t AbstractIndexTuningEvaluator::_existing_memory_cost(const IndexTuningChoice& index_choice) const {
   const auto table = StorageManager::get().get_table(index_choice.column_ref.table_name);
   uintptr_t memory_cost = 0u;
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
@@ -70,8 +70,8 @@ uintptr_t AbstractIndexEvaluator::_existing_memory_cost(const IndexChoice& index
   return memory_cost;
 }
 
-std::vector<AbstractIndexEvaluator::AccessRecord>
-AbstractIndexEvaluator::_inspect_query_cache_and_generate_access_records() {
+std::vector<AbstractIndexTuningEvaluator::AccessRecord>
+AbstractIndexTuningEvaluator::_inspect_query_cache_and_generate_access_records() {
   std::vector<AccessRecord> access_records{};
 
   /*
@@ -85,7 +85,7 @@ AbstractIndexEvaluator::_inspect_query_cache_and_generate_access_records() {
   // We cannot use dynamic_pointer_cast here because SQLQueryCache.cache() returns a reference, not a pointer
   auto gdfs_cache_ptr =
       dynamic_cast<const GDFSCache<std::string, std::shared_ptr<AbstractLQPNode>>*>(&(lqp_cache.cache()));
-  Assert(gdfs_cache_ptr, "AbstractIndexEvaluator can only analyze GDFSCache instances.");
+  Assert(gdfs_cache_ptr, "AbstractIndexTuningEvaluator can only analyze GDFSCache instances.");
 
   const auto& fibonacci_heap = gdfs_cache_ptr->queue();
 
@@ -103,7 +103,7 @@ AbstractIndexEvaluator::_inspect_query_cache_and_generate_access_records() {
   return access_records;
 }  // namespace opossum
 
-void AbstractIndexEvaluator::_inspect_lqp_node(const std::shared_ptr<const AbstractLQPNode>& op, size_t query_frequency,
+void AbstractIndexTuningEvaluator::_inspect_lqp_node(const std::shared_ptr<const AbstractLQPNode>& op, size_t query_frequency,
                                                std::vector<AccessRecord>& access_records) {
   std::list<const std::shared_ptr<const AbstractLQPNode>> queue;
   queue.push_back(op);
@@ -154,7 +154,7 @@ void AbstractIndexEvaluator::_inspect_lqp_node(const std::shared_ptr<const Abstr
   }
 }
 
-std::set<ColumnRef> AbstractIndexEvaluator::_aggregate_access_records(const std::vector<AccessRecord>& access_records) {
+std::set<ColumnRef> AbstractIndexTuningEvaluator::_aggregate_access_records(const std::vector<AccessRecord>& access_records) {
   std::set<ColumnRef> new_indexes{};
   for (const auto& access_record : access_records) {
     new_indexes.insert(access_record.column_ref);
@@ -163,13 +163,13 @@ std::set<ColumnRef> AbstractIndexEvaluator::_aggregate_access_records(const std:
   return new_indexes;
 }
 
-void AbstractIndexEvaluator::_add_choices_for_existing_indexes(std::vector<IndexChoice>& choices,
+void AbstractIndexTuningEvaluator::_add_choices_for_existing_indexes(std::vector<IndexTuningChoice>& choices,
                                                                std::set<ColumnRef>& new_indexes) {
   for (const auto& table_name : StorageManager::get().table_names()) {
     const auto& table = StorageManager::get().get_table(table_name);
 
     for (const auto& index_info : table->get_indexes()) {
-      auto index_choice = IndexChoice{ColumnRef{table_name, index_info.column_ids}, true};
+      auto index_choice = IndexTuningChoice{ColumnRef{table_name, index_info.column_ids}, true};
       index_choice.type = index_info.type;
       choices.emplace_back(index_choice);
       // Erase this index from the set of proposed new indexes as it already exists
@@ -178,7 +178,7 @@ void AbstractIndexEvaluator::_add_choices_for_existing_indexes(std::vector<Index
   }
 }
 
-void AbstractIndexEvaluator::_add_choices_for_new_indexes(std::vector<IndexChoice>& choices,
+void AbstractIndexTuningEvaluator::_add_choices_for_new_indexes(std::vector<IndexTuningChoice>& choices,
                                                           const std::set<ColumnRef>& new_indexes) {
   for (const auto& column_ref : new_indexes) {
     choices.emplace_back(column_ref, false);

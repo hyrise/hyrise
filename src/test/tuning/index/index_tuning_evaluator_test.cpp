@@ -8,15 +8,15 @@
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "storage/table.hpp"
-#include "tuning/index/index_evaluator.hpp"
+#include "tuning/index/index_tuning_evaluator.hpp"
 #include "type_cast.hpp"
 
 namespace opossum {
 
-class IndexEvaluatorTest : public BaseTest {
+class IndexTuningEvaluatorTest : public BaseTest {
  protected:
   void SetUp() override {
-    _evaluator = std::make_shared<IndexEvaluator>();
+    _evaluator = std::make_shared<IndexTuningEvaluator>();
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("col_1", DataType::Int);
     column_definitions.emplace_back("col_2", DataType::String);
@@ -39,16 +39,16 @@ class IndexEvaluatorTest : public BaseTest {
   void TearDown() override { StorageManager::get().drop_table("t"); }
 
   void _inspect_lqp_operator(const std::shared_ptr<const AbstractLQPNode>& op, size_t query_frequency,
-                             std::vector<AbstractIndexEvaluator::AccessRecord>& access_records) {
+                             std::vector<AbstractIndexTuningEvaluator::AccessRecord>& access_records) {
     _evaluator->_inspect_lqp_node(op, query_frequency, access_records);
   }
 
-  std::vector<AbstractIndexEvaluator::AccessRecord>& _access_records() { return _evaluator->_access_records; }
+  std::vector<AbstractIndexTuningEvaluator::AccessRecord>& _access_records() { return _evaluator->_access_records; }
 
-  std::shared_ptr<IndexEvaluator> _evaluator;
+  std::shared_ptr<IndexTuningEvaluator> _evaluator;
 };
 
-TEST_F(IndexEvaluatorTest, InspectLQPOperator) {
+TEST_F(IndexTuningEvaluatorTest, InspectLQPOperator) {
   auto sql_pipeline_statement =
       SQLPipelineBuilder{"select * from t where col_1 = 4"}.disable_mvcc().create_pipeline_statement();
 
@@ -64,7 +64,7 @@ TEST_F(IndexEvaluatorTest, InspectLQPOperator) {
   EXPECT_EQ(_access_records().back().condition, PredicateCondition::Equals);
 }
 
-TEST_F(IndexEvaluatorTest, GenerateEvaluations) {
+TEST_F(IndexTuningEvaluatorTest, GenerateEvaluations) {
   // Trigger query plan generation + caching(!)
   const auto queries = {"select * from t where col_1 = 4", "select * from t where col_1 = 4",
                         "select * from t where col_1 = 5", "select * from t where col_1 = 6",
@@ -78,8 +78,8 @@ TEST_F(IndexEvaluatorTest, GenerateEvaluations) {
 
   EXPECT_EQ(tuning_choices.size(), 2u);
 
-  std::shared_ptr<IndexChoice> choice_col1 = std::dynamic_pointer_cast<IndexChoice>(tuning_choices[0]);
-  std::shared_ptr<IndexChoice> choice_col2 = std::dynamic_pointer_cast<IndexChoice>(tuning_choices[1]);
+  std::shared_ptr<IndexTuningChoice> choice_col1 = std::dynamic_pointer_cast<IndexTuningChoice>(tuning_choices[0]);
+  std::shared_ptr<IndexTuningChoice> choice_col2 = std::dynamic_pointer_cast<IndexTuningChoice>(tuning_choices[1]);
 
   // Both indices aren't created yet
   EXPECT_EQ(choice_col1->is_currently_chosen(), false);

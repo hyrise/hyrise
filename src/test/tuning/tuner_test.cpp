@@ -4,8 +4,8 @@
 #include <vector>
 
 #include "../base_test.hpp"
-#include "tuning/abstract_evaluator.hpp"
-#include "tuning/abstract_selector.hpp"
+#include "tuning/abstract_tuning_evaluator.hpp"
+#include "tuning/abstract_tuning_selector.hpp"
 #include "tuning/tuner.hpp"
 #include "tuning/tuning_operation.hpp"
 
@@ -17,20 +17,20 @@ using Runtime = std::chrono::milliseconds;
 using RuntimeMs = std::chrono::milliseconds::rep;
 using RuntimeMsList = std::vector<std::chrono::milliseconds::rep>;
 
-struct MockOperation : public TuningOperation {
-  explicit MockOperation(RuntimeMs runtime) : runtime{runtime} {}
+struct MockTuningOperation : public TuningOperation {
+  explicit MockTuningOperation(RuntimeMs runtime) : runtime{runtime} {}
 
   void execute() final { std::this_thread::sleep_for(runtime); }
 
   Runtime runtime;
 };
 
-struct MockSelector : public AbstractSelector {
-  explicit MockSelector(RuntimeMs runtime, RuntimeMsList operation_runtimes) : runtime{runtime} {
+struct MockTuningSelector : public AbstractTuningSelector {
+  explicit MockTuningSelector(RuntimeMs runtime, RuntimeMsList operation_runtimes) : runtime{runtime} {
     operations.clear();
     operations.reserve(operation_runtimes.size());
     for (auto operation_runtime : operation_runtimes) {
-      operations.push_back(std::make_shared<MockOperation>(operation_runtime));
+      operations.push_back(std::make_shared<MockTuningOperation>(operation_runtime));
     }
   }
 
@@ -45,8 +45,8 @@ struct MockSelector : public AbstractSelector {
   std::vector<std::shared_ptr<TuningOperation>> operations;
 };
 
-struct MockEvaluator : public AbstractEvaluator {
-  explicit MockEvaluator(RuntimeMs runtime) : runtime{runtime} {}
+struct MockTuningEvaluator : public AbstractTuningEvaluator {
+  explicit MockTuningEvaluator(RuntimeMs runtime) : runtime{runtime} {}
 
   void evaluate(std::vector<std::shared_ptr<TuningChoice>>& choices) final { std::this_thread::sleep_for(runtime); }
 
@@ -59,10 +59,10 @@ class TunerTest : public BaseTest {};
 
 TEST_F(TunerTest, TuningCompleted) {
   Tuner tuner;
-  tuner.add_evaluator(std::make_unique<MockEvaluator>(1));
-  tuner.add_evaluator(std::make_unique<MockEvaluator>(1));
-  tuner.add_evaluator(std::make_unique<MockEvaluator>(1));
-  tuner.set_selector(std::make_unique<MockSelector>(1, RuntimeMsList{1, 1, 1}));
+  tuner.add_evaluator(std::make_unique<MockTuningEvaluator>(1));
+  tuner.add_evaluator(std::make_unique<MockTuningEvaluator>(1));
+  tuner.add_evaluator(std::make_unique<MockTuningEvaluator>(1));
+  tuner.set_selector(std::make_unique<MockTuningSelector>(1, RuntimeMsList{1, 1, 1}));
 
   tuner.set_time_budget(0.1);  // in seconds
 
@@ -75,10 +75,10 @@ TEST_F(TunerTest, TuningCompleted) {
 TEST_F(TunerTest, TuningOverallTimeout) {
   // during evaluation phase
   Tuner tuner_eval;
-  tuner_eval.add_evaluator(std::make_unique<MockEvaluator>(1));
-  tuner_eval.add_evaluator(std::make_unique<MockEvaluator>(200));
-  tuner_eval.add_evaluator(std::make_unique<MockEvaluator>(1));
-  tuner_eval.set_selector(std::make_unique<MockSelector>(1, RuntimeMsList{1, 1, 1}));
+  tuner_eval.add_evaluator(std::make_unique<MockTuningEvaluator>(1));
+  tuner_eval.add_evaluator(std::make_unique<MockTuningEvaluator>(200));
+  tuner_eval.add_evaluator(std::make_unique<MockTuningEvaluator>(1));
+  tuner_eval.set_selector(std::make_unique<MockTuningSelector>(1, RuntimeMsList{1, 1, 1}));
 
   tuner_eval.set_time_budget(0.1);  // in seconds
 
@@ -89,10 +89,10 @@ TEST_F(TunerTest, TuningOverallTimeout) {
 
   // during selection phase
   Tuner tuner_sel;
-  tuner_sel.add_evaluator(std::make_unique<MockEvaluator>(1));
-  tuner_sel.add_evaluator(std::make_unique<MockEvaluator>(1));
-  tuner_sel.add_evaluator(std::make_unique<MockEvaluator>(1));
-  tuner_sel.set_selector(std::make_unique<MockSelector>(200, RuntimeMsList{1, 1, 1}));
+  tuner_sel.add_evaluator(std::make_unique<MockTuningEvaluator>(1));
+  tuner_sel.add_evaluator(std::make_unique<MockTuningEvaluator>(1));
+  tuner_sel.add_evaluator(std::make_unique<MockTuningEvaluator>(1));
+  tuner_sel.set_selector(std::make_unique<MockTuningSelector>(200, RuntimeMsList{1, 1, 1}));
 
   tuner_sel.set_time_budget(0.1);  // in seconds
 
@@ -103,10 +103,10 @@ TEST_F(TunerTest, TuningOverallTimeout) {
 
   // during execution phase
   Tuner tuner_exec;
-  tuner_exec.add_evaluator(std::make_unique<MockEvaluator>(1));
-  tuner_exec.add_evaluator(std::make_unique<MockEvaluator>(1));
-  tuner_exec.add_evaluator(std::make_unique<MockEvaluator>(1));
-  tuner_exec.set_selector(std::make_unique<MockSelector>(1, RuntimeMsList{1, 200, 1}));
+  tuner_exec.add_evaluator(std::make_unique<MockTuningEvaluator>(1));
+  tuner_exec.add_evaluator(std::make_unique<MockTuningEvaluator>(1));
+  tuner_exec.add_evaluator(std::make_unique<MockTuningEvaluator>(1));
+  tuner_exec.set_selector(std::make_unique<MockTuningSelector>(1, RuntimeMsList{1, 200, 1}));
 
   tuner_exec.set_time_budget(0.1);  // in seconds
 
@@ -118,10 +118,10 @@ TEST_F(TunerTest, TuningOverallTimeout) {
 
 TEST_F(TunerTest, TuningEvaluationTimeout) {
   Tuner tuner;
-  tuner.add_evaluator(std::make_unique<MockEvaluator>(1));
-  tuner.add_evaluator(std::make_unique<MockEvaluator>(200));
-  tuner.add_evaluator(std::make_unique<MockEvaluator>(1));
-  tuner.set_selector(std::make_unique<MockSelector>(200, RuntimeMsList{1, 1, 1}));
+  tuner.add_evaluator(std::make_unique<MockTuningEvaluator>(1));
+  tuner.add_evaluator(std::make_unique<MockTuningEvaluator>(200));
+  tuner.add_evaluator(std::make_unique<MockTuningEvaluator>(1));
+  tuner.set_selector(std::make_unique<MockTuningSelector>(200, RuntimeMsList{1, 1, 1}));
 
   tuner.set_time_budget(0.3, Tuner::NoBudget, 0.1, Tuner::NoBudget);  // in seconds
 
@@ -133,10 +133,10 @@ TEST_F(TunerTest, TuningEvaluationTimeout) {
 
 TEST_F(TunerTest, TuningSelectionTimeout) {
   Tuner tuner;
-  tuner.add_evaluator(std::make_unique<MockEvaluator>(1));
-  tuner.add_evaluator(std::make_unique<MockEvaluator>(1));
-  tuner.add_evaluator(std::make_unique<MockEvaluator>(1));
-  tuner.set_selector(std::make_unique<MockSelector>(200, RuntimeMsList{1, 200, 1}));
+  tuner.add_evaluator(std::make_unique<MockTuningEvaluator>(1));
+  tuner.add_evaluator(std::make_unique<MockTuningEvaluator>(1));
+  tuner.add_evaluator(std::make_unique<MockTuningEvaluator>(1));
+  tuner.set_selector(std::make_unique<MockTuningSelector>(200, RuntimeMsList{1, 200, 1}));
 
   tuner.set_time_budget(0.3, Tuner::NoBudget, Tuner::NoBudget, 0.1);  // in seconds
 
@@ -148,10 +148,10 @@ TEST_F(TunerTest, TuningSelectionTimeout) {
 
 TEST_F(TunerTest, TuningExecutionTimeout) {
   Tuner tuner;
-  tuner.add_evaluator(std::make_unique<MockEvaluator>(1));
-  tuner.add_evaluator(std::make_unique<MockEvaluator>(1));
-  tuner.add_evaluator(std::make_unique<MockEvaluator>(1));
-  tuner.set_selector(std::make_unique<MockSelector>(1, RuntimeMsList{200, 200, 200}));
+  tuner.add_evaluator(std::make_unique<MockTuningEvaluator>(1));
+  tuner.add_evaluator(std::make_unique<MockTuningEvaluator>(1));
+  tuner.add_evaluator(std::make_unique<MockTuningEvaluator>(1));
+  tuner.set_selector(std::make_unique<MockTuningSelector>(1, RuntimeMsList{200, 200, 200}));
 
   tuner.set_time_budget(0.3, 0.1);  // in seconds
 

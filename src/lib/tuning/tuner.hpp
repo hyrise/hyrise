@@ -6,8 +6,8 @@
 #include <string>
 
 #include "scheduler/abstract_task.hpp"
-#include "tuning/abstract_evaluator.hpp"
-#include "tuning/abstract_selector.hpp"
+#include "tuning/abstract_tuning_evaluator.hpp"
+#include "tuning/abstract_tuning_selector.hpp"
 
 namespace opossum {
 
@@ -15,16 +15,16 @@ namespace opossum {
  * A Tuner encapsulates the process of analyzing the current system state and
  * performing specific modifications to optimize the systems performance.
  *
- * It uses AbstractEvaluators to generate TuningChoices which represent possible
+ * It uses AbstractTuningEvaluators to generate TuningChoices which represent possible
  * modifications together with their expected performance impact and costs.
  * TuningChoices are transformed into a concrete operation sequence
- * by an AbstractSelector, that also considers a cost budget that may not be
+ * by an AbstractTuningSelector, that also considers a cost budget that may not be
  * exceeded at any point in the sequence.
  *
  * While executing the operation sequence, the Tuner considers a time budget
  * and stops the execution once it exceeds that budget.
  *
- * Both the time and cost budget (the latter being enforced by the AbstractSelector)
+ * Both the time and cost budget (the latter being enforced by the AbstractTuningSelector)
  * are initially infinite (i.e. disabled).
  */
 class Tuner {
@@ -39,23 +39,23 @@ class Tuner {
   Tuner();
 
   /**
-   * Accessors for the AbstractEvaluators used for the tuning process.
+   * Accessors for the AbstractTuningEvaluators used for the tuning process.
    *
    * The Tuner takes ownership of the supplied evaluator. The same evaluator
    * instance may never be used in more than one Tuner.
    */
-  void add_evaluator(std::unique_ptr<AbstractEvaluator>&& evaluator);
+  void add_evaluator(std::unique_ptr<AbstractTuningEvaluator>&& evaluator);
   void remove_evaluator(std::size_t index);
-  const std::vector<std::unique_ptr<AbstractEvaluator>>& evaluators() const;
+  const std::vector<std::unique_ptr<AbstractTuningEvaluator>>& evaluators() const;
 
   /**
-   * Accessors for the AbstractSelector used for the tuning process.
+   * Accessors for the AbstractTuningSelector used for the tuning process.
    *
    * The Tuner takes ownership of the supplied selector. The same selector
    * instance may never be used in more than one Tuner.
    */
-  void set_selector(std::unique_ptr<AbstractSelector>&& selector);
-  const std::unique_ptr<AbstractSelector>& selector() const;
+  void set_selector(std::unique_ptr<AbstractTuningSelector>&& selector);
+  const std::unique_ptr<AbstractTuningSelector>& selector() const;
 
   /**
    * Configures the time budgets for subsequent schedule() invocations.
@@ -83,10 +83,10 @@ class Tuner {
   float execute_time_budget() const;
 
   /**
-   * The cost budget is enforced by the AbstractSelector and has no
+   * The cost budget is enforced by the AbstractTuningSelector and has no
    * fixed interpretation.
    *
-   * Its semantics depend on the AbstractEvaluators used which must
+   * Its semantics depend on the AbstractTuningEvaluators used which must
    * be compatible in this respect.
    *
    * A value of positive infinity disables cost budget checking.
@@ -125,8 +125,8 @@ class Tuner {
   void _select();
   void _execute();
 
-  std::vector<std::unique_ptr<AbstractEvaluator>> _evaluators;
-  std::unique_ptr<AbstractSelector> _selector;
+  std::vector<std::unique_ptr<AbstractTuningEvaluator>> _evaluators;
+  std::unique_ptr<AbstractTuningSelector> _selector;
 
   Runtime _time_budget;
   Runtime _evaluate_time_budget;

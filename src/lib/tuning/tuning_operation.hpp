@@ -5,7 +5,7 @@
 namespace opossum {
 
 /**
- * A TuningOperation is derived from a TuningChoice and either
+ * A TuningOperation is created from a TuningChoice and either
  * performs or reverts the respective system modification.
  */
 class TuningOperation {
@@ -13,7 +13,7 @@ class TuningOperation {
   virtual ~TuningOperation() {}
   /**
    * Perform this tuning operation.
-   * If you need a no-op TuningOperation, look at NullOperation.
+   * If you need a no-op TuningOperation, look at NullTuningOperation.
    */
   virtual void execute() = 0;
 

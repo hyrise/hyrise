@@ -382,22 +382,22 @@ set(
     tasks/server/execute_server_query_task.hpp
     tasks/server/load_server_file_task.cpp
     tasks/server/load_server_file_task.hpp
-    tuning/abstract_evaluator.hpp
-    tuning/abstract_selector.hpp
-    tuning/greedy_selector.cpp
-    tuning/greedy_selector.hpp
-    tuning/index/abstract_index_evaluator.cpp
-    tuning/index/abstract_index_evaluator.hpp
+    tuning/abstract_tuning_evaluator.hpp
+    tuning/abstract_tuning_selector.hpp
+    tuning/greedy_tuning_selector.cpp
+    tuning/greedy_tuning_selector.hpp
+    tuning/index/abstract_index_tuning_evaluator.cpp
+    tuning/index/abstract_index_tuning_evaluator.hpp
     tuning/index/column_ref.cpp
     tuning/index/column_ref.hpp
-    tuning/index/index_evaluator.cpp
-    tuning/index/index_evaluator.hpp
-    tuning/index/index_choice.cpp
-    tuning/index/index_choice.hpp
-    tuning/index/index_operation.cpp
-    tuning/index/index_operation.hpp
-    tuning/null_operation.cpp
-    tuning/null_operation.hpp
+    tuning/index/index_tuning_evaluator.cpp
+    tuning/index/index_tuning_evaluator.hpp
+    tuning/index/index_tuning_choice.cpp
+    tuning/index/index_tuning_choice.hpp
+    tuning/index/index_tuning_operation.cpp
+    tuning/index/index_tuning_operation.hpp
+    tuning/null_tuning_operation.cpp
+    tuning/null_tuning_operation.hpp
     tuning/tuner.cpp
     tuning/tuner.hpp
     tuning/tuning_choice.hpp

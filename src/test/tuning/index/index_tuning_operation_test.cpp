@@ -9,11 +9,11 @@
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "tuning/index/column_ref.hpp"
-#include "tuning/index/index_operation.hpp"
+#include "tuning/index/index_tuning_operation.hpp"
 
 namespace opossum {
 
-class IndexOperationTest : public BaseTest {
+class IndexTuningOperationTest : public BaseTest {
  protected:
   void SetUp() override { _ensure_pristine_table(); }
 
@@ -48,39 +48,39 @@ class IndexOperationTest : public BaseTest {
   ColumnRef _column_ref{"table_name", ColumnID{0}};
 };
 
-TEST_F(IndexOperationTest, GetColumRef) {
-  IndexOperation operation{_column_ref, ColumnIndexType::GroupKey, true};
+TEST_F(IndexTuningOperationTest, GetColumRef) {
+  IndexTuningOperation operation{_column_ref, ColumnIndexType::GroupKey, true};
   EXPECT_EQ(operation.column(), _column_ref);
 }
 
-TEST_F(IndexOperationTest, GetColumnIndexType) {
-  IndexOperation operation{_column_ref, ColumnIndexType::GroupKey, true};
+TEST_F(IndexTuningOperationTest, GetColumnIndexType) {
+  IndexTuningOperation operation{_column_ref, ColumnIndexType::GroupKey, true};
   EXPECT_EQ(operation.type(), ColumnIndexType::GroupKey);
 }
 
-TEST_F(IndexOperationTest, GetCreate) {
-  IndexOperation operation{_column_ref, ColumnIndexType::GroupKey, true};
+TEST_F(IndexTuningOperationTest, GetCreate) {
+  IndexTuningOperation operation{_column_ref, ColumnIndexType::GroupKey, true};
   EXPECT_EQ(operation.create(), true);
 }
 
-TEST_F(IndexOperationTest, PrintOnStream) {
-  IndexOperation operation{_column_ref, ColumnIndexType::GroupKey, true};
+TEST_F(IndexTuningOperationTest, PrintOnStream) {
+  IndexTuningOperation operation{_column_ref, ColumnIndexType::GroupKey, true};
 
   std::stringstream stream;
   operation.print_on(stream);
 
   std::string result = stream.str();
-  EXPECT_EQ(result, "IndexOperation{Create on table_name.(column_name)}");
+  EXPECT_EQ(result, "IndexTuningOperation{Create on table_name.(column_name)}");
 }
 
-TEST_F(IndexOperationTest, CreateIndex) {
+TEST_F(IndexTuningOperationTest, CreateIndex) {
   auto supported_index_types = {ColumnIndexType::GroupKey, ColumnIndexType::CompositeGroupKey,
                                 ColumnIndexType::AdaptiveRadixTree};
 
   for (auto index_type : supported_index_types) {
     _ensure_pristine_table();
 
-    IndexOperation operation{_column_ref, index_type, true};
+    IndexTuningOperation operation{_column_ref, index_type, true};
     operation.execute();
 
     auto index_infos = _table->get_indexes();
@@ -90,18 +90,18 @@ TEST_F(IndexOperationTest, CreateIndex) {
   }
 }
 
-TEST_F(IndexOperationTest, DeleteIndex) {
+TEST_F(IndexTuningOperationTest, DeleteIndex) {
   auto column_ids = std::vector{ColumnID{0}};
   _table->create_index<GroupKeyIndex>(column_ids);
 
-  IndexOperation operation{_column_ref, ColumnIndexType::GroupKey, false};
+  IndexTuningOperation operation{_column_ref, ColumnIndexType::GroupKey, false};
   operation.execute();
 
   auto index_infos = _table->get_indexes();
   EXPECT_EQ(index_infos.size(), 0u);
 }
 
-TEST_F(IndexOperationTest, ClearCacheWhenRemovingIndex) {
+TEST_F(IndexTuningOperationTest, ClearCacheWhenRemovingIndex) {
   auto& lqp_cache = SQLQueryCache<std::shared_ptr<AbstractLQPNode>>::get();
   auto& pqp_cache = SQLQueryCache<SQLQueryPlan>::get();
 
@@ -116,7 +116,7 @@ TEST_F(IndexOperationTest, ClearCacheWhenRemovingIndex) {
   auto column_ids = std::vector{ColumnID{0}};
   _table->create_index<GroupKeyIndex>(column_ids);
 
-  IndexOperation operation{_column_ref, ColumnIndexType::GroupKey, false};
+  IndexTuningOperation operation{_column_ref, ColumnIndexType::GroupKey, false};
   operation.execute();
 
   EXPECT_EQ(lqp_cache.size(), 0u);

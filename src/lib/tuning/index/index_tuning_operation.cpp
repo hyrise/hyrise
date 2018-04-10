@@ -1,4 +1,4 @@
-#include "index_operation.hpp"
+#include "index_tuning_operation.hpp"
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "sql/sql_query_cache.hpp"
@@ -11,7 +11,7 @@
 
 namespace opossum {
 
-void IndexOperation::execute() {
+void IndexTuningOperation::execute() {
   if (_create) {
     _create_index();
   } else {
@@ -19,11 +19,11 @@ void IndexOperation::execute() {
   }
 }
 
-void IndexOperation::print_on(std::ostream& output) const {
-  output << "IndexOperation{" << (_create ? "Create" : "Delete") << " on " << _column << "}";
+void IndexTuningOperation::print_on(std::ostream& output) const {
+  output << "IndexTuningOperation{" << (_create ? "Create" : "Delete") << " on " << _column << "}";
 }
 
-void IndexOperation::_create_index() {
+void IndexTuningOperation::_create_index() {
   auto table = StorageManager::get().get_table(_column.table_name);
   switch (_type) {
     case ColumnIndexType::GroupKey:
@@ -42,7 +42,7 @@ void IndexOperation::_create_index() {
   _invalidate_cache();
 }
 
-void IndexOperation::_delete_index() {
+void IndexTuningOperation::_delete_index() {
   auto table = StorageManager::get().get_table(_column.table_name);
   for (auto index_info : table->get_indexes()) {
     // The index name is ignored in comparison, as it seems not to be used anywhere
@@ -55,7 +55,7 @@ void IndexOperation::_delete_index() {
   Fail("Index to be deleted was not found");
 }
 
-void IndexOperation::_invalidate_cache() {
+void IndexTuningOperation::_invalidate_cache() {
   /*
      * For now, this simply clears the cache.
      * However, it would be more beneficial to *selectively* evict cache entries
@@ -67,10 +67,10 @@ void IndexOperation::_invalidate_cache() {
   SQLQueryCache<SQLQueryPlan>::get().clear();
 }
 
-const ColumnRef& IndexOperation::column() const { return _column; }
+const ColumnRef& IndexTuningOperation::column() const { return _column; }
 
-ColumnIndexType IndexOperation::type() { return _type; }
+ColumnIndexType IndexTuningOperation::type() { return _type; }
 
-bool IndexOperation::create() { return _create; }
+bool IndexTuningOperation::create() { return _create; }
 
 }  // namespace opossum

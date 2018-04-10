@@ -9,9 +9,9 @@ namespace opossum {
 /**
  * Encapsulates a creation or deletion operation of an index
  */
-class IndexOperation : public TuningOperation {
+class IndexTuningOperation : public TuningOperation {
  public:
-  IndexOperation(const ColumnRef& column, ColumnIndexType type, bool create)
+  IndexTuningOperation(const ColumnRef& column, ColumnIndexType type, bool create)
       : _column{column}, _type{type}, _create{create} {}
 
   void execute() final;

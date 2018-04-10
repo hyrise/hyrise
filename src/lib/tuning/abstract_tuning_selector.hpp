@@ -9,7 +9,7 @@
 namespace opossum {
 
 /**
- * An AbstractSelector transforms an unordered list of TuningChoices into
+ * An AbstractTuningSelector transforms an unordered list of TuningChoices into
  * a concrete sequence of TuningOperations.
  *
  * It considers a cost budget that the entire operation sequence as well as any
@@ -23,9 +23,9 @@ namespace opossum {
  * For more information, see e.g. Wikipedia:
  *   https://en.wikipedia.org/wiki/Knapsack_problem
  */
-class AbstractSelector {
+class AbstractTuningSelector {
  public:
-  virtual ~AbstractSelector() {}
+  virtual ~AbstractTuningSelector() {}
   /**
    * Determine the tuning operation sequence as specified above based on the
    * given list of choices and the budget value.

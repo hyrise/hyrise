@@ -9,12 +9,12 @@
 namespace opossum {
 
 /**
- * An IndexChoice contains the characteristics of one particular index
- * as recognized by an AbstractIndexEvaluator
+ * An IndexTuningChoice contains the characteristics of one particular index
+ * as recognized by an AbstractIndexTuningEvaluator
  */
-class IndexChoice : public TuningChoice {
+class IndexTuningChoice : public TuningChoice {
  public:
-  explicit IndexChoice(ColumnRef column_ref, bool exists = false)
+  explicit IndexTuningChoice(ColumnRef column_ref, bool exists = false)
       : column_ref{column_ref}, saved_work{0.0f}, exists{exists}, type{ColumnIndexType::Invalid}, memory_cost{0.0f} {}
 
   float desirability() const final;
@@ -38,11 +38,11 @@ class IndexChoice : public TuningChoice {
   ColumnRef column_ref;
 
   /**
-   * An IndexEvaluator specific, signed value that indicates
+   * An IndexTuningEvaluator specific, signed value that indicates
    * how this index will affect the overall system performance
    *
    * desirability values are relative and only comparable if estimated
-   * by the same IndexEvaluator
+   * by the same IndexTuningEvaluator
    */
   float saved_work;
 

@@ -1,4 +1,4 @@
-#include "index_evaluator.hpp"
+#include "index_tuning_evaluator.hpp"
 
 #include "optimizer/column_statistics.hpp"
 #include "optimizer/table_statistics.hpp"
@@ -10,11 +10,11 @@
 
 namespace opossum {
 
-IndexEvaluator::IndexEvaluator() {}
+IndexTuningEvaluator::IndexTuningEvaluator() {}
 
-void IndexEvaluator::_setup() { _saved_work.clear(); }
+void IndexTuningEvaluator::_setup() { _saved_work.clear(); }
 
-void IndexEvaluator::_process_access_record(const AbstractIndexEvaluator::AccessRecord& record) {
+void IndexTuningEvaluator::_process_access_record(const AbstractIndexTuningEvaluator::AccessRecord& record) {
   const auto table_statistics = StorageManager::get().get_table(record.column_ref.table_name)->table_statistics();
   // ToDo(anyone) adapt for multi column indices...
   const auto predicate_statistics =
@@ -30,11 +30,11 @@ void IndexEvaluator::_process_access_record(const AbstractIndexEvaluator::Access
   }
 }
 
-ColumnIndexType IndexEvaluator::_propose_index_type(const IndexChoice& index_evaluation) const {
+ColumnIndexType IndexTuningEvaluator::_propose_index_type(const IndexTuningChoice& index_evaluation) const {
   return ColumnIndexType::GroupKey;
 }
 
-uintptr_t IndexEvaluator::_predict_memory_cost(const IndexChoice& index_evaluation) const {
+uintptr_t IndexTuningEvaluator::_predict_memory_cost(const IndexTuningChoice& index_evaluation) const {
   const auto table = StorageManager::get().get_table(index_evaluation.column_ref.table_name);
   // ToDo(anyone) adapt for multi column indices...
   const auto column_statistics =
@@ -62,7 +62,7 @@ uintptr_t IndexEvaluator::_predict_memory_cost(const IndexChoice& index_evaluati
   return memory_cost_per_chunk * chunk_count;
 }
 
-float IndexEvaluator::_get_saved_work(const IndexChoice& index_evaluation) const {
+float IndexTuningEvaluator::_get_saved_work(const IndexTuningChoice& index_evaluation) const {
   if (_saved_work.count(index_evaluation.column_ref) > 0) {
     return _saved_work.at(index_evaluation.column_ref);
   } else {

@@ -1,4 +1,4 @@
-#include "greedy_selector.hpp"
+#include "greedy_tuning_selector.hpp"
 
 #include <algorithm>
 #include <limits>
@@ -38,7 +38,7 @@ const std::list<std::shared_ptr<TuningChoice>>::const_iterator sacrifice_choices
   return sorted_choices.cend();
 }
 
-std::vector<std::shared_ptr<TuningOperation>> GreedySelector::select(
+std::vector<std::shared_ptr<TuningOperation>> GreedyTuningSelector::select(
     const std::vector<std::shared_ptr<TuningChoice>>& choices, float cost_budget) {
   std::vector<std::shared_ptr<TuningOperation>> operations;
   operations.reserve(choices.size());
@@ -47,7 +47,7 @@ std::vector<std::shared_ptr<TuningOperation>> GreedySelector::select(
   float cost_balance = 0.0f;
   for (const auto& choice : choices) {
     // Assumption: cost() >= 0 ==> accept_cost() >= 0 && current_cost() >= 0 && reject_cost() <= 0
-    DebugAssert(choice->cost() >= 0, "GreedySelector cannot deal with negative cost");
+    DebugAssert(choice->cost() >= 0, "GreedyTuningSelector cannot deal with negative cost");
     DebugAssert(choice->accept_cost() >= 0, "If cost is >=0, accept_cost must also be >=0");
     DebugAssert(choice->current_cost() >= 0, "If cost is >=, current_cost must also be >= 0");
     DebugAssert(choice->reject_cost() <= 0, "If cost is >=0, reject_cost must be <= 0");

@@ -14,7 +14,7 @@ Tuner::Tuner()
       _cost_budget{NoBudget},
       _status{Status::Unknown} {}
 
-void Tuner::add_evaluator(std::unique_ptr<AbstractEvaluator>&& evaluator) {
+void Tuner::add_evaluator(std::unique_ptr<AbstractTuningEvaluator>&& evaluator) {
   Assert(evaluator, "Tried to add an invalid evaluator.");
   _evaluators.push_back(std::move(evaluator));
 }
@@ -27,14 +27,14 @@ void Tuner::remove_evaluator(std::size_t index) {
   Fail("index out of bounds");
 }
 
-const std::vector<std::unique_ptr<AbstractEvaluator>>& Tuner::evaluators() const { return _evaluators; }
+const std::vector<std::unique_ptr<AbstractTuningEvaluator>>& Tuner::evaluators() const { return _evaluators; }
 
-void Tuner::set_selector(std::unique_ptr<AbstractSelector>&& selector) {
+void Tuner::set_selector(std::unique_ptr<AbstractTuningSelector>&& selector) {
   Assert(selector, "Tried to add an invalid selector.");
   _selector = std::move(selector);
 }
 
-const std::unique_ptr<AbstractSelector>& Tuner::selector() const { return _selector; }
+const std::unique_ptr<AbstractTuningSelector>& Tuner::selector() const { return _selector; }
 
 void Tuner::set_time_budget(float budget, float execute_budget, float evaluate_budget, float select_budget) {
   _time_budget = Runtime{budget};
@@ -56,8 +56,8 @@ void Tuner::set_cost_budget(float budget) { _cost_budget = budget; }
 float Tuner::cost_budget() const { return _cost_budget; }
 
 void Tuner::schedule_tuning_process() {
-  Assert(_evaluators.size() > 0, "Can not run Tuner without at least one AbstractEvaluator");
-  Assert(_selector, "Can not run Tuner without an AbstractSelector");
+  Assert(_evaluators.size() > 0, "Can not run Tuner without at least one AbstractTuningEvaluator");
+  Assert(_selector, "Can not run Tuner without an AbstractTuningSelector");
   Assert(!is_running(), "Can not schedule another tuning process while the previous process is still running");
 
   _evaluate_task = std::make_shared<JobTask>([this]() { _evaluate(); });

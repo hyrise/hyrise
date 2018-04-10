@@ -33,8 +33,8 @@ int _execute_query(const std::string& query, unsigned int execution_count);
 
 int main() {
   opossum::Tuner tuner;
-  tuner.add_evaluator(std::make_unique<opossum::IndexEvaluator>());
-  tuner.set_selector(std::make_unique<opossum::GreedySelector>());
+  tuner.add_evaluator(std::make_unique<opossum::IndexTuningEvaluator>());
+  tuner.set_selector(std::make_unique<opossum::GreedyTuningSelector>());
 
   LOG_INFO("Loading binary table...");
   auto importer = std::make_shared<opossum::ImportBinary>("group01_CUSTOMER.bin", "CUSTOMER");

@@ -8,22 +8,22 @@
 #include "all_type_variant.hpp"
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"
-#include "tuning/abstract_evaluator.hpp"
+#include "tuning/abstract_tuning_evaluator.hpp"
 #include "tuning/index/column_ref.hpp"
-#include "tuning/index/index_choice.hpp"
+#include "tuning/index/index_tuning_choice.hpp"
 
 namespace opossum {
 
 /**
- * The AbstractIndexEvaluator is a base class with helper functions for various index evaluators that differ
+ * The AbstractIndexTuningEvaluator is a base class with helper functions for various index evaluators that differ
  * in the concrete algorithms used to determine index desirability and memory cost.
  *
  * It encapsulates the common behaviour of analyzing the systems query cache for
  * operations that might benefit from an index on a specific column
  * and of searching for already existing indices.
  */
-class AbstractIndexEvaluator : public AbstractEvaluator {
-  friend class IndexEvaluatorTest;
+class AbstractIndexTuningEvaluator : public AbstractTuningEvaluator {
+  friend class IndexTuningEvaluatorTest;
 
  protected:
   /**
@@ -45,7 +45,7 @@ class AbstractIndexEvaluator : public AbstractEvaluator {
   };
 
  public:
-  AbstractIndexEvaluator();
+  AbstractIndexTuningEvaluator();
 
   void evaluate(std::vector<std::shared_ptr<TuningChoice>>& choices) final;
 
@@ -70,35 +70,35 @@ class AbstractIndexEvaluator : public AbstractEvaluator {
    * This method is called for every non-existing index to determine the best
    * index type to create.
    */
-  virtual ColumnIndexType _propose_index_type(const IndexChoice& index_choice) const = 0;
+  virtual ColumnIndexType _propose_index_type(const IndexTuningChoice& index_choice) const = 0;
   /**
    * This method is called on an existing index to determine its memory cost in bytes
    *
    * The existing implementation simply accumulates the individual index costs
    * as reported by the specific index object over all chunks of a column.
    */
-  virtual uintptr_t _existing_memory_cost(const IndexChoice& index_choice) const;
+  virtual uintptr_t _existing_memory_cost(const IndexTuningChoice& index_choice) const;
   /**
    * This method is called for every non-existing index to predict its memory cost.
    */
-  virtual uintptr_t _predict_memory_cost(const IndexChoice& index_choice) const = 0;
+  virtual uintptr_t _predict_memory_cost(const IndexTuningChoice& index_choice) const = 0;
   /**
    * This method is called for every index to calculate its final desirability metric.
    */
-  virtual float _get_saved_work(const IndexChoice& index_choice) const = 0;
+  virtual float _get_saved_work(const IndexTuningChoice& index_choice) const = 0;
 
  protected:
   std::vector<AccessRecord> _inspect_query_cache_and_generate_access_records();
   void _inspect_lqp_node(const std::shared_ptr<const AbstractLQPNode>& op, size_t query_frequency,
                          std::vector<AccessRecord>& access_records);
   std::set<ColumnRef> _aggregate_access_records(const std::vector<AccessRecord>& access_records);
-  void _add_choices_for_existing_indexes(std::vector<IndexChoice>& choices, std::set<ColumnRef>& new_indexes);
-  void _add_choices_for_new_indexes(std::vector<IndexChoice>& choices, const std::set<ColumnRef>& new_indexes);
+  void _add_choices_for_existing_indexes(std::vector<IndexTuningChoice>& choices, std::set<ColumnRef>& new_indexes);
+  void _add_choices_for_new_indexes(std::vector<IndexTuningChoice>& choices, const std::set<ColumnRef>& new_indexes);
 
   std::vector<AccessRecord> _access_records;
   std::set<ColumnRef> _new_indexes;
 
-  std::vector<IndexChoice> _choices;
+  std::vector<IndexTuningChoice> _choices;
 };
 
 }  // namespace opossum
