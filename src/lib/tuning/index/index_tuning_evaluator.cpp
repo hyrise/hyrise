@@ -57,8 +57,8 @@ uintptr_t IndexTuningEvaluator::_predict_memory_cost(const IndexTuningChoice& in
   const auto average_rows_per_chunk = row_count / chunk_count;
   const auto chunk_distinct_values = distinct_value_count / chunk_count;
 
-  const uintptr_t memory_cost_per_chunk =
-      BaseIndex::predict_memory_consumption(index_evaluation.type, average_rows_per_chunk, chunk_distinct_values, value_bytes);
+  const uintptr_t memory_cost_per_chunk = BaseIndex::predict_memory_consumption(
+      index_evaluation.type, average_rows_per_chunk, chunk_distinct_values, value_bytes);
   return memory_cost_per_chunk * chunk_count;
 }
 
