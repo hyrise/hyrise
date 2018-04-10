@@ -8,9 +8,7 @@ FIND_PACKAGE(PQ REQUIRED)
 IF (PQ_FOUND)
 
     FIND_PATH(PQXX_INCLUDE_DIR NAME pqxx/pqxx HINTS
-        "$ENV{LIB_DIR}/include"
-        "$ENV{LIB_DIR}/include/pqxx"
-        "$ENV{INCLUDE}"
+        $ENV{HOME}/local/include /opt/local/include /usr/local/include /usr/include
     )
 
     FIND_LIBRARY(PQXX_LIBRARY NAMES libpqxx pqxx HINTS
