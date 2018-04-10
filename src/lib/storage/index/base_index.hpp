@@ -48,8 +48,8 @@ class BaseIndex : private Noncopyable {
    *
    * If no prediction is possible, this shall fail.
    */
-  static size_t predict_memory_consumption(ColumnIndexType type, ChunkOffset row_count, ChunkOffset value_count,
-                                           uint32_t value_bytes);
+  static size_t estimate_memory_consumption(ColumnIndexType type, ChunkOffset row_count, ChunkOffset value_count,
+                                            uint32_t value_bytes);
 
   /**
    * Creates an index on all given columns. Since all indices are composite indices the order of
