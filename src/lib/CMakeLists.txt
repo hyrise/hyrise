@@ -102,6 +102,8 @@ set(
     operators/join_hash.cpp
     operators/join_hash/hash_traits.hpp
     operators/join_hash.hpp
+    operators/join_mpsm.cpp
+    operators/join_mpsm.hpp
     operators/join_index.cpp
     operators/join_index.hpp
     operators/join_nested_loop.cpp
@@ -219,6 +221,22 @@ set(
     scheduler/topology.hpp
     scheduler/worker.cpp
     scheduler/worker.hpp
+    server/server.cpp
+    server/server.hpp
+    server/server_session.cpp
+    server/server_session.hpp
+    server/postgres_wire_handler.cpp
+    server/postgres_wire_handler.hpp
+    server/query_response_builder.cpp
+    server/query_response_builder.hpp
+    server/task_runner.hpp
+    server/then_operator.hpp
+    server/types.hpp
+    server/client_connection.cpp
+    server/client_connection.hpp
+    server/use_boost_future.hpp
+    server/use_boost_future_impl.hpp
+    server/use_boost_future_legacy_impl.hpp
     sql/abstract_cache.hpp
     sql/gdfs_cache.hpp
     sql/gds_cache.hpp
@@ -227,6 +245,8 @@ set(
     sql/lru_cache.hpp
     sql/lru_k_cache.hpp
     sql/random_cache.hpp
+    sql/sql_pipeline_builder.cpp
+    sql/sql_pipeline_builder.hpp
     sql/sql_pipeline.cpp
     sql/sql_pipeline.hpp
     sql/sql_pipeline_statement.cpp
@@ -351,6 +371,17 @@ set(
     tasks/chunk_migration_task.hpp
     tasks/migration_preparation_task.cpp
     tasks/migration_preparation_task.hpp
+    tasks/server/abstract_server_task.hpp
+    tasks/server/bind_server_prepared_statement_task.cpp
+    tasks/server/bind_server_prepared_statement_task.hpp
+    tasks/server/create_pipeline_task.cpp
+    tasks/server/create_pipeline_task.hpp
+    tasks/server/execute_server_prepared_statement_task.cpp
+    tasks/server/execute_server_prepared_statement_task.hpp
+    tasks/server/execute_server_query_task.cpp
+    tasks/server/execute_server_query_task.hpp
+    tasks/server/load_server_file_task.cpp
+    tasks/server/load_server_file_task.hpp
     tuning/abstract_evaluator.hpp
     tuning/abstract_selector.hpp
     tuning/greedy_selector.cpp
@@ -415,9 +446,22 @@ if (NOT DISABLE_JIT_SUPPORT)
     include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
     set(JIT_EMBEDDED_SOURCES
         # Files listed here will be embedded into the binary as LLVM-IR
+        operators/jit_operator/jit_operations.cpp
         operators/jit_operator/jit_operations.hpp
         operators/jit_operator/jit_types.cpp
         operators/jit_operator/jit_types.hpp
+        operators/jit_operator/operators/abstract_jittable.hpp
+        operators/jit_operator/operators/abstract_jittable_sink.hpp
+        operators/jit_operator/operators/jit_compute.cpp
+        operators/jit_operator/operators/jit_compute.hpp
+        operators/jit_operator/operators/jit_expression.cpp
+        operators/jit_operator/operators/jit_expression.hpp
+        operators/jit_operator/operators/jit_filter.cpp
+        operators/jit_operator/operators/jit_filter.hpp
+        operators/jit_operator/operators/jit_read_tuple.cpp
+        operators/jit_operator/operators/jit_read_tuple.hpp
+        operators/jit_operator/operators/jit_write_tuple.cpp
+        operators/jit_operator/operators/jit_write_tuple.hpp
     )
     embed_llvm(LLVM_BUNDLE_FILE ${JIT_EMBEDDED_SOURCES})
     set(

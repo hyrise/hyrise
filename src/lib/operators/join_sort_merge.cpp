@@ -35,7 +35,7 @@ namespace opossum {
 JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator> left,
                              const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
                              const ColumnIDPair& column_ids, const PredicateCondition op)
-    : AbstractJoinOperator(left, right, mode, column_ids, op) {
+    : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, column_ids, op) {
   // Validate the parameters
   DebugAssert(mode != JoinMode::Cross, "This operator does not support cross joins.");
   DebugAssert(left != nullptr, "The left input operator is null.");
@@ -115,7 +115,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   std::vector<std::shared_ptr<PosList>> _output_pos_lists_right;
 
   /**
-   * The TablePosition is a utility struct that is used to define a specific position in a sorted input table.
+   * The TablePosition is a utility struct that is used during the merge phase to identify the
+   * elements in our sorted temporary list by position.
   **/
   struct TableRange;
   struct TablePosition {
@@ -136,7 +137,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     * a start position to an end position.
   **/
   struct TableRange {
-    TableRange(TablePosition start_position, TablePosition end_position) : start(start_position), end(end_position) {}
+    TableRange(TablePosition start_position, TablePosition end_position) : start{start_position}, end{end_position} {}
     TableRange(size_t cluster, size_t start_index, size_t end_index)
         : start{TablePosition(cluster, start_index)}, end{TablePosition(cluster, end_index)} {}
 
@@ -181,59 +182,59 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Represents the result of a value comparison.
   **/
-  enum class CompareResult { Less, Greater, Equal };
+  enum class ComparisonResult { Less, Greater, Equal };
 
   /**
   * Performs the join for two runs of a specified cluster.
   * A run is a series of rows in a cluster with the same value.
   **/
-  void _join_runs(TableRange left_run, TableRange right_run, CompareResult compare_result) {
+  void _join_runs(TableRange left_run, TableRange right_run, ComparisonResult comparison_result) {
     size_t cluster_number = left_run.start.cluster;
     switch (_op) {
       case PredicateCondition::Equals:
-        if (compare_result == CompareResult::Equal) {
+        if (comparison_result == ComparisonResult::Equal) {
           _emit_all_combinations(cluster_number, left_run, right_run);
-        } else if (compare_result == CompareResult::Less) {
+        } else if (comparison_result == ComparisonResult::Less) {
           if (_mode == JoinMode::Left || _mode == JoinMode::Outer) {
             _emit_right_null_combinations(cluster_number, left_run);
           }
-        } else if (compare_result == CompareResult::Greater) {
+        } else if (comparison_result == ComparisonResult::Greater) {
           if (_mode == JoinMode::Right || _mode == JoinMode::Outer) {
             _emit_left_null_combinations(cluster_number, right_run);
           }
         }
         break;
       case PredicateCondition::NotEquals:
-        if (compare_result == CompareResult::Greater) {
+        if (comparison_result == ComparisonResult::Greater) {
           _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
-        } else if (compare_result == CompareResult::Equal) {
+        } else if (comparison_result == ComparisonResult::Equal) {
           _emit_all_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
           _emit_all_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
-        } else if (compare_result == CompareResult::Less) {
+        } else if (comparison_result == ComparisonResult::Less) {
           _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
         }
         break;
       case PredicateCondition::GreaterThan:
-        if (compare_result == CompareResult::Greater) {
+        if (comparison_result == ComparisonResult::Greater) {
           _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
-        } else if (compare_result == CompareResult::Equal) {
+        } else if (comparison_result == ComparisonResult::Equal) {
           _emit_all_combinations(cluster_number, left_run.end.to(_end_of_left_table), right_run);
         }
         break;
       case PredicateCondition::GreaterThanEquals:
-        if (compare_result == CompareResult::Greater || compare_result == CompareResult::Equal) {
+        if (comparison_result == ComparisonResult::Greater || comparison_result == ComparisonResult::Equal) {
           _emit_all_combinations(cluster_number, left_run.start.to(_end_of_left_table), right_run);
         }
         break;
       case PredicateCondition::LessThan:
-        if (compare_result == CompareResult::Less) {
+        if (comparison_result == ComparisonResult::Less) {
           _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
-        } else if (compare_result == CompareResult::Equal) {
+        } else if (comparison_result == ComparisonResult::Equal) {
           _emit_all_combinations(cluster_number, left_run, right_run.end.to(_end_of_right_table));
         }
         break;
       case PredicateCondition::LessThanEquals:
-        if (compare_result == CompareResult::Less || compare_result == CompareResult::Equal) {
+        if (comparison_result == ComparisonResult::Less || comparison_result == ComparisonResult::Equal) {
           _emit_all_combinations(cluster_number, left_run, right_run.start.to(_end_of_right_table));
         }
         break;
@@ -297,13 +298,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Compares two values and creates a comparison result.
   **/
-  CompareResult _compare(T left, T right) {
+  ComparisonResult _compare(T left, T right) {
     if (left < right) {
-      return CompareResult::Less;
+      return ComparisonResult::Less;
     } else if (left == right) {
-      return CompareResult::Equal;
+      return ComparisonResult::Equal;
     } else {
-      return CompareResult::Greater;
+      return ComparisonResult::Greater;
     }
   }
 
@@ -331,20 +332,20 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       auto& left_value = (*left_cluster)[left_run_start].value;
       auto& right_value = (*right_cluster)[right_run_start].value;
 
-      auto compare_result = _compare(left_value, right_value);
+      auto comparison_result = _compare(left_value, right_value);
 
       TableRange left_run(cluster_number, left_run_start, left_run_end);
       TableRange right_run(cluster_number, right_run_start, right_run_end);
-      _join_runs(left_run, right_run, compare_result);
+      _join_runs(left_run, right_run, comparison_result);
 
       // Advance to the next run on the smaller side or both if equal
-      if (compare_result == CompareResult::Equal) {
+      if (comparison_result == ComparisonResult::Equal) {
         // Advance both runs
         left_run_start = left_run_end;
         right_run_start = right_run_end;
         left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
         right_run_end = right_run_start + _run_length(right_run_start, right_cluster);
-      } else if (compare_result == CompareResult::Less) {
+      } else if (comparison_result == ComparisonResult::Less) {
         // Advance the left run
         left_run_start = left_run_end;
         left_run_end = left_run_start + _run_length(left_run_start, left_cluster);
@@ -359,9 +360,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     auto right_rest = TableRange(cluster_number, right_run_start, right_size);
     auto left_rest = TableRange(cluster_number, left_run_start, left_size);
     if (left_run_start < left_size) {
-      _join_runs(left_rest, right_rest, CompareResult::Less);
+      _join_runs(left_rest, right_rest, ComparisonResult::Less);
     } else if (right_run_start < right_size) {
-      _join_runs(left_rest, right_rest, CompareResult::Greater);
+      _join_runs(left_rest, right_rest, ComparisonResult::Greater);
     }
   }
 
@@ -675,8 +676,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     _add_output_columns(output_columns, _sort_merge_join.input_table_right(), output_right);
 
     // Build the output_table with one Chunk
-    auto output_column_definitions = concatenated(_sort_merge_join.input_table_left()->column_definitions(),
-                                                  _sort_merge_join.input_table_right()->column_definitions());
+    auto output_column_definitions = concatenate(_sort_merge_join.input_table_left()->column_definitions(),
+                                                 _sort_merge_join.input_table_right()->column_definitions());
     auto output_table = std::make_shared<Table>(output_column_definitions, TableType::References);
 
     output_table->append_chunk(output_columns);

@@ -7,6 +7,7 @@
 #include "operators/difference.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
@@ -14,6 +15,7 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -50,7 +52,7 @@ template <typename T>
 class RecreationTestJoin : public RecreationTest {};
 
 // here we define all Join types
-using JoinTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge>;
+using JoinTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge, JoinMPSM>;
 TYPED_TEST_CASE(RecreationTestJoin, JoinTypes);
 
 TYPED_TEST(RecreationTestJoin, RecreationJoin) {
@@ -172,6 +174,38 @@ TEST_F(RecreationTest, DiamondShape) {
   auto recreated_pqp = union_positions->recreate();
 
   EXPECT_EQ(recreated_pqp->input_left()->input_left(), recreated_pqp->input_right()->input_left());
+}
+
+TEST_F(RecreationTest, Subselect) {
+  // Due to the nested structure of the subselect, it makes sense to keep this more high level than the other tests in
+  // this suite. The test is very confusing and error-prone with explicit operators as above.
+  const auto table = load_table("src/test/tables/int_int_int.tbl", 2);
+  StorageManager::get().add_table("table_3int", table);
+
+  const std::string subselect_query = "SELECT * FROM table_3int WHERE a = (SELECT MAX(b) FROM table_3int)";
+  const TableColumnDefinitions column_definitions = {{"a", DataType::Int}, {"b", DataType::Int}, {"c", DataType::Int}};
+
+  auto sql_pipeline = SQLPipelineBuilder{subselect_query}.disable_mvcc().create_pipeline_statement();
+  const auto first_result = sql_pipeline.get_result_table();
+
+  // Quick sanity check to see that the original query is correct
+  auto expected_first = std::make_shared<Table>(column_definitions, TableType::Data);
+  expected_first->append({10, 10, 10});
+  EXPECT_TABLE_EQ_UNORDERED(first_result, expected_first);
+
+  SQLPipelineBuilder{"INSERT INTO table_3int VALUES (11, 11, 11)"}.create_pipeline_statement().get_result_table();
+
+  const auto recreated_plan = sql_pipeline.get_query_plan()->recreate();
+  const auto tasks = recreated_plan.create_tasks();
+  CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+
+  const auto recreated_result = tasks.back()->get_operator()->get_output();
+
+  auto expected_recreated = std::make_shared<Table>(column_definitions, TableType::Data);
+  expected_recreated->append({11, 10, 11});
+  expected_recreated->append({11, 11, 11});
+
+  EXPECT_TABLE_EQ_UNORDERED(recreated_result, expected_recreated);
 }
 
 }  // namespace opossum

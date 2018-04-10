@@ -5,9 +5,9 @@
 
 #include <readline/history.h>
 #include <readline/readline.h>
-#include <setjmp.h>
 #include <sys/stat.h>
 #include <chrono>
+#include <csetjmp>
 #include <csignal>
 #include <ctime>
 #include <iomanip>
@@ -16,6 +16,14 @@
 #include <regex>
 #include <string>
 #include <vector>
+
+#if __has_include(<filesystem>)
+#include <filesystem>
+namespace filesystem = std::filesystem;
+#else
+#include <experimental/filesystem>
+namespace filesystem = std::experimental::filesystem;
+#endif
 
 #include "SQLParser.h"
 #include "concurrency/transaction_context.hpp"
@@ -30,6 +38,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
@@ -46,7 +55,16 @@
 
 namespace {
 
-// Buffer for program state
+/**
+ * Buffer for program state
+ *
+ * We use this to make Ctrl+C work on all platforms by jumping back into main() from the Ctrl+C signal handler. This
+ * was the only way to get this to work on all platforms inclusing macOS.
+ * See here (https://github.com/hyrise/hyrise/pull/198#discussion_r135539719) for a discussion about this.
+ *
+ * The known caveats of goto/longjmp aside, this will probably also cause problems (queries continuing to run in the
+ * background) when the scheduler/multithreading is enabled.
+ */
 sigjmp_buf jmp_env;
 
 // Returns a string containing a timestamp of the current date and time
@@ -106,6 +124,7 @@ Console::Console()
   register_command("rollback", std::bind(&Console::rollback_transaction, this, std::placeholders::_1));
   register_command("commit", std::bind(&Console::commit_transaction, this, std::placeholders::_1));
   register_command("txinfo", std::bind(&Console::print_transaction_info, this, std::placeholders::_1));
+  register_command("pwd", std::bind(&Console::print_current_working_directory, this, std::placeholders::_1));
   register_command("setting", std::bind(&Console::change_runtime_setting, this, std::placeholders::_1));
 
   // Register words specifically for command completion purposes, e.g.
@@ -220,9 +239,14 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
 bool Console::_initialize_pipeline(const std::string& sql) {
   try {
     if (_explicitly_created_transaction_context != nullptr) {
-      _sql_pipeline = std::make_unique<SQLPipeline>(sql, _prepared_statements, _explicitly_created_transaction_context);
+      _sql_pipeline =
+          std::make_unique<SQLPipeline>(SQLPipelineBuilder{sql}
+                                            .with_prepared_statement_cache(_prepared_statements)
+                                            .with_transaction_context(_explicitly_created_transaction_context)
+                                            .create_pipeline());
     } else {
-      _sql_pipeline = std::make_unique<SQLPipeline>(sql, _prepared_statements);
+      _sql_pipeline = std::make_unique<SQLPipeline>(
+          SQLPipelineBuilder{sql}.with_prepared_statement_cache(_prepared_statements).create_pipeline());
     }
   } catch (const std::exception& exception) {
     out(std::string(exception.what()) + '\n');
@@ -342,6 +366,7 @@ int Console::help(const std::string&) {
   out("  rollback                         - Roll back a manually created transaction\n");
   out("  commit                           - Commit a manually created transaction\n");
   out("  txinfo                           - Print information on the current transaction\n");
+  out("  pwd                              - Print current working directory\n");
   out("  quit                             - Exit the HYRISE Console\n");
   out("  help                             - Show this message\n\n");
   out("  setting [property] [value]       - Change a runtime setting\n\n");
@@ -632,7 +657,8 @@ void Console::handle_signal(int sig) {
     console._multiline_input = "";
     console.set_prompt("!> ");
     console._verbose = false;
-    // Restore program state stored in jmp_env set with sigsetjmp(2)
+    // Restore program state stored in jmp_env set with sigsetjmp(2).
+    // See comment on jmp_env for details
     siglongjmp(jmp_env, 1);
   }
 }
@@ -692,6 +718,11 @@ int Console::print_transaction_info(const std::string& input) {
   const auto snapshot_commit_id = std::to_string(_explicitly_created_transaction_context->snapshot_commit_id());
   out("Active transaction: { transaction id = " + transaction_id + ", snapshot commit id = " + snapshot_commit_id +
       " }\n");
+  return ReturnCode::Ok;
+}
+
+int Console::print_current_working_directory(const std::string&) {
+  out(filesystem::current_path().string() + "\n");
   return ReturnCode::Ok;
 }
 
@@ -772,7 +803,7 @@ char* Console::command_generator_tpcc(const char* text, int state) {
 }
 
 bool Console::_handle_rollback() {
-  auto& failed_pipeline = _sql_pipeline->failed_pipeline_statement();
+  auto failed_pipeline = _sql_pipeline->failed_pipeline_statement();
   if (failed_pipeline->transaction_context() && failed_pipeline->transaction_context()->aborted()) {
     out("The transaction has been rolled back.\n");
     _explicitly_created_transaction_context = nullptr;
@@ -835,6 +866,7 @@ int main(int argc, char** argv) {
   }
 
   // Set jmp_env to current program state in preparation for siglongjmp(2)
+  // See comment on jmp_env for details
   while (sigsetjmp(jmp_env, 1) != 0) {
   }
 

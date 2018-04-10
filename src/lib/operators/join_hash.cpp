@@ -26,7 +26,7 @@ namespace opossum {
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
                    const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
                    const ColumnIDPair& column_ids, const PredicateCondition predicate_condition)
-    : AbstractJoinOperator(left, right, mode, column_ids, predicate_condition) {
+    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, column_ids, predicate_condition) {
   DebugAssert(predicate_condition == PredicateCondition::Equals, "Operator not supported by Hash Join.");
 }
 
@@ -570,11 +570,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         output_column_definitions = _right_in_table->column_definitions();
       } else {
         output_column_definitions =
-            concatenated(_right_in_table->column_definitions(), _left_in_table->column_definitions());
+            concatenate(_right_in_table->column_definitions(), _left_in_table->column_definitions());
       }
     } else {
       output_column_definitions =
-          concatenated(_left_in_table->column_definitions(), _right_in_table->column_definitions());
+          concatenate(_left_in_table->column_definitions(), _right_in_table->column_definitions());
     }
 
     _output_table = std::make_shared<Table>(output_column_definitions, TableType::References);

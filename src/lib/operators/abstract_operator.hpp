@@ -14,6 +14,41 @@ class OperatorTask;
 class Table;
 class TransactionContext;
 
+enum class OperatorType {
+  Aggregate,
+  Delete,
+  Difference,
+  ExportBinary,
+  ExportCsv,
+  GetTable,
+  ImportBinary,
+  ImportCsv,
+  IndexScan,
+  Insert,
+  JoinHash,
+  JoinIndex,
+  JoinNestedLoop,
+  JoinSortMerge,
+  JoinMPSM,
+  Limit,
+  Print,
+  Product,
+  Projection,
+  Sort,
+  TableScan,
+  TableWrapper,
+  UnionAll,
+  UnionPositions,
+  Update,
+  Validate,
+  CreateView,
+  DropView,
+  ShowColumns,
+  ShowTables,
+
+  Mock  // for Tests that need to Mock operators
+};
+
 // AbstractOperator is the abstract super class for all operators.
 // All operators have up to two input tables and one output table.
 // Their lifecycle has three phases:
@@ -30,10 +65,12 @@ class TransactionContext;
 
 class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, private Noncopyable {
  public:
-  AbstractOperator(const std::shared_ptr<const AbstractOperator> left = nullptr,
+  AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator> left = nullptr,
                    const std::shared_ptr<const AbstractOperator> right = nullptr);
 
   virtual ~AbstractOperator() = default;
+
+  OperatorType type() const;
 
   // Overriding implementations need to call on_operator_started/finished() on the _transaction_context as well
   virtual void execute();
@@ -101,6 +138,8 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   virtual std::shared_ptr<AbstractOperator> _on_recreate(
       const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
       const std::shared_ptr<AbstractOperator>& recreated_input_right) const = 0;
+
+  const OperatorType _type;
 
   // Shared pointers to input operators, can be nullptr.
   std::shared_ptr<const AbstractOperator> _input_left;

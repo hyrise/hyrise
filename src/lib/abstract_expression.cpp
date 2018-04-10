@@ -130,24 +130,7 @@ bool AbstractExpression<DerivedExpression>::is_logical_operator() const {
 
 template <typename DerivedExpression>
 bool AbstractExpression<DerivedExpression>::is_binary_operator() const {
-  if (is_arithmetic_operator()) return true;
-
-  switch (_type) {
-    case ExpressionType::Equals:
-    case ExpressionType::NotEquals:
-    case ExpressionType::LessThan:
-    case ExpressionType::LessThanEquals:
-    case ExpressionType::GreaterThan:
-    case ExpressionType::GreaterThanEquals:
-    case ExpressionType::Like:
-    case ExpressionType::NotLike:
-    case ExpressionType::And:
-    case ExpressionType::Or:
-    case ExpressionType::Between:
-      return true;
-    default:
-      return false;
-  }
+  return is_binary_operator_type(_type);
 }
 
 template <typename DerivedExpression>
@@ -405,5 +388,30 @@ std::shared_ptr<DerivedExpression> AbstractExpression<DerivedExpression>::create
 
 template class AbstractExpression<LQPExpression>;
 template class AbstractExpression<PQPExpression>;
+
+bool is_binary_operator_type(const ExpressionType type) {
+  switch (type) {
+    case ExpressionType::Subtraction:
+    case ExpressionType::Addition:
+    case ExpressionType::Multiplication:
+    case ExpressionType::Division:
+    case ExpressionType::Modulo:
+    case ExpressionType::Power:
+    case ExpressionType::Equals:
+    case ExpressionType::NotEquals:
+    case ExpressionType::LessThan:
+    case ExpressionType::LessThanEquals:
+    case ExpressionType::GreaterThan:
+    case ExpressionType::GreaterThanEquals:
+    case ExpressionType::Like:
+    case ExpressionType::NotLike:
+    case ExpressionType::And:
+    case ExpressionType::Or:
+    case ExpressionType::Between:
+      return true;
+    default:
+      return false;
+  }
+}
 
 }  // namespace opossum

@@ -31,7 +31,7 @@ namespace opossum {
 
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator> in, ColumnID left_column_id,
                      const PredicateCondition predicate_condition, const AllParameterVariant right_parameter)
-    : AbstractReadOnlyOperator{in},
+    : AbstractReadOnlyOperator{OperatorType::TableScan, in},
       _left_column_id{left_column_id},
       _predicate_condition{predicate_condition},
       _right_parameter{right_parameter} {}
