@@ -12,7 +12,7 @@
 namespace opossum {
 
 void IndexTuningOperation::execute() {
-  if (_create) {
+  if (_create_else_delete) {
     _create_index();
   } else {
     _delete_index();
@@ -20,7 +20,7 @@ void IndexTuningOperation::execute() {
 }
 
 void IndexTuningOperation::print_on(std::ostream& output) const {
-  output << "IndexTuningOperation{" << (_create ? "Create" : "Delete") << " on " << _column << "}";
+  output << "IndexTuningOperation{" << (_create_else_delete ? "Create" : "Delete") << " on " << _column << "}";
 }
 
 void IndexTuningOperation::_create_index() {
@@ -71,6 +71,6 @@ const ColumnRef& IndexTuningOperation::column() const { return _column; }
 
 ColumnIndexType IndexTuningOperation::type() { return _type; }
 
-bool IndexTuningOperation::create() { return _create; }
+bool IndexTuningOperation::will_create_else_delete() { return _create_else_delete; }
 
 }  // namespace opossum

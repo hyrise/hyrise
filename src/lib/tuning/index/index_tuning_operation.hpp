@@ -11,8 +11,8 @@ namespace opossum {
  */
 class IndexTuningOperation : public TuningOperation {
  public:
-  IndexTuningOperation(const ColumnRef& column, ColumnIndexType type, bool create)
-      : _column{column}, _type{type}, _create{create} {}
+  IndexTuningOperation(const ColumnRef& column, ColumnIndexType type, bool create_else_delete)
+      : _column{column}, _type{type}, _create_else_delete{create_else_delete} {}
 
   void execute() final;
 
@@ -31,12 +31,12 @@ class IndexTuningOperation : public TuningOperation {
   /**
    * true: create index, false: delete index
    */
-  bool create();
+  bool will_create_else_delete();
 
  protected:
   ColumnRef _column;
   ColumnIndexType _type;
-  bool _create;
+  bool _create_else_delete;
 
   void _create_index();
   void _delete_index();

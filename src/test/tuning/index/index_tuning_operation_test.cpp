@@ -60,7 +60,7 @@ TEST_F(IndexTuningOperationTest, GetColumnIndexType) {
 
 TEST_F(IndexTuningOperationTest, GetCreate) {
   IndexTuningOperation operation{_column_ref, ColumnIndexType::GroupKey, true};
-  EXPECT_EQ(operation.create(), true);
+  EXPECT_EQ(operation.will_create_else_delete(), true);
 }
 
 TEST_F(IndexTuningOperationTest, PrintOnStream) {

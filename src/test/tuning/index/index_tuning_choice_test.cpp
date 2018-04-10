@@ -69,7 +69,7 @@ TEST_F(IndexTuningChoiceTest, Accept) {
 
   EXPECT_EQ(accept_operation->column(), column_ref);
   EXPECT_EQ(accept_operation->type(), choice_nonexisting.type);
-  EXPECT_EQ(accept_operation->create(), true);
+  EXPECT_EQ(accept_operation->will_create_else_delete(), true);
 
   // If the index is already existing, the result is a null-operation, realized as a (not-subclassed) TuningOperation
   // (that then cannot be cast to IndexOp.)
@@ -88,6 +88,6 @@ TEST_F(IndexTuningChoiceTest, Reject) {
   auto reject_operation = std::dynamic_pointer_cast<IndexTuningOperation>(choice_existing.reject());
   EXPECT_EQ(reject_operation->column(), column_ref);
   EXPECT_EQ(reject_operation->type(), choice_nonexisting.type);
-  EXPECT_EQ(reject_operation->create(), false);
+  EXPECT_EQ(reject_operation->will_create_else_delete(), false);
 }
 }  // namespace opossum
