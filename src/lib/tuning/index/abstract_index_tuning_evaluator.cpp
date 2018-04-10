@@ -40,7 +40,7 @@ void AbstractIndexTuningEvaluator::evaluate(std::vector<std::shared_ptr<TuningCh
 
   // Evaluate
   for (auto& index_choice : _choices) {
-    if (index_choice.exists) {
+    if (index_choice.index_exists) {
       index_choice.memory_cost = static_cast<float>(_existing_memory_cost(index_choice));
     } else {
       index_choice.type = _propose_index_type(index_choice);
@@ -103,8 +103,9 @@ AbstractIndexTuningEvaluator::_inspect_query_cache_and_generate_access_records()
   return access_records;
 }  // namespace opossum
 
-void AbstractIndexTuningEvaluator::_inspect_lqp_node(const std::shared_ptr<const AbstractLQPNode>& op, size_t query_frequency,
-                                               std::vector<AccessRecord>& access_records) {
+void AbstractIndexTuningEvaluator::_inspect_lqp_node(const std::shared_ptr<const AbstractLQPNode>& op,
+                                                     size_t query_frequency,
+                                                     std::vector<AccessRecord>& access_records) {
   std::list<const std::shared_ptr<const AbstractLQPNode>> queue;
   queue.push_back(op);
   while (!queue.empty()) {
@@ -154,7 +155,8 @@ void AbstractIndexTuningEvaluator::_inspect_lqp_node(const std::shared_ptr<const
   }
 }
 
-std::set<ColumnRef> AbstractIndexTuningEvaluator::_aggregate_access_records(const std::vector<AccessRecord>& access_records) {
+std::set<ColumnRef> AbstractIndexTuningEvaluator::_aggregate_access_records(
+    const std::vector<AccessRecord>& access_records) {
   std::set<ColumnRef> new_indexes{};
   for (const auto& access_record : access_records) {
     new_indexes.insert(access_record.column_ref);
@@ -164,7 +166,7 @@ std::set<ColumnRef> AbstractIndexTuningEvaluator::_aggregate_access_records(cons
 }
 
 void AbstractIndexTuningEvaluator::_add_choices_for_existing_indexes(std::vector<IndexTuningChoice>& choices,
-                                                               std::set<ColumnRef>& new_indexes) {
+                                                                     std::set<ColumnRef>& new_indexes) {
   for (const auto& table_name : StorageManager::get().table_names()) {
     const auto& table = StorageManager::get().get_table(table_name);
 
@@ -179,7 +181,7 @@ void AbstractIndexTuningEvaluator::_add_choices_for_existing_indexes(std::vector
 }
 
 void AbstractIndexTuningEvaluator::_add_choices_for_new_indexes(std::vector<IndexTuningChoice>& choices,
-                                                          const std::set<ColumnRef>& new_indexes) {
+                                                                const std::set<ColumnRef>& new_indexes) {
   for (const auto& column_ref : new_indexes) {
     choices.emplace_back(column_ref, false);
   }

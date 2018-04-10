@@ -18,7 +18,9 @@ class MockTuningOperation : public TuningOperation {
   const std::string& name() const { return _name; }
   bool accepted() const { return _accepted; }
   void execute() final {}
-  void print_on(std::ostream& output) const final { output << "MockTuningOperation(" << _name << ", " << _accepted << ")"; }
+  void print_on(std::ostream& output) const final {
+    output << "MockTuningOperation(" << _name << ", " << _accepted << ")";
+  }
 
  protected:
   std::string _name;

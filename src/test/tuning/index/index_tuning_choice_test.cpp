@@ -46,7 +46,7 @@ TEST_F(IndexTuningChoiceTest, GetCurrentlyChosen) {
   IndexTuningChoice choice_existing{column_ref, true};
   EXPECT_EQ(choice_existing.is_currently_chosen(), true);
 
-  choice_nonexisting.exists = true;
+  choice_nonexisting.index_exists = true;
   EXPECT_EQ(choice_nonexisting.is_currently_chosen(), true);
 }
 

@@ -15,7 +15,11 @@ namespace opossum {
 class IndexTuningChoice : public TuningChoice {
  public:
   explicit IndexTuningChoice(ColumnRef column_ref, bool exists = false)
-      : column_ref{column_ref}, saved_work{0.0f}, exists{exists}, type{ColumnIndexType::Invalid}, memory_cost{0.0f} {}
+      : column_ref{column_ref},
+        saved_work{0.0f},
+        index_exists{exists},
+        type{ColumnIndexType::Invalid},
+        memory_cost{0.0f} {}
 
   float desirability() const final;
 
@@ -49,7 +53,7 @@ class IndexTuningChoice : public TuningChoice {
   /**
    * Does this Evaluation refer to an already created index or one that does not exist yet
    */
-  bool exists;
+  bool index_exists;
 
   /**
    * exists == true: The type of the existing index

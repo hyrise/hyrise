@@ -12,10 +12,10 @@ float IndexTuningChoice::cost() const { return memory_cost; }
 
 float IndexTuningChoice::confidence() const { return 1.0f; }
 
-bool IndexTuningChoice::is_currently_chosen() const { return exists; }
+bool IndexTuningChoice::is_currently_chosen() const { return index_exists; }
 
 void IndexTuningChoice::print_on(std::ostream& output) const {
-  output << "IndexTuningChoice{on: " << column_ref << ", exists: " << exists << ", saved_work: " << saved_work
+  output << "IndexTuningChoice{on: " << column_ref << ", exists: " << index_exists << ", saved_work: " << saved_work
          << " RowScans, memory_cost: " << memory_cost << " MiB}";
 }
 
