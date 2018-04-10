@@ -30,30 +30,6 @@ target_link_libraries(
     hyriseBenchmarkLib
 )
 
-# Configure playground for self driving database / group 01
-add_executable(
-    hyrisePlaygroundGroup01
-
-    playground_group01.cpp
-)
-target_link_libraries(
-    hyrisePlaygroundGroup01
-    hyrise
-    hyriseBenchmarkLib
-)
-
-# Configure playground for self driving database / group 01 - table generator
-add_executable(
-    hyrisePlaygroundTableGenerator
-
-    playground_table_generator.cpp
-)
-target_link_libraries(
-    hyrisePlaygroundTableGenerator
-    hyrise
-    hyriseBenchmarkLib
-)
-
 # Configure tpccTableGenerator
 add_executable(tpccTableGenerator tpcc_table_generator.cpp)
 target_link_libraries(tpccTableGenerator hyrise hyriseBenchmarkLib)

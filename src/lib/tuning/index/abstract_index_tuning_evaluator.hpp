@@ -52,17 +52,13 @@ class AbstractIndexTuningEvaluator : public AbstractTuningEvaluator {
  protected:
   /**
    * This method is called at the very beginning of the evaluation process.
-   *
    * It may be used to setup data structures of the concrete algorithms.
-   *
    * The default implementation does nothing.
    */
   virtual void _setup();
   /**
    * This method is called for every access record that is aggregated into the new index set.
-   *
    * It may be used to aggregate information concerning individual uses of the candidate index.
-   *
    * The default implementation does nothing.
    */
   virtual void _process_access_record(const AccessRecord& record);
@@ -73,7 +69,6 @@ class AbstractIndexTuningEvaluator : public AbstractTuningEvaluator {
   virtual ColumnIndexType _propose_index_type(const IndexTuningChoice& index_choice) const = 0;
   /**
    * This method is called on an existing index to determine its memory cost in bytes
-   *
    * The existing implementation simply accumulates the individual index costs
    * as reported by the specific index object over all chunks of a column.
    */

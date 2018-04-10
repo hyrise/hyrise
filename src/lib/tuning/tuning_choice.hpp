@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include <set>
+#include <vector>
 
 #include "tuning/tuning_operation.hpp"
 
@@ -72,7 +72,7 @@ class TuningChoice {
    * A list of other TuningChoices that should/can not be chosen if this
    * TuningChoice is accepted.
    */
-  const std::set<std::shared_ptr<TuningChoice>>& invalidates() const;
+  const std::vector<std::weak_ptr<TuningChoice>>& invalidates() const;
 
   /**
    * Add a TuningChoice that should/can not be chosen if this TuningChoice
@@ -122,7 +122,7 @@ class TuningChoice {
    */
   virtual std::shared_ptr<TuningOperation> _reject_operation() const = 0;
 
-  std::set<std::shared_ptr<TuningChoice>> _invalidates;
+  std::vector<std::weak_ptr<TuningChoice>> _invalidates;
 };
 
 }  // namespace opossum
