@@ -12,7 +12,7 @@ namespace opossum {
 
 IndexTuningEvaluator::IndexTuningEvaluator() {}
 
-void IndexTuningEvaluator::_setup() { _saved_work.clear(); }
+void IndexTuningEvaluator::_setup() { _saved_work_per_index.clear(); }
 
 void IndexTuningEvaluator::_process_access_record(const AbstractIndexTuningEvaluator::AccessRecord& record) {
   const auto table_statistics = StorageManager::get().get_table(record.column_ref.table_name)->table_statistics();
@@ -23,10 +23,10 @@ void IndexTuningEvaluator::_process_access_record(const AbstractIndexTuningEvalu
   const auto match_rows = predicate_statistics->row_count();
   const auto unscanned_rows = total_rows - match_rows;
   const float saved_work = unscanned_rows * record.query_frequency;
-  if (_saved_work.count(record.column_ref) > 0) {
-    _saved_work[record.column_ref] += saved_work;
+  if (_saved_work_per_index.count(record.column_ref) > 0) {
+    _saved_work_per_index[record.column_ref] += saved_work;
   } else {
-    _saved_work[record.column_ref] = saved_work;
+    _saved_work_per_index[record.column_ref] = saved_work;
   }
 }
 
@@ -63,8 +63,8 @@ uintptr_t IndexTuningEvaluator::_predict_memory_cost(const IndexTuningChoice& in
 }
 
 float IndexTuningEvaluator::_get_saved_work(const IndexTuningChoice& index_evaluation) const {
-  if (_saved_work.count(index_evaluation.column_ref) > 0) {
-    return _saved_work.at(index_evaluation.column_ref);
+  if (_saved_work_per_index.count(index_evaluation.column_ref) > 0) {
+    return _saved_work_per_index.at(index_evaluation.column_ref);
   } else {
     return 0.0f;
   }
