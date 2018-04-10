@@ -25,7 +25,7 @@ namespace opossum {
  */
 class AbstractTuningSelector {
  public:
-  virtual ~AbstractTuningSelector() {}
+  virtual ~AbstractTuningSelector() = default;
   /**
    * Determine the tuning operation sequence as specified above based on the
    * given list of choices and the budget value.
