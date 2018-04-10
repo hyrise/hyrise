@@ -1591,7 +1591,7 @@ bool opossum::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
   Function::iterator FirstNewBlock;
 
   { // Scope to destroy VMap after cloning.
-    ValueToValueMapTy VMap = Context.llvm_value_map;
+    ValueToValueMapTy& VMap = Context.llvm_value_map;
     // Keep a list of pair (dst, src) to emit byval initializations.
     SmallVector<std::pair<Value*, Value*>, 4> ByValInit;
 

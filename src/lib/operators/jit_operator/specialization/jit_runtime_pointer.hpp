@@ -1,7 +1,11 @@
 #pragma once
 
 #include <fcntl.h>
+#include <unistd.h>
+
 #include <llvm/IR/Value.h>
+
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -21,13 +25,13 @@ class JitKnownRuntimePointer : public JitRuntimePointer {
     auto fd = open("/dev/random", O_WRONLY);
     bool result = (write(fd, ptr, 8) == 8);
     close(fd);
-    return true;
+    return result;
   }
 
   virtual uint64_t address() const = 0;
   virtual uint64_t total_offset() const = 0;
-  virtual const JitKnownRuntimePointer& base() const { throw std::logic_error("can't get base pointer"); }
-  virtual const JitKnownRuntimePointer& up() const { throw std::logic_error("can't move up"); }
+  virtual const JitKnownRuntimePointer& base() const { Fail("Cannot get base pointer."); }
+  virtual const JitKnownRuntimePointer& up() const { Fail("Cannot move pointer up."); }
 };
 
 class JitConstantRuntimePointer : public JitKnownRuntimePointer {
