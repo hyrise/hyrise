@@ -4,6 +4,7 @@
 #include <limits>
 #include <list>
 
+#include "utils/assert.hpp"
 #include "utils/logging.hpp"
 
 namespace opossum {
@@ -42,11 +43,16 @@ std::vector<std::shared_ptr<TuningOperation>> GreedySelector::select(
     const std::vector<std::shared_ptr<TuningChoice>>& choices, float cost_budget) {
   std::vector<std::shared_ptr<TuningOperation>> operations;
   operations.reserve(choices.size());
-  // Assumption: cost() >= 0 ==> accept_cost() >= 0 && current_cost() >= 0 && reject_cost() <= 0
 
   // Accumulate absolute cost balance from currently chosen choices.
   float cost_balance = 0.0f;
   for (const auto& choice : choices) {
+    // Assumption: cost() >= 0 ==> accept_cost() >= 0 && current_cost() >= 0 && reject_cost() <= 0
+    DebugAssert(choice->cost() >= 0, "GreedySelector cannot deal with negative cost");
+    DebugAssert(choice->accept_cost() >= 0, "If cost is >=0, accept_cost must also be >=0");
+    DebugAssert(choice->current_cost() >= 0, "If cost is >=, current_cost must also be >= 0");
+    DebugAssert(choice->reject_cost() <= 0, "If cost is >=0, reject_cost must be <= 0");
+
     cost_balance += choice->current_cost();
   }
 

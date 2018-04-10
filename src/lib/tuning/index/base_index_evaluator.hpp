@@ -88,12 +88,12 @@ class BaseIndexEvaluator : public AbstractEvaluator {
   virtual float _calculate_saved_work(const IndexChoice& index_choice) const = 0;
 
  protected:
-  void _inspect_query_cache();
-  void _inspect_pqp_operator(const std::shared_ptr<const AbstractOperator>& op, size_t query_frequency);
-  void _inspect_lqp_node(const std::shared_ptr<const AbstractLQPNode>& op, size_t query_frequency);
-  void _aggregate_access_records();
-  void _add_existing_indexes();
-  void _add_new_indexes();
+  std::vector<AccessRecord> _inspect_query_cache_and_generate_access_records();
+  void _inspect_lqp_node(const std::shared_ptr<const AbstractLQPNode>& op, size_t query_frequency,
+                         std::vector<AccessRecord>& access_records);
+  std::set<ColumnRef> _aggregate_access_records(const std::vector<AccessRecord>& access_records);
+  void _add_choices_for_existing_indexes(std::vector<IndexChoice>& choices, std::set<ColumnRef>& new_indexes);
+  void _add_choices_for_new_indexes(std::vector<IndexChoice>& choices, const std::set<ColumnRef>& new_indexes);
 
   std::vector<AccessRecord> _access_records;
   std::set<ColumnRef> _new_indexes;

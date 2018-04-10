@@ -3,6 +3,8 @@
 
 #include "../../base_test.hpp"
 #include "sql/sql_pipeline.hpp"
+#include "sql/sql_pipeline_builder.hpp"
+#include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "storage/table.hpp"
@@ -36,48 +38,25 @@ class IndexEvaluatorTest : public BaseTest {
 
   void TearDown() override { StorageManager::get().drop_table("t"); }
 
-  void _inspect_lqp_operator(const std::shared_ptr<const AbstractLQPNode>& op, size_t query_frequency) {
-    return _evaluator->_inspect_lqp_node(op, query_frequency);
+  void _inspect_lqp_operator(const std::shared_ptr<const AbstractLQPNode>& op, size_t query_frequency,
+                             std::vector<BaseIndexEvaluator::AccessRecord>& access_records) {
+    _evaluator->_inspect_lqp_node(op, query_frequency, access_records);
   }
 
-  void _inspect_pqp_operator(const std::shared_ptr<const AbstractOperator>& op, size_t query_frequency) {
-    return _evaluator->_inspect_pqp_operator(op, query_frequency);
-  }
-
-  const std::vector<BaseIndexEvaluator::AccessRecord>& _access_records() { return _evaluator->_access_records; }
+  std::vector<BaseIndexEvaluator::AccessRecord>& _access_records() { return _evaluator->_access_records; }
 
   std::shared_ptr<IndexEvaluator> _evaluator;
 };
 
 TEST_F(IndexEvaluatorTest, InspectLQPOperator) {
-  SQLPipeline pipeline("select * from t where col_1 = 4", UseMvcc::No);
+  auto sql_pipeline_statement =
+      SQLPipelineBuilder{"select * from t where col_1 = 4"}.disable_mvcc().create_pipeline_statement();
 
-  auto lqp = pipeline.get_optimized_logical_plans();
-
-  EXPECT_TRUE(_access_records().empty());
-
-  for (const auto& lqp_node : lqp) {
-    _inspect_lqp_operator(lqp_node, 1);
-  }
-
-  EXPECT_EQ(_access_records().size(), 1u);
-  EXPECT_EQ(_access_records().back().column_ref.table_name, "t");
-  EXPECT_EQ(_access_records().back().column_ref.column_ids, std::vector<ColumnID>{ColumnID{0}});
-  EXPECT_EQ(_access_records().back().condition, PredicateCondition::Equals);
-}
-
-TEST_F(IndexEvaluatorTest, InspectPQPOperator) {
-  SQLPipeline pipeline("select * from t where col_1 = 4", UseMvcc::No);
-
-  auto query_plans = pipeline.get_query_plans();
+  auto lqp_operator_root = sql_pipeline_statement.get_optimized_logical_plan();
 
   EXPECT_TRUE(_access_records().empty());
 
-  for (const auto& sql_query_plan : query_plans) {
-    for (const auto& op : sql_query_plan->tree_roots()) {
-      _inspect_pqp_operator(op, 1);
-    }
-  }
+  _inspect_lqp_operator(lqp_operator_root, 1, _access_records());
 
   EXPECT_EQ(_access_records().size(), 1u);
   EXPECT_EQ(_access_records().back().column_ref.table_name, "t");
@@ -86,15 +65,12 @@ TEST_F(IndexEvaluatorTest, InspectPQPOperator) {
 }
 
 TEST_F(IndexEvaluatorTest, GenerateEvaluations) {
-  std::vector<std::shared_ptr<SQLPipeline>> pipelines{
-      std::make_shared<SQLPipeline>("select * from t where col_1 = 4", UseMvcc::No),
-      std::make_shared<SQLPipeline>("select * from t where col_1 = 5", UseMvcc::No),
-      std::make_shared<SQLPipeline>("select * from t where col_1 = 6", UseMvcc::No),
-      std::make_shared<SQLPipeline>("select * from t where col_2 = '9'", UseMvcc::No)};
-
   // Trigger query plan generation + caching(!)
-  for (auto pipeline : pipelines) {
-    pipeline->get_query_plans();
+  const auto queries = {"select * from t where col_1 = 4", "select * from t where col_1 = 4",
+                        "select * from t where col_1 = 5", "select * from t where col_1 = 6",
+                        "select * from t where col_2 = '9'"};
+  for (const auto& query : queries) {
+    SQLPipelineBuilder{query}.disable_mvcc().create_pipeline_statement().get_query_plan();
   }
 
   std::vector<std::shared_ptr<TuningChoice>> tuning_choices;

@@ -28,16 +28,16 @@ void BaseIndexEvaluator::evaluate(std::vector<std::shared_ptr<TuningChoice>>& ch
   // Allow concrete implementation to initialize
   _setup();
 
-  // Scan query cache for indexable table column accesses
-  _inspect_query_cache();
+  // Scan query cache for indexable table column accesses and generate access records
+  _access_records = _inspect_query_cache_and_generate_access_records();
 
   // Aggregate column accesses to set of new columns to index
-  _aggregate_access_records();
+  _new_indexes = _aggregate_access_records(_access_records);
 
-  // Fill index_evaluations vector
+  // Fill vector of evaluated choices
   _choices.clear();
-  _add_existing_indexes();
-  _add_new_indexes();
+  _add_choices_for_existing_indexes(_choices, _new_indexes);
+  _add_choices_for_new_indexes(_choices, _new_indexes);
 
   // Evaluate
   for (auto& index_choice : _choices) {
@@ -71,8 +71,8 @@ uintptr_t BaseIndexEvaluator::_existing_memory_cost(const IndexChoice& index_cho
   return memory_cost;
 }
 
-void BaseIndexEvaluator::_inspect_query_cache() {
-  _access_records.clear();
+std::vector<BaseIndexEvaluator::AccessRecord> BaseIndexEvaluator::_inspect_query_cache_and_generate_access_records() {
+  std::vector<AccessRecord> access_records{};
 
   /*
    * ToDo(anybody): The cache interface could be improved by introducing
@@ -100,11 +100,14 @@ void BaseIndexEvaluator::_inspect_query_cache() {
   for (; cache_iterator != cache_end; ++cache_iterator) {
     const auto& entry = *cache_iterator;
     LOG_DEBUG("  -> Query '" << entry.key << "' frequency: " << entry.frequency << " priority: " << entry.priority);
-    _inspect_lqp_node(entry.value, entry.frequency);
+    _inspect_lqp_node(entry.value, entry.frequency, access_records);
   }
+
+  return access_records;
 }  // namespace opossum
 
-void BaseIndexEvaluator::_inspect_lqp_node(const std::shared_ptr<const AbstractLQPNode>& op, size_t query_frequency) {
+void BaseIndexEvaluator::_inspect_lqp_node(const std::shared_ptr<const AbstractLQPNode>& op, size_t query_frequency,
+                                           std::vector<AccessRecord>& access_records) {
   std::list<const std::shared_ptr<const AbstractLQPNode>> queue;
   queue.push_back(op);
   while (!queue.empty()) {
@@ -140,7 +143,7 @@ void BaseIndexEvaluator::_inspect_lqp_node(const std::shared_ptr<const AbstractL
             AccessRecord access_record(stored_table->table_name(), *original_column_id, query_frequency);
             access_record.condition = predicate_node->predicate_condition();
             access_record.compare_value = boost::get<AllTypeVariant>(predicate_node->value());
-            _access_records.push_back(access_record);
+            access_records.push_back(access_record);
           }
         }
       } break;
@@ -154,65 +157,34 @@ void BaseIndexEvaluator::_inspect_lqp_node(const std::shared_ptr<const AbstractL
   }
 }
 
-void BaseIndexEvaluator::_inspect_pqp_operator(const std::shared_ptr<const AbstractOperator>& op,
-                                               size_t query_frequency) {
-  std::list<const std::shared_ptr<const AbstractOperator>> queue;
-  queue.push_back(op);
-  while (!queue.empty()) {
-    auto node = queue.front();
-    queue.pop_front();
-    if (const auto& table_scan = std::dynamic_pointer_cast<const TableScan>(node)) {
-      /*
-         * A TableScan represents a scan that could possibly be sped up by
-         * creating an index. To do this, we need to find out where this column
-         * came from, i.e. what column on what table is scanned.
-         * Usually the underlying node is a GetTable node, holding this information.
-         */
-      DebugAssert(std::dynamic_pointer_cast<const Validate>(table_scan->input_left()) == nullptr,
-                  "Validation nodes are not supported. Please run the pipeline without MVCC columns.");
-      if (const auto& get_table = std::dynamic_pointer_cast<const GetTable>(table_scan->input_left())) {
-        const auto& table_name = get_table->table_name();
-        ColumnID column_id = table_scan->left_column_id();
-        _access_records.emplace_back(table_name, column_id, query_frequency);
-        _access_records.back().condition = table_scan->predicate_condition();
-        _access_records.back().compare_value = boost::get<AllTypeVariant>(table_scan->right_parameter());
-      }
-    } else {
-      if (node->input_left()) {
-        queue.push_back(node->input_left());
-      }
-      if (node->input_right()) {
-        queue.push_back(node->input_right());
-      }
-    }
-  }
-}
-
-void BaseIndexEvaluator::_aggregate_access_records() {
-  _new_indexes.clear();
-  for (const auto& access_record : _access_records) {
-    _new_indexes.insert(access_record.column_ref);
+std::set<ColumnRef> BaseIndexEvaluator::_aggregate_access_records(const std::vector<AccessRecord>& access_records) {
+  std::set<ColumnRef> new_indexes{};
+  for (const auto& access_record : access_records) {
+    new_indexes.insert(access_record.column_ref);
     _process_access_record(access_record);
   }
+  return new_indexes;
 }
 
-void BaseIndexEvaluator::_add_existing_indexes() {
+void BaseIndexEvaluator::_add_choices_for_existing_indexes(std::vector<IndexChoice>& choices,
+                                                           std::set<ColumnRef>& new_indexes) {
   for (const auto& table_name : StorageManager::get().table_names()) {
     const auto& table = StorageManager::get().get_table(table_name);
-    const auto& first_chunk = table->get_chunk(ChunkID{0});
 
     for (const auto& index_info : table->get_indexes()) {
       auto index_choice = IndexChoice{ColumnRef{table_name, index_info.column_ids}, true};
       index_choice.type = index_info.type;
-      _choices.emplace_back(index_choice);
-      _new_indexes.erase({table_name, index_info.column_ids});
+      choices.emplace_back(index_choice);
+      // Erase this index from the set of proposed new indexes as it already exists
+      new_indexes.erase({table_name, index_info.column_ids});
     }
   }
 }
 
-void BaseIndexEvaluator::_add_new_indexes() {
-  for (const auto& column_ref : _new_indexes) {
-    _choices.emplace_back(column_ref, false);
+void BaseIndexEvaluator::_add_choices_for_new_indexes(std::vector<IndexChoice>& choices,
+                                                      const std::set<ColumnRef>& new_indexes) {
+  for (const auto& column_ref : new_indexes) {
+    choices.emplace_back(column_ref, false);
   }
 }
 

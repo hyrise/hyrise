@@ -76,7 +76,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
 
   for (ChunkOffset chunk_offset = 0; chunk_offset < column_size; ++chunk_offset) {
     auto concatenated_key = VariableLengthKey(bytes_per_key);
-    for (const auto & [ byte_width, decompressor ] : attribute_vector_widths_and_decompressors) {
+    for (const auto& [byte_width, decompressor] : attribute_vector_widths_and_decompressors) {
       concatenated_key.shift_and_set(decompressor->get(chunk_offset), byte_width * CHAR_BIT);
     }
     keys[chunk_offset] = std::move(concatenated_key);
