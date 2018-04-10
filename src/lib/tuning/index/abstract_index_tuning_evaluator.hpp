@@ -88,11 +88,32 @@ class AbstractIndexTuningEvaluator : public AbstractTuningEvaluator {
   virtual float _get_saved_work(const IndexTuningChoice& index_choice) const = 0;
 
  protected:
+  /**
+   * This method iterates over all queries in the cache, gets their logical
+   * query plans and generates AccessRecord objects by
+   * calling _inspect_lqp_node().
+   */
   std::vector<AccessRecord> _inspect_query_cache_and_generate_access_records();
+  /**
+   * This method traverses a logical query plan and generates AccessRecord objects
+   * whenever it encounters an operation that could benefit from an index.
+   */
   void _inspect_lqp_node(const std::shared_ptr<const AbstractLQPNode>& op, size_t query_frequency,
                          std::vector<AccessRecord>& access_records);
+  /**
+   * This method takes AccessRecords and creates a set of indexes for the referred columns.
+   * It will call _process_access_record() of the derived class in order to let
+   * the concrete implementation calculate e.g. usage and desirability metrics.
+   */
   std::set<ColumnRef> _aggregate_access_records(const std::vector<AccessRecord>& access_records);
+  /**
+   * This method adds IndexTuningChoices (marked as already present) for every index that already exists.
+   * It will delete entries from the passed new_indexes set that represent indexes that are already created.
+   */
   void _add_choices_for_existing_indexes(std::vector<IndexTuningChoice>& choices, std::set<ColumnRef>& new_indexes);
+  /**
+   * This method adds IndexTuningChoices for every index that was proposed.
+   */
   void _add_choices_for_new_indexes(std::vector<IndexTuningChoice>& choices, const std::set<ColumnRef>& new_indexes);
 
   std::vector<AccessRecord> _access_records;

@@ -40,7 +40,7 @@ class IndexTuningEvaluator : public AbstractIndexTuningEvaluator {
   uintptr_t _predict_memory_cost(const IndexTuningChoice& index_evaluation) const final;
   float _get_saved_work(const IndexTuningChoice& index_evaluation) const final;
 
-  std::map<ColumnRef, float> _saved_work;
+  std::map<ColumnRef, float> _saved_work_per_index;
 };
 
 }  // namespace opossum
