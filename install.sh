@@ -112,4 +112,6 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
     fi
 fi
 
+dpkg -L libpq-dev
+
 exit 0
