@@ -137,11 +137,15 @@ std::vector<std::shared_ptr<TuningOperation>> GreedyTuningSelector::select(
 
         for (auto choice = sorted_choices.cbegin(); choice != sorted_choices.cend(); ++choice) {
           // Assumption: choice.invalidates() never contains choice itself!
-          if (sorted_choices.back()->invalidates().count(*choice) > 0) {
-            operations.push_back((*choice)->reject());
-            cost_balance += (*choice)->reject_cost();
-            // reject_desirability() of invalid choice is always 0.0f
-          }
+            for (auto invalidated_choice : sorted_choices.back()->invalidates()) {
+                auto invalidated_choice_shared_ptr = invalidated_choice.lock();
+                DebugAssert(invalidated_choice_shared_ptr, "invalidated choice was deleted");
+                if (invalidated_choice_shared_ptr == *choice) {
+                    operations.push_back((*choice)->reject());
+                    cost_balance += (*choice)->reject_cost();
+                    // reject_desirability() of invalid choice is always 0.0f
+                }
+            }
         }
       }
       sorted_choices.pop_back();

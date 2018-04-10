@@ -58,7 +58,7 @@ TEST_F(IndexTuningChoiceTest, GetInvalidates) {
   choice1->add_invalidate(choice2);
   EXPECT_EQ(choice1->invalidates().size(), 1u);
   EXPECT_TRUE(choice2->invalidates().empty());
-  auto invalidated_choice = *(choice1->invalidates().cbegin());
+  auto invalidated_choice = (choice1->invalidates().cbegin())->lock();
   EXPECT_EQ(invalidated_choice, choice2);
 }
 
