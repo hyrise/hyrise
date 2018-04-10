@@ -78,6 +78,13 @@ boost::future<void> ClientConnection::send_auth() {
   return _send_bytes_async(output_packet) >> then >> ignore_sent_bytes;
 }
 
+boost::future<void> ClientConnection::send_parameter_status(const std::string& key, const std::string& value) {
+  auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ParameterStatus);
+  PostgresWireHandler::write_string(*output_packet, key);
+  PostgresWireHandler::write_string(*output_packet, value);
+  return _send_bytes_async(output_packet) >> then >> ignore_sent_bytes;
+}
+
 boost::future<void> ClientConnection::send_ready_for_query() {
   // ReadyForQuery packet 'Z' with transaction status Idle 'I'
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ReadyForQuery);

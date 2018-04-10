@@ -42,6 +42,7 @@ class ClientConnection {
 
   boost::future<void> send_ssl_denied();
   boost::future<void> send_auth();
+  boost::future<void> send_parameter_status(const std::string& key, const std::string& value);
   boost::future<void> send_ready_for_query();
   boost::future<void> send_error(const std::string& message);
   boost::future<void> send_notice(const std::string& notice);
