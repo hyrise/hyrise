@@ -23,8 +23,8 @@ class ServerTestRunner : public BaseTest {
         std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology()));
 
     auto server_runner = [](boost::asio::io_service& io_service, const uint16_t port) {
-      // The server registers itself to the boost io_service. The io_service is the main IO control unit here and it lives
-      // until the server doesn't request any IO any more, i.e. is has terminated. The server requests IO in its
+      // The server registers itself to the boost io_service. The io_service is the main IO control unit here and it
+      // lives until the server doesn't request any IO any more, i.e. is has terminated. The server requests IO in its
       // constructor and then runs forever.
       opossum::Server server{io_service, port};
 
@@ -53,7 +53,8 @@ TEST_F(ServerTestRunner, TestSimpleSelect) {
   pqxx::nontransaction transaction{connection};
 
   const auto result = transaction.exec("SELECT * FROM table_a;");
-  EXPECT_EQ(result.size(), _table_a->row_count()) << "Expected " << _table_a->row_count() << " rows, but got " << result.size();
+  EXPECT_EQ(result.size(), _table_a->row_count()) << "Expected " << _table_a->row_count() << " rows, but got "
+                                                  << result.size();
 }
 
 TEST_F(ServerTestRunner, TestSimpleInsertSelect) {
@@ -67,4 +68,3 @@ TEST_F(ServerTestRunner, TestSimpleInsertSelect) {
 }
 
 }  // namespace opossum
-

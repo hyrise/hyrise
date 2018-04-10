@@ -13,9 +13,8 @@ IF (PQ_FOUND)
         "$ENV{INCLUDE}"
     )
 
-    FIND_LIBRARY(PQXX_LIBRARY NAMES libpqxx pqxx PATHS
-        "$ENV{LIB_DIR}/lib"
-        "$ENV{LIB}/lib"
+    FIND_LIBRARY(PQXX_LIBRARY NAMES libpqxx pqxx HINTS
+        "$ENV{LIB_DIR}/lib" "$ENV{LIB}/lib" "$ENV{HOME}/local/lib64" "$ENV{HOME}/local/lib" /usr/local/lib64 /usr/local/lib /opt/local/lib64 /opt/local/lib /usr/lib64 /usr/lib
     )
 
     IF(PQXX_INCLUDE_DIR AND PQXX_LIBRARY)

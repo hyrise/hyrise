@@ -7,12 +7,13 @@
 FIND_PATH(PQ_INCLUDE_DIR NAME libpq-fe.h HINTS
     "$ENV{LIB_DIR}/include"
     "$ENV{LIB_DIR}/include/liqpq"
+    "$ENV{LIB_DIR}/include/potgres"
+    "$ENV{LIB_DIR}/include/potgres/liqpq"
     "$ENV{INCLUDE}"
 )
 
-FIND_LIBRARY(PQ_LIBRARY NAME pq PATHS
-    "$ENV{LIB_DIR}/lib"
-    "$ENV{LIB}/lib"
+FIND_LIBRARY(PQ_LIBRARY NAME pq HINTS
+    "$ENV{LIB_DIR}/lib" "$ENV{LIB}/lib" "$ENV{HOME}/local/lib64" "$ENV{HOME}/local/lib" /usr/local/lib64 /usr/local/lib /opt/local/lib64 /opt/local/lib /usr/lib64 /usr/lib
 )
 
 IF(PQ_INCLUDE_DIR AND PQ_LIBRARY)
