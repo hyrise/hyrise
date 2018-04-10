@@ -7,7 +7,6 @@
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
-#include "utils/logging.hpp"
 
 namespace opossum {
 
@@ -24,8 +23,6 @@ void IndexEvaluator::_process_access_record(const BaseIndexEvaluator::AccessReco
   const auto match_rows = predicate_statistics->row_count();
   const auto unscanned_rows = total_rows - match_rows;
   const float saved_work = unscanned_rows * record.query_frequency;
-  LOG_INFO("saved work for query on " << record.column_ref.table_name << "." << record.column_ref.column_ids[0] << ": "
-                                      << saved_work << "\n");
   if (_saved_work.count(record.column_ref) > 0) {
     _saved_work[record.column_ref] += saved_work;
   } else {

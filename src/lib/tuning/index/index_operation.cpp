@@ -8,7 +8,6 @@
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "utils/logging.hpp"
 
 namespace opossum {
 

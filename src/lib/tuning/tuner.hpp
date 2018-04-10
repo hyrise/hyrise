@@ -125,9 +125,6 @@ class Tuner {
   void _select();
   void _execute();
 
-  void _log_choices() const;
-  void _log_operations() const;
-
   std::vector<std::unique_ptr<AbstractEvaluator>> _evaluators;
   std::unique_ptr<AbstractSelector> _selector;
 

@@ -421,7 +421,6 @@ set(
     utils/format_duration.hpp
     utils/load_table.cpp
     utils/load_table.hpp
-    utils/logging.hpp
     utils/murmur_hash.cpp
     utils/murmur_hash.hpp
     utils/numa_memory_resource.cpp

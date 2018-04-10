@@ -3,7 +3,6 @@
 #include "scheduler/job_task.hpp"
 
 #include "utils/assert.hpp"
-#include "utils/logging.hpp"
 
 namespace opossum {
 
@@ -97,8 +96,6 @@ void Tuner::wait_for_completion() {
 }
 
 void Tuner::_evaluate() {
-  LOG_INFO("Begin tuning evaluation phase...");
-
   const auto begin = RuntimeClock::now();
 
   _choices.clear();
@@ -107,28 +104,21 @@ void Tuner::_evaluate() {
 
     const auto runtime = RuntimeClock::now() - begin;
     if (runtime > _remaining_time_budget) {
-      LOG_INFO("Interrupt evaluation phase: Time budget exceeded.");
       _status = Status::Timeout;
       return;
     }
     if (runtime > _evaluate_time_budget) {
-      LOG_INFO("Interrupt evaluation phase: Evaluate time budget exceeded.");
       _status = Status::EvaluationTimeout;
       return;
     }
   }
   _remaining_time_budget -= RuntimeClock::now() - begin;
-
-  _log_choices();
-  LOG_INFO("Tuning evaluation phase completed.");
 }
 
 void Tuner::_select() {
   if (_status != Status::Running) {
-    LOG_INFO("Skip tuning selection phase because previous step exceeded the time budget.");
     return;
   }
-  LOG_INFO("Begin tuning selection phase...");
 
   const auto begin = RuntimeClock::now();
 
@@ -136,27 +126,20 @@ void Tuner::_select() {
 
   const auto runtime = RuntimeClock::now() - begin;
   if (runtime > _remaining_time_budget) {
-    LOG_INFO("Interrupt selection phase: Time budget exceeded.");
     _status = Status::Timeout;
     return;
   }
   if (runtime > _select_time_budget) {
-    LOG_INFO("Interrupt selection phase: Select time budget exceeded.");
     _status = Status::SelectionTimeout;
     return;
   }
   _remaining_time_budget -= runtime;
-
-  _log_operations();
-  LOG_INFO("Tuning selection phase completed.");
 }
 
 void Tuner::_execute() {
   if (_status != Status::Running) {
-    LOG_INFO("Skip tuning execution phase because previous step exceeded the time budget.");
     return;
   }
-  LOG_INFO("Begin tuning execution phase...");
 
   const auto begin = RuntimeClock::now();
 
@@ -165,37 +148,16 @@ void Tuner::_execute() {
 
     const auto runtime = RuntimeClock::now() - begin;
     if (runtime > _remaining_time_budget) {
-      LOG_INFO("Interrupt execution phase: Time budget exceeded.");
       _status = Status::Timeout;
       return;
     }
     if (runtime > _execute_time_budget) {
-      LOG_INFO("Interrupt execution phase: Execute time budget exceeded.");
       _status = Status::ExecutionTimeout;
       return;
     }
   }
 
   _status = Status::Completed;
-  LOG_INFO("Tuning execution phase completed.");
-}
-
-void Tuner::_log_choices() const {
-  LOG_DEBUG("TuningChoice set:");
-  for (const auto& choice : _choices) {
-    LOG_DEBUG("-> " << *choice);
-    // Silence warning about unused variable in release builds
-    (void)choice;
-  }
-}
-
-void Tuner::_log_operations() const {
-  LOG_DEBUG("TuningOperation sequence:");
-  for (const auto& operation : _operations) {
-    LOG_DEBUG("-> " << *operation);
-    // Silence warning about unused variable in release builds
-    (void)operation;
-  }
 }
 
 }  // namespace opossum

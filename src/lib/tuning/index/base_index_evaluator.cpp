@@ -18,7 +18,6 @@
 #include "storage/index/base_index.hpp"
 #include "storage/storage_manager.hpp"
 #include "types.hpp"
-#include "utils/logging.hpp"
 
 namespace opossum {
 
@@ -89,17 +88,14 @@ std::vector<BaseIndexEvaluator::AccessRecord> BaseIndexEvaluator::_inspect_query
 
   const auto& fibonacci_heap = gdfs_cache_ptr->queue();
 
-  LOG_DEBUG("Query plan cache (size: " << fibonacci_heap.size() << "):");
-  if (fibonacci_heap.size() == 0) {
-    LOG_WARN("There are no logical query plans in the cache. Make sure that logical query plans get cached!");
-  }
+  DebugAssert(fibonacci_heap.size() > 0,
+              "There are no logical query plans in the cache. Make sure that logical query plans get cached!");
 
   auto cache_iterator = fibonacci_heap.ordered_begin();
   auto cache_end = fibonacci_heap.ordered_end();
 
   for (; cache_iterator != cache_end; ++cache_iterator) {
     const auto& entry = *cache_iterator;
-    LOG_DEBUG("  -> Query '" << entry.key << "' frequency: " << entry.frequency << " priority: " << entry.priority);
     _inspect_lqp_node(entry.value, entry.frequency, access_records);
   }
 

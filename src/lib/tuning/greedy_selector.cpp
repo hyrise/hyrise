@@ -5,7 +5,6 @@
 #include <list>
 
 #include "utils/assert.hpp"
-#include "utils/logging.hpp"
 
 namespace opossum {
 
@@ -76,14 +75,13 @@ std::vector<std::shared_ptr<TuningOperation>> GreedySelector::select(
   // If current state exceeds cost_budget,
   // reject the least desirable choices to reduce cost_balance.
   if (cost_balance > cost_budget) {
-    LOG_INFO("Cost balance of " << cost_balance << " exceeds budget of " << cost_budget);
     const auto sacrifice_until = sacrifice_choices(sorted_choices, cost_budget - cost_balance);
     if (sacrifice_until == sorted_choices.cend()) {
-      LOG_WARN("Cost budget is impossible to maintain. No Operations are performed.");
+      // Cost budget is impossible to maintain
       return operations;
     }
     for (auto choice = sorted_choices.cbegin(); choice != sacrifice_until; ++choice) {
-      LOG_DEBUG(" ! Reject " << **choice << " to reduce cost balance");
+      // Reject this existing choice to reduce cost balance
       operations.push_back((*choice)->reject());
       cost_balance += (*choice)->reject_cost();
       desirability_balance += (*choice)->reject_desirability();
@@ -96,8 +94,6 @@ std::vector<std::shared_ptr<TuningOperation>> GreedySelector::select(
   while (sorted_choices.size() > 0) {
     auto best_choice = sorted_choices.front();
     if (best_choice->reject_desirability() > sorted_choices.back()->accept_desirability()) {
-      LOG_DEBUG("Rejecting " << *best_choice << " is most beneficial.");
-
       /*
        * Rejecting a choice can only reduce cost_balance (i.e. free up resources)
        * and never exceed cost_budget (no new costs will be added) as cost() >= 0:
@@ -107,15 +103,12 @@ std::vector<std::shared_ptr<TuningOperation>> GreedySelector::select(
        * nothing will be changed.
        */
 
-      LOG_DEBUG(" ! Reject " << *best_choice);
       operations.push_back(best_choice->reject());
       cost_balance += best_choice->reject_cost();
       desirability_balance += best_choice->reject_desirability();
       sorted_choices.pop_front();
 
     } else {
-      LOG_DEBUG("Accepting " << *sorted_choices.back() << " is most beneficial.");
-
       /*
        * Accepting a choice could exceed cost_budget (cost more resources than
        * there are available), so try to reduce cost_balance first (free up used resources)
@@ -125,20 +118,19 @@ std::vector<std::shared_ptr<TuningOperation>> GreedySelector::select(
           sacrifice_choices(sorted_choices, cost_budget - cost_balance - sorted_choices.back()->accept_cost(),
                             -sorted_choices.back()->accept_desirability());
       if (sacrifice_until == sorted_choices.cend()) {
-        LOG_DEBUG(" ! Reject " << *sorted_choices.back() << " as required cost would sacrifice more desirability.");
+        // Reject this choice as required cost would sacrifice more desirability
         operations.push_back(sorted_choices.back()->reject());
         cost_balance += sorted_choices.back()->reject_cost();
         desirability_balance += sorted_choices.back()->reject_desirability();
       } else {
         for (auto choice = sorted_choices.cbegin(); choice != sacrifice_until; ++choice) {
-          LOG_DEBUG(" ! Reject " << **choice << " to reduce cost balance");
+          // Reject this choice in order to reduce cost balance
           operations.push_back((*choice)->reject());
           cost_balance += (*choice)->reject_cost();
           desirability_balance += (*choice)->reject_desirability();
         }
         sorted_choices.erase(sorted_choices.cbegin(), sacrifice_until);
 
-        LOG_DEBUG(" ! Accept " << *sorted_choices.back());
         operations.push_back(sorted_choices.back()->accept());
         cost_balance += sorted_choices.back()->accept_cost();
         desirability_balance += sorted_choices.back()->accept_desirability();
@@ -146,7 +138,6 @@ std::vector<std::shared_ptr<TuningOperation>> GreedySelector::select(
         for (auto choice = sorted_choices.cbegin(); choice != sorted_choices.cend(); ++choice) {
           // Assumption: choice.invalidates() never contains choice itself!
           if (sorted_choices.back()->invalidates().count(*choice) > 0) {
-            LOG_DEBUG(" ! Reject " << **choice << " because it was invalidated");
             operations.push_back((*choice)->reject());
             cost_balance += (*choice)->reject_cost();
             // reject_desirability() of invalid choice is always 0.0f
@@ -157,7 +148,6 @@ std::vector<std::shared_ptr<TuningOperation>> GreedySelector::select(
     }
   }
 
-  LOG_INFO("Desirability delta: " << desirability_balance << "; Cost balance: " << cost_balance);
   return operations;
 }
 
