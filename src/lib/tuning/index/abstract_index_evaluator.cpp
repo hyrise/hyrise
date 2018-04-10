@@ -46,7 +46,7 @@ void AbstractIndexEvaluator::evaluate(std::vector<std::shared_ptr<TuningChoice>>
       index_choice.type = _propose_index_type(index_choice);
       index_choice.memory_cost = static_cast<float>(_predict_memory_cost(index_choice));
     }
-    index_choice.saved_work = _calculate_saved_work(index_choice);
+    index_choice.saved_work = _get_saved_work(index_choice);
 
     // Transfer results to choices vector
     choices.push_back(std::make_shared<IndexChoice>(index_choice));

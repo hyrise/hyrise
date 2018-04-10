@@ -38,7 +38,7 @@ class IndexEvaluator : public AbstractIndexEvaluator {
   void _process_access_record(const AccessRecord& record) final;
   ColumnIndexType _propose_index_type(const IndexChoice& index_evaluation) const final;
   uintptr_t _predict_memory_cost(const IndexChoice& index_evaluation) const final;
-  float _calculate_saved_work(const IndexChoice& index_evaluation) const final;
+  float _get_saved_work(const IndexChoice& index_evaluation) const final;
 
   std::map<ColumnRef, float> _saved_work;
 };

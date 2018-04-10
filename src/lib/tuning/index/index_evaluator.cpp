@@ -62,7 +62,7 @@ uintptr_t IndexEvaluator::_predict_memory_cost(const IndexChoice& index_evaluati
   return memory_cost_per_chunk * chunk_count;
 }
 
-float IndexEvaluator::_calculate_saved_work(const IndexChoice& index_evaluation) const {
+float IndexEvaluator::_get_saved_work(const IndexChoice& index_evaluation) const {
   if (_saved_work.count(index_evaluation.column_ref) > 0) {
     return _saved_work.at(index_evaluation.column_ref);
   } else {

@@ -85,7 +85,7 @@ class AbstractIndexEvaluator : public AbstractEvaluator {
   /**
    * This method is called for every index to calculate its final desirability metric.
    */
-  virtual float _calculate_saved_work(const IndexChoice& index_choice) const = 0;
+  virtual float _get_saved_work(const IndexChoice& index_choice) const = 0;
 
  protected:
   std::vector<AccessRecord> _inspect_query_cache_and_generate_access_records();
