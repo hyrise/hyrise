@@ -66,10 +66,9 @@ std::vector<std::shared_ptr<TuningOperation>> GreedyTuningSelector::select(
   std::list<std::shared_ptr<TuningChoice>> sorted_choices(choices.cbegin(), choices.cend());
 
   sorted_choices.sort([](std::shared_ptr<TuningChoice> lhs, std::shared_ptr<TuningChoice> rhs) {
-    return lhs->reject_cost() < rhs->reject_cost();
-  });
-  sorted_choices.sort([](std::shared_ptr<TuningChoice> lhs, std::shared_ptr<TuningChoice> rhs) {
-    return lhs->accept_desirability() < rhs->accept_desirability();
+    return (lhs->accept_desirability() == rhs->accept_desirability()) ?
+                lhs->reject_cost() < rhs->reject_cost() :
+                lhs->accept_desirability() < rhs->accept_desirability();
   });
 
   // If current state exceeds cost_budget,
