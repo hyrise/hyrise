@@ -21,7 +21,7 @@
 1589c1594
 <     ValueToValueMapTy VMap;
 ---
->     ValueToValueMapTy VMap = Context.llvm_value_map;
+>     ValueToValueMapTy& VMap = Context.llvm_value_map;
 1629c1634
 <     CloneAndPruneFunctionInto(Caller, CalledFunc, VMap,
 ---
