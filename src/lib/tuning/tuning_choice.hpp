@@ -72,7 +72,7 @@ class TuningChoice {
    * A list of other TuningChoices that should/can not be chosen if this
    * TuningChoice is accepted.
    */
-  const std::vector<std::weak_ptr<TuningChoice> > &invalidates() const;
+  const std::vector<std::weak_ptr<TuningChoice>>& invalidates() const;
 
   /**
    * Add a TuningChoice that should/can not be chosen if this TuningChoice
