@@ -15,6 +15,7 @@ set(
     concurrency/transaction_context_test.cpp
     gtest_main.cpp
     import_export/csv_meta_test.cpp
+    cost_model/cost_feature_proxy_test.cpp
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
     logical_query_plan/aggregate_node_test.cpp

@@ -4,12 +4,14 @@
 
 namespace opossum {
 
-std::string format_duration(uint64_t nanoseconds) {
-  const auto microseconds = (nanoseconds / 1'000) % 1000;
-  const auto milliseconds = (nanoseconds / 1'000'000) % 1000;
-  const auto seconds = (nanoseconds / 1'000'000'000) % 1000;
-  const auto minutes = (nanoseconds / 60'000'000'000) % 1000;
-  nanoseconds %= 1000;
+std::string format_duration(const std::chrono::nanoseconds nanoseconds) {
+  auto nanosecond_count = nanoseconds.count();
+
+  const auto microseconds = (nanosecond_count / 1'000) % 1000;
+  const auto milliseconds = (nanosecond_count / 1'000'000) % 1000;
+  const auto seconds = (nanosecond_count / 1'000'000'000) % 60;
+  const auto minutes = (nanosecond_count / 60'000'000'000) % 1000;
+  nanosecond_count %= 1000;
 
   std::stringstream stream;
 
@@ -20,7 +22,7 @@ std::string format_duration(uint64_t nanoseconds) {
   } else if (milliseconds > 0) {
     stream << milliseconds << "ms " << microseconds << " µs";
   } else {
-    stream << microseconds << "µs " << nanoseconds << "ns";
+    stream << microseconds << "µs " << nanosecond_count << "ns";
   }
 
   return stream.str();

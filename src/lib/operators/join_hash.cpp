@@ -20,6 +20,7 @@
 #include "utils/assert.hpp"
 #include "utils/cuckoo_hashtable.hpp"
 #include "utils/murmur_hash.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 
@@ -31,6 +32,8 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
 }
 
 const std::string JoinHash::name() const { return "JoinHash"; }
+
+const JoinHashPerformanceData& JoinHash::join_hash_performance_data() const { return _join_hash_performance_data; }
 
 std::shared_ptr<AbstractOperator> JoinHash::_on_recreate(
     const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
@@ -75,7 +78,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
   _impl = make_unique_by_data_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
       build_input->column_data_type(build_column_id), probe_input->column_data_type(probe_column_id), build_operator,
-      probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped);
+      probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped, _join_hash_performance_data);
   return _impl->_on_execute();
 }
 
@@ -90,13 +93,14 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  public:
   JoinHashImpl(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
                const JoinMode mode, const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
-               const bool inputs_swapped)
+               const bool inputs_swapped, JoinHashPerformanceData& join_hash_performance_data)
       : _left(left),
         _right(right),
         _mode(mode),
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
-        _inputs_swapped(inputs_swapped) {}
+        _inputs_swapped(inputs_swapped),
+        _join_hash_performance_data(join_hash_performance_data) {}
 
   virtual ~JoinHashImpl() = default;
 
@@ -105,8 +109,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   const JoinMode _mode;
   const ColumnIDPair _column_ids;
   const PredicateCondition _predicate_condition;
-
   const bool _inputs_swapped;
+  JoinHashPerformanceData& _join_hash_performance_data;
+
   std::shared_ptr<Table> _output_table;
 
   const unsigned int _partitioning_seed = 13;
@@ -609,6 +614,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       offset_right += _right_in_table->get_chunk(i)->size();
     }
 
+    Timer performance_timer;
+
     // Materialization phase
     std::vector<std::shared_ptr<std::vector<size_t>>> histograms_left;
     std::vector<std::shared_ptr<std::vector<size_t>>> histograms_right;
@@ -623,6 +630,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     // 'keep_nulls' makes sure that the relation on the right materializes NULL values when executing an OUTER join.
     auto materialized_right =
         _materialize_input<RightType>(_right_in_table, _column_ids.second, histograms_right, keep_nulls);
+
+    _join_hash_performance_data.materialization = performance_timer.lap();
 
     // Radix Partitioning phase
     /*
@@ -640,6 +649,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     auto radix_right =
         _partition_radix_parallel<RightType>(materialized_right, right_chunk_offsets, histograms_right, keep_nulls);
 
+    _join_hash_performance_data.partitioning = performance_timer.lap();
+
     // Build phase
     std::vector<std::shared_ptr<HashTable<HashedType>>> hashtables;
     hashtables.resize(radix_left.partition_offsets.size() - 1);
@@ -648,6 +659,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     The hashtables for each partition P should also reside on the same node as the two vectors leftP and rightP.
     */
     _build(radix_left, hashtables);
+
+    _join_hash_performance_data.build = performance_timer.lap();
 
     // Probe phase
     std::vector<PosList> left_pos_lists;
@@ -664,6 +677,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     } else {
       _probe(radix_right, hashtables, left_pos_lists, right_pos_lists);
     }
+
+    _join_hash_performance_data.probe = performance_timer.lap();
 
     auto only_output_right_input = _inputs_swapped && (_mode == JoinMode::Semi || _mode == JoinMode::Anti);
 
@@ -717,6 +732,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
       _output_table->append_chunk(output_columns);
     }
+
+    _join_hash_performance_data.output = performance_timer.lap();
 
     return _output_table;
   }

@@ -11,6 +11,7 @@
 #include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/print_directed_acyclic_graph.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 
@@ -23,7 +24,7 @@ OperatorType AbstractOperator::type() const { return _type; }
 void AbstractOperator::execute() {
   DebugAssert(!_output, "Operator has already been executed");
 
-  auto start = std::chrono::high_resolution_clock::now();
+  Timer performance_timer;
 
   auto transaction_context = this->transaction_context();
 
@@ -46,8 +47,8 @@ void AbstractOperator::execute() {
   // release any temporary data if possible
   _on_cleanup();
 
-  auto end = std::chrono::high_resolution_clock::now();
-  _performance_data.walltime_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+  // Intentionally leave runtime at 0 when Operator is NOT executed because the Transaction was aborted
+  _base_performance_data.total = performance_timer.lap();
 }
 
 // returns the result of the operator
@@ -107,7 +108,7 @@ std::shared_ptr<AbstractOperator> AbstractOperator::mutable_input_right() const 
   return std::const_pointer_cast<AbstractOperator>(_input_right);
 }
 
-const AbstractOperator::PerformanceData& AbstractOperator::performance_data() const { return _performance_data; }
+const BaseOperatorPerformanceData& AbstractOperator::base_performance_data() const { return _base_performance_data; }
 
 std::shared_ptr<const AbstractOperator> AbstractOperator::input_left() const { return _input_left; }
 
@@ -131,7 +132,8 @@ void AbstractOperator::print(std::ostream& stream) const {
 
       stream << format_bytes(output->estimate_memory_usage());
       stream << "/";
-      stream << format_duration(op->performance_data().walltime_ns) << ")";
+      stream << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(op->base_performance_data().total))
+             << ")";
     }
   };
 
