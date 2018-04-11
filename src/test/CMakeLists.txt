@@ -138,6 +138,7 @@ set(
     tuning/index/index_tuning_evaluator_test.cpp
     tuning/index/index_tuning_choice_test.cpp
     tuning/index/index_tuning_operation_test.cpp
+    tuning/index/index_tuning_test.cpp
     tuning/tuner_test.cpp
     utils/cuckoo_hashtable_test.cpp
     utils/format_bytes_test.cpp
