@@ -237,6 +237,8 @@ set(
     statistics/generate_table_statistics.hpp
     statistics/generate_column_statistics.cpp
     statistics/generate_column_statistics.hpp
+    statistics/statistics_import_export.cpp
+    statistics/statistics_import_export.hpp
     statistics/table_statistics.cpp
     statistics/table_statistics.hpp
     sql/abstract_cache.hpp

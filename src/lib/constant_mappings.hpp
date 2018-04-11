@@ -13,6 +13,7 @@ namespace opossum {
 
 enum class EncodingType : uint8_t;
 enum class VectorCompressionType : uint8_t;
+enum class TableType;
 
 extern const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string;
 extern const std::unordered_map<PredicateCondition, ExpressionType> predicate_condition_to_expression_type;
@@ -27,5 +28,6 @@ extern const boost::bimap<AggregateFunction, std::string> aggregate_function_to_
 extern const boost::bimap<DataType, std::string> data_type_to_string;
 extern const std::unordered_map<EncodingType, std::string> encoding_type_to_string;
 extern const std::unordered_map<VectorCompressionType, std::string> vector_compression_type_to_string;
+extern const boost::bimap<TableType, std::string> table_type_to_string;
 
 }  // namespace opossum
