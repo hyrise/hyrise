@@ -169,9 +169,6 @@ const std::unordered_map<VectorCompressionType, std::string> vector_compression_
 };
 
 const boost::bimap<TableType, std::string> table_type_to_string =
-make_bimap<TableType, std::string>({
-                                           {TableType::Data, "Data"},
-                                           {TableType::References, "References"}
-                                           });
+    make_bimap<TableType, std::string>({{TableType::Data, "Data"}, {TableType::References, "References"}});
 
 }  // namespace opossum

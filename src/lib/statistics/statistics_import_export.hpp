@@ -19,5 +19,4 @@ std::shared_ptr<AbstractColumnStatistics> import_column_statistics(const nlohman
 
 nlohmann::json export_table_statistics(const TableStatistics& table_statistics);
 nlohmann::json export_column_statistics(const AbstractColumnStatistics& column_statistics);
-
-}
+}  // namespace opossum

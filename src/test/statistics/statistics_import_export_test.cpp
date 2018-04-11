@@ -1,12 +1,13 @@
-#include "gtest/gtest.h"
-
 #include <fstream>
 
+#include "gtest/gtest.h"
+
+#include "base_test.hpp"
 #include "statistics/column_statistics.hpp"
 #include "statistics/statistics_import_export.hpp"
 #include "statistics/table_statistics.hpp"
+#include "testing_assert.hpp"
 #include "utils/load_table.hpp"
-#include "base_test.hpp"
 
 namespace opossum {
 
@@ -17,9 +18,9 @@ TEST_F(StatisticsImportExportTest, EndToEnd) {
 
   original_column_statistics.emplace_back(std::make_shared<ColumnStatistics<int32_t>>(0.3f, 50.1f, 21, 100));
   original_column_statistics.emplace_back(std::make_shared<ColumnStatistics<int64_t>>(0.4f, 51.2f, 22, 101));
-  original_column_statistics.emplace_back(std::make_shared<ColumnStatistics<float>>(0.4f, 51.3f, 2.2f, 1.01f));
-  original_column_statistics.emplace_back(std::make_shared<ColumnStatistics<double>>(0.4f, 51.3f, 2.2, 1.01));
-  original_column_statistics.emplace_back(std::make_shared<ColumnStatistics<std::string>>(0.4f, 51.3f, "abc", "xyz"));
+  original_column_statistics.emplace_back(std::make_shared<ColumnStatistics<float>>(0.5f, 51.3f, 2.2f, 1.01f));
+  original_column_statistics.emplace_back(std::make_shared<ColumnStatistics<double>>(0.6f, 52.3f, 2.2444, 1.01555));
+  original_column_statistics.emplace_back(std::make_shared<ColumnStatistics<std::string>>(0.7f, 53.3f, "abc", "xyz"));
 
   TableStatistics original_table_statistics{TableType::Data, 3500, original_column_statistics};
 
@@ -31,11 +32,13 @@ TEST_F(StatisticsImportExportTest, EndToEnd) {
 
   EXPECT_EQ(imported_table_statistics.table_type(), TableType::Data);
   EXPECT_EQ(imported_table_statistics.row_count(), 3500);
-  ASSERT_EQ(imported_table_statistics.column_statistics().size(), 5);
+  ASSERT_EQ(imported_table_statistics.column_statistics().size(), 5u);
 
-  const auto imported_column_0 = imported_table_statistics.column_statistics().at(0);
-  ASSERT_EQ(imported_column_0)
+  EXPECT_INT32_COLUMN_STATISTICS(imported_table_statistics.column_statistics().at(0), 0.3f, 50.1f, 21, 100);
+  EXPECT_INT64_COLUMN_STATISTICS(imported_table_statistics.column_statistics().at(1), 0.4f, 51.2f, 22, 101);
+  EXPECT_FLOAT_COLUMN_STATISTICS(imported_table_statistics.column_statistics().at(2), 0.5f, 51.3f, 2.2f, 1.01f);
+  EXPECT_DOUBLE_COLUMN_STATISTICS(imported_table_statistics.column_statistics().at(3), 0.6f, 52.3f, 2.2444, 1.01555);
+  EXPECT_STRING_COLUMN_STATISTICS(imported_table_statistics.column_statistics().at(4), 0.7f, 53.3f, "abc", "xyz");
 }
-
 
 }  // namespace opossum

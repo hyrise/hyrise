@@ -2,6 +2,7 @@
 
 #include <fstream>
 
+#include "column_statistics.hpp"
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
@@ -10,13 +11,13 @@ namespace opossum {
 
 TableStatistics import_table_statistics(const std::string& path) {
   std::ifstream stream(path);
-  Assert(stream.good(), std::string{"Couldn't open file '"} + path + "'");
+  Assert(stream.good(), std::string("Couldn't open file '") + path + "'");
   return import_table_statistics(stream);
 }
 
 void export_table_statistics(const TableStatistics& table_statistics, const std::string& path) {
   std::ofstream stream(path);
-  Assert(stream.good(), std::string{"Couldn't open file '"} + path + "'");
+  Assert(stream.good(), std::string("Couldn't open file '") + path + "'");
   export_table_statistics(table_statistics, stream);
 }
 
@@ -58,15 +59,19 @@ std::shared_ptr<AbstractColumnStatistics> import_column_statistics(const nlohman
   const auto data_type_iter = data_type_to_string.right.find(json["data_type"].get<std::string>());
   Assert(data_type_iter != data_type_to_string.right.end(), "No such DataType");
 
+  std::shared_ptr<AbstractColumnStatistics> result_column_statistics;
+
   resolve_data_type(data_type_iter->second, [&](const auto type) {
     using ColumnDataType = typename decltype(type)::type;
     const auto min = json["min"].get<ColumnDataType>();
     const auto max = json["max"].get<ColumnDataType>();
 
-    return std::make_shared<ColumnStatistics<ColumnDataType>>(null_value_ratio, distinct_count, min, max);
+    result_column_statistics =
+        std::make_shared<ColumnStatistics<ColumnDataType>>(null_value_ratio, distinct_count, min, max);
   });
 
-  Fail("Should be unreachable. resolve_data_type() apparently failed.");
+  Assert(result_column_statistics, "resolve_data_type() apparently failed.");
+  return result_column_statistics;
 }
 
 nlohmann::json export_table_statistics(const TableStatistics& table_statistics) {
