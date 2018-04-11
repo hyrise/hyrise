@@ -33,8 +33,6 @@ CostFeatureVariant CostFeatureOperatorProxy::_extract_feature_impl(const CostFea
 
     case CostFeature::LeftDataType:
     case CostFeature::RightDataType: {
-      auto column_id = INVALID_COLUMN_ID;
-
       if (const auto join_op = std::dynamic_pointer_cast<AbstractJoinOperator>(_op); join_op) {
         if (cost_feature == CostFeature::LeftDataType) {
           Assert(_op->input_table_left(), "Input operator must be executed");
@@ -58,7 +56,6 @@ CostFeatureVariant CostFeatureOperatorProxy::_extract_feature_impl(const CostFea
             return table_scan->input_table_left()->column_data_type(column_id);
           }
         }
-
       } else {
         Fail("This CostFeature is not defined for this LQPNodeType");
       }
