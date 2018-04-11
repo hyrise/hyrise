@@ -39,7 +39,7 @@ std::list<std::shared_ptr<TuningChoice>>::const_iterator determine_choices_to_sa
   return sorted_choices.cend();
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 std::vector<std::shared_ptr<TuningOperation>> GreedyTuningSelector::select(
     const std::vector<std::shared_ptr<TuningChoice>>& choices, float cost_budget) {
