@@ -37,13 +37,6 @@ class JoinGraph final {
    */
   static std::shared_ptr<JoinGraph> from_lqp(const std::shared_ptr<AbstractLQPNode>& lqp);
 
-  /**
-   * Converts the predicates into edges and creates a JoinGraph from them.
-   */
-  static std::shared_ptr<JoinGraph> from_predicates(
-      std::vector<std::shared_ptr<AbstractLQPNode>> vertices, std::vector<LQPOutputRelation> output_relations,
-      const std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>>& predicates);
-
   JoinGraph() = default;
   JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>> vertices, std::vector<LQPOutputRelation> output_relations,
             std::vector<std::shared_ptr<JoinEdge>> edges);
@@ -57,7 +50,7 @@ class JoinGraph final {
    * Find all predicates that "connect" the two vertex sets, i.e. have operands in both of them
    */
   std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>> find_predicates(
-      const JoinVertexSet& vertex_set_a, const JoinVertexSet& vertex_set_b) const;
+  const JoinVertexSet& vertex_set_a, const JoinVertexSet& vertex_set_b) const;
 
   /**
    * Find the edge that exactly connects the vertices in vertex_set. Returns nullptr if no such edge exists.
@@ -70,4 +63,5 @@ class JoinGraph final {
   std::vector<LQPOutputRelation> output_relations;
   std::vector<std::shared_ptr<JoinEdge>> edges;
 };
+
 }  // namespace opossum
