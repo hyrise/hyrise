@@ -30,7 +30,7 @@ class SQLQueryPlanCacheTest : public BaseTest {
   }
 
   void execute_query(const std::string& query) {
-    auto pipeline_statement = SQLPipelineBuilder{query}.create_pipeline_statement();
+    auto pipeline_statement = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline_statement();
     pipeline_statement.get_result_table();
 
     if (pipeline_statement.query_plan_cache_hit()) {
