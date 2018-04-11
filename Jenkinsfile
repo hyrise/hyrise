@@ -68,7 +68,7 @@ node {
       }, clangSystemTestRelease: {
         stage("System Test") {
             sh "./clang-release/hyriseSystemTest"
-        }K
+        }
       }, clangReleaseSanitizers: {
         stage("clang-release:sanitizers (master only)") {
           if (env.BRANCH_NAME == 'master') {
