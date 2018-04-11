@@ -65,10 +65,10 @@ node {
           sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
           sh "./gcc-release/hyriseTest gcc-release"
         }
-      }, systemTest: {
+      }, clangSystemTestRelease: {
         stage("System Test") {
-            sh "./scripts/run_system_test.sh clang-release"
-        }
+            sh "./clang-release/hyriseSystemTest"
+        }K
       }, clangReleaseSanitizers: {
         stage("clang-release:sanitizers (master only)") {
           if (env.BRANCH_NAME == 'master') {
