@@ -8,8 +8,6 @@
 #include <vector>
 
 #include "base_single_column_table_scan_impl.hpp"
-#include "storage/value_vector.hpp"
-#include "storage/dictionary_column.hpp"
 
 #include "types.hpp"
 
@@ -60,7 +58,7 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
   /**
    * @returns number of matches and the result of each dictionary entry
    */
-  std::pair<size_t, std::vector<bool>> _find_matches_in_dictionary(const dictionary_vector_t<std::string>& dictionary);
+  std::pair<size_t, std::vector<bool>> _find_matches_in_dictionary(const pmr_vector<std::string>& dictionary);
 
   /**@}*/
 

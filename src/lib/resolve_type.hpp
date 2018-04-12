@@ -249,8 +249,7 @@ std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnType>>::
  */
 template <typename T>
 DataType data_type_from_type() {
-  // TODO(team_btm): uncomment this: (and make it work soon!)
-  // static_assert(hana::contains(data_types, hana::type_c<T>), "Type not a valid column type.");
+  static_assert(hana::contains(data_types, hana::type_c<T>), "Type not a valid column type.");
 
   return hana::fold_left(data_type_pairs, DataType{},
                          [](auto data_type, auto type_tuple) {

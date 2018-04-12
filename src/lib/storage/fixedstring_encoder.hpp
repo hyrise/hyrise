@@ -6,8 +6,10 @@
 
 #include "storage/base_column_encoder.hpp"
 
+#include "fixed_string.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/value_column.hpp"
+#include "storage/value_vector.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 #include "types.hpp"
@@ -21,19 +23,31 @@ namespace opossum {
  * The algorithm first creates an attribute vector of standard size (uint32_t) and then compresses it
  * using fixed-size byte-aligned encoding.
  */
-class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
+class FixedStringDictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
  public:
-  static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::Dictionary>;
+  static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::FixedStringDictionary>;
   static constexpr auto _uses_vector_compression = true;  // see base_column_encoder.hpp for details
+  // Allow usage of FixedString in the DictionaryColumn
 
   template <typename T>
   std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueColumn<T>>& value_column) {
     // See: https://goo.gl/MCM5rr
     // Create dictionary (enforce uniqueness and sorting)
+
+    std::cout << "fs =============================================";
     const auto& values = value_column->values();
     const auto alloc = values.get_allocator();
 
-    auto dictionary = pmr_vector<T>{values.cbegin(), values.cend(), alloc};
+    if
+      constexpr(std::is_same<T, std::string>::value) {
+        const auto fixed_string_length = _calculate_fixed_string_length(values);
+        if (fixed_string_length != 0) {
+          // Use FixedString for dictionary compression
+          // return _on_encode_fixed_string();
+        }
+      }
+
+    auto dictionary = dictionary_vector_t<T>{values.cbegin(), values.cend(), alloc};
 
     // Remove null values from value vector
     if (value_column->is_nullable()) {
@@ -100,9 +114,17 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
 
  private:
   template <typename T>
-  static ValueID _get_value_id(const pmr_vector<T>& dictionary, const T& value) {
+  static ValueID _get_value_id(const dictionary_vector_t<T>& dictionary, const T& value) {
     return static_cast<ValueID>(
         std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
+  }
+
+  size_t _calculate_fixed_string_length(const pmr_concurrent_vector<std::string>& values) const {
+    size_t max_string_length = 0;
+    for (const auto& value : values) {
+      if (value.size() > max_string_length) max_string_length = value.size();
+    }
+    return max_string_length;
   }
 };
 
