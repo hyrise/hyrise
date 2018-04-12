@@ -244,6 +244,8 @@ class RadixClusterSortNUMA {
 
     std::vector<std::shared_ptr<AbstractTask>> cluster_jobs;
 
+    std::cout << "Input Chunks: " << input_chunks->size() << " " << _cluster_count << std::endl;
+
     for (NodeID node_id{0}; node_id < _cluster_count; node_id++) {
       Assert(node_id < input_chunks->size(), "Node ID outof range: " + std::to_string(node_id) + " " + std::to_string(_cluster_count));
       auto job = std::make_shared<JobTask>([&output, &input_chunks, node_id, radix_bitmask, this]() {
