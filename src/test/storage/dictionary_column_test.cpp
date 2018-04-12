@@ -68,9 +68,9 @@ TEST_F(StorageDictionaryColumnTest, CompressColumnString) {
   EXPECT_EQ((*dict)[2], "Hasso");
   EXPECT_EQ((*dict)[3], "Steve");
 
-  // TODO(team_btm): removee this again
-  // auto col2 = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
-  // auto dict_col2 = std::dynamic_pointer_cast<DictionaryColumn<std::string>>(col);
+  // TODO(team_btm): remove this again
+  auto col2 = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
+  auto dict_col2 = std::dynamic_pointer_cast<DictionaryColumn<std::string>>(col);
 }
 
 TEST_F(StorageDictionaryColumnTest, CompressColumnDouble) {
