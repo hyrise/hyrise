@@ -4,7 +4,7 @@
 #include "gtest/gtest.h"
 
 #include "../lib/fixed_string.hpp"
-#include "../lib/storage/value_vector.hpp"
+#include "../lib/storage/fixedstring_dictionary_column/fixedstring_vector.hpp"
 
 namespace opossum {
 

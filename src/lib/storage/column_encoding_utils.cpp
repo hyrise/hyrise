@@ -6,9 +6,9 @@
 #include "storage/dictionary_column/dictionary_encoder.hpp"
 #include "storage/frame_of_reference/frame_of_reference_encoder.hpp"
 #include "storage/run_length_column/run_length_encoder.hpp"
+#include "storage/fixedstring_dictionary_column/fixedstring_encoder.hpp"
 
 #include "storage/base_value_column.hpp"
-#include "storage/fixedstring_encoder.hpp"
 #include "utils/assert.hpp"
 #include "utils/enum_constant.hpp"
 

@@ -291,7 +291,9 @@ set(
     storage/dictionary_column/dictionary_encoder.hpp
     storage/dictionary_column.hpp
     storage/encoding_type.hpp
-    storage/fixedstring_encoder.hpp
+    storage/fixedstring_dictionary_column/fixedstring_encoder.hpp
+    storage/fixedstring_dictionary_column/fixedstring_vector.cpp
+    storage/fixedstring_dictionary_column/fixedstring_vector.hpp
     storage/frame_of_reference_column.hpp
     storage/frame_of_reference_column.cpp
     storage/frame_of_reference/frame_of_reference_encoder.hpp
@@ -339,8 +341,6 @@ set(
     storage/table_column_definition.hpp
     storage/value_column.cpp
     storage/value_column.hpp
-    storage/value_vector.cpp
-    storage/value_vector.hpp
     storage/value_column/null_value_vector_iterable.hpp
     storage/value_column/value_column_iterable.hpp
     storage/vector_compression/base_compressed_vector.hpp
