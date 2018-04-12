@@ -7,6 +7,7 @@
 #include "operators/difference.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
@@ -14,7 +15,7 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
-#include "sql/sql_pipeline_statement.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -51,7 +52,7 @@ template <typename T>
 class RecreationTestJoin : public RecreationTest {};
 
 // here we define all Join types
-using JoinTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge>;
+using JoinTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge, JoinMPSM>;
 TYPED_TEST_CASE(RecreationTestJoin, JoinTypes);
 
 TYPED_TEST(RecreationTestJoin, RecreationJoin) {
@@ -184,7 +185,7 @@ TEST_F(RecreationTest, Subselect) {
   const std::string subselect_query = "SELECT * FROM table_3int WHERE a = (SELECT MAX(b) FROM table_3int)";
   const TableColumnDefinitions column_definitions = {{"a", DataType::Int}, {"b", DataType::Int}, {"c", DataType::Int}};
 
-  SQLPipelineStatement sql_pipeline{subselect_query, UseMvcc::No};
+  auto sql_pipeline = SQLPipelineBuilder{subselect_query}.disable_mvcc().create_pipeline_statement();
   const auto first_result = sql_pipeline.get_result_table();
 
   // Quick sanity check to see that the original query is correct
@@ -192,7 +193,7 @@ TEST_F(RecreationTest, Subselect) {
   expected_first->append({10, 10, 10});
   EXPECT_TABLE_EQ_UNORDERED(first_result, expected_first);
 
-  SQLPipelineStatement{"INSERT INTO table_3int VALUES (11, 11, 11)"}.get_result_table();
+  SQLPipelineBuilder{"INSERT INTO table_3int VALUES (11, 11, 11)"}.create_pipeline_statement().get_result_table();
 
   const auto recreated_plan = sql_pipeline.get_query_plan()->recreate();
   const auto tasks = recreated_plan.create_tasks();

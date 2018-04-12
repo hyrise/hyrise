@@ -7,6 +7,8 @@
 #include <utility>
 #include <vector>
 
+#include "logical_query_plan/projection_node.hpp"
+
 namespace opossum {
 
 LQPVisualizer::LQPVisualizer() : AbstractVisualizer() {
@@ -45,6 +47,20 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
     auto right_input = node->right_input();
     _build_subtree(right_input, visualized_nodes);
     _build_dataflow(right_input, node);
+  }
+
+  // Visualize subselects
+  if (const auto projection = std::dynamic_pointer_cast<ProjectionNode>(node)) {
+    for (const auto& column_expression : projection->column_expressions()) {
+      if (column_expression->is_subselect()) {
+        _build_subtree(column_expression->subselect_node(), visualized_nodes);
+
+        auto edge_info = _default_edge;
+        edge_info.label = "Scalar Subquery";
+        edge_info.style = "dashed";
+        _add_edge(column_expression->subselect_node(), node, edge_info);
+      }
+    }
   }
 }
 

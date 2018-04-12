@@ -103,6 +103,8 @@ set(
     operators/join_hash.cpp
     operators/join_hash/hash_traits.hpp
     operators/join_hash.hpp
+    operators/join_mpsm.cpp
+    operators/join_mpsm.hpp
     operators/join_index.cpp
     operators/join_index.hpp
     operators/join_nested_loop.cpp
@@ -244,6 +246,8 @@ set(
     sql/lru_cache.hpp
     sql/lru_k_cache.hpp
     sql/random_cache.hpp
+    sql/sql_pipeline_builder.cpp
+    sql/sql_pipeline_builder.hpp
     sql/sql_pipeline.cpp
     sql/sql_pipeline.hpp
     sql/sql_pipeline_statement.cpp
@@ -422,9 +426,22 @@ if (NOT DISABLE_JIT_SUPPORT)
     include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
     set(JIT_EMBEDDED_SOURCES
         # Files listed here will be embedded into the binary as LLVM-IR
+        operators/jit_operator/jit_operations.cpp
         operators/jit_operator/jit_operations.hpp
         operators/jit_operator/jit_types.cpp
         operators/jit_operator/jit_types.hpp
+        operators/jit_operator/operators/abstract_jittable.hpp
+        operators/jit_operator/operators/abstract_jittable_sink.hpp
+        operators/jit_operator/operators/jit_compute.cpp
+        operators/jit_operator/operators/jit_compute.hpp
+        operators/jit_operator/operators/jit_expression.cpp
+        operators/jit_operator/operators/jit_expression.hpp
+        operators/jit_operator/operators/jit_filter.cpp
+        operators/jit_operator/operators/jit_filter.hpp
+        operators/jit_operator/operators/jit_read_tuple.cpp
+        operators/jit_operator/operators/jit_read_tuple.hpp
+        operators/jit_operator/operators/jit_write_tuple.cpp
+        operators/jit_operator/operators/jit_write_tuple.hpp
     )
     embed_llvm(LLVM_BUNDLE_FILE ${JIT_EMBEDDED_SOURCES})
     set(

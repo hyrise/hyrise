@@ -71,16 +71,18 @@ void LikeTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
 }
 
 std::string LikeTableScanImpl::sqllike_to_regex(std::string sqllike) {
-  constexpr auto replace_by = std::array<std::pair<const char*, const char*>, 15u>{{{".", "\\."},
+  // Do substitution of <backslash> with <backslash><backslash> FIRST, because otherwise it will also replace
+  // backslashes introduced by the other substitutions
+  constexpr auto replace_by = std::array<std::pair<const char*, const char*>, 15u>{{{"\\", "\\\\"},
+                                                                                    {".", "\\."},
                                                                                     {"^", "\\^"},
                                                                                     {"$", "\\$"},
                                                                                     {"+", "\\+"},
                                                                                     {"?", "\\?"},
                                                                                     {"(", "\\("},
-                                                                                    {")", "\\"},
+                                                                                    {")", "\\)"},
                                                                                     {"{", "\\{"},
                                                                                     {"}", "\\}"},
-                                                                                    {"\\", "\\\\"},
                                                                                     {"|", "\\|"},
                                                                                     {".", "\\."},
                                                                                     {"*", "\\*"},
