@@ -291,6 +291,8 @@ set(
     storage/dictionary_column/dictionary_encoder.hpp
     storage/dictionary_column.hpp
     storage/encoding_type.hpp
+    storage/fixedstring_dictionary_column/fixedstring_column.cpp
+    storage/fixedstring_dictionary_column/fixedstring_column.hpp
     storage/fixedstring_dictionary_column/fixedstring_encoder.hpp
     storage/fixedstring_dictionary_column/fixedstring_vector.cpp
     storage/fixedstring_dictionary_column/fixedstring_vector.hpp

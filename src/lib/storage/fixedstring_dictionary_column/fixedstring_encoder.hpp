@@ -7,6 +7,7 @@
 #include "storage/base_column_encoder.hpp"
 
 #include "storage/dictionary_column.hpp"
+#include "storage/fixedstring_dictionary_column/fixedstring_column.hpp"
 #include "storage/value_column.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
@@ -33,7 +34,7 @@ class FixedStringDictionaryEncoder : public ColumnEncoder<FixedStringDictionaryE
     const auto& values = value_column->values();
     const auto alloc = values.get_allocator();
 
-    auto dictionary = pmr_vector<T>{values.cbegin(), values.cend(), alloc};
+    auto dictionary = FixedStringVector{values.cbegin(), values.cend()};
 
     // Remove null values from value vector
     if (value_column->is_nullable()) {
@@ -44,7 +45,8 @@ class FixedStringDictionaryEncoder : public ColumnEncoder<FixedStringDictionaryE
       auto null_it = null_values.crbegin();
       for (auto dict_it = dictionary.rbegin(); dict_it != dictionary.rend(); ++dict_it, ++null_it) {
         if (*null_it) {
-          std::swap(*dict_it, *(--erase_from_here_it));
+          // std::swap(*dict_it, *(--erase_from_here_it));
+          dict_it->swap(*(--erase_from_here_it));
         }
       }
 
@@ -94,13 +96,13 @@ class FixedStringDictionaryEncoder : public ColumnEncoder<FixedStringDictionaryE
 
     auto dictionary_sptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(dictionary));
     auto attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(encoded_attribute_vector));
-    return std::allocate_shared<DictionaryColumn<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
+    return std::allocate_shared<FixedStringColumn>(alloc, dictionary_sptr, attribute_vector_sptr,
                                                      ValueID{null_value_id});
   }
 
  private:
   template <typename T>
-  static ValueID _get_value_id(const pmr_vector<T>& dictionary, const T& value) {
+  static ValueID _get_value_id(const FixedStringVector& dictionary, const T& value) {
     return static_cast<ValueID>(
         std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
   }

@@ -7,6 +7,7 @@
 
 #include "fixed_string.hpp"
 #include "types.hpp"
+#include "type_cast.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -25,7 +26,7 @@ class FixedStringVector {
   }
 
   template <class Iter>
-  FixedStringVector(Iter first, Iter last) : _string_length(first->size()) {
+  FixedStringVector(Iter first, Iter last) : _string_length(type_cast<std::string>(*first).size()) {
     _iterator_push_back(first, last);
   }
 
@@ -108,6 +109,8 @@ class FixedStringVector {
 
   // Return the calculated size of FixedStringVector in main memory
   size_t data_size() const;
+
+  std::shared_ptr<const pmr_vector<std::string>> dictionary() const;
 
  protected:
   const size_t _string_length;
