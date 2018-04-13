@@ -147,7 +147,7 @@ TEST_F(SQLTranslatorTest, SelectWithAndCondition) {
 
   auto projection_node = ProjectionNode::make_pass_through(PredicateNode::make(
       _table_a_b, PredicateCondition::LessThan, 457.9f,
-      PredicateNode::make(_table_a_a, PredicateCondition::GreaterThanEquals, int64_t(1234), _stored_table_node_a)));
+      PredicateNode::make(_table_a_a, PredicateCondition::GreaterThanEquals, int32_t(1234), _stored_table_node_a)));
 
   EXPECT_LQP_EQ(projection_node, result_node);
 }
@@ -442,7 +442,7 @@ TEST_F(SQLTranslatorTest, Update) {
 
   const auto lqp = UpdateNode::make(
       "table_a", std::vector<std::shared_ptr<LQPExpression>>{update_a, update_b},
-      PredicateNode::make(_table_a_a, PredicateCondition::GreaterThan, int64_t(1), _stored_table_node_a));
+      PredicateNode::make(_table_a_a, PredicateCondition::GreaterThan, int32_t(1), _stored_table_node_a));
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
