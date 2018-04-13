@@ -70,26 +70,6 @@ class SQLBenchmark : public BenchmarkBasicFixture {
     }
   }
 
-  // List of the queries used in benchmarks.
-
-  // const std::string QExec = "EXECUTE cached_query;";
-
-  // const std::string QExecParam = "EXECUTE cached_query(50);";
-
-  // const std::string Q1 = "SELECT * FROM customer;";
-
-  // const std::string Q2 =
-  //     "SELECT c_name, c_custkey"
-  //     "  FROM (SELECT * FROM customer WHERE c_custkey < 100 AND c_nationkey=0) t1"
-  //     "  WHERE c_custkey > 10 AND c_nationkey < 10;";
-
-  // const std::string Q3 =
-  //     "SELECT c_custkey, c_name, COUNT(o_orderkey)"
-  //     "  FROM customer"
-  //     "  JOIN orders ON c_custkey = o_custkey"
-  //     "  GROUP BY c_custkey, c_name"
-  //     "  HAVING COUNT(o_orderkey) >= 100;";
-
   const std::string Query =
       R"(SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.o_orderkey)
         FROM customer
@@ -99,16 +79,6 @@ class SQLBenchmark : public BenchmarkBasicFixture {
         ) AS orderitems ON c_custkey = orderitems.o_custkey
         GROUP BY customer.c_custkey, customer.c_name
         HAVING COUNT(orderitems.o_orderkey) >= 100;)";
-
-  // const std::string Q4Param =
-  //     R"(SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.o_orderkey)
-  //       FROM customer
-  //       JOIN (SELECT * FROM
-  //         orders
-  //         JOIN lineitem ON o_orderkey = l_orderkey
-  //       ) AS orderitems ON c_custkey = orderitems.o_custkey
-  //       GROUP BY customer.c_custkey, customer.c_name
-  //       HAVING COUNT(orderitems.o_orderkey) >= ?;)";
 };
 
 BENCHMARK_F(SQLBenchmark, BM_CompileQuery)(benchmark::State& st) { BM_CompileQuery(st, Query); }
