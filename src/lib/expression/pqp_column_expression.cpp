@@ -8,7 +8,7 @@ std::shared_ptr<AbstractExpression> PQPColumnExpression::deep_copy() const {
   return std::make_shared<PQPColumnExpression>(column_id);
 }
 
-std::string PQPColumnExpression::description() const {
+std::string PQPColumnExpression::as_column_name() const {
   Fail("TODO");
 }
 

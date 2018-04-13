@@ -17,7 +17,7 @@ std::shared_ptr<AbstractExpression> NotExpression::deep_copy() const {
   return std::make_shared<NotExpression>(operand()->deep_copy()):
 }
 
-std::string NotExpression::description() const {
+std::string NotExpression::as_column_name() const {
   Fail("Notyetimplemented");
   return "";
 }

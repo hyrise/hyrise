@@ -16,7 +16,7 @@ const std::shared_ptr<AbstractExpression>& InExpression::set() const {
 }
 
 std::shared_ptr<AbstractExpression> InExpression::deep_copy() const {
-  return std::make_shared<AbstractExpression>(value()->deep_copy(), set()->deep_copy());
+  return std::make_shared<InExpression>(value()->deep_copy(), set()->deep_copy());
 }
 
 std::string InExpression::as_column_name() const {

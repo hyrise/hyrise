@@ -11,7 +11,7 @@ FunctionExpression::FunctionExpression(const FunctionType function_type,
 AbstractExpression(ExpressionType::Function, arguments) {}
 
 std::shared_ptr<AbstractExpression> FunctionExpression::deep_copy() const {
-  return std::make_shared<FunctionExpression>(function_type, deep_copy_expressions(arguments));
+  return std::make_shared<FunctionExpression>(function_type, std::vector<std::shared_ptr<AbstractExpression>>{}/* deep_copy_expressions(arguments) */);
 }
 
 std::string FunctionExpression::as_column_name() const {

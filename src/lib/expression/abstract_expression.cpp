@@ -15,7 +15,7 @@ bool AbstractExpression::requires_calculation() const {
 
 bool AbstractExpression::deep_equals(const AbstractExpression& expression) const {
   if (type != expression.type) return false;
-  if (!deep_equals_expressions(arguments, expression.arguments)) return false;
+//  if (!deep_equals_expressions(arguments, expression.arguments)) return false;
   return _shallow_equals(expression);
 }
 

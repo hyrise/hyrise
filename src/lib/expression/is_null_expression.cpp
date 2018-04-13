@@ -15,7 +15,7 @@ std::shared_ptr<AbstractExpression> IsNullExpression::deep_copy() const {
   return std::make_shared<IsNullExpression>(predicate_condition, operand()->deep_copy());
 }
 
-std::string IsNullExpression::description() const {
+std::string IsNullExpression::as_column_name() const {
   Fail("Notyetimpleented");
   return "";
 }

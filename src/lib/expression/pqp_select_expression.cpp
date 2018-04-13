@@ -15,7 +15,7 @@ std::shared_ptr<AbstractExpression> PQPSelectExpression::deep_copy() const {
   return std::make_shared<PQPSelectExpression>(pqp->recreate());
 }
 
-std::string PQPSelectExpression::description() const {
+std::string PQPSelectExpression::as_column_name() const {
   std::stringstream stream;
 
   Fail("Todo");

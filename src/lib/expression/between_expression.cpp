@@ -28,7 +28,7 @@ std::shared_ptr<AbstractExpression> BetweenExpression::deep_copy() const {
   return std::make_shared<BetweenExpression>(value()->deep_copy(), lower_bound()->deep_copy(), upper_bound()->deep_copy());
 }
 
-std::string BetweenExpression::description() const {
+std::string BetweenExpression::as_column_name() const {
   Fail("Notyetimplemented");
   return "";
 };

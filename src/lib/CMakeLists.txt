@@ -5,8 +5,6 @@ set(
     all_parameter_variant.hpp
     all_type_variant.cpp
     all_type_variant.hpp
-    plan_column_definition.cpp
-    plan_column_definition.hpp
     concurrency/commit_context.cpp
     concurrency/commit_context.hpp
     concurrency/transaction_context.cpp
@@ -15,8 +13,12 @@ set(
     concurrency/transaction_manager.hpp
     constant_mappings.cpp
     constant_mappings.hpp
+    expression/abstract_column_expression.cpp
+    expression/abstract_column_expression.hpp
     expression/abstract_expression.cpp
     expression/abstract_expression.hpp
+    expression/abstract_predicate_expression.cpp
+    expression/abstract_predicate_expression.hpp
     expression/aggregate_expression.cpp
     expression/aggregate_expression.hpp
     expression/arithmetic_expression.cpp
@@ -29,8 +31,6 @@ set(
     expression/binary_predicate_expression.hpp
     expression/case_expression.cpp
     expression/case_expression.hpp
-    expression/abstract_column_expression.cpp
-    expression/abstract_column_expression.hpp
     expression/exists_expression.cpp
     expression/exists_expression.hpp
     expression/expression_utils.cpp
@@ -45,14 +45,16 @@ set(
     expression/logical_expression.hpp
     expression/lqp_column_expression.cpp
     expression/lqp_column_expression.hpp
-    expression/abstract_predicate_expression.cpp
-    expression/abstract_predicate_expression.hpp
-    expression/pqp_select_expression.cpp
-    expression/pqp_select_expression.cpp
-    expression/pqp_column_expression.cpp
-    expression/pqp_column_expression.hpp
     expression/lqp_select_expression.cpp
     expression/lqp_select_expression.hpp
+    expression/named_column_expression.cpp
+    expression/named_column_expression.hpp
+    expression/not_expression.cpp
+    expression/not_expression.hpp
+    expression/pqp_column_expression.cpp
+    expression/pqp_column_expression.hpp
+    expression/pqp_select_expression.cpp
+    expression/pqp_select_expression.hpp
     expression/value_expression.cpp
     expression/value_expression.hpp
     expression/value_placeholder_expression.cpp
@@ -66,53 +68,53 @@ set(
     import_export/csv_parser.hpp
     import_export/csv_writer.cpp
     import_export/csv_writer.hpp
-    logical_query_plan/abstract_lqp_node.cpp
-    logical_query_plan/abstract_lqp_node.hpp
-    logical_query_plan/aggregate_node.cpp
-    logical_query_plan/aggregate_node.hpp
-    logical_query_plan/create_view_node.cpp
-    logical_query_plan/create_view_node.hpp
-    logical_query_plan/delete_node.cpp
-    logical_query_plan/delete_node.hpp
-    logical_query_plan/drop_view_node.cpp
-    logical_query_plan/drop_view_node.hpp
-    logical_query_plan/dummy_table_node.cpp
-    logical_query_plan/dummy_table_node.hpp
-    logical_query_plan/enable_make_for_lqp_node.hpp
-    logical_query_plan/insert_node.cpp
-    logical_query_plan/insert_node.hpp
-    logical_query_plan/join_node.cpp
-    logical_query_plan/join_node.hpp
-    logical_query_plan/limit_node.cpp
-    logical_query_plan/limit_node.hpp
-    logical_query_plan/logical_plan_root_node.cpp
-    logical_query_plan/logical_plan_root_node.hpp
-    logical_query_plan/lqp_column_reference.cpp
-    logical_query_plan/lqp_column_reference.hpp
-    logical_query_plan/lqp_translator.cpp
-    logical_query_plan/lqp_translator.hpp
-    logical_query_plan/mock_node.cpp
-    logical_query_plan/mock_node.hpp
-    logical_query_plan/predicate_node.cpp
-    logical_query_plan/predicate_node.hpp
-    logical_query_plan/projection_node.cpp
-    logical_query_plan/projection_node.hpp
-    logical_query_plan/qualified_column_name.cpp
-    logical_query_plan/qualified_column_name.hpp
-    logical_query_plan/show_columns_node.cpp
-    logical_query_plan/show_columns_node.hpp
-    logical_query_plan/show_tables_node.cpp
-    logical_query_plan/show_tables_node.hpp
-    logical_query_plan/sort_node.cpp
-    logical_query_plan/sort_node.hpp
-    logical_query_plan/stored_table_node.cpp
-    logical_query_plan/stored_table_node.hpp
-    logical_query_plan/union_node.cpp
-    logical_query_plan/union_node.hpp
-    logical_query_plan/update_node.cpp
-    logical_query_plan/update_node.hpp
-    logical_query_plan/validate_node.cpp
-    logical_query_plan/validate_node.hpp
+#    logical_query_plan/abstract_lqp_node.cpp
+#    logical_query_plan/abstract_lqp_node.hpp
+#    logical_query_plan/aggregate_node.cpp
+#    logical_query_plan/aggregate_node.hpp
+#    logical_query_plan/create_view_node.cpp
+#    logical_query_plan/create_view_node.hpp
+#    logical_query_plan/delete_node.cpp
+#    logical_query_plan/delete_node.hpp
+#    logical_query_plan/drop_view_node.cpp
+#    logical_query_plan/drop_view_node.hpp
+#    logical_query_plan/dummy_table_node.cpp
+#    logical_query_plan/dummy_table_node.hpp
+#    logical_query_plan/enable_make_for_lqp_node.hpp
+#    logical_query_plan/insert_node.cpp
+#    logical_query_plan/insert_node.hpp
+#    logical_query_plan/join_node.cpp
+#    logical_query_plan/join_node.hpp
+#    logical_query_plan/limit_node.cpp
+#    logical_query_plan/limit_node.hpp
+#    logical_query_plan/logical_plan_root_node.cpp
+#    logical_query_plan/logical_plan_root_node.hpp
+#    logical_query_plan/lqp_column_reference.cpp
+#    logical_query_plan/lqp_column_reference.hpp
+#    logical_query_plan/lqp_translator.cpp
+#    logical_query_plan/lqp_translator.hpp
+#    logical_query_plan/mock_node.cpp
+#    logical_query_plan/mock_node.hpp
+#    logical_query_plan/predicate_node.cpp
+#    logical_query_plan/predicate_node.hpp
+#    logical_query_plan/projection_node.cpp
+#    logical_query_plan/projection_node.hpp
+#    logical_query_plan/qualified_column_name.cpp
+#    logical_query_plan/qualified_column_name.hpp
+#    logical_query_plan/show_columns_node.cpp
+#    logical_query_plan/show_columns_node.hpp
+#    logical_query_plan/show_tables_node.cpp
+#    logical_query_plan/show_tables_node.hpp
+#    logical_query_plan/sort_node.cpp
+#    logical_query_plan/sort_node.hpp
+#    logical_query_plan/stored_table_node.cpp
+#    logical_query_plan/stored_table_node.hpp
+#    logical_query_plan/union_node.cpp
+#    logical_query_plan/union_node.hpp
+#    logical_query_plan/update_node.cpp
+#    logical_query_plan/update_node.hpp
+#    logical_query_plan/validate_node.cpp
+#    logical_query_plan/validate_node.hpp
     null_value.hpp
     operators/abstract_join_operator.cpp
     operators/abstract_join_operator.hpp
@@ -201,51 +203,53 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
-    optimizer/base_column_statistics.cpp
-    optimizer/base_column_statistics.hpp
-    optimizer/chunk_statistics/abstract_filter.hpp
-    optimizer/chunk_statistics/chunk_column_statistics.cpp
-    optimizer/chunk_statistics/chunk_column_statistics.hpp
-    optimizer/chunk_statistics/chunk_statistics.cpp
-    optimizer/chunk_statistics/chunk_statistics.hpp
-    optimizer/chunk_statistics/min_max_filter.hpp
-    optimizer/chunk_statistics/range_filter.hpp
-    optimizer/column_statistics.cpp
-    optimizer/column_statistics.hpp
-    optimizer/join_ordering/join_edge.cpp
-    optimizer/join_ordering/join_edge.hpp
-    optimizer/join_ordering/join_graph_builder.cpp
-    optimizer/join_ordering/join_graph_builder.hpp
-    optimizer/join_ordering/join_graph.cpp
-    optimizer/join_ordering/join_graph.hpp
-    optimizer/join_ordering/join_plan_predicate.cpp
-    optimizer/join_ordering/join_plan_predicate.hpp
-    optimizer/join_ordering/join_vertex_set.hpp
-    optimizer/optimizer.cpp
-    optimizer/optimizer.hpp
-    optimizer/strategy/abstract_rule.cpp
-    optimizer/strategy/abstract_rule.hpp
-    optimizer/strategy/chunk_pruning_rule.cpp
-    optimizer/strategy/chunk_pruning_rule.hpp
-    optimizer/strategy/constant_calculation_rule.cpp
-    optimizer/strategy/constant_calculation_rule.hpp
-    optimizer/strategy/index_scan_rule.cpp
-    optimizer/strategy/index_scan_rule.hpp
-    optimizer/strategy/join_detection_rule.cpp
-    optimizer/strategy/join_detection_rule.hpp
-    optimizer/strategy/predicate_pushdown_rule.cpp
-    optimizer/strategy/predicate_pushdown_rule.hpp
-    optimizer/strategy/predicate_reordering_rule.cpp
-    optimizer/strategy/predicate_reordering_rule.hpp
-    optimizer/strategy/rule_batch.cpp
-    optimizer/strategy/rule_batch.hpp
-    optimizer/table_statistics.cpp
-    optimizer/table_statistics.hpp
-    planviz/abstract_visualizer.hpp
-    planviz/lqp_visualizer.cpp
-    planviz/lqp_visualizer.hpp
-    planviz/sql_query_plan_visualizer.cpp
-    planviz/sql_query_plan_visualizer.hpp
+#    optimizer/base_column_statistics.cpp
+#    optimizer/base_column_statistics.hpp
+#    optimizer/chunk_statistics/abstract_filter.hpp
+#    optimizer/chunk_statistics/chunk_column_statistics.cpp
+#    optimizer/chunk_statistics/chunk_column_statistics.hpp
+#    optimizer/chunk_statistics/chunk_statistics.cpp
+#    optimizer/chunk_statistics/chunk_statistics.hpp
+#    optimizer/chunk_statistics/min_max_filter.hpp
+#    optimizer/chunk_statistics/range_filter.hpp
+#    optimizer/column_statistics.cpp
+#    optimizer/column_statistics.hpp
+#    optimizer/join_ordering/join_edge.cpp
+#    optimizer/join_ordering/join_edge.hpp
+#    optimizer/join_ordering/join_graph_builder.cpp
+#    optimizer/join_ordering/join_graph_builder.hpp
+#    optimizer/join_ordering/join_graph.cpp
+#    optimizer/join_ordering/join_graph.hpp
+#    optimizer/join_ordering/join_plan_predicate.cpp
+#    optimizer/join_ordering/join_plan_predicate.hpp
+#    optimizer/join_ordering/join_vertex_set.hpp
+#    optimizer/optimizer.cpp
+#    optimizer/optimizer.hpp
+#    optimizer/strategy/abstract_rule.cpp
+#    optimizer/strategy/abstract_rule.hpp
+#    optimizer/strategy/chunk_pruning_rule.cpp
+#    optimizer/strategy/chunk_pruning_rule.hpp
+#    optimizer/strategy/constant_calculation_rule.cpp
+#    optimizer/strategy/constant_calculation_rule.hpp
+#    optimizer/strategy/index_scan_rule.cpp
+#    optimizer/strategy/index_scan_rule.hpp
+#    optimizer/strategy/join_detection_rule.cpp
+#    optimizer/strategy/join_detection_rule.hpp
+#    optimizer/strategy/predicate_pushdown_rule.cpp
+#    optimizer/strategy/predicate_pushdown_rule.hpp
+#    optimizer/strategy/predicate_reordering_rule.cpp
+#    optimizer/strategy/predicate_reordering_rule.hpp
+#    optimizer/strategy/rule_batch.cpp
+#    optimizer/strategy/rule_batch.hpp
+#    optimizer/table_statistics.cpp
+#    optimizer/table_statistics.hpp
+    plan_column_definition.cpp
+    plan_column_definition.hpp
+#    planviz/abstract_visualizer.hpp
+#    planviz/lqp_visualizer.cpp
+#    planviz/lqp_visualizer.hpp
+#    planviz/sql_query_plan_visualizer.cpp
+#    planviz/sql_query_plan_visualizer.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.cpp
     scheduler/abstract_scheduler.hpp
@@ -283,25 +287,25 @@ set(
     server/use_boost_future.hpp
     server/use_boost_future_impl.hpp
     server/use_boost_future_legacy_impl.hpp
-    sql/abstract_cache.hpp
-    sql/gdfs_cache.hpp
-    sql/gds_cache.hpp
-    sql/hsql_expr_translator.cpp
-    sql/hsql_expr_translator.hpp
-    sql/lru_cache.hpp
-    sql/lru_k_cache.hpp
-    sql/random_cache.hpp
-    sql/sql_pipeline_builder.cpp
-    sql/sql_pipeline_builder.hpp
-    sql/sql_pipeline.cpp
-    sql/sql_pipeline.hpp
-    sql/sql_pipeline_statement.cpp
-    sql/sql_pipeline_statement.hpp
-    sql/sql_query_cache.hpp
-    sql/sql_query_plan.cpp
-    sql/sql_query_plan.hpp
-    sql/sql_translator.cpp
-    sql/sql_translator.hpp
+#    sql/abstract_cache.hpp
+#    sql/gdfs_cache.hpp
+#    sql/gds_cache.hpp
+#    sql/hsql_expr_translator.cpp
+#    sql/hsql_expr_translator.hpp
+#    sql/lru_cache.hpp
+#    sql/lru_k_cache.hpp
+#    sql/random_cache.hpp
+#    sql/sql_pipeline_builder.cpp
+#    sql/sql_pipeline_builder.hpp
+#    sql/sql_pipeline.cpp
+#    sql/sql_pipeline.hpp
+#    sql/sql_pipeline_statement.cpp
+#    sql/sql_pipeline_statement.hpp
+#    sql/sql_query_cache.hpp
+#    sql/sql_query_plan.cpp
+#    sql/sql_query_plan.hpp
+#    sql/sql_translator.cpp
+#    sql/sql_translator.hpp
     storage/base_column.cpp
     storage/base_column_encoder.hpp
     storage/base_column.hpp
@@ -430,6 +434,7 @@ set(
     tasks/server/load_server_file_task.hpp
     type_cast.hpp
     type_comparison.hpp
+    types.cpp
     types.hpp
     uid_allocator.hpp
     utils/arithmetic_operator_expression.hpp

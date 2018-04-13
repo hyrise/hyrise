@@ -4,7 +4,6 @@
 #include <memory>
 
 #include "types.hpp"
-#include "expression_utils.hpp"
 
 namespace opossum {
 

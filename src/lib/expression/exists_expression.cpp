@@ -11,7 +11,7 @@ ExistsExpression::ExistsExpression(const std::shared_ptr<LQPSelectExpression>& s
 
 }
 
-const std::shared_ptr<LQPSelectExpression>& ExistsExpression::select() const {
+std::shared_ptr<LQPSelectExpression> ExistsExpression::select() const {
   Assert(arguments[0]->type == ExpressionType::Select, "Expected to contains Select Expression");
   return std::static_pointer_cast<LQPSelectExpression>(arguments[0]);
 }

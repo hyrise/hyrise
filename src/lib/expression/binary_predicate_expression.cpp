@@ -21,7 +21,7 @@ std::shared_ptr<AbstractExpression> BinaryPredicateExpression::deep_copy() const
   return std::make_shared<BinaryPredicateExpression>(predicate_condition, left_operand()->deep_copy(), left_operand()->deep_copy());
 }
 
-std::string BinaryPredicateExpression::description() const {
+std::string BinaryPredicateExpression::as_column_name() const {
   std::stringstream stream;
 
   Fail("Todo");
