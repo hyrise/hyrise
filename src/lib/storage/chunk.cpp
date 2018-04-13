@@ -204,7 +204,7 @@ std::vector<std::shared_ptr<const BaseColumn>> Chunk::get_columns_for_ids(
 std::shared_ptr<ChunkStatistics> Chunk::statistics() const { return _statistics; }
 
 void Chunk::set_statistics(std::shared_ptr<ChunkStatistics> chunk_statistics) {
-  DebugAssert(chunk_statistics->statistics().size() == column_count(),
+  DebugAssert(chunk_statistics->chunk_column_statistics().size() == column_count(),
               "ChunkStatistics must have same column amount as Chunk");
   _statistics = chunk_statistics;
 }

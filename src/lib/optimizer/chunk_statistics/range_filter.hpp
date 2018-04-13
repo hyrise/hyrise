@@ -30,7 +30,7 @@ class RangeFilter : public AbstractFilter {
                                                       uint32_t max_ranges_count = MAX_RANGES_COUNT);
 
   bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const override {
-    const auto t_value = boost::get<T>(value);
+    const auto t_value = type_cast<T>(value);
     // Operators work as follows: value_from_table <operator> t_value
     // e.g. OpGreaterThan: value_from_table > t_value
     // thus we can exclude chunk if t_value >= _max since then no value from the table can be greater than t_value
