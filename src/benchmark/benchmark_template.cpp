@@ -15,13 +15,13 @@ BENCHMARK_F(BenchmarkBasicFixture, BM_Template)(benchmark::State& state) {
   // Google benchmark automatically determines a number of executions. The code that should be measured multiple times
   // goes in the while loop. Executions before the loop won't be measured.
   clear_cache();
-  auto warm_up = std::make_shared<Difference>(_gt_a, _gt_b);
+  auto warm_up = std::make_shared<Difference>(_table_wrapper_a, _table_wrapper_b);
   warm_up->execute();
   while (state.KeepRunning()) {
     state.PauseTiming();
     // If you have something to be configured which shouldn't be measured, you can pause the measures.
     state.ResumeTiming();
-    auto difference = std::make_shared<opossum::Difference>(_gt_a, _gt_b);
+    auto difference = std::make_shared<opossum::Difference>(_table_wrapper_a, _table_wrapper_b);
     difference->execute();
   }
 }

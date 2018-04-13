@@ -71,17 +71,18 @@ void BM_Join(benchmark::State& state) {
 }
 
 template <class C>
-void BM_JoinMultipleNumaNodes(benchmark::State& state) {
+void BM_Join_UseMultipleNumaNodes(benchmark::State& state) {
   auto table_wrapper_left = generate_table(100000, 50, true);
   auto table_wrapper_right = generate_table(100000, 50, true);
 
   BM_Join_impl<C>(state, table_wrapper_left, table_wrapper_right);
 }
 
+BENCHMARK_TEMPLATE(BM_Join, JoinNestedLoop);
 BENCHMARK_TEMPLATE(BM_Join, JoinIndex);
 BENCHMARK_TEMPLATE(BM_Join, JoinHash);
 BENCHMARK_TEMPLATE(BM_Join, JoinSortMerge);
 BENCHMARK_TEMPLATE(BM_Join, JoinMPSM);
-BENCHMARK_TEMPLATE(BM_JoinMultipleNumaNodes, JoinMPSM);
+BENCHMARK_TEMPLATE(BM_Join_UseMultipleNumaNodes, JoinMPSM);
 
 }  // namespace opossum
