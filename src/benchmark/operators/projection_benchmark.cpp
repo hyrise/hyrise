@@ -12,7 +12,8 @@
 
 namespace opossum {
 
-void Benchmark_Projecton_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator> in, Projection::ColumnExpressions expressions) {
+void Benchmark_Projecton_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator> in,
+                              Projection::ColumnExpressions expressions) {
   auto warm_up = std::make_shared<Projection>(in, expressions);
   warm_up->execute();
   while (state.KeepRunning()) {
@@ -32,7 +33,8 @@ BENCHMARK_F(BenchmarkBasicFixture, BM_Projection_VariableTerm)(benchmark::State&
   clear_cache();
 
   // "a" + "b"
-  Projection::ColumnExpressions expressions = {PQPExpression::create_binary_operator(ExpressionType::Addition, PQPExpression::create_column(ColumnID{0}), PQPExpression::create_column(ColumnID{1}))};
+  Projection::ColumnExpressions expressions = {PQPExpression::create_binary_operator(
+      ExpressionType::Addition, PQPExpression::create_column(ColumnID{0}), PQPExpression::create_column(ColumnID{1}))};
   Benchmark_Projecton_impl(state, _table_wrapper_a, expressions);
 }
 
@@ -40,7 +42,8 @@ BENCHMARK_F(BenchmarkBasicFixture, BM_Projection_ConstantTerm)(benchmark::State&
   clear_cache();
 
   // "a" + 5
-  Projection::ColumnExpressions expressions = {PQPExpression::create_binary_operator(ExpressionType::Addition, PQPExpression::create_column(ColumnID{0}), PQPExpression::create_literal(5))};
+  Projection::ColumnExpressions expressions = {PQPExpression::create_binary_operator(
+      ExpressionType::Addition, PQPExpression::create_column(ColumnID{0}), PQPExpression::create_literal(5))};
   Benchmark_Projecton_impl(state, _table_wrapper_a, expressions);
 }
 

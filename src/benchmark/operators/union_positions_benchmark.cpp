@@ -47,7 +47,8 @@ std::shared_ptr<opossum::PosList> generate_pos_list(float referenced_table_chunk
 
 namespace opossum {
 
-std::shared_ptr<Table> create_reference_table(std::shared_ptr<Table> _referenced_table, size_t num_rows, size_t num_columns) {
+std::shared_ptr<Table> create_reference_table(std::shared_ptr<Table> _referenced_table, size_t num_rows,
+                                              size_t num_columns) {
   const auto num_rows_per_chunk = num_rows / GENERATED_TABLE_NUM_CHUNKS;
 
   TableColumnDefinitions column_definitions;
@@ -95,9 +96,11 @@ void BM_UnionPositions(::benchmark::State& state) {
   /**
    * Create the referencing tables, the ones we're actually going to perform the benchmark on
    */
-  auto _table_wrapper_left = std::make_shared<TableWrapper>(create_reference_table(_referenced_table, num_rows, num_columns));
+  auto _table_wrapper_left =
+      std::make_shared<TableWrapper>(create_reference_table(_referenced_table, num_rows, num_columns));
   _table_wrapper_left->execute();
-  auto _table_wrapper_right = std::make_shared<TableWrapper>(create_reference_table(_referenced_table, num_rows, num_columns));
+  auto _table_wrapper_right =
+      std::make_shared<TableWrapper>(create_reference_table(_referenced_table, num_rows, num_columns));
   _table_wrapper_right->execute();
 
   while (state.KeepRunning()) {

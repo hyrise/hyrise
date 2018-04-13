@@ -8,12 +8,13 @@
 
 namespace opossum {
 
-void BM_TableScan_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator> in, ColumnID left_column_id, const PredicateCondition predicate_condition, const AllParameterVariant right_parameter) {
+void BM_TableScan_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator> in,
+                       ColumnID left_column_id, const PredicateCondition predicate_condition,
+                       const AllParameterVariant right_parameter) {
   auto warm_up = std::make_shared<TableScan>(in, left_column_id, predicate_condition, right_parameter);
   warm_up->execute();
   while (state.KeepRunning()) {
-    auto table_scan =
-        std::make_shared<TableScan>(in, left_column_id, predicate_condition, right_parameter);
+    auto table_scan = std::make_shared<TableScan>(in, left_column_id, predicate_condition, right_parameter);
     table_scan->execute();
   }
 }

@@ -2,15 +2,15 @@
 
 #include "../table_generator.hpp"
 #include "benchmark/benchmark.h"
-#include "storage/chunk.hpp"
-#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
-#include "storage/storage_manager.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
 #include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_wrapper.hpp"
+#include "storage/chunk.hpp"
+#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
+#include "storage/storage_manager.hpp"
 
 namespace opossum {
 
@@ -23,14 +23,16 @@ void clear_cache() {
   clear.resize(0);
 }
 
-std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows, const size_t number_of_chunks, bool use_multiple_numa_nodes = false) {
+std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows, const size_t number_of_chunks,
+                                             bool use_multiple_numa_nodes = false) {
   auto table_generator = std::make_shared<TableGenerator>();
 
   ColumnDataDistribution config = ColumnDataDistribution::make_uniform_config(0.0, 10000);
   const auto chunk_size = static_cast<ChunkID>(number_of_rows / number_of_chunks);
   Assert(chunk_size > 0, "The chunk size is 0 or less, can not generate such a table");
 
-  auto table = table_generator->generate_table(std::vector<ColumnDataDistribution>{config}, number_of_rows, chunk_size, EncodingType::Dictionary, use_multiple_numa_nodes);
+  auto table = table_generator->generate_table(std::vector<ColumnDataDistribution>{config}, number_of_rows, chunk_size,
+                                               EncodingType::Dictionary, use_multiple_numa_nodes);
 
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     auto chunk = table->get_chunk(chunk_id);
@@ -48,14 +50,19 @@ std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows, const 
   return table_wrapper;
 }
 
-template<class C>
-void BM_Join_impl(benchmark::State& state, std::shared_ptr<TableWrapper> table_wrapper_left, std::shared_ptr<TableWrapper> table_wrapper_right) {
+template <class C>
+void BM_Join_impl(benchmark::State& state, std::shared_ptr<TableWrapper> table_wrapper_left,
+                  std::shared_ptr<TableWrapper> table_wrapper_right) {
   clear_cache();
 
-  auto warm_up = std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner, std::pair<ColumnID, ColumnID>{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals);
+  auto warm_up =
+      std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
+                          std::pair<ColumnID, ColumnID>{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals);
   warm_up->execute();
   while (state.KeepRunning()) {
-    auto table_scan = std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner, std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
+    auto table_scan =
+        std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
+                            std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
     table_scan->execute();
   }
 
