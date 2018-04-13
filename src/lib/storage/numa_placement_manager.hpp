@@ -75,7 +75,7 @@ class NUMAPlacementManager {
   NUMAPlacementManager(NUMAPlacementManager&&) = delete;
 
  protected:
-  explicit NUMAPlacementManager(const std::shared_ptr<Topology> topology = Topology::create_fake_numa_topology(20, 1));
+  explicit NUMAPlacementManager(const std::shared_ptr<Topology> topology = Topology::create_numa_topology());
 
   Options _options;
   std::shared_ptr<Topology> _topology;
