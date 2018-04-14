@@ -60,10 +60,10 @@ void BM_Join_impl(benchmark::State& state, std::shared_ptr<TableWrapper> table_w
                           std::pair<ColumnID, ColumnID>{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals);
   warm_up->execute();
   while (state.KeepRunning()) {
-    auto table_scan =
+    auto join =
         std::make_shared<C>(table_wrapper_left, table_wrapper_right, JoinMode::Inner,
                             std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
-    table_scan->execute();
+    join->execute();
   }
 
   opossum::StorageManager::get().reset();
