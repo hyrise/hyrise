@@ -80,6 +80,7 @@ struct QualifiedColumnName {
 class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, private Noncopyable {
  public:
   explicit AbstractLQPNode(LQPNodeType node_type);
+  virtual ~AbstractLQPNode();
 
   // Creates a deep copy
   std::shared_ptr<AbstractLQPNode> deep_copy() const;
@@ -385,7 +386,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
    * Add or remove a output without manipulating this outputs input ptr. For internal usage in set_left_input(),
    * set_right_input(), remove_output
    */
-  void _remove_output_pointer(const std::shared_ptr<AbstractLQPNode>& output);
+  void _remove_output_pointer(const AbstractLQPNode& output);
   void _add_output_pointer(const std::shared_ptr<AbstractLQPNode>& output);
   // @}
 };
