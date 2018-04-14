@@ -13,6 +13,7 @@
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/aggregate_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
+#include "expression/expression_utils.hpp"
 #include "expression/logical_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/not_expression.hpp"
@@ -58,23 +59,23 @@ JoinMode translate_join_mode(const hsql::JoinType join_type) {
   return it->second;
 }
 
-std::vector<std::shared_ptr<AbstractLQPNode>> SQLTranslator::translate_parse_result(
-    const hsql::SQLParserResult& result) {
+std::vector<std::shared_ptr<AbstractLQPNode>> SQLTranslator::translate_parser_result(
+const hsql::SQLParserResult &result) {
   std::vector<std::shared_ptr<AbstractLQPNode>> result_nodes;
   const std::vector<hsql::SQLStatement*>& statements = result.getStatements();
 
   for (const hsql::SQLStatement* stmt : statements) {
-    auto result_node = translate_statement(*stmt);
+    auto result_node = translate_parser_statement(*stmt);
     result_nodes.push_back(result_node);
   }
 
   return result_nodes;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_statement(const hsql::SQLStatement& statement) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_parser_statement(const hsql::SQLStatement &statement) {
   switch (statement.type()) {
     case hsql::kStmtSelect:
-      return translate_select(static_cast<const hsql::SelectStatement &>(statement));
+      return translate_select_statement(static_cast<const hsql::SelectStatement &>(statement));
     case hsql::kStmtInsert:
       return _translate_insert(static_cast<const hsql::InsertStatement&>(statement));
     case hsql::kStmtDelete:
@@ -106,7 +107,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
   if (insert.type == hsql::kInsertSelect) {
     Assert(insert.select, "INSERT INTO ... SELECT ...: No SELECT statement given");
 
-    insert_data_node = translate_select(*insert.select);
+    insert_data_node = translate_select_statement(*insert.select);
   } else {
     Assert(insert.values, "INSERT INTO ... VALUES: No values given");
 
@@ -182,7 +183,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   return UpdateNode::make((update.table)->name, update_expressions, target_references_node);
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select(const hsql::SelectStatement &select) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select_statement(const hsql::SelectStatement &select) {
   // SQL Orders of Operations: http://www.bennadel.com/blog/70-sql-query-order-of-operations.htm
   // 1. FROM clause (incl. JOINs and subselects that are part of this)
   // 2. WHERE clause
@@ -198,24 +199,24 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select(const hsql::Sel
   Assert(select.unionSelect == nullptr, "Set operations (UNION/INTERSECT/...) are not supported yet");
   Assert(!select.selectDistinct, "DISTINCT is not yet supported");
 
-  auto current_node = _translate_table_ref(*select.fromTable);
+  auto translation_state = _translate_table_ref(*select.fromTable);
 
   if (select.whereClause != nullptr) {
-    const auto where_expression = translate_hsql_expr(*select.whereClause, {current_node});
-    current_node = _translate_predicate_expression(where_expression, current_node);
+    const auto where_expression = translate_hsql_expr(*select.whereClause, translation_state.qualified_column_name_lookup);
+    _translate_predicate_expression(where_expression, translation_state);
   }
 
-  current_node = _translate_select_groupby_having(select, current_node);
+  _translate_select_list_groupby_having(select, translation_state);
 
   if (select.order != nullptr) {
-    current_node = _translate_order_by(*select.order, current_node);
+    _translate_order_by(*select.order, translation_state);
   }
 
   if (select.limit != nullptr) {
-    current_node = LimitNode::make(select.limit->limit, current_node);
+    LimitNode::make(select.limit->limit, translation_state);
   }
 
-  return current_node;
+  return translation_state.lqp;
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::JoinDefinition& join) {
@@ -377,55 +378,68 @@ const hsql::TableRef &table) {
   return ProjectionNode::make(column_definitions, node);
 }
 
-SQLTranslationState SQLTranslator::_translate_table_ref(const hsql::TableRef& hsql_table_ref, const std::shared_ptr<QualifiedColumnNameLookup>& name_lookup) {
+SQLTranslationState SQLTranslator::_translate_table_ref(const hsql::TableRef& hsql_table_ref) {
   const auto alias = hsql_table_ref.alias ? std::optional<std::string>(hsql_table_ref.alias->name) : std::nullopt;
 
-  SQLTranslationState translation_state;
+  auto lqp = std::shared_ptr<AbstractLQPNode>{};
 
   switch (hsql_table_ref.type) {
-    case hsql::kTableName: {
-      auto lqp = std::shared_ptr<AbstractLQPNode>{};
+    case hsql::kTableName:
+    case hsql::kTableSelect: {
 
-      if (StorageManager::get().has_table(hsql_table_ref.name)) {
-        lqp = StoredTableNode::make(hsql_table_ref.name);
-        lqp = _validate_if_active(translation_state.lqp);
+      if (hsql_table_ref.type == hsql::kTableName) {
+        if (StorageManager::get().has_table(hsql_table_ref.name)) {
+          lqp = StoredTableNode::make(hsql_table_ref.name);
+          lqp = _validate_if_active(lqp);
 
-      } else if (StorageManager::get().has_view(hsql_table_ref.name)) {
-        lqp = StorageManager::get().get_view(hsql_table_ref.name);
-        Assert(!_validate || lqp->subplan_is_validated(), "Trying to add non-validated view to validated query");
-      } else {
-        Fail(std::string("Did not find a table or view with name ") + hsql_table_ref.name);
+        } else if (StorageManager::get().has_view(hsql_table_ref.name)) {
+          lqp = StorageManager::get().get_view(hsql_table_ref.name);
+          Assert(!_validate || lqp->subplan_is_validated(), "Trying to add non-validated view to validated query");
+        } else {
+          Fail(std::string("Did not find a table or view with name ") + hsql_table_ref.name);
+        }
+      } else  { // hsql::kTableSelect
+        Assert(hsql_table_ref.alias, "Every derived table must have its own alias");
+        lqp = translate_select_statement(*hsql_table_ref.select);
       }
 
-      _translate_column_renamings(translation_state, hsql_table_ref);
     } break;
-    case hsql::kTableSelect:
-      node = translate_select(*hsql_table_ref.select, translation_state);
-      Assert(alias, "Every derived table must have its own alias");
-      node = _translate_column_renamings(node, hsql_table_ref);
-      break;
+
     case hsql::kTableJoin:
-      node = _translate_join(*hsql_table_ref.join);
+      lqp = _translate_join(*hsql_table_ref.join);
       break;
     case hsql::kTableCrossProduct:
-      node = _translate_cross_product(*hsql_table_ref.list);
+      lqp = _translate_cross_product(*hsql_table_ref.list);
       break;
+
     default:
       Fail("Unable to translate source table.");
   }
 
-  node->set_alias(alias);
-  return node;
+  auto translation_state = SQLTranslationState::from_leaf(lqp);
+
+  if (hsql_table_ref.alias) {
+    if (hsql_table_ref.alias->columns) {
+      translation_state.set_column_names(*hsql_table_ref.alias->columns);
+    }
+    if (hsql_table_ref.alias->name) {
+      translation_state.set_table_name(hsql_table_ref.alias->name);
+    }
+  }
+
+  return translation_state;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_groupby_having(
-const hsql::SelectStatement &select, const std::shared_ptr<AbstractLQPNode> &input_node) {
-  auto current_node = input_node;
+void SQLTranslator::_translate_select_list_groupby_having(
+const hsql::SelectStatement &select, SQLTranslationState &translation_state) {
+  const auto input_node = translation_state.lqp;
 
-  const auto input_expressions = current_node->output_column_expressions();
+  const auto input_expressions = translation_state.lqp->output_column_expressions();
+
   auto pre_aggregate_expressions = std::unordered_set<std::shared_ptr<AbstractExpression>, ExpressionHash, ExpressionEquals>{
   input_expressions.begin(), input_expressions.end()
   };
+
   auto aggregate_expressions = std::unordered_set<std::shared_ptr<AbstractExpression>, ExpressionHash, ExpressionEquals>{
   };
 
@@ -434,7 +448,7 @@ const hsql::SelectStatement &select, const std::shared_ptr<AbstractLQPNode> &inp
   if (select.groupBy && select.groupBy->columns) {
     pre_aggregate_expressions.reserve(pre_aggregate_expressions.size() + select.groupBy->columns->size());
     for (const auto* group_by_hsql_expr : *select.groupBy->columns) {
-      const auto group_by_expression = translate_hsql_expr(*group_by_hsql_expr, {current_node});
+      const auto group_by_expression = translate_hsql_expr(*group_by_hsql_expr, translation_state.qualified_column_name_lookup);
       group_by_expressions.emplace_back(group_by_expression);
       pre_aggregate_expressions.insert(group_by_expression);
     }
@@ -457,7 +471,7 @@ const hsql::SelectStatement &select, const std::shared_ptr<AbstractLQPNode> &inp
   // Gather all aggregates and arguments from having
   auto having_expression = std::shared_ptr<AbstractExpression>{};
   if (select.groupBy && select.groupBy->having) {
-    having_expression = translate_hsql_expr(*select.groupBy->having, {current_node});
+    having_expression = translate_hsql_expr(*select.groupBy->having, translation_state.qualified_column_name_lookup);
     visit_expression(having_expression, find_aggregates_and_arguments);
   }
 
@@ -467,26 +481,26 @@ const hsql::SelectStatement &select, const std::shared_ptr<AbstractLQPNode> &inp
     if (hsql_select_expr->type == hsql::kExprStar) {
       select_list_elements.emplace_back(nullptr);
     } else {
-      auto expression = translate_hsql_expr(*hsql_select_expr, {current_node});
+      auto expression = translate_hsql_expr(*hsql_select_expr, translation_state.qualified_column_name_lookup);
       visit_expression(expression, find_aggregates_and_arguments);
       select_list_elements.emplace_back(expression);
     }
   }
 
   // Build pre_aggregate_projection
-  current_node = ProjectionNode::make(std::vector<std::shared_ptr<AbstractExpression>>(
+  translation_state.lqp = ProjectionNode::make(std::vector<std::shared_ptr<AbstractExpression>>(
   pre_aggregate_expressions.begin(), pre_aggregate_expressions.end()
-  ), current_node);
+  ), translation_state.lqp);
 
 
   // Build Aggregate
   if (!aggregate_expressions.empty() || !group_by_expressions.empty()) {
-    current_node = AggregateNode::make(group_by_expressions, aggregate_expressions, current_node);
+    translation_state.lqp = AggregateNode::make(group_by_expressions, aggregate_expressions, translation_state.lqp);
   }
 
   // Build having
   if (having_expression) {
-    current_node = _translate_predicate_expression(having_expression, current_node);
+    translation_state.lqp = _translate_predicate_expression(having_expression, translation_state.lqp);
   }
 
   // Create output_expressions from SELECT list, including column wildcards
@@ -500,12 +514,14 @@ const hsql::SelectStatement &select, const std::shared_ptr<AbstractLQPNode> &inp
 
     if (hsql_expr->type == hsql::kExprStar) {
       if (hsql_expr->table) {
-        const auto expressions = current_node->find_expressions_from_table_name(*hsql_expr->table);
+        const auto expressions = translation_state.find_output_columns_with_table_name(*hsql_expr->table);
         output_expressions.reserve(output_expressions.size() + expressions.size());
         for (const auto& expression : expressions) {
           output_expressions.emplace_back(expression);
         }
       } else {
+        // When GROUP BY is present, a * in the SELECT list refers to all GROUP BY expressions.
+        // When no GROUP BY is present, all input expressions are selected.
         if (select.groupBy) {
           output_expressions.reserve(output_expressions.size() + group_by_expressions.size());
           for (const auto& group_by_expression : group_by_expressions) {
@@ -520,16 +536,16 @@ const hsql::SelectStatement &select, const std::shared_ptr<AbstractLQPNode> &inp
         }
       }
     }
-    output_expressions.emplace_back(select_list_elements[select_list_idx]);
+
+    auto output_expression = select_list_elements[select_list_idx];
+    output_expressions.emplace_back(output_expression);
 
     if (hsql_expr->alias) {
-      column_aliases[select_list_elements[select_list_idx]] = hsql_expr->alias;
+      translation_state.qualified_column_name_lookup->set_column_name(output_expression, hsql_expr->alias);
     }
   }
 
-  current_node = ProjectionNode::make(output_expressions, current_node);
-
-  return current_node;
+  translation_state.lqp = ProjectionNode::make(output_expressions, translation_state.lqp);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_order_by(
@@ -569,7 +585,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::Show
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::CreateStatement& create_statement) {
   switch (create_statement.type) {
     case hsql::CreateType::kCreateView: {
-      auto view = translate_select((const hsql::SelectStatement &) *create_statement.select);
+      auto view = translate_select_statement((const hsql::SelectStatement &) *create_statement.select);
 
       if (create_statement.viewColumns) {
         // The CREATE VIEW statement has renamed the columns: CREATE VIEW myview (foo, bar) AS SELECT ...
@@ -668,7 +684,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_prune_expressions(const std::shared_ptr<AbstractLQPNode>& node,
                                                             const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const {
-  if (deep_equals_expressions(node->output_column_expressions(), expressions)) return node;
+  if (expressions_equal(node->output_column_expressions(), expressions)) return node;
   return ProjectionNode::make(expressions, node);
 }
 

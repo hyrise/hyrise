@@ -1,4 +1,4 @@
-#include "qualified_column_name_lookup.hpp"
+#include "column_identifier_lookup.hpp"
 
 #include <algorithm>
 
@@ -13,7 +13,7 @@ ExpressionLookupEntry::ExpressionLookupEntry(const std::optional<std::string>& t
 
 }
 
-void QualifiedColumnNameLookup::add(const QualifiedColumnName& qualified_column_name,
+void ColumnIdentifierLookup::add(const QualifiedColumnName& qualified_column_name,
                            const std::shared_ptr<AbstractExpression>& expression) {
   const auto entry = std::make_shared<ExpressionLookupEntry>(qualified_column_name.table_name, expression);
 
@@ -23,26 +23,26 @@ void QualifiedColumnNameLookup::add(const QualifiedColumnName& qualified_column_
   _entries_by_column_name[qualified_column_name.column_name].emplace_back(entry);
 }
 
-void QualifiedColumnNameLookup::set_table_name(const std::shared_ptr<AbstractExpression>& expression, const std::string& table_name) {
+void ColumnIdentifierLookup::set_table_name(const std::shared_ptr<AbstractExpression>& expression, const std::string& table_name) {
   const auto entry_iter = _entries_by_expression.find(expression);
   Assert(entry_iter != _entries_by_expression.end(), "Expression not in lookup");
   entry_iter->second->table_name = table_name;
 }
 
-void QualifiedColumnNameLookup::set_column_name(const std::shared_ptr<AbstractExpression>& expression, const std::string& column_name) {
+void ColumnIdentifierLookup::set_column_name(const std::shared_ptr<AbstractExpression>& expression, const std::string& column_name) {
   const auto entry_iter = _entries_by_expression.find(expression);
   Assert(entry_iter != _entries_by_expression.end(), "Expression not in lookup");
   const auto entry = entry_iter->second;
 
   const auto entries_with_column_name_iter = _entries_by_column_name.find(column_name);
-  Assert(entries_with_column_name_iter != _entries_by_column_name.end(), "Column name not in lookup. Bug in QualifiedColumnNameLookup.");
+  Assert(entries_with_column_name_iter != _entries_by_column_name.end(), "Column name not in lookup. Bug in ColumnIdentifierLookup.");
 
   const auto& entries_with_column_name = entries_with_column_name_iter->second;
 
   const auto entry_iter2 = std::find_if(entries_with_column_name.begin(), entries_with_column_name.end(), [&](const auto& entry2) {
     return entry->expression->deep_equals(*entry2->expression);
   });
-  Assert(entry_iter2 != entries_with_column_name.end(), "Entry not in lookup. Bug in QualifiedColumnNameLookup.");
+  Assert(entry_iter2 != entries_with_column_name.end(), "Entry not in lookup. Bug in ColumnIdentifierLookup.");
 
   entries_with_column_name.erase(entry_iter2);
   if (entries_with_column_name.empty()) {
@@ -52,7 +52,7 @@ void QualifiedColumnNameLookup::set_column_name(const std::shared_ptr<AbstractEx
   _entries_by_column_name[column_name].emplace_back(entry);
 }
 
-std::vector<std::shared_ptr<ExpressionLookupEntry>> QualifiedColumnNameLookup::get(const QualifiedColumnName& qualified_column_name) const {
+std::vector<std::shared_ptr<ExpressionLookupEntry>> ColumnIdentifierLookup::get(const QualifiedColumnName& qualified_column_name) const {
   const auto entry_iter = _entries_by_column_name.find(qualified_column_name.column_name);
   if (entry_iter == _entries_by_column_name.end()) {
     return {};

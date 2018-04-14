@@ -1,14 +1,14 @@
-#include "external_expression_proxy.hpp"
+#include "external_column_identifier_proxy.hpp"
 
-#include "qualified_column_name_lookup.hpp"
+#include "column_identifier_lookup.hpp"
 #include "expression/external_expression.hpp"
 
 namespace opossum {
 
-ExternalExpressionProxy::ExternalExpressionProxy(const std::shared_ptr<QualifiedColumnNameLookup>& expression_lookup):
+ExternalColumnIdentifierProxy::ExternalColumnIdentifierProxy(const std::shared_ptr<ColumnIdentifierLookup>& expression_lookup):
   _expression_lookup(expression_lookup) {}
 
-std::shared_ptr<AbstractExpression> ExternalExpressionProxy::get(const QualifiedColumnName& qualified_column_name) {
+std::shared_ptr<AbstractExpression> ExternalColumnIdentifierProxy::get(const QualifiedColumnName& qualified_column_name) {
   const auto external_expression = _expression_lookup->get(qualified_column_name);
 
   auto internal_expression_iter = _referenced_external_expressions.find(external_expression);
@@ -20,7 +20,7 @@ std::shared_ptr<AbstractExpression> ExternalExpressionProxy::get(const Qualified
   return internal_expression_iter->second;
 }
 
-const ExternalExpressionProxy::ExternalExpressions& ExternalExpressionProxy::referenced_external_expressions() const {
+const ExternalColumnIdentifierProxy::ExternalExpressions& ExternalColumnIdentifierProxy::referenced_external_expressions() const {
   return _referenced_external_expressions;
 }
 

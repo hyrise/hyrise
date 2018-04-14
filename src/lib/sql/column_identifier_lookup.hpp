@@ -23,7 +23,7 @@ struct ExpressionLookupEntry final {
  * Its main purpose is name resolution during the SQL translation. As such,
  * it performs resolution of Table and Column Aliases.
  */
-class QualifiedColumnNameLookup final {
+class ColumnIdentifierLookup final {
  public:
   void add(const QualifiedColumnName& qualified_column_name, const std::shared_ptr<AbstractExpression>& expression);
   void set_table_name(const std::shared_ptr<AbstractExpression>& expression, const std::string& table_name);
