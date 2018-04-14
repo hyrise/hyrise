@@ -17,12 +17,14 @@
 
 namespace opossum {
 
+class PQPExpression;
+
 /**
  * Operator to select a subset of the set of all columns found in the table
  */
 class Projection : public AbstractReadOnlyOperator {
  public:
-  using ColumnExpressions = std::vector<AliasedExpression>;
+  using ColumnExpressions = std::vector<std::shared_ptr<PQPExpression>>;
 
   Projection(const std::shared_ptr<const AbstractOperator> in, const ColumnExpressions& column_expressions);
 

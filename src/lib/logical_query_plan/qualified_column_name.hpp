@@ -5,7 +5,7 @@
 
 namespace opossum {
 
-struct QualifiedColumnName {
+struct QualifiedColumnName final {
   QualifiedColumnName(const std::string& column_name, const std::optional<std::string>& table_name =
   std::nullopt);  // NOLINT - Implicit conversion is intended
 

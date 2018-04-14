@@ -11,6 +11,7 @@
 namespace opossum {
 
 class CaseExpression : public AbstractExpression {
+ public:
   CaseExpression(const std::shared_ptr<AbstractExpression>& when,
                           const std::shared_ptr<AbstractExpression>& then,
                           const std::shared_ptr<AbstractExpression>& else_);

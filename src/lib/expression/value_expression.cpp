@@ -2,6 +2,8 @@
 
 #include <sstream>
 
+#include "boost/functional/hash.hpp"
+
 namespace opossum {
 
 ValueExpression::ValueExpression(const AllTypeVariant& value): AbstractExpression(ExpressionType::Value, {}), value(value) {
@@ -20,7 +22,11 @@ std::string ValueExpression::as_column_name() const {
 }
 
 bool ValueExpression::_shallow_equals(const AbstractExpression& expression) const {
-  return value == static_cast<const ValueExpression>(expression).value;
+  return value == static_cast<const ValueExpression&>(expression).value;
+}
+
+size_t ValueExpression::_on_hash() const {
+  return std::hash<AllTypeVariant>{}(value);
 }
 
 }

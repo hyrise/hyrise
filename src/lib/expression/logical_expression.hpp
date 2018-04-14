@@ -25,6 +25,7 @@ class LogicalExpression : public AbstractExpression {
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
+  size_t _on_hash() const override;
 };
 
 }  // namespace opossum

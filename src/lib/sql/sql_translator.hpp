@@ -8,6 +8,7 @@
 #include "SQLParser.h"
 
 #include "all_parameter_variant.hpp"
+#include "qualified_column_name_lookup.hpp"
 
 #include "expression/abstract_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -15,7 +16,13 @@
 namespace opossum {
 
 class AggregateNode;
+class QualifiedColumnNameLookup;
 class LQPExpression;
+
+struct SQLTranslationState final {
+  std::shared_ptr<AbstractLQPNode> lqp;
+  std::shared_ptr<QualifiedColumnNameLookup> name_lookup;
+};
 
 /**
 * Produces an LQP (Logical Query Plan), as defined in src/logical_query_plan/, from an hsql::SQLParseResult.
@@ -39,7 +46,8 @@ class SQLTranslator final : public Noncopyable {
   std::shared_ptr<AbstractLQPNode> translate_select(const hsql::SelectStatement &select);
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _translate_table_ref(const hsql::TableRef& table);
+  SQLTranslationState _translate_table_ref(const hsql::TableRef& hsql_table_ref,
+                                           const std::shared_ptr<QualifiedColumnNameLookup>& name_lookup);
 
   std::shared_ptr<AbstractLQPNode> _translate_select_groupby_having(const hsql::SelectStatement &select,
                                                                     const std::shared_ptr<AbstractLQPNode> &input_node);

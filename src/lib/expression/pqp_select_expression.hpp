@@ -1,10 +1,16 @@
 #pragma once
 
 #include "abstract_expression.hpp"
+#include "all_type_variant.hpp"
 
 namespace opossum {
 
 class AbstractOperator;
+
+struct PQPSelectParameter final {
+  ColumnID column_id;
+  std::shared_ptr<AllTypeVariant> value;
+};
 
 class PQPSelectExpression : public AbstractExpression {
  public:
@@ -16,8 +22,11 @@ class PQPSelectExpression : public AbstractExpression {
 
   std::shared_ptr<AbstractOperator> pqp;
 
+  std::vector<PQPSelectParameter> parameters;
+
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
+  size_t _on_hash() const override;
 };
 
 }  // namespace opossum

@@ -2,6 +2,8 @@
 
 #include <sstream>
 
+#include "boost/functional/hash.hpp"
+
 namespace opossum {
 
 ArithmeticExpression::ArithmeticExpression(const ArithmeticOperator arithmetic_operator,
@@ -31,6 +33,10 @@ std::string ArithmeticExpression::as_column_name() const {
 
 bool ArithmeticExpression::_shallow_equals(const AbstractExpression& expression) const {
   return arithmetic_operator == static_cast<const ArithmeticExpression&>(expression).arithmetic_operator;
+}
+
+size_t ArithmeticExpression::_on_hash() const {
+  return boost::hash_value(static_cast<size_t>(arithmetic_operator));
 }
 
 }  // namespace opossum

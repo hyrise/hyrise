@@ -35,6 +35,8 @@ set(
     expression/exists_expression.hpp
     expression/expression_utils.cpp
     expression/expression_utils.hpp
+    expression/external_expression.cpp
+    expression/external_expression.hpp
     expression/function_expression.cpp
     expression/function_expression.hpp
     expression/in_expression.cpp
@@ -91,6 +93,8 @@ set(
 #    logical_query_plan/logical_plan_root_node.hpp
 #    logical_query_plan/lqp_column_reference.cpp
 #    logical_query_plan/lqp_column_reference.hpp
+    sql/qualified_column_name_lookup.cpp
+    sql/qualified_column_name_lookup.hpp
 #    logical_query_plan/lqp_translator.cpp
 #    logical_query_plan/lqp_translator.hpp
 #    logical_query_plan/mock_node.cpp
@@ -126,8 +130,6 @@ set(
     operators/abstract_read_write_operator.hpp
     operators/aggregate.cpp
     operators/aggregate.hpp
-    operators/case_operator.cpp
-    operators/case_operator.hpp
     operators/delete.cpp
     operators/delete.hpp
     operators/difference.cpp
@@ -170,8 +172,6 @@ set(
     operators/maintenance/show_columns.hpp
     operators/maintenance/show_tables.cpp
     operators/maintenance/show_tables.hpp
-    operators/pqp_expression.cpp
-    operators/pqp_expression.hpp
     operators/print.cpp
     operators/print.hpp
     operators/product.cpp
@@ -287,6 +287,10 @@ set(
     server/use_boost_future.hpp
     server/use_boost_future_impl.hpp
     server/use_boost_future_legacy_impl.hpp
+    sql/qualified_column_name_lookup.cpp
+    sql/qualified_column_name_lookup.hpp
+    sql/external_expression_proxy.cpp
+    sql/external_expression_proxy.hpp
 #    sql/abstract_cache.hpp
 #    sql/gdfs_cache.hpp
 #    sql/gds_cache.hpp
@@ -304,8 +308,8 @@ set(
 #    sql/sql_query_cache.hpp
 #    sql/sql_query_plan.cpp
 #    sql/sql_query_plan.hpp
-#    sql/sql_translator.cpp
-#    sql/sql_translator.hpp
+    sql/sql_translator.cpp
+    sql/sql_translator.hpp
     storage/base_column.cpp
     storage/base_column_encoder.hpp
     storage/base_column.hpp

@@ -18,8 +18,6 @@ class BinaryPredicateExpression : public AbstractPredicateExpression {
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
 
-  PredicateCondition predicate_condition;
-
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
 };

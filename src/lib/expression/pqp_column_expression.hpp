@@ -17,6 +17,7 @@ class PQPColumnExpression : public AbstractColumnExpression {
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
+  size_t _on_hash() const override;
 };
 
 

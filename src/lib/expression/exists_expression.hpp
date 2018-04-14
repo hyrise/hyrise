@@ -7,6 +7,7 @@ namespace opossum {
 class LQPSelectExpression;
 
 class ExistsExpression : public AbstractExpression {
+ public:
   explicit ExistsExpression(const std::shared_ptr<LQPSelectExpression>& select);
 
   std::shared_ptr<LQPSelectExpression> select() const;

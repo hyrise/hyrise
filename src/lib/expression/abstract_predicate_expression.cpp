@@ -2,6 +2,8 @@
 
 #include <sstream>
 
+#include "boost/functional/hash.hpp"
+
 namespace opossum {
 
 AbstractPredicateExpression::AbstractPredicateExpression(const PredicateCondition predicate_condition, const std::vector<std::shared_ptr<AbstractExpression>>& arguments):
@@ -11,4 +13,7 @@ bool AbstractPredicateExpression::_shallow_equals(const AbstractExpression& expr
   return predicate_condition == static_cast<const AbstractPredicateExpression&>(expression).predicate_condition;
 }
 
+size_t AbstractPredicateExpression::_on_hash() const {
+  return boost::hash_value(static_cast<size_t>(predicate_condition));
+}
 }  // namespace opossum

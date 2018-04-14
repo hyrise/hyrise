@@ -1,8 +1,10 @@
 #include "function_expression.hpp"
 
-#include "utils/assert.hpp"
-
 #include <sstream>
+
+#include "boost/functional/hash.hpp"
+
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -24,6 +26,10 @@ std::string FunctionExpression::as_column_name() const {
 
 bool FunctionExpression::_shallow_equals(const AbstractExpression& expression) const {
   return function_type == static_cast<const FunctionExpression&>(expression).function_type;
+}
+
+size_t FunctionExpression::_on_hash() const {
+  return boost::hash_value(static_cast<size_t>(function_type));
 }
 
 }  // namespace opossum

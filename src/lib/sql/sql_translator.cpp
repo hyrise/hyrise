@@ -377,36 +377,38 @@ const hsql::TableRef &table) {
   return ProjectionNode::make(column_definitions, node);
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql::TableRef& table) {
-  const auto alias = table.alias ? std::optional<std::string>(table.alias->name) : std::nullopt;
-  std::shared_ptr<AbstractLQPNode> node;
+SQLTranslationState SQLTranslator::_translate_table_ref(const hsql::TableRef& hsql_table_ref, const std::shared_ptr<QualifiedColumnNameLookup>& name_lookup) {
+  const auto alias = hsql_table_ref.alias ? std::optional<std::string>(hsql_table_ref.alias->name) : std::nullopt;
 
-  switch (table.type) {
-    case hsql::kTableName:
-      if (StorageManager::get().has_table(table.name)) {
-        /**
-         * Make sure the ALIAS is applied to the StoredTableNode and not the ValidateNode
-         */
-        auto stored_table_node = StoredTableNode::make(table.name);
-        stored_table_node->set_alias(alias);
-        return _translate_column_renamings(_validate_if_active(stored_table_node), table);
-      } else if (StorageManager::get().has_view(table.name)) {
-        node = StorageManager::get().get_view(table.name);
-        Assert(!_validate || node->subplan_is_validated(), "Trying to add non-validated view to validated query");
+  SQLTranslationState translation_state;
+
+  switch (hsql_table_ref.type) {
+    case hsql::kTableName: {
+      auto lqp = std::shared_ptr<AbstractLQPNode>{};
+
+      if (StorageManager::get().has_table(hsql_table_ref.name)) {
+        lqp = StoredTableNode::make(hsql_table_ref.name);
+        lqp = _validate_if_active(translation_state.lqp);
+
+      } else if (StorageManager::get().has_view(hsql_table_ref.name)) {
+        lqp = StorageManager::get().get_view(hsql_table_ref.name);
+        Assert(!_validate || lqp->subplan_is_validated(), "Trying to add non-validated view to validated query");
       } else {
-        Fail(std::string("Did not find a table or view with name ") + table.name);
+        Fail(std::string("Did not find a table or view with name ") + hsql_table_ref.name);
       }
-      break;
+
+      _translate_column_renamings(translation_state, hsql_table_ref);
+    } break;
     case hsql::kTableSelect:
-      node = translate_select(*table.select);
+      node = translate_select(*hsql_table_ref.select, translation_state);
       Assert(alias, "Every derived table must have its own alias");
-      node = _translate_column_renamings(node, table);
+      node = _translate_column_renamings(node, hsql_table_ref);
       break;
     case hsql::kTableJoin:
-      node = _translate_join(*table.join);
+      node = _translate_join(*hsql_table_ref.join);
       break;
     case hsql::kTableCrossProduct:
-      node = _translate_cross_product(*table.list);
+      node = _translate_cross_product(*hsql_table_ref.list);
       break;
     default:
       Fail("Unable to translate source table.");

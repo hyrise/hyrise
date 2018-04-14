@@ -7,7 +7,7 @@ namespace opossum {
 CaseExpression::CaseExpression(const std::shared_ptr<AbstractExpression>& when,
                const std::shared_ptr<AbstractExpression>& then,
                const std::shared_ptr<AbstractExpression>& else_):
-  AbstractExpression(AbstractExpression::Case, {when, then , else_})  {}
+  AbstractExpression(ExpressionType ::Case, {when, then , else_})  {}
 
 const std::shared_ptr<AbstractExpression>& CaseExpression::when() const {
   return arguments[0];

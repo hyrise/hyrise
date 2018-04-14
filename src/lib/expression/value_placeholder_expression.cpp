@@ -1,5 +1,7 @@
 #include "value_placeholder_expression.hpp"
 
+#include "boost/functional/hash.hpp"
+
 #include <sstream>
 
 namespace opossum {
@@ -21,6 +23,10 @@ std::string ValuePlaceholderExpression::as_column_name() const {
 
 bool ValuePlaceholderExpression::_shallow_equals(const AbstractExpression& expression) const {
   return value_placeholder == static_cast<const ValuePlaceholderExpression&>(expression).value_placeholder;
+}
+
+size_t ValuePlaceholderExpression::_on_hash() const {
+  return std::hash<ValuePlaceholder>{}(value_placeholder);
 }
 
 }

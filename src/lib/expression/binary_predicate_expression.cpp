@@ -2,6 +2,8 @@
 
 #include <sstream>
 
+#include "boost/functional/hash.hpp"
+
 namespace opossum {
 
 BinaryPredicateExpression::BinaryPredicateExpression(const PredicateCondition predicate_condition,

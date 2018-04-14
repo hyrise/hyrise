@@ -2,6 +2,8 @@
 
 #include <sstream>
 
+#include "boost/functional/hash.hpp"
+
 namespace opossum {
 
 LogicalExpression::LogicalExpression(const LogicalOperator logical_operator,
@@ -31,6 +33,10 @@ std::string LogicalExpression::as_column_name() const {
 
 bool LogicalExpression::_shallow_equals(const AbstractExpression& expression) const {
   return logical_operator == static_cast<const LogicalExpression&>(expression).logical_operator;
+}
+
+size_t LogicalExpression::_on_hash() const {
+  return boost::hash_value(static_cast<size_t>(logical_operator));
 }
 
 }  // namespace opossum

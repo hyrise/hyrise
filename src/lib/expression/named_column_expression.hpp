@@ -8,14 +8,14 @@
 
 namespace opossum {
 
-class LQPColumnExpression : public AbstractColumnExpression {
+class NamedColumnExpression : public AbstractColumnExpression {
  public:
-  explicit LQPColumnExpression(const LQPColumnReference& column_reference);
+  explicit NamedColumnExpression(const QualifiedColumnName& qualified_column_name);
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
 
-  LQPColumnReference column_reference;
+  QualifiedColumnName qualified_column_name;
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
