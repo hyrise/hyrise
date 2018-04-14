@@ -13,7 +13,7 @@
 #include "expression/abstract_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "sql_translation_state.hpp"
-#include "external_column_identifier_proxy.hpp"
+#include "column_identifier_lookup_proxy.hpp"
 
 namespace opossum {
 
@@ -45,22 +45,21 @@ class SQLTranslator final {
    * @param external_identifier_proxy   if set, allows the SelectStatement to refer to columns of outer queries.
    */
   std::shared_ptr<AbstractLQPNode> translate_select_statement(const hsql::SelectStatement &select,
-                                                              const std::shared_ptr<ExternalColumnIdentifierProxy>& external_identifier_proxy = std::make_shared<ExternalColumnIdentifierProxy>());
+                                                              const std::shared_ptr<ExternalColumnIdentifierProxy>& external_identifier_proxy = {});
 
  protected:
-  SQLTranslationState _translate_table_ref(const hsql::TableRef& hsql_table_ref);
+  std::shared_ptr<AbstractLQPNode> _translate_table_ref(const hsql::TableRef& hsql_table_ref, const std::shared_ptr<SQLTranslationState>& translation_state);
 
-  SQLTranslationState _translate_join(const hsql::JoinDefinition& select);
+  std::shared_ptr<AbstractLQPNode> _translate_join(const hsql::JoinDefinition& select, const std::shared_ptr<SQLTranslationState>& translation_state);
 
-  SQLTranslationState _translate_natural_join(const hsql::JoinDefinition& select);
+  std::shared_ptr<AbstractLQPNode> _translate_natural_join(const hsql::JoinDefinition& select, const std::shared_ptr<SQLTranslationState>& translation_state);
 
-  SQLTranslationState _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
+  std::shared_ptr<AbstractLQPNode> _translate_cross_product(const std::vector<hsql::TableRef*>& tables, const std::shared_ptr<SQLTranslationState>& translation_state);
 
-  void _translate_select_list_groupby_having(const hsql::SelectStatement &select,
-                                                                         SQLTranslationState &translation_state);
+  std::shared_ptr<AbstractLQPNode> _translate_select_list_groupby_having(const hsql::SelectStatement &select, const std::shared_ptr<SQLTranslationState>& translation_state);
 
   std::shared_ptr<AbstractLQPNode> _translate_order_by(const std::vector<hsql::OrderDescription*>& order_list,
-                                                       std::shared_ptr<AbstractLQPNode> current_node);
+                                                       std::shared_ptr<AbstractLQPNode> current_node, const std::shared_ptr<SQLTranslationState>& translation_state);
 
   std::shared_ptr<AbstractLQPNode> _translate_insert(const hsql::InsertStatement& insert);
 

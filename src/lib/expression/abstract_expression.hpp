@@ -2,6 +2,8 @@
 
 #include <functional>
 #include <memory>
+#include <unordered_map>
+#include <unordered_set>
 
 #include "types.hpp"
 
@@ -33,5 +35,24 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   virtual bool _shallow_equals(const AbstractExpression& expression) const;
   virtual size_t _on_hash() const;
 };
+
+// Wrapper around expression->hash(), to enable hash based containers containing std::shared_ptr<AbstractExpression>
+struct ExpressionSharedPtrHash final {
+  size_t operator()(const std::shared_ptr<AbstractExpression>& expression) const {
+    return expression->hash();
+  }
+};
+
+// Wrapper around expression->deep_equals(), to enable hash based containers containing
+// std::shared_ptr<AbstractExpression>
+struct ExpressionSharedPtrEqual final {
+  size_t operator()(const std::shared_ptr<AbstractExpression>& expression_a,
+                    const std::shared_ptr<AbstractExpression>& expression_b) const {
+    return expression_a->deep_equals(*expression_b);
+  }
+};
+
+template<typename Value> using ExpressionUnorderedMap = std::unordered_map<std::shared_ptr<AbstractExpression>, Value, ExpressionSharedPtrHash, ExpressionSharedPtrEqual>;
+using ExpressionUnorderedSet = std::unordered_set<std::shared_ptr<AbstractExpression>, ExpressionSharedPtrHash, ExpressionSharedPtrEqual>;
 
 }  // namespace opossum

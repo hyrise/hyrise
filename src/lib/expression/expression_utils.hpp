@@ -68,5 +68,4 @@ void visit_expression(std::shared_ptr<AbstractExpression>& expression, Visitor v
   }
 }
 
-
 }  // namespace opossum

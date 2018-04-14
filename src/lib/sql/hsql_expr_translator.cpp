@@ -62,7 +62,7 @@ const std::unordered_map<hsql::OperatorType, PredicateCondition> hsql_predicate_
 namespace opossum {
 
 std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
-                                                        const std::vector<std::shared_ptr<AbstractLQPNode>>& nodes) {
+                                                        const std::shared_ptr<SQLTranslationState>& translation_state, bool validate) {
   auto name = expr.name != nullptr ? std::string(expr.name) : "";
 
   std::shared_ptr<LQPExpression> left;
@@ -72,16 +72,16 @@ std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
   if (expr.exprList) {
     arguments.reserve(expr.exprList->size());
     for (const auto *hsql_argument : *(expr.exprList)) {
-      arguments.emplace_back(translate_hsql_expr(*hsql_argument, nodes));
+      arguments.emplace_back(translate_hsql_expr(*hsql_argument, translation_state));
     }
   }
 
   if (expr.expr) {
-    left = translate_hsql_expr(*expr.expr, nodes);
+    left = translate_hsql_expr(*expr.expr, translation_state);
   }
 
   if (expr.expr2) {
-    right = translate_hsql_expr(*expr.expr2, nodes);
+    right = translate_hsql_expr(*expr.expr2, translation_state);
   }
 
   switch (expr.type) {
@@ -107,19 +107,9 @@ std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
 
     case hsql::kExprColumnRef: {
       const auto table_name = expr.table ? std::optional<std::string>(std::string(expr.table)) : std::nullopt;
-      const auto qualified_column_name = QualifiedColumnName{name, table_name};
+      const auto qualified_column_name = ColumnIdentifier{name, table_name};
 
-      auto column_reference = std::optional<LQPColumnReference>{};
-      for (const auto& node : nodes) {
-        const auto column_reference2 = node->find_column(qualified_column_name);
-        if (column_reference2) {
-          Assert(!column_reference || column_reference == column_reference2, std::string{"Ambiguous identifier '"} + qualified_column_name.as_string() + "'");
-          column_reference = column_reference2;
-        }
-      }
-      Assert(column_reference, std::string{"Couldn't resolve identifier '"} + qualified_column_name.as_string() + "'");
-
-      return std::make_shared<LQPColumnExpression>(column_reference);
+      return translation_state.resolve_identifier(qualified_column_name);
     }
 
     case hsql::kExprFunctionRef: {
@@ -162,27 +152,27 @@ std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
           Assert(left && !right, "Illegal arguments for BETWEEN. Bug in sqlparser?");
           Assert(expr.exprList && (*expr.exprList)[0] && (*expr.exprList)[1], "Illegal arguments for BETWEEN. Bug in sqlparser?");
 
-          const auto lower_bound = translate_hsql_expr(*(*expr.exprList)[0], nodes);
-          const auto upper_bound = translate_hsql_expr(*(*expr.exprList)[1], nodes);
+          const auto lower_bound = translate_hsql_expr(*(*expr.exprList)[0], translation_state);
+          const auto upper_bound = translate_hsql_expr(*(*expr.exprList)[1], translation_state);
 
           return std::make_shared<BetweenExpression>(left, lower_bound, upper_bound);
         } else if (predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull) {
           Assert(left && !right, "Illegal arguments for IsNull/IsNotNull. Bug in sqlparser?");
           return std::make_shared<IsNullExpression>(predicate_condition, left);
         } else {
-          Assert(left && right, "Illegal arguments for IsNull/IsNotNull. Bug in sqlparser?");
+          Assert(left && right, "Illegal arguments for binary predicate. Bug in sqlparser?");
           return std::make_shared<BinaryPredicateExpression>(predicate_condition, left, right);
         }
       }
 
       const auto logical_iter = hsql_logical_operators.find(expr.opType);
       if (logical_iter != hsql_logical_operators.end()) {
-        Assert(left && right), "Wrong number of arguments. Bug in sqlparser?");
+        Assert(left && right, "Wrong number of arguments. Bug in sqlparser?");
         return std::make_shared<LogicalExpression>(logical_iter->second, left, right);
       }
 
       if (expr.opType == hsql::kOpNot){
-        Assert(left && !right), "Wrong number of arguments. Bug in sqlparser?");
+        Assert(left && !right, "Wrong number of arguments. Bug in sqlparser?");
         return std::make_shared<NotExpression>(left);
       }
 
@@ -190,8 +180,11 @@ std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
     }
 
     case hsql::kExprSelect: {
-      const auto lqp = SQLTranslator{}.translate_select(*expr.select);
-      return std::make_shared<LQPSelectExpression>(lqp);
+      auto external_column_identifier_proxy = translation_state->create_external_column_identifier_proxy();
+
+      const auto lqp = SQLTranslator{validate}.translate_select_statement(*expr.select, external_column_identifier_proxy);
+
+      return std::make_shared<LQPSelectExpression>(lqp, external_column_identifier_proxy->referenced_external_expressions());
     }
 
     case hsql::kExprArray: {

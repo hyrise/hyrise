@@ -2,7 +2,7 @@
 
 namespace opossum {
 
-NamedColumnExpression::NamedColumnExpression(const QualifiedColumnName& qualified_column_name):
+NamedColumnExpression::NamedColumnExpression(const ColumnIdentifier& qualified_column_name):
   qualified_column_name(qualified_column_name) {}
 
 std::shared_ptr<AbstractExpression> NamedColumnExpression::deep_copy() const {
@@ -18,7 +18,7 @@ bool NamedColumnExpression::_shallow_equals(const AbstractExpression& expression
 }
 
 size_t NamedColumnExpression::_on_hash() const {
-  return std::hash<QualifiedColumnName>{}(qualified_column_name);
+  return std::hash<ColumnIdentifier>{}(qualified_column_name);
 }
 
 }  // namespace opossum

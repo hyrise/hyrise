@@ -19,7 +19,6 @@ class LQPSelectExpression : public AbstractExpression {
 
   std::shared_ptr<AbstractLQPNode> lqp;
 
-
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
   size_t _on_hash() const override;

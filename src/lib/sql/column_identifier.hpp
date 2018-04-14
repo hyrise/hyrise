@@ -5,11 +5,11 @@
 
 namespace opossum {
 
-struct QualifiedColumnName final {
-  QualifiedColumnName(const std::string& column_name, const std::optional<std::string>& table_name =
+struct ColumnIdentifier final {
+  ColumnIdentifier(const std::string& column_name, const std::optional<std::string>& table_name =
   std::nullopt);  // NOLINT - Implicit conversion is intended
 
-  bool operator==(const QualifiedColumnName& rhs) const;
+  bool operator==(const ColumnIdentifier& rhs) const;
 
   std::string as_string() const;
 

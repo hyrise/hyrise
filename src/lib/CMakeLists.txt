@@ -103,8 +103,6 @@ set(
 #    logical_query_plan/predicate_node.hpp
 #    logical_query_plan/projection_node.cpp
 #    logical_query_plan/projection_node.hpp
-#    logical_query_plan/qualified_column_name.cpp
-#    logical_query_plan/qualified_column_name.hpp
 #    logical_query_plan/show_columns_node.cpp
 #    logical_query_plan/show_columns_node.hpp
 #    logical_query_plan/show_tables_node.cpp
@@ -289,13 +287,13 @@ set(
     server/use_boost_future_legacy_impl.hpp
     sql/column_identifier_lookup.cpp
     sql/column_identifier_lookup.hpp
-    sql/external_column_identifier_proxy.cpp
-    sql/external_column_identifier_proxy.hpp
+    sql/column_identifier_lookup_proxy.cpp
+    sql/column_identifier_lookup_proxy.hpp
 #    sql/abstract_cache.hpp
 #    sql/gdfs_cache.hpp
 #    sql/gds_cache.hpp
-#    sql/hsql_expr_translator.cpp
-#    sql/hsql_expr_translator.hpp
+    sql/hsql_expr_translator.cpp
+    sql/hsql_expr_translator.hpp
 #    sql/lru_cache.hpp
 #    sql/lru_k_cache.hpp
 #    sql/random_cache.hpp
@@ -308,6 +306,8 @@ set(
 #    sql/sql_query_cache.hpp
 #    sql/sql_query_plan.cpp
 #    sql/sql_query_plan.hpp
+    sql/column_identifier.cpp
+    sql/column_identifier.hpp
     sql/sql_translation_state.cpp
     sql/sql_translation_state.hpp
     sql/sql_translator.cpp

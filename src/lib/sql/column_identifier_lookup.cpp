@@ -13,7 +13,7 @@ ExpressionLookupEntry::ExpressionLookupEntry(const std::optional<std::string>& t
 
 }
 
-void ColumnIdentifierLookup::add(const QualifiedColumnName& qualified_column_name,
+void ColumnIdentifierLookup::add(const ColumnIdentifier& qualified_column_name,
                            const std::shared_ptr<AbstractExpression>& expression) {
   const auto entry = std::make_shared<ExpressionLookupEntry>(qualified_column_name.table_name, expression);
 
@@ -52,7 +52,7 @@ void ColumnIdentifierLookup::set_column_name(const std::shared_ptr<AbstractExpre
   _entries_by_column_name[column_name].emplace_back(entry);
 }
 
-std::vector<std::shared_ptr<ExpressionLookupEntry>> ColumnIdentifierLookup::get(const QualifiedColumnName& qualified_column_name) const {
+std::vector<std::shared_ptr<ExpressionLookupEntry>> ColumnIdentifierLookup::get(const ColumnIdentifier& qualified_column_name) const {
   const auto entry_iter = _entries_by_column_name.find(qualified_column_name.column_name);
   if (entry_iter == _entries_by_column_name.end()) {
     return {};
