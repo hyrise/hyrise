@@ -11,7 +11,7 @@ namespace opossum {
 /**
  * CostModelLinear has different models for different kind of TableScans.
  */
-enum class CostModelLinearTableScanType {
+enum class CostModelRuntimeTableScanType {
   ColumnValueNumeric,
   ColumnColumnNumeric,
   ColumnValueString,
@@ -22,8 +22,8 @@ enum class CostModelLinearTableScanType {
 /**
  * Weights of the CostModelLinear for a particular build type (release, debug)
  */
-struct CostModelLinearConfig final {
-  std::map<CostModelLinearTableScanType, CostFeatureWeights> table_scan_models;
+struct CostModelRuntimeConfig final {
+  std::map<CostModelRuntimeTableScanType, CostFeatureWeights> table_scan_models;
   std::map<OperatorType, CostFeatureWeights> other_operator_models;
 };
 
@@ -37,17 +37,17 @@ struct CostModelLinearConfig final {
  * - For JoinHash - since it shows erratic performance behaviour - only the runtime of some of the operators phases is
  *      being predicted.
  */
-class CostModelLinear : public AbstractCostModel {
+class CostModelRuntime : public AbstractCostModel {
  public:
-  static CostModelLinearConfig create_debug_build_config();
-  static CostModelLinearConfig create_release_build_config();
+  static CostModelRuntimeConfig create_debug_build_config();
+  static CostModelRuntimeConfig create_release_build_config();
 
   /**
    * @return a CostModelLinear calibrated on the current build type (debug, release)
    */
-  static CostModelLinearConfig create_current_build_type_config();
+  static CostModelRuntimeConfig create_current_build_type_config();
 
-  explicit CostModelLinear(const CostModelLinearConfig& config = create_current_build_type_config());
+  explicit CostModelRuntime(const CostModelRuntimeConfig& config = create_current_build_type_config());
 
   std::string name() const override;
 
@@ -58,7 +58,7 @@ class CostModelLinear : public AbstractCostModel {
   Cost _predict_cost(const CostFeatureWeights& feature_weights, const AbstractCostFeatureProxy& feature_proxy) const;
 
  private:
-  CostModelLinearConfig _config;
+  CostModelRuntimeConfig _config;
 };
 
 }  // namespace opossum

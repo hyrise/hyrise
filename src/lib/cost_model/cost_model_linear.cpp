@@ -11,32 +11,32 @@
 
 namespace opossum {
 
-CostModelLinearConfig CostModelLinear::create_debug_build_config() {
-  CostModelLinearConfig config;
+CostModelRuntimeConfig CostModelRuntime::create_debug_build_config() {
+  CostModelRuntimeConfig config;
 
-  config.table_scan_models[CostModelLinearTableScanType::ColumnValueNumeric] =
+  config.table_scan_models[CostModelRuntimeTableScanType::ColumnValueNumeric] =
       CostFeatureWeights{{CostFeature::LeftInputReferenceRowCount, 0.151131599208f},
                          {CostFeature::LeftInputRowCount, 0.15565695035f},
                          {CostFeature::OutputRowCount, 0.112082904016f},
                          {CostFeature::OutputDereferenceRowCount, 0.0248249284018f}};
-  config.table_scan_models[CostModelLinearTableScanType::ColumnColumnNumeric] =
+  config.table_scan_models[CostModelRuntimeTableScanType::ColumnColumnNumeric] =
       CostFeatureWeights{{CostFeature::LeftInputReferenceRowCount, 0.0f},
                          {CostFeature::LeftInputRowCount, 0.265919959986f},
                          {CostFeature::OutputRowCount, 0.0f},
                          {CostFeature::OutputDereferenceRowCount, 0.0f}};
-  config.table_scan_models[CostModelLinearTableScanType::ColumnValueString] = CostFeatureWeights{
+  config.table_scan_models[CostModelRuntimeTableScanType::ColumnValueString] = CostFeatureWeights{
       {CostFeature::LeftInputReferenceRowCount, 0.389646092813f},
       {CostFeature::LeftInputRowCount, 0.150529434248f},
       {CostFeature::OutputRowCount, 0.140562838787f},
       {CostFeature::OutputDereferenceRowCount, 0.0576460191188f},
   };
-  config.table_scan_models[CostModelLinearTableScanType::ColumnColumnString] = CostFeatureWeights{
+  config.table_scan_models[CostModelRuntimeTableScanType::ColumnColumnString] = CostFeatureWeights{
       {CostFeature::LeftInputReferenceRowCount, 0.389646092813f},
       {CostFeature::LeftInputRowCount, 0.150529434248f},
       {CostFeature::OutputRowCount, 0.140562838787f},
       {CostFeature::OutputDereferenceRowCount, 0.0576460191188f},
   };
-  config.table_scan_models[CostModelLinearTableScanType::Like] = CostFeatureWeights{
+  config.table_scan_models[CostModelRuntimeTableScanType::Like] = CostFeatureWeights{
       {CostFeature::LeftInputReferenceRowCount, 0.0f},
       {CostFeature::LeftInputRowCount, 8.0548057056f},
       {CostFeature::OutputRowCount, 0.0f},
@@ -58,32 +58,32 @@ CostModelLinearConfig CostModelLinear::create_debug_build_config() {
   return config;
 }
 
-CostModelLinearConfig CostModelLinear::create_release_build_config() {
-  CostModelLinearConfig config;
+CostModelRuntimeConfig CostModelRuntime::create_release_build_config() {
+  CostModelRuntimeConfig config;
 
-  config.table_scan_models[CostModelLinearTableScanType::ColumnValueNumeric] =
+  config.table_scan_models[CostModelRuntimeTableScanType::ColumnValueNumeric] =
       CostFeatureWeights{{CostFeature::LeftInputReferenceRowCount, 0.00357555320143f},
                          {CostFeature::LeftInputRowCount, 0.0189155666155f},
                          {CostFeature::OutputRowCount, 0.00185955501541f},
                          {CostFeature::OutputDereferenceRowCount, 0.0f}};
-  config.table_scan_models[CostModelLinearTableScanType::ColumnColumnNumeric] =
+  config.table_scan_models[CostModelRuntimeTableScanType::ColumnColumnNumeric] =
       CostFeatureWeights{{CostFeature::LeftInputReferenceRowCount, 0.0f},
                          {CostFeature::LeftInputRowCount, 0.0262691992411f},
                          {CostFeature::OutputRowCount, 0.0f},
                          {CostFeature::OutputDereferenceRowCount, 0.0f}};
-  config.table_scan_models[CostModelLinearTableScanType::ColumnValueString] = CostFeatureWeights{
+  config.table_scan_models[CostModelRuntimeTableScanType::ColumnValueString] = CostFeatureWeights{
       {CostFeature::LeftInputReferenceRowCount, 0.0122686866294f},
       {CostFeature::LeftInputRowCount, 0.0183285792719f},
       {CostFeature::OutputRowCount, 0.00602195854223f},
       {CostFeature::OutputDereferenceRowCount, 0.0325447573152f},
   };
-  config.table_scan_models[CostModelLinearTableScanType::ColumnColumnString] = CostFeatureWeights{
+  config.table_scan_models[CostModelRuntimeTableScanType::ColumnColumnString] = CostFeatureWeights{
       {CostFeature::LeftInputReferenceRowCount, 0.0122686866294f},
       {CostFeature::LeftInputRowCount, 0.0183285792719f},
       {CostFeature::OutputRowCount, 0.00602195854223f},
       {CostFeature::OutputDereferenceRowCount, 0.0325447573152f},
   };
-  config.table_scan_models[CostModelLinearTableScanType::Like] = CostFeatureWeights{
+  config.table_scan_models[CostModelRuntimeTableScanType::Like] = CostFeatureWeights{
       {CostFeature::LeftInputReferenceRowCount, 1.96376974778f},
       {CostFeature::LeftInputRowCount, 0.0f},
       {CostFeature::OutputRowCount, 11.2450352145f},
@@ -105,7 +105,7 @@ CostModelLinearConfig CostModelLinear::create_release_build_config() {
   return config;
 }
 
-CostModelLinearConfig CostModelLinear::create_current_build_type_config() {
+CostModelRuntimeConfig CostModelRuntime::create_current_build_type_config() {
 #if IS_DEBUG
   return create_debug_build_config();
 #else
@@ -113,11 +113,11 @@ CostModelLinearConfig CostModelLinear::create_current_build_type_config() {
 #endif
 }
 
-CostModelLinear::CostModelLinear(const CostModelLinearConfig& config) : _config(config) {}
+CostModelRuntime::CostModelRuntime(const CostModelRuntimeConfig& config) : _config(config) {}
 
-std::string CostModelLinear::name() const { return "CostModelLinear"; }
+std::string CostModelRuntime::name() const { return "CostModelRuntime"; }
 
-Cost CostModelLinear::get_reference_operator_cost(const std::shared_ptr<AbstractOperator>& op) const {
+Cost CostModelRuntime::get_reference_operator_cost(const std::shared_ptr<AbstractOperator>& op) const {
   Assert(op->get_output(), "Can only get reference cost of Operators that were executed");
 
   auto duration = std::chrono::microseconds{0};
@@ -142,7 +142,7 @@ Cost CostModelLinear::get_reference_operator_cost(const std::shared_ptr<Abstract
   return static_cast<Cost>(duration.count());
 }
 
-Cost CostModelLinear::_cost_model_impl(const OperatorType operator_type,
+Cost CostModelRuntime::_cost_model_impl(const OperatorType operator_type,
                                        const AbstractCostFeatureProxy& feature_proxy) const {
   switch (operator_type) {
     case OperatorType::TableScan: {
@@ -155,21 +155,21 @@ Cost CostModelLinear::_cost_model_impl(const OperatorType operator_type,
 
       if (predicate_condition == PredicateCondition::Like || predicate_condition == PredicateCondition::NotLike) {
         Assert(left_data_type == DataType::String && right_data_type == DataType::String, "Expected string for LIKE");
-        feature_weights_iter = _config.table_scan_models.find(CostModelLinearTableScanType::Like);
+        feature_weights_iter = _config.table_scan_models.find(CostModelRuntimeTableScanType::Like);
       } else {
         const auto right_operand_is_column = feature_proxy.extract_feature(CostFeature::RightOperandIsColumn).boolean();
 
         if (left_data_type == DataType::String) {
           if (right_operand_is_column) {
-            feature_weights_iter = _config.table_scan_models.find(CostModelLinearTableScanType::ColumnColumnString);
+            feature_weights_iter = _config.table_scan_models.find(CostModelRuntimeTableScanType::ColumnColumnString);
           } else {
-            feature_weights_iter = _config.table_scan_models.find(CostModelLinearTableScanType::ColumnValueString);
+            feature_weights_iter = _config.table_scan_models.find(CostModelRuntimeTableScanType::ColumnValueString);
           }
         } else {
           if (right_operand_is_column) {
-            feature_weights_iter = _config.table_scan_models.find(CostModelLinearTableScanType::ColumnColumnNumeric);
+            feature_weights_iter = _config.table_scan_models.find(CostModelRuntimeTableScanType::ColumnColumnNumeric);
           } else {
-            feature_weights_iter = _config.table_scan_models.find(CostModelLinearTableScanType::ColumnValueNumeric);
+            feature_weights_iter = _config.table_scan_models.find(CostModelRuntimeTableScanType::ColumnValueNumeric);
           }
         }
       }
@@ -188,7 +188,7 @@ Cost CostModelLinear::_cost_model_impl(const OperatorType operator_type,
   }
 }
 
-Cost CostModelLinear::_predict_cost(const CostFeatureWeights& feature_weights,
+Cost CostModelRuntime::_predict_cost(const CostFeatureWeights& feature_weights,
                                     const AbstractCostFeatureProxy& feature_proxy) const {
   auto cost = Cost{0};
 

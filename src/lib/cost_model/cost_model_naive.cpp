@@ -5,13 +5,13 @@
 
 namespace opossum {
 
-std::string CostModelNaive::name() const { return "CostModelNaive"; }
+std::string CostModelLogical::name() const { return "CostModelLogical"; }
 
-Cost CostModelNaive::get_reference_operator_cost(const std::shared_ptr<AbstractOperator>& op) const {
+Cost CostModelLogical::get_reference_operator_cost(const std::shared_ptr<AbstractOperator>& op) const {
   return estimate_operator_cost(op);
 }
 
-Cost CostModelNaive::_cost_model_impl(const OperatorType operator_type,
+Cost CostModelLogical::_cost_model_impl(const OperatorType operator_type,
                                       const AbstractCostFeatureProxy& feature_proxy) const {
   switch (operator_type) {
     case OperatorType::JoinHash:
