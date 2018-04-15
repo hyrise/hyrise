@@ -451,7 +451,7 @@ if (${ENABLE_JIT_SUPPORT})
     set(LIBRARIES ${LIBRARIES} ${LLVM_LIBRARY})
 endif()
 
-if (${ENABLE_NUMA_SUPPORT} AND ${NUMA_FOUND})
+if (${ENABLE_NUMA_SUPPORT})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
 endif()
 
