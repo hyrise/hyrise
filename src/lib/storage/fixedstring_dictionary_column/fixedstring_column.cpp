@@ -108,4 +108,6 @@ const ValueID FixedStringColumn<T>::null_value_id() const {
   return _null_value_id;
 }
 
+template class FixedStringColumn<std::string>;
+
 }  // namespace opossum
