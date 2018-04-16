@@ -6,8 +6,8 @@
 #include <vector>
 
 #include "fixed_string.hpp"
-#include "types.hpp"
 #include "type_cast.hpp"
+#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

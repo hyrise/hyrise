@@ -79,11 +79,11 @@ const char* FixedStringVector::data() const { return &_chars[0]; }
 size_t FixedStringVector::data_size() const { return sizeof(*this) + _chars.size(); }
 
 std::shared_ptr<const pmr_vector<std::string>> FixedStringVector::dictionary() const {
-    pmr_vector<std::string> string_values;
-    for (auto it = begin(); it != end(); ++it) {
-        string_values.push_back(it->string());
-    }
-    return std::make_shared<pmr_vector<std::string> >(std::move(string_values));
+  pmr_vector<std::string> string_values;
+  for (auto it = begin(); it != end(); ++it) {
+    string_values.push_back(it->string());
+  }
+  return std::make_shared<pmr_vector<std::string>>(std::move(string_values));
 }
 
 }  // namespace opossum

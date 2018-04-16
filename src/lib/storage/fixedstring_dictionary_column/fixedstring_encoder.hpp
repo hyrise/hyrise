@@ -96,13 +96,13 @@ class FixedStringDictionaryEncoder : public ColumnEncoder<FixedStringDictionaryE
     auto dictionary_sptr = std::allocate_shared<FixedStringVector>(alloc, std::move(dictionary));
     auto attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(encoded_attribute_vector));
     return std::allocate_shared<FixedStringColumn<std::string>>(alloc, dictionary_sptr, attribute_vector_sptr,
-                                                     ValueID{null_value_id});
+                                                                ValueID{null_value_id});
   }
 
  private:
   static ValueID _get_value_id(const FixedStringVector& dictionary, const std::string& value) {
-    return static_cast<ValueID>(
-        std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), FixedString(value))));
+    return static_cast<ValueID>(std::distance(
+        dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), FixedString(value))));
   }
 };
 

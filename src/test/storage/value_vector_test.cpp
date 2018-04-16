@@ -54,7 +54,7 @@ TEST_F(FixedStringVectorTest, IteratorFixedString) {
   }
 
   EXPECT_EQ(valuevector[0], "abcde");
-  }
+}
 
 TEST_F(FixedStringVectorTest, IteratorConstFixedString) {
   auto valuevector = FixedStringVector(4u);

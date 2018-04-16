@@ -20,8 +20,8 @@ template <typename T>
 class FixedStringColumn : public BaseDictionaryColumn {
  public:
   explicit FixedStringColumn(const std::shared_ptr<const FixedStringVector>& dictionary,
-                            const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
-                            const ValueID null_value_id);
+                             const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
+                             const ValueID null_value_id);
 
   // returns an underlying dictionary
   std::shared_ptr<const pmr_vector<std::string>> dictionary() const;
