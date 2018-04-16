@@ -176,6 +176,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
         value_vectors[column_index][row_offset] = generate_value_by_distribution_type();
       }
 
+      // add values to column in chunk, reset value vector
       columns.push_back(std::allocate_shared<ValueColumn<int>>(allocator_valcolumn_int,
                                                                std::move(value_vectors[column_index]), allocator_int));
       value_vectors[column_index] = tbb::concurrent_vector<int>(chunk_size);
