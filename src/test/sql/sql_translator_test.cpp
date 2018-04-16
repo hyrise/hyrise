@@ -687,7 +687,7 @@ TEST_F(SQLTranslatorTest, MultipleJoinConditionsOnBothSides) {
     JoinNode::make(JoinMode::Inner, LQPColumnReferencePair{_table_a_a, _table_b_a}, PredicateCondition::Equals,
 
       PredicateNode::make(_table_a_a, PredicateCondition::Equals, _table_a_b,
-        PredicateNode::make(_table_a_b, PredicateCondition::NotEquals, static_cast<int64_t>(3),
+        PredicateNode::make(_table_a_b, PredicateCondition::NotEquals, static_cast<int32_t>(3),
           _stored_table_node_a)),
 
       PredicateNode::make(_table_b_b, PredicateCondition::Equals, _table_b_a,
@@ -700,12 +700,12 @@ TEST_F(SQLTranslatorTest, MultipleJoinConditionsOnBothSides) {
 
 TEST_F(SQLTranslatorTest, JoinConditionAmbiguous) {
   const auto query = "SELECT * FROM table_a JOIN table_b ON a = b";
-  EXPECT_THROW(compile_query(query), std::invalid_argument);
+  EXPECT_THROW(compile_query(query), std::logic_error);
 }
 
 TEST_F(SQLTranslatorTest, NonJoinConditionAmbiguous) {
   const auto query = "SELECT * FROM table_a JOIN table_b ON table_a.a = table_b.a AND a = 3";
-  EXPECT_THROW(compile_query(query), std::invalid_argument);
+  EXPECT_THROW(compile_query(query), std::logic_error);
 }
 
 TEST_F(SQLTranslatorTest, ColumnsOfJoinConditionPermuted) {
