@@ -11,6 +11,7 @@
 
 namespace opossum {
 
+template <typename T>
 FixedStringColumn<T>::FixedStringColumn(const std::shared_ptr<const FixedStringVector>& dictionary,
                                       const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
                                       const ValueID null_value_id)
@@ -19,6 +20,7 @@ FixedStringColumn<T>::FixedStringColumn(const std::shared_ptr<const FixedStringV
       _attribute_vector{attribute_vector},
       _null_value_id{null_value_id} {}
 
+template <typename T>
 const AllTypeVariant FixedStringColumn<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
 
@@ -34,16 +36,19 @@ const AllTypeVariant FixedStringColumn<T>::operator[](const ChunkOffset chunk_of
   return (*_dictionary)[value_id];
 }
 
+template <typename T>
 std::shared_ptr<const pmr_vector<std::string>> FixedStringColumn<T>::dictionary() const {
   // TODO(team_btm) fix this shit
   // return std::shared_ptr<FixedStringColumn>;
   return _dictionary->dictionary();
 }
 
+template <typename T>
 size_t FixedStringColumn<T>::size() const {
   return _attribute_vector->size();
 }
 
+template <typename T>
 std::shared_ptr<BaseColumn> FixedStringColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   auto new_attribute_vector_ptr = _attribute_vector->copy_using_allocator(alloc);
   auto new_attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(new_attribute_vector_ptr));
@@ -53,14 +58,17 @@ std::shared_ptr<BaseColumn> FixedStringColumn<T>::copy_using_allocator(const Pol
                                                    _null_value_id);
 }
 
+template <typename T>
 size_t FixedStringColumn<T>::estimate_memory_usage() const {
   return sizeof(*this) + _dictionary->data_size() + _attribute_vector->data_size();
 }
 
+template <typename T>
 CompressedVectorType FixedStringColumn<T>::compressed_vector_type() const {
   return _attribute_vector->type();
 }
 
+template <typename T>
 ValueID FixedStringColumn<T>::lower_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
@@ -71,6 +79,7 @@ ValueID FixedStringColumn<T>::lower_bound(const AllTypeVariant& value) const {
   return static_cast<ValueID>(std::distance(_dictionary->cbegin(), it));
 }
 
+template <typename T>
 ValueID FixedStringColumn<T>::upper_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
@@ -81,14 +90,17 @@ ValueID FixedStringColumn<T>::upper_bound(const AllTypeVariant& value) const {
   return static_cast<ValueID>(std::distance(_dictionary->cbegin(), it));
 }
 
+template <typename T>
 size_t FixedStringColumn<T>::unique_values_count() const {
   return _dictionary->size();
 }
 
+template <typename T>
 std::shared_ptr<const BaseCompressedVector> FixedStringColumn<T>::attribute_vector() const {
   return _attribute_vector;
 }
 
+template <typename T>
 const ValueID FixedStringColumn<T>::null_value_id() const {
   return _null_value_id;
 }

@@ -24,7 +24,7 @@ namespace opossum {
  */
 class FixedStringDictionaryEncoder : public ColumnEncoder<FixedStringDictionaryEncoder> {
  public:
-  static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::Dictionary>;
+  static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::FixedStringDictionary>;
   static constexpr auto _uses_vector_compression = true;  // see base_column_encoder.hpp for details
 
   std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueColumn<std::string>>& value_column) {
@@ -95,7 +95,7 @@ class FixedStringDictionaryEncoder : public ColumnEncoder<FixedStringDictionaryE
 
     auto dictionary_sptr = std::allocate_shared<FixedStringVector>(alloc, std::move(dictionary));
     auto attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(encoded_attribute_vector));
-    return std::allocate_shared<FixedStringColumn>(alloc, dictionary_sptr, attribute_vector_sptr,
+    return std::allocate_shared<FixedStringColumn<std::string>>(alloc, dictionary_sptr, attribute_vector_sptr,
                                                      ValueID{null_value_id});
   }
 

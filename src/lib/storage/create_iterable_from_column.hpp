@@ -6,6 +6,7 @@
 #include "storage/frame_of_reference/frame_of_reference_iterable.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/run_length_column/run_length_column_iterable.hpp"
+#include "storage/fixedstring_dictionary_column/fixedstring_column_iterable.hpp"
 #include "storage/value_column/value_column_iterable.hpp"
 
 namespace opossum {
@@ -41,6 +42,11 @@ auto create_iterable_from_column(const DictionaryColumn<T>& column) {
 template <typename T>
 auto create_iterable_from_column(const RunLengthColumn<T>& column) {
   return erase_type_from_iterable_if_debug(RunLengthColumnIterable<T>{column});
+}
+
+template <typename T>
+auto create_iterable_from_column(const FixedStringColumn<T>& column) {
+	return erase_type_from_iterable_if_debug(FixedStringColumnIterable<T>{column});
 }
 
 template <typename T>
