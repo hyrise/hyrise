@@ -15,7 +15,7 @@ class BaseDictionaryColumn : public BaseEncodedColumn {
  public:
   using BaseEncodedColumn::BaseEncodedColumn;
 
-  EncodingType encoding_type() const final;
+  virtual EncodingType encoding_type() const override;
 
   void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
 

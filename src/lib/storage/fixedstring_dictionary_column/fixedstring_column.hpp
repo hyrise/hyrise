@@ -51,6 +51,8 @@ class FixedStringColumn : public BaseDictionaryColumn {
    * @defgroup BaseDictionaryColumn interface
    * @{
    */
+  EncodingType encoding_type() const final;
+
   ValueID lower_bound(const AllTypeVariant& value) const final;
   ValueID upper_bound(const AllTypeVariant& value) const final;
 

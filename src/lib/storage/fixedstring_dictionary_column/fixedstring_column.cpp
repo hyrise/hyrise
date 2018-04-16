@@ -69,6 +69,9 @@ CompressedVectorType FixedStringColumn<T>::compressed_vector_type() const {
 }
 
 template <typename T>
+EncodingType FixedStringColumn<T>::encoding_type() const { return EncodingType::FixedStringDictionary; }
+
+template <typename T>
 ValueID FixedStringColumn<T>::lower_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
