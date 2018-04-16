@@ -115,7 +115,11 @@ AllParameterVariant HSQLExprTranslator::to_all_parameter_variant(
     const hsql::Expr& expr, const std::optional<std::shared_ptr<AbstractLQPNode>>& input_node) {
   switch (expr.type) {
     case hsql::kExprLiteralInt:
-      return AllTypeVariant(expr.ival);
+      if (static_cast<int32_t>(expr.ival) == expr.ival) {
+        return AllTypeVariant{static_cast<int32_t>(expr.ival)};
+      } else {
+        return AllTypeVariant{expr.ival};
+      }
     case hsql::kExprLiteralFloat:
       return AllTypeVariant(expr.fval);
     case hsql::kExprLiteralString:

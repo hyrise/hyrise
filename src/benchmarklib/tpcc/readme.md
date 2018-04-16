@@ -10,7 +10,7 @@ such as database population rules or transaction definitions.
 
 ### How does Hyrise implement TPC-C
 
-For Hyrise we added a TPC-C Table Generator class (tpcc::TableGenerator) that uses these database population rules and
+For Hyrise we added a TPC-C Table Generator class (TableGenerator) that uses these database population rules and
 generates Hyrise Tables. These tables are then used in the benchmarks to measure the performance of this database given
 a set of transactions.
 
