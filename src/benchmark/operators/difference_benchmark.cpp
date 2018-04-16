@@ -3,7 +3,7 @@
 #include "benchmark/benchmark.h"
 
 #include "../benchmark_basic_fixture.hpp"
-#include "../table_generator.hpp"
+#include "table_generator.hpp"
 #include "operators/difference.hpp"
 #include "operators/table_wrapper.hpp"
 

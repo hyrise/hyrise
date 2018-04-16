@@ -1,7 +1,7 @@
 #include <memory>
 
 #include "../benchmark_basic_fixture.hpp"
-#include "../table_generator.hpp"
+#include "table_generator.hpp"
 #include "benchmark/benchmark.h"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
