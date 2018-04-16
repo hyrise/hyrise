@@ -700,12 +700,12 @@ TEST_F(SQLTranslatorTest, MultipleJoinConditionsOnBothSides) {
 
 TEST_F(SQLTranslatorTest, JoinConditionAmbiguous) {
   const auto query = "SELECT * FROM table_a JOIN table_b ON a = b";
-  EXPECT_THROW(compile_query(query), std::runtime_error);
+  EXPECT_THROW(compile_query(query), std::invalid_argument);
 }
 
 TEST_F(SQLTranslatorTest, NonJoinConditionAmbiguous) {
   const auto query = "SELECT * FROM table_a JOIN table_b ON table_a.a = table_b.a AND a = 3";
-  EXPECT_THROW(compile_query(query), std::runtime_error);
+  EXPECT_THROW(compile_query(query), std::invalid_argument);
 }
 
 TEST_F(SQLTranslatorTest, ColumnsOfJoinConditionPermuted) {
