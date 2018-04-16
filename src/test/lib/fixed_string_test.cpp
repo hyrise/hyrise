@@ -71,7 +71,7 @@ TEST_F(FixedStringTest, Swap) {
   auto str1 = FixedString("foo");
   auto str2 = FixedString("bar");
 
-  str1.swap(str2);
+  std::swap(str1, str2);
   EXPECT_EQ(str1.string(), "bar");
   EXPECT_EQ(str2.string(), "foo");
 }
