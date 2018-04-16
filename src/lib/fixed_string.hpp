@@ -92,10 +92,10 @@ class FixedString {
   friend std::ostream& operator<<(std::ostream& os, const FixedString& obj) { return os << obj.string(); }
 
   // Support swappable concept needed for sorting values. See: http://en.cppreference.com/w/cpp/concept/Swappable
-  friend void swap(FixedString& lhs, FixedString& rhs) { lhs.swap(rhs); }
+  friend void swap(FixedString lhs, FixedString rhs) { lhs.swap(rhs); }
 
   // Swap two FixedStrings by exchanging the underlying memory's content
-  void swap(FixedString& other) {
+  void swap(FixedString other) {
     DebugAssert(_maximum_length == other.maximum_length(),
                 "FixedStrings must have the same maximum_length in order to swap them");
     std::swap_ranges(_mem, _mem + _maximum_length, other._mem);

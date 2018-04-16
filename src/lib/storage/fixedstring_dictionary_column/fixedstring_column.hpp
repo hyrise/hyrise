@@ -16,6 +16,7 @@ class BaseCompressedVector;
  *
  * Uses vector compression schemes for its attribute vector.
  */
+template <typename T>
 class FixedStringColumn : public BaseDictionaryColumn {
  public:
   explicit FixedStringColumn(const std::shared_ptr<const FixedStringVector>& dictionary,

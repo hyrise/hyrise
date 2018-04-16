@@ -27,8 +27,7 @@ class FixedStringDictionaryEncoder : public ColumnEncoder<FixedStringDictionaryE
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::Dictionary>;
   static constexpr auto _uses_vector_compression = true;  // see base_column_encoder.hpp for details
 
-  template <typename T>
-  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueColumn<T>>& value_column) {
+  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueColumn<std::string>>& value_column) {
     // See: https://goo.gl/MCM5rr
     // Create dictionary (enforce uniqueness and sorting)
     const auto& values = value_column->values();
@@ -94,17 +93,16 @@ class FixedStringDictionaryEncoder : public ColumnEncoder<FixedStringDictionaryE
 
     auto encoded_attribute_vector = compress_vector(attribute_vector, vector_compression_type(), alloc, {max_value});
 
-    auto dictionary_sptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(dictionary));
+    auto dictionary_sptr = std::allocate_shared<FixedStringVector>(alloc, std::move(dictionary));
     auto attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(encoded_attribute_vector));
     return std::allocate_shared<FixedStringColumn>(alloc, dictionary_sptr, attribute_vector_sptr,
                                                      ValueID{null_value_id});
   }
 
  private:
-  template <typename T>
-  static ValueID _get_value_id(const FixedStringVector& dictionary, const T& value) {
+  static ValueID _get_value_id(const FixedStringVector& dictionary, const std::string& value) {
     return static_cast<ValueID>(
-        std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
+        std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), FixedString(value))));
   }
 };
 
