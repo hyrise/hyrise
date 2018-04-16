@@ -30,7 +30,7 @@ std::shared_ptr<AbstractColumnStatistics> generate_column_statistics<std::string
             max = column_value.value();
           } else {
             min = std::min(min, column_value.value());
-            max = std::max(min, column_value.value());
+            max = std::max(max, column_value.value());
           }
           distinct_set.insert(column_value.value());
         }
