@@ -108,8 +108,8 @@ std::shared_ptr<Table> TableGenerator::generate_table(
   pseudorandom_engine.seed(rd());
 
   // Base allocators if we don't use multiple NUMA nodes
-  auto allocator_ptr_basecolumn = PolymorphicAllocator<std::shared_ptr<BaseColumn>>{};
-  auto allocator_valcolumn_int = PolymorphicAllocator<ValueColumn<int>>{};
+  auto allocator_ptr_base_column = PolymorphicAllocator<std::shared_ptr<BaseColumn>>{};
+  auto allocator_value_column_int = PolymorphicAllocator<ValueColumn<int>>{};
   auto allocator_chunk = PolymorphicAllocator<Chunk>{};
   auto allocator_int = PolymorphicAllocator<int>{};
 
@@ -123,14 +123,14 @@ std::shared_ptr<Table> TableGenerator::generate_table(
       auto memory_resource = NUMAPlacementManager::get().get_memory_resource(current_node);
 
       // create allocators for the node
-      allocator_ptr_basecolumn = PolymorphicAllocator<std::shared_ptr<BaseColumn>>{memory_resource};
-      allocator_valcolumn_int = PolymorphicAllocator<ValueColumn<int>>{memory_resource};
+      allocator_ptr_base_column = PolymorphicAllocator<std::shared_ptr<BaseColumn>>{memory_resource};
+      allocator_value_column_int = PolymorphicAllocator<ValueColumn<int>>{memory_resource};
       allocator_chunk = PolymorphicAllocator<Chunk>{memory_resource};
       allocator_int = PolymorphicAllocator<int>{memory_resource};
     }
 #endif
 
-    auto columns = ChunkColumns(allocator_ptr_basecolumn);
+    auto columns = ChunkColumns(allocator_ptr_base_column);
     for (ChunkID column_index{0}; column_index < num_columns; ++column_index) {
       const auto& column_data_distribution = column_data_distributions[column_index];
 
@@ -177,7 +177,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
       }
 
       // add values to column in chunk, reset value vector
-      columns.push_back(std::allocate_shared<ValueColumn<int>>(allocator_valcolumn_int,
+      columns.push_back(std::allocate_shared<ValueColumn<int>>(allocator_value_column_int,
                                                                std::move(value_vectors[column_index]), allocator_int));
       value_vectors[column_index] = tbb::concurrent_vector<int>(chunk_size);
 
