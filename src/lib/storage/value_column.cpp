@@ -31,8 +31,11 @@ ValueColumn<T>::ValueColumn(pmr_concurrent_vector<T>&& values, const Polymorphic
     : BaseValueColumn(data_type_from_type<T>()), _values(std::move(values), alloc) {}
 
 template <typename T>
-ValueColumn<T>::ValueColumn(pmr_concurrent_vector<T>&& values, pmr_concurrent_vector<bool>&& null_values, const PolymorphicAllocator<T>& alloc)
-    : BaseValueColumn(data_type_from_type<T>()), _values(std::move(values), alloc), _null_values(std::move(null_values)/*, alloc*/) {}
+ValueColumn<T>::ValueColumn(pmr_concurrent_vector<T>&& values, pmr_concurrent_vector<bool>&& null_values,
+                            const PolymorphicAllocator<T>& alloc)
+    : BaseValueColumn(data_type_from_type<T>()),
+      _values(std::move(values), alloc),
+      _null_values(std::move(null_values) /*, alloc*/) {}
 
 template <typename T>
 const AllTypeVariant ValueColumn<T>::operator[](const ChunkOffset chunk_offset) const {

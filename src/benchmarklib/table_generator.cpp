@@ -82,8 +82,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
 std::shared_ptr<Table> TableGenerator::generate_table(
     const std::vector<ColumnDataDistribution>& column_data_distributions, const size_t num_rows,
     const size_t chunk_size, std::optional<EncodingType> encoding_type, bool use_multiple_partitions) {
-
-  Assert(chunk_size != 0, "cannot generate table with chunk size 0")
+  Assert(chunk_size != 0, "cannot generate table with chunk size 0");
   const auto num_columns = column_data_distributions.size();
   const auto num_chunks = std::ceil(static_cast<double>(num_rows) / static_cast<double>(chunk_size));
 
@@ -177,7 +176,8 @@ std::shared_ptr<Table> TableGenerator::generate_table(
         value_vectors[column_index][row_offset] = generate_value_by_distribution_type();
       }
 
-      columns.push_back(std::allocate_shared<ValueColumn<int>>(allocator_valcolumn_int, std::move(value_vectors[column_index]), allocator_int));
+      columns.push_back(std::allocate_shared<ValueColumn<int>>(allocator_valcolumn_int,
+                                                               std::move(value_vectors[column_index]), allocator_int));
       value_vectors[column_index] = tbb::concurrent_vector<int>(chunk_size);
 
       // add full chunk to table
