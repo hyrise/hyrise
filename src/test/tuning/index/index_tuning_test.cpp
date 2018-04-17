@@ -68,12 +68,12 @@ TEST_F(IndexTuningTest, EndToEndTest) {
 
   // Check that exactly the expected indexes are built
   std::vector<IndexInfo> expected_index_infos = {
-      IndexInfo{std::vector<ColumnID>{ColumnID{0}}, "", ColumnIndexType::GroupKey},
+      IndexInfo{std::vector<ColumnID>{ColumnID{1}}, "", ColumnIndexType::GroupKey},
       IndexInfo{std::vector<ColumnID>{ColumnID{4}}, "", ColumnIndexType::GroupKey}};
   auto indexes = _table->get_indexes();
   for (const auto& index_info : indexes) {
     auto it = std::find(expected_index_infos.begin(), expected_index_infos.end(), index_info);
-    EXPECT_NE(it, expected_index_infos.end());
+    ASSERT_NE(it, expected_index_infos.end());
     expected_index_infos.erase(it);
   }
   EXPECT_EQ(expected_index_infos.size(), 0u);
