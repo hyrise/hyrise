@@ -13,7 +13,7 @@
 #include "storage/value_column.hpp"
 #include "types.hpp"
 
-namespace benchmark_utilities {
+namespace opossum {
 
 class AbstractBenchmarkTableGenerator {
  public:
@@ -162,4 +162,4 @@ class AbstractBenchmarkTableGenerator {
     add_column(columns_by_chunk, column_definitions, name, cardinalities, wrapped_generator_function);
   }
 };
-}  // namespace benchmark_utilities
+}  // namespace opossum

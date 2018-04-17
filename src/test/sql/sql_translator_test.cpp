@@ -147,7 +147,7 @@ TEST_F(SQLTranslatorTest, SelectWithAndCondition) {
 
   auto projection_node = ProjectionNode::make_pass_through(PredicateNode::make(
       _table_a_b, PredicateCondition::LessThan, 457.9f,
-      PredicateNode::make(_table_a_a, PredicateCondition::GreaterThanEquals, int64_t(1234), _stored_table_node_a)));
+      PredicateNode::make(_table_a_a, PredicateCondition::GreaterThanEquals, int32_t(1234), _stored_table_node_a)));
 
   EXPECT_LQP_EQ(projection_node, result_node);
 }
@@ -442,7 +442,7 @@ TEST_F(SQLTranslatorTest, Update) {
 
   const auto lqp = UpdateNode::make(
       "table_a", std::vector<std::shared_ptr<LQPExpression>>{update_a, update_b},
-      PredicateNode::make(_table_a_a, PredicateCondition::GreaterThan, int64_t(1), _stored_table_node_a));
+      PredicateNode::make(_table_a_a, PredicateCondition::GreaterThan, int32_t(1), _stored_table_node_a));
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -639,6 +639,87 @@ TEST_F(SQLTranslatorTest, ColumnAlias) {
   EXPECT_EQ(expressions.size(), 2u);
   EXPECT_EQ(*expressions[0]->alias(), std::string("y"));
   EXPECT_EQ(*expressions[1]->alias(), std::string("z"));
+}
+
+TEST_F(SQLTranslatorTest, MultipleJoinConditionsOnLeftSide) {
+  const auto query =
+      "SELECT * FROM table_a JOIN table_b ON table_a.a = table_b.a AND table_a.b NOT LIKE 'special request'";
+  auto result_node = compile_query(query);
+
+  // clang-format off
+  const auto expected = ProjectionNode::make_pass_through(
+      JoinNode::make(JoinMode::Inner, LQPColumnReferencePair{_table_a_a, _table_b_a}, PredicateCondition::Equals,
+        PredicateNode::make(_table_a_b, PredicateCondition::NotLike, std::string("special request"),
+          _stored_table_node_a),
+        _stored_table_node_b));
+  // clang-format on
+
+  EXPECT_LQP_EQ(expected, result_node);
+}
+
+TEST_F(SQLTranslatorTest, MultipleJoinConditionsOnRightSide) {
+  const auto query =
+      "SELECT * FROM table_a JOIN table_b ON table_a.a = table_b.a AND table_b.b NOT LIKE 'special request'";
+  auto result_node = compile_query(query);
+
+  // clang-format off
+  const auto expected = ProjectionNode::make_pass_through(
+    JoinNode::make(JoinMode::Inner, LQPColumnReferencePair{_table_a_a, _table_b_a}, PredicateCondition::Equals,
+      _stored_table_node_a,
+      PredicateNode::make(_table_b_b, PredicateCondition::NotLike, std::string("special request"),
+        _stored_table_node_b)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(expected, result_node);
+}
+
+TEST_F(SQLTranslatorTest, MultipleJoinConditionsOnBothSides) {
+  const auto query =
+      "SELECT * FROM table_a JOIN table_b ON table_a.a = table_b.a "
+      "AND table_a.b != 3 "
+      "AND table_a.a == table_a.b "
+      "AND table_b.b NOT LIKE 'special request' "
+      "AND table_b.b == table_b.a ";
+  auto result_node = compile_query(query);
+
+  // clang-format off
+  const auto expected = ProjectionNode::make_pass_through(
+    JoinNode::make(JoinMode::Inner, LQPColumnReferencePair{_table_a_a, _table_b_a}, PredicateCondition::Equals,
+
+      PredicateNode::make(_table_a_a, PredicateCondition::Equals, _table_a_b,
+        PredicateNode::make(_table_a_b, PredicateCondition::NotEquals, static_cast<int32_t>(3),
+          _stored_table_node_a)),
+
+      PredicateNode::make(_table_b_b, PredicateCondition::Equals, _table_b_a,
+        PredicateNode::make(_table_b_b, PredicateCondition::NotLike, std::string("special request"),
+          _stored_table_node_b))));
+  // clang-format on
+
+  EXPECT_LQP_EQ(expected, result_node);
+}
+
+TEST_F(SQLTranslatorTest, JoinConditionAmbiguous) {
+  const auto query = "SELECT * FROM table_a JOIN table_b ON a = b";
+  EXPECT_THROW(compile_query(query), std::logic_error);
+}
+
+TEST_F(SQLTranslatorTest, NonJoinConditionAmbiguous) {
+  const auto query = "SELECT * FROM table_a JOIN table_b ON table_a.a = table_b.a AND a = 3";
+  EXPECT_THROW(compile_query(query), std::logic_error);
+}
+
+TEST_F(SQLTranslatorTest, ColumnsOfJoinConditionPermuted) {
+  const auto query = "SELECT * FROM table_a JOIN table_b ON table_b.a < table_a.b";
+  auto result_node = compile_query(query);
+
+  // clang-format off
+  const auto expected = ProjectionNode::make_pass_through(
+    JoinNode::make(JoinMode::Inner, LQPColumnReferencePair {_table_a_b, _table_b_a}, PredicateCondition::GreaterThan,
+      _stored_table_node_a,
+      _stored_table_node_b));
+  // clang-format on
+
+  EXPECT_LQP_EQ(expected, result_node);
 }
 
 }  // namespace opossum
