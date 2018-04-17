@@ -10,12 +10,12 @@
 #include "benchmark_utilities/random_generator.hpp"
 #include "utils/assert.hpp"
 
-namespace tpcc {
+namespace opossum {
 
-class TpccRandomGenerator : public benchmark_utilities::RandomGenerator {
+class TpccRandomGenerator : public opossum::RandomGenerator {
  public:
   // Fix random seed by default, to make sure the benchmark is deterministic
-  explicit TpccRandomGenerator(uint32_t seed = 42) : benchmark_utilities::RandomGenerator(seed) {}
+  explicit TpccRandomGenerator(uint32_t seed = 42) : opossum::RandomGenerator(seed) {}
 
   /**
    * Generates a random zip code as defined by TPCC
@@ -85,4 +85,4 @@ class TpccRandomGenerator : public benchmark_utilities::RandomGenerator {
  protected:
   const size_t _nurand_constant_c = random_number(0, 255);
 };
-}  // namespace tpcc
+}  // namespace opossum

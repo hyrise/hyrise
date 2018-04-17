@@ -457,15 +457,7 @@ TEST_F(SQLPipelineStatementTest, GetResultTableBadQueryNoMVCC) {
   auto sql_pipeline = SQLPipelineBuilder{sql}.disable_mvcc().create_pipeline_statement();
 
   // Make sure this is actually the failed execution and not a logic_error from the transaction management.
-  EXPECT_THROW(sql_pipeline.get_result_table(), std::runtime_error);
-}
-
-TEST_F(SQLPipelineStatementTest, GetResultTableBadQuery) {
-  auto sql = "SELECT a + b FROM table_a";
-  auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline_statement();
-
-  EXPECT_THROW(sql_pipeline.get_result_table(), std::exception);
-  EXPECT_TRUE(sql_pipeline.transaction_context()->aborted());
+  EXPECT_THROW(sql_pipeline.get_result_table(), std::logic_error);
 }
 
 TEST_F(SQLPipelineStatementTest, GetResultTableNoOutput) {
@@ -621,11 +613,11 @@ TEST_F(SQLPipelineStatementTest, MultiplePreparedStatementsExecute) {
   const std::string execute_statement_multi_invalid = "EXECUTE x_multi (123, 10000, 500, 100)";  // too many arguments
 
   EXPECT_THROW(SQLPipelineBuilder(execute_statement1_invalid).create_pipeline_statement().get_result_table(),
-               std::runtime_error);
+               std::logic_error);
   EXPECT_THROW(SQLPipelineBuilder(execute_statement2_invalid).create_pipeline_statement().get_result_table(),
-               std::runtime_error);
+               std::logic_error);
   EXPECT_THROW(SQLPipelineBuilder(execute_statement_multi_invalid).create_pipeline_statement().get_result_table(),
-               std::runtime_error);
+               std::logic_error);
 
   auto execute_sql_pipeline1 = SQLPipelineBuilder{execute_statement1}
                                    .with_prepared_statement_cache(prepared_statement_cache)
