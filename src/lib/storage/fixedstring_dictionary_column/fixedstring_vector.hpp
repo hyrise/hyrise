@@ -25,11 +25,6 @@ class FixedStringVector {
     _iterator_push_back(first, last);
   }
 
-  template <class Iter>
-  FixedStringVector(Iter first, Iter last) : _string_length(type_cast<std::string>(*first).size()) {
-    _iterator_push_back(first, last);
-  }
-
   // Create a FixedStringVector of FixedStrings with given values
   FixedStringVector(const FixedStringVector&& other)
       : _string_length(std::move(other._string_length)), _chars(std::move(other._chars)) {}

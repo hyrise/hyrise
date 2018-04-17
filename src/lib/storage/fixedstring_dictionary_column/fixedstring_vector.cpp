@@ -58,11 +58,14 @@ const std::string FixedStringVector::operator[](const size_t n) const {
   }
 }
 
-size_t FixedStringVector::size() const { return _chars.size() / _string_length; }
+size_t FixedStringVector::size() const {
+    return _string_length == 0u ? _string_length : _chars.size() / _string_length;
+}
 
 size_t FixedStringVector::capacity() const { return _chars.capacity(); }
 
 void FixedStringVector::erase(const iterator start, const iterator end) {
+  if (_string_length == 0) return;
   auto it = _chars.begin();
   std::advance(it, _chars.size() - std::distance(start, end) * _string_length);
   _chars.erase(it, _chars.end());
