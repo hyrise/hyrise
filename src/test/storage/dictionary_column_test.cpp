@@ -71,6 +71,12 @@ TEST_F(StorageDictionaryColumnTest, CompressColumnString) {
   // TODO(team_btm): remove this again
   auto col2 = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
   auto dict_col2 = std::dynamic_pointer_cast<DictionaryColumn<std::string>>(col);
+
+  // Test attribute_vector size
+  EXPECT_EQ(dict_col2->size(), 6u);
+
+  // Test dictionary size (uniqueness)
+  EXPECT_EQ(dict_col2->unique_values_count(), 4u);
 }
 
 TEST_F(StorageDictionaryColumnTest, CompressColumnDouble) {
