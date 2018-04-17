@@ -33,7 +33,8 @@ class FixedStringDictionaryEncoder : public ColumnEncoder<FixedStringDictionaryE
     const auto& values = value_column->values();
     const auto alloc = values.get_allocator();
 
-    auto dictionary = FixedStringVector{values.cbegin(), values.cend()};
+    const auto fixed_string_length = _calculate_fixed_string_length(values);
+    auto dictionary = FixedStringVector{values.cbegin(), values.cend(), fixed_string_length};
 
     // Remove null values from value vector
     if (value_column->is_nullable()) {
@@ -103,6 +104,14 @@ class FixedStringDictionaryEncoder : public ColumnEncoder<FixedStringDictionaryE
   static ValueID _get_value_id(const FixedStringVector& dictionary, const std::string& value) {
     return static_cast<ValueID>(std::distance(
         dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), FixedString(value))));
+  }
+
+  size_t _calculate_fixed_string_length(const pmr_concurrent_vector<std::string>& values) const {
+    size_t max_string_length = 0;
+    for (const auto& value : values) {
+      if (value.size() > max_string_length) max_string_length = value.size();
+    }
+    return max_string_length;
   }
 };
 
