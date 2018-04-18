@@ -56,6 +56,7 @@ class FixedStringVector {
     friend class boost::iterator_core_access;
     bool equal(iterator const& other) const { return this->_pos == other._pos; }
     typename facade::difference_type distance_to(iterator const& other) const {
+      if (_string_length == 0) return 0;
       return (std::intptr_t(other._pos) - std::intptr_t(this->_pos)) / std::intptr_t(_string_length);
     }
     void advance(typename facade::difference_type n) { _pos += n * _string_length; }
