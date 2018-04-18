@@ -21,7 +21,7 @@
 
 namespace opossum {
 
-class TPCHTest : public BaseTestWithParam<size_t> {
+class TPCHTest : public BaseTestWithParam<std::pair<const size_t, const char*>> {
  protected:
   std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
 
@@ -43,11 +43,12 @@ class TPCHTest : public BaseTestWithParam<size_t> {
 };
 
 TEST_P(TPCHTest, TPCHQueryTest) {
-  const auto query_idx = GetParam();
+  size_t query_idx;
+  const char* query;
+  std::tie(query_idx, query) = GetParam();
 
   SCOPED_TRACE("TPC-H " + std::to_string(query_idx));
 
-  const auto query = tpch_queries.at(query_idx);
   const auto sqlite_result_table = _sqlite_wrapper->execute_query(query);
 
   auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline();
@@ -58,30 +59,7 @@ TEST_P(TPCHTest, TPCHQueryTest) {
 }
 
 // clang-format off
-INSTANTIATE_TEST_CASE_P(TPCHTestInstances, TPCHTest, ::testing::Values(
-  1,
-  // 2,  /* Enable once we support Subselects in WHERE condition */
-  3,
-  // 4,  /* Enable once we support Exists and Subselects in WHERE condition */
-  5,
-  6,
-  7,
-  // 8,  /* Enable once CASE and arithmetic operations of Aggregations are supported */
-  9,
-  10
-  // 11, /* Enable once we support Subselects in Having clause */
-  // 12, /* Enable once we support IN */
-  // 13, /* Enable once we support nested expressions in Join Condition */
-  // 14, /* Enable once we support Case */
-  // 15, /* Enable once we support Subselects in WHERE condition */
-  // 16, /* Enable once we support Subselects in WHERE condition */
-  // 17, /* Enable once we support Subselects in WHERE condition */
-  // 18, /* Enable once we support Subselects in WHERE condition */
-  // 19, /* Enable once we support OR in WHERE condition */
-  // 20, /* Enable once we support Subselects in WHERE condition */
-  // 21, /* Enable once we support Exists and Subselect in WHERE condition */
-  // 22  /* Enable once we support SUBSTRING, IN, EXISTS, and un-/correlated Subselects in WHERE condition */
-), );  // NOLINT
+INSTANTIATE_TEST_CASE_P(TPCHTestInstances, TPCHTest, ::testing::ValuesIn(tpch_queries), );  // NOLINT
 // clang-format on
 
 }  // namespace opossum

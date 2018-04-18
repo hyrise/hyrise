@@ -16,7 +16,6 @@
 
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/numa_placement_manager.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
 
