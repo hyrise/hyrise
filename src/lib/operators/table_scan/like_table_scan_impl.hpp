@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include "boost/variant.hpp"
 #include "base_single_column_table_scan_impl.hpp"
 
 #include "types.hpp"
@@ -49,7 +50,22 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
 
   /**@}*/
 
- private:
+  enum class PatternWildcard { SingleChar /* '_' */, AnyChars /* '%' */ };
+  using PatternToken = boost::variant<std::string, PatternWildcard>; // Keep type order, users rely on which()
+  using PatternTokens = std::vector<PatternToken>;
+
+  /**
+   * Turn a pattern string, e.g. "H_llo W%ld" into Tokens {"H", PatternWildcard::SingleChar, "llo W",
+   * PatternWildcard::AnyChars, "ld"}
+   */
+  static PatternTokens pattern_to_tokens(const std::string& pattern);
+
+  /**
+   * Check whether a string matches a series of tokens.
+   */
+  static bool tokens_match_string(const PatternTokens &tokens, const std::string &str);
+
+  private:
   /**
    * @defgroup Methods used for handling dictionary columns
    * @{
@@ -66,7 +82,14 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
   const std::string _right_wildcard;
   const bool _invert_results;
 
+  PatternTokens _tokens;
+
   std::regex _regex;
 };
+
+inline std::ostream& operator<<(std::ostream& stream, const LikeTableScanImpl::PatternWildcard& wildcard) {
+  stream << "[WC]";
+  return stream;
+}
 
 }  // namespace opossum

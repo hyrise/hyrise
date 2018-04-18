@@ -9,12 +9,15 @@
 #include "gtest/gtest.h"
 
 #include "operators/abstract_read_only_operator.hpp"
+#include "operators/table_scan/like_table_scan_impl.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
+
+using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
@@ -51,6 +54,39 @@ class OperatorsTableScanLikeTest : public BaseTest {
 
   std::shared_ptr<GetTable> _gt, _gt_special_chars, _gt_string, _gt_string_dict;
 };
+
+TEST_F(OperatorsTableScanLikeTest, PatternToTokens) {
+  const auto tokens_a = LikeTableScanImpl::pattern_to_tokens("");
+  const auto tokens_b = LikeTableScanImpl::pattern_to_tokens("%abc%_def__Hello%");
+
+  ASSERT_EQ(tokens_a.size(), 0u);
+
+  ASSERT_EQ(tokens_b.size(), 9u);
+  EXPECT_EQ(tokens_b.at(0), LikeTableScanImpl::PatternToken(LikeTableScanImpl::PatternWildcard::AnyChars));
+  EXPECT_EQ(tokens_b.at(1), LikeTableScanImpl::PatternToken("abc"s));
+  EXPECT_EQ(tokens_b.at(2), LikeTableScanImpl::PatternToken(LikeTableScanImpl::PatternWildcard::AnyChars));
+  EXPECT_EQ(tokens_b.at(3), LikeTableScanImpl::PatternToken(LikeTableScanImpl::PatternWildcard::SingleChar));
+  EXPECT_EQ(tokens_b.at(4), LikeTableScanImpl::PatternToken("def"s));
+  EXPECT_EQ(tokens_b.at(5), LikeTableScanImpl::PatternToken(LikeTableScanImpl::PatternWildcard::SingleChar));
+  EXPECT_EQ(tokens_b.at(6), LikeTableScanImpl::PatternToken(LikeTableScanImpl::PatternWildcard::SingleChar));
+  EXPECT_EQ(tokens_b.at(7), LikeTableScanImpl::PatternToken("Hello"s));
+  EXPECT_EQ(tokens_b.at(8), LikeTableScanImpl::PatternToken(LikeTableScanImpl::PatternWildcard::AnyChars));
+}
+
+TEST_F(OperatorsTableScanLikeTest, StringMatchesTokens) {
+  const auto tokens_a = LikeTableScanImpl::pattern_to_tokens("abc%");
+
+  EXPECT_TRUE(LikeTableScanImpl::tokens_match_string(tokens_a, "abc"));
+  EXPECT_TRUE(LikeTableScanImpl::tokens_match_string(tokens_a, "abcdef"));
+  EXPECT_FALSE(LikeTableScanImpl::tokens_match_string(tokens_a, "ab"));
+
+  const auto tokens_b = LikeTableScanImpl::pattern_to_tokens("%abc%_ced%%Hello");
+
+  EXPECT_TRUE(LikeTableScanImpl::tokens_match_string(tokens_b, "abcccedHello"));
+  EXPECT_TRUE(LikeTableScanImpl::tokens_match_string(tokens_b, "WorldabcabcccedHelloHelloHello"));
+  EXPECT_FALSE(LikeTableScanImpl::tokens_match_string(tokens_b, "abccedHello"));
+}
+
 
 /*
     Tests for operator PredicateCondition::Like

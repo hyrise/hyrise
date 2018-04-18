@@ -28,7 +28,8 @@ LikeTableScanImpl::LikeTableScanImpl(std::shared_ptr<const Table> in_table, cons
       _invert_results(predicate_condition == PredicateCondition::NotLike) {
   // convert the given SQL-like search term into a c++11 regex to use it for the actual matching
   auto regex_string = sqllike_to_regex(_right_wildcard);
-  _regex = std::regex{regex_string, std::regex_constants::icase};  // case insensitivity
+  _regex = std::regex{regex_string};  // case insensitivity
+  const auto tokens = pattern_to_tokens(right_wildcard);
 }
 
 void LikeTableScanImpl::handle_column(const BaseValueColumn& base_column,
@@ -43,8 +44,7 @@ void LikeTableScanImpl::handle_column(const BaseValueColumn& base_column,
   auto left_iterable = ValueColumnIterable<std::string>{left_column};
   auto right_iterable = ConstantValueIterable<std::regex>{_regex};
 
-  const auto regex_match = [this](const std::string& str) { return std::regex_match(str, _regex) ^ _invert_results; };
-
+  const auto regex_match = [this](const std::string& str) { return tokens_match_string(_tokens, str) ^ _invert_results; };
   left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
     this->_unary_scan(regex_match, left_it, left_end, chunk_id, matches_out);
   });
@@ -93,6 +93,70 @@ std::string LikeTableScanImpl::sqllike_to_regex(std::string sqllike) {
   }
 
   return "^" + sqllike + "$";
+}
+
+LikeTableScanImpl::PatternTokens LikeTableScanImpl::pattern_to_tokens(const std::string& pattern) {
+  PatternTokens tokens;
+
+  auto current_position = size_t{0};
+  while (current_position < pattern.size()) {
+    if (pattern[current_position] == '_') {
+      tokens.emplace_back(PatternWildcard::SingleChar);
+      ++current_position;
+    } else if (pattern[current_position] == '%') {
+      tokens.emplace_back(PatternWildcard::AnyChars);
+      ++current_position;
+    } else {
+      const auto next_wildcard_position = pattern.find_first_of("_%", current_position);
+      const auto token_length = next_wildcard_position == std::string::npos ? std::string::npos : next_wildcard_position - current_position;
+      tokens.emplace_back(pattern.substr(current_position, token_length));
+      current_position = next_wildcard_position;
+    }
+  }
+
+  return tokens;
+}
+
+bool LikeTableScanImpl::tokens_match_string(const PatternTokens &tokens, const std::string &str) {
+  enum class MatchMode {
+    RightHere,    // Match the current token precisely at the current_position
+    StartingHere  // Match the current token anywhere starting from the current_position
+  };
+
+  auto match_mode = MatchMode::RightHere;
+
+  auto token_idx = size_t{0};
+  auto current_position = size_t{0};
+
+  for (; token_idx < tokens.size(); ++token_idx) {
+    const auto& token = tokens[token_idx];
+
+    if (token.which() == 1) {  // Token is Wildcard
+      if (boost::get<PatternWildcard>(token) == PatternWildcard::SingleChar) {
+        if (current_position >= str.size()) return false;
+        ++current_position;
+      } else {
+        match_mode = MatchMode::StartingHere;
+      }
+    } else {  // Token is std::string
+      if (current_position >= str.size()) return false;
+
+      const auto string_token = boost::get<std::string>(token);
+
+      if (match_mode == MatchMode::RightHere) {
+        if (str.compare(current_position, string_token.size(), string_token) != 0) return false;
+        current_position += string_token.size();
+      } else {
+        current_position = str.find(string_token, current_position);
+        if (current_position == std::string::npos) return false;
+        current_position += string_token.size();
+      }
+
+      match_mode = MatchMode::RightHere;
+    }
+  }
+
+  return (current_position == str.size() || match_mode == MatchMode::StartingHere) && token_idx == tokens.size();
 }
 
 void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
