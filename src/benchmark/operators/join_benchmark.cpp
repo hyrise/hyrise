@@ -23,7 +23,7 @@ void clear_cache() {
 }
 
 std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows, const size_t number_of_chunks,
-                                             bool use_multiple_numa_nodes = false) {
+                                             bool numa_distribute_chunks = false) {
   auto table_generator = std::make_shared<TableGenerator>();
 
   ColumnDataDistribution config = ColumnDataDistribution::make_uniform_config(0.0, 10000);
@@ -31,7 +31,7 @@ std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows, const 
   Assert(chunk_size > 0, "The chunk size is 0 or less, can not generate such a table");
 
   auto table = table_generator->generate_table(std::vector<ColumnDataDistribution>{config}, number_of_rows, chunk_size,
-                                               EncodingType::Dictionary, use_multiple_numa_nodes);
+                                               EncodingType::Dictionary/*, numa_distribute_chunks*/);
 
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     auto chunk = table->get_chunk(chunk_id);
