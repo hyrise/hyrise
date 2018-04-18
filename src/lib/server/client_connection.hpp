@@ -24,7 +24,7 @@ struct ColumnDescription {
 // This class provides a wrapper over the TCP socket and (de)serializes
 // network messages using the PostgresWireHandler. It's a very thin wrapper
 // because the ASIO socket is hard to mock, so there are no tests for this class
-class ClientConnection {
+class ClientConnection : public std::enable_shared_from_this<ClientConnection> {
  public:
   explicit ClientConnection(boost::asio::ip::tcp::socket socket);
 

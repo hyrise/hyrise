@@ -19,29 +19,49 @@ class ServerTestRunner : public BaseTest {
     StorageManager::get().add_table("table_a", _table_a);
 
     // Set scheduler so that the server can execute the tasks on separate threads.
-    opossum::CurrentScheduler::set(
-        std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology()));
+    CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_numa_topology()));
 
-    auto server_runner = [](boost::asio::io_service& io_service, const uint16_t port) {
-      // The server registers itself to the boost io_service. The io_service is the main IO control unit here and it
-      // lives until the server doesn't request any IO any more, i.e. is has terminated. The server requests IO in its
-      // constructor and then runs forever.
-      opossum::Server server{io_service, port};
+    uint16_t server_port = 0;
+    std::mutex mutex;
+    std::condition_variable cv;
+
+    auto server_runner = [&](boost::asio::io_service& io_service) {
+      Server server{io_service, /* port = */ 0};  // run on port 0 so the server can pick a free one
+
+      {
+        std::unique_lock<std::mutex> lock{mutex};
+        server_port = server.get_port_number();
+      }
+
+      std::cout << "Server running on port " + std::to_string(server_port) + ".\n";
+      cv.notify_one();
 
       io_service.run();
     };
 
-    _server_thread = std::make_unique<std::thread>(server_runner, std::ref(_io_service), _server_port);
-    _connection_string = "hostaddr=127.0.0.1 port=" + std::to_string(_server_port);
+    _io_service = std::make_unique<boost::asio::io_service>();
+    _server_thread = std::make_unique<std::thread>(server_runner, std::ref(*_io_service));
+
+    // We need to wait here for the server to have started so we can get its port, which must be set != 0
+    {
+      std::unique_lock<std::mutex> lock{mutex};
+      cv.wait(lock, [&] { return server_port != 0; });
+    }
+
+    // Get randomly assigned port number for client connection
+    _connection_string = "hostaddr=127.0.0.1 port=" + std::to_string(server_port);
   }
 
   void TearDown() override {
-    _io_service.stop();
+    _io_service->stop();
+
+    // Give io_service time to shut down gracefully
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
     _server_thread->join();
   }
 
-  uint16_t _server_port = 54321;
-  boost::asio::io_service _io_service;
+  std::unique_ptr<boost::asio::io_service> _io_service;
   std::unique_ptr<std::thread> _server_thread;
   std::string _connection_string;
 
@@ -50,21 +70,45 @@ class ServerTestRunner : public BaseTest {
 
 TEST_F(ServerTestRunner, TestSimpleSelect) {
   pqxx::connection connection{_connection_string};
+
+  // We use nontransactions because the regular transactions use SQL that we don't support. Nontransactions auto commit.
   pqxx::nontransaction transaction{connection};
 
   const auto result = transaction.exec("SELECT * FROM table_a;");
-  EXPECT_EQ(result.size(), _table_a->row_count()) << "Expected " << _table_a->row_count() << " rows, but got "
-                                                  << result.size();
+  const auto result2 = transaction.exec("SELECT * FROM table_a;");
+  const auto result3 = transaction.exec("SELECT * FROM table_a;");
+  const auto result4 = transaction.exec("SELECT * FROM table_a;");
+  const auto result5 = transaction.exec("SELECT * FROM table_a;");
+  EXPECT_EQ(result.size(), _table_a->row_count());
+
+  connection.disconnect();
+  EXPECT_EQ(result.size(), _table_a->row_count());
 }
 
 TEST_F(ServerTestRunner, TestSimpleInsertSelect) {
   pqxx::connection connection{_connection_string};
   pqxx::nontransaction transaction{connection};
 
-  const auto num_rows = _table_a->row_count();
+  const auto expected_num_rows = _table_a->row_count() + 1;
   transaction.exec("INSERT INTO table_a VALUES (1, 1.0);");
   const auto result = transaction.exec("SELECT * FROM table_a;");
-  EXPECT_EQ(result.size(), num_rows + 1) << "Expected " << num_rows + 1 << " rows, but got " << result.size();
+  EXPECT_EQ(result.size(), expected_num_rows);
+}
+
+TEST_F(ServerTestRunner, TestPreparedStatement) {
+  pqxx::connection connection{_connection_string};
+  pqxx::nontransaction transaction{connection};
+
+  const std::string prepared_name = "statement1";
+  connection.prepare(prepared_name, "SELECT * FROM table_a WHERE a > ?");
+
+  const auto param = 1234u;
+  const auto result1 = transaction.exec_prepared(prepared_name, param);
+  EXPECT_EQ(result1.size(), 1u);
+
+  transaction.exec("INSERT INTO table_a VALUES (55555, 1.0);");
+  const auto result2 = transaction.exec_prepared(prepared_name, param);
+  EXPECT_EQ(result2.size(), 2u);
 }
 
 }  // namespace opossum
