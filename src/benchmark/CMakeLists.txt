@@ -32,26 +32,6 @@ target_link_libraries(
     benchmark
 )
 
-add_executable(
-    hyriseBenchmarkTPCC
-
-    benchmark_main.cpp
-    benchmark_template.cpp
-    tpcc/delivery_benchmark.cpp
-    tpcc/new_order_benchmark.cpp
-    tpcc/order_status_benchmark.cpp
-    tpcc/tpcc_base_fixture.cpp
-    tpcc/tpcc_base_fixture.hpp
-)
-
-target_link_libraries(
-    hyriseBenchmarkTPCC
-    hyrise
-    hyriseBenchmarkLib
-    benchmark
-)
-
-
 # Configure hyriseBenchmarkTPCH
 add_executable(hyriseBenchmarkTPCH tpch_benchmark.cpp)
 target_link_libraries(
