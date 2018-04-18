@@ -4,7 +4,6 @@
 #include "benchmark/benchmark.h"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
-#include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_wrapper.hpp"
@@ -77,19 +76,9 @@ void BM_Join(benchmark::State& state) {
   BM_Join_impl<C>(state, table_wrapper_left, table_wrapper_right);
 }
 
-template <class C>
-void BM_Join_UseMultipleNumaNodes(benchmark::State& state) {
-  auto table_wrapper_left = generate_table(100000, 50, true);
-  auto table_wrapper_right = generate_table(100000, 50, true);
-
-  BM_Join_impl<C>(state, table_wrapper_left, table_wrapper_right);
-}
-
 BENCHMARK_TEMPLATE(BM_Join, JoinNestedLoop);
 BENCHMARK_TEMPLATE(BM_Join, JoinIndex);
 BENCHMARK_TEMPLATE(BM_Join, JoinHash);
 BENCHMARK_TEMPLATE(BM_Join, JoinSortMerge);
-BENCHMARK_TEMPLATE(BM_Join, JoinMPSM);
-BENCHMARK_TEMPLATE(BM_Join_UseMultipleNumaNodes, JoinMPSM);
 
 }  // namespace opossum

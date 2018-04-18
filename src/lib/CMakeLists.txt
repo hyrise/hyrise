@@ -102,8 +102,6 @@ set(
     operators/join_hash.cpp
     operators/join_hash/hash_traits.hpp
     operators/join_hash.hpp
-    operators/join_mpsm.cpp
-    operators/join_mpsm.hpp
     operators/join_index.cpp
     operators/join_index.hpp
     operators/join_nested_loop.cpp
