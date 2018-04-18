@@ -75,7 +75,7 @@ BENCHMARK_CAPTURE(BM_TableScanLike, FindPattern, "l_comment", "%final%");
 BENCHMARK_CAPTURE(BM_TableScanLike, MultipleFindPatterns, "l_comment", "%final%requests%");
 BENCHMARK_CAPTURE(BM_TableScanLike, StartsWithPattern, "l_shipinstruct", "quickly%");
 BENCHMARK_CAPTURE(BM_TableScanLike, EndsWithPattern, "l_comment", "%foxes");
-BENCHMARK_CAPTURE(BM_TableScanLike, ComplexPatter, "l_comment", "%quick_y__above%even%");
+BENCHMARK_CAPTURE(BM_TableScanLike, ComplexPattern, "l_comment", "%quick_y__above%even%");
 
 BENCHMARK_REGISTER_F(BenchmarkBasicFixture, BM_TableScanConstant)->Apply(BenchmarkBasicFixture::ChunkSizeIn);
 BENCHMARK_REGISTER_F(BenchmarkBasicFixture, BM_TableScanConstantOnDict)->Apply(BenchmarkBasicFixture::ChunkSizeIn);
