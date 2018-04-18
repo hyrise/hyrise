@@ -16,6 +16,7 @@
 
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/numa_placement_manager.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
 
@@ -80,7 +81,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
 
 std::shared_ptr<Table> TableGenerator::generate_table(
     const std::vector<ColumnDataDistribution>& column_data_distributions, const size_t num_rows,
-    const size_t chunk_size, std::optional<EncodingType> encoding_type, bool use_multiple_partitions) {
+    const size_t chunk_size, std::optional<EncodingType> encoding_type, const bool use_multiple_partitions) {
   Assert(chunk_size != 0, "cannot generate table with chunk size 0");
   const auto num_columns = column_data_distributions.size();
   const auto num_chunks = std::ceil(static_cast<double>(num_rows) / static_cast<double>(chunk_size));
