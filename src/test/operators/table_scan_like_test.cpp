@@ -56,8 +56,8 @@ class OperatorsTableScanLikeTest : public BaseTest {
 };
 
 TEST_F(OperatorsTableScanLikeTest, PatternToTokens) {
-  const auto tokens_a = LikeTableScanImpl::pattern_to_tokens("");
-  const auto tokens_b = LikeTableScanImpl::pattern_to_tokens("%abc%_def__Hello%");
+  const auto tokens_a = LikeTableScanImpl::pattern_string_to_tokens("");
+  const auto tokens_b = LikeTableScanImpl::pattern_string_to_tokens("%abc%_def__Hello%");
 
   ASSERT_EQ(tokens_a.size(), 0u);
 
@@ -72,21 +72,6 @@ TEST_F(OperatorsTableScanLikeTest, PatternToTokens) {
   EXPECT_EQ(tokens_b.at(7), LikeTableScanImpl::PatternToken("Hello"s));
   EXPECT_EQ(tokens_b.at(8), LikeTableScanImpl::PatternToken(LikeTableScanImpl::PatternWildcard::AnyChars));
 }
-
-TEST_F(OperatorsTableScanLikeTest, StringMatchesTokens) {
-  const auto tokens_a = LikeTableScanImpl::pattern_to_tokens("abc%");
-
-  EXPECT_TRUE(LikeTableScanImpl::tokens_match_string(tokens_a, "abc"));
-  EXPECT_TRUE(LikeTableScanImpl::tokens_match_string(tokens_a, "abcdef"));
-  EXPECT_FALSE(LikeTableScanImpl::tokens_match_string(tokens_a, "ab"));
-
-  const auto tokens_b = LikeTableScanImpl::pattern_to_tokens("%abc%_ced%%Hello");
-
-  EXPECT_TRUE(LikeTableScanImpl::tokens_match_string(tokens_b, "abcccedHello"));
-  EXPECT_TRUE(LikeTableScanImpl::tokens_match_string(tokens_b, "WorldabcabcccedHelloHelloHello"));
-  EXPECT_FALSE(LikeTableScanImpl::tokens_match_string(tokens_b, "abccedHello"));
-}
-
 
 /*
     Tests for operator PredicateCondition::Like
@@ -117,18 +102,11 @@ TEST_F(OperatorsTableScanLikeTest, ScanLikeEmptyStringOnDict) {
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
-TEST_F(OperatorsTableScanLikeTest, ScanLikeCaseInsensitivity) {
-  std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_starting.tbl", 1);
-  // wildcard has to be placed at front and/or back of search string
-  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, PredicateCondition::Like, "dAmpF%");
-  scan->execute();
-  EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
-}
 
 TEST_F(OperatorsTableScanLikeTest, ScanLikeUnderscoreWildcard) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_starting.tbl", 1);
   // wildcard has to be placed at front and/or back of search string
-  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, PredicateCondition::Like, "d_m_f%");
+  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, PredicateCondition::Like, "D_m_f%");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
@@ -281,14 +259,14 @@ TEST_F(OperatorsTableScanLikeTest, ScanNotLikeAllRowsOnDict) {
 TEST_F(OperatorsTableScanLikeTest, ScanNotLikeUnderscoreWildcard) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_not_starting.tbl", 1);
   // wildcard has to be placed at front and/or back of search string
-  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, PredicateCondition::NotLike, "d_m_f%");
+  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, PredicateCondition::NotLike, "D_m_f%");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 TEST_F(OperatorsTableScanLikeTest, ScanNotLikeUnderscoreWildcardOnDict) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_not_starting.tbl", 1);
   // wildcard has to be placed at front and/or back of search string
-  auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, PredicateCondition::NotLike, "d_m_f%");
+  auto scan = std::make_shared<TableScan>(_gt_string_dict, ColumnID{1}, PredicateCondition::NotLike, "D_m_f%");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }

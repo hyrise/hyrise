@@ -22,14 +22,11 @@
 namespace opossum {
 
 LikeTableScanImpl::LikeTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
-                                     const PredicateCondition predicate_condition, const std::string& right_wildcard)
+                                     const PredicateCondition predicate_condition, const std::string& pattern)
     : BaseSingleColumnTableScanImpl{in_table, left_column_id, predicate_condition},
-      _right_wildcard{right_wildcard},
+      _pattern{pattern},
       _invert_results(predicate_condition == PredicateCondition::NotLike) {
-  // convert the given SQL-like search term into a c++11 regex to use it for the actual matching
-  auto regex_string = sqllike_to_regex(_right_wildcard);
-  _regex = std::regex{regex_string};  // case insensitivity
-  const auto tokens = pattern_to_tokens(right_wildcard);
+ _pattern_variant = pattern_string_to_pattern_variant(pattern);
 }
 
 void LikeTableScanImpl::handle_column(const BaseValueColumn& base_column,
@@ -38,16 +35,10 @@ void LikeTableScanImpl::handle_column(const BaseValueColumn& base_column,
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
   const auto chunk_id = context->_chunk_id;
-
   auto& left_column = static_cast<const ValueColumn<std::string>&>(base_column);
-
   auto left_iterable = ValueColumnIterable<std::string>{left_column};
-  auto right_iterable = ConstantValueIterable<std::regex>{_regex};
 
-  const auto regex_match = [this](const std::string& str) { return tokens_match_string(_tokens, str) ^ _invert_results; };
-  left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
-    this->_unary_scan(regex_match, left_it, left_end, chunk_id, matches_out);
-  });
+  _scan_iterable(left_iterable, chunk_id, matches_out, mapped_chunk_offsets.get());
 }
 
 void LikeTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
@@ -59,43 +50,47 @@ void LikeTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
 
   resolve_encoded_column_type<std::string>(base_column, [&](const auto& typed_column) {
     auto left_iterable = create_iterable_from_column(typed_column);
-    auto right_iterable = ConstantValueIterable<std::regex>{_regex};
-
-    const auto regex_match = [this](const std::string& str) { return std::regex_match(str, _regex) ^ _invert_results; };
-
-    left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
-      this->_unary_scan(regex_match, left_it, left_end, chunk_id, matches_out);
-    });
+    _scan_iterable(left_iterable, chunk_id, matches_out, mapped_chunk_offsets.get());
   });
 }
 
-std::string LikeTableScanImpl::sqllike_to_regex(std::string sqllike) {
-  // Do substitution of <backslash> with <backslash><backslash> FIRST, because otherwise it will also replace
-  // backslashes introduced by the other substitutions
-  constexpr auto replace_by = std::array<std::pair<const char*, const char*>, 15u>{{{"\\", "\\\\"},
-                                                                                    {".", "\\."},
-                                                                                    {"^", "\\^"},
-                                                                                    {"$", "\\$"},
-                                                                                    {"+", "\\+"},
-                                                                                    {"?", "\\?"},
-                                                                                    {"(", "\\("},
-                                                                                    {")", "\\)"},
-                                                                                    {"{", "\\{"},
-                                                                                    {"}", "\\}"},
-                                                                                    {"|", "\\|"},
-                                                                                    {".", "\\."},
-                                                                                    {"*", "\\*"},
-                                                                                    {"%", ".*"},
-                                                                                    {"_", "."}}};
+void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
+                                      std::shared_ptr<ColumnVisitableContext> base_context) {
+  const auto& left_column = static_cast<const DictionaryColumn<std::string>&>(base_column);
+  auto context = std::static_pointer_cast<Context>(base_context);
+  auto& matches_out = context->_matches_out;
+  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
+  const auto chunk_id = context->_chunk_id;
 
-  for (const auto& pair : replace_by) {
-    boost::replace_all(sqllike, pair.first, pair.second);
+  const auto result = _find_matches_in_dictionary(*left_column.dictionary());
+  const auto& match_count = result.first;
+  const auto& dictionary_matches = result.second;
+
+  auto attribute_vector_iterable = create_iterable_from_attribute_vector(left_column);
+
+  // LIKE matches all rows
+  if (match_count == dictionary_matches.size()) {
+    attribute_vector_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+      static const auto always_true = [](const auto&) { return true; };
+      this->_unary_scan(always_true, left_it, left_end, chunk_id, matches_out);
+    });
+
+    return;
   }
 
-  return "^" + sqllike + "$";
+  // LIKE matches no rows
+  if (match_count == 0u) {
+    return;
+  }
+
+  const auto dictionary_lookup = [&dictionary_matches](const ValueID& value) { return dictionary_matches[value]; };
+
+  attribute_vector_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
+    this->_unary_scan(dictionary_lookup, left_it, left_end, chunk_id, matches_out);
+  });
 }
 
-LikeTableScanImpl::PatternTokens LikeTableScanImpl::pattern_to_tokens(const std::string& pattern) {
+LikeTableScanImpl::PatternTokens LikeTableScanImpl::pattern_string_to_tokens(const std::string &pattern) {
   PatternTokens tokens;
 
   auto current_position = size_t{0};
@@ -117,86 +112,139 @@ LikeTableScanImpl::PatternTokens LikeTableScanImpl::pattern_to_tokens(const std:
   return tokens;
 }
 
-bool LikeTableScanImpl::tokens_match_string(const PatternTokens &tokens, const std::string &str) {
-  enum class MatchMode {
-    RightHere,    // Match the current token precisely at the current_position
-    StartingHere  // Match the current token anywhere starting from the current_position
-  };
+LikeTableScanImpl::PatternVariant LikeTableScanImpl::pattern_string_to_pattern_variant(const std::string &pattern) {
+  const auto tokens = pattern_string_to_tokens(pattern);
 
-  auto match_mode = MatchMode::RightHere;
+  if (tokens.size() == 2 &&
+      tokens[0].type() == typeid(std::string) &&
+      tokens[1] == PatternToken{PatternWildcard::AnyChars}) {
+    return StartsWithPattern{boost::get<std::string>(tokens[0])};
+  } else if (tokens.size() == 2 &&
+             tokens[0] == PatternToken{PatternWildcard::AnyChars} &&
+             tokens[1].type() == typeid(std::string)) {
+    return EndsWithPattern{boost::get<std::string>(tokens[1])};
+  } else if (tokens.size() == 3 &&
+             tokens[0] == PatternToken{PatternWildcard::AnyChars} &&
+             tokens[1].type() == typeid(std::string) &&
+             tokens[2] ==PatternToken{PatternWildcard::AnyChars}) {
+    return ContainsPattern{boost::get<std::string>(tokens[1])};
+  } else {
+    // Pick ContainsMultiple or Regex
+    auto impl_is_contains_multiple = true; // Set to false if tokens don't match %{, str, %} pattern
+    auto strings = std::vector<std::string>{}; // arguments used for ContainsMultiple, if it gets used
+    auto expect_any_chars = true;  // If false, expect a string
 
-  auto token_idx = size_t{0};
-  auto current_position = size_t{0};
-
-  for (; token_idx < tokens.size(); ++token_idx) {
-    const auto& token = tokens[token_idx];
-
-    if (token.which() == 1) {  // Token is Wildcard
-      if (boost::get<PatternWildcard>(token) == PatternWildcard::SingleChar) {
-        if (current_position >= str.size()) return false;
-        ++current_position;
-      } else {
-        match_mode = MatchMode::StartingHere;
+    for (const auto& token : tokens) {
+      if (expect_any_chars && token != PatternToken{PatternWildcard::AnyChars}) {
+        impl_is_contains_multiple = false;
+        break;
       }
-    } else {  // Token is std::string
-      if (current_position >= str.size()) return false;
-
-      const auto string_token = boost::get<std::string>(token);
-
-      if (match_mode == MatchMode::RightHere) {
-        if (str.compare(current_position, string_token.size(), string_token) != 0) return false;
-        current_position += string_token.size();
-      } else {
-        current_position = str.find(string_token, current_position);
-        if (current_position == std::string::npos) return false;
-        current_position += string_token.size();
+      if (!expect_any_chars && token.type() != typeid(std::string)) {
+        impl_is_contains_multiple = false;
+        break;
+      }
+      if (!expect_any_chars) {
+        strings.emplace_back(boost::get<std::string>(token));
       }
 
-      match_mode = MatchMode::RightHere;
+      expect_any_chars = !expect_any_chars;
+    }
+
+    if (impl_is_contains_multiple) {
+      return ContainsMultiplePattern{strings};
+    } else {
+      return std::regex(sql_like_to_regex(pattern));
     }
   }
-
-  return (current_position == str.size() || match_mode == MatchMode::StartingHere) && token_idx == tokens.size();
 }
 
-void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
-                                      std::shared_ptr<ColumnVisitableContext> base_context) {
-  const auto& left_column = static_cast<const DictionaryColumn<std::string>&>(base_column);
-  auto context = std::static_pointer_cast<Context>(base_context);
-  auto& matches_out = context->_matches_out;
-  const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
-  const auto chunk_id = context->_chunk_id;
-
-  const auto result = _find_matches_in_dictionary(*left_column.dictionary());
-  const auto& match_count = result.first;
-  const auto& dictionary_matches = result.second;
-
-  auto attribute_vector_iterable = create_iterable_from_attribute_vector(left_column);
-
-  // Regex matches all
-  if (match_count == dictionary_matches.size()) {
-    attribute_vector_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
-      static const auto always_true = [](const auto&) { return true; };
-      this->_unary_scan(always_true, left_it, left_end, chunk_id, matches_out);
+template<typename Functor>
+void LikeTableScanImpl::resolve_pattern_matcher(const PatternVariant &pattern_variant, const bool invert, const Functor &functor) {
+  if (pattern_variant.type() == typeid(StartsWithPattern)) {
+    const auto& prefix = boost::get<StartsWithPattern>(pattern_variant).str;
+    functor([&](const std::string& str) -> bool {
+      if (str.size() < prefix.size()) return invert;
+      return (str.compare(0, prefix.size(), prefix) == 0) ^ invert;
     });
 
-    return;
+  } else if (pattern_variant.type() == typeid(EndsWithPattern)) {
+    const auto& suffix = boost::get<EndsWithPattern>(pattern_variant).str;
+    functor([&](const std::string& str) -> bool {
+      if (str.size() < suffix.size()) return invert;
+      return (str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0) ^ invert;
+    });
+
+  } else if (pattern_variant.type() == typeid(ContainsPattern)) {
+    const auto& contains_str = boost::get<ContainsPattern>(pattern_variant).str;
+    functor([&](const std::string& str) -> bool {
+      return (str.find(contains_str) != std::string::npos) ^ invert;
+    });
+
+  } else if (pattern_variant.type() == typeid(ContainsMultiplePattern)) {
+    const auto& contains_strs = boost::get<ContainsMultiplePattern>(pattern_variant).str;
+
+    functor([&](const std::string& str) -> bool {
+      auto current_position = size_t{0};
+      for (const auto& contains_str : contains_strs) {
+        current_position = str.find(contains_str, current_position);
+        if (current_position == std::string::npos) return invert;
+      }
+      return !invert;
+    });
+
+  } else if (pattern_variant.type() == typeid(std::regex)) {
+    const auto& regex = boost::get<std::regex>(pattern_variant);
+
+    functor([&](const std::string& str) -> bool {
+      return std::regex_match(str, regex) ^ invert;
+    });
+
+  } else {
+    Fail("Impl not... implemented [sic]");
+  }
+}
+
+std::string LikeTableScanImpl::sql_like_to_regex(std::string sql_like) {
+  // Do substitution of <backslash> with <backslash><backslash> FIRST, because otherwise it will also replace
+  // backslashes introduced by the other substitutions
+  constexpr auto replace_by = std::array<std::pair<const char*, const char*>, 15u>{{{"\\", "\\\\"},
+                                                                                   {".", "\\."},
+                                                                                   {"^", "\\^"},
+                                                                                   {"$", "\\$"},
+                                                                                   {"+", "\\+"},
+                                                                                   {"?", "\\?"},
+                                                                                   {"(", "\\("},
+                                                                                   {")", "\\)"},
+                                                                                   {"{", "\\{"},
+                                                                                   {"}", "\\}"},
+                                                                                   {"|", "\\|"},
+                                                                                   {".", "\\."},
+                                                                                   {"*", "\\*"},
+                                                                                   {"%", ".*"},
+                                                                                   {"_", "."}}};
+
+  for (const auto& pair : replace_by) {
+    boost::replace_all(sql_like, pair.first, pair.second);
   }
 
-  // Regex mathes none
-  if (match_count == 0u) {
-    return;
-  }
+  return "^" + sql_like + "$";
+}
 
-  const auto dictionary_lookup = [&dictionary_matches](const ValueID& value) { return dictionary_matches[value]; };
-
-  attribute_vector_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
-    this->_unary_scan(dictionary_lookup, left_it, left_end, chunk_id, matches_out);
+template<typename Iterable>
+void LikeTableScanImpl::_scan_iterable(const Iterable& iterable,
+                                       const ChunkID chunk_id,
+                                       PosList& matches_out,
+                                       const ChunkOffsetsList* const mapped_chunk_offsets) {
+  this->resolve_pattern_matcher(_pattern_variant, _invert_results, [&](const auto &matcher) {
+    iterable.with_iterators(mapped_chunk_offsets, [&](auto left_it, auto left_end) {
+      this->_unary_scan(matcher, left_it, left_end, chunk_id, matches_out);
+    });
   });
 }
 
+
 std::pair<size_t, std::vector<bool>> LikeTableScanImpl::_find_matches_in_dictionary(
-    const pmr_vector<std::string>& dictionary) {
+const pmr_vector<std::string>& dictionary) {
   auto result = std::pair<size_t, std::vector<bool>>{};
 
   auto& count = result.first;
@@ -205,13 +253,24 @@ std::pair<size_t, std::vector<bool>> LikeTableScanImpl::_find_matches_in_diction
   count = 0u;
   dictionary_matches.reserve(dictionary.size());
 
-  for (const auto& value : dictionary) {
-    const auto result = std::regex_match(value, _regex) ^ _invert_results;
-    count += static_cast<size_t>(result);
-    dictionary_matches.push_back(result);
-  }
+  resolve_pattern_matcher(_pattern_variant, _invert_results, [&](const auto &matcher) {
+    for (const auto &value : dictionary) {
+      const auto result = matcher(value);
+      count += static_cast<size_t>(result);
+      dictionary_matches.push_back(result);
+    }
+  });
 
   return result;
+}
+
+std::ostream& operator<<(std::ostream& stream, const LikeTableScanImpl::PatternWildcard& wildcard) {
+  switch(wildcard) {
+    case LikeTableScanImpl::PatternWildcard::SingleChar: stream << "_"; break;
+    case LikeTableScanImpl::PatternWildcard::AnyChars: stream << "%"; break;
+  }
+
+  return stream;
 }
 
 }  // namespace opossum
