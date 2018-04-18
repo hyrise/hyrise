@@ -8,8 +8,6 @@
 // https://github.com/boostorg/asio/blob/master/include/boost/asio/use_future.hpp
 
 #include <boost/asio/detail/config.hpp>
-#include <boost/asio/detail/pop_options.hpp>
-#include <boost/asio/detail/push_options.hpp>
 #include <boost/version.hpp>
 
 #include <memory>
