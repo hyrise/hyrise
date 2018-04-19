@@ -17,6 +17,7 @@ class SQLIdentifierContextTest : public ::testing::Test {
     expression_a = std::make_shared<SQLIdentifierExpression>(SQLIdentifier{"a", "T1"});
     expression_b = std::make_shared<SQLIdentifierExpression>(SQLIdentifier{"b", "T1"});
     expression_c = std::make_shared<SQLIdentifierExpression>(SQLIdentifier{"c", "T1"});
+    expression_unnamed = std::make_shared<SQLIdentifierExpression>(SQLIdentifier{"d", "T1"});
 
     context.set_column_name(expression_a, {"a"s});
     context.set_column_name(expression_b, {"b"s});
@@ -26,7 +27,7 @@ class SQLIdentifierContextTest : public ::testing::Test {
     context.set_table_name(expression_c, {"T2"s});
   }
 
-  std::shared_ptr<AbstractExpression> expression_a, expression_b, expression_c;
+  std::shared_ptr<AbstractExpression> expression_a, expression_b, expression_c, expression_unnamed;
   SQLIdentifierContext context;
 };
 
@@ -134,6 +135,23 @@ TEST_F(SQLIdentifierContextTest, ResolveOuterExpression) {
   ASSERT_EQ(intermediate_context_proxy->accessed_expressions().size(), 2u);
   EXPECT_EQ(intermediate_context_proxy->accessed_expressions().at(0), intermediate_expression_b);
   EXPECT_EQ(intermediate_context_proxy->accessed_expressions().at(1), intermediate_expression_a);
+}
+
+TEST_F(SQLIdentifierContextTest, GetExpressionIdentifier) {
+  EXPECT_EQ(context.get_expression_identifier(expression_a), SQLIdentifier("a", "T1"));
+  EXPECT_EQ(context.get_expression_identifier(expression_unnamed), std::nullopt);
+}
+
+TEST_F(SQLIdentifierContextTest, DeepEqualsIsUsed) {
+  /**
+   * Test that we can use equivalent, but stored in different Expression objects, expression to use the Context
+   */
+
+  const auto expression_a2 = std::make_shared<SQLIdentifierExpression>(SQLIdentifier{"a", "T1"});
+  context.set_column_name(expression_a2, "a2");
+  context.set_table_name(expression_a2, "T2");
+  EXPECT_EQ(context.resolve_identifier_relaxed({"a2"s, "T2"}), expression_a);
+  EXPECT_EQ(context.get_expression_identifier(expression_a2), SQLIdentifier("a2"s, "T2"));
 }
 
 }  // namespace opossum

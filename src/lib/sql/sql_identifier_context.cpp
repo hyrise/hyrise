@@ -12,8 +12,6 @@ void SQLIdentifierContext::set_column_name(const std::shared_ptr<AbstractExpress
   } else {
     entry.identifier.emplace(column_name);
   }
-
-
 }
 
 void SQLIdentifierContext::set_table_name(const std::shared_ptr<AbstractExpression>& expression, const std::string& table_name) {
@@ -44,6 +42,12 @@ std::shared_ptr<AbstractExpression> SQLIdentifierContext::resolve_identifier_rel
 
   return matching_expressions[0];
 
+}
+
+const std::optional<SQLIdentifier> SQLIdentifierContext::get_expression_identifier(const std::shared_ptr<AbstractExpression>& expression) const {
+  auto entry_iter = std::find_if(_entries.begin(), _entries.end(), [&](const auto& entry) { return entry.expression->deep_equals(*expression); });
+  if (entry_iter == _entries.end()) return std::nullopt;
+  return entry_iter->identifier;
 }
 
 SQLIdentifierContextEntry& SQLIdentifierContext::_find_or_create_expression_entry(const std::shared_ptr<AbstractExpression>& expression) {
