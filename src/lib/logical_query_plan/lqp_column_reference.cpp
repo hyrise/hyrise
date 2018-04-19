@@ -1,5 +1,7 @@
 #include "lqp_column_reference.hpp"
 
+#include "boost/functional/hash.hpp"
+
 #include "abstract_lqp_node.hpp"
 #include "utils/assert.hpp"
 
@@ -13,25 +15,23 @@ std::shared_ptr<const AbstractLQPNode> LQPColumnReference::original_node() const
 
 ColumnID LQPColumnReference::original_column_id() const { return _original_column_id; }
 
-std::string LQPColumnReference::description() const {
-  const auto node = this->original_node();
-
-  DebugAssert(node, "LQPColumnReference state not sufficient to retrieve column name");
-  return node->get_verbose_column_name(_original_column_id);
-}
-
 bool LQPColumnReference::operator==(const LQPColumnReference& rhs) const {
   return original_node() == rhs.original_node() && _original_column_id == rhs._original_column_id;
 }
 
 std::ostream& operator<<(std::ostream& os, const LQPColumnReference& column_reference) {
-  const auto node = column_reference.original_node();
-
-  if (column_reference.original_node()) {
-    os << column_reference.description();
-  } else {
-    os << "[Invalid LQPColumnReference, ColumnID:" << column_reference.original_column_id() << "]";
-  }
+  Fail("Hard");
   return os;
 }
 }  // namespace opossum
+
+namespace std {
+
+size_t hash<opossum::LQPColumnReference>::operator()(const opossum::LQPColumnReference& column_reference) const {
+  auto hash = boost::hash_value(column_reference.original_node().get());
+  boost::hash_combine(hash, static_cast<size_t>(column_reference.original_column_id()));
+  return hash;
+};
+
+}  // namespace std
+
