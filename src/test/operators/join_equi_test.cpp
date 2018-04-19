@@ -13,7 +13,6 @@
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
-#include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_scan.hpp"
@@ -32,7 +31,7 @@ template <typename T>
 class JoinEquiTest : public JoinTest {};
 
 // here we define all Join types
-using JoinEquiTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge, JoinIndex, JoinMPSM>;
+using JoinEquiTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge, JoinIndex>;
 TYPED_TEST_CASE(JoinEquiTest, JoinEquiTypes);
 
 TYPED_TEST(JoinEquiTest, WrongJoinOperator) {
@@ -49,7 +48,7 @@ TYPED_TEST(JoinEquiTest, LeftJoin) {
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinIntFloat) {
-  if (std::is_same<TypeParam, JoinSortMerge>::value || std::is_same<TypeParam, JoinMPSM>::value) {
+  if (std::is_same<TypeParam, JoinSortMerge>::value) {
     return;
   }
 
@@ -65,7 +64,7 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntFloat) {
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinIntDouble) {
-  if (std::is_same<TypeParam, JoinSortMerge>::value || std::is_same<TypeParam, JoinMPSM>::value) {
+  if (std::is_same<TypeParam, JoinSortMerge>::value) {
     return;
   }
 

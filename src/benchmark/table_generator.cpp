@@ -16,7 +16,6 @@
 
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/numa_placement_manager.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
 
@@ -81,9 +80,8 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
 
 std::shared_ptr<Table> TableGenerator::generate_table(
     const std::vector<ColumnDataDistribution>& column_data_distributions, const size_t num_rows,
-    const size_t chunk_size, std::optional<EncodingType> encoding_type, bool use_multiple_partitions) {
-  Assert(chunk_size != 0, "cannot generate table with chunk size 0") const auto num_columns =
-      column_data_distributions.size();
+    const size_t chunk_size, std::optional<EncodingType> encoding_type) {
+  const auto num_columns = column_data_distributions.size();
   const auto num_chunks = std::ceil(static_cast<double>(num_rows) / static_cast<double>(chunk_size));
 
   // create result table and container for vectors holding the generated values for the columns
@@ -160,21 +158,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
 
       // add full chunk to table
       if (column_index == num_columns - 1) {
-        std::optional<PolymorphicAllocator<Chunk>> allocator;
-
-#if HYRISE_NUMA_SUPPORT
-        if (use_multiple_partitions) {
-          // compute on which node to create the chunk
-          auto num_numa_nodes = NUMAPlacementManager::get().topology()->nodes().size();
-          auto current_node = chunk_index % num_numa_nodes;
-
-          // create an allocator for the node
-          allocator = std::optional<PolymorphicAllocator<Chunk>>{
-              PolymorphicAllocator<Chunk>{NUMAPlacementManager::get().get_memory_resource(current_node)}};
-        }
-#endif
-
-        table->append_chunk(columns, allocator);
+        table->append_chunk(columns);
       }
     }
   }
