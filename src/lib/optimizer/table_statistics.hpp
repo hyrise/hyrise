@@ -73,9 +73,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
    */
   float row_count() const;
 
-  /**
-   * Returns the number of valid rows (using approximate count of deleted rows)
-   */
+  // Returns the number of valid rows (using approximate count of deleted rows)
   uint64_t approx_valid_row_count() const;
 
   const std::vector<std::shared_ptr<BaseColumnStatistics>>& column_statistics() const;
@@ -100,9 +98,7 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
       const std::shared_ptr<TableStatistics>& right_table_stats, const JoinMode mode, const ColumnIDPair column_ids,
       const PredicateCondition predicate_condition);
 
-  /**
-   * Increases the (approximate) count of invalid rows in the table (caused by deletes).
-   */
+  // Increases the (approximate) count of invalid rows in the table (caused by deletes).
   void increment_invalid_row_count(uint64_t count);
 
  protected:
