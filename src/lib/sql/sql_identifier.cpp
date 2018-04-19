@@ -24,7 +24,6 @@ std::string SQLIdentifier::as_string() const {
 
 namespace std {
 
-template<>
 size_t hash<opossum::SQLIdentifier>::operator()(const opossum::SQLIdentifier& sql_identifier) const {
   auto hash = std::hash<std::string>{}(sql_identifier.column_name);
 
