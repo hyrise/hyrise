@@ -10,7 +10,7 @@
 namespace opossum {
 
 enum class ExpressionType {
-  Aggregate, Arithmetic, Array, Case, Column, Exists, External, Function, In, Logical, Not, Predicate, Select, Value, ValuePlaceholder
+  Aggregate, Arithmetic, Array, Case, Column, Exists, External, Function, In, Logical, Mock, Not, Predicate, Select, Value, ValuePlaceholder
 };
 
 class AbstractExpression : public std::enable_shared_from_this<AbstractExpression> {

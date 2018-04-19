@@ -13,7 +13,7 @@
 #include "plan_column_definition.hpp"
 #include "lqp_column_reference.hpp"
 #include "types.hpp"
-#include "sql/column_identifier.hpp"
+#include "sql/sql_identifier.hpp"
 
 namespace opossum {
 

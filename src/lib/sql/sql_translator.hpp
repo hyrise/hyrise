@@ -8,12 +8,12 @@
 #include "SQLParser.h"
 
 #include "all_parameter_variant.hpp"
-#include "column_identifier_lookup.hpp"
+#include "sql_identifier_context.hpp"
 
 #include "expression/abstract_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "sql_translation_state.hpp"
-#include "column_identifier_lookup_proxy.hpp"
+#include "sql_identifier_context_proxy.hpp"
 
 namespace opossum {
 
