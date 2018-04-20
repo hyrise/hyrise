@@ -5,7 +5,7 @@
 namespace opossum {
 
 InExpression::InExpression(const std::shared_ptr<AbstractExpression>& value, const std::shared_ptr<AbstractExpression>& set):
-  AbstractExpression(ExpressionType::In, {value, set}) {}
+  AbstractPredicateExpression(PredicateCondition::In, {value, set}) {}
 
 const std::shared_ptr<AbstractExpression>& InExpression::value() const {
   return arguments[0];

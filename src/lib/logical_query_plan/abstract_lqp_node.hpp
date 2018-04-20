@@ -44,8 +44,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   explicit AbstractLQPNode(const LQPNodeType node_type);
   virtual ~AbstractLQPNode() = default;
 
-  LQPNodeType type() const;
-
   /**
    * @defgroup Access the outputs/inputs
    *
@@ -99,13 +97,20 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   std::shared_ptr<AbstractLQPNode> deep_copy() const;
 
-  virtual bool shallow_equals(const AbstractLQPNode& rhs) const = 0;
+  /**
+   * Compare this node with another, without comparing inputs. Prefer lqp_find_subplan_mismatch() over this function.
+   * @param node_mapping    Mapping from nodes in this node's input plans to corresponding nodes in the input plans of
+   *                        rhs
+   */
+  bool shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const;
+
   virtual const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const = 0;
 
- protected:
-  const LQPNodeType _type;
+  const LQPNodeType type;
 
+ protected:
   virtual std::shared_ptr<AbstractLQPNode> _shallow_copy_impl(LQPNodeMapping & node_mapping) const = 0;
+  virtual bool _shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const = 0;
 
  private:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl(LQPNodeMapping & node_mapping) const;

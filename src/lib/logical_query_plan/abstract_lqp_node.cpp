@@ -8,9 +8,8 @@
 
 namespace opossum {
 
-AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type) : _type(node_type) {}
+AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type) : type(node_type) {}
 
-LQPNodeType AbstractLQPNode::type() const { return _type; }
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::left_input() const { return _inputs[0]; }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::right_input() const { return _inputs[1]; }
@@ -125,6 +124,11 @@ size_t AbstractLQPNode::output_count() const { return _outputs.size(); }
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy() const {
   LQPNodeMapping node_mapping;
   return _deep_copy_impl(node_mapping);
+}
+
+bool AbstractLQPNode::shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+  if (type != rhs.type) return false;
+  return _shallow_equals_impl(rhs, node_mapping);
 }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy_impl(LQPNodeMapping & node_mapping) const {

@@ -8,16 +8,17 @@ namespace opossum {
 ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<AbstractExpression>>& expressions):
   AbstractLQPNode(LQPNodeType::Projection), expressions(expressions) {}
 
-bool ProjectionNode::shallow_equals(const AbstractLQPNode& rhs) const {
-  return false;
-}
-
 const std::vector<std::shared_ptr<AbstractExpression>>& ProjectionNode::output_column_expressions() const {
   return expressions;
 }
 
 std::shared_ptr<AbstractLQPNode> ProjectionNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {
   return make(expressions_copy_and_adapt_to_different_lqp(expressions, node_mapping));
+}
+
+bool ProjectionNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const {
+  const auto& rhs_expressions = static_cast<const ProjectionNode&>(rhs).expressions;
+  return expressions_equal_to_expressions_in_different_lqp(expressions, rhs_expressions, node_mapping);
 }
 
 }  // namespace opossum

@@ -14,19 +14,34 @@ bool expressions_equal(const std::vector<std::shared_ptr<AbstractExpression>>& e
                     [&] (const auto& expression_a, const auto& expression_b) { return expression_a->deep_equals(*expression_b);});
 }
 
-//bool expressions_equal_to_expressions_in_different_lqp(
-//const std::vector<std::shared_ptr<AbstractExpression>> &expressions_left,
-//const std::vector<std::shared_ptr<AbstractExpression>> &expressions_right,
-//const std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>> &node_mapping) {
-//  return false;
-//}
-//
-//bool expressions_equal_to_expressions_in_different_lqp(const AbstractExpression& expression_left,
-//                       const AbstractExpression& expression_right,
-//                       const std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>& node_mapping) {
-//  return false;
-//}
+bool expressions_equal_to_expressions_in_different_lqp(
+const std::vector<std::shared_ptr<AbstractExpression>> &expressions_left,
+const std::vector<std::shared_ptr<AbstractExpression>> &expressions_right,
+const LQPNodeMapping& node_mapping) {
+  if (expressions_left.size() != expressions_right.size()) return false;
 
+  for (auto expression_idx = size_t{0}; expression_idx < expressions_left.size(); ++expression_idx) {
+    const auto& expression_left = *expressions_left[expression_idx];
+    const auto& expression_right = *expressions_right[expression_idx];
+
+    if (!expression_equal_to_expression_in_different_lqp(expression_left, expression_right, node_mapping)) return false;
+  }
+
+  return true;
+}
+
+bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& expression_left,
+                                                     const AbstractExpression& expression_right,
+                                                     const LQPNodeMapping& node_mapping) {
+  /**
+   * Compare expression_left to expression_right by creating a deep copy of expression_left and adapting it to the LQP
+   * of expression_right, then perform a normal comparison of two expressions in the same LQP.
+   */
+
+  auto copied_expression_left = expression_left.deep_copy();
+  expression_adapt_to_different_lqp(copied_expression_left, node_mapping);
+  return copied_expression_left->deep_equals(expression_right);
+}
 
 std::vector<std::shared_ptr<AbstractExpression>> expressions_copy(
 const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
@@ -54,22 +69,11 @@ const LQPNodeMapping& node_mapping) {
 std::shared_ptr<AbstractExpression> expression_copy_and_adapt_to_different_lqp(
 const AbstractExpression& expression,
 const LQPNodeMapping& node_mapping) {
+
   auto copied_expression = expression.deep_copy();
   expression_adapt_to_different_lqp(copied_expression, node_mapping);
   return copied_expression;
 }
-
-//std::vector<std::shared_ptr<AbstractExpression>> expressions_copy_and_adapt_to_different_lqp(
-//const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
-//const std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>& node_mapping) {
-//  return {};
-//}
-//
-//std::shared_ptr<AbstractExpression> expression_copy_and_adapt_to_different_lqp(
-//const AbstractExpression& expression,
-//const std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>& node_mapping){
-//  return {};
-//}
 
 void expression_adapt_to_different_lqp(
   std::shared_ptr<AbstractExpression>& expression,

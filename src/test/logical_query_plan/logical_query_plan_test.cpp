@@ -18,6 +18,10 @@ class LogicalQueryPlanTest : public ::testing::Test {
     StorageManager::get().add_table("int_int", table_int_int);
   }
 
+  void TearDown() override {
+    StorageManager::reset();
+  }
+
   std::shared_ptr<Table> table_int_int;
 };
 
@@ -38,33 +42,34 @@ TEST_F(LogicalQueryPlanTest, CreateNodeMapping) {
   EXPECT_EQ(node_mapping[stored_table_node], copied_stored_table_node);
 }
 
-//TEST_F(LogicalQueryPlanTest, DeepCopyBasics) {
-//  const auto stored_table_node = StoredTableNode::make("int_int");
-//
-//  const auto expression_a = std::make_shared<LQPColumnExpression>(LQPColumnReference{stored_table_node, ColumnID{0}});
-//  const auto expression_b = std::make_shared<LQPColumnExpression>(LQPColumnReference{stored_table_node, ColumnID{1}});
-//
-//  const auto projection_node = ProjectionNode::make({expression_a, expression_b}, stored_table_node);
-//  const auto lqp = projection_node;
-//
-//  const auto copied_lqp = lqp->deep_copy();
-//
-//  EXPECT_LQP_EQUAL(copied_lqp, lqp);
-//
-//  const auto copied_projection_node = std::dynamic_pointer_cast<ProjectionNode>(copied_lqp);
-//  const auto copied_stored_table_node = std::dynamic_pointer_cast<ProjectionNode>(copied_lqp->left_input());
-//
-//  // Nodes in copied LQP should have different pointers
-//  EXPECT_NE(projection_node, copied_projection_node);
-//  EXPECT_NE(stored_table_node, copied_stored_table_node);
-//
-//  // Check that expressions in copied LQP point to StoredTableNode in their LQP, not into the original LQP
-//  const auto copied_expression_a = std::dynamic_pointer_cast<LQPColumnExpression>(copied_projection_node->expressions.at(0));
-//  const auto copied_expression_b = std::dynamic_pointer_cast<LQPColumnExpression>(copied_projection_node->expressions.at(1));
-//
-//  EXPECT_EQ(copied_expression_a->column_reference.original_node(), copied_stored_table_node);
-//  EXPECT_EQ(copied_expression_b->column_reference.original_node(), copied_stored_table_node);
-//}
+TEST_F(LogicalQueryPlanTest, DeepCopyBasics) {
+  const auto stored_table_node = StoredTableNode::make("int_int");
+
+  const auto expression_a = std::make_shared<LQPColumnExpression>(LQPColumnReference{stored_table_node, ColumnID{0}});
+  const auto expression_b = std::make_shared<LQPColumnExpression>(LQPColumnReference{stored_table_node, ColumnID{1}});
+
+  const auto projection_node = ProjectionNode::make(stored_table_node->output_column_expressions(),
+                                                    stored_table_node);
+  const auto lqp = projection_node;
+
+  const auto copied_lqp = lqp->deep_copy();
+
+  EXPECT_LQP_EQ(copied_lqp, lqp);
+
+  const auto copied_projection_node = std::dynamic_pointer_cast<ProjectionNode>(copied_lqp);
+  const auto copied_stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(copied_lqp->left_input());
+
+  // Nodes in copied LQP should have different pointers
+  EXPECT_NE(projection_node, copied_projection_node);
+  EXPECT_NE(stored_table_node, copied_stored_table_node);
+
+  // Check that expressions in copied LQP point to StoredTableNode in their LQP, not into the original LQP
+  const auto copied_expression_a = std::dynamic_pointer_cast<LQPColumnExpression>(copied_projection_node->expressions.at(0));
+  const auto copied_expression_b = std::dynamic_pointer_cast<LQPColumnExpression>(copied_projection_node->expressions.at(1));
+
+  EXPECT_EQ(copied_expression_a->column_reference.original_node(), copied_stored_table_node);
+  EXPECT_EQ(copied_expression_b->column_reference.original_node(), copied_stored_table_node);
+}
 
 }  // namespace opossum
 

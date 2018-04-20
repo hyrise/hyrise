@@ -10,10 +10,6 @@ StoredTableNode::StoredTableNode(const std::string& table_name):
   AbstractLQPNode(LQPNodeType::StoredTable), table_name(table_name) {
 }
 
-bool StoredTableNode::shallow_equals(const AbstractLQPNode& rhs) const {
-  return false;
-}
-
 const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::output_column_expressions() const {
   // Need to initialize the expressions lazily because they will have a weak_ptr to this node and we can't obtain that
   // in the constructor
@@ -31,6 +27,10 @@ const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::output_
 
 std::shared_ptr<AbstractLQPNode> StoredTableNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {
   return make(table_name);
+}
+
+bool StoredTableNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const {
+  return table_name == static_cast<const StoredTableNode&>(rhs).table_name;
 }
 
 }  // namespace opossum

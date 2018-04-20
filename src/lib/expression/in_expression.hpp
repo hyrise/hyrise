@@ -1,10 +1,10 @@
 #pragma once
 
-#include "abstract_expression.hpp"
+#include "abstract_predicate_expression.hpp"
 
 namespace opossum {
 
-class InExpression : public AbstractExpression {
+class InExpression : public AbstractPredicateExpression {
  public:
   InExpression(const std::shared_ptr<AbstractExpression>& value, const std::shared_ptr<AbstractExpression>& set);
 

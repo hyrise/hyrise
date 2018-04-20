@@ -2,7 +2,7 @@ set(
     SHARED_SOURCES
 #    base_test.hpp
 #    testing_assert.cpp
-#    testing_assert.hpp
+    testing_assert.hpp
 #    sql/sqlite_testrunner/sqlite_wrapper.cpp
 #    sql/sqlite_testrunner/sqlite_wrapper.hpp
 )
@@ -16,6 +16,7 @@ set(
 #    lib/all_parameter_variant_test.cpp
 #    lib/all_type_variant_test.cpp
     expression/expression_test.cpp
+    expression/expression_evaluator_test.cpp
 #    logical_query_plan/aggregate_node_test.cpp
 #    logical_query_plan/create_view_node_test.cpp
 #    logical_query_plan/drop_view_node_test.cpp

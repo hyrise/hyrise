@@ -20,17 +20,17 @@ bool expressions_equal(const std::vector<std::shared_ptr<AbstractExpression>>& e
 /**
  * Utility to compare vectors of Expressions from different LQPs
  */
-//bool expressions_equal_to_expressions_in_different_lqp(
-//const std::vector<std::shared_ptr<AbstractExpression>> &expressions_left,
-//const std::vector<std::shared_ptr<AbstractExpression>> &expressions_right,
-//const std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>> &node_mapping);
+bool expressions_equal_to_expressions_in_different_lqp(
+const std::vector<std::shared_ptr<AbstractExpression>> &expressions_left,
+const std::vector<std::shared_ptr<AbstractExpression>> &expressions_right,
+const LQPNodeMapping& node_mapping);
 
 /**
  * Utility to compare two Expressions from different LQPs
  */
-//bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& expression_left,
-//                       const AbstractExpression& expression_right,
-//                       const std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>& node_mapping);
+bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& expression_left,
+                       const AbstractExpression& expression_right,
+                       const LQPNodeMapping& node_mapping);
 
 
 std::vector<std::shared_ptr<AbstractExpression>> expressions_copy(

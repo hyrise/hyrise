@@ -14,13 +14,13 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
  public:
   explicit StoredTableNode(const std::string& table_name);
 
-  bool shallow_equals(const AbstractLQPNode& rhs) const override;
   const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const override;
 
   const std::string table_name;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _shallow_copy_impl(LQPNodeMapping & node_mapping) const override;
+  bool _shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const override;
 
  private:
   mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _expressions;

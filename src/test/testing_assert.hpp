@@ -1,4 +1,4 @@
-//#pragma once
+#pragma once
 //
 //#include <cmath>
 //#include <memory>
@@ -127,15 +127,17 @@
 //#define ASSERT_LQP_TIE(output, input_side, input) \
 //  if (!opossum::check_lqp_tie(output, input_side, input)) FAIL();
 //
+
 #define EXPECT_LQP_EQ(lhs, rhs)                                  \
   {                                                              \
-    const auto mismatch = lhs->find_first_subplan_mismatch(rhs); \
+    const auto mismatch = lqp_find_subplan_mismatch(lhs, rhs); \
     if (mismatch) {                                              \
       std::cout << "Differing subtrees" << std::endl;            \
-      mismatch->first->print();                                  \
-      std::cout << std::endl;                                    \
-      mismatch->second->print();                                 \
-      std::cout << std::endl;                                    \
       GTEST_FAIL();                                              \
     }                                                            \
   }
+
+//mismatch->first->print();                                  \
+      //std::cout << std::endl;                                    \
+      //mismatch->second->print();                                 \
+      //std::cout << std::endl;                                    \
