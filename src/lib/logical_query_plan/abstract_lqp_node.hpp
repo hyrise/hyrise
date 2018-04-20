@@ -1,6 +1,9 @@
 #pragma once
 
+#include <vector>
+
 #include "enable_make_for_lqp_node.hpp"
+#include "lqp_utils.hpp"
 
 namespace opossum {
 
@@ -28,14 +31,97 @@ enum class LQPNodeType {
   Mock
 };
 
+enum class LQPInputSide { Left, Right };
+
+// Describes the output of a Node and which of the output's inputs this Node is
+struct LQPOutputRelation {
+  std::shared_ptr<AbstractLQPNode> output;
+  LQPInputSide input_side{LQPInputSide::Left};
+};
+
 class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
  public:
   explicit AbstractLQPNode(const LQPNodeType node_type);
   virtual ~AbstractLQPNode() = default;
 
+  LQPNodeType type() const;
+
+  /**
+   * @defgroup Access the outputs/inputs
+   *
+   * The outputs are implicitly set and removed in set_left_input()/set_right_input()/set_input().
+   * Design decision: If you delete a node, you explicitly need to call remove_output() on its input.
+   *
+   * set_input() is a shorthand for set_left_input() or set_right_input(), useful if the side is a runtime value.
+   * @{
+   */
+  std::shared_ptr<AbstractLQPNode> left_input() const;
+  std::shared_ptr<AbstractLQPNode> right_input() const;
+  std::shared_ptr<AbstractLQPNode> input(LQPInputSide side) const;
+  void set_left_input(const std::shared_ptr<AbstractLQPNode>& left);
+  void set_right_input(const std::shared_ptr<AbstractLQPNode>& right);
+  void set_input(LQPInputSide side, const std::shared_ptr<AbstractLQPNode>& input);
+
+  size_t input_count() const;
+
+  /**
+   * @pre this has has @param output as an output
+   * @return whether this is the left or right input in the specified output.
+   */
+  LQPInputSide get_input_side(const std::shared_ptr<AbstractLQPNode>& output) const;
+
+  /**
+   * @returns {get_output_side(outputs()[0], ..., get_output_side(outputs()[n-1])}
+   */
+  std::vector<LQPInputSide> get_input_sides() const;
+
+  /**
+   * Locks all outputs (as they are stored in weak_ptrs) and returns them as shared_ptrs
+   */
+  std::vector<std::shared_ptr<AbstractLQPNode>> outputs() const;
+
+  void remove_output(const std::shared_ptr<AbstractLQPNode>& output);
+  void clear_outputs();
+
+  /**
+   * @return {{outputs()[0], get_input_sides()[0]}, ..., {outputs()[n-1], get_input_sides()[n-1]}}
+   */
+  std::vector<LQPOutputRelation> output_relations() const;
+
+  /**
+   * Same as outputs().size(), but avoids locking all output pointers
+   */
+  size_t output_count() const;
+  /** @} */
+
+  /**
+   * @return A deep copy of the LQP this Node is the root of
+   */
+  std::shared_ptr<AbstractLQPNode> deep_copy() const;
+
   virtual bool shallow_equals(const AbstractLQPNode& rhs) const = 0;
   virtual const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const = 0;
-  virtual std::shared_ptr<AbstractLQPNode> deep_copy() const = 0;
+
+ protected:
+  const LQPNodeType _type;
+
+  virtual std::shared_ptr<AbstractLQPNode> _shallow_copy_impl(LQPNodeMapping & node_mapping) const = 0;
+
+ private:
+  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(LQPNodeMapping & node_mapping) const;
+  std::shared_ptr<AbstractLQPNode> _shallow_copy(LQPNodeMapping & node_mapping) const;
+
+  /**
+   * @{
+   * For internal usage in set_left_input(), set_right_input(), set_input(), remove_output()
+   * Add or remove a output without manipulating this output's input ptr.
+   */
+  void _add_output_pointer(const std::shared_ptr<AbstractLQPNode>& output);
+  void _remove_output_pointer(const std::shared_ptr<AbstractLQPNode>& output);
+  /** @} */
+
+  std::vector<std::weak_ptr<AbstractLQPNode>> _outputs;
+  std::array<std::shared_ptr<AbstractLQPNode>, 2> _inputs;
 };
 
 }  // namespace opossum

@@ -11,8 +11,8 @@ set(
 #    concurrency/transaction_context.hpp
 #    concurrency/transaction_manager.cpp
 #    concurrency/transaction_manager.hpp
-#    constant_mappings.cpp
-#    constant_mappings.hpp
+    constant_mappings.cpp
+    constant_mappings.hpp
     expression/abstract_column_expression.hpp
     expression/abstract_expression.cpp
     expression/abstract_expression.hpp
@@ -32,8 +32,8 @@ set(
 #    expression/case_expression.hpp
 #    expression/exists_expression.cpp
 #    expression/exists_expression.hpp
-#    expression/expression_utils.cpp
-#    expression/expression_utils.hpp
+    expression/expression_utils.cpp
+    expression/expression_utils.hpp
 #    expression/external_expression.cpp
 #    expression/external_expression.hpp
 #    expression/function_expression.cpp
@@ -96,6 +96,8 @@ set(
 #    sql/column_identifier_lookup.hpp
 #    logical_query_plan/lqp_translator.cpp
 #    logical_query_plan/lqp_translator.hpp
+    logical_query_plan/lqp_utils.cpp
+    logical_query_plan/lqp_utils.hpp
 #    logical_query_plan/mock_node.cpp
 #    logical_query_plan/mock_node.hpp
 #    logical_query_plan/predicate_node.cpp
@@ -449,7 +451,7 @@ set(
 #    utils/arithmetic_operator_expression.hpp
 #    utils/arithmetic_operator_expression_impl.hpp
     utils/assert.hpp
-#    utils/boost_default_memory_resource.cpp
+    utils/boost_default_memory_resource.cpp
 #    utils/copyable_atomic.hpp
 #    utils/cuckoo_hashtable.hpp
 #    utils/enum_constant.hpp
@@ -457,8 +459,8 @@ set(
 #    utils/format_bytes.hpp
 #    utils/format_duration.cpp
 #    utils/format_duration.hpp
-#    utils/load_table.cpp
-#    utils/load_table.hpp
+    utils/load_table.cpp
+    utils/load_table.hpp
 #    utils/murmur_hash.cpp
 #    utils/murmur_hash.hpp
 #    utils/numa_memory_resource.cpp

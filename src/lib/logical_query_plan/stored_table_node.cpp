@@ -29,8 +29,8 @@ const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::output_
   return *_expressions;
 }
 
-std::shared_ptr<AbstractLQPNode> StoredTableNode::deep_copy() const {
-  return std::make_shared<StoredTableNode>(table_name);
+std::shared_ptr<AbstractLQPNode> StoredTableNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {
+  return make(table_name);
 }
 
 }  // namespace opossum

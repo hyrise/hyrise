@@ -15,6 +15,7 @@ set(
 #    import_export/csv_meta_test.cpp
 #    lib/all_parameter_variant_test.cpp
 #    lib/all_type_variant_test.cpp
+    expression/expression_test.cpp
 #    logical_query_plan/aggregate_node_test.cpp
 #    logical_query_plan/create_view_node_test.cpp
 #    logical_query_plan/drop_view_node_test.cpp
@@ -24,7 +25,7 @@ set(
 #    logical_query_plan/insert_node_test.cpp
 #    logical_query_plan/join_node_test.cpp
 #    logical_query_plan/limit_node_test.cpp
-#    logical_query_plan/logical_query_plan_test.cpp
+    logical_query_plan/logical_query_plan_test.cpp
 #    logical_query_plan/mock_node_test.cpp
 #    logical_query_plan/predicate_node_test.cpp
 #    logical_query_plan/projection_node_test.cpp

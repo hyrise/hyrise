@@ -13,9 +13,11 @@ class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public Abstr
 
   bool shallow_equals(const AbstractLQPNode& rhs) const override;
   const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const override;
-  std::shared_ptr<AbstractLQPNode> deep_copy() const override;
 
   std::vector<std::shared_ptr<AbstractExpression>> expressions;
+
+ protected:
+  std::shared_ptr<AbstractLQPNode> _shallow_copy_impl(LQPNodeMapping & node_mapping) const override;
 };
 
 }  // namespace opossum

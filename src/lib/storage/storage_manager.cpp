@@ -28,7 +28,7 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
     Assert(table->get_chunk(chunk_id)->has_mvcc_columns(), "Table must have MVCC columns.");
   }
 
-  table->set_table_statistics(std::make_shared<TableStatistics>(table));
+//  table->set_table_statistics(std::make_shared<TableStatistics>(table));
   _tables.emplace(name, std::move(table));
 }
 
@@ -113,25 +113,26 @@ void StorageManager::print(std::ostream& out) const {
 void StorageManager::reset() { get() = StorageManager(); }
 
 void StorageManager::export_all_tables_as_csv(const std::string& path) {
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(_tables.size());
-
-  for (auto& pair : _tables) {
-    auto job_task = std::make_shared<JobTask>([pair, &path]() {
-      const auto& name = pair.first;
-      auto& table = pair.second;
-
-      auto table_wrapper = std::make_shared<TableWrapper>(table);
-      table_wrapper->execute();
-
-      auto export_csv = std::make_shared<ExportCsv>(table_wrapper, path + "/" + name + ".csv");
-      export_csv->execute();
-    });
-    jobs.push_back(job_task);
-    job_task->schedule();
-  }
-
-  for (auto& job : jobs) job->join();
+  Fail("");
+//  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+//  jobs.reserve(_tables.size());
+//
+//  for (auto& pair : _tables) {
+//    auto job_task = std::make_shared<JobTask>([pair, &path]() {
+//      const auto& name = pair.first;
+//      auto& table = pair.second;
+//
+//      auto table_wrapper = std::make_shared<TableWrapper>(table);
+//      table_wrapper->execute();
+//
+//      auto export_csv = std::make_shared<ExportCsv>(table_wrapper, path + "/" + name + ".csv");
+//      export_csv->execute();
+//    });
+//    jobs.push_back(job_task);
+//    job_task->schedule();
+//  }
+//
+//  for (auto& job : jobs) job->join();
 }
 
 }  // namespace opossum

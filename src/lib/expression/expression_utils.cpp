@@ -4,8 +4,7 @@
 #include <sstream>
 #include <queue>
 
-//#include "abstract_expression.hpp"
-//#include "lqp_column_expression.hpp"
+#include "lqp_column_expression.hpp"
 
 namespace opossum {
 
@@ -39,6 +38,27 @@ const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
   return copied_expressions;
 }
 
+std::vector<std::shared_ptr<AbstractExpression>> expressions_copy_and_adapt_to_different_lqp(
+const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
+const LQPNodeMapping& node_mapping) {
+  std::vector<std::shared_ptr<AbstractExpression>> copied_expressions;
+  copied_expressions.reserve(expressions.size());
+
+  for (const auto& expression : expressions) {
+    copied_expressions.emplace_back(expression_copy_and_adapt_to_different_lqp(*expression, node_mapping));
+  }
+
+  return copied_expressions;
+}
+
+std::shared_ptr<AbstractExpression> expression_copy_and_adapt_to_different_lqp(
+const AbstractExpression& expression,
+const LQPNodeMapping& node_mapping) {
+  auto copied_expression = expression.deep_copy();
+  expression_adapt_to_different_lqp(copied_expression, node_mapping);
+  return copied_expression;
+}
+
 //std::vector<std::shared_ptr<AbstractExpression>> expressions_copy_and_adapt_to_different_lqp(
 //const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
 //const std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>& node_mapping) {
@@ -51,11 +71,32 @@ const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
 //  return {};
 //}
 
-//void expression_adapt_to_different_lqp(
-//AbstractExpression& expression,
-//const std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>& node_mapping){
+void expression_adapt_to_different_lqp(
+  std::shared_ptr<AbstractExpression>& expression,
+  const LQPNodeMapping& node_mapping){
 
-//}
+  visit_expression(expression, [&](auto& expression_ptr) {
+    if (expression_ptr->type != ExpressionType::Column) return true;
+
+    const auto lqp_column_expression_ptr = std::dynamic_pointer_cast<LQPColumnExpression>(expression_ptr);
+    Assert(lqp_column_expression_ptr, "Asked to adapt expression in LQP, but encountered non-LQP ColumnExpression");
+
+    expression_ptr = expression_adapt_to_different_lqp(*lqp_column_expression_ptr, node_mapping);
+
+    return false;
+  });
+}
+
+std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(
+const LQPColumnExpression& lqp_column_expression,
+const LQPNodeMapping& node_mapping) {
+  const auto node_mapping_iter = node_mapping.find(lqp_column_expression.column_reference.original_node());
+  Assert(node_mapping_iter != node_mapping.end(), "Couldn't find referenced node in NodeMapping");
+
+  LQPColumnReference adapted_column_reference{node_mapping_iter->second, lqp_column_expression.column_reference.original_column_id()};
+
+  return std::make_shared<LQPColumnExpression>(adapted_column_reference);
+}
 
 std::string expression_column_names(const std::vector<std::shared_ptr<AbstractExpression>> &expressions) {
   std::stringstream stream;
