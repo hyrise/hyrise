@@ -20,6 +20,7 @@ class ExpressionEvaluatorTest : public ::testing::Test {
 
     a = std::make_shared<PQPColumnExpression>(ColumnID{0});
     b = std::make_shared<PQPColumnExpression>(ColumnID{1});
+    a_plus_b = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, a, b);
   }
 
   std::shared_ptr<Table> table;
@@ -31,7 +32,8 @@ class ExpressionEvaluatorTest : public ::testing::Test {
 };
 
 TEST_F(ExpressionEvaluatorTest, ArithmeticExpression) {
-
+  const auto a_plus_b_result = std::vector<int32_t>({3, 5, 7, 9});
+  EXPECT_EQ(boost::get<std::vector<int32_t>>(evaluator->evaluate_expression<int32_t>(*a_plus_b)), a_plus_b_result);
 }
 
 }  // namespace opossum

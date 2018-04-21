@@ -17,7 +17,7 @@ class Chunk;
 
 class ExpressionEvaluator final {
  public:
-  template<typename T> using NullableValues = std::vector<std::pair<bool, T>>;
+  template<typename T> using NullableValues = std::pair<std::vector<bool>, std::vector<T>>;
   template<typename T> using NonNullableValues = std::vector<T>;
 
   template<typename T> using ExpressionResult = boost::variant<
@@ -45,3 +45,5 @@ class ExpressionEvaluator final {
 };
 
 }  // namespace opossum
+
+#include "expression_evaluator.ipp"

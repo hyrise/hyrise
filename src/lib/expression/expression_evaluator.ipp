@@ -12,7 +12,7 @@ ExpressionEvaluator::ExpressionEvaluator(const std::shared_ptr<Chunk>& chunk):
 {}
 
 template<typename T>
-ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpression& expression) const {
+ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpression& expression) const {
   switch (expression.type) {
     case ExpressionType::Arithmetic:
       return evaluate_arithmetic_expression<T>(static_cast<const ArithmeticExpression&>(expression));
@@ -30,7 +30,7 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpre
 }
 
 template<typename T>
-ExpressionResult<T> ExpressionEvaluator::evaluate_arithmetic_expression(const ArithmeticExpression& expression) const {
+ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_arithmetic_expression(const ArithmeticExpression& expression) const {
   const auto left_operands = evaluate_expression<T>(*expression.left_operand());
   const auto right_operands = evaluate_expression<T>(*expression.right_operand());
 
@@ -45,9 +45,15 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_arithmetic_expression(const Ar
 }
 
 template<typename T, typename OperatorFunctor>
-static ExpressionResult<T> evaluate_binary_operator(const ExpressionResult<T>& left_operand,
+ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_binary_operator(const ExpressionResult<T>& left_operand,
                                                              const ExpressionResult<T>& right_operand,
                                                              const OperatorFunctor& functor) {
+
+  if (left_operand.type() == typeid(NullableValues<T>) && right_operand.type() == typeid(NullableValues<T>)) {
+    std::vector<bool> nulls(boost::get<NullableValues<T>>(left_operand).first.size());
+    std::transform()
+  }
+
   ExpressionResult<T> result(left_operand.size());
   std::transform(left_operand.begin(), left_operand.end(), right_operand.begin(), result.begin(), functor);
   return result;

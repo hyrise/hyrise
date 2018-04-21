@@ -32,7 +32,7 @@ set(
 #    expression/case_expression.hpp
     expression/exists_expression.cpp
     expression/exists_expression.hpp
-    expression/expression_evaluator.cpp
+    expression/expression_evaluator.ipp
     expression/expression_evaluator.hpp
     expression/expression_utils.cpp
     expression/expression_utils.hpp
@@ -54,8 +54,8 @@ set(
     expression/sql_identifier_expression.hpp
 #    expression/not_expression.cpp
 #    expression/not_expression.hpp
-#    expression/pqp_column_expression.cpp
-#    expression/pqp_column_expression.hpp
+    expression/pqp_column_expression.cpp
+    expression/pqp_column_expression.hpp
 #    expression/pqp_select_expression.cpp
 #    expression/pqp_select_expression.hpp
 #    expression/value_expression.cpp
