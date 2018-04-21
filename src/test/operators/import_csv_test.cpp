@@ -218,6 +218,23 @@ TEST_F(OperatorsImportCsvTest, ImportStringNullValues) {
 }
 
 TEST_F(OperatorsImportCsvTest, ImportUnquotedNullString) {
+  std::string csv_file = "src/test/csv/string_with_bad_null.csv";
+  auto csv_meta = process_csv_meta_file(csv_file + CsvMeta::META_FILE_EXTENSION);
+  csv_meta.config.reject_null_strings = false;
+  auto importer = std::make_shared<ImportCsv>(csv_file, csv_meta);
+  importer->execute();
+
+  TableColumnDefinitions column_definitions{{"a", DataType::String, true}};
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
+  expected_table->append({"xxx"});
+  expected_table->append({"www"});
+  expected_table->append({NULL_VALUE});
+  expected_table->append({"zzz"});
+
+  EXPECT_TABLE_EQ_ORDERED(importer->get_output(), expected_table);
+}
+
+TEST_F(OperatorsImportCsvTest, ImportUnquotedNullStringThrows) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/string_with_bad_null.csv");
   EXPECT_THROW(importer->execute(), std::exception);
 }

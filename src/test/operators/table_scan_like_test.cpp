@@ -32,6 +32,13 @@ class OperatorsTableScanLikeTest : public BaseTest {
     _gt_string = std::make_shared<GetTable>("table_string");
     _gt_string->execute();
 
+    // load special chars table
+    std::shared_ptr<Table> test_table_special_chars =
+        load_table("src/test/tables/int_string_like_special_chars.tbl", 2);
+    StorageManager::get().add_table("table_special_chars", std::move(test_table_special_chars));
+    _gt_special_chars = std::make_shared<GetTable>("table_special_chars");
+    _gt_special_chars->execute();
+
     // load and compress string table
     auto test_table_string_dict = load_table("src/test/tables/int_string_like.tbl", 5);
     ChunkEncoder::encode_chunks(test_table_string_dict, {ChunkID{0}});
@@ -42,7 +49,7 @@ class OperatorsTableScanLikeTest : public BaseTest {
     _gt_string_dict->execute();
   }
 
-  std::shared_ptr<GetTable> _gt, _gt_string, _gt_string_dict;
+  std::shared_ptr<GetTable> _gt, _gt_special_chars, _gt_string, _gt_string_dict;
 };
 
 /*
@@ -54,6 +61,7 @@ TEST_F(OperatorsTableScanLikeTest, ScanLikeNonStringColumn) {
   auto scan = std::make_shared<TableScan>(_gt, ColumnID{0}, PredicateCondition::Like, "%test");
   EXPECT_THROW(scan->execute(), std::exception);
 }
+
 TEST_F(OperatorsTableScanLikeTest, ScanLikeNonStringValue) {
   auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, PredicateCondition::Like, 1234);
   scan->execute();
@@ -137,6 +145,24 @@ TEST_F(OperatorsTableScanLikeTest, ScanLikeEndingOnReferencedDictColumn) {
   auto scan2 = std::make_shared<TableScan>(scan1, ColumnID{1}, PredicateCondition::Like, "%gesellschaft");
   scan2->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan2->get_output(), expected_result);
+}
+
+TEST_F(OperatorsTableScanLikeTest, ScanLikeOnSpecialChars) {
+  std::shared_ptr<Table> expected_result_1 = load_table("src/test/tables/int_string_like_special_chars_1.tbl", 1);
+  std::shared_ptr<Table> expected_result_2 = load_table("src/test/tables/int_string_like_special_chars_2.tbl", 1);
+
+  auto scan1 = std::make_shared<TableScan>(_gt_special_chars, ColumnID{1}, PredicateCondition::Like, "%2^2%");
+  scan1->execute();
+  EXPECT_TABLE_EQ_UNORDERED(scan1->get_output(), expected_result_1);
+
+  auto scan2 = std::make_shared<TableScan>(_gt_special_chars, ColumnID{1}, PredicateCondition::Like, "%$%$%");
+  scan2->execute();
+  EXPECT_TABLE_EQ_UNORDERED(scan2->get_output(), expected_result_1);
+
+  std::shared_ptr<Table> expected_result2 = load_table("src/test/tables/int_string_like_special_chars_2.tbl", 1);
+  auto scan3 = std::make_shared<TableScan>(_gt_special_chars, ColumnID{1}, PredicateCondition::Like, "%(%)%");
+  scan3->execute();
+  EXPECT_TABLE_EQ_UNORDERED(scan3->get_output(), expected_result_2);
 }
 
 // PredicateCondition::Like - Containing Wildcard
