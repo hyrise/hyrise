@@ -1,9 +1,5 @@
 #include "jit_code_specializer.hpp"
 
-#include <queue>
-
-#include <boost/algorithm/string/predicate.hpp>
-
 #include <llvm/Analysis/GlobalsModRef.h>
 #include <llvm/Analysis/TargetTransformInfo.h>
 #include <llvm/Linker/IRMover.h>
@@ -11,9 +7,10 @@
 #include <llvm/Transforms/IPO/ForceFunctionAttrs.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 #include <llvm/Transforms/Scalar.h>
-#include <llvm/Transforms/Utils/Cloning.h>
 
-#include "llvm_extensions.hpp"
+#include <boost/algorithm/string/predicate.hpp>
+
+#include <queue>
 
 namespace opossum {
 
@@ -242,7 +239,7 @@ llvm::Function* JitCodeSpecializer::_clone_function(SpecializationContext& conte
   llvm::SmallVector<llvm::ReturnInst*, 8> returns;
   llvm::CloneFunctionInto(cloned_function, &function, context.llvm_value_map, true, returns);
 
-  // TODO remove?
+  // TODO(Johannes) remove?
   if (function.hasPersonalityFn()) {
     cloned_function->setPersonalityFn(llvm::MapValue(function.getPersonalityFn(), context.llvm_value_map));
   }
@@ -335,15 +332,15 @@ void JitCodeSpecializer::_visit(U& element, std::function<void(T&)> fn) const {
     for (auto& function : element) {
       _visit(function, fn);
     }
-  } else if constexpr(std::is_same_v<std::remove_const_t<U>, llvm::Function>) {
+  } else if constexpr(std::is_same_v<std::remove_const_t<U>, llvm::Function>) {                                // NOLINT
     for (auto& block : element) {
       _visit(block, fn);
     }
-  } else if constexpr(std::is_same_v<std::remove_const_t<U>, llvm::BasicBlock>) {
+  } else if constexpr(std::is_same_v<std::remove_const_t<U>, llvm::BasicBlock>) {                              // NOLINT
     for (auto& inst : element) {
       _visit(inst, fn);
     }
-  } else if constexpr(std::is_same_v<std::remove_const_t<U>, llvm::Instruction>) {
+  } else if constexpr(std::is_same_v<std::remove_const_t<U>, llvm::Instruction>) {                             // NOLINT
     if constexpr(std::is_base_of_v<llvm::Instruction, T>) {
       if (auto inst = llvm::dyn_cast<T>(&element)) {
         fn(*inst);
@@ -353,7 +350,7 @@ void JitCodeSpecializer::_visit(U& element, std::function<void(T&)> fn) const {
         _visit(*op.get(), fn);
       }
     }
-  } else if constexpr(std::is_same_v<std::remove_const_t<U>, llvm::ConstantExpr>) {
+  } else if constexpr(std::is_same_v<std::remove_const_t<U>, llvm::ConstantExpr>) {                            // NOLINT
     for (auto& op : element.operands()) {
       _visit(*op.get(), fn);
     }

@@ -1,9 +1,9 @@
 #include "llvm_extensions.hpp"
 
-#include <unordered_set>
-
 #include <llvm/Analysis/ConstantFolding.h>
 #include <llvm/IR/Constants.h>
+
+#include <unordered_set>
 
 namespace opossum {
 
@@ -88,8 +88,6 @@ llvm::Constant* MyConstantFoldInstruction(llvm::Instruction* I, llvm::ArrayRef<l
 llvm::Constant* make_constant(llvm::Value* value, SpecializationContext& context,
                               std::unordered_set<llvm::Value*>& failed) {
   if (failed.count(value)) return nullptr;
-  //value->print(llvm::outs(), true);
-  //std::cout << std::endl;
   if (auto const_value = llvm::dyn_cast<llvm::Constant>(value)) return const_value;
   if (auto load = llvm::dyn_cast<llvm::LoadInst>(value)) {
     const auto runtime_pointer =
