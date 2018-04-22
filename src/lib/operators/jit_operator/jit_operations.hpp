@@ -90,7 +90,8 @@ struct InvalidTypeCatcher : Functor {
 
   template <typename... Ts>
   Result operator()(const Ts...) const {
-    Fail("Invalid combination of types for operation.");
+    throw "";
+    //Fail("Invalid combination of types for operation.");
   }
 };
 

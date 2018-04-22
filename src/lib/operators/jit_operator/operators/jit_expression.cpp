@@ -53,8 +53,7 @@ void JitExpression::compute(JitRuntimeContext& context) const {
         jit_is_not_null(_left_child->result(), _result_value, context);
         break;
       default:
-        Fail("Expression type is not supported.");
-        break;
+        std::logic_error("Expression type is not supported.");
     }
     return;
   }
@@ -113,7 +112,7 @@ void JitExpression::compute(JitRuntimeContext& context) const {
       jit_or(_left_child->result(), _right_child->result(), _result_value, context);
       break;
     default:
-      Fail("Expression type is not supported.");
+      throw std::logic_error("Expression type is not supported.");
   }
 }
 
