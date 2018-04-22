@@ -452,8 +452,8 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/specialization/jit_runtime_pointer.hpp
         operators/jit_operator/specialization/llvm/CloneFunction.cpp
         operators/jit_operator/specialization/llvm/InlineFunction.cpp
-        operators/jit_operator/specialization/llvm/llvm_extensions.cpp
-        operators/jit_operator/specialization/llvm/llvm_extensions.hpp
+        operators/jit_operator/specialization/llvm_extensions.cpp
+        operators/jit_operator/specialization/llvm_extensions.hpp
         operators/jit_operator_wrapper.cpp
         operators/jit_operator_wrapper.hpp
         ${SOURCES}

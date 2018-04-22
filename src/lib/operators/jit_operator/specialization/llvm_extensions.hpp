@@ -4,7 +4,7 @@
 
 #include <llvm/Transforms/Utils/Cloning.h>
 
-#include "../jit_runtime_pointer.hpp"
+#include "jit_runtime_pointer.hpp"
 
 namespace opossum {
 

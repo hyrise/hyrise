@@ -14,7 +14,7 @@
 
 // clang-format off
 
-#include "llvm_extensions.hpp"
+#include "../llvm_extensions.hpp"
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"

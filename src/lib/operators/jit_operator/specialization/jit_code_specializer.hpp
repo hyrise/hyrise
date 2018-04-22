@@ -8,7 +8,7 @@
 #include "jit_compiler.hpp"
 #include "jit_repository.hpp"
 #include "jit_runtime_pointer.hpp"
-#include "llvm/llvm_extensions.hpp"
+#include "llvm_extensions.hpp"
 
 namespace opossum {
 

@@ -13,7 +13,7 @@
 #include <llvm/Transforms/Scalar.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 
-#include "llvm/llvm_extensions.hpp"
+#include "llvm_extensions.hpp"
 
 namespace opossum {
 
