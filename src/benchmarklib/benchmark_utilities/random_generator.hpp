@@ -6,7 +6,7 @@
 
 #include "utils/assert.hpp"
 
-namespace benchmark_utilities {
+namespace opossum {
 
 class RandomGenerator {
  public:
@@ -48,4 +48,4 @@ class RandomGenerator {
  protected:
   std::default_random_engine engine;
 };
-}  // namespace benchmark_utilities
+}  // namespace opossum
