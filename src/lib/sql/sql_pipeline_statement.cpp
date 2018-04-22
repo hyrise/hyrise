@@ -7,7 +7,6 @@
 
 #include "SQLParser.h"
 #include "concurrency/transaction_manager.hpp"
-#include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/hsql_expr_translator.hpp"
@@ -164,7 +163,7 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
   } else {
     // "Normal" mode in which the query plan is created
     const auto& lqp = get_optimized_logical_plan();
-    _query_plan->add_tree_by_root(JitAwareLQPTranslator{}.translate_node(lqp));
+    _query_plan->add_tree_by_root(_lqp_translator->translate_node(lqp));
 
     // Set number of parameters to match later in case of prepared statement
     _query_plan->set_num_parameters(_num_parameters);
