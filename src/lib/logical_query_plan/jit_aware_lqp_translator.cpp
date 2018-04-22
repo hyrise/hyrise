@@ -22,13 +22,13 @@ JitAwareLQPTranslator::JitAwareLQPTranslator() : LQPTranslator() {
 }
 
 std::shared_ptr<AbstractOperator> JitAwareLQPTranslator::translate_node(
-        const std::shared_ptr<AbstractLQPNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   auto jit_operator = _try_translate_node_to_jit_operators(node);
   return jit_operator ? jit_operator : LQPTranslator::translate_node(node);
 }
 
 std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_node_to_jit_operators(
-        const std::shared_ptr<AbstractLQPNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   uint32_t num_jittable_nodes{0};
   std::unordered_set<std::shared_ptr<AbstractLQPNode>> input_nodes;
 
@@ -68,7 +68,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_node_t
     // However, if we do need to filter, we first convert the filter node to a JitExpression ...
     const auto expression = _translate_node_to_jit_expression(filter_node, *read_tuple, input_node);
     if (!expression) return nullptr;
-    // make sure that expression gets computed ...
+    // make sure that the expression gets computed ...
     jit_operator->add_jit_operator(std::make_shared<JitCompute>(expression));
     // and then filter on the resulting boolean.
     jit_operator->add_jit_operator(std::make_shared<JitFilter>(expression->result()));
@@ -112,7 +112,9 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_translate_node_to_j
         left = _translate_predicate_to_jit_expression(std::dynamic_pointer_cast<PredicateNode>(node), jit_source,
                                                       input_node);
         right = _translate_node_to_jit_expression(node->left_input(), jit_source, input_node);
-        return left && right ? std::make_shared<JitExpression>(left, ExpressionType::And, right, jit_source.add_temporary_value()) : nullptr;
+        return left && right
+                   ? std::make_shared<JitExpression>(left, ExpressionType::And, right, jit_source.add_temporary_value())
+                   : nullptr;
       } else {
         return _translate_predicate_to_jit_expression(std::dynamic_pointer_cast<PredicateNode>(node), jit_source,
                                                       input_node);
@@ -121,7 +123,9 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_translate_node_to_j
     case LQPNodeType::Union:
       left = _translate_node_to_jit_expression(node->left_input(), jit_source, input_node);
       right = _translate_node_to_jit_expression(node->right_input(), jit_source, input_node);
-      return left && right ? std::make_shared<JitExpression>(left, ExpressionType::Or, right, jit_source.add_temporary_value()) : nullptr;
+      return left && right
+                 ? std::make_shared<JitExpression>(left, ExpressionType::Or, right, jit_source.add_temporary_value())
+                 : nullptr;
 
     case LQPNodeType::Projection:
       // We don't care about projection nodes here, since they do not perform any tuple filtering
@@ -151,7 +155,8 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_translate_predicate
     case ExpressionType::Like:
     case ExpressionType::NotLike:
       right = _translate_variant_to_jit_expression(node->value(), jit_source, input_node);
-      return right ? std::make_shared<JitExpression>(left, condition, right, jit_source.add_temporary_value()) : nullptr;
+      return right ? std::make_shared<JitExpression>(left, condition, right, jit_source.add_temporary_value())
+                   : nullptr;
     /* Unary predicates */
     case ExpressionType::IsNull:
     case ExpressionType::IsNotNull:
@@ -265,9 +270,8 @@ bool JitAwareLQPTranslator::_node_is_jittable(const std::shared_ptr<AbstractLQPN
   }
 }
 
-void JitAwareLQPTranslator::_visit(
-    const std::shared_ptr<AbstractLQPNode>& node,
-    std::function<bool(const std::shared_ptr<AbstractLQPNode>&)> func) const {
+void JitAwareLQPTranslator::_visit(const std::shared_ptr<AbstractLQPNode>& node,
+                                   std::function<bool(const std::shared_ptr<AbstractLQPNode>&)> func) const {
   std::unordered_set<std::shared_ptr<const AbstractLQPNode>> visited;
   std::queue<std::shared_ptr<AbstractLQPNode>> queue({node});
 

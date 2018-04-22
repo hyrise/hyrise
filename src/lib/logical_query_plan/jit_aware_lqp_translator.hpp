@@ -39,7 +39,8 @@ class JitAwareLQPTranslator final : public LQPTranslator {
   std::shared_ptr<AbstractOperator> translate_node(const std::shared_ptr<AbstractLQPNode>& node) const final;
 
  private:
-  std::shared_ptr<JitOperatorWrapper> _try_translate_node_to_jit_operators(const std::shared_ptr<AbstractLQPNode>& node) const;
+  std::shared_ptr<JitOperatorWrapper> _try_translate_node_to_jit_operators(
+      const std::shared_ptr<AbstractLQPNode>& node) const;
 
   std::shared_ptr<const JitExpression> _translate_node_to_jit_expression(
       const std::shared_ptr<AbstractLQPNode>& node, JitReadTuple& jit_source,
@@ -80,7 +81,7 @@ class JitAwareLQPTranslator final : public LQPTranslator {
   // Traverses the LQP in a breadth-first fashion and passes all visited nodes to a lambda. The boolean returned
   // from the lambda determines whether the current node should be explored further.
   void _visit(const std::shared_ptr<AbstractLQPNode>& node,
-                             std::function<bool(const std::shared_ptr<AbstractLQPNode>&)> func) const;
+              std::function<bool(const std::shared_ptr<AbstractLQPNode>&)> func) const;
 };
 
 }  // namespace opossum
