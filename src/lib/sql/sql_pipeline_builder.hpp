@@ -27,6 +27,7 @@ class Optimizer;
  * Defaults:
  *  - MVCC is enabled
  *  - The default Optimizer (Optimizer::create_default_optimizer() is used.
+ *  - No JIT operators
  *
  * Favour this interface over calling the SQLPipeline[Statement] constructors with their long parameter list.
  * See SQLPipeline[Statement] doc for these classes, in short SQLPipeline ist for queries with multiple statement,
@@ -37,6 +38,7 @@ class SQLPipelineBuilder final {
   explicit SQLPipelineBuilder(const std::string& sql);
 
   SQLPipelineBuilder& with_mvcc(const UseMvcc use_mvcc);
+  SQLPipelineBuilder& with_lqp_translator(const std::shared_ptr<LQPTranslator>& translator);
   SQLPipelineBuilder& with_optimizer(const std::shared_ptr<Optimizer>& optimizer);
   SQLPipelineBuilder& with_prepared_statement_cache(const PreparedStatementCache& prepared_statements);
   SQLPipelineBuilder& with_transaction_context(const std::shared_ptr<TransactionContext>& transaction_context);
@@ -59,6 +61,7 @@ class SQLPipelineBuilder final {
 
   UseMvcc _use_mvcc{UseMvcc::Yes};
   std::shared_ptr<TransactionContext> _transaction_context;
+  std::shared_ptr<LQPTranslator> _lqp_translator;
   std::shared_ptr<Optimizer> _optimizer;
   PreparedStatementCache _prepared_statements;
 };

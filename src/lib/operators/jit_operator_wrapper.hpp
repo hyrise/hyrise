@@ -9,6 +9,8 @@
 
 namespace opossum {
 
+enum class JitExecutionMode { Interpret, Compile };
+
 /* The JitOperatorWrapper wraps a number of jittable operators and exposes them through Hyrise's default
  * operator interface. This allows a number of jit operators to be seamlessly integrated with
  * the existing operator pipeline.
@@ -18,15 +20,15 @@ namespace opossum {
  */
 class JitOperatorWrapper : public AbstractReadOnlyOperator {
  public:
-  explicit JitOperatorWrapper(const std::shared_ptr<const AbstractOperator> left, const bool use_jit = true,
-                              const std::vector<std::shared_ptr<AbstractJittable>>& operators = {});
+  explicit JitOperatorWrapper(const std::shared_ptr<const AbstractOperator> left,
+                              const JitExecutionMode execution_mode = JitExecutionMode::Compile,
+                              const std::vector<std::shared_ptr<AbstractJittable>>& jit_operators = {});
 
   const std::string name() const final;
   const std::string description(DescriptionMode description_mode) const final;
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args) const final;
 
-  void compile_query();
-
+  // Adds a jittable operator to the end of the operator pipeline.
+  // The operators will later be chained by the JitOperatorWrapper.
   void add_jit_operator(const std::shared_ptr<AbstractJittable>& op);
 
  protected:
@@ -40,12 +42,9 @@ class JitOperatorWrapper : public AbstractReadOnlyOperator {
   const std::shared_ptr<JitReadTuple> _source() const;
   const std::shared_ptr<AbstractJittableSink> _sink() const;
 
-  const bool _use_jit;
-  bool _already_compiled;
-  std::vector<std::shared_ptr<AbstractJittable>> _operators;
+  const JitExecutionMode _execution_mode;
   JitCodeSpecializer _module;
-  std::mutex _compile_mutex;
-  std::function<void(const JitReadTuple*, JitRuntimeContext&)> _execute_func;
+  std::vector<std::shared_ptr<AbstractJittable>> _jit_operators;
 };
 
 }  // namespace opossum
