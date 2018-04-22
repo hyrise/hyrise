@@ -33,8 +33,9 @@ namespace opossum {
  *    by a helper method first. We then add a JitCompute operator to our chain and use its result value instead of the
  *    original non-primitive value.
  */
-class JitAwareLQPTranslator final : protected LQPTranslator {
+class JitAwareLQPTranslator final : public LQPTranslator {
  public:
+  JitAwareLQPTranslator();
   std::shared_ptr<AbstractOperator> translate_node(const std::shared_ptr<AbstractLQPNode>& node) const final;
 
  private:
@@ -58,12 +59,16 @@ class JitAwareLQPTranslator final : protected LQPTranslator {
       const AllParameterVariant& value, JitReadTuple& jit_source,
       const std::shared_ptr<AbstractLQPNode>& input_node) const;
 
+  // Returns whether the current node has a PredicateNode or a UnionNode as one of its decendents.
+  // This information is needed when converting a PredicateNode to a JitExpression to determine whether the
+  // PredicateNode is part of a conjunction.
   bool _has_another_condition(const std::shared_ptr<AbstractLQPNode>& node) const;
 
   // Returns whether an LQP node with its current configuration can be part of an operator pipeline.
   bool _node_is_jittable(const std::shared_ptr<AbstractLQPNode>& node) const;
 
-  //
+  // Traverses the LQP in a breadth-first fashion and calls the lambda for each node encountered. The boolean returned
+  // from the lambda determines whether the current node should be extended further.
   void _breadth_first_search(const std::shared_ptr<AbstractLQPNode>& node,
                              std::function<bool(const std::shared_ptr<AbstractLQPNode>&)> func) const;
 };

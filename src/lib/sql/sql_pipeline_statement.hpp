@@ -4,7 +4,7 @@
 
 #include "SQLParserResult.h"
 #include "concurrency/transaction_context.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"
@@ -34,6 +34,7 @@ class SQLPipelineStatement : public Noncopyable {
   // Prefer using the SQLPipelineBuilder for constructing SQLPipelineStatements conveniently
   SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                        const UseMvcc use_mvcc, const std::shared_ptr<TransactionContext>& transaction_context,
+                       const std::shared_ptr<LQPTranslator>& lqp_translator,
                        const std::shared_ptr<Optimizer>& optimizer, const PreparedStatementCache& prepared_statements);
 
   // Returns the raw SQL string.
@@ -78,6 +79,9 @@ class SQLPipelineStatement : public Noncopyable {
 
   // Might be the Statement's own transaction context, or the one shared by all Statements in a Pipeline
   std::shared_ptr<TransactionContext> _transaction_context;
+
+  // The translator to be used to translate the abstract LQP into an executable PQP
+  const std::shared_ptr<LQPTranslator> _lqp_translator;
 
   const std::shared_ptr<Optimizer> _optimizer;
 

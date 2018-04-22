@@ -15,6 +15,12 @@
 
 namespace opossum {
 
+JitAwareLQPTranslator::JitAwareLQPTranslator() : LQPTranslator() {
+#if !HYRISE_JIT_SUPPORT
+  Fail("Query translation with JIT operators requested, but jitting is not available");
+#endif
+}
+
 std::shared_ptr<AbstractOperator> JitAwareLQPTranslator::translate_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   uint32_t num_jittable_nodes{0};
@@ -37,6 +43,7 @@ std::shared_ptr<AbstractOperator> JitAwareLQPTranslator::translate_node(
     return LQPTranslator::translate_node(node);
   }
 
+  // The input_node is not being integrated into the operator chain, but instead serves as the input to the JitOperators
   const auto input_node = *input_nodes.begin();
 
   auto jit_operator = std::make_shared<JitOperatorWrapper>(translate_node(input_node));
