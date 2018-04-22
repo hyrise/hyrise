@@ -39,6 +39,8 @@ class JitAwareLQPTranslator final : public LQPTranslator {
   std::shared_ptr<AbstractOperator> translate_node(const std::shared_ptr<AbstractLQPNode>& node) const final;
 
  private:
+  std::shared_ptr<JitOperatorWrapper> _try_translate_node_to_jit_operators(const std::shared_ptr<AbstractLQPNode>& node) const;
+
   std::shared_ptr<const JitExpression> _translate_node_to_jit_expression(
       const std::shared_ptr<AbstractLQPNode>& node, JitReadTuple& jit_source,
       const std::shared_ptr<AbstractLQPNode>& input_node) const;
@@ -59,17 +61,25 @@ class JitAwareLQPTranslator final : public LQPTranslator {
       const AllParameterVariant& value, JitReadTuple& jit_source,
       const std::shared_ptr<AbstractLQPNode>& input_node) const;
 
-  // Returns whether the current node has a PredicateNode or a UnionNode as one of its decendents.
+  // Returns whether the subquery represented by this LQP node filters tuples in some way.
   // This information is needed when converting a PredicateNode to a JitExpression to determine whether the
   // PredicateNode is part of a conjunction.
-  bool _has_another_condition(const std::shared_ptr<AbstractLQPNode>& node) const;
+  // Example: SELECT ... WHERE A > 3 AND B < 4;
+  // The LQP represents the WHERE clause as two consecutive PredicateNodes. When translating to a JitExpressions, the
+  // first PredicateNode (A > 3) gets translated into a conjuction, with its condition being the
+  // left-hand side: (A > 3) AND ...
+  // The right-hand side of the conjunction is created by translating the second PredicateNode (B < 4) to JitExpression.
+  // Since the second predicate has no further PredicateNodes following is, it can be translated into a simple
+  // expression without the need to add an additional AND node.
+  // This helper method distinguish these two cases for a given node.
+  bool _subquery_filters_tuples(const std::shared_ptr<AbstractLQPNode>& node) const;
 
   // Returns whether an LQP node with its current configuration can be part of an operator pipeline.
   bool _node_is_jittable(const std::shared_ptr<AbstractLQPNode>& node) const;
 
-  // Traverses the LQP in a breadth-first fashion and calls the lambda for each node encountered. The boolean returned
-  // from the lambda determines whether the current node should be extended further.
-  void _breadth_first_search(const std::shared_ptr<AbstractLQPNode>& node,
+  // Traverses the LQP in a breadth-first fashion and passes all visited nodes to a lambda. The boolean returned
+  // from the lambda determines whether the current node should be explored further.
+  void _visit(const std::shared_ptr<AbstractLQPNode>& node,
                              std::function<bool(const std::shared_ptr<AbstractLQPNode>&)> func) const;
 };
 
