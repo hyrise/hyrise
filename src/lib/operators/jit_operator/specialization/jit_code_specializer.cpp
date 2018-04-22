@@ -161,30 +161,24 @@ void JitCodeSpecializer::_perform_load_substitution(SpecializationContext& conte
 }
 
 void JitCodeSpecializer::_optimize(SpecializationContext& context, const bool unroll_loops) const {
-  _visit<llvm::BranchInst>(*context.root_function, [&](llvm::BranchInst& branch_inst) {
-    // TODO(johannes) properly identify unrolling metadata
-    branch_inst.setMetadata(18, nullptr);
-  });
-
   const llvm::Triple module_triple(context.module->getTargetTriple());
   const llvm::TargetLibraryInfoImpl target_lib_info(module_triple);
 
   llvm::legacy::PassManager pass_manager;
-  pass_manager.add(new llvm::TargetLibraryInfoWrapperPass(target_lib_info));
-  pass_manager.add(llvm::createTargetTransformInfoWrapperPass(_compiler.target_machine().getTargetIRAnalysis()));
-  llvm::PassManagerBuilder pass_builder;
-  pass_builder.OptLevel = 1;
-  pass_builder.SizeLevel = 0;
-  pass_builder.DisableUnitAtATime = true;
-  pass_builder.DisableUnrollLoops = true;
-  pass_builder.LoopVectorize = false;
-  pass_builder.SLPVectorize = false;
+  pass_manager.add(llvm::createEarlyCSEPass(true));
+  pass_manager.add(llvm::createLICMPass());
 
-  _compiler.target_machine().adjustPassManager(pass_builder);
-  pass_builder.addFunctionSimplificationPasses(pass_manager);
   if (unroll_loops) {
-    pass_manager.add(llvm::createLoopUnrollPass(3, 1000000000, -1, 0));
+    _visit<llvm::BranchInst>(*context.root_function, [&](llvm::BranchInst& branch_inst) {
+      // Remove metadata that prevents loop unrolling
+      branch_inst.setMetadata(llvm::LLVMContext::MD_loop, nullptr);
+    });
+    pass_manager.add(llvm::createLoopUnrollPass(3, std::numeric_limits<int>::max(), -1, 0));
   }
+
+  pass_manager.add(llvm::createAggressiveDCEPass());
+  pass_manager.add(llvm::createCFGSimplificationPass());
+  pass_manager.add(llvm::createInstructionCombiningPass(false));
   pass_manager.run(*context.module);
 }
 
