@@ -28,7 +28,9 @@ class JitCodeSpecializer {
   template <typename T>
   std::function<T> specialize_function(const std::string& root_function_name,
                                        const JitRuntimePointer::Ptr& runtime_this, const bool two_passes) {
+    _repository.specialization_mutex().lock();
     _specialize_function_impl(root_function_name, runtime_this, two_passes);
+    _repository.specialization_mutex().unlock();
     return _compiler.find_symbol<T>(root_function_name + "_");
   }
 
@@ -56,7 +58,7 @@ class JitCodeSpecializer {
   template <typename T, typename U>
   void _visit(U& function, std::function<void(T&)> fn) const;
 
-  const JitRepository& _repository;
+  JitRepository& _repository;
   const std::shared_ptr<llvm::LLVMContext> _llvm_context;
   JitCompiler _compiler;
 };

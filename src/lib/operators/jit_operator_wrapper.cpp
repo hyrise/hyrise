@@ -81,7 +81,4 @@ std::shared_ptr<AbstractOperator> JitOperatorWrapper::_on_recreate(
   return nullptr;
 }
 
-// cleanup
-#undef JIT_ABSTRACT_SOURCE_EXECUTE_MANGLED_NAME
-
 }  // namespace opossum

@@ -41,8 +41,11 @@ class JitOperatorWrapper : public AbstractReadOnlyOperator {
   const std::shared_ptr<AbstractJittableSink> _sink() const;
 
   const bool _use_jit;
+  bool _already_compiled;
   std::vector<std::shared_ptr<AbstractJittable>> _operators;
   JitCodeSpecializer _module;
+  std::mutex _compile_mutex;
+  std::function<void(const JitReadTuple*, JitRuntimeContext&)> _execute_func;
 };
 
 }  // namespace opossum

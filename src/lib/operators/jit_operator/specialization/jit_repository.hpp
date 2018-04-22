@@ -24,6 +24,7 @@ class JitRepository : private Noncopyable {
   llvm::Function* get_vtable_entry(const std::string& class_name, const size_t index) const;
 
   std::shared_ptr<llvm::LLVMContext> llvm_context() const;
+  std::mutex& specialization_mutex();
 
  private:
   JitRepository();
@@ -35,6 +36,7 @@ class JitRepository : private Noncopyable {
   std::unique_ptr<llvm::Module> _module;
   std::unordered_map<std::string, llvm::Function*> _functions;
   std::unordered_map<std::string, std::vector<llvm::Function*>> _vtables;
+  std::mutex _specialization_mutex;
 
   const std::string vtable_prefix = "_ZTV";
 };
