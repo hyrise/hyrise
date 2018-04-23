@@ -23,8 +23,8 @@ const std::string JitOperatorWrapper::description(DescriptionMode description_mo
 
 void JitOperatorWrapper::add_jit_operator(const std::shared_ptr<AbstractJittable>& op) { _jit_operators.push_back(op); }
 
-const std::shared_ptr<JitReadTuple> JitOperatorWrapper::_source() const {
-  return std::dynamic_pointer_cast<JitReadTuple>(_jit_operators.front());
+const std::shared_ptr<JitReadTuples> JitOperatorWrapper::_source() const {
+  return std::dynamic_pointer_cast<JitReadTuples>(_jit_operators.front());
 }
 
 const std::shared_ptr<AbstractJittableSink> JitOperatorWrapper::_sink() const {
@@ -48,15 +48,15 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
     (*it)->set_next_operator(*(it + 1));
   }
 
-  std::function<void(const JitReadTuple*, JitRuntimeContext&)> execute_func;
+  std::function<void(const JitReadTuples*, JitRuntimeContext&)> execute_func;
   switch (_execution_mode) {
     case JitExecutionMode::Compile:
-      execute_func = _module.specialize_function<void(const JitReadTuple*, JitRuntimeContext&)>(
+      execute_func = _module.specialize_function<void(const JitReadTuples*, JitRuntimeContext&)>(
           "_ZNK7opossum12JitReadTuple7executeERNS_17JitRuntimeContextE",
                   std::make_shared<JitConstantRuntimePointer>(_source().get()), false);
       break;
     case JitExecutionMode::Interpret:
-      execute_func = &JitReadTuple::execute;
+      execute_func = &JitReadTuples::execute;
       break;
   }
 

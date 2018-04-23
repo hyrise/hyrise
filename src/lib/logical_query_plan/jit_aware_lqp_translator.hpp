@@ -11,19 +11,20 @@ namespace opossum {
  * that is possible and seems beneficial. Otherwise, it will fall back to the LQPTranslator.
  *
  * It works in two steps:
- * 1) Determine, if we can/should add a JitOperatorWrapper node here and which nodes we can replace:
- *    Starting from the current node, we perform a breadth-first search through the query tree. For each node we will determine, whether
- *    it is jittable (based on the node's type and parameters). We will follow each branch of the tree until we hit a
- *    non-jittable node. Since StoredTableNodes are not jittable, this is guaranteed to happen for all branches.
+ * 1) Determine if we can/should add a JitOperatorWrapper node here and which nodes we can replace:
+ *    Starting from the current node, we perform a breadth-first search through the query tree.
+ *    For each node we will determine whether it is jittable (based on the node's type and parameters).
+ *    We will follow each branch of the tree until we hit a non-jittable node. Since StoredTableNodes are not jittable,
+ *    this is guaranteed to happen for all branches.
  *    All non-jittable nodes encountered this way are stored in a set.
  *    Once the BFS terminates, we only continue if the number of jittable nodes is greater than two and the
  *    set of non-jittable nodes we encountered only contains a single node. This is then used as the input
  *    node to the chain of jit operators.
  * 2) Once we know which nodes we want to jit, we can start building out JitOperatorWrapper:
- *    We start by adding a JitReadTuple node. This node is passed to all translation functions during the construction
+ *    We start by adding a JitReadTuples node. This node is passed to all translation functions during the construction
  *    of further operators. If any jit operator depends on a column or literal value, this value is registered with the
- *    JitReadTuple operator. The operator returns a JitTupleValue that serves as a placeholder in the requesting
- *    operator. The JitReadTuple operator will make sure that the actual value is then accessible through the
+ *    JitReadTuples operator. The operator returns a JitTupleValue that serves as a placeholder in the requesting
+ *    operator. The JitReadTuples operator will make sure that the actual value is then accessible through the
  *    JitTupleValue at runtime.
  *    The output columns are determined by the top-most ProjectionNode. If there is no ProjectionNode, all columns from
  *    the input node are considered as outputs.
@@ -42,27 +43,27 @@ class JitAwareLQPTranslator final : public LQPTranslator {
   std::shared_ptr<JitOperatorWrapper> _try_translate_node_to_jit_operators(
       const std::shared_ptr<AbstractLQPNode>& node) const;
 
-  std::shared_ptr<const JitExpression> _translate_node_to_jit_expression(
-      const std::shared_ptr<AbstractLQPNode>& node, JitReadTuple& jit_source,
+  std::shared_ptr<const JitExpression> _try_translate_node_to_jit_expression(
+      const std::shared_ptr<AbstractLQPNode>& node, JitReadTuples& jit_source,
       const std::shared_ptr<AbstractLQPNode>& input_node) const;
 
-  std::shared_ptr<const JitExpression> _translate_predicate_to_jit_expression(
-      const std::shared_ptr<PredicateNode>& node, JitReadTuple& jit_source,
+  std::shared_ptr<const JitExpression> _try_translate_predicate_to_jit_expression(
+      const std::shared_ptr<PredicateNode>& node, JitReadTuples& jit_source,
       const std::shared_ptr<AbstractLQPNode>& input_node) const;
 
-  std::shared_ptr<const JitExpression> _translate_expression_to_jit_expression(
-      const LQPExpression& lqp_expression, JitReadTuple& jit_source,
+  std::shared_ptr<const JitExpression> _try_translate_expression_to_jit_expression(
+      const LQPExpression& lqp_expression, JitReadTuples& jit_source,
       const std::shared_ptr<AbstractLQPNode>& input_node) const;
 
-  std::shared_ptr<const JitExpression> _translate_column_to_jit_expression(
-      const LQPColumnReference& lqp_column_reference, JitReadTuple& jit_source,
+  std::shared_ptr<const JitExpression> _try_translate_column_to_jit_expression(
+      const LQPColumnReference& lqp_column_reference, JitReadTuples& jit_source,
       const std::shared_ptr<AbstractLQPNode>& input_node) const;
 
-  std::shared_ptr<const JitExpression> _translate_variant_to_jit_expression(
-      const AllParameterVariant& value, JitReadTuple& jit_source,
+  std::shared_ptr<const JitExpression> _try_translate_variant_to_jit_expression(
+      const AllParameterVariant& value, JitReadTuples& jit_source,
       const std::shared_ptr<AbstractLQPNode>& input_node) const;
 
-  // Returns whether the subquery represented by this LQP node filters tuples in some way.
+  // Returns whether the part of the query plan represented by this LQP node filters tuples in some way.
   // This information is needed when converting a PredicateNode to a JitExpression to determine whether the
   // PredicateNode is part of a conjunction.
   // Example: SELECT ... WHERE A > 3 AND B < 4;
@@ -73,7 +74,7 @@ class JitAwareLQPTranslator final : public LQPTranslator {
   // Since the second predicate has no further PredicateNodes following is, it can be translated into a simple
   // expression without the need to add an additional AND node.
   // This helper method distinguish these two cases for a given node.
-  bool _subquery_filters_tuples(const std::shared_ptr<AbstractLQPNode>& node) const;
+  bool _input_is_filtered(const std::shared_ptr<AbstractLQPNode>& node) const;
 
   // Returns whether an LQP node with its current configuration can be part of an operator pipeline.
   bool _node_is_jittable(const std::shared_ptr<AbstractLQPNode>& node) const;

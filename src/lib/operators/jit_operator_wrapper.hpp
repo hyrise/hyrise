@@ -4,7 +4,7 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "jit_operator/operators/abstract_jittable_sink.hpp"
-#include "jit_operator/operators/jit_read_tuple.hpp"
+#include "jit_operator/operators/jit_read_tuples.hpp"
 #include "operators/jit_operator/specialization/jit_code_specializer.hpp"
 
 namespace opossum {
@@ -39,7 +39,7 @@ class JitOperatorWrapper : public AbstractReadOnlyOperator {
       const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
 
  private:
-  const std::shared_ptr<JitReadTuple> _source() const;
+  const std::shared_ptr<JitReadTuples> _source() const;
   const std::shared_ptr<AbstractJittableSink> _sink() const;
 
   const JitExecutionMode _execution_mode;
