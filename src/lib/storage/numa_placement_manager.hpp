@@ -61,7 +61,6 @@ class NUMAPlacementManager {
   static NUMAPlacementManager& get();
   static int get_node_id_of(void* ptr);
 
-
   // Returns the memory resource of the next node according to a round robin placement policy
   boost::container::pmr::memory_resource* get_next_memory_resource();
   boost::container::pmr::memory_resource* get_memory_resource(int node_id);
