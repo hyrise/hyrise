@@ -116,11 +116,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
   for (ChunkID chunk_index{0}; chunk_index < num_chunks; ++chunk_index) {
 #if HYRISE_NUMA_SUPPORT
     if (numa_distribute_chunks) {
-      // compute on which node to create the chunk
-      auto num_numa_nodes = NUMAPlacementManager::get().topology()->nodes().size();
-      auto current_node = chunk_index % num_numa_nodes;
-
-      auto memory_resource = NUMAPlacementManager::get().get_memory_resource(current_node);
+      auto memory_resource = NUMAPlacementManager::get().get_next_memory_resource();
 
       // create allocators for the node
       allocator_ptr_base_column = PolymorphicAllocator<std::shared_ptr<BaseColumn>>{memory_resource};
