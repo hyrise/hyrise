@@ -77,8 +77,6 @@ PolymorphicAllocator<FixedString> FixedStringVector::get_allocator() { return _c
 
 void FixedStringVector::reserve(const size_t n) { _chars.reserve(n * _string_length); }
 
-const char* FixedStringVector::data() const { return &_chars[0]; }
-
 size_t FixedStringVector::data_size() const { return sizeof(*this) + _chars.size(); }
 
 std::shared_ptr<const pmr_vector<std::string>> FixedStringVector::dictionary() const {

@@ -45,8 +45,7 @@ class FixedStringDictionaryEncoder : public ColumnEncoder<FixedStringDictionaryE
       auto null_it = null_values.crbegin();
       for (auto dict_it = dictionary.rbegin(); dict_it != dictionary.rend(); ++dict_it, ++null_it) {
         if (*null_it) {
-          // std::swap(*dict_it, *(--erase_from_here_it));
-          dict_it->swap(*(--erase_from_here_it));
+          std::iter_swap(dict_it, --erase_from_here_it);
         }
       }
 

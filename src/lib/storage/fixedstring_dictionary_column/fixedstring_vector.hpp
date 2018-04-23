@@ -100,9 +100,6 @@ class FixedStringVector {
   // Return a copy of the allocator object associated with the vector of values
   PolymorphicAllocator<FixedString> get_allocator();
 
-  // Return a pointer to the first element of the char vector
-  const char* data() const;
-
   // Return the calculated size of FixedStringVector in main memory
   size_t data_size() const;
 
