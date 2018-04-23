@@ -50,7 +50,8 @@ class JoinGraphBuilder final {
    * one connected graph.
    */
   static std::vector<std::shared_ptr<JoinEdge>> cross_edges_between_components(
-      const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices, std::vector<std::shared_ptr<JoinEdge>> edges);
+      const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices,
+      const std::vector<std::shared_ptr<JoinEdge>>& edges);
 
  private:
   /**

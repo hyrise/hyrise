@@ -58,16 +58,16 @@ TEST_F(JoinGraphTest, SingleVertexMultiplePredicates) {
    */
 
   const auto vertex =
-  std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
+      std::make_shared<MockNode>(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
   const auto vertex_a = vertex->get_column("a"s);
   const auto vertex_b = vertex->get_column("b"s);
   const auto predicate_a = std::make_shared<JoinPlanAtomicPredicate>(vertex_a, PredicateCondition::Equals, 5);
   const auto predicate_b = std::make_shared<JoinPlanAtomicPredicate>(vertex_a, PredicateCondition::Equals, vertex_b);
   const auto predicate_c =
-  std::make_shared<JoinPlanLogicalPredicate>(predicate_a, JoinPlanPredicateLogicalOperator::Or, predicate_b);
+      std::make_shared<JoinPlanLogicalPredicate>(predicate_a, JoinPlanPredicateLogicalOperator::Or, predicate_b);
 
   const auto join_graph = JoinGraph(
-  {vertex}, {}, JoinGraphBuilder::join_edges_from_predicates({vertex}, {predicate_a, predicate_b, predicate_c}));
+      {vertex}, {}, JoinGraphBuilder::join_edges_from_predicates({vertex}, {predicate_a, predicate_b, predicate_c}));
 
   const auto vertex_set = JoinVertexSet{1, 1};
   const auto found_predicates = join_graph.find_predicates(vertex_set);
@@ -94,15 +94,15 @@ TEST_F(JoinGraphTest, MultipleVerticesMultiplePredicates) {
 
   const auto predicate_a = std::make_shared<JoinPlanAtomicPredicate>(vertex_a_x, PredicateCondition::Equals, 5);
   const auto predicate_b =
-  std::make_shared<JoinPlanAtomicPredicate>(vertex_b_x, PredicateCondition::Equals, vertex_c_x);
+      std::make_shared<JoinPlanAtomicPredicate>(vertex_b_x, PredicateCondition::Equals, vertex_c_x);
   const auto predicate_c =
-  std::make_shared<JoinPlanLogicalPredicate>(predicate_a, JoinPlanPredicateLogicalOperator::Or, predicate_b);
+      std::make_shared<JoinPlanLogicalPredicate>(predicate_a, JoinPlanPredicateLogicalOperator::Or, predicate_b);
   const auto predicate_d =
-  std::make_shared<JoinPlanLogicalPredicate>(predicate_a, JoinPlanPredicateLogicalOperator::And, predicate_b);
+      std::make_shared<JoinPlanLogicalPredicate>(predicate_a, JoinPlanPredicateLogicalOperator::And, predicate_b);
 
   const auto vertices = std::vector<std::shared_ptr<AbstractLQPNode>>({vertex_a, vertex_b, vertex_c});
   const auto join_graph = JoinGraph(vertices, {}, JoinGraphBuilder::join_edges_from_predicates(
-  vertices, {predicate_a, predicate_b, predicate_c, predicate_d}));
+                                                      vertices, {predicate_a, predicate_b, predicate_c, predicate_d}));
 
   const auto vertex_set_a = JoinVertexSet{3, 0b001};
   const auto vertex_set_b = JoinVertexSet{3, 0b010};
@@ -161,13 +161,13 @@ TEST_F(JoinGraphTest, Print) {
 
   const auto predicate_a = std::make_shared<JoinPlanAtomicPredicate>(vertex_a_x, PredicateCondition::Equals, 5);
   const auto predicate_b =
-  std::make_shared<JoinPlanAtomicPredicate>(vertex_b_y, PredicateCondition::Equals, vertex_c_z);
+      std::make_shared<JoinPlanAtomicPredicate>(vertex_b_y, PredicateCondition::Equals, vertex_c_z);
   const auto predicate_c =
-  std::make_shared<JoinPlanLogicalPredicate>(predicate_a, JoinPlanPredicateLogicalOperator::Or, predicate_b);
+      std::make_shared<JoinPlanLogicalPredicate>(predicate_a, JoinPlanPredicateLogicalOperator::Or, predicate_b);
 
   const auto vertices = std::vector<std::shared_ptr<AbstractLQPNode>>({vertex_a, vertex_b, vertex_c});
   const auto join_graph = JoinGraph(
-  vertices, {}, JoinGraphBuilder::join_edges_from_predicates(vertices, {predicate_a, predicate_b, predicate_c}));
+      vertices, {}, JoinGraphBuilder::join_edges_from_predicates(vertices, {predicate_a, predicate_b, predicate_c}));
 
   std::stringstream stream;
   join_graph.print(stream);

@@ -204,18 +204,22 @@ std::vector<std::shared_ptr<JoinEdge>> JoinGraphBuilder::join_edges_from_predica
 }
 
 std::vector<std::shared_ptr<JoinEdge>> JoinGraphBuilder::cross_edges_between_components(
-    const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices, std::vector<std::shared_ptr<JoinEdge>> edges) {
+    const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices,
+    const std::vector<std::shared_ptr<JoinEdge>>& edges) {
   /**
    * Create edges from the gathered JoinPlanPredicates. We can't directly create the JoinGraph from this since we want
    * the JoinGraph to be connected and there might be edges from CrossJoins still missing.
    * To make the JoinGraph connected, we identify all Components and connect them to a Chain.
    *
    * So this
+   *
    *   B
    *  / \    D--E   F
    * A---C
    *
+   *
    * becomes
+   *
    *   B
    *  / \
    * A---C
@@ -226,48 +230,70 @@ std::vector<std::shared_ptr<JoinEdge>> JoinGraphBuilder::cross_edges_between_com
    *
    * where the edges AD and DF are being created and have no predicates. There is of course the theoretical chance that
    * different edges, say CD and EF would result in a better plan. We ignore this possibility for now.
+   *
+   * HOW THIS IS DONE: We identify the components in the graph using a breadth first search (BFS). Every BFS will
+   * identify one component. One vertex from each component is stored and these are later connected to form a chain,
+   * so the entire graph becomes connected
    */
 
+  // We flood the entire graph. remaining_vertex_indices contains all vertices not yet reached (which, as we start, are
+  // all of them.
   std::unordered_set<size_t> remaining_vertex_indices;
-  for (auto vertex_idx = size_t{0}; vertex_idx < vertices.size(); ++vertex_idx)
+  for (auto vertex_idx = size_t{0}; vertex_idx < vertices.size(); ++vertex_idx) {
     remaining_vertex_indices.insert(vertex_idx);
+  }
 
+  // Filled with exactly one vertex for each component. The vertices are later chained to make the entire graph
+  // connected.
   std::vector<size_t> one_vertex_per_component;
 
-  while (!remaining_vertex_indices.empty()) {
-    const auto vertex_idx = *remaining_vertex_indices.begin();
+  // We don't need to to look at an Edge multiple times, so we keep a set of those that we haven't reached
+  auto remaining_edges = edges;
 
-    one_vertex_per_component.emplace_back(vertex_idx);
+  // Loop performing one BFS for each component, identifying all vertices of that component
+  while (!remaining_vertex_indices.empty()) {
+    // Pick one vertex we haven't yet reached and start a breath first search-flooding from it
+    const auto bfs_origin_vertex_idx = *remaining_vertex_indices.begin();
+
+    one_vertex_per_component.emplace_back(bfs_origin_vertex_idx);
 
     std::stack<size_t> bfs_stack;
-    bfs_stack.push(vertex_idx);
+    bfs_stack.push(bfs_origin_vertex_idx);
 
     while (!bfs_stack.empty()) {
-      const auto vertex_idx2 = bfs_stack.top();
+      const auto current_bfs_vertex_idx = bfs_stack.top();
       bfs_stack.pop();
 
-      remaining_vertex_indices.erase(vertex_idx2);
+      // We might reach a vertex multiple times. This doesn't cause any problems, but there is no need
+      // to look for any connected edges of this vertex as done in the for loop below, so we can stop here.
+      const auto erased_vertex_count = remaining_vertex_indices.erase(current_bfs_vertex_idx);
+      if (erased_vertex_count == 0) continue;
 
-      for (auto iter = edges.begin(); iter != edges.end();) {
-        const auto& edge = *iter;
-        if (!edge->vertex_set.test(vertex_idx2)) {
-          ++iter;
+      // Find the edges that are connected to this vertex and add the other vertices of this Edge to the BFS stack.
+      for (auto edge_iter = remaining_edges.begin(); edge_iter != remaining_edges.end();) {
+        const auto& edge = *edge_iter;
+        if (!edge->vertex_set.test(current_bfs_vertex_idx)) {
+          ++edge_iter;
           continue;
         }
 
         auto connected_vertex_idx = edge->vertex_set.find_first();
         while (connected_vertex_idx != JoinVertexSet::npos) {
-          if (connected_vertex_idx != vertex_idx2) bfs_stack.push(connected_vertex_idx);
+          if (connected_vertex_idx != current_bfs_vertex_idx) bfs_stack.push(connected_vertex_idx);
           connected_vertex_idx = edge->vertex_set.find_next(connected_vertex_idx);
         }
 
-        iter = edges.erase(iter);
+        edge_iter = remaining_edges.erase(edge_iter);
       }
     }
   }
 
+  // One or less components? No need to chain up any vertices
   if (one_vertex_per_component.size() < 2) return {};
 
+  /**
+   * Create the Edges that connect the components
+   */
   std::vector<std::shared_ptr<JoinEdge>> inter_component_edges;
   inter_component_edges.reserve(one_vertex_per_component.size() - 1);
 

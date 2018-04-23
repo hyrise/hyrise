@@ -50,7 +50,7 @@ class JoinGraph final {
    * Find all predicates that "connect" the two vertex sets, i.e. have operands in both of them
    */
   std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>> find_predicates(
-  const JoinVertexSet& vertex_set_a, const JoinVertexSet& vertex_set_b) const;
+      const JoinVertexSet& vertex_set_a, const JoinVertexSet& vertex_set_b) const;
 
   /**
    * Find the edge that exactly connects the vertices in vertex_set. Returns nullptr if no such edge exists.
