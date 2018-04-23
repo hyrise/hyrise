@@ -8,7 +8,6 @@
 #include "scheduler/topology.hpp"
 #include "server/server.hpp"
 #include "storage/storage_manager.hpp"
-#include "tpcc/tpcc_table_generator.hpp"
 #include "utils/load_table.hpp"
 
 int main(int argc, char* argv[]) {

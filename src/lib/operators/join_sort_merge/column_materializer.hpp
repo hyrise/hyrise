@@ -77,7 +77,7 @@ class ColumnMaterializer {
   }
 
   /**
-   * Materialization works for all types of columns
+   * Materialization works of all types of columns
    */
   template <typename ColumnType>
   std::shared_ptr<MaterializedColumn<T>> _materialize_column(const ColumnType& column, ChunkID chunk_id,

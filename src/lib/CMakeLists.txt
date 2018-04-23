@@ -102,8 +102,6 @@ set(
     operators/join_hash.cpp
     operators/join_hash/hash_traits.hpp
     operators/join_hash.hpp
-    operators/join_mpsm.cpp
-    operators/join_mpsm.hpp
     operators/join_index.cpp
     operators/join_index.hpp
     operators/join_nested_loop.cpp
@@ -419,7 +417,7 @@ set(
     ${TBB_LIBRARY}
 )
 
-if (NOT DISABLE_JIT_SUPPORT)
+if (${ENABLE_JIT_SUPPORT})
     include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
     set(JIT_EMBEDDED_SOURCES
         # Files listed here will be embedded into the binary as LLVM-IR
@@ -451,7 +449,7 @@ if (NOT DISABLE_JIT_SUPPORT)
     set(LIBRARIES ${LIBRARIES} ${LLVM_LIBRARY})
 endif()
 
-if (NOT DISABLE_NUMA_SUPPORT AND ${NUMA_FOUND})
+if (${ENABLE_NUMA_SUPPORT})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
 endif()
 

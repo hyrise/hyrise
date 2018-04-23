@@ -14,6 +14,7 @@
 
 namespace opossum {
 
+class JoinNode;
 class AggregateNode;
 class LQPExpression;
 
@@ -85,6 +86,38 @@ class SQLTranslator final : public Noncopyable {
                                                        const std::shared_ptr<AbstractLQPNode>& input_node);
 
   std::shared_ptr<AbstractLQPNode> _translate_join(const hsql::JoinDefinition& select);
+
+  void _insert_nonjoin_predicates(const std::shared_ptr<JoinNode>& join_node,
+                                  const std::vector<const hsql::Expr*>& left_conditions,
+                                  const std::vector<const hsql::Expr*>& right_conditions);
+
+  /**
+   * Given a set of input expressions which may contain zero, one, or two column expressions as children,
+   * partition the input expressions into separate lists containing the expressions whose column references
+   * either point to the left, the right, or both sides, respectively.
+   */
+  void _get_sides_from_operator_expressions(const std::vector<const hsql::Expr*>& conditions,
+                                            const std::shared_ptr<AbstractLQPNode>& left_node,
+                                            const std::shared_ptr<AbstractLQPNode>& right_node,
+                                            std::vector<const hsql::Expr*>& both, std::vector<const hsql::Expr*>& left,
+                                            std::vector<const hsql::Expr*>& right);
+
+  /**
+   * Flatten an expression tree solely consisting of conjunctions into a list using a depth-first traversal.
+   */
+  void _flatten_conjunctive_expression_tree(const hsql::Expr* expression, std::vector<const hsql::Expr*>& conditions);
+
+  /**
+  * Convert a set of operator expressions into a chain of predicate nodes and embed these into the given subtree.
+   */
+  void _insert_predicates_before(const std::shared_ptr<AbstractLQPNode>& node,
+                                 const std::vector<const hsql::Expr*>& conditions,
+                                 const LQPInputSide side = LQPInputSide::Left);
+
+  /** Look up the qualified column name of the expression in the two input nodes and return the resulting side.*/
+  LQPInputSide _get_side(const std::shared_ptr<AbstractLQPNode>& left, const std::shared_ptr<AbstractLQPNode>& right,
+                         const hsql::Expr* expression);
+
   std::shared_ptr<AbstractLQPNode> _translate_natural_join(const hsql::JoinDefinition& select);
 
   std::shared_ptr<AbstractLQPNode> _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
