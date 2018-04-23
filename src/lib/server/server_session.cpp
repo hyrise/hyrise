@@ -112,7 +112,9 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_client_
   // We need a copy of this session to outlive the async operation
   auto self = this->shared_from_this();
   return _connection->receive_packet_header() >> then >> [this, self, process_command](RequestHeader request) {
-    if (request.message_type == NetworkMessageType::TerminateCommand) { return boost::make_ready_future(); }
+    if (request.message_type == NetworkMessageType::TerminateCommand) {
+      return boost::make_ready_future();
+    }
 
     // Handle any exceptions that have occurred during process_command. For this, we need to call .then() explicitly,
     // because >> then >> does not handle exceptions

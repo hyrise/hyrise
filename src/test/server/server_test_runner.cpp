@@ -78,27 +78,26 @@ TEST_F(ServerTestRunner, TestSimpleSelect) {
 }
 
 TEST_F(ServerTestRunner, TestMultipleConnections) {
-pqxx::connection connection1{_connection_string};
-pqxx::connection connection2{_connection_string};
-pqxx::connection connection3{_connection_string};
+  pqxx::connection connection1{_connection_string};
+  pqxx::connection connection2{_connection_string};
+  pqxx::connection connection3{_connection_string};
 
-pqxx::nontransaction transaction1{connection1};
-pqxx::nontransaction transaction2{connection2};
-pqxx::nontransaction transaction3{connection3};
+  pqxx::nontransaction transaction1{connection1};
+  pqxx::nontransaction transaction2{connection2};
+  pqxx::nontransaction transaction3{connection3};
 
-const std::string sql = "SELECT * FROM table_a;";
-const auto expected_num_rows = _table_a->row_count();
+  const std::string sql = "SELECT * FROM table_a;";
+  const auto expected_num_rows = _table_a->row_count();
 
-const auto result1 = transaction1.exec(sql);
-EXPECT_EQ(result1.size(), expected_num_rows);
+  const auto result1 = transaction1.exec(sql);
+  EXPECT_EQ(result1.size(), expected_num_rows);
 
-const auto result2 = transaction2.exec(sql);
-EXPECT_EQ(result2.size(), expected_num_rows);
+  const auto result2 = transaction2.exec(sql);
+  EXPECT_EQ(result2.size(), expected_num_rows);
 
-const auto result3 = transaction3.exec(sql);
-EXPECT_EQ(result3.size(), expected_num_rows);
+  const auto result3 = transaction3.exec(sql);
+  EXPECT_EQ(result3.size(), expected_num_rows);
 }
-
 
 TEST_F(ServerTestRunner, TestSimpleInsertSelect) {
   pqxx::connection connection{_connection_string};
