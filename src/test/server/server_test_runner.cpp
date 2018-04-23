@@ -33,7 +33,7 @@ class ServerTestRunner : public BaseTest {
         server_port = server.get_port_number();
       }
 
-      std::cout << "Server running on port " + std::to_string(server_port) + ".\n";
+      std::cout << "Server running on port " << server_port << std::endl;
       cv.notify_one();
 
       io_service.run();
@@ -53,11 +53,10 @@ class ServerTestRunner : public BaseTest {
   }
 
   void TearDown() override {
+    // Give the server time to shut down gracefully before force-closing the socket it's working on
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
     _io_service->stop();
-
-    // Give io_service time to shut down gracefully
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-
     _server_thread->join();
   }
 
@@ -75,13 +74,6 @@ TEST_F(ServerTestRunner, TestSimpleSelect) {
   pqxx::nontransaction transaction{connection};
 
   const auto result = transaction.exec("SELECT * FROM table_a;");
-  const auto result2 = transaction.exec("SELECT * FROM table_a;");
-  const auto result3 = transaction.exec("SELECT * FROM table_a;");
-  const auto result4 = transaction.exec("SELECT * FROM table_a;");
-  const auto result5 = transaction.exec("SELECT * FROM table_a;");
-  EXPECT_EQ(result.size(), _table_a->row_count());
-
-  connection.disconnect();
   EXPECT_EQ(result.size(), _table_a->row_count());
 }
 
