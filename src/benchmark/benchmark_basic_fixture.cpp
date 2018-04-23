@@ -10,10 +10,15 @@
 #include "table_generator.hpp"
 #include "types.hpp"
 
+namespace {
+  // Generating a table with 40,000 rows (see TableGenerator), a chunk size of 2,000 results in 20 chunks per table 
+  const auto CHUNK_SIZE = ChunkID{2000};
+}
+
 namespace opossum {
 
 void BenchmarkBasicFixture::SetUp(::benchmark::State& state) {
-  auto chunk_size = ChunkID(2000);
+  auto chunk_size = ChunkID(CHUNK_SIZE);
 
   auto table_generator = std::make_shared<TableGenerator>();
   auto table_generator2 = std::make_shared<TableGenerator>();
