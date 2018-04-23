@@ -12,12 +12,13 @@
 #include "storage/storage_manager.hpp"
 
 namespace {
-  const auto NUMBER_OF_CHUNKS = size_t{50};
+const auto NUMBER_OF_CHUNKS = size_t{50};
 
-  // These numbers were arbitrarily chosen to form a representative group of JoinBenchmarks that run in a tolerable amount of time
-  const auto TABLE_SIZE_SMALL  = size_t{1000};
-  const auto TABLE_SIZE_MEDIUM = size_t{100000};
-  const auto TABLE_SIZE_BIG    = size_t{10000000};
+// These numbers were arbitrarily chosen to form a representative group of JoinBenchmarks
+// that run in a tolerable amount of time
+const auto TABLE_SIZE_SMALL = size_t{1000};
+const auto TABLE_SIZE_MEDIUM = size_t{100000};
+const auto TABLE_SIZE_BIG = size_t{10000000};
 }
 
 namespace opossum {
@@ -77,7 +78,7 @@ void BM_Join_impl(benchmark::State& state, std::shared_ptr<TableWrapper> table_w
 }
 
 template <class C>
-void BM_Join_Small(benchmark::State& state) { // 1,000 x 1,000
+void BM_Join_Small(benchmark::State& state) {  // 1,000 x 1,000
   auto table_wrapper_left = generate_table(TABLE_SIZE_SMALL);
   auto table_wrapper_right = generate_table(TABLE_SIZE_SMALL);
 
@@ -85,7 +86,7 @@ void BM_Join_Small(benchmark::State& state) { // 1,000 x 1,000
 }
 
 template <class C>
-void BM_Join_Skewed(benchmark::State& state) { // 1,000 x 10,000,000
+void BM_Join_Skewed(benchmark::State& state) {  // 1,000 x 10,000,000
   auto table_wrapper_left = generate_table(TABLE_SIZE_SMALL);
   auto table_wrapper_right = generate_table(TABLE_SIZE_BIG);
 
@@ -93,7 +94,7 @@ void BM_Join_Skewed(benchmark::State& state) { // 1,000 x 10,000,000
 }
 
 template <class C>
-void BM_Join_Big(benchmark::State& state) { // 100,000 x 100,000
+void BM_Join_Big(benchmark::State& state) {  // 100,000 x 100,000
   auto table_wrapper_left = generate_table(TABLE_SIZE_MEDIUM);
   auto table_wrapper_right = generate_table(TABLE_SIZE_MEDIUM);
 
@@ -113,6 +114,5 @@ BENCHMARK_TEMPLATE(BM_Join_Big, JoinHash);
 BENCHMARK_TEMPLATE(BM_Join_Small, JoinSortMerge);
 BENCHMARK_TEMPLATE(BM_Join_Skewed, JoinSortMerge);
 BENCHMARK_TEMPLATE(BM_Join_Big, JoinSortMerge);
-
 
 }  // namespace opossum
