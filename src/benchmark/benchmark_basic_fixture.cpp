@@ -12,7 +12,7 @@
 
 namespace {
   // Generating a table with 40,000 rows (see TableGenerator), a chunk size of 2,000 results in 20 chunks per table 
-  const auto CHUNK_SIZE = ChunkID{2000};
+  const auto CHUNK_SIZE = opossum::ChunkID{2000};
 }
 
 namespace opossum {
