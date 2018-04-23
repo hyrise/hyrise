@@ -433,10 +433,10 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/operators/jit_expression.hpp
         operators/jit_operator/operators/jit_filter.cpp
         operators/jit_operator/operators/jit_filter.hpp
-        operators/jit_operator/operators/jit_read_tuple.cpp
-        operators/jit_operator/operators/jit_read_tuple.hpp
-        operators/jit_operator/operators/jit_write_tuple.cpp
-        operators/jit_operator/operators/jit_write_tuple.hpp
+        operators/jit_operator/operators/jit_read_tuples.cpp
+        operators/jit_operator/operators/jit_read_tuples.hpp
+        operators/jit_operator/operators/jit_write_tuples.cpp
+        operators/jit_operator/operators/jit_write_tuples.hpp
     )
     embed_llvm(LLVM_BUNDLE_FILE ${JIT_EMBEDDED_SOURCES})
     set(
