@@ -6,6 +6,7 @@
 #include <unordered_set>
 
 #include "constant_mappings.hpp"
+#include "operators/jit_operator/operators/jit_compute.hpp"
 #include "operators/jit_operator/operators/jit_filter.hpp"
 #include "operators/jit_operator/operators/jit_read_tuple.hpp"
 #include "operators/jit_operator/operators/jit_write_tuple.hpp"
