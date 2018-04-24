@@ -57,7 +57,7 @@ class TransactionManager : private Noncopyable {
    */
   std::shared_ptr<TransactionContext> new_transaction_context();
 
-private:
+ private:
   friend class TransactionContext;
 
   TransactionManager();
