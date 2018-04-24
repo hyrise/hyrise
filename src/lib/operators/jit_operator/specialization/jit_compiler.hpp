@@ -16,6 +16,18 @@
 
 namespace opossum {
 
+/* A wrapper for the just-in-time features provided by the LLVM framework.
+ * The wrapper only provides a minimal compiler configuration without an optimization layer - modules must be optimized
+ * outside the JitCompiler.
+ * The interface of the JitCompiler is rather simple: Modules (LLVM's compilation unit) can be added and removed from
+ * the compiler; the compiler takes ownership of all modules.
+ * When a module is added to the compiler, it is immediately compiled to machine code.
+ * This machine code can be accessed for a symbol defined by a module by passing the MANGLED! name of the symbol to the
+ * find_symbol function.
+ * By providing the correct template parameters, the function returns a properly-typed function pointer that can be
+ * called like a regular function. The caller is responsible for providing template arguments that match the symbols
+ * signature in the LLVM module.
+ */
 class JitCompiler {
  protected:
   using ObjectLayer = llvm::orc::RTDyldObjectLinkingLayer;
@@ -34,7 +46,7 @@ class JitCompiler {
   std::function<T> find_symbol(const std::string& name) {
     const auto target_address = _handle_error(_compile_layer.findSymbol(_mangle(name), true).getAddress());
 
-    DebugAssert(target_address, "symbol " + name + " could not be found");
+    Assert(target_address, "symbol " + name + " could not be found");
     return reinterpret_cast<T*>(target_address);
   }
 
@@ -51,7 +63,7 @@ class JitCompiler {
     }
 
     llvm::logAllUnhandledErrors(value_or_error.takeError(), llvm::errs(), "");
-    Fail("an LLVM error occured");
+    Fail("An LLVM error occured");
   }
 
   void _handle_error(llvm::Error error);

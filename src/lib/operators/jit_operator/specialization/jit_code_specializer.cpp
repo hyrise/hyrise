@@ -45,11 +45,6 @@ void JitCodeSpecializer::_specialize_function_impl(const std::string& root_funct
     _optimize(context, false);
   }
 
-  // TESTING ONLY
-  int counter = 0;
-  _visit<llvm::Instruction>(*context.root_function, [&](llvm::Instruction& inst) { counter++; });
-  std::cout << "TestCounter: " << counter << std::endl;
-
   _compiler.add_module(std::move(context.module));
 }
 

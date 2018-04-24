@@ -64,7 +64,7 @@ const std::string JitCompiler::_mangle(const std::string& name) const {
 void JitCompiler::_handle_error(llvm::Error error) {
   if (error) {
     llvm::logAllUnhandledErrors(std::move(error), llvm::errs(), "");
-    llvm_unreachable("");
+    Fail("An LLVM error occured");
   }
 }
 
