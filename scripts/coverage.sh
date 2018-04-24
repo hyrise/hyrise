@@ -45,10 +45,10 @@ if [[ "$unamestr" == 'Darwin' ]]; then
   # https://llvm.org/docs/CoverageMappingFormat.html
   
   # merge the profile data using the llvm-profdata tool:
-  llvm-profdata merge -o ./default.profdata ./default.profraw
+  /usr/local/opt/llvm/bin/llvm-profdata merge -o ./default.profdata ./default.profraw
 
   # run LLVM’s code coverage tool
-  llvm-cov show -format=html -instr-profile default.profdata build-coverage/hyriseTest -output-dir=coverage src/lib/
+  /usr/local/opt/llvm/bin/llvm-cov show -format=html -instr-profile default.profdata build-coverage/hyriseTest -output-dir=coverage src/lib/
 
   exit
 fi
