@@ -18,31 +18,6 @@ std::shared_ptr<JoinGraph> JoinGraph::from_lqp(const std::shared_ptr<AbstractLQP
   return JoinGraphBuilder{}(lqp);  // NOLINT - doesn't like {} followed by ()
 }
 
-std::shared_ptr<JoinGraph> JoinGraph::from_predicates(
-    std::vector<std::shared_ptr<AbstractLQPNode>> vertices, std::vector<LQPOutputRelation> output_relations,
-    const std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>>& predicates) {
-  std::unordered_map<std::shared_ptr<AbstractLQPNode>, size_t> vertex_to_index;
-  std::map<JoinVertexSet, std::shared_ptr<JoinEdge>> vertices_to_edge;
-  std::vector<std::shared_ptr<JoinEdge>> edges;
-
-  for (size_t vertex_idx = 0; vertex_idx < vertices.size(); ++vertex_idx) {
-    vertex_to_index[vertices[vertex_idx]] = vertex_idx;
-  }
-
-  for (const auto& predicate : predicates) {
-    const auto vertex_set = predicate->get_accessed_vertex_set(vertices);
-    auto iter = vertices_to_edge.find(vertex_set);
-    if (iter == vertices_to_edge.end()) {
-      auto edge = std::make_shared<JoinEdge>(vertex_set);
-      iter = vertices_to_edge.emplace(vertex_set, edge).first;
-      edges.emplace_back(edge);
-    }
-    iter->second->predicates.emplace_back(predicate);
-  }
-
-  return std::make_shared<JoinGraph>(std::move(vertices), std::move(output_relations), std::move(edges));
-}
-
 JoinGraph::JoinGraph(std::vector<std::shared_ptr<AbstractLQPNode>> vertices,
                      std::vector<LQPOutputRelation> output_relations, std::vector<std::shared_ptr<JoinEdge>> edges)
     : vertices(std::move(vertices)), output_relations(std::move(output_relations)), edges(std::move(edges)) {}

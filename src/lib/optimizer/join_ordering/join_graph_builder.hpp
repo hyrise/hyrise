@@ -36,6 +36,23 @@ class JoinGraphBuilder final {
    */
   std::shared_ptr<JoinGraph> operator()(const std::shared_ptr<AbstractLQPNode>& lqp);
 
+  /**
+   * From a set of vertices and predicates that operates on these vertices, create a set of edges that "contain" these
+   * predicates and connect the vertices.
+   */
+  static std::vector<std::shared_ptr<JoinEdge>> join_edges_from_predicates(
+      const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices,
+      const std::vector<std::shared_ptr<const AbstractJoinPlanPredicate>>& predicates);
+
+  /**
+   * Given a set of vertices and edges identify components (i.e. set of vertices that are connected among themselves,
+   * but not with vertices from other components) and create a set of edges that connect these components into
+   * one connected graph.
+   */
+  static std::vector<std::shared_ptr<JoinEdge>> cross_edges_between_components(
+      const std::vector<std::shared_ptr<AbstractLQPNode>>& vertices,
+      const std::vector<std::shared_ptr<JoinEdge>>& edges);
+
  private:
   /**
    * Traverse the LQP recursively identifying predicates and vertices along the way
@@ -72,7 +89,7 @@ class JoinGraphBuilder final {
   PredicateParseResult _parse_union(const std::shared_ptr<UnionNode>& union_node) const;
 
   /**
-   * Returns whether a node of the given type is a JoinGraph vertex in all cases. This is true for all node types that
+   * @return whether a node of the given type is a JoinGraph vertex in all cases. This is true for all node types that
    * aren't Predicates, Joins or Unions.
    */
   bool _lqp_node_type_is_vertex(const LQPNodeType node_type) const;

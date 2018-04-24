@@ -1,6 +1,5 @@
 #include <memory>
 
-#include "../table_generator.hpp"
 #include "benchmark/benchmark.h"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
@@ -10,6 +9,7 @@
 #include "storage/chunk.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/storage_manager.hpp"
+#include "table_generator.hpp"
 
 namespace {
 const auto NUMBER_OF_CHUNKS = size_t{50};
