@@ -86,7 +86,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_node_t
        boost::combine(top_projection->output_column_names(), top_projection->output_column_references())) {
     const auto expression = _try_translate_column_to_jit_expression(output_column.get<1>(), *read_tuple, input_node);
     if (!expression) return nullptr;
-    // It the JitExpression is of type ExpressionType::Column, there is no need to add a compute node, since it
+    // If the JitExpression is of type ExpressionType::Column, there is no need to add a compute node, since it
     // would not compute anything anyway
     if (expression->expression_type() != ExpressionType::Column) {
       jit_operator->add_jit_operator(std::make_shared<JitCompute>(expression));
