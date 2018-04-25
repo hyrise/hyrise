@@ -177,6 +177,8 @@ TEST_F(OperatorsProjectionTest, AllColumns) {
 }
 
 TEST_F(OperatorsProjectionTest, NoColumns) {
+  if (!IS_DEBUG) return;
+
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/float_int.tbl", 2);
 
   auto projection = std::make_shared<Projection>(_table_wrapper, std::vector<std::shared_ptr<PQPExpression>>{});

@@ -46,7 +46,15 @@ TEST_F(NUMAMemoryResourceTest, AreEqual) {
   const int numa_node = 1;
 #endif
 
-  EXPECT_EQ(NUMAMemoryResource(numa_node, "foo"), NUMAMemoryResource(numa_node, "bar"));
+  // Two memory_resources compare equal if and only if memory allocated from one memory_resource can be deallocated from the other and vice versa.
+
+  auto resource_a = NUMAMemoryResource(numa_node, "foo");
+  auto resource_b = NUMAMemoryResource(numa_node, "bar");
+
+  EXPECT_TRUE(resource_a.is_equal(resource_b));
+
+  auto ptr = resource_a.allocate(100, 1);
+  resource_b.deallocate(ptr, 100, 1);
 }
 
 }  // namespace opossum
