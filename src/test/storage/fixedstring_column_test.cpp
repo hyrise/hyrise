@@ -42,10 +42,6 @@ TEST_F(StorageFixedStringColumnTest, CompressColumnString) {
   EXPECT_EQ((*dict)[1], "Bill");
   EXPECT_EQ((*dict)[2], "Hasso");
   EXPECT_EQ((*dict)[3], "Steve");
-
-  // Test attribute vector
-  // EXPECT_EQ((*attr)[0], 0);
-  // EXPECT_EQ((*attr)[1], 1);
 }
 
 TEST_F(StorageFixedStringColumnTest, Decode) {
