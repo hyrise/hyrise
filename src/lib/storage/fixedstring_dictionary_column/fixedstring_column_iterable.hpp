@@ -19,9 +19,9 @@ class FixedStringColumnIterable : public PointAccessibleColumnIterable<FixedStri
     resolve_compressed_vector_type(*_column.attribute_vector(), [&](const auto& vector) {
       using ZsIteratorType = decltype(vector.cbegin());
 
-      auto begin =
-          Iterator<ZsIteratorType>{*_column.dictionary(), _column.null_value_id(), vector.cbegin(), ChunkOffset{0u}};
-      auto end = Iterator<ZsIteratorType>{*_column.dictionary(), _column.null_value_id(), vector.cend(),
+      auto dictionary = _column.dictionary();
+      auto begin = Iterator<ZsIteratorType>{*dictionary, _column.null_value_id(), vector.cbegin(), ChunkOffset{0u}};
+      auto end = Iterator<ZsIteratorType>{*dictionary, _column.null_value_id(), vector.cend(),
                                           static_cast<ChunkOffset>(_column.size())};
       functor(begin, end);
     });
@@ -33,9 +33,10 @@ class FixedStringColumnIterable : public PointAccessibleColumnIterable<FixedStri
       auto decoder = vector.create_decoder();
       using ZsDecoderType = std::decay_t<decltype(*decoder)>;
 
-      auto begin = PointAccessIterator<ZsDecoderType>{*_column.dictionary(), _column.null_value_id(), *decoder,
+      auto dictionary = _column.dictionary();
+      auto begin = PointAccessIterator<ZsDecoderType>{*dictionary, _column.null_value_id(), *decoder,
                                                       mapped_chunk_offsets.cbegin()};
-      auto end = PointAccessIterator<ZsDecoderType>{*_column.dictionary(), _column.null_value_id(), *decoder,
+      auto end = PointAccessIterator<ZsDecoderType>{*dictionary, _column.null_value_id(), *decoder,
                                                     mapped_chunk_offsets.cend()};
       functor(begin, end);
     });
