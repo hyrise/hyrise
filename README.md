@@ -64,7 +64,7 @@ The binary can be executed with `./<YourBuildDirectory>/hyriseTest`.
 Note, that the tests/sanitizers/etc need to be executed from the project root in order for table files to be found.
 
 ### Coverage
-`./scripts/coverage.sh <build dir>` will print a summary to the command line and create detailed html reports at ./coverage/index.html
+`./scripts/coverage.sh` will print a summary to the command line and create detailed html reports at ./coverage/index.html
 
 *Supports only clang on MacOS and only gcc on linux*
 

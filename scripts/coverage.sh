@@ -3,14 +3,11 @@ set -e
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --build_directory=*)
-      build_directory="${1#*=}"
-      ;;
     --generate_badge=*)
       generate_badge="${1#*=}"
       ;;
-    --test_data_folder=*)
-      test_data_folder="${1#*=}"
+    --launcher=*)
+      launcher="${1#*=}"
       ;;
     *)
       printf "Error: Invalid argument."
@@ -19,24 +16,56 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-if [ -z "$build_directory" ]
-  then
-    echo "Error: No build directory supplied - use --build_directory=..."
-    exit 1
+if [ ! -d "third_party" ]; then
+  echo "You should call this script from the root of the project"
+  exit
 fi
 
-cd $build_directory
+mkdir -p build-coverage
+cd build-coverage
+platform='unknown'
+unamestr=`uname`
+if [[ "$unamestr" == 'Linux' ]]; then
+   # Use GCC for Linux
+   cmake -DCMAKE_CXX_COMPILER_LAUNCHER=$launcher -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DENABLE_COVERAGE=ON ..
+elif [[ "$unamestr" == 'Darwin' ]]; then
+   # Use Clang for OS X
+   cmake -DCMAKE_CXX_COMPILER_LAUNCHER=$launcher -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++ -DENABLE_COVERAGE=ON ..
+fi
+
 cores=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
 make hyriseTest -j $((cores / 2))
 cd -
 
-./$build_directory/hyriseTest $test_data_folder
 rm -fr coverage; mkdir coverage
+./build-coverage/hyriseTest build-coverage
+
+if [[ "$unamestr" == 'Darwin' ]]; then
+  # LLVM has its own way of dealing with coverage...
+  # https://llvm.org/docs/CoverageMappingFormat.html
+  
+  # merge the profile data using the llvm-profdata tool:
+  /usr/local/opt/llvm/bin/llvm-profdata merge -o ./default.profdata ./default.profraw
+
+  # run LLVM’s code coverage tool
+  /usr/local/opt/llvm/bin/llvm-cov show -format=html -instr-profile default.profdata build-coverage/hyriseTest -output-dir=coverage src/lib/
+
+  exit
+fi
+
+# Continuing only with Linux/gcc
+
 # call gcovr twice b/c of https://github.com/gcovr/gcovr/issues/112
 gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches -k
 
+if [ "true" == "$generate_badge" ]
+then
+    # in this step, keep coverage information only if we need it for pycobertura later
+    keep="-k"
+fi
+
 # generate HTML
-gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches -k -g --html --html-details -o coverage/index.html > coverage_output.txt
+gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches $keep -g --html --html-details -o coverage/index.html > coverage_output.txt
 cat coverage_output.txt
 
 if [ "true" == "$generate_badge" ]
