@@ -73,7 +73,8 @@ if(${NUMA_FOUND})
     add_subdirectory(pgasus )
 endif()
 
-# TODO(lawben): There is currently a PR open for CMake support in libpqxx. Once that is merged, this should be updated
+# TODO(lawben): There is currently a PR open for CMake support in libpqxx.
+# Once that is merged, this should be updated to add_subdirectory(libpqxx)
 add_library(
     pqxx
 

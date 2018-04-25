@@ -14,6 +14,7 @@ class ServerTestRunner : public BaseTest {
  protected:
   void SetUp() override {
     StorageManager::get().reset();
+    SQLQueryCache<SQLQueryPlan>::get().clear();
 
     _table_a = load_table("src/test/tables/int_float.tbl", 2);
     StorageManager::get().add_table("table_a", _table_a);
@@ -109,7 +110,6 @@ TEST_F(ServerTestRunner, TestSimpleInsertSelect) {
   EXPECT_EQ(result.size(), expected_num_rows);
 }
 
-// Currently doesn't work because the library in ubuntu is too old
 TEST_F(ServerTestRunner, TestPreparedStatement) {
   pqxx::connection connection{_connection_string};
   pqxx::nontransaction transaction{connection};
