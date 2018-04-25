@@ -230,8 +230,6 @@ void JoinNestedLoop::_write_output_chunks(ChunkColumns& columns, const std::shar
       if (input_table->chunk_count() > 0) {
         auto new_pos_list = std::make_shared<PosList>();
 
-        ChunkID current_chunk_id{0};
-
         // de-reference to the correct RowID so the output can be used in a Multi Join
         for (const auto row : *pos_list) {
           if (row.is_null()) {
