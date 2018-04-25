@@ -51,10 +51,7 @@ TEST_F(NUMAMemoryResourceTest, AreEqual) {
   auto resource_a = NUMAMemoryResource(numa_node, "foo");
   auto resource_b = NUMAMemoryResource(numa_node, "bar");
 
-  EXPECT_TRUE(resource_a.is_equal(resource_b));
-
-  auto ptr = resource_a.allocate(100, 1);
-  resource_b.deallocate(ptr, 100, 1);
+  EXPECT_FALSE(resource_a.is_equal(resource_b));
 }
 
 }  // namespace opossum
