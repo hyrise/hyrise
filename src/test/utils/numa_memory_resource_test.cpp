@@ -46,7 +46,8 @@ TEST_F(NUMAMemoryResourceTest, AreEqual) {
   const int numa_node = 1;
 #endif
 
-  // Two memory_resources compare equal if and only if memory allocated from one memory_resource can be deallocated from the other and vice versa.
+  // Two memory_resources compare equal if and only if memory allocated from one memory_resource can be deallocated fro
+  // the other and vice versa.
 
   auto resource_a = NUMAMemoryResource(numa_node, "foo");
   auto resource_b = NUMAMemoryResource(numa_node, "bar");
