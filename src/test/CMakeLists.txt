@@ -154,11 +154,11 @@ set(
     LIBRARIES
     gtest
     gmock
+    pqxx
     sqlite3
     ${FILESYSTEM_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
-    ${PQXX_LIBRARIES}
 )
 
 # Build special sanitizer version of googletest

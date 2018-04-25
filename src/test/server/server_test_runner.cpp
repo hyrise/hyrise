@@ -110,20 +110,20 @@ TEST_F(ServerTestRunner, TestSimpleInsertSelect) {
 }
 
 // Currently doesn't work because the library in ubuntu is too old
-// TEST_F(ServerTestRunner, TestPreparedStatement) {
-//  pqxx::connection connection{_connection_string};
-//  pqxx::nontransaction transaction{connection};
-//
-//  const std::string prepared_name = "statement1";
-//  connection.prepare(prepared_name, "SELECT * FROM table_a WHERE a > ?");
-//
-//  const auto param = 1234u;
-//  const auto result1 = transaction.exec_prepared(prepared_name, param);
-//  EXPECT_EQ(result1.size(), 1u);
-//
-//  transaction.exec("INSERT INTO table_a VALUES (55555, 1.0);");
-//  const auto result2 = transaction.exec_prepared(prepared_name, param);
-//  EXPECT_EQ(result2.size(), 2u);
-// }
+ TEST_F(ServerTestRunner, TestPreparedStatement) {
+  pqxx::connection connection{_connection_string};
+  pqxx::nontransaction transaction{connection};
+
+  const std::string prepared_name = "statement1";
+  connection.prepare(prepared_name, "SELECT * FROM table_a WHERE a > ?");
+
+  const auto param = 1234u;
+  const auto result1 = transaction.exec_prepared(prepared_name, param);
+  EXPECT_EQ(result1.size(), 1u);
+
+  transaction.exec("INSERT INTO table_a VALUES (55555, 1.0);");
+  const auto result2 = transaction.exec_prepared(prepared_name, param);
+  EXPECT_EQ(result2.size(), 2u);
+ }
 
 }  // namespace opossum
