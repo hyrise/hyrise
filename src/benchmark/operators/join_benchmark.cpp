@@ -1,13 +1,13 @@
 #include <memory>
 
 #include "../benchmark_join_fixture.hpp"
-#include "../table_generator.hpp"
 #include "benchmark/benchmark.h"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_wrapper.hpp"
+#include "table_generator.hpp"
 
 namespace opossum {
 

@@ -184,7 +184,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_
 
   return create_sql_pipeline() >> then >> [=](std::unique_ptr<CreatePipelineResult> result) {
     if (result->load_table.has_value()) {
-      return load_table_file(result->load_table.value().first, result->load_table.value().second);
+      return load_table_file(result->load_table->first, result->load_table->second);
     } else {
       return execute_sql_pipeline(result->sql_pipeline) >> then >>
              [=](std::shared_ptr<SQLPipeline> sql_pipeline) { return _send_simple_query_response(sql_pipeline); };
