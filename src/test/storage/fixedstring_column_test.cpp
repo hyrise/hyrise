@@ -46,17 +46,17 @@ TEST_F(StorageFixedStringColumnTest, CompressColumnString) {
 TEST_F(StorageFixedStringColumnTest, Decode) {
   vc_str->append("Bill");
   vc_str->append("Steve");
-  vc_str->append("Alexander");
+  vc_str->append("Bill");
 
   auto col = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
   auto dict_col = std::dynamic_pointer_cast<FixedStringColumn<std::string>>(col);
 
   EXPECT_EQ(dict_col->encoding_type(), EncodingType::FixedStringDictionary);
+
   // Decode values
-  // TODO(team_btm): check this, throws error
-  // EXPECT_EQ((*dict_col)[0], "Bill");
-  // EXPECT_EQ((*dict_col)[1], "Steve");
-  // EXPECT_EQ((*dict_col)[2], "Alexander");
+  EXPECT_EQ((*dict_col)[0], AllTypeVariant("Bill"));
+  EXPECT_EQ((*dict_col)[1], AllTypeVariant("Steve"));
+  EXPECT_EQ((*dict_col)[2], AllTypeVariant("Bill"));
 }
 
 TEST_F(StorageFixedStringColumnTest, CopyUsingAlloctor) {
@@ -73,11 +73,10 @@ TEST_F(StorageFixedStringColumnTest, CopyUsingAlloctor) {
 
   EXPECT_EQ(dict_col->dictionary()->get_allocator(), dict_col_copy->dictionary()->get_allocator());
   auto dict = dict_col_copy->dictionary();
+
   EXPECT_EQ((*dict)[0], "Alexander");
   EXPECT_EQ((*dict)[1], "Bill");
   EXPECT_EQ((*dict)[2], "Steve");
-  // TODO(team_btm): why can we access an element more + this isnt something like null?
-  EXPECT_EQ((*dict)[3], "Steve");
 }
 
 TEST_F(StorageFixedStringColumnTest, LowerUpperBound) {

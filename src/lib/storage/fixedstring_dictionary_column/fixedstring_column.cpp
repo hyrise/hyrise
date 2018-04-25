@@ -38,8 +38,6 @@ const AllTypeVariant FixedStringColumn<T>::operator[](const ChunkOffset chunk_of
 
 template <typename T>
 std::shared_ptr<const pmr_vector<std::string>> FixedStringColumn<T>::dictionary() const {
-  // TODO(team_btm) fix this shit
-  // return std::shared_ptr<FixedStringColumn>;
   return _dictionary->dictionary();
 }
 
