@@ -31,6 +31,7 @@ TEST_F(StorageFixedStringColumnTest, CompressColumnString) {
 
   // Test attribute_vector size
   EXPECT_EQ(dict_col->size(), 6u);
+  EXPECT_EQ(dict_col->attribute_vector()->size(), 6u);
 
   // Test dictionary size (uniqueness)
   EXPECT_EQ(dict_col->unique_values_count(), 4u);
@@ -41,6 +42,10 @@ TEST_F(StorageFixedStringColumnTest, CompressColumnString) {
   EXPECT_EQ((*dict)[1], "Bill");
   EXPECT_EQ((*dict)[2], "Hasso");
   EXPECT_EQ((*dict)[3], "Steve");
+
+  // Test attribute vector
+  // EXPECT_EQ((*attr)[0], 0);
+  // EXPECT_EQ((*attr)[1], 1);
 }
 
 TEST_F(StorageFixedStringColumnTest, Decode) {
@@ -52,6 +57,7 @@ TEST_F(StorageFixedStringColumnTest, Decode) {
   auto dict_col = std::dynamic_pointer_cast<FixedStringColumn<std::string>>(col);
 
   EXPECT_EQ(dict_col->encoding_type(), EncodingType::FixedStringDictionary);
+  EXPECT_EQ(dict_col->compressed_vector_type(), CompressedVectorType::FixedSize1ByteAligned);
 
   // Decode values
   EXPECT_EQ((*dict_col)[0], AllTypeVariant("Bill"));
@@ -99,6 +105,20 @@ TEST_F(StorageFixedStringColumnTest, LowerUpperBound) {
 
   EXPECT_EQ(dict_col->lower_bound(AllTypeVariant("Z")), INVALID_VALUE_ID);
   EXPECT_EQ(dict_col->upper_bound(AllTypeVariant("Z")), INVALID_VALUE_ID);
+}
+
+TEST_F(StorageFixedStringColumnTest, NullValues) {
+  std::shared_ptr<ValueColumn<std::string>> vc_str = std::make_shared<ValueColumn<std::string>>(true);
+
+  vc_str->append("A");
+  vc_str->append(NULL_VALUE);
+  vc_str->append("E");
+
+  auto col = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
+  auto dict_col = std::dynamic_pointer_cast<FixedStringColumn<std::string>>(col);
+
+  EXPECT_EQ(dict_col->null_value_id(), 2u);
+  EXPECT_TRUE(variant_is_null((*dict_col)[1]));
 }
 
 TEST_F(StorageFixedStringColumnTest, MemoryUsageEstimation) {
