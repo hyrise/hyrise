@@ -59,7 +59,7 @@ const std::string FixedStringVector::operator[](const size_t n) const {
 }
 
 size_t FixedStringVector::size() const {
-    return _string_length == 0u ? _string_length : _chars.size() / _string_length;
+  return _string_length == 0u ? _string_length : _chars.size() / _string_length;
 }
 
 size_t FixedStringVector::capacity() const { return _chars.capacity(); }

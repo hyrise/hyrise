@@ -170,7 +170,7 @@ TEST_F(FixedStringVectorTest, IteratorConstructor) {
 
 TEST_F(FixedStringVectorTest, ConstIteratorConstructor) {
   std::vector<std::string> v1 = {"abc", "def", "ghi"};
-  auto v2 = FixedStringVector{v1.cbegin(), v1.cend(), 3};  
+  auto v2 = FixedStringVector{v1.cbegin(), v1.cend(), 3};
   std::vector<std::string> v3 = {};
   auto v4 = FixedStringVector{v3.cbegin(), v3.cend(), 0};
 

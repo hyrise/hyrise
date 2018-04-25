@@ -119,7 +119,8 @@ TEST_F(StorageFixedStringColumnTest, MemoryUsageEstimation) {
   static constexpr auto size_of_attribute = 1u;
   static constexpr auto size_of_dictionary = 3u;
 
-  EXPECT_EQ(dictionary_column->estimate_memory_usage(), empty_memory_usage + 3 * size_of_attribute + size_of_dictionary);
+  EXPECT_EQ(dictionary_column->estimate_memory_usage(),
+            empty_memory_usage + 3 * size_of_attribute + size_of_dictionary);
 }
 
 }  // namespace opossum
