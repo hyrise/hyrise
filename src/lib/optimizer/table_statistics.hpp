@@ -52,6 +52,8 @@ class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
    */
   explicit TableStatistics(const std::shared_ptr<Table> table);
 
+  virtual ~TableStatistics() = default;
+
   /**
    * Table statistics should not be copied by other actors.
    * Copy constructor not private as copy is used by make_shared.

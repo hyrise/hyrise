@@ -23,6 +23,8 @@ class LQPTranslator : private Noncopyable {
  public:
   virtual std::shared_ptr<AbstractOperator> translate_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 
+  virtual ~LQPTranslator() = default;
+
  private:
   std::shared_ptr<AbstractOperator> _translate_by_node_type(LQPNodeType type,
                                                             const std::shared_ptr<AbstractLQPNode>& node) const;
