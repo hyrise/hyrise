@@ -15,7 +15,7 @@
 namespace opossum {
 
 template <typename TConnection, typename TTaskRunner>
-class ServerSessionImpl {
+class ServerSessionImpl : public std::enable_shared_from_this<ServerSessionImpl<TConnection, TTaskRunner>> {
  public:
   explicit ServerSessionImpl(std::shared_ptr<TConnection> connection, std::shared_ptr<TTaskRunner> task_runner)
       : _connection(connection), _task_runner(task_runner) {}
@@ -26,7 +26,7 @@ class ServerSessionImpl {
   boost::future<void> _perform_session_startup();
 
   boost::future<void> _handle_client_requests();
-  boost::future<void> _handle_simple_query_command(const std::string sql);
+  boost::future<void> _handle_simple_query_command(const std::string& sql);
   boost::future<void> _handle_parse_command(const ParsePacket& parse_info);
   boost::future<void> _handle_bind_command(const BindPacket& packet);
   boost::future<void> _handle_describe_command(std::string portal_name);

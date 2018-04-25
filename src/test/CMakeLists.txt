@@ -95,6 +95,7 @@ set(
     server/mock_task_runner.hpp
     server/postgres_wire_handler_test.cpp
     server/server_session_test.cpp
+    server/server_test_runner.cpp
     sql/sql_basic_cache_test.cpp
     sql/hsql_expression_translator_test.cpp
     sql/sqlite_testrunner/sqlite_testrunner.cpp
@@ -152,6 +153,7 @@ set(
     LIBRARIES
     gtest
     gmock
+    pqxx
     sqlite3
     ${FILESYSTEM_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}

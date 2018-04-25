@@ -8,7 +8,6 @@
 // https://github.com/boostorg/asio/blob/master/include/boost/asio/use_future.hpp
 
 #include <boost/asio/detail/config.hpp>
-#include <boost/asio/detail/push_options.hpp>
 #include <boost/version.hpp>
 
 #include <memory>
@@ -57,20 +56,10 @@ class use_boost_future_t {
   Allocator allocator_;
 };
 
-/// A special value, similar to std::nothrow.
-/**
- * See the documentation for boost::asio::use_future_t for a usage example.
- */
-#if defined(BOOST_ASIO_MSVC)
-__declspec(selectany) use_boost_future_t<> use_boost_future;
-#elif defined(BOOST_ASIO_HAS_CONSTEXPR) || defined(GENERATING_DOCUMENTATION)
 constexpr use_boost_future_t<> use_boost_future;
-#endif
 
 }  // namespace asio
 }  // namespace boost
-
-#include <boost/asio/detail/pop_options.hpp>
 
 // TODO(anyone): The implementation version derived from boost 1.64 does not work with
 // older boost versions (and vice versa), so we have to maintain two implementations
