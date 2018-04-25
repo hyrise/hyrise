@@ -337,8 +337,9 @@ void Console::out(std::shared_ptr<const Table> table, uint32_t flags) {
   const bool fits_on_one_page = table->row_count() < static_cast<uint64_t>(size_y) - 1;
 
   static bool pagination_disabled = false;
-  if(!fits_on_one_page && !std::getenv("TERM") && !pagination_disabled) {
-    out("Your TERM environment variable is not set - most likely because you are running the console from an IDE. Pagination is disabled.\n\n");
+  if (!fits_on_one_page && !std::getenv("TERM") && !pagination_disabled) {
+    out("Your TERM environment variable is not set - most likely because you are running the console from an IDE. "
+        "Pagination is disabled.\n\n");
     pagination_disabled = true;
   }
 
