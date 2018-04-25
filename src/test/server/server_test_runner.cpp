@@ -110,7 +110,7 @@ TEST_F(ServerTestRunner, TestSimpleInsertSelect) {
 }
 
 // Currently doesn't work because the library in ubuntu is too old
- TEST_F(ServerTestRunner, TestPreparedStatement) {
+TEST_F(ServerTestRunner, TestPreparedStatement) {
   pqxx::connection connection{_connection_string};
   pqxx::nontransaction transaction{connection};
 
@@ -124,6 +124,6 @@ TEST_F(ServerTestRunner, TestSimpleInsertSelect) {
   transaction.exec("INSERT INTO table_a VALUES (55555, 1.0);");
   const auto result2 = transaction.exec_prepared(prepared_name, param);
   EXPECT_EQ(result2.size(), 2u);
- }
+}
 
 }  // namespace opossum
