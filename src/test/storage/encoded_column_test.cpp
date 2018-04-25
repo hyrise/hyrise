@@ -159,7 +159,10 @@ TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumn) {
 
     value_column_iterable.with_iterators([&](auto value_column_it, auto value_column_end) {
       encoded_column_iterable.with_iterators([&](auto encoded_column_it, auto encoded_column_end) {
-        for (; encoded_column_it != encoded_column_end; ++encoded_column_it, ++value_column_it) {
+        auto i = 0;
+        for (; encoded_column_it != encoded_column_end; ++encoded_column_it, ++value_column_it, ++i) {
+          EXPECT_EQ((*value_column)[i], encoded_column[i]);
+
           EXPECT_EQ(value_column_it->is_null(), encoded_column_it->is_null());
 
           if (!value_column_it->is_null()) {

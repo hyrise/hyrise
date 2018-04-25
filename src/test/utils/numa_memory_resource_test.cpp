@@ -39,4 +39,14 @@ TEST_F(NUMAMemoryResourceTest, BasicAllocate) {
   EXPECT_EQ(get_node_id_of(vec.data()), numa_node);
 }
 
+TEST_F(NUMAMemoryResourceTest, AreEqual) {
+#if HYRISE_NUMA_SUPPORT
+  const int numa_node = numa_max_node();
+#else
+  const int numa_node = 1;
+#endif
+
+  EXPECT_EQ(NUMAMemoryResource(numa_node, "foo"), NUMAMemoryResource(numa_node, "bar"));
+}
+
 }  // namespace opossum

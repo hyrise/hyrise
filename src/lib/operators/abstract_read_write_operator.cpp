@@ -16,7 +16,13 @@ void AbstractReadWriteOperator::execute() {
          "AbstractReadWriteOperator::execute() should never be called without having set the transaction context.");
 
   Assert(_state == ReadWriteOperatorState::Pending, "Operator needs to have state Pending in order to be executed.");
-  AbstractOperator::execute();
+
+  try {
+    AbstractOperator::execute();
+  } catch (...) {
+    _mark_as_failed();
+    throw;
+  }
 
   if (_state == ReadWriteOperatorState::Failed) return;
 
