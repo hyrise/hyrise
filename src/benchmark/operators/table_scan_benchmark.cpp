@@ -65,9 +65,9 @@ void BM_TableScanLike(benchmark::State& state, const std::string& column_name, c
   lineitem_wrapper->execute();
 
   while (state.KeepRunning()) {
-      auto table_scan = std::make_shared<TableScan>(lineitem_wrapper, lineitem_table->column_id_by_name(column_name),
-                                                 PredicateCondition::Like, pattern);
-      table_scan->execute();
+    auto table_scan = std::make_shared<TableScan>(lineitem_wrapper, lineitem_table->column_id_by_name(column_name),
+                                                  PredicateCondition::Like, pattern);
+    table_scan->execute();
   }
 }
 

@@ -7,8 +7,8 @@
 #include <utility>
 #include <vector>
 
-#include "boost/variant.hpp"
 #include "base_single_column_table_scan_impl.hpp"
+#include "boost/variant.hpp"
 
 #include "boost/variant.hpp"
 #include "types.hpp"
@@ -46,38 +46,57 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
    */
   static std::string sql_like_to_regex(std::string sqllike);
 
-  enum class PatternWildcard { SingleChar /* '_' */, AnyChars /* '%' */ };
-  using PatternToken = boost::variant<std::string, PatternWildcard>; // Keep type order, users rely on which()
+  enum class Wildcard { SingleChar /* '_' */, AnyChars /* '%' */ };
+  using PatternToken = boost::variant<std::string, Wildcard>;  // Keep type order, users rely on which()
   using PatternTokens = std::vector<PatternToken>;
 
   /**
    * Turn a pattern string, e.g. "H_llo W%ld" into Tokens {"H", PatternWildcard::SingleChar, "llo W",
    * PatternWildcard::AnyChars, "ld"}
    */
-  static PatternTokens pattern_string_to_tokens(const std::string &pattern);
+  static PatternTokens pattern_string_to_tokens(const std::string& pattern);
 
   /**
    * To speed up LIKE there are special implementations available for simple, common patterns.
    * Any other pattern will fall back to regex.
    */
-  struct StartsWithPattern final { std::string str; };  // 'hello%'
-  struct EndsWithPattern final { std::string str; };  // '%hello'
-  struct ContainsPattern final { std::string str; };  // '%hello%'
-  struct ContainsMultiplePattern final { std::vector<std::string> str; };  // '%hello%world%nice%wheather'
+  struct StartsWithPattern final {
+    std::string str;
+  };  // 'hello%'
+  struct EndsWithPattern final {
+    std::string str;
+  };  // '%hello'
+  struct ContainsPattern final {
+    std::string str;
+  };  // '%hello%'
+  struct MultipleContainsPattern final {
+    std::vector<std::string> str;
+  };  // '%hello%world%nice%weather'
 
-  using PatternVariant = boost::variant<std::regex, StartsWithPattern, EndsWithPattern, ContainsPattern, ContainsMultiplePattern>;
+  /**
+   * Contains one of the specialised patterns from above (StartsWithPattern, ...) or falls back to std::regex for a
+   * general pattern.
+   */
+  using AllPatternVariant =
+      boost::variant<std::regex, StartsWithPattern, EndsWithPattern, ContainsPattern, MultipleContainsPattern>;
 
-  static PatternVariant pattern_string_to_pattern_variant(const std::string &pattern);
+  static AllPatternVariant pattern_string_to_pattern_variant(const std::string& pattern);
 
-  template<typename Functor>
-  static void resolve_pattern_matcher(const PatternVariant &pattern_variant, const bool invert, const Functor &functor);
+  /**
+   * Call functor with the resolved Pattern
+   */
+  template <typename Functor>
+  static void resolve_pattern_matcher(const AllPatternVariant& pattern_variant, const bool invert,
+                                      const Functor& functor);
 
  private:
-  template<typename Iterable>
-  void _scan_iterable(const Iterable& iterable,
-                      const ChunkID chunk_id,
-                      PosList& matches_out,
-                     const ChunkOffsetsList* const mapped_chunk_offsets);
+  /**
+   * Scan the iterable (using the optional mapped_chunk_offsets) with _pattern_variant and fill the matches_out with
+   * RowIDs that match the pattern.
+   */
+  template <typename Iterable>
+  void _scan_iterable(const Iterable& iterable, const ChunkID chunk_id, PosList& matches_out,
+                      const ChunkOffsetsList* const mapped_chunk_offsets);
 
   /**
    * Used for dictionary columns
@@ -88,9 +107,9 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
   const std::string _pattern;
   const bool _invert_results;
 
-  PatternVariant _pattern_variant;
+  AllPatternVariant _pattern_variant;
 };
 
-std::ostream& operator<<(std::ostream& stream, const LikeTableScanImpl::PatternWildcard& wildcard);
+std::ostream& operator<<(std::ostream& stream, const LikeTableScanImpl::Wildcard& wildcard);
 
 }  // namespace opossum

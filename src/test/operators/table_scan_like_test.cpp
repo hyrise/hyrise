@@ -9,9 +9,9 @@
 #include "gtest/gtest.h"
 
 #include "operators/abstract_read_only_operator.hpp"
-#include "operators/table_scan/like_table_scan_impl.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/table_scan/like_table_scan_impl.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -62,15 +62,15 @@ TEST_F(OperatorsTableScanLikeTest, PatternToTokens) {
   ASSERT_EQ(tokens_a.size(), 0u);
 
   ASSERT_EQ(tokens_b.size(), 9u);
-  EXPECT_EQ(tokens_b.at(0), LikeTableScanImpl::PatternToken(LikeTableScanImpl::PatternWildcard::AnyChars));
+  EXPECT_EQ(tokens_b.at(0), LikeTableScanImpl::PatternToken(LikeTableScanImpl::Wildcard::AnyChars));
   EXPECT_EQ(tokens_b.at(1), LikeTableScanImpl::PatternToken("abc"s));
-  EXPECT_EQ(tokens_b.at(2), LikeTableScanImpl::PatternToken(LikeTableScanImpl::PatternWildcard::AnyChars));
-  EXPECT_EQ(tokens_b.at(3), LikeTableScanImpl::PatternToken(LikeTableScanImpl::PatternWildcard::SingleChar));
+  EXPECT_EQ(tokens_b.at(2), LikeTableScanImpl::PatternToken(LikeTableScanImpl::Wildcard::AnyChars));
+  EXPECT_EQ(tokens_b.at(3), LikeTableScanImpl::PatternToken(LikeTableScanImpl::Wildcard::SingleChar));
   EXPECT_EQ(tokens_b.at(4), LikeTableScanImpl::PatternToken("def"s));
-  EXPECT_EQ(tokens_b.at(5), LikeTableScanImpl::PatternToken(LikeTableScanImpl::PatternWildcard::SingleChar));
-  EXPECT_EQ(tokens_b.at(6), LikeTableScanImpl::PatternToken(LikeTableScanImpl::PatternWildcard::SingleChar));
+  EXPECT_EQ(tokens_b.at(5), LikeTableScanImpl::PatternToken(LikeTableScanImpl::Wildcard::SingleChar));
+  EXPECT_EQ(tokens_b.at(6), LikeTableScanImpl::PatternToken(LikeTableScanImpl::Wildcard::SingleChar));
   EXPECT_EQ(tokens_b.at(7), LikeTableScanImpl::PatternToken("Hello"s));
-  EXPECT_EQ(tokens_b.at(8), LikeTableScanImpl::PatternToken(LikeTableScanImpl::PatternWildcard::AnyChars));
+  EXPECT_EQ(tokens_b.at(8), LikeTableScanImpl::PatternToken(LikeTableScanImpl::Wildcard::AnyChars));
 }
 
 /*

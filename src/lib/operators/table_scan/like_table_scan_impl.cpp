@@ -26,7 +26,7 @@ LikeTableScanImpl::LikeTableScanImpl(std::shared_ptr<const Table> in_table, cons
     : BaseSingleColumnTableScanImpl{in_table, left_column_id, predicate_condition},
       _pattern{pattern},
       _invert_results(predicate_condition == PredicateCondition::NotLike) {
- _pattern_variant = pattern_string_to_pattern_variant(pattern);
+  _pattern_variant = pattern_string_to_pattern_variant(pattern);
 }
 
 void LikeTableScanImpl::handle_column(const BaseValueColumn& base_column,
@@ -90,20 +90,21 @@ void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
   });
 }
 
-LikeTableScanImpl::PatternTokens LikeTableScanImpl::pattern_string_to_tokens(const std::string &pattern) {
+LikeTableScanImpl::PatternTokens LikeTableScanImpl::pattern_string_to_tokens(const std::string& pattern) {
   PatternTokens tokens;
 
   auto current_position = size_t{0};
   while (current_position < pattern.size()) {
     if (pattern[current_position] == '_') {
-      tokens.emplace_back(PatternWildcard::SingleChar);
+      tokens.emplace_back(Wildcard::SingleChar);
       ++current_position;
     } else if (pattern[current_position] == '%') {
-      tokens.emplace_back(PatternWildcard::AnyChars);
+      tokens.emplace_back(Wildcard::AnyChars);
       ++current_position;
     } else {
       const auto next_wildcard_position = pattern.find_first_of("_%", current_position);
-      const auto token_length = next_wildcard_position == std::string::npos ? std::string::npos : next_wildcard_position - current_position;
+      const auto token_length =
+          next_wildcard_position == std::string::npos ? std::string::npos : next_wildcard_position - current_position;
       tokens.emplace_back(pattern.substr(current_position, token_length));
       current_position = next_wildcard_position;
     }
@@ -112,30 +113,25 @@ LikeTableScanImpl::PatternTokens LikeTableScanImpl::pattern_string_to_tokens(con
   return tokens;
 }
 
-LikeTableScanImpl::PatternVariant LikeTableScanImpl::pattern_string_to_pattern_variant(const std::string &pattern) {
+LikeTableScanImpl::AllPatternVariant LikeTableScanImpl::pattern_string_to_pattern_variant(const std::string& pattern) {
   const auto tokens = pattern_string_to_tokens(pattern);
 
-  if (tokens.size() == 2 &&
-      tokens[0].type() == typeid(std::string) &&
-      tokens[1] == PatternToken{PatternWildcard::AnyChars}) {
+  if (tokens.size() == 2 && tokens[0].type() == typeid(std::string) && tokens[1] == PatternToken{Wildcard::AnyChars}) {
     return StartsWithPattern{boost::get<std::string>(tokens[0])};
-  } else if (tokens.size() == 2 &&
-             tokens[0] == PatternToken{PatternWildcard::AnyChars} &&
+  } else if (tokens.size() == 2 && tokens[0] == PatternToken{Wildcard::AnyChars} &&
              tokens[1].type() == typeid(std::string)) {
     return EndsWithPattern{boost::get<std::string>(tokens[1])};
-  } else if (tokens.size() == 3 &&
-             tokens[0] == PatternToken{PatternWildcard::AnyChars} &&
-             tokens[1].type() == typeid(std::string) &&
-             tokens[2] ==PatternToken{PatternWildcard::AnyChars}) {
+  } else if (tokens.size() == 3 && tokens[0] == PatternToken{Wildcard::AnyChars} &&
+             tokens[1].type() == typeid(std::string) && tokens[2] == PatternToken{Wildcard::AnyChars}) {
     return ContainsPattern{boost::get<std::string>(tokens[1])};
   } else {
     // Pick ContainsMultiple or Regex
-    auto impl_is_contains_multiple = true; // Set to false if tokens don't match %{, str, %} pattern
-    auto strings = std::vector<std::string>{}; // arguments used for ContainsMultiple, if it gets used
-    auto expect_any_chars = true;  // If false, expect a string
+    auto impl_is_contains_multiple = true;      // Set to false if tokens don't match %{, str, %} pattern
+    auto strings = std::vector<std::string>{};  // arguments used for ContainsMultiple, if it gets used
+    auto expect_any_chars = true;               // If false, expect a string
 
     for (const auto& token : tokens) {
-      if (expect_any_chars && token != PatternToken{PatternWildcard::AnyChars}) {
+      if (expect_any_chars && token != PatternToken{Wildcard::AnyChars}) {
         impl_is_contains_multiple = false;
         break;
       }
@@ -151,15 +147,16 @@ LikeTableScanImpl::PatternVariant LikeTableScanImpl::pattern_string_to_pattern_v
     }
 
     if (impl_is_contains_multiple) {
-      return ContainsMultiplePattern{strings};
+      return MultipleContainsPattern{strings};
     } else {
       return std::regex(sql_like_to_regex(pattern));
     }
   }
 }
 
-template<typename Functor>
-void LikeTableScanImpl::resolve_pattern_matcher(const PatternVariant &pattern_variant, const bool invert, const Functor &functor) {
+template <typename Functor>
+void LikeTableScanImpl::resolve_pattern_matcher(const AllPatternVariant& pattern_variant, const bool invert,
+                                                const Functor& functor) {
   if (pattern_variant.type() == typeid(StartsWithPattern)) {
     const auto& prefix = boost::get<StartsWithPattern>(pattern_variant).str;
     functor([&](const std::string& str) -> bool {
@@ -176,12 +173,10 @@ void LikeTableScanImpl::resolve_pattern_matcher(const PatternVariant &pattern_va
 
   } else if (pattern_variant.type() == typeid(ContainsPattern)) {
     const auto& contains_str = boost::get<ContainsPattern>(pattern_variant).str;
-    functor([&](const std::string& str) -> bool {
-      return (str.find(contains_str) != std::string::npos) ^ invert;
-    });
+    functor([&](const std::string& str) -> bool { return (str.find(contains_str) != std::string::npos) ^ invert; });
 
-  } else if (pattern_variant.type() == typeid(ContainsMultiplePattern)) {
-    const auto& contains_strs = boost::get<ContainsMultiplePattern>(pattern_variant).str;
+  } else if (pattern_variant.type() == typeid(MultipleContainsPattern)) {
+    const auto& contains_strs = boost::get<MultipleContainsPattern>(pattern_variant).str;
 
     functor([&](const std::string& str) -> bool {
       auto current_position = size_t{0};
@@ -195,9 +190,7 @@ void LikeTableScanImpl::resolve_pattern_matcher(const PatternVariant &pattern_va
   } else if (pattern_variant.type() == typeid(std::regex)) {
     const auto& regex = boost::get<std::regex>(pattern_variant);
 
-    functor([&](const std::string& str) -> bool {
-      return std::regex_match(str, regex) ^ invert;
-    });
+    functor([&](const std::string& str) -> bool { return std::regex_match(str, regex) ^ invert; });
 
   } else {
     Fail("Impl not... implemented [sic]");
@@ -208,20 +201,20 @@ std::string LikeTableScanImpl::sql_like_to_regex(std::string sql_like) {
   // Do substitution of <backslash> with <backslash><backslash> FIRST, because otherwise it will also replace
   // backslashes introduced by the other substitutions
   constexpr auto replace_by = std::array<std::pair<const char*, const char*>, 15u>{{{"\\", "\\\\"},
-                                                                                   {".", "\\."},
-                                                                                   {"^", "\\^"},
-                                                                                   {"$", "\\$"},
-                                                                                   {"+", "\\+"},
-                                                                                   {"?", "\\?"},
-                                                                                   {"(", "\\("},
-                                                                                   {")", "\\)"},
-                                                                                   {"{", "\\{"},
-                                                                                   {"}", "\\}"},
-                                                                                   {"|", "\\|"},
-                                                                                   {".", "\\."},
-                                                                                   {"*", "\\*"},
-                                                                                   {"%", ".*"},
-                                                                                   {"_", "."}}};
+                                                                                    {".", "\\."},
+                                                                                    {"^", "\\^"},
+                                                                                    {"$", "\\$"},
+                                                                                    {"+", "\\+"},
+                                                                                    {"?", "\\?"},
+                                                                                    {"(", "\\("},
+                                                                                    {")", "\\)"},
+                                                                                    {"{", "\\{"},
+                                                                                    {"}", "\\}"},
+                                                                                    {"|", "\\|"},
+                                                                                    {".", "\\."},
+                                                                                    {"*", "\\*"},
+                                                                                    {"%", ".*"},
+                                                                                    {"_", "."}}};
 
   for (const auto& pair : replace_by) {
     boost::replace_all(sql_like, pair.first, pair.second);
@@ -230,21 +223,18 @@ std::string LikeTableScanImpl::sql_like_to_regex(std::string sql_like) {
   return "^" + sql_like + "$";
 }
 
-template<typename Iterable>
-void LikeTableScanImpl::_scan_iterable(const Iterable& iterable,
-                                       const ChunkID chunk_id,
-                                       PosList& matches_out,
+template <typename Iterable>
+void LikeTableScanImpl::_scan_iterable(const Iterable& iterable, const ChunkID chunk_id, PosList& matches_out,
                                        const ChunkOffsetsList* const mapped_chunk_offsets) {
-  this->resolve_pattern_matcher(_pattern_variant, _invert_results, [&](const auto &matcher) {
+  this->resolve_pattern_matcher(_pattern_variant, _invert_results, [&](const auto& matcher) {
     iterable.with_iterators(mapped_chunk_offsets, [&](auto left_it, auto left_end) {
       this->_unary_scan(matcher, left_it, left_end, chunk_id, matches_out);
     });
   });
 }
 
-
 std::pair<size_t, std::vector<bool>> LikeTableScanImpl::_find_matches_in_dictionary(
-const pmr_vector<std::string>& dictionary) {
+    const pmr_vector<std::string>& dictionary) {
   auto result = std::pair<size_t, std::vector<bool>>{};
 
   auto& count = result.first;
@@ -253,8 +243,8 @@ const pmr_vector<std::string>& dictionary) {
   count = 0u;
   dictionary_matches.reserve(dictionary.size());
 
-  resolve_pattern_matcher(_pattern_variant, _invert_results, [&](const auto &matcher) {
-    for (const auto &value : dictionary) {
+  resolve_pattern_matcher(_pattern_variant, _invert_results, [&](const auto& matcher) {
+    for (const auto& value : dictionary) {
       const auto result = matcher(value);
       count += static_cast<size_t>(result);
       dictionary_matches.push_back(result);
@@ -264,10 +254,14 @@ const pmr_vector<std::string>& dictionary) {
   return result;
 }
 
-std::ostream& operator<<(std::ostream& stream, const LikeTableScanImpl::PatternWildcard& wildcard) {
-  switch(wildcard) {
-    case LikeTableScanImpl::PatternWildcard::SingleChar: stream << "_"; break;
-    case LikeTableScanImpl::PatternWildcard::AnyChars: stream << "%"; break;
+std::ostream& operator<<(std::ostream& stream, const LikeTableScanImpl::Wildcard& wildcard) {
+  switch (wildcard) {
+    case LikeTableScanImpl::Wildcard::SingleChar:
+      stream << "_";
+      break;
+    case LikeTableScanImpl::Wildcard::AnyChars:
+      stream << "%";
+      break;
   }
 
   return stream;
