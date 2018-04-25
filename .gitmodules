@@ -15,4 +15,4 @@
 	url = https://github.com/jarro2783/cxxopts.git
 [submodule "third_party/libpqxx"]
 	path = third_party/libpqxx
-	url = git@github.com:jtv/libpqxx.git
+	url = https://github.com/jtv/libpqxx.git
