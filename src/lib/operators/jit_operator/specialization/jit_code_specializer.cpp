@@ -25,6 +25,7 @@ void JitCodeSpecializer::_specialize_function_impl(const std::string& root_funct
   context.module->setDataLayout(_compiler.data_layout());
 
   const auto root_function = _repository.get_function(root_function_name);
+
   DebugAssert(root_function, "Root function not found in repository.");
   context.root_function = _clone_function(context, *root_function, "_");
 
@@ -120,7 +121,6 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context, 
     }
 
     llvm::InlineFunctionInfo info;
-    // SpecializationContext ctx{context.module.get(), context.runtime_value_map, context.llvm_value_map};
     if (InlineFunction(call_site, info, nullptr, false, context)) {
       for (const auto& new_call_site : info.InlinedCallSites) {
         call_sites.push(new_call_site);

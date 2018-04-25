@@ -12,6 +12,7 @@ const JitRuntimePointer::Ptr& _get_runtime_value(const llvm::Value* c_value, Spe
   if (context.llvm_value_map.count(c_value)) {
     value = context.llvm_value_map.lookup(c_value);
   }
+
   // try serving from cache
   if (context.runtime_value_map.count(value)) {
     return context.runtime_value_map[value];
@@ -59,7 +60,7 @@ const JitRuntimePointer::Ptr& _get_runtime_value(const llvm::Value* c_value, Spe
   return context.runtime_value_map[value];
 }
 
-llvm::Constant* MyConstantFoldInstruction(llvm::Instruction* I, llvm::ArrayRef<llvm::Constant*> Ops,
+llvm::Constant* ConstantFoldInstruction(llvm::Instruction* I, llvm::ArrayRef<llvm::Constant*> Ops,
                                           const llvm::DataLayout& DL, const llvm::TargetLibraryInfo* TLI) {
   // Handle PHI nodes quickly here...
   if (auto* PN = llvm::dyn_cast<llvm::PHINode>(I)) {
@@ -85,7 +86,7 @@ llvm::Constant* MyConstantFoldInstruction(llvm::Instruction* I, llvm::ArrayRef<l
   return llvm::ConstantFoldInstOperands(I, Ops, DL, TLI);
 }
 
-llvm::Constant* make_constant(llvm::Value* value, SpecializationContext& context,
+llvm::Constant* ResolveCondition(llvm::Value* value, SpecializationContext& context,
                               std::unordered_set<llvm::Value*>& failed) {
   if (failed.count(value)) return nullptr;
   if (auto const_value = llvm::dyn_cast<llvm::Constant>(value)) return const_value;
@@ -106,7 +107,7 @@ llvm::Constant* make_constant(llvm::Value* value, SpecializationContext& context
     failed.insert(value);
     std::vector<llvm::Constant*> ops;
     for (auto& use : inst->operands()) {
-      auto op = make_constant(use.get(), context, failed);
+      auto op = ResolveCondition(use.get(), context, failed);
       if (!op) {
         return nullptr;
       }
@@ -115,7 +116,7 @@ llvm::Constant* make_constant(llvm::Value* value, SpecializationContext& context
     const llvm::Triple module_triple(context.module->getTargetTriple());
     const llvm::TargetLibraryInfoImpl x(module_triple);
     const llvm::TargetLibraryInfo target_lib_info(x);
-    return MyConstantFoldInstruction(inst, ops, context.module->getDataLayout(), &target_lib_info);
+    return ConstantFoldInstruction(inst, ops, context.module->getDataLayout(), &target_lib_info);
   }
 
   return nullptr;
@@ -123,7 +124,7 @@ llvm::Constant* make_constant(llvm::Value* value, SpecializationContext& context
 
 llvm::Constant* ResolveCondition(llvm::Value* Value, SpecializationContext& Context) {
   std::unordered_set<llvm::Value*> failed;
-  return make_constant(Value, Context, failed);
+  return ResolveCondition(Value, Context, failed);
 }
 
 }  // namespace opossum

@@ -52,7 +52,7 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
   switch (_execution_mode) {
     case JitExecutionMode::Compile:
       execute_func = _module.specialize_function<void(const JitReadTuples*, JitRuntimeContext&)>(
-          "_ZNK7opossum12JitReadTuple7executeERNS_17JitRuntimeContextE",
+          "_ZNK7opossum13JitReadTuples7executeERNS_17JitRuntimeContextE",
           std::make_shared<JitConstantRuntimePointer>(_source().get()), false);
       break;
     case JitExecutionMode::Interpret:

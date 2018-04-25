@@ -55,8 +55,12 @@ class JitCodeSpecializer {
 
   const JitRuntimePointer::Ptr& _get_runtime_value(SpecializationContext& context, const llvm::Value* value) const;
 
+  // Recursively traverses an element of the LLVM module hierarchy and calls the given lambda on each element of type T
+  // found in the process.
+  // This helper can e.g. be used to iterate over all instructions (or specific types of instructions) in a module,
+  // function, or basic block, or to recursively traverse nested llvm::ConstExpr structures.
   template <typename T, typename U>
-  void _visit(U& function, std::function<void(T&)> fn) const;
+  void _visit(U& element, std::function<void(T&)> fn) const;
 
   JitRepository& _repository;
   const std::shared_ptr<llvm::LLVMContext> _llvm_context;

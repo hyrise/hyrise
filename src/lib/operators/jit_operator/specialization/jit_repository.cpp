@@ -7,11 +7,12 @@
 #include <llvm/IR/DebugInfo.h>
 #include <llvm/Support/Error.h>
 #include <llvm/Support/SourceMgr.h>
+#include <llvm/Support/TargetSelect.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 
 namespace opossum {
 
-// singleton
+// Singleton
 JitRepository& JitRepository::get() {
   static JitRepository instance;
   return instance;
@@ -36,9 +37,13 @@ std::mutex& JitRepository::specialization_mutex() { return _specialization_mutex
 JitRepository::JitRepository()
     : _llvm_context{std::make_shared<llvm::LLVMContext>()},
       _module{_parse_module(std::string(&jit_llvm_bundle, jit_llvm_bundle_size), *_llvm_context)} {
+  // Global LLVM initializations
+  llvm::InitializeNativeTarget();
+  llvm::InitializeNativeTargetAsmPrinter();
+
   llvm::StripDebugInfo(*_module);
 
-  // extract functions
+  // Extract functions
   for (auto& function : *_module) {
     const auto function_name = function.getName().str();
     if (!function.isDeclaration()) {
@@ -46,7 +51,7 @@ JitRepository::JitRepository()
     }
   }
 
-  // extract vtables
+  // Extract virtual functions
   for (const auto& global : _module->globals()) {
     if (boost::starts_with(global.getName().str(), vtable_prefix)) {
       if (!global.hasInitializer()) {
@@ -54,6 +59,7 @@ JitRepository::JitRepository()
       }
       if (auto array = llvm::dyn_cast<llvm::ConstantArray>(global.getInitializer()->getOperand(0))) {
         std::vector<llvm::Function*> vtable;
+        // LLVM vtables do not contain function references but other RTTI related information at indices 0 and 1
         for (uint32_t index = 2; index < array->getNumOperands(); ++index) {
           vtable.push_back(_functions[array->getOperand(index)->getOperand(0)->getName().str()]);
         }

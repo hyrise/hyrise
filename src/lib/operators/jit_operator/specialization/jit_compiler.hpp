@@ -38,24 +38,29 @@ class JitCompiler {
   explicit JitCompiler(const std::shared_ptr<llvm::LLVMContext>& context);
   ~JitCompiler();
 
+  // Adds a module to the LLVM just-in-time compiler and compiles it to machine code immediately
   ModuleHandle add_module(const std::shared_ptr<llvm::Module>& module);
 
+  // Removes a module from the LLVM just-in-time compiler and cleans up all related resources
   void remove_module(const ModuleHandle& handle);
 
+  // Locates a symbol in one of the modules previously added to the JIT by its MANGLED name
   template <typename T>
   std::function<T> find_symbol(const std::string& name) {
     const auto target_address = _handle_error(_compile_layer.findSymbol(_mangle(name), true).getAddress());
 
-    Assert(target_address, "symbol " + name + " could not be found");
+    Assert(target_address, "Symbol " + name + " could not be found");
     return reinterpret_cast<T*>(target_address);
   }
 
-  llvm::TargetMachine& target_machine() const;
+  // Exports the data layout of the JIT to provide other code specialization components with target-specific information
+  // (e.g., data types sizes)
   const llvm::DataLayout& data_layout() const;
 
  private:
   const std::string _mangle(const std::string& name) const;
 
+  // Unpacks LLVM results and fails on errors
   template <typename T>
   T _handle_error(llvm::Expected<T> value_or_error) {
     if (value_or_error) {
@@ -66,6 +71,7 @@ class JitCompiler {
     Fail("An LLVM error occured");
   }
 
+  // Checks LLVM error codes and fails on actual errors
   void _handle_error(llvm::Error error);
 
   const std::shared_ptr<llvm::LLVMContext> _context;

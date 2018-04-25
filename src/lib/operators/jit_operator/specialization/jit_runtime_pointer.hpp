@@ -9,6 +9,9 @@
 
 namespace opossum {
 
+/* The JitRuntimePointer class hierarchy represents memory operations
+ *
+ */
 class JitRuntimePointer {
  public:
   using Ptr = std::shared_ptr<const JitRuntimePointer>;
@@ -20,6 +23,8 @@ class JitKnownRuntimePointer : public JitRuntimePointer {
  public:
   using Ptr = std::shared_ptr<const JitKnownRuntimePointer>;
 
+  // Checks whether the address pointed to is valid (i.e., can be dereferenced).
+  // This solution is based on https://stackoverflow.com/questions/4611776/isbadreadptr-analogue-on-unix
   bool is_valid() const override {
     const auto ptr = reinterpret_cast<void*>(address());
     auto fd = open("/dev/random", O_WRONLY);
