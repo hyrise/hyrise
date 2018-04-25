@@ -10,6 +10,7 @@ namespace opossum {
  */
 class BaseJitColumnWriter {
  public:
+  virtual ~BaseJitColumnWriter() = default;
   virtual void write_value(JitRuntimeContext& context) const = 0;
 };
 
