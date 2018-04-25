@@ -70,7 +70,7 @@ bool FixedString::operator==(const FixedString& other) const {
   return memcmp(_mem, other._mem, size()) == 0;
 }
 
-void FixedString::swap(FixedString other) {
+void FixedString::swap(FixedString& other) {
   DebugAssert(_maximum_length == other.maximum_length(),
               "FixedStrings must have the same maximum_length in order to swap them");
   std::swap_ranges(_mem, _mem + _maximum_length, other._mem);

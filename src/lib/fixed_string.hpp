@@ -60,7 +60,7 @@ class FixedString {
   friend void swap(FixedString lhs, FixedString rhs);
 
   // Swap two FixedStrings by exchanging the underlying memory's content
-  void swap(FixedString other);
+  void swap(FixedString& other);
 
  protected:
   char* const _mem;
