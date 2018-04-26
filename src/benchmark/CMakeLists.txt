@@ -4,7 +4,6 @@ add_executable(
     benchmark_basic_fixture.cpp
     benchmark_basic_fixture.hpp
     benchmark_main.cpp
-    # benchmark_template.cpp
     operators/aggregate_benchmark.cpp
     operators/difference_benchmark.cpp
     operators/join_benchmark.cpp
