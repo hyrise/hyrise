@@ -537,13 +537,11 @@ const char* const tpch_query_10 =
  *
  * Changes:
  *  1. Random values are hardcoded
- *  2. Variable binding in alias not supported by SQLParser
- *    a. removed it
  */
-// const char* const tpch_query_13 =
-//    R"(SELECT c_count, count(*) as custdist FROM (SELECT c_custkey, count(o_orderkey) AS c_count
-//      FROM customer left outer join orders on c_custkey = o_custkey AND o_comment not like '%special%request%'
-//      GROUP BY c_custkey) as c_orders GROUP BY c_count ORDER BY custdist DESC, c_count DESC;)";
+const char* const tpch_query_13 =
+    R"(SELECT c_count, count(*) as custdist FROM (SELECT c_custkey, count(o_orderkey) as c_count
+      FROM customer left outer join orders on c_custkey = o_custkey AND o_comment not like '%special%request%'
+      GROUP BY c_custkey) as c_orders GROUP BY c_count ORDER BY custdist DESC, c_count DESC;)";
 
 /**
  * TPC-H 14
@@ -912,7 +910,7 @@ const std::map<size_t, const char*> tpch_queries = {
     {10, tpch_query_10},
     /* {11, tpch_query_11}, Enable once we support Subselects in Having clause */
     /* {12, tpch_query_12}, Enable once we support IN */
-    /* {13, tpch_query_13}, Enable once we support nested expressions in Join Condition */
+    {13, tpch_query_13},
     /* {14, tpch_query_14}, Enable once we support Case */
     /* {15, tpch_query_15}, Enable once we support Subselects in WHERE condition */
     /* {16, tpch_query_16}, Enable once we support Subselects in WHERE condition */

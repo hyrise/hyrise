@@ -18,6 +18,7 @@ namespace opossum {
 // We need these classes to perform the dynamic cast into a templated ValueColumn
 class AbstractTypedColumnProcessor {
  public:
+  virtual ~AbstractTypedColumnProcessor() = default;
   virtual void resize_vector(std::shared_ptr<BaseColumn> column, size_t new_size) = 0;
   virtual void copy_data(std::shared_ptr<const BaseColumn> source, size_t source_start_index,
                          std::shared_ptr<BaseColumn> target, size_t target_start_index, size_t length) = 0;

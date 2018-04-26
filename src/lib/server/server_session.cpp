@@ -34,12 +34,14 @@ using opossum::then_operator::then;
 
 template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::start() {
-  return (_perform_session_startup() >> then >> [=]() { return _handle_client_requests(); })
+  // We need a copy of this session to outlive the async operation
+  auto self = this->shared_from_this();
+  return (_perform_session_startup() >> then >> [this, self]() { return _handle_client_requests(); })
       // Use .then instead of >> then >> to be able to handle exceptions
-      .then(boost::launch::sync, [](boost::future<void> f) {
+      .then(boost::launch::sync, [self](boost::future<void> f) {
         try {
           f.get();
-        } catch (std::exception& e) {
+        } catch (const std::exception& e) {
           std::cerr << e.what() << std::endl;
         }
       });
@@ -54,7 +56,10 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_perform_sessio
     }
 
     return _connection->receive_startup_packet_body(startup_packet_length) >> then >>
-           [=]() { return _connection->send_auth(); } >> then >> [=]() { return _connection->send_ready_for_query(); };
+           [=]() { return _connection->send_auth(); } >> then >>
+           // We need to provide some random server version > 9 here, because some clients require it.
+           [=]() { return _connection->send_parameter_status("server_version", "9.5"); } >> then >>
+           [=]() { return _connection->send_ready_for_query(); };
   };
 }
 
@@ -104,18 +109,22 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_client_
     }
   };
 
-  return _connection->receive_packet_header() >> then >> [=](RequestHeader request) {
-    if (request.message_type == NetworkMessageType::TerminateCommand) return boost::make_ready_future();
+  // We need a copy of this session to outlive the async operation
+  auto self = this->shared_from_this();
+  return _connection->receive_packet_header() >> then >> [this, self, process_command](RequestHeader request) {
+    if (request.message_type == NetworkMessageType::TerminateCommand) {
+      return boost::make_ready_future();
+    }
 
     // Handle any exceptions that have occurred during process_command. For this, we need to call .then() explicitly,
-    // because >> then >> does not handle execptions
+    // because >> then >> does not handle exceptions
     return process_command(request)
                .then(boost::launch::sync,
-                     [=](boost::future<void> result) {
+                     [this, self](boost::future<void> result) {
                        try {
                          result.get();
                          return boost::make_ready_future();
-                       } catch (std::exception& e) {
+                       } catch (const std::exception& e) {
                          // Abort the current transaction
                          if (_transaction) {
                            _transaction->rollback();
@@ -123,12 +132,12 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_client_
                          }
 
                          return _connection->send_error(e.what()) >> then >>
-                                [=]() { return _connection->send_ready_for_query(); };
+                                [this, self]() { return _connection->send_ready_for_query(); };
                        }
                      })
                .unwrap()
            // Proceed with the next incoming message
-           >> then >> boost::bind(&ServerSessionImpl<TConnection, TTaskRunner>::_handle_client_requests, this);
+           >> then >> [this, self]() { return _handle_client_requests(); };
   };
 }
 
@@ -162,7 +171,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_send_simple_qu
 }
 
 template <typename TConnection, typename TTaskRunner>
-boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_query_command(const std::string sql) {
+boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_query_command(const std::string& sql) {
   auto create_sql_pipeline = [=]() {
     return _task_runner->dispatch_server_task(std::make_shared<CreatePipelineTask>(sql, true));
   };
@@ -184,7 +193,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_
 
   return create_sql_pipeline() >> then >> [=](std::unique_ptr<CreatePipelineResult> result) {
     if (result->load_table.has_value()) {
-      return load_table_file(result->load_table.value().first, result->load_table.value().second);
+      return load_table_file(result->load_table->first, result->load_table->second);
     } else {
       return execute_sql_pipeline(result->sql_pipeline) >> then >>
              [=](std::shared_ptr<SQLPipeline> sql_pipeline) { return _send_simple_query_response(sql_pipeline); };
@@ -288,8 +297,11 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_execute
              return _connection->send_status_message(NetworkMessageType::NoDataResponse) >> then >>
                     []() { return uint64_t(0); };
 
-           return QueryResponseBuilder::send_query_response(
-               [=](const std::vector<std::string>& row) { return _connection->send_data_row(row); }, *result_table);
+           const auto row_description = QueryResponseBuilder::build_row_description(result_table);
+           return _connection->send_row_description(row_description) >> then >> [=]() {
+             return QueryResponseBuilder::send_query_response(
+                 [=](const std::vector<std::string>& row) { return _connection->send_data_row(row); }, *result_table);
+           };
          } >>
          then >> [=](uint64_t row_count) {
            auto complete_message = QueryResponseBuilder::build_command_complete_message(statement_type, row_count);

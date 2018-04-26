@@ -61,8 +61,7 @@ class SQLPipeline : public Noncopyable {
   // Returns the TransactionContext that was passed to the SQLPipelineStatement, or nullptr if none was passed in.
   std::shared_ptr<TransactionContext> transaction_context() const;
 
-  // This returns the SQLPipelineStatement that caused this pipeline to throw an error.
-  // If there is no failed statement, this fails
+  // This returns the SQLPipelineStatement that aborted the transaction, if any
   std::shared_ptr<SQLPipelineStatement> failed_pipeline_statement() const;
 
   // Returns the number of SQLPipelineStatements present in this pipeline

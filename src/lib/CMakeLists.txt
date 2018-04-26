@@ -423,7 +423,7 @@ set(
     ${TBB_LIBRARY}
 )
 
-if (NOT DISABLE_JIT_SUPPORT)
+if (${ENABLE_JIT_SUPPORT})
     include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
     set(JIT_EMBEDDED_SOURCES
         # Files listed here will be embedded into the binary as LLVM-IR
@@ -455,7 +455,7 @@ if (NOT DISABLE_JIT_SUPPORT)
     set(LIBRARIES ${LIBRARIES} ${LLVM_LIBRARY})
 endif()
 
-if (NOT DISABLE_NUMA_SUPPORT AND ${NUMA_FOUND})
+if (${ENABLE_NUMA_SUPPORT})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
 endif()
 
