@@ -3,6 +3,7 @@
 #include "abstract_column_expression.hpp"
 
 #include "types.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 
@@ -12,6 +13,7 @@ class PQPColumnExpression : public AbstractColumnExpression {
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
+  ExpressionDataTypeVariant data_type() const override;
 
   ColumnID column_id;
 

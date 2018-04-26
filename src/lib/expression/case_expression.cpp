@@ -29,6 +29,10 @@ std::string CaseExpression::as_column_name() const {
   return stream.str();
 }
 
+ExpressionDataTypeVariant CaseExpression::data_type() const {
+
+}
+
 std::shared_ptr<AbstractExpression> CaseExpression::deep_copy() const {
   return std::make_shared<CaseExpression>(when(), then(), else_());
 }

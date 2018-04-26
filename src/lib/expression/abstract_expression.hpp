@@ -5,7 +5,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "all_type_variant.hpp"
 #include "types.hpp"
+#include "expression_data_type.hpp"
 
 namespace opossum {
 
@@ -25,6 +27,8 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   virtual std::shared_ptr<AbstractExpression> deep_copy() const = 0;
 
   virtual std::string as_column_name() const = 0;
+
+  virtual ExpressionDataTypeVariant data_type() const = 0;
 
   size_t hash() const;
 

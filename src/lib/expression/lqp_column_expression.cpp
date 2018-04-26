@@ -1,8 +1,11 @@
 #include "lqp_column_expression.hpp"
 
-#include "utils/assert.hpp"
-
 #include "boost/functional/hash.hpp"
+
+#include "logical_query_plan/stored_table_node.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -15,6 +18,14 @@ std::shared_ptr<AbstractExpression> LQPColumnExpression::deep_copy() const {
 
 std::string LQPColumnExpression::as_column_name() const {
   Fail("TODO");
+}
+
+ExpressionDataTypeVariant LQPColumnExpression::data_type() const {
+  const auto stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(column_reference.original_node());
+  Assert(stored_table_node, "Expected column reference to point to StoredTableNode");
+
+  const auto table = StorageManager::get().get_table(stored_table_node->table_name);
+  return table->column_data_type(column_reference.original_column_id());
 }
 
 bool LQPColumnExpression::_shallow_equals(const AbstractExpression& expression) const {

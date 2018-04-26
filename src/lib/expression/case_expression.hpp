@@ -21,8 +21,8 @@ class CaseExpression : public AbstractExpression {
   const std::shared_ptr<AbstractExpression>& else_() const;
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
-
   std::string as_column_name() const override;
+  ExpressionDataTypeVariant data_type() const override;
 };
 
 }  // namespace opossum

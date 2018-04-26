@@ -10,6 +10,8 @@ class AbstractPredicateExpression : public AbstractExpression {
   AbstractPredicateExpression(const PredicateCondition predicate_condition,
                               const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
 
+  ExpressionDataTypeVariant data_type() const override;
+
   PredicateCondition predicate_condition;
 
  protected:

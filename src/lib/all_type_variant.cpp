@@ -4,6 +4,14 @@
 
 namespace opossum {
 
+bool is_integral_data_type(const DataType data_type) {
+  return data_type == DataType::Long || data_type == DataType::Int;
+}
+
+bool is_floating_point_data_type(const DataType data_type){
+  return data_type == DataType::Float || data_type == DataType::Double;
+}
+
 bool all_type_variant_near(const AllTypeVariant& lhs, const AllTypeVariant& rhs, double max_abs_error) {
   // TODO(anybody) no checks for float vs double etc yet.
 

@@ -90,6 +90,9 @@ using AllTypeVariant = detail::AllTypeVariant;
 // Function to check if AllTypeVariant is null
 inline bool variant_is_null(const AllTypeVariant& variant) { return (variant.which() == 0); }
 
+bool is_integral_data_type(const DataType data_type);
+bool is_floating_point_data_type(const DataType data_type);
+
 /**
  * Notes:
  *   – Use this instead of AllTypeVariant{}, AllTypeVariant{NullValue{}}, NullValue{}, etc.

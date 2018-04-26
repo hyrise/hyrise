@@ -3,8 +3,8 @@ set(
     SOURCES
 #    all_parameter_variant.cpp
 #    all_parameter_variant.hpp
-#    all_type_variant.cpp
-#    all_type_variant.hpp
+    all_type_variant.cpp
+    all_type_variant.hpp
 #    concurrency/commit_context.cpp
 #    concurrency/commit_context.hpp
 #    concurrency/transaction_context.cpp
@@ -16,34 +16,37 @@ set(
     expression/abstract_column_expression.hpp
     expression/abstract_expression.cpp
     expression/abstract_expression.hpp
-    expression/abstract_predicate_expression.cpp
-    expression/abstract_predicate_expression.hpp
+#    expression/abstract_predicate_expression.cpp
+#    expression/abstract_predicate_expression.hpp
 #    expression/aggregate_expression.cpp
 #    expression/aggregate_expression.hpp
     expression/arithmetic_expression.cpp
     expression/arithmetic_expression.hpp
-    expression/array_expression.cpp
-    expression/array_expression.hpp
-    expression/between_expression.cpp
-    expression/between_expression.hpp
+#    expression/array_expression.cpp
+#    expression/array_expression.hpp
+#    expression/between_expression.cpp
+#    expression/between_expression.hpp
 #    expression/binary_predicate_expression.cpp
 #    expression/binary_predicate_expression.hpp
 #    expression/case_expression.cpp
 #    expression/case_expression.hpp
-    expression/exists_expression.cpp
-    expression/exists_expression.hpp
-    expression/expression_evaluator.ipp
+#    expression/exists_expression.cpp
+#    expression/exists_expression.hpp
+    expression/expression_evaluator.cpp
+    expression/expression_evaluator.inl
     expression/expression_evaluator.hpp
     expression/expression_utils.cpp
     expression/expression_utils.hpp
+    expression/expression_data_type.cpp
+    expression/expression_data_type.hpp
 #    expression/external_expression.cpp
 #    expression/external_expression.hpp
 #    expression/function_expression.cpp
 #    expression/function_expression.hpp
-    expression/in_expression.cpp
-    expression/in_expression.hpp
-    expression/is_null_expression.cpp
-    expression/is_null_expression.hpp
+#    expression/in_expression.cpp
+#    expression/in_expression.hpp
+#    expression/is_null_expression.cpp
+#    expression/is_null_expression.hpp
 #    expression/logical_expression.cpp
 #    expression/logical_expression.hpp
     expression/lqp_column_expression.cpp

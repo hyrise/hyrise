@@ -26,6 +26,15 @@ std::string AggregateExpression::as_column_name() const {
   return stream.str();
 }
 
+ExpressionDataTypeVariant AggregateExpression::data_type() const {
+  // TODO(anybody) picking Long, but Int might be sufficient. How do we handle this?
+  if (aggregate_type == AggregateType::CountDistinct || aggregate_type == AggregateType::Count) return DataType::Long;
+
+  Assert(arguments.size() == 1, "Expected AggregateType to have one argument");
+
+  return arguments[0]->data_type();
+}
+
 bool AggregateExpression::_shallow_equals(const AbstractExpression& expression) const {
   return aggregate_type == static_cast<const AggregateExpression&>(expression).aggregate_type;
 }

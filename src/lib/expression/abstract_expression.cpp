@@ -3,6 +3,7 @@
 #include <queue>
 
 #include "boost/functional/hash.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 

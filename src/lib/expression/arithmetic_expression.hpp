@@ -21,10 +21,10 @@ class ArithmeticExpression : public AbstractExpression {
   const std::shared_ptr<AbstractExpression>& right_operand() const;
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
+  std::string as_column_name() const override;
+  ExpressionDataTypeVariant data_type() const override;
 
   ArithmeticOperator arithmetic_operator;
-
-  std::string as_column_name() const override;
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;

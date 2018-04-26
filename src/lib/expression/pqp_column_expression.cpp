@@ -14,6 +14,10 @@ std::string PQPColumnExpression::as_column_name() const {
   Fail("TODO");
 }
 
+ExpressionDataTypeVariant PQPColumnExpression::data_type() const {
+  Fail("Can't determine the data_type of a PQPColumnExpression, you need to do that yourself");
+}
+
 bool PQPColumnExpression::_shallow_equals(const AbstractExpression& expression) const {
   return column_id == static_cast<const PQPColumnExpression&>(expression).column_id;
 }
