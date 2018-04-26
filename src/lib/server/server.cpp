@@ -27,12 +27,14 @@ void Server::start_session(boost::system::error_code error) {
   if (!error) {
     auto connection = std::make_shared<ClientConnection>(std::move(_socket));
     auto task_runner = std::make_shared<TaskRunner>(_io_service);
-    auto session = std::make_unique<ServerSession>(connection, task_runner);
+    auto session = std::make_shared<ServerSession>(connection, task_runner);
     // Start the session and release it once it has terminated
-    session->start() >> then >> [session = std::move(session)]() mutable { session.reset(); };
+    session->start() >> then >> [=]() mutable { session.reset(); };
   }
 
   accept_next_connection();
 }
+
+uint16_t Server::get_port_number() { return _acceptor.local_endpoint().port(); }
 
 }  // namespace opossum

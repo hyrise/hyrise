@@ -60,6 +60,8 @@ class ServerSessionTest : public BaseTest {
     // (i.e. don't throw an exception)
     ON_CALL(*_connection, send_ssl_denied()).WillByDefault(Invoke([]() { return boost::make_ready_future(); }));
     ON_CALL(*_connection, send_auth()).WillByDefault(Invoke([]() { return boost::make_ready_future(); }));
+    ON_CALL(*_connection, send_parameter_status(_, _))
+        .WillByDefault(Invoke([](const std::string&, const std::string&) { return boost::make_ready_future(); }));
     ON_CALL(*_connection, send_ready_for_query()).WillByDefault(Invoke([]() { return boost::make_ready_future(); }));
     ON_CALL(*_connection, send_error(_))
         .WillByDefault(Invoke([](const std::string&) { return boost::make_ready_future(); }));
@@ -105,6 +107,7 @@ TEST_F(ServerSessionTest, SessionPerformsStartup) {
 
   // Expect that the session sends out an authentication response and an initial ReadyForQuery
   EXPECT_CALL(*_connection, send_auth());
+  EXPECT_CALL(*_connection, send_parameter_status(_, _));
   EXPECT_CALL(*_connection, send_ready_for_query());
 
   // Actually run the session: googlemock will record which Connection methods are called in which order
@@ -139,6 +142,7 @@ TEST_F(ServerSessionTest, SessionDeniesSslRequestDuringStartup) {
   EXPECT_CALL(*_connection, receive_startup_packet_body(_));
 
   EXPECT_CALL(*_connection, send_auth());
+  EXPECT_CALL(*_connection, send_parameter_status(_, _));
   EXPECT_CALL(*_connection, send_ready_for_query());
 
   _session->start().wait();
