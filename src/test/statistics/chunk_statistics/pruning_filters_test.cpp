@@ -3,13 +3,13 @@
 #include <utility>
 #include <vector>
 
-#include "../../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "utils/assert.hpp"
 
-#include "optimizer/chunk_statistics/min_max_filter.hpp"
-#include "optimizer/chunk_statistics/range_filter.hpp"
+#include "statistics/chunk_statistics/min_max_filter.hpp"
+#include "statistics/chunk_statistics/range_filter.hpp"
 #include "types.hpp"
 
 namespace opossum {

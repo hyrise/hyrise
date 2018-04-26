@@ -72,8 +72,6 @@ set(
     operators/update_test.cpp
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
-    optimizer/chunk_statistics/pruning_filters_test.cpp
-    optimizer/column_statistics_test.cpp
     optimizer/expression_test.cpp
     optimizer/join_ordering/join_graph_builder_test.cpp
     optimizer/join_ordering/join_graph_test.cpp
@@ -88,8 +86,12 @@ set(
     optimizer/strategy/predicate_pushdown_rule_test.cpp
     optimizer/strategy/strategy_base_test.cpp
     optimizer/strategy/strategy_base_test.hpp
-    optimizer/table_statistics_join_test.cpp
-    optimizer/table_statistics_test.cpp
+    statistics/table_statistics_join_test.cpp
+    statistics/table_statistics_test.cpp
+    statistics/chunk_statistics/pruning_filters_test.cpp
+    statistics/column_statistics_test.cpp
+    statistics/generate_table_statistics_test.cpp
+    statistics/statistics_import_export_test.cpp
     scheduler/scheduler_test.cpp
     server/mock_connection.hpp
     server/mock_task_runner.hpp
