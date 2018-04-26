@@ -143,7 +143,7 @@ Cost CostModelRuntime::get_reference_operator_cost(const std::shared_ptr<Abstrac
 }
 
 Cost CostModelRuntime::_cost_model_impl(const OperatorType operator_type,
-                                       const AbstractCostFeatureProxy& feature_proxy) const {
+                                        const AbstractCostFeatureProxy& feature_proxy) const {
   switch (operator_type) {
     case OperatorType::TableScan: {
       const auto predicate_condition =
@@ -189,7 +189,7 @@ Cost CostModelRuntime::_cost_model_impl(const OperatorType operator_type,
 }
 
 Cost CostModelRuntime::_predict_cost(const CostFeatureWeights& feature_weights,
-                                    const AbstractCostFeatureProxy& feature_proxy) const {
+                                     const AbstractCostFeatureProxy& feature_proxy) const {
   auto cost = Cost{0};
 
   for (const auto& feature_and_weight : feature_weights) {
