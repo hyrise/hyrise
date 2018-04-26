@@ -13,6 +13,7 @@ class ExternalExpression : public AbstractExpression {
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
+  ExpressionDataTypeVariant data_type() const override;
 
   std::shared_ptr<AbstractExpression> referenced_expression() const;
 };

@@ -12,13 +12,14 @@
 namespace opossum {
 
 class AbstractExpression;
+class BaseColumn;
 class ArithmeticExpression;
 class PredicateExpression;
 class Chunk;
 
 class ExpressionEvaluator final {
  public:
-  template<typename T> using NullableValues = std::pair<std::vector<bool>, std::vector<T>>;
+  template<typename T> using NullableValues = std::pair<std::vector<T>, std::vector<bool>>;
   template<typename T> using NonNullableValues = std::vector<T>;
 
   template<typename T> using ExpressionResult = boost::variant<
@@ -28,9 +29,9 @@ class ExpressionEvaluator final {
     NullValue
   >;
 
-  explicit ExpressionEvaluator(const std::shared_ptr<Chunk>& chunk);
+  explicit ExpressionEvaluator(const std::shared_ptr<const Chunk>& chunk);
 
-  DataType get_expression_data_type(const AbstractExpression& expression) const;
+  std::shared_ptr<BaseColumn> evaluate_expression_to_column(const AbstractExpression& expression);
 
   template<typename T>
   ExpressionResult<T> evaluate_expression(const AbstractExpression& expression) const;
@@ -51,7 +52,7 @@ class ExpressionEvaluator final {
                                                                    const Functor &functor);
 
  private:
-  std::shared_ptr<Chunk> _chunk;
+  std::shared_ptr<const Chunk> _chunk;
 };
 
 }  // namespace opossum

@@ -4,20 +4,20 @@
 
 namespace opossum {
 
-enum class AggregateType {
+enum class AggregateFunction {
   Min, Max, Sum, Avg, Count, CountDistinct
 };
 
 class AggregateExpression : public AbstractExpression {
  public:
-  AggregateExpression(const AggregateType aggregate_type,
+  AggregateExpression(const AggregateFunction aggregate_function,
                       const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
   ExpressionDataTypeVariant data_type() const override;
 
-  AggregateType aggregate_type;
+  AggregateFunction aggregate_function;
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;

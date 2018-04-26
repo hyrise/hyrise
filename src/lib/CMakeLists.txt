@@ -5,12 +5,12 @@ set(
 #    all_parameter_variant.hpp
     all_type_variant.cpp
     all_type_variant.hpp
-#    concurrency/commit_context.cpp
-#    concurrency/commit_context.hpp
-#    concurrency/transaction_context.cpp
-#    concurrency/transaction_context.hpp
-#    concurrency/transaction_manager.cpp
-#    concurrency/transaction_manager.hpp
+    concurrency/commit_context.cpp
+    concurrency/commit_context.hpp
+    concurrency/transaction_context.cpp
+    concurrency/transaction_context.hpp
+    concurrency/transaction_manager.cpp
+    concurrency/transaction_manager.hpp
     constant_mappings.cpp
     constant_mappings.hpp
     expression/abstract_column_expression.hpp
@@ -18,8 +18,8 @@ set(
     expression/abstract_expression.hpp
 #    expression/abstract_predicate_expression.cpp
 #    expression/abstract_predicate_expression.hpp
-#    expression/aggregate_expression.cpp
-#    expression/aggregate_expression.hpp
+    expression/aggregate_expression.cpp
+    expression/aggregate_expression.hpp
     expression/arithmetic_expression.cpp
     expression/arithmetic_expression.hpp
 #    expression/array_expression.cpp
@@ -39,8 +39,8 @@ set(
     expression/expression_utils.hpp
     expression/expression_data_type.cpp
     expression/expression_data_type.hpp
-#    expression/external_expression.cpp
-#    expression/external_expression.hpp
+    expression/external_expression.cpp
+    expression/external_expression.hpp
 #    expression/function_expression.cpp
 #    expression/function_expression.hpp
 #    expression/in_expression.cpp
@@ -126,14 +126,14 @@ set(
 #    null_value.hpp
 #    operators/abstract_join_operator.cpp
 #    operators/abstract_join_operator.hpp
-#    operators/abstract_operator.cpp
-#    operators/abstract_operator.hpp
-#    operators/abstract_read_only_operator.cpp
-#    operators/abstract_read_only_operator.hpp
-#    operators/abstract_read_write_operator.cpp
-#    operators/abstract_read_write_operator.hpp
-#    operators/aggregate.cpp
-#    operators/aggregate.hpp
+    operators/abstract_operator.cpp
+    operators/abstract_operator.hpp
+    operators/abstract_read_only_operator.cpp
+    operators/abstract_read_only_operator.hpp
+    operators/abstract_read_write_operator.cpp
+    operators/abstract_read_write_operator.hpp
+    operators/aggregate.cpp
+    operators/aggregate.hpp
 #    operators/delete.cpp
 #    operators/delete.hpp
 #    operators/difference.cpp
@@ -142,8 +142,8 @@ set(
 #    operators/export_binary.hpp
 #    operators/export_csv.cpp
 #    operators/export_csv.hpp
-#    operators/get_table.cpp
-#    operators/get_table.hpp
+    operators/get_table.cpp
+    operators/get_table.hpp
 #    operators/import_binary.cpp
 #    operators/import_binary.hpp
 #    operators/import_csv.cpp
@@ -180,8 +180,8 @@ set(
 #    operators/print.hpp
 #    operators/product.cpp
 #    operators/product.hpp
-#    operators/projection.cpp
-#    operators/projection.hpp
+    operators/projection.cpp
+    operators/projection.hpp
 #    operators/sort.cpp
 #    operators/sort.hpp
 #    operators/table_scan/base_single_column_table_scan_impl.cpp
@@ -197,8 +197,8 @@ set(
 #    operators/table_scan/like_table_scan_impl.hpp
 #    operators/table_scan/single_column_table_scan_impl.cpp
 #    operators/table_scan/single_column_table_scan_impl.hpp
-#    operators/table_wrapper.cpp
-#    operators/table_wrapper.hpp
+    operators/table_wrapper.cpp
+    operators/table_wrapper.hpp
 #    operators/union_all.cpp
 #    operators/union_all.hpp
 #    operators/union_positions.cpp
@@ -255,26 +255,26 @@ set(
 #    planviz/sql_query_plan_visualizer.cpp
 #    planviz/sql_query_plan_visualizer.hpp
 #    resolve_type.hpp
-#    scheduler/abstract_scheduler.cpp
-#    scheduler/abstract_scheduler.hpp
-#    scheduler/abstract_task.cpp
-#    scheduler/abstract_task.hpp
-#    scheduler/current_scheduler.cpp
-#    scheduler/current_scheduler.hpp
-#    scheduler/job_task.cpp
-#    scheduler/job_task.hpp
-#    scheduler/node_queue_scheduler.cpp
-#    scheduler/node_queue_scheduler.hpp
-#    scheduler/operator_task.cpp
-#    scheduler/operator_task.hpp
-#    scheduler/processing_unit.cpp
-#    scheduler/processing_unit.hpp
-#    scheduler/task_queue.cpp
-#    scheduler/task_queue.hpp
-#    scheduler/topology.cpp
-#    scheduler/topology.hpp
-#    scheduler/worker.cpp
-#    scheduler/worker.hpp
+    scheduler/abstract_scheduler.cpp
+    scheduler/abstract_scheduler.hpp
+    scheduler/abstract_task.cpp
+    scheduler/abstract_task.hpp
+    scheduler/current_scheduler.cpp
+    scheduler/current_scheduler.hpp
+    scheduler/job_task.cpp
+    scheduler/job_task.hpp
+    scheduler/node_queue_scheduler.cpp
+    scheduler/node_queue_scheduler.hpp
+    scheduler/operator_task.cpp
+    scheduler/operator_task.hpp
+    scheduler/processing_unit.cpp
+    scheduler/processing_unit.hpp
+    scheduler/task_queue.cpp
+    scheduler/task_queue.hpp
+    scheduler/topology.cpp
+    scheduler/topology.hpp
+    scheduler/worker.cpp
+    scheduler/worker.hpp
 #    server/client_connection.cpp
 #    server/client_connection.hpp
 #    server/postgres_wire_handler.cpp
@@ -460,10 +460,10 @@ set(
 #    utils/copyable_atomic.hpp
 #    utils/cuckoo_hashtable.hpp
 #    utils/enum_constant.hpp
-#    utils/format_bytes.cpp
-#    utils/format_bytes.hpp
-#    utils/format_duration.cpp
-#    utils/format_duration.hpp
+    utils/format_bytes.cpp
+    utils/format_bytes.hpp
+    utils/format_duration.cpp
+    utils/format_duration.hpp
     utils/load_table.cpp
     utils/load_table.hpp
 #    utils/murmur_hash.cpp

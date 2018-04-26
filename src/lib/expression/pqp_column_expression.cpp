@@ -4,10 +4,10 @@
 
 namespace opossum {
 
-PQPColumnExpression::PQPColumnExpression(const ColumnID column_id): column_id(column_id) {}
+PQPColumnExpression::PQPColumnExpression(const ColumnID column_id, const DataType data_type): column_id(column_id), data_type_(data_type) {}
 
 std::shared_ptr<AbstractExpression> PQPColumnExpression::deep_copy() const {
-  return std::make_shared<PQPColumnExpression>(column_id);
+  return std::make_shared<PQPColumnExpression>(column_id, data_type_);
 }
 
 std::string PQPColumnExpression::as_column_name() const {
@@ -15,7 +15,7 @@ std::string PQPColumnExpression::as_column_name() const {
 }
 
 ExpressionDataTypeVariant PQPColumnExpression::data_type() const {
-  Fail("Can't determine the data_type of a PQPColumnExpression, you need to do that yourself");
+  return data_type_;
 }
 
 bool PQPColumnExpression::_shallow_equals(const AbstractExpression& expression) const {

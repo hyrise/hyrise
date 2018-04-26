@@ -19,6 +19,10 @@ std::string ExternalExpression::as_column_name() const{
   return referenced_expression()->as_column_name();
 }
 
+ExpressionDataTypeVariant ExternalExpression::data_type() const {
+  return referenced_expression()->data_type();
+}
+
 std::shared_ptr<AbstractExpression> ExternalExpression::referenced_expression() const {
   return arguments[0];
 }

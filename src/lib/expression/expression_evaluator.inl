@@ -48,8 +48,8 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_binary_ex
 const AbstractExpression& left_operand,
 const AbstractExpression& right_operand,
 const OperatorFunctor &functor) const {
-  const auto left_data_type = get_expression_data_type(left_operand);
-  const auto right_data_type = get_expression_data_type(right_operand);
+  const auto left_data_type = boost::get<DataType>(left_operand.data_type());
+  const auto right_data_type = boost::get<DataType>(right_operand.data_type());
 
   ExpressionResult<T> result;
 
