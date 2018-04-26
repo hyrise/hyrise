@@ -41,6 +41,8 @@ class OperatorsTableScanLikeTest : public BaseTest, public ::testing::WithParamI
 
     // load and compress string table
     if (::testing::UnitTest::GetInstance()->current_test_info()->value_param()) {
+      // Not all tests are parameterized - only those using compressed columns are. We have to ask the testing
+      // framework if a parameter is set. Otherwise, GetParam would fail.
       auto test_table_string_compressed = load_table("src/test/tables/int_string_like.tbl", 5);
       ChunkEncoder::encode_chunks(test_table_string_compressed, {ChunkID{0}}, GetParam());
 
