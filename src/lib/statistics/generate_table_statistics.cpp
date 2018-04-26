@@ -2,7 +2,7 @@
 
 #include <unordered_set>
 
-#include "abstract_column_statistics.hpp"
+#include "base_column_statistics.hpp"
 #include "column_statistics.hpp"
 #include "generate_column_statistics.hpp"
 #include "resolve_type.hpp"
@@ -13,7 +13,7 @@
 namespace opossum {
 
 TableStatistics generate_table_statistics(const Table& table) {
-  std::vector<std::shared_ptr<const AbstractColumnStatistics>> column_statistics;
+  std::vector<std::shared_ptr<const BaseColumnStatistics>> column_statistics;
   column_statistics.reserve(table.column_count());
 
   for (ColumnID column_id{0}; column_id < table.column_count(); ++column_id) {

@@ -33,7 +33,7 @@ class PredicateReorderingTest : public StrategyBaseTest {
     StorageManager::get().add_table("a", load_table("src/test/tables/int_int_int.tbl", Chunk::MAX_SIZE));
     _rule = std::make_shared<PredicateReorderingRule>();
 
-    std::vector<std::shared_ptr<const AbstractColumnStatistics>> column_statistics(
+    std::vector<std::shared_ptr<const BaseColumnStatistics>> column_statistics(
         {std::make_shared<ColumnStatistics<int32_t>>(0.0f, 20, 10, 100),
          std::make_shared<ColumnStatistics<int32_t>>(0.0f, 5, 50, 60),
          std::make_shared<ColumnStatistics<int32_t>>(0.0f, 2, 110, 1100)});
@@ -173,7 +173,7 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
    */
   auto column_statistics = std::make_shared<ColumnStatistics<int32_t>>(ColumnID{0}, 100.0f, 0.0f, 100.0f);
   auto table_statistics = std::make_shared<TableStatistics>(
-      TableType::Data, 100, std::vector<std::shared_ptr<const AbstractColumnStatistics>>{column_statistics});
+      TableType::Data, 100, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics});
 
   auto table_0 = MockNode::make(table_statistics);
   auto table_1 = MockNode::make(table_statistics);
@@ -224,7 +224,7 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
    */
   auto column_statistics = std::make_shared<ColumnStatistics<int32_t>>(ColumnID{0}, 100.0f, 0.0f, 100.0f);
   auto table_statistics = std::make_shared<TableStatistics>(
-      TableType::Data, 100, std::vector<std::shared_ptr<const AbstractColumnStatistics>>{column_statistics});
+      TableType::Data, 100, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics});
 
   auto table_node = MockNode::make(table_statistics);
   auto union_node = UnionNode::make(UnionMode::Positions);

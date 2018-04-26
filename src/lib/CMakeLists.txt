@@ -229,8 +229,8 @@ set(
     server/use_boost_future.hpp
     server/use_boost_future_impl.hpp
     server/use_boost_future_legacy_impl.hpp
-    statistics/abstract_column_statistics.cpp
-    statistics/abstract_column_statistics.hpp
+    statistics/base_column_statistics.cpp
+    statistics/base_column_statistics.hpp
     statistics/column_statistics.cpp
     statistics/column_statistics.cpp
     statistics/generate_table_statistics.cpp

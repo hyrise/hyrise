@@ -37,7 +37,7 @@ class IndexScanRuleTest : public StrategyBaseTest {
   }
 
   std::shared_ptr<TableStatistics> generate_mock_statistics(float row_count = 0.0f) {
-    std::vector<std::shared_ptr<const AbstractColumnStatistics>> column_statistics;
+    std::vector<std::shared_ptr<const BaseColumnStatistics>> column_statistics;
     column_statistics.emplace_back(std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10, 0, 20));
     column_statistics.emplace_back(std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10, 0, 20));
     column_statistics.emplace_back(std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10, 0, 20'000));

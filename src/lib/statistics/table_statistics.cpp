@@ -2,21 +2,21 @@
 
 #include <sstream>
 
-#include "abstract_column_statistics.hpp"
+#include "base_column_statistics.hpp"
 #include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
 
 namespace opossum {
 
 TableStatistics::TableStatistics(const TableType table_type, const float row_count,
-                                 const std::vector<std::shared_ptr<const AbstractColumnStatistics>>& column_statistics)
+                                 const std::vector<std::shared_ptr<const BaseColumnStatistics>>& column_statistics)
     : _table_type(table_type), _row_count(row_count), _column_statistics(column_statistics) {}
 
 TableType TableStatistics::table_type() const { return _table_type; }
 
 float TableStatistics::row_count() const { return _row_count; }
 
-const std::vector<std::shared_ptr<const AbstractColumnStatistics>>& TableStatistics::column_statistics() const {
+const std::vector<std::shared_ptr<const BaseColumnStatistics>>& TableStatistics::column_statistics() const {
   return _column_statistics;
 }
 
@@ -187,7 +187,7 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
   ColumnID new_right_column_id{static_cast<ColumnID::base_type>(_column_statistics.size() + column_ids.second)};
 
   auto calculate_added_null_values_for_outer_join = [&](const float row_count,
-                                                        const std::shared_ptr<const AbstractColumnStatistics> col_stats,
+                                                        const std::shared_ptr<const BaseColumnStatistics> col_stats,
                                                         const float predicate_column_distinct_count) {
     float null_value_no = col_stats->null_value_ratio() * row_count;
     if (col_stats->distinct_count() != 0.f) {
@@ -197,8 +197,8 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
   };
 
   auto adjust_null_value_ratio_for_outer_join = [&](
-      const std::vector<std::shared_ptr<const AbstractColumnStatistics>>::iterator col_begin,
-      const std::vector<std::shared_ptr<const AbstractColumnStatistics>>::iterator col_end, const float row_count,
+      const std::vector<std::shared_ptr<const BaseColumnStatistics>>::iterator col_begin,
+      const std::vector<std::shared_ptr<const BaseColumnStatistics>>::iterator col_end, const float row_count,
       const float null_value_no, const float new_row_count) {
     if (null_value_no == 0) {
       return;
@@ -211,7 +211,7 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
       float right_null_value_ratio = (column_null_value_no + null_value_no) / new_row_count;
 
       // We just created these column statistics and are therefore qualified to modify them
-      std::const_pointer_cast<AbstractColumnStatistics>(*col_itr)->set_null_value_ratio(right_null_value_ratio);
+      std::const_pointer_cast<BaseColumnStatistics>(*col_itr)->set_null_value_ratio(right_null_value_ratio);
     }
   };
 

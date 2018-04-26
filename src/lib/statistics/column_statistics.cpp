@@ -11,7 +11,7 @@ namespace opossum {
 template <typename ColumnDataType>
 ColumnStatistics<ColumnDataType>::ColumnStatistics(const float null_value_ratio, const float distinct_count,
                                                    const ColumnDataType min, const ColumnDataType max)
-    : AbstractColumnStatistics(data_type_from_type<ColumnDataType>(), null_value_ratio, distinct_count),
+    : BaseColumnStatistics(data_type_from_type<ColumnDataType>(), null_value_ratio, distinct_count),
       _min(min),
       _max(max) {
   Assert(null_value_ratio >= 0.0f && null_value_ratio <= 1.0f, "NullValueRatio out of range");
@@ -28,12 +28,12 @@ ColumnDataType ColumnStatistics<ColumnDataType>::max() const {
 }
 
 template <typename ColumnDataType>
-std::shared_ptr<AbstractColumnStatistics> ColumnStatistics<ColumnDataType>::clone() const {
+std::shared_ptr<BaseColumnStatistics> ColumnStatistics<ColumnDataType>::clone() const {
   return std::make_shared<ColumnStatistics<ColumnDataType>>(null_value_ratio(), distinct_count(), _min, _max);
 }
 
 template <typename ColumnDataType>
-ColumnValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_value(
+FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_value(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& value2) const {
   const auto value = type_cast<ColumnDataType>(variant_value);
@@ -88,7 +88,7 @@ ColumnValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_va
  * Specialization for strings as they cannot be used in subtractions.
  */
 template <>
-ColumnValueEstimate ColumnStatistics<std::string>::estimate_predicate_with_value(
+FilterByValueEstimate ColumnStatistics<std::string>::estimate_predicate_with_value(
     const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
     const std::optional<AllTypeVariant>& value2) const {
   // if column has no distinct values, it can only have null values which cannot be selected with this predicate
@@ -110,7 +110,7 @@ ColumnValueEstimate ColumnStatistics<std::string>::estimate_predicate_with_value
 }
 
 template <typename ColumnDataType>
-ColumnValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_value_placeholder(
+FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_value_placeholder(
     const PredicateCondition predicate_condition, const ValuePlaceholder& value,
     const std::optional<AllTypeVariant>& value2) const {
   switch (predicate_condition) {
@@ -155,9 +155,9 @@ ColumnValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_va
 }
 
 template <typename ColumnDataType>
-ColumnColumnEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_column(
+FilterByColumnComparisonEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_column(
     const PredicateCondition predicate_condition,
-    const AbstractColumnStatistics& abstract_right_column_statistics) const {
+    const BaseColumnStatistics& abstract_right_column_statistics) const {
   /**
    * Calculate expected selectivity by looking at what ratio of values of both columns are in the overlapping value
    * range of both columns. 
@@ -272,7 +272,7 @@ ColumnColumnEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_c
   // used for <, <=, > and >= predicate_conditions
   auto estimate_selectivity_for_open_ended_operators = [&](float values_below_ratio, float values_above_ratio,
                                                            ColumnDataType new_min, ColumnDataType new_max,
-                                                           bool add_equal_values) -> ColumnColumnEstimate {
+                                                           bool add_equal_values) -> FilterByColumnComparisonEstimate {
     // selectivity calculated by adding up ratios that values are below, in or above overlapping range
     float selectivity = 0.f;
     // ratio of values on left hand side which are smaller than overlapping range
@@ -346,9 +346,9 @@ ColumnColumnEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_c
  * Specialization for strings as they cannot be used in subtractions.
  */
 template <>
-ColumnColumnEstimate ColumnStatistics<std::string>::estimate_predicate_with_column(
+FilterByColumnComparisonEstimate ColumnStatistics<std::string>::estimate_predicate_with_column(
     const PredicateCondition predicate_condition,
-    const AbstractColumnStatistics& abstract_right_column_statistics) const {
+    const BaseColumnStatistics& abstract_right_column_statistics) const {
   // TODO(anybody) implement special case for strings
   Assert(_data_type == abstract_right_column_statistics.data_type(), "Cannot compare columns of different type");
 
@@ -400,7 +400,7 @@ float ColumnStatistics<std::string>::estimate_range_selectivity(const std::strin
 }
 
 template <typename ColumnDataType>
-ColumnValueEstimate ColumnStatistics<ColumnDataType>::estimate_range(const ColumnDataType minimum,
+FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_range(const ColumnDataType minimum,
                                                                      const ColumnDataType maximum) const {
   // NOTE: minimum can be greater than maximum (e.g. a predicate >= 2 on a column with only values of 1)
   // new minimum/maximum of table cannot be smaller/larger than the current minimum/maximum
@@ -420,7 +420,7 @@ ColumnValueEstimate ColumnStatistics<ColumnDataType>::estimate_range(const Colum
 }
 
 template <typename ColumnDataType>
-ColumnValueEstimate ColumnStatistics<ColumnDataType>::estimate_equals_with_value(const ColumnDataType value) const {
+FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_equals_with_value(const ColumnDataType value) const {
   DebugAssert(distinct_count() > 0, "Distinct count has to be greater zero");
   float new_distinct_count = 1.f;
   if (value < _min || value > _max) {
@@ -431,7 +431,7 @@ ColumnValueEstimate ColumnStatistics<ColumnDataType>::estimate_equals_with_value
 }
 
 template <typename ColumnDataType>
-ColumnValueEstimate ColumnStatistics<ColumnDataType>::estimate_not_equals_with_value(const ColumnDataType value) const {
+FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_not_equals_with_value(const ColumnDataType value) const {
   DebugAssert(distinct_count() > 0, "Distinct count has to be greater zero");
   if (value < _min || value > _max) {
     return {non_null_value_ratio(), without_null_values()};

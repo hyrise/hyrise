@@ -9,7 +9,7 @@
 #include "gtest/gtest.h"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "statistics/abstract_column_statistics.hpp"
+#include "statistics/base_column_statistics.hpp"
 #include "statistics/generate_table_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 

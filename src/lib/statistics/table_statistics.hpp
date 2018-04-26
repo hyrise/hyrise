@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-class AbstractColumnStatistics;
+class BaseColumnStatistics;
 
 /**
  * Statistics about a table, with algorithms to perform cardinality estimations.
@@ -24,7 +24,7 @@ class TableStatistics final {
   static constexpr auto DEFAULT_DISJUNCTION_SELECTIVITY = 0.2f;
 
   TableStatistics(const TableType table_type, const float row_count,
-                  const std::vector<std::shared_ptr<const AbstractColumnStatistics>>& column_statistics);
+                  const std::vector<std::shared_ptr<const BaseColumnStatistics>>& column_statistics);
   TableStatistics(const TableStatistics& table_statistics) = default;
 
   /**
@@ -33,7 +33,7 @@ class TableStatistics final {
    */
   TableType table_type() const;
   float row_count() const;
-  const std::vector<std::shared_ptr<const AbstractColumnStatistics>>& column_statistics() const;
+  const std::vector<std::shared_ptr<const BaseColumnStatistics>>& column_statistics() const;
   /** @} */
 
   /**
@@ -57,7 +57,7 @@ class TableStatistics final {
  private:
   TableType _table_type;
   float _row_count;
-  std::vector<std::shared_ptr<const AbstractColumnStatistics>> _column_statistics;
+  std::vector<std::shared_ptr<const BaseColumnStatistics>> _column_statistics;
 };
 
 }  // namespace opossum

@@ -2,7 +2,7 @@
 
 #include <unordered_set>
 
-#include "abstract_column_statistics.hpp"
+#include "base_column_statistics.hpp"
 #include "column_statistics.hpp"
 #include "resolve_type.hpp"
 #include "storage/create_iterable_from_column.hpp"
@@ -14,7 +14,7 @@ namespace opossum {
  * Generate the statistics of a single column. Used by generate_table_statistics()
  */
 template <typename ColumnDataType>
-std::shared_ptr<AbstractColumnStatistics> generate_column_statistics(const Table& table, const ColumnID column_id) {
+std::shared_ptr<BaseColumnStatistics> generate_column_statistics(const Table& table, const ColumnID column_id) {
   std::unordered_set<ColumnDataType> distinct_set;
 
   auto null_value_count = size_t{0};
@@ -52,7 +52,7 @@ std::shared_ptr<AbstractColumnStatistics> generate_column_statistics(const Table
 }
 
 template <>
-std::shared_ptr<AbstractColumnStatistics> generate_column_statistics<std::string>(const Table& table,
+std::shared_ptr<BaseColumnStatistics> generate_column_statistics<std::string>(const Table& table,
                                                                                   const ColumnID column_id);
 
 }  // namespace opossum

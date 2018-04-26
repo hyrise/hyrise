@@ -7,7 +7,7 @@ namespace opossum {
  * uses.
  */
 template <>
-std::shared_ptr<AbstractColumnStatistics> generate_column_statistics<std::string>(const Table& table,
+std::shared_ptr<BaseColumnStatistics> generate_column_statistics<std::string>(const Table& table,
                                                                                   const ColumnID column_id) {
   std::unordered_set<std::string> distinct_set;
 
