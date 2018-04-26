@@ -4,21 +4,29 @@ else()
     add_definitions(-DIS_DEBUG=0)
 endif()
 
-option(DISABLE_JIT_SUPPORT "Build without JIT support" OFF)
+# Provide ENABLE_JIT_SUPPORT option and automatically disable JIT if compiler is not Clang
+option(ENABLE_JIT_SUPPORT "Build with JIT support" ON)
 if (NOT ${LLVM_FOUND} OR NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
-    set(DISABLE_JIT_SUPPORT ON)
+    set(ENABLE_JIT_SUPPORT OFF)
 endif()
 
-if (NOT DISABLE_JIT_SUPPORT)
+if (${ENABLE_JIT_SUPPORT})
     add_definitions(-DHYRISE_JIT_SUPPORT=1)
+    MESSAGE(STATUS "Building with JIT support")
 else()
     add_definitions(-DHYRISE_JIT_SUPPORT=0)
     MESSAGE(STATUS "Building without JIT support")
 endif()
 
-option(DISABLE_NUMA_SUPPORT "Build without NUMA support" OFF)
-if (NOT DISABLE_NUMA_SUPPORT AND ${NUMA_FOUND})
+# Provide ENABLE_NUMA_SUPPORT option and automatically disable NUMA if libNUMA was not found
+option(ENABLE_NUMA_SUPPORT "Build with NUMA support" ON)
+if (NOT ${NUMA_FOUND})
+    set(ENABLE_NUMA_SUPPORT OFF)
+endif()
+
+if (${ENABLE_NUMA_SUPPORT})
     add_definitions(-DHYRISE_NUMA_SUPPORT=1)
+    MESSAGE(STATUS "Building with NUMA support")
 else()
     add_definitions(-DHYRISE_NUMA_SUPPORT=0)
     MESSAGE(STATUS "Building without NUMA support")
@@ -28,8 +36,17 @@ endif()
 # third_party stuff
 option(ENABLE_COVERAGE "Set to ON to build Hyrise with enabled coverage checking. Default: OFF" OFF)
 if (${ENABLE_COVERAGE})
-    add_compile_options(-O0 -fprofile-arcs -ftest-coverage)
-    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} --coverage")
+    add_compile_options(-O0 -fno-inline -fno-inline-small-functions -fno-default-inline)
+
+    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+        add_compile_options(-fprofile-arcs -ftest-coverage)
+        set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} --coverage")
+    elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+        add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
+        set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
+    else()
+        message(FATAL_ERROR "Don't know how to run coverage on your compiler (${CMAKE_CXX_COMPILER_ID}).")
+    endif()
 endif()
 
 # This will be used by the DebugAssert macro to output
@@ -59,11 +76,11 @@ include_directories(
     ${Boost_INCLUDE_DIRS}
 )
 
-if (NOT DISABLE_JIT_SUPPORT)
+if (${ENABLE_JIT_SUPPORT})
     include_directories(${LLVM_INCLUDE_DIR})
 endif()
 
-if (NOT DISABLE_NUMA_SUPPORT AND ${NUMA_FOUND})
+if (${ENABLE_NUMA_SUPPORT})
     include_directories(${PROJECT_SOURCE_DIR}/third_party/pgasus/include)
     include_directories(${PROJECT_BINARY_DIR}/third_party/pgasus/src)
 endif()

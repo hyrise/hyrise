@@ -18,6 +18,6 @@ struct TableColumnDefinition final {
 
 using TableColumnDefinitions = std::vector<TableColumnDefinition>;
 
-TableColumnDefinitions concatenate(const TableColumnDefinitions& lhs, const TableColumnDefinitions& rhs);
+TableColumnDefinitions concatenated(const TableColumnDefinitions& lhs, const TableColumnDefinitions& rhs);
 
 }  // namespace opossum

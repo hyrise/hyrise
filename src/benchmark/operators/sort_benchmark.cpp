@@ -8,27 +8,15 @@
 
 namespace opossum {
 
-BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_Sort_ChunkSizeOut)(benchmark::State& state) {
-  const auto chunk_size_out = static_cast<ChunkID>(state.range(1));
+BENCHMARK_F(BenchmarkBasicFixture, BM_Sort)(benchmark::State& state) {
   clear_cache();
 
-  auto warm_up =
-      std::make_shared<Sort>(_table_wrapper_a, ColumnID{0} /* "a" */, OrderByMode::Ascending, chunk_size_out);
+  auto warm_up = std::make_shared<Sort>(_table_wrapper_a, ColumnID{0} /* "a" */, OrderByMode::Ascending);
   warm_up->execute();
   while (state.KeepRunning()) {
-    auto sort = std::make_shared<Sort>(_table_wrapper_a, ColumnID{0} /* "a" */, OrderByMode::Ascending, chunk_size_out);
+    auto sort = std::make_shared<Sort>(_table_wrapper_a, ColumnID{0} /* "a" */, OrderByMode::Ascending);
     sort->execute();
   }
 }
-
-static void ChunkSizeOut(benchmark::internal::Benchmark* b) {
-  for (ChunkID chunk_size_in : {ChunkID(Chunk::MAX_SIZE), ChunkID(10000), ChunkID(100000)}) {
-    for (ChunkID chunk_size_out : {ChunkID(Chunk::MAX_SIZE), ChunkID(10000), ChunkID(100000)}) {
-      b->Args({static_cast<int>(chunk_size_in), static_cast<int>(chunk_size_out)});
-    }
-  }
-}
-
-BENCHMARK_REGISTER_F(BenchmarkBasicFixture, BM_Sort_ChunkSizeOut)->Apply(ChunkSizeOut);
 
 }  // namespace opossum

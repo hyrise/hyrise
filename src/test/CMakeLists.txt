@@ -96,6 +96,7 @@ set(
     server/mock_task_runner.hpp
     server/postgres_wire_handler_test.cpp
     server/server_session_test.cpp
+    server/server_test_runner.cpp
     sql/sql_basic_cache_test.cpp
     sql/hsql_expression_translator_test.cpp
     sql/sqlite_testrunner/sqlite_testrunner.cpp
@@ -135,6 +136,7 @@ set(
     testing_assert.hpp
     utils/cuckoo_hashtable_test.cpp
     utils/format_bytes_test.cpp
+    utils/format_duration_test.cpp
     utils/numa_memory_resource_test.cpp
     gtest_main.cpp
 )
@@ -142,7 +144,6 @@ set(
 set (
     SYSTEM_TEST_SOURCES
     ${SHARED_SOURCES}
-    tpc/tpcc_ref_test.cpp
     tpc/tpch_test.cpp
     tpc/tpch_db_generator_test.cpp
     gtest_main.cpp
@@ -154,6 +155,7 @@ set(
     LIBRARIES
     gtest
     gmock
+    pqxx
     sqlite3
     ${FILESYSTEM_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
@@ -172,4 +174,3 @@ target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
 target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES})
-add_dependencies(hyriseSystemTest tpccTableGenerator)

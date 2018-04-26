@@ -6,12 +6,8 @@ set(
 
     tpcc/constants.hpp
     tpcc/defines.hpp
-    tpcc/helper.cpp
     tpcc/helper.hpp
-    tpcc/new_order.cpp
-    tpcc/new_order.hpp
-    tpcc/order_status.cpp
-    tpcc/order_status.hpp
+    tpcc/helper.cpp
     tpcc/tpcc_random_generator.hpp
     tpcc/tpcc_table_generator.cpp
     tpcc/tpcc_table_generator.hpp
@@ -20,6 +16,9 @@ set(
     tpch/tpch_queries.hpp
     tpch/tpch_db_generator.cpp
     tpch/tpch_db_generator.hpp
+
+    table_generator.cpp
+    table_generator.hpp
 )
 
 

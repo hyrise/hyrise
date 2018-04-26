@@ -28,7 +28,8 @@ NUMAPlacementManager& NUMAPlacementManager::get() {
   return instance;
 }
 
-NUMAPlacementManager::NUMAPlacementManager(const std::shared_ptr<Topology> topology) : _topology(topology) {
+NUMAPlacementManager::NUMAPlacementManager(const std::shared_ptr<Topology> topology)
+    : _topology(topology), _current_node_id(0) {
   // The NUMAPlacementManager must exist before any table is stored in the storage manager. Otherwise, we might migrate
   // parts of that table. On termination of the program, the NUMAPlacementManager would be destroyed first, taking the
   // memory sources with it. This means that the destructors of those tables would fail.
@@ -51,6 +52,12 @@ void NUMAPlacementManager::set_options(const NUMAPlacementManager::Options optio
   _options = options;
   _collector_thread->set_loop_sleep_time(_options.counter_history_interval);
   _migration_thread->set_loop_sleep_time(_options.migration_interval);
+}
+
+boost::container::pmr::memory_resource* NUMAPlacementManager::get_next_memory_resource() {
+  const auto node_id = _current_node_id;
+  _current_node_id = (_current_node_id + 1) % _topology->nodes().size();
+  return get_memory_resource(node_id);
 }
 
 boost::container::pmr::memory_resource* NUMAPlacementManager::get_memory_resource(int node_id) {

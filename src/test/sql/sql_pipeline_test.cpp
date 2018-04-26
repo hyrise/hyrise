@@ -409,54 +409,6 @@ TEST_F(SQLPipelineTest, GetTimes) {
   EXPECT_GT(sql_pipeline.execution_time_microseconds().count(), 0);
 }
 
-TEST_F(SQLPipelineTest, GetFailedPipelineUnoptimizedLQPs) {
-  auto sql_pipeline = SQLPipelineBuilder{_fail_query}.create_pipeline();
-
-  try {
-    sql_pipeline.get_unoptimized_logical_plans();
-    // Fail if this did not throw an exception
-    FAIL();
-  } catch (const std::exception&) {
-    EXPECT_NE(sql_pipeline.failed_pipeline_statement(), nullptr);
-  }
-}
-
-TEST_F(SQLPipelineTest, GetFailedPipelineOptimizedLQPs) {
-  auto sql_pipeline = SQLPipelineBuilder{_fail_query}.create_pipeline();
-
-  try {
-    sql_pipeline.get_optimized_logical_plans();
-    // Fail if this did not throw an exception
-    FAIL();
-  } catch (const std::exception&) {
-    EXPECT_NE(sql_pipeline.failed_pipeline_statement(), nullptr);
-  }
-}
-
-TEST_F(SQLPipelineTest, GetFailedPipelineGueryPlans) {
-  auto sql_pipeline = SQLPipelineBuilder{_fail_query}.create_pipeline();
-
-  try {
-    sql_pipeline.get_query_plans();
-    // Fail if this did not throw an exception
-    FAIL();
-  } catch (const std::exception&) {
-    EXPECT_NE(sql_pipeline.failed_pipeline_statement(), nullptr);
-  }
-}
-
-TEST_F(SQLPipelineTest, GetFailedPipelineResultTable) {
-  auto sql_pipeline = SQLPipelineBuilder{_fail_query}.create_pipeline();
-
-  try {
-    sql_pipeline.get_result_table();
-    // Fail if this did not throw an exception
-    FAIL();
-  } catch (const std::exception&) {
-    EXPECT_NE(sql_pipeline.failed_pipeline_statement(), nullptr);
-  }
-}
-
 TEST_F(SQLPipelineTest, RequiresExecutionVariations) {
   EXPECT_FALSE(SQLPipelineBuilder{_select_query_a}.create_pipeline().requires_execution());
   EXPECT_FALSE(SQLPipelineBuilder{_join_query}.create_pipeline().requires_execution());

@@ -12,7 +12,7 @@ Cost CostModelLogical::get_reference_operator_cost(const std::shared_ptr<Abstrac
 }
 
 Cost CostModelLogical::_cost_model_impl(const OperatorType operator_type,
-                                      const AbstractCostFeatureProxy& feature_proxy) const {
+                                        const AbstractCostFeatureProxy& feature_proxy) const {
   switch (operator_type) {
     case OperatorType::JoinHash:
       return feature_proxy.extract_feature(CostFeature::LeftInputRowCount).scalar() +
