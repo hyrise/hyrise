@@ -228,9 +228,7 @@ TEST_F(OperatorsInsertTest, InsertNullIntoNonNull) {
   auto context = TransactionManager::get().new_transaction_context();
   ins->set_transaction_context(context);
   EXPECT_THROW(ins->execute(), std::logic_error);
-  std::cout << "start rollback" << std::endl;
   context->rollback();
-  std::cout << "end rollback" << std::endl;
 }
 
 TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {

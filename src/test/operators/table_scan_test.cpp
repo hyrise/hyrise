@@ -320,6 +320,7 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedCompressedColumn) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanPartiallyCompressed) {
+  // FrameOfReference can only deal with int values, so we skip tables that include non-ints
   if (_encoding_type == EncodingType::FrameOfReference) return;
 
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_seq_filtered.tbl", 2);
@@ -332,6 +333,7 @@ TEST_P(OperatorsTableScanTest, ScanPartiallyCompressed) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanWeirdPosList) {
+  // FrameOfReference can only deal with int values, so we skip tables that include non-ints
   if (_encoding_type == EncodingType::FrameOfReference) return;
 
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_seq_filtered_onlyodd.tbl", 2);
@@ -412,6 +414,7 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedIntValueColumnWithFloatColumnWith
 }
 
 TEST_P(OperatorsTableScanTest, ScanOnIntCompressedColumnWithFloatColumnWithNullValues) {
+  // FrameOfReference can only deal with int values, so we skip tables that include non-ints
   if (_encoding_type == EncodingType::FrameOfReference) return;
 
   auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
@@ -429,6 +432,7 @@ TEST_P(OperatorsTableScanTest, ScanOnIntCompressedColumnWithFloatColumnWithNullV
 }
 
 TEST_P(OperatorsTableScanTest, ScanOnReferencedIntCompressedColumnWithFloatColumnWithNullValues) {
+  // FrameOfReference can only deal with int values, so we skip tables that include non-ints
   if (_encoding_type == EncodingType::FrameOfReference) return;
 
   auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
@@ -480,6 +484,7 @@ TEST_P(OperatorsTableScanTest, ScanWithEmptyInput) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanOnWideDictionaryColumn) {
+  // FrameOfReference can only deal with int values, so we skip tables that include non-ints
   if (_encoding_type == EncodingType::FrameOfReference) return;
 
   // 2**8 + 1 values require a data type of 16bit.
@@ -518,6 +523,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueColumn) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedColumn) {
+  // FrameOfReference can only deal with int values, so we skip tables that include non-ints
   if (_encoding_type == EncodingType::FrameOfReference) return;
 
   auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
@@ -571,6 +577,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumn) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedCompressedColumn) {
+  // FrameOfReference can only deal with int values, so we skip tables that include non-ints
   if (_encoding_type == EncodingType::FrameOfReference) return;
 
   auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
@@ -599,6 +606,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedValueCo
 }
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedCompressedColumn) {
+  // FrameOfReference can only deal with int values, so we skip tables that include non-ints
   if (_encoding_type == EncodingType::FrameOfReference) return;
 
   auto table = create_referencing_table_w_null_row_id(true);

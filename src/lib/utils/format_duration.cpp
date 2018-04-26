@@ -10,13 +10,13 @@ std::string format_duration(uint64_t total_nanoseconds) {
   const auto minutes = nanoseconds_remaining / 60'000'000'000;
   nanoseconds_remaining -= minutes * 60'000'000'000;
 
-  const auto seconds = (nanoseconds_remaining / 1'000'000'000) % 1000;
+  const auto seconds = nanoseconds_remaining / 1'000'000'000;
   nanoseconds_remaining -= seconds * 1'000'000'000;
 
-  const auto milliseconds = (nanoseconds_remaining / 1'000'000) % 1000;
+  const auto milliseconds = nanoseconds_remaining / 1'000'000;
   nanoseconds_remaining -= milliseconds * 1'000'000;
 
-  const auto microseconds = (nanoseconds_remaining / 1'000) % 1000;
+  const auto microseconds = nanoseconds_remaining / 1'000;
   nanoseconds_remaining -= microseconds * 1'000;
 
   const auto nanoseconds = nanoseconds_remaining;
