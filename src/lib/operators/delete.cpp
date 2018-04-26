@@ -70,9 +70,7 @@ void Delete::_finish_commit() {
 
   const auto table_statistics = _table->table_statistics();
   if (table_statistics) {
-    // Hackyhacky const cast. We're not changing the table, technically, just its statistics.
-    // This updates the TableStatistics row count by creating and setting new TableStatistics in the Table.
-    std::const_pointer_cast<Table>(_table)->set_table_statistics(std::make_shared<TableStatistics>(
+    _table->set_table_statistics(std::make_shared<TableStatistics>(
         table_statistics->table_type(), table_statistics->row_count() - num_rows_deleted,
         table_statistics->column_statistics()));
   }

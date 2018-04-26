@@ -1,5 +1,7 @@
 #include "client_connection.hpp"
 
+#include <boost/asio.hpp>
+
 #include "postgres_wire_handler.hpp"
 #include "then_operator.hpp"
 #include "use_boost_future.hpp"
@@ -75,6 +77,13 @@ boost::future<void> ClientConnection::send_auth() {
   auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::AuthenticationRequest);
   PostgresWireHandler::write_value(*output_packet, htonl(0u));
 
+  return _send_bytes_async(output_packet) >> then >> ignore_sent_bytes;
+}
+
+boost::future<void> ClientConnection::send_parameter_status(const std::string& key, const std::string& value) {
+  auto output_packet = PostgresWireHandler::new_output_packet(NetworkMessageType::ParameterStatus);
+  PostgresWireHandler::write_string(*output_packet, key);
+  PostgresWireHandler::write_string(*output_packet, value);
   return _send_bytes_async(output_packet) >> then >> ignore_sent_bytes;
 }
 
@@ -212,8 +221,10 @@ boost::future<InputPacket> ClientConnection::_receive_bytes_async(size_t size) {
   auto result = std::make_shared<InputPacket>();
   result->data.resize(size);
 
+  // We need a copy of this client connection to outlive the async operation
+  auto self = shared_from_this();
   return _socket.async_read_some(boost::asio::buffer(result->data, size), boost::asio::use_boost_future) >> then >>
-         [=](uint64_t received_size) {
+         [self, result, size](uint64_t received_size) {
            // If this assertion should fail, we will end up in either the error handler for the current command or
            // the entire session. The connection may be closed but the server will keep running either way.
            Assert(received_size == size, "Client sent less data than expected.");

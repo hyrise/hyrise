@@ -20,8 +20,6 @@ add_executable(
     operators/table_scan_benchmark.cpp
     operators/union_all_benchmark.cpp
     statistics/generate_table_statistics_benchmark.cpp
-    table_generator.cpp
-    table_generator.hpp
     tpch_db_generator_benchmark.cpp
 )
 

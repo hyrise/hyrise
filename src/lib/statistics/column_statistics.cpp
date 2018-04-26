@@ -80,7 +80,7 @@ ColumnValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_va
     }
 
     default:
-      Fail("Estimation not implemented for request PredicateCondition");
+      Fail("Estimation not implemented for requested PredicateCondition");
   }
 }
 

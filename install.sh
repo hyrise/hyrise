@@ -15,7 +15,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             # python2.7 is preinstalled on macOS
             # check, for each programme individually with brew, whether it is already installed
             # due to brew issues on MacOS after system upgrade
-            for formula in boost cmake gcc clang-format@3.8 gcovr tbb pkg-config readline ncurses sqlite3 parallel; do
+            for formula in boost cmake gcc clang-format@3.8 gcovr tbb pkg-config readline ncurses sqlite3 parallel libpq; do
                 # if brew formula is installed
                 if brew ls --versions $formula > /dev/null; then
                     continue
@@ -88,7 +88,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 fi
 
                 boostall=$(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ')
-                sudo apt-get install --no-install-recommends -y clang-$requiredclang clang-format-3.8 gcovr python2.7 gcc-${requiredgccmajor} g++-${requiredgccmajor} llvm libnuma-dev libnuma1 libtbb-dev build-essential cmake libreadline-dev libncurses5-dev libsqlite3-dev parallel $boostall &
+                sudo apt-get install --no-install-recommends -y clang-$requiredclang clang-format-3.8 gcovr python2.7 gcc-${requiredgccmajor} g++-${requiredgccmajor} llvm libnuma-dev libnuma1 libtbb-dev build-essential cmake libreadline-dev libncurses5-dev libsqlite3-dev parallel $boostall libpq-dev &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during installation."

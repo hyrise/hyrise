@@ -59,7 +59,7 @@ class AbstractColumnStatistics {
       const std::optional<AllTypeVariant>& value2 = std::nullopt) const = 0;
 
   /**
-   * Estimate a Column-ValuePlacehoder Predicate, e.g. "a > ?"
+   * Estimate a Column-ValuePlaceholder Predicate, e.g. "a > ?"
    * Since the value of the ValuePlaceholder (naturally) isn't known, has to resort to magic values.
    */
   virtual ColumnValueEstimate estimate_predicate_with_value_placeholder(

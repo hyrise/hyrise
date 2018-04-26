@@ -31,16 +31,6 @@ std::shared_ptr<TransactionContext> TransactionManager::new_transaction_context(
   return std::make_shared<TransactionContext>(_next_transaction_id++, _last_commit_id);
 }
 
-void TransactionManager::run_transaction(const std::function<void(std::shared_ptr<TransactionContext>)>& fn) {
-  auto transaction_context = new_transaction_context();
-
-  fn(transaction_context);
-
-  if (transaction_context->aborted()) return;
-
-  transaction_context->commit();
-}
-
 /**
  * Logic of the lock-free algorithm
  *
