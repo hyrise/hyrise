@@ -1,4 +1,4 @@
-#include "cost_model_naive.hpp"
+#include "cost_model_logical.hpp"
 
 #include "abstract_cost_feature_proxy.hpp"
 #include "operators/abstract_operator.hpp"

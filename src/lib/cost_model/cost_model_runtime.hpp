@@ -9,7 +9,7 @@
 namespace opossum {
 
 /**
- * CostModelLinear has different models for different kind of TableScans.
+ * CostModelRuntime has different models for different kind of TableScans.
  */
 enum class CostModelRuntimeTableScanType {
   ColumnValueNumeric,
@@ -20,7 +20,7 @@ enum class CostModelRuntimeTableScanType {
 };
 
 /**
- * Weights of the CostModelLinear for a particular build type (release, debug)
+ * Weights of the CostModelRuntime for a particular build type (release, debug)
  */
 struct CostModelRuntimeConfig final {
   std::map<CostModelRuntimeTableScanType, CostFeatureWeights> table_scan_models;
@@ -29,7 +29,7 @@ struct CostModelRuntimeConfig final {
 
 /**
  * Experimental Cost Model that tries to predict the actual runtime in microseconds of an operator. Experiments have
- * shown it to perform only a little better than the much simpler "CostModelNaive"
+ * shown it to perform only a little better than the much simpler "CostModelLogical"
  *
  * - Currently only support JoinHash, TableScan, UnionPosition and Product, i.e., the most essential operators for
  *      JoinPlans
@@ -43,7 +43,7 @@ class CostModelRuntime : public AbstractCostModel {
   static CostModelRuntimeConfig create_release_build_config();
 
   /**
-   * @return a CostModelLinear calibrated on the current build type (debug, release)
+   * @return a CostModelRuntime calibrated on the current build type (debug, release)
    */
   static CostModelRuntimeConfig create_current_build_type_config();
 
