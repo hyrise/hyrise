@@ -36,7 +36,7 @@ endif()
 # third_party stuff
 option(ENABLE_COVERAGE "Set to ON to build Hyrise with enabled coverage checking. Default: OFF" OFF)
 if (${ENABLE_COVERAGE})
-    add_compile_options(-O0)
+    add_compile_options(-O0 -fno-inline -fno-inline-small-functions -fno-default-inline)
 
     if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         add_compile_options(-fprofile-arcs -ftest-coverage)

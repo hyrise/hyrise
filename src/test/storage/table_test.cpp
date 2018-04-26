@@ -174,12 +174,15 @@ TEST_F(StorageTableTest, MemoryUsageEstimation) {
    * memory usage estimations
    */
 
-  const auto empty_memory_usage = t->estimate_memory_usage();
+  auto mvcc_table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
 
-  t->append({4, "Hello"});
-  t->append({5, "Hello"});
+  const auto empty_memory_usage = mvcc_table->estimate_memory_usage();
 
-  EXPECT_GT(t->estimate_memory_usage(), empty_memory_usage + 2 * (sizeof(int) + sizeof(std::string)));
+  mvcc_table->append({4, "Hello"});
+  mvcc_table->append({5, "Hello"});
+
+  EXPECT_GT(mvcc_table->estimate_memory_usage(), empty_memory_usage + 2 * (sizeof(int) + sizeof(std::string)) +
+                                                     sizeof(TransactionID) + 2 * sizeof(CommitID));
 }
 
 }  // namespace opossum

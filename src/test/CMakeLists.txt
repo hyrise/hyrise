@@ -135,6 +135,7 @@ set(
     testing_assert.hpp
     utils/cuckoo_hashtable_test.cpp
     utils/format_bytes_test.cpp
+    utils/format_duration_test.cpp
     utils/numa_memory_resource_test.cpp
     gtest_main.cpp
 )
