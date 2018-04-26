@@ -5,8 +5,8 @@
 #include <ostream>
 #include <string>
 
-#include "base_column_statistics.hpp"
 #include "all_type_variant.hpp"
+#include "base_column_statistics.hpp"
 
 namespace opossum {
 
@@ -41,8 +41,7 @@ class ColumnStatistics : public BaseColumnStatistics {
       const std::optional<AllTypeVariant>& value2 = std::nullopt) const override;
 
   FilterByColumnComparisonEstimate estimate_predicate_with_column(
-      const PredicateCondition predicate_condition,
-      const BaseColumnStatistics& right_column_statistics) const override;
+      const PredicateCondition predicate_condition, const BaseColumnStatistics& right_column_statistics) const override;
 
   std::string description() const override;
   /** @} */

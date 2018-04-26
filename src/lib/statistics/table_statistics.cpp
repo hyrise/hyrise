@@ -2,9 +2,9 @@
 
 #include <sstream>
 
-#include "base_column_statistics.hpp"
 #include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
+#include "base_column_statistics.hpp"
 
 namespace opossum {
 

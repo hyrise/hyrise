@@ -70,9 +70,9 @@ void Delete::_finish_commit() {
 
   const auto table_statistics = _table->table_statistics();
   if (table_statistics) {
-    _table->set_table_statistics(std::make_shared<TableStatistics>(
-        table_statistics->table_type(), table_statistics->row_count() - num_rows_deleted,
-        table_statistics->column_statistics()));
+    _table->set_table_statistics(std::make_shared<TableStatistics>(table_statistics->table_type(),
+                                                                   table_statistics->row_count() - num_rows_deleted,
+                                                                   table_statistics->column_statistics()));
   }
 }
 

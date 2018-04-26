@@ -156,8 +156,7 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
 
 template <typename ColumnDataType>
 FilterByColumnComparisonEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_column(
-    const PredicateCondition predicate_condition,
-    const BaseColumnStatistics& abstract_right_column_statistics) const {
+    const PredicateCondition predicate_condition, const BaseColumnStatistics& abstract_right_column_statistics) const {
   /**
    * Calculate expected selectivity by looking at what ratio of values of both columns are in the overlapping value
    * range of both columns. 
@@ -347,8 +346,7 @@ FilterByColumnComparisonEstimate ColumnStatistics<ColumnDataType>::estimate_pred
  */
 template <>
 FilterByColumnComparisonEstimate ColumnStatistics<std::string>::estimate_predicate_with_column(
-    const PredicateCondition predicate_condition,
-    const BaseColumnStatistics& abstract_right_column_statistics) const {
+    const PredicateCondition predicate_condition, const BaseColumnStatistics& abstract_right_column_statistics) const {
   // TODO(anybody) implement special case for strings
   Assert(_data_type == abstract_right_column_statistics.data_type(), "Cannot compare columns of different type");
 
@@ -401,7 +399,7 @@ float ColumnStatistics<std::string>::estimate_range_selectivity(const std::strin
 
 template <typename ColumnDataType>
 FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_range(const ColumnDataType minimum,
-                                                                     const ColumnDataType maximum) const {
+                                                                       const ColumnDataType maximum) const {
   // NOTE: minimum can be greater than maximum (e.g. a predicate >= 2 on a column with only values of 1)
   // new minimum/maximum of table cannot be smaller/larger than the current minimum/maximum
   const auto common_min = std::max(minimum, _min);
@@ -431,7 +429,8 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_equals_with_val
 }
 
 template <typename ColumnDataType>
-FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_not_equals_with_value(const ColumnDataType value) const {
+FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_not_equals_with_value(
+    const ColumnDataType value) const {
   DebugAssert(distinct_count() > 0, "Distinct count has to be greater zero");
   if (value < _min || value > _max) {
     return {non_null_value_ratio(), without_null_values()};
