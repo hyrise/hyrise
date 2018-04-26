@@ -12,13 +12,15 @@
 
 #include <queue>
 
+#include "llvm_extensions.hpp"
+
 namespace opossum {
 
 JitCodeSpecializer::JitCodeSpecializer()
     : _repository{JitRepository::get()}, _llvm_context{_repository.llvm_context()}, _compiler{_llvm_context} {}
 
 void JitCodeSpecializer::_specialize_function_impl(const std::string& root_function_name,
-                                                   const JitRuntimePointer::Ptr& runtime_this, const bool two_passes) {
+                                                   const std::shared_ptr<const JitRuntimePointer>& runtime_this, const bool two_passes) {
   SpecializationContext context;
   context.root_function_name = root_function_name;
   context.module = std::make_unique<llvm::Module>(root_function_name, *_llvm_context);
@@ -61,7 +63,7 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context, 
     if (call_site.isIndirectCall()) {
       const auto called_value = call_site.getCalledValue();
       const auto called_runtime_value =
-          std::dynamic_pointer_cast<const JitKnownRuntimePointer>(_get_runtime_value(context, called_value));
+          std::dynamic_pointer_cast<const JitKnownRuntimePointer>(GetRuntimePointerForValue(called_value, context));
       if (called_runtime_value && called_runtime_value->is_valid()) {
         const auto vtable_index =
             called_runtime_value->up().total_offset() / context.module->getDataLayout().getPointerSize();
@@ -89,7 +91,7 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context, 
     }
 
     auto arg = call_site.arg_begin();
-    auto y = arg->get()->getType()->isPointerTy() && !_get_runtime_value(context, arg->get())->is_valid() &&
+    auto y = arg->get()->getType()->isPointerTy() && !GetRuntimePointerForValue(arg->get(), context)->is_valid() &&
              function.getName().str() != "__clang_call_terminate";
 
     if (y && !two_passes) {
@@ -133,8 +135,8 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context, 
 
 void JitCodeSpecializer::_perform_load_substitution(SpecializationContext& context) const {
   _visit<llvm::LoadInst>(*context.root_function, [&](llvm::LoadInst& inst) {
-    const auto runtime_pointer =
-        std::dynamic_pointer_cast<const JitKnownRuntimePointer>(_get_runtime_value(context, inst.getPointerOperand()));
+    const auto runtime_pointer = std::dynamic_pointer_cast<const JitKnownRuntimePointer>(
+        GetRuntimePointerForValue(inst.getPointerOperand(), context));
     if (!runtime_pointer || !runtime_pointer->is_valid()) {
       return;
     }
@@ -263,55 +265,6 @@ llvm::GlobalVariable* JitCodeSpecializer::_clone_global_variable(SpecializationC
   }
 
   return cloned_global;
-}
-
-const JitRuntimePointer::Ptr& JitCodeSpecializer::_get_runtime_value(SpecializationContext& context,
-                                                                     const llvm::Value* value) const {
-  // try serving from cache
-  if (context.runtime_value_map.count(value)) {
-    return context.runtime_value_map[value];
-  }
-
-  if (const auto constant_expr = llvm::dyn_cast<llvm::ConstantExpr>(value)) {
-    if (constant_expr->getType()->isPointerTy()) {
-      switch (constant_expr->getOpcode()) {
-        case llvm::Instruction::IntToPtr:
-          if (const auto address = llvm::dyn_cast<llvm::ConstantInt>(constant_expr->getOperand(0))) {
-            context.runtime_value_map[value] =
-                std::make_shared<JitConstantRuntimePointer>(address->getValue().getLimitedValue());
-          }
-          break;
-        default:
-          break;
-      }
-    }
-  } else if (const auto load_inst = llvm::dyn_cast<llvm::LoadInst>(value)) {
-    if (load_inst->getType()->isPointerTy()) {
-      if (const auto base = std::dynamic_pointer_cast<const JitKnownRuntimePointer>(
-              _get_runtime_value(context, load_inst->getPointerOperand()))) {
-        context.runtime_value_map[value] = std::make_shared<JitDereferencedRuntimePointer>(base);
-      }
-    }
-  } else if (const auto gep_inst = llvm::dyn_cast<llvm::GetElementPtrInst>(value)) {
-    llvm::APInt offset(64, 0);
-    if (gep_inst->accumulateConstantOffset(context.module->getDataLayout(), offset)) {
-      if (const auto base = std::dynamic_pointer_cast<const JitKnownRuntimePointer>(
-              _get_runtime_value(context, gep_inst->getPointerOperand()))) {
-        context.runtime_value_map[value] = std::make_shared<JitOffsetRuntimePointer>(base, offset.getLimitedValue());
-      }
-    }
-  } else if (const auto bitcast_inst = llvm::dyn_cast<llvm::BitCastInst>(value)) {
-    if (const auto base = std::dynamic_pointer_cast<const JitKnownRuntimePointer>(
-            _get_runtime_value(context, bitcast_inst->getOperand(0)))) {
-      context.runtime_value_map[value] = std::make_shared<JitOffsetRuntimePointer>(base, 0L);
-    }
-  }
-
-  if (!context.runtime_value_map.count(value)) {
-    context.runtime_value_map[value] = std::make_shared<JitRuntimePointer>();
-  }
-
-  return context.runtime_value_map[value];
 }
 
 template <typename T, typename U>
