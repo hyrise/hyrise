@@ -11,7 +11,7 @@ namespace opossum {
  * List of features usable in AbstractCostModels.
  *
  * Using enum to provide the unified "AbstractCostFeatureProxy" to access the same features for LQPs and PQPs.
- * Also, this makes it easy to specify Cost formulas from data only, as e.g. CostModelLinear does.
+ * Also, this makes it easy to specify Cost formulas from data only, as e.g. CostModelRuntime does.
  */
 enum class CostFeature {
   /**

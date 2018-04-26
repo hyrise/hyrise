@@ -3,7 +3,7 @@
 #include <chrono>
 
 #include "abstract_cost_feature_proxy.hpp"
-#include "cost_model_linear.hpp"
+#include "cost_model_runtime.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/union_positions.hpp"
