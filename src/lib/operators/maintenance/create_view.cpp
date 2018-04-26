@@ -23,7 +23,7 @@ std::shared_ptr<AbstractOperator> CreateView::_on_recreate(
 std::shared_ptr<const Table> CreateView::_on_execute() {
   StorageManager::get().add_view(_view_name, _lqp);
 
-  return std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data);
+  return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int}}, TableType::Data);  // Dummy table
 }
 
 }  // namespace opossum

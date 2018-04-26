@@ -18,7 +18,6 @@ class GetTable : public AbstractReadOnlyOperator {
   const std::string description(DescriptionMode description_mode) const override;
 
   const std::string& table_name() const;
-  const std::vector<ChunkID>& excluded_chunk_ids() const;
 
   void set_excluded_chunk_ids(const std::vector<ChunkID>& excluded_chunk_ids);
 

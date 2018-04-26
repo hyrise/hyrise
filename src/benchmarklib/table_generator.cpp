@@ -81,9 +81,8 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
 
 std::shared_ptr<Table> TableGenerator::generate_table(
     const std::vector<ColumnDataDistribution>& column_data_distributions, const size_t num_rows,
-    const size_t chunk_size, std::optional<EncodingType> encoding_type, bool use_multiple_partitions) {
-
-  Assert(chunk_size != 0, "cannot generate table with chunk size 0")
+    const size_t chunk_size, std::optional<EncodingType> encoding_type, const bool numa_distribute_chunks) {
+  Assert(chunk_size != 0, "cannot generate table with chunk size 0");
   const auto num_columns = column_data_distributions.size();
   const auto num_chunks = std::ceil(static_cast<double>(num_rows) / static_cast<double>(chunk_size));
 
@@ -108,8 +107,26 @@ std::shared_ptr<Table> TableGenerator::generate_table(
 
   pseudorandom_engine.seed(rd());
 
+  // Base allocators if we don't use multiple NUMA nodes
+  auto allocator_ptr_base_column = PolymorphicAllocator<std::shared_ptr<BaseColumn>>{};
+  auto allocator_value_column_int = PolymorphicAllocator<ValueColumn<int>>{};
+  auto allocator_chunk = PolymorphicAllocator<Chunk>{};
+  auto allocator_int = PolymorphicAllocator<int>{};
+
   for (ChunkID chunk_index{0}; chunk_index < num_chunks; ++chunk_index) {
-    ChunkColumns columns;
+#if HYRISE_NUMA_SUPPORT
+    if (numa_distribute_chunks) {
+      auto memory_resource = NUMAPlacementManager::get().get_next_memory_resource();
+
+      // create allocators for the node
+      allocator_ptr_base_column = PolymorphicAllocator<std::shared_ptr<BaseColumn>>{memory_resource};
+      allocator_value_column_int = PolymorphicAllocator<ValueColumn<int>>{memory_resource};
+      allocator_chunk = PolymorphicAllocator<Chunk>{memory_resource};
+      allocator_int = PolymorphicAllocator<int>{memory_resource};
+    }
+#endif
+
+    auto columns = ChunkColumns(allocator_ptr_base_column);
     for (ChunkID column_index{0}; column_index < num_columns; ++column_index) {
       const auto& column_data_distribution = column_data_distributions[column_index];
 
@@ -156,26 +173,13 @@ std::shared_ptr<Table> TableGenerator::generate_table(
       }
 
       // add values to column in chunk, reset value vector
-      columns.push_back(std::make_shared<ValueColumn<int>>(std::move(value_vectors[column_index])));
+      columns.push_back(std::allocate_shared<ValueColumn<int>>(allocator_value_column_int,
+                                                               std::move(value_vectors[column_index]), allocator_int));
       value_vectors[column_index] = tbb::concurrent_vector<int>(chunk_size);
 
       // add full chunk to table
       if (column_index == num_columns - 1) {
-        std::optional<PolymorphicAllocator<Chunk>> allocator;
-
-#if HYRISE_NUMA_SUPPORT
-        if (use_multiple_partitions) {
-          // compute on which node to create the chunk
-          auto num_numa_nodes = NUMAPlacementManager::get().topology()->nodes().size();
-          auto current_node = chunk_index % num_numa_nodes;
-
-          // create an allocator for the node
-          allocator = std::optional<PolymorphicAllocator<Chunk>>{
-              PolymorphicAllocator<Chunk>{NUMAPlacementManager::get().get_memory_resource(current_node)}};
-        }
-#endif
-
-        table->append_chunk(columns, allocator);
+        table->append_chunk(columns, allocator_chunk);
       }
     }
   }
