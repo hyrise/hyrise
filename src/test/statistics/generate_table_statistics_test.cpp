@@ -3,8 +3,8 @@
 #include "statistics/column_statistics.hpp"
 #include "statistics/generate_table_statistics.hpp"
 #include "statistics/table_statistics.hpp"
-#include "utils/load_table.hpp"
 #include "statistics_test_utils.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 

@@ -139,5 +139,3 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
       GTEST_FAIL();                                              \
     }                                                            \
   }
-
-
