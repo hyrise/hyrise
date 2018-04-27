@@ -14,7 +14,7 @@ namespace opossum {
 class StatisticsImportExportTest : public ::testing::Test {};
 
 TEST_F(StatisticsImportExportTest, EndToEnd) {
-  std::vector<std::shared_ptr<const AbstractColumnStatistics>> original_column_statistics;
+  std::vector<std::shared_ptr<const BaseColumnStatistics>> original_column_statistics;
 
   original_column_statistics.emplace_back(std::make_shared<ColumnStatistics<int32_t>>(0.3f, 50.1f, 21, 100));
   original_column_statistics.emplace_back(std::make_shared<ColumnStatistics<int64_t>>(0.4f, 51.2f, 22, 101));

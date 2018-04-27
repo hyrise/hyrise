@@ -42,7 +42,7 @@ TableStatistics import_table_statistics(const nlohmann::json& json) {
   const auto column_statistics_jsons = json["column_statistics"];
   Assert(column_statistics_jsons.is_array(), "ColumnStatistics should be stored in an array");
 
-  std::vector<std::shared_ptr<const AbstractColumnStatistics>> column_statistics;
+  std::vector<std::shared_ptr<const BaseColumnStatistics>> column_statistics;
   column_statistics.reserve(column_statistics_jsons.size());
 
   for (const auto& column_statistics_json : column_statistics_jsons) {
@@ -52,14 +52,14 @@ TableStatistics import_table_statistics(const nlohmann::json& json) {
   return {table_type, row_count, column_statistics};
 }
 
-std::shared_ptr<AbstractColumnStatistics> import_column_statistics(const nlohmann::json& json) {
+std::shared_ptr<BaseColumnStatistics> import_column_statistics(const nlohmann::json& json) {
   const auto distinct_count = json["distinct_count"].get<float>();
   const auto null_value_ratio = json["null_value_ratio"].get<float>();
 
   const auto data_type_iter = data_type_to_string.right.find(json["data_type"].get<std::string>());
   Assert(data_type_iter != data_type_to_string.right.end(), "No such DataType");
 
-  std::shared_ptr<AbstractColumnStatistics> result_column_statistics;
+  std::shared_ptr<BaseColumnStatistics> result_column_statistics;
 
   resolve_data_type(data_type_iter->second, [&](const auto type) {
     using ColumnDataType = typename decltype(type)::type;
@@ -87,7 +87,7 @@ nlohmann::json export_table_statistics(const TableStatistics& table_statistics) 
   return table_statistics_json;
 }
 
-nlohmann::json export_column_statistics(const AbstractColumnStatistics& abstract_column_statistics) {
+nlohmann::json export_column_statistics(const BaseColumnStatistics& abstract_column_statistics) {
   nlohmann::json column_statistics_json;
   column_statistics_json["data_type"] = data_type_to_string.left.at(abstract_column_statistics.data_type());
   column_statistics_json["distinct_count"] = abstract_column_statistics.distinct_count();
