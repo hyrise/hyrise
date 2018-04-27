@@ -7,6 +7,7 @@
 #include "expression/external_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_select_expression.hpp"
+#include "expression/value_placeholder_expression.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "operators/get_table.hpp"
@@ -48,22 +49,17 @@ TEST_F(ExpressionEvaluatorTest, ArithmeticExpression) {
 TEST_F(ExpressionEvaluatorTest, PQPSelectExpression) {
   const auto table_wrapper_b = std::make_shared<TableWrapper>(table_b);
   const auto x = std::make_shared<PQPColumnExpression>(ColumnID{0}, table_b->column_data_type(ColumnID{0}));
-  const auto external_b = std::make_shared<ExternalExpression>(b);
+  const auto external_b = std::make_shared<ValuePlaceholderExpression>(ValuePlaceholder{0});
   const auto b_plus_x = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, external_b, x);
   const auto inner_expressions = std::vector<std::shared_ptr<AbstractExpression>>({b_plus_x});
   const auto inner_projection = std::make_shared<Projection>(table_wrapper_b, inner_expressions);
   const auto aggregates = std::vector<AggregateColumnDefinition>({{AggregateFunction::Sum, ColumnID{0}}});
   const auto aggregate = std::make_shared<Aggregate>(inner_projection, aggregates, std::vector<ColumnID>{});
 
-  const auto table_wrapper_a = std::make_shared<TableWrapper>(table_b);
-  const auto pqp_select_expression = std::make_shared<PQPSelectExpression>(aggregate);
-  const auto outer_expressions = std::vector<std::shared_ptr<AbstractExpression>>({pqp_select_expression});
-  const auto outer_projection = std::make_shared<Projection>(table_wrapper_a, outer_expressions);
+  const auto pqp_select_expression = std::make_shared<PQPSelectExpression>(aggregate, );
 
-  table_wrapper_a->execute();
-  outer_projection->execute();
-
-  EXPECT_TABLE_EQ
+  const auto expected_result = std::vector<int32_t>({20, 9, 27, 7});
+  EXPECT_EQ(boost::get<std::vector<int32_t>>(evaluator->evaluate_expression<int32_t>(*a_plus_b)), a_plus_b_result);
 }
 
 }  // namespace opossum

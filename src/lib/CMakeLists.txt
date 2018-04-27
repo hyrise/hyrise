@@ -59,12 +59,12 @@ set(
 #    expression/not_expression.hpp
     expression/pqp_column_expression.cpp
     expression/pqp_column_expression.hpp
-#    expression/pqp_select_expression.cpp
-#    expression/pqp_select_expression.hpp
+    expression/pqp_select_expression.cpp
+    expression/pqp_select_expression.hpp
 #    expression/value_expression.cpp
 #    expression/value_expression.hpp
-#    expression/value_placeholder_expression.cpp
-#    expression/value_placeholder_expression.hpp
+    expression/value_placeholder_expression.cpp
+    expression/value_placeholder_expression.hpp
 #    import_export/binary.hpp
 #    import_export/csv_converter.cpp
 #    import_export/csv_converter.hpp

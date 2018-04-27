@@ -8,12 +8,23 @@
 
 namespace opossum {
 
-PQPSelectExpression::PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp): AbstractExpression(ExpressionType::Select, {}), pqp(pqp) {
+PQPSelectExpression::PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp,
+                                         const DataType data_type_,
+                                         const std::vector<PQPSelectParameter>& parameters):
+  AbstractExpression(ExpressionType::Select, {}), pqp(pqp), parameters(parameters), data_type_(data_type_) {
 
 }
 
+bool PQPSelectExpression::requires_calculation() const {
+  return true;
+}
+
 std::shared_ptr<AbstractExpression> PQPSelectExpression::deep_copy() const {
-  return std::make_shared<PQPSelectExpression>(pqp->recreate());
+  return std::make_shared<PQPSelectExpression>(pqp->recreate(), data_type_, parameters);
+}
+
+ExpressionDataTypeVariant PQPSelectExpression::data_type() const {
+  return data_type_;
 }
 
 std::string PQPSelectExpression::as_column_name() const {
