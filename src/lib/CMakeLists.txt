@@ -153,6 +153,8 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
+    statistics/statistics_import_export.cpp
+    statistics/statistics_import_export.hpp
     statistics/chunk_statistics/abstract_filter.hpp
     statistics/chunk_statistics/chunk_column_statistics.cpp
     statistics/chunk_statistics/chunk_column_statistics.hpp
