@@ -4,7 +4,7 @@
 #include <type_traits>
 #include <vector>
 
-#include "optimizer/chunk_statistics/abstract_filter.hpp"
+#include "abstract_filter.hpp"
 
 namespace opossum {
 

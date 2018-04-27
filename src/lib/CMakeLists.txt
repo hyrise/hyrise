@@ -153,17 +153,13 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
-    optimizer/base_column_statistics.cpp
-    optimizer/base_column_statistics.hpp
-    optimizer/chunk_statistics/abstract_filter.hpp
-    optimizer/chunk_statistics/chunk_column_statistics.cpp
-    optimizer/chunk_statistics/chunk_column_statistics.hpp
-    optimizer/chunk_statistics/chunk_statistics.cpp
-    optimizer/chunk_statistics/chunk_statistics.hpp
-    optimizer/chunk_statistics/min_max_filter.hpp
-    optimizer/chunk_statistics/range_filter.hpp
-    optimizer/column_statistics.cpp
-    optimizer/column_statistics.hpp
+    statistics/chunk_statistics/abstract_filter.hpp
+    statistics/chunk_statistics/chunk_column_statistics.cpp
+    statistics/chunk_statistics/chunk_column_statistics.hpp
+    statistics/chunk_statistics/chunk_statistics.cpp
+    statistics/chunk_statistics/chunk_statistics.hpp
+    statistics/chunk_statistics/min_max_filter.hpp
+    statistics/chunk_statistics/range_filter.hpp
     optimizer/join_ordering/join_edge.cpp
     optimizer/join_ordering/join_edge.hpp
     optimizer/join_ordering/join_graph_builder.cpp
@@ -191,8 +187,6 @@ set(
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/strategy/rule_batch.cpp
     optimizer/strategy/rule_batch.hpp
-    optimizer/table_statistics.cpp
-    optimizer/table_statistics.hpp
     planviz/abstract_visualizer.hpp
     planviz/lqp_visualizer.cpp
     planviz/lqp_visualizer.hpp
@@ -235,6 +229,16 @@ set(
     server/use_boost_future.hpp
     server/use_boost_future_impl.hpp
     server/use_boost_future_legacy_impl.hpp
+    statistics/base_column_statistics.cpp
+    statistics/base_column_statistics.hpp
+    statistics/column_statistics.cpp
+    statistics/column_statistics.cpp
+    statistics/generate_table_statistics.cpp
+    statistics/generate_table_statistics.hpp
+    statistics/generate_column_statistics.cpp
+    statistics/generate_column_statistics.hpp
+    statistics/table_statistics.cpp
+    statistics/table_statistics.hpp
     sql/abstract_cache.hpp
     sql/gdfs_cache.hpp
     sql/gds_cache.hpp
