@@ -4,7 +4,7 @@
 #include "statistics/generate_table_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "utils/load_table.hpp"
-#include "testing_assert.hpp"
+#include "statistics_test_utils.hpp"
 
 namespace opossum {
 
