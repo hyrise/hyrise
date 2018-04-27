@@ -70,7 +70,7 @@ void SQLQueryPlanVisualizer::_add_operator(const std::shared_ptr<const AbstractO
 
   if (op->get_output()) {
     auto total = op->base_performance_data().total;
-    label += "\n\n" + format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(total));
+    label += "\n\n" + format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(total).count());
     info.pen_width = std::fmax(1, std::ceil(std::log10(total.count()) / 2));
   }
 
