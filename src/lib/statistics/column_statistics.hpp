@@ -28,7 +28,7 @@ class ColumnStatistics : public BaseColumnStatistics {
   /** @} */
 
   /**
-   * @defgroup Implementations for AbstractColumnStatistics
+   * @defgroup Implementations for BaseColumnStatistics
    * @{
    */
   std::shared_ptr<BaseColumnStatistics> clone() const override;
