@@ -23,8 +23,8 @@ class ServerTestRunner : public BaseTest {
     CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_numa_topology()));
 
     uint16_t server_port = 0;
-    std::mutex mutex;
-    std::condition_variable cv;
+    std::mutex mutex{};
+    std::condition_variable cv{};
 
     auto server_runner = [&](boost::asio::io_service& io_service) {
       Server server{io_service, /* port = */ 0};  // run on port 0 so the server can pick a free one
@@ -34,7 +34,6 @@ class ServerTestRunner : public BaseTest {
         server_port = server.get_port_number();
       }
 
-      std::cout << "Server running on port " << server_port << std::endl;
       cv.notify_one();
 
       io_service.run();
