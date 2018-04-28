@@ -1,5 +1,7 @@
 #include "expression_evaluator.hpp"
 
+#include <type_traits>
+
 #include "abstract_expression.hpp"
 #include "abstract_predicate_expression.hpp"
 #include "binary_predicate_expression.hpp"
@@ -47,28 +49,67 @@ struct BooleanAnd final {
   }
 };
 
-template<bool null_from_values = false, bool value_from_null = false, bool support_string = false>
-struct DefaultBaseOperator {
+template<bool null_from_values, bool value_from_null>
+struct OperatorTraits {
   static constexpr auto may_produce_null_from_values = null_from_values;
   static constexpr auto may_produce_value_from_null = value_from_null;
-  static constexpr auto supports_string = support_string;
+  static constexpr auto supported = false;
 };
 
-template<typename ResultDataType, typename Functor, bool null_from_values = false, bool value_from_null = false, bool support_string = false>
-struct BinaryFunctorWrapper : public DefaultBaseOperator<null_from_values, value_from_null, support_string> {
-  template<typename BoolType>
-  void operator()(ResultDataType &result_value,
-                  BoolType& result_null,
-                  const ResultDataType left_value,
+template<typename Functor, typename O, typename L, typename R, bool null_from_values, bool value_from_null>
+struct BinaryFunctorWrapper : public OperatorTraits<null_from_values, value_from_null> {
+  void operator()(O &result_value,
+                  bool& result_null,
+                  const L left_value,
                   const bool left_null,
-                  const ResultDataType right_value,
+                  const R right_value,
                   const bool right_null) const {
     result_value = Functor{}(left_value, right_value);
     result_null = left_null || right_null;
   }
 };
 
-template<typename T> using GreaterThan = BinaryFunctorWrapper<T, std::greater<T>, false, false, true>;
+//template<typename T, typename L, typename R> using GreaterThan = BinaryFunctorWrapper<int32_t, std::greater<std::common_type_t<L, R>>, false, false, true>;
+//template<typename T, typename L, typename R> using Plus = BinaryFunctorWrapper<T, std::plus<T>, false, false, false>;
+
+//template<typename O, typename L, typename R, typename Enable = void>
+//struct GreaterThan {
+//  static constexpr auto supported = false;
+//};
+//template<typename O, typename L, typename R>
+//struct GreaterThan<O, L, R, std::enable_if_t<std::is_same_v<int32_t, O> && std::is_same_v<std::string, L> == std::is_same_v<std::string, R>>> {
+//  static constexpr auto supported = true;
+//  using impl = BinaryFunctorWrapper<std::greater<std::common_type_t<L, R>>, O, L, R, false, false>;
+//};
+
+template<template<typename> typename Fn, typename O, typename L, typename R, typename Enable = void>
+struct OrderPredicate {
+  static constexpr auto supported = false;
+};
+template<template<typename> typename Fn, typename O, typename L, typename R>
+struct OrderPredicate<Fn, O, L, R, std::enable_if_t<std::is_same_v<int32_t, O> && std::is_same_v<std::string, L> == std::is_same_v<std::string, R>>> {
+  static constexpr auto supported = true;
+  using impl = BinaryFunctorWrapper<Fn<std::common_type_t<L, R>>, O, L, R, false, false>;
+};
+
+template<template<typename> typename Fn, typename O, typename L, typename R, bool null_from_values, bool value_from_null, typename Enable = void>
+struct ArithmeticFunctor {
+  static constexpr auto supported = false;
+};
+template<template<typename> typename Fn, typename O, typename L, typename R, bool null_from_values, bool value_from_null>
+struct ArithmeticFunctor<Fn, O, L, R, null_from_values, value_from_null, std::enable_if_t<!std::is_same_v<std::string, O> && !std::is_same_v<std::string, L> && !std::is_same_v<std::string, R>>> {
+  static constexpr auto supported = true;
+  using impl = BinaryFunctorWrapper<Fn<O>, O, L, R, false, false>;
+};
+
+template<typename O, typename L, typename R> using Equals = OrderPredicate<std::equal_to, O, L, R>;
+template<typename O, typename L, typename R> using NotEquals = OrderPredicate<std::not_equal_to, O, L, R>;
+template<typename O, typename L, typename R> using GreaterThan = OrderPredicate<std::greater, O, L, R>;
+template<typename O, typename L, typename R> using GreaterThanEquals = OrderPredicate<std::greater_equal, O, L, R>;
+template<typename O, typename L, typename R> using LessThan = OrderPredicate<std::less, O, L, R>;
+template<typename O, typename L, typename R> using LessThanEquals = OrderPredicate<std::less_equal, O, L, R>;
+
+template<typename O, typename L, typename R> using Plus = ArithmeticFunctor<std::plus, O, L, R, true, true>;
 
 template<typename T>
 ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpression& expression) {
@@ -128,9 +169,12 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_expressio
 
 template<typename T>
 ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_arithmetic_expression(const ArithmeticExpression& expression) {
+  const auto& left = *expression.left_operand();
+  const auto& right = *expression.right_operand();
+
   switch (expression.arithmetic_operator) {
     case ArithmeticOperator::Addition:
-      return evaluate_binary_expression<T>(*expression.left_operand(), *expression.right_operand(), BinaryFunctorWrapper<T, std::plus<T>>{});
+      return evaluate_binary_expression<T, Plus>(left, right);
 
     default:
       Fail("ArithmeticOperator evaluation not yet implemented");
@@ -139,22 +183,28 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_arithmeti
 
 template<typename T>
 ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_binary_predicate_expression(const BinaryPredicateExpression& expression) {
+  const auto& left = *expression.left_operand();
+  const auto& right = *expression.right_operand();
+
+  // clang-format off
   switch (expression.predicate_condition) {
-    case PredicateCondition::GreaterThan:
-      return evaluate_binary_expression<T>(*expression.left_operand(), *expression.right_operand(), GreaterThan<T>{});
+    case PredicateCondition::Equals:            return evaluate_binary_expression<T, Equals>(left, right);
+    case PredicateCondition::NotEquals:         return evaluate_binary_expression<T, NotEquals>(left, right);
+    case PredicateCondition::LessThan:          return evaluate_binary_expression<T, LessThan>(left, right);
+    case PredicateCondition::LessThanEquals:    return evaluate_binary_expression<T, LessThanEquals>(left, right);
+    case PredicateCondition::GreaterThan:       return evaluate_binary_expression<T, GreaterThan>(left, right);
+    case PredicateCondition::GreaterThanEquals: return evaluate_binary_expression<T, GreaterThanEquals>(left, right);
 
     default:
-      Fail("ArithmeticOperator evaluation not yet implemented");
+      Fail("PredicateCondition evaluation not yet implemented");
   }
+  // clang-format on
 }
 
-template<typename T, typename OperatorFunctor>
+template<typename T, template<typename, typename, typename> typename Functor>
 ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_binary_expression(
 const AbstractExpression& left_operand,
-const AbstractExpression& right_operand,
-const OperatorFunctor &functor) {
-  constexpr auto result_is_string = std::is_same_v<T, std::string>;
-
+const AbstractExpression& right_operand) {
   const auto left_data_type = left_operand.data_type();
   const auto right_data_type = right_operand.data_type();
 
@@ -162,22 +212,18 @@ const OperatorFunctor &functor) {
 
   resolve_data_type(left_data_type, [&](const auto left_data_type_t) {
     using LeftDataType = typename decltype(left_data_type_t)::type;
-    constexpr auto left_is_string = std::is_same_v<LeftDataType, std::string>;
 
     const auto left_operands = evaluate_expression<LeftDataType>(left_operand);
 
     resolve_data_type(right_data_type, [&](const auto right_data_type_t) {
       using RightDataType = typename decltype(right_data_type_t)::type;
-      constexpr auto right_is_string = std::is_same_v<RightDataType, std::string>;
 
       const auto right_operands = evaluate_expression<RightDataType>(right_operand);
 
-      constexpr auto numeric_types = !result_is_string && !left_is_string && !right_is_string;
+      using ConcreteFunctor = Functor<T, LeftDataType, RightDataType>;
 
-      constexpr auto supported_string_operation = !result_is_string && left_is_string && right_is_string && OperatorFunctor::supports_string;
-
-      if constexpr (numeric_types || supported_string_operation) {
-        result = evaluate_binary_operator<T, LeftDataType, RightDataType>(left_operands, right_operands, functor);
+      if constexpr (ConcreteFunctor::supported) {
+        result = evaluate_binary_operator<T, LeftDataType, RightDataType>(left_operands, right_operands, typename ConcreteFunctor::impl{});
       } else {
         Fail("Operation not supported on strings");
       }

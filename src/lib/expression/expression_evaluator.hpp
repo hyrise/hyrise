@@ -59,10 +59,9 @@ class ExpressionEvaluator final {
   template<typename T>
   ExpressionResult<T> evaluate_select_expression(const PQPSelectExpression& expression);
 
-  template<typename T, typename OperatorFunctor>
+  template<typename T, template<typename RT, typename L, typename R> typename Functor>
   ExpressionResult<T> evaluate_binary_expression(const AbstractExpression& left_operand,
-                                                        const AbstractExpression& right_operand,
-                                                        const OperatorFunctor &functor);
+                                                 const AbstractExpression& right_operand);
   template<typename ResultDataType,
            typename LeftOperandDataType,
            typename RightOperandDataType,

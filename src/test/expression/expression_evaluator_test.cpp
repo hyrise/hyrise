@@ -35,6 +35,9 @@ class ExpressionEvaluatorTest : public ::testing::Test {
     a_plus_b = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, a, b);
     a_plus_c = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, a, c);
     s1_gt_s2 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThan, s1, s2);
+    s1_lt_s2 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, s1, s2);
+    a_lt_b = std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, a, b);
+    a_lt_c = std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, a, c);
 
     table_b = load_table("src/test/tables/expression_evaluator/input_b.tbl");
   }
@@ -46,7 +49,10 @@ class ExpressionEvaluatorTest : public ::testing::Test {
   std::shared_ptr<PQPColumnExpression> a, b, c, s1, s2;
   std::shared_ptr<ArithmeticExpression> a_plus_b;
   std::shared_ptr<ArithmeticExpression> a_plus_c;
+  std::shared_ptr<BinaryPredicateExpression> a_lt_b;
+  std::shared_ptr<BinaryPredicateExpression> a_lt_c;
   std::shared_ptr<BinaryPredicateExpression> s1_gt_s2;
+  std::shared_ptr<BinaryPredicateExpression> s1_lt_s2;
 };
 
 TEST_F(ExpressionEvaluatorTest, ArithmeticExpression) {
@@ -59,7 +65,7 @@ TEST_F(ExpressionEvaluatorTest, ArithmeticExpressionWithNull) {
   const auto& actual_values = actual_result.first;
   const auto& actual_nulls = actual_result.second;
 
-  ASSERT_EQ(actual_nulls.size(), 4u);
+  ASSERT_EQ(actual_values.size(), 4u);
   EXPECT_EQ(actual_values.at(0), 34);
   EXPECT_EQ(actual_values.at(2), 37);
 
@@ -67,11 +73,38 @@ TEST_F(ExpressionEvaluatorTest, ArithmeticExpressionWithNull) {
   EXPECT_EQ(actual_nulls, expected_nulls);
 }
 
-TEST_F(ExpressionEvaluatorTest, PredicateWithStrings) {
-  const auto& actual_values = boost::get<ExpressionEvaluator::NonNullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*s1_gt_s2));
+TEST_F(ExpressionEvaluatorTest, GreaterThanWithStrings) {
+  const auto actual_values = boost::get<ExpressionEvaluator::NonNullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*s1_gt_s2));
 
   std::vector<int32_t> expected_values = {0, 0, 1, 0};
   EXPECT_EQ(actual_values, expected_values);
+}
+
+TEST_F(ExpressionEvaluatorTest, LessThanWithStrings) {
+  const auto actual_values = boost::get<ExpressionEvaluator::NonNullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*s1_lt_s2));
+
+  std::vector<int32_t> expected_values = {1, 1, 0, 0};
+  EXPECT_EQ(actual_values, expected_values);
+}
+
+TEST_F(ExpressionEvaluatorTest, LessThan) {
+  const auto actual_values = boost::get<ExpressionEvaluator::NonNullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*a_lt_b));
+
+  std::vector<int32_t> expected_values = {1, 1, 1, 1};
+  EXPECT_EQ(actual_values, expected_values);
+}
+
+TEST_F(ExpressionEvaluatorTest, LessThanWithNulls) {
+  const auto actual_result = boost::get<ExpressionEvaluator::NullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*a_lt_c));
+  const auto& actual_values = actual_result.first;
+  const auto& actual_nulls = actual_result.second;
+
+  ASSERT_EQ(actual_values.size(), 4u);
+  EXPECT_TRUE(actual_values.at(0));
+  EXPECT_TRUE(actual_values.at(2));
+
+  std::vector<bool> expected_nulls = {false, true, false, true};
+  EXPECT_EQ(actual_nulls, expected_nulls);
 }
 
 TEST_F(ExpressionEvaluatorTest, PQPSelectExpression) {
