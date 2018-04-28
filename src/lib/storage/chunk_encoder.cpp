@@ -8,8 +8,8 @@
 #include "table.hpp"
 #include "types.hpp"
 
-#include "optimizer/chunk_statistics/chunk_column_statistics.hpp"
-#include "optimizer/chunk_statistics/chunk_statistics.hpp"
+#include "statistics/chunk_statistics/chunk_column_statistics.hpp"
+#include "statistics/chunk_statistics/chunk_statistics.hpp"
 #include "storage/base_encoded_column.hpp"
 #include "storage/column_encoding_utils.hpp"
 #include "utils/assert.hpp"

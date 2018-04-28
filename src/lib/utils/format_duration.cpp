@@ -4,23 +4,35 @@
 
 namespace opossum {
 
-std::string format_duration(uint64_t nanoseconds) {
-  const auto microseconds = (nanoseconds / 1'000) % 1000;
-  const auto milliseconds = (nanoseconds / 1'000'000) % 1000;
-  const auto seconds = (nanoseconds / 1'000'000'000) % 1000;
-  const auto minutes = (nanoseconds / 60'000'000'000) % 1000;
-  nanoseconds %= 1000;
+std::string format_duration(uint64_t total_nanoseconds) {
+  uint64_t nanoseconds_remaining = total_nanoseconds;
+
+  const auto minutes = nanoseconds_remaining / 60'000'000'000;
+  nanoseconds_remaining -= minutes * 60'000'000'000;
+
+  const auto seconds = nanoseconds_remaining / 1'000'000'000;
+  nanoseconds_remaining -= seconds * 1'000'000'000;
+
+  const auto milliseconds = nanoseconds_remaining / 1'000'000;
+  nanoseconds_remaining -= milliseconds * 1'000'000;
+
+  const auto microseconds = nanoseconds_remaining / 1'000;
+  nanoseconds_remaining -= microseconds * 1'000;
+
+  const auto nanoseconds = nanoseconds_remaining;
 
   std::stringstream stream;
 
   if (minutes > 0) {
-    stream << minutes << "m " << seconds << "s";
+    stream << minutes << " min " << seconds << " s";
   } else if (seconds > 0) {
-    stream << seconds << "s " << milliseconds << " ms";
+    stream << seconds << " s " << milliseconds << " ms";
   } else if (milliseconds > 0) {
-    stream << milliseconds << "ms " << microseconds << " µs";
+    stream << milliseconds << " ms " << microseconds << " µs";
+  } else if (microseconds > 0) {
+    stream << microseconds << " µs " << nanoseconds << " ns";
   } else {
-    stream << microseconds << "µs " << nanoseconds << "ns";
+    stream << nanoseconds << " ns";
   }
 
   return stream.str();

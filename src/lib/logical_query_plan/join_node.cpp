@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
-#include "optimizer/table_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -82,7 +82,8 @@ const std::vector<LQPColumnReference>& JoinNode::output_column_references() cons
 std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
   if (_join_mode == JoinMode::Cross) {
-    return left_input->get_statistics()->generate_cross_join_statistics(right_input->get_statistics());
+    return std::make_shared<TableStatistics>(
+        left_input->get_statistics()->estimate_cross_join(*right_input->get_statistics()));
   } else {
     Assert(_join_column_references,
            "Only cross joins and joins with join column ids supported for generating join statistics");
@@ -92,8 +93,8 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
     ColumnIDPair join_colum_ids{left_input->get_output_column_id(_join_column_references->first),
                                 right_input->get_output_column_id(_join_column_references->second)};
 
-    return left_input->get_statistics()->generate_predicated_join_statistics(right_input->get_statistics(), _join_mode,
-                                                                             join_colum_ids, *_predicate_condition);
+    return std::make_shared<TableStatistics>(left_input->get_statistics()->estimate_predicated_join(
+        *right_input->get_statistics(), _join_mode, join_colum_ids, *_predicate_condition));
   }
 }
 

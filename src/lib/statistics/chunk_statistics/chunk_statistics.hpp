@@ -6,7 +6,7 @@
 #include "all_type_variant.hpp"
 #include "types.hpp"
 
-#include "optimizer/chunk_statistics/chunk_column_statistics.hpp"
+#include "chunk_column_statistics.hpp"
 
 namespace opossum {
 
