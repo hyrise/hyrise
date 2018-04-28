@@ -35,7 +35,6 @@ template<bool null_from_values, bool value_from_null>
 struct OperatorTraits {
   static constexpr auto may_produce_null_from_values = null_from_values;
   static constexpr auto may_produce_value_from_null = value_from_null;
-  static constexpr auto supported = false;
 };
 
 template<typename Functor, typename O, typename L, typename R, bool null_from_values, bool value_from_null>
@@ -56,9 +55,26 @@ struct Comparison {
   static constexpr auto supported = false;
 };
 template<template<typename> typename Fn, typename O, typename L, typename R>
-struct Comparison<Fn, O, L, R, std::enable_if_t<std::is_same_v<int32_t, O> && std::is_same_v<std::string, L> == std::is_same_v<std::string, R>>> {
+struct Comparison<Fn, O, L, R, std::enable_if_t<std::is_same_v<int32_t, O> && std::is_same_v<std::string, L> == std::is_same_v<std::string, R>>> :  public BinaryFunctorWrapper<Fn<std::common_type_t<L, R>>, O, L, R, false, false> {
   static constexpr auto supported = true;
-  using impl = BinaryFunctorWrapper<Fn<std::common_type_t<L, R>>, O, L, R, false, false>;
+};
+
+template<typename O, typename L, typename R, typename Enable = void>
+struct TernaryOrImpl {
+  static constexpr auto supported = false;
+};
+
+template<typename O, typename L, typename R>
+struct TernaryOrImpl<O, L, R, std::enable_if_t<std::is_same_v<int32_t, O> && std::is_same_v<int32_t, L> && std::is_same_v<int32_t, R>>> : public OperatorTraits<false, true> {
+  static constexpr auto supported = true;
+  void operator()(int32_t &result_value, bool& result_null, const int32_t left_value, const bool left_null,
+                  const int32_t right_value, const bool right_null) const {
+    const auto left_is_true = !left_null && left_value;
+    const auto right_is_true = !right_null && right_value;
+
+    result_value = left_is_true || right_is_true;
+    result_null = (left_null || right_null) && !result_value;
+  }
 };
 
 template<template<typename> typename Fn, typename O, typename L, typename R, typename Enable = void>
@@ -66,9 +82,8 @@ struct Logical {
   static constexpr auto supported = false;
 };
 template<template<typename> typename Fn, typename O, typename L, typename R>
-struct Logical<Fn, O, L, R, std::enable_if_t<std::is_same_v<int32_t, O> && std::is_same_v<int32_t, L> && std::is_same_v<int32_t, R>>> {
+struct Logical<Fn, O, L, R, std::enable_if_t<std::is_same_v<int32_t, O> && std::is_same_v<int32_t, L> && std::is_same_v<int32_t, R>>> : public BinaryFunctorWrapper<Fn<O>, O, L, R, false, false>{
   static constexpr auto supported = true;
-  using impl = BinaryFunctorWrapper<Fn<int32_t>, O, L, R, false, false>;
 };
 
 template<template<typename> typename Fn, typename O, typename L, typename R, bool null_from_values, bool value_from_null, typename Enable = void>
@@ -76,9 +91,8 @@ struct ArithmeticFunctor {
   static constexpr auto supported = false;
 };
 template<template<typename> typename Fn, typename O, typename L, typename R, bool null_from_values, bool value_from_null>
-struct ArithmeticFunctor<Fn, O, L, R, null_from_values, value_from_null, std::enable_if_t<!std::is_same_v<std::string, O> && !std::is_same_v<std::string, L> && !std::is_same_v<std::string, R>>> {
+struct ArithmeticFunctor<Fn, O, L, R, null_from_values, value_from_null, std::enable_if_t<!std::is_same_v<std::string, O> && !std::is_same_v<std::string, L> && !std::is_same_v<std::string, R>>> : public BinaryFunctorWrapper<Fn<O>, O, L, R, false, false> {
   static constexpr auto supported = true;
-  using impl = BinaryFunctorWrapper<Fn<O>, O, L, R, false, false>;
 };
 
 // clang-format off
@@ -88,8 +102,9 @@ template<typename O, typename L, typename R> using GreaterThan = Comparison<std:
 template<typename O, typename L, typename R> using GreaterThanEquals = Comparison<std::greater_equal, O, L, R>;
 template<typename O, typename L, typename R> using LessThan = Comparison<std::less, O, L, R>;
 template<typename O, typename L, typename R> using LessThanEquals = Comparison<std::less_equal, O, L, R>;
+
 template<typename O, typename L, typename R> using And = Logical<std::logical_and, O, L, R>;
-template<typename O, typename L, typename R> using Or = Logical<std::logical_or, O, L, R>;
+template<typename O, typename L, typename R> using TernaryOr = TernaryOrImpl<O, L, R>;
 
 template<typename O, typename L, typename R> using Addition = ArithmeticFunctor<std::plus, O, L, R, true, true>;
 template<typename O, typename L, typename R> using Subtraction = ArithmeticFunctor<std::minus, O, L, R, true, true>;
@@ -161,8 +176,20 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_expressio
       return boost::get<T>(value);
     }
 
-    default:
-      Fail("ExpressionType evaluation not yet implemented");
+    case ExpressionType::Function:
+    case ExpressionType::Case:
+    case ExpressionType::Exists:
+    case ExpressionType::Not:
+
+    case ExpressionType::Array:
+      Fail("ExpressionEvaluator can't 'evaluate' an Array, it handles them only as part of an InExpression. The expression you are passing in is probably malformed");
+
+    case ExpressionType::ValuePlaceholder:
+    case ExpressionType::Mock:
+      Fail("ExpressionEvaluator can't handle ValuePlaceholders/Mocks since they don't have a value.");
+
+    case ExpressionType::Aggregate:
+      Fail("ExpressionEvaluator doesn't support Aggregates, use the Aggregate operator to compute them");
   }
 }
 
@@ -204,7 +231,7 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_binary_pr
 }
 
 
-template<typename T, template<typename, typename, typename> typename Functor>
+template<typename T, template<typename...> typename Functor>
 ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_binary_expression(
 const AbstractExpression& left_operand,
 const AbstractExpression& right_operand) {
@@ -226,7 +253,7 @@ const AbstractExpression& right_operand) {
       using ConcreteFunctor = Functor<T, LeftDataType, RightDataType>;
 
       if constexpr (ConcreteFunctor::supported) {
-        result = evaluate_binary_operator<T, LeftDataType, RightDataType>(left_operands, right_operands, typename ConcreteFunctor::impl{});
+        result = evaluate_binary_operator<T, LeftDataType, RightDataType>(left_operands, right_operands, ConcreteFunctor{});
       } else {
         Fail("Operation not supported on the given types");
       }
@@ -394,7 +421,7 @@ ExpressionEvaluator::ExpressionResult<ResultDataType> ExpressionEvaluator::evalu
     if constexpr (Functor::may_produce_value_from_null) {
       evaluate_per_row([&](const auto chunk_offset) {
         functor(result_values[chunk_offset], result_null,
-                left_values[chunk_offset], false,
+                (*left_values)[chunk_offset], false,
                 right_value, true);
         result_nulls[chunk_offset] = result_null;
       });
@@ -582,7 +609,7 @@ ExpressionEvaluator::ExpressionResult<int32_t> ExpressionEvaluator::evaluate_log
 
   // clang-format off
   switch (expression.logical_operator) {
-    case LogicalOperator::Or:  return evaluate_binary_expression<int32_t, Or>(left, right);
+    case LogicalOperator::Or:  return evaluate_binary_expression<int32_t, TernaryOr>(left, right);
     case LogicalOperator::And: return evaluate_binary_expression<int32_t, And>(left, right);
   }
   // clang-format on
