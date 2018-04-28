@@ -10,6 +10,7 @@
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_select_expression.hpp"
 #include "expression/value_placeholder_expression.hpp"
+#include "expression/value_expression.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "operators/get_table.hpp"
