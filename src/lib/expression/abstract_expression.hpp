@@ -7,7 +7,6 @@
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
-#include "expression_data_type.hpp"
 
 namespace opossum {
 
@@ -28,7 +27,9 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
 
   virtual std::string as_column_name() const = 0;
 
-  virtual ExpressionDataTypeVariant data_type() const = 0;
+  virtual DataType data_type() const = 0;
+
+  virtual bool is_nullable() const;
 
   size_t hash() const;
 

@@ -9,7 +9,7 @@ namespace opossum {
 AbstractPredicateExpression::AbstractPredicateExpression(const PredicateCondition predicate_condition, const std::vector<std::shared_ptr<AbstractExpression>>& arguments):
 AbstractExpression(ExpressionType::Predicate, arguments), predicate_condition(predicate_condition) {}
 
-ExpressionDataTypeVariant AbstractPredicateExpression::data_type() const {
+DataType AbstractPredicateExpression::data_type() const {
   return DataType::Int; // Should be Bool, but we don't have that.
 }
 

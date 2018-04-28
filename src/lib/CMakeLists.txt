@@ -1,8 +1,8 @@
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
-#    all_parameter_variant.cpp
-#    all_parameter_variant.hpp
+    all_parameter_variant.cpp
+    all_parameter_variant.hpp
     all_type_variant.cpp
     all_type_variant.hpp
     concurrency/commit_context.cpp
@@ -16,8 +16,8 @@ set(
     expression/abstract_column_expression.hpp
     expression/abstract_expression.cpp
     expression/abstract_expression.hpp
-#    expression/abstract_predicate_expression.cpp
-#    expression/abstract_predicate_expression.hpp
+    expression/abstract_predicate_expression.cpp
+    expression/abstract_predicate_expression.hpp
     expression/aggregate_expression.cpp
     expression/aggregate_expression.hpp
     expression/arithmetic_expression.cpp
@@ -26,8 +26,8 @@ set(
 #    expression/array_expression.hpp
 #    expression/between_expression.cpp
 #    expression/between_expression.hpp
-#    expression/binary_predicate_expression.cpp
-#    expression/binary_predicate_expression.hpp
+    expression/binary_predicate_expression.cpp
+    expression/binary_predicate_expression.hpp
 #    expression/case_expression.cpp
 #    expression/case_expression.hpp
 #    expression/exists_expression.cpp
@@ -37,10 +37,8 @@ set(
     expression/expression_evaluator.hpp
     expression/expression_utils.cpp
     expression/expression_utils.hpp
-    expression/expression_data_type.cpp
-    expression/expression_data_type.hpp
-    expression/external_expression.cpp
-    expression/external_expression.hpp
+#    expression/external_expression.cpp
+#    expression/external_expression.hpp
 #    expression/function_expression.cpp
 #    expression/function_expression.hpp
 #    expression/in_expression.cpp
@@ -61,8 +59,8 @@ set(
     expression/pqp_column_expression.hpp
     expression/pqp_select_expression.cpp
     expression/pqp_select_expression.hpp
-#    expression/value_expression.cpp
-#    expression/value_expression.hpp
+    expression/value_expression.cpp
+    expression/value_expression.hpp
     expression/value_placeholder_expression.cpp
     expression/value_placeholder_expression.hpp
 #    import_export/binary.hpp
@@ -184,19 +182,19 @@ set(
     operators/projection.hpp
 #    operators/sort.cpp
 #    operators/sort.hpp
-#    operators/table_scan/base_single_column_table_scan_impl.cpp
-#    operators/table_scan/base_single_column_table_scan_impl.hpp
-#    operators/table_scan/base_table_scan_impl.hpp
-#    operators/table_scan/column_comparison_table_scan_impl.cpp
-#    operators/table_scan/column_comparison_table_scan_impl.hpp
-#    operators/table_scan.cpp
-#    operators/table_scan.hpp
-#    operators/table_scan/is_null_table_scan_impl.cpp
-#    operators/table_scan/is_null_table_scan_impl.hpp
-#    operators/table_scan/like_table_scan_impl.cpp
-#    operators/table_scan/like_table_scan_impl.hpp
-#    operators/table_scan/single_column_table_scan_impl.cpp
-#    operators/table_scan/single_column_table_scan_impl.hpp
+    operators/table_scan/base_single_column_table_scan_impl.cpp
+    operators/table_scan/base_single_column_table_scan_impl.hpp
+    operators/table_scan/base_table_scan_impl.hpp
+    operators/table_scan/column_comparison_table_scan_impl.cpp
+    operators/table_scan/column_comparison_table_scan_impl.hpp
+    operators/table_scan.cpp
+    operators/table_scan.hpp
+    operators/table_scan/is_null_table_scan_impl.cpp
+    operators/table_scan/is_null_table_scan_impl.hpp
+    operators/table_scan/like_table_scan_impl.cpp
+    operators/table_scan/like_table_scan_impl.hpp
+    operators/table_scan/single_column_table_scan_impl.cpp
+    operators/table_scan/single_column_table_scan_impl.hpp
     operators/table_wrapper.cpp
     operators/table_wrapper.hpp
 #    operators/union_all.cpp
@@ -310,8 +308,8 @@ set(
 #    sql/sql_pipeline_statement.cpp
 #    sql/sql_pipeline_statement.hpp
 #    sql/sql_query_cache.hpp
-#    sql/sql_query_plan.cpp
-#    sql/sql_query_plan.hpp
+    sql/sql_query_plan.cpp
+    sql/sql_query_plan.hpp
     sql/sql_identifier.cpp
     sql/sql_identifier.hpp
     sql/sql_identifier_context.cpp

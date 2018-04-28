@@ -4,18 +4,22 @@
 
 namespace opossum {
 
-PQPColumnExpression::PQPColumnExpression(const ColumnID column_id, const DataType data_type): column_id(column_id), data_type_(data_type) {}
+PQPColumnExpression::PQPColumnExpression(const ColumnID column_id, const DataType data_type, const bool nullable): column_id(column_id), _data_type(data_type), _nullable(nullable) {}
 
 std::shared_ptr<AbstractExpression> PQPColumnExpression::deep_copy() const {
-  return std::make_shared<PQPColumnExpression>(column_id, data_type_);
+  return std::make_shared<PQPColumnExpression>(column_id, _data_type, _nullable);
 }
 
 std::string PQPColumnExpression::as_column_name() const {
   Fail("TODO");
 }
 
-ExpressionDataTypeVariant PQPColumnExpression::data_type() const {
-  return data_type_;
+DataType PQPColumnExpression::data_type() const {
+  return _data_type;
+}
+
+bool PQPColumnExpression::is_nullable() const {
+  return _nullable;
 }
 
 bool PQPColumnExpression::_shallow_equals(const AbstractExpression& expression) const {

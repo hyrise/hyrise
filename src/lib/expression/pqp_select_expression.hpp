@@ -7,27 +7,29 @@ namespace opossum {
 
 class AbstractOperator;
 
-struct PQPSelectParameter final {
-  ColumnID column_id{INVALID_COLUMN_ID};
-  ValuePlaceholder value_placeholder{0};
-};
-
 class PQPSelectExpression : public AbstractExpression {
  public:
-  explicit PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp, const DataType data_type_, const std::vector<PQPSelectParameter>& parameters);
+  explicit PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp,
+                               const DataType data_type,
+                               const bool nullable,
+                               const std::vector<ColumnID>& parameters);
 
   bool requires_calculation() const override;
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
-  ExpressionDataTypeVariant data_type() const override;
+  DataType data_type() const override;
+  bool is_nullable() const override;
 
   std::shared_ptr<AbstractOperator> pqp;
-  std::vector<PQPSelectParameter> parameters;
-  const DataType data_type_;
+  std::vector<ColumnID> parameters;
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
   size_t _on_hash() const override;
+
+ private:
+  const DataType _data_type;
+  const bool _nullable;
 };
 
 }  // namespace opossum

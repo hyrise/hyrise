@@ -22,7 +22,8 @@ class ArithmeticExpression : public AbstractExpression {
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
-  ExpressionDataTypeVariant data_type() const override;
+  DataType data_type() const override;
+  bool is_nullable() const override;
 
   ArithmeticOperator arithmetic_operator;
 

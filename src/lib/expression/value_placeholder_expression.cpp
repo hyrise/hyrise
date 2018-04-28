@@ -21,8 +21,8 @@ std::string ValuePlaceholderExpression::as_column_name() const {
   return stream.str();
 }
 
-ExpressionDataTypeVariant ValuePlaceholderExpression::data_type() const {
-  return ExpressionDataTypeVacant{};
+DataType ValuePlaceholderExpression::data_type() const {
+  Fail("ValuePlaceholder has not DataType");
 }
 
 bool ValuePlaceholderExpression::_shallow_equals(const AbstractExpression& expression) const {

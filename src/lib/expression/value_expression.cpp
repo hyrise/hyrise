@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include "boost/functional/hash.hpp"
+#include "resolve_type.hpp"
 
 namespace opossum {
 
@@ -19,6 +20,14 @@ std::string ValueExpression::as_column_name() const {
 
   Fail("Todo");
   return stream.str();
+}
+
+DataType ValueExpression::data_type() const {
+  return data_type_from_all_type_variant(value);
+}
+
+bool ValueExpression::is_nullable() const {
+  return value.type() == typeid(NullValue);
 }
 
 bool ValueExpression::_shallow_equals(const AbstractExpression& expression) const {

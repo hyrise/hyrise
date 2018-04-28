@@ -129,3 +129,12 @@ static const auto NULL_VALUE = AllTypeVariant{};
 bool all_type_variant_near(const AllTypeVariant& lhs, const AllTypeVariant& rhs, double max_abs_error = 0.001);
 
 }  // namespace opossum
+
+namespace std {
+
+template<>
+struct hash<opossum::AllTypeVariant> {
+  size_t operator()(const opossum::AllTypeVariant& all_type_variant) const;
+};
+
+}  // namespace std

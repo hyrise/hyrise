@@ -3,15 +3,35 @@
 #include "pqp_column_expression.hpp"
 #include "resolve_type.hpp"
 #include "storage/value_column.hpp"
+#include "storage/materialize.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
 ExpressionEvaluator::ExpressionEvaluator(const std::shared_ptr<const Chunk>& chunk):
 _chunk(chunk)
-{}
+{
+  _column_materializations.resize(_chunk->column_count());
+}
+
+void ExpressionEvaluator::_ensure_column_materialization(const ColumnID column_id) {
+  Assert(column_id < _chunk->column_count(), "Column out of range");
+
+  if (_column_materializations[column_id]) return;
+
+  const auto& column = *_chunk->get_column(column_id);
+
+  resolve_data_type(column.data_type(), [&](const auto data_type_t) {
+    using ColumnDataType = typename decltype(data_type_t)::type;
+
+    auto column_materialization = std::make_unique<ColumnMaterialization<ColumnDataType>>();
+    materialize_values(column, column_materialization->values);
+    _column_materializations[column_id] = std::move(column_materialization);
+  });
+}
 
 std::shared_ptr<BaseColumn> ExpressionEvaluator::evaluate_expression_to_column(const AbstractExpression& expression) {
-  const auto data_type = boost::get<DataType>(expression.data_type());
+  const auto data_type = expression.data_type();
 
   std::shared_ptr<BaseColumn> column;
 

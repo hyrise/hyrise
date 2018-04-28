@@ -93,7 +93,6 @@ class ColumnIterable {
   template <typename Container>
   void materialize_values(Container& container) const {
     for_each([&](const auto& value) {
-      DebugAssert(!value.is_null(), "NULL value in materialize_values(), call materialize_values_and_nulls() instead");
       container.push_back(value.value());
     });
   }

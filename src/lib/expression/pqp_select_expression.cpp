@@ -9,9 +9,10 @@
 namespace opossum {
 
 PQPSelectExpression::PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp,
-                                         const DataType data_type_,
-                                         const std::vector<PQPSelectParameter>& parameters):
-  AbstractExpression(ExpressionType::Select, {}), pqp(pqp), parameters(parameters), data_type_(data_type_) {
+                                         const DataType data_type,
+                                         const bool nullable,
+                                         const std::vector<ColumnID>& parameters):
+  AbstractExpression(ExpressionType::Select, {}), pqp(pqp), parameters(parameters), _data_type(data_type), _nullable(nullable) {
 
 }
 
@@ -20,11 +21,15 @@ bool PQPSelectExpression::requires_calculation() const {
 }
 
 std::shared_ptr<AbstractExpression> PQPSelectExpression::deep_copy() const {
-  return std::make_shared<PQPSelectExpression>(pqp->recreate(), data_type_, parameters);
+  return std::make_shared<PQPSelectExpression>(pqp->recreate(), _data_type, _nullable, parameters);
 }
 
-ExpressionDataTypeVariant PQPSelectExpression::data_type() const {
-  return data_type_;
+DataType PQPSelectExpression::data_type() const {
+  return _data_type;
+}
+
+bool PQPSelectExpression::is_nullable() const {
+  return _nullable;
 }
 
 std::string PQPSelectExpression::as_column_name() const {

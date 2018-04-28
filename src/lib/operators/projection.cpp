@@ -8,7 +8,10 @@
 #include <utility>
 #include <vector>
 
+#include "expression/expression_utils.hpp"
 #include "expression/expression_evaluator.hpp"
+#include "expression/value_expression.hpp"
+#include "expression/value_placeholder_expression.hpp"
 
 namespace opossum {
 
@@ -20,7 +23,18 @@ const std::string Projection::name() const { return "Projection"; }
 std::shared_ptr<AbstractOperator> Projection::_on_recreate(
     const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
     const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return nullptr;
+  auto expressions = expressions_copy(_expressions);
+  for (auto& expression : expressions) {
+    visit_expression(expression, [&](auto& current_expression) {
+      if (current_expression->type != ExpressionType::ValuePlaceholder) return true;
+
+      const auto value_placeholder_expression = std::static_pointer_cast<ValuePlaceholderExpression>(current_expression);
+      current_expression = std::make_shared<ValueExpression>(boost::get<AllTypeVariant>(args[value_placeholder_expression->value_placeholder.index()]));
+      return false;
+    });
+  }
+
+  return std::make_shared<Projection>(recreated_input_left, expressions);
 }
 
 std::shared_ptr<const Table> Projection::_on_execute() {
@@ -31,7 +45,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   for (const auto& expression : _expressions) {
     TableColumnDefinition column_definition;
 
-    column_definition.data_type = boost::get<DataType>(expression->data_type());
+    column_definition.data_type = expression->data_type();
     column_definition.name = "Undefined";
     column_definition.nullable = true;
 

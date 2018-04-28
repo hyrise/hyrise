@@ -13,8 +13,8 @@ std::string SQLIdentifierExpression::as_column_name() const {
   Fail("Lol");
 }
 
-ExpressionDataTypeVariant SQLIdentifierExpression::data_type() const {
-  return ExpressionDataTypeVacant{};
+DataType SQLIdentifierExpression::data_type() const {
+  Fail("Can't deduce the DataType of an SQL identifier");
 }
 
 bool SQLIdentifierExpression::_shallow_equals(const AbstractExpression& expression) const {

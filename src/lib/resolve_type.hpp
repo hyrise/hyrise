@@ -268,7 +268,8 @@ DataType data_type_from_type() {
  * Note: DataType and AllTypeVariant are defined in a way such that
  *       the indices in DataType and AllTypeVariant match.
  */
-inline DataType data_type_from_all_type_variant(const AllTypeVariant& all_type_variant) {
+inline DataType
+data_type_from_all_type_variant(const AllTypeVariant& all_type_variant) {
   return static_cast<DataType>(all_type_variant.which());
 }
 

@@ -1,5 +1,8 @@
 #include "all_type_variant.hpp"
 
+#include "boost/functional/hash.hpp"
+#include "utils/assert.hpp"
+
 #include <cmath>
 
 namespace opossum {
@@ -25,3 +28,16 @@ bool all_type_variant_near(const AllTypeVariant& lhs, const AllTypeVariant& rhs,
 }
 
 }  // namespace opossum
+
+namespace std {
+
+size_t hash<opossum::AllTypeVariant>::operator()(const opossum::AllTypeVariant& all_type_variant) const {
+  if (all_type_variant.type() == typeid(int32_t)) return boost::hash_value(static_cast<int32_t>(boost::get<int32_t>(all_type_variant)));
+  if (all_type_variant.type() == typeid(int64_t)) return boost::hash_value(boost::get<int64_t>(all_type_variant));
+  if (all_type_variant.type() == typeid(float)) return boost::hash_value(boost::get<float>(all_type_variant));
+  if (all_type_variant.type() == typeid(double)) return boost::hash_value(boost::get<double>(all_type_variant));
+  if (all_type_variant.type() == typeid(std::string)) return boost::hash_value(boost::get<std::string>(all_type_variant));
+  opossum::Fail("Unhandled type");
+}
+
+}  // namespace std

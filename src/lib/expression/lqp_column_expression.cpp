@@ -20,7 +20,7 @@ std::string LQPColumnExpression::as_column_name() const {
   Fail("TODO");
 }
 
-ExpressionDataTypeVariant LQPColumnExpression::data_type() const {
+DataType LQPColumnExpression::data_type() const {
   const auto stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(column_reference.original_node());
   Assert(stored_table_node, "Expected column reference to point to StoredTableNode");
 
