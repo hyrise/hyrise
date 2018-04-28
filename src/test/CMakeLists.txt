@@ -142,6 +142,13 @@ set(
     gtest_main.cpp
 )
 
+if (${ENABLE_JIT_SUPPORT})
+    set(JIT_EMBEDDED_SOURCES
+        operators/jit_operator/jit_types_test.cpp
+        operators/jit_operator/jit_operations_test.cpp
+    )
+endif()
+
 set (
     SYSTEM_TEST_SOURCES
     ${SHARED_SOURCES}

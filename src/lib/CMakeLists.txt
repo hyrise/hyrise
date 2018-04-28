@@ -447,8 +447,8 @@ if (${ENABLE_JIT_SUPPORT})
     embed_llvm(LLVM_BUNDLE_FILE ${JIT_EMBEDDED_SOURCES})
     set(
         SOURCES
-        logical_query_plan/jit_aware_lqp_translator.cpp
-        logical_query_plan/jit_aware_lqp_translator.hpp
+        operators/jit_operator/jit_aware_lqp_translator.cpp
+        operators/jit_operator/jit_aware_lqp_translator.hpp
         operators/jit_operator_wrapper.cpp
         operators/jit_operator_wrapper.hpp
         ${SOURCES}
