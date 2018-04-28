@@ -51,9 +51,6 @@ TEST_F(JitVariantVectorTest, GetAndSet) {
     const auto value_out = vector.get<bool>(index);
     EXPECT_EQ(value_in, value_out);
   }
-
-  EXPECT_ANY_THROW(vector.set(-1, 123));
-  EXPECT_ANY_THROW(vector.set(10, 123));
 }
 
 TEST_F(JitVariantVectorTest, IsNullAndSetIsNull) {
