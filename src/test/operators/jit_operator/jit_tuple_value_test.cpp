@@ -3,8 +3,7 @@
 
 namespace opossum {
 
-class JitTupleValueTest : public BaseTest {
-};
+class JitTupleValueTest : public BaseTest {};
 
 TEST_F(JitTupleValueTest, GetAndSet) {
   JitRuntimeContext context;
@@ -37,7 +36,7 @@ TEST_F(JitTupleValueTest, GetAndSet) {
   {
     const auto index = static_cast<size_t>(std::rand()) % 10;
     JitTupleValue tuple_value{DataType::Double, false, index};
-    const auto value_in = static_cast<double >(std::rand());
+    const auto value_in = static_cast<double>(std::rand());
     tuple_value.set(value_in, context);
     const auto value_out = tuple_value.get<double>(context);
     EXPECT_EQ(value_in, value_out);
@@ -82,4 +81,4 @@ TEST_F(JitTupleValueTest, IsNullAndSetIsNull) {
   }
 }
 
-} // namespace opossum
+}  // namespace opossum

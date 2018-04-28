@@ -1,10 +1,9 @@
-#include "../../base_test.hpp"
 #include "operators/jit_operator/jit_operations.hpp"
+#include "../../base_test.hpp"
 
 namespace opossum {
 
-class JitOperationsTest : public BaseTest {
-};
+class JitOperationsTest : public BaseTest {};
 
 TEST_F(JitOperationsTest, ComputeResultType) {
   // We only test a selection of data type combinations and operations.
@@ -48,10 +47,7 @@ TEST_F(JitOperationsTest, ComputeResultType) {
   EXPECT_THROW(jit_compute_type(jit_modulo, DataType::Int, DataType::Float), std::logic_error);
 }
 
-
-TEST_F(JitOperationsTest, Computations) {
-
-}
+TEST_F(JitOperationsTest, Computations) {}
 
 TEST_F(JitOperationsTest, JitAnd) {
   JitRuntimeContext context;
@@ -111,8 +107,10 @@ TEST_F(JitOperationsTest, JitAnd) {
   }
 
   // Check that invalid data type combinations are rejected
-  const JitTupleValue int_value{DataType::Int, false, 0};
-  EXPECT_THROW(jit_and(true_value, int_value, result_value, context), std::logic_error);
+  if (!IS_DEBUG) {
+    const JitTupleValue int_value{DataType::Int, false, 0};
+    EXPECT_THROW(jit_and(true_value, int_value, result_value, context), std::logic_error);
+  }
 }
 
 TEST_F(JitOperationsTest, JitOr) {
@@ -173,8 +171,10 @@ TEST_F(JitOperationsTest, JitOr) {
   }
 
   // Check that invalid data type combinations are rejected
-  const JitTupleValue int_value{DataType::Int, false, 0};
-  EXPECT_THROW(jit_or(true_value, int_value, result_value, context), std::logic_error);
+  if (IS_DEBUG) {
+    const JitTupleValue int_value{DataType::Int, false, 0};
+    EXPECT_THROW(jit_or(true_value, int_value, result_value, context), std::logic_error);
+  }
 }
 
 TEST_F(JitOperationsTest, JitNot) {
@@ -207,8 +207,10 @@ TEST_F(JitOperationsTest, JitNot) {
   }
 
   // Check that invalid data type combinations are rejected
-  const JitTupleValue int_value{DataType::Int, false, 0};
-  EXPECT_THROW(jit_not(int_value, result_value, context), std::logic_error);
+  if (IS_DEBUG) {
+    const JitTupleValue int_value{DataType::Int, false, 0};
+    EXPECT_THROW(jit_not(int_value, result_value, context), std::logic_error);
+  }
 }
 
 TEST_F(JitOperationsTest, JitIs_Not_Null) {
@@ -244,4 +246,4 @@ TEST_F(JitOperationsTest, JitIs_Not_Null) {
   }
 }
 
-} // namespace opossum
+}  // namespace opossum
