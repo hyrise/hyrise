@@ -10,7 +10,8 @@ AbstractPredicateExpression::AbstractPredicateExpression(const PredicateConditio
 AbstractExpression(ExpressionType::Predicate, arguments), predicate_condition(predicate_condition) {}
 
 DataType AbstractPredicateExpression::data_type() const {
-  return DataType::Int; // Should be Bool, but we don't have that.
+  // Should be Bool, but we don't have that.
+  return DataType::Int;
 }
 
 bool AbstractPredicateExpression::_shallow_equals(const AbstractExpression& expression) const {

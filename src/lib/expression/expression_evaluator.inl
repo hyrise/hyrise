@@ -3,10 +3,13 @@
 #include <type_traits>
 
 #include "abstract_expression.hpp"
+#include "array_expression.hpp"
 #include "abstract_predicate_expression.hpp"
 #include "binary_predicate_expression.hpp"
 #include "all_parameter_variant.hpp"
 #include "arithmetic_expression.hpp"
+#include "logical_expression.hpp"
+#include "in_expression.hpp"
 #include "pqp_column_expression.hpp"
 #include "pqp_select_expression.hpp"
 #include "value_expression.hpp"
@@ -15,6 +18,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "resolve_type.hpp"
+#include "utils/lambda_visitor.hpp"
 
 namespace opossum {
 
@@ -69,27 +73,24 @@ struct BinaryFunctorWrapper : public OperatorTraits<null_from_values, value_from
   }
 };
 
-//template<typename T, typename L, typename R> using GreaterThan = BinaryFunctorWrapper<int32_t, std::greater<std::common_type_t<L, R>>, false, false, true>;
-//template<typename T, typename L, typename R> using Plus = BinaryFunctorWrapper<T, std::plus<T>, false, false, false>;
-
-//template<typename O, typename L, typename R, typename Enable = void>
-//struct GreaterThan {
-//  static constexpr auto supported = false;
-//};
-//template<typename O, typename L, typename R>
-//struct GreaterThan<O, L, R, std::enable_if_t<std::is_same_v<int32_t, O> && std::is_same_v<std::string, L> == std::is_same_v<std::string, R>>> {
-//  static constexpr auto supported = true;
-//  using impl = BinaryFunctorWrapper<std::greater<std::common_type_t<L, R>>, O, L, R, false, false>;
-//};
-
 template<template<typename> typename Fn, typename O, typename L, typename R, typename Enable = void>
-struct OrderPredicate {
+struct Comparison {
   static constexpr auto supported = false;
 };
 template<template<typename> typename Fn, typename O, typename L, typename R>
-struct OrderPredicate<Fn, O, L, R, std::enable_if_t<std::is_same_v<int32_t, O> && std::is_same_v<std::string, L> == std::is_same_v<std::string, R>>> {
+struct Comparison<Fn, O, L, R, std::enable_if_t<std::is_same_v<int32_t, O> && std::is_same_v<std::string, L> == std::is_same_v<std::string, R>>> {
   static constexpr auto supported = true;
   using impl = BinaryFunctorWrapper<Fn<std::common_type_t<L, R>>, O, L, R, false, false>;
+};
+
+template<template<typename> typename Fn, typename O, typename L, typename R, typename Enable = void>
+struct Logical {
+  static constexpr auto supported = false;
+};
+template<template<typename> typename Fn, typename O, typename L, typename R>
+struct Logical<Fn, O, L, R, std::enable_if_t<std::is_same_v<int32_t, O> && std::is_same_v<int32_t, L> && std::is_same_v<int32_t, R>>> {
+  static constexpr auto supported = true;
+  using impl = BinaryFunctorWrapper<Fn<int32_t>, O, L, R, false, false>;
 };
 
 template<template<typename> typename Fn, typename O, typename L, typename R, bool null_from_values, bool value_from_null, typename Enable = void>
@@ -102,14 +103,29 @@ struct ArithmeticFunctor<Fn, O, L, R, null_from_values, value_from_null, std::en
   using impl = BinaryFunctorWrapper<Fn<O>, O, L, R, false, false>;
 };
 
-template<typename O, typename L, typename R> using Equals = OrderPredicate<std::equal_to, O, L, R>;
-template<typename O, typename L, typename R> using NotEquals = OrderPredicate<std::not_equal_to, O, L, R>;
-template<typename O, typename L, typename R> using GreaterThan = OrderPredicate<std::greater, O, L, R>;
-template<typename O, typename L, typename R> using GreaterThanEquals = OrderPredicate<std::greater_equal, O, L, R>;
-template<typename O, typename L, typename R> using LessThan = OrderPredicate<std::less, O, L, R>;
-template<typename O, typename L, typename R> using LessThanEquals = OrderPredicate<std::less_equal, O, L, R>;
+// clang-format off
+template<typename O, typename L, typename R> using Equals = Comparison<std::equal_to, O, L, R>;
+template<typename O, typename L, typename R> using NotEquals = Comparison<std::not_equal_to, O, L, R>;
+template<typename O, typename L, typename R> using GreaterThan = Comparison<std::greater, O, L, R>;
+template<typename O, typename L, typename R> using GreaterThanEquals = Comparison<std::greater_equal, O, L, R>;
+template<typename O, typename L, typename R> using LessThan = Comparison<std::less, O, L, R>;
+template<typename O, typename L, typename R> using LessThanEquals = Comparison<std::less_equal, O, L, R>;
+template<typename O, typename L, typename R> using And = Logical<std::logical_and, O, L, R>;
+template<typename O, typename L, typename R> using Or = Logical<std::logical_or, O, L, R>;
 
-template<typename O, typename L, typename R> using Plus = ArithmeticFunctor<std::plus, O, L, R, true, true>;
+template<typename O, typename L, typename R> using Addition = ArithmeticFunctor<std::plus, O, L, R, true, true>;
+template<typename O, typename L, typename R> using Subtraction = ArithmeticFunctor<std::minus, O, L, R, true, true>;
+template<typename O, typename L, typename R> using Multiplication = ArithmeticFunctor<std::multiplies, O, L, R, true, true>;
+// clang-format on
+
+// clang-format off
+template<typename T> bool ExpressionEvaluator::is_nullable_values(const ExpressionResult<T>& result)      { return result.which() == 0; }
+template<typename T> bool ExpressionEvaluator::is_non_nullable_values(const ExpressionResult<T>& result)  { return result.which() == 1; }
+template<typename T> bool ExpressionEvaluator::is_value(const ExpressionResult<T>& result)                { return result.which() == 2; }
+template<typename T> bool ExpressionEvaluator::is_null(const ExpressionResult<T>& result)                 { return result.which() == 3; }
+template<typename T> bool ExpressionEvaluator::is_nullable_array(const ExpressionResult<T>& result)       { return result.which() == 4; }
+template<typename T> bool ExpressionEvaluator::is_non_nullable_array(const ExpressionResult<T>& result)   { return result.which() == 5; }
+// clang-format on
 
 template<typename T>
 ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpression& expression) {
@@ -117,11 +133,16 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_expressio
     case ExpressionType::Arithmetic:
       return evaluate_arithmetic_expression<T>(static_cast<const ArithmeticExpression&>(expression));
 
+    case ExpressionType::Logical:
+      return evaluate_logical_expression<T>(static_cast<const LogicalExpression&>(expression));
+
     case ExpressionType::Predicate: {
       const auto& predicate_expression = static_cast<const AbstractPredicateExpression&>(expression);
 
-      if (is_binary_predicate_condition(predicate_expression.predicate_condition)) {
+      if (is_ordering_predicate_condition(predicate_expression.predicate_condition)) {
         return evaluate_binary_predicate_expression<T>(static_cast<const BinaryPredicateExpression&>(expression));
+      } else if (predicate_expression.predicate_condition == PredicateCondition::In) {
+        return evaluate_in_expression<T>(static_cast<const InExpression&>(expression));
       } else {
         Fail("Unsupported Predicate Expression");
       }
@@ -172,13 +193,16 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_arithmeti
   const auto& left = *expression.left_operand();
   const auto& right = *expression.right_operand();
 
+  // clang-format off
   switch (expression.arithmetic_operator) {
-    case ArithmeticOperator::Addition:
-      return evaluate_binary_expression<T, Plus>(left, right);
+    case ArithmeticOperator::Addition:       return evaluate_binary_expression<T, Addition>(left, right);
+    case ArithmeticOperator::Subtraction:    return evaluate_binary_expression<T, Subtraction>(left, right);
+    case ArithmeticOperator::Multiplication: return evaluate_binary_expression<T, Multiplication>(left, right);
 
     default:
       Fail("ArithmeticOperator evaluation not yet implemented");
   }
+  // clang-format on
 }
 
 template<typename T>
@@ -200,6 +224,7 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_binary_pr
   }
   // clang-format on
 }
+
 
 template<typename T, template<typename, typename, typename> typename Functor>
 ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_binary_expression(
@@ -225,12 +250,22 @@ const AbstractExpression& right_operand) {
       if constexpr (ConcreteFunctor::supported) {
         result = evaluate_binary_operator<T, LeftDataType, RightDataType>(left_operands, right_operands, typename ConcreteFunctor::impl{});
       } else {
-        Fail("Operation not supported on strings");
+        Fail("Operation not supported on the given types");
       }
     });
   });
 
   return result;
+}
+
+template<typename T>
+ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_logical_expression(const LogicalExpression& expression) {
+  Fail("LogicalExpression can only output int32_t");
+}
+
+template<typename T>
+ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_in_expression(const InExpression& expression) {
+  Fail("InExpression supports only int32_t as result");
 }
 
 template<typename ResultDataType,

@@ -1,6 +1,6 @@
-a|b|c|s1|s2
-int|int|int_null|string|string
-1|2|33|a|b
-2|3|null|Hello|World
-3|4|34|what|up
-4|5|null|Same|Same
+a|b|c|d|s1|s2
+int|int|int_null|int|string|string
+1|2|33|2|a|b
+2|3|null|5|Hello|World
+3|4|34|6|what|up
+4|5|null|7|Same|Same

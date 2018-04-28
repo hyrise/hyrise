@@ -78,4 +78,65 @@ std::shared_ptr<BaseColumn> ExpressionEvaluator::evaluate_expression_to_column(c
   return column;
 }
 
+template<>
+ExpressionEvaluator::ExpressionResult<int32_t> ExpressionEvaluator::evaluate_logical_expression<int32_t>(const LogicalExpression& expression) {
+  const auto& left = *expression.left_operand();
+  const auto& right = *expression.right_operand();
+
+  // clang-format off
+  switch (expression.logical_operator) {
+    case LogicalOperator::Or:  return evaluate_binary_expression<int32_t, Or>(left, right);
+    case LogicalOperator::And: return evaluate_binary_expression<int32_t, And>(left, right);
+  }
+  // clang-format on
+}
+
+template<>
+ExpressionEvaluator::ExpressionResult<int32_t> ExpressionEvaluator::evaluate_in_expression<int32_t>(const InExpression& in_expression) {
+  const auto& left_expression = *in_expression.value();
+  const auto& right_expression = *in_expression.set();
+
+  std::vector<int32_t> result_values;
+  std::vector<bool> result_nulls;
+
+  if (right_expression.type == ExpressionType::Array) {
+    const auto& array_expression = static_cast<const ArrayExpression&>(right_expression);
+
+    /**
+     * To keep the code simply for now, transform the InExpression like this:
+     * "a IN (x, y, z)"   ---->   "a = x OR a = y OR a = z"
+     *
+     * But first, out of array_expression.elements(), pick those expressions whose type can be compared with
+     * in_expression.value() so we're not getting "Can't compare Int and String" when doing something crazy like
+     * "5 IN (6, 5, "Hello")
+     */
+    const auto left_is_string = left_expression.data_type() == DataType::String;
+    std::vector<std::shared_ptr<AbstractExpression>> type_compatible_elements;
+    for (const auto& element : array_expression.elements()) {
+      if ((element->data_type() == DataType::String) == left_is_string) {
+        type_compatible_elements.emplace_back(element);
+      }
+    }
+
+    if (type_compatible_elements.empty()) {
+      // NULL IN () is NULL, <not_null> IN () is FALSE
+      Fail("Not supported yet");
+    }
+
+    std::shared_ptr<AbstractExpression> predicate_disjunction = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, in_expression.value(), type_compatible_elements.front());
+    for (auto element_idx = size_t{1}; element_idx < type_compatible_elements.size(); ++element_idx) {
+      const auto equals_element = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, in_expression.value(), type_compatible_elements[element_idx]);
+      predicate_disjunction = std::make_shared<LogicalExpression>(LogicalOperator::Or, predicate_disjunction, equals_element);
+    }
+
+    return evaluate_expression<int32_t>(*predicate_disjunction);
+  } else if (right_expression.type == ExpressionType::Select) {
+    Fail("Unsupported ExpressionType used in InExpression");
+  } else {
+    Fail("Unsupported ExpressionType used in InExpression");
+  }
+
+  return {};
+}
+
 }  // namespace opossum

@@ -2,9 +2,11 @@
 
 #include <optional>
 
+#include "expression/array_expression.hpp"
 #include "expression/expression_evaluator.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
+#include "expression/in_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_select_expression.hpp"
 #include "expression/value_placeholder_expression.hpp"
@@ -30,8 +32,9 @@ class ExpressionEvaluatorTest : public ::testing::Test {
     a = std::make_shared<PQPColumnExpression>(ColumnID{0}, table_a->column_data_type(ColumnID{0}), table_a->column_is_nullable(ColumnID{0}));
     b = std::make_shared<PQPColumnExpression>(ColumnID{1}, table_a->column_data_type(ColumnID{1}), table_a->column_is_nullable(ColumnID{1}));
     c = std::make_shared<PQPColumnExpression>(ColumnID{2}, table_a->column_data_type(ColumnID{2}), table_a->column_is_nullable(ColumnID{2}));
-    s1 = std::make_shared<PQPColumnExpression>(ColumnID{3}, table_a->column_data_type(ColumnID{3}), table_a->column_is_nullable(ColumnID{3}));
-    s2 = std::make_shared<PQPColumnExpression>(ColumnID{4}, table_a->column_data_type(ColumnID{4}), table_a->column_is_nullable(ColumnID{4}));
+    d = std::make_shared<PQPColumnExpression>(ColumnID{3}, table_a->column_data_type(ColumnID{3}), table_a->column_is_nullable(ColumnID{3}));
+    s1 = std::make_shared<PQPColumnExpression>(ColumnID{4}, table_a->column_data_type(ColumnID{4}), table_a->column_is_nullable(ColumnID{4}));
+    s2 = std::make_shared<PQPColumnExpression>(ColumnID{5}, table_a->column_data_type(ColumnID{5}), table_a->column_is_nullable(ColumnID{5}));
     a_plus_b = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, a, b);
     a_plus_c = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, a, c);
     s1_gt_s2 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThan, s1, s2);
@@ -46,7 +49,7 @@ class ExpressionEvaluatorTest : public ::testing::Test {
   std::shared_ptr<Chunk> chunk_a;
   std::optional<ExpressionEvaluator> evaluator;
 
-  std::shared_ptr<PQPColumnExpression> a, b, c, s1, s2;
+  std::shared_ptr<PQPColumnExpression> a, b, c, d, s1, s2;
   std::shared_ptr<ArithmeticExpression> a_plus_b;
   std::shared_ptr<ArithmeticExpression> a_plus_c;
   std::shared_ptr<BinaryPredicateExpression> a_lt_b;
@@ -105,6 +108,22 @@ TEST_F(ExpressionEvaluatorTest, LessThanWithNulls) {
 
   std::vector<bool> expected_nulls = {false, true, false, true};
   EXPECT_EQ(actual_nulls, expected_nulls);
+}
+
+TEST_F(ExpressionEvaluatorTest, In) {
+  std::vector<std::shared_ptr<AbstractExpression>> array_elements;
+  array_elements.emplace_back(std::make_shared<ValueExpression>(3.0));
+  array_elements.emplace_back(s1);
+  array_elements.emplace_back(std::make_shared<ArithmeticExpression>(ArithmeticOperator::Subtraction, d, std::make_shared<ValueExpression>(1)));
+
+  const auto array = std::make_shared<ArrayExpression>(array_elements);
+
+  const auto in = std::make_shared<InExpression>(a, array);
+
+  const auto actual_values = boost::get<ExpressionEvaluator::NonNullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*in));
+
+  std::vector<int32_t> expected_values = {1, 0, 1, 0};
+  EXPECT_EQ(actual_values, expected_values);
 }
 
 TEST_F(ExpressionEvaluatorTest, PQPSelectExpression) {

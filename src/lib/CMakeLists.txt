@@ -22,8 +22,8 @@ set(
     expression/aggregate_expression.hpp
     expression/arithmetic_expression.cpp
     expression/arithmetic_expression.hpp
-#    expression/array_expression.cpp
-#    expression/array_expression.hpp
+    expression/array_expression.cpp
+    expression/array_expression.hpp
 #    expression/between_expression.cpp
 #    expression/between_expression.hpp
     expression/binary_predicate_expression.cpp
@@ -41,12 +41,12 @@ set(
 #    expression/external_expression.hpp
 #    expression/function_expression.cpp
 #    expression/function_expression.hpp
-#    expression/in_expression.cpp
-#    expression/in_expression.hpp
+    expression/in_expression.cpp
+    expression/in_expression.hpp
 #    expression/is_null_expression.cpp
 #    expression/is_null_expression.hpp
-#    expression/logical_expression.cpp
-#    expression/logical_expression.hpp
+    expression/logical_expression.cpp
+    expression/logical_expression.hpp
     expression/lqp_column_expression.cpp
     expression/lqp_column_expression.hpp
 #    expression/lqp_select_expression.cpp
@@ -462,6 +462,7 @@ set(
     utils/format_bytes.hpp
     utils/format_duration.cpp
     utils/format_duration.hpp
+    utils/lambda_visitor.hpp
     utils/load_table.cpp
     utils/load_table.hpp
 #    utils/murmur_hash.cpp

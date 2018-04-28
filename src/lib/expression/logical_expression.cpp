@@ -31,6 +31,11 @@ std::string LogicalExpression::as_column_name() const {
   return stream.str();
 }
 
+DataType LogicalExpression::data_type() const {
+  // Should be Bool, but we don't have that.
+  return DataType::Int;
+}
+
 bool LogicalExpression::_shallow_equals(const AbstractExpression& expression) const {
   return logical_operator == static_cast<const LogicalExpression&>(expression).logical_operator;
 }
