@@ -31,3 +31,7 @@ compile_times.txt
 
 # CLion cmake directory
 cmake-build-*
+
+# llvm coverage information
+default.profdata
+default.profraw

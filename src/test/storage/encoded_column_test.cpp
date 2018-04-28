@@ -159,7 +159,16 @@ TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumn) {
 
     value_column_iterable.with_iterators([&](auto value_column_it, auto value_column_end) {
       encoded_column_iterable.with_iterators([&](auto encoded_column_it, auto encoded_column_end) {
-        for (; encoded_column_it != encoded_column_end; ++encoded_column_it, ++value_column_it) {
+        auto row_idx = 0;
+        for (; encoded_column_it != encoded_column_end; ++encoded_column_it, ++value_column_it, ++row_idx) {
+          // This covers `EncodedColumn::operator[]`
+          if (variant_is_null((*value_column)[row_idx])) {
+            EXPECT_TRUE(variant_is_null(encoded_column[row_idx]));
+          } else {
+            EXPECT_EQ((*value_column)[row_idx], encoded_column[row_idx]);
+          }
+
+          // This covers the point access iterator
           EXPECT_EQ(value_column_it->is_null(), encoded_column_it->is_null());
 
           if (!value_column_it->is_null()) {

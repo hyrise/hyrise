@@ -39,4 +39,20 @@ TEST_F(NUMAMemoryResourceTest, BasicAllocate) {
   EXPECT_EQ(get_node_id_of(vec.data()), numa_node);
 }
 
+TEST_F(NUMAMemoryResourceTest, AreEqual) {
+#if HYRISE_NUMA_SUPPORT
+  const int numa_node = numa_max_node();
+#else
+  const int numa_node = 1;
+#endif
+
+  // Two memory_resources compare equal if and only if memory allocated from one memory_resource can be deallocated
+  // from the other and vice versa.
+
+  auto resource_a = NUMAMemoryResource(numa_node, "foo");
+  auto resource_b = NUMAMemoryResource(numa_node, "bar");
+
+  EXPECT_FALSE(resource_a.is_equal(resource_b));
+}
+
 }  // namespace opossum

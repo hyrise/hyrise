@@ -14,7 +14,6 @@ class OperatorsGetTableTest : public BaseTest {
   void SetUp() override {
     _test_table = std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data, 2);
     auto& manager = StorageManager::get();
-    manager.add_table("aNiceTestTable", _test_table);
     manager.add_table("tableWithValues", load_table("src/test/tables/int_float2.tbl", 1u));
   }
 
@@ -22,10 +21,10 @@ class OperatorsGetTableTest : public BaseTest {
 };
 
 TEST_F(OperatorsGetTableTest, GetOutput) {
-  auto gt = std::make_shared<GetTable>("aNiceTestTable");
+  auto gt = std::make_shared<GetTable>("tableWithValues");
   gt->execute();
 
-  EXPECT_EQ(gt->get_output(), _test_table);
+  EXPECT_TABLE_EQ_UNORDERED(gt->get_output(), load_table("src/test/tables/int_float2.tbl", 1u));
 }
 
 TEST_F(OperatorsGetTableTest, ThrowsUnknownTableName) {
@@ -35,7 +34,7 @@ TEST_F(OperatorsGetTableTest, ThrowsUnknownTableName) {
 }
 
 TEST_F(OperatorsGetTableTest, OperatorName) {
-  auto gt = std::make_shared<opossum::GetTable>("aNiceTestTable");
+  auto gt = std::make_shared<opossum::GetTable>("tableWithValues");
 
   EXPECT_EQ(gt->name(), "GetTable");
 }

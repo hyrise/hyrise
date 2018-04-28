@@ -9,6 +9,7 @@
 #include <chrono>
 #include <csetjmp>
 #include <csignal>
+#include <cstdlib>
 #include <ctime>
 #include <iomanip>
 #include <iostream>
@@ -333,8 +334,17 @@ void Console::out(std::shared_ptr<const Table> table, uint32_t flags) {
   int size_y, size_x;
   rl_get_screen_size(&size_y, &size_x);
 
+  const bool fits_on_one_page = table->row_count() < static_cast<uint64_t>(size_y) - 1;
+
+  static bool pagination_disabled = false;
+  if (!fits_on_one_page && !std::getenv("TERM") && !pagination_disabled) {
+    out("Your TERM environment variable is not set - most likely because you are running the console from an IDE. "
+        "Pagination is disabled.\n\n");
+    pagination_disabled = true;
+  }
+
   // Paginate only if table has more rows that fit in the terminal
-  if (table->row_count() < static_cast<uint64_t>(size_y) - 1) {
+  if (fits_on_one_page || pagination_disabled) {
     Print::print(table, flags, _out);
   } else {
     std::stringstream stream;
