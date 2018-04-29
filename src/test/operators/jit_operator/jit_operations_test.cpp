@@ -107,7 +107,7 @@ TEST_F(JitOperationsTest, JitAnd) {
   }
 
   // Check that invalid data type combinations are rejected
-  if (!IS_DEBUG) {
+  if (IS_DEBUG) {
     const JitTupleValue int_value{DataType::Int, false, 0};
     EXPECT_THROW(jit_and(true_value, int_value, result_value, context), std::logic_error);
   }
