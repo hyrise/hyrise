@@ -215,7 +215,7 @@ TEST_F(JitOperationsTest, JitNot) {
 
 TEST_F(JitOperationsTest, JitIs_Not_Null) {
   JitRuntimeContext context;
-  context.tuple.resize(2);
+  context.tuple.resize(3);
 
   const JitTupleValue null_value{DataType::Bool, true, 0};
   const JitTupleValue non_null_value{DataType::Int, true, 1};
