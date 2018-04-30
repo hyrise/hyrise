@@ -24,6 +24,9 @@ class Table;
  * - For dictionary columns, we check the values in the dictionary and store the results in a vector
  *   in order to avoid having to look up each value ID of the attribute vector in the dictionary. This also
  *   enables us to detect if all or none of the values in the column satisfy the expression.
+ *
+ * Performance Notes: Uses std::regex as a slow fallback and resorts to much faster Pattern matchers for special cases,
+ *                    e.g., StartsWithPattern. 
  */
 class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
  public:
