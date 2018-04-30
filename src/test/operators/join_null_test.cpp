@@ -12,7 +12,6 @@
 
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
-#include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/projection.hpp"

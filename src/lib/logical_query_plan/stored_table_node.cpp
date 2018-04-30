@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "optimizer/table_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"

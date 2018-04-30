@@ -4,12 +4,14 @@
 #include <utility>
 #include <vector>
 
-#include "../base_test.hpp"
 #include "all_parameter_variant.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "optimizer/table_statistics.hpp"
+#include "statistics/base_column_statistics.hpp"
+#include "statistics/generate_table_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 
 namespace opossum {
 
@@ -24,7 +26,7 @@ class TableStatisticsTest : public BaseTest {
 
   void SetUp() override {
     auto table = load_table("src/test/tables/int_float_double_string.tbl", Chunk::MAX_SIZE);
-    _table_a_with_statistics.statistics = std::make_shared<TableStatistics>(table);
+    _table_a_with_statistics.statistics = std::make_shared<TableStatistics>(generate_table_statistics(*table));
     table->set_table_statistics(_table_a_with_statistics.statistics);
     _table_a_with_statistics.table = table;
   }
@@ -53,8 +55,8 @@ class TableStatisticsTest : public BaseTest {
     }
     table_scan->execute();
 
-    auto post_table_scan_statistics =
-        table_with_statistics.statistics->predicate_statistics(column_id, predicate_condition, value, value2);
+    auto post_table_scan_statistics = std::make_shared<TableStatistics>(
+        table_with_statistics.statistics->estimate_predicate(column_id, predicate_condition, value, value2));
     TableWithStatistics output;
     output.table = table_scan->get_output();
     output.statistics = post_table_scan_statistics;
@@ -227,10 +229,10 @@ TEST_F(TableStatisticsTest, TableType) {
 
   EXPECT_EQ(table_a_statistics->table_type(), TableType::Data);
 
-  const auto post_predicate_statistics =
-      table_a_statistics->predicate_statistics(ColumnID{0}, PredicateCondition::Equals, 1);
-  const auto post_join_statistics = table_a_statistics->generate_predicated_join_statistics(
-      table_a_statistics, JoinMode::Inner, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals);
+  const auto post_predicate_statistics = std::make_shared<TableStatistics>(
+      table_a_statistics->estimate_predicate(ColumnID{0}, PredicateCondition::Equals, 1));
+  const auto post_join_statistics = std::make_shared<TableStatistics>(table_a_statistics->estimate_predicated_join(
+      *table_a_statistics, JoinMode::Inner, {ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals));
 
   EXPECT_EQ(post_predicate_statistics->table_type(), TableType::References);
   EXPECT_EQ(post_join_statistics->table_type(), TableType::References);

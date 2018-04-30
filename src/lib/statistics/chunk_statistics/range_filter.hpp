@@ -4,7 +4,7 @@
 #include <type_traits>
 #include <vector>
 
-#include "optimizer/chunk_statistics/abstract_filter.hpp"
+#include "abstract_filter.hpp"
 
 namespace opossum {
 
@@ -52,13 +52,14 @@ class RangeFilter : public AbstractFilter {
         return t_value < min;
       }
       case PredicateCondition::Equals: {
-        bool prunable = true;
         for (const auto& bounds : _ranges) {
           const auto & [ min, max ] = bounds;
-          // prunable becomes false if t_value is within any of the bounds
-          prunable &= !(t_value >= min && t_value <= max);
+
+          if (t_value >= min && t_value <= max) {
+            return false;
+          }
         }
-        return prunable;
+        return true;
       }
       default:
         return false;
@@ -115,7 +116,7 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   std::vector<std::pair<T, T>> ranges;
   size_t next_startpoint = 0u;
   for (const auto& distance_index_pair : distances) {
-    const auto index = std::get<1>(distance_index_pair);
+    const auto index = distance_index_pair.second;
     ranges.emplace_back(dictionary[next_startpoint], dictionary[index]);
     next_startpoint = index + 1;
   }

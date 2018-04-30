@@ -72,8 +72,6 @@ set(
     operators/update_test.cpp
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
-    optimizer/chunk_statistics/pruning_filters_test.cpp
-    optimizer/column_statistics_test.cpp
     optimizer/expression_test.cpp
     optimizer/join_ordering/join_graph_builder_test.cpp
     optimizer/join_ordering/join_graph_test.cpp
@@ -88,8 +86,13 @@ set(
     optimizer/strategy/predicate_pushdown_rule_test.cpp
     optimizer/strategy/strategy_base_test.cpp
     optimizer/strategy/strategy_base_test.hpp
-    optimizer/table_statistics_join_test.cpp
-    optimizer/table_statistics_test.cpp
+    statistics/table_statistics_join_test.cpp
+    statistics/table_statistics_test.cpp
+    statistics/chunk_statistics/pruning_filters_test.cpp
+    statistics/column_statistics_test.cpp
+    statistics/generate_table_statistics_test.cpp
+    statistics/statistics_import_export_test.cpp
+    statistics/statistics_test_utils.hpp
     scheduler/scheduler_test.cpp
     server/mock_connection.hpp
     server/mock_task_runner.hpp
@@ -134,6 +137,7 @@ set(
     testing_assert.hpp
     utils/cuckoo_hashtable_test.cpp
     utils/format_bytes_test.cpp
+    utils/format_duration_test.cpp
     utils/numa_memory_resource_test.cpp
     gtest_main.cpp
 )
@@ -141,6 +145,7 @@ set(
 set (
     SYSTEM_TEST_SOURCES
     ${SHARED_SOURCES}
+    server/server_test_runner.cpp
     tpc/tpch_test.cpp
     tpc/tpch_db_generator_test.cpp
     gtest_main.cpp
@@ -169,4 +174,4 @@ target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
-target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES})
+target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES} pqxx)

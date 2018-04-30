@@ -7,9 +7,9 @@
 
 #include "resolve_type.hpp"
 
-#include "optimizer/chunk_statistics/abstract_filter.hpp"
-#include "optimizer/chunk_statistics/min_max_filter.hpp"
-#include "optimizer/chunk_statistics/range_filter.hpp"
+#include "abstract_filter.hpp"
+#include "min_max_filter.hpp"
+#include "range_filter.hpp"
 #include "storage/base_encoded_column.hpp"
 #include "storage/create_iterable_from_column.hpp"
 #include "storage/dictionary_column.hpp"

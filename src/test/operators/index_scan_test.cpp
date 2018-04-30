@@ -159,6 +159,31 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryVal
   }
 }
 
+TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnlySomeChunks) {
+  const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{4}};
+  const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{9}};
+
+  std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
+  tests[PredicateCondition::Equals] = {104};
+  tests[PredicateCondition::NotEquals] = {100, 102, 106, 108, 120, 122, 124};
+  tests[PredicateCondition::LessThan] = {100, 102};
+  tests[PredicateCondition::LessThanEquals] = {100, 102, 104};
+  tests[PredicateCondition::GreaterThan] = {106, 108, 120, 122, 124};
+  tests[PredicateCondition::GreaterThanEquals] = {104, 106, 108, 120, 122, 124};
+  tests[PredicateCondition::Between] = {104, 106, 108};
+
+  for (const auto& test : tests) {
+    auto scan = std::make_shared<IndexScan>(this->_table_wrapper, this->_index_type, this->_column_ids, test.first,
+                                            right_values, right_values2);
+
+    scan->set_included_chunk_ids({ChunkID{0}, ChunkID{2}});
+
+    scan->execute();
+
+    this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test.second);
+  }
+}
+
 TYPED_TEST(OperatorsIndexScanTest, OperatorName) {
   const auto right_values = std::vector<AllTypeVariant>(this->_column_ids.size(), AllTypeVariant{0});
 

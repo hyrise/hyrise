@@ -21,6 +21,7 @@ class MockConnection {
 
   MOCK_METHOD0(send_ssl_denied, boost::future<void>());
   MOCK_METHOD0(send_auth, boost::future<void>());
+  MOCK_METHOD2(send_parameter_status, boost::future<void>(const std::string& key, const std::string& value));
   MOCK_METHOD0(send_ready_for_query, boost::future<void>());
   MOCK_METHOD1(send_error, boost::future<void>(const std::string& message));
   MOCK_METHOD1(send_notice, boost::future<void>(const std::string& notice));

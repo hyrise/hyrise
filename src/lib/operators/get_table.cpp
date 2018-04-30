@@ -28,8 +28,6 @@ const std::string GetTable::description(DescriptionMode description_mode) const 
 
 const std::string& GetTable::table_name() const { return _name; }
 
-const std::vector<ChunkID>& GetTable::excluded_chunk_ids() const { return _excluded_chunk_ids; }
-
 void GetTable::set_excluded_chunk_ids(const std::vector<ChunkID>& excluded_chunk_ids) {
   _excluded_chunk_ids = excluded_chunk_ids;
 }

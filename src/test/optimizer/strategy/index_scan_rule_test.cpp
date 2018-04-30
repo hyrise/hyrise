@@ -10,10 +10,10 @@
 #include "abstract_expression.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "optimizer/column_statistics.hpp"
 #include "optimizer/strategy/index_scan_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
-#include "optimizer/table_statistics.hpp"
+#include "statistics/column_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
@@ -27,36 +27,6 @@
 
 namespace opossum {
 
-class TableStatisticsMock : public TableStatistics {
- public:
-  // we don't need a shared_ptr<Table> for this mock, so just set a nullptr
-  TableStatisticsMock() : TableStatistics(std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data)) {
-    _row_count = 0;
-  }
-
-  explicit TableStatisticsMock(float row_count)
-      : TableStatistics(std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data)) {
-    _row_count = row_count;
-  }
-
-  std::shared_ptr<TableStatistics> predicate_statistics(const ColumnID column_id,
-                                                        const PredicateCondition predicate_condition,
-                                                        const AllParameterVariant& value,
-                                                        const std::optional<AllTypeVariant>& value2) override {
-    if (column_id == ColumnID{0}) {
-      return std::make_shared<TableStatisticsMock>(500);
-    }
-    if (column_id == ColumnID{1}) {
-      return std::make_shared<TableStatisticsMock>(200);
-    }
-    if (column_id == ColumnID{2}) {
-      return std::make_shared<TableStatisticsMock>(950);
-    }
-
-    Fail("Tried to access TableStatisticsMock with unexpected column");
-  }
-};
-
 class IndexScanRuleTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
@@ -66,13 +36,21 @@ class IndexScanRuleTest : public StrategyBaseTest {
     _rule = std::make_shared<IndexScanRule>();
   }
 
+  std::shared_ptr<TableStatistics> generate_mock_statistics(float row_count = 0.0f) {
+    std::vector<std::shared_ptr<const BaseColumnStatistics>> column_statistics;
+    column_statistics.emplace_back(std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10, 0, 20));
+    column_statistics.emplace_back(std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10, 0, 20));
+    column_statistics.emplace_back(std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10, 0, 20'000));
+    return std::make_shared<TableStatistics>(TableStatistics{TableType::Data, row_count, column_statistics});
+  }
+
   std::shared_ptr<IndexScanRule> _rule;
 };
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {
   auto stored_table_node = StoredTableNode::make("a");
 
-  auto statistics_mock = std::make_shared<TableStatisticsMock>();
+  auto statistics_mock = generate_mock_statistics();
   stored_table_node->set_statistics(statistics_mock);
 
   auto predicate_node_0 =
@@ -90,7 +68,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
   auto table = StorageManager::get().get_table("a");
   table->create_index<GroupKeyIndex>({ColumnID{2}});
 
-  auto statistics_mock = std::make_shared<TableStatisticsMock>();
+  auto statistics_mock = generate_mock_statistics();
   stored_table_node->set_statistics(statistics_mock);
 
   auto predicate_node_0 =
@@ -108,7 +86,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithMultiColumnIndex) {
   auto table = StorageManager::get().get_table("a");
   table->create_index<CompositeGroupKeyIndex>({ColumnID{2}, ColumnID{1}});
 
-  auto statistics_mock = std::make_shared<TableStatisticsMock>();
+  auto statistics_mock = generate_mock_statistics();
   stored_table_node->set_statistics(statistics_mock);
 
   auto predicate_node_0 =
@@ -123,7 +101,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithMultiColumnIndex) {
 TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
   auto stored_table_node = StoredTableNode::make("a");
 
-  auto statistics_mock = std::make_shared<TableStatisticsMock>();
+  auto statistics_mock = generate_mock_statistics();
   stored_table_node->set_statistics(statistics_mock);
 
   auto predicate_node_0 = PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{2}},
@@ -141,7 +119,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
   auto table = StorageManager::get().get_table("a");
   table->create_index<GroupKeyIndex>({ColumnID{2}});
 
-  auto statistics_mock = std::make_shared<TableStatisticsMock>(80'000);
+  auto statistics_mock = generate_mock_statistics(80'000);
   table->set_table_statistics(statistics_mock);
 
   auto predicate_node_0 =
@@ -159,7 +137,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanIfNotGroupKey) {
   auto table = StorageManager::get().get_table("a");
   table->create_index<AdaptiveRadixTreeIndex>({ColumnID{2}});
 
-  auto statistics_mock = std::make_shared<TableStatisticsMock>(1'000'000);
+  auto statistics_mock = generate_mock_statistics(1'000'000);
   table->set_table_statistics(statistics_mock);
 
   auto predicate_node_0 =
@@ -177,11 +155,11 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
   auto table = StorageManager::get().get_table("a");
   table->create_index<GroupKeyIndex>({ColumnID{2}});
 
-  auto statistics_mock = std::make_shared<TableStatisticsMock>(1'000'000);
+  auto statistics_mock = generate_mock_statistics(1'000'000);
   table->set_table_statistics(statistics_mock);
 
   auto predicate_node_0 =
-      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{2}}, PredicateCondition::GreaterThan, 10);
+      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{2}}, PredicateCondition::GreaterThan, 19'900);
   predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type(), ScanType::TableScan);
@@ -195,11 +173,11 @@ TEST_F(IndexScanRuleTest, IndexScanOnlyOnOutputOfStoredTableNode) {
   auto table = StorageManager::get().get_table("a");
   table->create_index<GroupKeyIndex>({ColumnID{2}});
 
-  auto statistics_mock = std::make_shared<TableStatisticsMock>(1'000'000);
+  auto statistics_mock = generate_mock_statistics(1'000'000);
   table->set_table_statistics(statistics_mock);
 
   auto predicate_node_0 =
-      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{2}}, PredicateCondition::GreaterThan, 10);
+      PredicateNode::make(LQPColumnReference{stored_table_node, ColumnID{2}}, PredicateCondition::GreaterThan, 19'900);
   predicate_node_0->set_left_input(stored_table_node);
 
   auto predicate_node_1 =

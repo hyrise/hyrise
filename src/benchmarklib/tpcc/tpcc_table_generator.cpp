@@ -58,7 +58,8 @@ std::shared_ptr<Table> TpccTableGenerator::generate_items_table() {
         return data;
       });
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size,
+                                                UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
   ChunkEncoder::encode_all_chunks(table);
@@ -96,7 +97,8 @@ std::shared_ptr<Table> TpccTableGenerator::generate_warehouse_table() {
     return CUSTOMER_YTD * NUM_CUSTOMERS_PER_DISTRICT * NUM_DISTRICTS_PER_WAREHOUSE;
   });
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size,
+                                                UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
   ChunkEncoder::encode_all_chunks(table);
@@ -146,7 +148,8 @@ std::shared_ptr<Table> TpccTableGenerator::generate_stock_table() {
         return data;
       });
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size,
+                                                UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
   ChunkEncoder::encode_all_chunks(table);
@@ -188,7 +191,8 @@ std::shared_ptr<Table> TpccTableGenerator::generate_district_table() {
   add_column<int>(columns_by_chunk, column_definitions, "D_NEXT_O_ID", cardinalities,
                   [&](std::vector<size_t>) { return NUM_ORDERS + 1; });
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size,
+                                                UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
   ChunkEncoder::encode_all_chunks(table);
@@ -255,7 +259,8 @@ std::shared_ptr<Table> TpccTableGenerator::generate_customer_table() {
   add_column<std::string>(columns_by_chunk, column_definitions, "C_DATA", cardinalities,
                           [&](std::vector<size_t>) { return _random_gen.astring(300, 500); });
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size,
+                                                UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
   ChunkEncoder::encode_all_chunks(table);
@@ -288,7 +293,8 @@ std::shared_ptr<Table> TpccTableGenerator::generate_history_table() {
   add_column<std::string>(columns_by_chunk, column_definitions, "H_DATA", cardinalities,
                           [&](std::vector<size_t>) { return _random_gen.astring(12, 24); });
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size,
+                                                UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
   ChunkEncoder::encode_all_chunks(table);
@@ -333,7 +339,8 @@ std::shared_ptr<Table> TpccTableGenerator::generate_order_table(
   add_column<int>(columns_by_chunk, column_definitions, "O_ALL_LOCAL", cardinalities,
                   [&](std::vector<size_t>) { return 1; });
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size,
+                                                UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
   ChunkEncoder::encode_all_chunks(table);
@@ -436,7 +443,8 @@ std::shared_ptr<Table> TpccTableGenerator::generate_order_line_table(
                                      order_line_counts,
                                      [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size,
+                                                UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
   ChunkEncoder::encode_all_chunks(table);
@@ -462,7 +470,8 @@ std::shared_ptr<Table> TpccTableGenerator::generate_new_order_table() {
   add_column<int>(columns_by_chunk, column_definitions, "NO_W_ID", cardinalities,
                   [&](std::vector<size_t> indices) { return indices[0]; });
 
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size,
+                                                UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
   ChunkEncoder::encode_all_chunks(table);
@@ -484,14 +493,14 @@ std::map<std::string, std::shared_ptr<Table>> TpccTableGenerator::generate_all_t
   auto new_order_table = std::async(std::launch::async, &TpccTableGenerator::generate_new_order_table, this);
 
   return std::map<std::string, std::shared_ptr<Table>>({{"ITEM", item_table.get()},
-                                                        {"WAREHOUSE", warehouse_table.get()},
-                                                        {"STOCK", stock_table.get()},
-                                                        {"DISTRICT", district_table.get()},
-                                                        {"CUSTOMER", customer_table.get()},
-                                                        {"HISTORY", history_table.get()},
-                                                        {"ORDER", order_table.get()},
-                                                        {"ORDER_LINE", order_line_table.get()},
-                                                        {"NEW_ORDER", new_order_table.get()}});
+                                                                 {"WAREHOUSE", warehouse_table.get()},
+                                                                 {"STOCK", stock_table.get()},
+                                                                 {"DISTRICT", district_table.get()},
+                                                                 {"CUSTOMER", customer_table.get()},
+                                                                 {"HISTORY", history_table.get()},
+                                                                 {"ORDER", order_table.get()},
+                                                                 {"ORDER_LINE", order_line_table.get()},
+                                                                 {"NEW_ORDER", new_order_table.get()}});
 }
 
 /*

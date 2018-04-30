@@ -13,7 +13,6 @@
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
-#include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_scan.hpp"
@@ -49,7 +48,7 @@ TYPED_TEST(JoinEquiTest, LeftJoin) {
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinIntFloat) {
-  if (std::is_same<TypeParam, JoinSortMerge>::value || std::is_same<TypeParam, JoinMPSM>::value) {
+  if (std::is_same<TypeParam, JoinSortMerge>::value) {
     return;
   }
 
@@ -65,7 +64,7 @@ TYPED_TEST(JoinEquiTest, InnerJoinIntFloat) {
 }
 
 TYPED_TEST(JoinEquiTest, InnerJoinIntDouble) {
-  if (std::is_same<TypeParam, JoinSortMerge>::value || std::is_same<TypeParam, JoinMPSM>::value) {
+  if (std::is_same<TypeParam, JoinSortMerge>::value) {
     return;
   }
 

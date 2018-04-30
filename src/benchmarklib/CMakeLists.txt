@@ -1,3 +1,5 @@
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
 set(
     SOURCES
 
@@ -16,6 +18,9 @@ set(
     tpch/tpch_queries.hpp
     tpch/tpch_db_generator.cpp
     tpch/tpch_db_generator.hpp
+
+    table_generator.cpp
+    table_generator.hpp
 )
 
 
