@@ -193,7 +193,7 @@ void LikeTableScanImpl::resolve_pattern_matcher(const AllPatternVariant& pattern
     functor([&](const std::string& str) -> bool { return std::regex_match(str, regex) ^ invert; });
 
   } else {
-    Fail("Impl not... implemented [sic]");
+    Fail("Pattern not implemented. Probably a bug.");
   }
 }
 
