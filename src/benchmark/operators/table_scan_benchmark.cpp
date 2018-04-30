@@ -4,8 +4,8 @@
 #include "benchmark/benchmark.h"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "utils/load_table.hpp"
 #include "table_generator.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 

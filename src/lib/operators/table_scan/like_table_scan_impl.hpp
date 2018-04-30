@@ -10,7 +10,6 @@
 #include "base_single_column_table_scan_impl.hpp"
 #include "boost/variant.hpp"
 
-#include "boost/variant.hpp"
 #include "types.hpp"
 
 namespace opossum {

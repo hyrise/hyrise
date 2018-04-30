@@ -118,10 +118,10 @@ LikeTableScanImpl::AllPatternVariant LikeTableScanImpl::pattern_string_to_patter
 
   if (tokens.size() == 2 && tokens[0].type() == typeid(std::string) && tokens[1] == PatternToken{Wildcard::AnyChars}) {
     return StartsWithPattern{boost::get<std::string>(tokens[0])};
-  } else if (tokens.size() == 2 && tokens[0] == PatternToken{Wildcard::AnyChars} &&
+  } else if (tokens.size() == 2 && tokens[0] == PatternToken{Wildcard::AnyChars} &&  // NOLINT
              tokens[1].type() == typeid(std::string)) {
     return EndsWithPattern{boost::get<std::string>(tokens[1])};
-  } else if (tokens.size() == 3 && tokens[0] == PatternToken{Wildcard::AnyChars} &&
+  } else if (tokens.size() == 3 && tokens[0] == PatternToken{Wildcard::AnyChars} &&  // NOLINT
              tokens[1].type() == typeid(std::string) && tokens[2] == PatternToken{Wildcard::AnyChars}) {
     return ContainsPattern{boost::get<std::string>(tokens[1])};
   } else {
