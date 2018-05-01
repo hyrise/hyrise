@@ -74,7 +74,7 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
   struct ContainsPattern final {
     std::string string;
   };
-  // '%hello%world%nice%weather'
+  // '%hello%world%nice%weather%'
   struct MultipleContainsPattern final {
     std::vector<std::string> strings;
   };
