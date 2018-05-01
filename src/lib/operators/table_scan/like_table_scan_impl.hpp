@@ -62,18 +62,22 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
    * To speed up LIKE there are special implementations available for simple, common patterns.
    * Any other pattern will fall back to regex.
    */
+  // 'hello%'
   struct StartsWithPattern final {
-    std::string str;
-  };  // 'hello%'
+    std::string string;
+  };
+  // '%hello'
   struct EndsWithPattern final {
-    std::string str;
-  };  // '%hello'
+    std::string string;
+  };
+  // '%hello%'
   struct ContainsPattern final {
-    std::string str;
-  };  // '%hello%'
+    std::string string;
+  };
+  // '%hello%world%nice%weather'
   struct MultipleContainsPattern final {
-    std::vector<std::string> str;
-  };  // '%hello%world%nice%weather'
+    std::vector<std::string> strings;
+  };
 
   /**
    * Contains one of the specialised patterns from above (StartsWithPattern, ...) or falls back to std::regex for a
@@ -88,7 +92,7 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
    * Call functor with the resolved Pattern
    */
   template <typename Functor>
-  static void resolve_pattern_matcher(const AllPatternVariant& pattern_variant, const bool invert,
+  static void resolve_pattern_matcher(const AllPatternVariant& pattern_variant, const bool invert_results,
                                       const Functor& functor);
 
  private:
@@ -107,6 +111,8 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
   std::pair<size_t, std::vector<bool>> _find_matches_in_dictionary(const pmr_vector<std::string>& dictionary);
 
   const std::string _pattern;
+
+  // For NOT LIKE support
   const bool _invert_results;
 
   AllPatternVariant _pattern_variant;

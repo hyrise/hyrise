@@ -114,7 +114,7 @@ TEST_P(OperatorsTableScanLikeTest, ScanLikeEmptyStringOnDict) {
 TEST_F(OperatorsTableScanLikeTest, ScanLikeUnderscoreWildcard) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_starting.tbl", 1);
   // wildcard has to be placed at front and/or back of search string
-  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, PredicateCondition::Like, "D_m_f%");
+  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, PredicateCondition::Like, "%D%_m_f%");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }

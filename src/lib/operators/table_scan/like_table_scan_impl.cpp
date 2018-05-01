@@ -117,26 +117,41 @@ LikeTableScanImpl::AllPatternVariant LikeTableScanImpl::pattern_string_to_patter
   const auto tokens = pattern_string_to_tokens(pattern);
 
   if (tokens.size() == 2 && tokens[0].type() == typeid(std::string) && tokens[1] == PatternToken{Wildcard::AnyChars}) {
+    // Pattern has the form 'hello%'
     return StartsWithPattern{boost::get<std::string>(tokens[0])};
+
   } else if (tokens.size() == 2 && tokens[0] == PatternToken{Wildcard::AnyChars} &&  // NOLINT
              tokens[1].type() == typeid(std::string)) {
+    // Pattern has the form '%hello'
     return EndsWithPattern{boost::get<std::string>(tokens[1])};
+
   } else if (tokens.size() == 3 && tokens[0] == PatternToken{Wildcard::AnyChars} &&  // NOLINT
              tokens[1].type() == typeid(std::string) && tokens[2] == PatternToken{Wildcard::AnyChars}) {
+    // Pattern has the form '%hello%'
     return ContainsPattern{boost::get<std::string>(tokens[1])};
-  } else {
-    // Pick ContainsMultiple or Regex
-    auto impl_is_contains_multiple = true;      // Set to false if tokens don't match %{, str, %} pattern
-    auto strings = std::vector<std::string>{};  // arguments used for ContainsMultiple, if it gets used
-    auto expect_any_chars = true;               // If false, expect a string
 
+  } else {
+    /**
+     * Pattern is either MultipleContainsPattern, e.g., '%hello%world%how%are%you%' or, if it isn't we fall back to
+     * using a regex matcher.
+     *
+     * A MultipleContainsPattern begins and ends with '%' and  contains only strings and '%'.
+     */
+
+    // Pick ContainsMultiple or Regex
+    auto pattern_is_contains_multiple = true;   // Set to false if tokens don't match %(, string, %)* pattern
+    auto strings = std::vector<std::string>{};  // arguments used for ContainsMultiple, if it gets used
+    auto expect_any_chars = true;               // If true, expect '%', if false, expect a string
+
+    // Check if the tokens match the layout expected for MultipleContainsPattern - or break and set
+    // pattern_is_contains_multiple to false once they don't
     for (const auto& token : tokens) {
       if (expect_any_chars && token != PatternToken{Wildcard::AnyChars}) {
-        impl_is_contains_multiple = false;
+        pattern_is_contains_multiple = false;
         break;
       }
       if (!expect_any_chars && token.type() != typeid(std::string)) {
-        impl_is_contains_multiple = false;
+        pattern_is_contains_multiple = false;
         break;
       }
       if (!expect_any_chars) {
@@ -146,7 +161,7 @@ LikeTableScanImpl::AllPatternVariant LikeTableScanImpl::pattern_string_to_patter
       expect_any_chars = !expect_any_chars;
     }
 
-    if (impl_is_contains_multiple) {
+    if (pattern_is_contains_multiple) {
       return MultipleContainsPattern{strings};
     } else {
       return std::regex(sql_like_to_regex(pattern));
@@ -155,42 +170,44 @@ LikeTableScanImpl::AllPatternVariant LikeTableScanImpl::pattern_string_to_patter
 }
 
 template <typename Functor>
-void LikeTableScanImpl::resolve_pattern_matcher(const AllPatternVariant& pattern_variant, const bool invert,
+void LikeTableScanImpl::resolve_pattern_matcher(const AllPatternVariant& pattern_variant, const bool invert_results,
                                                 const Functor& functor) {
   if (pattern_variant.type() == typeid(StartsWithPattern)) {
-    const auto& prefix = boost::get<StartsWithPattern>(pattern_variant).str;
-    functor([&](const std::string& str) -> bool {
-      if (str.size() < prefix.size()) return invert;
-      return (str.compare(0, prefix.size(), prefix) == 0) ^ invert;
+    const auto& prefix = boost::get<StartsWithPattern>(pattern_variant).string;
+    functor([&](const std::string& string) -> bool {
+      if (string.size() < prefix.size()) return invert_results;
+      return (string.compare(0, prefix.size(), prefix) == 0) ^ invert_results;
     });
 
   } else if (pattern_variant.type() == typeid(EndsWithPattern)) {
-    const auto& suffix = boost::get<EndsWithPattern>(pattern_variant).str;
-    functor([&](const std::string& str) -> bool {
-      if (str.size() < suffix.size()) return invert;
-      return (str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0) ^ invert;
+    const auto& suffix = boost::get<EndsWithPattern>(pattern_variant).string;
+    functor([&](const std::string& string) -> bool {
+      if (string.size() < suffix.size()) return invert_results;
+      return (string.compare(string.size() - suffix.size(), suffix.size(), suffix) == 0) ^ invert_results;
     });
 
   } else if (pattern_variant.type() == typeid(ContainsPattern)) {
-    const auto& contains_str = boost::get<ContainsPattern>(pattern_variant).str;
-    functor([&](const std::string& str) -> bool { return (str.find(contains_str) != std::string::npos) ^ invert; });
+    const auto& contains_str = boost::get<ContainsPattern>(pattern_variant).string;
+    functor([&](const std::string& string) -> bool {
+      return (string.find(contains_str) != std::string::npos) ^ invert_results;
+    });
 
   } else if (pattern_variant.type() == typeid(MultipleContainsPattern)) {
-    const auto& contains_strs = boost::get<MultipleContainsPattern>(pattern_variant).str;
+    const auto& contains_strs = boost::get<MultipleContainsPattern>(pattern_variant).strings;
 
-    functor([&](const std::string& str) -> bool {
+    functor([&](const std::string& string) -> bool {
       auto current_position = size_t{0};
       for (const auto& contains_str : contains_strs) {
-        current_position = str.find(contains_str, current_position);
-        if (current_position == std::string::npos) return invert;
+        current_position = string.find(contains_str, current_position);
+        if (current_position == std::string::npos) return invert_results;
       }
-      return !invert;
+      return !invert_results;
     });
 
   } else if (pattern_variant.type() == typeid(std::regex)) {
     const auto& regex = boost::get<std::regex>(pattern_variant);
 
-    functor([&](const std::string& str) -> bool { return std::regex_match(str, regex) ^ invert; });
+    functor([&](const std::string& string) -> bool { return std::regex_match(string, regex) ^ invert_results; });
 
   } else {
     Fail("Pattern not implemented. Probably a bug.");
