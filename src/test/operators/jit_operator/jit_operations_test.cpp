@@ -47,7 +47,115 @@ TEST_F(JitOperationsTest, ComputeResultType) {
   EXPECT_THROW(jit_compute_type(jit_modulo, DataType::Int, DataType::Float), std::logic_error);
 }
 
-TEST_F(JitOperationsTest, Computations) {}
+TEST_F(JitOperationsTest, ArithmeticComputations) {
+  // We only test a selection of data type combinations and operations.
+  JitRuntimeContext context;
+  context.tuple.resize(5);
+
+  const JitTupleValue int_value{DataType::Int, false, 0};
+  const JitTupleValue long_value{DataType::Long, false, 1};
+  const JitTupleValue float_value{DataType::Float, false, 2};
+  const JitTupleValue double_value{DataType::Double, false, 3};
+
+  int_value.set<int32_t>(2, context);
+  long_value.set<int64_t>(5l, context);
+  float_value.set<float>(3.14f, context);
+  double_value.set<double>(1.23, context);
+
+  const JitTupleValue int_result_value{DataType::Int, false, 4};
+  const JitTupleValue long_result_value{DataType::Long, false, 4};
+  const JitTupleValue float_result_value{DataType::Float, false, 4};
+  const JitTupleValue double_result_value{DataType::Double, false, 4};
+  const JitTupleValue bool_result_value{DataType::Bool, false, 4};
+
+  jit_compute(jit_addition, int_value, long_value, long_result_value, context);
+  ASSERT_EQ(2 + 5l, long_result_value.get<int64_t>(context));
+
+  jit_compute(jit_subtraction, float_value, long_value, float_result_value, context);
+  ASSERT_EQ(3.14f - 5l, float_result_value.get<float>(context));
+
+  jit_compute(jit_multiplication, double_value, int_value, double_result_value, context);
+  ASSERT_EQ(1.23 * 2, double_result_value.get<double>(context));
+
+  jit_compute(jit_division, int_value, float_value, float_result_value, context);
+  ASSERT_EQ(2 / 3.14f, float_result_value.get<float>(context));
+
+  jit_compute(jit_modulo, long_value, int_value, long_result_value, context);
+  ASSERT_EQ(5l % 2, long_result_value.get<int64_t>(context));
+
+  jit_compute(jit_power, double_value, float_value, double_result_value, context);
+  ASSERT_EQ(std::pow(1.23, 3.14f), double_result_value.get<double>(context));
+}
+
+TEST_F(JitOperationsTest, Predicates) {
+  JitRuntimeContext context;
+  context.tuple.resize(5);
+
+  const JitTupleValue int_1{DataType::Int, false, 0};
+  const JitTupleValue int_2{DataType::Int, false, 1};
+  const JitTupleValue float_1{DataType::Float, false, 2};
+  const JitTupleValue float_2{DataType::Float, false, 3};
+  const JitTupleValue result_value{DataType::Bool, false, 4};
+
+  int_1.set<int32_t>(1, context);
+  int_2.set<int32_t>(2, context);
+  float_1.set<float>(1.0f, context);
+  float_2.set<float>(2.0f, context);
+
+  // GreaterThan
+  jit_compute(jit_greater_than, int_1, int_2, result_value, context);
+  ASSERT_FALSE(result_value.get<bool>(context));
+
+  jit_compute(jit_greater_than, int_1, float_1, result_value, context);
+  ASSERT_FALSE(result_value.get<bool>(context));
+
+  jit_compute(jit_greater_than, float_2, int_1, result_value, context);
+  ASSERT_TRUE(result_value.get<bool>(context));
+
+  // GreaterThanEquals
+  jit_compute(jit_greater_than_equals, float_1, float_2, result_value, context);
+  ASSERT_FALSE(result_value.get<bool>(context));
+
+  jit_compute(jit_greater_than_equals, float_1, int_1, result_value, context);
+  ASSERT_TRUE(result_value.get<bool>(context));
+
+  jit_compute(jit_greater_than_equals, int_2, float_1, result_value, context);
+  ASSERT_TRUE(result_value.get<bool>(context));
+
+  // LessThan
+  jit_compute(jit_less_than, int_1, int_2, result_value, context);
+  ASSERT_TRUE(result_value.get<bool>(context));
+
+  jit_compute(jit_less_than, int_1, float_1, result_value, context);
+  ASSERT_FALSE(result_value.get<bool>(context));
+
+  jit_compute(jit_less_than, float_2, int_1, result_value, context);
+  ASSERT_FALSE(result_value.get<bool>(context));
+
+  // LessThanEquals
+  jit_compute(jit_less_than_equals, float_1, float_2, result_value, context);
+  ASSERT_TRUE(result_value.get<bool>(context));
+
+  jit_compute(jit_less_than_equals, float_1, int_1, result_value, context);
+  ASSERT_TRUE(result_value.get<bool>(context));
+
+  jit_compute(jit_less_than_equals, int_2, float_1, result_value, context);
+  ASSERT_FALSE(result_value.get<bool>(context));
+
+  // Equals
+  jit_compute(jit_equals, float_1, float_2, result_value, context);
+  ASSERT_FALSE(result_value.get<bool>(context));
+
+  jit_compute(jit_equals, float_1, int_1, result_value, context);
+  ASSERT_TRUE(result_value.get<bool>(context));
+
+  // NotEquals
+  jit_compute(jit_not_equals, int_1, int_2, result_value, context);
+  ASSERT_TRUE(result_value.get<bool>(context));
+
+  jit_compute(jit_not_equals, int_1, float_1, result_value, context);
+  ASSERT_FALSE(result_value.get<bool>(context));
+}
 
 TEST_F(JitOperationsTest, JitAnd) {
   JitRuntimeContext context;
