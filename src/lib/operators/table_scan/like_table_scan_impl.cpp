@@ -200,6 +200,7 @@ void LikeTableScanImpl::resolve_pattern_matcher(const AllPatternVariant& pattern
       for (const auto& contains_str : contains_strs) {
         current_position = string.find(contains_str, current_position);
         if (current_position == std::string::npos) return invert_results;
+        current_position += contains_str.size();
       }
       return !invert_results;
     });

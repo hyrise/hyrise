@@ -40,23 +40,28 @@ BENCHMARK_F(BenchmarkBasicFixture, BM_TableScanVariable_OnDict)(benchmark::State
   BM_TableScan_impl(state, _table_dict_wrapper, ColumnID{0}, PredicateCondition::GreaterThanEquals, ColumnID{1});
 }
 
-void BM_TableScanLike(benchmark::State& state, const std::string& column_name, const std::string& pattern) {
+BENCHMARK_F(BenchmarkBasicFixture, BM_TableScan_Like)(benchmark::State& state) {
   const auto lineitem_table = load_table("src/test/tables/tpch/sf-0.001/lineitem.tbl");
 
   const auto lineitem_wrapper = std::make_shared<TableWrapper>(lineitem_table);
   lineitem_wrapper->execute();
 
+  const auto column_names_and_patterns = std::vector<std::pair<std::string, std::string>>({
+                                                                                          {"l_comment", "%final%"},
+                                                                                          {"l_comment", "%final%requests%"},
+                                                                                          {"l_shipinstruct", "quickly%"},
+                                                                                          {"l_comment", "%foxes"},
+                                                                                          {"l_comment", "%quick_y__above%even%"},
+  });
+
   while (state.KeepRunning()) {
-    auto table_scan = std::make_shared<TableScan>(lineitem_wrapper, lineitem_table->column_id_by_name(column_name),
-                                                  PredicateCondition::Like, pattern);
-    table_scan->execute();
+    for (const auto& column_name_and_pattern : column_names_and_patterns) {
+      auto table_scan = std::make_shared<TableScan>(lineitem_wrapper, lineitem_table->column_id_by_name(column_name_and_pattern.first),
+                                                    PredicateCondition::Like, column_name_and_pattern.second);
+      table_scan->execute();
+    }
   }
 }
 
-BENCHMARK_CAPTURE(BM_TableScanLike, FindPattern, "l_comment", "%final%");
-BENCHMARK_CAPTURE(BM_TableScanLike, MultipleFindPatterns, "l_comment", "%final%requests%");
-BENCHMARK_CAPTURE(BM_TableScanLike, StartsWithPattern, "l_shipinstruct", "quickly%");
-BENCHMARK_CAPTURE(BM_TableScanLike, EndsWithPattern, "l_comment", "%foxes");
-BENCHMARK_CAPTURE(BM_TableScanLike, ComplexPattern, "l_comment", "%quick_y__above%even%");
 
 }  // namespace opossum
