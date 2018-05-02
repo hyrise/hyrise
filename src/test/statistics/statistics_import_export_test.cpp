@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <fstream>
 
 #include "gtest/gtest.h"
@@ -11,7 +12,9 @@
 
 namespace opossum {
 
-class StatisticsImportExportTest : public ::testing::Test {};
+class StatisticsImportExportTest : public ::testing::Test {
+  void TearDown() { std::remove((test_data_path + "exported_table_statistics_test.json").c_str()); }
+};
 
 TEST_F(StatisticsImportExportTest, EndToEnd) {
   std::vector<std::shared_ptr<const BaseColumnStatistics>> original_column_statistics;
@@ -24,7 +27,7 @@ TEST_F(StatisticsImportExportTest, EndToEnd) {
 
   TableStatistics original_table_statistics{TableType::Data, 3500, original_column_statistics};
 
-  const auto exported_statistics_file_path = test_data_path + "exported_table_statistics.json";
+  const auto exported_statistics_file_path = test_data_path + "exported_table_statistics_test.json";
 
   export_table_statistics(original_table_statistics, exported_statistics_file_path);
 
