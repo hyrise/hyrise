@@ -12,6 +12,7 @@ namespace opossum {
  */
 class BaseJitColumnReader {
  public:
+  virtual ~BaseJitColumnReader() {}
   virtual void read_value(JitRuntimeContext& context) = 0;
 };
 
