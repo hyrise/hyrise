@@ -237,6 +237,8 @@ std::string LikeTableScanImpl::sql_like_to_regex(std::string sql_like) {
     boost::replace_all(sql_like, pair.first, pair.second);
   }
 
+  std::cout << sql_like << " -> " << "^" + sql_like + "$" << std::endl;
+
   return "^" + sql_like + "$";
 }
 

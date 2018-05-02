@@ -194,9 +194,10 @@ TEST_F(OperatorsTableScanLikeTest, ScanLikeOnSpecialChars) {
   scan3->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan3->get_output(), expected_result_2);
 
-  auto scan4 = std::make_shared<TableScan>(_gt_special_chars, ColumnID{1}, PredicateCondition::Like, "%la\\.^$+?(){}.*__bl%");
+  auto scan4 =
+      std::make_shared<TableScan>(_gt_special_chars, ColumnID{1}, PredicateCondition::Like, "%la\\.^$+?)({}.*__bl%");
   scan4->execute();
-  EXPECT_TABLE_EQ_UNORDERED(scan4->get_output(), expected_result_1);
+  EXPECT_TABLE_EQ_UNORDERED(scan4->get_output(), expected_result_4);
 }
 
 // PredicateCondition::Like - Containing Wildcard
