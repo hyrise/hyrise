@@ -61,11 +61,4 @@ constexpr use_boost_future_t<> use_boost_future;
 }  // namespace asio
 }  // namespace boost
 
-// TODO(anyone): The implementation version derived from boost 1.64 does not work with
-// older boost versions (and vice versa), so we have to maintain two implementations
-// until newer boost versions are available through standard package repositories
-#if BOOST_VERSION >= 106400
 #include "use_boost_future_impl.hpp"
-#else
-#include "use_boost_future_legacy_impl.hpp"
-#endif

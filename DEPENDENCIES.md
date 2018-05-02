@@ -3,7 +3,7 @@
 | Name             | Version          | Platform |                              Optional |
 | ---------------- | ---------------- | -------- | ------------------------------------- |
 | build-essential  | any              |    Linux |                                    No |
-| boost            | >= 1.63.0        |    All   |                                    No |
+| boost            | >= 1.65.0        |    All   |                                    No |
 | clang            | 5                |    All   |                 Yes, if gcc installed |
 | clang-format     | 3.8              |    All   |                      Yes (formatting) |
 | cmake            | 3.5 (deprecated) |    All   |                                    No |
