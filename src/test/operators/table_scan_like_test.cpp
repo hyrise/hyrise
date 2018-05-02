@@ -179,6 +179,7 @@ TEST_P(OperatorsTableScanLikeTest, ScanLikeEndingOnReferencedDictColumn) {
 TEST_F(OperatorsTableScanLikeTest, ScanLikeOnSpecialChars) {
   std::shared_ptr<Table> expected_result_1 = load_table("src/test/tables/int_string_like_special_chars_1.tbl", 1);
   std::shared_ptr<Table> expected_result_2 = load_table("src/test/tables/int_string_like_special_chars_2.tbl", 1);
+  std::shared_ptr<Table> expected_result_4 = load_table("src/test/tables/int_string_like_special_chars_3.tbl", 1);
 
   auto scan1 = std::make_shared<TableScan>(_gt_special_chars, ColumnID{1}, PredicateCondition::Like, "%2^2%");
   scan1->execute();
@@ -192,6 +193,10 @@ TEST_F(OperatorsTableScanLikeTest, ScanLikeOnSpecialChars) {
   auto scan3 = std::make_shared<TableScan>(_gt_special_chars, ColumnID{1}, PredicateCondition::Like, "%(%)%");
   scan3->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan3->get_output(), expected_result_2);
+
+  auto scan4 = std::make_shared<TableScan>(_gt_special_chars, ColumnID{1}, PredicateCondition::Like, "%la\\.^$+?(){}.*__bl%");
+  scan4->execute();
+  EXPECT_TABLE_EQ_UNORDERED(scan4->get_output(), expected_result_1);
 }
 
 // PredicateCondition::Like - Containing Wildcard
