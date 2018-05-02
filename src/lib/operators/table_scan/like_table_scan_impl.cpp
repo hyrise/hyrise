@@ -217,7 +217,7 @@ void LikeTableScanImpl::resolve_pattern_matcher(const AllPatternVariant& pattern
 std::string LikeTableScanImpl::sql_like_to_regex(std::string sql_like) {
   // Do substitution of <backslash> with <backslash><backslash> FIRST, because otherwise it will also replace
   // backslashes introduced by the other substitutions
-  constexpr auto replace_by = std::array<std::pair<const char*, const char*>, 15u>{{{"\\", "\\\\"},
+  constexpr auto replace_by = std::array<std::pair<const char*, const char*>, 14u>{{{"\\", "\\\\"},
                                                                                     {".", "\\."},
                                                                                     {"^", "\\^"},
                                                                                     {"$", "\\$"},
@@ -228,7 +228,6 @@ std::string LikeTableScanImpl::sql_like_to_regex(std::string sql_like) {
                                                                                     {"{", "\\{"},
                                                                                     {"}", "\\}"},
                                                                                     {"|", "\\|"},
-                                                                                    {".", "\\."},
                                                                                     {"*", "\\*"},
                                                                                     {"%", ".*"},
                                                                                     {"_", "."}}};
@@ -236,8 +235,6 @@ std::string LikeTableScanImpl::sql_like_to_regex(std::string sql_like) {
   for (const auto& pair : replace_by) {
     boost::replace_all(sql_like, pair.first, pair.second);
   }
-
-  std::cout << sql_like << " -> " << "^" + sql_like + "$" << std::endl;
 
   return "^" + sql_like + "$";
 }
