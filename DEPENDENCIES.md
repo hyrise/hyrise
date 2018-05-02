@@ -5,7 +5,7 @@
 | build-essential  | any              |    Linux |                                    No |
 | boost            | >= 1.65.0        |    All   |                                    No |
 | clang            | 5                |    All   |                 Yes, if gcc installed |
-| clang-format     | 3.8              |    All   |                      Yes (formatting) |
+| clang-format     | 6.0 / 2018-01-11 |    All   |                      Yes (formatting) |
 | cmake            | 3.5 (deprecated) |    All   |                                    No |
 | cmake            | 3.9              |    All   |                                    No |
 | gcc              | 7.2              |    All   | Yes, if clang installed, not for OS X |

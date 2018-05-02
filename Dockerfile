@@ -8,8 +8,8 @@ RUN apt-get update \
         build-essential \
         bc \
         ccache \
-        clang-5.0 \
-        clang-format-3.8 \
+        clang-6.0 \
+        clang-format-6.0 \
         cmake \
         curl \
         gcovr \
