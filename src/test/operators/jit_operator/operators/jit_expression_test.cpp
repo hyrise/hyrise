@@ -79,7 +79,7 @@ TEST_F(JitExpressionTest, Not) {
     expression.compute(context);
     ASSERT_TRUE(context.tuple.get<bool>(result_index));
   }
-  {
+  if (IS_DEBUG) {
     // Not can only be computed on boolean values
     auto input_value = JitTupleValue{DataType::Int, false, 0};
     JitExpression expression(std::make_shared<JitExpression>(input_value), ExpressionType::Not, result_index);
