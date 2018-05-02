@@ -175,14 +175,97 @@ TEST_F(JitExpressionTest, ArithmeticOperations) {
 }
 
 TEST_F(JitExpressionTest, PredicateOperations) {
-  /*{
-    JitExpression expression(std::make_shared<JitExpression>(int_tuple_value), ExpressionType::G,
-                             std::make_shared<JitExpression>(float_tuple_value), result_index);
-    ASSERT_EQ(expression.result().data_type(), DataType::Float);
-    ASSERT_FALSE(expression.result().is_nullable());
-    expression.compute(context);
-    ASSERT_EQ(expression.result().get<float>(context), int_value + float_value);
-  }*/
+  JitRuntimeContext context;
+  context.tuple.resize(3);
+
+  auto left_tuple_value = JitTupleValue{DataType::Int, false, 0};
+  auto right_tuple_value = JitTupleValue{DataType::Int, false, 1};
+  auto result_index = 2;
+
+  JitExpression gt_expression(std::make_shared<JitExpression>(left_tuple_value), ExpressionType::GreaterThan,
+                              std::make_shared<JitExpression>(right_tuple_value), result_index);
+  JitExpression gte_expression(std::make_shared<JitExpression>(left_tuple_value), ExpressionType::GreaterThanEquals,
+                               std::make_shared<JitExpression>(right_tuple_value), result_index);
+  JitExpression lt_expression(std::make_shared<JitExpression>(left_tuple_value), ExpressionType::LessThan,
+                              std::make_shared<JitExpression>(right_tuple_value), result_index);
+  JitExpression lte_expression(std::make_shared<JitExpression>(left_tuple_value), ExpressionType::LessThanEquals,
+                               std::make_shared<JitExpression>(right_tuple_value), result_index);
+  JitExpression e_expression(std::make_shared<JitExpression>(left_tuple_value), ExpressionType::Equals,
+                             std::make_shared<JitExpression>(right_tuple_value), result_index);
+  JitExpression ne_expression(std::make_shared<JitExpression>(left_tuple_value), ExpressionType::NotEquals,
+                              std::make_shared<JitExpression>(right_tuple_value), result_index);
+
+  ASSERT_EQ(gt_expression.result().data_type(), DataType::Bool);
+  ASSERT_EQ(gte_expression.result().data_type(), DataType::Bool);
+  ASSERT_EQ(lt_expression.result().data_type(), DataType::Bool);
+  ASSERT_EQ(lte_expression.result().data_type(), DataType::Bool);
+  ASSERT_EQ(e_expression.result().data_type(), DataType::Bool);
+  ASSERT_EQ(ne_expression.result().data_type(), DataType::Bool);
+
+  for (auto i = 0; i < 10; ++i) {
+    auto left_value = static_cast<int32_t>(std::rand()) % 5;
+    auto right_value = static_cast<int32_t>(std::rand()) % 5;
+
+    left_tuple_value.set(left_value, context);
+    right_tuple_value.set(right_value, context);
+
+    gt_expression.compute(context);
+    ASSERT_EQ(gt_expression.result().get<bool>(context), left_value > right_value);
+
+    gte_expression.compute(context);
+    ASSERT_EQ(gt_expression.result().get<bool>(context), left_value >= right_value);
+
+    lt_expression.compute(context);
+    ASSERT_EQ(gt_expression.result().get<bool>(context), left_value < right_value);
+
+    lte_expression.compute(context);
+    ASSERT_EQ(gt_expression.result().get<bool>(context), left_value <= right_value);
+
+    e_expression.compute(context);
+    ASSERT_EQ(gt_expression.result().get<bool>(context), left_value == right_value);
+
+    ne_expression.compute(context);
+    ASSERT_EQ(gt_expression.result().get<bool>(context), left_value != right_value);
+  }
+
+  // Check that invalid data type combinations throw an exception
+  auto string_tuple_value = JitTupleValue{DataType::String, false, 1};
+  JitExpression invalid_expression(std::make_shared<JitExpression>(string_tuple_value), ExpressionType::Equals,
+                                   std::make_shared<JitExpression>(right_tuple_value), result_index);
+  ASSERT_THROW(invalid_expression.compute(context), std::logic_error);
+}
+
+TEST_F(JitExpressionTest, StringComparison) {
+  JitRuntimeContext context;
+  context.tuple.resize(3);
+
+  auto left_tuple_value = JitTupleValue{DataType::String, false, 0};
+  auto right_tuple_value = JitTupleValue{DataType::String, false, 1};
+  auto result_index = 2;
+
+  JitExpression like_expression(std::make_shared<JitExpression>(left_tuple_value), ExpressionType::Like,
+                                std::make_shared<JitExpression>(right_tuple_value), result_index);
+  JitExpression not_like_expression(std::make_shared<JitExpression>(left_tuple_value), ExpressionType::NotLike,
+                                    std::make_shared<JitExpression>(right_tuple_value), result_index);
+
+  ASSERT_EQ(like_expression.result().data_type(), DataType::Bool);
+  ASSERT_EQ(not_like_expression.result().data_type(), DataType::Bool);
+
+  for (auto i = 0; i < 10; ++i) {
+    auto left_value = std::string(1, 'a' + abs(static_cast<char>(std::rand())) % 5);
+    auto right_value = std::string(1, 'a' + abs(static_cast<char>(std::rand())) % 5);
+
+    left_tuple_value.set(left_value, context);
+    right_tuple_value.set(right_value, context);
+
+    like_expression.compute(context);
+    auto a = like_expression.result().get<bool>(context);
+    auto b = left_value == right_value;
+    ASSERT_EQ(a, b);
+
+    not_like_expression.compute(context);
+    ASSERT_EQ(not_like_expression.result().get<bool>(context), left_value != right_value);
+  }
 }
 
 TEST_F(JitExpressionTest, NestedExpressions) {
