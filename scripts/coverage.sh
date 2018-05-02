@@ -49,6 +49,8 @@ if [[ "$unamestr" == 'Darwin' ]]; then
   # run LLVM’s code coverage tool
   /usr/local/opt/llvm/bin/llvm-cov show -format=html -instr-profile default.profdata build-coverage/hyriseTest -output-dir=coverage src/lib/
 
+  echo Coverage Information is in ./coverage/index.html
+
   exit
 fi
 
