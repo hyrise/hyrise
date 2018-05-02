@@ -38,7 +38,7 @@ make hyriseTest -j $((cores / 2))
 cd -
 
 rm -fr coverage; mkdir coverage
-./build-coverage/hyriseTest build-coverage
+./build-coverage/hyriseTest build-coverage | true  # | true makes sure that a failing test does not stop the script
 
 if [[ "$unamestr" == 'Darwin' ]]; then
   # LLVM has its own way of dealing with coverage...
