@@ -88,6 +88,17 @@ if(${LLVM_FOUND})
     message(STATUS "Found llvm library: inc=${LLVM_INCLUDE_DIR}, lib=${LLVM_LIBRARY}")
 endif()
 
+if(${CI_BUILD})
+    if(NOT ${LLVM_FOUND})
+        message(FATAL_ERROR "-DCI_BUILD=ON was set, but LLVM was not found.")
+    endif()
+
+    if(NOT ${NUMA_FOUND})
+        message(FATAL_ERROR "-DCI_BUILD=ON was set, but libnuma was not found.")
+    endif()
+endif()
+
+
 # Include sub-CMakeLists.txt
 add_subdirectory(third_party/ EXCLUDE_FROM_ALL)
 add_subdirectory(src)
