@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "optimizer/table_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

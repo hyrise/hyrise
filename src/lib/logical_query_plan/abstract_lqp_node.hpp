@@ -81,6 +81,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode>, pr
  public:
   explicit AbstractLQPNode(LQPNodeType node_type);
 
+  virtual ~AbstractLQPNode() = default;
+
   // Creates a deep copy
   std::shared_ptr<AbstractLQPNode> deep_copy() const;
 

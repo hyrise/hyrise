@@ -3,11 +3,15 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
+#include "server_session.hpp"
+
 namespace opossum {
 
 class Server {
  public:
   Server(boost::asio::io_service& io_service, uint16_t port);
+
+  uint16_t get_port_number();
 
  protected:
   void accept_next_connection();

@@ -33,3 +33,7 @@ CMakeLists.txt.user
 
 # CLion cmake directory
 cmake-build-*
+
+# llvm coverage information
+default.profdata
+default.profraw

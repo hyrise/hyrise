@@ -21,6 +21,7 @@
 | sqlite3          | >= 3             |    All   |                                    No |
 | tbb/libtbb-dev   | any              |    All   |                                    No |
 | valgrind         | any              |    All   |            Yes, memory checking in CI |
+| libpq-dev        | >= 9             |    All   |                                    No |
 
 
 ## Dependencies that are integrated in our build process via git submodules
@@ -28,3 +29,4 @@
 - googletest (https://github.com/google/googletest)
 - sql-parser (https://github.com/hyrise/sql-parser)
 - pgasus (https://github.com/kateyy/pgasus)
+- libpqxx (https://github.com/jtv/libpqxx)

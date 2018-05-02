@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_Aggregate)(benchmark::State& state) {
+BENCHMARK_F(BenchmarkBasicFixture, BM_Aggregate)(benchmark::State& state) {
   clear_cache();
 
   std::vector<AggregateColumnDefinition> aggregates = {{ColumnID{1} /* "b" */, AggregateFunction::Min}};
@@ -23,6 +23,5 @@ BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_Aggregate)(benchmark::State& state)
     aggregate->execute();
   }
 }
-BENCHMARK_REGISTER_F(BenchmarkBasicFixture, BM_Aggregate)->Apply(BenchmarkBasicFixture::ChunkSizeIn);
 
 }  // namespace opossum
