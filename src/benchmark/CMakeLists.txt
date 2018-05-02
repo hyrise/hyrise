@@ -33,3 +33,22 @@ target_link_libraries(
     hyrise
     hyriseBenchmarkLib
 )
+
+# General purpose benchmark runner
+add_executable(
+    hyriseBenchmarkRunner
+
+    benchmark_runner.cpp
+    benchmark_runner.hpp
+    benchmark_runner_main.cpp
+    benchmark_utils.cpp
+    benchmark_utils.hpp
+)
+
+target_link_libraries(
+    hyriseBenchmarkRunner
+
+    hyrise
+    hyriseBenchmarkLib
+    ${FILESYSTEM_LIBRARY}
+)
