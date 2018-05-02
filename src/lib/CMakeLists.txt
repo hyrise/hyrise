@@ -26,8 +26,6 @@ set(
     cost_model/cost_feature_operator_proxy.cpp
     cost_model/cost_feature_operator_proxy.hpp
     cost_model/cost.hpp
-    cost_model/cost_model_runtime.cpp
-    cost_model/cost_model_runtime.hpp
     cost_model/cost_model_logical.cpp
     cost_model/cost_model_logical.hpp
     import_export/binary.hpp
