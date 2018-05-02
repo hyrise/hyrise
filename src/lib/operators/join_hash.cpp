@@ -667,7 +667,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     } else {
       _probe(radix_right, hashtables, left_pos_lists, right_pos_lists);
     }
-    
+
     auto only_output_right_input = _inputs_swapped && (_mode == JoinMode::Semi || _mode == JoinMode::Anti);
 
     /**
