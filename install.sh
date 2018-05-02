@@ -10,6 +10,7 @@ echo
 if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
     unamestr=$(uname)
     if [[ "$unamestr" == 'Darwin' ]]; then
+        brew --version 2>/dev/null || /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
         echo "Installing dependencies (this may take a while)..."
         if brew update >/dev/null; then
             # python2.7 is preinstalled on macOS
@@ -47,7 +48,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
                 boostall=$(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ')
-                sudo apt-get install --no-install-recommends -y clang-6.0 clang-format-6.0 gcovr python2.7 gcc-7.2 g++-7.2 llvm libnuma-dev libnuma1 libtbb-dev build-essential cmake libreadline-dev libncurses5-dev libsqlite3-dev parallel $boostall libpq-dev &
+                sudo apt-get install --no-install-recommends -y clang-6.0 clang-format-6.0 gcovr python2.7 gcc-7 llvm libnuma-dev libnuma1 libtbb-dev build-essential cmake libreadline-dev libncurses5-dev libsqlite3-dev parallel $boostall libpq-dev &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during installation."

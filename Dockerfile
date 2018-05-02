@@ -13,6 +13,7 @@ RUN apt-get update \
         cmake \
         curl \
         gcovr \
+        gcc-7 \
         git \
         $(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ') \
         libnuma-dev \
