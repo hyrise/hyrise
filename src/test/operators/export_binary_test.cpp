@@ -156,15 +156,10 @@ TEST_F(OperatorsExportBinaryTest, FixedStringDictionaryColumn) {
 
   ChunkEncoder::encode_all_chunks(table, EncodingType::FixedStringDictionary);
 
-  std::cout << "test" << std::endl;
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-  std::cout << "test" << std::endl;
   table_wrapper->execute();
-  std::cout << "test" << std::endl;
   auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
-  std::cout << "test" << std::endl;
   ex->execute();
-  std::cout << "test" << std::endl;
 
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files("src/test/binary/StringDictionaryColumn.bin", filename));
