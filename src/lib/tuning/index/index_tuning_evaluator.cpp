@@ -20,7 +20,7 @@ void IndexTuningEvaluator::_process_access_record(const AbstractIndexTuningEvalu
   const auto predicate_statistics =
       table_statistics->estimate_predicate(record.column_ref.column_ids[0], record.condition, record.compare_value);
   const auto total_rows = table_statistics->row_count();
-  const auto match_rows = predicate_statistics->row_count();
+  const auto match_rows = predicate_statistics.row_count();
   const auto unscanned_rows = total_rows - match_rows;
   const float saved_work = unscanned_rows * record.query_frequency;
   if (_saved_work_per_index.count(record.column_ref) > 0) {
