@@ -1,7 +1,7 @@
 #include "index_tuning_evaluator.hpp"
 
-#include "optimizer/column_statistics.hpp"
-#include "optimizer/table_statistics.hpp"
+#include "statistics/column_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 #include "resolve_type.hpp"
 #include "storage/index/base_index.hpp"
 #include "storage/storage_manager.hpp"
