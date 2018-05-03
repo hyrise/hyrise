@@ -5,6 +5,7 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "table_generator.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
@@ -37,6 +38,30 @@ BENCHMARK_F(BenchmarkBasicFixture, BM_TableScanConstant_OnDict)(benchmark::State
 BENCHMARK_F(BenchmarkBasicFixture, BM_TableScanVariable_OnDict)(benchmark::State& state) {
   clear_cache();
   BM_TableScan_impl(state, _table_dict_wrapper, ColumnID{0}, PredicateCondition::GreaterThanEquals, ColumnID{1});
+}
+
+BENCHMARK_F(BenchmarkBasicFixture, BM_TableScan_Like)(benchmark::State& state) {
+  const auto lineitem_table = load_table("src/test/tables/tpch/sf-0.001/lineitem.tbl");
+
+  const auto lineitem_wrapper = std::make_shared<TableWrapper>(lineitem_table);
+  lineitem_wrapper->execute();
+
+  const auto column_names_and_patterns = std::vector<std::pair<std::string, std::string>>({
+      {"l_comment", "%final%"},
+      {"l_comment", "%final%requests%"},
+      {"l_shipinstruct", "quickly%"},
+      {"l_comment", "%foxes"},
+      {"l_comment", "%quick_y__above%even%"},
+  });
+
+  while (state.KeepRunning()) {
+    for (const auto& column_name_and_pattern : column_names_and_patterns) {
+      auto table_scan = std::make_shared<TableScan>(lineitem_wrapper,
+                                                    lineitem_table->column_id_by_name(column_name_and_pattern.first),
+                                                    PredicateCondition::Like, column_name_and_pattern.second);
+      table_scan->execute();
+    }
+  }
 }
 
 }  // namespace opossum
