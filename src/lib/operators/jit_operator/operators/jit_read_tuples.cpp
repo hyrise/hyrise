@@ -34,6 +34,8 @@ void JitReadTuples::before_query(const Table& in_table, JitRuntimeContext& conte
 
 void JitReadTuples::before_chunk(const Table& in_table, const Chunk& in_chunk, JitRuntimeContext& context) const {
   context.inputs.clear();
+  context.chunk_offset = 0;
+  context.chunk_size = in_chunk.size();
 
   // Create the column iterator for each input column and store them to the runtime context
   for (const auto& input_column : _input_columns) {

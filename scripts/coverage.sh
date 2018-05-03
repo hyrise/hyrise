@@ -48,7 +48,9 @@ if [[ "$unamestr" == 'Darwin' ]]; then
   /usr/local/opt/llvm/bin/llvm-profdata merge -o ./default.profdata ./default.profraw
 
   # run LLVM’s code coverage tool
-  /usr/local/opt/llvm/bin/llvm-cov show -format=html -instr-profile default.profdata build-coverage/hyriseTest -output-dir=coverage src/lib/
+  /usr/local/opt/llvm/bin/llvm-cov show -format=html -instr-profile ./default.profdata build-coverage/hyriseTest -output-dir=./coverage ./src/lib/
+
+  rm default.profdata default.profraw
 
   exit
 fi
