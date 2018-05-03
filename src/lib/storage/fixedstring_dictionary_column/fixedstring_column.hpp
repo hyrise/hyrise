@@ -12,8 +12,9 @@ namespace opossum {
 class BaseCompressedVector;
 
 /**
- * @brief Column implementing dictionary encoding
+ * @brief Column implementing dictionary encoding for strings
  *
+ * It compresses string columns by avoiding small string optimization.
  * Uses vector compression schemes for its attribute vector.
  */
 template <typename T>

@@ -11,8 +11,11 @@
 
 namespace opossum {
 
-// FixedString is a data type, which stores a string in an array of chars in order to
-// save memory space by avoiding small string optimization (SSO)
+// FixedString is a data type, in order to access the elements of a `fixedstring_vector` and interact with them.
+// It has two different functionalities:
+//     1. Represent an object in the `fixedstring_vector` (some sort of view) not owning the memory itself
+//     2. Standalone object owning the memory
+// It stores a string in an array of chars in order to save memory space by avoiding small string optimization (SSO).
 class FixedString {
  public:
   // Create a FixedString from a std::string
@@ -27,6 +30,8 @@ class FixedString {
   // Create a FixedString with an existing one
   FixedString(const FixedString& other);
 
+
+  // TODO(team_btm): fix this
   // ~FixedString() {
   //   if (_owns_memory) delete[] _mem;
   // }

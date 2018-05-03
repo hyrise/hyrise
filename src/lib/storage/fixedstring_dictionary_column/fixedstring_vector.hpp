@@ -40,6 +40,7 @@ class FixedStringVector {
 
   FixedString at(const ChunkOffset chunk_offset);
 
+  // We need a custom iterator for this vector, since we have to perform jumps when iterating over the vector.
   class iterator : public boost::iterator_facade<iterator, FixedString, std::random_access_iterator_tag, FixedString> {
    public:
     iterator(size_t string_length, const pmr_vector<char>& vector, size_t pos = 0)
@@ -103,6 +104,7 @@ class FixedStringVector {
   // Return the calculated size of FixedStringVector in main memory
   size_t data_size() const;
 
+  // Return the underlying dictionary as a vector of string
   std::shared_ptr<const pmr_vector<std::string>> dictionary() const;
 
  protected:
