@@ -1,4 +1,4 @@
-#include "jit_write_tuple.hpp"
+#include "jit_write_tuples.hpp"
 
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-std::string JitWriteTuple::description() const {
+std::string JitWriteTuples::description() const {
   std::stringstream desc;
   desc << "[WriteTuple] ";
   for (const auto& output_column : _output_columns) {
@@ -16,7 +16,7 @@ std::string JitWriteTuple::description() const {
   return desc.str();
 }
 
-std::shared_ptr<Table> JitWriteTuple::create_output_table(const uint32_t max_chunk_size) const {
+std::shared_ptr<Table> JitWriteTuples::create_output_table(const uint32_t max_chunk_size) const {
   TableColumnDefinitions column_definitions;
 
   for (const auto& output_column : _output_columns) {
@@ -29,26 +29,26 @@ std::shared_ptr<Table> JitWriteTuple::create_output_table(const uint32_t max_chu
   return std::make_shared<Table>(column_definitions, TableType::Data, max_chunk_size);
 }
 
-void JitWriteTuple::before_query(Table& out_table, JitRuntimeContext& context) const { _create_output_chunk(context); }
+void JitWriteTuples::before_query(Table& out_table, JitRuntimeContext& context) const { _create_output_chunk(context); }
 
-void JitWriteTuple::after_chunk(Table& out_table, JitRuntimeContext& context) const {
+void JitWriteTuples::after_chunk(Table& out_table, JitRuntimeContext& context) const {
   if (context.out_chunk.size() > 0 && context.out_chunk[0]->size() > 0) {
     out_table.append_chunk(context.out_chunk);
     _create_output_chunk(context);
   }
 }
 
-void JitWriteTuple::add_output_column(const std::string& column_name, const JitTupleValue& value) {
+void JitWriteTuples::add_output_column(const std::string& column_name, const JitTupleValue& value) {
   _output_columns.push_back({column_name, value});
 }
 
-void JitWriteTuple::_consume(JitRuntimeContext& context) const {
+void JitWriteTuples::_consume(JitRuntimeContext& context) const {
   for (const auto& output : context.outputs) {
     output->write_value(context);
   }
 }
 
-void JitWriteTuple::_create_output_chunk(JitRuntimeContext& context) const {
+void JitWriteTuples::_create_output_chunk(JitRuntimeContext& context) const {
   context.out_chunk.clear();
   context.outputs.clear();
 
