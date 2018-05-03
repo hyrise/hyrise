@@ -203,7 +203,7 @@ TEST_F(FixedStringVectorTest, Sort) {
   fixedstring_vector.push_back("Hasso");
 
   std::sort(fixedstring_vector.begin(), fixedstring_vector.end());
-  
+
   EXPECT_EQ(fixedstring_vector[0], "Alexander");
   EXPECT_EQ(fixedstring_vector[4], "Mark");
 }

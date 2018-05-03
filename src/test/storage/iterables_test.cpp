@@ -12,6 +12,8 @@
 #include "storage/column_iterables/constant_value_iterable.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/dictionary_column/dictionary_column_iterable.hpp"
+#include "storage/fixedstring_dictionary_column/fixedstring_column.hpp"
+#include "storage/fixedstring_dictionary_column/fixedstring_column_iterable.hpp"
 #include "storage/reference_column/reference_column_iterable.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
@@ -45,15 +47,32 @@ struct SumUp {
   uint32_t& _sum;
 };
 
+struct AppendWithIt {
+  template <typename Iterator>
+  void operator()(Iterator begin, Iterator end) const {
+    _concatenate = "";
+
+    for (; begin != end; ++begin) {
+      if ((*begin).is_null()) continue;
+
+      _concatenate += (*begin).value();
+    }
+  }
+
+  std::string& _concatenate;
+};
+
 class IterablesTest : public BaseTest {
  protected:
   void SetUp() override {
     table = load_table("src/test/tables/int_float6.tbl", Chunk::MAX_SIZE);
     table_with_null = load_table("src/test/tables/int_float_with_null.tbl", Chunk::MAX_SIZE);
+    table_strings = load_table("src/test/tables/string.tbl", Chunk::MAX_SIZE);
   }
 
   std::shared_ptr<Table> table;
   std::shared_ptr<Table> table_with_null;
+  std::shared_ptr<Table> table_strings;
 };
 
 TEST_F(IterablesTest, ValueColumnIteratorWithIterators) {
@@ -148,6 +167,40 @@ TEST_F(IterablesTest, DictionaryColumnReferencedIteratorWithIterators) {
   iterable.with_iterators(&chunk_offsets, SumUpWithIt{sum});
 
   EXPECT_EQ(sum, 12'480u);
+}
+
+TEST_F(IterablesTest, FixedStringDictionaryColumnIteratorWithIterators) {
+  ChunkEncoder::encode_all_chunks(table_strings, EncodingType::FixedStringDictionary);
+
+  auto chunk = table_strings->get_chunk(ChunkID{0u});
+
+  auto column = chunk->get_column(ColumnID{0u});
+  auto dict_column = std::dynamic_pointer_cast<const FixedStringColumn<std::string>>(column);
+
+  auto iterable = FixedStringColumnIterable<std::string>{*dict_column};
+
+  auto concatenate = std::string();
+  iterable.with_iterators(AppendWithIt{concatenate});
+
+  EXPECT_EQ(concatenate, "xxxwwwyyyuuutttzzz");
+}
+
+TEST_F(IterablesTest, FixedStringDictionaryColumnReferencedIteratorWithIterators) {
+  ChunkEncoder::encode_all_chunks(table_strings, EncodingType::FixedStringDictionary);
+
+  auto chunk = table_strings->get_chunk(ChunkID{0u});
+
+  auto column = chunk->get_column(ColumnID{0u});
+  auto dict_column = std::dynamic_pointer_cast<const FixedStringColumn<std::string>>(column);
+
+  auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
+
+  auto iterable = FixedStringColumnIterable<std::string>{*dict_column};
+
+  auto concatenate = std::string();
+  iterable.with_iterators(&chunk_offsets, AppendWithIt{concatenate});
+
+  EXPECT_EQ(concatenate, "xxxyyyuuu");
 }
 
 TEST_F(IterablesTest, ReferenceColumnIteratorWithIterators) {
