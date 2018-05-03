@@ -176,7 +176,7 @@ TEST_F(FixedStringVectorTest, ConstIteratorConstructor) {
 
   EXPECT_EQ(v2[0], "abc");
   EXPECT_EQ(v2.size(), 3u);
-  EXPECT_EQ(v4.size(), 0u);
+  EXPECT_EQ(v4.size(), 1u);
 }
 
 TEST_F(FixedStringVectorTest, DataSize) {
@@ -203,9 +203,19 @@ TEST_F(FixedStringVectorTest, Sort) {
   fixedstring_vector.push_back("Hasso");
 
   std::sort(fixedstring_vector.begin(), fixedstring_vector.end());
-  
+
   EXPECT_EQ(fixedstring_vector[0], "Alexander");
   EXPECT_EQ(fixedstring_vector[4], "Mark");
+}
+
+TEST_F(FixedStringVectorTest, StringLengthZero) {
+  auto fixedstring_vector = FixedStringVector(0u);
+  EXPECT_EQ(fixedstring_vector.size(), 1u);
+  EXPECT_EQ(fixedstring_vector[0], "");
+
+  fixedstring_vector.push_back("");
+  EXPECT_EQ(fixedstring_vector.size(), 1u);
+  EXPECT_EQ(fixedstring_vector[0], "");
 }
 
 }  // namespace opossum

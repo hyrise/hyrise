@@ -59,7 +59,10 @@ const std::string FixedStringVector::operator[](const size_t n) const {
 }
 
 size_t FixedStringVector::size() const {
-  return _string_length == 0u ? _string_length : _chars.size() / _string_length;
+  // If the string length is zero, `_chars` has always the size 0. Thus, we don't know
+  // how many empty strings were added to the FixedStringVector. So the FixedStringVector size is
+  // always 1 and it returns an empty string when the first element is accessed.
+  return _string_length == 0u ? 1u : _chars.size() / _string_length;
 }
 
 size_t FixedStringVector::capacity() const { return _chars.capacity(); }
