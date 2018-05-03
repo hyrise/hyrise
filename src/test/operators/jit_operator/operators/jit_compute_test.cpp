@@ -21,7 +21,6 @@ TEST_F(JitComputeTest, TriggersComputationOfNestedExpression) {
   JitRuntimeContext context;
   context.tuple.resize(5);
 
-
   // Create tuple values for inputs
   JitTupleValue a_value{DataType::Int, false, 0};
   JitTupleValue b_value{DataType::Int, false, 1};
@@ -53,7 +52,7 @@ TEST_F(JitComputeTest, TriggersComputationOfNestedExpression) {
     b_value.set<int32_t>(b, context);
     c_value.set<int32_t>(c, context);
 
-    //mock_op->emit(context);
+    source->emit(context);
     ASSERT_EQ(a + b > c, context.tuple.get<bool>(4));
   }
 }
