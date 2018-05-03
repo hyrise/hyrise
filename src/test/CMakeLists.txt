@@ -150,6 +150,19 @@ set(
     gtest_main.cpp
 )
 
+if (${ENABLE_JIT_SUPPORT})
+    set(HYRISE_UNIT_TEST_SOURCES
+        ${HYRISE_UNIT_TEST_SOURCES}
+        operators/jit_operator/jit_operations_test.cpp
+        operators/jit_operator/jit_tuple_value_test.cpp
+        operators/jit_operator/jit_variant_vector_test.cpp
+        operators/jit_operator/operators/jit_compute_test.cpp
+        operators/jit_operator/operators/jit_expression_test.cpp
+        operators/jit_operator/operators/jit_filter_test.cpp
+        operators/jit_operator/operators/jit_read_write_tuple_test.cpp
+    )
+endif()
+
 set (
     SYSTEM_TEST_SOURCES
     ${SHARED_SOURCES}
