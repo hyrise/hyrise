@@ -23,7 +23,7 @@ std::shared_ptr<AbstractOperator> DropView::_on_recreate(
 std::shared_ptr<const Table> DropView::_on_execute() {
   StorageManager::get().drop_view(_view_name);
 
-  return std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data);  // Dummy table
+  return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int}}, TableType::Data);  // Dummy table
 }
 
 }  // namespace opossum

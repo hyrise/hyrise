@@ -2,12 +2,13 @@
 #include <utility>
 #include <vector>
 
-#include "../base_test.hpp"
+#include "base_test.hpp"
 #include "gtest/gtest.h"
 
 #include "operators/join_nested_loop.hpp"
 #include "operators/table_wrapper.hpp"
-#include "optimizer/table_statistics.hpp"
+#include "statistics/generate_table_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 
 namespace opossum {
 
@@ -22,7 +23,8 @@ class TableStatisticsJoinTest : public BaseTest {
 
   void SetUp() override {
     auto table_uniform_distribution = load_table("src/test/tables/int_equal_distribution.tbl", Chunk::MAX_SIZE);
-    _table_uniform_distribution_with_stats.statistics = std::make_shared<TableStatistics>(table_uniform_distribution);
+    _table_uniform_distribution_with_stats.statistics =
+        std::make_shared<TableStatistics>(generate_table_statistics(*table_uniform_distribution));
     table_uniform_distribution->set_table_statistics(_table_uniform_distribution_with_stats.statistics);
     _table_uniform_distribution_with_stats.table = table_uniform_distribution;
   }
@@ -38,8 +40,8 @@ class TableStatisticsJoinTest : public BaseTest {
     for (ColumnID::base_type column_1 = 0; column_1 < table_with_statistics.table->column_count(); ++column_1) {
       for (ColumnID::base_type column_2 = 0; column_2 < table_with_statistics.table->column_count(); ++column_2) {
         auto column_ids = std::make_pair(ColumnID{column_1}, ColumnID{column_2});
-        auto join_stats = table_with_statistics.statistics->generate_predicated_join_statistics(
-            table_with_statistics.statistics, mode, column_ids, predicate_condition);
+        auto join_stats = std::make_shared<TableStatistics>(table_with_statistics.statistics->estimate_predicated_join(
+            *table_with_statistics.statistics, mode, column_ids, predicate_condition));
         auto join =
             std::make_shared<JoinNestedLoop>(table_wrapper, table_wrapper, mode, column_ids, predicate_condition);
         join->execute();
@@ -59,8 +61,8 @@ class TableStatisticsJoinTest : public BaseTest {
     for (ColumnID::base_type column_1 = 0; column_1 < table_with_statistics.table->column_count(); ++column_1) {
       for (ColumnID::base_type column_2 = 0; column_2 < table_with_statistics.table->column_count(); ++column_2) {
         auto column_ids = std::make_pair(ColumnID{column_1}, ColumnID{column_2});
-        auto join_stats = table_with_statistics.statistics->generate_predicated_join_statistics(
-            table_with_statistics.statistics, mode, column_ids, predicate_condition);
+        auto join_stats = std::make_shared<TableStatistics>(table_with_statistics.statistics->estimate_predicated_join(
+            *table_with_statistics.statistics, mode, column_ids, predicate_condition));
         auto cached_row_count = row_counts.at(table_with_statistics.table->column_count() * column_1 + column_2);
         EXPECT_FLOAT_EQ(cached_row_count, join_stats->row_count());
       }
@@ -133,7 +135,7 @@ TEST_F(TableStatisticsJoinTest, InnerJoinTest) {
 TEST_F(TableStatisticsJoinTest, CrossJoinTest) {
   auto table_row_count = _table_uniform_distribution_with_stats.table->row_count();
   auto table_stats = _table_uniform_distribution_with_stats.statistics;
-  auto join_stats = table_stats->generate_cross_join_statistics(table_stats);
+  auto join_stats = std::make_shared<TableStatistics>(table_stats->estimate_cross_join(*table_stats));
   EXPECT_FLOAT_EQ(join_stats->row_count(), table_row_count * table_row_count);
 }
 

@@ -73,7 +73,7 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
 }
 
 bool PredicatePushdownRule::_predicate_value_demotable(const std::shared_ptr<PredicateNode>& predicate_node,
-                                                   const std::shared_ptr<AbstractLQPNode>& node) const {
+                                                       const std::shared_ptr<AbstractLQPNode>& node) const {
   // The predicate must not be demoted if it combines columns of both join partners.
   // This can happen if the value to compare against is indeed another column ID
   // which references a table different from the filtered column's table.
@@ -85,9 +85,8 @@ bool PredicatePushdownRule::_predicate_value_demotable(const std::shared_ptr<Pre
     const bool all_left =
         _contained_in_left_subtree(node, predicate_node->column_reference()) && _contained_in_left_subtree(node, value);
 
-    const bool all_right =
-        _contained_in_right_subtree(node, predicate_node->column_reference()) &&
-        _contained_in_right_subtree(node, value);
+    const bool all_right = _contained_in_right_subtree(node, predicate_node->column_reference()) &&
+                           _contained_in_right_subtree(node, value);
 
     return all_left ^ all_right;
   }
