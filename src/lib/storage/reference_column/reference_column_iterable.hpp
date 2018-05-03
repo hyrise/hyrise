@@ -41,7 +41,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
                       const PosListIterator& begin_pos_list_it, const PosListIterator& pos_list_it)
         : _table{table},
           _column_id{column_id},
-          _cached_chunk_id{ChunkID{0}},
+          _cached_chunk_id{INVALID_CHUNK_ID},
           _cached_column{nullptr},
           _begin_pos_list_it{begin_pos_list_it},
           _pos_list_it{pos_list_it} {}
@@ -60,7 +60,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
       const auto chunk_id = _pos_list_it->chunk_id;
       const auto& chunk_offset = _pos_list_it->chunk_offset;
 
-      if (chunk_id != _cached_chunk_id || !_cached_column) {
+      if (chunk_id != _cached_chunk_id) {
         _cached_chunk_id = chunk_id;
         const auto chunk = _table->get_chunk(chunk_id);
         _cached_column = chunk->get_column(_column_id);
