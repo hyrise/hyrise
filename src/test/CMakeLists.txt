@@ -145,6 +145,8 @@ set(
 if (${ENABLE_JIT_SUPPORT})
     set(HYRISE_UNIT_TEST_SOURCES
         ${HYRISE_UNIT_TEST_SOURCES}
+        operators/jit_operator_wrapper_test.cpp
+        operators/jit_operator/jit_aware_lqp_translator_test.cpp
         operators/jit_operator/jit_operations_test.cpp
         operators/jit_operator/jit_tuple_value_test.cpp
         operators/jit_operator/jit_variant_vector_test.cpp
