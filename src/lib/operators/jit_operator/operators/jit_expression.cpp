@@ -117,6 +117,29 @@ void JitExpression::compute(JitRuntimeContext& context) const {
   }
 }
 
+bool JitExpression::operator==(const JitExpression& other) const {
+  if (_expression_type != other.expression_type()) {
+    return false;
+  }
+
+  if (is_binary_operator_type(_expression_type)) {
+    return *_left_child == *other._left_child && *_right_child == *other._right_child;
+  }
+
+  switch (_expression_type) {
+    case ExpressionType::Column:
+      return result().data_type() == other.result().data_type() &&
+             result().is_nullable() == other.result().is_nullable() &&
+             result().tuple_index() == other.result().tuple_index();
+    case ExpressionType::Not:
+    case ExpressionType::IsNull:
+    case ExpressionType::IsNotNull:
+      return *_left_child == *other._left_child;
+    default:
+      return false;
+  }
+}
+
 std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
   if (!is_binary_operator_type(_expression_type)) {
     switch (_expression_type) {

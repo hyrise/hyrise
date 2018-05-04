@@ -23,6 +23,8 @@ const std::string JitOperatorWrapper::description(DescriptionMode description_mo
 
 void JitOperatorWrapper::add_jit_operator(const std::shared_ptr<AbstractJittable>& op) { _jit_operators.push_back(op); }
 
+std::vector<std::shared_ptr<AbstractJittable>>& JitOperatorWrapper::jit_operators() { return _jit_operators; }
+
 const std::shared_ptr<JitReadTuples> JitOperatorWrapper::_source() const {
   return std::dynamic_pointer_cast<JitReadTuples>(_jit_operators.front());
 }
@@ -61,10 +63,6 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
 
   for (opossum::ChunkID chunk_id{0}; chunk_id < in_table.chunk_count(); ++chunk_id) {
     const auto& in_chunk = *in_table.get_chunk(chunk_id);
-
-    context.chunk_size = in_chunk.size();
-    context.chunk_offset = 0;
-
     _source()->before_chunk(in_table, in_chunk, context);
     execute_func(_source().get(), context);
     _sink()->after_chunk(*out_table, context);

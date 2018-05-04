@@ -36,6 +36,8 @@ class JitExpression {
    */
   void compute(JitRuntimeContext& context) const;
 
+  bool operator==(const JitExpression& other) const;
+
  private:
   std::pair<const DataType, const bool> _compute_result_type();
 
