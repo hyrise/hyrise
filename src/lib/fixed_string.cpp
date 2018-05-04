@@ -30,7 +30,7 @@ FixedString::~FixedString() {
 FixedString& FixedString::operator=(const FixedString& other) {
   DebugAssert(other.maximum_length() <= _maximum_length,
               "Other FixedString is longer than current maximum string length");
-  const auto copied_length = other.maximum_length() < _maximum_length ? other.maximum_length() : _maximum_length;
+  const auto copied_length = std::min(other.maximum_length(), _maximum_length);
   other._copy_to(_mem, copied_length);
   // Fill unused fields of char array with null terminator, in order to overwrite the content of
   // the old FixedString. This is especially important if the old FixedString was longer than the other FixedString.
@@ -80,6 +80,10 @@ std::ostream& operator<<(std::ostream& os, const FixedString& obj) { return os <
 
 void swap(FixedString lhs, FixedString rhs) { lhs.swap(rhs); }
 
+bool operator==(const FixedString& lhs, const std::string& rhs) { return lhs.string() == rhs; }
+
+bool operator==(const std::string& lhs, const FixedString& rhs) { return lhs == rhs.string(); }
+
 size_t FixedString::_copy_to(char* destination, size_t len, size_t pos) const {
   DebugAssert(&destination + _maximum_length < &_mem || &destination > &_mem + _maximum_length,
               "Can't copy FixedString to same location");
@@ -87,5 +91,7 @@ size_t FixedString::_copy_to(char* destination, size_t len, size_t pos) const {
   std::memcpy(destination, _mem + pos, copied_length);
   return copied_length;
 }
+
+FixedString::operator std::string() const { return string(); }
 
 }  // namespace opossum

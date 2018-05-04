@@ -33,7 +33,7 @@ const AllTypeVariant FixedStringColumn<T>::operator[](const ChunkOffset chunk_of
     return NULL_VALUE;
   }
 
-  return (*_dictionary)[value_id];
+  return _dictionary->get_string_at(value_id);
 }
 
 template <typename T>

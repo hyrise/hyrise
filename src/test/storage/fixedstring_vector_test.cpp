@@ -15,13 +15,13 @@ TEST_F(FixedStringVectorTest, SubscriptOperator) {
   fixedstring_vector.push_back("abc");
   fixedstring_vector.push_back("string");
 
-  EXPECT_EQ(fixedstring_vector[0], "abc");
-  EXPECT_EQ(fixedstring_vector[1], "string");
+  EXPECT_EQ(fixedstring_vector[0u], "abc");
+  EXPECT_EQ(fixedstring_vector[1u], "string");
   if (IS_DEBUG) {
     EXPECT_THROW(fixedstring_vector.push_back("opossum"), std::exception);
   } else {
     fixedstring_vector.push_back("opossum");
-    EXPECT_EQ(fixedstring_vector[2], "opossu");
+    EXPECT_EQ(fixedstring_vector[2u], "opossu");
   }
 }
 
@@ -30,17 +30,17 @@ TEST_F(FixedStringVectorTest, AtOperator) {
   fixedstring_vector.push_back("abc");
   fixedstring_vector.push_back("string");
 
-  EXPECT_EQ(fixedstring_vector.at(0).string(), "abc");
-  EXPECT_EQ(fixedstring_vector.at(0).size(), 3u);
-  EXPECT_EQ(fixedstring_vector.at(0).maximum_length(), 6u);
+  EXPECT_EQ(fixedstring_vector.at(0u).string(), "abc");
+  EXPECT_EQ(fixedstring_vector.at(0u).size(), 3u);
+  EXPECT_EQ(fixedstring_vector.at(0u).maximum_length(), 6u);
 
-  EXPECT_EQ(fixedstring_vector.at(1).string(), "string");
+  EXPECT_EQ(fixedstring_vector.at(1u).string(), "string");
 
   if (IS_DEBUG) {
     EXPECT_THROW(fixedstring_vector.push_back("opossum"), std::exception);
   } else {
     fixedstring_vector.push_back("opossum");
-    EXPECT_EQ(fixedstring_vector.at(2).string(), "opossu");
+    EXPECT_EQ(fixedstring_vector.at(2u).string(), "opossu");
   }
 }
 
@@ -53,7 +53,7 @@ TEST_F(FixedStringVectorTest, Iterator) {
     *it = FixedString("abcde");
   }
 
-  EXPECT_EQ(fixedstring_vector[0], "abcde");
+  EXPECT_EQ(fixedstring_vector[0u], "abcde");
 }
 
 TEST_F(FixedStringVectorTest, IteratorConst) {
@@ -101,9 +101,9 @@ TEST_F(FixedStringVectorTest, ReverseIterator) {
     *it = FixedString("abcd");
   }
 
-  EXPECT_EQ(fixedstring_vector[0], "abcd");
-  EXPECT_EQ(fixedstring_vector[1], "abcd");
-  EXPECT_EQ(fixedstring_vector[2], "abcd");
+  EXPECT_EQ(fixedstring_vector[0u], "abcd");
+  EXPECT_EQ(fixedstring_vector[1u], "abcd");
+  EXPECT_EQ(fixedstring_vector[2u], "abcd");
 }
 
 TEST_F(FixedStringVectorTest, Size) {
@@ -129,7 +129,7 @@ TEST_F(FixedStringVectorTest, Erase) {
   fixedstring_vector.erase(it, fixedstring_vector.end());
 
   EXPECT_EQ(fixedstring_vector.size(), 1u);
-  EXPECT_EQ(fixedstring_vector[0], "str1");
+  EXPECT_EQ(fixedstring_vector[0u], "str1");
 }
 
 TEST_F(FixedStringVectorTest, Shrink) {
@@ -156,7 +156,7 @@ TEST_F(FixedStringVectorTest, ConstFixedStringVector) {
   auto fixedstring_vector = FixedStringVector(4u);
   fixedstring_vector.push_back("str1");
   const auto& fixedstring_vector2 = FixedStringVector(std::move(fixedstring_vector));
-  const auto fixed = fixedstring_vector2[0];
+  const auto fixed = fixedstring_vector2.get_string_at(0u);
   EXPECT_EQ(fixed, "str1");
 }
 
@@ -164,7 +164,7 @@ TEST_F(FixedStringVectorTest, IteratorConstructor) {
   std::vector<std::string> v1 = {"abc", "def", "ghi"};
   auto v2 = FixedStringVector{v1.begin(), v1.end(), 3};
 
-  EXPECT_EQ(v2[2], "ghi");
+  EXPECT_EQ(v2[2u], "ghi");
   EXPECT_EQ(v2.size(), 3u);
 }
 
@@ -174,7 +174,7 @@ TEST_F(FixedStringVectorTest, ConstIteratorConstructor) {
   std::vector<std::string> v3 = {};
   auto v4 = FixedStringVector{v3.cbegin(), v3.cend(), 0};
 
-  EXPECT_EQ(v2[0], "abc");
+  EXPECT_EQ(v2[0u], "abc");
   EXPECT_EQ(v2.size(), 3u);
   EXPECT_EQ(v4.size(), 1u);
 }
@@ -204,18 +204,28 @@ TEST_F(FixedStringVectorTest, Sort) {
 
   std::sort(fixedstring_vector.begin(), fixedstring_vector.end());
 
-  EXPECT_EQ(fixedstring_vector[0], "Alexander");
-  EXPECT_EQ(fixedstring_vector[4], "Mark");
+  EXPECT_EQ(fixedstring_vector[0u], "Alexander");
+  EXPECT_EQ(fixedstring_vector[4u], "Mark");
 }
 
 TEST_F(FixedStringVectorTest, StringLengthZero) {
   auto fixedstring_vector = FixedStringVector(0u);
   EXPECT_EQ(fixedstring_vector.size(), 1u);
-  EXPECT_EQ(fixedstring_vector[0], "");
+  EXPECT_EQ(fixedstring_vector[0u], "");
 
   fixedstring_vector.push_back("");
   EXPECT_EQ(fixedstring_vector.size(), 1u);
-  EXPECT_EQ(fixedstring_vector[0], "");
+  EXPECT_EQ(fixedstring_vector[0u], "");
+}
+
+TEST_F(FixedStringVectorTest, CompareStdStringToFixedString) {
+  auto fixedstring_vector = FixedStringVector(6u);
+  fixedstring_vector.push_back("abc");
+  fixedstring_vector.push_back("string");
+
+  EXPECT_EQ(fixedstring_vector.at(1u), std::string("string"));
+  EXPECT_EQ(fixedstring_vector.at(0u), "abc");
+  EXPECT_EQ("abc", fixedstring_vector.at(0u));
 }
 
 }  // namespace opossum

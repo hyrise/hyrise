@@ -37,9 +37,11 @@ class FixedStringVector {
   void push_back(const std::string& string);
 
   // Return the value at a certain position.
-  const std::string operator[](const size_t n) const;
+  FixedString operator[](const size_t value_id);
 
-  FixedString at(const ChunkOffset chunk_offset);
+  FixedString at(const size_t value_id);
+
+  const std::string get_string_at(const size_t value_id) const;
 
   // Make the FixedStringVector of FixedStrings iterable in different ways
   FixedStringIterator begin() noexcept;
