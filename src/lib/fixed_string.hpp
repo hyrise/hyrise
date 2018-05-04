@@ -30,11 +30,6 @@ class FixedString {
   // Create a FixedString with an existing one
   FixedString(const FixedString& other);
 
-
-  // TODO(team_btm): fix this
-  // ~FixedString() {
-  //   if (_owns_memory) delete[] _mem;
-  // }
   ~FixedString();
 
   // Copy assign
