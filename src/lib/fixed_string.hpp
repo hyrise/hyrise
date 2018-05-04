@@ -62,6 +62,8 @@ class FixedString {
   // Swap two FixedStrings by exchanging the underlying memory's content
   void swap(FixedString& other);
 
+  operator std::string() const;
+
  protected:
   char* const _mem;
   const size_t _maximum_length;

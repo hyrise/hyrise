@@ -88,4 +88,6 @@ size_t FixedString::_copy_to(char* destination, size_t len, size_t pos) const {
   return copied_length;
 }
 
+FixedString::operator std::string() const { return string(); }
+
 }  // namespace opossum
