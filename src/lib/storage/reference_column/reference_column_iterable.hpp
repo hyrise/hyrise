@@ -39,7 +39,12 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
    public:
     explicit Iterator(const std::shared_ptr<const Table> table, const ColumnID column_id,
                       const PosListIterator& begin_pos_list_it, const PosListIterator& pos_list_it)
-        : _table{table}, _column_id{column_id}, _begin_pos_list_it{begin_pos_list_it}, _pos_list_it{pos_list_it} {}
+        : _table{table},
+          _column_id{column_id},
+          _cached_chunk_id{INVALID_CHUNK_ID},
+          _cached_column{nullptr},
+          _begin_pos_list_it{begin_pos_list_it},
+          _pos_list_it{pos_list_it} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -55,14 +60,17 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
       const auto chunk_id = _pos_list_it->chunk_id;
       const auto& chunk_offset = _pos_list_it->chunk_offset;
 
-      const auto chunk = _table->get_chunk(chunk_id);
-      const auto column = chunk->get_column(_column_id);
+      if (chunk_id != _cached_chunk_id) {
+        _cached_chunk_id = chunk_id;
+        const auto chunk = _table->get_chunk(chunk_id);
+        _cached_column = chunk->get_column(_column_id);
+      }
 
       /**
        * This is just a temporary solution to supporting encoded column type.
        * It’s very slow and is going to be replaced very soon!
        */
-      return _value_from_any_column(*column, chunk_offset);
+      return _value_from_any_column(*_cached_column, chunk_offset);
     }
 
    private:
@@ -82,6 +90,9 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
    private:
     const std::shared_ptr<const Table> _table;
     const ColumnID _column_id;
+
+    mutable ChunkID _cached_chunk_id;
+    mutable std::shared_ptr<const BaseColumn> _cached_column;
 
     const PosListIterator _begin_pos_list_it;
     PosListIterator _pos_list_it;

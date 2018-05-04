@@ -7,7 +7,6 @@
 
 #include "SQLParser.h"
 #include "concurrency/transaction_manager.hpp"
-#include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/hsql_expr_translator.hpp"
@@ -21,12 +20,14 @@ namespace opossum {
 SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                                            const UseMvcc use_mvcc,
                                            const std::shared_ptr<TransactionContext>& transaction_context,
+                                           const std::shared_ptr<LQPTranslator>& lqp_translator,
                                            const std::shared_ptr<Optimizer>& optimizer,
                                            const PreparedStatementCache& prepared_statements)
     : _sql_string(sql),
       _use_mvcc(use_mvcc),
       _auto_commit(_use_mvcc == UseMvcc::Yes && !transaction_context),
       _transaction_context(transaction_context),
+      _lqp_translator(lqp_translator),
       _optimizer(optimizer),
       _parsed_sql_statement(std::move(parsed_sql)),
       _prepared_statements(prepared_statements) {
@@ -162,7 +163,7 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
   } else {
     // "Normal" mode in which the query plan is created
     const auto& lqp = get_optimized_logical_plan();
-    _query_plan->add_tree_by_root(LQPTranslator{}.translate_node(lqp));
+    _query_plan->add_tree_by_root(_lqp_translator->translate_node(lqp));
 
     // Set number of parameters to match later in case of prepared statement
     _query_plan->set_num_parameters(_num_parameters);

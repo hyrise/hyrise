@@ -11,7 +11,7 @@ namespace opossum {
 /**
  * @brief template-free base class of all iterators used by iterables
  *
- * The class allows the JitOperator to keep pointers to differently specialized versions
+ * The class allows the JitOperatorWrapper to keep pointers to differently specialized versions
  * of the iterators in a common data structure.
  */
 class JitBaseColumnIterator {};
