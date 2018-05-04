@@ -53,6 +53,10 @@ class FixedString {
   // The FixedStrings must have the same length to be equal
   bool operator==(const FixedString& other) const;
 
+  friend bool operator==(const FixedString& lhs, const std::string& rhs);
+
+  friend bool operator==(const std::string& lhs, const FixedString& rhs);
+
   // Prints FixedString as string
   friend std::ostream& operator<<(std::ostream& os, const FixedString& obj);
 

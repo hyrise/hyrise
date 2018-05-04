@@ -218,4 +218,14 @@ TEST_F(FixedStringVectorTest, StringLengthZero) {
   EXPECT_EQ(fixedstring_vector[0], "");
 }
 
+TEST_F(FixedStringVectorTest, CompareStdStringToFixedString) {
+  auto fixedstring_vector = FixedStringVector(6u);
+  fixedstring_vector.push_back("abc");
+  fixedstring_vector.push_back("string");
+
+  EXPECT_EQ(fixedstring_vector.at(1), std::string("string"));
+  EXPECT_EQ(fixedstring_vector.at(0), "abc");
+  EXPECT_EQ("abc", fixedstring_vector.at(0));
+}
+
 }  // namespace opossum
