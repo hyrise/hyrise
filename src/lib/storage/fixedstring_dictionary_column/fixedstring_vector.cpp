@@ -19,10 +19,6 @@ void FixedStringVector::push_back(const std::string& string) {
   string.copy(&_chars[pos], string.size());
 }
 
-FixedString FixedStringVector::at(const ChunkOffset chunk_offset) {
-  return FixedString(&_chars.at(chunk_offset * _string_length), _string_length);
-}
-
 FixedStringVector::iterator FixedStringVector::begin() noexcept { return iterator(_string_length, _chars, 0); }
 
 FixedStringVector::iterator FixedStringVector::end() noexcept {
@@ -46,9 +42,17 @@ reverse_iterator FixedStringVector::rbegin() noexcept { return reverse_iterator(
 
 reverse_iterator FixedStringVector::rend() noexcept { return reverse_iterator(begin()); }
 
-const std::string FixedStringVector::operator[](const size_t n) const {
+FixedString FixedStringVector::operator[](const size_t value_id) {
   PerformanceWarning("operator[] used");
-  const auto string_value = std::string(&_chars[n * _string_length], _string_length);
+  return FixedString(&_chars[value_id * _string_length], _string_length);
+}
+
+FixedString FixedStringVector::at(const size_t value_id) {
+  return FixedString(&_chars.at(value_id * _string_length), _string_length);
+}
+
+const std::string FixedStringVector::get_string_at(const size_t value_id) const {
+  const auto string_value = std::string(&_chars[value_id * _string_length], _string_length);
   const auto pos = string_value.find('\0');
 
   if (pos == std::string::npos) {
