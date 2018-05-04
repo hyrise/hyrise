@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "fixed_string.hpp"
+#include "fixedstring_vector_iterator.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -40,46 +41,16 @@ class FixedStringVector {
 
   FixedString at(const ChunkOffset chunk_offset);
 
-  // We need a custom iterator for this vector, since we have to perform jumps when iterating over the vector.
-  class iterator : public boost::iterator_facade<iterator, FixedString, std::random_access_iterator_tag, FixedString> {
-   public:
-    iterator(size_t string_length, const pmr_vector<char>& vector, size_t pos = 0)
-        : _string_length(string_length), _chars(vector), _pos(pos) {}
-    iterator& operator=(const iterator& other) {
-      DebugAssert(_string_length == other._string_length && &_chars == &other._chars,
-                  "can't convert pointers from different vectors");
-      _pos = other._pos;
-      return *this;
-    }
-
-   private:
-    using facade = boost::iterator_facade<iterator, FixedString, std::random_access_iterator_tag, FixedString>;
-    friend class boost::iterator_core_access;
-    bool equal(iterator const& other) const { return this->_pos == other._pos; }
-    typename facade::difference_type distance_to(iterator const& other) const {
-      if (_string_length == 0) return 0;
-      return (std::intptr_t(other._pos) - std::intptr_t(this->_pos)) / std::intptr_t(_string_length);
-    }
-    void advance(typename facade::difference_type n) { _pos += n * _string_length; }
-    void increment() { _pos += _string_length; }
-    void decrement() { _pos -= _string_length; }
-    FixedString dereference() const { return FixedString(const_cast<char*>(&_chars[_pos]), _string_length); }
-
-    const size_t _string_length;
-    const pmr_vector<char>& _chars;
-    size_t _pos;
-  };
-
   // Make the FixedStringVector of FixedStrings iterable in different ways
-  iterator begin() noexcept;
-  iterator end() noexcept;
-  iterator begin() const noexcept;
-  iterator end() const noexcept;
+  FixedStringIterator begin() noexcept;
+  FixedStringIterator end() noexcept;
+  FixedStringIterator begin() const noexcept;
+  FixedStringIterator end() const noexcept;
 
-  iterator cbegin() const noexcept;
-  iterator cend() const noexcept;
+  FixedStringIterator cbegin() const noexcept;
+  FixedStringIterator cend() const noexcept;
 
-  typedef boost::reverse_iterator<iterator> reverse_iterator;
+  typedef boost::reverse_iterator<FixedStringIterator> reverse_iterator;
   reverse_iterator rbegin() noexcept;
   reverse_iterator rend() noexcept;
 
@@ -93,7 +64,7 @@ class FixedStringVector {
   void reserve(const size_t n);
 
   // Remove elements from the vector
-  void erase(const iterator start, const iterator end);
+  void erase(const FixedStringIterator start, const FixedStringIterator end);
 
   // Reduce capacity to fit its size
   void shrink_to_fit();

@@ -302,6 +302,8 @@ set(
     storage/fixedstring_dictionary_column/fixedstring_encoder.hpp
     storage/fixedstring_dictionary_column/fixedstring_vector.cpp
     storage/fixedstring_dictionary_column/fixedstring_vector.hpp
+    storage/fixedstring_dictionary_column/fixedstring_vector_iterator.cpp
+    storage/fixedstring_dictionary_column/fixedstring_vector_iterator.hpp
     storage/frame_of_reference_column.hpp
     storage/frame_of_reference_column.cpp
     storage/frame_of_reference/frame_of_reference_encoder.hpp

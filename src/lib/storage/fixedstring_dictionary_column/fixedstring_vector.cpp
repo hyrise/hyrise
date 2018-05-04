@@ -23,25 +23,27 @@ FixedString FixedStringVector::at(const ChunkOffset chunk_offset) {
   return FixedString(&_chars.at(chunk_offset * _string_length), _string_length);
 }
 
-FixedStringVector::iterator FixedStringVector::begin() noexcept { return iterator(_string_length, _chars, 0); }
+FixedStringIterator FixedStringVector::begin() noexcept { return FixedStringIterator(_string_length, _chars, 0); }
 
-FixedStringVector::iterator FixedStringVector::end() noexcept {
-  return iterator(_string_length, _chars, _chars.size());
+FixedStringIterator FixedStringVector::end() noexcept {
+  return FixedStringIterator(_string_length, _chars, _chars.size());
 }
 
-FixedStringVector::iterator FixedStringVector::begin() const noexcept { return iterator(_string_length, _chars, 0); }
+FixedStringIterator FixedStringVector::begin() const noexcept { return FixedStringIterator(_string_length, _chars, 0); }
 
-FixedStringVector::iterator FixedStringVector::end() const noexcept {
-  return iterator(_string_length, _chars, _chars.size());
+FixedStringIterator FixedStringVector::end() const noexcept {
+  return FixedStringIterator(_string_length, _chars, _chars.size());
 }
 
-FixedStringVector::iterator FixedStringVector::cbegin() const noexcept { return iterator(_string_length, _chars, 0); }
-
-FixedStringVector::iterator FixedStringVector::cend() const noexcept {
-  return iterator(_string_length, _chars, _chars.size());
+FixedStringIterator FixedStringVector::cbegin() const noexcept {
+  return FixedStringIterator(_string_length, _chars, 0);
 }
 
-typedef boost::reverse_iterator<FixedStringVector::iterator> reverse_iterator;
+FixedStringIterator FixedStringVector::cend() const noexcept {
+  return FixedStringIterator(_string_length, _chars, _chars.size());
+}
+
+typedef boost::reverse_iterator<FixedStringIterator> reverse_iterator;
 reverse_iterator FixedStringVector::rbegin() noexcept { return reverse_iterator(end()); }
 
 reverse_iterator FixedStringVector::rend() noexcept { return reverse_iterator(begin()); }
@@ -67,7 +69,7 @@ size_t FixedStringVector::size() const {
 
 size_t FixedStringVector::capacity() const { return _chars.capacity(); }
 
-void FixedStringVector::erase(const iterator start, const iterator end) {
+void FixedStringVector::erase(const FixedStringIterator start, const FixedStringIterator end) {
   if (_string_length == 0) return;
   auto it = _chars.begin();
   std::advance(it, _chars.size() - std::distance(start, end) * _string_length);
