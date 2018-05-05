@@ -48,12 +48,12 @@ TEST_F(JitComputeTest, TriggersComputationOfNestedExpression) {
 
   for (auto i = 0; i < 10; ++i) {
     // Create input tuple values
-    std::uniform_int_distribution<> dis(0, std::numeric_limits<int32_t>::max());
-    auto a = static_cast<int32_t>(dis(gen));
-    auto c = static_cast<int32_t>(dis(gen));
+    std::uniform_int_distribution<int32_t> dis(0, std::numeric_limits<int32_t>::max());
+    auto a = dis(gen);
+    auto c = dis(gen);
     // ensure that a + b does not cause overflow
-    dis = std::uniform_int_distribution<>(0, std::numeric_limits<int32_t>::max() - a);
-    auto b = static_cast<int32_t>(dis(gen));
+    dis = std::uniform_int_distribution<int32_t>(0, std::numeric_limits<int32_t>::max() - a);
+    auto b = dis(gen);
 
     // Set input values in tuple
     a_value.set<int32_t>(a, context);
