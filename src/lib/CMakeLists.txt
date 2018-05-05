@@ -9,6 +9,8 @@ set(
     all_type_variant.hpp
     concurrency/commit_context.cpp
     concurrency/commit_context.hpp
+    concurrency/logging/initialLogger.cpp
+    concurrency/logging/initialLogger.hpp
     concurrency/transaction_context.cpp
     concurrency/transaction_context.hpp
     concurrency/transaction_manager.cpp

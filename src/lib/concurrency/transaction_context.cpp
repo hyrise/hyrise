@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "commit_context.hpp"
+#include "logging/initialLogger.hpp"
 #include "operators/abstract_read_write_operator.hpp"
 #include "transaction_manager.hpp"
 #include "utils/assert.hpp"
@@ -157,6 +158,8 @@ void TransactionContext::_mark_as_pending_and_try_commit(std::function<void(Tran
     if (auto context_ptr = context_weak_ptr.lock()) {
       context_ptr->_phase = TransactionPhase::Committed;
     }
+
+    InitialLogger::getInstance().log_commit(transaction_id);
 
     if (callback) callback(transaction_id);
   });
