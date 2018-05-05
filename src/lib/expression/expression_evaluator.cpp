@@ -10,6 +10,7 @@
 #include "all_parameter_variant.hpp"
 #include "arithmetic_expression.hpp"
 #include "exists_expression.hpp"
+#include "extract_expression.hpp"
 #include "logical_expression.hpp"
 #include "in_expression.hpp"
 #include "pqp_column_expression.hpp"
@@ -258,6 +259,9 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_expressio
     case ExpressionType::Exists:
       return evaluate_exists_expression<T>(static_cast<const ExistsExpression&>(expression));
 
+    case ExpressionType::Extract:
+      return evaluate_extract_expression<T>(static_cast<const ExtractExpression&>(expression));
+
     case ExpressionType::Not:
       Fail("Not not yet implemented");
 
@@ -442,6 +446,65 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_exists_ex
   });
 
   return result_values;
+}
+
+template<>
+ExpressionEvaluator::ExpressionResult<std::string> ExpressionEvaluator::evaluate_extract_expression<std::string>(const ExtractExpression& extract_expression) {
+  const auto from_result = evaluate_expression<std::string>(*extract_expression.from());
+
+  switch (extract_expression.date_component) {
+    case DateComponent::Year: return evaluate_extract_substr<0, 4>(from_result);
+    case DateComponent::Month: return evaluate_extract_substr<5, 2>(from_result);
+    case DateComponent::Day: return evaluate_extract_substr<8, 2>(from_result);
+  }
+}
+
+template<typename T>
+ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_extract_expression(const ExtractExpression& extract_expression) {
+  Fail("Only Strings (YYYY-MM-DD) supported for Dates right now");
+}
+
+template<size_t offset, size_t count>
+ExpressionEvaluator::ExpressionResult<std::string> ExpressionEvaluator::evaluate_extract_substr(const ExpressionResult<std::string>& from_result) {
+  if (is_null(from_result)) {
+    return NullValue{};
+
+  } else if (is_value(from_result)) {
+    const auto& date = boost::get<std::string>(from_result);
+    DebugAssert(date.size() == 10, "String Date format required to be strictly YYYY-MM-DD");
+    return date.substr(offset, count);
+
+  } else if (is_non_nullable_values(from_result)) {
+    const auto& from_values = boost::get<NonNullableValues<std::string>>(from_result);
+
+    auto result_values = NonNullableValues<std::string>(_chunk->size());
+
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+      const auto& date = from_values[chunk_offset];
+      DebugAssert(date.size() == 10, "String Date format required to be strictly YYYY-MM-DD");
+      result_values[chunk_offset] = date.substr(offset, count);
+    }
+
+    return result_values;
+
+  } else if (is_nullable_values(from_result)) {
+    const auto& from_values_and_nulls = boost::get<NullableValues<std::string>>(from_result);
+    const auto& from_values = from_values_and_nulls.first;
+    const auto& from_nulls = from_values_and_nulls.second;
+
+    auto result_values = std::vector<std::string>(_chunk->size());
+
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+      const auto& date = from_values[chunk_offset];
+      DebugAssert(date.size() == 10, "String Date format required to be strictly YYYY-MM-DD");
+      result_values[chunk_offset] = date.substr(offset, count);
+    }
+
+    return std::make_pair(result_values, from_nulls);
+
+  } else {
+    Fail("Can't EXTRACT from this Expression");
+  }
 }
 
 template<typename ResultDataType,

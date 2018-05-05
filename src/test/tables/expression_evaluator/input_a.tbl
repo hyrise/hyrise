@@ -1,6 +1,6 @@
-a|b|c|d|s1|s2
-int|int|int_null|int|string|string
-1|2|33|2|a|b
-2|3|null|5|Hello|World
-3|4|34|6|what|up
-4|5|null|7|Same|Same
+a|b|c|d|s1|s2|dates
+int|int|int_null|int|string|string|string
+1|2|33|2|a|b|2017-12-06
+2|3|null|5|Hello|World|2014-08-05
+3|4|34|6|what|up|2011-09-03
+4|5|null|7|Same|Same|2010-01-02

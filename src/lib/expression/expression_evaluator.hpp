@@ -13,14 +13,15 @@
 namespace opossum {
 
 class AbstractExpression;
-class BaseColumn;
-class CaseExpression;
 class ArithmeticExpression;
-class ExistsExpression;
+class BaseColumn;
 class BinaryPredicateExpression;
+class CaseExpression;
+class Chunk;
+class ExistsExpression;
+class ExtractExpression;
 class InExpression;
 class PQPSelectExpression;
-class Chunk;
 
 struct BaseColumnMaterialization {
   virtual ~BaseColumnMaterialization() = default;
@@ -85,6 +86,12 @@ class ExpressionEvaluator final {
 
   template<typename T>
   ExpressionResult<T> evaluate_case_expression(const CaseExpression& case_expression);
+
+  template<typename T>
+  ExpressionResult<T> evaluate_extract_expression(const ExtractExpression& extract_expression);
+
+  template<size_t offset, size_t count>
+  ExpressionResult<std::string> evaluate_extract_substr(const ExpressionResult<std::string>& from_result);
 
   template<typename T>
   ExpressionResult<T> evaluate_exists_expression(const ExistsExpression& exists_expression);

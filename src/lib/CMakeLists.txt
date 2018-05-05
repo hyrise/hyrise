@@ -39,6 +39,8 @@ set(
     expression/expression_evaluator.hpp
     expression/expression_utils.cpp
     expression/expression_utils.hpp
+    expression/extract_expression.cpp
+    expression/extract_expression.hpp
 #    expression/external_expression.cpp
 #    expression/external_expression.hpp
 #    expression/function_expression.cpp

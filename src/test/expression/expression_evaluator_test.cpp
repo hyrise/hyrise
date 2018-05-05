@@ -4,6 +4,7 @@
 
 #include "expression/array_expression.hpp"
 #include "expression/case_expression.hpp"
+#include "expression/extract_expression.hpp"
 #include "expression/exists_expression.hpp"
 #include "expression/expression_evaluator.hpp"
 #include "expression/arithmetic_expression.hpp"
@@ -38,6 +39,7 @@ class ExpressionEvaluatorTest : public ::testing::Test {
     d = std::make_shared<PQPColumnExpression>(ColumnID{3}, table_a->column_data_type(ColumnID{3}), table_a->column_is_nullable(ColumnID{3}));
     s1 = std::make_shared<PQPColumnExpression>(ColumnID{4}, table_a->column_data_type(ColumnID{4}), table_a->column_is_nullable(ColumnID{4}));
     s2 = std::make_shared<PQPColumnExpression>(ColumnID{5}, table_a->column_data_type(ColumnID{5}), table_a->column_is_nullable(ColumnID{5}));
+    dates = std::make_shared<PQPColumnExpression>(ColumnID{6}, table_a->column_data_type(ColumnID{6}), table_a->column_is_nullable(ColumnID{6}));
     a_plus_b = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, a, b);
     a_plus_c = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, a, c);
     s1_gt_s2 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThan, s1, s2);
@@ -53,7 +55,7 @@ class ExpressionEvaluatorTest : public ::testing::Test {
   std::shared_ptr<Chunk> chunk_a;
   std::optional<ExpressionEvaluator> evaluator;
 
-  std::shared_ptr<PQPColumnExpression> a, b, c, d, s1, s2, x;
+  std::shared_ptr<PQPColumnExpression> a, b, c, d, s1, s2, dates, x;
   std::shared_ptr<ArithmeticExpression> a_plus_b;
   std::shared_ptr<ArithmeticExpression> a_plus_c;
   std::shared_ptr<BinaryPredicateExpression> a_lt_b;
@@ -190,6 +192,23 @@ TEST_F(ExpressionEvaluatorTest, Exists) {
 
   std::vector<int32_t> expected_values = {0, 0, 1, 1};
   EXPECT_EQ(actual_values, expected_values);
+}
+
+TEST_F(ExpressionEvaluatorTest, Extract) {
+  const auto extract_year_expression = std::make_shared<ExtractExpression>(DateComponent::Year, dates);
+  const auto actual_years = boost::get<ExpressionEvaluator::NonNullableValues<std::string>>(evaluator->evaluate_expression<std::string>(*extract_year_expression));
+  const auto expected_years = std::vector<std::string>({"2017", "2014", "2011", "2010"});
+  EXPECT_EQ(actual_years, expected_years);
+  
+  const auto extract_month_expression = std::make_shared<ExtractExpression>(DateComponent::Month, dates);
+  const auto actual_months = boost::get<ExpressionEvaluator::NonNullableValues<std::string>>(evaluator->evaluate_expression<std::string>(*extract_month_expression));
+  const auto expected_months = std::vector<std::string>({"12", "08", "09", "01"});
+  EXPECT_EQ(actual_months, expected_months);
+  
+  const auto extract_day_expression = std::make_shared<ExtractExpression>(DateComponent::Day, dates);
+  const auto actual_days = boost::get<ExpressionEvaluator::NonNullableValues<std::string>>(evaluator->evaluate_expression<std::string>(*extract_day_expression));
+  const auto expected_days = std::vector<std::string>({"06", "05", "03", "02"});
+  EXPECT_EQ(actual_days, expected_days);
 }
 
 TEST_F(ExpressionEvaluatorTest, PQPSelectExpression) {

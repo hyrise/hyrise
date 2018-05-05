@@ -5,7 +5,7 @@
 namespace opossum {
 
 enum class FunctionType {
-  Substring, Extract
+  Substring
 };
 
 class FunctionExpression : public AbstractExpression {
