@@ -1,13 +1,13 @@
 #pragma once
 
-#include "abstract_expression.hpp"
+#include "abstract_select_expression.hpp"
 
 namespace opossum {
 
 class AbstractLQPNode;
 class ExternalExpression;
 
-class LQPSelectExpression : public AbstractExpression {
+class LQPSelectExpression : public AbstractSelectExpression {
  public:
   explicit LQPSelectExpression(const std::shared_ptr<AbstractLQPNode>& lqp,
                                const std::vector<std::shared_ptr<AbstractExpression>>& referenced_external_expressions);

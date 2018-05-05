@@ -4,6 +4,7 @@
 
 #include "expression/array_expression.hpp"
 #include "expression/case_expression.hpp"
+#include "expression/exists_expression.hpp"
 #include "expression/expression_evaluator.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -45,13 +46,14 @@ class ExpressionEvaluatorTest : public ::testing::Test {
     a_lt_c = std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, a, c);
 
     table_b = load_table("src/test/tables/expression_evaluator/input_b.tbl");
+    x = std::make_shared<PQPColumnExpression>(ColumnID{0}, table_b->column_data_type(ColumnID{0}), table_b->column_is_nullable(ColumnID{0}));
   }
 
   std::shared_ptr<Table> table_a, table_b;
   std::shared_ptr<Chunk> chunk_a;
   std::optional<ExpressionEvaluator> evaluator;
 
-  std::shared_ptr<PQPColumnExpression> a, b, c, d, s1, s2;
+  std::shared_ptr<PQPColumnExpression> a, b, c, d, s1, s2, x;
   std::shared_ptr<ArithmeticExpression> a_plus_b;
   std::shared_ptr<ArithmeticExpression> a_plus_c;
   std::shared_ptr<BinaryPredicateExpression> a_lt_b;
@@ -130,9 +132,12 @@ TEST_F(ExpressionEvaluatorTest, In) {
 
 TEST_F(ExpressionEvaluatorTest, Case) {
   /**
-   *  CASE a = 2 THEN b
-   *  CASE a > 3 THEN c
-   *  ELSE NULL
+   * SELECT
+   *    CASE a = 2 THEN b
+   *    CASE a > 3 THEN c
+   *    ELSE NULL
+   * FROM
+   *    table_a
    */
   const auto else_ = std::make_shared<ValueExpression>(NullValue{});
   const auto a_eq_2 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals,
@@ -158,6 +163,33 @@ TEST_F(ExpressionEvaluatorTest, Case) {
 
   EXPECT_EQ(actual_values.at(1), 3);
   EXPECT_EQ(actual_values.at(2), 34);
+}
+
+TEST_F(ExpressionEvaluatorTest, Exists) {
+  /**
+   * Test a co-related EXISTS query
+   *
+   * SELECT
+   *    EXISTS (SELECT a + x FROM table_b WHERE a + b = 13)
+   * FROM
+   *    table_a;
+   */
+  const auto table_wrapper = std::make_shared<TableWrapper>(table_b);
+  const auto a_placeholder = std::make_shared<ValuePlaceholderExpression>(ValuePlaceholder{0});
+  const auto projection_expressions = std::vector<std::shared_ptr<AbstractExpression>>({
+    std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, a_placeholder, x)
+  });
+  const auto projection = std::make_shared<Projection>(table_wrapper, projection_expressions);
+  const auto a_plus_x_eq_13 = std::make_shared<TableScan>(projection, ColumnID{0}, PredicateCondition::Equals, 13);
+  const auto pqp_select_expression = std::make_shared<PQPSelectExpression>(a_plus_x_eq_13, DataType::Int, false, std::vector<ColumnID>{ColumnID{0}});
+
+  const auto exists_expression = std::make_shared<ExistsExpression>(pqp_select_expression);
+
+  const auto actual_result = evaluator->evaluate_expression<int32_t>(*exists_expression);
+  const auto actual_values = boost::get<ExpressionEvaluator::NonNullableValues<int32_t>>(actual_result);
+
+  std::vector<int32_t> expected_values = {0, 0, 1, 1};
+  EXPECT_EQ(actual_values, expected_values);
 }
 
 TEST_F(ExpressionEvaluatorTest, PQPSelectExpression) {

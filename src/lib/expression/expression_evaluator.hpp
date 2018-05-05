@@ -16,6 +16,7 @@ class AbstractExpression;
 class BaseColumn;
 class CaseExpression;
 class ArithmeticExpression;
+class ExistsExpression;
 class BinaryPredicateExpression;
 class InExpression;
 class PQPSelectExpression;
@@ -77,10 +78,16 @@ class ExpressionEvaluator final {
   ExpressionResult<T> evaluate_in_expression(const InExpression& in_expression);
 
   template<typename T>
-  ExpressionResult<T> evaluate_select_expression(const PQPSelectExpression& expression);
+  ExpressionResult<T> evaluate_select_expression_for_chunk(const PQPSelectExpression &expression);
+
+  template<typename T>
+  ExpressionResult<T> evaluate_select_expression_for_row(const PQPSelectExpression& expression, const ChunkOffset chunk_offset);
 
   template<typename T>
   ExpressionResult<T> evaluate_case_expression(const CaseExpression& case_expression);
+
+  template<typename T>
+  ExpressionResult<T> evaluate_exists_expression(const ExistsExpression& exists_expression);
 
   template<typename ResultDataType,
           typename ThenDataType,

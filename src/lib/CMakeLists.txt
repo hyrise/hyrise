@@ -13,7 +13,10 @@ set(
     concurrency/transaction_manager.hpp
     constant_mappings.cpp
     constant_mappings.hpp
+    expression/abstract_column_expression.cpp
     expression/abstract_column_expression.hpp
+    expression/abstract_select_expression.cpp
+    expression/abstract_select_expression.hpp
     expression/abstract_expression.cpp
     expression/abstract_expression.hpp
     expression/abstract_predicate_expression.cpp
@@ -30,8 +33,8 @@ set(
     expression/binary_predicate_expression.hpp
     expression/case_expression.cpp
     expression/case_expression.hpp
-#    expression/exists_expression.cpp
-#    expression/exists_expression.hpp
+    expression/exists_expression.cpp
+    expression/exists_expression.hpp
     expression/expression_evaluator.cpp
     expression/expression_evaluator.hpp
     expression/expression_utils.cpp

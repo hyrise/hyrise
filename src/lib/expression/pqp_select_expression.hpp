@@ -1,20 +1,19 @@
 #pragma once
 
-#include "abstract_expression.hpp"
+#include "abstract_select_expression.hpp"
 #include "all_type_variant.hpp"
 
 namespace opossum {
 
 class AbstractOperator;
 
-class PQPSelectExpression : public AbstractExpression {
+class PQPSelectExpression : public AbstractSelectExpression {
  public:
   explicit PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp,
                                const DataType data_type,
                                const bool nullable,
                                const std::vector<ColumnID>& parameters);
 
-  bool requires_calculation() const override;
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
   DataType data_type() const override;

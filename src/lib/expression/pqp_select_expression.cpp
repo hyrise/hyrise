@@ -12,13 +12,10 @@ PQPSelectExpression::PQPSelectExpression(const std::shared_ptr<AbstractOperator>
                                          const DataType data_type,
                                          const bool nullable,
                                          const std::vector<ColumnID>& parameters):
-  AbstractExpression(ExpressionType::Select, {}), pqp(pqp), parameters(parameters), _data_type(data_type), _nullable(nullable) {
+  pqp(pqp), parameters(parameters), _data_type(data_type), _nullable(nullable) {
 
 }
 
-bool PQPSelectExpression::requires_calculation() const {
-  return true;
-}
 
 std::shared_ptr<AbstractExpression> PQPSelectExpression::deep_copy() const {
   return std::make_shared<PQPSelectExpression>(pqp->recreate(), _data_type, _nullable, parameters);

@@ -9,6 +9,7 @@
 #include "case_expression.hpp"
 #include "all_parameter_variant.hpp"
 #include "arithmetic_expression.hpp"
+#include "exists_expression.hpp"
 #include "logical_expression.hpp"
 #include "in_expression.hpp"
 #include "pqp_column_expression.hpp"
@@ -217,7 +218,7 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_expressio
       const auto* pqp_select_expression = dynamic_cast<const PQPSelectExpression*>(&expression);
       Assert(pqp_select_expression, "Can only evaluate PQPSelectExpression");
 
-      return evaluate_select_expression<T>(*pqp_select_expression);
+      return evaluate_select_expression_for_chunk<T>(*pqp_select_expression);
     }
 
     case ExpressionType::Column: {
@@ -249,11 +250,16 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_expressio
     }
 
     case ExpressionType::Function:
+      Fail("Function evaluation not yet implemented");
+
     case ExpressionType::Case:
       return evaluate_case_expression<T>(static_cast<const CaseExpression&>(expression));
 
     case ExpressionType::Exists:
+      return evaluate_exists_expression<T>(static_cast<const ExistsExpression&>(expression));
+
     case ExpressionType::Not:
+      Fail("Not not yet implemented");
 
     case ExpressionType::Array:
       Fail("Can't 'evaluate' an Array as a top level expression, can only handle them as part of an InExpression. "
@@ -414,6 +420,28 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_case_expr
   }
 
   return result;
+}
+
+template<typename T>
+ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_exists_expression(const ExistsExpression& exists_expression) {
+  std::vector<T> result_values(_chunk->size());
+
+  const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(exists_expression.select());
+  for (const auto& parameter : pqp_select_expression->parameters) {
+    _ensure_column_materialization(parameter);
+  }
+
+  resolve_data_type(pqp_select_expression->data_type(), [&](const auto select_data_type_t) {
+    using SelectDataType = typename decltype(select_data_type_t)::type;
+
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+      const auto select_result = evaluate_select_expression_for_row<SelectDataType>(*pqp_select_expression, chunk_offset);
+      const auto& select_result_values = boost::get<NonNullableValues<SelectDataType>>(select_result);
+      result_values[chunk_offset] = !select_result_values.empty();
+    }
+  });
+
+  return result_values;
 }
 
 template<typename ResultDataType,
@@ -678,7 +706,8 @@ ExpressionEvaluator::ExpressionResult<ResultDataType> ExpressionEvaluator::evalu
 
 
 template<typename T>
-ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_select_expression(const PQPSelectExpression& expression) {
+ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_select_expression_for_chunk(
+const PQPSelectExpression &expression) {
   for (const auto& parameter : expression.parameters) {
     _ensure_column_materialization(parameter);
   }
@@ -689,38 +718,51 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_select_ex
   std::vector<AllParameterVariant> parameter_values(expression.parameters.size());
 
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
-    for (auto parameter_idx = size_t{0}; parameter_idx < expression.parameters.size(); ++parameter_idx) {
-      const auto parameter_column_id = expression.parameters[parameter_idx];
-      const auto& column = *_chunk->get_column(parameter_column_id);
+    const auto select_result = evaluate_select_expression_for_row<T>(expression, chunk_offset);
+    const auto& select_result_values = boost::get<NonNullableValues<T>>(select_result);
 
-      resolve_data_type(column.data_type(), [&](const auto data_type_t) {
-        using ColumnDataType = typename decltype(data_type_t)::type;
-        parameter_values[parameter_idx] = AllTypeVariant{static_cast<ColumnMaterialization<ColumnDataType>&>(*_column_materializations[parameter_column_id]).values[chunk_offset]};
-      });
-    }
-
-    auto row_pqp = expression.pqp->recreate(parameter_values);
-
-    SQLQueryPlan query_plan;
-    query_plan.add_tree_by_root(row_pqp);
-    const auto tasks = query_plan.create_tasks();
-    CurrentScheduler::schedule_and_wait_for_tasks(tasks);
-
-    const auto result_table = row_pqp->get_output();
-
-    Assert(result_table->column_count() == 1, "Expected precisely one column");
-    Assert(result_table->row_count() == 1, "Expected precisely one row");
-    Assert(result_table->column_data_type(ColumnID{0}) == data_type_from_type<T>(), "Expected different DataType");
-
-    const auto& result_column = *result_table->get_chunk(ChunkID{0})->get_column(ColumnID{0});
-
-    std::vector<T> result_value;
-    materialize_values(result_column, result_value);
-
-    result.emplace_back(result_value[0]);
+    Assert(select_result_values.size() == 1, "Expected precisely one row");
+    result.emplace_back(select_result_values[0]);
   }
 
   return result;
+}
+
+template<typename T>
+ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_select_expression_for_row(const PQPSelectExpression& expression, const ChunkOffset chunk_offset) {
+  std::vector<AllParameterVariant> parameter_values(expression.parameters.size());
+
+  for (auto parameter_idx = size_t{0}; parameter_idx < expression.parameters.size(); ++parameter_idx) {
+    const auto parameter_column_id = expression.parameters[parameter_idx];
+    const auto& column = *_chunk->get_column(parameter_column_id);
+
+    resolve_data_type(column.data_type(), [&](const auto data_type_t) {
+      using ColumnDataType = typename decltype(data_type_t)::type;
+      parameter_values[parameter_idx] = AllTypeVariant{static_cast<ColumnMaterialization<ColumnDataType>&>(*_column_materializations[parameter_column_id]).values[chunk_offset]};
+    });
+  }
+
+  auto row_pqp = expression.pqp->recreate(parameter_values);
+
+  SQLQueryPlan query_plan;
+  query_plan.add_tree_by_root(row_pqp);
+  const auto tasks = query_plan.create_tasks();
+  CurrentScheduler::schedule_and_wait_for_tasks(tasks);
+
+  const auto result_table = row_pqp->get_output();
+
+  Assert(result_table->column_count() == 1, "Expected precisely one column");
+  Assert(result_table->column_data_type(ColumnID{0}) == data_type_from_type<T>(), "Expected different DataType");
+
+  std::vector<T> result_values;
+  result_values.reserve(result_table->row_count());
+
+  for (auto chunk_id = ChunkID{0}; chunk_id < result_table->chunk_count(); ++chunk_id) {
+    const auto &result_column = *result_table->get_chunk(chunk_id)->get_column(ColumnID{0});
+    materialize_values(result_column, result_values);
+  }
+
+  return result_values;
 }
 
 void ExpressionEvaluator::_ensure_column_materialization(const ColumnID column_id) {

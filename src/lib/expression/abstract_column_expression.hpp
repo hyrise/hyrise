@@ -6,7 +6,7 @@ namespace opossum {
 
 class AbstractColumnExpression : public AbstractExpression {
  public:
-  AbstractColumnExpression(): AbstractExpression(ExpressionType::Column, {}) {}
+  AbstractColumnExpression();
 };
 
 }  // namespace opossum
