@@ -4,6 +4,7 @@
 
 namespace opossum {
 
+// For a possible list of functions, see https://www.w3schools.com/sql/sql_ref_sqlserver.asp
 enum class FunctionType {
   Substring
 };
@@ -15,6 +16,7 @@ class FunctionExpression : public AbstractExpression {
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
+  DataType data_type() const override;
 
   FunctionType function_type;
 

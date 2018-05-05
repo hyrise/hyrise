@@ -20,6 +20,7 @@ class CaseExpression;
 class Chunk;
 class ExistsExpression;
 class ExtractExpression;
+class FunctionExpression;
 class InExpression;
 class PQPSelectExpression;
 
@@ -65,6 +66,14 @@ class ExpressionEvaluator final {
 
   template<typename T>
   ExpressionResult<T> evaluate_expression(const AbstractExpression& expression);
+
+  template<typename T>
+  ExpressionResult<T> evaluate_function_expression(const FunctionExpression& expression);
+
+  template<typename OffsetDataType, typename CharCountDataType>
+  ExpressionResult<std::string> evaluate_substring(const ExpressionResult<std::string>& string_result,
+                                         const ExpressionResult<OffsetDataType>& offset_result,
+                                         const ExpressionResult<CharCountDataType>& char_count_result);
 
   template<typename T>
   ExpressionResult<T> evaluate_arithmetic_expression(const ArithmeticExpression& expression);

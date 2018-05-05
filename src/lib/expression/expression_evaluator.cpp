@@ -11,6 +11,7 @@
 #include "arithmetic_expression.hpp"
 #include "exists_expression.hpp"
 #include "extract_expression.hpp"
+#include "function_expression.hpp"
 #include "logical_expression.hpp"
 #include "in_expression.hpp"
 #include "pqp_column_expression.hpp"
@@ -251,7 +252,7 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_expressio
     }
 
     case ExpressionType::Function:
-      Fail("Function evaluation not yet implemented");
+      return evaluate_function_expression<T>(static_cast<const FunctionExpression&>(expression));
 
     case ExpressionType::Case:
       return evaluate_case_expression<T>(static_cast<const CaseExpression&>(expression));
@@ -276,6 +277,44 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_expressio
     case ExpressionType::Aggregate:
       Fail("ExpressionEvaluator doesn't support Aggregates, use the Aggregate Operator to compute them");
   }
+}
+
+template<typename T>
+ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_function_expression(const FunctionExpression& expression) {
+  switch (expression.function_type) {
+    case FunctionType::Substring:
+      // clang-format off
+      if constexpr (std::is_same_v<T, std::string>) {
+        resolve_data_type(expression.arguments[1]->data_type(), [&](const auto offset_data_type_t) {
+          using OffsetDataType = typename decltype(offset_data_type_t)::type;
+
+          resolve_data_type(expression.arguments[2]->data_type(), [&](const auto char_count_data_type_t) {
+            using CharCountDataType = typename decltype(char_count_data_type_t)::type;
+
+            if constexpr(std::is_integral_v<OffsetDataType> && std::is_integral_v<CharCountDataType>) {
+              return evaluate_substring(
+                evaluate_expression<std::string>(expression.arguments[0])
+                evaluate_expression<OffsetDataType>(expression.arguments[1]),
+                evaluate_expression<OffsetDataType>(expression.arguments[2])));
+            } else {
+              Fail("SUBSTRING parameters 2 and 3 need to be integral");
+            }
+          });
+        });
+
+        return evaluate_substring();
+      } else {
+        Fail("SUBSTRING can only return String");
+      }
+      // clang-format on
+  }
+}
+
+template<typename OffsetDataType, typename CharCountDataType>
+ExpressionEvaluator::ExpressionResult<std::string> ExpressionEvaluator::evaluate_substring(const ExpressionResult<std::string>& string_result,
+                                                 const ExpressionResult<OffsetDataType>& offset_result,
+                                                 const ExpressionResult<CharCountDataType>& char_count_result) {
+  if  
 }
 
 template<typename T>

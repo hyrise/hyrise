@@ -43,8 +43,8 @@ set(
     expression/extract_expression.hpp
 #    expression/external_expression.cpp
 #    expression/external_expression.hpp
-#    expression/function_expression.cpp
-#    expression/function_expression.hpp
+    expression/function_expression.cpp
+    expression/function_expression.hpp
     expression/in_expression.cpp
     expression/in_expression.hpp
 #    expression/is_null_expression.cpp
