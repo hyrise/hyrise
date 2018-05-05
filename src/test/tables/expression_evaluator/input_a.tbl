@@ -1,4 +1,4 @@
-a|b|c|d|s1|s2
+3a|b|c|d|s1|s2
 int|int|int_null|int|string|string
 1|2|33|2|a|b
 2|3|null|5|Hello|World

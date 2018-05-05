@@ -14,6 +14,7 @@ namespace opossum {
 
 class AbstractExpression;
 class BaseColumn;
+class CaseExpression;
 class ArithmeticExpression;
 class BinaryPredicateExpression;
 class InExpression;
@@ -77,6 +78,16 @@ class ExpressionEvaluator final {
 
   template<typename T>
   ExpressionResult<T> evaluate_select_expression(const PQPSelectExpression& expression);
+
+  template<typename T>
+  ExpressionResult<T> evaluate_case_expression(const CaseExpression& case_expression);
+
+  template<typename ResultDataType,
+          typename ThenDataType,
+          typename ElseDataType>
+  ExpressionResult<ResultDataType> evaluate_case(const ExpressionResult<int32_t>& when_result,
+                                                 const ExpressionResult<ThenDataType>& then_result,
+                                                 const ExpressionResult<ElseDataType>& else_result);
 
   template<typename T, template<typename...> typename Functor>
   ExpressionResult<T> evaluate_binary_expression(const AbstractExpression& left_operand,

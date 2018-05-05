@@ -113,5 +113,25 @@ std::string expression_column_names(const std::vector<std::shared_ptr<AbstractEx
   return stream.str();
 }
 
+DataType expression_common_type(const DataType lhs, const DataType rhs) {
+  Assert(lhs != DataType::Null || rhs != DataType::Int, "Can't deduce common type if both sides are NULL");
+  Assert((lhs == DataType::String) == (rhs == DataType::String), "Strings only compatible with strings");
+
+  if (lhs == DataType::Null) return rhs;
+  if (rhs == DataType::Null) return lhs;
+
+  if (lhs == DataType::String) return DataType::String;
+
+  if (lhs == DataType::Double || rhs == DataType::Double) return DataType::Double;
+  if (lhs == DataType::Long) {
+    return is_floating_point_data_type(rhs) ? DataType::Double : DataType::Long;
+  }
+  if (rhs == DataType::Long) {
+    return is_floating_point_data_type(lhs) ? DataType::Double : DataType::Long;
+  }
+  if (lhs == DataType::Float || rhs == DataType::Float) return DataType::Float;
+
+  return DataType::Int;
+}
 
 }  // namespace opossum

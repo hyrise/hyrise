@@ -74,4 +74,6 @@ void visit_expression(std::shared_ptr<AbstractExpression>& expression, Visitor v
   }
 }
 
+DataType expression_common_type(const DataType lhs, const DataType rhs);
+
 }  // namespace opossum

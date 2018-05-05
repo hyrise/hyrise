@@ -28,8 +28,8 @@ set(
 #    expression/between_expression.hpp
     expression/binary_predicate_expression.cpp
     expression/binary_predicate_expression.hpp
-#    expression/case_expression.cpp
-#    expression/case_expression.hpp
+    expression/case_expression.cpp
+    expression/case_expression.hpp
 #    expression/exists_expression.cpp
 #    expression/exists_expression.hpp
     expression/expression_evaluator.cpp

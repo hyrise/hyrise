@@ -6,6 +6,7 @@
 #include "array_expression.hpp"
 #include "abstract_predicate_expression.hpp"
 #include "binary_predicate_expression.hpp"
+#include "case_expression.hpp"
 #include "all_parameter_variant.hpp"
 #include "arithmetic_expression.hpp"
 #include "logical_expression.hpp"
@@ -39,7 +40,8 @@ struct OperatorTraits {
 
 template<typename Functor, typename O, typename L, typename R, bool null_from_values, bool value_from_null>
 struct BinaryFunctorWrapper : public OperatorTraits<null_from_values, value_from_null> {
-  void operator()(O &result_value,
+  void operator()(const ChunkOffset chunk_offset, 
+                  O &result_value,
                   bool& result_null,
                   const L left_value,
                   const bool left_null,
@@ -67,13 +69,82 @@ struct TernaryOrImpl {
 template<typename O, typename L, typename R>
 struct TernaryOrImpl<O, L, R, std::enable_if_t<std::is_same_v<int32_t, O> && std::is_same_v<int32_t, L> && std::is_same_v<int32_t, R>>> : public OperatorTraits<false, true> {
   static constexpr auto supported = true;
-  void operator()(int32_t &result_value, bool& result_null, const int32_t left_value, const bool left_null,
+  void operator()(const ChunkOffset chunk_offset, int32_t &result_value, bool& result_null, const int32_t left_value, const bool left_null,
                   const int32_t right_value, const bool right_null) const {
     const auto left_is_true = !left_null && left_value;
     const auto right_is_true = !right_null && right_value;
 
     result_value = left_is_true || right_is_true;
     result_null = (left_null || right_null) && !result_value;
+  }
+};
+
+template<typename O, typename L, typename R, typename Enable = void>
+struct CaseNonNullableCondition {
+  static constexpr auto supported = false;
+};
+
+template<typename O, typename L, typename R>
+struct CaseNonNullableCondition<O, L, R, std::enable_if_t<std::is_same_v<std::string, O> == std::is_same_v<std::string, L> && std::is_same_v<std::string, L> == std::is_same_v<std::string, R>>> : public OperatorTraits<false, true> {
+  static constexpr auto supported = true;
+
+  const std::vector<int32_t> when_values;
+
+  CaseNonNullableCondition(std::vector<int32_t> when_values):
+    when_values(when_values) {}
+  
+  void operator()(const ChunkOffset chunk_offset, O &result_value, bool& result_null, const L left_value, const bool left_null,
+                  const R right_value, const bool right_null) const {
+    if (when_values[chunk_offset]) {
+      if (left_null) {
+        result_null = true;
+      } else {
+        result_null = false;
+        result_value = static_cast<O>(left_value);        
+      }
+    } else {
+      if (right_null) {
+        result_null = true;
+      } else {
+        result_null = false;
+        result_value = static_cast<O>(right_value);
+      }
+    }
+  }
+};
+
+template<typename O, typename L, typename R, typename Enable = void>
+struct CaseNullableCondition {
+  static constexpr auto supported = false;
+};
+
+template<typename O, typename L, typename R>
+struct CaseNullableCondition<O, L, R, std::enable_if_t<std::is_same_v<std::string, O> == std::is_same_v<std::string, L> && std::is_same_v<std::string, L> == std::is_same_v<std::string, R>>> : public OperatorTraits<false, true> {
+  static constexpr auto supported = true;
+
+  const std::vector<int32_t> when_values;
+  const std::vector<bool> when_nulls;
+
+  CaseNullableCondition(std::vector<int32_t> when_values, std::vector<bool> when_nulls):
+    when_values(when_values), when_nulls(when_nulls) {}
+
+  void operator()(const ChunkOffset chunk_offset, O &result_value, bool& result_null, const L left_value, const bool left_null,
+                  const R right_value, const bool right_null) const {
+    if (when_nulls[chunk_offset] || when_values[chunk_offset]) {
+      if (left_null) {
+        result_null = true;
+      } else {
+        result_null = false;
+        result_value = static_cast<O>(left_value);
+      }
+    } else {
+      if (right_null) {
+        result_null = true;
+      } else {
+        result_null = false;
+        result_value = static_cast<O>(right_value);
+      }
+    }
   }
 };
 
@@ -109,6 +180,7 @@ template<typename O, typename L, typename R> using TernaryOr = TernaryOrImpl<O, 
 template<typename O, typename L, typename R> using Addition = ArithmeticFunctor<std::plus, O, L, R, true, true>;
 template<typename O, typename L, typename R> using Subtraction = ArithmeticFunctor<std::minus, O, L, R, true, true>;
 template<typename O, typename L, typename R> using Multiplication = ArithmeticFunctor<std::multiplies, O, L, R, true, true>;
+template<typename O, typename L, typename R> using Division = ArithmeticFunctor<std::divides, O, L, R, true, true>;
 // clang-format on
 
 // clang-format off
@@ -178,18 +250,21 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_expressio
 
     case ExpressionType::Function:
     case ExpressionType::Case:
+      return evaluate_case_expression<T>(static_cast<const CaseExpression&>(expression));
+
     case ExpressionType::Exists:
     case ExpressionType::Not:
 
     case ExpressionType::Array:
-      Fail("ExpressionEvaluator can't 'evaluate' an Array, it handles them only as part of an InExpression. The expression you are passing in is probably malformed");
+      Fail("Can't 'evaluate' an Array as a top level expression, can only handle them as part of an InExpression. "
+           "The expression you are passing in is probably malformed");
 
     case ExpressionType::ValuePlaceholder:
     case ExpressionType::Mock:
-      Fail("ExpressionEvaluator can't handle ValuePlaceholders/Mocks since they don't have a value.");
+      Fail("Can't handle ValuePlaceholders/Mocks since they don't have a value.");
 
     case ExpressionType::Aggregate:
-      Fail("ExpressionEvaluator doesn't support Aggregates, use the Aggregate operator to compute them");
+      Fail("ExpressionEvaluator doesn't support Aggregates, use the Aggregate Operator to compute them");
   }
 }
 
@@ -203,6 +278,7 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_arithmeti
     case ArithmeticOperator::Addition:       return evaluate_binary_expression<T, Addition>(left, right);
     case ArithmeticOperator::Subtraction:    return evaluate_binary_expression<T, Subtraction>(left, right);
     case ArithmeticOperator::Multiplication: return evaluate_binary_expression<T, Multiplication>(left, right);
+    case ArithmeticOperator::Division:       return evaluate_binary_expression<T, Division>(left, right);
 
     default:
       Fail("ArithmeticOperator evaluation not yet implemented");
@@ -273,6 +349,103 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_in_expres
   Fail("InExpression supports only int32_t as result");
 }
 
+template<typename T>
+ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_case_expression(const CaseExpression& case_expression) {
+  const auto when = evaluate_expression<int32_t>(*case_expression.when());
+
+  /**
+   * Handle cases where the CASE condition is a fixed value/NULL (e.g. CASE 5+3 > 2 THEN ... ELSE ...)
+   *    fixed_branch: std::nullopt, if CASE condition is not a value/NULL
+   *    fixed_branch: CaseBranch::Then, if CASE condition if value is not FALSE
+   *    fixed_branch: CaseBranch::Else, if CASE condition if value false or NULL
+   * This avoids computing branches we don't need to compute.
+   */
+  enum class CaseBranch { Then, Else };
+  auto fixed_branch = std::optional<CaseBranch>{};
+
+  if (is_value(when)) fixed_branch = boost::get<int32_t>(when) != 0 ? CaseBranch::Then : CaseBranch::Else;
+  if (is_null(when)) fixed_branch = CaseBranch::Else;
+
+  if (fixed_branch) {
+    switch (*fixed_branch) {
+      case CaseBranch::Then: return evaluate_expression<T>(*case_expression.then());
+      case CaseBranch::Else: return evaluate_expression<T>(*case_expression.else_());
+    }
+  }
+  
+  /**
+   * Handle cases where the CASE condition is a per-row expression
+   */
+  const auto then_is_null = case_expression.then()->data_type() == DataType::Null;
+  const auto else_is_null = case_expression.else_()->data_type() == DataType::Null;
+
+  if (then_is_null && else_is_null) return NullValue{};
+
+  ExpressionEvaluator::ExpressionResult<T> result;
+
+  if (then_is_null) {
+    resolve_data_type(case_expression.else_()->data_type(), [&](const auto else_data_type_t) {
+      using ElseDataType = typename decltype(else_data_type_t)::type;
+      const auto else_result = evaluate_expression<ElseDataType>(*case_expression.then());
+
+      result = evaluate_case<T>(when, ExpressionResult<T>(NullValue{}), else_result);
+    });
+
+  } else if (else_is_null) {
+    resolve_data_type(case_expression.then()->data_type(), [&](const auto then_data_type_t) {
+      using ThenDataType = typename decltype(then_data_type_t)::type;
+      const auto then_result = evaluate_expression<ThenDataType>(*case_expression.then());
+
+      result = evaluate_case<T>(when, then_result, ExpressionResult<T>(NullValue{}));
+    });
+
+  } else {
+    resolve_data_type(case_expression.then()->data_type(), [&](const auto then_data_type_t) {
+      using ThenDataType = typename decltype(then_data_type_t)::type;
+      const auto then_result = evaluate_expression<ThenDataType>(*case_expression.then());
+
+      resolve_data_type(case_expression.else_()->data_type(), [&](const auto else_data_type_t) {
+        using ElseDataType = typename decltype(else_data_type_t)::type;
+        const auto else_result = evaluate_expression<ElseDataType>(*case_expression.else_());
+
+        result = evaluate_case<T>(when, then_result, else_result);
+      });
+    });
+  }
+
+  return result;
+}
+
+template<typename ResultDataType,
+typename ThenDataType,
+typename ElseDataType>
+ExpressionEvaluator::ExpressionResult<ResultDataType> ExpressionEvaluator::evaluate_case(const ExpressionResult<int32_t>& when_result,
+                                               const ExpressionResult<ThenDataType>& then_result,
+                                               const ExpressionResult<ElseDataType>& else_result) {
+  if (is_nullable_values(when_result)) {
+    using CaseFunctor = CaseNullableCondition<ResultDataType, ThenDataType, ElseDataType>;
+
+    if constexpr (CaseFunctor::supported) {
+      const auto& when_values = boost::get<NullableValues<int32_t>>(when_result).first;
+      const auto& when_nulls = boost::get<NullableValues<int32_t>>(when_result).second;
+
+      return evaluate_binary_operator<ResultDataType>(then_result, else_result, CaseFunctor(when_values, when_nulls));
+    } else {
+      Fail("Operand types not support for CASE");
+    }
+  } else {
+    using CaseFunctor = CaseNonNullableCondition<ResultDataType, ThenDataType, ElseDataType>;
+
+    if constexpr (CaseFunctor::supported) {
+      const auto& when_values = boost::get<NonNullableValues<int32_t>>(when_result);
+
+      return evaluate_binary_operator<ResultDataType>(then_result, else_result, CaseFunctor{when_values});
+    } else {
+      Fail("Operand types not support for CASE");
+    }
+  }
+}
+
 template<typename ResultDataType,
 typename LeftOperandDataType,
 typename RightOperandDataType,
@@ -306,9 +479,9 @@ ExpressionEvaluator::ExpressionResult<ResultDataType> ExpressionEvaluator::evalu
    */
   if (left_is_value) left_value = boost::get<LeftOperandDataType>(left_operands);
   else if (right_is_value) right_value = boost::get<RightOperandDataType>(right_operands);
-  else if (left_is_value && right_is_null) functor(result_value, result_null, left_value, false, right_value, true);
-  else if (left_is_null && right_is_value) functor(result_value, result_null, left_value, true, right_value, false);
-  else if (left_is_value && right_is_value) functor(result_value, result_null, left_value, false, right_value, false);
+  else if (left_is_value && right_is_null) functor(0, result_value, result_null, left_value, false, right_value, true);
+  else if (left_is_null && right_is_value) functor(0, result_value, result_null, left_value, true, right_value, false);
+  else if (left_is_value && right_is_value) functor(0, result_value, result_null, left_value, false, right_value, false);
 
   if ((left_is_value || left_is_null) && (right_is_value || right_is_null)) {
     if (result_null) {
@@ -356,14 +529,14 @@ ExpressionEvaluator::ExpressionResult<ResultDataType> ExpressionEvaluator::evalu
 
   if (left_is_nullable && right_is_nullable) {
     evaluate_per_row([&](const auto chunk_offset) {
-      functor(result_values[chunk_offset], result_null, (*left_values)[chunk_offset],
+      functor(chunk_offset, result_values[chunk_offset], result_null, (*left_values)[chunk_offset],
               (*left_nulls)[chunk_offset], (*right_values)[chunk_offset], (*right_nulls)[chunk_offset]);
       result_nulls[chunk_offset] = result_null;
     });
   }
   else if (left_is_nullable && right_is_values) {
     evaluate_per_row([&](const auto chunk_offset) {
-      functor(result_values[chunk_offset], result_null,
+      functor(chunk_offset, result_values[chunk_offset], result_null,
               (*left_values)[chunk_offset], (*left_nulls)[chunk_offset],
               (*right_values)[chunk_offset], false);
       result_nulls[chunk_offset] = result_null;
@@ -371,15 +544,27 @@ ExpressionEvaluator::ExpressionResult<ResultDataType> ExpressionEvaluator::evalu
   }
   else if (left_is_nullable && right_is_value) {
     evaluate_per_row([&](const auto chunk_offset) {
-      functor(result_values[chunk_offset], result_null,
+      functor(chunk_offset, result_values[chunk_offset], result_null,
               (*left_values)[chunk_offset], (*left_nulls)[chunk_offset],
               right_value, false);
       result_nulls[chunk_offset] = result_null;
     });
   }
+  else if (left_is_nullable && right_is_null) {
+    if (Functor::may_produce_value_from_null) {
+      evaluate_per_row([&](const auto chunk_offset) {
+        functor(chunk_offset, result_values[chunk_offset], result_null,
+                (*left_values)[chunk_offset], (*left_nulls)[chunk_offset],
+                RightOperandDataType{}, true);
+        result_nulls[chunk_offset] = result_null;
+      });
+    } else {
+      return NullValue{};
+    }
+  }
   else if (left_is_values && right_is_nullable) {
     evaluate_per_row([&](const auto chunk_offset) {
-      functor(result_values[chunk_offset], result_null,
+      functor(chunk_offset, result_values[chunk_offset], result_null,
               (*left_values)[chunk_offset], false,
               (*right_values)[chunk_offset], (*right_nulls)[chunk_offset]);
       result_nulls[chunk_offset] = result_null;
@@ -388,14 +573,14 @@ ExpressionEvaluator::ExpressionResult<ResultDataType> ExpressionEvaluator::evalu
   else if (left_is_values && right_is_values) {
     if (result_is_nullable) {
       evaluate_per_row([&](const auto chunk_offset) {
-        functor(result_values[chunk_offset], result_null,
+        functor(chunk_offset, result_values[chunk_offset], result_null,
                 (*left_values)[chunk_offset], false,
                 (*right_values)[chunk_offset], false);
         result_nulls[chunk_offset] = result_null;
       });
     } else {
       evaluate_per_row([&](const auto chunk_offset) {
-        functor(result_values[chunk_offset], result_null /* dummy */,
+        functor(chunk_offset, result_values[chunk_offset], result_null /* dummy */,
                 (*left_values)[chunk_offset], false,
                 (*right_values)[chunk_offset], false);
       });
@@ -404,14 +589,14 @@ ExpressionEvaluator::ExpressionResult<ResultDataType> ExpressionEvaluator::evalu
   else if (left_is_values && right_is_value) {
     if (result_is_nullable) {
       evaluate_per_row([&](const auto chunk_offset) {
-        functor(result_values[chunk_offset], result_null,
+        functor(chunk_offset, result_values[chunk_offset], result_null,
                 (*left_values)[chunk_offset], false,
                 right_value, false);
         result_nulls[chunk_offset] = result_null;
       });
     } else {
       evaluate_per_row([&](const auto chunk_offset) {
-        functor(result_values[chunk_offset], result_null /* dummy */,
+        functor(chunk_offset, result_values[chunk_offset], result_null /* dummy */,
                 (*left_values)[chunk_offset], false,
                 right_value, false);
       });
@@ -420,18 +605,18 @@ ExpressionEvaluator::ExpressionResult<ResultDataType> ExpressionEvaluator::evalu
   else if (left_is_values && right_is_null) {
     if constexpr (Functor::may_produce_value_from_null) {
       evaluate_per_row([&](const auto chunk_offset) {
-        functor(result_values[chunk_offset], result_null,
+        functor(chunk_offset, result_values[chunk_offset], result_null,
                 (*left_values)[chunk_offset], false,
                 right_value, true);
         result_nulls[chunk_offset] = result_null;
       });
     } else {
-      std::fill(result_nulls.begin(), result_nulls.end(), true);
+      return NullValue{};
     }
   }
   else if (left_is_value && right_is_nullable) {
     evaluate_per_row([&](const auto chunk_offset) {
-      functor(result_values[chunk_offset], result_null,
+      functor(chunk_offset, result_values[chunk_offset], result_null,
               left_value, false,
               (*right_values)[chunk_offset], (*right_nulls)[chunk_offset]);
       result_nulls[chunk_offset] = result_null;
@@ -440,14 +625,14 @@ ExpressionEvaluator::ExpressionResult<ResultDataType> ExpressionEvaluator::evalu
   else if (left_is_value && right_is_values) {
     if (result_is_nullable) {
       evaluate_per_row([&](const auto chunk_offset) {
-        functor(result_values[chunk_offset], result_null,
+        functor(chunk_offset, result_values[chunk_offset], result_null,
                 left_value, false,
                 (*right_values)[chunk_offset], false);
         result_nulls[chunk_offset] = result_null;
       });
     } else {
       evaluate_per_row([&](const auto chunk_offset) {
-        functor(result_values[chunk_offset], result_null /* dummy */,
+        functor(chunk_offset, result_values[chunk_offset], result_null /* dummy */,
                 left_value, false,
                 (*right_values)[chunk_offset], false);
       });
@@ -456,25 +641,25 @@ ExpressionEvaluator::ExpressionResult<ResultDataType> ExpressionEvaluator::evalu
   else if (left_is_null && right_is_nullable) {
     if constexpr (Functor::may_produce_value_from_null) {
       evaluate_per_row([&](const auto chunk_offset) {
-        functor(result_values[chunk_offset], result_null,
+        functor(chunk_offset, result_values[chunk_offset], result_null,
                 left_value, true,
                 (*right_values)[chunk_offset], (*right_nulls)[chunk_offset]);
         result_nulls[chunk_offset] = result_null;
       });
     } else {
-      std::fill(result_nulls.begin(), result_nulls.end(), true);
+      return NullValue{};
     }
   }
   else if (left_is_null && right_is_values) {
     if constexpr (Functor::may_produce_value_from_null) {
       evaluate_per_row([&](const auto chunk_offset) {
-        functor(result_values[chunk_offset], result_null,
+        functor(chunk_offset, result_values[chunk_offset], result_null,
                 left_value, true,
                 (*right_values)[chunk_offset], false);
         result_nulls[chunk_offset] = result_null;
       });
     } else {
-      std::fill(result_nulls.begin(), result_nulls.end(), true);
+      return NullValue{};
     }
   }
   else {

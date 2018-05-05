@@ -2,6 +2,8 @@
 
 #include <sstream>
 
+#include "expression_utils.hpp"
+
 namespace opossum {
 
 CaseExpression::CaseExpression(const std::shared_ptr<AbstractExpression>& when,
@@ -29,12 +31,12 @@ std::string CaseExpression::as_column_name() const {
   return stream.str();
 }
 
-ExpressionDataTypeVariant CaseExpression::data_type() const {
-
+DataType CaseExpression::data_type() const {
+  return expression_common_type(then()->data_type(), else_()->data_type());
 }
 
 std::shared_ptr<AbstractExpression> CaseExpression::deep_copy() const {
-  return std::make_shared<CaseExpression>(when(), then(), else_());
+  return std::make_shared<CaseExpression>(when()->deep_copy(), then()->deep_copy(), else_()->deep_copy());
 }
 
 }  // namespace opossum

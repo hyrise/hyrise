@@ -3,6 +3,7 @@
 #include <optional>
 
 #include "expression/array_expression.hpp"
+#include "expression/case_expression.hpp"
 #include "expression/expression_evaluator.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -125,6 +126,38 @@ TEST_F(ExpressionEvaluatorTest, In) {
 
   std::vector<int32_t> expected_values = {1, 0, 1, 0};
   EXPECT_EQ(actual_values, expected_values);
+}
+
+TEST_F(ExpressionEvaluatorTest, Case) {
+  /**
+   *  CASE a = 2 THEN b
+   *  CASE a > 3 THEN c
+   *  ELSE NULL
+   */
+  const auto else_ = std::make_shared<ValueExpression>(NullValue{});
+  const auto a_eq_2 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals,
+                                                                  a, std::make_shared<ValueExpression>(2));
+  const auto a_ge_3 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals,
+                                                                  a, std::make_shared<ValueExpression>(3));
+  const auto case_a_ge_3 = std::make_shared<CaseExpression>(a_ge_3, c, else_);
+
+  const auto case_a_eq_2 = std::make_shared<CaseExpression>(a_eq_2, b, case_a_ge_3);
+
+  EXPECT_EQ(case_a_ge_3->data_type(), DataType::Int);
+  EXPECT_EQ(case_a_eq_2->data_type(), DataType::Int);
+  EXPECT_TRUE(case_a_ge_3->is_nullable());
+  EXPECT_TRUE(case_a_eq_2->is_nullable());
+
+  const auto actual_result = evaluator->evaluate_expression<int32_t>(*case_a_eq_2);
+  const auto& actual_nullable_values = boost::get<ExpressionEvaluator::NullableValues<int32_t>>(actual_result);
+  const auto& actual_values = actual_nullable_values.first;
+  const auto& actual_nulls = actual_nullable_values.second;
+
+  std::vector<bool> expected_nulls = {true, false, false, true};
+  EXPECT_EQ(actual_nulls, expected_nulls);
+
+  EXPECT_EQ(actual_values.at(1), 3);
+  EXPECT_EQ(actual_values.at(2), 34);
 }
 
 TEST_F(ExpressionEvaluatorTest, PQPSelectExpression) {
