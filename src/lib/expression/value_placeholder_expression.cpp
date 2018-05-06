@@ -16,8 +16,7 @@ std::shared_ptr<AbstractExpression> ValuePlaceholderExpression::deep_copy() cons
 
 std::string ValuePlaceholderExpression::as_column_name() const {
   std::stringstream stream;
-
-  Fail("Todo");
+  stream << "ValuePlaceholder(" << value_placeholder.index() << ")";
   return stream.str();
 }
 

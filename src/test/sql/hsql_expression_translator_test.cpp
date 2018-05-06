@@ -10,7 +10,7 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "sql/SQLStatement.h"
-#include "sql/hsql_expr_translator.hpp"
+#include "sql/translate_hsql_expr.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {

@@ -19,7 +19,7 @@ std::shared_ptr<AbstractSelectExpression> ExistsExpression::select() const {
 std::string ExistsExpression::as_column_name() const {
   std::stringstream stream;
 
-  Fail("Todo");
+  stream << "EXISTS(" << select()->as_column_name() << ")";
 
   return stream.str();
 }

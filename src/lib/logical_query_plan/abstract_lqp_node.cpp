@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <unordered_map>
 
+#include "expression/abstract_expression.hpp"
 #include "utils/assert.hpp"
 #include "lqp_utils.hpp"
 
@@ -129,6 +130,19 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy() const {
 bool AbstractLQPNode::shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   if (type != rhs.type) return false;
   return _shallow_equals_impl(rhs, node_mapping);
+}
+
+const std::vector<std::shared_ptr<AbstractExpression>>& AbstractLQPNode::output_column_expressions() const {
+  Assert(left_input() && !right_input(), "Can only forward input expressions, if there is only a left input");
+  return left_input()->output_column_expressions();
+}
+
+std::optional<ColumnID> AbstractLQPNode::find_column(const AbstractExpression& expression) const {
+  const auto& output_column_expressions = this->output_column_expressions(); // Avoid redundant retrieval in loop below
+  for (auto column_id = ColumnID{0}; column_id < output_column_expressions.size(); ++column_id) {
+    if (output_column_expressions[column_id]->deep_equals(expression)) return column_id;
+  }
+  return std::nullopt;
 }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy_impl(LQPNodeMapping & node_mapping) const {

@@ -24,6 +24,7 @@
 #include "sql/sql_pipeline_statement.hpp"
 #include "sqlite_wrapper.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
@@ -54,7 +55,7 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
 
       _sqlite->create_table_from_tbl(table_file, table_name);
 
-      std::shared_ptr<Table> table = load_table(table_file, Chunk::MAX_SIZE);
+      std::shared_ptr<Table> table = load_table(table_file);
       StorageManager::get().add_table(table_name, std::move(table));
     }
 

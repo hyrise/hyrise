@@ -34,13 +34,13 @@ class ExpressionEvaluatorTest : public ::testing::Test {
     chunk_a = table_a->get_chunk(ChunkID{0});
     evaluator.emplace(chunk_a);
 
-    a = std::make_shared<PQPColumnExpression>(ColumnID{0}, table_a->column_data_type(ColumnID{0}), table_a->column_is_nullable(ColumnID{0}));
-    b = std::make_shared<PQPColumnExpression>(ColumnID{1}, table_a->column_data_type(ColumnID{1}), table_a->column_is_nullable(ColumnID{1}));
-    c = std::make_shared<PQPColumnExpression>(ColumnID{2}, table_a->column_data_type(ColumnID{2}), table_a->column_is_nullable(ColumnID{2}));
-    d = std::make_shared<PQPColumnExpression>(ColumnID{3}, table_a->column_data_type(ColumnID{3}), table_a->column_is_nullable(ColumnID{3}));
-    s1 = std::make_shared<PQPColumnExpression>(ColumnID{4}, table_a->column_data_type(ColumnID{4}), table_a->column_is_nullable(ColumnID{4}));
-    s2 = std::make_shared<PQPColumnExpression>(ColumnID{5}, table_a->column_data_type(ColumnID{5}), table_a->column_is_nullable(ColumnID{5}));
-    dates = std::make_shared<PQPColumnExpression>(ColumnID{6}, table_a->column_data_type(ColumnID{6}), table_a->column_is_nullable(ColumnID{6}));
+    a = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "a"));
+    b = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "b"));
+    c = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "c"));
+    d = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "d"));
+    s1 = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "s1"));
+    s2 = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "s2"));
+    dates = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "dates"));
     a_plus_b = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, a, b);
     a_plus_c = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, a, c);
     s1_gt_s2 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThan, s1, s2);
@@ -49,7 +49,7 @@ class ExpressionEvaluatorTest : public ::testing::Test {
     a_lt_c = std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, a, c);
 
     table_b = load_table("src/test/tables/expression_evaluator/input_b.tbl");
-    x = std::make_shared<PQPColumnExpression>(ColumnID{0}, table_b->column_data_type(ColumnID{0}), table_b->column_is_nullable(ColumnID{0}));
+    x = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_b, "x"));
   }
 
   std::shared_ptr<Table> table_a, table_b;
@@ -229,7 +229,6 @@ TEST_F(ExpressionEvaluatorTest, Extract) {
 
 TEST_F(ExpressionEvaluatorTest, PQPSelectExpression) {
   const auto table_wrapper_b = std::make_shared<TableWrapper>(table_b);
-  const auto x = std::make_shared<PQPColumnExpression>(ColumnID{0}, table_b->column_data_type(ColumnID{0}), table_b->column_is_nullable(ColumnID{0}));
   const auto external_b = std::make_shared<ValuePlaceholderExpression>(ValuePlaceholder{0});
   const auto b_plus_x = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, external_b, x);
   const auto inner_expressions = std::vector<std::shared_ptr<AbstractExpression>>({b_plus_x, x});

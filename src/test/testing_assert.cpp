@@ -9,7 +9,7 @@
 #include "all_type_variant.hpp"
 #include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/join_node.hpp"
+//#include "logical_query_plan/join_node.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
 
@@ -256,31 +256,31 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   return true;
 }
 
-void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, PredicateCondition predicate_condition,
-                            const LQPColumnReference& left_column_reference,
-                            const LQPColumnReference& right_column_reference) {
-  ASSERT_EQ(node->type(), LQPNodeType::Join);  // Can't cast otherwise
-  auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
-  ASSERT_EQ(join_node->join_mode(), JoinMode::Inner);  // Can't access join_column_ids() otherwise
-  EXPECT_EQ(join_node->predicate_condition(), predicate_condition);
-  EXPECT_EQ(join_node->join_column_references(), std::make_pair(left_column_reference, right_column_reference));
-}
+//void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, PredicateCondition predicate_condition,
+//                            const LQPColumnReference& left_column_reference,
+//                            const LQPColumnReference& right_column_reference) {
+//  ASSERT_EQ(node->type(), LQPNodeType::Join);  // Can't cast otherwise
+//  auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
+//  ASSERT_EQ(join_node->join_mode(), JoinMode::Inner);  // Can't access join_column_ids() otherwise
+//  EXPECT_EQ(join_node->predicate_condition(), predicate_condition);
+//  EXPECT_EQ(join_node->join_column_references(), std::make_pair(left_column_reference, right_column_reference));
+//}
 
-void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node) {}
+//void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node) {}
 
-bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& output, LQPInputSide input_side,
-                   const std::shared_ptr<const AbstractLQPNode>& input) {
-  auto outputs = input->outputs();
-  for (const auto& output2 : outputs) {
-    if (!output2) {
-      return false;
-    }
-    if (output == output2 && output2->input(input_side) == input) {
-      return true;
-    }
-  }
+//bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& output, LQPInputSide input_side,
+//                   const std::shared_ptr<const AbstractLQPNode>& input) {
+//  auto outputs = input->outputs();
+//  for (const auto& output2 : outputs) {
+//    if (!output2) {
+//      return false;
+//    }
+//    if (output == output2 && output2->input(input_side) == input) {
+//      return true;
+//    }
+//  }
 
-  return false;
-}
+//  return false;
+//}
 
 }  // namespace opossum

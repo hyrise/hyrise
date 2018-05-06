@@ -10,6 +10,16 @@ StoredTableNode::StoredTableNode(const std::string& table_name):
   AbstractLQPNode(LQPNodeType::StoredTable), table_name(table_name) {
 }
 
+LQPColumnReference StoredTableNode::get_column(const std::string& name) const {
+  const auto table = StorageManager::get().get_table(table_name);
+  const auto column_id = table->column_id_by_name(name);
+  return {shared_from_this(), column_id};
+}
+
+void StoredTableNode::set_excluded_chunk_ids(const std::vector<ChunkID>& chunks) { _excluded_chunk_ids = chunks; }
+
+const std::vector<ChunkID>& StoredTableNode::excluded_chunk_ids() const { return _excluded_chunk_ids; }
+
 const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::output_column_expressions() const {
   // Need to initialize the expressions lazily because they will have a weak_ptr to this node and we can't obtain that
   // in the constructor
@@ -30,7 +40,8 @@ std::shared_ptr<AbstractLQPNode> StoredTableNode::_shallow_copy_impl(LQPNodeMapp
 }
 
 bool StoredTableNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const {
-  return table_name == static_cast<const StoredTableNode&>(rhs).table_name;
+  const auto& stored_table_node = static_cast<const StoredTableNode&>(rhs);
+  return table_name == stored_table_node.table_name && _excluded_chunk_ids == stored_table_node._excluded_chunk_ids;
 }
 
 }  // namespace opossum

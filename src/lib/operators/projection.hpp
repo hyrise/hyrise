@@ -42,9 +42,9 @@ class Projection : public AbstractReadOnlyOperator {
 
   static std::shared_ptr<Table> dummy_table();
 
- protected:
-  std::vector<std::shared_ptr<AbstractExpression>> _expressions;
+  const std::vector<std::shared_ptr<AbstractExpression>> expressions;
 
+ protected:
   std::shared_ptr<const Table> _on_execute() override;
 
   std::shared_ptr<AbstractOperator> _on_recreate(

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 #include "abstract_expression.hpp"
 
 namespace opossum {
@@ -12,6 +14,8 @@ enum class ArithmeticOperator {
   Modulo,
   Power
 };
+
+std::ostream& operator<<(std::ostream& stream, const ArithmeticOperator arithmetic_operator);
 
 class ArithmeticExpression : public AbstractExpression {
  public:

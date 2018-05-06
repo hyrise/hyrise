@@ -21,8 +21,7 @@ std::shared_ptr<AbstractExpression> LQPSelectExpression::deep_copy() const {
 
 std::string LQPSelectExpression::as_column_name() const {
   std::stringstream stream;
-
-  Fail("Todo");
+  stream << "LQP SUBSELECT";
   return stream.str();
 }
 

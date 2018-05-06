@@ -4,6 +4,7 @@
 
 #include "enable_make_for_lqp_node.hpp"
 #include "lqp_utils.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -104,7 +105,9 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   bool shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const;
 
-  virtual const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const = 0;
+  virtual const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const;
+
+  std::optional<ColumnID> find_column(const AbstractExpression& expression) const;
 
   const LQPNodeType type;
 

@@ -95,14 +95,12 @@ set(
 #    logical_query_plan/join_node.hpp
 #    logical_query_plan/limit_node.cpp
 #    logical_query_plan/limit_node.hpp
-#    logical_query_plan/logical_plan_root_node.cpp
-#    logical_query_plan/logical_plan_root_node.hpp
+    logical_query_plan/logical_plan_root_node.cpp
+    logical_query_plan/logical_plan_root_node.hpp
     logical_query_plan/lqp_column_reference.cpp
     logical_query_plan/lqp_column_reference.hpp
-#    sql/column_identifier_lookup.cpp
-#    sql/column_identifier_lookup.hpp
-#    logical_query_plan/lqp_translator.cpp
-#    logical_query_plan/lqp_translator.hpp
+    logical_query_plan/lqp_translator.cpp
+    logical_query_plan/lqp_translator.hpp
     logical_query_plan/lqp_utils.cpp
     logical_query_plan/lqp_utils.hpp
 #    logical_query_plan/mock_node.cpp
@@ -229,10 +227,10 @@ set(
 #    optimizer/join_ordering/join_plan_predicate.cpp
 #    optimizer/join_ordering/join_plan_predicate.hpp
 #    optimizer/join_ordering/join_vertex_set.hpp
-#    optimizer/optimizer.cpp
-#    optimizer/optimizer.hpp
-#    optimizer/strategy/abstract_rule.cpp
-#    optimizer/strategy/abstract_rule.hpp
+    optimizer/optimizer.cpp
+    optimizer/optimizer.hpp
+    optimizer/strategy/abstract_rule.cpp
+    optimizer/strategy/abstract_rule.hpp
 #    optimizer/strategy/chunk_pruning_rule.cpp
 #    optimizer/strategy/chunk_pruning_rule.hpp
 #    optimizer/strategy/constant_calculation_rule.cpp
@@ -245,8 +243,8 @@ set(
 #    optimizer/strategy/predicate_pushdown_rule.hpp
 #    optimizer/strategy/predicate_reordering_rule.cpp
 #    optimizer/strategy/predicate_reordering_rule.hpp
-#    optimizer/strategy/rule_batch.cpp
-#    optimizer/strategy/rule_batch.hpp
+    optimizer/strategy/rule_batch.cpp
+    optimizer/strategy/rule_batch.hpp
 #    optimizer/table_statistics.cpp
 #    optimizer/table_statistics.hpp
 #    plan_column_definition.cpp
@@ -300,18 +298,16 @@ set(
 #    sql/abstract_cache.hpp
 #    sql/gdfs_cache.hpp
 #    sql/gds_cache.hpp
-#    sql/hsql_expr_translator.cpp
-#    sql/hsql_expr_translator.hpp
 #    sql/lru_cache.hpp
 #    sql/lru_k_cache.hpp
 #    sql/random_cache.hpp
-#    sql/sql_pipeline_builder.cpp
-#    sql/sql_pipeline_builder.hpp
-#    sql/sql_pipeline.cpp
-#    sql/sql_pipeline.hpp
-#    sql/sql_pipeline_statement.cpp
-#    sql/sql_pipeline_statement.hpp
-#    sql/sql_query_cache.hpp
+    sql/sql_pipeline_builder.cpp
+    sql/sql_pipeline_builder.hpp
+    sql/sql_pipeline.cpp
+    sql/sql_pipeline.hpp
+    sql/sql_pipeline_statement.cpp
+    sql/sql_pipeline_statement.hpp
+    sql/sql_query_cache.hpp
     sql/sql_query_plan.cpp
     sql/sql_query_plan.hpp
     sql/sql_identifier.cpp
@@ -322,8 +318,10 @@ set(
     sql/sql_identifier_context_proxy.hpp
 #    sql/sql_translation_state.cpp
 #    sql/sql_translation_state.hpp
-#    sql/sql_translator.cpp
-#    sql/sql_translator.hpp
+    sql/sql_translator.cpp
+    sql/sql_translator.hpp
+    sql/translate_hsql_expr.cpp
+    sql/translate_hsql_expr.hpp
     storage/base_column.cpp
     storage/base_column_encoder.hpp
     storage/base_column.hpp
@@ -431,14 +429,14 @@ set(
     storage/vector_compression/vector_compression.cpp
     storage/vector_compression/vector_compression.hpp
     strong_typedef.hpp
-#    tasks/chunk_compression_task.cpp
-#    tasks/chunk_compression_task.hpp
-#    tasks/chunk_metrics_collection_task.cpp
-#    tasks/chunk_metrics_collection_task.hpp
-#    tasks/chunk_migration_task.cpp
-#    tasks/chunk_migration_task.hpp
-#    tasks/migration_preparation_task.cpp
-#    tasks/migration_preparation_task.hpp
+    tasks/chunk_compression_task.cpp
+    tasks/chunk_compression_task.hpp
+    tasks/chunk_metrics_collection_task.cpp
+    tasks/chunk_metrics_collection_task.hpp
+    tasks/chunk_migration_task.cpp
+    tasks/chunk_migration_task.hpp
+    tasks/migration_preparation_task.cpp
+    tasks/migration_preparation_task.hpp
 #    tasks/server/abstract_server_task.hpp
 #    tasks/server/bind_server_prepared_statement_task.cpp
 #    tasks/server/bind_server_prepared_statement_task.hpp
@@ -471,10 +469,10 @@ set(
     utils/load_table.hpp
 #    utils/murmur_hash.cpp
 #    utils/murmur_hash.hpp
-#    utils/numa_memory_resource.cpp
-#    utils/numa_memory_resource.hpp
-#    utils/pausable_loop_thread.cpp
-#    utils/pausable_loop_thread.hpp
+    utils/numa_memory_resource.cpp
+    utils/numa_memory_resource.hpp
+    utils/pausable_loop_thread.cpp
+    utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
     utils/performance_warning.hpp
 #    utils/print_directed_acyclic_graph.hpp

@@ -7,6 +7,18 @@
 
 namespace opossum {
 
+std::ostream& operator<<(std::ostream& stream, const ArithmeticOperator arithmetic_operator) {
+  switch(arithmetic_operator) {
+    case ArithmeticOperator::Addition: stream << "+"; break;
+    case ArithmeticOperator::Subtraction: stream << "-"; break;
+    case ArithmeticOperator::Multiplication: stream << "*"; break;
+    case ArithmeticOperator::Division: stream << "/"; break;
+    case ArithmeticOperator::Modulo: stream << "%"; break;
+    case ArithmeticOperator::Power: stream << "^"; break;
+  }
+  return stream;
+}
+
 ArithmeticExpression::ArithmeticExpression(const ArithmeticOperator arithmetic_operator,
                                            const std::shared_ptr<AbstractExpression>& left_operand,
                                            const std::shared_ptr<AbstractExpression>& right_operand):
@@ -31,7 +43,7 @@ DataType ArithmeticExpression::data_type() const {
 std::string ArithmeticExpression::as_column_name() const {
   std::stringstream stream;
 
-  Fail("Todo");
+  stream << left_operand()->as_column_name() << " " << arithmetic_operator << " " << right_operand()->as_column_name();
 
   return stream.str();
 }

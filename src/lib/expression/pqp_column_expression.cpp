@@ -2,16 +2,23 @@
 
 #include "boost/functional/hash.hpp"
 
+#include "storage/table.hpp"
+
 namespace opossum {
 
-PQPColumnExpression::PQPColumnExpression(const ColumnID column_id, const DataType data_type, const bool nullable): column_id(column_id), _data_type(data_type), _nullable(nullable) {}
+PQPColumnExpression PQPColumnExpression::from_table(const Table& table, const std::string& column_name) {
+  const auto column_id = table.column_id_by_name(column_name);
+  return {column_id, table.column_data_type(column_id), table.column_is_nullable(column_id), column_name};
+}
+
+PQPColumnExpression::PQPColumnExpression(const ColumnID column_id, const DataType data_type, const bool nullable, const std::string& column_name): column_id(column_id), _data_type(data_type), _nullable(nullable), _column_name(column_name) {}
 
 std::shared_ptr<AbstractExpression> PQPColumnExpression::deep_copy() const {
-  return std::make_shared<PQPColumnExpression>(column_id, _data_type, _nullable);
+  return std::make_shared<PQPColumnExpression>(column_id, _data_type, _nullable, _column_name);
 }
 
 std::string PQPColumnExpression::as_column_name() const {
-  Fail("TODO");
+  return _column_name;
 }
 
 DataType PQPColumnExpression::data_type() const {

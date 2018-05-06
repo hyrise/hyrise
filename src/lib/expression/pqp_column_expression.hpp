@@ -9,7 +9,12 @@ namespace opossum {
 
 class PQPColumnExpression : public AbstractColumnExpression {
  public:
-  PQPColumnExpression(const ColumnID column_id, const DataType data_type, const bool nullable);
+  static PQPColumnExpression from_table(const Table& table, const std::string& column_name);
+
+  PQPColumnExpression(const ColumnID column_id,
+                      const DataType data_type,
+                      const bool nullable,
+                      const std::string& column_name);
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
@@ -25,6 +30,7 @@ class PQPColumnExpression : public AbstractColumnExpression {
  private:
   const DataType _data_type;
   const bool _nullable;
+  const std::string _column_name;
 };
 
 

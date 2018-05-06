@@ -5,6 +5,7 @@
 
 #include "abstract_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
+#include "lqp_column_reference.hpp"
 
 namespace opossum {
 
@@ -13,6 +14,11 @@ class LQPColumnExpression;
 class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public AbstractLQPNode {
  public:
   explicit StoredTableNode(const std::string& table_name);
+
+  LQPColumnReference get_column(const std::string& name) const;
+
+  void set_excluded_chunk_ids(const std::vector<ChunkID>& chunks);
+  const std::vector<ChunkID>& excluded_chunk_ids() const;
 
   const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const override;
 
@@ -24,6 +30,7 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
 
  private:
   mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _expressions;
+  std::vector<ChunkID> _excluded_chunk_ids;
 };
 
 }  // namespace opossum

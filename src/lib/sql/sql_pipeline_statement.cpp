@@ -10,7 +10,7 @@
 #include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/current_scheduler.hpp"
-#include "sql/hsql_expr_translator.hpp"
+#include "sql/translate_hsql_expr.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "sql/sql_translator.hpp"
@@ -84,7 +84,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   }
 
   try {
-    const auto lqp_roots = SQLTranslator{_use_mvcc == UseMvcc::Yes}.translate_parse_result(*parsed_sql);
+    const auto lqp_roots = SQLTranslator{_use_mvcc}.translate_parser_result(*parsed_sql);
     DebugAssert(lqp_roots.size() == 1, "LQP translation returned no or more than one LQP root for a single statement.");
     _unoptimized_logical_plan = lqp_roots.front();
   } catch (const std::exception& exception) {
@@ -159,9 +159,10 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
       // Get list of arguments from EXECUTE statement.
       std::vector<AllParameterVariant> arguments;
       if (execute_statement->parameters != nullptr) {
-        for (const auto* expr : *execute_statement->parameters) {
-          arguments.push_back(HSQLExprTranslator::to_all_parameter_variant(*expr));
-        }
+        Fail("Not yet implemented");
+//        for (const auto* expr : *execute_statement->parameters) {
+//          arguments.push_back(HSQLExprTranslator::to_all_parameter_variant(*expr));
+//        }
       }
 
       Assert(arguments.size() == plan->num_parameters(),

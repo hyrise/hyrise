@@ -17,7 +17,11 @@ std::shared_ptr<AbstractExpression> LQPColumnExpression::deep_copy() const {
 }
 
 std::string LQPColumnExpression::as_column_name() const {
-  Fail("TODO");
+  const auto stored_table_node = std::dynamic_pointer_cast<const StoredTableNode>(column_reference.original_node());
+  Assert(stored_table_node, "Expected column reference to point to StoredTableNode");
+
+  const auto table = StorageManager::get().get_table(stored_table_node->table_name);
+  return table->column_name(column_reference.original_column_id());
 }
 
 DataType LQPColumnExpression::data_type() const {

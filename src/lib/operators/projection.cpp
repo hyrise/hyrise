@@ -16,14 +16,14 @@
 namespace opossum {
 
 Projection::Projection(const std::shared_ptr<const AbstractOperator>& in, const std::vector<std::shared_ptr<AbstractExpression>>& expressions)
-    : AbstractReadOnlyOperator(OperatorType::Projection, in), _expressions(expressions) {}
+    : AbstractReadOnlyOperator(OperatorType::Projection, in), expressions(expressions) {}
 
 const std::string Projection::name() const { return "Projection"; }
 
 std::shared_ptr<AbstractOperator> Projection::_on_recreate(
     const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
     const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  auto expressions = expressions_copy(_expressions);
+  auto expressions = expressions_copy(this->expressions);
   for (auto& expression : expressions) {
     visit_expression(expression, [&](auto& current_expression) {
       if (current_expression->type != ExpressionType::ValuePlaceholder) return true;
@@ -42,11 +42,11 @@ std::shared_ptr<const Table> Projection::_on_execute() {
    * Determine the TableColumnDefinitions and create the output table from them
    */
   TableColumnDefinitions column_definitions;
-  for (const auto& expression : _expressions) {
+  for (const auto& expression : expressions) {
     TableColumnDefinition column_definition;
 
     column_definition.data_type = expression->data_type();
-    column_definition.name = "Undefined";
+    column_definition.name = expression->as_column_name();
     column_definition.nullable = true;
 
     column_definitions.emplace_back(column_definition);
@@ -59,11 +59,11 @@ std::shared_ptr<const Table> Projection::_on_execute() {
    */
   for (auto chunk_id = ChunkID{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     ChunkColumns output_columns;
-    output_columns.reserve(_expressions.size());
+    output_columns.reserve(expressions.size());
 
     ExpressionEvaluator evaluator(input_table_left()->get_chunk(chunk_id));
 
-    for (const auto& expression : _expressions) {
+    for (const auto& expression : expressions) {
       output_columns.emplace_back(evaluator.evaluate_expression_to_column(*expression));
     }
 
