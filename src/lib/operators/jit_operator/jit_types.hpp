@@ -135,6 +135,11 @@ class JitTupleValue {
     context.tuple.set_is_null(_tuple_index, is_null);
   }
 
+  bool operator==(const JitTupleValue& other) const {
+    return data_type() == other.data_type() && is_nullable() == other.is_nullable() &&
+           tuple_index() == other.tuple_index();
+  }
+
  private:
   const DataType _data_type;
   const bool _is_nullable;

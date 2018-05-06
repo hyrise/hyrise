@@ -68,6 +68,8 @@ class JitWriteTuples : public AbstractJittableSink {
 
   void add_output_column(const std::string& column_name, const JitTupleValue& tuple_value);
 
+  std::vector<JitOutputColumn> output_columns() const;
+
  private:
   void _consume(JitRuntimeContext& context) const final;
 

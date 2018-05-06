@@ -25,6 +25,8 @@ class JitExpression {
   std::string to_string() const;
 
   ExpressionType expression_type() const { return _expression_type; }
+  std::shared_ptr<const JitExpression> left_child() const { return _left_child; }
+  std::shared_ptr<const JitExpression> right_child() const { return _right_child; }
   const JitTupleValue& result() const { return _result_value; }
 
   /* Triggers the (recursive) computation of the value represented by this expression.
@@ -35,8 +37,6 @@ class JitExpression {
    * since it only abstractly represents the result slot in the runtime tuple.
    */
   void compute(JitRuntimeContext& context) const;
-
-  bool operator==(const JitExpression& other) const;
 
  private:
   std::pair<const DataType, const bool> _compute_result_type();
