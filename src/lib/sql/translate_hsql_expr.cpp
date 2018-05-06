@@ -103,7 +103,7 @@ std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
 //      }
 
     case hsql::kExprLiteralNull:
-//      return std::make_shared<ValueExpression>(NullValue{});
+      return std::make_shared<ValueExpression>(NullValue{});
 
     case hsql::kExprParameter:
 //      return std::make_shared<ValuePlaceholderExpression>(ValuePlaceholder{static_cast<uint16_t>(expr.ival)});
@@ -139,6 +139,22 @@ std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
       if (arithmetic_operators_iter != hsql_arithmetic_operators.end()) {
         Assert(left && right, "Didn't receive two arguments for binary expression. Bug in sqlparser?");
         return std::make_shared<ArithmeticExpression>(arithmetic_operators_iter->second, left, right);
+      }
+
+      switch (expr.opType) {
+        case hsql::kOpCase: {
+          if (expr.exprList) {
+            // Case with any WHEN ... THEN ... clauses
+            for ()
+
+          } else {
+            // Case without any WHEN ... THEN ... clauses
+          }
+        }
+        std::cout << "Case discovered" << std::endl;
+
+        default:
+          Fail("Not handling this OperatorType yet");
       }
 
 //      const auto predicate_iter = hsql_predicate_condition.find(expr.opType);

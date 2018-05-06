@@ -3,6 +3,9 @@
 
 #include "constant_mappings.hpp"
 #include "expression/abstract_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/case_expression.hpp"
+#include "expression/value_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -16,9 +19,9 @@
 
 namespace {
 void load_test_tables() {
-  opossum::StorageManager::get().add_table("table_a", opossum::load_table("src/test/tables/int_float.tbl"));
-  opossum::StorageManager::get().add_table("table_b", opossum::load_table("src/test/tables/int_float2.tbl"));
-  opossum::StorageManager::get().add_table("table_c", opossum::load_table("src/test/tables/int_float5.tbl"));
+  opossum::StorageManager::get().add_table("int_float", opossum::load_table("src/test/tables/int_float.tbl"));
+  opossum::StorageManager::get().add_table("int_float2", opossum::load_table("src/test/tables/int_float2.tbl"));
+  opossum::StorageManager::get().add_table("int_float5", opossum::load_table("src/test/tables/int_float5.tbl"));
 }
 }  // namespace
 
@@ -28,18 +31,18 @@ class SQLTranslatorTest : public ::testing::Test {
  public:
   void SetUp() override {
     load_test_tables();
-    _stored_table_node_a = StoredTableNode::make("table_a");
-    _stored_table_node_b = StoredTableNode::make("table_b");
-    _stored_table_node_c = StoredTableNode::make("table_c");
-    _table_a_a = _stored_table_node_a->get_column("a");
-    _table_a_b = _stored_table_node_a->get_column("b");
+    _stored_table_node_int_float = StoredTableNode::make("int_float");
+    _stored_table_node_int_float2 = StoredTableNode::make("int_float2");
+    _stored_table_node_int_float5 = StoredTableNode::make("int_float5");
+    _int_float_a = _stored_table_node_int_float->get_column("a");
+    _int_float_b = _stored_table_node_int_float->get_column("b");
 //    _table_b_a = _stored_table_node_b->get_column("a"s);
 //    _table_b_b = _stored_table_node_b->get_column("b"s);
 //    _table_c_a = _stored_table_node_c->get_column("a"s);
 //    _table_c_d = _stored_table_node_c->get_column("d"s);
 
-    _table_a_a_expression = std::make_shared<LQPColumnExpression>(_table_a_a);
-    _table_a_b_expression = std::make_shared<LQPColumnExpression>(_table_a_b);
+    _int_float_a_expression = std::make_shared<LQPColumnExpression>(_int_float_a);
+    _int_float_b_expression = std::make_shared<LQPColumnExpression>(_int_float_b);
 
   }
 
@@ -53,12 +56,12 @@ class SQLTranslatorTest : public ::testing::Test {
     return lqps.at(0);
   }
 
-  std::shared_ptr<StoredTableNode> _stored_table_node_a;
-  std::shared_ptr<StoredTableNode> _stored_table_node_b;
-  std::shared_ptr<StoredTableNode> _stored_table_node_c;
-  std::shared_ptr<AbstractExpression> _table_a_a_expression;
-  std::shared_ptr<AbstractExpression> _table_a_b_expression;
-  LQPColumnReference _table_a_a, _table_a_b;
+  std::shared_ptr<StoredTableNode> _stored_table_node_int_float;
+  std::shared_ptr<StoredTableNode> _stored_table_node_int_float2;
+  std::shared_ptr<StoredTableNode> _stored_table_node_int_float5;
+  std::shared_ptr<AbstractExpression> _int_float_a_expression;
+  std::shared_ptr<AbstractExpression> _int_float_b_expression;
+  LQPColumnReference _int_float_a, _int_float_b;
 //  LQPColumnReference _table_a_b;
 //  LQPColumnReference _table_b_a;
 //  LQPColumnReference _table_b_b;
@@ -67,23 +70,46 @@ class SQLTranslatorTest : public ::testing::Test {
 };
 
 TEST_F(SQLTranslatorTest, SelectSingleColumn) {
-  const auto actual_lqp = compile_query("SELECT a FROM table_a;");
+  const auto actual_lqp = compile_query("SELECT a FROM int_float;");
 
   const auto expected_expression = std::vector<std::shared_ptr<AbstractExpression>>({
-    _table_a_a_expression
+                                                                                    _int_float_a_expression
   });
-  const auto expected_lqp = ProjectionNode::make(expected_expression, _stored_table_node_a);
+  const auto expected_lqp = ProjectionNode::make(expected_expression, _stored_table_node_int_float);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, SelectArithmeticExpression) {
-  const auto actual_lqp = compile_query("SELECT a * b FROM table_a;");
+TEST_F(SQLTranslatorTest, SimpleArithmeticExpression) {
+  const auto actual_lqp = compile_query("SELECT a * b FROM int_float;");
 
   const auto expected_expression = std::vector<std::shared_ptr<AbstractExpression>>({
-    std::make_shared<ArithmeticExpression>(ArithmeticOperator::Multiplication, _table_a_a_expression, _table_a_b_expression)
+    std::make_shared<ArithmeticExpression>(ArithmeticOperator::Multiplication, _int_float_a_expression, _int_float_b_expression)
   });
-  const auto expected_lqp = ProjectionNode::make(expected_expression, _stored_table_node_a);
+  const auto expected_lqp = ProjectionNode::make(expected_expression, _stored_table_node_int_float);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, CaseExpression) {
+  const auto actual_lqp = compile_query("SELECT"
+                                        "    CASE"
+                                        "       WHEN a = 123 THEN b"
+                                        "       WHEN a = 1234 THEN a"
+                                        "       ELSE NULL"
+                                        "    END"
+                                        " FROM int_float;");
+
+  const auto value_123 = std::make_shared<ValueExpression>(123);
+  const auto value_1234 = std::make_shared<ValueExpression>(1234);
+  const auto a_eq_123 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, _int_float_a_expression, value_123);
+  const auto a_eq_1234 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, _int_float_a_expression, value_1234);
+  const auto null_value = std::make_shared<ValueExpression>(NullValue{});
+  const auto case_a_eq_1234 = std::make_shared<CaseExpression>(a_eq_1234, _int_float_a_expression, null_value);
+  const auto case_a_eq_123 = std::make_shared<CaseExpression>(a_eq_123, _int_float_b_expression, case_a_eq_1234);
+
+  const auto expected_expression = std::vector<std::shared_ptr<AbstractExpression>>({case_a_eq_123});
+  const auto expected_lqp = ProjectionNode::make(expected_expression, _stored_table_node_int_float);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
