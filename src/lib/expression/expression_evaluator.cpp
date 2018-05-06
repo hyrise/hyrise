@@ -281,6 +281,8 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_expressio
 
 template<typename T>
 ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_function_expression(const FunctionExpression& expression) {
+  ExpressionEvaluator::ExpressionResult<T> result;
+
   switch (expression.function_type) {
     case FunctionType::Substring:
       // clang-format off
@@ -292,29 +294,39 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_function_
             using CharCountDataType = typename decltype(char_count_data_type_t)::type;
 
             if constexpr(std::is_integral_v<OffsetDataType> && std::is_integral_v<CharCountDataType>) {
-              return evaluate_substring(
-                evaluate_expression<std::string>(expression.arguments[0])
-                evaluate_expression<OffsetDataType>(expression.arguments[1]),
-                evaluate_expression<OffsetDataType>(expression.arguments[2])));
+              result = evaluate_substring(
+                evaluate_expression<std::string>(*expression.arguments[0]),
+                evaluate_expression<OffsetDataType>(*expression.arguments[1]),
+                evaluate_expression<OffsetDataType>(*expression.arguments[2]));
             } else {
               Fail("SUBSTRING parameters 2 and 3 need to be integral");
             }
           });
         });
-
-        return evaluate_substring();
       } else {
         Fail("SUBSTRING can only return String");
       }
       // clang-format on
   }
+
+  return result;
 }
 
 template<typename OffsetDataType, typename CharCountDataType>
 ExpressionEvaluator::ExpressionResult<std::string> ExpressionEvaluator::evaluate_substring(const ExpressionResult<std::string>& string_result,
                                                  const ExpressionResult<OffsetDataType>& offset_result,
                                                  const ExpressionResult<CharCountDataType>& char_count_result) {
-  if  
+  Fail("Not yet implemented");
+//  /**
+//   *
+//   */
+//
+//  auto result_values = std::vector<std::string>(_chunk->size());
+//  auto result_nulls = std::vector<bool>(_chunk->size());
+//
+//  for (auto chunk_offset = 0; chunk_offset < _chunk->size(); ++chunk_offset) {
+//
+//  }
 }
 
 template<typename T>

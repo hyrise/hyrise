@@ -212,20 +212,20 @@ TEST_F(ExpressionEvaluatorTest, Extract) {
   EXPECT_EQ(actual_days, expected_days);
 }
 
-TEST_F(ExpressionEvaluatorTest, Substring) {
-  /**
-   * SELECT
-   *    SUBSTRING(s1, a, b)
-   * FROM
-   *    table_a
-   */
-  const auto substring_expression = std::make_shared<FunctionExpression>(FunctionType::Substring, s1, a, b);
-  const auto actual_values = boost::get<ExpressionEvaluator::NonNullableValues<std::string>>(evaluator->evaluate_expression<std::string>(*substring_expression));
-
-  const auto expected_values = std::vector<std::string>({"a", "ell", "at", "e"});
-
-  EXPECT_EQ(actual_values, expected_values);
-}
+//TEST_F(ExpressionEvaluatorTest, Substring) {
+//  /**
+//   * SELECT
+//   *    SUBSTRING(s1, a, b)
+//   * FROM
+//   *    table_a
+//   */
+//  const auto substring_expression = std::make_shared<FunctionExpression>(FunctionType::Substring, s1, a, b);
+//  const auto actual_values = boost::get<ExpressionEvaluator::NonNullableValues<std::string>>(evaluator->evaluate_expression<std::string>(*substring_expression));
+//
+//  const auto expected_values = std::vector<std::string>({"a", "ell", "at", "e"});
+//
+//  EXPECT_EQ(actual_values, expected_values);
+//}
 
 TEST_F(ExpressionEvaluatorTest, PQPSelectExpression) {
   const auto table_wrapper_b = std::make_shared<TableWrapper>(table_b);
