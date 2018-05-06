@@ -26,7 +26,7 @@ const std::shared_ptr<AbstractExpression>& CaseExpression::else_() const {
 std::string CaseExpression::as_column_name() const {
   std::stringstream stream;
 
-  Fail("Todo");
+  stream << "CASE";
 
   return stream.str();
 }

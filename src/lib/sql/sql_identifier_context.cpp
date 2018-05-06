@@ -41,7 +41,12 @@ std::shared_ptr<AbstractExpression> SQLIdentifierContext::resolve_identifier_rel
   if (matching_expressions.size() != 1) return nullptr; // Identifier is ambiguous/not existing
 
   return matching_expressions[0];
+}
 
+std::shared_ptr<AbstractExpression> SQLIdentifierContext::resolve_identifier_strict(const SQLIdentifier& identifier) const {
+  const auto expression = resolve_identifier_relaxed(identifier);
+  Assert(expression, "Couldn't resolve identifier");
+  return expression;
 }
 
 const std::optional<SQLIdentifier> SQLIdentifierContext::get_expression_identifier(const std::shared_ptr<AbstractExpression>& expression) const {

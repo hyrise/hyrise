@@ -13,6 +13,7 @@
 #include "expression/array_expression.hpp"
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
+#include "expression/case_expression.hpp"
 #include "expression/function_expression.hpp"
 #include "expression/is_null_expression.hpp"
 #include "expression/logical_expression.hpp"
@@ -85,30 +86,31 @@ std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
       const auto table_name = expr.table ? std::optional<std::string>(std::string(expr.table)) : std::nullopt;
       const auto identifier = SQLIdentifier{name, table_name};
 
-      return sql_identifier_context->resolve_identifier_relaxed(identifier);
+      return sql_identifier_context->resolve_identifier_strict(identifier);
     }
 
     case hsql::kExprLiteralFloat:
-//      return std::make_shared<ValueExpression>(expr.fval);
+      return std::make_shared<ValueExpression>(expr.fval);
 
     case hsql::kExprLiteralString:
-//      Assert(expr.name, "No value given for string literal");
-//      return std::make_shared<ValueExpression>(*expr.name);
+      Assert(expr.name, "No value given for string literal");
+      return std::make_shared<ValueExpression>(*expr.name);
 
     case hsql::kExprLiteralInt:
-//      if (static_cast<int32_t>(expr.ival) == expr.ival) {
-//        return std::make_shared<ValueExpression>(static_cast<int32_t>(expr.ival));
-//      } else {
-//        return std::make_shared<ValueExpression>(expr.ival);
-//      }
+      if (static_cast<int32_t>(expr.ival) == expr.ival) {
+        return std::make_shared<ValueExpression>(static_cast<int32_t>(expr.ival));
+      } else {
+        return std::make_shared<ValueExpression>(expr.ival);
+      }
 
     case hsql::kExprLiteralNull:
       return std::make_shared<ValueExpression>(NullValue{});
 
     case hsql::kExprParameter:
-//      return std::make_shared<ValuePlaceholderExpression>(ValuePlaceholder{static_cast<uint16_t>(expr.ival)});
+      return std::make_shared<ValuePlaceholderExpression>(ValuePlaceholder{static_cast<uint16_t>(expr.ival)});
 
     case hsql::kExprFunctionRef: {
+      Fail("Nyi");
 //      Assert(expr.exprList, "FunctionRef has no exprList. Bug in sqlparser?");
 
 //      // convert to upper-case to find mapping
@@ -137,21 +139,44 @@ std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
       // Translate ArithmeticExpression
       const auto arithmetic_operators_iter = hsql_arithmetic_operators.find(expr.opType);
       if (arithmetic_operators_iter != hsql_arithmetic_operators.end()) {
-        Assert(left && right, "Didn't receive two arguments for binary expression. Bug in sqlparser?");
+        Assert(left && right, "Unexpected SQLParserResult. Didn't receive two arguments for binary expression.");
         return std::make_shared<ArithmeticExpression>(arithmetic_operators_iter->second, left, right);
+      }
+
+      const auto predicate_condition_iter = hsql_predicate_condition.find(expr.opType);
+      if (predicate_condition_iter != hsql_predicate_condition.end()) {
+        Assert(left && right, "Unexpected SQLParserResult. Didn't receive two arguments for binary_expression");
+        const auto predicate_condition = predicate_condition_iter->second;
+
+        if (is_ordering_predicate_condition(predicate_condition)) {
+          return std::make_shared<BinaryPredicateExpression>(predicate_condition, left, right);
+        }
       }
 
       switch (expr.opType) {
         case hsql::kOpCase: {
-          if (expr.exprList) {
-            // Case with any WHEN ... THEN ... clauses
-            for ()
+          Assert(expr.exprList, "Unexpected SQLParserResult. Case needs exprList");
+          Assert(!expr.exprList->empty(), "Unexpected SQLParserResult. Case needs non-empty exprList");
 
+          // Initialize CASE with the ELSE expression and then put the remaining WHEN...THEN... clauses on top of that
+          // in reverse order
+          auto current_case_expression = std::shared_ptr<AbstractExpression>{};
+          if (expr.expr2) {
+            current_case_expression = translate_hsql_expr(*expr.expr2, sql_identifier_context, use_mvcc);
           } else {
-            // Case without any WHEN ... THEN ... clauses
+            current_case_expression = std::make_shared<ValueExpression>(NullValue{});
           }
+
+          for (auto case_reverse_idx = size_t{0}; case_reverse_idx < expr.exprList->size(); ++case_reverse_idx) {
+            const auto case_idx = expr.exprList->size() - case_reverse_idx - 1;
+            const auto case_clause = (*expr.exprList)[case_idx];
+            const auto when = translate_hsql_expr(*case_clause->expr, sql_identifier_context, use_mvcc);
+            const auto then = translate_hsql_expr(*case_clause->expr2, sql_identifier_context, use_mvcc);
+            current_case_expression = std::make_shared<CaseExpression>(when, then, current_case_expression);
+          }
+
+          return current_case_expression;
         }
-        std::cout << "Case discovered" << std::endl;
 
         default:
           Fail("Not handling this OperatorType yet");
@@ -193,6 +218,7 @@ std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
     }
 
     case hsql::kExprSelect: {
+      Fail("Nyi");
 //      auto external_column_identifier_proxy = translation_state->create_external_column_identifier_proxy();
 //
 //      const auto lqp = SQLTranslator{validate}.translate_select_statement(*expr.select, external_column_identifier_proxy);
@@ -201,12 +227,16 @@ std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
     }
 
     case hsql::kExprArray:
+      Fail("Nyi");
       //return std::make_shared<ArrayExpression>(arguments);
 
     case hsql::kExprHint:
     case hsql::kExprStar:
     case hsql::kExprArrayIndex:
       Fail("Can't translate this hsql expression into a Hyrise expression");
+
+    default:
+      Fail("Nyie");
   }
 }
 }  // namespace opossum
