@@ -160,6 +160,7 @@ void TransactionContext::_mark_as_pending_and_try_commit(std::function<void(Tran
     }
 
     InitialLogger::getInstance().log_commit(transaction_id);
+    InitialLogger::getInstance().flush();
 
     if (callback) callback(transaction_id);
   });
