@@ -13,6 +13,8 @@ class JitFilter : public AbstractJittable {
 
   std::string description() const final;
 
+  JitTupleValue condition();
+
  private:
   void _consume(JitRuntimeContext& context) const final;
 

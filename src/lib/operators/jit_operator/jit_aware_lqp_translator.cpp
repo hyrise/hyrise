@@ -75,16 +75,9 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_node_t
     jit_operator->add_jit_operator(std::make_shared<JitFilter>(expression->result()));
   }
 
-  // Identify the top-most projection node to determine the output columns
-  auto top_projection = node;
-  while (top_projection != input_node && top_projection->type() != LQPNodeType::Projection) {
-    top_projection = top_projection->left_input();
-  }
-
   // Add a compute operator for each computed output column (i.e., a column that is not from a stored table).
   auto write_table = std::make_shared<JitWriteTuples>();
-  for (const auto& output_column :
-       boost::combine(top_projection->output_column_names(), top_projection->output_column_references())) {
+  for (const auto& output_column : boost::combine(node->output_column_names(), node->output_column_references())) {
     const auto expression = _try_translate_column_to_jit_expression(output_column.get<1>(), *read_tuple, input_node);
     if (!expression) return nullptr;
     // If the JitExpression is of type ExpressionType::Column, there is no need to add a compute node, since it
@@ -110,9 +103,9 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_node_
       // If the PredicateNode has no further conditions (i.e., all tuples pass into the PredicateNode unconditionally),
       // there is no need to create a dedicated AND-expression.
       if (_input_is_filtered(node->left_input())) {
-        left = _try_translate_predicate_to_jit_expression(std::dynamic_pointer_cast<PredicateNode>(node), jit_source,
-                                                          input_node);
-        right = _try_translate_node_to_jit_expression(node->left_input(), jit_source, input_node);
+        left = _try_translate_node_to_jit_expression(node->left_input(), jit_source, input_node);
+        right = _try_translate_predicate_to_jit_expression(std::dynamic_pointer_cast<PredicateNode>(node), jit_source,
+                                                           input_node);
         return left && right
                    ? std::make_shared<JitExpression>(left, ExpressionType::And, right, jit_source.add_temporary_value())
                    : nullptr;

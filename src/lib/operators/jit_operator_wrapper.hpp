@@ -31,6 +31,8 @@ class JitOperatorWrapper : public AbstractReadOnlyOperator {
   // The operators will later be chained by the JitOperatorWrapper.
   void add_jit_operator(const std::shared_ptr<AbstractJittable>& op);
 
+  std::vector<std::shared_ptr<AbstractJittable>>& jit_operators();
+
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
