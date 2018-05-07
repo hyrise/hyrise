@@ -124,7 +124,8 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     std::vector<int> values(0);
     for (int i = 0; i <= 18; ++i) values.push_back(i);
     std::shuffle(values.begin(), values.end(), g);
-    for (auto i : values) pos_list->emplace_back(RowID{ChunkID{static_cast<uint32_t>(i/5)}, static_cast<uint32_t>(i%5)});
+    for (auto i : values) pos_list->emplace_back(RowID{ChunkID{static_cast<uint32_t>(i/5)},
+                                                 static_cast<uint32_t>(i%5)});
 
     auto col_a = std::make_shared<ReferenceColumn>(test_table_part_compressed, ColumnID{0}, pos_list);
     auto col_b = std::make_shared<ReferenceColumn>(test_table_part_compressed, ColumnID{1}, pos_list);
