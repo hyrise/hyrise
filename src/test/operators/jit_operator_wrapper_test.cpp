@@ -48,7 +48,7 @@ TEST_F(JitOperatorWrapperTest, JitOperatorsAreAdded) {
   auto _operator_2 = std::make_shared<JitFilter>(JitTupleValue(DataType::Bool, false, -1));
   auto _operator_3 = std::make_shared<JitWriteTuples>();
 
-  JitOperatorWrapper jit_operator_wrapper(_empty_table_wrapper);
+  JitOperatorWrapper jit_operator_wrapper(_empty_table_wrapper, JitExecutionMode::Interpret);
   jit_operator_wrapper.add_jit_operator(_operator_1);
   jit_operator_wrapper.add_jit_operator(_operator_2);
   jit_operator_wrapper.add_jit_operator(_operator_3);
@@ -64,7 +64,7 @@ TEST_F(JitOperatorWrapperTest, JitOperatorsAreConnectedToAChain) {
   auto _operator_2 = std::make_shared<JitFilter>(JitTupleValue(DataType::Bool, false, -1));
   auto _operator_3 = std::make_shared<JitWriteTuples>();
 
-  JitOperatorWrapper jit_operator_wrapper(_empty_table_wrapper);
+  JitOperatorWrapper jit_operator_wrapper(_empty_table_wrapper, JitExecutionMode::Interpret);
   jit_operator_wrapper.add_jit_operator(_operator_1);
   jit_operator_wrapper.add_jit_operator(_operator_2);
   jit_operator_wrapper.add_jit_operator(_operator_3);
@@ -77,7 +77,7 @@ TEST_F(JitOperatorWrapperTest, JitOperatorsAreConnectedToAChain) {
 
 TEST_F(JitOperatorWrapperTest, ExecutionFailsIfSourceOrSinkAreMissing) {
   {
-    JitOperatorWrapper jit_operator_wrapper(_empty_table_wrapper);
+    JitOperatorWrapper jit_operator_wrapper(_empty_table_wrapper, JitExecutionMode::Interpret);
     jit_operator_wrapper.add_jit_operator(std::make_shared<JitReadTuples>());
     ASSERT_THROW(jit_operator_wrapper.execute(), std::logic_error);
   }
@@ -89,7 +89,7 @@ TEST_F(JitOperatorWrapperTest, ExecutionFailsIfSourceOrSinkAreMissing) {
   }
   {
     // Both source and sink are set, so this should work
-    JitOperatorWrapper jit_operator_wrapper(_empty_table_wrapper);
+    JitOperatorWrapper jit_operator_wrapper(_empty_table_wrapper, JitExecutionMode::Interpret);
     jit_operator_wrapper.add_jit_operator(std::make_shared<JitReadTuples>());
     jit_operator_wrapper.add_jit_operator(std::make_shared<JitWriteTuples>());
     jit_operator_wrapper.execute();
@@ -114,7 +114,7 @@ TEST_F(JitOperatorWrapperTest, CallsJitOperatorHooks) {
         .WillByDefault(testing::Invoke(source.get(), &MockJitSource::forward_before_chunk));
   }
 
-  JitOperatorWrapper jit_operator_wrapper(_int_table_wrapper);
+  JitOperatorWrapper jit_operator_wrapper(_int_table_wrapper, JitExecutionMode::Interpret);
   jit_operator_wrapper.add_jit_operator(source);
   jit_operator_wrapper.add_jit_operator(sink);
   jit_operator_wrapper.execute();

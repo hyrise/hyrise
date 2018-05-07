@@ -35,6 +35,8 @@ class JitRuntimePointer {
  public:
   using Ptr = std::shared_ptr<const JitRuntimePointer>;
 
+  virtual ~JitRuntimePointer() {}
+
   virtual bool is_valid() const { return false; }
 };
 
