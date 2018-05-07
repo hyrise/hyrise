@@ -45,7 +45,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     std::vector<int> values(0);
     for (int i = 0; i <= 24; i += 2) values.push_back(i);
     std::shuffle(values.begin(), values.end(), g);
-    for (auto i : values) test_even_compressed->append({i, 100 + i}); 
+    for (auto i : values) test_even_compressed->append({i, 100 + i});
 
     ChunkEncoder::encode_chunks(test_even_compressed, {ChunkID{0}, ChunkID{1}}, {_encoding_type});
 
@@ -62,7 +62,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
     std::shared_ptr<Table> test_even_compressed = std::make_shared<Table>(table_column_definitions, TableType::Data, 5);
 
-    for (int i = 0; i <= 24; i += 2) test_even_compressed->append({i, 100 + i}); 
+    for (int i = 0; i <= 24; i += 2) test_even_compressed->append({i, 100 + i});
 
     ChunkEncoder::encode_chunks(test_even_compressed, {ChunkID{0}, ChunkID{1}}, {_encoding_type});
 
@@ -91,7 +91,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     std::vector<int> values(0);
     for (int i = 1; i <= num_entries; ++i) values.push_back(i);
     std::shuffle(values.begin(), values.end(), g);
-    for (auto i : values) table->append({i, 100.1 + i}); 
+    for (auto i : values) table->append({i, 100.1 + i});
 
     return table;
   }
@@ -124,7 +124,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     std::vector<int> values(0);
     for (int i = 0; i <= 18; ++i) values.push_back(i);
     std::shuffle(values.begin(), values.end(), g);
-    for (auto i : values) pos_list->emplace_back(RowID{ChunkID{i/5}, static_cast<uint32_t>(i%5)}); 
+    for (auto i : values) pos_list->emplace_back(RowID{ChunkID{i/5}, static_cast<uint32_t>(i%5)});
 
     auto col_a = std::make_shared<ReferenceColumn>(test_table_part_compressed, ColumnID{0}, pos_list);
     auto col_b = std::make_shared<ReferenceColumn>(test_table_part_compressed, ColumnID{1}, pos_list);
@@ -328,7 +328,8 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedCompressedColumn) {
 
   for (const auto& test : tests) {
     auto scan1 =
-        std::make_shared<TableScan>(get_table_op_even_compressed_randomized(), ColumnID{1}, PredicateCondition::LessThan, 108);
+        std::make_shared<TableScan>(get_table_op_even_compressed_randomized(), ColumnID{1},
+          PredicateCondition::LessThan, 108);
     scan1->execute();
 
     auto scan2 = std::make_shared<TableScan>(scan1, ColumnID{0}, test.first, 4);
@@ -403,7 +404,8 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedColumnValueLessThanMinDictionaryV
   tests[PredicateCondition::GreaterThanEquals] = all_rows;
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<TableScan>(get_table_op_even_compressed_randomized(), ColumnID{0} /* "a" */, test.first, -10);
+    auto scan = std::make_shared<TableScan>(get_table_op_even_compressed_randomized(),
+      ColumnID{0} /* "a" */, test.first, -10);
     scan->execute();
 
     ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);
@@ -488,7 +490,8 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedColumnAroundBounds) {
   tests[PredicateCondition::IsNotNull] = {100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 124};
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<opossum::TableScan>(get_table_op_even_compressed_randomized(), ColumnID{0}, test.first, 0);
+    auto scan = std::make_shared<opossum::TableScan>(get_table_op_even_compressed_randomized(),
+      ColumnID{0}, test.first, 0);
     scan->execute();
 
     ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);

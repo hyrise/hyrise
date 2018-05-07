@@ -30,7 +30,7 @@ class OperatorsIndexScanTest : public BaseTest {
     column_definitions.emplace_back("a", DataType::Int);
     column_definitions.emplace_back("b", DataType::Int);
 
-    //randomized entries
+    // randomized entries
     auto table_randomized = std::make_shared<Table>(column_definitions, TableType::Data, 5);
 
     std::random_device rd;
@@ -39,8 +39,8 @@ class OperatorsIndexScanTest : public BaseTest {
     std::vector<int> values(0);
     for (int i = 0; i <= 24; i += 2) values.push_back(i);
     std::shuffle(values.begin(), values.end(), g);
-    for (auto i : values) table_randomized->append({i, 100 + i}); 
-      
+    for (auto i : values) table_randomized->append({i, 100 + i});
+
     ChunkEncoder::encode_all_chunks(table_randomized);
 
     _chunk_ids = std::vector<ChunkID>(table_randomized->chunk_count());
@@ -56,11 +56,11 @@ class OperatorsIndexScanTest : public BaseTest {
     _table_wrapper_randomized = std::make_shared<TableWrapper>(table_randomized);
     _table_wrapper_randomized->execute();
 
-    //orderes entries
+    // orderes entries
     auto table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
 
     for (int i = 0; i <= 24; i += 2) table->append({i, 100 + i});
-      
+
     ChunkEncoder::encode_all_chunks(table);
 
     for (const auto& chunk_id : _chunk_ids) {
@@ -110,7 +110,8 @@ class OperatorsIndexScanTest : public BaseTest {
   ColumnIndexType _index_type;
 };
 
-typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex, CompositeGroupKeyIndex /* add further indices */>
+typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex,
+  CompositeGroupKeyIndex /* add further indices */>
     DerivedIndices;
 TYPED_TEST_CASE(OperatorsIndexScanTest, DerivedIndices);
 
@@ -130,8 +131,8 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
   tests[PredicateCondition::Between] = {104, 106, 108};
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexScan>(this->_table_wrapper_randomized, this->_index_type, this->_column_ids, test.first,
-                                            right_values, right_values2);
+    auto scan = std::make_shared<IndexScan>(this->_table_wrapper_randomized, this->_index_type,
+                                            this->_column_ids, test.first, right_values, right_values2);
 
     scan->execute();
 
@@ -155,8 +156,8 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionary
   tests[PredicateCondition::GreaterThanEquals] = no_rows;
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexScan>(this->_table_wrapper_randomized, this->_index_type, this->_column_ids, test.first,
-                                            right_values, right_values2);
+    auto scan = std::make_shared<IndexScan>(this->_table_wrapper_randomized, this->_index_type,
+                                            this->_column_ids, test.first, right_values, right_values2);
     scan->execute();
 
     this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test.second);
@@ -179,8 +180,8 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryVal
   tests[PredicateCondition::GreaterThanEquals] = all_rows;
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexScan>(this->_table_wrapper_randomized, this->_index_type, this->_column_ids, test.first,
-                                            right_values, right_values2);
+    auto scan = std::make_shared<IndexScan>(this->_table_wrapper_randomized, this->_index_type,
+                                            this->_column_ids, test.first, right_values, right_values2);
     scan->execute();
 
     this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, test.second);
@@ -215,8 +216,9 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnlySomeChunks) {
 TYPED_TEST(OperatorsIndexScanTest, OperatorName) {
   const auto right_values = std::vector<AllTypeVariant>(this->_column_ids.size(), AllTypeVariant{0});
 
-  auto scan = std::make_shared<opossum::IndexScan>(this->_table_wrapper_randomized, this->_index_type, this->_column_ids,
-                                                   PredicateCondition::GreaterThanEquals, right_values);
+  auto scan = std::make_shared<opossum::IndexScan>(this->_table_wrapper_randomized, this->_index_type,
+                                                   this->_column_ids, PredicateCondition::GreaterThanEquals,
+                                                   right_values);
 
   EXPECT_EQ(scan->name(), "IndexScan");
 }
@@ -224,8 +226,8 @@ TYPED_TEST(OperatorsIndexScanTest, OperatorName) {
 TYPED_TEST(OperatorsIndexScanTest, InvalidIndexTypeThrows) {
   const auto right_values = std::vector<AllTypeVariant>(this->_column_ids.size(), AllTypeVariant{0});
 
-  auto scan = std::make_shared<opossum::IndexScan>(this->_table_wrapper_randomized, ColumnIndexType::Invalid, this->_column_ids,
-                                                   PredicateCondition::GreaterThan, right_values);
+  auto scan = std::make_shared<opossum::IndexScan>(this->_table_wrapper_randomized, ColumnIndexType::Invalid,
+                                                   this->_column_ids, PredicateCondition::GreaterThan, right_values);
   EXPECT_THROW(scan->execute(), std::logic_error);
 }
 
