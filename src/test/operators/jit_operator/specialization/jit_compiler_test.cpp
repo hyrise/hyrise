@@ -1,5 +1,6 @@
 #include <llvm/IRReader/IRReader.h>
 #include <llvm/Support/SourceMgr.h>
+#include <llvm/Support/TargetSelect.h>
 
 #include "../../../base_test.hpp"
 #include "operators/jit_operator/specialization/jit_compiler.hpp"
@@ -9,6 +10,8 @@ namespace opossum {
 class JitCompilerTest : public BaseTest {
  protected:
   void SetUp() override {
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
     _context = std::make_shared<llvm::LLVMContext>();
     llvm::SMDiagnostic error;
     _module = llvm::parseIRFile("src/test/llvm/add.ll", error, *_context);
