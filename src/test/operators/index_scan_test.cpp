@@ -63,11 +63,6 @@ class OperatorsIndexScanTest : public BaseTest {
       
     ChunkEncoder::encode_all_chunks(table);
 
-    _chunk_ids = std::vector<ChunkID>(table->chunk_count());
-    std::iota(_chunk_ids.begin(), _chunk_ids.end(), ChunkID{0u});
-
-    _column_ids = std::vector<ColumnID>{ColumnID{0u}};
-
     for (const auto& chunk_id : _chunk_ids) {
       auto chunk = table->get_chunk(chunk_id);
       chunk->template create_index<DerivedIndex>(_column_ids);
