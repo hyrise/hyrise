@@ -34,8 +34,8 @@ const std::shared_ptr<AbstractJittableSink> JitOperatorWrapper::_sink() const {
 }
 
 std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
-  DebugAssert(_source(), "JitOperatorWrapper does not have a valid source node.");
-  DebugAssert(_sink(), "JitOperatorWrapper does not have a valid sink node.");
+  Assert(_source(), "JitOperatorWrapper does not have a valid source node.");
+  Assert(_sink(), "JitOperatorWrapper does not have a valid sink node.");
 
   const auto& in_table = *input_left()->get_output();
 
