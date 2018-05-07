@@ -1,3 +1,5 @@
+#include <random>
+
 #include "operators/jit_operator/operators/jit_compute.hpp"
 #include "../../../base_test.hpp"
 
@@ -41,11 +43,17 @@ TEST_F(JitComputeTest, TriggersComputationOfNestedExpression) {
   compute->set_next_operator(sink);
 
   // We test the correct computation of the expression ten times with random values
+  std::random_device rd;
+  std::mt19937 gen(rd());
+
   for (auto i = 0; i < 10; ++i) {
     // Create input tuple values
-    auto a = static_cast<int32_t>(std::rand());
-    auto b = static_cast<int32_t>(std::rand());
-    auto c = static_cast<int32_t>(std::rand());
+    std::uniform_int_distribution<int32_t> dis(0, std::numeric_limits<int32_t>::max());
+    auto a = dis(gen);
+    auto c = dis(gen);
+    // ensure that a + b does not cause overflow
+    dis = std::uniform_int_distribution<int32_t>(0, std::numeric_limits<int32_t>::max() - a);
+    auto b = dis(gen);
 
     // Set input values in tuple
     a_value.set<int32_t>(a, context);
