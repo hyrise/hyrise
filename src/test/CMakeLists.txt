@@ -156,6 +156,8 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/operators/jit_read_write_tuple_test.cpp
         operators/jit_operator/specialization/jit_compiler_test.cpp
         operators/jit_operator/specialization/jit_repository_test.cpp
+        operators/jit_operator/specialization/load_module.cpp
+        operators/jit_operator/specialization/load_module.hpp
     )
 endif()
 

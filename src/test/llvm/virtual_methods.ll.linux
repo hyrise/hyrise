@@ -1,0 +1,195 @@
+; ModuleID = 'virtual_methods.cpp'
+source_filename = "virtual_methods.cpp"
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
+
+%class.DerivedA = type { %class.Base }
+%class.Base = type { i32 (...)** }
+%class.DerivedB = type { %class.Base }
+%class.DerivedD = type { %class.DerivedC }
+%class.DerivedC = type { %class.Base }
+
+$_ZN8DerivedAC2Ev = comdat any
+
+$_ZN8DerivedBC2Ev = comdat any
+
+$_ZN8DerivedDC2Ev = comdat any
+
+$_ZN4BaseC2Ev = comdat any
+
+$_ZN8DerivedA3fooEv = comdat any
+
+$_ZN4Base3barEv = comdat any
+
+$_ZN8DerivedB3fooEv = comdat any
+
+$_ZN8DerivedB3barEv = comdat any
+
+$_ZN8DerivedCC2Ev = comdat any
+
+$_ZN8DerivedD3fooEv = comdat any
+
+$_ZN8DerivedC3barEv = comdat any
+
+$_ZTV8DerivedA = comdat any
+
+$_ZTS8DerivedA = comdat any
+
+$_ZTS4Base = comdat any
+
+$_ZTI4Base = comdat any
+
+$_ZTI8DerivedA = comdat any
+
+$_ZTV4Base = comdat any
+
+$_ZTV8DerivedB = comdat any
+
+$_ZTS8DerivedB = comdat any
+
+$_ZTI8DerivedB = comdat any
+
+$_ZTV8DerivedD = comdat any
+
+$_ZTS8DerivedD = comdat any
+
+$_ZTS8DerivedC = comdat any
+
+$_ZTI8DerivedC = comdat any
+
+$_ZTI8DerivedD = comdat any
+
+$_ZTV8DerivedC = comdat any
+
+@_ZTV8DerivedA = linkonce_odr unnamed_addr constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* bitcast ({ i8*, i8*, i8* }* @_ZTI8DerivedA to i8*), i8* bitcast (void (%class.DerivedA*)* @_ZN8DerivedA3fooEv to i8*), i8* bitcast (void (%class.Base*)* @_ZN4Base3barEv to i8*)] }, comdat, align 8
+@_ZTVN10__cxxabiv120__si_class_type_infoE = external global i8*
+@_ZTS8DerivedA = linkonce_odr constant [10 x i8] c"8DerivedA\00", comdat
+@_ZTVN10__cxxabiv117__class_type_infoE = external global i8*
+@_ZTS4Base = linkonce_odr constant [6 x i8] c"4Base\00", comdat
+@_ZTI4Base = linkonce_odr constant { i8*, i8* } { i8* bitcast (i8** getelementptr inbounds (i8*, i8** @_ZTVN10__cxxabiv117__class_type_infoE, i64 2) to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @_ZTS4Base, i32 0, i32 0) }, comdat
+@_ZTI8DerivedA = linkonce_odr constant { i8*, i8*, i8* } { i8* bitcast (i8** getelementptr inbounds (i8*, i8** @_ZTVN10__cxxabiv120__si_class_type_infoE, i64 2) to i8*), i8* getelementptr inbounds ([10 x i8], [10 x i8]* @_ZTS8DerivedA, i32 0, i32 0), i8* bitcast ({ i8*, i8* }* @_ZTI4Base to i8*) }, comdat
+@_ZTV4Base = linkonce_odr unnamed_addr constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* bitcast ({ i8*, i8* }* @_ZTI4Base to i8*), i8* bitcast (void ()* @__cxa_pure_virtual to i8*), i8* bitcast (void (%class.Base*)* @_ZN4Base3barEv to i8*)] }, comdat, align 8
+@_ZTV8DerivedB = linkonce_odr unnamed_addr constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* bitcast ({ i8*, i8*, i8* }* @_ZTI8DerivedB to i8*), i8* bitcast (void (%class.DerivedB*)* @_ZN8DerivedB3fooEv to i8*), i8* bitcast (void (%class.DerivedB*)* @_ZN8DerivedB3barEv to i8*)] }, comdat, align 8
+@_ZTS8DerivedB = linkonce_odr constant [10 x i8] c"8DerivedB\00", comdat
+@_ZTI8DerivedB = linkonce_odr constant { i8*, i8*, i8* } { i8* bitcast (i8** getelementptr inbounds (i8*, i8** @_ZTVN10__cxxabiv120__si_class_type_infoE, i64 2) to i8*), i8* getelementptr inbounds ([10 x i8], [10 x i8]* @_ZTS8DerivedB, i32 0, i32 0), i8* bitcast ({ i8*, i8* }* @_ZTI4Base to i8*) }, comdat
+@_ZTV8DerivedD = linkonce_odr unnamed_addr constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* bitcast ({ i8*, i8*, i8* }* @_ZTI8DerivedD to i8*), i8* bitcast (void (%class.DerivedD*)* @_ZN8DerivedD3fooEv to i8*), i8* bitcast (void (%class.DerivedC*)* @_ZN8DerivedC3barEv to i8*)] }, comdat, align 8
+@_ZTS8DerivedD = linkonce_odr constant [10 x i8] c"8DerivedD\00", comdat
+@_ZTS8DerivedC = linkonce_odr constant [10 x i8] c"8DerivedC\00", comdat
+@_ZTI8DerivedC = linkonce_odr constant { i8*, i8*, i8* } { i8* bitcast (i8** getelementptr inbounds (i8*, i8** @_ZTVN10__cxxabiv120__si_class_type_infoE, i64 2) to i8*), i8* getelementptr inbounds ([10 x i8], [10 x i8]* @_ZTS8DerivedC, i32 0, i32 0), i8* bitcast ({ i8*, i8* }* @_ZTI4Base to i8*) }, comdat
+@_ZTI8DerivedD = linkonce_odr constant { i8*, i8*, i8* } { i8* bitcast (i8** getelementptr inbounds (i8*, i8** @_ZTVN10__cxxabiv120__si_class_type_infoE, i64 2) to i8*), i8* getelementptr inbounds ([10 x i8], [10 x i8]* @_ZTS8DerivedD, i32 0, i32 0), i8* bitcast ({ i8*, i8*, i8* }* @_ZTI8DerivedC to i8*) }, comdat
+@_ZTV8DerivedC = linkonce_odr unnamed_addr constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* bitcast ({ i8*, i8*, i8* }* @_ZTI8DerivedC to i8*), i8* bitcast (void ()* @__cxa_pure_virtual to i8*), i8* bitcast (void (%class.DerivedC*)* @_ZN8DerivedC3barEv to i8*)] }, comdat, align 8
+
+; Function Attrs: norecurse nounwind uwtable
+define i32 @main() local_unnamed_addr #0 {
+  %1 = alloca %class.DerivedA, align 8
+  %2 = alloca %class.DerivedB, align 8
+  %3 = alloca %class.DerivedD, align 8
+  %4 = bitcast %class.DerivedA* %1 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %4) #3
+  call void @_ZN8DerivedAC2Ev(%class.DerivedA* nonnull %1) #3
+  %5 = bitcast %class.DerivedB* %2 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %5) #3
+  call void @_ZN8DerivedBC2Ev(%class.DerivedB* nonnull %2) #3
+  %6 = bitcast %class.DerivedD* %3 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %6) #3
+  call void @_ZN8DerivedDC2Ev(%class.DerivedD* nonnull %3) #3
+  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %6) #3
+  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %5) #3
+  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %4) #3
+  ret i32 0
+}
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+
+; Function Attrs: inlinehint norecurse nounwind uwtable
+define linkonce_odr void @_ZN8DerivedAC2Ev(%class.DerivedA*) unnamed_addr #2 comdat align 2 {
+  %2 = getelementptr inbounds %class.DerivedA, %class.DerivedA* %0, i64 0, i32 0
+  tail call void @_ZN4BaseC2Ev(%class.Base* %2) #3
+  %3 = getelementptr inbounds %class.DerivedA, %class.DerivedA* %0, i64 0, i32 0, i32 0
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV8DerivedA, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %3, align 8, !tbaa !2
+  ret void
+}
+
+; Function Attrs: inlinehint norecurse nounwind uwtable
+define linkonce_odr void @_ZN8DerivedBC2Ev(%class.DerivedB*) unnamed_addr #2 comdat align 2 {
+  %2 = getelementptr inbounds %class.DerivedB, %class.DerivedB* %0, i64 0, i32 0
+  tail call void @_ZN4BaseC2Ev(%class.Base* %2) #3
+  %3 = getelementptr inbounds %class.DerivedB, %class.DerivedB* %0, i64 0, i32 0, i32 0
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV8DerivedB, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %3, align 8, !tbaa !2
+  ret void
+}
+
+; Function Attrs: inlinehint norecurse nounwind uwtable
+define linkonce_odr void @_ZN8DerivedDC2Ev(%class.DerivedD*) unnamed_addr #2 comdat align 2 {
+  %2 = getelementptr inbounds %class.DerivedD, %class.DerivedD* %0, i64 0, i32 0
+  tail call void @_ZN8DerivedCC2Ev(%class.DerivedC* %2) #3
+  %3 = getelementptr inbounds %class.DerivedD, %class.DerivedD* %0, i64 0, i32 0, i32 0, i32 0
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV8DerivedD, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %3, align 8, !tbaa !2
+  ret void
+}
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+
+; Function Attrs: inlinehint norecurse nounwind uwtable
+define linkonce_odr void @_ZN4BaseC2Ev(%class.Base*) unnamed_addr #2 comdat align 2 {
+  %2 = getelementptr inbounds %class.Base, %class.Base* %0, i64 0, i32 0
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV4Base, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %2, align 8, !tbaa !2
+  ret void
+}
+
+; Function Attrs: norecurse nounwind uwtable
+define linkonce_odr void @_ZN8DerivedA3fooEv(%class.DerivedA*) unnamed_addr #0 comdat align 2 {
+  ret void
+}
+
+; Function Attrs: norecurse nounwind uwtable
+define linkonce_odr void @_ZN4Base3barEv(%class.Base*) unnamed_addr #0 comdat align 2 {
+  ret void
+}
+
+declare void @__cxa_pure_virtual() unnamed_addr
+
+; Function Attrs: norecurse nounwind uwtable
+define linkonce_odr void @_ZN8DerivedB3fooEv(%class.DerivedB*) unnamed_addr #0 comdat align 2 {
+  ret void
+}
+
+; Function Attrs: norecurse nounwind uwtable
+define linkonce_odr void @_ZN8DerivedB3barEv(%class.DerivedB*) unnamed_addr #0 comdat align 2 {
+  ret void
+}
+
+; Function Attrs: inlinehint norecurse nounwind uwtable
+define linkonce_odr void @_ZN8DerivedCC2Ev(%class.DerivedC*) unnamed_addr #2 comdat align 2 {
+  %2 = getelementptr inbounds %class.DerivedC, %class.DerivedC* %0, i64 0, i32 0
+  tail call void @_ZN4BaseC2Ev(%class.Base* %2) #3
+  %3 = getelementptr inbounds %class.DerivedC, %class.DerivedC* %0, i64 0, i32 0, i32 0
+  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [4 x i8*] }, { [4 x i8*] }* @_ZTV8DerivedC, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %3, align 8, !tbaa !2
+  ret void
+}
+
+; Function Attrs: norecurse nounwind uwtable
+define linkonce_odr void @_ZN8DerivedD3fooEv(%class.DerivedD*) unnamed_addr #0 comdat align 2 {
+  ret void
+}
+
+; Function Attrs: norecurse nounwind uwtable
+define linkonce_odr void @_ZN8DerivedC3barEv(%class.DerivedC*) unnamed_addr #0 comdat align 2 {
+  ret void
+}
+
+attributes #0 = { norecurse nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { argmemonly nounwind }
+attributes #2 = { inlinehint norecurse nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #3 = { nounwind }
+
+!llvm.module.flags = !{!0}
+!llvm.ident = !{!1}
+
+!0 = !{i32 1, !"wchar_size", i32 4}
+!1 = !{!"clang version 5.0.0-3 (tags/RELEASE_500/final)"}
+!2 = !{!3, !3, i64 0}
+!3 = !{!"vtable pointer", !4, i64 0}
+!4 = !{!"Simple C++ TBAA"}

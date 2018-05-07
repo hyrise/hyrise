@@ -26,20 +26,20 @@ class JitCompilerTest : public BaseTest {
 };
 
 TEST_F(JitCompilerTest, CompilesAddedModules) {
-  JitCompiler compiler(_context);
+  auto compiler = JitCompiler(_context);
   compiler.add_module(std::move(_module));
   auto add_fn = compiler.find_symbol<int32_t(int32_t, int32_t)>(_add_fn_symbol);
   ASSERT_EQ(add_fn(1, 5), 1 + 5);
 }
 
 TEST_F(JitCompilerTest, ThrowsOnInvalidSymbolLookup) {
-  JitCompiler compiler(_context);
+  auto compiler = JitCompiler(_context);
   compiler.add_module(std::move(_module));
   ASSERT_THROW(compiler.find_symbol<void()>("some_nonexisting_symbol"), std::logic_error);
 }
 
 TEST_F(JitCompilerTest, AddsAndRemovesModules) {
-  JitCompiler compiler(_context);
+  auto compiler = JitCompiler(_context);
   ASSERT_THROW(compiler.find_symbol<int32_t(int32_t, int32_t)>(_add_fn_symbol), std::logic_error);
   auto module_handle = compiler.add_module(std::move(_module));
   compiler.find_symbol<int32_t(int32_t, int32_t)>(_add_fn_symbol);

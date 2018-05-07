@@ -49,9 +49,6 @@ class JitRepository : private Noncopyable {
 
   std::unique_ptr<llvm::Module> _parse_module(const std::string& module_string, llvm::LLVMContext& context) const;
 
-  // Dumps the content of the repository to some output stream for debugging
-  void _dump(std::ostream& os) const;
-
   std::shared_ptr<llvm::LLVMContext> _llvm_context;
   std::unique_ptr<llvm::Module> _module;
   std::unordered_map<std::string, llvm::Function*> _functions;
