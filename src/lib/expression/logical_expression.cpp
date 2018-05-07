@@ -20,7 +20,7 @@ const std::shared_ptr<AbstractExpression>& LogicalExpression::right_operand() co
 }
 
 std::shared_ptr<AbstractExpression> LogicalExpression::deep_copy() const {
-  return std::make_shared<LogicalExpression>(logical_operator, left_operand()->deep_copy(), left_operand()->deep_copy());
+  return std::make_shared<LogicalExpression>(logical_operator, left_operand()->deep_copy(), right_operand()->deep_copy());
 }
 
 std::string LogicalExpression::as_column_name() const {

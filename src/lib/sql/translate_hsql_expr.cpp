@@ -94,7 +94,7 @@ std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
 
     case hsql::kExprLiteralString:
       Assert(expr.name, "No value given for string literal");
-      return std::make_shared<ValueExpression>(*expr.name);
+      return std::make_shared<ValueExpression>(name);
 
     case hsql::kExprLiteralInt:
       if (static_cast<int32_t>(expr.ival) == expr.ival) {
@@ -166,6 +166,7 @@ std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
           } else {
             current_case_expression = std::make_shared<ValueExpression>(NullValue{});
           }
+
 
           for (auto case_reverse_idx = size_t{0}; case_reverse_idx < expr.exprList->size(); ++case_reverse_idx) {
             const auto case_idx = expr.exprList->size() - case_reverse_idx - 1;

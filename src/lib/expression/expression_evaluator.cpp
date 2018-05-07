@@ -35,14 +35,15 @@ _chunk(chunk)
 }
 
 
-template<bool null_from_values, bool value_from_null>
+template<bool null_from_values, bool value_from_null, bool per_row_evaluation>
 struct OperatorTraits {
   static constexpr auto may_produce_null_from_values = null_from_values;
   static constexpr auto may_produce_value_from_null = value_from_null;
+  static constexpr auto force_per_row_evaluation = per_row_evaluation;
 };
 
-template<typename Functor, typename O, typename L, typename R, bool null_from_values, bool value_from_null>
-struct BinaryFunctorWrapper : public OperatorTraits<null_from_values, value_from_null> {
+template<typename Functor, typename O, typename L, typename R, bool null_from_values, bool value_from_null, bool per_row_evaluation>
+struct BinaryFunctorWrapper : public OperatorTraits<null_from_values, value_from_null, per_row_evaluation> {
   void operator()(const ChunkOffset chunk_offset, 
                   O &result_value,
                   bool& result_null,
@@ -60,7 +61,7 @@ struct Comparison {
   static constexpr auto supported = false;
 };
 template<template<typename> typename Fn, typename O, typename L, typename R>
-struct Comparison<Fn, O, L, R, std::enable_if_t<std::is_same_v<int32_t, O> && std::is_same_v<std::string, L> == std::is_same_v<std::string, R>>> :  public BinaryFunctorWrapper<Fn<std::common_type_t<L, R>>, O, L, R, false, false> {
+struct Comparison<Fn, O, L, R, std::enable_if_t<std::is_same_v<int32_t, O> && std::is_same_v<std::string, L> == std::is_same_v<std::string, R>>> :  public BinaryFunctorWrapper<Fn<std::common_type_t<L, R>>, O, L, R, false, false, false> {
   static constexpr auto supported = true;
 };
 
@@ -70,7 +71,7 @@ struct TernaryOrImpl {
 };
 
 template<typename O, typename L, typename R>
-struct TernaryOrImpl<O, L, R, std::enable_if_t<std::is_same_v<int32_t, O> && std::is_same_v<int32_t, L> && std::is_same_v<int32_t, R>>> : public OperatorTraits<false, true> {
+struct TernaryOrImpl<O, L, R, std::enable_if_t<std::is_same_v<int32_t, O> && std::is_same_v<int32_t, L> && std::is_same_v<int32_t, R>>> : public OperatorTraits<false, true, false> {
   static constexpr auto supported = true;
   void operator()(const ChunkOffset chunk_offset, int32_t &result_value, bool& result_null, const int32_t left_value, const bool left_null,
                   const int32_t right_value, const bool right_null) const {
@@ -88,7 +89,7 @@ struct CaseNonNullableCondition {
 };
 
 template<typename O, typename L, typename R>
-struct CaseNonNullableCondition<O, L, R, std::enable_if_t<std::is_same_v<std::string, O> == std::is_same_v<std::string, L> && std::is_same_v<std::string, L> == std::is_same_v<std::string, R>>> : public OperatorTraits<false, true> {
+struct CaseNonNullableCondition<O, L, R, std::enable_if_t<std::is_same_v<std::string, O> == std::is_same_v<std::string, L> && std::is_same_v<std::string, L> == std::is_same_v<std::string, R>>> : public OperatorTraits<false, true, true> {
   static constexpr auto supported = true;
 
   const std::vector<int32_t> when_values;
@@ -122,7 +123,7 @@ struct CaseNullableCondition {
 };
 
 template<typename O, typename L, typename R>
-struct CaseNullableCondition<O, L, R, std::enable_if_t<std::is_same_v<std::string, O> == std::is_same_v<std::string, L> && std::is_same_v<std::string, L> == std::is_same_v<std::string, R>>> : public OperatorTraits<false, true> {
+struct CaseNullableCondition<O, L, R, std::enable_if_t<std::is_same_v<std::string, O> == std::is_same_v<std::string, L> && std::is_same_v<std::string, L> == std::is_same_v<std::string, R>>> : public OperatorTraits<false, true, true> {
   static constexpr auto supported = true;
 
   const std::vector<int32_t> when_values;
@@ -156,16 +157,16 @@ struct Logical {
   static constexpr auto supported = false;
 };
 template<template<typename> typename Fn, typename O, typename L, typename R>
-struct Logical<Fn, O, L, R, std::enable_if_t<std::is_same_v<int32_t, O> && std::is_same_v<int32_t, L> && std::is_same_v<int32_t, R>>> : public BinaryFunctorWrapper<Fn<O>, O, L, R, false, false>{
+struct Logical<Fn, O, L, R, std::enable_if_t<std::is_same_v<int32_t, O> && std::is_same_v<int32_t, L> && std::is_same_v<int32_t, R>>> : public BinaryFunctorWrapper<Fn<O>, O, L, R, false, false, false>{
   static constexpr auto supported = true;
 };
 
-template<template<typename> typename Fn, typename O, typename L, typename R, bool null_from_values, bool value_from_null, typename Enable = void>
+template<template<typename> typename Fn, typename O, typename L, typename R, typename Enable = void>
 struct ArithmeticFunctor {
   static constexpr auto supported = false;
 };
-template<template<typename> typename Fn, typename O, typename L, typename R, bool null_from_values, bool value_from_null>
-struct ArithmeticFunctor<Fn, O, L, R, null_from_values, value_from_null, std::enable_if_t<!std::is_same_v<std::string, O> && !std::is_same_v<std::string, L> && !std::is_same_v<std::string, R>>> : public BinaryFunctorWrapper<Fn<O>, O, L, R, false, false> {
+template<template<typename> typename Fn, typename O, typename L, typename R>
+struct ArithmeticFunctor<Fn, O, L, R, std::enable_if_t<!std::is_same_v<std::string, O> && !std::is_same_v<std::string, L> && !std::is_same_v<std::string, R>>> : public BinaryFunctorWrapper<Fn<O>, O, L, R, false, false, false> {
   static constexpr auto supported = true;
 };
 
@@ -180,10 +181,10 @@ template<typename O, typename L, typename R> using LessThanEquals = Comparison<s
 template<typename O, typename L, typename R> using And = Logical<std::logical_and, O, L, R>;
 template<typename O, typename L, typename R> using TernaryOr = TernaryOrImpl<O, L, R>;
 
-template<typename O, typename L, typename R> using Addition = ArithmeticFunctor<std::plus, O, L, R, true, true>;
-template<typename O, typename L, typename R> using Subtraction = ArithmeticFunctor<std::minus, O, L, R, true, true>;
-template<typename O, typename L, typename R> using Multiplication = ArithmeticFunctor<std::multiplies, O, L, R, true, true>;
-template<typename O, typename L, typename R> using Division = ArithmeticFunctor<std::divides, O, L, R, true, true>;
+template<typename O, typename L, typename R> using Addition = ArithmeticFunctor<std::plus, O, L, R>;
+template<typename O, typename L, typename R> using Subtraction = ArithmeticFunctor<std::minus, O, L, R>;
+template<typename O, typename L, typename R> using Multiplication = ArithmeticFunctor<std::multiplies, O, L, R>;
+template<typename O, typename L, typename R> using Division = ArithmeticFunctor<std::divides, O, L, R>;
 // clang-format on
 
 // clang-format off
@@ -415,7 +416,7 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_case_expr
   const auto when = evaluate_expression<int32_t>(*case_expression.when());
 
   /**
-   * Handle cases where the CASE condition is a fixed value/NULL (e.g. CASE 5+3 > 2 THEN ... ELSE ...)
+   * Handle cases where the CASE condition ("WHEN") is a fixed value/NULL (e.g. CASE 5+3 > 2 THEN ... ELSE ...)
    *    fixed_branch: std::nullopt, if CASE condition is not a value/NULL
    *    fixed_branch: CaseBranch::Then, if CASE condition if value is not FALSE
    *    fixed_branch: CaseBranch::Else, if CASE condition if value false or NULL
@@ -620,16 +621,21 @@ ExpressionEvaluator::ExpressionResult<ResultDataType> ExpressionEvaluator::evalu
    * Compute single value/null cases
    */
   if (left_is_value) left_value = boost::get<LeftOperandDataType>(left_operands);
-  else if (right_is_value) right_value = boost::get<RightOperandDataType>(right_operands);
-  else if (left_is_value && right_is_null) functor(0, result_value, result_null, left_value, false, right_value, true);
-  else if (left_is_null && right_is_value) functor(0, result_value, result_null, left_value, true, right_value, false);
-  else if (left_is_value && right_is_value) functor(0, result_value, result_null, left_value, false, right_value, false);
+  if (right_is_value) right_value = boost::get<RightOperandDataType>(right_operands);
 
-  if ((left_is_value || left_is_null) && (right_is_value || right_is_null)) {
-    if (result_null) {
-      return NullValue{};
-    } else {
-      return result_value;
+  if (!Functor::force_per_row_evaluation) {
+    if (left_is_value && right_is_null) functor(0, result_value, result_null, left_value, false, right_value, true);
+    else if (left_is_null && right_is_value)
+      functor(0, result_value, result_null, left_value, true, right_value, false);
+    else if (left_is_value && right_is_value)
+      functor(0, result_value, result_null, left_value, false, right_value, false);
+
+    if ((left_is_value || left_is_null) && (right_is_value || right_is_null)) {
+      if (result_null) {
+        return NullValue{};
+      } else {
+        return result_value;
+      }
     }
   }
 
@@ -662,7 +668,6 @@ ExpressionEvaluator::ExpressionResult<ResultDataType> ExpressionEvaluator::evalu
   /**
    *
    */
-
   const auto evaluate_per_row = [&](const auto& fn) {
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
       fn(chunk_offset);
@@ -780,6 +785,30 @@ ExpressionEvaluator::ExpressionResult<ResultDataType> ExpressionEvaluator::evalu
       });
     }
   }
+  else if (left_is_value && right_is_value) {
+    if (result_is_nullable) {
+      evaluate_per_row([&](const auto chunk_offset) {
+        functor(chunk_offset, result_values[chunk_offset], result_null,
+                left_value, false,
+                right_value, false);
+        result_nulls[chunk_offset] = result_null;
+      });
+    } else {
+      evaluate_per_row([&](const auto chunk_offset) {
+        functor(chunk_offset, result_values[chunk_offset], result_null /* dummy */,
+                left_value, false,
+                right_value, false);
+      });
+    }
+  }
+  else if (left_is_value && right_is_null) {
+    evaluate_per_row([&](const auto chunk_offset) {
+      functor(chunk_offset, result_values[chunk_offset], result_null,
+              left_value, false,
+              right_value /* dummy */, true);
+      result_nulls[chunk_offset] = result_null;
+    });
+  }
   else if (left_is_null && right_is_nullable) {
     if constexpr (Functor::may_produce_value_from_null) {
       evaluate_per_row([&](const auto chunk_offset) {
@@ -798,6 +827,30 @@ ExpressionEvaluator::ExpressionResult<ResultDataType> ExpressionEvaluator::evalu
         functor(chunk_offset, result_values[chunk_offset], result_null,
                 left_value, true,
                 (*right_values)[chunk_offset], false);
+        result_nulls[chunk_offset] = result_null;
+      });
+    } else {
+      return NullValue{};
+    }
+  }
+  else if (left_is_null && right_is_value) {
+    if constexpr (Functor::may_produce_value_from_null) {
+      evaluate_per_row([&](const auto chunk_offset) {
+        functor(chunk_offset, result_values[chunk_offset], result_null,
+                left_value, true,
+                right_value, false);
+        result_nulls[chunk_offset] = result_null;
+      });
+    } else {
+      return NullValue{};
+    }
+  }
+  else if (left_is_null && right_is_null) {
+    if constexpr (Functor::may_produce_value_from_null) {
+      evaluate_per_row([&](const auto chunk_offset) {
+        functor(chunk_offset, result_values[chunk_offset], result_null,
+                left_value, true,
+                right_value, true);
         result_nulls[chunk_offset] = result_null;
       });
     } else {
