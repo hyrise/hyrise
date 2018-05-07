@@ -20,7 +20,8 @@ JitCodeSpecializer::JitCodeSpecializer()
     : _repository{JitRepository::get()}, _llvm_context{_repository.llvm_context()}, _compiler{_llvm_context} {}
 
 void JitCodeSpecializer::_specialize_function_impl(const std::string& root_function_name,
-                                                   const std::shared_ptr<const JitRuntimePointer>& runtime_this, const bool two_passes) {
+                                                   const std::shared_ptr<const JitRuntimePointer>& runtime_this,
+                                                   const bool two_passes) {
   SpecializationContext context;
   context.root_function_name = root_function_name;
   context.module = std::make_unique<llvm::Module>(root_function_name, *_llvm_context);

@@ -27,7 +27,11 @@ extern size_t jit_llvm_bundle_size;
  */
 class JitRepository : private Noncopyable {
  public:
+  // Returns the singleton repository instance that is initialized with the embedded bitcode
   static JitRepository& get();
+
+  // Create a repository from the given module
+  JitRepository(std::unique_ptr<llvm::Module> module, std::shared_ptr<llvm::LLVMContext> context);
 
   // Returns a virtual function implementation given a function name
   llvm::Function* get_function(const std::string& name) const;
@@ -40,6 +44,8 @@ class JitRepository : private Noncopyable {
 
  private:
   JitRepository();
+
+  void _initialize();
 
   std::unique_ptr<llvm::Module> _parse_module(const std::string& module_string, llvm::LLVMContext& context) const;
 

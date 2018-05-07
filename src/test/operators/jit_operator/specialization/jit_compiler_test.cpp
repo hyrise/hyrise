@@ -12,7 +12,6 @@ class JitCompilerTest : public BaseTest {
     _context = std::make_shared<llvm::LLVMContext>();
     llvm::SMDiagnostic error;
     _module = llvm::parseIRFile("src/test/llvm/add.ll", error, *_context);
-
   }
 
   std::shared_ptr<llvm::LLVMContext> _context;
@@ -43,4 +42,4 @@ TEST_F(JitCompilerTest, AddsAndRemovesModules) {
   ASSERT_THROW(compiler.find_symbol<int32_t(int32_t, int32_t)>(_add_symbol), std::logic_error);
 }
 
-} // namespace opossum
+}  // namespace opossum

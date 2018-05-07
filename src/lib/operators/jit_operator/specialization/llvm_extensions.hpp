@@ -63,7 +63,8 @@ void CloneAndPruneIntoFromInst(llvm::Function* NewFunc, const llvm::Function* Ol
                                const char* NameSuffix, llvm::ClonedCodeInfo* CodeInfo, SpecializationContext& Context);
 
 // Gets a runtime memory location (is possible) for an LLVM bitcode value
-const std::shared_ptr<const JitRuntimePointer>& GetRuntimePointerForValue(const llvm::Value* value, SpecializationContext& context);
+const std::shared_ptr<const JitRuntimePointer>& GetRuntimePointerForValue(const llvm::Value* value,
+                                                                          SpecializationContext& context);
 
 // Tries to determine the runtime value for a given condition variable of a switch or branch instruction.
 // Operands of the value are recursively resolved until they are either constants or load instructions.

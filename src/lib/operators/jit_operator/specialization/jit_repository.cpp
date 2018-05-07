@@ -34,9 +34,18 @@ std::shared_ptr<llvm::LLVMContext> JitRepository::llvm_context() const { return 
 
 std::mutex& JitRepository::specialization_mutex() { return _specialization_mutex; }
 
+JitRepository::JitRepository(std::unique_ptr<llvm::Module> module, std::shared_ptr<llvm::LLVMContext> context)
+    : _llvm_context{context}, _module{std::move(module)} {
+  _initialize();
+}
+
 JitRepository::JitRepository()
     : _llvm_context{std::make_shared<llvm::LLVMContext>()},
       _module{_parse_module(std::string(&jit_llvm_bundle, jit_llvm_bundle_size), *_llvm_context)} {
+  _initialize();
+}
+
+void JitRepository::_initialize() {
   // Global LLVM initializations
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();

@@ -7,7 +7,8 @@
 
 namespace opossum {
 
-const std::shared_ptr<const JitRuntimePointer>& GetRuntimePointerForValue(const llvm::Value* value, SpecializationContext& context) {
+const std::shared_ptr<const JitRuntimePointer>& GetRuntimePointerForValue(const llvm::Value* value,
+                                                                          SpecializationContext& context) {
   // If the value exists in the value map, use the mapped value (i.e., the value in the cloned function) for the lookup
   auto mapped_value = value;
   if (context.llvm_value_map.count(value)) {

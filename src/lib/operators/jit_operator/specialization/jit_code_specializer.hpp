@@ -27,7 +27,8 @@ class JitCodeSpecializer {
 
   template <typename T>
   std::function<T> specialize_function(const std::string& root_function_name,
-                                       const std::shared_ptr<const JitRuntimePointer>& runtime_this, const bool two_passes) {
+                                       const std::shared_ptr<const JitRuntimePointer>& runtime_this,
+                                       const bool two_passes) {
     _repository.specialization_mutex().lock();
     _specialize_function_impl(root_function_name, runtime_this, two_passes);
     _repository.specialization_mutex().unlock();
@@ -35,8 +36,8 @@ class JitCodeSpecializer {
   }
 
  private:
-  void _specialize_function_impl(const std::string& root_function_name, const std::shared_ptr<const JitRuntimePointer>& runtime_this,
-                                 const bool two_passes);
+  void _specialize_function_impl(const std::string& root_function_name,
+                                 const std::shared_ptr<const JitRuntimePointer>& runtime_this, const bool two_passes);
 
   void _inline_function_calls(SpecializationContext& context, const bool two_passes) const;
 
