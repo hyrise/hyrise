@@ -16,7 +16,6 @@ class DerivedC : public Base {
   void bar() {}
 };
 
-
 class DerivedD : public DerivedC {
   void foo() {}
 };

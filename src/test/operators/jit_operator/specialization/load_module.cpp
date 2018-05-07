@@ -15,4 +15,4 @@ std::unique_ptr<llvm::Module> load_module(const std::string path, llvm::LLVMCont
   return llvm::parseIRFile(path + suffix, diagnostic, context);
 }
 
-} // namespace opossum
+}  // namespace opossum

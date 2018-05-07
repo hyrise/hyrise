@@ -5,7 +5,6 @@
 #include "../../../base_test.hpp"
 #include "load_module.hpp"
 #include "operators/jit_operator/specialization/jit_compiler.hpp"
-#include "operators/jit_operator/specialization/jit_compiler.hpp"
 
 namespace opossum {
 

@@ -50,20 +50,20 @@ TEST_F(JitRepositoryTest, CorrectlyParsesVTablesAcrossClassHierarchy) {
   // and that the correct implementation is returned for each class / index combination.
   // See "src/test/llvm/virtual_methods.cpp" for the class hierarchy.
 
-  ASSERT_EQ(repository.get_vtable_entry ("4Base", 0), nullptr);
-  ASSERT_EQ(repository.get_vtable_entry ("4Base", 1), base_bar);
+  ASSERT_EQ(repository.get_vtable_entry("4Base", 0), nullptr);
+  ASSERT_EQ(repository.get_vtable_entry("4Base", 1), base_bar);
 
-  ASSERT_EQ(repository.get_vtable_entry ("8DerivedA", 0), derived_a_foo);
-  ASSERT_EQ(repository.get_vtable_entry ("8DerivedA", 1), base_bar);
+  ASSERT_EQ(repository.get_vtable_entry("8DerivedA", 0), derived_a_foo);
+  ASSERT_EQ(repository.get_vtable_entry("8DerivedA", 1), base_bar);
 
-  ASSERT_EQ(repository.get_vtable_entry ("8DerivedB", 0), derived_b_foo);
-  ASSERT_EQ(repository.get_vtable_entry ("8DerivedB", 1), derived_b_bar);
+  ASSERT_EQ(repository.get_vtable_entry("8DerivedB", 0), derived_b_foo);
+  ASSERT_EQ(repository.get_vtable_entry("8DerivedB", 1), derived_b_bar);
 
-  ASSERT_EQ(repository.get_vtable_entry ("8DerivedC", 0), nullptr);
-  ASSERT_EQ(repository.get_vtable_entry ("8DerivedC", 1), derived_c_bar);
+  ASSERT_EQ(repository.get_vtable_entry("8DerivedC", 0), nullptr);
+  ASSERT_EQ(repository.get_vtable_entry("8DerivedC", 1), derived_c_bar);
 
-  ASSERT_EQ(repository.get_vtable_entry ("8DerivedD", 0), derived_d_foo);
-  ASSERT_EQ(repository.get_vtable_entry ("8DerivedD", 1), derived_c_bar);
+  ASSERT_EQ(repository.get_vtable_entry("8DerivedD", 0), derived_d_foo);
+  ASSERT_EQ(repository.get_vtable_entry("8DerivedD", 1), derived_c_bar);
 }
 
 }  // namespace opossum
