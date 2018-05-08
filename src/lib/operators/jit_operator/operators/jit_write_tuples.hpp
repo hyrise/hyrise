@@ -10,7 +10,7 @@ namespace opossum {
  */
 class BaseJitColumnWriter {
  public:
-  virtual ~BaseJitColumnWriter() {}
+  virtual ~BaseJitColumnWriter() = default;
   virtual void write_value(JitRuntimeContext& context) const = 0;
 };
 
@@ -19,13 +19,13 @@ struct JitOutputColumn {
   JitTupleValue tuple_value;
 };
 
-/* JitWriteTuple must be the last operator in any chain of jit operators.
+/* JitWriteTuples must be the last operator in any chain of jit operators.
  * It is responsible for
  * 1) adding column definitions to the output table
  * 2) appending the current tuple to the current output chunk
  * 3) creating a new output chunks and adding output chunks to the output table
  */
-class JitWriteTuple : public AbstractJittableSink {
+class JitWriteTuples : public AbstractJittableSink {
   /* JitColumnWriters provide a template-free interface to store tuple values in ValueColumns in the output table.
    *
    * All ValueColumns have BaseValueColumn as their template-free super class. This allows us to store shared pointers

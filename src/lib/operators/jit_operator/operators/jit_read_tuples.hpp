@@ -12,7 +12,7 @@ namespace opossum {
  */
 class BaseJitColumnReader {
  public:
-  virtual ~BaseJitColumnReader() {}
+  virtual ~BaseJitColumnReader() = default;
   virtual void read_value(JitRuntimeContext& context) = 0;
 };
 
@@ -26,22 +26,22 @@ struct JitInputLiteral {
   JitTupleValue tuple_value;
 };
 
-/* JitReadTuple must be the first operator in any chain of jit operators.
+/* JitReadTuples must be the first operator in any chain of jit operators.
  * It is responsible for:
  * 1) storing literal values to the runtime tuple before the query is executed
  * 2) reading data from the the input table to the runtime tuple
  * 3) advancing the column iterators
  * 4) keeping track of the number of values in the runtime tuple. Whenever
  *    another operator needs to store a temporary value in the runtime tuple,
- *    it can request a slot in the tuple from JitReadTuple.
+ *    it can request a slot in the tuple from JitReadTuples.
  */
-class JitReadTuple : public AbstractJittable {
+class JitReadTuples : public AbstractJittable {
   /* JitColumnReaders wrap the column iterable interface used by most operators and makes it accessible
-   * to the JitOperator.
+   * to the JitOperatorWrapper.
    *
    * Why we need this wrapper:
    * Most operators access data by creating a fixed number (usually one or two) of column iterables and
-   * then immediately use those iterators in a lambda. The JitOperator, on the other hand, processes
+   * then immediately use those iterators in a lambda. The JitOperatorWrapper, on the other hand, processes
    * data in a tuple-at-a-time fashion and thus needs access to an arbitrary number of column iterators
    * at the same time.
    *
