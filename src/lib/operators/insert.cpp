@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "../concurrency/logging/initialLogger.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "resolve_type.hpp"
 #include "storage/base_encoded_column.hpp"
@@ -179,6 +180,22 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
                                                       target_chunk->get_mutable_column(column_id), target_start_index,
                                                       num_to_insert);
       }
+
+      // logging start
+      const auto column_count = source_chunk->column_count();
+      for (decltype(source_chunk->size()) row_index = 0; row_index < source_chunk->size(); ++row_index){
+        std::stringstream row_values{};
+        row_values << "(";
+        row_values << (*source_chunk->columns()[0])[row_index];
+        for (decltype(source_chunk->column_count()) column_index = 1; column_index < column_count; ++column_index){
+          row_values << "," << (*source_chunk->columns()[column_index])[row_index];
+        }
+        row_values << ")";
+        std::cout << "insert  " << row_values.str() << std::endl;
+        InitialLogger::getInstance().log_value(context->transaction_id(), _target_table_name, RowID{target_chunk_id, row_index}, row_values);
+      }
+      // logging end
+
       still_to_insert -= num_to_insert;
       target_start_index += num_to_insert;
       source_chunk_start_index += num_to_insert;

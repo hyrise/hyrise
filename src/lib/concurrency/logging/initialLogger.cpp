@@ -21,6 +21,15 @@ void InitialLogger::log_commit(const TransactionID transaction_id){
   _mutex.unlock();
 }
 
+void InitialLogger::log_value(const TransactionID transaction_id, const std::string table_name, const RowID row_id, const std::stringstream &values){
+  std::stringstream ss;
+  ss << "(v," << transaction_id << "," << table_name << "," << row_id << "," << values.str() << ")";
+
+  _mutex.lock();
+  write(_file_descriptor, (void*)ss.str().c_str(), ss.str().length());
+  _mutex.unlock();
+}
+
 void InitialLogger::flush() {
   fsync(_file_descriptor);
 }
