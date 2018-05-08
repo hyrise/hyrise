@@ -30,6 +30,15 @@ void InitialLogger::log_value(const TransactionID transaction_id, const std::str
   _mutex.unlock();
 }
 
+void InitialLogger::invalidate(const TransactionID transaction_id, const std::string table_name, const RowID row_id){
+  std::stringstream ss;
+  ss << "(i," << transaction_id << "," << table_name << "," << row_id << ")";
+
+  _mutex.lock();
+  write(_file_descriptor, (void*)ss.str().c_str(), ss.str().length());
+  _mutex.unlock();
+}
+
 void InitialLogger::flush() {
   fsync(_file_descriptor);
 }

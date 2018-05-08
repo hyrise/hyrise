@@ -15,6 +15,8 @@ class InitialLogger {
 
   void log_value(const TransactionID transaction_id, const std::string table_name, const RowID row_id, const std::stringstream &values);
 
+  void invalidate(const TransactionID transaction_id, const std::string table_name, const RowID row_id);
+
   void flush();
 
  private:

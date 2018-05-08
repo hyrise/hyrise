@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 
+#include "../concurrency/logging/initialLogger.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/reference_column.hpp"
@@ -48,6 +49,9 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
         _mark_as_failed();
         return nullptr;
       }
+
+      InitialLogger::getInstance().invalidate(_transaction_id, _table_name, row_id);
+
     }
   }
 
