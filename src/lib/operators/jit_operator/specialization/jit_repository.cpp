@@ -5,10 +5,10 @@
 #include <llvm/ADT/SetVector.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DebugInfo.h>
-#include <llvm/Support/Error.h>
-#include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Transforms/Utils/Cloning.h>
+
+#include "llvm_utils.hpp"
 
 namespace opossum {
 
@@ -34,18 +34,10 @@ std::shared_ptr<llvm::LLVMContext> JitRepository::llvm_context() const { return 
 
 std::mutex& JitRepository::specialization_mutex() { return _specialization_mutex; }
 
-JitRepository::JitRepository(std::unique_ptr<llvm::Module> module, std::shared_ptr<llvm::LLVMContext> context)
-    : _llvm_context{context}, _module{std::move(module)} {
-  _initialize();
-}
+JitRepository::JitRepository() : JitRepository(std::string(&jit_llvm_bundle, jit_llvm_bundle_size)) {}
 
-JitRepository::JitRepository()
-    : _llvm_context{std::make_shared<llvm::LLVMContext>()},
-      _module{_parse_module(std::string(&jit_llvm_bundle, jit_llvm_bundle_size), *_llvm_context)} {
-  _initialize();
-}
-
-void JitRepository::_initialize() {
+JitRepository::JitRepository(const std::string& module_string)
+    : _llvm_context{std::make_shared<llvm::LLVMContext>()}, _module{parse_llvm_module(module_string, *_llvm_context)} {
   // Global LLVM initializations
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
@@ -76,19 +68,6 @@ void JitRepository::_initialize() {
       }
     }
   }
-}
-
-std::unique_ptr<llvm::Module> JitRepository::_parse_module(const std::string& module_string,
-                                                           llvm::LLVMContext& context) const {
-  llvm::SMDiagnostic error;
-  const auto buffer = llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(module_string));
-  auto module = llvm::parseIR(*buffer, error, context);
-
-  if (error.getFilename() != "") {
-    error.print("", llvm::errs(), true);
-    Fail("An LLVM error occured while parsing the embedded LLVM bitcode.");
-  }
-  return module;
 }
 
 }  // namespace opossum

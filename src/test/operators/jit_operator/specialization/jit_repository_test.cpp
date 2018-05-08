@@ -2,24 +2,17 @@
 #include <llvm/Support/SourceMgr.h>
 
 #include "../../../base_test.hpp"
-#include "load_module.hpp"
 #include "operators/jit_operator/specialization/jit_repository.hpp"
 
 namespace opossum {
 
-class JitRepositoryTest : public BaseTest {
- protected:
-  void SetUp() override {
-    _context = std::make_shared<llvm::LLVMContext>();
-    _module = load_module("src/test/llvm/virtual_methods.ll", *_context);
-  }
+extern char jit_repository_test_module;
+extern size_t jit_repository_test_module_size;
 
-  std::shared_ptr<llvm::LLVMContext> _context;
-  std::unique_ptr<llvm::Module> _module;
-};
+class JitRepositoryTest : public BaseTest {};
 
 TEST_F(JitRepositoryTest, ProvidesAccessToDefinedFunctions) {
-  auto repository = JitRepository(std::move(_module), _context);
+  auto repository = JitRepository(std::string(&jit_repository_test_module, jit_repository_test_module_size));
 
   // Check that all defined methods in the class hierarchy are present in the bitcode repository.
   // Virtual methods that are not implemented should cause a nullptr.
@@ -37,7 +30,7 @@ TEST_F(JitRepositoryTest, ProvidesAccessToDefinedFunctions) {
 }
 
 TEST_F(JitRepositoryTest, CorrectlyParsesVTablesAcrossClassHierarchy) {
-  auto repository = JitRepository(std::move(_module), _context);
+  auto repository = JitRepository(std::string(&jit_llvm_bundle, jit_llvm_bundle_size));
 
   auto base_bar = repository.get_function("_ZN4Base3barEv");
   auto derived_a_foo = repository.get_function("_ZN8DerivedA3fooEv");

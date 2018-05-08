@@ -143,8 +143,14 @@ set(
 )
 
 if (${ENABLE_JIT_SUPPORT})
+    include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
+    embed_llvm(JIT_COMPILER_TEST_MODULE jit_compiler_test_module operators/jit_operator/specialization/modules/jit_compiler_test_module.cpp)
+    embed_llvm(JIT_REPOSITORY_TEST_MODULE jit_repository_test_module operators/jit_operator/specialization/modules/jit_repository_test_module.cpp)
+
     set(HYRISE_UNIT_TEST_SOURCES
         ${HYRISE_UNIT_TEST_SOURCES}
+        ${JIT_COMPILER_TEST_MODULE}
+        ${JIT_REPOSITORY_TEST_MODULE}
         operators/jit_operator_wrapper_test.cpp
         operators/jit_operator/jit_aware_lqp_translator_test.cpp
         operators/jit_operator/jit_operations_test.cpp
@@ -156,9 +162,7 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/operators/jit_read_write_tuple_test.cpp
         operators/jit_operator/specialization/jit_compiler_test.cpp
         operators/jit_operator/specialization/jit_repository_test.cpp
-        operators/jit_operator/specialization/load_module.cpp
-        operators/jit_operator/specialization/load_module.hpp
-    )
+        )
 endif()
 
 set (

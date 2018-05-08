@@ -3,20 +3,24 @@
 #include <llvm/Support/TargetSelect.h>
 
 #include "../../../base_test.hpp"
-#include "load_module.hpp"
 #include "operators/jit_operator/specialization/jit_compiler.hpp"
+#include "operators/jit_operator/specialization/llvm_utils.hpp"
 
 namespace opossum {
+
+extern char jit_compiler_test_module;
+extern size_t jit_compiler_test_module_size;
 
 class JitCompilerTest : public BaseTest {
  protected:
   void SetUp() override {
     // Global LLVM initializations
     llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmParser();
     llvm::InitializeNativeTargetAsmPrinter();
 
     _context = std::make_shared<llvm::LLVMContext>();
-    _module = load_module("src/test/llvm/add.ll", *_context);
+    _module = parse_llvm_module(std::string(&jit_compiler_test_module, jit_compiler_test_module_size), *_context);
   }
 
   std::shared_ptr<llvm::LLVMContext> _context;

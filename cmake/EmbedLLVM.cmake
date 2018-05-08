@@ -25,15 +25,15 @@ enable_language(ASM)
 #
 #    std::string bitcode_string(&opossum::jit_llvm_bundle, opossum::jit_llvm_bundle_size);
 
-function(EMBED_LLVM OUTPUT_FILE)
+function(EMBED_LLVM OUTPUT_FILE SYMBOL_NAME)
     # Parsing all remaining arguments as input files
     cmake_parse_arguments(llvm "" "EXPORT_MACRO" "" ${ARGN})
     set(INPUT_FILES "${llvm_UNPARSED_ARGUMENTS}")
 
     # Setting up paths for the files that are being generated
-    set(CPP_BUNDLE_FILE "${CMAKE_CURRENT_BINARY_DIR}/embed_llvm/jit_llvm_bundle.cpp")
-    set(LLVM_BUNDLE_FILE "${CMAKE_CURRENT_BINARY_DIR}/embed_llvm/jit_llvm_bundle.bc")
-    set(ASM_FILE "${CMAKE_CURRENT_BINARY_DIR}/embed_llvm/jit_llvm_bundle.s")
+    set(CPP_BUNDLE_FILE "${CMAKE_CURRENT_BINARY_DIR}/embed_llvm/${SYMBOL_NAME}.cpp")
+    set(LLVM_BUNDLE_FILE "${CMAKE_CURRENT_BINARY_DIR}/embed_llvm/${SYMBOL_NAME}.bc")
+    set(ASM_FILE "${CMAKE_CURRENT_BINARY_DIR}/embed_llvm/${SYMBOL_NAME}.s")
 
     # Step 1: Including all input files
     file(WRITE ${CPP_BUNDLE_FILE} "")
@@ -51,18 +51,22 @@ function(EMBED_LLVM OUTPUT_FILE)
     set_source_files_properties(${LLVM_BUNDLE_FILE} PROPERTIES GENERATED TRUE)
 
     # Step 3: Generating the auxilary assembly file
+    string(LENGTH ${SYMBOL_NAME} SYMBOL_NAME_LENGTH)
+    set(MANGLED_SYMBOL _ZN7opossum${SYMBOL_NAME_LENGTH}${SYMBOL_NAME}E)
+    math(EXPR SYMBOL_NAME_SIZE_LENGTH "${SYMBOL_NAME_LENGTH} + 5")
+    set(MANGLED_SIZE_SYMBOL _ZN7opossum${SYMBOL_NAME_SIZE_LENGTH}${SYMBOL_NAME}_sizeE)
     file(WRITE ${ASM_FILE} "
-        .global _ZN7opossum15jit_llvm_bundleE
-        .global __ZN7opossum15jit_llvm_bundleE
-        .global _ZN7opossum20jit_llvm_bundle_sizeE
-        .global __ZN7opossum20jit_llvm_bundle_sizeE
-        _ZN7opossum15jit_llvm_bundleE:
-        __ZN7opossum15jit_llvm_bundleE:
+        .global ${MANGLED_SYMBOL}
+        .global _${MANGLED_SYMBOL}
+        .global ${MANGLED_SIZE_SYMBOL}
+        .global _${MANGLED_SIZE_SYMBOL}
+        ${MANGLED_SYMBOL}:
+        _${MANGLED_SYMBOL}:
         .incbin \"${LLVM_BUNDLE_FILE}\"
         1:
-        _ZN7opossum20jit_llvm_bundle_sizeE:
-        __ZN7opossum20jit_llvm_bundle_sizeE:
-        .8byte 1b - _ZN7opossum15jit_llvm_bundleE"
+        ${MANGLED_SIZE_SYMBOL}:
+        _${MANGLED_SIZE_SYMBOL}:
+        .8byte 1b - ${MANGLED_SYMBOL}"
     )
     set_source_files_properties(${ASM_FILE} PROPERTIES GENERATED TRUE OBJECT_DEPENDS ${LLVM_BUNDLE_FILE})
     set(${OUTPUT_FILE} ${ASM_FILE} PARENT_SCOPE)
