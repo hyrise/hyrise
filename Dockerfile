@@ -1,6 +1,6 @@
 # https://github.com/hyrise/hyrise/wiki/Docker-Image
 
-FROM ubuntu:17.10
+FROM ubuntu:18.04
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
     && apt-get install -y \
@@ -8,13 +8,15 @@ RUN apt-get update \
         build-essential \
         bc \
         ccache \
-        clang-5.0 \
-        clang-format-3.8 \
+        clang-6.0 \
+        clang-format-6.0 \
         cmake \
         curl \
         gcovr \
+        gcc-7 \
         git \
         $(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ') \
+        libclang-6.0-dev \
         libnuma-dev \
         libncurses5-dev \
         libnuma1 \

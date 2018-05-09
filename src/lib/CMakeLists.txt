@@ -230,7 +230,6 @@ set(
     server/client_connection.hpp
     server/use_boost_future.hpp
     server/use_boost_future_impl.hpp
-    server/use_boost_future_legacy_impl.hpp
     statistics/base_column_statistics.cpp
     statistics/base_column_statistics.hpp
     statistics/column_statistics.cpp
