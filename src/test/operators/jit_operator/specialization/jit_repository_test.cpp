@@ -6,11 +6,19 @@
 
 namespace opossum {
 
+// These symbols provide access to the LLVM bitcode string embedded into the hyriseTest binary during compilation.
+// The symbols are defined in an assembly file that is generated in EmbedLLVM.cmake and linked into the binary.
+// Please refer to EmbedLLVM.cmake / src/test/CMakeLists.txt for further details of the bitcode generation and
+// embedding process.
 extern char jit_repository_test_module;
 extern size_t jit_repository_test_module_size;
 
 class JitRepositoryTest : public BaseTest {};
 
+// This test case checks that the JitRepository properly extracts functions and virtual tables from the provided LLVM
+// module.
+// It uses an example LLVM module with a virtual class hierarchy to test this. The C++ code used to generate the bitcode
+// is located in src/test/operators/jit_operator/specialization/modules/jit_repository_test_module.cpp.
 TEST_F(JitRepositoryTest, ProvidesAccessToDefinedFunctions) {
   auto repository = JitRepository(std::string(&jit_repository_test_module, jit_repository_test_module_size));
 

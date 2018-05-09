@@ -19,7 +19,7 @@ extern size_t jit_compiler_test_module_size;
 // It uses a simple LLVM module with a single int32_t add(int32_t, int32_t) function to test adding and removing
 // modules from the compiler as well as resolving compiled symbols.
 // The C++ code used to generate the bitcode is located in
-// src/test/operatros/jit_operators/specialization/modules/jit_compiler_test.cpp.
+// src/test/operators/jit_operator/specialization/modules/jit_compiler_test_module.cpp.
 class JitCompilerTest : public BaseTest {
  protected:
   void SetUp() override {
@@ -34,6 +34,7 @@ class JitCompilerTest : public BaseTest {
 
   std::shared_ptr<llvm::LLVMContext> _context;
   std::unique_ptr<llvm::Module> _module;
+  // this corresponds to "int32_t add(int32_t, int32_t)"
   std::string _add_fn_symbol = "_Z3addii";
 };
 

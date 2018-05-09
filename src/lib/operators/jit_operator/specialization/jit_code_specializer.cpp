@@ -144,8 +144,7 @@ void JitCodeSpecializer::_perform_load_substitution(SpecializationContext& conte
     const auto address = runtime_pointer->address();
     if (inst.getType()->isIntegerTy()) {
       const auto bit_width = inst.getType()->getIntegerBitWidth();
-      const auto mask =
-          bit_width == 64 ? 0xffffffffffffffff : (static_cast<uint64_t>(1) << bit_width) - 1;
+      const auto mask = bit_width == 64 ? 0xffffffffffffffff : (static_cast<uint64_t>(1) << bit_width) - 1;
       const auto value = *reinterpret_cast<uint64_t*>(address) & mask;
       inst.replaceAllUsesWith(llvm::ConstantInt::get(inst.getType(), value));
     } else if (inst.getType()->isFloatTy()) {
@@ -159,11 +158,14 @@ void JitCodeSpecializer::_perform_load_substitution(SpecializationContext& conte
 }
 
 void JitCodeSpecializer::_optimize(SpecializationContext& context, const bool unroll_loops) const {
-  const llvm::Triple module_triple(context.module->getTargetTriple());
-  const llvm::TargetLibraryInfoImpl target_lib_info(module_triple);
-
+  // Create a pass manager that handles dependencies between the optimization passes.
+  // The selection of optimization passes is a manual trail-and-error-based selection and provides a "good" balance
+  // between the result and runtime of the optimization.
   llvm::legacy::PassManager pass_manager;
+
+  // Removes common subexpressions
   pass_manager.add(llvm::createEarlyCSEPass(true));
+  // Attempts to remove as much code from the body of a loop to either before or after the loop
   pass_manager.add(llvm::createLICMPass());
 
   if (unroll_loops) {
@@ -171,11 +173,18 @@ void JitCodeSpecializer::_optimize(SpecializationContext& context, const bool un
       // Remove metadata that prevents loop unrolling
       branch_inst.setMetadata(llvm::LLVMContext::MD_loop, nullptr);
     });
+    // Add a loop unroll pass. The maximum threshold is necessary to force LLVM to unroll loops even if it judges the
+    // unrolling operation as disadvantageous. Loop unrolling (in most cases for the current jit operators) allows
+    // further specialization of the code that leads to much shorter and more efficient code in the end.
+    // But LLVM cannot know that and thus the internal cost model for loop unrolling is disabled.
     pass_manager.add(llvm::createLoopUnrollPass(3, std::numeric_limits<int>::max(), -1, 0));
   }
 
+  // Removes dead code (e.g., unreachable instructions or instructions whose result is unused)
   pass_manager.add(llvm::createAggressiveDCEPass());
+  // Simplifies the control flow by combining basic blocks, removing unreachable blocks, etc.
   pass_manager.add(llvm::createCFGSimplificationPass());
+  // Combines instructions to fold computation of expressions with many constants
   pass_manager.add(llvm::createInstructionCombiningPass(false));
   pass_manager.run(*context.module);
 }
@@ -183,9 +192,12 @@ void JitCodeSpecializer::_optimize(SpecializationContext& context, const bool un
 llvm::Function* JitCodeSpecializer::_create_function_declaration(SpecializationContext& context,
                                                                  const llvm::Function& function,
                                                                  const std::string& suffix) const {
+  // If the function is already declared (or even defined) in the module, we should not add a redundant declaration
   if (auto fn = context.module->getFunction(function.getName())) {
     return fn;
   }
+
+  // Create the declaration with correct signature, linkage, and attributes
   const auto declaration =
       llvm::Function::Create(llvm::cast<llvm::FunctionType>(function.getValueType()), function.getLinkage(),
                              function.getName() + suffix, context.module.get());
@@ -195,32 +207,29 @@ llvm::Function* JitCodeSpecializer::_create_function_declaration(SpecializationC
 
 llvm::Function* JitCodeSpecializer::_clone_function(SpecializationContext& context, const llvm::Function& function,
                                                     const std::string& suffix) const {
+  // First create an appropriate function declaration that we can later clone the function into
   const auto cloned_function = _create_function_declaration(context, function, suffix);
 
-  // map personality function
-  if (function.hasPersonalityFn()) {
-    _visit<llvm::Function>(*function.getPersonalityFn(), [&](const auto& fn) {
-      if (!context.llvm_value_map.count(&fn)) {
-        context.llvm_value_map[&fn] = _create_function_declaration(context, fn);
-      }
-    });
-  }
+  // We create a mapping from values in the source module to values in the target module.
+  // This mapping is passed to LLVM's cloning function and ensures that all references to other functions, global
+  // variables, and function arguments refer to values in the target module and NOT in the source module.
+  // This way the module stays self-contained and valid.
 
-  // map functions called
+  // Map functions called
   _visit<const llvm::Function>(function, [&](const auto& fn) {
-    if (fn.isDeclaration() && !context.llvm_value_map.count(&fn)) {
+    if (!context.llvm_value_map.count(&fn)) {
       context.llvm_value_map[&fn] = _create_function_declaration(context, fn);
     }
   });
 
-  // map global variables
+  // Map global variables accessed
   _visit<const llvm::GlobalVariable>(function, [&](auto& global) {
     if (!context.llvm_value_map.count(&global)) {
       context.llvm_value_map[&global] = _clone_global_variable(context, global);
     }
   });
 
-  // map function args
+  // Map function arguments
   auto arg = function.arg_begin();
   auto cloned_arg = cloned_function->arg_begin();
   for (; arg != function.arg_end() && cloned_arg != cloned_function->arg_end(); ++arg, ++cloned_arg) {
@@ -231,19 +240,19 @@ llvm::Function* JitCodeSpecializer::_clone_function(SpecializationContext& conte
   llvm::SmallVector<llvm::ReturnInst*, 8> returns;
   llvm::CloneFunctionInto(cloned_function, &function, context.llvm_value_map, true, returns);
 
-  // TODO(Johannes) remove?
-  if (function.hasPersonalityFn()) {
-    cloned_function->setPersonalityFn(llvm::MapValue(function.getPersonalityFn(), context.llvm_value_map));
-  }
-
   return cloned_function;
 }
 
 llvm::GlobalVariable* JitCodeSpecializer::_clone_global_variable(SpecializationContext& context,
                                                                  const llvm::GlobalVariable& global_variable) const {
-  if (auto gb = context.module->getGlobalVariable(global_variable.getName())) {
-    return gb;
+  if (auto global = context.module->getGlobalVariable(global_variable.getName())) {
+    return global;
   }
+
+  //
+  //  context.module->getOrInsertGlobal()
+  //  auto cloned_global =
+  //  gVar->setAlignment(4);
 
   const auto cloned_global =
       new llvm::GlobalVariable(*context.module, global_variable.getValueType(), global_variable.isConstant(),

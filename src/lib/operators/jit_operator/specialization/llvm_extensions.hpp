@@ -39,7 +39,12 @@ void CloneAndPruneIntoFromInst(llvm::Function* NewFunc, const llvm::Function* Ol
                                bool ModuleLevelChanges, llvm::SmallVectorImpl<llvm::ReturnInst*>& Returns,
                                const char* NameSuffix, llvm::ClonedCodeInfo* CodeInfo, SpecializationContext& Context);
 
-// Gets a runtime memory location (is possible) for an LLVM bitcode value
+// Gets a runtime memory location (if possible) for an LLVM bitcode value.
+// The specialization context maintains a mapping of already resolved bitcode values and their memory locations.
+// This function starts with the given to-be-resolved LLVM pointer value and traverses the chain of LLVM pointer
+// operations (e.g., Load, GetElementPtr, Bitcast instructions) until an already known value (i.e., one that is present
+// in the map) is encountered or a value can no longer be resolved further (e.g., because the operation relies on a
+// non-constant operand).
 const std::shared_ptr<const JitRuntimePointer>& GetRuntimePointerForValue(const llvm::Value* value,
                                                                           SpecializationContext& context);
 

@@ -22,6 +22,7 @@ const std::shared_ptr<const JitRuntimePointer>& GetRuntimePointerForValue(const 
 
   if (const auto constant_expr = llvm::dyn_cast<llvm::ConstantExpr>(mapped_value)) {
     // Case 1: The value is an IntToPtr instruction embedded in a ConstExpr:
+    // This type of instruction casts a constant integer value to a pointer
     // Take the constant integer from the instruction (operand 0), and convert it to a constant runtime pointer
     if (constant_expr->getType()->isPointerTy()) {
       if (constant_expr->getOpcode() == llvm::Instruction::IntToPtr) {
@@ -40,14 +41,14 @@ const std::shared_ptr<const JitRuntimePointer>& GetRuntimePointerForValue(const 
         context.runtime_value_map[mapped_value] = std::make_shared<JitDereferencedRuntimePointer>(base);
       }
     }
-  } else if (const auto gep_inst = llvm::dyn_cast<llvm::GetElementPtrInst>(mapped_value)) {
+  } else if (const auto get_element_ptr_inst = llvm::dyn_cast<llvm::GetElementPtrInst>(mapped_value)) {
     // Case 3: The value is a GetElementPtr instruction:
     // Try to get 1) the constant offset this instructions applies, and 2) the pointer the offset is applied to
     // If both values can be obtained create a corresponding runtime pointer object
     llvm::APInt offset(64, 0);
-    if (gep_inst->accumulateConstantOffset(context.module->getDataLayout(), offset)) {
+    if (get_element_ptr_inst->accumulateConstantOffset(context.module->getDataLayout(), offset)) {
       if (const auto base = std::dynamic_pointer_cast<const JitKnownRuntimePointer>(
-              GetRuntimePointerForValue(gep_inst->getPointerOperand(), context))) {
+              GetRuntimePointerForValue(get_element_ptr_inst->getPointerOperand(), context))) {
         context.runtime_value_map[mapped_value] =
             std::make_shared<JitOffsetRuntimePointer>(base, offset.getLimitedValue());
       }
