@@ -77,6 +77,7 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context, 
         // The virtual call could not be resolved. There is nothing we can inline so we might as well move on.
         call_sites.pop();
         continue;
+      }
     }
 
     auto& function = *call_site.getCalledFunction();
