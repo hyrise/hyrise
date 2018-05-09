@@ -147,8 +147,7 @@ if (${ENABLE_JIT_SUPPORT})
     embed_llvm(JIT_COMPILER_TEST_MODULE jit_compiler_test_module operators/jit_operator/specialization/modules/jit_compiler_test_module.cpp)
     embed_llvm(JIT_REPOSITORY_TEST_MODULE jit_repository_test_module operators/jit_operator/specialization/modules/jit_repository_test_module.cpp)
     # Prevent clang from complaining about unused defines when compiling the assembly file
-    set_property(SOURCE ${JIT_COMPILER_TEST_MODULE} PROPERTY COMPILE_FLAGS -Qunused-arguments)
-    set_property(SOURCE ${JIT_REPOSITORY_TEST_MODULE} PROPERTY COMPILE_FLAGS -Qunused-arguments)
+    set_property(SOURCE ${JIT_COMPILER_TEST_MODULE} ${JIT_REPOSITORY_TEST_MODULE} PROPERTY COMPILE_FLAGS -Qunused-arguments)
 
     set(HYRISE_UNIT_TEST_SOURCES
         ${HYRISE_UNIT_TEST_SOURCES}
