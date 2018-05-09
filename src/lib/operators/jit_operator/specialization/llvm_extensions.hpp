@@ -6,29 +6,6 @@
 
 #include "jit_runtime_pointer.hpp"
 
-/* The code specialization uses cloning and inlining functionality from LLVM, but requires two small modifications to
- * the implementation provided by LLVM:
- * 1) When cloning functions, LLVM maintains a map of corresponding values in the old and new function. This map is used
- * to substitute instruction operands during cloning.
- * When cloning functions across module boundaries this map needs to be initialized with all global objects to ensure
- * references to such objects in the cloned function refer to the correct module.
- * While the CloneFunction API accepts an initialized method as a parameter, the InlineFunction (which uses
- * CloneFunction internally) does not expose this parameter. Our modified implementation adds this parameter and passes
- * it through to the CloneFunction function.
- * 2) LLVM supports pruning of basic blocks during function cloning. The conditions of switch and conditional branch
- * instructions are evaluated. In case of a constant conditions, the branch target can be pre-computed and the branch
- * instruction be eliminated. However, LLVM only performs a static analysis of the LLVM bitcode. We thus extended the
- * pruning mechanism to also consider runtime information.
- *
- * Two LLVM files (CloneFunction.cpp and InlineFunction.cpp) have been copied from the LLVM repository located at
- * https://github.com/llvm-mirror/llvm/tree/release_50 to the llvm/ subdirectory.
- * The changes made to these files are documented by the corresponding diff files.
- * The files are excluded from automatic formatting and linting to keep them as close to the original source code as
- * possible.
- * The changes to these files are kept to a minimum. Most of the extensions made to LLVM can be found in
- * llvm_extensions.cpp.
- */
-
 namespace opossum {
 
 // Data necessary to specialize the current module. This data is kept in a separate structure outside the
