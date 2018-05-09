@@ -157,57 +157,57 @@ TEST_F(JitAwareLQPTranslatorTest, LiteralValuesAreAddedToJitReadTupleAdapter) {
   ASSERT_EQ(input_literals[1].tuple_value.is_nullable(), false);
 }
 
-TEST_F(JitAwareLQPTranslatorTest, SelectedColumnsAreOutputInCorrectOrder) {
-  {
-    // Select a subset of columns
-    const auto jit_operator_wrapper = translate_query("SELECT a FROM table_a WHERE a > 1");
-    const auto jit_operators = jit_operator_wrapper->jit_operators();
-    ASSERT_EQ(jit_operators.size(), 4u);
+TEST_F(JitAwareLQPTranslatorTest, ColumnSubsetIsOutputCorrectly) {
+  // Select a subset of columns
+  const auto jit_operator_wrapper = translate_query("SELECT a FROM table_a WHERE a > 1");
+  const auto jit_operators = jit_operator_wrapper->jit_operators();
+  ASSERT_EQ(jit_operators.size(), 4u);
 
-    const auto jit_read_tuples = std::dynamic_pointer_cast<JitReadTuples>(jit_operators[0]);
-    ASSERT_NE(jit_read_tuples, nullptr);
-    const auto jit_write_tuples = std::dynamic_pointer_cast<JitWriteTuples>(jit_operators[3]);
-    ASSERT_NE(jit_write_tuples, nullptr);
+  const auto jit_read_tuples = std::dynamic_pointer_cast<JitReadTuples>(jit_operators[0]);
+  ASSERT_NE(jit_read_tuples, nullptr);
+  const auto jit_write_tuples = std::dynamic_pointer_cast<JitWriteTuples>(jit_operators[3]);
+  ASSERT_NE(jit_write_tuples, nullptr);
 
-    const auto output_columns = jit_write_tuples->output_columns();
-    ASSERT_EQ(output_columns.size(), 1u);
+  const auto output_columns = jit_write_tuples->output_columns();
+  ASSERT_EQ(output_columns.size(), 1u);
 
-    // The column output in the JitWriteTuples adapter should match the column read by the JitReadTuples adapter
-    ASSERT_TRUE(jit_read_tuples->find_input_column(output_columns[0].tuple_value) == ColumnID{0});
-  }
-  {
-    // Select all columns
-    const auto jit_operator_wrapper = translate_query("SELECT * FROM table_a WHERE a > 1");
-    const auto jit_operators = jit_operator_wrapper->jit_operators();
-    ASSERT_EQ(jit_operators.size(), 4u);
+  // The column output in the JitWriteTuples adapter should match the column read by the JitReadTuples adapter
+  ASSERT_TRUE(jit_read_tuples->find_input_column(output_columns[0].tuple_value) == ColumnID{0});
+}
 
-    const auto jit_read_tuples = std::dynamic_pointer_cast<JitReadTuples>(jit_operators[0]);
-    ASSERT_NE(jit_read_tuples, nullptr);
-    const auto jit_write_tuples = std::dynamic_pointer_cast<JitWriteTuples>(jit_operators[3]);
-    ASSERT_NE(jit_write_tuples, nullptr);
+TEST_F(JitAwareLQPTranslatorTest, AllColumnsAreOutputCorrectly) {
+  // Select all columns
+  const auto jit_operator_wrapper = translate_query("SELECT * FROM table_a WHERE a > 1");
+  const auto jit_operators = jit_operator_wrapper->jit_operators();
+  ASSERT_EQ(jit_operators.size(), 4u);
 
-    const auto output_columns = jit_write_tuples->output_columns();
-    ASSERT_EQ(output_columns.size(), 3u);
-    ASSERT_TRUE(jit_read_tuples->find_input_column(output_columns[0].tuple_value) == ColumnID{0});
-    ASSERT_TRUE(jit_read_tuples->find_input_column(output_columns[1].tuple_value) == ColumnID{1});
-    ASSERT_TRUE(jit_read_tuples->find_input_column(output_columns[2].tuple_value) == ColumnID{2});
-  }
-  {
-    // Select columns in different order
-    const auto jit_operator_wrapper = translate_query("SELECT c, a FROM table_a WHERE a > 1");
-    const auto jit_operators = jit_operator_wrapper->jit_operators();
-    ASSERT_EQ(jit_operators.size(), 4u);
+  const auto jit_read_tuples = std::dynamic_pointer_cast<JitReadTuples>(jit_operators[0]);
+  ASSERT_NE(jit_read_tuples, nullptr);
+  const auto jit_write_tuples = std::dynamic_pointer_cast<JitWriteTuples>(jit_operators[3]);
+  ASSERT_NE(jit_write_tuples, nullptr);
 
-    const auto jit_read_tuples = std::dynamic_pointer_cast<JitReadTuples>(jit_operators[0]);
-    ASSERT_NE(jit_read_tuples, nullptr);
-    const auto jit_write_tuples = std::dynamic_pointer_cast<JitWriteTuples>(jit_operators[3]);
-    ASSERT_NE(jit_write_tuples, nullptr);
+  const auto output_columns = jit_write_tuples->output_columns();
+  ASSERT_EQ(output_columns.size(), 3u);
+  ASSERT_TRUE(jit_read_tuples->find_input_column(output_columns[0].tuple_value) == ColumnID{0});
+  ASSERT_TRUE(jit_read_tuples->find_input_column(output_columns[1].tuple_value) == ColumnID{1});
+  ASSERT_TRUE(jit_read_tuples->find_input_column(output_columns[2].tuple_value) == ColumnID{2});
+}
 
-    const auto output_columns = jit_write_tuples->output_columns();
-    ASSERT_EQ(output_columns.size(), 2u);
-    ASSERT_TRUE(jit_read_tuples->find_input_column(output_columns[0].tuple_value) == ColumnID{2});
-    ASSERT_TRUE(jit_read_tuples->find_input_column(output_columns[1].tuple_value) == ColumnID{0});
-  }
+TEST_F(JitAwareLQPTranslatorTest, ReorderedColumnsAreOutputCorrectly) {
+  // Select columns in different order
+  const auto jit_operator_wrapper = translate_query("SELECT c, a FROM table_a WHERE a > 1");
+  const auto jit_operators = jit_operator_wrapper->jit_operators();
+  ASSERT_EQ(jit_operators.size(), 4u);
+
+  const auto jit_read_tuples = std::dynamic_pointer_cast<JitReadTuples>(jit_operators[0]);
+  ASSERT_NE(jit_read_tuples, nullptr);
+  const auto jit_write_tuples = std::dynamic_pointer_cast<JitWriteTuples>(jit_operators[3]);
+  ASSERT_NE(jit_write_tuples, nullptr);
+
+  const auto output_columns = jit_write_tuples->output_columns();
+  ASSERT_EQ(output_columns.size(), 2u);
+  ASSERT_TRUE(jit_read_tuples->find_input_column(output_columns[0].tuple_value) == ColumnID{2});
+  ASSERT_TRUE(jit_read_tuples->find_input_column(output_columns[1].tuple_value) == ColumnID{0});
 }
 
 TEST_F(JitAwareLQPTranslatorTest, OutputColumnNamesAndAlias) {

@@ -143,6 +143,13 @@ set(
 )
 
 if (${ENABLE_JIT_SUPPORT})
+    # Some of the JIT test cases require pre-compiled LLVM bitcode.
+    # To ensure this bitcode is always up-to-date and works across operating systems, the bitcode is automatically
+    # compiled along with the hyriseTest binary (see cmake/EmbedLLVM.cmake for details of this process).
+    # The C++ input files for the bitcode generation are located in
+    # src/test/operators/jit_operator/specialization/modules/.
+    # Each line below starting with "embed_llvm(" embeds on of these test files and exposes it as a different symbol
+    # name. Each test case can the access the required bitcode using this symbol.
     include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
     embed_llvm(JIT_COMPILER_TEST_MODULE jit_compiler_test_module operators/jit_operator/specialization/modules/jit_compiler_test_module.cpp)
     embed_llvm(JIT_REPOSITORY_TEST_MODULE jit_repository_test_module operators/jit_operator/specialization/modules/jit_repository_test_module.cpp)

@@ -8,9 +8,18 @@
 
 namespace opossum {
 
+// These symbols provide access to the LLVM bitcode string embedded into the hyriseTest binary during compilation.
+// The symbols are defined in an assembly file that is generated in EmbedLLVM.cmake and linked into the binary.
+// Please refer to EmbedLLVM.cmake / src/test/CMakeLists.txt for further details of the bitcode generation and
+// embedding process.
 extern char jit_compiler_test_module;
 extern size_t jit_compiler_test_module_size;
 
+// This test case checks the JitCompiler, a thin wrapper around LLVM's just-in-time compilation functionality.
+// It uses a simple LLVM module with a single int32_t add(int32_t, int32_t) function to test adding and removing
+// modules from the compiler as well as resolving compiled symbols.
+// The C++ code used to generate the bitcode is located in
+// src/test/operatros/jit_operators/specialization/modules/jit_compiler_test.cpp.
 class JitCompilerTest : public BaseTest {
  protected:
   void SetUp() override {

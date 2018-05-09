@@ -77,7 +77,6 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context, 
         // The virtual call could not be resolved. There is nothing we can inline so we might as well move on.
         call_sites.pop();
         continue;
-      }
     }
 
     auto& function = *call_site.getCalledFunction();
@@ -145,7 +144,7 @@ void JitCodeSpecializer::_perform_load_substitution(SpecializationContext& conte
     if (inst.getType()->isIntegerTy()) {
       const auto bit_width = inst.getType()->getIntegerBitWidth();
       const auto mask =
-          bit_width == 64 ? 0xffffffffffffffff : (static_cast<uint64_t>(1) << inst.getType()->getIntegerBitWidth()) - 1;
+          bit_width == 64 ? 0xffffffffffffffff : (static_cast<uint64_t>(1) << bit_width) - 1;
       const auto value = *reinterpret_cast<uint64_t*>(address) & mask;
       inst.replaceAllUsesWith(llvm::ConstantInt::get(inst.getType(), value));
     } else if (inst.getType()->isFloatTy()) {

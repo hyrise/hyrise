@@ -33,8 +33,6 @@ namespace opossum {
  */
 class JitRuntimePointer {
  public:
-  using Ptr = std::shared_ptr<const JitRuntimePointer>;
-
   virtual ~JitRuntimePointer() {}
 
   virtual bool is_valid() const { return false; }
@@ -42,8 +40,6 @@ class JitRuntimePointer {
 
 class JitKnownRuntimePointer : public JitRuntimePointer {
  public:
-  using Ptr = std::shared_ptr<const JitKnownRuntimePointer>;
-
   // Checks whether the address pointed to is valid (i.e., can be dereferenced).
   // This solution is based on https://stackoverflow.com/questions/4611776/isbadreadptr-analogue-on-unix
   bool is_valid() const override {
