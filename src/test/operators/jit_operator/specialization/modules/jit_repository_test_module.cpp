@@ -1,4 +1,5 @@
 #include <iostream>
+#include <memory>
 
 struct Base {
   virtual void foo() = 0;
@@ -23,14 +24,20 @@ struct DerivedD : public DerivedC {
 };
 
 // Prevent LLVM from optimizing away the entire class hierarchy
-int main() {
-  DerivedA a;
-  DerivedB c;
-  DerivedD d;
-  a.foo();
-  a.bar();
-  c.foo();
-  c.bar();
-  d.foo();
-  d.bar();
+int main(int argc, char* argv[]) {
+  std::shared_ptr<Base> instance;
+
+  switch (argc) {
+    case 0:
+      instance = std::make_shared<DerivedA>();
+      break;
+    case 1:
+      instance = std::make_shared<DerivedB>();
+      break;
+    default:
+      instance = std::make_shared<DerivedD>();
+      break;
+  }
+  instance->foo();
+  instance->bar();
 }
