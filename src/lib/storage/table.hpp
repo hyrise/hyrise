@@ -94,6 +94,12 @@ class Table : private Noncopyable {
   void append_chunk(const ChunkColumns& columns, const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
                     const std::shared_ptr<ChunkAccessCounter>& access_counter = nullptr);
 
+  /**
+   * Appends an existing chunk to this table.
+   * Makes sure the columns in the chunk match with the TableType and the MVCC setting is the same as for the table.
+   */
+  void append_chunk(const std::shared_ptr<Chunk> chunk);
+
   // Create and append a Chunk consisting of ValueColumns.
   void append_mutable_chunk();
 
