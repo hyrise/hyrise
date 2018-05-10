@@ -9,7 +9,7 @@
 #include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
-#include "optimizer/table_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

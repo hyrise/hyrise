@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-// We need a boolean data type in the JitOperator, but don't want to add it to
+// We need a boolean data type in the JitOperatorWrapper, but don't want to add it to
 // DATA_TYPE_INFO to avoid costly template instantiations.
 // See "all_type_variant.hpp" for details.
 #define JIT_DATA_TYPE_INFO ((bool, Bool, "bool")) DATA_TYPE_INFO
@@ -19,9 +19,9 @@ namespace opossum {
 
 #define JIT_VARIANT_VECTOR_RESIZE(r, d, type) BOOST_PP_TUPLE_ELEM(3, 1, type).resize(new_size);
 
-/* A brief overview of the type system and the way values are handled in the JitOperator:
+/* A brief overview of the type system and the way values are handled in the JitOperatorWrapper:
  *
- * The JitOperator performs most of its operations on variant values, since this allows writing generic operators with
+ * The JitOperatorWrapper performs most of its operations on variant values, since this allows writing generic operators with
  * an unlimited number of variably-typed operands (without the need for excessive templating).
  * While this sounds costly at first, the jit engine knows the actual type of each value in advance and replaces generic
  * operations with specialized versions for the concrete data types.
@@ -37,12 +37,12 @@ namespace opossum {
  * Both restrictions are enforced using the same mechanism:
  * All values (and other data that must not be available to the specialization engine) are encapsulated in the
  * JitRuntimeContext. This context is only passed to the operator after code specialization has taken place.
- * The JitRuntimeContext contains a vector of variant values (called tuple) which the JitOperator can access through
+ * The JitRuntimeContext contains a vector of variant values (called tuple) which the JitOperatorWrapper can access through
  * JitTupleValue instances.
- * The runtime tuple is created and destroyed outside the JitOperator's scope, so no memory management is
+ * The runtime tuple is created and destroyed outside the JitOperatorWrapper's scope, so no memory management is
  * required from within the operator.
  * Each JitTupleValue encapsulates information about how to access a single value in the runtime tuple. However, the
- * JitTupleValues are part of the JitOperator and must thus not store a reference to the JitRuntimeContext. So while
+ * JitTupleValues are part of the JitOperatorWrapper and must thus not store a reference to the JitRuntimeContext. So while
  * they "know" how to access values in the runtime tuple, they do not have the means to do so.
  * Only by passing the runtime context to a JitTupleValue allows the value to be accessed.
  */
@@ -91,7 +91,7 @@ class JitVariantVector {
 class BaseJitColumnReader;
 class BaseJitColumnWriter;
 
-// The structure encapsulates all data available to the JitOperator at runtime,
+// The structure encapsulates all data available to the JitOperatorWrapper at runtime,
 // but NOT during code specialization.
 struct JitRuntimeContext {
   uint32_t chunk_size;

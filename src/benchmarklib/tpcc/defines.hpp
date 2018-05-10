@@ -7,10 +7,6 @@ namespace opossum {
 
 class OperatorTask;
 
+using TaskVector = std::vector<std::shared_ptr<OperatorTask>>;
+
 }  // namespace opossum
-
-namespace tpcc {
-
-using TaskVector = std::vector<std::shared_ptr<opossum::OperatorTask>>;
-
-}  // namespace tpcc

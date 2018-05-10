@@ -7,7 +7,6 @@
 #include "operators/difference.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
-#include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
@@ -40,11 +39,11 @@ class RecreationTest : public BaseTest {
     _table_wrapper_c->execute();
     _table_wrapper_d->execute();
 
-    _test_get_table = std::make_shared<Table>(TableColumnDefinitions{}, TableType::Data, 2);
-    StorageManager::get().add_table("aNiceTestTable", _test_get_table);
+    _test_table = load_table("src/test/tables/int_float.tbl", 2);
+    StorageManager::get().add_table("aNiceTestTable", _test_table);
   }
 
-  std::shared_ptr<Table> _test_get_table;
+  std::shared_ptr<Table> _test_table;
   std::shared_ptr<TableWrapper> _table_wrapper_a, _table_wrapper_b, _table_wrapper_c, _table_wrapper_d;
 };
 
@@ -52,7 +51,7 @@ template <typename T>
 class RecreationTestJoin : public RecreationTest {};
 
 // here we define all Join types
-using JoinTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge, JoinMPSM>;
+using JoinTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge>;
 TYPED_TEST_CASE(RecreationTestJoin, JoinTypes);
 
 TYPED_TEST(RecreationTestJoin, RecreationJoin) {
@@ -100,14 +99,14 @@ TEST_F(RecreationTest, RecreationGetTable) {
   // build and execute get table
   auto get_table = std::make_shared<GetTable>("aNiceTestTable");
   get_table->execute();
-  EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(), _test_get_table);
+  EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(), _test_table);
 
   // recreate and execute recreated get table
   auto recreated_get_table = get_table->recreate();
   EXPECT_NE(recreated_get_table, nullptr) << "Could not recreate GetTable";
 
   recreated_get_table->execute();
-  EXPECT_TABLE_EQ_UNORDERED(recreated_get_table->get_output(), _test_get_table);
+  EXPECT_TABLE_EQ_UNORDERED(recreated_get_table->get_output(), _test_table);
 }
 
 TEST_F(RecreationTest, RecreationLimit) {

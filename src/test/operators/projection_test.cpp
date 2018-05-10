@@ -176,6 +176,17 @@ TEST_F(OperatorsProjectionTest, AllColumns) {
   EXPECT_TABLE_EQ_UNORDERED(projection->get_output(), expected_result);
 }
 
+TEST_F(OperatorsProjectionTest, NoColumns) {
+  if (!IS_DEBUG) return;
+
+  std::shared_ptr<Table> expected_result = load_table("src/test/tables/float_int.tbl", 2);
+
+  auto projection = std::make_shared<Projection>(_table_wrapper, std::vector<std::shared_ptr<PQPExpression>>{});
+  projection->execute();
+
+  EXPECT_THROW(projection->get_output(), std::logic_error);
+}
+
 TEST_F(OperatorsProjectionTest, ConstantArithmeticProjection) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int_int_fix_values.tbl", 2);
 

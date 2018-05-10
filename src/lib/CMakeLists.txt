@@ -189,17 +189,15 @@ set(
     operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
-    optimizer/base_column_statistics.cpp
-    optimizer/base_column_statistics.hpp
-    optimizer/chunk_statistics/abstract_filter.hpp
-    optimizer/chunk_statistics/chunk_column_statistics.cpp
-    optimizer/chunk_statistics/chunk_column_statistics.hpp
-    optimizer/chunk_statistics/chunk_statistics.cpp
-    optimizer/chunk_statistics/chunk_statistics.hpp
-    optimizer/chunk_statistics/min_max_filter.hpp
-    optimizer/chunk_statistics/range_filter.hpp
-    optimizer/column_statistics.cpp
-    optimizer/column_statistics.hpp
+    statistics/statistics_import_export.cpp
+    statistics/statistics_import_export.hpp
+    statistics/chunk_statistics/abstract_filter.hpp
+    statistics/chunk_statistics/chunk_column_statistics.cpp
+    statistics/chunk_statistics/chunk_column_statistics.hpp
+    statistics/chunk_statistics/chunk_statistics.cpp
+    statistics/chunk_statistics/chunk_statistics.hpp
+    statistics/chunk_statistics/min_max_filter.hpp
+    statistics/chunk_statistics/range_filter.hpp
     optimizer/join_ordering/join_edge.cpp
     optimizer/join_ordering/join_edge.hpp
     optimizer/join_ordering/join_graph_builder.cpp
@@ -227,8 +225,6 @@ set(
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/strategy/rule_batch.cpp
     optimizer/strategy/rule_batch.hpp
-    optimizer/table_statistics.cpp
-    optimizer/table_statistics.hpp
     planviz/abstract_visualizer.hpp
     planviz/lqp_visualizer.cpp
     planviz/lqp_visualizer.hpp
@@ -270,7 +266,16 @@ set(
     server/types.hpp
     server/use_boost_future.hpp
     server/use_boost_future_impl.hpp
-    server/use_boost_future_legacy_impl.hpp
+    statistics/base_column_statistics.cpp
+    statistics/base_column_statistics.hpp
+    statistics/column_statistics.cpp
+    statistics/column_statistics.cpp
+    statistics/generate_table_statistics.cpp
+    statistics/generate_table_statistics.hpp
+    statistics/generate_column_statistics.cpp
+    statistics/generate_column_statistics.hpp
+    statistics/table_statistics.cpp
+    statistics/table_statistics.hpp
     sql/abstract_cache.hpp
     sql/gdfs_cache.hpp
     sql/gds_cache.hpp
@@ -454,7 +459,7 @@ set(
     ${TBB_LIBRARY}
 )
 
-if (NOT DISABLE_JIT_SUPPORT)
+if (${ENABLE_JIT_SUPPORT})
     include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
     set(JIT_EMBEDDED_SOURCES
         # Files listed here will be embedded into the binary as LLVM-IR
@@ -470,14 +475,18 @@ if (NOT DISABLE_JIT_SUPPORT)
         operators/jit_operator/operators/jit_expression.hpp
         operators/jit_operator/operators/jit_filter.cpp
         operators/jit_operator/operators/jit_filter.hpp
-        operators/jit_operator/operators/jit_read_tuple.cpp
-        operators/jit_operator/operators/jit_read_tuple.hpp
-        operators/jit_operator/operators/jit_write_tuple.cpp
-        operators/jit_operator/operators/jit_write_tuple.hpp
+        operators/jit_operator/operators/jit_read_tuples.cpp
+        operators/jit_operator/operators/jit_read_tuples.hpp
+        operators/jit_operator/operators/jit_write_tuples.cpp
+        operators/jit_operator/operators/jit_write_tuples.hpp
     )
     embed_llvm(LLVM_BUNDLE_FILE ${JIT_EMBEDDED_SOURCES})
     set(
         SOURCES
+        operators/jit_operator/jit_aware_lqp_translator.cpp
+        operators/jit_operator/jit_aware_lqp_translator.hpp
+        operators/jit_operator_wrapper.cpp
+        operators/jit_operator_wrapper.hpp
         ${SOURCES}
         ${JIT_EMBEDDED_SOURCES}
         ${LLVM_BUNDLE_FILE})
@@ -486,7 +495,7 @@ if (NOT DISABLE_JIT_SUPPORT)
     set(LIBRARIES ${LIBRARIES} ${LLVM_LIBRARY})
 endif()
 
-if (NOT DISABLE_NUMA_SUPPORT AND ${NUMA_FOUND})
+if (${ENABLE_NUMA_SUPPORT})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
 endif()
 

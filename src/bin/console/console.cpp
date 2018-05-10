@@ -9,6 +9,7 @@
 #include <chrono>
 #include <csetjmp>
 #include <csignal>
+#include <cstdlib>
 #include <ctime>
 #include <iomanip>
 #include <iostream>
@@ -129,7 +130,7 @@ Console::Console()
 
   // Register words specifically for command completion purposes, e.g.
   // for TPC-C table generation, 'CUSTOMER', 'DISTRICT', etc
-  auto tpcc_generators = tpcc::TpccTableGenerator::tpcc_table_generator_functions();
+  auto tpcc_generators = opossum::TpccTableGenerator::tpcc_table_generator_functions();
   for (auto it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it) {
     _tpcc_commands.push_back(it->first);
   }
@@ -333,8 +334,17 @@ void Console::out(std::shared_ptr<const Table> table, uint32_t flags) {
   int size_y, size_x;
   rl_get_screen_size(&size_y, &size_x);
 
+  const bool fits_on_one_page = table->row_count() < static_cast<uint64_t>(size_y) - 1;
+
+  static bool pagination_disabled = false;
+  if (!fits_on_one_page && !std::getenv("TERM") && !pagination_disabled) {
+    out("Your TERM environment variable is not set - most likely because you are running the console from an IDE. "
+        "Pagination is disabled.\n\n");
+    pagination_disabled = true;
+  }
+
   // Paginate only if table has more rows that fit in the terminal
-  if (table->row_count() < static_cast<uint64_t>(size_y) - 1) {
+  if (fits_on_one_page || pagination_disabled) {
     Print::print(table, flags, _out);
   } else {
     std::stringstream stream;
@@ -380,7 +390,7 @@ int Console::help(const std::string&) {
 int Console::generate_tpcc(const std::string& tablename) {
   if (tablename.empty() || "ALL" == tablename) {
     out("Generating TPCC tables (this might take a while) ...\n");
-    auto tables = tpcc::TpccTableGenerator().generate_all_tables();
+    auto tables = opossum::TpccTableGenerator().generate_all_tables();
     for (auto& pair : tables) {
       StorageManager::get().add_table(pair.first, pair.second);
     }
@@ -388,7 +398,7 @@ int Console::generate_tpcc(const std::string& tablename) {
   }
 
   out("Generating TPCC table: \"" + tablename + "\" ...\n");
-  auto table = tpcc::TpccTableGenerator::generate_tpcc_table(tablename);
+  auto table = opossum::TpccTableGenerator::generate_tpcc_table(tablename);
   if (table == nullptr) {
     out("Error: No TPCC table named \"" + tablename + "\" available.\n");
     return Console::ReturnCode::Error;

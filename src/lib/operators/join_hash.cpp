@@ -575,11 +575,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         output_column_definitions = _right_in_table->column_definitions();
       } else {
         output_column_definitions =
-            concatenate(_right_in_table->column_definitions(), _left_in_table->column_definitions());
+            concatenated(_right_in_table->column_definitions(), _left_in_table->column_definitions());
       }
     } else {
       output_column_definitions =
-          concatenate(_left_in_table->column_definitions(), _right_in_table->column_definitions());
+          concatenated(_left_in_table->column_definitions(), _right_in_table->column_definitions());
     }
 
     _output_table = std::make_shared<Table>(output_column_definitions, TableType::References);
