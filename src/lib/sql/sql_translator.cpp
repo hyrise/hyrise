@@ -20,6 +20,7 @@
 //#include "expression/value_expression.hpp"
 //#include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/alias_node.hpp"
 //#include "logical_query_plan/aggregate_node.hpp"
 //#include "logical_query_plan/create_view_node.hpp"
 //#include "logical_query_plan/delete_node.hpp"
@@ -516,12 +517,18 @@ const hsql::SelectStatement &select) {
 //  if (having_expression) {
 //    translation_state.lqp = _translate_predicate_expression(having_expression, translation_state.lqp);
 //  }
-
   // Create output_expressions from SELECT list, including column wildcards
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions;
   std::unordered_map<std::shared_ptr<AbstractExpression>, std::string> column_aliases;
 
   auto output_column_id = ColumnID{0};
+
+  // Check whether we need to create an AliasNode
+  const auto need_alias_node = std::any_of(select.selectList->begin(), select.selectList->end(), [](const auto * hsql_expr) {
+    return hsql_expr->alias != nullptr;
+  });
+  auto aliases = std::optional<std::vector<std::string>>{};
+  if (need_alias_node) aliases.emplace();
 
   for (auto select_list_idx = size_t{0}; select_list_idx < select.selectList->size(); ++select_list_idx) {
     const auto* hsql_expr = (*select.selectList)[select_list_idx];
@@ -555,12 +562,20 @@ const hsql::SelectStatement &select) {
     auto output_expression = select_list_elements[select_list_idx];
     output_expressions.emplace_back(output_expression);
 
-//    if (hsql_expr->alias) {
-//      translation_state.qualified_column_name_lookup->set_column_name(output_expression, hsql_expr->alias);
-//    }
+    // Handle aliases
+    if (hsql_expr->alias) {
+      _sql_identifier_context->set_column_name(output_expression, hsql_expr->alias);
+      aliases->emplace_back(hsql_expr->alias);
+    } else if (need_alias_node) {
+      aliases->emplace_back(output_expression->as_column_name());
+    }
   }
 
   _current_lqp = ProjectionNode::make(output_expressions, _current_lqp);
+
+  if (need_alias_node) {
+    _current_lqp = AliasNode::make(output_expressions, *aliases, _current_lqp);
+  }
 }
 
 //std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_order_by(

@@ -17,6 +17,7 @@ set(
 #    lib/all_type_variant_test.cpp
     expression/expression_test.cpp
     expression/expression_evaluator_test.cpp
+    logical_query_plan/alias_node_test.cpp
 #    logical_query_plan/aggregate_node_test.cpp
 #    logical_query_plan/create_view_node_test.cpp
 #    logical_query_plan/drop_view_node_test.cpp
@@ -37,6 +38,7 @@ set(
 #    logical_query_plan/union_node_test.cpp
 #    logical_query_plan/update_node_test.cpp
 #    logical_query_plan/validate_node_test.cpp
+    operators/alias_operator_test.cpp
 #    operators/aggregate_test.cpp
 #    operators/case_test.cpp
 #    operators/delete_test.cpp

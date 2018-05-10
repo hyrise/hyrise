@@ -9,6 +9,7 @@
 #include "expression/arithmetic_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -31,18 +32,18 @@ class SQLTranslatorTest : public ::testing::Test {
  public:
   void SetUp() override {
     load_test_tables();
-    _stored_table_node_int_float = StoredTableNode::make("int_float");
-    _stored_table_node_int_float2 = StoredTableNode::make("int_float2");
-    _stored_table_node_int_float5 = StoredTableNode::make("int_float5");
-    _int_float_a = _stored_table_node_int_float->get_column("a");
-    _int_float_b = _stored_table_node_int_float->get_column("b");
+    stored_table_node_int_float = StoredTableNode::make("int_float");
+    stored_table_node_int_float2 = StoredTableNode::make("int_float2");
+    stored_table_node_int_float5 = StoredTableNode::make("int_float5");
+    int_float_a = stored_table_node_int_float->get_column("a");
+    int_float_b = stored_table_node_int_float->get_column("b");
 //    _table_b_a = _stored_table_node_b->get_column("a"s);
 //    _table_b_b = _stored_table_node_b->get_column("b"s);
 //    _table_c_a = _stored_table_node_c->get_column("a"s);
 //    _table_c_d = _stored_table_node_c->get_column("d"s);
 
-    _int_float_a_expression = std::make_shared<LQPColumnExpression>(_int_float_a);
-    _int_float_b_expression = std::make_shared<LQPColumnExpression>(_int_float_b);
+    int_float_a_expression = std::make_shared<LQPColumnExpression>(int_float_a);
+    int_float_b_expression = std::make_shared<LQPColumnExpression>(int_float_b);
 
   }
 
@@ -56,12 +57,12 @@ class SQLTranslatorTest : public ::testing::Test {
     return lqps.at(0);
   }
 
-  std::shared_ptr<StoredTableNode> _stored_table_node_int_float;
-  std::shared_ptr<StoredTableNode> _stored_table_node_int_float2;
-  std::shared_ptr<StoredTableNode> _stored_table_node_int_float5;
-  std::shared_ptr<AbstractExpression> _int_float_a_expression;
-  std::shared_ptr<AbstractExpression> _int_float_b_expression;
-  LQPColumnReference _int_float_a, _int_float_b;
+  std::shared_ptr<StoredTableNode> stored_table_node_int_float;
+  std::shared_ptr<StoredTableNode> stored_table_node_int_float2;
+  std::shared_ptr<StoredTableNode> stored_table_node_int_float5;
+  std::shared_ptr<AbstractExpression> int_float_a_expression;
+  std::shared_ptr<AbstractExpression> int_float_b_expression;
+  LQPColumnReference int_float_a, int_float_b;
 //  LQPColumnReference _table_a_b;
 //  LQPColumnReference _table_b_a;
 //  LQPColumnReference _table_b_b;
@@ -73,9 +74,9 @@ TEST_F(SQLTranslatorTest, SelectSingleColumn) {
   const auto actual_lqp = compile_query("SELECT a FROM int_float;");
 
   const auto expected_expression = std::vector<std::shared_ptr<AbstractExpression>>({
-                                                                                    _int_float_a_expression
+                                                                                    int_float_a_expression
   });
-  const auto expected_lqp = ProjectionNode::make(expected_expression, _stored_table_node_int_float);
+  const auto expected_lqp = ProjectionNode::make(expected_expression, stored_table_node_int_float);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -84,9 +85,9 @@ TEST_F(SQLTranslatorTest, SimpleArithmeticExpression) {
   const auto actual_lqp = compile_query("SELECT a * b FROM int_float;");
 
   const auto expected_expression = std::vector<std::shared_ptr<AbstractExpression>>({
-    std::make_shared<ArithmeticExpression>(ArithmeticOperator::Multiplication, _int_float_a_expression, _int_float_b_expression)
+    std::make_shared<ArithmeticExpression>(ArithmeticOperator::Multiplication, int_float_a_expression, int_float_b_expression)
   });
-  const auto expected_lqp = ProjectionNode::make(expected_expression, _stored_table_node_int_float);
+  const auto expected_lqp = ProjectionNode::make(expected_expression, stored_table_node_int_float);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -102,14 +103,31 @@ TEST_F(SQLTranslatorTest, CaseExpression) {
 
   const auto value_123 = std::make_shared<ValueExpression>(123);
   const auto value_1234 = std::make_shared<ValueExpression>(1234);
-  const auto a_eq_123 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, _int_float_a_expression, value_123);
-  const auto a_eq_1234 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, _int_float_a_expression, value_1234);
+  const auto a_eq_123 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, int_float_a_expression, value_123);
+  const auto a_eq_1234 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, int_float_a_expression, value_1234);
   const auto null_value = std::make_shared<ValueExpression>(NullValue{});
-  const auto case_a_eq_1234 = std::make_shared<CaseExpression>(a_eq_1234, _int_float_a_expression, null_value);
-  const auto case_a_eq_123 = std::make_shared<CaseExpression>(a_eq_123, _int_float_b_expression, case_a_eq_1234);
+  const auto case_a_eq_1234 = std::make_shared<CaseExpression>(a_eq_1234, int_float_a_expression, null_value);
+  const auto case_a_eq_123 = std::make_shared<CaseExpression>(a_eq_123, int_float_b_expression, case_a_eq_1234);
 
   const auto expected_expression = std::vector<std::shared_ptr<AbstractExpression>>({case_a_eq_123});
-  const auto expected_lqp = ProjectionNode::make(expected_expression, _stored_table_node_int_float);
+  const auto expected_lqp = ProjectionNode::make(expected_expression, stored_table_node_int_float);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, AliasesInSelectList) {
+  const auto actual_lqp = compile_query("SELECT a AS column_a, b, b + a AS sum_column FROM int_float;");
+
+  const auto b_plus_a_expression = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, int_float_a_expression, int_float_b_expression);
+  const auto expressions = std::vector<std::shared_ptr<AbstractExpression>>{{int_float_a_expression, int_float_b_expression, b_plus_a_expression}};
+  const auto aliases = std::vector<std::string>{{"column_a", "b", "sum_column"}};
+
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expressions, aliases,
+    ProjectionNode::make(expressions, stored_table_node_int_float)
+  );
+  // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }

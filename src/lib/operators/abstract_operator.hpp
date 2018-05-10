@@ -16,6 +16,7 @@ class TransactionContext;
 
 enum class OperatorType {
   Aggregate,
+  Alias,
   Delete,
   Difference,
   ExportBinary,
@@ -93,7 +94,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // The given arguments are used to replace the ValuePlaceholder objects within the new operator, if applicable.
   // Recursively recreates the input operators and passes the argument list along.
   // An operator needs to implement this method in order to be cacheable.
-  virtual std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args = {}) const;
+  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args = {}) const;
 
   // Get the input operators.
   std::shared_ptr<const AbstractOperator> input_left() const;

@@ -78,6 +78,8 @@ set(
 #    import_export/csv_writer.hpp
     logical_query_plan/abstract_lqp_node.cpp
     logical_query_plan/abstract_lqp_node.hpp
+    logical_query_plan/alias_node.cpp
+    logical_query_plan/alias_node.hpp
 #    logical_query_plan/aggregate_node.cpp
 #    logical_query_plan/aggregate_node.hpp
 #    logical_query_plan/create_view_node.cpp
@@ -103,8 +105,8 @@ set(
     logical_query_plan/lqp_translator.hpp
     logical_query_plan/lqp_utils.cpp
     logical_query_plan/lqp_utils.hpp
-#    logical_query_plan/mock_node.cpp
-#    logical_query_plan/mock_node.hpp
+    logical_query_plan/mock_node.cpp
+    logical_query_plan/mock_node.hpp
 #    logical_query_plan/predicate_node.cpp
 #    logical_query_plan/predicate_node.hpp
     logical_query_plan/projection_node.cpp
@@ -134,6 +136,8 @@ set(
     operators/abstract_read_write_operator.hpp
     operators/aggregate.cpp
     operators/aggregate.hpp
+    operators/alias_operator.cpp
+    operators/alias_operator.hpp
 #    operators/delete.cpp
 #    operators/delete.hpp
 #    operators/difference.cpp

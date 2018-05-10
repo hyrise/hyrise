@@ -33,6 +33,7 @@
 //#include "operators/maintenance/show_tables.hpp"
 //#include "operators/pqp_expression.hpp"
 //#include "operators/product.hpp"
+#include "operators/alias_operator.hpp"
 #include "operators/projection.hpp"
 //#include "operators/sort.hpp"
 //#include "operators/table_scan.hpp"
@@ -40,6 +41,7 @@
 //#include "operators/union_positions.hpp"
 //#include "operators/update.hpp"
 //#include "operators/validate.hpp"
+#include "alias_node.hpp"
 //#include "predicate_node.hpp"
 #include "projection_node.hpp"
 //#include "show_columns_node.hpp"
@@ -84,6 +86,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
 LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
   switch (type) {
+    case LQPNodeType::Alias:        return _translate_alias_node(node);
     case LQPNodeType::StoredTable:
       return _translate_stored_table_node(node);
 //    case LQPNodeType::Predicate:
@@ -222,6 +225,22 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_stored_table_node(
 //
 //  return std::make_shared<UnionPositions>(index_scan, table_scan);
 //}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alias_node(
+const std::shared_ptr<opossum::AbstractLQPNode> &node) const {
+  const auto alias_node = std::dynamic_pointer_cast<AliasNode>(node);
+  const auto input_node = alias_node->left_input();
+  const auto input_operator = translate_node(input_node);
+
+  auto column_ids = std::vector<ColumnID>();
+  column_ids.reserve(alias_node->output_column_expressions().size());
+
+  for (const auto& expression : alias_node->output_column_expressions()) {
+    column_ids.emplace_back(input_node->get_column_id(*expression));
+  }
+
+  return std::make_shared<AliasOperator>(input_operator, column_ids, alias_node->aliases);
+}
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_projection_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
@@ -399,7 +418,7 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
      */
 
     visit_expression(pqp_expression, [&](auto & expression) {
-      const auto column_id = node->find_column(*expression);
+      const auto column_id = node->find_column_id(*expression);
       if (column_id) {
         const auto referenced_expression = node->output_column_expressions()[*column_id];
         expression = std::make_shared<PQPColumnExpression>(*column_id,

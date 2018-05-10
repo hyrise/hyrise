@@ -137,12 +137,18 @@ const std::vector<std::shared_ptr<AbstractExpression>>& AbstractLQPNode::output_
   return left_input()->output_column_expressions();
 }
 
-std::optional<ColumnID> AbstractLQPNode::find_column(const AbstractExpression& expression) const {
+std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression &expression) const {
   const auto& output_column_expressions = this->output_column_expressions(); // Avoid redundant retrieval in loop below
   for (auto column_id = ColumnID{0}; column_id < output_column_expressions.size(); ++column_id) {
     if (output_column_expressions[column_id]->deep_equals(expression)) return column_id;
   }
   return std::nullopt;
+}
+
+ColumnID AbstractLQPNode::get_column_id(const AbstractExpression &expression) const {
+  const auto column_id = find_column_id(expression);
+  Assert(column_id, "Couldn't resolve column");
+  return *column_id;
 }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy_impl(LQPNodeMapping & node_mapping) const {
@@ -161,7 +167,7 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy_impl(LQPNodeMapping
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_shallow_copy(LQPNodeMapping & node_mapping) const {
   const auto node_mapping_iter = node_mapping.find(shared_from_this());
 
-  // Handle diamon shapes in the LQP; don't copy nodes twice
+  // Handle diamond shapes in the LQP; don't copy nodes twice
   if (node_mapping_iter != node_mapping.end()) return node_mapping_iter->second;
 
   auto shallow_copy = _shallow_copy_impl(node_mapping);

@@ -10,6 +10,8 @@
 
 namespace opossum {
 
+class TableStatistics;
+
 /**
  * Node that represents a table that has no data backing it, but may provide
  *  - (mocked) statistics
@@ -21,27 +23,21 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
  public:
   using ColumnDefinitions = std::vector<std::pair<DataType, std::string>>;
 
-  explicit MockNode(const ColumnDefinitions& column_definitions,
-                    const std::optional<std::string>& alias = std::nullopt);
-  explicit MockNode(const std::shared_ptr<TableStatistics>& statistics,
-                    const std::optional<std::string>& alias = std::nullopt);
-
-  const std::vector<std::string>& output_column_names() const override;
+  explicit MockNode(const ColumnDefinitions& column_definitions);
+//  explicit MockNode(const std::shared_ptr<TableStatistics>& statistics);
 
   const boost::variant<ColumnDefinitions, std::shared_ptr<TableStatistics>>& constructor_arguments() const;
 
-  std::string description() const override;
-  std::string get_verbose_column_name(ColumnID column_id) const override;
+  const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const override;
 
-  bool shallow_equals(const AbstractLQPNode& rhs) const override;
+  //std::string description() const override;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
+  std::shared_ptr<AbstractLQPNode> _shallow_copy_impl(LQPNodeMapping & node_mapping) const override;
+  bool _shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const override;
 
  private:
-  std::vector<std::string> _output_column_names;
+  mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _output_column_expressions;
 
   // Constructor args to keep around for deep_copy()
   boost::variant<ColumnDefinitions, std::shared_ptr<TableStatistics>> _constructor_arguments;

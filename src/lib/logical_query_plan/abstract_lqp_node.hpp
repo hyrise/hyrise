@@ -12,6 +12,7 @@ class AbstractExpression;
 
 enum class LQPNodeType {
   Aggregate,
+  Alias,
   CreateView,
   Delete,
   DropView,
@@ -107,7 +108,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 
   virtual const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const;
 
-  std::optional<ColumnID> find_column(const AbstractExpression& expression) const;
+  std::optional<ColumnID> find_column_id(const AbstractExpression &expression) const;
+  ColumnID get_column_id(const AbstractExpression &expression) const;
 
   const LQPNodeType type;
 
