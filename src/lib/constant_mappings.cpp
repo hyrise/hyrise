@@ -161,6 +161,7 @@ const std::unordered_map<EncodingType, std::string> encoding_type_to_string = {
     {EncodingType::Dictionary, "Dictionary"},
     {EncodingType::RunLength, "RunLength"},
     {EncodingType::FrameOfReference, "FrameOfReference"},
+    {EncodingType::Unencoded, "Unencoded"},
 };
 
 const std::unordered_map<VectorCompressionType, std::string> vector_compression_type_to_string = {

@@ -10,8 +10,10 @@ namespace fs = std::experimental::filesystem;
 #endif
 
 #include <json.hpp>
+#include <storage/chunk_encoder.hpp>
 
 #include "benchmark_runner.hpp"
+#include "constant_mappings.hpp"
 #include "import_export/csv_parser.hpp"
 #include "planviz/lqp_visualizer.hpp"
 #include "planviz/sql_query_plan_visualizer.hpp"
@@ -178,7 +180,17 @@ BenchmarkRunner BenchmarkRunner::create_tpch(BenchmarkConfig config, const std::
   }
 
   config.out << "- Generating TPCH Tables with scale_factor=" << scale_factor << "..." << std::endl;
-  opossum::TpchDbGenerator(scale_factor, config.chunk_size).generate_and_store();
+
+  ColumnEncodingSpec encoding_spec{config.encoding_type};
+  const auto tables = opossum::TpchDbGenerator(scale_factor, config.chunk_size).generate();
+
+  for (auto& table : tables) {
+    if (config.encoding_type != EncodingType::Unencoded) {
+      ChunkEncoder::encode_all_chunks(table.second, encoding_spec);
+    }
+
+    StorageManager::get().add_table(tpch_table_names.at(table.first), table.second);
+  }
   config.out << "- Done." << std::endl;
 
   auto context = _create_context(config);
@@ -198,6 +210,8 @@ BenchmarkRunner BenchmarkRunner::create(BenchmarkConfig config, const std::strin
   CsvMeta csv_meta{};
   csv_meta.chunk_size = config.chunk_size;
 
+  ColumnEncodingSpec encoding_spec{config.encoding_type};
+
   for (const auto& table_str : tables) {
     const auto table_name = fs::path{table_str}.stem().string();
 
@@ -206,6 +220,10 @@ BenchmarkRunner BenchmarkRunner::create(BenchmarkConfig config, const std::strin
       table = load_table(table_str, config.chunk_size);
     } else {
       table = CsvParser{}.parse(table_str, csv_meta);
+    }
+
+    if (config.encoding_type != EncodingType::Unencoded) {
+      ChunkEncoder::encode_all_chunks(table, encoding_spec);
     }
 
     StorageManager::get().add_table(table_name, table);
@@ -415,25 +433,7 @@ nlohmann::json BenchmarkRunner::_create_context(const BenchmarkConfig& config) {
   std::stringstream timestamp_stream;
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
-  std::string encoding_string;
-  switch (config.encoding_type) {
-    case EncodingType::Unencoded: {
-      encoding_string = "none";
-      break;
-    }
-    case EncodingType::Dictionary: {
-      encoding_string = "dictionary";
-      break;
-    }
-    case EncodingType::RunLength: {
-      encoding_string = "runlength";
-      break;
-    }
-    case EncodingType::FrameOfReference: {
-      encoding_string = "frameofreference";
-      break;
-    }
-  }
+  const auto encoding_string = encoding_type_to_string.at(config.encoding_type);
 
   return nlohmann::json{
       {"date", timestamp_stream.str()},
