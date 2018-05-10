@@ -6,7 +6,8 @@
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
-#include "optimizer/table_statistics.hpp"
+#include "statistics/column_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 #include "resolve_type.hpp"
 
 namespace opossum {
