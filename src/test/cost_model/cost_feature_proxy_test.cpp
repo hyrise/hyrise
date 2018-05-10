@@ -94,13 +94,13 @@ TYPED_TEST(CostFeatureProxyTest, AllFeatures) {
   EXPECT_FLOAT_EQ(proxies.join_proxy->extract_feature(CostFeature::LeftInputRowCountLogN).scalar(),
                   150 * std::log(150));
   EXPECT_FLOAT_EQ(proxies.join_proxy->extract_feature(CostFeature::RightInputRowCountLogN).scalar(), 25 * std::log(25));
-  EXPECT_EQ(proxies.join_proxy->extract_feature(CostFeature::MajorInputRowCount).scalar(), 150);
-  EXPECT_EQ(proxies.join_proxy->extract_feature(CostFeature::MinorInputRowCount).scalar(), 25);
-  EXPECT_EQ(proxies.join_proxy->extract_feature(CostFeature::MajorInputReferenceRowCount).scalar(), 0);
-  EXPECT_EQ(proxies.join_proxy->extract_feature(CostFeature::MinorInputReferenceRowCount).scalar(), 0);
+  EXPECT_EQ(proxies.join_proxy->extract_feature(CostFeature::LargerInputRowCount).scalar(), 150);
+  EXPECT_EQ(proxies.join_proxy->extract_feature(CostFeature::SmallerInputRowCount).scalar(), 25);
+  EXPECT_EQ(proxies.join_proxy->extract_feature(CostFeature::LargerInputReferenceRowCount).scalar(), 0);
+  EXPECT_EQ(proxies.join_proxy->extract_feature(CostFeature::SmallerInputReferenceRowCount).scalar(), 0);
   EXPECT_GT(proxies.join_proxy->extract_feature(CostFeature::OutputRowCount).scalar(), 0);
-  EXPECT_EQ(proxies.join_proxy->extract_feature(CostFeature::OutputDereferenceRowCount).scalar(), 0);
-  EXPECT_GT(proxies.predicate_proxy->extract_feature(CostFeature::OutputDereferenceRowCount).scalar(), 0);
+  EXPECT_EQ(proxies.join_proxy->extract_feature(CostFeature::OutputReferenceRowCount).scalar(), 0);
+  EXPECT_GT(proxies.predicate_proxy->extract_feature(CostFeature::OutputReferenceRowCount).scalar(), 0);
   EXPECT_EQ(proxies.join_proxy->extract_feature(CostFeature::LeftDataType).data_type(), DataType::Int);
   EXPECT_EQ(proxies.join_proxy->extract_feature(CostFeature::RightDataType).data_type(), DataType::Int);
   EXPECT_EQ(proxies.join_proxy->extract_feature(CostFeature::PredicateCondition).predicate_condition(),

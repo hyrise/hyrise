@@ -24,12 +24,12 @@ enum class CostFeature {
   RightInputReferenceRowCount,  // *InputRowCount if the input is References, 0 otherwise
   LeftInputRowCountLogN,
   RightInputRowCountLogN,  // *InputRowCount * log(*InputRowCount)
-  MajorInputRowCount,
-  MinorInputRowCount,  // Major = Input with more rows, Minor = Input with less rows
-  MajorInputReferenceRowCount,
-  MinorInputReferenceRowCount,
+  LargerInputRowCount,
+  SmallerInputRowCount,  // Major = Input with more rows, Minor = Input with less rows
+  LargerInputReferenceRowCount,
+  SmallerInputReferenceRowCount,
   OutputRowCount,
-  OutputDereferenceRowCount,  // If input is References, then OutputRowCount. 0 otherwise.
+  OutputReferenceRowCount,  // If input is References, then OutputRowCount. 0 otherwise.
 
   /**
    * Categorical features
