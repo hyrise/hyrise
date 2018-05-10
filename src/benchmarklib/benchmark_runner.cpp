@@ -183,7 +183,7 @@ BenchmarkRunner BenchmarkRunner::create_tpch(BenchmarkConfig config, const std::
 
   auto context = _create_context(config);
   // Add TPCH-specific information
-  context.insert(context.end(), {"scale_factor", scale_factor});
+  context.emplace("scale_factor", scale_factor);
 
   return BenchmarkRunner(std::move(config), queries, context);
 }
@@ -312,7 +312,7 @@ cxxopts::Options BenchmarkRunner::get_default_cli_options(const std::string& ben
     ("o,output", "File to output results to, don't specify for stdout", cxxopts::value<std::string>())
     ("m,mode", "IndividualQueries or PermutedQuerySets, default is IndividualQueries", cxxopts::value<std::string>()->default_value("IndividualQueries")) // NOLINT
     ("e,encoding", "Specify Chunk encoding. Options: none, dictionary, runlength, frameofreference (default: dictionary)", cxxopts::value<std::string>()->default_value("dictionary"))  // NOLINT
-    ("s,scheduler", "Enable or disable the scheduler", cxxopts::value<bool>()->default_value("false")) // NOLINT
+    ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("mvcc", "Enable MVCC", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("visualize", "Create a visualization image of one LQP and PQP for each query", cxxopts::value<bool>()->default_value("false")); // NOLINT
   // clang-format on

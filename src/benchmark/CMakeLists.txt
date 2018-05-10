@@ -26,29 +26,20 @@ target_link_libraries(
     benchmark
 )
 
+# General purpose benchmark runner
+add_executable(hyriseBenchmarkRunner benchmark_runner_main.cpp)
+target_link_libraries(
+    hyriseBenchmarkRunner
+
+    hyrise
+    hyriseBenchmarkLib
+)
+
 # Configure hyriseBenchmarkTPCH
 add_executable(hyriseBenchmarkTPCH tpch_benchmark.cpp)
 target_link_libraries(
     hyriseBenchmarkTPCH
-    hyrise
-    hyriseBenchmarkLib
-)
-
-# General purpose benchmark runner
-add_executable(
-    hyriseBenchmarkRunner
-
-    benchmark_runner.cpp
-    benchmark_runner.hpp
-    benchmark_runner_main.cpp
-    benchmark_utils.cpp
-    benchmark_utils.hpp
-)
-
-target_link_libraries(
-    hyriseBenchmarkRunner
 
     hyrise
     hyriseBenchmarkLib
-    ${FILESYSTEM_LIBRARY}
 )
