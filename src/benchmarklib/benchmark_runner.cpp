@@ -77,7 +77,8 @@ void BenchmarkRunner::run() {
 
 void BenchmarkRunner::_benchmark_permuted_query_sets() {
   // Init results
-  for (const auto& [name, _] : _queries) {
+  for (const auto& named_query : _queries) {
+    const auto& name = named_query.first;
     _query_results_by_query_name.emplace(name, QueryBenchmarkResult{});
   }
 
@@ -145,7 +146,8 @@ void BenchmarkRunner::_execute_query(const NamedQuery& named_query) {
 void BenchmarkRunner::_create_report(std::ostream& stream) const {
   nlohmann::json benchmarks;
 
-  for (const auto& [name, _] : _queries) {
+  for (const auto& named_query : _queries) {
+    const auto& name = named_query.first;
     const auto& query_result = _query_results_by_query_name.at(name);
 
     const auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(query_result.duration).count();
