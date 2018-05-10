@@ -2,8 +2,8 @@
 
 namespace opossum {
 
-std::ostream& out() {
-  if (verbose_benchmark) {
+std::ostream& get_out_stream(const bool verbose) {
+  if (verbose) {
     return std::cout;
   }
 
@@ -16,7 +16,6 @@ std::ostream& out() {
 
   static NullBuffer null_buffer;
   static std::ostream null_stream(&null_buffer);
-
   return null_stream;
 }
 
@@ -54,21 +53,27 @@ bool BenchmarkState::keep_running() {
 }
 
 BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode,
+                                 const bool verbose,
                                  const ChunkOffset chunk_size,
                                  const EncodingType encoding_type,
                                  const size_t max_num_query_runs,
                                  const Duration& max_duration,
                                  const UseMvcc use_mvcc,
                                  const std::optional<std::string>& output_file_path,
-                                 const bool enable_visualization)
+                                 const bool enable_scheduler,
+                                 const bool enable_visualization,
+                                 std::ostream& out)
     : benchmark_mode(benchmark_mode),
+      verbose(verbose),
       chunk_size(chunk_size),
       encoding_type(encoding_type),
       max_num_query_runs(max_num_query_runs),
       max_duration(max_duration),
       use_mvcc(use_mvcc),
       output_file_path(output_file_path),
-      enable_visualization(enable_visualization) {}
+      enable_scheduler(enable_scheduler),
+      enable_visualization(enable_visualization),
+      out(out) {}
 
 }  // namespace opossum
 

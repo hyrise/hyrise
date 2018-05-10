@@ -10,10 +10,6 @@
 
 namespace opossum {
 
-cxxopts::Options cli_options_description{"TPCH Benchmark", ""};
-
-auto x = cli_options_description.
-
 /**
  * IndividualQueries runs each query a number of times and then the next one
  * PermutedQuerySets runs the queries as sets permuting their order after each run (this exercises caches)
@@ -26,13 +22,10 @@ using TimePoint = std::chrono::high_resolution_clock::time_point;
 using NamedQuery = std::pair<std::string, std::string>;
 using NamedQueries = std::vector<NamedQuery>;
 
-// Used to config out()
-auto verbose_benchmark = false;
-
 /**
- * @return std::cout if `verbose_benchmark` is true, otherwise returns a discarding stream
+ * @return std::cout if `verbose` is true, otherwise returns a discarding stream
  */
-std::ostream& out();
+std::ostream& get_out_stream(const bool verbose);
 
 struct QueryBenchmarkResult {
   size_t num_iterations = 0;
@@ -45,7 +38,6 @@ using BenchmarkResults = std::unordered_map<std::string, QueryBenchmarkResult>;
 /**
  * Loosely copying the functionality of benchmark::State
  * keep_running() returns false once enough iterations or time has passed.
- *
  */
 struct BenchmarkState {
   enum class State { NotStarted, Running, Over };
@@ -64,18 +56,22 @@ struct BenchmarkState {
 };
 
 struct BenchmarkConfig {
-  BenchmarkConfig(const BenchmarkMode benchmark_mode, const ChunkOffset chunk_size, const EncodingType encoding_type,
-                  const size_t max_num_query_runs, const Duration& max_duration, const UseMvcc use_mvcc,
-                  const std::optional<std::string>& output_file_path, const bool enable_visualization);
+  BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool verbose, const ChunkOffset chunk_size,
+                  const EncodingType encoding_type, const size_t max_num_query_runs, const Duration& max_duration,
+                  const UseMvcc use_mvcc, const std::optional<std::string>& output_file_path,
+                  const bool enable_scheduler, const bool enable_visualization, std::ostream& out);
 
-  const BenchmarkMode benchmark_mode = BenchmarkMode::IndividualQueries;
-  const ChunkOffset chunk_size = Chunk::MAX_SIZE;
-  const EncodingType encoding_type = EncodingType::Dictionary;
-  const size_t max_num_query_runs = 1000;
-  const Duration max_duration = std::chrono::seconds{5};
-  const UseMvcc use_mvcc = UseMvcc::No;
-  const std::optional<std::string> output_file_path = std::nullopt;
-  const bool enable_visualization = false;
+  const BenchmarkMode benchmark_mode;
+  const bool verbose;
+  const ChunkOffset chunk_size;
+  const EncodingType encoding_type;
+  const size_t max_num_query_runs;
+  const Duration max_duration;
+  const UseMvcc use_mvcc;
+  const std::optional<std::string> output_file_path;
+  const bool enable_scheduler;
+  const bool enable_visualization;
+  std::ostream& out;
 };
 
 

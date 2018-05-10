@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <optional>
 
+#include <json.hpp>
+
 #include "storage/encoding_type.hpp"
 #include "storage/chunk.hpp"
 #include "sql/sql_query_plan.hpp"
@@ -22,8 +24,13 @@ class BenchmarkRunner {
 
   void run();
 
+  static BenchmarkConfig parse_default_cli_options(const cxxopts::ParseResult& parse_result,
+                                                   const cxxopts::Options& cli_options);
+  static cxxopts::Options get_default_cli_options(const std::string& benchmark_name);
+
  private:
-  BenchmarkRunner(BenchmarkConfig config, const NamedQueries& queries);
+
+  BenchmarkRunner(BenchmarkConfig config, const NamedQueries& queries, const nlohmann::json& context);
 
   // Run benchmark in BenchmarkMode::PermutedQuerySets mode
   void _benchmark_permuted_query_sets();
@@ -35,6 +42,13 @@ class BenchmarkRunner {
 
   // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json
   void _create_report(std::ostream& stream) const;
+  // Get all the files/tables/queries from a given path
+
+  static std::vector<std::string> _parse_table_path(const std::string& table_path);
+  static NamedQueries _parse_query_path(const std::string& query_path);
+  static NamedQueries _parse_query_file(const std::string& query_path);
+
+  static nlohmann::json _create_context(const BenchmarkConfig& config);
 
   struct QueryPlans final {
     // std::vector<>s, since queries can contain multiple statements
@@ -50,6 +64,8 @@ class BenchmarkRunner {
   const NamedQueries _queries;
 
   BenchmarkResults _query_results_by_query_name;
+
+  nlohmann::json _context;
 };
 
 
