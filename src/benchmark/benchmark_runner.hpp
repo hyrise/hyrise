@@ -1,25 +1,26 @@
 #pragma once
 
-#include <vector>
-#include <chrono>
-#include <iostream>
-#include <unordered_map>
-#include <optional>
-
 #include <json.hpp>
 
-#include "storage/encoding_type.hpp"
-#include "storage/chunk.hpp"
-#include "sql/sql_query_plan.hpp"
+#include <chrono>
+#include <iostream>
+#include <optional>
+#include <unordered_map>
+#include <vector>
+
+#include "benchmark_utils.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
-#include "benchmark_utils.hpp"
+#include "sql/sql_query_plan.hpp"
+#include "storage/chunk.hpp"
+#include "storage/encoding_type.hpp"
 
 namespace opossum {
 
 class BenchmarkRunner {
  public:
-  static BenchmarkRunner create_tpch(BenchmarkConfig config, const std::vector<QueryID>& query_ids = {}, float scale_factor = 1.0f);
+  static BenchmarkRunner create_tpch(BenchmarkConfig config, const std::vector<QueryID>& query_ids = {},
+                                     float scale_factor = 1.0f);
   static BenchmarkRunner create(BenchmarkConfig config, const std::string& table_path, const std::string& query_path);
 
   void run();
@@ -29,7 +30,6 @@ class BenchmarkRunner {
   static cxxopts::Options get_default_cli_options(const std::string& benchmark_name);
 
  private:
-
   BenchmarkRunner(BenchmarkConfig config, const NamedQueries& queries, const nlohmann::json& context);
 
   // Run benchmark in BenchmarkMode::PermutedQuerySets mode
@@ -68,7 +68,4 @@ class BenchmarkRunner {
   nlohmann::json _context;
 };
 
-
 }  // namespace opossum
-
-

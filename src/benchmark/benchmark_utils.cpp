@@ -20,10 +20,9 @@ std::ostream& get_out_stream(const bool verbose) {
 }
 
 BenchmarkState::BenchmarkState(const size_t max_num_iterations, const opossum::Duration max_duration)
-  : max_num_iterations(max_num_iterations), max_duration(max_duration) {}
+    : max_num_iterations(max_num_iterations), max_duration(max_duration) {}
 
 bool BenchmarkState::keep_running() {
-
   switch (state) {
     case State::NotStarted:
       begin = std::chrono::high_resolution_clock::now();
@@ -52,17 +51,11 @@ bool BenchmarkState::keep_running() {
   return true;
 }
 
-BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode,
-                                 const bool verbose,
-                                 const ChunkOffset chunk_size,
-                                 const EncodingType encoding_type,
-                                 const size_t max_num_query_runs,
-                                 const Duration& max_duration,
-                                 const UseMvcc use_mvcc,
-                                 const std::optional<std::string>& output_file_path,
-                                 const bool enable_scheduler,
-                                 const bool enable_visualization,
-                                 std::ostream& out)
+BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool verbose, const ChunkOffset chunk_size,
+                                 const EncodingType encoding_type, const size_t max_num_query_runs,
+                                 const Duration& max_duration, const UseMvcc use_mvcc,
+                                 const std::optional<std::string>& output_file_path, const bool enable_scheduler,
+                                 const bool enable_visualization, std::ostream& out)
     : benchmark_mode(benchmark_mode),
       verbose(verbose),
       chunk_size(chunk_size),
@@ -76,5 +69,3 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode,
       out(out) {}
 
 }  // namespace opossum
-
-

@@ -1,12 +1,13 @@
 #pragma once
 
-#include <iostream>
-#include <chrono>
-#include <unordered_map>
 #include <cxxopts.hpp>
 
-#include "storage/encoding_type.hpp"
+#include <chrono>
+#include <iostream>
+#include <unordered_map>
+
 #include "storage/chunk.hpp"
+#include "storage/encoding_type.hpp"
 
 namespace opossum {
 
@@ -73,6 +74,5 @@ struct BenchmarkConfig {
   const bool enable_visualization;
   std::ostream& out;
 };
-
 
 }  // namespace opossum

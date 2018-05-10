@@ -1,19 +1,7 @@
 #include <random>
 
-#include <json.hpp>
-
-#include "benchmark_runner.hpp"
-#include "tpch/tpch_db_generator.hpp"
-#include "sql/sql_pipeline_builder.hpp"
-#include "tpch/tpch_queries.hpp"
-#include "planviz/lqp_visualizer.hpp"
-#include "planviz/sql_query_plan_visualizer.hpp"
-#include "utils/load_table.hpp"
-#include "import_export/csv_parser.hpp"
-#include "storage/storage_manager.hpp"
-
 #if __has_include(<fs>)
-#include <fs>
+#include <filesystem>
 namespace fs = std::filesystem;
 #else
 #include <experimental/filesystem>
@@ -21,12 +9,22 @@ namespace fs = std::filesystem;
 namespace fs = std::experimental::filesystem;
 #endif
 
+#include <json.hpp>
 
+#include "benchmark_runner.hpp"
+#include "import_export/csv_parser.hpp"
+#include "planviz/lqp_visualizer.hpp"
+#include "planviz/sql_query_plan_visualizer.hpp"
+#include "sql/sql_pipeline_builder.hpp"
+#include "storage/storage_manager.hpp"
+#include "tpch/tpch_db_generator.hpp"
+#include "tpch/tpch_queries.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
 BenchmarkRunner::BenchmarkRunner(BenchmarkConfig config, const NamedQueries& queries, const nlohmann::json& context)
-  : _config(std::move(config)), _queries(queries), _context(context) {}
+    : _config(std::move(config)), _queries(queries), _context(context) {}
 
 void BenchmarkRunner::run() {
   _config.out << "\n- Starting Benchmark.." << std::endl;
@@ -170,7 +168,8 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
   stream << std::setw(2) << report << std::endl;
 }
 
-BenchmarkRunner BenchmarkRunner::create_tpch(BenchmarkConfig config, const std::vector<QueryID>& query_ids, const float scale_factor) {
+BenchmarkRunner BenchmarkRunner::create_tpch(BenchmarkConfig config, const std::vector<QueryID>& query_ids,
+                                             const float scale_factor) {
   NamedQueries queries;
   queries.reserve(query_ids.size());
 
@@ -189,8 +188,7 @@ BenchmarkRunner BenchmarkRunner::create_tpch(BenchmarkConfig config, const std::
   return BenchmarkRunner(std::move(config), queries, context);
 }
 
-BenchmarkRunner BenchmarkRunner::create(BenchmarkConfig config,
-                                        const std::string& table_path,
+BenchmarkRunner BenchmarkRunner::create(BenchmarkConfig config, const std::string& table_path,
                                         const std::string& query_path) {
   const auto tables = _parse_table_path(table_path);
   if (tables.empty()) {
@@ -252,9 +250,7 @@ std::vector<std::string> BenchmarkRunner::_parse_table_path(const std::string& t
 }
 
 NamedQueries BenchmarkRunner::_parse_query_path(const std::string& query_path) {
-  const auto is_sql_file = [](const std::string& filename) {
-    return boost::algorithm::ends_with(filename, ".sql");
-  };
+  const auto is_sql_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".sql"); };
 
   fs::path path{query_path};
   if (!fs::exists(path)) {
@@ -268,7 +264,6 @@ NamedQueries BenchmarkRunner::_parse_query_path(const std::string& query_path) {
       throw std::runtime_error("Specified file '" + query_path + "' is not an .sql file");
     }
   }
-
 
   // Recursively walk through the specified directory and add all files on the way
   NamedQueries queries;
@@ -302,8 +297,6 @@ NamedQueries BenchmarkRunner::_parse_query_file(const std::string& query_path) {
   }
 
   return queries;
-
-
 }
 
 cxxopts::Options BenchmarkRunner::get_default_cli_options(const std::string& benchmark_name) {
@@ -327,7 +320,8 @@ cxxopts::Options BenchmarkRunner::get_default_cli_options(const std::string& ben
   return cli_options;
 }
 
-BenchmarkConfig BenchmarkRunner::parse_default_cli_options(const cxxopts::ParseResult& parse_result, const cxxopts::Options& cli_options) {
+BenchmarkConfig BenchmarkRunner::parse_default_cli_options(const cxxopts::ParseResult& parse_result,
+                                                           const cxxopts::Options& cli_options) {
   // Should the benchmark be run in verbose mode
   const auto verbose = parse_result["verbose"].as<bool>();
   auto& out = get_out_stream(verbose);
@@ -386,17 +380,13 @@ BenchmarkConfig BenchmarkRunner::parse_default_cli_options(const cxxopts::ParseR
   auto encoding_type = EncodingType::Dictionary;  // Just to init it deterministically
   if (encoding_type_str == "dictionary") {
     encoding_type = EncodingType::Dictionary;
-  }
-  else if (encoding_type_str == "runlength") {
+  } else if (encoding_type_str == "runlength") {
     encoding_type = EncodingType::RunLength;
-  }
-  else if (encoding_type_str == "frameofreference") {
+  } else if (encoding_type_str == "frameofreference") {
     encoding_type = EncodingType::FrameOfReference;
-  }
-  else if (encoding_type_str == "none") {
+  } else if (encoding_type_str == "none") {
     encoding_type = EncodingType::Unencoded;
-  }
-  else {
+  } else {
     std::cerr << cli_options.help({}) << std::endl;
     throw std::runtime_error("Invalid encoding type: '" + encoding_type_str + "'");
   }
@@ -414,9 +404,9 @@ BenchmarkConfig BenchmarkRunner::parse_default_cli_options(const cxxopts::ParseR
   out << "- Max duration per query is " << max_duration << " seconds" << std::endl;
   const Duration timeout_duration = std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{max_duration});
 
-  return BenchmarkConfig{benchmark_mode, verbose, chunk_size, encoding_type, max_runs, timeout_duration, use_mvcc,
-                         output_file_path, enable_scheduler, enable_visualization, out};
-
+  return BenchmarkConfig{
+      benchmark_mode, verbose,          chunk_size,       encoding_type,        max_runs, timeout_duration,
+      use_mvcc,       output_file_path, enable_scheduler, enable_visualization, out};
 }
 nlohmann::json BenchmarkRunner::_create_context(const BenchmarkConfig& config) {
   // Generate YY-MM-DD hh:mm::ss
@@ -445,13 +435,13 @@ nlohmann::json BenchmarkRunner::_create_context(const BenchmarkConfig& config) {
     }
   }
 
-  return nlohmann::json {
-    {"date", timestamp_stream.str()},
-    {"chunk_size", config.chunk_size},
-    {"build_type", IS_DEBUG ? "debug" : "release"},
-    {"encoding", encoding_string},
-    {"benchmark_mode",
-     config.benchmark_mode == BenchmarkMode::IndividualQueries ? "IndividualQueries" : "PermutedQuerySets"}};
+  return nlohmann::json{
+      {"date", timestamp_stream.str()},
+      {"chunk_size", config.chunk_size},
+      {"build_type", IS_DEBUG ? "debug" : "release"},
+      {"encoding", encoding_string},
+      {"benchmark_mode",
+       config.benchmark_mode == BenchmarkMode::IndividualQueries ? "IndividualQueries" : "PermutedQuerySets"}};
 }
 
 }  // namespace opossum

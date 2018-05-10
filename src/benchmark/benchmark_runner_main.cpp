@@ -1,18 +1,16 @@
 #include <cxxopts.hpp>
 
-#include "utils/performance_warning.hpp"
-#include "scheduler/topology.hpp"
-#include "scheduler/node_queue_scheduler.hpp"
-#include "scheduler/current_scheduler.hpp"
 #include "benchmark_runner.hpp"
 #include "benchmark_utils.hpp"
+#include "scheduler/current_scheduler.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
+#include "scheduler/topology.hpp"
 #include "tpch/tpch_queries.hpp"
 #include "types.hpp"
-
-using namespace opossum;
+#include "utils/performance_warning.hpp"
 
 int main(int argc, char* argv[]) {
-  auto cli_options = BenchmarkRunner::get_default_cli_options("Hyrise Benchmark Runner");
+  auto cli_options = opossum::BenchmarkRunner::get_default_cli_options("Hyrise Benchmark Runner");
 
   // clang-format off
   cli_options.add_options()
@@ -29,7 +27,7 @@ int main(int argc, char* argv[]) {
   }
 
   const bool verbose = cli_parse_result["verbose"].as<bool>();
-  auto& out = get_out_stream(verbose);
+  auto& out = opossum::get_out_stream(verbose);
 
   // Check that the options 'queries' and 'tables' were specified
   if (cli_parse_result.count("queries") == 0 || cli_parse_result["tables"].count() == 0) {
@@ -37,7 +35,7 @@ int main(int argc, char* argv[]) {
     std::cerr << cli_options.help({}) << std::endl;
   }
 
-  const auto config = BenchmarkRunner::parse_default_cli_options(cli_parse_result, cli_options);
+  const auto config = opossum::BenchmarkRunner::parse_default_cli_options(cli_parse_result, cli_options);
 
   const auto query_path = cli_parse_result["queries"].as<std::string>();
   out << "- Benchmarking queries from " << query_path << std::endl;
@@ -46,8 +44,5 @@ int main(int argc, char* argv[]) {
   out << "- Running on tables from " << table_path << std::endl;
 
   // Run the benchmark
-  BenchmarkRunner::create(config, table_path, query_path).run();
+  opossum::BenchmarkRunner::create(config, table_path, query_path).run();
 }
-
-
-
