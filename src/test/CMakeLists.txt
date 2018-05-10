@@ -153,13 +153,15 @@ if (${ENABLE_JIT_SUPPORT})
     include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
     embed_llvm(JIT_COMPILER_TEST_MODULE jit_compiler_test_module operators/jit_operator/specialization/modules/jit_compiler_test_module.cpp)
     embed_llvm(JIT_REPOSITORY_TEST_MODULE jit_repository_test_module operators/jit_operator/specialization/modules/jit_repository_test_module.cpp)
+    embed_llvm(LLVM_EXTENSIONS_TEST_MODULE llvm_extensions_test_module operators/jit_operator/specialization/modules/llvm_extensions_test_module.cpp)
     # Prevent clang from complaining about unused defines when compiling the assembly file
-    set_property(SOURCE ${JIT_COMPILER_TEST_MODULE} ${JIT_REPOSITORY_TEST_MODULE} PROPERTY COMPILE_FLAGS -Qunused-arguments)
+    set_property(SOURCE ${JIT_COMPILER_TEST_MODULE} ${JIT_REPOSITORY_TEST_MODULE} ${LLVM_EXTENSIONS_TEST_MODULE} PROPERTY COMPILE_FLAGS -Qunused-arguments)
 
     set(HYRISE_UNIT_TEST_SOURCES
         ${HYRISE_UNIT_TEST_SOURCES}
         ${JIT_COMPILER_TEST_MODULE}
         ${JIT_REPOSITORY_TEST_MODULE}
+        ${LLVM_EXTENSIONS_TEST_MODULE}
         operators/jit_operator_wrapper_test.cpp
         operators/jit_operator/jit_aware_lqp_translator_test.cpp
         operators/jit_operator/jit_operations_test.cpp
@@ -172,6 +174,7 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/specialization/jit_compiler_test.cpp
         operators/jit_operator/specialization/jit_repository_test.cpp
         operators/jit_operator/specialization/jit_runtime_pointer_test.cpp
+        operators/jit_operator/specialization/llvm_extensions_test.cpp
     )
 endif()
 
