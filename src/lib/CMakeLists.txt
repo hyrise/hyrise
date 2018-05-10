@@ -230,7 +230,6 @@ set(
     server/client_connection.hpp
     server/use_boost_future.hpp
     server/use_boost_future_impl.hpp
-    server/use_boost_future_legacy_impl.hpp
     statistics/base_column_statistics.cpp
     statistics/base_column_statistics.hpp
     statistics/column_statistics.cpp
@@ -439,14 +438,18 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/operators/jit_expression.hpp
         operators/jit_operator/operators/jit_filter.cpp
         operators/jit_operator/operators/jit_filter.hpp
-        operators/jit_operator/operators/jit_read_tuple.cpp
-        operators/jit_operator/operators/jit_read_tuple.hpp
-        operators/jit_operator/operators/jit_write_tuple.cpp
-        operators/jit_operator/operators/jit_write_tuple.hpp
+        operators/jit_operator/operators/jit_read_tuples.cpp
+        operators/jit_operator/operators/jit_read_tuples.hpp
+        operators/jit_operator/operators/jit_write_tuples.cpp
+        operators/jit_operator/operators/jit_write_tuples.hpp
     )
     embed_llvm(LLVM_BUNDLE_FILE ${JIT_EMBEDDED_SOURCES})
     set(
         SOURCES
+        operators/jit_operator/jit_aware_lqp_translator.cpp
+        operators/jit_operator/jit_aware_lqp_translator.hpp
+        operators/jit_operator_wrapper.cpp
+        operators/jit_operator_wrapper.hpp
         ${SOURCES}
         ${JIT_EMBEDDED_SOURCES}
         ${LLVM_BUNDLE_FILE})

@@ -1,4 +1,4 @@
-#include "jit_read_tuple.hpp"
+#include "jit_read_tuples.hpp"
 
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-std::string JitReadTuple::description() const {
+std::string JitReadTuples::description() const {
   std::stringstream desc;
   desc << "[ReadTuple] ";
   for (const auto& input_column : _input_columns) {
@@ -18,7 +18,7 @@ std::string JitReadTuple::description() const {
   return desc.str();
 }
 
-void JitReadTuple::before_query(const Table& in_table, JitRuntimeContext& context) const {
+void JitReadTuples::before_query(const Table& in_table, JitRuntimeContext& context) const {
   // Create a runtime tuple of the appropriate size
   context.tuple.resize(_num_tuple_values);
 
@@ -32,8 +32,10 @@ void JitReadTuple::before_query(const Table& in_table, JitRuntimeContext& contex
   }
 }
 
-void JitReadTuple::before_chunk(const Table& in_table, const Chunk& in_chunk, JitRuntimeContext& context) const {
+void JitReadTuples::before_chunk(const Table& in_table, const Chunk& in_chunk, JitRuntimeContext& context) const {
   context.inputs.clear();
+  context.chunk_offset = 0;
+  context.chunk_size = in_chunk.size();
 
   // Create the column iterator for each input column and store them to the runtime context
   for (const auto& input_column : _input_columns) {
@@ -56,7 +58,7 @@ void JitReadTuple::before_chunk(const Table& in_table, const Chunk& in_chunk, Ji
   }
 }
 
-void JitReadTuple::execute(JitRuntimeContext& context) const {
+void JitReadTuples::execute(JitRuntimeContext& context) const {
   for (; context.chunk_offset < context.chunk_size; ++context.chunk_offset) {
     // We read from and advance all column iterators, before passing the tuple on to the next operator.
     for (const auto& input : context.inputs) {
@@ -66,8 +68,8 @@ void JitReadTuple::execute(JitRuntimeContext& context) const {
   }
 }
 
-JitTupleValue JitReadTuple::add_input_column(const DataType data_type, const bool is_nullable,
-                                             const ColumnID column_id) {
+JitTupleValue JitReadTuples::add_input_column(const DataType data_type, const bool is_nullable,
+                                              const ColumnID column_id) {
   // There is no need to add the same input column twice.
   // If the same column is requested for the second time, we return the JitTupleValue created previously.
   const auto it = std::find_if(_input_columns.begin(), _input_columns.end(),
@@ -81,7 +83,7 @@ JitTupleValue JitReadTuple::add_input_column(const DataType data_type, const boo
   return tuple_value;
 }
 
-JitTupleValue JitReadTuple::add_literal_value(const AllTypeVariant& value) {
+JitTupleValue JitReadTuples::add_literal_value(const AllTypeVariant& value) {
   // Somebody needs a literal value. We assign it a position in the runtime tuple and store the literal value,
   // so we can initialize the corresponding tuple value to the correct literal value later.
   const auto data_type = data_type_from_all_type_variant(value);
@@ -90,7 +92,7 @@ JitTupleValue JitReadTuple::add_literal_value(const AllTypeVariant& value) {
   return tuple_value;
 }
 
-size_t JitReadTuple::add_temporary_value() {
+size_t JitReadTuples::add_temporary_value() {
   // Somebody wants to store a temporary value in the runtime tuple. We don't really care about the value itself,
   // but have to remember to make some space for it when we create the runtime tuple.
   return _num_tuple_values++;

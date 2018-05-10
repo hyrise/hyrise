@@ -292,6 +292,15 @@ TEST_F(ColumnStatisticsTest, TwoColumnsEqualsTest) {
 
   EXPECT_FLOAT_EQ(result3.selectivity, expected_selectivity);
   EXPECT_FLOAT_EQ(result4.selectivity, expected_selectivity);
+
+  auto col_stat5 = std::make_shared<ColumnStatistics<float>>(0.0f, 10.f, 20.f, 30.f);
+
+  auto result5 = col_stat3->estimate_predicate_with_column(predicate_condition, *col_stat5);
+  auto result6 = col_stat5->estimate_predicate_with_column(predicate_condition, *col_stat3);
+  expected_selectivity = 0.f;
+
+  EXPECT_FLOAT_EQ(result5.selectivity, expected_selectivity);
+  EXPECT_FLOAT_EQ(result6.selectivity, expected_selectivity);
 }
 
 TEST_F(ColumnStatisticsTest, TwoColumnsLessThanTest) {
