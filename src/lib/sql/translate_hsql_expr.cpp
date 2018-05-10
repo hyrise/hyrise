@@ -27,6 +27,14 @@
 
 #include "SQLParser.h"
 
+namespace opossum {
+
+std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
+                                                        const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context,
+                                                        const UseMvcc use_mvcc);
+
+}  // namespace opossum
+
 namespace {
 
 using namespace opossum; // NOLINT
@@ -58,6 +66,46 @@ const std::unordered_map<hsql::OperatorType, PredicateCondition> hsql_predicate_
   {hsql::kOpIsNull, PredicateCondition::IsNull}
 };
 
+std::shared_ptr<AbstractExpression> translate_hsql_case(const hsql::Expr& expr,
+                                                        const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context,
+                                                        const UseMvcc use_mvcc) {
+  /**
+   * There is a "simple" and a "searched" CASE syntax, see http://www.oratable.com/simple-case-searched-case/
+   * Hyrise supports both.
+   */
+
+  Assert(expr.exprList, "Unexpected SQLParserResult. Case needs exprList");
+  Assert(!expr.exprList->empty(), "Unexpected SQLParserResult. Case needs non-empty exprList");
+
+  // "a + b" in "CASE a + b WHEN ... THEN ... END", or nullptr when using the "searched" CASE syntax
+  auto simple_case_left_operand = std::shared_ptr<AbstractExpression>{};
+  if (expr.expr) simple_case_left_operand = translate_hsql_expr(*expr.expr, sql_identifier_context, use_mvcc);
+
+  // Initialize CASE with the ELSE expression and then put the remaining WHEN...THEN... clauses on top of that
+  // in reverse order
+  auto current_case_expression = std::shared_ptr<AbstractExpression>{};
+  if (expr.expr2) {
+    current_case_expression = translate_hsql_expr(*expr.expr2, sql_identifier_context, use_mvcc);
+  } else {
+    // No ELSE specified, use NULL
+    current_case_expression = std::make_shared<ValueExpression>(NullValue{});
+  }
+
+  for (auto case_reverse_idx = size_t{0}; case_reverse_idx < expr.exprList->size(); ++case_reverse_idx) {
+    const auto case_idx = expr.exprList->size() - case_reverse_idx - 1;
+    const auto case_clause = (*expr.exprList)[case_idx];
+
+    auto when = translate_hsql_expr(*case_clause->expr, sql_identifier_context, use_mvcc);
+    if (simple_case_left_operand) {
+      when = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, simple_case_left_operand, when);
+    }
+
+    const auto then = translate_hsql_expr(*case_clause->expr2, sql_identifier_context, use_mvcc);
+    current_case_expression = std::make_shared<CaseExpression>(when, then, current_case_expression);
+  }
+
+  return current_case_expression;
+}
 } // namespace
 
 namespace opossum {
@@ -154,30 +202,7 @@ std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
       }
 
       switch (expr.opType) {
-        case hsql::kOpCase: {
-          Assert(expr.exprList, "Unexpected SQLParserResult. Case needs exprList");
-          Assert(!expr.exprList->empty(), "Unexpected SQLParserResult. Case needs non-empty exprList");
-
-          // Initialize CASE with the ELSE expression and then put the remaining WHEN...THEN... clauses on top of that
-          // in reverse order
-          auto current_case_expression = std::shared_ptr<AbstractExpression>{};
-          if (expr.expr2) {
-            current_case_expression = translate_hsql_expr(*expr.expr2, sql_identifier_context, use_mvcc);
-          } else {
-            current_case_expression = std::make_shared<ValueExpression>(NullValue{});
-          }
-
-
-          for (auto case_reverse_idx = size_t{0}; case_reverse_idx < expr.exprList->size(); ++case_reverse_idx) {
-            const auto case_idx = expr.exprList->size() - case_reverse_idx - 1;
-            const auto case_clause = (*expr.exprList)[case_idx];
-            const auto when = translate_hsql_expr(*case_clause->expr, sql_identifier_context, use_mvcc);
-            const auto then = translate_hsql_expr(*case_clause->expr2, sql_identifier_context, use_mvcc);
-            current_case_expression = std::make_shared<CaseExpression>(when, then, current_case_expression);
-          }
-
-          return current_case_expression;
-        }
+        case hsql::kOpCase: return translate_hsql_case(expr, sql_identifier_context, use_mvcc);
 
         default:
           Fail("Not handling this OperatorType yet");

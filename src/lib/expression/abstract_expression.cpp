@@ -4,6 +4,7 @@
 
 #include "boost/functional/hash.hpp"
 #include "utils/assert.hpp"
+#include "expression_utils.hpp"
 
 namespace opossum {
 
@@ -22,7 +23,7 @@ bool AbstractExpression::is_nullable() const {
 
 bool AbstractExpression::deep_equals(const AbstractExpression& expression) const {
   if (type != expression.type) return false;
-//  if (!deep_equals_expressions(arguments, expression.arguments)) return false;
+  if (!expressions_equal(arguments, expression.arguments)) return false;
   return _shallow_equals(expression);
 }
 

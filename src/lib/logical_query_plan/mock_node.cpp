@@ -44,7 +44,7 @@ const std::vector<std::shared_ptr<AbstractExpression>>& MockNode::output_column_
   return *_output_column_expressions;
 }
 
-//std::string MockNode::description() const { return "[MockTable]"; }
+std::string MockNode::description() const { return "[MockTable]"; }
 
 std::shared_ptr<AbstractLQPNode> MockNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {
 //  if (_constructor_arguments.type() == typeid(std::shared_ptr<TableStatistics>)) {

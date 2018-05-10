@@ -30,7 +30,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const override;
 
-  //std::string description() const override;
+  std::string description() const override;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _shallow_copy_impl(LQPNodeMapping & node_mapping) const override;

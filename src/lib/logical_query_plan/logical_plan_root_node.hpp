@@ -18,7 +18,7 @@ class LogicalPlanRootNode : public EnableMakeForLQPNode<LogicalPlanRootNode>, pu
  public:
   LogicalPlanRootNode();
 
-//  std::string description() const override;
+  std::string description() const override;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _shallow_copy_impl(LQPNodeMapping & node_mapping) const override;

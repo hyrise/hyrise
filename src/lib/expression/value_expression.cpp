@@ -18,6 +18,10 @@ std::shared_ptr<AbstractExpression> ValueExpression::deep_copy() const  {
 std::string ValueExpression::as_column_name() const {
   std::stringstream stream;
   stream << value;
+
+  if (value.type() == typeid(int32_t)) stream << "l";
+  else if (value.type() == typeid(float)) stream << "f";
+
   return stream.str();
 }
 
@@ -30,7 +34,14 @@ bool ValueExpression::is_nullable() const {
 }
 
 bool ValueExpression::_shallow_equals(const AbstractExpression& expression) const {
-  return value == static_cast<const ValueExpression&>(expression).value;
+  const auto& value_expression = static_cast<const ValueExpression&>(expression);
+
+  /**
+   * Even though null != null, two null expressions are *the same expressions*
+   */
+  if (data_type() == DataType::Null && value_expression.data_type() == DataType::Null) return true;
+
+  return value == value_expression.value;
 }
 
 size_t ValueExpression::_on_hash() const {

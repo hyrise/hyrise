@@ -37,6 +37,8 @@ set(
     expression/exists_expression.hpp
     expression/expression_evaluator.cpp
     expression/expression_evaluator.hpp
+    expression/expression_factory.cpp
+    expression/expression_factory.hpp
     expression/expression_utils.cpp
     expression/expression_utils.hpp
     expression/extract_expression.cpp
@@ -479,7 +481,7 @@ set(
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
     utils/performance_warning.hpp
-#    utils/print_directed_acyclic_graph.hpp
+    utils/print_directed_acyclic_graph.hpp
 #    utils/scoped_locking_ptr.hpp
 #    utils/template_type.hpp
 )

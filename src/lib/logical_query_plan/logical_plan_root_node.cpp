@@ -8,7 +8,7 @@ namespace opossum {
 
 LogicalPlanRootNode::LogicalPlanRootNode() : AbstractLQPNode(LQPNodeType::Root) {}
 
-//std::string LogicalPlanRootNode::description() const { return "[LogicalPlanRootNode]"; }
+std::string LogicalPlanRootNode::description() const { return "[LogicalPlanRootNode]"; }
 
 std::shared_ptr<AbstractLQPNode> LogicalPlanRootNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {
   return make();

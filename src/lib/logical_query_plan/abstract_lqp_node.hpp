@@ -47,6 +47,11 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual ~AbstractLQPNode() = default;
 
   /**
+   * @return a string describing this node, but nothing about its inputs.
+   */
+  virtual std::string description() const = 0;
+
+  /**
    * @defgroup Access the outputs/inputs
    *
    * The outputs are implicitly set and removed in set_left_input()/set_right_input()/set_input().
@@ -106,10 +111,25 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   bool shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const;
 
+  /**
+   * @return The Expressions defining each Column that this node outputs
+   */
   virtual const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const;
 
+  /**
+   * @return The ColumnID of the @param expression, or std::nullopt if it can't be found
+   */
   std::optional<ColumnID> find_column_id(const AbstractExpression &expression) const;
+
+  /**
+   * @return The ColumnID of the @param expression. Assert()s that it can be found
+   */
   ColumnID get_column_id(const AbstractExpression &expression) const;
+
+  /**
+   * Prints this node and all its descendants formatted as a tree
+   */
+  void print(std::ostream& out = std::cout) const;
 
   const LQPNodeType type;
 

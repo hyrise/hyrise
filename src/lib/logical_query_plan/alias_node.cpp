@@ -1,5 +1,8 @@
 #include "alias_node.hpp"
 
+#include <sstream>
+
+#include "boost/algorithm/string/join.hpp"
 #include "expression/expression_utils.hpp"
 
 namespace opossum {
@@ -7,6 +10,14 @@ namespace opossum {
 AliasNode::AliasNode(const std::vector<std::shared_ptr<AbstractExpression>> &_expressions, const std::vector<std::string> &aliases):
   AbstractLQPNode(LQPNodeType::Alias), aliases(aliases), _expressions(_expressions) {
   Assert(_expressions.size() == aliases.size(), "Specify a name for each Expression");
+}
+
+std::string AliasNode::description() const {
+  std::stringstream stream;
+  stream << "Alias [";
+  stream << boost::algorithm::join(aliases, ", ");
+  stream << "]";
+  return stream.str();
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>> &AliasNode::output_column_expressions() const {

@@ -5,6 +5,7 @@
 
 #include "expression/abstract_expression.hpp"
 #include "utils/assert.hpp"
+#include "utils/print_directed_acyclic_graph.hpp"
 #include "lqp_utils.hpp"
 
 namespace opossum {
@@ -149,6 +150,20 @@ ColumnID AbstractLQPNode::get_column_id(const AbstractExpression &expression) co
   const auto column_id = find_column_id(expression);
   Assert(column_id, "Couldn't resolve column");
   return *column_id;
+}
+
+void AbstractLQPNode::print(std::ostream& out) const {
+  const auto get_inputs_fn = [](const auto& node) {
+    std::vector<std::shared_ptr<const AbstractLQPNode>> inputs;
+    if (node->left_input()) inputs.emplace_back(node->left_input());
+    if (node->right_input()) inputs.emplace_back(node->right_input());
+    return inputs;
+  };
+  const auto node_print_fn = [](const auto& node, auto& stream) {
+    stream << node->description();
+  };
+
+  print_directed_acyclic_graph<const AbstractLQPNode>(shared_from_this(), get_inputs_fn, node_print_fn, out);
 }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy_impl(LQPNodeMapping & node_mapping) const {

@@ -1,5 +1,7 @@
 #include "projection_node.hpp"
 
+#include <sstream>
+
 #include "expression/expression_utils.hpp"
 #include "utils/assert.hpp"
 
@@ -7,6 +9,21 @@ namespace opossum {
 
 ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<AbstractExpression>>& expressions):
   AbstractLQPNode(LQPNodeType::Projection), expressions(expressions) {}
+
+std::string ProjectionNode::description() const {
+  std::stringstream stream;
+
+  stream << "[Projection] ";
+
+  for (size_t column_idx = 0; column_idx < expressions.size(); ++column_idx) {
+    stream << expressions[column_idx]->as_column_name();
+    if (column_idx + 1 < expressions.size()) {
+      stream << ", ";
+    }
+  }
+
+  return stream.str();
+}
 
 const std::vector<std::shared_ptr<AbstractExpression>>& ProjectionNode::output_column_expressions() const {
   return expressions;

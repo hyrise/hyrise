@@ -179,3 +179,4 @@ SELECT b + c FROM mixed;
 
 -- CASE
 SELECT CASE WHEN id < 50 THEN 'Hello' WHEN id < 70 THEN 'World' ELSE 'Ciao' END AS case_column FROM mixed;
+SELECT CASE id + 10 WHEN 15 THEN a WHEN 26 THEN 'World' ELSE d END AS case_column FROM mixed;

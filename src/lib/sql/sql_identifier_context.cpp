@@ -3,6 +3,8 @@
 #include "utils/assert.hpp"
 #include "sql_identifier_context_proxy.hpp"
 
+using namespace std::string_literals;  // NOLINT
+
 namespace opossum {
 
 void SQLIdentifierContext::set_column_name(const std::shared_ptr<AbstractExpression>& expression, const std::string& column_name) {
@@ -45,7 +47,7 @@ std::shared_ptr<AbstractExpression> SQLIdentifierContext::resolve_identifier_rel
 
 std::shared_ptr<AbstractExpression> SQLIdentifierContext::resolve_identifier_strict(const SQLIdentifier& identifier) const {
   const auto expression = resolve_identifier_relaxed(identifier);
-  Assert(expression, "Couldn't resolve identifier");
+  Assert(expression, "Couldn't resolve identifier "s + identifier.as_string());
   return expression;
 }
 

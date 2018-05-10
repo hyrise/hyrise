@@ -20,6 +20,7 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   void set_excluded_chunk_ids(const std::vector<ChunkID>& chunks);
   const std::vector<ChunkID>& excluded_chunk_ids() const;
 
+  std::string description() const override;
   const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const override;
 
   const std::string table_name;

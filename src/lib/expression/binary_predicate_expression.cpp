@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include "boost/functional/hash.hpp"
+#include "constant_mappings.hpp"
 
 namespace opossum {
 
@@ -26,7 +27,9 @@ std::shared_ptr<AbstractExpression> BinaryPredicateExpression::deep_copy() const
 std::string BinaryPredicateExpression::as_column_name() const {
   std::stringstream stream;
 
-  Fail("Todo");
+  stream << left_operand()->as_column_name() << " ";
+  stream << predicate_condition_to_string.left.at(predicate_condition) << " ";
+  stream << right_operand()->as_column_name();
 
   return stream.str();
 }

@@ -4,6 +4,7 @@
 #include "constant_mappings.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
+#include "expression/expression_factory.hpp"
 #include "expression/case_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
@@ -17,6 +18,8 @@
 #include "sql/sql_translator.hpp"
 #include "utils/load_table.hpp"
 #include "testing_assert.hpp"
+
+using namespace opossum::expression_factory;  // NOLINT
 
 namespace {
 void load_test_tables() {
@@ -94,23 +97,22 @@ TEST_F(SQLTranslatorTest, SimpleArithmeticExpression) {
 
 TEST_F(SQLTranslatorTest, CaseExpressionSimple) {
   const auto actual_lqp = compile_query("SELECT"
-                                        "    CASE a"
-                                        "       WHEN 123 THEN b"
-                                        "       WHEN 1234 THEN a"
-                                        "       ELSE NULL"
+                                        "    CASE (a + b) * 3"
+                                        "       WHEN 123 THEN 'Hello'"
+                                        "       WHEN 1234 THEN 'World'"
+                                        "       ELSE 'Nope'"
                                         "    END"
                                         " FROM int_float;");
 
-  const auto value_123 = std::make_shared<ValueExpression>(123);
-  const auto value_1234 = std::make_shared<ValueExpression>(1234);
-  const auto a_eq_123 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, int_float_a_expression, value_123);
-  const auto a_eq_1234 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, int_float_a_expression, value_1234);
-  const auto null_value = std::make_shared<ValueExpression>(NullValue{});
-  const auto case_a_eq_1234 = std::make_shared<CaseExpression>(a_eq_1234, int_float_a_expression, null_value);
-  const auto case_a_eq_123 = std::make_shared<CaseExpression>(a_eq_123, int_float_b_expression, case_a_eq_1234);
+  // clang-format off
+  const auto a_plus_b_times_3 = multiplication(addition(int_float_a, int_float_b), 3);
 
-  const auto expected_expression = std::vector<std::shared_ptr<AbstractExpression>>({case_a_eq_123});
-  const auto expected_lqp = ProjectionNode::make(expected_expression, stored_table_node_int_float);
+  const auto expression = case_(equals(a_plus_b_times_3, 123), "Hello",
+                                case_(equals(a_plus_b_times_3, 1234), "World",
+                                      "Nope"));
+  // clang-format on
+
+  const auto expected_lqp = ProjectionNode::make(expression_vector(expression), stored_table_node_int_float);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -124,16 +126,15 @@ TEST_F(SQLTranslatorTest, CaseExpressionSearched) {
                                         "    END"
                                         " FROM int_float;");
 
-  const auto value_123 = std::make_shared<ValueExpression>(123);
-  const auto value_1234 = std::make_shared<ValueExpression>(1234);
-  const auto a_eq_123 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, int_float_a_expression, value_123);
-  const auto a_eq_1234 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, int_float_a_expression, value_1234);
-  const auto null_value = std::make_shared<ValueExpression>(NullValue{});
-  const auto case_a_eq_1234 = std::make_shared<CaseExpression>(a_eq_1234, int_float_a_expression, null_value);
-  const auto case_a_eq_123 = std::make_shared<CaseExpression>(a_eq_123, int_float_b_expression, case_a_eq_1234);
+  // clang-format off
+  const auto expression = case_(equals(int_float_a, 123),
+                                int_float_b,
+                                case_(equals(int_float_a, 1234),
+                                      int_float_a,
+                                      null()));
+  // clang-format on
 
-  const auto expected_expression = std::vector<std::shared_ptr<AbstractExpression>>({case_a_eq_123});
-  const auto expected_lqp = ProjectionNode::make(expected_expression, stored_table_node_int_float);
+  const auto expected_lqp = ProjectionNode::make(expression_vector(expression), stored_table_node_int_float);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -141,9 +142,8 @@ TEST_F(SQLTranslatorTest, CaseExpressionSearched) {
 TEST_F(SQLTranslatorTest, AliasesInSelectList) {
   const auto actual_lqp = compile_query("SELECT a AS column_a, b, b + a AS sum_column FROM int_float;");
 
-  const auto b_plus_a_expression = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, int_float_a_expression, int_float_b_expression);
-  const auto expressions = std::vector<std::shared_ptr<AbstractExpression>>{{int_float_a_expression, int_float_b_expression, b_plus_a_expression}};
   const auto aliases = std::vector<std::string>{{"column_a", "b", "sum_column"}};
+  const auto expressions = expression_vector(int_float_a, int_float_b, addition(int_float_b, int_float_a));
 
   // clang-format off
   const auto expected_lqp =

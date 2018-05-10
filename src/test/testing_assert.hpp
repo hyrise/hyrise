@@ -134,11 +134,13 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
     const auto mismatch = lqp_find_subplan_mismatch(lhs, rhs); \
     if (mismatch) {                                              \
       std::cout << "Differing subtrees" << std::endl;            \
+      std::cout << "-------------- Actual LQP --------------" << std::endl;            \
+      mismatch->first->print();                                  \
+      std::cout << std::endl;                                    \
+      std::cout << "------------- Expected LQP -------------" << std::endl;            \
+      mismatch->second->print();                                 \
+      std::cout << "-------------..............-------------" << std::endl;            \
       GTEST_FAIL();                                              \
     }                                                            \
   }
 
-//mismatch->first->print();                                  \
-      //std::cout << std::endl;                                    \
-      //mismatch->second->print();                                 \
-      //std::cout << std::endl;                                    \
