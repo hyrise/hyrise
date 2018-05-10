@@ -5,7 +5,8 @@
 namespace opossum {
 
 /**
- * Starts a std::chrono::high_resolution_clock base timer on construction and returns/reset measurement on calling lap()
+ * Starts a std::chrono::high_resolution_clock base timer on construction and returns and resets measurement when
+ * lap() is called.
  */
 class Timer final {
  public:

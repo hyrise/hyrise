@@ -4,10 +4,8 @@
 
 namespace opossum {
 
-struct BaseOperatorPerformanceData {
-  virtual ~BaseOperatorPerformanceData() = default;
-
-  std::chrono::microseconds total{0};
+struct BaseOperatorPerformanceData final {
+  std::chrono::microseconds walltime{0};
 };
 
 }  // namespace opossum

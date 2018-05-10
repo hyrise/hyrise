@@ -35,7 +35,6 @@ class AbstractCostModel {
   virtual Cost get_reference_operator_cost(const std::shared_ptr<AbstractOperator>& op) const = 0;
 
   /**
-   * Used e.g., to verify estimations of `estimate_lqp_node_cost()`
    * @return    the estimated Cost of an **executed** operator based on the features of its **executed** input(s) and
    *            the features of its output.
    */

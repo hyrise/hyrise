@@ -16,7 +16,7 @@ class AbstractCostFeatureProxy {
  protected:
   /**
    * Implementation only needs to handle core features (CostFeature::LeftInputRowCount, etc).
-   * Derived features (CostFeature::MajorInputRowCount, etc) will be computed in extract_feature()
+   * Derived features (CostFeature::LargerInputRowCount, etc) will be computed in extract_feature()
    */
   virtual CostFeatureVariant _extract_feature_impl(const CostFeature cost_feature) const = 0;
 };

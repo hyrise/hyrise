@@ -12,7 +12,7 @@ namespace opossum {
  *
  * Currently costs all Join Operators, TableScans and UnionPositions
  */
-class CostModelNaive : public AbstractCostModel {
+class CostModelLogical : public AbstractCostModel {
  public:
   std::string name() const override;
 

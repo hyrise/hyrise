@@ -47,8 +47,7 @@ void AbstractOperator::execute() {
   // release any temporary data if possible
   _on_cleanup();
 
-  // Intentionally leave runtime at 0 when Operator is NOT executed because the Transaction was aborted
-  _base_performance_data.total = performance_timer.lap();
+  _base_performance_data.walltime = performance_timer.lap();
 }
 
 // returns the result of the operator
@@ -131,7 +130,8 @@ void AbstractOperator::print(std::ostream& stream) const {
 
       stream << format_bytes(output->estimate_memory_usage());
       stream << "/";
-      stream << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(op->base_performance_data().total))
+      stream << format_duration(
+                    std::chrono::duration_cast<std::chrono::nanoseconds>(op->base_performance_data().walltime))
              << ")";
     }
   };

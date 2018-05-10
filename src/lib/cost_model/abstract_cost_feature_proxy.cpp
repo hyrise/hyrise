@@ -27,27 +27,27 @@ CostFeatureVariant AbstractCostFeatureProxy::extract_feature(const CostFeature c
       const auto row_count = extract_feature(CostFeature::RightInputRowCount).scalar();
       return row_count * std::log(row_count);
     }
-    case CostFeature::MajorInputRowCount: {
+    case CostFeature::LargerInputRowCount: {
       const auto left_input_row_count = extract_feature(CostFeature::LeftInputRowCount).scalar();
       const auto right_input_row_count = extract_feature(CostFeature::RightInputRowCount).scalar();
       return left_input_row_count > right_input_row_count ? left_input_row_count : right_input_row_count;
     }
-    case CostFeature::MinorInputRowCount: {
+    case CostFeature::SmallerInputRowCount: {
       const auto left_input_row_count = extract_feature(CostFeature::LeftInputRowCount).scalar();
       const auto right_input_row_count = extract_feature(CostFeature::RightInputRowCount).scalar();
       return left_input_row_count < right_input_row_count ? left_input_row_count : right_input_row_count;
     }
-    case CostFeature::MajorInputReferenceRowCount: {
+    case CostFeature::LargerInputReferenceRowCount: {
       return extract_feature(CostFeature::LeftInputIsMajor).boolean()
                  ? extract_feature(CostFeature::LeftInputReferenceRowCount).scalar()
                  : extract_feature(CostFeature::RightInputReferenceRowCount).scalar();
     }
-    case CostFeature::MinorInputReferenceRowCount: {
+    case CostFeature::SmallerInputReferenceRowCount: {
       return extract_feature(CostFeature::LeftInputIsMajor).boolean()
                  ? extract_feature(CostFeature::RightInputReferenceRowCount).scalar()
                  : extract_feature(CostFeature::LeftInputReferenceRowCount).scalar();
     }
-    case CostFeature::OutputDereferenceRowCount: {
+    case CostFeature::OutputReferenceRowCount: {
       return extract_feature(CostFeature::LeftInputIsReferences).boolean()
                  ? extract_feature(CostFeature::OutputRowCount).scalar()
                  : 0.0f;

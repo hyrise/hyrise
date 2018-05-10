@@ -26,10 +26,8 @@ set(
     cost_model/cost_feature_operator_proxy.cpp
     cost_model/cost_feature_operator_proxy.hpp
     cost_model/cost.hpp
-    cost_model/cost_model_linear.cpp
-    cost_model/cost_model_linear.hpp
-    cost_model/cost_model_naive.cpp
-    cost_model/cost_model_naive.hpp
+    cost_model/cost_model_logical.cpp
+    cost_model/cost_model_logical.hpp
     import_export/binary.hpp
     import_export/csv_converter.cpp
     import_export/csv_converter.hpp
@@ -115,31 +113,11 @@ set(
     operators/index_scan.hpp
     operators/insert.cpp
     operators/insert.hpp
-    operators/jit_operator/jit_operations.cpp
-    operators/jit_operator/jit_operations.hpp
-    operators/jit_operator/jit_types.cpp
-    operators/jit_operator/jit_types.hpp
-    operators/jit_operator/operators/abstract_jittable.hpp
-    operators/jit_operator/operators/abstract_jittable_sink.hpp
-    operators/jit_operator/operators/jit_compute.cpp
-    operators/jit_operator/operators/jit_compute.hpp
-    operators/jit_operator/operators/jit_expression.cpp
-    operators/jit_operator/operators/jit_expression.hpp
-    operators/jit_operator/operators/jit_filter.cpp
-    operators/jit_operator/operators/jit_filter.hpp
-    operators/jit_operator/operators/jit_read_tuple.cpp
-    operators/jit_operator/operators/jit_read_tuple.hpp
-    operators/jit_operator/operators/jit_write_tuple.cpp
-    operators/jit_operator/operators/jit_write_tuple.hpp
     operators/join_hash.cpp
     operators/join_hash/hash_traits.hpp
     operators/join_hash.hpp
     operators/join_index.cpp
     operators/join_index.hpp
-    operators/join_mpsm/column_materializer_numa.hpp
-    operators/join_mpsm.cpp
-    operators/join_mpsm.hpp
-    operators/join_mpsm/radix_cluster_sort_numa.hpp
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
     operators/join_sort_merge/column_materializer.hpp
