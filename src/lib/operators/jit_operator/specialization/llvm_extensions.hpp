@@ -12,7 +12,7 @@ namespace opossum {
 // JitCodeSpecializer so it can be passed to the modified LLVM functions.
 struct SpecializationContext {
   std::string root_function_name;
-  std::unique_ptr<llvm::Module> module;
+  std::shared_ptr<llvm::Module> module;
   llvm::Function* root_function;
   // Maps values from the source function to the target function during function cloning
   llvm::ValueToValueMapTy llvm_value_map;

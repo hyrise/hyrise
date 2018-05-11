@@ -138,8 +138,8 @@ llvm::Constant* ResolveConditionRec(llvm::Value* value, SpecializationContext& c
       ops.push_back(op);
     }
     const llvm::Triple module_triple(context.module->getTargetTriple());
-    const llvm::TargetLibraryInfoImpl x(module_triple);
-    const llvm::TargetLibraryInfo target_lib_info(x);
+    const llvm::TargetLibraryInfoImpl target_lib_info_impl(module_triple);
+    const llvm::TargetLibraryInfo target_lib_info(target_lib_info_impl);
     return ConstantFoldInstruction(inst, ops, context.module->getDataLayout(), &target_lib_info);
   }
 
