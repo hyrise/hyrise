@@ -134,7 +134,7 @@ TEST_F(LQPTranslatorTest, ArithmeticExpression) {
   EXPECT_EQ(get_table_op->table_name(), "table_int_float");
 }
 
-TEST_F(LQPTranslatorTest, PredicateNode) {
+TEST_F(LQPTranslatorTest, PredicateNodeSimple) {
   /**
    * Build LQP and translate to PQP
    *
@@ -154,6 +154,36 @@ TEST_F(LQPTranslatorTest, PredicateNode) {
   EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(5));
 
   const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(op->input_left());
+  ASSERT_TRUE(get_table_op);
+  EXPECT_EQ(get_table_op->table_name(), "table_int_float");
+}
+
+TEST_F(LQPTranslatorTest, PredicateNodeBetween) {
+  /**
+   * Build LQP and translate to PQP
+   *
+   * LQP resembles:
+   *   SELECT * FROM int_float WHERE 5 BETWEEN a AND b;
+   */
+  const auto predicate_node = PredicateNode::make(between(5, int_float_a, int_float_b), int_float_node);
+  const auto op = LQPTranslator{}.translate_node(predicate_node);
+
+  /**
+   * Check PQP
+   */
+  const auto upper_bound_scan_op = std::dynamic_pointer_cast<const TableScan>(op);
+  ASSERT_TRUE(upper_bound_scan_op);
+  EXPECT_EQ(upper_bound_scan_op->left_column_id(), ColumnID{1});
+  EXPECT_EQ(upper_bound_scan_op->predicate_condition(), PredicateCondition::GreaterThanEquals);
+  EXPECT_EQ(upper_bound_scan_op->right_parameter(), AllParameterVariant(5));
+
+  const auto lower_bound_scan_op = std::dynamic_pointer_cast<const TableScan>(op->input_left());
+  ASSERT_TRUE(lower_bound_scan_op);
+  EXPECT_EQ(lower_bound_scan_op->left_column_id(), ColumnID{0});
+  EXPECT_EQ(lower_bound_scan_op->predicate_condition(), PredicateCondition::LessThanEquals);
+  EXPECT_EQ(lower_bound_scan_op->right_parameter(), AllParameterVariant(5));
+
+  const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(op->input_left()->input_left());
   ASSERT_TRUE(get_table_op);
   EXPECT_EQ(get_table_op->table_name(), "table_int_float");
 }

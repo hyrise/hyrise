@@ -4,6 +4,7 @@
 
 #include "abstract_expression.hpp"
 #include "arithmetic_expression.hpp"
+#include "between_expression.hpp"
 #include "binary_predicate_expression.hpp"
 #include "case_expression.hpp"
 #include "lqp_column_expression.hpp"
@@ -55,19 +56,22 @@ struct binary final {
   };
 };
 
+template<typename E>
+struct ternary final {
+  template<typename A, typename B, typename C>
+  std::shared_ptr<E> operator()(const A& a, const B& b, const C& c) {
+    return std::make_shared<E>(to_expression(a), to_expression(b), to_expression(c));
+  };
+};
+
 extern binary<ArithmeticOperator::Multiplication, ArithmeticExpression> multiplication;
 extern binary<ArithmeticOperator::Addition, ArithmeticExpression> addition;
 extern binary<PredicateCondition::Equals, BinaryPredicateExpression> equals;
 extern binary<PredicateCondition::LessThan, BinaryPredicateExpression> less_than;
 extern binary<PredicateCondition::GreaterThanEquals, BinaryPredicateExpression> greater_than_equals;
 extern binary<PredicateCondition::GreaterThan, BinaryPredicateExpression> greater_than;
-
-template<typename ExpressionLikeWhen, typename ExpressionLikeThen, typename ExpressionLikeElse>
-std::shared_ptr<CaseExpression> case_(const ExpressionLikeWhen& when,
-                                      const ExpressionLikeThen& then,
-                                      const ExpressionLikeElse& else_) {
-  return std::make_shared<CaseExpression>(to_expression(when), to_expression(then), to_expression(else_));
-};
+extern ternary<BetweenExpression> between;
+extern ternary<CaseExpression> case_;
 
 template<typename ... Args>
 std::vector<std::shared_ptr<AbstractExpression>> expression_vector(Args &&... args) {

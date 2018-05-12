@@ -117,14 +117,17 @@ std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
 
   std::shared_ptr<AbstractExpression> left;
   std::shared_ptr<AbstractExpression> right;
+  std::vector<std::shared_ptr<AbstractExpression>> arguments;
 
-//  std::vector<std::shared_ptr<AbstractExpression>> arguments;
-//  if (expr.exprList) {
-//    arguments.reserve(expr.exprList->size());
-//    for (const auto *hsql_argument : *(expr.exprList)) {
-//      arguments.emplace_back(translate_hsql_expr(*hsql_argument, translation_state));
-//    }
-//  }
+  // TODO fix case parsing
+  if (!(expr.type == hsql::kExprOperator && expr.opType == hsql::kOpCase)) {
+    if (expr.exprList) {
+      arguments.reserve(expr.exprList->size());
+      for (const auto *hsql_argument : *(expr.exprList)) {
+        arguments.emplace_back(translate_hsql_expr(*hsql_argument, sql_identifier_context, use_mvcc));
+      }
+    }
+  }
 
   if (expr.expr) left = translate_hsql_expr(*expr.expr, sql_identifier_context, use_mvcc);
   if (expr.expr2) right = translate_hsql_expr(*expr.expr2, sql_identifier_context, use_mvcc);
@@ -194,11 +197,14 @@ std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
       // Translate PredicateExpression
       const auto predicate_condition_iter = hsql_predicate_condition.find(expr.opType);
       if (predicate_condition_iter != hsql_predicate_condition.end()) {
-        Assert(left && right, "Unexpected SQLParserResult. Didn't receive two arguments for binary_expression");
         const auto predicate_condition = predicate_condition_iter->second;
 
         if (is_ordering_predicate_condition(predicate_condition)) {
+          Assert(left && right, "Unexpected SQLParserResult. Didn't receive two arguments for binary_expression");
           return std::make_shared<BinaryPredicateExpression>(predicate_condition, left, right);
+        } else if (predicate_condition == PredicateCondition::Between) {
+          Assert(arguments.size() == 2, "Expected two arguments for BETWEEN");
+          return std::make_shared<BetweenExpression>(left, arguments[0], arguments[1]);
         }
       }
 

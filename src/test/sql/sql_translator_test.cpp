@@ -209,6 +209,23 @@ TEST_F(SQLTranslatorTest, WhereWithOr) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, WhereWithBetween) {
+  const auto actual_lqp = compile_query("SELECT a FROM int_float WHERE a BETWEEN b and 5;");
+
+  const auto a_times_b = multiplication(int_float_a, int_float_b);
+  const auto b_plus_a = addition(int_float_b, int_float_a);
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float_a),
+    PredicateNode::make(between(int_float_a, int_float_b, 5),
+      stored_table_node_int_float
+  ));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 //TEST_F(SQLTranslatorTest, SelectStarAllTest) {
 //  const auto query = "SELECT * FROM table_a;";
 //  const auto result_node = compile_query(query);

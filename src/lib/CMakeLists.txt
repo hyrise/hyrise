@@ -27,8 +27,8 @@ set(
     expression/arithmetic_expression.hpp
     expression/array_expression.cpp
     expression/array_expression.hpp
-#    expression/between_expression.cpp
-#    expression/between_expression.hpp
+    expression/between_expression.cpp
+    expression/between_expression.hpp
     expression/binary_predicate_expression.cpp
     expression/binary_predicate_expression.hpp
     expression/case_expression.cpp

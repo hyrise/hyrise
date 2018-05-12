@@ -30,6 +30,8 @@ binary<PredicateCondition::Equals, BinaryPredicateExpression> equals;
 binary<PredicateCondition::LessThan, BinaryPredicateExpression> less_than;
 binary<PredicateCondition::GreaterThanEquals, BinaryPredicateExpression> greater_than_equals;
 binary<PredicateCondition::GreaterThan, BinaryPredicateExpression> greater_than;
+ternary<BetweenExpression> between;
+ternary<CaseExpression> case_;
 
 }  // namespace expression_factory
 

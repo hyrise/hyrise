@@ -1,5 +1,7 @@
 #include "between_expression.hpp"
 
+#include <sstream>
+
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -7,7 +9,7 @@ namespace opossum {
 BetweenExpression::BetweenExpression(const std::shared_ptr<AbstractExpression>& value,
                   const std::shared_ptr<AbstractExpression>& lower_bound,
                   const std::shared_ptr<AbstractExpression>& upper_bound):
-  AbstractPredicateExpression(PredicateCondition::Between, {value, upper_bound, lower_bound})
+  AbstractPredicateExpression(PredicateCondition::Between, {value, lower_bound, upper_bound})
 {
 
 }
@@ -29,8 +31,9 @@ std::shared_ptr<AbstractExpression> BetweenExpression::deep_copy() const {
 }
 
 std::string BetweenExpression::as_column_name() const {
-  Fail("Notyetimplemented");
-  return "";
+  std::stringstream stream;
+  stream << value() << " BETWEEN " << lower_bound() << " AND " << upper_bound();
+  return stream.str();
 };
 
 }  // namespace opossum
