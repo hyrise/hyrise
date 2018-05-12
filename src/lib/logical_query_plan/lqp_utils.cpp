@@ -38,8 +38,13 @@ lqp_find_structure_mismatch(const std::shared_ptr<const AbstractLQPNode>& lhs, c
 
 std::optional<LQPMismatch>
 lqp_find_subplan_mismatch_impl(const LQPNodeMapping& node_mapping, const std::shared_ptr<const AbstractLQPNode>& lhs, const std::shared_ptr<const AbstractLQPNode>& rhs) {
-  if ((!lhs && !rhs) || lhs->shallow_equals(*rhs, node_mapping)) return std::nullopt;
-  return LQPMismatch(lhs, rhs);
+  if (!lhs && !rhs) return std::nullopt;
+  if (!lhs->shallow_equals(*rhs, node_mapping)) return LQPMismatch(lhs, rhs);
+
+  const auto mismatch_left = lqp_find_subplan_mismatch_impl(node_mapping, lhs->left_input(), rhs->left_input());
+  if (mismatch_left) return mismatch_left;
+
+  return lqp_find_subplan_mismatch_impl(node_mapping, lhs->right_input(), rhs->right_input());
 }
 
 }  // namespace

@@ -82,8 +82,8 @@ set(
     logical_query_plan/abstract_lqp_node.hpp
     logical_query_plan/alias_node.cpp
     logical_query_plan/alias_node.hpp
-#    logical_query_plan/aggregate_node.cpp
-#    logical_query_plan/aggregate_node.hpp
+    logical_query_plan/aggregate_node.cpp
+    logical_query_plan/aggregate_node.hpp
 #    logical_query_plan/create_view_node.cpp
 #    logical_query_plan/create_view_node.hpp
 #    logical_query_plan/delete_node.cpp

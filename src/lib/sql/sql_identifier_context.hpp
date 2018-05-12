@@ -32,6 +32,8 @@ class SQLIdentifierContext final {
   std::shared_ptr<AbstractExpression> resolve_identifier_strict(const SQLIdentifier& identifier) const;
   const std::optional<SQLIdentifier> get_expression_identifier(const std::shared_ptr<AbstractExpression>& expression) const;
 
+  std::vector<std::shared_ptr<AbstractExpression>> resolve_table_name(const std::string& table_name) const;
+
  private:
   SQLIdentifierContextEntry& _find_or_create_expression_entry(const std::shared_ptr<AbstractExpression>& expression);
 

@@ -11,7 +11,7 @@
 
 //#include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
-//#include "expression/aggregate_expression.hpp"
+#include "expression/aggregate_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/between_expression.hpp"
 #include "expression/expression_utils.hpp"
@@ -23,7 +23,7 @@
 //#include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
-//#include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
 //#include "logical_query_plan/create_view_node.hpp"
 //#include "logical_query_plan/delete_node.hpp"
 //#include "logical_query_plan/drop_view_node.hpp"
@@ -451,46 +451,54 @@ void SQLTranslator::_translate_select_list_groupby_having(
 const hsql::SelectStatement &select) {
 //  const auto input_node = translation_state.lqp;
 //
-//  const auto input_expressions = translation_state.lqp->output_column_expressions();
-//
-//  auto pre_aggregate_expressions = std::unordered_set<std::shared_ptr<AbstractExpression>, ExpressionHash, ExpressionEquals>{
-//  input_expressions.begin(), input_expressions.end()
-//  };
-//
-//  auto aggregate_expressions = std::unordered_set<std::shared_ptr<AbstractExpression>, ExpressionHash, ExpressionEquals>{
-//  };
-//
-//  // Add all expressions required for GROUP BY
-//  auto group_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
-//  if (select.groupBy && select.groupBy->columns) {
-//    pre_aggregate_expressions.reserve(pre_aggregate_expressions.size() + select.groupBy->columns->size());
-//    for (const auto* group_by_hsql_expr : *select.groupBy->columns) {
-//      const auto group_by_expression = translate_hsql_expr(*group_by_hsql_expr, translation_state.qualified_column_name_lookup);
-//      group_by_expressions.emplace_back(group_by_expression);
-//      pre_aggregate_expressions.insert(group_by_expression);
-//    }
-//  }
-//
-//  // Visitor that identifies aggregates and their arguments
-//  const auto find_aggregates_and_arguments = [&](auto& sub_expression) {
-//    if (sub_expression.type != ExpressionType::Aggregate) return true;
-//    auto aggregate_expression = std::static_pointer_cast<AggregateExpression>(sub_expression);
-//    aggregate_expressions.insert(aggregate_expression);
-//
-//    for (const auto& argument : aggregate_expression->arguments) {
-//      if (argument->requires_calculation()) {
-//        pre_aggregate_expressions.insert(argument);
-//      }
-//    }
-//    return false;
-//  };
-//
-//  // Gather all aggregates and arguments from having
-//  auto having_expression = std::shared_ptr<AbstractExpression>{};
-//  if (select.groupBy && select.groupBy->having) {
-//    having_expression = translate_hsql_expr(*select.groupBy->having, translation_state);
-//    visit_expression(having_expression, find_aggregates_and_arguments);
-//  }
+  const auto& input_expressions = _current_lqp->output_column_expressions();
+
+  auto pre_aggregate_expression_set = ExpressionUnorderedSet{input_expressions.begin(), input_expressions.end()};
+  auto pre_aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{input_expressions.begin(), input_expressions.end()};
+  auto aggregate_expression_set = ExpressionUnorderedSet{};
+  auto aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+
+  // Add all expressions required for GROUP BY
+  auto group_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+  if (select.groupBy && select.groupBy->columns) {
+    group_by_expressions.reserve(select.groupBy->columns->size());
+    for (const auto* group_by_hsql_expr : *select.groupBy->columns) {
+      const auto group_by_expression = translate_hsql_expr(*group_by_hsql_expr, _sql_identifier_context, _use_mvcc);
+      group_by_expressions.emplace_back(group_by_expression);
+      if (pre_aggregate_expression_set.emplace(group_by_expression).second) {
+        pre_aggregate_expressions.emplace_back(group_by_expression);
+      }
+
+      if (group_by_hsql_expr->alias) {
+        _sql_identifier_context->set_column_name(group_by_expression, group_by_hsql_expr->alias);
+      }
+    }
+  }
+
+  // Visitor that identifies aggregates and their arguments
+  const auto find_aggregates_and_arguments = [&](auto& sub_expression) {
+    if (sub_expression->type != ExpressionType::Aggregate) return true;
+    auto aggregate_expression = std::static_pointer_cast<AggregateExpression>(sub_expression);
+    if (aggregate_expression_set.emplace(aggregate_expression).second) {
+      aggregate_expressions.emplace_back(aggregate_expression);
+      for (const auto& argument : aggregate_expression->arguments) {
+        if (argument->requires_calculation()) {
+          if (pre_aggregate_expression_set.emplace(argument).second) {
+            pre_aggregate_expressions.emplace_back(argument);
+          }
+        }
+      }
+    }
+
+    return false;
+  };
+
+  // Gather all aggregates and arguments from having
+  auto having_expression = std::shared_ptr<AbstractExpression>{};
+  if (select.groupBy && select.groupBy->having) {
+    having_expression = translate_hsql_expr(*select.groupBy->having, _sql_identifier_context, _use_mvcc);
+    visit_expression(having_expression, find_aggregates_and_arguments);
+  }
 
   // Identify all aggregates and arguments needed for SELECT and build the select_list_elements
   std::vector<std::shared_ptr<AbstractExpression>> select_list_elements;
@@ -499,84 +507,101 @@ const hsql::SelectStatement &select) {
       select_list_elements.emplace_back(nullptr);
     } else {
       auto expression = translate_hsql_expr(*hsql_select_expr, _sql_identifier_context, _use_mvcc);
-//      visit_expression(expression, find_aggregates_and_arguments);
+      visit_expression(expression, find_aggregates_and_arguments);
       select_list_elements.emplace_back(expression);
     }
   }
-//
-//  // Build pre_aggregate_projection
-//  translation_state.lqp = ProjectionNode::make(std::vector<std::shared_ptr<AbstractExpression>>(
-//  pre_aggregate_expressions.begin(), pre_aggregate_expressions.end()
-//  ), translation_state.lqp);
-//
-//
-//  // Build Aggregate
-//  if (!aggregate_expressions.empty() || !group_by_expressions.empty()) {
-//    translation_state.lqp = AggregateNode::make(group_by_expressions, aggregate_expressions, translation_state.lqp);
-//  }
-//
-//  // Build having
-//  if (having_expression) {
-//    translation_state.lqp = _translate_predicate_expression(having_expression, translation_state.lqp);
-//  }
+
+  // Build pre_aggregate_projection
+  if (pre_aggregate_expressions.size() != _current_lqp->output_column_expressions().size()) {
+    _current_lqp = ProjectionNode::make(pre_aggregate_expressions, _current_lqp);
+  }
+
+  // Build Aggregate
+  if (!aggregate_expressions.empty() || !group_by_expressions.empty()) {
+    _current_lqp = AggregateNode::make(group_by_expressions, aggregate_expressions, _current_lqp);
+  }
+
+  // Build Having
+  if (having_expression) {
+    _current_lqp = _translate_predicate_expression(having_expression, _current_lqp);
+  }
+
   // Create output_expressions from SELECT list, including column wildcards
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions;
   std::unordered_map<std::shared_ptr<AbstractExpression>, std::string> column_aliases;
 
   auto output_column_id = ColumnID{0};
 
-  // Check whether we need to create an AliasNode
-  const auto need_alias_node = std::any_of(select.selectList->begin(), select.selectList->end(), [](const auto * hsql_expr) {
-    return hsql_expr->alias != nullptr;
-  });
-  auto aliases = std::optional<std::vector<std::string>>{};
-  if (need_alias_node) aliases.emplace();
-
   for (auto select_list_idx = size_t{0}; select_list_idx < select.selectList->size(); ++select_list_idx) {
     const auto* hsql_expr = (*select.selectList)[select_list_idx];
 
     if (hsql_expr->type == hsql::kExprStar) {
-      Fail("");
-//      if (hsql_expr->table) {
-//        const auto expressions = translation_state.find_output_columns_with_table_name(*hsql_expr->table);
-//        output_expressions.reserve(output_expressions.size() + expressions.size());
-//        for (const auto& expression : expressions) {
-//          output_expressions.emplace_back(expression);
-//        }
-//      } else {
-//        // When GROUP BY is present, a * in the SELECT list refers to all GROUP BY expressions.
-//        // When no GROUP BY is present, all input expressions are selected.
-//        if (select.groupBy) {
-//          output_expressions.reserve(output_expressions.size() + group_by_expressions.size());
-//          for (const auto& group_by_expression : group_by_expressions) {
-//            output_expressions.emplace_back(group_by_expression);
-//          }
-//        } else {
-//          const auto& input_expressions = input_node->output_column_expressions();
-//          output_expressions.reserve(output_expressions.size() + input_expressions.size());
-//          for (const auto& input_expression : input_expressions) {
-//            output_expressions.emplace_back(input_expression);
-//          }
-//        }
-//      }
-    }
+      if (hsql_expr->table) {
+        const auto expressions = _sql_identifier_context->resolve_table_name(hsql_expr->table);
+        for (const auto& expression : expressions) {
+          // If GROUP BY is present, only select GROUP BY expressions that have the specified table name.
+          // Otherwise, select all still available expressions with that name
+          if (select.groupBy) {
+            const auto group_by_expression_iter = std::find_if(group_by_expressions.begin(), group_by_expressions.end(),
+            [&](const auto& group_by_expression) { return group_by_expression->deep_equals(*expression); });
 
-    auto output_expression = select_list_elements[select_list_idx];
-    output_expressions.emplace_back(output_expression);
+            if (group_by_expression_iter != group_by_expressions.end()) {
+              output_expressions.emplace_back(expression);
+            }
+          } else {
+            const auto input_expression_iter = std::find_if(input_expressions.begin(), input_expressions.end(),
+                                                               [&](const auto& input_expression) { return input_expression->deep_equals(*expression); });
 
-    // Handle aliases
-    if (hsql_expr->alias) {
-      _sql_identifier_context->set_column_name(output_expression, hsql_expr->alias);
-      aliases->emplace_back(hsql_expr->alias);
-    } else if (need_alias_node) {
-      aliases->emplace_back(output_expression->as_column_name());
+            if (input_expression_iter != input_expressions.end()) {
+              output_expressions.emplace_back(expression);
+            }
+          }
+        }
+      } else {
+        // When GROUP BY is present, a * in the SELECT list refers to all GROUP BY expressions.
+        // When no GROUP BY is present, all input expressions are selected.
+        if (select.groupBy) {
+          output_expressions.reserve(output_expressions.size() + group_by_expressions.size());
+          for (const auto& group_by_expression : group_by_expressions) {
+            output_expressions.emplace_back(group_by_expression);
+          }
+        } else {
+          output_expressions.reserve(output_expressions.size() + input_expressions.size());
+          for (const auto& input_expression : input_expressions) {
+            output_expressions.emplace_back(input_expression);
+          }
+        }
+      }
+    } else {
+      auto output_expression = select_list_elements[select_list_idx];
+      output_expressions.emplace_back(output_expression);
+
+      if (hsql_expr->alias) {
+        _sql_identifier_context->set_column_name(output_expression, hsql_expr->alias);
+      }
     }
   }
 
   _current_lqp = ProjectionNode::make(output_expressions, _current_lqp);
 
+  // Check whether we need to create an AliasNode
+  const auto need_alias_node = std::any_of(select.selectList->begin(), select.selectList->end(), [](const auto * hsql_expr) {
+    return hsql_expr->alias != nullptr;
+  });
+
   if (need_alias_node) {
-    _current_lqp = AliasNode::make(output_expressions, *aliases, _current_lqp);
+    std::vector<std::string> aliases;
+    for (const auto& output_expression : output_expressions) {
+      const auto identifier = _sql_identifier_context->get_expression_identifier(output_expression);
+      if (identifier) {
+        aliases.emplace_back(identifier->column_name);
+      } else {
+        aliases.emplace_back(output_expression->as_column_name());
+      }
+    }
+
+    _current_lqp = AliasNode::make(output_expressions, aliases, _current_lqp);
   }
 }
 

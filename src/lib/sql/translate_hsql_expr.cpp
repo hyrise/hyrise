@@ -161,29 +161,38 @@ std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
       return std::make_shared<ValuePlaceholderExpression>(ValuePlaceholder{static_cast<uint16_t>(expr.ival)});
 
     case hsql::kExprFunctionRef: {
-      Fail("Nyi");
-//      Assert(expr.exprList, "FunctionRef has no exprList. Bug in sqlparser?");
+      Assert(expr.exprList, "FunctionRef has no exprList. Bug in sqlparser?");
 
-//      // convert to upper-case to find mapping
-//      std::transform(name.begin(), name.end(), name.begin(), [](const auto c) { return std::toupper(c); });
+      // convert to upper-case to find mapping
+      std::transform(name.begin(), name.end(), name.begin(), [](const auto c) { return std::toupper(c); });
 
-//      const auto aggregate_iter = aggregate_type_to_string.right.find(name);
-//      if (aggregate_iter != aggregate_type_to_string.right.end()) {
-//        auto aggregate_function = aggregate_iter->second;
+      const auto aggregate_iter = aggregate_function_to_string.right.find(name);
+      if (aggregate_iter != aggregate_function_to_string.right.end()) {
+        auto aggregate_function = aggregate_iter->second;
 
-//        if (aggregate_function == AggregateType::Count && expr.distinct) {
-//          aggregate_function = AggregateType::CountDistinct;
-//        }
-//        return std::make_shared<AggregateExpression>(aggregate_function, arguments);
-//      } else {
+        if (aggregate_function == AggregateFunction::Count && expr.distinct) {
+          aggregate_function = AggregateFunction::CountDistinct;
+        }
+
+        switch (aggregate_function) {
+          case AggregateFunction::Min: case AggregateFunction::Max: case AggregateFunction::Sum:
+          case AggregateFunction::Avg:
+            Assert(arguments.size() == 1, "Expected exactly one argument for this AggregateFunction");
+            return std::make_shared<AggregateExpression>(aggregate_function, arguments[0]);
+
+          case AggregateFunction::Count: case AggregateFunction::CountDistinct:
+            return std::make_shared<AggregateExpression>(aggregate_function);
+        }
+
+      } else {
 //        const auto function_iter = function_type_to_string.right.find(name);
 
 //        if (function_iter != function_type_to_string.right.end()) {
 //          return std::make_shared<FunctionExpression>(function_iter->second, arguments);
 //        } else {
-//          Fail(std::string{"Couldn't resolve function '"} + name + "'");
+          Fail(std::string{"Couldn't resolve function '"} + name + "'");
 //        }
-//      }
+      }
     }
 
     case hsql::kExprOperator: {

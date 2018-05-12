@@ -57,6 +57,14 @@ const std::optional<SQLIdentifier> SQLIdentifierContext::get_expression_identifi
   return entry_iter->identifier;
 }
 
+std::vector<std::shared_ptr<AbstractExpression>> SQLIdentifierContext::resolve_table_name(const std::string& table_name) const {
+  std::vector<std::shared_ptr<AbstractExpression>> expressions;
+  for (const auto& entry : _entries) {
+    if (entry.identifier && entry.identifier->table_name == table_name) expressions.emplace_back(entry.expression);
+  }
+  return expressions;
+}
+
 SQLIdentifierContextEntry& SQLIdentifierContext::_find_or_create_expression_entry(const std::shared_ptr<AbstractExpression>& expression) {
   auto entry_iter = std::find_if(_entries.begin(), _entries.end(), [&](const auto& entry) { return entry.expression->deep_equals(*expression); });
 

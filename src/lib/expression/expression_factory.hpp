@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "abstract_expression.hpp"
+#include "aggregate_expression.hpp"
 #include "arithmetic_expression.hpp"
 #include "between_expression.hpp"
 #include "binary_predicate_expression.hpp"
@@ -49,10 +50,18 @@ std::shared_ptr<ValueExpression> value(const AllTypeVariant& value);
 std::shared_ptr<ValueExpression> null();
 
 template<auto t, typename E>
+struct unary final {
+  template<typename A>
+  std::shared_ptr<E> operator()(const A &a) {
+    return std::make_shared<E>(t, to_expression(a));
+  };
+};
+
+template<auto t, typename E>
 struct binary final {
-  template<typename L, typename R>
-  std::shared_ptr<E> operator()(const L &lhs, const R &rhs) {
-    return std::make_shared<E>(t, to_expression(lhs), to_expression(rhs));
+  template<typename A, typename B>
+  std::shared_ptr<E> operator()(const A &a, const B &b) {
+    return std::make_shared<E>(t, to_expression(a), to_expression(b));
   };
 };
 
@@ -64,6 +73,8 @@ struct ternary final {
   };
 };
 
+extern unary<AggregateFunction::Sum, AggregateExpression> sum;
+extern binary<ArithmeticOperator::Division, ArithmeticExpression> division;
 extern binary<ArithmeticOperator::Multiplication, ArithmeticExpression> multiplication;
 extern binary<ArithmeticOperator::Addition, ArithmeticExpression> addition;
 extern binary<PredicateCondition::Equals, BinaryPredicateExpression> equals;

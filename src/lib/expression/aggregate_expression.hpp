@@ -10,8 +10,10 @@ enum class AggregateFunction {
 
 class AggregateExpression : public AbstractExpression {
  public:
-  AggregateExpression(const AggregateFunction aggregate_function,
-                      const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
+  AggregateExpression(const AggregateFunction aggregate_function);
+  AggregateExpression(const AggregateFunction aggregate_function, const std::shared_ptr<AbstractExpression>& argument);
+
+  std::shared_ptr<AbstractExpression> argument() const;
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;

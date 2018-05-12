@@ -49,7 +49,7 @@ const std::string Aggregate::description(DescriptionMode description_mode) const
   desc << " Aggregates: ";
   for (size_t expression_idx = 0; expression_idx < _aggregates.size(); ++expression_idx) {
     const auto& aggregate = _aggregates[expression_idx];
-    desc << aggregate_type_to_string.left.at(aggregate.function);
+    desc << aggregate_function_to_string.left.at(aggregate.function);
 
     if (aggregate.column) {
       desc << "(Column #" << *aggregate.column << ")";
@@ -705,7 +705,7 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
     if (aggregate.function == AggregateFunction::CountDistinct) {
       output_column_name = std::string("COUNT(DISTINCT ") + column_name + ")";
     } else {
-      output_column_name = aggregate_type_to_string.left.at(function) + "(" + column_name + ")";
+      output_column_name = aggregate_function_to_string.left.at(function) + "(" + column_name + ")";
     }
   }
 

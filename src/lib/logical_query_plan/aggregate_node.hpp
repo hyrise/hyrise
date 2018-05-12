@@ -24,32 +24,18 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
   AggregateNode(const std::vector<std::shared_ptr<AbstractExpression>>& group_by_expressions,
                 const std::vector<std::shared_ptr<AbstractExpression>>& aggregate_expressions);
 
-  const std::vector<std::shared_ptr<AbstractExpression>>& group_by_expressions() const;
-  const std::vector<std::shared_ptr<AbstractExpression>>& aggregate_expressions() const;
-
   std::string description() const override;
-
-  const std::vector<std::string>& output_column_names() const override;
-  const std::vector<LQPColumnReference>& output_column_references() const override;
   const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const override;
 
-  std::string get_verbose_column_name(ColumnID column_id) const override;
-
-  bool shallow_equals(const AbstractLQPNode& rhs) const override;
+  const std::vector<std::shared_ptr<AbstractExpression>> group_by_expressions;
+  const std::vector<std::shared_ptr<AbstractExpression>> aggregate_expressions;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
-  void _on_input_changed() override;
+  std::shared_ptr<AbstractLQPNode> _shallow_copy_impl(LQPNodeMapping & node_mapping) const override;
+  bool _shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const override;
 
  private:
-  std::vector<std::shared_ptr<AbstractExpression>> _group_by_expressions;
-  std::vector<std::shared_ptr<AbstractExpression>> _aggregate_expressions;
-
-  mutable std::optional<std::vector<std::string>> _output_column_names;
-
-  void _update_output() const;
+  std::vector<std::shared_ptr<AbstractExpression>> _output_column_expressions;
 };
 
 }  // namespace opossum

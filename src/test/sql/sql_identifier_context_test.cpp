@@ -144,7 +144,7 @@ TEST_F(SQLIdentifierContextTest, GetExpressionIdentifier) {
 
 TEST_F(SQLIdentifierContextTest, DeepEqualsIsUsed) {
   /**
-   * Test that we can use equivalent, but stored in different Expression objects, expression to use the Context
+   * Test that we can use equivalent Expression objects that are stored in different Objects
    */
 
   const auto expression_a2 = std::make_shared<SQLIdentifierExpression>(SQLIdentifier{"a", "T1"});
@@ -152,6 +152,17 @@ TEST_F(SQLIdentifierContextTest, DeepEqualsIsUsed) {
   context.set_table_name(expression_a2, "T2");
   EXPECT_EQ(context.resolve_identifier_relaxed({"a2"s, "T2"}), expression_a);
   EXPECT_EQ(context.get_expression_identifier(expression_a2), SQLIdentifier("a2"s, "T2"));
+}
+
+TEST_F(SQLIdentifierContextTest, ResolveTableName) {
+  /**
+   * Test that all Expressions of a table name can be found
+   */
+
+  const auto t1_expressions = std::vector<std::shared_ptr<AbstractExpression>>({expression_a, expression_b});
+  const auto t2_expressions = std::vector<std::shared_ptr<AbstractExpression>>({expression_c});
+  EXPECT_EQ(context.resolve_table_name("T1"), t1_expressions);
+  EXPECT_EQ(context.resolve_table_name("T2"), t2_expressions);
 }
 
 }  // namespace opossum

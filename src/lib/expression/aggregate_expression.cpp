@@ -10,18 +10,33 @@
 
 namespace opossum {
 
+AggregateExpression::AggregateExpression(const AggregateFunction aggregate_function):
+  AbstractExpression(ExpressionType::Aggregate, {}) {
+
+}
+
 AggregateExpression::AggregateExpression(const AggregateFunction aggregate_function,
-                    const std::vector<std::shared_ptr<AbstractExpression>>& arguments):
-  AbstractExpression(ExpressionType::Aggregate, arguments), aggregate_function(aggregate_function) {}
+                                         const std::shared_ptr<AbstractExpression>& argument):
+  AbstractExpression(ExpressionType::Aggregate, {argument}), aggregate_function(aggregate_function) {}
+
+std::shared_ptr<AbstractExpression> AggregateExpression::argument() const {
+  return arguments.empty() ? nullptr : arguments[0];
+}
 
 std::shared_ptr<AbstractExpression> AggregateExpression::deep_copy() const {
-  return std::make_shared<AggregateExpression>(aggregate_function, expressions_copy(arguments));
+  if (argument()) {
+    return std::make_shared<AggregateExpression>(aggregate_function, argument()->deep_copy());
+  } else {
+    return std::make_shared<AggregateExpression>(aggregate_function, nullptr);
+  }
 }
 
 std::string AggregateExpression::as_column_name() const {
   std::stringstream stream;
 
-  Fail("Todo");
+  stream << aggregate_function_to_string.left.at(aggregate_function) << "(";
+  if (argument()) stream << argument()->as_column_name();
+  stream << ")";
 
   return stream.str();
 }

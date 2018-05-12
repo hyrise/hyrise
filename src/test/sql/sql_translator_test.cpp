@@ -10,6 +10,7 @@
 #include "expression/arithmetic_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -84,6 +85,16 @@ TEST_F(SQLTranslatorTest, SelectSingleColumn) {
   const auto expected_lqp = ProjectionNode::make(expected_expression, stored_table_node_int_float);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, SelectStar) {
+  const auto actual_lqp_no_table = compile_query("SELECT * FROM int_float;");
+  const auto actual_lqp_table = compile_query("SELECT int_float.* FROM int_float;");
+
+  const auto expected_lqp = ProjectionNode::make(expression_vector(int_float_a, int_float_b), stored_table_node_int_float);
+
+  EXPECT_LQP_EQ(actual_lqp_no_table, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp_table, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, SimpleArithmeticExpression) {
@@ -221,6 +232,62 @@ TEST_F(SQLTranslatorTest, WhereWithBetween) {
     PredicateNode::make(between(int_float_a, int_float_b, 5),
       stored_table_node_int_float
   ));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
+  const auto actual_lqp = compile_query("SELECT SUM(a * 3) * b FROM int_float GROUP BY b");
+
+  const auto a_times_3 = multiplication(int_float_a, 3);
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(multiplication(sum(a_times_3), int_float_b)),
+    AggregateNode::make(expression_vector(int_float_b), expression_vector(sum(a_times_3)),
+      ProjectionNode::make(expression_vector(int_float_a, int_float_b, a_times_3),
+      stored_table_node_int_float
+  )));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, GroupByOnly) {
+  const auto actual_lqp = compile_query("SELECT * FROM int_float GROUP BY b + 3, a / b, b");
+
+  const auto b_plus_3 = addition(int_float_b, 3);
+  const auto a_divided_by_b = division(int_float_a, int_float_b);
+  const auto group_by_expressions = expression_vector(b_plus_3, a_divided_by_b, int_float_b);
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(group_by_expressions,
+    AggregateNode::make(expression_vector(b_plus_3, a_divided_by_b, int_float_b), expression_vector(),
+      ProjectionNode::make(expression_vector(int_float_a, int_float_b, b_plus_3, a_divided_by_b),
+        stored_table_node_int_float
+  )));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, AggregateAndGroupByWildcard) {
+  // - "int_float.*" will select only "b", because a is not in GROUP BY
+  // - y is an alias assigned in the GROUP BY list and can be used in the SELECT list
+  const auto actual_lqp = compile_query("SELECT int_float.*, y, SUM(a+b) FROM int_float GROUP BY b+3 AS y, b");
+
+  const auto sum_a_plus_b = sum(addition(int_float_a, int_float_b));
+  const auto b_plus_3 = addition(int_float_b, 3);
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float_b, b_plus_3, sum(addition(int_float_a, int_float_b))),  // NOLINT
+    AggregateNode::make(expression_vector(b_plus_3, int_float_b), expression_vector(sum_a_plus_b),
+      ProjectionNode::make(expression_vector(int_float_a, int_float_b, b_plus_3, addition(int_float_a, int_float_b)),
+        stored_table_node_int_float
+  )));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

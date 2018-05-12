@@ -24,7 +24,9 @@ std::shared_ptr<ValueExpression> null() {
   return std::make_shared<ValueExpression>(NullValue{});
 }
 
+unary<AggregateFunction::Sum, AggregateExpression> sum;
 binary<ArithmeticOperator::Multiplication, ArithmeticExpression> multiplication;
+binary<ArithmeticOperator::Division, ArithmeticExpression> division;
 binary<ArithmeticOperator::Addition, ArithmeticExpression> addition;
 binary<PredicateCondition::Equals, BinaryPredicateExpression> equals;
 binary<PredicateCondition::LessThan, BinaryPredicateExpression> less_than;
