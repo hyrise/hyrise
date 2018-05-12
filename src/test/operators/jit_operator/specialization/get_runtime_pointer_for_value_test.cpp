@@ -5,13 +5,20 @@
 
 namespace opossum {
 
+/* The code specialization engine uses the JitRuntimePointer class hierarchy to simulate LLVM pointer operations.
+ * The GetRuntimePointerForValue function, which is tested in the following test cases, returns the physical runtime
+ * memory location for an abstract LLVM value, if possible.
+ * The test cases creates a simple bitcode function with a number of pointer instructions. The physical address of
+ * the first function argument is given to the GetRuntimePointerForValue function. Based on this information, it should
+ * be able to compute the physical runtime addresses for the other bitcode values by simulating the coresponding
+ * instructions.
+ */
 class GetRuntimePointerForValueTest : public BaseTest {
  protected:
   void SetUp() override {
     _llvm_context = std::make_shared<llvm::LLVMContext>();
-    _context.module = std::make_unique<llvm::Module>("test_module", *_llvm_context);
 
-    // Create bitcode for the following function
+    // Create an LLVM module with the following bitcode
     //
     // define void @foo(i64*** %0) {
     // entry:
@@ -23,7 +30,7 @@ class GetRuntimePointerForValueTest : public BaseTest {
     //   %6 = getelementptr i64*, i64** %2, i32 4
     //   %7 = load i64*, i64** %2
     // }
-
+    _context.module = std::make_unique<llvm::Module>("test_module", *_llvm_context);
     auto argument_type =
         llvm::PointerType::get(llvm::PointerType::get(llvm::Type::getInt64PtrTy(*_llvm_context), 0), 0);
     auto foo_fn = llvm::dyn_cast<llvm::Function>(
@@ -33,6 +40,7 @@ class GetRuntimePointerForValueTest : public BaseTest {
     auto block = llvm::BasicBlock::Create(*_llvm_context, "entry", foo_fn);
     llvm::IRBuilder<> builder(block);
 
+    // Create instructions
     _value_0 = foo_fn->arg_begin();
     _value_1 = builder.CreateConstGEP1_32(_value_0, 1);
     _value_2 = builder.CreateLoad(_value_0);
@@ -43,6 +51,7 @@ class GetRuntimePointerForValueTest : public BaseTest {
     _value_7 = builder.CreateLoad(_value_2);
   }
 
+  // Assert that the address returned from a JitRuntimePointer equals the expected address
   void assert_address_eq(const std::shared_ptr<const JitRuntimePointer>& runtime_pointer,
                          const uint64_t expected_address) const {
     auto known_runtime_pointer = std::dynamic_pointer_cast<const JitKnownRuntimePointer>(runtime_pointer);
@@ -63,7 +72,8 @@ class GetRuntimePointerForValueTest : public BaseTest {
   llvm::Value* _value_7;
 };
 
-TEST_F(GetRuntimePointerForValueTest, Test1) {
+TEST_F(GetRuntimePointerForValueTest, RuntimePointersAreInvalidWithoutInitialAddress) {
+  //
   ASSERT_FALSE(GetRuntimePointerForValue(_value_0, _context)->is_valid());
   ASSERT_FALSE(GetRuntimePointerForValue(_value_1, _context)->is_valid());
   ASSERT_FALSE(GetRuntimePointerForValue(_value_2, _context)->is_valid());
@@ -74,14 +84,17 @@ TEST_F(GetRuntimePointerForValueTest, Test1) {
   ASSERT_FALSE(GetRuntimePointerForValue(_value_7, _context)->is_valid());
 }
 
-TEST_F(GetRuntimePointerForValueTest, Test2) {
+TEST_F(GetRuntimePointerForValueTest, BitcodePointerInstructionsAreProperlySimulated) {
+  // Create a set of valid pointers that the function can work on
   int64_t some_value;
   int64_t* some_pointer_1 = &some_value;
   int64_t** some_pointer_2 = &some_pointer_1;
   int64_t*** some_pointer_3 = &some_pointer_2;
 
+  // Initialize the first function argument of the foo function to the above pointer
   _context.runtime_value_map[_value_0] = std::make_shared<JitConstantRuntimePointer>(some_pointer_3);
 
+  // Compare simulated and actual pointer values
   assert_address_eq(GetRuntimePointerForValue(_value_0, _context), reinterpret_cast<uint64_t>(some_pointer_3));
   assert_address_eq(GetRuntimePointerForValue(_value_1, _context),
                     reinterpret_cast<uint64_t>(some_pointer_3) + 1 * sizeof(int64_t));

@@ -1,32 +1,35 @@
 #include <iostream>
 
-struct RuntimeContext {
+struct SomeStruct {
   int32_t a;
   int32_t b;
 };
 
-void branch_instruction(const RuntimeContext& context) {
-  // Complex resolvable branch condition with constant folding opportunities
-  if (context.a + context.b > 5) {
+void branch_instruction(const SomeStruct& s) {
+  // A fully resolvable branch condition. All operands of the condition are either constant or loaded from the
+  // SomeStruct parameter.
+  // The expression also requires constant folding (i.e., once all operands have been replaced by constants, the
+  // addition and comparison can be pre-computed to yield a final boolean result).
+  if (s.a + s.b > 5) {
     std::cout << "> 5" << std::endl;
   } else {
     std::cout << "<= 5" << std::endl;
   }
 }
 
-void branch_instruction_failing(const RuntimeContext& context, const int32_t unknown_value) {
-  // This condition depends on unknown_value, which is not part of the runtime context and
-  // thus not known by the specialization engine. Hence, this condition cannot be resolved.
-  if (context.a + context.b > unknown_value) {
+void branch_instruction_failing(const SomeStruct& s, const int32_t unknown_value) {
+  // This branch condition depends on unknown_value, whose value will not be known to the specialization engine.
+  // Hence, this condition cannot be resolved.
+  if (s.a + s.b > unknown_value) {
     std::cout << "> 5" << std::endl;
   } else {
     std::cout << "<= 5" << std::endl;
   }
 }
 
-void switch_instruction(const RuntimeContext& context) {
-  // Simple numeric switch condition that can be resolved from the runtime context
-  switch (context.a) {
+void switch_instruction(const SomeStruct& s) {
+  // Simple numeric switch condition that can be resolved.
+  switch (s.a) {
     case 0:
       std::cout << "0" << std::endl;
       break;
@@ -41,8 +44,8 @@ void switch_instruction(const RuntimeContext& context) {
 
 // Prevent LLVM from optimizing away any code. We use argc as a parameter so the compiler cannot
 // guess its value and do crazy optimizations.
-int main(int argc, char* argv[]) {
-  branch_instruction(RuntimeContext{argc, argc});
-  branch_instruction_failing(RuntimeContext{argc, argc}, argc);
-  switch_instruction(RuntimeContext{argc, argc});
+void foo(int32_t value) {
+  branch_instruction(SomeStruct{value, value});
+  branch_instruction_failing(SomeStruct{value, value}, value);
+  switch_instruction(SomeStruct{value, value});
 }

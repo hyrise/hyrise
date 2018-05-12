@@ -4,6 +4,13 @@
 
 namespace opossum {
 
+/* A class hierarchy for testing the code specialization. The hierarchy roughly resembles the JitOperators, but
+ * operates on simple integer values instead of database tuples. Each operation implements an apply function that
+ * takes a value and applies some operation to it.
+ * The Increment and Decrement operations are parameter-free, the IncrementByN operation takes a parameter via its
+ * constructor that is stored in a private member variable. This operation is used to ensure information from member
+ * variables are considered during code specialization.
+ */
 class AbstractOperation {
  public:
   virtual int32_t apply(const int32_t value) const = 0;
