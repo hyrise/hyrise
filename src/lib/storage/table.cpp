@@ -168,6 +168,27 @@ void Table::append_chunk(const ChunkColumns& columns, const std::optional<Polymo
   _chunks.emplace_back(std::make_shared<Chunk>(columns, mvcc_columns, alloc, access_counter));
 }
 
+void Table::append_chunk(const std::shared_ptr<Chunk> chunk) {
+#if IS_DEBUG
+  for (const auto& column : chunk->columns()) {
+    const auto is_reference_column = std::dynamic_pointer_cast<ReferenceColumn>(column) != nullptr;
+    switch (_type) {
+      case TableType::References:
+        DebugAssert(is_reference_column, "Invalid column type");
+        break;
+      case TableType::Data:
+        DebugAssert(!is_reference_column, "Invalid column type");
+        break;
+    }
+  }
+#endif
+
+  DebugAssert(chunk->has_mvcc_columns() == (_use_mvcc == UseMvcc::Yes),
+              "Chunk does not have the same MVCC setting as the table.");
+
+  _chunks.emplace_back(chunk);
+}
+
 std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }
 
 std::vector<IndexInfo> Table::get_indexes() const { return _indexes; }
