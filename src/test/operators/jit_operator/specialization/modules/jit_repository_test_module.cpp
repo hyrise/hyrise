@@ -24,10 +24,10 @@ struct DerivedD : public DerivedC {
 };
 
 // Prevent LLVM from optimizing away the entire class hierarchy
-int main(int argc, char* argv[]) {
+void foo(int32_t value) {
   std::shared_ptr<Base> instance;
 
-  switch (argc) {
+  switch (value) {
     case 0:
       instance = std::make_shared<DerivedA>();
       break;

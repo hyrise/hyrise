@@ -23,22 +23,24 @@ class JitRTTIHelper {
 
 class JitCodeSpecializer {
  public:
-  JitCodeSpecializer();
+  explicit JitCodeSpecializer(JitRepository& repository = JitRepository::get());
+
+  std::shared_ptr<llvm::Module> specialize_function(
+      const std::string& root_function_name,
+      const std::shared_ptr<const JitRuntimePointer>& runtime_this = std::make_shared<JitRuntimePointer>(),
+      const bool two_passes = false);
 
   template <typename T>
-  std::function<T> specialize_function(const std::string& root_function_name,
-                                       const std::shared_ptr<const JitRuntimePointer>& runtime_this,
-                                       const bool two_passes) {
-    _repository.specialization_mutex().lock();
-    _specialize_function_impl(root_function_name, runtime_this, two_passes);
-    _repository.specialization_mutex().unlock();
+  std::function<T> specialize_and_compile_function(
+      const std::string& root_function_name,
+      const std::shared_ptr<const JitRuntimePointer>& runtime_this = std::make_shared<JitRuntimePointer>(),
+      const bool two_passes = false) {
+    auto module = specialize_function(root_function_name, runtime_this, two_passes);
+    _compiler.add_module(module);
     return _compiler.find_symbol<T>(root_function_name + "_");
   }
 
  private:
-  void _specialize_function_impl(const std::string& root_function_name,
-                                 const std::shared_ptr<const JitRuntimePointer>& runtime_this, const bool two_passes);
-
   void _inline_function_calls(SpecializationContext& context, const bool two_passes) const;
 
   void _perform_load_substitution(SpecializationContext& context) const;

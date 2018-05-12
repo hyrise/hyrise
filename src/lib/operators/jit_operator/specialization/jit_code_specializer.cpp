@@ -16,15 +16,17 @@
 
 namespace opossum {
 
-JitCodeSpecializer::JitCodeSpecializer()
-    : _repository{JitRepository::get()}, _llvm_context{_repository.llvm_context()}, _compiler{_llvm_context} {}
+JitCodeSpecializer::JitCodeSpecializer(JitRepository& repository)
+    : _repository{repository}, _llvm_context{_repository.llvm_context()}, _compiler{_llvm_context} {}
 
-void JitCodeSpecializer::_specialize_function_impl(const std::string& root_function_name,
-                                                   const std::shared_ptr<const JitRuntimePointer>& runtime_this,
-                                                   const bool two_passes) {
+std::shared_ptr<llvm::Module> JitCodeSpecializer::specialize_function(
+    const std::string& root_function_name, const std::shared_ptr<const JitRuntimePointer>& runtime_this,
+    const bool two_passes) {
+  std::lock_guard<std::mutex> lock(_repository.specialization_mutex());
+
   SpecializationContext context;
   context.root_function_name = root_function_name;
-  context.module = std::make_unique<llvm::Module>(root_function_name, *_llvm_context);
+  context.module = std::make_shared<llvm::Module>(root_function_name, *_llvm_context);
   context.module->setDataLayout(_compiler.data_layout());
 
   const auto root_function = _repository.get_function(root_function_name);
@@ -49,7 +51,7 @@ void JitCodeSpecializer::_specialize_function_impl(const std::string& root_funct
     _optimize(context, false);
   }
 
-  _compiler.add_module(std::move(context.module));
+  return context.module;
 }
 
 void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context, const bool two_passes) const {

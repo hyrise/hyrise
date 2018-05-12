@@ -10,6 +10,8 @@ namespace opossum {
 // The symbols are defined in an assembly file that is generated in EmbedLLVM.cmake and linked into the binary.
 // Please refer to EmbedLLVM.cmake / src/test/CMakeLists.txt for further details of the bitcode generation and
 // embedding process.
+// The C++ code used to generate the bitcode for this test is located in
+// src/test/operators/jit_operator/specialization/modules/resolve_condition_test_module.cpp.
 extern char resolve_condition_test_module;
 extern size_t resolve_condition_test_module_size;
 
@@ -23,7 +25,6 @@ class ResolveConditionTest : public BaseTest {
   void SetUp() override {
     _repository = std::make_shared<JitRepository>(
         std::string(&resolve_condition_test_module, resolve_condition_test_module_size));
-    _specialization_context.module = _repository->module();
 
     // Locate branch instruction in "void branch_instruction(RuntimeContext const&)" function
     _branch_instruction_fn = _repository->get_function("_Z18branch_instructionRK14RuntimeContext");
@@ -37,6 +38,8 @@ class ResolveConditionTest : public BaseTest {
     // Locate switch instruction in "void switch_instruction(RuntimeContext const&)" function
     _switch_instruction_fn = _repository->get_function("_Z18switch_instructionRK14RuntimeContext");
     _switch_instruction = llvm::dyn_cast<llvm::SwitchInst>(_switch_instruction_fn->getEntryBlock().getTerminator());
+
+    _specialization_context.module = _repository->module();
   }
 
   std::shared_ptr<JitRepository> _repository;
