@@ -204,7 +204,7 @@ TEST_F(JitCodeSpecializerTest, UnrollsLoops) {
     const auto num_phi_nodes = count_instructions<llvm::PHINode>(*specialized_apply_multiple_operations_fn);
     ASSERT_GT(num_phi_nodes, 1u);
     const auto num_call_instructions = count_instructions<llvm::CallInst>(*specialized_apply_multiple_operations_fn);
-    ASSERT_GT(num_call_instructions, 1u);
+    ASSERT_GE(num_call_instructions, 1u);
   }
   {
     // Repeat the above test WITH loop unrolling
