@@ -7,13 +7,15 @@
 #include "gtest/gtest.h"
 
 #include "expression/arithmetic_expression.hpp"
+#include "expression/expression_utils.hpp"
+#include "expression/expression_factory.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 //#include "logical_query_plan/aggregate_node.hpp"
 //#include "logical_query_plan/join_node.hpp"
 //#include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
-//#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 //#include "logical_query_plan/show_columns_node.hpp"
 //#include "logical_query_plan/show_tables_node.hpp"
@@ -31,12 +33,14 @@
 //#include "operators/pqp_expression.hpp"
 #include "operators/projection.hpp"
 //#include "operators/sort.hpp"
-//#include "operators/table_scan.hpp"
+#include "operators/table_scan.hpp"
 //#include "operators/union_positions.hpp"
 //#include "storage/chunk_encoder.hpp"
 //#include "storage/index/group_key/group_key_index.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
+
+using namespace opossum::expression_factory;  // NOLINT
 
 namespace opossum {
 
@@ -50,14 +54,14 @@ class LQPTranslatorTest : public ::testing::Test {
     StorageManager::get().add_table("table_int_float", table_int_float);
     StorageManager::get().add_table("table_int_float2", table_int_float2);
     StorageManager::get().add_table("table_alias_name", table_alias_name);
-//    StorageManager::get().add_table("table_int_float_chunked", load_table("src/test/tables/int_float.tbl", 1));
-//    ChunkEncoder::encode_all_chunks(StorageManager::get().get_table("table_int_float_chunked"));
+//    StorageManager::get().add_table("int_float_chunked", load_table("src/test/tables/int_float.tbl", 1));
+//    ChunkEncoder::encode_all_chunks(StorageManager::get().get_table("int_float_chunked"));
 
-    table_int_float_node = StoredTableNode::make("table_int_float");
-    table_int_float_a = table_int_float_node->get_column("a");
-    table_int_float_b = table_int_float_node->get_column("b");
-    table_int_float_a_expression = std::make_shared<LQPColumnExpression>(table_int_float_a);
-    table_int_float_b_expression = std::make_shared<LQPColumnExpression>(table_int_float_b);
+    int_float_node = StoredTableNode::make("table_int_float");
+    int_float_a = int_float_node->get_column("a");
+    int_float_b = int_float_node->get_column("b");
+    int_float_a_expression = std::make_shared<LQPColumnExpression>(int_float_a);
+    int_float_b_expression = std::make_shared<LQPColumnExpression>(int_float_b);
   }
 
   void TearDown() override {
@@ -73,9 +77,9 @@ class LQPTranslatorTest : public ::testing::Test {
 //  }
 
   std::shared_ptr<Table> table_int_float, table_int_float2, table_alias_name;
-  std::shared_ptr<StoredTableNode> table_int_float_node;
-  LQPColumnReference table_int_float_a, table_int_float_b;
-  std::shared_ptr<AbstractExpression> table_int_float_a_expression, table_int_float_b_expression;
+  std::shared_ptr<StoredTableNode> int_float_node;
+  LQPColumnReference int_float_a, int_float_b;
+  std::shared_ptr<AbstractExpression> int_float_a_expression, int_float_b_expression;
 };
 
 TEST_F(LQPTranslatorTest, StoredTableNode) {
@@ -85,7 +89,7 @@ TEST_F(LQPTranslatorTest, StoredTableNode) {
    * LQP resembles:
    *    SELECT a FROM table_int_float;
    */
-  const auto op = LQPTranslator{}.translate_node(table_int_float_node);
+  const auto op = LQPTranslator{}.translate_node(int_float_node);
 
   /**
    * Check PQP
@@ -102,9 +106,9 @@ TEST_F(LQPTranslatorTest, ArithmeticExpression) {
    * LQP resembles:
    *   SELECT a + b FROM table_int_float;
    */
-  const auto a_plus_b_lqp = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, table_int_float_a_expression, table_int_float_b_expression);
+  const auto a_plus_b_lqp = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, int_float_a_expression, int_float_b_expression);
   const auto projection_expressions = std::vector<std::shared_ptr<AbstractExpression>>({a_plus_b_lqp});
-  const auto projection_node = ProjectionNode::make(projection_expressions, table_int_float_node);
+  const auto projection_node = ProjectionNode::make(projection_expressions, int_float_node);
   const auto op = LQPTranslator{}.translate_node(projection_node);
 
   /**
@@ -125,6 +129,29 @@ TEST_F(LQPTranslatorTest, ArithmeticExpression) {
   ASSERT_TRUE(b_pqp);
   EXPECT_EQ(b_pqp->column_id, ColumnID{1});
 
+  const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(op->input_left());
+  ASSERT_TRUE(get_table_op);
+  EXPECT_EQ(get_table_op->table_name(), "table_int_float");
+}
+
+TEST_F(LQPTranslatorTest, PredicateNode) {
+  /**
+   * Build LQP and translate to PQP
+   *
+   * LQP resembles:
+   *   SELECT * FROM int_float WHERE 5 > b;
+   */
+  const auto predicate_node = PredicateNode::make(greater_than(5, int_float_b), int_float_node);
+  const auto op = LQPTranslator{}.translate_node(predicate_node);
+
+  /**
+   * Check PQP
+   */
+  const auto table_scan_op = std::dynamic_pointer_cast<TableScan>(op);
+  ASSERT_TRUE(table_scan_op);
+  EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1});
+  EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::LessThan);
+  EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(5));
 
   const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(op->input_left());
   ASSERT_TRUE(get_table_op);
@@ -181,9 +208,9 @@ TEST_F(LQPTranslatorTest, ArithmeticExpression) {
 //  /**
 //   * Build LQP and translate to PQP
 //   */
-//  const auto stored_table_node = StoredTableNode::make("table_int_float_chunked");
+//  const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 //
-//  const auto table = StorageManager::get().get_table("table_int_float_chunked");
+//  const auto table = StorageManager::get().get_table("int_float_chunked");
 //  std::vector<ColumnID> index_column_ids = {ColumnID{1}};
 //  std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
 //  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
@@ -217,9 +244,9 @@ TEST_F(LQPTranslatorTest, ArithmeticExpression) {
 //  /**
 //   * Build LQP and translate to PQP
 //   */
-//  const auto stored_table_node = StoredTableNode::make("table_int_float_chunked");
+//  const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 //
-//  const auto table = StorageManager::get().get_table("table_int_float_chunked");
+//  const auto table = StorageManager::get().get_table("int_float_chunked");
 //  std::vector<ColumnID> index_column_ids = {ColumnID{1}};
 //  std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
 //  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
@@ -261,9 +288,9 @@ TEST_F(LQPTranslatorTest, ArithmeticExpression) {
 //  /**
 //   * Build LQP and translate to PQP
 //   */
-//  const auto stored_table_node = StoredTableNode::make("table_int_float_chunked");
+//  const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 //
-//  const auto table = StorageManager::get().get_table("table_int_float_chunked");
+//  const auto table = StorageManager::get().get_table("int_float_chunked");
 //  std::vector<ColumnID> index_column_ids = {ColumnID{1}};
 //  std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
 //  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);

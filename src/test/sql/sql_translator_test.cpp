@@ -12,8 +12,10 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
+#include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "storage/storage_manager.hpp"
 #include "sql/sql_translator.hpp"
 #include "utils/load_table.hpp"
@@ -149,6 +151,58 @@ TEST_F(SQLTranslatorTest, AliasesInSelectList) {
   const auto expected_lqp =
   AliasNode::make(expressions, aliases,
     ProjectionNode::make(expressions, stored_table_node_int_float)
+  );
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, WhereSimple) {
+  const auto actual_lqp = compile_query("SELECT a FROM int_float WHERE a < 200;");
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float_a),
+    PredicateNode::make(less_than(int_float_a, 200), stored_table_node_int_float));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, WhereWithArithmetics) {
+  const auto actual_lqp = compile_query("SELECT a FROM int_float WHERE a * b >= b + a;");
+
+  const auto a_times_b = multiplication(int_float_a, int_float_b);
+  const auto b_plus_a = addition(int_float_b, int_float_a);
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float_a),
+    PredicateNode::make(greater_than_equals(a_times_b, b_plus_a),
+      ProjectionNode::make(expression_vector(a_times_b, b_plus_a, int_float_a, int_float_b), stored_table_node_int_float
+  )));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, WhereWithOr) {
+  const auto actual_lqp = compile_query("SELECT a FROM int_float WHERE 5 >= b + a OR (a > 2 AND b > 2);");
+
+  const auto b_plus_a = addition(int_float_b, int_float_a);
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float_a),
+    UnionNode::make(UnionMode::Positions,
+      ProjectionNode::make(expression_vector(int_float_a, int_float_b), // get rid of "b+a" for the Union
+        PredicateNode::make(greater_than_equals(5, b_plus_a),
+          ProjectionNode::make(expression_vector(b_plus_a, int_float_a, int_float_b), // compute "b+a"
+            stored_table_node_int_float))),
+      PredicateNode::make(greater_than(int_float_a, 2),
+        PredicateNode::make(greater_than(int_float_b, 2),
+           stored_table_node_int_float))
+    )
   );
   // clang-format on
 

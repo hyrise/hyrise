@@ -26,7 +26,7 @@ class LQPTranslator final {
                                                             const std::shared_ptr<AbstractLQPNode>& node) const;
 
   std::shared_ptr<AbstractOperator> _translate_stored_table_node(const std::shared_ptr<AbstractLQPNode>& node) const;
-//  std::shared_ptr<AbstractOperator> _translate_predicate_node(const std::shared_ptr<AbstractLQPNode>& node) const;
+  std::shared_ptr<AbstractOperator> _translate_predicate_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 //  std::shared_ptr<AbstractOperator> _translate_predicate_node_to_index_scan(
 //      const std::shared_ptr<PredicateNode>& node, const AllParameterVariant& value, const ColumnID column_id,
 //      const std::shared_ptr<AbstractOperator> input_operator) const;
@@ -40,7 +40,7 @@ class LQPTranslator final {
 //  std::shared_ptr<AbstractOperator> _translate_delete_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 //  std::shared_ptr<AbstractOperator> _translate_dummy_table_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 //  std::shared_ptr<AbstractOperator> _translate_update_node(const std::shared_ptr<AbstractLQPNode>& node) const;
-//  std::shared_ptr<AbstractOperator> _translate_union_node(const std::shared_ptr<AbstractLQPNode>& node) const;
+  std::shared_ptr<AbstractOperator> _translate_union_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 //  std::shared_ptr<AbstractOperator> _translate_validate_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 //
 //  // Maintenance operators

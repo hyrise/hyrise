@@ -191,6 +191,7 @@ std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
         return std::make_shared<ArithmeticExpression>(arithmetic_operators_iter->second, left, right);
       }
 
+      // Translate PredicateExpression
       const auto predicate_condition_iter = hsql_predicate_condition.find(expr.opType);
       if (predicate_condition_iter != hsql_predicate_condition.end()) {
         Assert(left && right, "Unexpected SQLParserResult. Didn't receive two arguments for binary_expression");
@@ -203,6 +204,8 @@ std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& expr,
 
       switch (expr.opType) {
         case hsql::kOpCase: return translate_hsql_case(expr, sql_identifier_context, use_mvcc);
+        case hsql::kOpOr: return std::make_shared<LogicalExpression>(LogicalOperator::Or, left, right);
+        case hsql::kOpAnd: return std::make_shared<LogicalExpression>(LogicalOperator::And, left, right);
 
         default:
           Fail("Not handling this OperatorType yet");

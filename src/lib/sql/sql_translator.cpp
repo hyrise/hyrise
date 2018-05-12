@@ -10,14 +10,16 @@
 #include <vector>
 
 //#include "expression/abstract_expression.hpp"
-//#include "expression/abstract_predicate_expression.hpp"
+#include "expression/abstract_predicate_expression.hpp"
 //#include "expression/aggregate_expression.hpp"
-//#include "expression/binary_predicate_expression.hpp"
-//#include "expression/expression_utils.hpp"
-//#include "expression/logical_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/between_expression.hpp"
+#include "expression/expression_utils.hpp"
+#include "expression/logical_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
+#include "expression/is_null_expression.hpp"
 //#include "expression/not_expression.hpp"
-//#include "expression/value_expression.hpp"
+#include "expression/value_expression.hpp"
 //#include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
@@ -29,13 +31,13 @@
 //#include "logical_query_plan/insert_node.hpp"
 //#include "logical_query_plan/join_node.hpp"
 //#include "logical_query_plan/limit_node.hpp"
-//#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 //#include "logical_query_plan/show_columns_node.hpp"
 //#include "logical_query_plan/show_tables_node.hpp"
 //#include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-//#include "logical_query_plan/union_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 //#include "logical_query_plan/update_node.hpp"
 //#include "logical_query_plan/validate_node.hpp"
 //#include "sql/hsql_expr_translator.hpp"
@@ -135,10 +137,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select_statement(const
 
   _current_lqp = _translate_table_ref(*select.fromTable);
 
-//  if (select.whereClause != nullptr) {
-//    const auto where_expression = translate_hsql_expr(*select.whereClause, translation_state, _validate);
-//    current_lqp = _translate_predicate_expression(where_expression, current_lqp, translation_state);
-//  }
+  if (select.whereClause != nullptr) {
+    const auto where_expression = translate_hsql_expr(*select.whereClause, _sql_identifier_context, _use_mvcc);
+    _current_lqp = _translate_predicate_expression(where_expression, _current_lqp);
+  }
 
   _translate_select_list_groupby_having(select);
 
@@ -663,69 +665,81 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(
 //  validate_node->set_left_input(input_node);
   return input_node;
 }
-//
-//std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
-//  const std::shared_ptr<AbstractExpression> &expression,
-//  std::shared_ptr<AbstractLQPNode> current_node) const {
-//  if (expression->type == ExpressionType::Predicate) {
-//    for (const auto &argument : expression->arguments) {
-//      current_node = _translate_predicate_expression(argument, current_node);
-//    }
-//
-//    const auto predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(expression);
-//
-//    return PredicateNode::make(predicate_expression, current_node);
-//  }
-//
-//  if (expression->type == ExpressionType::Logical) {
-//    const auto logical_expression = std::static_pointer_cast<LogicalExpression>(expression);
-//
-//    switch (logical_expression->logical_operator) {
-//      case LogicalOperator::And: {
-//        current_node = _translate_predicate_expression(logical_expression->left_operand(), current_node);
-//        return _translate_predicate_expression(logical_expression->right_operand(), current_node);
-//      }
-//      case LogicalOperator::Or: {
-//        const auto input_expressions = current_node->output_column_expressions();
-//
-//        const auto left_input = _translate_predicate_expression(logical_expression->left_operand(), current_node);
-//        const auto right_input = _translate_predicate_expression(logical_expression->left_operand(), current_node);
-//
-//        // For Union to work we need to eliminate all potential temporary columns added in the branches of the Union
-//        // E.g. "a+b" in "a+b > 5 OR a < 3"
-//        return UnionNode::make(UnionMode::Positions,
-//                               _prune_expressions(left_input, input_expressions),
-//                               _prune_expressions(right_input, input_expressions));
-//      }
-//    }
-//  }
-//
-//  if (expression->type == ExpressionType::Not) {
-//    // Fallback implementation for NOT, for now
-//    current_node = _add_expression_if_unavailable(current_node, expression);
-//    return PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
-//    PredicateCondition::NotEquals, expression, std::make_shared<ValueExpression>(0)));
-//  }
-//
-//  Assert(expression->type != ExpressionType::Aggregate, "Aggregate used in illegal location");
-//  return _add_expression_if_unavailable(current_node, expression);
-//}
-//
-//
-//std::shared_ptr<AbstractLQPNode> SQLTranslator::_prune_expressions(const std::shared_ptr<AbstractLQPNode>& node,
-//                                                            const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const {
-//  if (expressions_equal(node->output_column_expressions(), expressions)) return node;
-//  return ProjectionNode::make(expressions, node);
-//}
-//
-//std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expression_if_unavailable(const std::shared_ptr<AbstractLQPNode>& node,
-//                                                 const std::shared_ptr<AbstractExpression>& expression) const {
-//  // The required expression is already available or doesn't need to be computed (e.g. when it is a literal)
-//  if (!expression->requires_calculation() || node->find_column(expression)) return node;
-//
-//  auto expressions = node->output_column_expressions();
-//  expressions.emplace_back(expression);
-//  return ProjectionNode::make(expressions, node);
-//}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(const std::shared_ptr<AbstractExpression> &expression,
+                                                                                std::shared_ptr<AbstractLQPNode> current_node) const {
+  /**
+   * Translate AbstractPredicateExpression
+   */
+  if (expression->type == ExpressionType::Predicate) {
+    current_node = _add_expressions_if_unavailable(current_node, expression->arguments);
+    return PredicateNode::make(expression, current_node);
+  }
+
+  /**
+   * Translate LogicalExpression
+   */
+  if (expression->type == ExpressionType::Logical) {
+    const auto logical_expression = std::static_pointer_cast<LogicalExpression>(expression);
+
+    switch (logical_expression->logical_operator) {
+      case LogicalOperator::And: {
+        current_node = _translate_predicate_expression(logical_expression->right_operand(), current_node);
+        return _translate_predicate_expression(logical_expression->left_operand(), current_node);
+      }
+      case LogicalOperator::Or: {
+        const auto input_expressions = current_node->output_column_expressions();
+
+        const auto left_input = _translate_predicate_expression(logical_expression->left_operand(), current_node);
+        const auto right_input = _translate_predicate_expression(logical_expression->right_operand(), current_node);
+
+        // For Union to work we need to eliminate all potential temporary columns added in the branches of the Union
+        // E.g. "a+b" in "a+b > 5 OR a < 3"
+        return UnionNode::make(UnionMode::Positions,
+                               _prune_expressions(left_input, input_expressions),
+                               _prune_expressions(right_input, input_expressions));
+      }
+    }
+  }
+
+  /**
+   * Translate NotExpression
+   */
+  if (expression->type == ExpressionType::Not) {
+    // Fallback implementation for NOT, for now
+    current_node = _add_expressions_if_unavailable(current_node, {expression});
+    return PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
+    PredicateCondition::NotEquals, expression, std::make_shared<ValueExpression>(0)), current_node);
+  }
+
+  Fail("Non-predicate Expression used as Predicate");
+}
+
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_prune_expressions(const std::shared_ptr<AbstractLQPNode>& node,
+                                                            const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const {
+  if (expressions_equal(node->output_column_expressions(), expressions)) return node;
+  return ProjectionNode::make(expressions, node);
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expressions_if_unavailable(const std::shared_ptr<AbstractLQPNode>& node,
+                                                 const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const {
+  std::vector<std::shared_ptr<AbstractExpression>> projection_expressions;
+
+  for (const auto& expression : expressions) {
+    // The required expression is already available or doesn't need to be computed (e.g. when it is a literal)
+    if (!expression->requires_calculation() || node->find_column_id(*expression)) continue;
+    projection_expressions.emplace_back(expression);
+  }
+
+  // All requested expressions are available, no need to create a projection
+  if (projection_expressions.empty()) return node;
+
+  projection_expressions.insert(projection_expressions.end(),
+                                node->output_column_expressions().begin(),
+                                node->output_column_expressions().end());
+
+  return ProjectionNode::make(projection_expressions, node);
+}
 
 }  // namespace opossum

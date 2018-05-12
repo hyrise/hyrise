@@ -26,6 +26,10 @@ std::shared_ptr<ValueExpression> null() {
 
 binary<ArithmeticOperator::Multiplication, ArithmeticExpression> multiplication;
 binary<ArithmeticOperator::Addition, ArithmeticExpression> addition;
+binary<PredicateCondition::Equals, BinaryPredicateExpression> equals;
+binary<PredicateCondition::LessThan, BinaryPredicateExpression> less_than;
+binary<PredicateCondition::GreaterThanEquals, BinaryPredicateExpression> greater_than_equals;
+binary<PredicateCondition::GreaterThan, BinaryPredicateExpression> greater_than;
 
 }  // namespace expression_factory
 

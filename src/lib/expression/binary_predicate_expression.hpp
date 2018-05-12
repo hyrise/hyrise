@@ -15,6 +15,9 @@ class BinaryPredicateExpression : public AbstractPredicateExpression {
   const std::shared_ptr<AbstractExpression>& left_operand() const;
   const std::shared_ptr<AbstractExpression>& right_operand() const;
 
+  // a > 5 --> 5 < a
+  std::shared_ptr<BinaryPredicateExpression> flipped() const;
+
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
 

@@ -109,8 +109,8 @@ set(
     logical_query_plan/lqp_utils.hpp
     logical_query_plan/mock_node.cpp
     logical_query_plan/mock_node.hpp
-#    logical_query_plan/predicate_node.cpp
-#    logical_query_plan/predicate_node.hpp
+    logical_query_plan/predicate_node.cpp
+    logical_query_plan/predicate_node.hpp
     logical_query_plan/projection_node.cpp
     logical_query_plan/projection_node.hpp
 #    logical_query_plan/show_columns_node.cpp
@@ -121,8 +121,8 @@ set(
 #    logical_query_plan/sort_node.hpp
     logical_query_plan/stored_table_node.cpp
     logical_query_plan/stored_table_node.hpp
-#    logical_query_plan/union_node.cpp
-#    logical_query_plan/union_node.hpp
+    logical_query_plan/union_node.cpp
+    logical_query_plan/union_node.hpp
 #    logical_query_plan/update_node.cpp
 #    logical_query_plan/update_node.hpp
 #    logical_query_plan/validate_node.cpp
@@ -207,8 +207,8 @@ set(
     operators/table_wrapper.hpp
 #    operators/union_all.cpp
 #    operators/union_all.hpp
-#    operators/union_positions.cpp
-#    operators/union_positions.hpp
+    operators/union_positions.cpp
+    operators/union_positions.hpp
 #    operators/update.cpp
 #    operators/update.hpp
 #    operators/validate.cpp

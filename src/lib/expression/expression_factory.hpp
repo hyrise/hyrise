@@ -47,11 +47,6 @@ std::shared_ptr<ValueExpression> to_expression(const AllTypeVariant& value);
 std::shared_ptr<ValueExpression> value(const AllTypeVariant& value);
 std::shared_ptr<ValueExpression> null();
 
-template<typename ExpressionLikeLeft, typename ExpressionLikeRight>
-std::shared_ptr<BinaryPredicateExpression> equals(const ExpressionLikeLeft& lhs, const ExpressionLikeRight& rhs) {
-  return std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, to_expression(lhs), to_expression(rhs));
-};
-
 template<auto t, typename E>
 struct binary final {
   template<typename L, typename R>
@@ -62,6 +57,10 @@ struct binary final {
 
 extern binary<ArithmeticOperator::Multiplication, ArithmeticExpression> multiplication;
 extern binary<ArithmeticOperator::Addition, ArithmeticExpression> addition;
+extern binary<PredicateCondition::Equals, BinaryPredicateExpression> equals;
+extern binary<PredicateCondition::LessThan, BinaryPredicateExpression> less_than;
+extern binary<PredicateCondition::GreaterThanEquals, BinaryPredicateExpression> greater_than_equals;
+extern binary<PredicateCondition::GreaterThan, BinaryPredicateExpression> greater_than;
 
 template<typename ExpressionLikeWhen, typename ExpressionLikeThen, typename ExpressionLikeElse>
 std::shared_ptr<CaseExpression> case_(const ExpressionLikeWhen& when,

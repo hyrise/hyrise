@@ -71,14 +71,8 @@ class SQLTranslator final {
 //  std::shared_ptr<AbstractLQPNode> _translate_column_renamings(const std::shared_ptr<AbstractLQPNode> &node,
 //                                                               const hsql::TableRef &table);
 //
-//  std::shared_ptr<AbstractLQPNode> _translate_predicate_expression(
-//  const std::shared_ptr<AbstractExpression> &expression, std::shared_ptr<AbstractLQPNode> current_node) const;
-//
-//  std::shared_ptr<AbstractLQPNode> _prune_expressions(const std::shared_ptr<AbstractLQPNode>& node,
-//                                                              const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const;
-//
-//  std::shared_ptr<AbstractLQPNode> _add_expression_if_unavailable(const std::shared_ptr<AbstractLQPNode>& node,
-//                                                              const std::shared_ptr<AbstractExpression>& expression) const;
+  std::shared_ptr<AbstractLQPNode> _translate_predicate_expression(
+  const std::shared_ptr<AbstractExpression> &expression, std::shared_ptr<AbstractLQPNode> current_node) const;
 //
 //  std::shared_ptr<AbstractLQPNode> _translate_show(const hsql::ShowStatement& show_statement);
 //
@@ -86,6 +80,12 @@ class SQLTranslator final {
 //
 //  std::vector<std::shared_ptr<LQPExpression>> _retrieve_having_aggregates(
 //      const hsql::Expr& expr, const std::shared_ptr<AbstractLQPNode>& input_node);
+
+  std::shared_ptr<AbstractLQPNode> _prune_expressions(const std::shared_ptr<AbstractLQPNode>& node,
+                                                      const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const;
+
+  std::shared_ptr<AbstractLQPNode> _add_expressions_if_unavailable(const std::shared_ptr<AbstractLQPNode>& node,
+                                                                  const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const;
 
  private:
   const UseMvcc _use_mvcc;

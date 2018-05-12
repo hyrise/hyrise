@@ -13,9 +13,15 @@
 //#include "drop_view_node.hpp"
 //#include "dummy_table_node.hpp"
 #include "expression/abstract_expression.hpp"
+#include "expression/abstract_predicate_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/between_expression.hpp"
+#include "expression/is_null_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "expression/value_expression.hpp"
+#include "expression/value_placeholder_expression.hpp"
 //#include "insert_node.hpp"
 //#include "join_node.hpp"
 //#include "limit_node.hpp"
@@ -36,19 +42,19 @@
 #include "operators/alias_operator.hpp"
 #include "operators/projection.hpp"
 //#include "operators/sort.hpp"
-//#include "operators/table_scan.hpp"
+#include "operators/table_scan.hpp"
 //#include "operators/table_wrapper.hpp"
-//#include "operators/union_positions.hpp"
+#include "operators/union_positions.hpp"
 //#include "operators/update.hpp"
 //#include "operators/validate.hpp"
 #include "alias_node.hpp"
-//#include "predicate_node.hpp"
+#include "predicate_node.hpp"
 #include "projection_node.hpp"
 //#include "show_columns_node.hpp"
 //#include "sort_node.hpp"
 //#include "storage/storage_manager.hpp"
 #include "stored_table_node.hpp"
-//#include "union_node.hpp"
+#include "union_node.hpp"
 //#include "update_node.hpp"
 //#include "utils/performance_warning.hpp"
 //#include "validate_node.hpp"
@@ -89,8 +95,8 @@ LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
     case LQPNodeType::Alias:        return _translate_alias_node(node);
     case LQPNodeType::StoredTable:
       return _translate_stored_table_node(node);
-//    case LQPNodeType::Predicate:
-//      return _translate_predicate_node(node);
+    case LQPNodeType::Predicate:
+      return _translate_predicate_node(node);
     case LQPNodeType::Projection:
       return _translate_projection_node(node);
 //    case LQPNodeType::Sort:
@@ -111,8 +117,8 @@ LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
 //      return _translate_update_node(node);
 //    case LQPNodeType::Validate:
 //      return _translate_validate_node(node);
-//    case LQPNodeType::Union:
-//      return _translate_union_node(node);
+    case LQPNodeType::Union:
+      return _translate_union_node(node);
 
 //      // Maintenance operators
 //    case LQPNodeType::ShowTables:
@@ -137,10 +143,45 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_stored_table_node(
   return get_table;
 }
 
-//std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
-//    const std::shared_ptr<AbstractLQPNode>& node) const {
-//  const auto input_operator = translate_node(node->left_input());
-//  auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto input_node = node->left_input();
+  const auto input_operator = translate_node(input_node);
+  const auto predicate_node = std::static_pointer_cast<PredicateNode>(node);
+
+  Assert(predicate_node->predicate->type == ExpressionType::Predicate, "Only PredicateExpressions can be translated to Table/IndexScans");
+
+  if (auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node->predicate); binary_predicate_expression) {
+    // LeftOperand must be a column, if it isn't switch operands
+    if (!input_node->find_column_id(*binary_predicate_expression->left_operand())) {
+      binary_predicate_expression = binary_predicate_expression->flipped();
+    }
+
+    const auto left_column_id = input_node->get_column_id(*binary_predicate_expression->left_operand());
+
+    auto right_parameter = AllParameterVariant{};
+
+    const auto right_expression = binary_predicate_expression->right_operand();
+
+    // Except for Value and ValuePlaceholders every expression is resolved to a column
+    if (right_expression->type == ExpressionType::Value) {
+      const auto value_expression = std::static_pointer_cast<ValueExpression>(right_expression);
+      right_parameter = value_expression->value;
+    } else if (right_expression->type == ExpressionType::ValuePlaceholder) {
+      const auto value_placeholder_expression = std::static_pointer_cast<ValuePlaceholderExpression>(right_expression);
+      right_parameter = value_placeholder_expression->value_placeholder;
+    } else {
+      right_parameter = input_node->get_column_id(*right_expression);
+    }
+
+    return std::make_shared<TableScan>(input_operator,
+                                       left_column_id,
+                                       binary_predicate_expression->predicate_condition,
+                                       right_parameter);
+  }
+
+  Fail("Unsupported predicate type");
+//  if (auto left_expression = predicate_node->predicate
 //
 //  const auto column_id = predicate_node->get_output_column_id(predicate_node->column_reference());
 //
@@ -168,8 +209,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_stored_table_node(
 //  }
 //
 //  return std::make_shared<TableScan>(input_operator, column_id, predicate_node->predicate_condition(), value);
-//}
-//
+}
+
 //std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_index_scan(
 //    const std::shared_ptr<PredicateNode>& predicate_node, const AllParameterVariant& value, const ColumnID column_id,
 //    const std::shared_ptr<AbstractOperator> input_operator) const {
@@ -355,20 +396,18 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_projection_node(
 //  return std::make_shared<Update>(update_node->table_name(), input_operator, projection);
 //}
 //
-//std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
-//    const std::shared_ptr<AbstractLQPNode>& node) const {
-//  const auto union_node = std::dynamic_pointer_cast<UnionNode>(node);
-//
-//  const auto input_operator_left = translate_node(node->left_input());
-//  const auto input_operator_right = translate_node(node->right_input());
-//
-//  switch (union_node->union_mode()) {
-//    case UnionMode::Positions:
-//      return std::make_shared<UnionPositions>(input_operator_left, input_operator_right);
-//    default:
-//      Fail("UnionMode not supported");
-//  }
-//}
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto union_node = std::dynamic_pointer_cast<UnionNode>(node);
+
+  const auto input_operator_left = translate_node(node->left_input());
+  const auto input_operator_right = translate_node(node->right_input());
+
+  switch (union_node->union_mode) {
+    case UnionMode::Positions:
+      return std::make_shared<UnionPositions>(input_operator_left, input_operator_right);
+  }
+}
 //
 //std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
 //    const std::shared_ptr<AbstractLQPNode>& node) const {

@@ -1,30 +1,31 @@
 --SELECT * FROM mixed;
 --SELECT * FROM mixed_null;
---
----- Table Scans
---SELECT * FROM mixed WHERE b = 10;
---SELECT * FROM mixed WHERE a = 'a' AND c < 65.31;
---SELECT * FROM mixed WHERE a = 'a' AND c <= 65.31;
---SELECT * FROM mixed WHERE 40 >= b;
---SELECT * FROM mixed WHERE b >= 21 AND c < 72.76;
+
+-- Table Scans
+-- TODO reinstantiate *
+SELECT b FROM mixed WHERE b = 10;
+SELECT b FROM mixed WHERE a = 'a' AND c < 65.31;
+SELECT b FROM mixed WHERE a = 'a' AND c <= 65.31;
+SELECT b FROM mixed WHERE 40 >= b;
+SELECT b FROM mixed WHERE b >= 21 AND c < 72.76;
 --SELECT * FROM mixed WHERE b BETWEEN 20 AND 45;
 --SELECT * FROM mixed WHERE b BETWEEN c AND 45;
---SELECT * FROM mixed WHERE b >= 21 OR c < 72.76;
---SELECT * FROM mixed WHERE b >= 21 OR (b <= 30 AND c > 50.0);
---SELECT * FROM mixed WHERE b >= 21 OR c < 72.76 OR (b <= 30 AND c > 50.0);
---
+SELECT b FROM mixed WHERE b >= 21 OR c < 72.76;
+SELECT b FROM mixed WHERE b >= 21 OR (b <= 30 AND c > 50.0);
+SELECT b FROM mixed WHERE b >= 21 OR c < 72.76 OR (b <= 30 AND c > 50.0);
+
 --SELECT * FROM mixed_null WHERE b = 12;
 
 -- Projection
 SELECT a FROM mixed;
 SELECT b + b FROM mixed;
 SELECT b + c FROM mixed;
---SELECT b * c / b + c * c / b - b / b FROM mixed;
+SELECT (b * c) / b + (c * c) / b - b / b as x FROM mixed;
 --SELECT a + d FROM mixed;
---SELECT a as b FROM mixed;
+SELECT a as b FROM mixed;
 --SELECT b, 4+6 as c, b+4 AS d, 5.0+c AS e FROM mixed_null;
---SELECT a*b/c AS calc FROM id_int_int_int_100;
---SELECT b*b AS calc FROM mixed;
+SELECT a*b/c AS calc FROM id_int_int_int_100;
+SELECT b*b AS calc FROM mixed;
 --SELECT a, b, a+b AS e, a+b+NULL AS f FROM id_int_int_int_100;
 --SELECT a, b, b+b AS e, b+b+NULL AS f FROM mixed;
 --SELECT a, b, b+b AS e, b+b+NULL AS f FROM mixed_null;
