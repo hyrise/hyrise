@@ -7,6 +7,8 @@
 #include "utils/assert.hpp"
 #include "constant_mappings.hpp"
 #include "expression_utils.hpp"
+#include "operators/aggregate/aggregate_traits.hpp"
+#include "resolve_type.hpp"
 
 namespace opossum {
 
@@ -42,12 +44,36 @@ std::string AggregateExpression::as_column_name() const {
 }
 
 DataType AggregateExpression::data_type() const {
-  // TODO(anybody) picking Long, but Int might be sufficient. How do we handle this?
-  if (aggregate_function == AggregateFunction::CountDistinct || aggregate_function == AggregateFunction::Count) return DataType::Long;
+  if (aggregate_function == AggregateFunction::Count) return AggregateTraits<NullValue, AggregateFunction::Count>::aggregate_data_type;
+  if (aggregate_function == AggregateFunction::CountDistinct) return AggregateTraits<NullValue, AggregateFunction::CountDistinct>::aggregate_data_type;
 
-  Assert(arguments.size() == 1, "Expected AggregateFunction to have one argument");
+  Assert(arguments.size() == 1, "Expected this AggregateFunction to have one argument");
 
-  return arguments[0]->data_type();
+  const auto argument_data_type = arguments[0]->data_type();
+  auto aggregate_data_type = DataType::Null;
+
+  resolve_data_type(argument_data_type, [&](const auto data_type_t) {
+    using AggregateDataType = typename decltype(data_type_t)::type;
+    switch (aggregate_function) {
+      case AggregateFunction::Min:
+        aggregate_data_type = AggregateTraits<AggregateDataType, AggregateFunction::Min>::aggregate_data_type;
+        break;
+      case AggregateFunction::Max:
+        aggregate_data_type = AggregateTraits<AggregateDataType, AggregateFunction::Max>::aggregate_data_type;
+        break;
+      case AggregateFunction::Avg:
+        aggregate_data_type = AggregateTraits<AggregateDataType, AggregateFunction::Avg>::aggregate_data_type;
+        break;
+      case AggregateFunction::Count:
+      case AggregateFunction::CountDistinct:
+        break;  // These are handled above
+      case AggregateFunction::Sum:
+        aggregate_data_type = AggregateTraits<AggregateDataType, AggregateFunction::Sum>::aggregate_data_type;
+        break;
+    }
+  });
+
+  return aggregate_data_type;
 }
 
 bool AggregateExpression::_shallow_equals(const AbstractExpression& expression) const {

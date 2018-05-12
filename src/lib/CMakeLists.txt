@@ -127,7 +127,7 @@ set(
 #    logical_query_plan/update_node.hpp
 #    logical_query_plan/validate_node.cpp
 #    logical_query_plan/validate_node.hpp
-#    null_value.hpp
+    null_value.hpp
 #    operators/abstract_join_operator.cpp
 #    operators/abstract_join_operator.hpp
     operators/abstract_operator.cpp
@@ -136,6 +136,7 @@ set(
     operators/abstract_read_only_operator.hpp
     operators/abstract_read_write_operator.cpp
     operators/abstract_read_write_operator.hpp
+    operators/aggregate/aggregate_traits.hpp
     operators/aggregate.cpp
     operators/aggregate.hpp
     operators/alias_operator.cpp
@@ -260,7 +261,7 @@ set(
 #    planviz/lqp_visualizer.hpp
 #    planviz/sql_query_plan_visualizer.cpp
 #    planviz/sql_query_plan_visualizer.hpp
-#    resolve_type.hpp
+    resolve_type.hpp
     scheduler/abstract_scheduler.cpp
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp

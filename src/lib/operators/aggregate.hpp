@@ -29,12 +29,11 @@ struct GroupByContext;
  * Optionally, an alias can be specified to use as the output name.
  */
 struct AggregateColumnDefinition final {
-  AggregateColumnDefinition(const AggregateFunction function, const std::optional<ColumnID>& column, const std::optional<std::string>& alias = std::nullopt)
-      : column(column), function(function), alias(alias) {}
+  AggregateColumnDefinition(const AggregateFunction function, const std::optional<ColumnID>& column)
+      : column(column), function(function) {}
 
   std::optional<ColumnID> column;
   AggregateFunction function;
-  std::optional<std::string> alias;
 };
 
 /*

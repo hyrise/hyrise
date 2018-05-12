@@ -248,7 +248,7 @@ std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnType>>::
  * This function returns the DataType of a data type based on the definition in data_type_pairs.
  */
 template <typename T>
-DataType data_type_from_type() {
+constexpr DataType data_type_from_type() {
   static_assert(hana::contains(data_types, hana::type_c<T>), "Type not a valid column type.");
 
   return hana::fold_left(data_type_pairs, DataType{},

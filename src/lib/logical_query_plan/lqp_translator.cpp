@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "abstract_lqp_node.hpp"
-//#include "aggregate_node.hpp"
+#include "aggregate_node.hpp"
 //#include "constant_mappings.hpp"
 //#include "create_view_node.hpp"
 //#include "delete_node.hpp"
@@ -25,7 +25,7 @@
 //#include "insert_node.hpp"
 //#include "join_node.hpp"
 //#include "limit_node.hpp"
-//#include "operators/aggregate.hpp"
+#include "operators/aggregate.hpp"
 //#include "operators/delete.hpp"
 #include "operators/get_table.hpp"
 //#include "operators/index_scan.hpp"
@@ -103,8 +103,8 @@ LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
 //      return _translate_sort_node(node);
 //    case LQPNodeType::Join:
 //      return _translate_join_node(node);
-//    case LQPNodeType::Aggregate:
-//      return _translate_aggregate_node(node);
+    case LQPNodeType::Aggregate:
+      return _translate_aggregate_node(node);
 //    case LQPNodeType::Limit:
 //      return _translate_limit_node(node);
 //    case LQPNodeType::Insert:
@@ -340,22 +340,49 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_projection_node(
 //                                         join_column_ids, *(join_node->predicate_condition()));
 //}
 //
-//std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
-//    const std::shared_ptr<AbstractLQPNode>& node) const {
-//  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(node);
-//
-//  const auto input_operator = translate_node(node->left_input());
-//
-//  const auto aggregate_expressions = _translate_expressions(aggregate_node->aggregate_expressions(), node);
-//
-//  // Resolve all LQPColumnReferences into ColumnIDs
-//  std::vector<ColumnID> groupby_columns;
-//  for (const auto& groupby_column_reference : aggregate_node->groupby_column_references()) {
-//    groupby_columns.emplace_back(node->left_input()->get_output_column_id(groupby_column_reference));
-//  }
-//
-//  return std::make_shared<Aggregate>(input_operator, aggregate_expressions, groupby_columns);
-//}
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(node);
+
+  const auto input_operator = translate_node(node->left_input());
+
+  const auto aggregate_pqp_expressions = _translate_expressions(aggregate_node->aggregate_expressions, node->left_input());
+  const auto group_by_pqp_expressions = _translate_expressions(aggregate_node->group_by_expressions, node->left_input());
+
+  // Create AggregateColumnDefinitions from AggregateExpressions
+  // All aggregate_pqp_expressions have to be AggregateExpressions and their argument() has to be a PQPColumnExpression
+  std::vector<AggregateColumnDefinition> aggregate_column_definitions;
+  aggregate_column_definitions.reserve(aggregate_pqp_expressions.size());
+  for (const auto& expression : aggregate_pqp_expressions) {
+    Assert(expression->type == ExpressionType::Aggregate, "Expression '" + expression->as_column_name() + "' used as AggregateExpression is not an AggregateExpression");
+
+    const auto& aggregate_expression = std::static_pointer_cast<AggregateExpression>(expression);
+
+    if (aggregate_expression->argument()) {
+      Assert(aggregate_expression->argument()->type, "The argument of AggregateExpression '" + expression->as_column_name() + "' couldn't be resolved");
+
+      const auto column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(aggregate_expression->argument());
+      Assert(column_expression, "Only PQPColumnExpressions valid here.");
+
+      aggregate_column_definitions.emplace_back(aggregate_expression->aggregate_function, column_expression->column_id);
+
+    } else {
+      aggregate_column_definitions.emplace_back(aggregate_expression->aggregate_function, std::nullopt);
+    }
+  }
+
+  // Create GroupByColumns from the GroupBy expressions
+  std::vector<ColumnID> group_by_column_ids;
+  group_by_column_ids.reserve(group_by_pqp_expressions.size());
+
+  for (const auto& group_by_expression : group_by_pqp_expressions) {
+    const auto group_by_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(group_by_expression);
+    Assert(group_by_column_expression, "Only PQPColumnExpressions valid here.");
+    group_by_column_ids.emplace_back(group_by_column_expression->column_id);
+  }
+
+  return std::make_shared<Aggregate>(input_operator, aggregate_column_definitions, group_by_column_ids);
+}
 //
 //std::shared_ptr<AbstractOperator> LQPTranslator::_translate_limit_node(
 //    const std::shared_ptr<AbstractLQPNode>& node) const {

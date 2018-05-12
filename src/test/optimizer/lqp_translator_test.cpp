@@ -6,12 +6,13 @@
 
 #include "gtest/gtest.h"
 
+#include "expression/aggregate_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/expression_factory.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
-//#include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
 //#include "logical_query_plan/join_node.hpp"
 //#include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
@@ -22,7 +23,7 @@
 //#include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 //#include "logical_query_plan/union_node.hpp"
-//#include "operators/aggregate.hpp"
+#include "operators/aggregate.hpp"
 #include "operators/get_table.hpp"
 //#include "operators/index_scan.hpp"
 //#include "operators/join_hash.hpp"
@@ -428,98 +429,33 @@ TEST_F(LQPTranslatorTest, PredicateNodeBetween) {
 //  ASSERT_TRUE(show_columns_op);
 //  EXPECT_EQ(show_columns_op->name(), "ShowColumns");
 //}
-//
-//TEST_F(LQPTranslatorTest, AggregateNodeNoArithmetics) {
-//  /**
-//   * Build LQP and translate to PQP
-//   */
-//  const auto stored_table_node = StoredTableNode::make("table_int_float");
-//
-//  auto sum_expression = LQPExpression::create_aggregate_function(
-//      AggregateFunction::Sum, {LQPExpression::create_column(LQPColumnReference(stored_table_node, ColumnID{0}))},
-//      {"sum_of_a"});
-//
-//  auto aggregate_node = AggregateNode::make(std::vector<std::shared_ptr<LQPExpression>>{sum_expression},
-//                                            std::vector<LQPColumnReference>{});
-//  aggregate_node->set_left_input(stored_table_node);
-//
-//  const auto op = LQPTranslator{}.translate_node(aggregate_node);
-//
-//  /**
-//   * Check PQP
-//   */
-//  const auto aggregate_op = std::dynamic_pointer_cast<Aggregate>(op);
-//  ASSERT_TRUE(aggregate_op);
-//  ASSERT_EQ(aggregate_op->aggregates().size(), 1u);
-//  EXPECT_EQ(aggregate_op->groupby_column_ids().size(), 0u);
-//
-//  const auto aggregate_definition = aggregate_op->aggregates()[0];
-//  EXPECT_EQ(aggregate_definition.column, ColumnID{0});
-//  EXPECT_EQ(aggregate_definition.function, AggregateFunction::Sum);
-//  EXPECT_EQ(aggregate_definition.alias, std::optional<std::string>("sum_of_a"));
-//}
-//
-//TEST_F(LQPTranslatorTest, AggregateNodeWithArithmetics) {
-//  /**
-//   * Build LQP and translate to PQP
-//   */
-//  const auto stored_table_node = StoredTableNode::make("table_int_float");
-//
-//  // Create expression "b * 2".
-//  const auto expr_col_b = LQPExpression::create_column(LQPColumnReference{stored_table_node, ColumnID{1}});
-//  const auto expr_literal = LQPExpression::create_literal(2);
-//  const auto expr_multiplication =
-//      LQPExpression::create_binary_operator(ExpressionType::Multiplication, expr_col_b, expr_literal);
-//
-//  // Create aggregate with expression "SUM(b * 2)".
-//  // TODO(tim): Projection cannot handle expression `$a + $b`
-//  // because it is not able to handle columns with different data types.
-//  // Create issue with failing test.
-//  auto sum_expression =
-//      LQPExpression::create_aggregate_function(AggregateFunction::Sum, {expr_multiplication}, {"sum_of_b_times_two"});
-//  auto aggregate_node =
-//      AggregateNode::make(std::vector<std::shared_ptr<LQPExpression>>{sum_expression},
-//                          std::vector<LQPColumnReference>{LQPColumnReference(stored_table_node, ColumnID{0})});
-//  aggregate_node->set_left_input(stored_table_node);
-//
-//  const auto op = LQPTranslator{}.translate_node(aggregate_node);
-//
-//  /**
-//   * Check PQP
-//   */
-//  // Check aggregate operator.
-//  const auto aggregate_op = std::dynamic_pointer_cast<Aggregate>(op);
-//  ASSERT_TRUE(aggregate_op);
-//  ASSERT_EQ(aggregate_op->aggregates().size(), 1u);
-//
-//  ASSERT_EQ(aggregate_op->groupby_column_ids().size(), 1u);
-//  EXPECT_EQ(aggregate_op->groupby_column_ids()[0], ColumnID{0});
-//
-//  const auto aggregate_definition = aggregate_op->aggregates()[0];
-//  EXPECT_EQ(aggregate_definition.column, ColumnID{1});
-//  EXPECT_EQ(aggregate_definition.function, AggregateFunction::Sum);
-//  EXPECT_EQ(aggregate_definition.alias, std::optional<std::string>("sum_of_b_times_two"));
-//
-//  // Check projection operator.
-//  // The projection operator is required because we need the arithmetic operation to be calculated first.
-//  const auto left_op = aggregate_op->input_left();
-//  ASSERT_TRUE(left_op);
-//
-//  const auto projection_op = std::dynamic_pointer_cast<const Projection>(left_op);
-//  ASSERT_TRUE(projection_op);
-//
-//  const auto column_expressions = projection_op->column_expressions();
-//  ASSERT_EQ(column_expressions.size(), 2u);
-//
-//  const auto column_expression0 = column_expressions[0];
-//  EXPECT_EQ(column_expression0->type(), ExpressionType::Column);
-//  EXPECT_EQ(column_expression0->column_id(), ColumnID{0});
-//
-//  const auto column_expression1 = column_expressions[1];
-//  EXPECT_EQ(column_expression1->to_string(), "ColumnID #1 * 2");
-//  EXPECT_EQ(column_expression1->alias(), std::nullopt);
-//}
-//
+
+TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
+  /**
+   * Build LQP and translate to PQP
+   */
+  // clang-format off
+  const auto lqp =
+  AggregateNode::make(expression_vector(int_float_a), expression_vector(sum(addition(int_float_b, int_float_a))),
+    ProjectionNode::make(expression_vector(int_float_b, int_float_a, addition(int_float_b, int_float_a)),
+      int_float_node));
+  // clang-format on
+  const auto op = LQPTranslator{}.translate_node(lqp);
+
+  /**
+   * Check PQP
+   */
+  const auto aggregate_op = std::dynamic_pointer_cast<Aggregate>(op);
+  ASSERT_TRUE(aggregate_op);
+  ASSERT_EQ(aggregate_op->aggregates().size(), 1u);
+  ASSERT_EQ(aggregate_op->groupby_column_ids().size(), 1u);
+  EXPECT_EQ(aggregate_op->groupby_column_ids().at(0), ColumnID{1});
+
+  const auto aggregate_definition = aggregate_op->aggregates()[0];
+  EXPECT_EQ(aggregate_definition.column, ColumnID{2});
+  EXPECT_EQ(aggregate_definition.function, AggregateFunction::Sum);
+}
+
 //TEST_F(LQPTranslatorTest, MultipleNodesHierarchy) {
 //  /**
 //   * Build LQP and translate to PQP
