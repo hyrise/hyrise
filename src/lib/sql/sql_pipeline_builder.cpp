@@ -1,5 +1,4 @@
 #include "sql_pipeline_builder.hpp"
-#include "operators/jit_operator/jit_aware_lqp_translator.hpp"
 
 namespace opossum {
 
@@ -37,7 +36,7 @@ SQLPipelineBuilder& SQLPipelineBuilder::with_transaction_context(
 SQLPipelineBuilder& SQLPipelineBuilder::disable_mvcc() { return with_mvcc(UseMvcc::No); }
 
 SQLPipeline SQLPipelineBuilder::create_pipeline() const {
-  auto lqp_translator = _lqp_translator ? _lqp_translator : std::make_shared<JitAwareLQPTranslator>();
+  auto lqp_translator = _lqp_translator ? _lqp_translator : std::make_shared<LQPTranslator>();
   auto optimizer = _optimizer ? _optimizer : Optimizer::create_default_optimizer();
 
   return {_sql, _transaction_context, _use_mvcc, lqp_translator, optimizer, _prepared_statements};
@@ -45,7 +44,7 @@ SQLPipeline SQLPipelineBuilder::create_pipeline() const {
 
 SQLPipelineStatement SQLPipelineBuilder::create_pipeline_statement(
     std::shared_ptr<hsql::SQLParserResult> parsed_sql) const {
-  auto lqp_translator = _lqp_translator ? _lqp_translator : std::make_shared<JitAwareLQPTranslator>();
+  auto lqp_translator = _lqp_translator ? _lqp_translator : std::make_shared<LQPTranslator>();
   auto optimizer = _optimizer ? _optimizer : Optimizer::create_default_optimizer();
 
   return {_sql, parsed_sql, _use_mvcc, _transaction_context, lqp_translator, optimizer, _prepared_statements};

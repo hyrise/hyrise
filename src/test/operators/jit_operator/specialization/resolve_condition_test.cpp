@@ -15,7 +15,6 @@ namespace opossum {
 extern char resolve_condition_test_module;
 extern size_t resolve_condition_test_module_size;
 
-
 /* This test checks the runtime information-based resolution mechanism for condition variables.
  * LLVM supports simple branch pruning during function inlining and cloning. Branch conditions and switch instructions
  * that can statically be reduced to a single case are used to prune other branches and reduce the amount of cloned
