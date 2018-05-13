@@ -126,7 +126,8 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context, 
     }
 
     llvm::InlineFunctionInfo info;
-    if (InlineFunction(call_site, info, nullptr, false, context)) {
+    // TODO(Fabian) check 2nd last argument value nullptr for llvm::Function *ForwardVarArgsTo
+    if (InlineFunction(call_site, info, nullptr, false, nullptr, context)) {
       for (const auto& new_call_site : info.InlinedCallSites) {
         call_sites.push(new_call_site);
       }

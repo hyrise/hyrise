@@ -1,5 +1,5 @@
 # Overview
-This directory contains two files (CloneFunction.cpp and InlineFunction.cpp) that have been copied from the LLVM repository located at `https://github.com/llvm-mirror/llvm/tree/release_50`.
+This directory contains two files (CloneFunction.cpp and InlineFunction.cpp) that have been copied from the LLVM repository located at `https://github.com/llvm-mirror/llvm/tree/release_60`.
 The code specialization requires modifications to these files, which are detailed below.
 
 The changes made to these files are kept to a minimum. Most of the code extending LLVM can be found in and `../llvm_extensions.hpp` and `../llvm_extensions.cpp`.
@@ -13,4 +13,4 @@ The code specialization uses cloning and inlining functionality from LLVM, but r
 
 ## Porting to a new LLVM version
 
-When porting to a new LLVM version, these files need to pe replaced by the corresponding files in the new LLVM release and the same (or equivallent) changes need to be applied manually. To make this easier this directory contains a diff for each file that document the necessary changes.
+When porting to a new LLVM version, these files need to pe replaced by the corresponding files in the new LLVM release and the same (or equivalent) changes need to be applied manually. To make this easier this directory contains a diff for each file that document the necessary changes.
