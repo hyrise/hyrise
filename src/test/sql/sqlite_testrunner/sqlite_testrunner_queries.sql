@@ -156,14 +156,17 @@ SELECT a, b, AVG(b) FROM mixed GROUP BY a, b HAVING MAX(c) > 10 AND MAX(c) <= 30
 --SELECT * FROM mixed WHERE b IS NOT NULL;
 --SELECT * FROM mixed_null WHERE b IS NULL;
 --SELECT * FROM mixed_null WHERE b IS NOT NULL;
---
----- Subqueries in SELECT statement
---SELECT a, (SELECT MAX(b) FROM mixed) AS foo FROM id_int_int_int_100;
---
+
+-- Subqueries in SELECT statement
+SELECT a, (SELECT MAX(b) FROM mixed) AS foo FROM id_int_int_int_100;
+SELECT (SELECT MAX(b) + id_int_int_int_100.a FROM mixed) AS foo FROM id_int_int_int_100;
+SELECT (SELECT MAX(b) + id_int_int_int_100.a + id_int_int_int_100.b FROM mixed) AS foo FROM id_int_int_int_100;
+SELECT (SELECT MIN(1 + 2) FROM mixed) AS foos FROM id_int_int_int_100;
+
 ---- Subqueries in WHERE statement
---SELECT a FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
+SELECT a FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
 --SELECT * FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
---SELECT a, b FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
+SELECT a, b FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
 --SELECT * FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
 --SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
 --SELECT a, b FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)

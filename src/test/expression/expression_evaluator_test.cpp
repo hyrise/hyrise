@@ -234,7 +234,7 @@ TEST_F(ExpressionEvaluatorTest, PQPSelectExpression) {
   const auto inner_expressions = std::vector<std::shared_ptr<AbstractExpression>>({b_plus_x, x});
   const auto inner_projection = std::make_shared<Projection>(table_wrapper_b, inner_expressions);
   const auto table_scan = std::make_shared<TableScan>(inner_projection, ColumnID{0}, PredicateCondition::Equals, 12);
-  const auto aggregates = std::vector<AggregateColumnDefinition>({{AggregateFunction::Sum, ColumnID{1}}});
+  const auto aggregates = std::vector<AggregateColumnDefinition>({{AggregateFunction::Sum, ColumnID{1}, "SUM(b)"}});
   const auto aggregate = std::make_shared<Aggregate>(table_scan, aggregates, std::vector<ColumnID>{});
 
   const auto parameters = std::vector<ColumnID>({ColumnID{1}});

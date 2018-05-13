@@ -10,7 +10,6 @@
 #include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/current_scheduler.hpp"
-#include "sql/translate_hsql_expr.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "sql/sql_translator.hpp"

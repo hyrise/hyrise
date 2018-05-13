@@ -43,6 +43,8 @@ class SQLTranslatorTest : public ::testing::Test {
     stored_table_node_int_float5 = StoredTableNode::make("int_float5");
     int_float_a = stored_table_node_int_float->get_column("a");
     int_float_b = stored_table_node_int_float->get_column("b");
+    int_float5_a = stored_table_node_int_float5->get_column("a");
+    int_float5_d = stored_table_node_int_float5->get_column("d");
 //    _table_b_a = _stored_table_node_b->get_column("a"s);
 //    _table_b_b = _stored_table_node_b->get_column("b"s);
 //    _table_c_a = _stored_table_node_c->get_column("a"s);
@@ -68,7 +70,7 @@ class SQLTranslatorTest : public ::testing::Test {
   std::shared_ptr<StoredTableNode> stored_table_node_int_float5;
   std::shared_ptr<AbstractExpression> int_float_a_expression;
   std::shared_ptr<AbstractExpression> int_float_b_expression;
-  LQPColumnReference int_float_a, int_float_b;
+  LQPColumnReference int_float_a, int_float_b, int_float5_a, int_float5_d;
 //  LQPColumnReference _table_a_b;
 //  LQPColumnReference _table_b_a;
 //  LQPColumnReference _table_b_b;
@@ -91,10 +93,28 @@ TEST_F(SQLTranslatorTest, SelectStar) {
   const auto actual_lqp_no_table = compile_query("SELECT * FROM int_float;");
   const auto actual_lqp_table = compile_query("SELECT int_float.* FROM int_float;");
 
-  const auto expected_lqp = ProjectionNode::make(expression_vector(int_float_a, int_float_b), stored_table_node_int_float);
+  EXPECT_LQP_EQ(actual_lqp_no_table, stored_table_node_int_float);
+  EXPECT_LQP_EQ(actual_lqp_table, stored_table_node_int_float);
+}
 
-  EXPECT_LQP_EQ(actual_lqp_no_table, expected_lqp);
-  EXPECT_LQP_EQ(actual_lqp_table, expected_lqp);
+TEST_F(SQLTranslatorTest, SelectStarSelectsOnlyFromColumns) {
+  /**
+   * Test that if temporary columns are introduced, these are not selected by "*"
+   */
+
+  const auto actual_lqp_no_table = compile_query("SELECT * FROM int_float WHERE a + b > 10");
+  const auto actual_lqp_table = compile_query("SELECT int_float.* FROM int_float WHERE a + b > 10;");
+
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expression_vector(int_float_a, int_float_b),
+    PredicateNode::make(greater_than(addition(int_float_a, int_float_b), 10),
+      ProjectionNode::make(expression_vector(addition(int_float_a, int_float_b)), stored_table_node_int_float)
+    ));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp_no_table, stored_table_node_int_float);
+  EXPECT_LQP_EQ(actual_lqp_table, stored_table_node_int_float);
 }
 
 TEST_F(SQLTranslatorTest, SimpleArithmeticExpression) {
@@ -263,11 +283,10 @@ TEST_F(SQLTranslatorTest, GroupByOnly) {
 
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(group_by_expressions,
-    AggregateNode::make(expression_vector(b_plus_3, a_divided_by_b, int_float_b), expression_vector(),
-      ProjectionNode::make(expression_vector(int_float_a, int_float_b, b_plus_3, a_divided_by_b),
-        stored_table_node_int_float
-  )));
+  AggregateNode::make(expression_vector(b_plus_3, a_divided_by_b, int_float_b), expression_vector(),
+    ProjectionNode::make(expression_vector(int_float_a, int_float_b, b_plus_3, a_divided_by_b),
+      stored_table_node_int_float
+  ));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -297,66 +316,48 @@ TEST_F(SQLTranslatorTest, AggregateAndGroupByWildcard) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-//TEST_F(SQLTranslatorTest, SelectStarAllTest) {
-//  const auto query = "SELECT * FROM table_a;";
-//  const auto result_node = compile_query(query);
-//
-//  auto projection_node = ProjectionNode::make_pass_through(_stored_table_node_a);
-//
-//  EXPECT_LQP_EQ(projection_node, result_node);
-//}
-//
-//TEST_F(SQLTranslatorTest, ExpressionTest) {
-//  const auto query = "SELECT * FROM table_a WHERE a = 1233 + 1";
-//  const auto result_node = compile_query(query);
-//
-//  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
-//  EXPECT_EQ(result_node->left_input()->type(), LQPNodeType::Projection);
-//  EXPECT_FALSE(result_node->right_input());
-//
-//  ASSERT_EQ(result_node->left_input()->left_input()->type(), LQPNodeType::Predicate);
-//  const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(result_node->left_input()->left_input());
-//  EXPECT_FALSE(predicate_node->right_input());
-//  EXPECT_EQ(predicate_node->predicate_condition(), PredicateCondition::Equals);
-//
-//  ASSERT_EQ(predicate_node->left_input()->type(), LQPNodeType::Projection);
-//  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(predicate_node->left_input());
-//  EXPECT_TRUE(projection_node->column_expressions().back()->is_arithmetic_operator());
-//
-//  const auto original_node = projection_node->left_input();
-//
-//  // The value() of the PredicateNode is the LQPColumnReference to the (added) projection node column
-//  // containing the nested expression
-//  ASSERT_TRUE(is_lqp_column_reference(predicate_node->value()));
-//  EXPECT_EQ(predicate_node->column_reference(), LQPColumnReference(original_node, ColumnID{0}));
-//  EXPECT_EQ(boost::get<LQPColumnReference>(predicate_node->value()), LQPColumnReference(projection_node, ColumnID{2}));
-//}
-//
-//TEST_F(SQLTranslatorTest, ExpressionWithColumnTest) {
-//  const auto query = "SELECT * FROM table_a WHERE a = 1231 + b";
-//  const auto result_node = compile_query(query);
-//
-//  ASSERT_EQ(result_node->left_input()->left_input()->left_input()->type(), LQPNodeType::Projection);
-//  const auto projection_node =
-//      std::dynamic_pointer_cast<ProjectionNode>(result_node->left_input()->left_input()->left_input());
-//
-//  const auto expression = projection_node->column_expressions().back();
-//  EXPECT_TRUE(expression->is_arithmetic_operator());
-//  EXPECT_EQ(expression->type(), ExpressionType::Addition);
-//  EXPECT_EQ(expression->left_child()->type(), ExpressionType::Literal);
-//  EXPECT_EQ(expression->right_child()->type(), ExpressionType::Column);
-//}
-//
-//TEST_F(SQLTranslatorTest, TwoColumnFilter) {
-//  const auto query = "SELECT * FROM table_a WHERE a = \"b\"";
-//  const auto result_node = compile_query(query);
-//
-//  auto projection_node = ProjectionNode::make_pass_through(
-//      PredicateNode::make(_table_a_a, PredicateCondition::Equals, _table_a_b, _stored_table_node_a));
-//
-//  EXPECT_LQP_EQ(projection_node, result_node);
-//}
-//
+TEST_F(SQLTranslatorTest, SubSelectFromSimple) {
+  const auto actual_lqp_a = compile_query("SELECT z.x, z.a, z.b FROM (SELECT a + b AS x, * FROM int_float) AS z");
+  const auto actual_lqp_b = compile_query("SELECT * FROM (SELECT a + b AS x, * FROM int_float) AS z");
+  const auto actual_lqp_c = compile_query("SELECT z.* FROM (SELECT a + b AS x, * FROM int_float) AS z");
+
+  const auto expressions = expression_vector(addition(int_float_a, int_float_b), int_float_a, int_float_b);
+  const auto aliases = std::vector<std::string>({"x", "a", "b"});
+
+    // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expressions, aliases,
+    ProjectionNode::make(expressions, stored_table_node_int_float)
+  );
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp_c, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, SubSelectSelectList) {
+  // "d" is from the outer query
+  const auto actual_lqp_a = compile_query("SELECT (SELECT MIN(a + d) FROM int_float), a FROM int_float5 AS f");
+
+  const auto a_plus_d = addition(int_float_a, external(int_float5_d, 0));
+
+  // clang-format off
+  const auto sub_select_lqp =
+  AggregateNode::make(expression_vector(), expression_vector(min(a_plus_d)),
+    ProjectionNode::make(expression_vector(int_float_a, int_float_b, a_plus_d), stored_table_node_int_float)
+  );
+  // clang-format on
+
+  const auto select_expressions = expression_vector(select(sub_select_lqp, expression_vector(int_float5_d)), int_float5_a);
+
+  // clang-format off
+  const auto expected_lqp = ProjectionNode::make(select_expressions, stored_table_node_int_float5);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
+}
+
 //TEST_F(SQLTranslatorTest, ExpressionStringTest) {
 //  const auto query = "SELECT * FROM table_a WHERE a = 'b'";
 //  const auto result_node = compile_query(query);
@@ -366,77 +367,10 @@ TEST_F(SQLTranslatorTest, AggregateAndGroupByWildcard) {
 //
 //  EXPECT_LQP_EQ(projection_node, result_node);
 //}
-//
-//TEST_F(SQLTranslatorTest, SelectWithAndCondition) {
-//  const auto query = "SELECT * FROM table_a WHERE a >= 1234 AND b < 457.9";
-//  const auto result_node = compile_query(query);
-//
-//  auto projection_node = ProjectionNode::make_pass_through(PredicateNode::make(
-//      _table_a_b, PredicateCondition::LessThan, 457.9f,
-//      PredicateNode::make(_table_a_a, PredicateCondition::GreaterThanEquals, int64_t(1234), _stored_table_node_a)));
-//
-//  EXPECT_LQP_EQ(projection_node, result_node);
-//}
-//
-//TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
-//  const auto query = "SELECT a, SUM(b) AS s FROM table_a GROUP BY a;";
-//  const auto result_node = compile_query(query);
-//
-//  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
-//  EXPECT_FALSE(result_node->right_input());
-//
-//  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
-//  EXPECT_NE(projection_node, nullptr);
-//  EXPECT_EQ(projection_node->column_expressions().size(), 2u);
-//  EXPECT_EQ(projection_node->output_column_names().size(), 2u);
-//  EXPECT_EQ(projection_node->output_column_names()[0], std::string("a"));
-//  EXPECT_EQ(projection_node->output_column_names()[1], std::string("s"));
-//
-//  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node->left_input());
-//  ASSERT_NE(aggregate_node, nullptr);
-//  ASSERT_NE(aggregate_node->left_input(), nullptr);
-//
-//  const auto stored_table_node = aggregate_node->left_input();
-//  EXPECT_EQ(stored_table_node->type(), LQPNodeType::StoredTable);
-//  EXPECT_FALSE(stored_table_node->left_input());
-//  EXPECT_FALSE(stored_table_node->right_input());
-//
-//  EXPECT_EQ(aggregate_node->aggregate_expressions().size(), 1u);
-//  const std::vector<LQPColumnReference> groupby_columns = {LQPColumnReference{stored_table_node, ColumnID{0}}};
-//  EXPECT_EQ(aggregate_node->groupby_column_references(), groupby_columns);
-//  EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->alias(), std::string("s"));
-//}
-//
 //TEST_F(SQLTranslatorTest, AggregateWithInvalidGroupBy) {
 //  // Cannot select b without it being in the GROUP BY clause.
 //  const auto query = "SELECT b, SUM(b) AS s FROM table_a GROUP BY a;";
 //  EXPECT_THROW(compile_query(query), std::runtime_error);
-//}
-//
-//TEST_F(SQLTranslatorTest, AggregateWithExpression) {
-//  const auto query = "SELECT SUM(a+b) AS s, SUM(a*b) as f FROM table_a";
-//  const auto result_node = compile_query(query);
-//
-//  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
-//  EXPECT_FALSE(result_node->right_input());
-//
-//  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
-//  EXPECT_NE(projection_node, nullptr);
-//  EXPECT_EQ(projection_node->column_expressions().size(), 2u);
-//  EXPECT_EQ(projection_node->output_column_names().size(), 2u);
-//  EXPECT_EQ(projection_node->output_column_names()[0], std::string("s"));
-//  EXPECT_EQ(projection_node->output_column_names()[1], std::string("f"));
-//
-//  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node->left_input());
-//  EXPECT_EQ(aggregate_node->aggregate_expressions().size(), 2u);
-//  EXPECT_EQ(aggregate_node->groupby_column_references().size(), 0u);
-//  EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->alias(), std::string("s"));
-//  EXPECT_EQ(aggregate_node->aggregate_expressions().at(1)->alias(), std::string("f"));
-//
-//  const auto stored_table_node = aggregate_node->left_input();
-//  EXPECT_EQ(stored_table_node->type(), LQPNodeType::StoredTable);
-//  EXPECT_FALSE(stored_table_node->left_input());
-//  EXPECT_FALSE(stored_table_node->right_input());
 //}
 //
 //TEST_F(SQLTranslatorTest, AggregateWithCountDistinct) {

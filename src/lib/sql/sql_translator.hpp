@@ -31,7 +31,9 @@ class LQPExpression;
  */
 class SQLTranslator final {
  public:
-  explicit SQLTranslator(const UseMvcc use_mvcc = UseMvcc::No);
+  explicit SQLTranslator(const UseMvcc use_mvcc = UseMvcc::No, const std::shared_ptr<SQLIdentifierContextProxy>& external_sql_identifier_context_proxy = {});
+
+  std::shared_ptr<SQLIdentifierContext> sql_identifier_context() const;
 
   std::vector<std::shared_ptr<AbstractLQPNode>> translate_sql(const std::string& sql);
   std::vector<std::shared_ptr<AbstractLQPNode>> translate_parser_result(const hsql::SQLParserResult &result);
@@ -87,11 +89,17 @@ class SQLTranslator final {
   std::shared_ptr<AbstractLQPNode> _add_expressions_if_unavailable(const std::shared_ptr<AbstractLQPNode>& node,
                                                                   const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const;
 
+
+  std::shared_ptr<AbstractExpression> _translate_hsql_expr(const hsql::Expr& expr) const;
+  std::shared_ptr<AbstractExpression> _translate_hsql_case(const hsql::Expr& expr) const;
+
  private:
   const UseMvcc _use_mvcc;
 
   std::shared_ptr<AbstractLQPNode> _current_lqp;
+  std::shared_ptr<AbstractLQPNode> _from_root_node;
   std::shared_ptr<SQLIdentifierContext> _sql_identifier_context;
+  std::shared_ptr<SQLIdentifierContextProxy> _external_sql_identifier_context_proxy;
 };
 
 }  // namespace opossum

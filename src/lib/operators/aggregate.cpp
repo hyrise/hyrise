@@ -614,7 +614,7 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
   }
 
   constexpr bool needs_null = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
-  _output_column_definitions.emplace_back(std::string{}, aggregate_data_type, needs_null);
+  _output_column_definitions.emplace_back(aggregate.column_name, aggregate_data_type, needs_null);
 
   auto col = std::make_shared<ValueColumn<decltype(aggregate_type)>>(needs_null);
 

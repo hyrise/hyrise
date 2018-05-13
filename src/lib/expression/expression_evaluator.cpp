@@ -271,9 +271,10 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_expressio
       Fail("Can't 'evaluate' an Array as a top level expression, can only handle them as part of an InExpression. "
            "The expression you are passing in is probably malformed");
 
+    case ExpressionType::External:
     case ExpressionType::ValuePlaceholder:
     case ExpressionType::Mock:
-      Fail("Can't handle ValuePlaceholders/Mocks since they don't have a value.");
+      Fail("Can't handle External/ValuePlaceholders/Mocks since they don't have a value.");
 
     case ExpressionType::Aggregate:
       Fail("ExpressionEvaluator doesn't support Aggregates, use the Aggregate Operator to compute them");

@@ -24,6 +24,11 @@ MockNode::MockNode(const ColumnDefinitions& column_definitions)
 //  }
 //}
 
+const MockNode::ColumnDefinitions& MockNode::column_definitions() const {
+  Assert(_constructor_arguments.type() == typeid(ColumnDefinitions), "Unexpected type");
+  return boost::get<ColumnDefinitions>(_constructor_arguments);
+}
+
 const boost::variant<MockNode::ColumnDefinitions, std::shared_ptr<TableStatistics>>& MockNode::constructor_arguments()
     const {
   return _constructor_arguments;

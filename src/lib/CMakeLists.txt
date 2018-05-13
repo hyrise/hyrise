@@ -43,8 +43,8 @@ set(
     expression/expression_utils.hpp
     expression/extract_expression.cpp
     expression/extract_expression.hpp
-#    expression/external_expression.cpp
-#    expression/external_expression.hpp
+    expression/external_expression.cpp
+    expression/external_expression.hpp
     expression/function_expression.cpp
     expression/function_expression.hpp
     expression/in_expression.cpp
@@ -55,8 +55,8 @@ set(
     expression/logical_expression.hpp
     expression/lqp_column_expression.cpp
     expression/lqp_column_expression.hpp
-#    expression/lqp_select_expression.cpp
-#    expression/lqp_select_expression.hpp
+    expression/lqp_select_expression.cpp
+    expression/lqp_select_expression.hpp
     expression/sql_identifier_expression.cpp
     expression/sql_identifier_expression.hpp
 #    expression/not_expression.cpp
@@ -327,8 +327,6 @@ set(
 #    sql/sql_translation_state.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
-    sql/translate_hsql_expr.cpp
-    sql/translate_hsql_expr.hpp
     storage/base_column.cpp
     storage/base_column_encoder.hpp
     storage/base_column.hpp

@@ -30,7 +30,9 @@ bool PQPColumnExpression::is_nullable() const {
 }
 
 bool PQPColumnExpression::_shallow_equals(const AbstractExpression& expression) const {
-  return column_id == static_cast<const PQPColumnExpression&>(expression).column_id;
+  const auto* pqp_column_expression = dynamic_cast<const PQPColumnExpression*>(&expression);
+  if (!pqp_column_expression) return false;
+  return column_id == pqp_column_expression->column_id;
 }
 
 size_t PQPColumnExpression::_on_hash() const {

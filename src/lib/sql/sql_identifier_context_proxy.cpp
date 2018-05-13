@@ -1,5 +1,6 @@
 #include "sql_identifier_context_proxy.hpp"
 
+#include "expression/external_expression.hpp"
 #include "sql_identifier_context.hpp"
 
 namespace opossum {
@@ -14,14 +15,20 @@ std::shared_ptr<AbstractExpression> SQLIdentifierContextProxy::resolve_identifie
       return expression->deep_equals(*expression2);
     });
 
+    auto value_placeholder_idx = uint16_t{0};
     if (expression_iter == _accessed_expressions.end()) {
       _accessed_expressions.emplace_back(expression);
+      value_placeholder_idx = static_cast<uint16_t>(_accessed_expressions.size() - 1);
+    } else {
+      value_placeholder_idx = static_cast<uint16_t>(std::distance(_accessed_expressions.begin(), expression_iter));
     }
-  } else {
-    if (_outer_context_proxy) expression = _outer_context_proxy->resolve_identifier_relaxed(identifier);
-  }
 
-  return expression;
+    return std::make_shared<ExternalExpression>(ValuePlaceholder{value_placeholder_idx}, expression->data_type(), expression->is_nullable(), expression->as_column_name());
+  } else {
+    Assert(!_outer_context_proxy, "More than one level of nesting not supported yet");
+    return nullptr;
+    // if (_outer_context_proxy) expression = _outer_context_proxy->resolve_identifier_relaxed(identifier);
+  }
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& SQLIdentifierContextProxy::accessed_expressions() const {

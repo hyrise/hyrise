@@ -26,6 +26,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   explicit MockNode(const ColumnDefinitions& column_definitions);
 //  explicit MockNode(const std::shared_ptr<TableStatistics>& statistics);
 
+  const ColumnDefinitions& column_definitions() const;
   const boost::variant<ColumnDefinitions, std::shared_ptr<TableStatistics>>& constructor_arguments() const;
 
   const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const override;

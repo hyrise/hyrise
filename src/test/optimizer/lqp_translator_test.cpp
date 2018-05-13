@@ -12,6 +12,7 @@
 #include "expression/expression_factory.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "expression/pqp_select_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 //#include "logical_query_plan/join_node.hpp"
 //#include "logical_query_plan/limit_node.hpp"
@@ -50,10 +51,12 @@ class LQPTranslatorTest : public ::testing::Test {
   void SetUp() override {
     table_int_float = load_table("src/test/tables/int_float.tbl");
     table_int_float2 = load_table("src/test/tables/int_float2.tbl");
+    table_int_float5 = load_table("src/test/tables/int_float5.tbl");
     table_alias_name = load_table("src/test/tables/table_alias_name.tbl");
 
     StorageManager::get().add_table("table_int_float", table_int_float);
     StorageManager::get().add_table("table_int_float2", table_int_float2);
+    StorageManager::get().add_table("table_int_float5", table_int_float5);
     StorageManager::get().add_table("table_alias_name", table_alias_name);
 //    StorageManager::get().add_table("int_float_chunked", load_table("src/test/tables/int_float.tbl", 1));
 //    ChunkEncoder::encode_all_chunks(StorageManager::get().get_table("int_float_chunked"));
@@ -63,6 +66,10 @@ class LQPTranslatorTest : public ::testing::Test {
     int_float_b = int_float_node->get_column("b");
     int_float_a_expression = std::make_shared<LQPColumnExpression>(int_float_a);
     int_float_b_expression = std::make_shared<LQPColumnExpression>(int_float_b);
+
+    int_float5_node = StoredTableNode::make("table_int_float5");
+    int_float5_a = int_float5_node->get_column("a");
+    int_float5_d = int_float5_node->get_column("d");
   }
 
   void TearDown() override {
@@ -77,9 +84,9 @@ class LQPTranslatorTest : public ::testing::Test {
 //    return table_scan->_excluded_chunk_ids;
 //  }
 
-  std::shared_ptr<Table> table_int_float, table_int_float2, table_alias_name;
-  std::shared_ptr<StoredTableNode> int_float_node;
-  LQPColumnReference int_float_a, int_float_b;
+  std::shared_ptr<Table> table_int_float, table_int_float2, table_int_float5, table_alias_name;
+  std::shared_ptr<StoredTableNode> int_float_node, int_float5_node;
+  LQPColumnReference int_float_a, int_float_b, int_float5_a, int_float5_d;
   std::shared_ptr<AbstractExpression> int_float_a_expression, int_float_b_expression;
 };
 
@@ -90,12 +97,12 @@ TEST_F(LQPTranslatorTest, StoredTableNode) {
    * LQP resembles:
    *    SELECT a FROM table_int_float;
    */
-  const auto op = LQPTranslator{}.translate_node(int_float_node);
+  const auto pqp = LQPTranslator{}.translate_node(int_float_node);
 
   /**
    * Check PQP
    */
-  const auto get_table_op = std::dynamic_pointer_cast<GetTable>(op);
+  const auto get_table_op = std::dynamic_pointer_cast<GetTable>(pqp);
   ASSERT_TRUE(get_table_op);
   EXPECT_EQ(get_table_op->table_name(), "table_int_float");
 }
@@ -110,12 +117,12 @@ TEST_F(LQPTranslatorTest, ArithmeticExpression) {
   const auto a_plus_b_lqp = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, int_float_a_expression, int_float_b_expression);
   const auto projection_expressions = std::vector<std::shared_ptr<AbstractExpression>>({a_plus_b_lqp});
   const auto projection_node = ProjectionNode::make(projection_expressions, int_float_node);
-  const auto op = LQPTranslator{}.translate_node(projection_node);
+  const auto pqp = LQPTranslator{}.translate_node(projection_node);
 
   /**
    * Check PQP
    */
-  const auto projection_op = std::dynamic_pointer_cast<Projection>(op);
+  const auto projection_op = std::dynamic_pointer_cast<Projection>(pqp);
   ASSERT_TRUE(projection_op);
   ASSERT_EQ(projection_op->expressions.size(), 1u);
   const auto a_plus_b_pqp = std::dynamic_pointer_cast<ArithmeticExpression>(projection_op->expressions.at(0));
@@ -130,7 +137,7 @@ TEST_F(LQPTranslatorTest, ArithmeticExpression) {
   ASSERT_TRUE(b_pqp);
   EXPECT_EQ(b_pqp->column_id, ColumnID{1});
 
-  const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(op->input_left());
+  const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->input_left());
   ASSERT_TRUE(get_table_op);
   EXPECT_EQ(get_table_op->table_name(), "table_int_float");
 }
@@ -143,18 +150,18 @@ TEST_F(LQPTranslatorTest, PredicateNodeSimple) {
    *   SELECT * FROM int_float WHERE 5 > b;
    */
   const auto predicate_node = PredicateNode::make(greater_than(5, int_float_b), int_float_node);
-  const auto op = LQPTranslator{}.translate_node(predicate_node);
+  const auto pqp = LQPTranslator{}.translate_node(predicate_node);
 
   /**
    * Check PQP
    */
-  const auto table_scan_op = std::dynamic_pointer_cast<TableScan>(op);
+  const auto table_scan_op = std::dynamic_pointer_cast<TableScan>(pqp);
   ASSERT_TRUE(table_scan_op);
   EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1});
   EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::LessThan);
   EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(5));
 
-  const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(op->input_left());
+  const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->input_left());
   ASSERT_TRUE(get_table_op);
   EXPECT_EQ(get_table_op->table_name(), "table_int_float");
 }
@@ -167,26 +174,69 @@ TEST_F(LQPTranslatorTest, PredicateNodeBetween) {
    *   SELECT * FROM int_float WHERE 5 BETWEEN a AND b;
    */
   const auto predicate_node = PredicateNode::make(between(5, int_float_a, int_float_b), int_float_node);
-  const auto op = LQPTranslator{}.translate_node(predicate_node);
+  const auto pqp = LQPTranslator{}.translate_node(predicate_node);
 
   /**
    * Check PQP
    */
-  const auto upper_bound_scan_op = std::dynamic_pointer_cast<const TableScan>(op);
+  const auto upper_bound_scan_op = std::dynamic_pointer_cast<const TableScan>(pqp);
   ASSERT_TRUE(upper_bound_scan_op);
   EXPECT_EQ(upper_bound_scan_op->left_column_id(), ColumnID{1});
   EXPECT_EQ(upper_bound_scan_op->predicate_condition(), PredicateCondition::GreaterThanEquals);
   EXPECT_EQ(upper_bound_scan_op->right_parameter(), AllParameterVariant(5));
 
-  const auto lower_bound_scan_op = std::dynamic_pointer_cast<const TableScan>(op->input_left());
+  const auto lower_bound_scan_op = std::dynamic_pointer_cast<const TableScan>(pqp->input_left());
   ASSERT_TRUE(lower_bound_scan_op);
   EXPECT_EQ(lower_bound_scan_op->left_column_id(), ColumnID{0});
   EXPECT_EQ(lower_bound_scan_op->predicate_condition(), PredicateCondition::LessThanEquals);
   EXPECT_EQ(lower_bound_scan_op->right_parameter(), AllParameterVariant(5));
 
-  const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(op->input_left()->input_left());
+  const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->input_left()->input_left());
   ASSERT_TRUE(get_table_op);
   EXPECT_EQ(get_table_op->table_name(), "table_int_float");
+}
+
+TEST_F(LQPTranslatorTest, SelectExpressionCorelated) {
+  /**
+   * Build LQP and translate to PQP
+   *
+   * LQP resembles:
+   *   SELECT (SELECT MIN(a + d) FROM int_float), a FROM int_float5 AS f;
+   */
+  const auto a_plus_d = addition(int_float_a, external(int_float5_d, 0));
+
+  // clang-format off
+  const auto sub_select_lqp =
+    AggregateNode::make(expression_vector(), expression_vector(min(a_plus_d)),
+      ProjectionNode::make(expression_vector(int_float_a, int_float_b, a_plus_d), int_float_node)
+  );
+  // clang-format on
+
+  const auto select_expressions = expression_vector(select(sub_select_lqp, expression_vector(int_float5_d)), int_float5_a);
+
+  const auto lqp = ProjectionNode::make(select_expressions, int_float5_node);
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  /**
+   * Check PQP
+   */
+  const auto projection = std::dynamic_pointer_cast<const Projection>(pqp);
+  ASSERT_TRUE(projection);
+
+  ASSERT_EQ(projection->expressions.size(), 2u);
+  EXPECT_EQ(projection->expressions.at(1)->type, ExpressionType::Column);
+
+  const auto sub_select_expression = std::dynamic_pointer_cast<const PQPSelectExpression>(projection->expressions.at(0));
+  ASSERT_TRUE(sub_select_expression);
+
+  /**
+   * Check SubSelect PQP
+   */
+  const auto sub_select_pqp = sub_select_expression->pqp;
+  const auto sub_select_aggregate = std::dynamic_pointer_cast<const Aggregate>(sub_select_pqp);
+  ASSERT_TRUE(sub_select_aggregate);
+  const auto sub_select_projection = std::dynamic_pointer_cast<const Projection>(sub_select_pqp->input_left());
+  ASSERT_TRUE(sub_select_projection);
 }
 
 //TEST_F(LQPTranslatorTest, PredicateNodeUnaryScan) {

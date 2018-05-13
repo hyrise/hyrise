@@ -94,8 +94,9 @@ void expression_adapt_to_different_lqp(
 std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(
 const LQPColumnExpression& lqp_column_expression,
 const LQPNodeMapping& node_mapping) {
-  const auto node_mapping_iter = node_mapping.find(lqp_column_expression.column_reference.original_node());
-  Assert(node_mapping_iter != node_mapping.end(), "Couldn't find referenced node in NodeMapping");
+  const auto node = lqp_column_expression.column_reference.original_node();
+  const auto node_mapping_iter = node_mapping.find(node);
+  Assert(node_mapping_iter != node_mapping.end(), "Couldn't find referenced node (" + node->description() + ") in NodeMapping");
 
   LQPColumnReference adapted_column_reference{node_mapping_iter->second, lqp_column_expression.column_reference.original_column_id()};
 

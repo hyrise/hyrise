@@ -18,7 +18,9 @@ DataType SQLIdentifierExpression::data_type() const {
 }
 
 bool SQLIdentifierExpression::_shallow_equals(const AbstractExpression& expression) const {
-  return sql_identifier == static_cast<const SQLIdentifierExpression&>(expression).sql_identifier;
+  const auto* sql_identifier_expression = dynamic_cast<const SQLIdentifierExpression*>(&expression);
+  if (!sql_identifier_expression) return false;
+  return sql_identifier == sql_identifier_expression->sql_identifier;
 }
 
 size_t SQLIdentifierExpression::_on_hash() const {

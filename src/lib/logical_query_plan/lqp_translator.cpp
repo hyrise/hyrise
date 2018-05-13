@@ -19,7 +19,9 @@
 #include "expression/is_null_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
+#include "expression/lqp_select_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "expression/pqp_select_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "expression/value_placeholder_expression.hpp"
 //#include "insert_node.hpp"
@@ -364,10 +366,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
       const auto column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(aggregate_expression->argument());
       Assert(column_expression, "Only PQPColumnExpressions valid here.");
 
-      aggregate_column_definitions.emplace_back(aggregate_expression->aggregate_function, column_expression->column_id);
+      aggregate_column_definitions.emplace_back(aggregate_expression->aggregate_function, column_expression->column_id, expression->as_column_name());
 
     } else {
-      aggregate_column_definitions.emplace_back(aggregate_expression->aggregate_function, std::nullopt);
+      aggregate_column_definitions.emplace_back(aggregate_expression->aggregate_function, std::nullopt, expression->as_column_name());
     }
   }
 
@@ -477,6 +479,31 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
      */
 
     visit_expression(pqp_expression, [&](auto & expression) {
+      // Resolve SubSelectExpression
+      if (expression->type == ExpressionType::Select) {
+        const auto lqp_select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(expression);
+        Assert(lqp_select_expression, "Expected LQPSelectExpression");
+
+        const auto sub_select_pqp = LQPTranslator{}.translate_node(lqp_select_expression->lqp);
+        const auto sub_select_data_type = lqp_select_expression->data_type();
+        const auto sub_select_nullable = lqp_select_expression->is_nullable();
+        auto sub_select_parameters = std::vector<ColumnID>{};
+        sub_select_parameters.reserve(lqp_select_expression->referenced_external_expressions().size());
+
+        for (const auto& external_expression : lqp_select_expression->referenced_external_expressions()) {
+          sub_select_parameters.emplace_back(node->get_column_id(*external_expression));
+        }
+
+        expression = std::make_shared<PQPSelectExpression>(
+          sub_select_pqp,
+          sub_select_data_type,
+          sub_select_nullable,
+          sub_select_parameters
+        );
+        return false;
+      }
+
+      // Try to resolve the Expression to a column from the input node
       const auto column_id = node->find_column_id(*expression);
       if (column_id) {
         const auto referenced_expression = node->output_column_expressions()[*column_id];

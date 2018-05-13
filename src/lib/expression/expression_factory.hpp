@@ -8,8 +8,10 @@
 #include "between_expression.hpp"
 #include "binary_predicate_expression.hpp"
 #include "case_expression.hpp"
+#include "external_expression.hpp"
 #include "lqp_column_expression.hpp"
 #include "value_expression.hpp"
+#include "value_placeholder_expression.hpp"
 
 /**
  * This file provides convenience methods to create (nested) Expression objects with little boilerplate
@@ -47,6 +49,8 @@ std::shared_ptr<LQPColumnExpression> to_expression(const LQPColumnReference& col
 std::shared_ptr<ValueExpression> to_expression(const AllTypeVariant& value);
 
 std::shared_ptr<ValueExpression> value(const AllTypeVariant& value);
+std::shared_ptr<ValuePlaceholderExpression> value_placeholder(const ValuePlaceholder& value_placeholder);
+std::shared_ptr<ValuePlaceholderExpression> value_placeholder(const uint16_t index);
 std::shared_ptr<ValueExpression> null();
 
 template<auto t, typename E>
@@ -74,6 +78,7 @@ struct ternary final {
 };
 
 extern unary<AggregateFunction::Sum, AggregateExpression> sum;
+extern unary<AggregateFunction::Min, AggregateExpression> min;
 extern binary<ArithmeticOperator::Division, ArithmeticExpression> division;
 extern binary<ArithmeticOperator::Multiplication, ArithmeticExpression> multiplication;
 extern binary<ArithmeticOperator::Addition, ArithmeticExpression> addition;
@@ -83,6 +88,15 @@ extern binary<PredicateCondition::GreaterThanEquals, BinaryPredicateExpression> 
 extern binary<PredicateCondition::GreaterThan, BinaryPredicateExpression> greater_than;
 extern ternary<BetweenExpression> between;
 extern ternary<CaseExpression> case_;
+
+std::shared_ptr<AbstractExpression> select(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                           const std::vector<std::shared_ptr<AbstractExpression>>& referenced_external_expressions);
+
+template<typename E>
+std::shared_ptr<ExternalExpression> external(const E& e, const uint16_t index) {
+  const auto expression = to_expression(e);
+  return std::make_shared<ExternalExpression>(ValuePlaceholder{index}, expression->data_type(), expression->is_nullable(), expression->as_column_name());
+}
 
 template<typename ... Args>
 std::vector<std::shared_ptr<AbstractExpression>> expression_vector(Args &&... args) {
