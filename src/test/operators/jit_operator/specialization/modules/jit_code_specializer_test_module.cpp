@@ -41,7 +41,8 @@ void foo(int32_t value) {
   IncrementByN inc_by_n(value);
   std::cout << load_replacement(inc_by_n, value) << std::endl;
 
-  apply_multiple_operations({std::make_shared<Increment>(), std::make_shared<Increment>()}, value);
+  std::cout << apply_multiple_operations({std::make_shared<Increment>(), std::make_shared<Increment>()}, value)
+            << std::endl;
 }
 
 }  // namespace opossum

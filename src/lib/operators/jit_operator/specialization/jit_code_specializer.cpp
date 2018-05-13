@@ -31,7 +31,7 @@ std::shared_ptr<llvm::Module> JitCodeSpecializer::specialize_function(
 
   const auto root_function = _repository.get_function(root_function_name);
 
-  DebugAssert(root_function, "Root function not found in repository.");
+  Assert(root_function, "Root function not found in repository.");
   context.root_function = _clone_function(context, *root_function, "_");
 
   if (two_passes) {
