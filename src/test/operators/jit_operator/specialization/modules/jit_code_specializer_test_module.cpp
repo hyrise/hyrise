@@ -18,13 +18,9 @@ __attribute__((noinline)) int32_t load_replacement(const IncrementByN& op, int32
 // In each loop iteration a virtual call is performed to a different operation.
 // Since different operations might be executed in different loop iterations, this code can only be specialized after
 // the loop has been unrolled.
-__attribute__((noinline)) int32_t apply_multiple_operations(
-    const std::vector<std::shared_ptr<const AbstractOperation>>& ops, int32_t value) {
-  auto current_value = value;
-  for (auto i = 0u; i < ops.size(); ++i) {
-    current_value = ops[i]->apply(current_value);
-  }
-  return current_value;
+__attribute__((noinline)) int32_t apply_multiple_operations(const MultipleOperations& multiple_operations,
+                                                            int32_t value) {
+  return multiple_operations.apply(value);
 }
 
 // Prevent LLVM from optimizing away most of the code during bitcode generation
@@ -41,8 +37,9 @@ void foo(int32_t value) {
   IncrementByN inc_by_n(value);
   std::cout << load_replacement(inc_by_n, value) << std::endl;
 
-  std::cout << apply_multiple_operations({std::make_shared<Increment>(), std::make_shared<Increment>()}, value)
-            << std::endl;
+  MultipleOperations multiple_operations(std::vector<std::shared_ptr<const AbstractOperation>>(
+      {std::make_shared<Increment>(), std::make_shared<Increment>()}));
+  std::cout << apply_multiple_operations(multiple_operations, value) << std::endl;
 }
 
 }  // namespace opossum

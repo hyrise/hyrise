@@ -39,4 +39,21 @@ class IncrementByN : public AbstractOperation {
   int32_t _n;
 };
 
+class MultipleOperations : public AbstractOperation {
+ public:
+  explicit MultipleOperations(const std::vector<std::shared_ptr<const AbstractOperation>> operations)
+      : _operations{operations} {}
+
+  int32_t apply(const int32_t value) const final {
+    auto current_value = value;
+    for (auto i = 0u; i < _operations.size(); ++i) {
+      current_value = _operations[i]->apply(current_value);
+    }
+    return current_value;
+  }
+
+ private:
+  std::vector<std::shared_ptr<const AbstractOperation>> _operations;
+};
+
 }  // namespace opossum

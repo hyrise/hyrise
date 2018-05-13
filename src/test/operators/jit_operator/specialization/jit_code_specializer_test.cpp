@@ -178,24 +178,25 @@ TEST_F(JitCodeSpecializerTest, ReplacesLoadInstructions) {
 TEST_F(JitCodeSpecializerTest, UnrollsLoops) {
   // int32_t opossum::apply_multiple_operations(const std::vector<std::shared_ptr<const AbstractOperation>>&, int32_t);
   std::string apply_multiple_operations_fn_symbol =
-      "_ZN7opossum25apply_multiple_operationsERKNSt3__16vectorINS0_10shared_ptrIKNS_17AbstractOperationEEENS0_"
-      "9allocatorIS5_EEEEi";
+      "_ZN7opossum25apply_multiple_operationsERKNS_18MultipleOperationsEi";
+
+  // Create three operations that should be executed consecutively
+  const auto multiple_operations = MultipleOperations(std::vector<std::shared_ptr<const AbstractOperation>>({
+      std::make_shared<IncrementByN>(10),
+      std::make_shared<Decrement>(),
+      std::make_shared<Decrement>(),
+  }));
 
   {
-    // Create three operations that should be executed consecutively
-    const auto operations = std::vector<std::shared_ptr<const AbstractOperation>>{
-        std::make_shared<IncrementByN>(10),
-        std::make_shared<Decrement>(),
-        std::make_shared<Decrement>(),
-    };
-
     JitCodeSpecializer code_specializer(*_repository);
     // Run the code specialization WITHOUT loop unrolling
     const auto specialized_module = code_specializer.specialize_function(
-        apply_multiple_operations_fn_symbol, std::make_shared<JitConstantRuntimePointer>(&operations), false);
+        apply_multiple_operations_fn_symbol, std::make_shared<JitConstantRuntimePointer>(&multiple_operations), false);
 
     ASSERT_EQ(specialized_module->size(), 1u);
     const auto specialized_apply_multiple_operations_fn = specialized_module->begin();
+
+    specialized_module->print(llvm::dbgs(), nullptr, false, true);
 
     // The loop has not been unrolled and there is still control flow (i.e., multiple basic blocks and phi nodes), and
     // function calls in the function.
@@ -207,16 +208,9 @@ TEST_F(JitCodeSpecializerTest, UnrollsLoops) {
     ASSERT_GE(num_call_instructions, 1u);
   }
   {
-    // Repeat the above test WITH loop unrolling
-    const auto operations = std::vector<std::shared_ptr<const AbstractOperation>>{
-        std::make_shared<IncrementByN>(10),
-        std::make_shared<Decrement>(),
-        std::make_shared<Decrement>(),
-    };
-
     JitCodeSpecializer code_specializer(*_repository);
     const auto specialized_module = code_specializer.specialize_function(
-        apply_multiple_operations_fn_symbol, std::make_shared<JitConstantRuntimePointer>(&operations), true);
+        apply_multiple_operations_fn_symbol, std::make_shared<JitConstantRuntimePointer>(&multiple_operations), true);
 
     ASSERT_EQ(specialized_module->size(), 1u);
     const auto specialized_apply_multiple_operations_fn = specialized_module->begin();
@@ -242,11 +236,11 @@ TEST_F(JitCodeSpecializerTest, UnrollsLoops) {
     ASSERT_EQ(num_instructions, 2u);
 
     // When fully compiling and executing the specialized function, it still produces the correct result.
-    const auto compiled_apply_multiple_operations_fn = code_specializer.specialize_and_compile_function<int32_t(
-        const std::vector<std::shared_ptr<const AbstractOperation>>&, int32_t)>(
-        apply_multiple_operations_fn_symbol, std::make_shared<JitConstantRuntimePointer>(&operations));
+    const auto compiled_apply_multiple_operations_fn =
+        code_specializer.specialize_and_compile_function<int32_t(const MultipleOperations&, int32_t)>(
+            apply_multiple_operations_fn_symbol, std::make_shared<JitConstantRuntimePointer>(&multiple_operations));
     const auto value = 123;
-    ASSERT_EQ(compiled_apply_multiple_operations_fn(operations, value), value + 10 - 1 - 1);
+    ASSERT_EQ(compiled_apply_multiple_operations_fn(multiple_operations, value), value + 10 - 1 - 1);
   }
 }
 
