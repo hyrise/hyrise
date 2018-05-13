@@ -196,8 +196,6 @@ TEST_F(JitCodeSpecializerTest, UnrollsLoops) {
     ASSERT_EQ(specialized_module->size(), 1u);
     const auto specialized_apply_multiple_operations_fn = specialized_module->begin();
 
-    specialized_module->print(llvm::dbgs(), nullptr, false, true);
-
     // The loop has not been unrolled and there is still control flow (i.e., multiple basic blocks and phi nodes), and
     // function calls in the function.
     const auto num_blocks = specialized_apply_multiple_operations_fn->size();
