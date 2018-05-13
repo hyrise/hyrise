@@ -275,19 +275,23 @@ TEST_F(SQLTranslatorTest, GroupByOnly) {
 
 TEST_F(SQLTranslatorTest, AggregateAndGroupByWildcard) {
   // - "int_float.*" will select only "b", because a is not in GROUP BY
-  // - y is an alias assigned in the GROUP BY list and can be used in the SELECT list
-  const auto actual_lqp = compile_query("SELECT int_float.*, y, SUM(a+b) FROM int_float GROUP BY b+3 AS y, b");
+  // - y is an alias assigned in the SELECT list and can be used in the GROUP BY list
+  const auto actual_lqp = compile_query("SELECT int_float.*, b+3 AS y, SUM(a+b) FROM int_float GROUP BY y, b");
 
   const auto sum_a_plus_b = sum(addition(int_float_a, int_float_b));
   const auto b_plus_3 = addition(int_float_b, 3);
 
+  const auto aliases = std::vector<std::string>({"b", "y", "SUM(a + b)"});
+  const auto select_list_expressions = expression_vector(int_float_b, b_plus_3, sum(addition(int_float_a, int_float_b)));
+
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(int_float_b, b_plus_3, sum(addition(int_float_a, int_float_b))),  // NOLINT
-    AggregateNode::make(expression_vector(b_plus_3, int_float_b), expression_vector(sum_a_plus_b),
-      ProjectionNode::make(expression_vector(int_float_a, int_float_b, b_plus_3, addition(int_float_a, int_float_b)),
-        stored_table_node_int_float
-  )));
+  AliasNode::make(select_list_expressions, aliases,
+    ProjectionNode::make(select_list_expressions,
+      AggregateNode::make(expression_vector(b_plus_3, int_float_b), expression_vector(sum_a_plus_b),
+        ProjectionNode::make(expression_vector(int_float_a, int_float_b, addition(int_float_a, int_float_b), b_plus_3),
+          stored_table_node_int_float
+  ))));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

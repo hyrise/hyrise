@@ -7,15 +7,23 @@
 
 namespace opossum {
 
-AliasNode::AliasNode(const std::vector<std::shared_ptr<AbstractExpression>> &_expressions, const std::vector<std::string> &aliases):
-  AbstractLQPNode(LQPNodeType::Alias), aliases(aliases), _expressions(_expressions) {
+AliasNode::AliasNode(const std::vector<std::shared_ptr<AbstractExpression>> &expressions, const std::vector<std::string> &aliases):
+  AbstractLQPNode(LQPNodeType::Alias), aliases(aliases), _expressions(expressions) {
   Assert(_expressions.size() == aliases.size(), "Specify a name for each Expression");
 }
 
 std::string AliasNode::description() const {
   std::stringstream stream;
   stream << "Alias [";
-  stream << boost::algorithm::join(aliases, ", ");
+  for (auto column_id = ColumnID{0}; column_id < _expressions.size(); ++column_id) {
+    if (_expressions[column_id]->as_column_name() == aliases[column_id]) {
+      stream << aliases[column_id];
+    } else {
+      stream << _expressions[column_id]->as_column_name() << " AS " << aliases[column_id];
+    }
+
+    if (column_id + 1 < _expressions.size()) stream << ", ";
+  }
   stream << "]";
   return stream.str();
 }

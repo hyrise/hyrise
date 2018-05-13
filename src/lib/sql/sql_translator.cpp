@@ -449,31 +449,12 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql:
 
 void SQLTranslator::_translate_select_list_groupby_having(
 const hsql::SelectStatement &select) {
-//  const auto input_node = translation_state.lqp;
-//
   const auto& input_expressions = _current_lqp->output_column_expressions();
 
   auto pre_aggregate_expression_set = ExpressionUnorderedSet{input_expressions.begin(), input_expressions.end()};
   auto pre_aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{input_expressions.begin(), input_expressions.end()};
   auto aggregate_expression_set = ExpressionUnorderedSet{};
   auto aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
-
-  // Add all expressions required for GROUP BY
-  auto group_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
-  if (select.groupBy && select.groupBy->columns) {
-    group_by_expressions.reserve(select.groupBy->columns->size());
-    for (const auto* group_by_hsql_expr : *select.groupBy->columns) {
-      const auto group_by_expression = translate_hsql_expr(*group_by_hsql_expr, _sql_identifier_context, _use_mvcc);
-      group_by_expressions.emplace_back(group_by_expression);
-      if (pre_aggregate_expression_set.emplace(group_by_expression).second) {
-        pre_aggregate_expressions.emplace_back(group_by_expression);
-      }
-
-      if (group_by_hsql_expr->alias) {
-        _sql_identifier_context->set_column_name(group_by_expression, group_by_hsql_expr->alias);
-      }
-    }
-  }
 
   // Visitor that identifies aggregates and their arguments
   const auto find_aggregates_and_arguments = [&](auto& sub_expression) {
@@ -493,15 +474,9 @@ const hsql::SelectStatement &select) {
     return false;
   };
 
-  // Gather all aggregates and arguments from having
-  auto having_expression = std::shared_ptr<AbstractExpression>{};
-  if (select.groupBy && select.groupBy->having) {
-    having_expression = translate_hsql_expr(*select.groupBy->having, _sql_identifier_context, _use_mvcc);
-    visit_expression(having_expression, find_aggregates_and_arguments);
-  }
-
-  // Identify all aggregates and arguments needed for SELECT and build the select_list_elements
+  // Identify all Aggregates and their arguments needed for SELECT and build the select_list_elements
   std::vector<std::shared_ptr<AbstractExpression>> select_list_elements;
+  auto post_select_sql_identifier_context = std::make_shared<SQLIdentifierContext>(*_sql_identifier_context);
   for (const auto& hsql_select_expr : *select.selectList) {
     if (hsql_select_expr->type == hsql::kExprStar) {
       select_list_elements.emplace_back(nullptr);
@@ -509,7 +484,32 @@ const hsql::SelectStatement &select) {
       auto expression = translate_hsql_expr(*hsql_select_expr, _sql_identifier_context, _use_mvcc);
       visit_expression(expression, find_aggregates_and_arguments);
       select_list_elements.emplace_back(expression);
+
+      if (hsql_select_expr->alias) {
+        post_select_sql_identifier_context->set_column_name(expression, hsql_select_expr->alias);
+      }
     }
+  }
+  _sql_identifier_context = post_select_sql_identifier_context;
+
+  // Identify all GROUP BY expressions
+  auto group_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+  if (select.groupBy && select.groupBy->columns) {
+    group_by_expressions.reserve(select.groupBy->columns->size());
+    for (const auto* group_by_hsql_expr : *select.groupBy->columns) {
+      const auto group_by_expression = translate_hsql_expr(*group_by_hsql_expr, _sql_identifier_context, _use_mvcc);
+      group_by_expressions.emplace_back(group_by_expression);
+      if (pre_aggregate_expression_set.emplace(group_by_expression).second) {
+        pre_aggregate_expressions.emplace_back(group_by_expression);
+      }
+    }
+  }
+
+  // Gather all aggregates and arguments from HAVING
+  auto having_expression = std::shared_ptr<AbstractExpression>{};
+  if (select.groupBy && select.groupBy->having) {
+    having_expression = translate_hsql_expr(*select.groupBy->having, _sql_identifier_context, _use_mvcc);
+    visit_expression(having_expression, find_aggregates_and_arguments);
   }
 
   // Build pre_aggregate_projection
