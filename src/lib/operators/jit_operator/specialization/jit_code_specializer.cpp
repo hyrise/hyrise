@@ -48,7 +48,7 @@ std::shared_ptr<llvm::Module> JitCodeSpecializer::specialize_function(
 
   // Run the first specialization and optimization pass
   context.runtime_value_map[context.root_function->arg_begin()] = runtime_this;
-  _inline_function_calls(context, !two_passes);
+  _inline_function_calls(context);
   _perform_load_substitution(context);
   // Unroll loops only if two passes are selected
   _optimize(context, two_passes);
@@ -57,7 +57,7 @@ std::shared_ptr<llvm::Module> JitCodeSpecializer::specialize_function(
   if (two_passes) {
     context.runtime_value_map.clear();
     context.runtime_value_map[context.root_function->arg_begin()] = runtime_this;
-    _inline_function_calls(context, true);
+    _inline_function_calls(context);
     _perform_load_substitution(context);
     _optimize(context, false);
   }
@@ -65,7 +65,7 @@ std::shared_ptr<llvm::Module> JitCodeSpecializer::specialize_function(
   return context.module;
 }
 
-void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context, const bool final_pass) const {
+void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context) const {
   // This method implements the main code fusion functionality.
   // It works as follows:
   // Throughout the fusion process, a working list of call sites (i.e., function calls) is maintained.
@@ -165,12 +165,11 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context, 
     // different objects in different loop iterations.
     // If two specialization passes are performed, these functions should be inlined after loop unrolling has been
     // performed (i.e., during the second pass).
-    // If only one specialization pass is performed, these functions are inlined immediately.
     auto first_argument = call_site.arg_begin();
     auto first_argument_cannot_be_resolved = first_argument->get()->getType()->isPointerTy() &&
                                              !GetRuntimePointerForValue(first_argument->get(), context)->is_valid();
 
-    if (first_argument_cannot_be_resolved && !final_pass) {
+    if (first_argument_cannot_be_resolved) {
       call_sites.pop();
       continue;
     }

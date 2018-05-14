@@ -54,7 +54,7 @@ class JitCodeSpecializer {
 
  private:
   //
-  void _inline_function_calls(SpecializationContext& context, const bool final_pass) const;
+  void _inline_function_calls(SpecializationContext& context) const;
 
   // Iterates over all load instruction in the function and tries to determine their value from the provided runtime
   // information. If this succeeds, the load instruction is replaced by a constant value.
