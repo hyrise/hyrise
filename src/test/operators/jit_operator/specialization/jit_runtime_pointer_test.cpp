@@ -112,13 +112,10 @@ TEST_F(JitRuntimePointerTest, NavigatingANestedDataStructure) {
   auto second_pointer = std::make_shared<JitDereferencedRuntimePointer>(first_next_member_pointer);
   auto second_next_member_pointer = std::make_shared<JitOffsetRuntimePointer>(second_pointer, offsetof(ListNode, next));
   auto third_pointer = std::make_shared<JitDereferencedRuntimePointer>(second_next_member_pointer);
-  auto third_next_member_pointer = std::make_shared<JitOffsetRuntimePointer>(third_pointer, offsetof(ListNode, next));
-  auto fourth_pointer = std::make_shared<JitDereferencedRuntimePointer>(third_next_member_pointer);
 
   ASSERT_TRUE(first_pointer->is_valid());
   ASSERT_TRUE(second_pointer->is_valid());
   ASSERT_TRUE(third_pointer->is_valid());
-  ASSERT_FALSE(fourth_pointer->is_valid());
 
   ASSERT_EQ(first_pointer->address(), reinterpret_cast<uint64_t>(&first));
   ASSERT_EQ(second_pointer->address(), reinterpret_cast<uint64_t>(&second));
