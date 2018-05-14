@@ -34,7 +34,8 @@ class SQLPipeline : public Noncopyable {
  public:
   // Prefer using the SQLPipelineBuilder interface for constructing SQLPipelines conveniently
   SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context, const UseMvcc use_mvcc,
-              const std::shared_ptr<Optimizer>& optimizer, const PreparedStatementCache& prepared_statements);
+              const std::shared_ptr<LQPTranslator>& lqp_translator, const std::shared_ptr<Optimizer>& optimizer,
+              const PreparedStatementCache& prepared_statements);
 
   // Returns the SQL string for each statement.
   const std::vector<std::string>& get_sql_strings();

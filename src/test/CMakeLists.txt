@@ -15,6 +15,7 @@ set(
     concurrency/transaction_context_test.cpp
     gtest_main.cpp
     import_export/csv_meta_test.cpp
+    cost_model/cost_feature_proxy_test.cpp
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
     lib/fixed_string_test.cpp
@@ -144,6 +145,19 @@ set(
     utils/numa_memory_resource_test.cpp
     gtest_main.cpp
 )
+
+if (${ENABLE_JIT_SUPPORT})
+    set(HYRISE_UNIT_TEST_SOURCES
+        ${HYRISE_UNIT_TEST_SOURCES}
+        operators/jit_operator/jit_operations_test.cpp
+        operators/jit_operator/jit_tuple_value_test.cpp
+        operators/jit_operator/jit_variant_vector_test.cpp
+        operators/jit_operator/operators/jit_compute_test.cpp
+        operators/jit_operator/operators/jit_expression_test.cpp
+        operators/jit_operator/operators/jit_filter_test.cpp
+        operators/jit_operator/operators/jit_read_write_tuple_test.cpp
+    )
+endif()
 
 set (
     SYSTEM_TEST_SOURCES

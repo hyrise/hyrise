@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "all_parameter_variant.hpp"
+#include "base_operator_performance_data.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -25,6 +26,7 @@ enum class OperatorType {
   ImportCsv,
   IndexScan,
   Insert,
+  JitOperatorWrapper,
   JoinHash,
   JoinIndex,
   JoinNestedLoop,
@@ -108,10 +110,9 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::shared_ptr<const Table> input_table_left() const;
   std::shared_ptr<const Table> input_table_right() const;
 
-  struct PerformanceData {
-    uint64_t walltime_ns = 0;  // time spent in nanoseconds executing this operator
-  };
-  const AbstractOperator::PerformanceData& performance_data() const;
+  // Return data about the operators performance (runtime, e.g.) AFTER it has been executed.
+  // Derived operators may produce more finely grained performance data (e.g. JoinHash::join_hash_performance_data())
+  const BaseOperatorPerformanceData& base_performance_data() const;
 
   void print(std::ostream& stream = std::cout) const;
 
@@ -150,7 +151,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // Weak pointer breaks cyclical dependency between operators and context
   std::optional<std::weak_ptr<TransactionContext>> _transaction_context;
 
-  PerformanceData _performance_data;
+  BaseOperatorPerformanceData _base_performance_data;
 
   std::weak_ptr<OperatorTask> _operator_task;
 };

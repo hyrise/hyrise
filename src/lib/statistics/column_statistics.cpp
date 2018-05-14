@@ -220,6 +220,11 @@ FilterByColumnComparisonEstimate ColumnStatistics<ColumnDataType>::estimate_pred
   const auto overlapping_range_min = std::max(_min, right_column_statistics.min());
   const auto overlapping_range_max = std::min(_max, right_column_statistics.max());
 
+  // if no overlapping range exists, the result is empty
+  if (overlapping_range_min > overlapping_range_max) {
+    return {0.f, without_null_values(), right_column_statistics.without_null_values()};
+  }
+
   // calculate ratio of values before, in and above the common value range
   const auto left_overlapping_ratio = estimate_range_selectivity(overlapping_range_min, overlapping_range_max);
   const auto right_overlapping_ratio =

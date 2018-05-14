@@ -24,11 +24,6 @@
     T t;                                                                                                          \
     constexpr explicit D(const T& t_) BOOST_NOEXCEPT_IF(boost::has_nothrow_copy_constructor<T>::value) : t(t_) {} \
     D() BOOST_NOEXCEPT_IF(boost::has_nothrow_default_constructor<T>::value) : t() {}                              \
-    D(const D& t_) BOOST_NOEXCEPT_IF(boost::has_nothrow_copy_constructor<T>::value) : t(t_.t) {}                  \
-    D& operator=(const D& other) BOOST_NOEXCEPT_IF(boost::has_nothrow_assign<T>::value) {                         \
-      t = other.t;                                                                                                \
-      return *this;                                                                                               \
-    }                                                                                                             \
     D& operator=(const T& other) BOOST_NOEXCEPT_IF(boost::has_nothrow_assign<T>::value) {                         \
       t = other;                                                                                                  \
       return *this;                                                                                               \

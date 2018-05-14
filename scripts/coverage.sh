@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -51,6 +50,8 @@ if [[ "$unamestr" == 'Darwin' ]]; then
   /usr/local/opt/llvm/bin/llvm-cov show -format=html -instr-profile ./default.profdata build-coverage/hyriseTest -output-dir=./coverage ./src/lib/
 
   rm default.profdata default.profraw
+
+  echo Coverage Information is in ./coverage/index.html
 
   exit
 fi
