@@ -9,7 +9,7 @@
 
 // Include your encoded column file here!
 #include "storage/dictionary_column.hpp"
-#include "storage/fixedstring_dictionary_column/fixedstring_column.hpp"
+#include "storage/fixed_string_dictionary_column/fixed_string_column.hpp"
 #include "storage/frame_of_reference_column.hpp"
 #include "storage/run_length_column.hpp"
 

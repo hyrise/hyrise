@@ -7,7 +7,7 @@
 #include "storage/base_column_encoder.hpp"
 
 #include "storage/dictionary_column.hpp"
-#include "storage/fixedstring_dictionary_column/fixedstring_column.hpp"
+#include "storage/fixed_string_dictionary_column/fixed_string_column.hpp"
 #include "storage/value_column.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/vector_compression/vector_compression.hpp"

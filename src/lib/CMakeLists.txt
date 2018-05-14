@@ -296,14 +296,14 @@ set(
     storage/dictionary_column/dictionary_encoder.hpp
     storage/dictionary_column.hpp
     storage/encoding_type.hpp
-    storage/fixedstring_dictionary_column/fixedstring_column.cpp
-    storage/fixedstring_dictionary_column/fixedstring_column.hpp
-    storage/fixedstring_dictionary_column/fixedstring_column_iterable.hpp
-    storage/fixedstring_dictionary_column/fixedstring_encoder.hpp
-    storage/fixedstring_dictionary_column/fixedstring_vector.cpp
-    storage/fixedstring_dictionary_column/fixedstring_vector.hpp
-    storage/fixedstring_dictionary_column/fixedstring_vector_iterator.cpp
-    storage/fixedstring_dictionary_column/fixedstring_vector_iterator.hpp
+    storage/fixed_string_dictionary_column/fixed_string_column.cpp
+    storage/fixed_string_dictionary_column/fixed_string_column.hpp
+    storage/fixed_string_dictionary_column/fixed_string_column_iterable.hpp
+    storage/fixed_string_dictionary_column/fixed_string_encoder.hpp
+    storage/fixed_string_dictionary_column/fixed_string_vector.cpp
+    storage/fixed_string_dictionary_column/fixed_string_vector.hpp
+    storage/fixed_string_dictionary_column/fixed_string_vector_iterator.cpp
+    storage/fixed_string_dictionary_column/fixed_string_vector_iterator.hpp
     storage/frame_of_reference_column.hpp
     storage/frame_of_reference_column.cpp
     storage/frame_of_reference/frame_of_reference_encoder.hpp

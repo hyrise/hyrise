@@ -7,7 +7,7 @@
 
 #include "storage/chunk_encoder.hpp"
 #include "storage/column_encoding_utils.hpp"
-#include "storage/fixedstring_dictionary_column/fixedstring_column.hpp"
+#include "storage/fixed_string_dictionary_column/fixed_string_column.hpp"
 #include "storage/value_column.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 

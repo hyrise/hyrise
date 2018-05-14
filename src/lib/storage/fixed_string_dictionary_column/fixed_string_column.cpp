@@ -1,4 +1,4 @@
-#include "fixedstring_column.hpp"
+#include "fixed_string_column.hpp"
 
 #include <memory>
 #include <string>

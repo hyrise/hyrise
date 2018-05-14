@@ -4,7 +4,7 @@
 #include <memory>
 
 #include "storage/dictionary_column/dictionary_encoder.hpp"
-#include "storage/fixedstring_dictionary_column/fixedstring_encoder.hpp"
+#include "storage/fixed_string_dictionary_column/fixed_string_encoder.hpp"
 #include "storage/frame_of_reference/frame_of_reference_encoder.hpp"
 #include "storage/run_length_column/run_length_encoder.hpp"
 

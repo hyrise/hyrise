@@ -3,7 +3,7 @@
 #include "storage/column_iterables/any_column_iterable.hpp"
 #include "storage/dictionary_column/dictionary_column_iterable.hpp"
 #include "storage/encoding_type.hpp"
-#include "storage/fixedstring_dictionary_column/fixedstring_column_iterable.hpp"
+#include "storage/fixed_string_dictionary_column/fixed_string_column_iterable.hpp"
 #include "storage/frame_of_reference/frame_of_reference_iterable.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/run_length_column/run_length_column_iterable.hpp"

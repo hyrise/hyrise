@@ -4,7 +4,7 @@
 
 #include "storage/column_iterables.hpp"
 
-#include "storage/fixedstring_dictionary_column/fixedstring_column.hpp"
+#include "storage/fixed_string_dictionary_column/fixed_string_column.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace opossum {

@@ -4,7 +4,7 @@
 #include <string>
 
 #include "../base_dictionary_column.hpp"
-#include "fixedstring_vector.hpp"
+#include "fixed_string_vector.hpp"
 #include "types.hpp"
 
 namespace opossum {
