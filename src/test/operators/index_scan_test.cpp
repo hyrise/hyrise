@@ -112,8 +112,8 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
 
     scan->execute();
 
-    auto scan_small_chunk = std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_index_type, this->_column_ids,
-                                            test.first, right_values, right_values2);
+    auto scan_small_chunk = std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_index_type, 
+                                                        this->_column_ids, test.first, right_values, right_values2);
 
     scan_small_chunk->execute();
 
@@ -123,7 +123,8 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
 }
 
 TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionaryValue) {
-  const auto all_rows = std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
+  const auto all_rows = std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 
+                                                    110, 112};
   const auto no_rows = std::vector<AllTypeVariant>{};
 
   const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{30}};
@@ -143,8 +144,8 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionary
 
     scan->execute();
 
-    auto scan_small_chunk = std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_index_type, this->_column_ids,
-                                            test.first, right_values, right_values2);
+    auto scan_small_chunk = std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_index_type, 
+                                                        this->_column_ids, test.first, right_values, right_values2);
 
     scan_small_chunk->execute();
 
@@ -154,7 +155,8 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionary
 }
 
 TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryValue) {
-  const auto all_rows = std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
+  const auto all_rows = std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 
+                                                    110, 112};
   const auto no_rows = std::vector<AllTypeVariant>{};
 
   const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{-10}};
@@ -174,8 +176,8 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryVal
 
     scan->execute();
 
-    auto scan_small_chunk = std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_index_type, this->_column_ids,
-                                            test.first, right_values, right_values2);
+    auto scan_small_chunk = std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_index_type, 
+                                                        this->_column_ids, test.first, right_values, right_values2);
 
     scan_small_chunk->execute();
 
