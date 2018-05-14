@@ -65,7 +65,8 @@ class JitCodeSpecializer {
   void _optimize(SpecializationContext& context, const bool unroll_loops) const;
 
   // Creates a function declaration (i.e., a function signature without a function body) for the given function.
-  llvm::Function* _create_function_declaration(SpecializationContext& context, const llvm::Function& function, const std::string& cloned_function_name) const;
+  llvm::Function* _create_function_declaration(SpecializationContext& context, const llvm::Function& function,
+                                               const std::string& cloned_function_name) const;
 
   // Clones the root function function from the JitRepository to the current module.
   llvm::Function* _clone_root_function(SpecializationContext& context, const llvm::Function& function) const;
