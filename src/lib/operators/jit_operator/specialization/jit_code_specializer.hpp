@@ -25,11 +25,23 @@ class JitCodeSpecializer {
  public:
   explicit JitCodeSpecializer(JitRepository& repository = JitRepository::get());
 
+  // Specializes the given function with the provided runtime information.
+  // The root_function_name must be the mangled name of the function to be specialized. This function must exist in the
+  // bitcode repository.
+  // The runtime_this parameter is a JitRuntimePointer to the first pointer argument of this function. For member
+  // functions this is the implicit "this" parameter.
+  // The function is only specializde and the LLVM module with the specialized function is returned.
   std::shared_ptr<llvm::Module> specialize_function(
       const std::string& root_function_name,
       const std::shared_ptr<const JitRuntimePointer>& runtime_this = std::make_shared<JitRuntimePointer>(),
       const bool two_passes = false);
 
+  // Specializes and compiles the given function with the provided runtime information.
+  // The root_function_name must be the mangled name of the function to be specialized. This function must exist in the
+  // bitcode repository.
+  // The runtime_this parameter is a JitRuntimePointer to the first pointer argument of this function. For member
+  // functions this is the implicit "this" parameter.
+  // A function pointer to the compiled and executable function is returned.
   template <typename T>
   std::function<T> specialize_and_compile_function(
       const std::string& root_function_name,
@@ -37,22 +49,28 @@ class JitCodeSpecializer {
       const bool two_passes = false) {
     auto module = specialize_function(root_function_name, runtime_this, two_passes);
     _compiler.add_module(module);
-    return _compiler.find_symbol<T>(root_function_name + "_");
+    return _compiler.find_symbol<T>(root_function_name);
   }
 
  private:
+  //
   void _inline_function_calls(SpecializationContext& context, const bool two_passes) const;
 
+  // Iterates over all load instruction in the function and tries to determine their value from the provided runtime
+  // information. If this succeeds, the load instruction is replaced by a constant value.
+  // Only boolean, integer, float and double values are substituted for now.
   void _perform_load_substitution(SpecializationContext& context) const;
 
+  // Run the LLVM optimizer on the specialized module.
   void _optimize(SpecializationContext& context, const bool unroll_loops) const;
 
-  llvm::Function* _create_function_declaration(SpecializationContext& context, const llvm::Function& function,
-                                               const std::string& suffix = "") const;
+  // Creates a function declaration (i.e., a function signature without a function body) for the given function.
+  llvm::Function* _create_function_declaration(SpecializationContext& context, const llvm::Function& function) const;
 
-  llvm::Function* _clone_function(SpecializationContext& context, const llvm::Function& function,
-                                  const std::string& suffix = "") const;
+  // Clones the root function function from the JitRepository to the current module.
+  llvm::Function* _clone_root_function(SpecializationContext& context, const llvm::Function& function) const;
 
+  // Clones a global variable from the JitRepository to the current module.
   llvm::GlobalVariable* _clone_global_variable(SpecializationContext& context,
                                                const llvm::GlobalVariable& global_variable) const;
 
