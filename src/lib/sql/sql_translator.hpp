@@ -97,9 +97,11 @@ class SQLTranslator final {
   const UseMvcc _use_mvcc;
 
   std::shared_ptr<AbstractLQPNode> _current_lqp;
-  std::shared_ptr<AbstractLQPNode> _from_root_node;
   std::shared_ptr<SQLIdentifierContext> _sql_identifier_context;
   std::shared_ptr<SQLIdentifierContextProxy> _external_sql_identifier_context_proxy;
+
+  // Collect the output of the FROM clause to expand wildcards (*; <t>.*) used in the SELECT list
+  std::unordered_map<std::string, std::shared_ptr<AbstractLQPNode>> _from_elements_by_table_name;
 };
 
 }  // namespace opossum

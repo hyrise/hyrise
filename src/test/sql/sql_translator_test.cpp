@@ -102,19 +102,20 @@ TEST_F(SQLTranslatorTest, SelectStarSelectsOnlyFromColumns) {
    * Test that if temporary columns are introduced, these are not selected by "*"
    */
 
+  // "a + b" is a temporary column that shouldn't be in the output
   const auto actual_lqp_no_table = compile_query("SELECT * FROM int_float WHERE a + b > 10");
   const auto actual_lqp_table = compile_query("SELECT int_float.* FROM int_float WHERE a + b > 10;");
 
   // clang-format off
   const auto expected_lqp =
-  AliasNode::make(expression_vector(int_float_a, int_float_b),
+  ProjectionNode::make(expression_vector(int_float_a, int_float_b),
     PredicateNode::make(greater_than(addition(int_float_a, int_float_b), 10),
-      ProjectionNode::make(expression_vector(addition(int_float_a, int_float_b)), stored_table_node_int_float)
+      ProjectionNode::make(expression_vector(addition(int_float_a, int_float_b), int_float_a, int_float_b), stored_table_node_int_float)
     ));
   // clang-format on
 
-  EXPECT_LQP_EQ(actual_lqp_no_table, stored_table_node_int_float);
-  EXPECT_LQP_EQ(actual_lqp_table, stored_table_node_int_float);
+  EXPECT_LQP_EQ(actual_lqp_no_table, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp_table, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, SimpleArithmeticExpression) {

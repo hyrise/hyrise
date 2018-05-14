@@ -1,20 +1,20 @@
---SELECT * FROM mixed;
---SELECT * FROM mixed_null;
+SELECT * FROM mixed;
+SELECT * FROM mixed_null;
 
 -- Table Scans
--- TODO reinstantiate *
-SELECT b FROM mixed WHERE b = 10;
-SELECT b FROM mixed WHERE a = 'a' AND c < 65.31;
-SELECT b FROM mixed WHERE a = 'a' AND c <= 65.31;
-SELECT b FROM mixed WHERE 40 >= b;
-SELECT b FROM mixed WHERE b >= 21 AND c < 72.76;
---SELECT b FROM mixed WHERE b BETWEEN 20 AND 45;
-SELECT b FROM mixed WHERE b BETWEEN c AND 45;
-SELECT b FROM mixed WHERE b >= 21 OR c < 72.76;
-SELECT b FROM mixed WHERE b >= 21 OR (b <= 30 AND c > 50.0);
-SELECT b FROM mixed WHERE b >= 21 OR c < 72.76 OR (b <= 30 AND c > 50.0);
+SELECT * FROM mixed WHERE b = 10;
+SELECT * FROM mixed WHERE a = 'a' AND c < 65.31;
+SELECT * FROM mixed WHERE a = 'a' AND c <= 65.31;
+SELECT * FROM mixed WHERE 40 >= b;
+SELECT * FROM mixed WHERE b >= 21 AND c < 72.76;
+SELECT * FROM mixed WHERE b BETWEEN 20 AND 45;
+SELECT * FROM mixed WHERE b BETWEEN c AND 45;
+SELECT * FROM mixed WHERE b >= 21 OR c < 72.76;
+SELECT * FROM mixed WHERE b >= 21 OR (b <= 30 AND c > 50.0);
+SELECT * FROM mixed WHERE b >= 21 OR c < 72.76 OR (b <= 30 AND c > 50.0);
+SELECT * FROM mixed WHERE b + c < c * b - 100;
 
---SELECT * FROM mixed_null WHERE b = 12;
+SELECT * FROM mixed_null WHERE b = 12;
 
 -- Projection
 SELECT a FROM mixed;
@@ -83,9 +83,9 @@ SELECT MIN(id) FROM mixed GROUP BY d, c;
 SELECT a, SUM(b) FROM mixed GROUP BY a;
 SELECT a, SUM(b), AVG(c) FROM mixed GROUP BY a;
 SELECT a, b, MAX(c), AVG(b) FROM mixed GROUP BY a, b;
----- (#578) SELECT a AS whatever, SUM(b) FROM mixed GROUP BY whatever;
---
----- Join, GROUP BY, Having, ...
+SELECT a AS whatever, SUM(b) FROM mixed GROUP BY whatever;
+
+-- Join, GROUP BY, Having, ...
 --SELECT c_custkey, c_name, COUNT(a) FROM tpch_customer JOIN id_int_int_int_100 ON c_custkey = a GROUP BY c_custkey, c_name HAVING COUNT(a) >= 2;
 --SELECT c_custkey, c_name, COUNT(a) FROM tpch_customer JOIN ( SELECT * FROM id_int_int_int_100 JOIN mixed ON id_int_int_int_100.a = mixed.id ) AS sub ON tpch_customer.c_custkey = sub.a GROUP BY c_custkey, c_name HAVING COUNT(sub.a) >= 2;
 
@@ -97,10 +97,10 @@ SELECT a, b, MAX(c), AVG(b) FROM mixed GROUP BY a, b;
 -- COUNT(DISTINCT)
 -- SELECT a, COUNT(DISTINCT b) FROM mixed GROUP BY a;
 --
----- Case insensitivity
---sELEcT Sum(b + b) AS sum_b_b from mixed;
---
----- Aggregates with NULL
+-- Case insensitivity
+sELEcT Sum(b + b) AS sum_b_b from mixed;
+
+-- Aggregates with NULL
 SELECT a, MAX(b) FROM mixed_null GROUP BY a;
 SELECT a, MIN(b) FROM mixed_null GROUP BY a;
 SELECT a, SUM(b) FROM mixed_null GROUP BY a;
@@ -108,7 +108,7 @@ SELECT a, AVG(b) FROM mixed_null GROUP BY a;
 -- SELECT a, COUNT(b) FROM mixed_null GROUP BY a;
 
 -- Checks that output of Aggregate can be worked with correctly.
--- SELECT b, sub.min_c, max_b FROM (SELECT a, b, MAX(b) AS max_b, MIN(c) AS min_c FROM mixed GROUP BY a, b) as sub WHERE b BETWEEN 20 AND 50 AND min_c > 15;
+--SELECT b, sub.min_c, max_b FROM (SELECT a, b, MAX(b) AS max_b, MIN(c) AS min_c FROM mixed GROUP BY a, b) as sub WHERE b BETWEEN 20 AND 50 AND min_c > 15;
 
 -- HAVING
 SELECT a, b, MAX(b), AVG(c) FROM mixed GROUP BY a, b HAVING MAX(b) >= 10 AND MAX(b) < 40;

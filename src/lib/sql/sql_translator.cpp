@@ -176,7 +176,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select_statement(const
   _sql_identifier_context = std::make_shared<SQLIdentifierContext>();
 
   _current_lqp = _translate_table_ref(*select.fromTable);
-  _from_root_node = _current_lqp;
 
   if (select.whereClause != nullptr) {
     const auto where_expression = _translate_hsql_expr(*select.whereClause);
@@ -430,6 +429,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select_statement(const
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql::TableRef& hsql_table_ref) {
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
 
+  // Each element in the FROM list needs to have a unique table name
+  auto table_name = std::string{};
+
   switch (hsql_table_ref.type) {
     case hsql::kTableName:
     case hsql::kTableSelect: {
@@ -455,8 +457,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql:
         } else {
           Fail(std::string("Did not find a table or view with name ") + hsql_table_ref.name);
         }
+        table_name = hsql_table_ref.name;
       } else if (hsql_table_ref.type == hsql::kTableSelect) {
         Assert(hsql_table_ref.alias && hsql_table_ref.alias->name, "Every SubSelect must have its own alias");
+        table_name = hsql_table_ref.alias->name;
 
         SQLTranslator sub_select_translator{_use_mvcc};
         lqp = sub_select_translator.translate_select_statement(*hsql_table_ref.select);
@@ -484,17 +488,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql:
     default:
       Fail("Unable to translate source table.");
   }
-//
-//  if (hsql_table_ref.alias) {
-//    if (hsql_table_ref.alias->columns) {
-//      for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-//        translation_state.set_column_names(lqp->output_column_expressions(), *hsql_table_ref.alias->columns);
-//      }
-//    }
-//    if (hsql_table_ref.alias->name) {
-//      translation_state.set_table_name(lqp->output_column_expressions(), hsql_table_ref.alias->name);
-//    }
-//  }
+
+  const auto table_name_is_unique = _from_elements_by_table_name.emplace(table_name, lqp).second;
+  Assert(table_name_is_unique, "Table name '" + table_name + "' in FROM is not unique");
 
   return lqp;
 }
@@ -570,7 +566,8 @@ const hsql::SelectStatement &select) {
   }
 
   // Build Aggregate
-  if (!aggregate_expressions.empty() || !group_by_expressions.empty()) {
+  const auto is_aggregate = !aggregate_expressions.empty() || !group_by_expressions.empty();
+  if (is_aggregate) {
     _current_lqp = AggregateNode::make(group_by_expressions, aggregate_expressions, _current_lqp);
   }
 
@@ -588,45 +585,79 @@ const hsql::SelectStatement &select) {
   for (auto select_list_idx = size_t{0}; select_list_idx < select.selectList->size(); ++select_list_idx) {
     const auto* hsql_expr = (*select.selectList)[select_list_idx];
 
+
     if (hsql_expr->type == hsql::kExprStar) {
       if (hsql_expr->table) {
-        const auto expressions = _sql_identifier_context->resolve_table_name(hsql_expr->table);
-        for (const auto& expression : expressions) {
-          // If GROUP BY is present, only select GROUP BY expressions that have the specified table name.
-          // Otherwise, select all expressions from FROM with that table name
-          if (select.groupBy) {
-            const auto group_by_expression_iter = std::find_if(group_by_expressions.begin(), group_by_expressions.end(),
-            [&](const auto& group_by_expression) { return group_by_expression->deep_equals(*expression); });
-
-            if (group_by_expression_iter != group_by_expressions.end()) {
-              output_expressions.emplace_back(expression);
+        if (is_aggregate) {
+          // Select all GROUP BY columns with the specified table name
+          for (const auto& group_by_expression : group_by_expressions) {
+            const auto identifier = _sql_identifier_context->get_expression_identifier(group_by_expression);
+            if (identifier && identifier->table_name == hsql_expr->table) {
+              output_expressions.emplace_back(group_by_expression);
             }
-          } else {
-            const auto& from_expressions = _from_root_node->output_column_expressions();
-            const auto from_expressions_iter = std::find_if(from_expressions.begin(), from_expressions.end(),
-                                                               [&](const auto& input_expression) { return input_expression->deep_equals(*expression); });
+          }
+        } else {
+          // Select all columns from the FROM element with the specified name
+          const auto from_element_iter = _from_elements_by_table_name.find(hsql_expr->table);
+          Assert(from_element_iter != _from_elements_by_table_name.end(), std::string("No such element in FROM with table name '") + hsql_expr->table + "'");
 
-            if (from_expressions_iter != from_expressions.end()) {
-              output_expressions.emplace_back(expression);
-            }
+          for (const auto& expression : from_element_iter->second->output_column_expressions()) {
+            output_expressions.emplace_back(expression);
           }
         }
       } else {
-        // When GROUP BY is present, a * in the SELECT list refers to all GROUP BY expressions.
-        // When no GROUP BY is present, all FROM expressions are selected.
-        if (select.groupBy) {
-          output_expressions.reserve(output_expressions.size() + group_by_expressions.size());
-          for (const auto& group_by_expression : group_by_expressions) {
-            output_expressions.emplace_back(group_by_expression);
-          }
+        if (is_aggregate) {
+          // Select all GROUP BY columns
+          output_expressions.insert(output_expressions.end(), group_by_expressions.begin(), group_by_expressions.end());
         } else {
-          output_expressions.reserve(output_expressions.size() + input_expressions.size());
-          for (const auto& input_expression : input_expressions) {
-            output_expressions.emplace_back(input_expression);
+          // Select all columns from the FROM elements
+          for (const auto& table_name_and_from_element : _from_elements_by_table_name) {
+            const auto& from_element_expressions = table_name_and_from_element.second->output_column_expressions();
+            output_expressions.insert(output_expressions.end(), from_element_expressions.begin(), from_element_expressions.end());
           }
         }
       }
-    } else {
+    }
+
+//    if (hsql_expr->type == hsql::kExprStar) {
+//      if (hsql_expr->table) {
+//        const auto expressions = _sql_identifier_context->resolve_table_name(hsql_expr->table);
+//        for (const auto& expression : expressions) {
+//          // If GROUP BY is present, only select GROUP BY expressions that have the specified table name.
+//          // Otherwise, select all expressions from FROM with that table name
+//          if (select.groupBy) {
+//            const auto group_by_expression_iter = std::find_if(group_by_expressions.begin(), group_by_expressions.end(),
+//            [&](const auto& group_by_expression) { return group_by_expression->deep_equals(*expression); });
+//
+//            if (group_by_expression_iter != group_by_expressions.end()) {
+//              output_expressions.emplace_back(expression);
+//            }
+//          } else {
+//            const auto& from_expressions = _from_root_node->output_column_expressions();
+//            const auto from_expressions_iter = std::find_if(from_expressions.begin(), from_expressions.end(),
+//                                                               [&](const auto& input_expression) { return input_expression->deep_equals(*expression); });
+//
+//            if (from_expressions_iter != from_expressions.end()) {
+//              output_expressions.emplace_back(expression);
+//            }
+//          }
+//        }
+//      } else {
+//        // When GROUP BY is present, a * in the SELECT list refers to all GROUP BY expressions.
+//        // When no GROUP BY is present, all FROM expressions are selected.
+//        if (select.groupBy) {
+//          output_expressions.reserve(output_expressions.size() + group_by_expressions.size());
+//          for (const auto& group_by_expression : group_by_expressions) {
+//            output_expressions.emplace_back(group_by_expression);
+//          }
+//        } else {
+//          output_expressions.reserve(output_expressions.size() + input_expressions.size());
+//          for (const auto& input_expression : input_expressions) {
+//            output_expressions.emplace_back(input_expression);
+//          }
+//        }
+//      }
+    else {
       auto output_expression = select_list_elements[select_list_idx];
       output_expressions.emplace_back(output_expression);
 
