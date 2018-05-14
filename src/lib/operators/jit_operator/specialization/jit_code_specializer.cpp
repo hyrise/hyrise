@@ -48,7 +48,7 @@ std::shared_ptr<llvm::Module> JitCodeSpecializer::specialize_function(
 
   // Run the first specialization and optimization pass
   context.runtime_value_map[context.root_function->arg_begin()] = runtime_this;
-  _inline_function_calls(context, false);
+  _inline_function_calls(context, !two_passes);
   _perform_load_substitution(context);
   // Unroll loops only if two passes are selected
   _optimize(context, two_passes);
@@ -65,7 +65,7 @@ std::shared_ptr<llvm::Module> JitCodeSpecializer::specialize_function(
   return context.module;
 }
 
-void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context, const bool two_passes) const {
+void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context, const bool final_pass) const {
   // This method implements the main code fusion functionality.
   // It works as follows:
   // Throughout the fusion process, a working list of call sites (i.e., function calls) is maintained.
@@ -104,19 +104,42 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context, 
     // Resolve indirect (virtual) function calls
     if (call_site.isIndirectCall()) {
       const auto called_value = call_site.getCalledValue();
-      // Get the
+      // Get the runtime location of the called function (i.e., the compiled machine code of the function)
       const auto called_runtime_value =
           std::dynamic_pointer_cast<const JitKnownRuntimePointer>(GetRuntimePointerForValue(called_value, context));
       if (called_runtime_value && called_runtime_value->is_valid()) {
+        // LLVM implements virtual function calls via virtual function tables
+        // (see https://en.wikipedia.org/wiki/Virtual_method_table).
+        // The resolution of virtual calls starts with a pointer to the object that the virtual call should be performed
+        // on. This object contains a pointer to its vtable (usually at offset 0). The vtable contains a list of
+        // function pointers (one for each virtual function).
+        // In the LLVM bitcode, a virtual call is resolved through a number of LLVM pointer operations:
+        // - a load instruction to dereference the vtable pointer in the object
+        // - a getelementptr instruction to select the correct virtual function in the vtable
+        // - another load instruction to dereference the virtual function pointer from the table
+        // When analyzing a virtual call, the code specializer works backwards starting from the pointer to the called
+        // function (called_runtime_value).
+        // Moving "up" one level (undoing one load operation) yields the pointer to the function pointer in the
+        // vtable. The total_offset of this pointer corresponds to the index in the vtable that is used for the virtual
+        // call.
+        // Moving "up" another level yields the pointer to the object that the virtual function is called on. Using RTTI
+        // the class name of the object can be determined.
+        // These two pieces of information (the class name and the vtable index) are sufficient to unambiguously
+        // identify the called virtual function and locate it in the bitcode repository.
+
+        // Determine the vtable index and class name of the virtual call
         const auto vtable_index =
             called_runtime_value->up().total_offset() / context.module->getDataLayout().getPointerSize();
         const auto instance = reinterpret_cast<JitRTTIHelper*>(called_runtime_value->up().up().base().address());
         const auto class_name = typeid(*instance).name();
+
+        // If the called function can be located in the repository, the virtual call is replaced by a direct call to
+        // that function.
         if (const auto repo_function = _repository.get_vtable_entry(class_name, vtable_index)) {
           call_site.setCalledFunction(repo_function);
         }
       } else {
-        // The virtual call could not be resolved. There is nothing we can inline so we might as well move on.
+        // The virtual call could not be resolved. There is nothing we can inline so we move on.
         call_sites.pop();
         continue;
       }
@@ -125,21 +148,29 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context, 
     auto& function = *call_site.getCalledFunction();
     auto function_name = function.getName().str();
 
-    auto function_is_in_opossum_namespace = boost::starts_with(function.getName().str(), "_ZNK7opossum") ||
-                                            boost::starts_with(function.getName().str(), "_ZN7opossum");
+    auto function_has_opossum_namespace = boost::starts_with(function.getName().str(), "_ZNK7opossum") ||
+                                          boost::starts_with(function.getName().str(), "_ZN7opossum");
 
-    // All function that are not
-    if (!function_is_in_opossum_namespace && function.getName().str() != "__clang_call_terminate") {
+    // All function that are not in the opossum:: namespace are not considered for inlining. Instead, a function
+    // declaration (without a function body) is created.
+    if (!function_has_opossum_namespace) {
       context.llvm_value_map[&function] = _create_function_declaration(context, function);
       call_sites.pop();
       continue;
     }
 
-    auto arg = call_site.arg_begin();
-    auto y = arg->get()->getType()->isPointerTy() && !GetRuntimePointerForValue(arg->get(), context)->is_valid() &&
-             function.getName().str() != "__clang_call_terminate";
+    // Determine whether the first function argument is a pointer/reference to an object, but the runtime location
+    // for this object cannot be determined.
+    // This is the case for member functions that are called within a loop body. These functions may be called on
+    // different objects in different loop iterations.
+    // If two specialization passes are performed, these functions should be inlined after loop unrolling has been
+    // performed (i.e., during the second pass).
+    // If only one specialization pass is performed, these functions are inlined immediately.
+    auto first_argument = call_site.arg_begin();
+    auto first_argument_cannot_be_resolved = first_argument->get()->getType()->isPointerTy() &&
+                                             !GetRuntimePointerForValue(first_argument->get(), context)->is_valid();
 
-    if (y && !two_passes) {
+    if (first_argument_cannot_be_resolved && !final_pass) {
       call_sites.pop();
       continue;
     }
