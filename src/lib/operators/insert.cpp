@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "../concurrency/logging/initialLogger.hpp"
+#include "../concurrency/logging/logger.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "resolve_type.hpp"
 #include "storage/base_encoded_column.hpp"
@@ -192,7 +192,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
         }
         row_values << ")";
         //std::cout << "insert  " << row_values.str() << std::endl;
-        InitialLogger::getInstance().log_value(context->transaction_id(), _target_table_name, RowID{target_chunk_id, row_index}, row_values);
+        Logger::getInstance().value(context->transaction_id(), _target_table_name, RowID{target_chunk_id, row_index}, row_values);
       }
       // logging end
 
