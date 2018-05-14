@@ -128,7 +128,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
   }
 
   std::shared_ptr<const Table> create_referencing_table_w_null_row_id(const bool references_dict_column) {
-    const auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
+    const auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
 
     if (references_dict_column) {
       ChunkEncoder::encode_all_chunks(table, {_encoding_type});
@@ -382,7 +382,7 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedColumnValueLessThanMinDictionaryV
 }
 
 TEST_P(OperatorsTableScanTest, ScanOnIntValueColumnWithFloatColumnWithNullValues) {
-  auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
+  auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
@@ -396,7 +396,7 @@ TEST_P(OperatorsTableScanTest, ScanOnIntValueColumnWithFloatColumnWithNullValues
 }
 
 TEST_P(OperatorsTableScanTest, ScanOnReferencedIntValueColumnWithFloatColumnWithNullValues) {
-  auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
+  auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
@@ -410,10 +410,7 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedIntValueColumnWithFloatColumnWith
 }
 
 TEST_P(OperatorsTableScanTest, ScanOnIntCompressedColumnWithFloatColumnWithNullValues) {
-  // FrameOfReference can only deal with int values, so we skip tables that include non-ints
-  if (_encoding_type == EncodingType::FrameOfReference) return;
-
-  auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
+  auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
   ChunkEncoder::encode_all_chunks(table, {_encoding_type});
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -428,10 +425,7 @@ TEST_P(OperatorsTableScanTest, ScanOnIntCompressedColumnWithFloatColumnWithNullV
 }
 
 TEST_P(OperatorsTableScanTest, ScanOnReferencedIntCompressedColumnWithFloatColumnWithNullValues) {
-  // FrameOfReference can only deal with int values, so we skip tables that include non-ints
-  if (_encoding_type == EncodingType::FrameOfReference) return;
-
-  auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
+  auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
   ChunkEncoder::encode_all_chunks(table, {_encoding_type});
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
@@ -509,7 +503,7 @@ TEST_P(OperatorsTableScanTest, OperatorName) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueColumn) {
-  auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4));
+  auto table_wrapper = std::make_shared<TableWrapper>(load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4));
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
@@ -520,10 +514,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueColumn) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedColumn) {
-  // FrameOfReference can only deal with int values, so we skip tables that include non-ints
-  if (_encoding_type == EncodingType::FrameOfReference) return;
-
-  auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
+  auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
   ChunkEncoder::encode_all_chunks(table, {_encoding_type});
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -561,7 +552,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumnWithoutNu
 }
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumn) {
-  auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
+  auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
@@ -574,10 +565,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumn) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedCompressedColumn) {
-  // FrameOfReference can only deal with int values, so we skip tables that include non-ints
-  if (_encoding_type == EncodingType::FrameOfReference) return;
-
-  auto table = load_table("src/test/tables/int_float_w_null_8_rows.tbl", 4);
+  auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
   ChunkEncoder::encode_all_chunks(table, {_encoding_type});
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
@@ -603,9 +591,6 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedValueCo
 }
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedCompressedColumn) {
-  // FrameOfReference can only deal with int values, so we skip tables that include non-ints
-  if (_encoding_type == EncodingType::FrameOfReference) return;
-
   auto table = create_referencing_table_w_null_row_id(true);
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
