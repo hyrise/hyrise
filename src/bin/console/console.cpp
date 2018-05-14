@@ -45,6 +45,7 @@ namespace filesystem = std::experimental::filesystem;
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/load_table.hpp"
+#include "utils/plugin_manager.hpp"
 
 #define ANSI_COLOR_RED "\x1B[31m"
 #define ANSI_COLOR_GREEN "\x1B[32m"
@@ -826,6 +827,8 @@ bool Console::_handle_rollback() {
 }  // namespace opossum
 
 int main(int argc, char** argv) {
+  opossum::PluginManager::get().initialize();
+
   using Return = opossum::Console::ReturnCode;
   auto& console = opossum::Console::get();
 
