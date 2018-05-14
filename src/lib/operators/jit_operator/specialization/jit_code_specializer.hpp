@@ -49,7 +49,7 @@ class JitCodeSpecializer {
       const bool two_passes = false) {
     auto module = specialize_function(root_function_name, runtime_this, two_passes);
     _compiler.add_module(module);
-    return _compiler.find_symbol<T>(root_function_name);
+    return _compiler.find_symbol<T>(_specialized_root_function_name);
   }
 
  private:
@@ -65,7 +65,7 @@ class JitCodeSpecializer {
   void _optimize(SpecializationContext& context, const bool unroll_loops) const;
 
   // Creates a function declaration (i.e., a function signature without a function body) for the given function.
-  llvm::Function* _create_function_declaration(SpecializationContext& context, const llvm::Function& function) const;
+  llvm::Function* _create_function_declaration(SpecializationContext& context, const llvm::Function& function, const std::string& cloned_function_name) const;
 
   // Clones the root function function from the JitRepository to the current module.
   llvm::Function* _clone_root_function(SpecializationContext& context, const llvm::Function& function) const;
@@ -84,6 +84,7 @@ class JitCodeSpecializer {
   JitRepository& _repository;
   const std::shared_ptr<llvm::LLVMContext> _llvm_context;
   JitCompiler _compiler;
+  const std::string _specialized_root_function_name = "jit_module_root_function";
 };
 
 }  // namespace opossum

@@ -154,7 +154,7 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context, 
     // All function that are not in the opossum:: namespace are not considered for inlining. Instead, a function
     // declaration (without a function body) is created.
     if (!function_has_opossum_namespace) {
-      context.llvm_value_map[&function] = _create_function_declaration(context, function);
+      context.llvm_value_map[&function] = _create_function_declaration(context, function, function.getName());
       call_sites.pop();
       continue;
     }
@@ -184,7 +184,7 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context, 
     // Map called functions
     _visit<const llvm::Function>(function, [&](const auto& fn) {
       if (fn.isDeclaration() && !context.llvm_value_map.count(&fn)) {
-        context.llvm_value_map[&fn] = _create_function_declaration(context, fn);
+        context.llvm_value_map[&fn] = _create_function_declaration(context, fn, fn.getName());
       }
     });
 
@@ -278,23 +278,24 @@ void JitCodeSpecializer::_optimize(SpecializationContext& context, const bool un
 }
 
 llvm::Function* JitCodeSpecializer::_create_function_declaration(SpecializationContext& context,
-                                                                 const llvm::Function& function) const {
+                                                                 const llvm::Function& function,
+                                                                 const std::string& cloned_function_name) const {
   // If the function is already declared (or even defined) in the module, we should not add a redundant declaration
-  if (auto fn = context.module->getFunction(function.getName())) {
+  if (auto fn = context.module->getFunction(cloned_function_name)) {
     return fn;
   }
 
   // Create the declaration with correct signature, linkage, and attributes
   const auto declaration = llvm::Function::Create(llvm::cast<llvm::FunctionType>(function.getValueType()),
-                                                  function.getLinkage(), function.getName(), context.module.get());
+                                                  function.getLinkage(), cloned_function_name, context.module.get());
   declaration->copyAttributesFrom(&function);
   return declaration;
 }
 
 llvm::Function* JitCodeSpecializer::_clone_root_function(SpecializationContext& context,
                                                          const llvm::Function& function) const {
-  // First create an appropriate function declaration that we can later clone the function into
-  const auto cloned_function = _create_function_declaration(context, function);
+  // First create an appropriate function declaration that we can later clone the function body into
+  const auto cloned_function = _create_function_declaration(context, function, _specialized_root_function_name);
 
   // We create a mapping from values in the source module to values in the target module.
   // This mapping is passed to LLVM's cloning function and ensures that all references to other functions, global
@@ -304,7 +305,7 @@ llvm::Function* JitCodeSpecializer::_clone_root_function(SpecializationContext& 
   // Map functions called
   _visit<const llvm::Function>(function, [&](const auto& fn) {
     if (!context.llvm_value_map.count(&fn)) {
-      context.llvm_value_map[&fn] = _create_function_declaration(context, fn);
+      context.llvm_value_map[&fn] = _create_function_declaration(context, fn, fn.getName());
     }
   });
 
