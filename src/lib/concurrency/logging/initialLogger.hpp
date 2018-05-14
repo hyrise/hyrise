@@ -22,6 +22,8 @@ class InitialLogger {
  private:
   InitialLogger();
 
+  void _write(const std::stringstream& ss);
+
   int _file_descriptor;
   std::mutex _mutex;
 };

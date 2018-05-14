@@ -12,31 +12,28 @@ InitialLogger& InitialLogger::getInstance() {
   return instance;
 }
 
-void InitialLogger::log_commit(const TransactionID transaction_id){
-  std::stringstream ss;
-  ss << "(t," << transaction_id << ")";
-
+void InitialLogger::_write(const std::stringstream& ss){
   _mutex.lock();
   write(_file_descriptor, (void*)ss.str().c_str(), ss.str().length());
   _mutex.unlock();
+}
+
+void InitialLogger::log_commit(const TransactionID transaction_id){
+  std::stringstream ss;
+  ss << "(t," << transaction_id << ")\n";
+  _write(ss);
 }
 
 void InitialLogger::log_value(const TransactionID transaction_id, const std::string table_name, const RowID row_id, const std::stringstream &values){
   std::stringstream ss;
-  ss << "(v," << transaction_id << "," << table_name << "," << row_id << "," << values.str() << ")";
-
-  _mutex.lock();
-  write(_file_descriptor, (void*)ss.str().c_str(), ss.str().length());
-  _mutex.unlock();
+  ss << "(v," << transaction_id << "," << table_name << "," << row_id << "," << values.str() << ")\n";
+  _write(ss);
 }
 
 void InitialLogger::invalidate(const TransactionID transaction_id, const std::string table_name, const RowID row_id){
   std::stringstream ss;
-  ss << "(i," << transaction_id << "," << table_name << "," << row_id << ")";
-
-  _mutex.lock();
-  write(_file_descriptor, (void*)ss.str().c_str(), ss.str().length());
-  _mutex.unlock();
+  ss << "(i," << transaction_id << "," << table_name << "," << row_id << ")\n";
+  _write(ss);
 }
 
 void InitialLogger::flush() {
