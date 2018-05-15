@@ -88,7 +88,6 @@ class JitVariantVector {
   template <typename T>
   std::vector<T>& get_vector();
 
-
  private:
   BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_MEMBER, _, JIT_DATA_TYPE_INFO)
   std::vector<uint8_t> _is_null;
@@ -96,7 +95,6 @@ class JitVariantVector {
 
 class BaseJitColumnReader;
 class BaseJitColumnWriter;
-
 
 struct JitRuntimeHashmap {
   std::unordered_map<uint64_t, std::vector<size_t>> indices;
@@ -179,7 +177,9 @@ class JitHashmapValue {
   void set(const T value, const size_t index, JitRuntimeContext& context) const {
     context.hashmap.values[_column_index].set<T>(index, value);
   }
-  inline bool is_null(const size_t index, JitRuntimeContext& context) const { return _is_nullable && context.hashmap.values[_column_index].is_null(index); }
+  inline bool is_null(const size_t index, JitRuntimeContext& context) const {
+    return _is_nullable && context.hashmap.values[_column_index].is_null(index);
+  }
   inline void set_is_null(const bool is_null, const size_t index, JitRuntimeContext& context) const {
     context.hashmap.values[_column_index].set_is_null(index, is_null);
   }

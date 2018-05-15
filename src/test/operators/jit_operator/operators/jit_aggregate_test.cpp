@@ -7,8 +7,6 @@ namespace opossum {
 
 class JitAggregateTest : public BaseTest {};
 
-TEST_F(JitAggregateTest, Test1) {
-  ASSERT_TRUE(false);
-}
+TEST_F(JitAggregateTest, Test1) { ASSERT_TRUE(false); }
 
 }  // namespace opossum

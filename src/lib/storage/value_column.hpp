@@ -21,6 +21,9 @@ class ValueColumn : public BaseValueColumn {
   explicit ValueColumn(pmr_concurrent_vector<T>&& values, const PolymorphicAllocator<T>& alloc = {});
   explicit ValueColumn(pmr_concurrent_vector<T>&& values, pmr_concurrent_vector<bool>&& null_values,
                        const PolymorphicAllocator<T>& alloc = {});
+  explicit ValueColumn(std::vector<T>& values, const PolymorphicAllocator<T>& alloc = {});
+  explicit ValueColumn(std::vector<T>& values, std::vector<bool>& null_values,
+                       const PolymorphicAllocator<T>& alloc = {});
 
   // Return the value at a certain position. If you want to write efficient operators, back off!
   // Use values() and null_values() to get the vectors and check the content yourself.
