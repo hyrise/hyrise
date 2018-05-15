@@ -39,7 +39,7 @@
 #include "logical_query_plan/projection_node.hpp"
 //#include "logical_query_plan/show_columns_node.hpp"
 //#include "logical_query_plan/show_tables_node.hpp"
-//#include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 //#include "logical_query_plan/update_node.hpp"
@@ -184,9 +184,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select_statement(const
 
   _translate_select_list_groupby_having(select);
 
-//  if (select.order != nullptr) {
-//    current_lqp = _translate_order_by(*select.order, current_lqp, translation_state);
-//  }
+  if (select.order != nullptr) _translate_order_by(*select.order);
+
 
 //  if (select.limit != nullptr) {
 //    current_lqp = LimitNode::make(select.limit->limit, current_lqp, translation_state);
@@ -580,11 +579,8 @@ const hsql::SelectStatement &select) {
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions;
   std::unordered_map<std::shared_ptr<AbstractExpression>, std::string> column_aliases;
 
-  auto output_column_id = ColumnID{0};
-
   for (auto select_list_idx = size_t{0}; select_list_idx < select.selectList->size(); ++select_list_idx) {
     const auto* hsql_expr = (*select.selectList)[select_list_idx];
-
 
     if (hsql_expr->type == hsql::kExprStar) {
       if (hsql_expr->table) {
@@ -692,29 +688,30 @@ const hsql::SelectStatement &select) {
   }
 }
 
-//std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_order_by(
-//    const std::vector<hsql::OrderDescription*>& order_list, std::shared_ptr<AbstractLQPNode> current_node) {
-//  if (order_list.empty()) {
-//    return current_node;
-//  }
-//
-//  std::vector<OrderByDefinition> order_by_definitions;
-//  order_by_definitions.reserve(order_list.size());
-//  for (const auto& order_description : order_list) {
-//    const auto order_by_expression = _translate_hsql_expr(*order_description->expr, {current_node});
-//    const auto order_by_mode = order_type_to_order_by_mode.at(order_description->type);
-//    order_by_definitions.emplace_back(order_by_expression, order_by_mode);
-//
-//    if (!current_node->find_column(*order_by_expression) && order_by_expression->requires_calculation()) {
-//      current_node = _add_expression_if_unavailable(current_node, order_by_expression);
-//    }
-//  }
-//
-//  auto sort_node = SortNode::make(order_by_definitions, current_node);
-//
-//  return sort_node;
-//}
-//
+void SQLTranslator::_translate_order_by(const std::vector<hsql::OrderDescription*>& order_list) {
+  if (order_list.empty()) return;
+
+  // So we can later reset the available Expressions to the Expressions of this LQP
+  const auto input_lqp = _current_lqp;
+
+  std::vector<std::shared_ptr<AbstractExpression>> expressions(order_list.size());
+  std::vector<OrderByMode> order_by_modes(order_list.size());
+  for (auto expression_idx = size_t{0}; expression_idx < order_list.size(); ++expression_idx) {
+    const auto& order_description = order_list[expression_idx];
+    expressions[expression_idx] = _translate_hsql_expr(*order_description->expr);
+    order_by_modes[expression_idx] = order_type_to_order_by_mode.at(order_description->type);
+  }
+
+  _current_lqp =  _add_expressions_if_unavailable(_current_lqp, expressions);
+
+  _current_lqp = SortNode::make(expressions, order_by_modes, _current_lqp);
+
+  // If any Expressions were added to perform the sorting, remove them again
+  if (input_lqp->output_column_expressions().size() != _current_lqp->output_column_expressions().size()) {
+    _current_lqp = ProjectionNode::make(input_lqp->output_column_expressions(), _current_lqp);
+  }
+}
+
 //std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
 //  switch (show_statement.type) {
 //    case hsql::ShowType::kShowTables:

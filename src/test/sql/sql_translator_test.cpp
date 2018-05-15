@@ -16,6 +16,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "storage/storage_manager.hpp"
 #include "sql/sql_translator.hpp"
@@ -357,6 +358,23 @@ TEST_F(SQLTranslatorTest, SubSelectSelectList) {
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, OrderByTest) {
+  const auto actual_lqp = compile_query("SELECT * FROM int_float ORDER BY a, a+b DESC, b ASC");
+
+  const auto order_by_modes = std::vector<OrderByMode>({OrderByMode::Ascending, OrderByMode::Descending, OrderByMode::Ascending});
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float_a, int_float_b),
+    SortNode::make(expression_vector(int_float_a, addition(int_float_a, int_float_b), int_float_b), order_by_modes,
+      ProjectionNode::make(expression_vector(addition(int_float_a, int_float_a), int_float_b, int_float_b),
+        stored_table_node_int_float
+  )));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp)
 }
 
 //TEST_F(SQLTranslatorTest, ExpressionStringTest) {

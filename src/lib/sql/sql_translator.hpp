@@ -51,8 +51,7 @@ class SQLTranslator final {
 //
   void _translate_select_list_groupby_having(const hsql::SelectStatement &select);
 //
-//  std::shared_ptr<AbstractLQPNode> _translate_order_by(const std::vector<hsql::OrderDescription*>& order_list,
-//                                                       std::shared_ptr<AbstractLQPNode> current_node, const std::shared_ptr<SQLTranslationState>& translation_state);
+  void _translate_order_by(const std::vector<hsql::OrderDescription*>& order_list);
 //
 //  std::shared_ptr<AbstractLQPNode> _translate_insert(const hsql::InsertStatement& insert);
 //

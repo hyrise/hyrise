@@ -117,8 +117,8 @@ set(
 #    logical_query_plan/show_columns_node.hpp
 #    logical_query_plan/show_tables_node.cpp
 #    logical_query_plan/show_tables_node.hpp
-#    logical_query_plan/sort_node.cpp
-#    logical_query_plan/sort_node.hpp
+    logical_query_plan/sort_node.cpp
+    logical_query_plan/sort_node.hpp
     logical_query_plan/stored_table_node.cpp
     logical_query_plan/stored_table_node.hpp
     logical_query_plan/union_node.cpp
