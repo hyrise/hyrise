@@ -89,10 +89,17 @@ class Table : private Noncopyable {
    * Creates a new Chunk and appends it to this table.
    * Makes sure the @param columns match with the TableType (only ReferenceColumns or only data containing columns)
    * En/Disables MVCC for the Chunk depending on whether MVCC is enabled for the table (has_mvcc())
+   * This is a convenience method to enable automatically creating a chunk with correct settings given a set of columns.
    * @param alloc
    */
   void append_chunk(const ChunkColumns& columns, const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
                     const std::shared_ptr<ChunkAccessCounter>& access_counter = nullptr);
+
+  /**
+   * Appends an existing chunk to this table.
+   * Makes sure the columns in the chunk match with the TableType and the MVCC setting is the same as for the table.
+   */
+  void append_chunk(const std::shared_ptr<Chunk> chunk);
 
   // Create and append a Chunk consisting of ValueColumns.
   void append_mutable_chunk();

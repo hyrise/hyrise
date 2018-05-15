@@ -15,6 +15,19 @@ set(
     concurrency/transaction_manager.hpp
     constant_mappings.cpp
     constant_mappings.hpp
+    cost_model/abstract_cost_feature_proxy.cpp
+    cost_model/abstract_cost_feature_proxy.hpp
+    cost_model/abstract_cost_model.cpp
+    cost_model/abstract_cost_model.hpp
+    cost_model/cost_feature.cpp
+    cost_model/cost_feature.hpp
+    cost_model/cost_feature_lqp_node_proxy.cpp
+    cost_model/cost_feature_lqp_node_proxy.hpp
+    cost_model/cost_feature_operator_proxy.cpp
+    cost_model/cost_feature_operator_proxy.hpp
+    cost_model/cost.hpp
+    cost_model/cost_model_logical.cpp
+    cost_model/cost_model_logical.hpp
     import_export/binary.hpp
     import_export/csv_converter.cpp
     import_export/csv_converter.hpp
@@ -81,6 +94,7 @@ set(
     operators/abstract_read_write_operator.hpp
     operators/aggregate.cpp
     operators/aggregate.hpp
+    operators/base_operator_performance_data.hpp
     operators/delete.cpp
     operators/delete.hpp
     operators/difference.cpp
@@ -183,8 +197,8 @@ set(
     optimizer/strategy/index_scan_rule.hpp
     optimizer/strategy/join_detection_rule.cpp
     optimizer/strategy/join_detection_rule.hpp
-    optimizer/strategy/predicate_pushdown_rule.hpp
     optimizer/strategy/predicate_pushdown_rule.cpp
+    optimizer/strategy/predicate_pushdown_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/strategy/rule_batch.cpp
@@ -215,22 +229,21 @@ set(
     scheduler/topology.hpp
     scheduler/worker.cpp
     scheduler/worker.hpp
-    server/server.cpp
-    server/server.hpp
-    server/server_session.cpp
-    server/server_session.hpp
+    server/client_connection.cpp
+    server/client_connection.hpp
     server/postgres_wire_handler.cpp
     server/postgres_wire_handler.hpp
     server/query_response_builder.cpp
     server/query_response_builder.hpp
+    server/server.cpp
+    server/server.hpp
+    server/server_session.cpp
+    server/server_session.hpp
     server/task_runner.hpp
     server/then_operator.hpp
     server/types.hpp
-    server/client_connection.cpp
-    server/client_connection.hpp
     server/use_boost_future.hpp
     server/use_boost_future_impl.hpp
-    server/use_boost_future_legacy_impl.hpp
     statistics/base_column_statistics.cpp
     statistics/base_column_statistics.hpp
     statistics/column_statistics.cpp
@@ -260,23 +273,22 @@ set(
     sql/sql_query_plan.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
-    storage/base_column_encoder.hpp
     storage/base_column.cpp
+    storage/base_column_encoder.hpp
     storage/base_column.hpp
     storage/base_dictionary_column.cpp
     storage/base_dictionary_column.hpp
     storage/base_encoded_column.cpp
     storage/base_encoded_column.hpp
     storage/base_value_column.hpp
+    storage/chunk_access_counter.cpp
+    storage/chunk_access_counter.hpp
     storage/chunk.cpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
     storage/chunk.hpp
-    storage/chunk_access_counter.cpp
-    storage/chunk_access_counter.hpp
     storage/column_encoding_utils.cpp
     storage/column_encoding_utils.hpp
-    storage/column_iterables.hpp
     storage/column_iterables/any_column_iterable.hpp
     storage/column_iterables/any_column_iterator.hpp
     storage/column_iterables/base_column_iterators.hpp
@@ -285,21 +297,19 @@ set(
     storage/column_iterables/column_iterator_values.hpp
     storage/column_iterables/constant_value_iterable.hpp
     storage/column_iterables/create_iterable_from_attribute_vector.hpp
+    storage/column_iterables.hpp
     storage/column_visitable.hpp
     storage/create_iterable_from_column.hpp
-    storage/create_iterable_from_column.ipp
     storage/dictionary_column/attribute_vector_iterable.hpp
     storage/dictionary_column.cpp
     storage/dictionary_column/dictionary_column_iterable.hpp
     storage/dictionary_column/dictionary_encoder.hpp
     storage/dictionary_column.hpp
     storage/encoding_type.hpp
-    storage/frame_of_reference_column.hpp
     storage/frame_of_reference_column.cpp
+    storage/frame_of_reference_column.hpp
     storage/frame_of_reference/frame_of_reference_encoder.hpp
     storage/frame_of_reference/frame_of_reference_iterable.hpp
-    storage/mvcc_columns.cpp
-    storage/mvcc_columns.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
@@ -321,6 +331,8 @@ set(
     storage/index/group_key/variable_length_key_store.hpp
     storage/index/index_info.hpp
     storage/materialize.hpp
+    storage/mvcc_columns.cpp
+    storage/mvcc_columns.hpp
     storage/numa_placement_manager.cpp
     storage/numa_placement_manager.hpp
     storage/proxy_chunk.cpp
@@ -335,10 +347,10 @@ set(
     storage/run_length_column/run_length_encoder.hpp
     storage/storage_manager.cpp
     storage/storage_manager.hpp
-    storage/table.cpp
-    storage/table.hpp
     storage/table_column_definition.cpp
     storage/table_column_definition.hpp
+    storage/table.cpp
+    storage/table.hpp
     storage/value_column.cpp
     storage/value_column.hpp
     storage/value_column/null_value_vector_iterable.hpp
@@ -350,8 +362,8 @@ set(
     storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_compressor.cpp
     storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_compressor.hpp
     storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_decompressor.hpp
-    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp
     storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp
+    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp
     storage/vector_compression/resolve_compressed_vector_type.hpp
     storage/vector_compression/simd_bp128/oversized_types.hpp
     storage/vector_compression/simd_bp128/simd_bp128_compressor.cpp
@@ -436,6 +448,8 @@ set(
     utils/print_directed_acyclic_graph.hpp
     utils/scoped_locking_ptr.hpp
     utils/template_type.hpp
+    utils/timer.cpp
+    utils/timer.hpp
 )
 
 set(
