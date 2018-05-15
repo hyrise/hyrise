@@ -2,6 +2,7 @@
 
 #include "logger.hpp"
 #include "types.hpp"
+#include "../../storage/storage_manager.hpp"
 
 #include <fstream>
 #include <sstream>
@@ -25,16 +26,21 @@ void Recovery::recover() {
     if (log_type == 't'){
       TransactionID transaction_id = std::stoull(line.substr(3, line.length() - 4));
       Logger::getInstance().commit(transaction_id);
-    } else if (log_type == 'v'){
-      continue;
-    } else if (log_type == 'i'){
-      // (i,1234123,...)
+    } else {  // 'v' or 'i'
+
+      // transaction_id_end  rowID_end
+      //     |  rowID_position  |
+      //     v        v         v
+      // (v,12,table1,RowID(0,25),(25,LAND_O,9001,asdf))
+      // (i,86,TABLE2,RowID(....))                  
+
       auto transaction_id_end = line.find(',', 3) - 1;
       TransactionID transaction_id = std::stoull(line.substr(3, transaction_id_end - 2));
 
-      auto rowID_position = line.rfind("RowID(");
-      // ...,RowID(x,y))  ->   x,y
-      auto rowID_substring = line.substr(rowID_position + 6, line.length() - rowID_position - 8);
+      auto rowID_position = line.find(",RowID(") + 1;
+      auto rowID_end = line.find(")", rowID_position);
+      // ...,RowID(x,y)...  ->   x,y
+      auto rowID_substring = line.substr(rowID_position + 6, rowID_end - rowID_position - 6);
       std::istringstream rowID_stream(rowID_substring); 
       ChunkID chunk_id;
       rowID_stream >> chunk_id;
@@ -43,10 +49,16 @@ void Recovery::recover() {
       rowID_stream >> chunk_offset;
       RowID row_id(chunk_id, chunk_offset);
 
-      // (i,2424,TABLE_NAME,ROW(...))
-      std::string table_name = line.substr(transaction_id_end + 2, rowID_position - 3 - transaction_id_end);
+      std::string table_name = line.substr(transaction_id_end + 2, rowID_position - transaction_id_end - 3);
 
-      Logger::getInstance().invalidate(transaction_id, table_name, row_id);
+      if (log_type == 'i'){
+        Logger::getInstance().invalidate(transaction_id, table_name, row_id);
+        continue;
+      }
+
+      // for value inserts 'v' only
+      auto data_types = StorageManager::get().get_table(_target_table_name).column_data_types();
+
     }
   }
 }
