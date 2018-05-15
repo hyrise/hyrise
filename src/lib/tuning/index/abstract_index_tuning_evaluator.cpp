@@ -106,7 +106,7 @@ AbstractIndexTuningEvaluator::_inspect_query_cache_and_generate_access_records()
 void AbstractIndexTuningEvaluator::_inspect_lqp_node(const std::shared_ptr<const AbstractLQPNode>& op,
                                                      size_t query_frequency,
                                                      std::vector<AccessRecord>& access_records) {
-  std::list<const std::shared_ptr<const AbstractLQPNode>> queue;
+  std::list<std::shared_ptr<const AbstractLQPNode>> queue;
   queue.push_back(op);
   while (!queue.empty()) {
     auto lqp_node = queue.front();
