@@ -83,6 +83,12 @@ class JitVariantVector {
   bool is_null(const size_t index) { return _is_null[index]; }
   void set_is_null(const size_t index, const bool is_null) { _is_null[index] = is_null; }
 
+  template <typename T>
+  size_t grow_by_one();
+  template <typename T>
+  std::vector<T>& get_vector();
+
+
  private:
   BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_MEMBER, _, JIT_DATA_TYPE_INFO)
   std::vector<uint8_t> _is_null;
@@ -90,6 +96,12 @@ class JitVariantVector {
 
 class BaseJitColumnReader;
 class BaseJitColumnWriter;
+
+
+struct JitRuntimeHashmap {
+  std::unordered_map<uint64_t, std::vector<size_t>> indices;
+  std::vector<JitVariantVector> values;
+};
 
 // The structure encapsulates all data available to the JitOperatorWrapper at runtime,
 // but NOT during code specialization.
@@ -99,6 +111,7 @@ struct JitRuntimeContext {
   JitVariantVector tuple;
   std::vector<std::shared_ptr<BaseJitColumnReader>> inputs;
   std::vector<std::shared_ptr<BaseJitColumnWriter>> outputs;
+  JitRuntimeHashmap hashmap;
   ChunkColumns out_chunk;
 };
 
@@ -147,6 +160,34 @@ class JitTupleValue {
   const DataType _data_type;
   const bool _is_nullable;
   const size_t _tuple_index;
+};
+
+class JitHashmapValue {
+ public:
+  JitHashmapValue(const DataType data_type, const bool is_nullable, const size_t column_index)
+      : _data_type{data_type}, _is_nullable{is_nullable}, _column_index{column_index} {}
+
+  DataType data_type() const { return _data_type; }
+  bool is_nullable() const { return _is_nullable; }
+  size_t column_index() const { return _column_index; }
+
+  template <typename T>
+  T get(const size_t index, JitRuntimeContext& context) const {
+    return context.hashmap.values[_column_index].get<T>(index);
+  }
+  template <typename T>
+  void set(const T value, const size_t index, JitRuntimeContext& context) const {
+    context.hashmap.values[_column_index].set<T>(index, value);
+  }
+  inline bool is_null(const size_t index, JitRuntimeContext& context) const { return _is_nullable && context.hashmap.values[_column_index].is_null(index); }
+  inline void set_is_null(const bool is_null, const size_t index, JitRuntimeContext& context) const {
+    context.hashmap.values[_column_index].set_is_null(index, is_null);
+  }
+
+ private:
+  const DataType _data_type;
+  const bool _is_nullable;
+  const size_t _column_index;
 };
 
 // cleanup
