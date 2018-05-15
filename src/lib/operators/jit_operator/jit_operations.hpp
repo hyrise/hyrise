@@ -52,23 +52,6 @@ namespace opossum {
   case static_cast<uint8_t>(JIT_GET_ENUM_VALUE(0, types)) << 8 | static_cast<uint8_t>(JIT_GET_ENUM_VALUE(1, types)): \
     return catching_func(JIT_GET_DATA_TYPE(0, types)(), JIT_GET_DATA_TYPE(1, types)());
 
-#define JIT_HASH_CASE(r, types)                      \
-  case JIT_GET_ENUM_VALUE(0, types):                 \
-    return std::hash<JIT_GET_DATA_TYPE(0, types)>()( \
-        context.tuple.get<JIT_GET_DATA_TYPE(0, types)>(value.tuple_index()));
-
-#define JIT_EQUALS_CASE(r, types)    \
-  case JIT_GET_ENUM_VALUE(0, types): \
-    return lhs.get<JIT_GET_DATA_TYPE(0, types)>(context) == rhs.get<JIT_GET_DATA_TYPE(0, types)>(rhs_index, context);
-
-#define JIT_ASSIGN_CASE(r, types)    \
-  case JIT_GET_ENUM_VALUE(0, types): \
-    return to.set<JIT_GET_DATA_TYPE(0, types)>(from.get<JIT_GET_DATA_TYPE(0, types)>(context), to_index, context);
-
-#define JIT_GROW_BY_ONE_CASE(r, types) \
-  case JIT_GET_ENUM_VALUE(0, types):   \
-    return context.hashmap.values[value.column_index()].grow_by_one<JIT_GET_DATA_TYPE(0, types)>();
-
 #define JIT_AGGREGATE_COMPUTE_CASE(r, types)                                                                \
   case JIT_GET_ENUM_VALUE(0, types):                                                                        \
     rhs.set<JIT_GET_DATA_TYPE(0, types)>(op_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(context),             \
@@ -191,6 +174,10 @@ __attribute__((noinline)) void jit_assign(const JitTupleValue& from, const JitHa
 
 __attribute__((noinline)) size_t jit_grow_by_one(const JitHashmapValue& value, JitRuntimeContext& context);
 
+#define JIT_DATA_TYPE_INFO_NO_STRING                                                               \
+  ((bool, Bool, "bool"))((int32_t, Int, "int"))((int64_t, Long, "long"))((float, Float, "float"))( \
+      (double, Double, "double"))
+
 template <typename T>
 __attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const JitTupleValue& lhs,
                                                      const JitHashmapValue& rhs, const size_t rhs_index,
@@ -200,7 +187,7 @@ __attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const Jit
   }
 
   switch (rhs.data_type()) {
-    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_AGGREGATE_COMPUTE_CASE, (JIT_DATA_TYPE_INFO))
+    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_AGGREGATE_COMPUTE_CASE, (JIT_DATA_TYPE_INFO_NO_STRING))
     default:
       break;
   }
@@ -211,10 +198,6 @@ __attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const Jit
 #undef JIT_GET_DATA_TYPE
 #undef JIT_COMPUTE_CASE
 #undef JIT_COMPUTE_TYPE_CASE
-#undef JIT_HASH_CASE
-#undef JIT_EQUALS_CASE
-#undef JIT_ASSIGN_CASE
-#undef JIT_GROW_BY_ONE_CASE
 #undef JIT_AGGREGATE_COMPUTE_CASE
 
 }  // namespace opossum

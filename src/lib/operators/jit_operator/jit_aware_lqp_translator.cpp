@@ -1,13 +1,16 @@
 #include "jit_aware_lqp_translator.hpp"
 
+#include <boost/range/adaptors.hpp>
 #include <boost/range/combine.hpp>
 
 #include <queue>
 #include <unordered_set>
 
 #include "constant_mappings.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "operators/jit_aggregate.hpp"
 #include "operators/jit_compute.hpp"
 #include "operators/jit_filter.hpp"
 #include "operators/jit_read_tuples.hpp"
@@ -87,7 +90,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_node_t
         boost::adaptors::slice(column_names, groupby_columns.size(), column_names.size());
 
     for (const auto& groupby_column : boost::combine(groupby_column_names, groupby_columns)) {
-      const auto expression = _translate_to_jit_expression(groupby_column.get<1>(), *read_tuple, input_node);
+      const auto expression = _try_translate_column_to_jit_expression(groupby_column.get<1>(), *read_tuple, input_node);
       if (expression->expression_type() != ExpressionType::Column) {
         jit_operator->add_jit_operator(std::make_shared<JitCompute>(expression));
       }
@@ -97,8 +100,8 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_node_t
     for (const auto& aggregate_column : boost::combine(aggregate_column_names, aggregate_columns)) {
       const auto aggregate_expression = aggregate_column.get<1>();
       DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Expression is not a function.");
-      const auto expression = _translate_to_jit_expression(*aggregate_expression->aggregate_function_arguments()[0],
-                                                           *read_tuple, input_node);
+      const auto expression = _try_translate_expression_to_jit_expression(
+          *aggregate_expression->aggregate_function_arguments()[0], *read_tuple, input_node);
       if (expression->expression_type() != ExpressionType::Column) {
         jit_operator->add_jit_operator(std::make_shared<JitCompute>(expression));
       }
