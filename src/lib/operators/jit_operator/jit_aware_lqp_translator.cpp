@@ -38,7 +38,8 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_node_t
 
   // Traverse query tree until a non-jittable nodes is found in each branch
   _visit(node, [&](auto& current_node) {
-    if (_node_is_jittable(current_node)) {
+    const auto is_root_node = current_node == node;
+    if (_node_is_jittable(current_node, is_root_node)) {
       ++num_jittable_nodes;
       return true;
     } else {
@@ -49,7 +50,8 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_node_t
 
   // It does not make sense to create a JitOperatorWrapper for fewer than 2 LQP nodes,
   // but we may want a better heuristic here
-  if (num_jittable_nodes < 2 || input_nodes.size() != 1) {
+  if (num_jittable_nodes < 1 || (num_jittable_nodes < 2 && node->type() != LQPNodeType::Aggregate) ||
+      input_nodes.size() != 1) {
     return nullptr;
   }
 
@@ -290,8 +292,11 @@ bool JitAwareLQPTranslator::_input_is_filtered(const std::shared_ptr<AbstractLQP
   return current_node->type() == LQPNodeType::Predicate || current_node->type() == LQPNodeType::Union;
 }
 
-bool JitAwareLQPTranslator::_node_is_jittable(const std::shared_ptr<AbstractLQPNode>& node) const {
+bool JitAwareLQPTranslator::_node_is_jittable(const std::shared_ptr<AbstractLQPNode>& node,
+                                              const bool allow_aggregate_node) const {
   switch (node->type()) {
+    case LQPNodeType::Aggregate:
+      return allow_aggregate_node;
     case LQPNodeType::Predicate:
       return std::dynamic_pointer_cast<PredicateNode>(node)->scan_type() == ScanType::TableScan &&
              std::dynamic_pointer_cast<PredicateNode>(node)->predicate_condition() != PredicateCondition::Between;
