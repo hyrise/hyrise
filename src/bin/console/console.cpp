@@ -27,6 +27,7 @@ namespace filesystem = std::experimental::filesystem;
 #endif
 
 #include "SQLParser.h"
+#include "concurrency/logging/recovery.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "operators/get_table.hpp"
@@ -879,6 +880,8 @@ int main(int argc, char** argv) {
   // See comment on jmp_env for details
   while (sigsetjmp(jmp_env, 1) != 0) {
   }
+
+  opossum::Recovery::getInstance().recover();
 
   // Main REPL loop
   while (return_code != Return::Quit) {

@@ -14,4 +14,7 @@ AbstractLogger& Logger::getInstance() {
   return instance;
 }
 
+const std::string Logger::directory = "/Users/Dimitri/transaction_logs/";
+const std::string Logger::filename = "hyrise-log.txt";
+
 }  // namespace opossum
