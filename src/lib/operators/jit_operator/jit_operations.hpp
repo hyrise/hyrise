@@ -66,7 +66,7 @@ const auto jit_multiplication = [](const auto a, const auto b) -> decltype(a * b
 const auto jit_division = [](const auto a, const auto b) -> decltype(a / b) { return a / b; };
 const auto jit_modulo = [](const auto a, const auto b) -> decltype(a % b) { return a % b; };
 const auto jit_power = [](const auto a, const auto b) -> decltype(std::pow(a, b)) { return std::pow(a, b); };
-const auto jit_maximum = [](const auto a, const auto b) -> decltype(a + b) { return a + b; };
+const auto jit_maximum = [](const auto a, const auto b) -> decltype(a + b) { return std::max(a, b); };
 const auto jit_minimum = [](const auto a, const auto b) -> decltype(std::min(a, b)) { return std::min(a, b); };
 const auto jit_increment = [](const auto a, const auto b) -> decltype(b + 1) { return b + 1; };
 

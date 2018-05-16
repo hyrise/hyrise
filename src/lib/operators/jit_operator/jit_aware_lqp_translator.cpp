@@ -104,6 +104,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_node_t
       DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Expression is not a function.");
       const auto expression = _try_translate_expression_to_jit_expression(
           *aggregate_expression->aggregate_function_arguments()[0], *read_tuple, input_node);
+      if (!expression) return nullptr;
       if (expression->expression_type() != ExpressionType::Column) {
         jit_operator->add_jit_operator(std::make_shared<JitCompute>(expression));
       }

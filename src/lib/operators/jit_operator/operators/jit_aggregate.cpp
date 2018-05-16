@@ -131,7 +131,6 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
     }
     for (uint32_t i = 0; i < num_aggregate_columns; ++i) {
       match_index = jit_grow_by_one(_aggregate_columns[i].hashmap_value, context);
-      jit_assign(_aggregate_columns[i].tuple_value, _aggregate_columns[i].hashmap_value, match_index, context);
     }
     hash_bucket.push_back(match_index);
   } else {
