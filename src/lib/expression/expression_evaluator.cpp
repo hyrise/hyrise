@@ -247,9 +247,13 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_expressio
       const auto& value_expression = static_cast<const ValueExpression &>(expression);
       const auto& value = value_expression.value;
 
-      Assert(value.type() == typeid(T), "Can't evaluate ValueExpression to requested type T");
-
-      return boost::get<T>(value);
+      if (value.type() == typeid(NullValue)) {
+        // A NULL value doesn't have a type, so it can be evaluated to any type
+        return T{};
+      } else {
+        Assert(value.type() == typeid(T), "Can't evaluate ValueExpression to requested type T");
+        return boost::get<T>(value);
+      }
     }
 
     case ExpressionType::Function:
@@ -374,8 +378,11 @@ template<typename T, template<typename...> typename Functor>
 ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_binary_expression(
 const AbstractExpression& left_operand,
 const AbstractExpression& right_operand) {
-  const auto left_data_type = left_operand.data_type();
-  const auto right_data_type = right_operand.data_type();
+  // The operands need to have types, so when either one is a NULL value, just assume the actual DataType to be the
+  // result data type
+  const auto result_data_type = data_type_from_type<T>();
+  const auto left_data_type = left_operand.data_type() == DataType::Null ? result_data_type : left_operand.data_type();
+  const auto right_data_type = right_operand.data_type() == DataType::Null ? result_data_type : right_operand.data_type();
 
   ExpressionResult<T> result;
 
@@ -1022,7 +1029,7 @@ ExpressionEvaluator::ExpressionResult<int32_t> ExpressionEvaluator::evaluate_in_
     const auto& array_expression = static_cast<const ArrayExpression&>(right_expression);
 
     /**
-     * To keep the code simply for now, transform the InExpression like this:
+     * To keep the code simpl for now, transform the InExpression like this:
      * "a IN (x, y, z)"   ---->   "a = x OR a = y OR a = z"
      *
      * But first, out of array_expression.elements(), pick those expressions whose type can be compared with

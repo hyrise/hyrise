@@ -26,9 +26,9 @@ SELECT a as b FROM mixed;
 SELECT b, 4+6 as c, b+4 AS d, 5.0+c AS e FROM mixed_null;
 SELECT a*b/c AS calc FROM id_int_int_int_100;
 SELECT b*b AS calc FROM mixed;
---SELECT a, b, a+b AS e, a+b+NULL AS f FROM id_int_int_int_100;
---SELECT a, b, b+b AS e, b+b+NULL AS f FROM mixed;
---SELECT a, b, b+b AS e, b+b+NULL AS f FROM mixed_null;
+SELECT a, b, a+b AS e, a+b+NULL AS f FROM id_int_int_int_100;
+SELECT a, b, b+b AS e, b+b+NULL AS f FROM mixed;
+SELECT a, b, b+b AS e, b+b+NULL AS f FROM mixed_null;
 
 -- ORDER BY
 SELECT * FROM mixed ORDER BY a;

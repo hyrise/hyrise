@@ -49,6 +49,20 @@ DataType LQPColumnExpression::data_type() const {
   }
 }
 
+bool LQPColumnExpression::is_nullable() const {
+  if (column_reference.original_node()->type == LQPNodeType::StoredTable) {
+    const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(column_reference.original_node());
+    const auto table = StorageManager::get().get_table(stored_table_node->table_name);
+    return table->column_is_nullable(column_reference.original_column_id());
+
+  } else if (column_reference.original_node()->type == LQPNodeType::Mock) {
+    return false; // MockNodes do not support NULLs
+
+  } else {
+    Fail("Not yet implemented");
+  }  
+}
+
 bool LQPColumnExpression::_shallow_equals(const AbstractExpression& expression) const {
   const auto* lqp_column_expression = dynamic_cast<const LQPColumnExpression*>(&expression);
   if (!lqp_column_expression) return false;
