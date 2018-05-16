@@ -35,8 +35,9 @@ set(
     expression/case_expression.hpp
     expression/exists_expression.cpp
     expression/exists_expression.hpp
-    expression/expression_evaluator.cpp
-    expression/expression_evaluator.hpp
+    expression/evaluation/expression_evaluator.cpp
+    expression/evaluation/expression_evaluator.hpp
+    expression/evaluation/expression_result.hpp
     expression/expression_factory.cpp
     expression/expression_factory.hpp
     expression/expression_utils.cpp
@@ -90,8 +91,8 @@ set(
 #    logical_query_plan/delete_node.hpp
 #    logical_query_plan/drop_view_node.cpp
 #    logical_query_plan/drop_view_node.hpp
-#    logical_query_plan/dummy_table_node.cpp
-#    logical_query_plan/dummy_table_node.hpp
+    logical_query_plan/dummy_table_node.cpp
+    logical_query_plan/dummy_table_node.hpp
     logical_query_plan/enable_make_for_lqp_node.hpp
 #    logical_query_plan/insert_node.cpp
 #    logical_query_plan/insert_node.hpp

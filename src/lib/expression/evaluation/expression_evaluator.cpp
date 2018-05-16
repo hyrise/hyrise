@@ -2,21 +2,23 @@
 
 #include <type_traits>
 
-#include "abstract_expression.hpp"
-#include "array_expression.hpp"
-#include "abstract_predicate_expression.hpp"
-#include "binary_predicate_expression.hpp"
-#include "case_expression.hpp"
+#include "boost/variant/apply_visitor.hpp"
+
+#include "expression/abstract_expression.hpp"
+#include "expression/array_expression.hpp"
+#include "expression/abstract_predicate_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/case_expression.hpp"
 #include "all_parameter_variant.hpp"
-#include "arithmetic_expression.hpp"
-#include "exists_expression.hpp"
-#include "extract_expression.hpp"
-#include "function_expression.hpp"
-#include "logical_expression.hpp"
-#include "in_expression.hpp"
-#include "pqp_column_expression.hpp"
-#include "pqp_select_expression.hpp"
-#include "value_expression.hpp"
+#include "expression/arithmetic_expression.hpp"
+#include "expression/exists_expression.hpp"
+#include "expression/extract_expression.hpp"
+#include "expression/function_expression.hpp"
+#include "expression/logical_expression.hpp"
+#include "expression/in_expression.hpp"
+#include "expression/pqp_column_expression.hpp"
+#include "expression/pqp_select_expression.hpp"
+#include "expression/value_expression.hpp"
 #include "operators/abstract_operator.hpp"
 #include "storage/materialize.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -187,17 +189,8 @@ template<typename O, typename L, typename R> using Multiplication = ArithmeticFu
 template<typename O, typename L, typename R> using Division = ArithmeticFunctor<std::divides, O, L, R>;
 // clang-format on
 
-// clang-format off
-template<typename T> bool ExpressionEvaluator::is_nullable_values(const ExpressionResult<T>& result)      { return result.which() == 0; }
-template<typename T> bool ExpressionEvaluator::is_non_nullable_values(const ExpressionResult<T>& result)  { return result.which() == 1; }
-template<typename T> bool ExpressionEvaluator::is_value(const ExpressionResult<T>& result)                { return result.which() == 2; }
-template<typename T> bool ExpressionEvaluator::is_null(const ExpressionResult<T>& result)                 { return result.which() == 3; }
-template<typename T> bool ExpressionEvaluator::is_nullable_array(const ExpressionResult<T>& result)       { return result.which() == 4; }
-template<typename T> bool ExpressionEvaluator::is_non_nullable_array(const ExpressionResult<T>& result)   { return result.which() == 5; }
-// clang-format on
-
 template<typename T>
-ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpression& expression) {
+ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpression& expression) {
   switch (expression.type) {
     case ExpressionType::Arithmetic:
       return evaluate_arithmetic_expression<T>(static_cast<const ArithmeticExpression&>(expression));
@@ -282,8 +275,8 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_expressio
 }
 
 template<typename T>
-ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_function_expression(const FunctionExpression& expression) {
-  ExpressionEvaluator::ExpressionResult<T> result;
+ExpressionResult<T> ExpressionEvaluator::evaluate_function_expression(const FunctionExpression& expression) {
+  ExpressionResult<T> result;
 
   switch (expression.function_type) {
     case FunctionType::Substring:
@@ -315,7 +308,7 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_function_
 }
 
 template<typename OffsetDataType, typename CharCountDataType>
-ExpressionEvaluator::ExpressionResult<std::string> ExpressionEvaluator::evaluate_substring(const ExpressionResult<std::string>& string_result,
+ExpressionResult<std::string> ExpressionEvaluator::evaluate_substring(const ExpressionResult<std::string>& string_result,
                                                  const ExpressionResult<OffsetDataType>& offset_result,
                                                  const ExpressionResult<CharCountDataType>& char_count_result) {
   Fail("Not yet implemented");
@@ -332,7 +325,7 @@ ExpressionEvaluator::ExpressionResult<std::string> ExpressionEvaluator::evaluate
 }
 
 template<typename T>
-ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_arithmetic_expression(const ArithmeticExpression& expression) {
+ExpressionResult<T> ExpressionEvaluator::evaluate_arithmetic_expression(const ArithmeticExpression& expression) {
   const auto& left = *expression.left_operand();
   const auto& right = *expression.right_operand();
 
@@ -350,7 +343,7 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_arithmeti
 }
 
 template<typename T>
-ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_binary_predicate_expression(const BinaryPredicateExpression& expression) {
+ExpressionResult<T> ExpressionEvaluator::evaluate_binary_predicate_expression(const BinaryPredicateExpression& expression) {
   const auto& left = *expression.left_operand();
   const auto& right = *expression.right_operand();
 
@@ -371,7 +364,7 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_binary_pr
 
 
 template<typename T, template<typename...> typename Functor>
-ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_binary_expression(
+ExpressionResult<T> ExpressionEvaluator::evaluate_binary_expression(
 const AbstractExpression& left_operand,
 const AbstractExpression& right_operand) {
   const auto left_is_null = left_operand.data_type() == DataType::Null;
@@ -381,21 +374,32 @@ const AbstractExpression& right_operand) {
 
   ExpressionResult<T> result;
 
-//  if (left_is_null) {
-//    resolve_data_type(right_operand.data_type(), [&](const auto right_data_type_t) {
-//      using RightDataType = typename decltype(right_data_type_t)::type;
-//      const auto right_result = evaluate_expression<RightDataType>(right_operand);
-//      result = evaluate_binary_expression<T, Functor>(ExpressionResult<NullValue>(NullValue{}), right_result);
-//    });
-//  } else if (right_is_null) {
-//    resolve_data_type(left_operand.data_type(), [&](const auto left_data_type_t) {
-//      using LeftDataType = typename decltype(left_data_type_t)::type;
-//      const auto left_result = evaluate_expression<LeftDataType>(left_operand);
-//
-//      result = evaluate_binary_expression<T, Functor>(left_result, ExpressionResult<NullValue>(NullValue{}));
-//    });
-//
-//  } else {
+  if (left_is_null) {
+    resolve_data_type(right_operand.data_type(), [&](const auto right_data_type_t) {
+      using RightDataType = typename decltype(right_data_type_t)::type;
+      const auto right_result = evaluate_expression<RightDataType>(right_operand);
+      using ConcreteFunctor = Functor<T, T, RightDataType>;
+
+      if constexpr (ConcreteFunctor::supported) {
+        result = evaluate_binary_operator<T, T, RightDataType>(ExpressionResult<T>(NullValue{}), right_result, ConcreteFunctor{});
+      } else {
+        Fail("Operation not supported on the given types");
+      }
+    });
+  } else if (right_is_null) {
+    resolve_data_type(left_operand.data_type(), [&](const auto left_data_type_t) {
+      using LeftDataType = typename decltype(left_data_type_t)::type;
+      const auto left_result = evaluate_expression<LeftDataType>(left_operand);
+      using ConcreteFunctor = Functor<T, LeftDataType, T>;
+
+      if constexpr (ConcreteFunctor::supported) {
+        result = evaluate_binary_operator<T, LeftDataType, T>(left_result, ExpressionResult<T>(NullValue{}), ConcreteFunctor{});
+      } else {
+        Fail("Operation not supported on the given types");
+      }
+    });
+
+  } else {
     resolve_data_type(left_operand.data_type(), [&](const auto left_data_type_t) {
       using LeftDataType = typename decltype(left_data_type_t)::type;
 
@@ -415,23 +419,23 @@ const AbstractExpression& right_operand) {
         }
       });
     });
-//  }
+  }
 
   return result;
 }
 
 template<typename T>
-ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_logical_expression(const LogicalExpression& expression) {
+ExpressionResult<T> ExpressionEvaluator::evaluate_logical_expression(const LogicalExpression& expression) {
   Fail("LogicalExpression can only output int32_t");
 }
 
 template<typename T>
-ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_in_expression(const InExpression& expression) {
+ExpressionResult<T> ExpressionEvaluator::evaluate_in_expression(const InExpression& expression) {
   Fail("InExpression supports only int32_t as result");
 }
 
 template<typename T>
-ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_case_expression(const CaseExpression& case_expression) {
+ExpressionResult<T> ExpressionEvaluator::evaluate_case_expression(const CaseExpression& case_expression) {
   const auto when = evaluate_expression<int32_t>(*case_expression.when());
 
   /**
@@ -462,7 +466,7 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_case_expr
 
   if (then_is_null && else_is_null) return NullValue{};
 
-  ExpressionEvaluator::ExpressionResult<T> result;
+  ExpressionResult<T> result;
 
   if (then_is_null) {
     resolve_data_type(case_expression.else_()->data_type(), [&](const auto else_data_type_t) {
@@ -498,7 +502,7 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_case_expr
 }
 
 template<typename T>
-ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_exists_expression(const ExistsExpression& exists_expression) {
+ExpressionResult<T> ExpressionEvaluator::evaluate_exists_expression(const ExistsExpression& exists_expression) {
   std::vector<T> result_values(_chunk->size());
 
   const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(exists_expression.select());
@@ -520,7 +524,7 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_exists_ex
 }
 
 template<>
-ExpressionEvaluator::ExpressionResult<std::string> ExpressionEvaluator::evaluate_extract_expression<std::string>(const ExtractExpression& extract_expression) {
+ExpressionResult<std::string> ExpressionEvaluator::evaluate_extract_expression<std::string>(const ExtractExpression& extract_expression) {
   const auto from_result = evaluate_expression<std::string>(*extract_expression.from());
 
   switch (extract_expression.date_component) {
@@ -531,12 +535,12 @@ ExpressionEvaluator::ExpressionResult<std::string> ExpressionEvaluator::evaluate
 }
 
 template<typename T>
-ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_extract_expression(const ExtractExpression& extract_expression) {
+ExpressionResult<T> ExpressionEvaluator::evaluate_extract_expression(const ExtractExpression& extract_expression) {
   Fail("Only Strings (YYYY-MM-DD) supported for Dates right now");
 }
 
 template<size_t offset, size_t count>
-ExpressionEvaluator::ExpressionResult<std::string> ExpressionEvaluator::evaluate_extract_substr(const ExpressionResult<std::string>& from_result) {
+ExpressionResult<std::string> ExpressionEvaluator::evaluate_extract_substr(const ExpressionResult<std::string>& from_result) {
   if (is_null(from_result)) {
     return NullValue{};
 
@@ -581,7 +585,7 @@ ExpressionEvaluator::ExpressionResult<std::string> ExpressionEvaluator::evaluate
 template<typename ResultDataType,
 typename ThenDataType,
 typename ElseDataType>
-ExpressionEvaluator::ExpressionResult<ResultDataType> ExpressionEvaluator::evaluate_case(const ExpressionResult<int32_t>& when_result,
+ExpressionResult<ResultDataType> ExpressionEvaluator::evaluate_case(const ExpressionResult<int32_t>& when_result,
                                                const ExpressionResult<ThenDataType>& then_result,
                                                const ExpressionResult<ElseDataType>& else_result) {
   if (is_nullable_values(when_result)) {
@@ -612,9 +616,10 @@ template<typename ResultDataType,
 typename LeftOperandDataType,
 typename RightOperandDataType,
 typename Functor>
-ExpressionEvaluator::ExpressionResult<ResultDataType> ExpressionEvaluator::evaluate_binary_operator(const ExpressionResult<LeftOperandDataType>& left_operands,
+ExpressionResult<ResultDataType> ExpressionEvaluator::evaluate_binary_operator(const ExpressionResult<LeftOperandDataType>& left_operands,
                                                                                                     const ExpressionResult<RightOperandDataType>& right_operands,
                                                                                                     const Functor &functor) {
+
   const auto left_is_nullable = left_operands.type() == typeid(NullableValues<LeftOperandDataType>);
   const auto left_is_values = left_operands.type() == typeid(NonNullableValues<LeftOperandDataType>);
   const auto left_is_value = left_operands.type() == typeid(LeftOperandDataType);
@@ -892,7 +897,7 @@ ExpressionEvaluator::ExpressionResult<ResultDataType> ExpressionEvaluator::evalu
 
 
 template<typename T>
-ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_select_expression_for_chunk(
+ExpressionResult<T> ExpressionEvaluator::evaluate_select_expression_for_chunk(
 const PQPSelectExpression &expression) {
   for (const auto& parameter : expression.parameters) {
     _ensure_column_materialization(parameter);
@@ -915,7 +920,7 @@ const PQPSelectExpression &expression) {
 }
 
 template<typename T>
-ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_select_expression_for_row(const PQPSelectExpression& expression, const ChunkOffset chunk_offset) {
+ExpressionResult<T> ExpressionEvaluator::evaluate_select_expression_for_row(const PQPSelectExpression& expression, const ChunkOffset chunk_offset) {
   std::vector<AllParameterVariant> parameter_values(expression.parameters.size());
 
   for (auto parameter_idx = size_t{0}; parameter_idx < expression.parameters.size(); ++parameter_idx) {
@@ -982,12 +987,12 @@ std::shared_ptr<BaseColumn> ExpressionEvaluator::evaluate_expression_to_column(c
 
     auto has_nulls = false;
 
-    if (result.type() == typeid(ExpressionEvaluator::NonNullableValues<ColumnDataType>)) {
-      const auto& result_values = boost::get<ExpressionEvaluator::NonNullableValues<ColumnDataType>>(result);
+    if (result.type() == typeid(NonNullableValues<ColumnDataType>)) {
+      const auto& result_values = boost::get<NonNullableValues<ColumnDataType>>(result);
       values = pmr_concurrent_vector<ColumnDataType>(result_values.begin(), result_values.end());
 
-    } else if (result.type() == typeid(ExpressionEvaluator::NullableValues<ColumnDataType>)) {
-      const auto& result_values_and_nulls = boost::get<ExpressionEvaluator::NullableValues<ColumnDataType>>(result);
+    } else if (result.type() == typeid(NullableValues<ColumnDataType>)) {
+      const auto& result_values_and_nulls = boost::get<NullableValues<ColumnDataType>>(result);
       const auto& result_values = result_values_and_nulls.first;
       const auto& result_nulls = result_values_and_nulls.second;
       has_nulls = true;
@@ -1016,7 +1021,7 @@ std::shared_ptr<BaseColumn> ExpressionEvaluator::evaluate_expression_to_column(c
 }
 
 template<>
-ExpressionEvaluator::ExpressionResult<int32_t> ExpressionEvaluator::evaluate_logical_expression<int32_t>(const LogicalExpression& expression) {
+ExpressionResult<int32_t> ExpressionEvaluator::evaluate_logical_expression<int32_t>(const LogicalExpression& expression) {
   const auto& left = *expression.left_operand();
   const auto& right = *expression.right_operand();
 
@@ -1029,7 +1034,7 @@ ExpressionEvaluator::ExpressionResult<int32_t> ExpressionEvaluator::evaluate_log
 }
 
 template<>
-ExpressionEvaluator::ExpressionResult<int32_t> ExpressionEvaluator::evaluate_in_expression<int32_t>(const InExpression& in_expression) {
+ExpressionResult<int32_t> ExpressionEvaluator::evaluate_in_expression<int32_t>(const InExpression& in_expression) {
   const auto& left_expression = *in_expression.value();
   const auto& right_expression = *in_expression.set();
 
@@ -1075,5 +1080,58 @@ ExpressionEvaluator::ExpressionResult<int32_t> ExpressionEvaluator::evaluate_in_
 
   return {};
 }
+
+
+
+
+
+
+
+
+
+
+
+//template<typename T, template<typename...> typename Functor>
+//ExpressionResult<T> ExpressionEvaluator::evaluate_binary_expression2(const AbstractExpression& left_expression,
+//                                                const AbstractExpression& right_expression) {
+//  ExpressionResult<T> result_variant;
+//
+//  resolve_expression(left_expression, [](const auto& left_result) {
+//    using LeftResultType = decltype(left_result);
+//
+//    resolve_expression(right_expression, [](const auto& right_result) {
+//      using RightResultType = decltype(right_result);
+//
+//      if constexpr (!is_series_v(left_result) && !is_series(right_result)) {
+//        result_variant = resolve_value_result<T>(left_result, right_result, [&](auto& result, const auto& left_data_type_t, const auto right_data_type_t) {
+//          using LeftDataType = typename decltype(left_data_type_t)::type;
+//          using RightDataType = typename decltype(right_data_type_t)::type;
+//
+//          if constexpr (supported_v<Functor, T, LeftDataType, RightDataType>) {
+//            Functor{}(0, result, left_result, right_result);
+//          } else {
+//            Fail("Not supported");
+//          }
+//        });
+//      } else {
+//        result_variant = resolve_series_result<T>(left_result, right_result, [&](auto& result, const auto& left_data_type_t, const auto right_data_type_t) {
+//          using LeftDataType = typename decltype(left_data_type_t)::type;
+//          using RightDataType = typename decltype(right_data_type_t)::type;
+//
+//          if constexpr (supported_v<Functor, T, LeftDataType, RightDataType>) {
+//            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+//              Functor{}(chunk_offset, result, left_result, right_result);
+//            }
+//          } else {
+//            Fail("Not supported");
+//          }
+//        });
+//      }
+//    });
+//  });
+//
+//  return result_variant;
+//}
+
 
 }  // namespace opossum

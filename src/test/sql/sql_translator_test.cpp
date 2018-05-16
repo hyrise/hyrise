@@ -12,6 +12,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
+#include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -78,6 +79,19 @@ class SQLTranslatorTest : public ::testing::Test {
 //  LQPColumnReference _table_c_a;
 //  LQPColumnReference _table_c_d;
 };
+
+// Not supported by SQLParser
+TEST_F(SQLTranslatorTest, DISABLED_NoFromClause) {
+  const auto actual_lqp = compile_query("SELECT 1 + 2;");
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(addition(value(1), value(2))),
+    DummyTableNode::make());
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
 
 TEST_F(SQLTranslatorTest, SelectSingleColumn) {
   const auto actual_lqp = compile_query("SELECT a FROM int_float;");
@@ -343,7 +357,8 @@ TEST_F(SQLTranslatorTest, SubSelectFromSimple) {
   const auto expressions = expression_vector(addition(int_float_a, int_float_b), int_float_a, int_float_b);
   const auto aliases = std::vector<std::string>({"x", "a", "b"});
 
-    // clang-format off
+  // Redundant AliasNode due to the SQLTranslator architecture. Doesn't look nice, but not really an issue.
+  // clang-format off
   const auto expected_lqp =
   AliasNode::make(expressions, aliases,
     AliasNode::make(expressions, aliases,

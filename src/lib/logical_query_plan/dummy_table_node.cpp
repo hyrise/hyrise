@@ -5,24 +5,29 @@
 #include <vector>
 
 #include "types.hpp"
+#include "expression/value_expression.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-DummyTableNode::DummyTableNode() : AbstractLQPNode(LQPNodeType::DummyTable) { _output_column_references.emplace(); }
-
-std::shared_ptr<AbstractLQPNode> DummyTableNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-    const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
-  return DummyTableNode::make();
+DummyTableNode::DummyTableNode() : AbstractLQPNode(LQPNodeType::DummyTable) {
+//  // just a dummy expression that will never be accessed
+//  _output_column_expressions.emplace_back(std::make_shared<ValueExpression>(0);
 }
 
-std::string DummyTableNode::description() const { return "[DummyTable]"; }
+std::string DummyTableNode::description() const {
+  return "[DummyTable]";
+}
 
-const std::vector<std::string>& DummyTableNode::output_column_names() const { return _output_column_names; }
+const std::vector<std::shared_ptr<AbstractExpression>>& DummyTableNode::output_column_expressions() const {
+  return _output_column_expressions;
+}
 
-bool DummyTableNode::shallow_equals(const AbstractLQPNode& rhs) const {
-  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+std::shared_ptr<AbstractLQPNode> DummyTableNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {
+  return std::make_shared<DummyTableNode>();
+}
+
+bool DummyTableNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const {
   return true;
 }
 

@@ -6,7 +6,8 @@
 #include "expression/case_expression.hpp"
 #include "expression/extract_expression.hpp"
 #include "expression/exists_expression.hpp"
-#include "expression/expression_evaluator.hpp"
+#include "expression/evaluation/expression_evaluator.hpp"
+#include "expression/expression_factory.hpp"
 #include "expression/function_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -24,6 +25,8 @@
 #include "operators/table_wrapper.hpp"
 #include "utils/load_table.hpp"
 #include "testing_assert.hpp"
+
+using namespace opossum::expression_factory;
 
 namespace opossum {
 
@@ -71,7 +74,7 @@ TEST_F(ExpressionEvaluatorTest, ArithmeticExpression) {
 }
 
 TEST_F(ExpressionEvaluatorTest, ArithmeticExpressionWithNull) {
-  const auto actual_result = boost::get<ExpressionEvaluator::NullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*a_plus_c));
+  const auto actual_result = boost::get<NullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*a_plus_c));
   const auto& actual_values = actual_result.first;
   const auto& actual_nulls = actual_result.second;
 
@@ -84,28 +87,28 @@ TEST_F(ExpressionEvaluatorTest, ArithmeticExpressionWithNull) {
 }
 
 TEST_F(ExpressionEvaluatorTest, GreaterThanWithStrings) {
-  const auto actual_values = boost::get<ExpressionEvaluator::NonNullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*s1_gt_s2));
+  const auto actual_values = boost::get<NonNullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*s1_gt_s2));
 
   std::vector<int32_t> expected_values = {0, 0, 1, 0};
   EXPECT_EQ(actual_values, expected_values);
 }
 
 TEST_F(ExpressionEvaluatorTest, LessThanWithStrings) {
-  const auto actual_values = boost::get<ExpressionEvaluator::NonNullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*s1_lt_s2));
+  const auto actual_values = boost::get<NonNullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*s1_lt_s2));
 
   std::vector<int32_t> expected_values = {1, 1, 0, 0};
   EXPECT_EQ(actual_values, expected_values);
 }
 
 TEST_F(ExpressionEvaluatorTest, LessThan) {
-  const auto actual_values = boost::get<ExpressionEvaluator::NonNullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*a_lt_b));
+  const auto actual_values = boost::get<NonNullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*a_lt_b));
 
   std::vector<int32_t> expected_values = {1, 1, 1, 1};
   EXPECT_EQ(actual_values, expected_values);
 }
 
 TEST_F(ExpressionEvaluatorTest, LessThanWithNulls) {
-  const auto actual_result = boost::get<ExpressionEvaluator::NullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*a_lt_c));
+  const auto actual_result = boost::get<NullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*a_lt_c));
   const auto& actual_values = actual_result.first;
   const auto& actual_nulls = actual_result.second;
 
@@ -127,7 +130,7 @@ TEST_F(ExpressionEvaluatorTest, In) {
 
   const auto in = std::make_shared<InExpression>(a, array);
 
-  const auto actual_values = boost::get<ExpressionEvaluator::NonNullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*in));
+  const auto actual_values = boost::get<NonNullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*in));
 
   std::vector<int32_t> expected_values = {1, 0, 1, 0};
   EXPECT_EQ(actual_values, expected_values);
@@ -157,7 +160,7 @@ TEST_F(ExpressionEvaluatorTest, Case) {
   EXPECT_TRUE(case_a_eq_2->is_nullable());
 
   const auto actual_result = evaluator->evaluate_expression<int32_t>(*case_a_eq_2);
-  const auto& actual_nullable_values = boost::get<ExpressionEvaluator::NullableValues<int32_t>>(actual_result);
+  const auto& actual_nullable_values = boost::get<NullableValues<int32_t>>(actual_result);
   const auto& actual_values = actual_nullable_values.first;
   const auto& actual_nulls = actual_nullable_values.second;
 
@@ -189,7 +192,7 @@ TEST_F(ExpressionEvaluatorTest, Exists) {
   const auto exists_expression = std::make_shared<ExistsExpression>(pqp_select_expression);
 
   const auto actual_result = evaluator->evaluate_expression<int32_t>(*exists_expression);
-  const auto actual_values = boost::get<ExpressionEvaluator::NonNullableValues<int32_t>>(actual_result);
+  const auto actual_values = boost::get<NonNullableValues<int32_t>>(actual_result);
 
   std::vector<int32_t> expected_values = {0, 0, 1, 1};
   EXPECT_EQ(actual_values, expected_values);
@@ -197,19 +200,24 @@ TEST_F(ExpressionEvaluatorTest, Exists) {
 
 TEST_F(ExpressionEvaluatorTest, Extract) {
   const auto extract_year_expression = std::make_shared<ExtractExpression>(DateComponent::Year, dates);
-  const auto actual_years = boost::get<ExpressionEvaluator::NonNullableValues<std::string>>(evaluator->evaluate_expression<std::string>(*extract_year_expression));
+  const auto actual_years = boost::get<NonNullableValues<std::string>>(evaluator->evaluate_expression<std::string>(*extract_year_expression));
   const auto expected_years = std::vector<std::string>({"2017", "2014", "2011", "2010"});
   EXPECT_EQ(actual_years, expected_years);
   
   const auto extract_month_expression = std::make_shared<ExtractExpression>(DateComponent::Month, dates);
-  const auto actual_months = boost::get<ExpressionEvaluator::NonNullableValues<std::string>>(evaluator->evaluate_expression<std::string>(*extract_month_expression));
+  const auto actual_months = boost::get<NonNullableValues<std::string>>(evaluator->evaluate_expression<std::string>(*extract_month_expression));
   const auto expected_months = std::vector<std::string>({"12", "08", "09", "01"});
   EXPECT_EQ(actual_months, expected_months);
   
   const auto extract_day_expression = std::make_shared<ExtractExpression>(DateComponent::Day, dates);
-  const auto actual_days = boost::get<ExpressionEvaluator::NonNullableValues<std::string>>(evaluator->evaluate_expression<std::string>(*extract_day_expression));
+  const auto actual_days = boost::get<NonNullableValues<std::string>>(evaluator->evaluate_expression<std::string>(*extract_day_expression));
   const auto expected_days = std::vector<std::string>({"06", "05", "03", "02"});
   EXPECT_EQ(actual_days, expected_days);
+}
+
+TEST_F(ExpressionEvaluatorTest, NullLiteral) {
+  const auto actual_result = evaluator->evaluate_expression<int32_t>(*addition(a, null()));
+  ASSERT_EQ(actual_result.type(), typeid(NullValue));
 }
 
 //TEST_F(ExpressionEvaluatorTest, Substring) {
@@ -220,7 +228,7 @@ TEST_F(ExpressionEvaluatorTest, Extract) {
 //   *    table_a
 //   */
 //  const auto substring_expression = std::make_shared<FunctionExpression>(FunctionType::Substring, s1, a, b);
-//  const auto actual_values = boost::get<ExpressionEvaluator::NonNullableValues<std::string>>(evaluator->evaluate_expression<std::string>(*substring_expression));
+//  const auto actual_values = boost::get<NonNullableValues<std::string>>(evaluator->evaluate_expression<std::string>(*substring_expression));
 //
 //  const auto expected_values = std::vector<std::string>({"a", "ell", "at", "e"});
 //

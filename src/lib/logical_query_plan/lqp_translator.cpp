@@ -11,7 +11,8 @@
 //#include "create_view_node.hpp"
 //#include "delete_node.hpp"
 //#include "drop_view_node.hpp"
-//#include "dummy_table_node.hpp"
+#include "dummy_table_node.hpp"
+#include "expression/array_expression.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -45,7 +46,7 @@
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
-//#include "operators/table_wrapper.hpp"
+#include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
 //#include "operators/update.hpp"
 //#include "operators/validate.hpp"
@@ -115,8 +116,8 @@ LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
 //      return _translate_insert_node(node);
 //    case LQPNodeType::Delete:
 //      return _translate_delete_node(node);
-//    case LQPNodeType::DummyTable:
-//      return _translate_dummy_table_node(node);
+    case LQPNodeType::DummyTable:
+      return _translate_dummy_table_node(node);
 //    case LQPNodeType::Update:
 //      return _translate_update_node(node);
 //    case LQPNodeType::Validate:
@@ -175,6 +176,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
                                                      *between_expression->upper_bound());
     return upper_bound_op;
 
+  } else if (const auto array_expression = std::dynamic_pointer_cast<ArrayExpression>(predicate_node->predicate); array_expression) {
+    Fail("TableScan doesn't support IN yet");
   }
 
   Fail("Unsupported predicate type");
@@ -470,10 +473,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
 //  return std::make_shared<DropView>(drop_view_node->view_name());
 //}
 //
-//std::shared_ptr<AbstractOperator> LQPTranslator::_translate_dummy_table_node(
-//    const std::shared_ptr<AbstractLQPNode>& node) const {
-//  return std::make_shared<TableWrapper>(Projection::dummy_table());
-//}
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_dummy_table_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  return std::make_shared<TableWrapper>(Projection::dummy_table());
+}
 
 std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expressions(
     const std::vector<std::shared_ptr<AbstractExpression>>& lqp_expressions,

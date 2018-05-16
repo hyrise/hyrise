@@ -11,6 +11,7 @@
 
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
+#include "expression/array_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "expression/aggregate_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -21,6 +22,7 @@
 #include "expression/lqp_column_expression.hpp"
 #include "expression/lqp_select_expression.hpp"
 #include "expression/is_null_expression.hpp"
+#include "expression/in_expression.hpp"
 //#include "expression/not_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "expression/value_placeholder_expression.hpp"
@@ -31,7 +33,7 @@
 //#include "logical_query_plan/create_view_node.hpp"
 //#include "logical_query_plan/delete_node.hpp"
 //#include "logical_query_plan/drop_view_node.hpp"
-//#include "logical_query_plan/dummy_table_node.hpp"
+#include "logical_query_plan/dummy_table_node.hpp"
 //#include "logical_query_plan/insert_node.hpp"
 //#include "logical_query_plan/join_node.hpp"
 //#include "logical_query_plan/limit_node.hpp"
@@ -156,7 +158,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_statement(const hsql::
   }
 }
 
-
 std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select_statement(const hsql::SelectStatement &select) {
   // SQL Orders of Operations: http://www.bennadel.com/blog/70-sql-query-order-of-operations.htm
   // 1. FROM clause (incl. JOINs and subselects that are part of this)
@@ -175,7 +176,11 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select_statement(const
 
   _sql_identifier_context = std::make_shared<SQLIdentifierContext>();
 
-  _current_lqp = _translate_table_ref(*select.fromTable);
+  if (select.fromTable) {
+    _current_lqp = _translate_table_ref(*select.fromTable);
+  } else {
+    _current_lqp = std::make_shared<DummyTableNode>();
+  }
 
   if (select.whereClause != nullptr) {
     const auto where_expression = _translate_hsql_expr(*select.whereClause);
@@ -593,6 +598,8 @@ const hsql::SelectStatement &select) {
     const auto* hsql_expr = (*select.selectList)[select_list_idx];
 
     if (hsql_expr->type == hsql::kExprStar) {
+      Assert(!_from_elements_by_table_name.empty(), "Can't SELECT with wildcards if since there are no FROM tables specified");
+
       if (hsql_expr->table) {
         if (is_aggregate) {
           // Select all GROUP BY columns with the specified table name
@@ -623,8 +630,7 @@ const hsql::SelectStatement &select) {
           }
         }
       }
-    }
-    else {
+    } else {
       auto output_expression = select_list_elements[select_list_idx];
       output_expressions.emplace_back(output_expression);
 
@@ -639,13 +645,12 @@ const hsql::SelectStatement &select) {
     _current_lqp = ProjectionNode::make(output_expressions, _current_lqp);
   }
 
-  // Check whether we need to create an AliasNode
-  const auto need_alias_node = std::any_of(select.selectList->begin(), select.selectList->end(), [](const auto * hsql_expr) {
-    return hsql_expr->alias != nullptr;
-  }) || std::any_of(output_expressions.begin(), output_expressions.end(), [&](const auto& expression) {
+  // Check whether we need to create an AliasNode - this is the case whenever a Expression was assigned a column_name
+  // that is not its generated name.
+  const auto need_alias_node = std::any_of(output_expressions.begin(), output_expressions.end(), [&](const auto& expression) {
     const auto identifier = _sql_identifier_context->get_expression_identifier(expression);
     return identifier && identifier->column_name != expression->as_column_name();
-  });
+  }) ;
 
   if (need_alias_node) {
     std::vector<std::string> aliases;
@@ -940,6 +945,10 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
         case hsql::kOpCase: return _translate_hsql_case(expr);
         case hsql::kOpOr: return std::make_shared<LogicalExpression>(LogicalOperator::Or, left, right);
         case hsql::kOpAnd: return std::make_shared<LogicalExpression>(LogicalOperator::And, left, right);
+        case hsql::kOpIn: {
+          const auto array = std::make_shared<ArrayExpression>(arguments);
+          return std::make_shared<InExpression>(left, array);
+        }
 
         default:
           Fail("Not handling this OperatorType yet");

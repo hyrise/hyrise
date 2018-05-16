@@ -1,6 +1,10 @@
 SELECT * FROM mixed;
 SELECT * FROM mixed_null;
 
+-- No FROM clause
+-- SELECT 1;
+-- SELECT (1 + 3.0) * 13.0;
+
 -- Table Scans
 SELECT * FROM mixed WHERE b = 10;
 SELECT * FROM mixed WHERE a = 'a' AND c < 65.31;
@@ -26,9 +30,9 @@ SELECT a as b FROM mixed;
 SELECT b, 4+6 as c, b+4 AS d, 5.0+c AS e FROM mixed_null;
 SELECT a*b/c AS calc FROM id_int_int_int_100;
 SELECT b*b AS calc FROM mixed;
---SELECT a, b, a+b AS e, a+b+NULL AS f FROM id_int_int_int_100;
---SELECT a, b, b+b AS e, b+b+NULL AS f FROM mixed;
---SELECT a, b, b+b AS e, b+b+NULL AS f FROM mixed_null;
+SELECT a, b, a+b AS e, a+b+NULL AS f FROM id_int_int_int_100;
+SELECT a, b, b+b AS e, b+b+NULL AS f FROM mixed;
+SELECT a, b, b+b AS e, b+b+NULL AS f FROM mixed_null;
 
 -- ORDER BY
 SELECT * FROM mixed ORDER BY a;
@@ -90,7 +94,7 @@ SELECT a AS whatever, SUM(b) FROM mixed GROUP BY whatever;
 --SELECT c_custkey, c_name, COUNT(a) FROM tpch_customer JOIN ( SELECT * FROM id_int_int_int_100 JOIN mixed ON id_int_int_int_100.a = mixed.id ) AS sub ON tpch_customer.c_custkey = sub.a GROUP BY c_custkey, c_name HAVING COUNT(sub.a) >= 2;
 
 -- COUNT(*)
--- SELECT COUNT(*) FROM mixed GROUP BY a;
+--SELECT COUNT(*) FROM mixed GROUP BY a;
 --SELECT a, COUNT(*) FROM mixed GROUP BY a;
 --SELECT COUNT(*), SUM(a + b) FROM id_int_int_int_100;
 --
@@ -112,6 +116,7 @@ SELECT b, sub.min_c, max_b FROM (SELECT a, b, MAX(b) AS max_b, MIN(c) AS min_c F
 
 -- HAVING
 SELECT a, b, MAX(b), AVG(c) FROM mixed GROUP BY a, b HAVING MAX(b) >= 10 AND MAX(b) < 40;
+SELECT a, b, MAX(b), AVG(c) FROM mixed GROUP BY a, b HAVING MAX(b) >= 10 AND MAX(b*0.8+c*0.01) < 40;
 SELECT a, b, MAX(b), AVG(c) FROM mixed GROUP BY a, b HAVING MAX(b) > 10 AND MAX(b) <= 30;
 SELECT a, b, MAX(b), AVG(c) FROM mixed GROUP BY a, b HAVING b > 33 AND AVG(c) > 50;
 SELECT a, b, MAX(b), AVG(c) FROM mixed GROUP BY a, b HAVING b > 33 OR b = 1 OR b = 17;
@@ -165,11 +170,11 @@ SELECT (SELECT MIN(1 + 2) FROM mixed) AS foos FROM id_int_int_int_100;
 
 ---- Subqueries in WHERE statement
 SELECT a FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
---SELECT * FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
+SELECT * FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
 SELECT a, b FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
---SELECT * FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
---SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
---SELECT a, b FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
+-- SELECT * FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
+-- SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
+-- SELECT a, b FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
 --
 ---- cannot test these because we cannot handle empty query results here
 ---- SELECT * FROM mixed WHERE b IS NULL;
@@ -187,3 +192,11 @@ SELECT a, b FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
 -- CASE
 SELECT CASE WHEN id < 50 THEN 'Hello' WHEN id < 70 THEN 'World' ELSE 'Ciao' END AS case_column FROM mixed;
 SELECT CASE id + 10 WHEN 15 THEN a WHEN 26 THEN 'World' ELSE d END AS case_column FROM mixed;
+
+-- IN
+-- SELECT * FROM id_int_int_int_100 WHERE a IN (24, 55, 78)
+-- SELECT * FROM id_int_int_int_100 WHERE a IN (b - 48, b + 1)
+-- SELECT a + c FROM id_int_int_int_100 WHERE a + c IN (9, "Hello", 13.345)
+
+-- EXTRACT()
+-- SELECT EXTRACT(MONTH FROM date) FROM int_date;
