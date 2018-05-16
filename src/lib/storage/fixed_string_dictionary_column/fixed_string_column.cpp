@@ -76,7 +76,7 @@ template <typename T>
 ValueID FixedStringColumn<T>::lower_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
-  const auto typed_value = FixedString(type_cast<std::string>(value));
+  const auto typed_value = type_cast<std::string>(value);
 
   auto it = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
   if (it == _dictionary->cend()) return INVALID_VALUE_ID;
@@ -87,7 +87,7 @@ template <typename T>
 ValueID FixedStringColumn<T>::upper_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
-  const auto typed_value = FixedString(type_cast<std::string>(value));
+  const auto typed_value = type_cast<std::string>(value);
 
   auto it = std::upper_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
   if (it == _dictionary->cend()) return INVALID_VALUE_ID;

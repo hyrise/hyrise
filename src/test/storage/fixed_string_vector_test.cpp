@@ -45,12 +45,14 @@ TEST_F(FixedStringVectorTest, AtOperator) {
 }
 
 TEST_F(FixedStringVectorTest, Iterator) {
+  std::vector<char> helper = {'a', 'b', 'c', 'd', 'e'};
+  auto fixed_string = FixedString(&helper[0], 5u);
   auto fixed_string_vector = FixedStringVector(5u);
   fixed_string_vector.push_back("str1");
   fixed_string_vector.push_back("str1");
 
   for (auto it = fixed_string_vector.begin(); it != fixed_string_vector.end(); ++it) {
-    *it = FixedString("abcde");
+    *it = fixed_string;
   }
 
   EXPECT_EQ(fixed_string_vector[0u], "abcde");
@@ -85,6 +87,8 @@ TEST_F(FixedStringVectorTest, Allocator) {
 }
 
 TEST_F(FixedStringVectorTest, ReverseIterator) {
+  std::vector<char> helper = {'a', 'b', 'c', 'd'};
+  auto fixed_string = FixedString(&helper[0], 4u);
   auto fixed_string_vector = FixedStringVector(4u);
   fixed_string_vector.push_back("str1");
   fixed_string_vector.push_back("str2");
@@ -98,7 +102,7 @@ TEST_F(FixedStringVectorTest, ReverseIterator) {
   EXPECT_EQ(first_value->string(), "str1");
 
   for (auto it = fixed_string_vector.rbegin(); it != fixed_string_vector.rend(); ++it) {
-    *it = FixedString("abcd");
+    *it = fixed_string;
   }
 
   EXPECT_EQ(fixed_string_vector[0u], "abcd");

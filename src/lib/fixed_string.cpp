@@ -11,10 +11,6 @@
 
 namespace opossum {
 
-FixedString::FixedString(const std::string& string) : _mem(new char[string.size()]{}), _maximum_length(string.size()) {
-  std::memcpy(_mem, string.c_str(), _maximum_length);
-}
-
 FixedString::FixedString(char* mem, size_t string_length)
     : _mem(mem), _maximum_length(string_length), _owns_memory(false) {}
 
@@ -64,6 +60,10 @@ bool FixedString::operator<(const FixedString& other) const {
   if (result == 0) return size() < other.size();
   return result < 0;
 }
+
+bool operator<(const FixedString& lhs, const std::string& rhs) { return lhs.string() < rhs; }
+
+bool operator<(const std::string& lhs, const FixedString& rhs) { return lhs < rhs.string(); }
 
 bool FixedString::operator==(const FixedString& other) const {
   if (size() != other.size()) return false;

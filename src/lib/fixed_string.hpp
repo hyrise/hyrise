@@ -18,12 +18,6 @@ namespace opossum {
 // It stores a string in an array of chars in order to save memory space by avoiding small string optimization (SSO).
 class FixedString {
  public:
-  // Create a FixedString from a std::string
-  // Currently, there is no solution to create a char array on the stack. One possible solution, called dynarray,
-  // (see http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3662.html) was rejected.
-  // (see https://stackoverflow.com/questions/20777623/what-is-the-status-on-dynarrays/20777801#20777801)
-  explicit FixedString(const std::string& string);
-
   // Create a FixedString from a memory address
   FixedString(char* mem, size_t string_length);
 
@@ -49,12 +43,12 @@ class FixedString {
   // is equal to the other FixedString, the shorter FixedString is smaller.
   // Example: "defg" < "defghi"
   bool operator<(const FixedString& other) const;
+  friend bool operator<(const FixedString& lhs, const std::string& rhs);
+  friend bool operator<(const std::string& lhs, const FixedString& rhs);
 
   // The FixedStrings must have the same length to be equal
   bool operator==(const FixedString& other) const;
-
   friend bool operator==(const FixedString& lhs, const std::string& rhs);
-
   friend bool operator==(const std::string& lhs, const FixedString& rhs);
 
   // Prints FixedString as string

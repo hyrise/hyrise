@@ -102,7 +102,7 @@ class FixedStringDictionaryEncoder : public ColumnEncoder<FixedStringDictionaryE
  private:
   static ValueID _get_value_id(const FixedStringVector& dictionary, const std::string& value) {
     return static_cast<ValueID>(std::distance(
-        dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), FixedString(value))));
+        dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
   }
 
   size_t _calculate_fixed_string_length(const pmr_concurrent_vector<std::string>& values) const {
