@@ -247,13 +247,9 @@ ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_expressio
       const auto& value_expression = static_cast<const ValueExpression &>(expression);
       const auto& value = value_expression.value;
 
-      if (value.type() == typeid(NullValue)) {
-        // A NULL value doesn't have a type, so it can be evaluated to any type
-        return T{};
-      } else {
-        Assert(value.type() == typeid(T), "Can't evaluate ValueExpression to requested type T");
-        return boost::get<T>(value);
-      }
+      Assert(value.type() == typeid(T), "Can't evaluate ValueExpression to requested type T");
+
+      return boost::get<T>(value);
     }
 
     case ExpressionType::Function:
@@ -378,33 +374,48 @@ template<typename T, template<typename...> typename Functor>
 ExpressionEvaluator::ExpressionResult<T> ExpressionEvaluator::evaluate_binary_expression(
 const AbstractExpression& left_operand,
 const AbstractExpression& right_operand) {
-  // The operands need to have types, so when either one is a NULL value, just assume the actual DataType to be the
-  // result data type
-  const auto result_data_type = data_type_from_type<T>();
-  const auto left_data_type = left_operand.data_type() == DataType::Null ? result_data_type : left_operand.data_type();
-  const auto right_data_type = right_operand.data_type() == DataType::Null ? result_data_type : right_operand.data_type();
+  const auto left_is_null = left_operand.data_type() == DataType::Null;
+  const auto right_is_null = right_operand.data_type() == DataType::Null;
+
+  if (left_is_null && right_is_null) return NullValue{};
 
   ExpressionResult<T> result;
 
-  resolve_data_type(left_data_type, [&](const auto left_data_type_t) {
-    using LeftDataType = typename decltype(left_data_type_t)::type;
+//  if (left_is_null) {
+//    resolve_data_type(right_operand.data_type(), [&](const auto right_data_type_t) {
+//      using RightDataType = typename decltype(right_data_type_t)::type;
+//      const auto right_result = evaluate_expression<RightDataType>(right_operand);
+//      result = evaluate_binary_expression<T, Functor>(ExpressionResult<NullValue>(NullValue{}), right_result);
+//    });
+//  } else if (right_is_null) {
+//    resolve_data_type(left_operand.data_type(), [&](const auto left_data_type_t) {
+//      using LeftDataType = typename decltype(left_data_type_t)::type;
+//      const auto left_result = evaluate_expression<LeftDataType>(left_operand);
+//
+//      result = evaluate_binary_expression<T, Functor>(left_result, ExpressionResult<NullValue>(NullValue{}));
+//    });
+//
+//  } else {
+    resolve_data_type(left_operand.data_type(), [&](const auto left_data_type_t) {
+      using LeftDataType = typename decltype(left_data_type_t)::type;
 
-    const auto left_operands = evaluate_expression<LeftDataType>(left_operand);
+      const auto left_operands = evaluate_expression<LeftDataType>(left_operand);
 
-    resolve_data_type(right_data_type, [&](const auto right_data_type_t) {
-      using RightDataType = typename decltype(right_data_type_t)::type;
+      resolve_data_type(right_operand.data_type(), [&](const auto right_data_type_t) {
+        using RightDataType = typename decltype(right_data_type_t)::type;
 
-      const auto right_operands = evaluate_expression<RightDataType>(right_operand);
+        const auto right_operands = evaluate_expression<RightDataType>(right_operand);
 
-      using ConcreteFunctor = Functor<T, LeftDataType, RightDataType>;
+        using ConcreteFunctor = Functor<T, LeftDataType, RightDataType>;
 
-      if constexpr (ConcreteFunctor::supported) {
-        result = evaluate_binary_operator<T, LeftDataType, RightDataType>(left_operands, right_operands, ConcreteFunctor{});
-      } else {
-        Fail("Operation not supported on the given types");
-      }
+        if constexpr (ConcreteFunctor::supported) {
+          result = evaluate_binary_operator<T, LeftDataType, RightDataType>(left_operands, right_operands, ConcreteFunctor{});
+        } else {
+          Fail("Operation not supported on the given types");
+        }
+      });
     });
-  });
+//  }
 
   return result;
 }
