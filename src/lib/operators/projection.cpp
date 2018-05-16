@@ -26,7 +26,8 @@ std::shared_ptr<AbstractOperator> Projection::_on_recreate(
     const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
 
   /**
-   * Replace ExternalExpressions and ValuePlaceholderExpressions with actual values.
+   * Replace ExternalExpressions and ValuePlaceholderExpressions with actual values. This makes corelated subqueries
+   * and parameterised queries work.
    */
   auto expressions = expressions_copy(this->expressions);
   for (auto& expression : expressions) {

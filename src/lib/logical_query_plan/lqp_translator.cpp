@@ -43,7 +43,7 @@
 //#include "operators/product.hpp"
 #include "operators/alias_operator.hpp"
 #include "operators/projection.hpp"
-//#include "operators/sort.hpp"
+#include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 //#include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
@@ -53,13 +53,15 @@
 #include "predicate_node.hpp"
 #include "projection_node.hpp"
 //#include "show_columns_node.hpp"
-//#include "sort_node.hpp"
+#include "sort_node.hpp"
 //#include "storage/storage_manager.hpp"
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
 //#include "update_node.hpp"
 //#include "utils/performance_warning.hpp"
 //#include "validate_node.hpp"
+
+using namespace std::string_literals;
 
 namespace opossum {
 
@@ -101,8 +103,8 @@ LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
       return _translate_predicate_node(node);
     case LQPNodeType::Projection:
       return _translate_projection_node(node);
-//    case LQPNodeType::Sort:
-//      return _translate_sort_node(node);
+    case LQPNodeType::Sort:
+      return _translate_sort_node(node);
 //    case LQPNodeType::Join:
 //      return _translate_join_node(node);
     case LQPNodeType::Aggregate:
@@ -288,32 +290,38 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_projection_node(
                                       _translate_expressions(projection_node->output_column_expressions(), input_node));
 }
 
-//std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
-//    const std::shared_ptr<AbstractLQPNode>& node) const {
-//  const auto sort_node = std::dynamic_pointer_cast<SortNode>(node);
-//  auto input_operator = translate_node(node->left_input());
-//
-//  /**
-//   * Go through all the order descriptions and create a sort operator for each of them.
-//   * Iterate in reverse because the sort operator does not support multiple columns, and instead relies on stable sort.
-//   * We therefore sort by the n+1-th column before sorting by the n-th column.
-//   */
-//
-//  std::shared_ptr<AbstractOperator> result_operator;
-//  const auto& definitions = sort_node->order_by_definitions();
-//  if (definitions.size() > 1) {
-//    PerformanceWarning("Multiple ORDER BYs are executed one-by-one");
-//  }
-//  for (auto it = definitions.rbegin(); it != definitions.rend(); it++) {
-//    const auto& definition = *it;
-//    result_operator = std::make_shared<Sort>(input_operator, node->get_output_column_id(definition.column_reference),
-//                                             definition.order_by_mode);
-//    input_operator = result_operator;
-//  }
-//
-//  return result_operator;
-//}
-//
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto sort_node = std::dynamic_pointer_cast<SortNode>(node);
+  auto input_operator = translate_node(node->left_input());
+
+  /**
+   * Go through all the order descriptions and create a sort operator for each of them.
+   * Iterate in reverse because the sort operator does not support multiple columns, and instead relies on stable sort.
+   * We therefore sort by the n+1-th column before sorting by the n-th column.
+   */
+
+  std::shared_ptr<AbstractOperator> current_pqp = input_operator;
+  const auto& pqp_expressions = _translate_expressions(sort_node->expressions, node->left_input());
+  if (pqp_expressions.size() > 1) {
+    PerformanceWarning("Multiple ORDER BYs are executed one-by-one");
+  }
+
+  auto pqp_expression_iter = pqp_expressions.rbegin();
+  auto order_by_mode_iter = sort_node->order_by_modes.rbegin();
+
+  for (; pqp_expression_iter != pqp_expressions.rend();
+       ++pqp_expression_iter, ++order_by_mode_iter) {
+    const auto& pqp_expression = *pqp_expression_iter;
+    const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(pqp_expression);
+    Assert(pqp_column_expression, "Sort Expression '"s + pqp_expression->as_column_name() + "' must be available as column, LQP is invalid");
+
+    current_pqp = std::make_shared<Sort>(current_pqp, pqp_column_expression->column_id, *order_by_mode_iter);
+  }
+
+  return current_pqp;
+}
+
 //std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 //    const std::shared_ptr<AbstractLQPNode>& node) const {
 //  const auto input_left_operator = translate_node(node->left_input());

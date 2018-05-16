@@ -506,6 +506,15 @@ const hsql::SelectStatement &select) {
   // Visitor that identifies aggregates and their arguments
   const auto find_aggregates_and_arguments = [&](auto& sub_expression) {
     if (sub_expression->type != ExpressionType::Aggregate) return true;
+
+    /**
+     * If the AggregateExpression has already been computed in a previous node (consider "x" in
+     * "SELECT x FROM (SELECT MIN(a) as x FROM t) AS y)", it doesn't count as a new Aggregate and is therefore not
+     * considered a "Aggregate" in the current SELECT list. Handling this as a special case seems hacky to me as well,
+     * but it's the best solution I can come up with right now.
+     */
+    if (_current_lqp->find_column_id(*sub_expression)) return false;
+
     auto aggregate_expression = std::static_pointer_cast<AggregateExpression>(sub_expression);
     if (aggregate_expression_set.emplace(aggregate_expression).second) {
       aggregate_expressions.emplace_back(aggregate_expression);
@@ -522,6 +531,7 @@ const hsql::SelectStatement &select) {
   };
 
   // Identify all Aggregates and their arguments needed for SELECT and build the select_list_elements
+  // Each select_list_element is either an Expression or nullptr if the element is a Wildcard
   std::vector<std::shared_ptr<AbstractExpression>> select_list_elements;
   auto post_select_sql_identifier_context = std::make_shared<SQLIdentifierContext>(*_sql_identifier_context);
   for (const auto& hsql_select_expr : *select.selectList) {
@@ -614,45 +624,6 @@ const hsql::SelectStatement &select) {
         }
       }
     }
-
-//    if (hsql_expr->type == hsql::kExprStar) {
-//      if (hsql_expr->table) {
-//        const auto expressions = _sql_identifier_context->resolve_table_name(hsql_expr->table);
-//        for (const auto& expression : expressions) {
-//          // If GROUP BY is present, only select GROUP BY expressions that have the specified table name.
-//          // Otherwise, select all expressions from FROM with that table name
-//          if (select.groupBy) {
-//            const auto group_by_expression_iter = std::find_if(group_by_expressions.begin(), group_by_expressions.end(),
-//            [&](const auto& group_by_expression) { return group_by_expression->deep_equals(*expression); });
-//
-//            if (group_by_expression_iter != group_by_expressions.end()) {
-//              output_expressions.emplace_back(expression);
-//            }
-//          } else {
-//            const auto& from_expressions = _from_root_node->output_column_expressions();
-//            const auto from_expressions_iter = std::find_if(from_expressions.begin(), from_expressions.end(),
-//                                                               [&](const auto& input_expression) { return input_expression->deep_equals(*expression); });
-//
-//            if (from_expressions_iter != from_expressions.end()) {
-//              output_expressions.emplace_back(expression);
-//            }
-//          }
-//        }
-//      } else {
-//        // When GROUP BY is present, a * in the SELECT list refers to all GROUP BY expressions.
-//        // When no GROUP BY is present, all FROM expressions are selected.
-//        if (select.groupBy) {
-//          output_expressions.reserve(output_expressions.size() + group_by_expressions.size());
-//          for (const auto& group_by_expression : group_by_expressions) {
-//            output_expressions.emplace_back(group_by_expression);
-//          }
-//        } else {
-//          output_expressions.reserve(output_expressions.size() + input_expressions.size());
-//          for (const auto& input_expression : input_expressions) {
-//            output_expressions.emplace_back(input_expression);
-//          }
-//        }
-//      }
     else {
       auto output_expression = select_list_elements[select_list_idx];
       output_expressions.emplace_back(output_expression);
@@ -671,6 +642,9 @@ const hsql::SelectStatement &select) {
   // Check whether we need to create an AliasNode
   const auto need_alias_node = std::any_of(select.selectList->begin(), select.selectList->end(), [](const auto * hsql_expr) {
     return hsql_expr->alias != nullptr;
+  }) || std::any_of(output_expressions.begin(), output_expressions.end(), [&](const auto& expression) {
+    const auto identifier = _sql_identifier_context->get_expression_identifier(expression);
+    return identifier && identifier->column_name != expression->as_column_name();
   });
 
   if (need_alias_node) {

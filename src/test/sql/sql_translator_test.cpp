@@ -318,6 +318,23 @@ TEST_F(SQLTranslatorTest, AggregateAndGroupByWildcard) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, AggregateForwarding) {
+  // Test that a referenced Aggregate does not result in redundant (and illegal!) AggregateNodes
+
+  const auto actual_lqp = compile_query("SELECT x + 3 FROM (SELECT MIN(a) as x FROM int_float) AS t;");
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(addition(min(int_float_a), 3)),
+    AliasNode::make(expression_vector(min(int_float_a)), std::vector<std::string>({"x"}),
+      AggregateNode::make(expression_vector(), expression_vector(min(int_float_a)),
+        stored_table_node_int_float
+  )));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, SubSelectFromSimple) {
   const auto actual_lqp_a = compile_query("SELECT z.x, z.a, z.b FROM (SELECT a + b AS x, * FROM int_float) AS z");
   const auto actual_lqp_b = compile_query("SELECT * FROM (SELECT a + b AS x, * FROM int_float) AS z");
@@ -329,8 +346,9 @@ TEST_F(SQLTranslatorTest, SubSelectFromSimple) {
     // clang-format off
   const auto expected_lqp =
   AliasNode::make(expressions, aliases,
-    ProjectionNode::make(expressions, stored_table_node_int_float)
-  );
+    AliasNode::make(expressions, aliases,
+      ProjectionNode::make(expressions, stored_table_node_int_float)
+  ));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
@@ -369,7 +387,7 @@ TEST_F(SQLTranslatorTest, OrderByTest) {
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(int_float_a, int_float_b),
     SortNode::make(expression_vector(int_float_a, addition(int_float_a, int_float_b), int_float_b), order_by_modes,
-      ProjectionNode::make(expression_vector(addition(int_float_a, int_float_a), int_float_b, int_float_b),
+      ProjectionNode::make(expression_vector(addition(int_float_a, int_float_b), int_float_a, int_float_b),
         stored_table_node_int_float
   )));
   // clang-format on

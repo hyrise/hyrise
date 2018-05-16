@@ -29,17 +29,17 @@ SELECT b*b AS calc FROM mixed;
 --SELECT a, b, a+b AS e, a+b+NULL AS f FROM id_int_int_int_100;
 --SELECT a, b, b+b AS e, b+b+NULL AS f FROM mixed;
 --SELECT a, b, b+b AS e, b+b+NULL AS f FROM mixed_null;
---
----- ORDER BY
---SELECT * FROM mixed ORDER BY a;
---SELECT * FROM mixed ORDER BY a, b;
---SELECT * FROM mixed ORDER BY a, b ASC;
---SELECT * FROM mixed ORDER BY a, b DESC;
---SELECT * FROM mixed ORDER BY b, a, c;
---SELECT * FROM mixed ORDER BY b, a DESC, c;
---SELECT sub.a, sub.b FROM (SELECT a, b FROM mixed WHERE a = 'a' ORDER BY b) AS sub WHERE sub.b > 10 ORDER BY b;
----- (#577) SELECT * FROM mixed_null ORDER BY b;
---
+
+-- ORDER BY
+SELECT * FROM mixed ORDER BY a;
+SELECT * FROM mixed ORDER BY a, b;
+SELECT * FROM mixed ORDER BY a, b ASC;
+SELECT * FROM mixed ORDER BY a, b DESC;
+SELECT * FROM mixed ORDER BY b, a, c;
+SELECT * FROM mixed ORDER BY b, a DESC, c;
+SELECT sub.a, sub.b FROM (SELECT a, b FROM mixed WHERE a = 'a' ORDER BY b) AS sub WHERE sub.b > 10 ORDER BY b;
+SELECT * FROM mixed_null ORDER BY b;
+
 ---- LIMIT
 --SELECT * FROM mixed LIMIT 77;
 --SELECT b FROM mixed LIMIT 10;
@@ -108,7 +108,7 @@ SELECT a, AVG(b) FROM mixed_null GROUP BY a;
 -- SELECT a, COUNT(b) FROM mixed_null GROUP BY a;
 
 -- Checks that output of Aggregate can be worked with correctly.
---SELECT b, sub.min_c, max_b FROM (SELECT a, b, MAX(b) AS max_b, MIN(c) AS min_c FROM mixed GROUP BY a, b) as sub WHERE b BETWEEN 20 AND 50 AND min_c > 15;
+SELECT b, sub.min_c, max_b FROM (SELECT a, b, MAX(b) AS max_b, MIN(c) AS min_c FROM mixed GROUP BY a, b) as sub WHERE b BETWEEN 20 AND 50 AND min_c > 15;
 
 -- HAVING
 SELECT a, b, MAX(b), AVG(c) FROM mixed GROUP BY a, b HAVING MAX(b) >= 10 AND MAX(b) < 40;

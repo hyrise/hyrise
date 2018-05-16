@@ -21,7 +21,7 @@
 #include "logical_query_plan/projection_node.hpp"
 //#include "logical_query_plan/show_columns_node.hpp"
 //#include "logical_query_plan/show_tables_node.hpp"
-//#include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 //#include "logical_query_plan/union_node.hpp"
 #include "operators/aggregate.hpp"
@@ -34,7 +34,7 @@
 //#include "operators/maintenance/show_tables.hpp"
 //#include "operators/pqp_expression.hpp"
 #include "operators/projection.hpp"
-//#include "operators/sort.hpp"
+#include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
 //#include "operators/union_positions.hpp"
 //#include "storage/chunk_encoder.hpp"
@@ -239,6 +239,55 @@ TEST_F(LQPTranslatorTest, SelectExpressionCorelated) {
   ASSERT_TRUE(sub_select_projection);
 }
 
+TEST_F(LQPTranslatorTest, Sort) {
+  /**
+   * Build LQP and translate to PQP
+   *
+   * LQP resembles:
+   *   SELECT a, b FROM int_float ORDER BY a, a + b DESC, b ASC
+   */
+
+  const auto order_by_modes = std::vector<OrderByMode>({OrderByMode::Ascending, OrderByMode::Descending, OrderByMode::AscendingNullsLast});
+
+  // clang-format off
+  const auto lqp =
+  ProjectionNode::make(expression_vector(int_float_a, int_float_b),
+    SortNode::make(expression_vector(int_float_a, addition(int_float_a, int_float_b), int_float_b), order_by_modes,
+      ProjectionNode::make(expression_vector(addition(int_float_a, int_float_b), int_float_a, int_float_b),
+        int_float_node
+  )));
+  // clang-format on
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  /**
+   * Check PQP
+   */
+  const auto projection_a = std::dynamic_pointer_cast<const Projection>(pqp);
+  ASSERT_TRUE(projection_a);
+
+  const auto sort_a = std::dynamic_pointer_cast<const Sort>(pqp->input_left());
+  ASSERT_TRUE(sort_a);
+  EXPECT_EQ(sort_a->column_id(), ColumnID{1});
+  EXPECT_EQ(sort_a->order_by_mode(), OrderByMode::Ascending);
+
+  const auto sort_a_plus_b = std::dynamic_pointer_cast<const Sort>(sort_a->input_left());
+  ASSERT_TRUE(sort_a_plus_b);
+  EXPECT_EQ(sort_a_plus_b->column_id(), ColumnID{0});
+  EXPECT_EQ(sort_a_plus_b->order_by_mode(), OrderByMode::Descending);
+
+  const auto sort_b = std::dynamic_pointer_cast<const Sort>(sort_a_plus_b->input_left());
+  ASSERT_TRUE(sort_b);
+  EXPECT_EQ(sort_b->column_id(), ColumnID{2});
+  EXPECT_EQ(sort_b->order_by_mode(), OrderByMode::AscendingNullsLast);
+
+  const auto projection_b = std::dynamic_pointer_cast<const Projection>(sort_b->input_left());
+  ASSERT_TRUE(projection_b);
+
+  const auto get_table = std::dynamic_pointer_cast<const GetTable>(projection_b->input_left());
+  ASSERT_TRUE(get_table);
+
+}
+
 //TEST_F(LQPTranslatorTest, PredicateNodeUnaryScan) {
 //  /**
 //   * Build LQP and translate to PQP
@@ -408,22 +457,6 @@ TEST_F(LQPTranslatorTest, SelectExpressionCorelated) {
 //  EXPECT_EQ(projection_op->column_expressions().size(), 1u);
 //  EXPECT_EQ(projection_op->column_expressions()[0]->column_id(), ColumnID{0});
 //  EXPECT_EQ(*projection_op->column_expressions()[0]->alias(), "a");
-//}
-//
-//TEST_F(LQPTranslatorTest, SortNode) {
-//  /**
-//   * Build LQP and translate to PQP
-//   */
-//  const auto stored_table_node = StoredTableNode::make("table_int_float");
-//  auto sort_node = SortNode::make(
-//      std::vector<OrderByDefinition>{{LQPColumnReference(stored_table_node, ColumnID{0}), OrderByMode::Ascending}});
-//  sort_node->set_left_input(stored_table_node);
-//  const auto op = LQPTranslator{}.translate_node(sort_node);
-//
-//  const auto sort_op = std::dynamic_pointer_cast<Sort>(op);
-//  ASSERT_TRUE(sort_op);
-//  EXPECT_EQ(sort_op->column_id(), ColumnID{0});
-//  EXPECT_EQ(sort_op->order_by_mode(), OrderByMode::Ascending);
 //}
 //
 //TEST_F(LQPTranslatorTest, JoinNode) {

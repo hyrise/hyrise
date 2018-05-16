@@ -189,8 +189,8 @@ set(
 #    operators/product.hpp
     operators/projection.cpp
     operators/projection.hpp
-#    operators/sort.cpp
-#    operators/sort.hpp
+    operators/sort.cpp
+    operators/sort.hpp
     operators/table_scan/base_single_column_table_scan_impl.cpp
     operators/table_scan/base_single_column_table_scan_impl.hpp
     operators/table_scan/base_table_scan_impl.hpp
