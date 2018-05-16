@@ -23,7 +23,7 @@ SELECT b + c FROM mixed;
 SELECT (b * c) / b + (c * c) / b - b / b as x FROM mixed;
 --SELECT a + d FROM mixed;
 SELECT a as b FROM mixed;
---SELECT b, 4+6 as c, b+4 AS d, 5.0+c AS e FROM mixed_null;
+SELECT b, 4+6 as c, b+4 AS d, 5.0+c AS e FROM mixed_null;
 SELECT a*b/c AS calc FROM id_int_int_int_100;
 SELECT b*b AS calc FROM mixed;
 --SELECT a, b, a+b AS e, a+b+NULL AS f FROM id_int_int_int_100;
