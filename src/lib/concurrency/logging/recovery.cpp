@@ -3,6 +3,7 @@
 #include "logger.hpp"
 #include "types.hpp"
 #include "../../storage/storage_manager.hpp"
+#include "../../storage/table.hpp"
 
 #include <fstream>
 #include <sstream>
@@ -57,8 +58,30 @@ void Recovery::recover() {
       }
 
       // for value inserts 'v' only
-      auto data_types = StorageManager::get().get_table(_target_table_name).column_data_types();
+      auto table = StorageManager::get().get_table(table_name);
+      auto data_types = table->column_data_types();
 
+      std::vector<AllTypeVariant> values;
+
+      // (v,12,table1,RowID(0,25),(25,LAND_O,9001,asdf)) -> 25,LAND_O,9001,asdf
+      auto value_string = line.substr(rowID_end + 3, line.length() - rowID_end - 5);
+      size_t position;
+      for (auto &data_type : data_types){
+        position = value_string.find(',');
+        if (position !=  std::string::npos)
+          values.push_back(value_string.substr(0, position));
+        else
+          values.push_back(value_string);
+        value_string.erase(0, position + 1);
+        (void) data_type; // TODO REMOVE THIS SHIT
+      }
+
+
+      std::stringstream ss;
+      for (auto &value : values){
+        ss << value;
+      }
+      Logger::getInstance().value(transaction_id, table_name, row_id, ss);
     }
   }
 }
