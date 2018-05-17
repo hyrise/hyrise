@@ -153,7 +153,7 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context) 
 
     // All function that are not in the opossum:: namespace are not considered for inlining. Instead, a function
     // declaration (without a function body) is created.
-    if (!function_has_opossum_namespace) {
+    if (!function_has_opossum_namespace && function_name != "__clang_call_terminate") {
       context.llvm_value_map[&function] = _create_function_declaration(context, function, function.getName());
       call_sites.pop();
       continue;
@@ -169,7 +169,7 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context) 
     auto first_argument_cannot_be_resolved = first_argument->get()->getType()->isPointerTy() &&
                                              !GetRuntimePointerForValue(first_argument->get(), context)->is_valid();
 
-    if (first_argument_cannot_be_resolved) {
+    if (first_argument_cannot_be_resolved && function_name != "__clang_call_terminate") {
       call_sites.pop();
       continue;
     }

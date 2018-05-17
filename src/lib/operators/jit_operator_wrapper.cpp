@@ -1,5 +1,7 @@
 #include "jit_operator_wrapper.hpp"
 
+#include "operators/jit_operator/operators/jit_aggregate.hpp"
+
 namespace opossum {
 
 JitOperatorWrapper::JitOperatorWrapper(const std::shared_ptr<const AbstractOperator> left,
@@ -51,12 +53,13 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
   }
 
   std::function<void(const JitReadTuples*, JitRuntimeContext&)> execute_func;
+  auto two_specialization_passes = static_cast<bool>(std::dynamic_pointer_cast<JitAggregate>(_sink()));
   switch (_execution_mode) {
     case JitExecutionMode::Compile:
       // this corresponds to "opossum::JitReadTuples::execute(opossum::JitRuntimeContext&) const"
       execute_func = _module.specialize_and_compile_function<void(const JitReadTuples*, JitRuntimeContext&)>(
           "_ZNK7opossum13JitReadTuples7executeERNS_17JitRuntimeContextE",
-          std::make_shared<JitConstantRuntimePointer>(_source().get()), false);
+          std::make_shared<JitConstantRuntimePointer>(_source().get()), two_specialization_passes);
       break;
     case JitExecutionMode::Interpret:
       execute_func = &JitReadTuples::execute;
