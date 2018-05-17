@@ -89,6 +89,7 @@ bool jit_aggregate_equals(const JitTupleValue& lhs, const JitHashmapValue& rhs, 
   if (lhs.is_null(context) && rhs.is_null(rhs_index, context)) {
     return true;
   }
+
   if (lhs.is_null(context) || rhs.is_null(rhs_index, context)) {
     return false;
   }
