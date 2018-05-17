@@ -1,13 +1,12 @@
 #include <random>
 
-#if __has_include(<fs>)
+#if __has_include(<filesystem>)
 #include <filesystem>
 namespace fs = std::filesystem;
 #else
 #include <experimental/filesystem>
-#include <scheduler/current_scheduler.hpp>
-namespace fs = std::experimental::filesystem;
 #endif
+namespace fs = std::experimental::filesystem;
 
 #include <json.hpp>
 #include <storage/chunk_encoder.hpp>
@@ -17,6 +16,7 @@ namespace fs = std::experimental::filesystem;
 #include "import_export/csv_parser.hpp"
 #include "planviz/lqp_visualizer.hpp"
 #include "planviz/sql_query_plan_visualizer.hpp"
+#include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_db_generator.hpp"
@@ -25,11 +25,12 @@ namespace fs = std::experimental::filesystem;
 
 namespace opossum {
 
-BenchmarkRunner::BenchmarkRunner(BenchmarkConfig config, const NamedQueries& queries, const nlohmann::json& context)
-    : _config(std::move(config)), _queries(queries), _context(context) {}
+BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, const NamedQueries& queries,
+                                 const nlohmann::json& context)
+    : _config(config), _queries(queries), _context(context) {}
 
 void BenchmarkRunner::run() {
-  _config.out << "\n- Starting Benchmark.." << std::endl;
+  _config.out << "\n- Starting Benchmark..." << std::endl;
 
   // Run the queries in the selected mode
   switch (_config.benchmark_mode) {
@@ -100,7 +101,7 @@ void BenchmarkRunner::_benchmark_permuted_query_sets() {
 
       const auto query_benchmark_end = std::chrono::steady_clock::now();
 
-      auto& query_benchmark_result = _query_results_by_query_name.at(named_query.first);
+      auto& query_benchmark_result = _query_results_by_query_name[named_query.first];
       query_benchmark_result.duration += query_benchmark_end - query_benchmark_begin;
       query_benchmark_result.num_iterations++;
     }
@@ -119,11 +120,12 @@ void BenchmarkRunner::_benchmark_individual_queries() {
 
     QueryBenchmarkResult result;
     result.num_iterations = state.num_iterations;
-    result.duration = std::chrono::high_resolution_clock::now() - state.begin;
+    result.duration = state.end - state.begin;
 
     _query_results_by_query_name.emplace(name, result);
   }
 }
+
 void BenchmarkRunner::_execute_query(const NamedQuery& named_query) {
   const auto& name = named_query.first;
   const auto& sql = named_query.second;
@@ -172,8 +174,8 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
   stream << std::setw(2) << report << std::endl;
 }
 
-BenchmarkRunner BenchmarkRunner::create_tpch(BenchmarkConfig config, const std::vector<QueryID>& query_ids,
-                                             const float scale_factor) {
+BenchmarkRunner BenchmarkRunner::create_tpch(const BenchmarkConfig& config, const std::vector<QueryID>& query_ids,
+                                             float scale_factor) {
   NamedQueries queries;
   queries.reserve(query_ids.size());
 
@@ -184,7 +186,7 @@ BenchmarkRunner BenchmarkRunner::create_tpch(BenchmarkConfig config, const std::
   config.out << "- Generating TPCH Tables with scale_factor=" << scale_factor << "..." << std::endl;
 
   ColumnEncodingSpec encoding_spec{config.encoding_type};
-  const auto tables = opossum::TpchDbGenerator(scale_factor, config.chunk_size).generate();
+  const auto tables = TpchDbGenerator(scale_factor, config.chunk_size).generate();
 
   for (auto& table : tables) {
     if (config.encoding_type != EncodingType::Unencoded) {
@@ -199,18 +201,15 @@ BenchmarkRunner BenchmarkRunner::create_tpch(BenchmarkConfig config, const std::
   // Add TPCH-specific information
   context.emplace("scale_factor", scale_factor);
 
-  return BenchmarkRunner(std::move(config), queries, context);
+  return BenchmarkRunner(config, queries, context);
 }
 
-BenchmarkRunner BenchmarkRunner::create(BenchmarkConfig config, const std::string& table_path,
+BenchmarkRunner BenchmarkRunner::create(const BenchmarkConfig& config, const std::string& table_path,
                                         const std::string& query_path) {
-  const auto tables = _parse_table_path(table_path);
+  const auto tables = _read_table_folder(table_path);
   if (tables.empty()) {
     throw std::runtime_error("No tables found in '" + table_path + "'");
   }
-
-  CsvMeta csv_meta{};
-  csv_meta.chunk_size = config.chunk_size;
 
   ColumnEncodingSpec encoding_spec{config.encoding_type};
 
@@ -221,7 +220,7 @@ BenchmarkRunner BenchmarkRunner::create(BenchmarkConfig config, const std::strin
     if (boost::algorithm::ends_with(table_str, ".tbl")) {
       table = load_table(table_str, config.chunk_size);
     } else {
-      table = CsvParser{}.parse(table_str, csv_meta);
+      table = CsvParser{}.parse(table_str);
     }
 
     if (config.encoding_type != EncodingType::Unencoded) {
@@ -232,11 +231,11 @@ BenchmarkRunner BenchmarkRunner::create(BenchmarkConfig config, const std::strin
     config.out << "- Adding table '" << table_name << "'" << std::endl;
   }
 
-  const auto queries = _parse_query_path(query_path);
+  const auto queries = _read_query_folder(query_path);
   return BenchmarkRunner(config, queries, _create_context(config));
 }
 
-std::vector<std::string> BenchmarkRunner::_parse_table_path(const std::string& table_path) {
+std::vector<std::string> BenchmarkRunner::_read_table_folder(const std::string& table_path) {
   const auto is_table_file = [](const std::string& filename) {
     return (boost::algorithm::ends_with(filename, ".csv") || boost::algorithm::ends_with(filename, ".tbl"));
   };
@@ -269,7 +268,7 @@ std::vector<std::string> BenchmarkRunner::_parse_table_path(const std::string& t
   return tables;
 }
 
-NamedQueries BenchmarkRunner::_parse_query_path(const std::string& query_path) {
+NamedQueries BenchmarkRunner::_read_query_folder(const std::string& query_path) {
   const auto is_sql_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".sql"); };
 
   fs::path path{query_path};
@@ -322,16 +321,25 @@ NamedQueries BenchmarkRunner::_parse_query_file(const std::string& query_path) {
 cxxopts::Options BenchmarkRunner::get_default_cli_options(const std::string& benchmark_name) {
   cxxopts::Options cli_options{benchmark_name};
 
+  // Make sure all current encodings are shown
+  std::vector<std::string> encoding_strings;
+  encoding_strings.reserve(encoding_type_to_string.size());
+  for (const auto& encoding : encoding_type_to_string) {
+    encoding_strings.emplace_back(boost::algorithm::to_lower_copy(encoding.second));
+  }
+
+  const auto encoding_strings_option = boost::algorithm::join(encoding_strings, ", ");
+
   // clang-format off
   cli_options.add_options()
     ("help", "print this help message")
     ("v,verbose", "Print log messages", cxxopts::value<bool>()->default_value("false"))
-    ("r,runs", "Maximum number of runs of a single query", cxxopts::value<size_t>()->default_value("1000")) // NOLINT
+    ("r,runs", "Maximum number of runs of a single query(set)", cxxopts::value<size_t>()->default_value("1000")) // NOLINT
     ("c,chunk_size", "ChunkSize, default is 2^32-1", cxxopts::value<ChunkOffset>()->default_value(std::to_string(Chunk::MAX_SIZE))) // NOLINT
-    ("t,time", "Maximum seconds within which a new query(set) is initiated", cxxopts::value<size_t>()->default_value("5")) // NOLINT
+    ("t,time", "Maximum seconds that a query(set) is run", cxxopts::value<size_t>()->default_value("5")) // NOLINT
     ("o,output", "File to output results to, don't specify for stdout", cxxopts::value<std::string>())
     ("m,mode", "IndividualQueries or PermutedQuerySets, default is IndividualQueries", cxxopts::value<std::string>()->default_value("IndividualQueries")) // NOLINT
-    ("e,encoding", "Specify Chunk encoding. Options: none, dictionary, runlength, frameofreference (default: dictionary)", cxxopts::value<std::string>()->default_value("dictionary"))  // NOLINT
+    ("e,encoding", "Specify Chunk encoding. Options: " + encoding_strings_option + " (default: dictionary)", cxxopts::value<std::string>()->default_value("dictionary"))  // NOLINT
     ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("mvcc", "Enable MVCC", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("visualize", "Create a visualization image of one LQP and PQP for each query", cxxopts::value<bool>()->default_value("false")); // NOLINT
@@ -404,7 +412,7 @@ BenchmarkConfig BenchmarkRunner::parse_default_cli_options(const cxxopts::ParseR
     encoding_type = EncodingType::RunLength;
   } else if (encoding_type_str == "frameofreference") {
     encoding_type = EncodingType::FrameOfReference;
-  } else if (encoding_type_str == "none") {
+  } else if (encoding_type_str == "unencoded") {
     encoding_type = EncodingType::Unencoded;
   } else {
     std::cerr << cli_options.help({}) << std::endl;
@@ -435,7 +443,8 @@ nlohmann::json BenchmarkRunner::_create_context(const BenchmarkConfig& config) {
   std::stringstream timestamp_stream;
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
-  const auto encoding_string = encoding_type_to_string.at(config.encoding_type);
+  auto encoding_string = encoding_type_to_string.at(config.encoding_type);
+  boost::algorithm::to_lower(encoding_string);
 
   return nlohmann::json{
       {"date", timestamp_stream.str()},
@@ -443,7 +452,14 @@ nlohmann::json BenchmarkRunner::_create_context(const BenchmarkConfig& config) {
       {"build_type", IS_DEBUG ? "debug" : "release"},
       {"encoding", encoding_string},
       {"benchmark_mode",
-       config.benchmark_mode == BenchmarkMode::IndividualQueries ? "IndividualQueries" : "PermutedQuerySets"}};
+       config.benchmark_mode == BenchmarkMode::IndividualQueries ? "IndividualQueries" : "PermutedQuerySets"},
+      {"max_runs", config.max_num_query_runs},
+      {"max_duration (s)", std::chrono::duration_cast<std::chrono::seconds>(config.max_duration).count()},
+      {"using_mvcc", config.use_mvcc == UseMvcc::Yes},
+      {"using_visualization", config.enable_visualization},
+      {"output_file_path", config.output_file_path ? *(config.output_file_path) : "stdout"},
+      {"using_scheduler", config.enable_scheduler},
+      {"verbose", config.verbose}};
 }
 
 }  // namespace opossum

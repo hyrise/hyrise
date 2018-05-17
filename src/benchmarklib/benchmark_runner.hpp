@@ -19,9 +19,10 @@ namespace opossum {
 
 class BenchmarkRunner {
  public:
-  static BenchmarkRunner create_tpch(BenchmarkConfig config, const std::vector<QueryID>& query_ids = {},
+  static BenchmarkRunner create_tpch(const BenchmarkConfig& config, const std::vector<QueryID>& query_ids = {},
                                      float scale_factor = 1.0f);
-  static BenchmarkRunner create(BenchmarkConfig config, const std::string& table_path, const std::string& query_path);
+  static BenchmarkRunner create(const BenchmarkConfig& config, const std::string& table_path,
+                                const std::string& query_path);
 
   void run();
 
@@ -30,7 +31,7 @@ class BenchmarkRunner {
   static cxxopts::Options get_default_cli_options(const std::string& benchmark_name);
 
  private:
-  BenchmarkRunner(BenchmarkConfig config, const NamedQueries& queries, const nlohmann::json& context);
+  BenchmarkRunner(const BenchmarkConfig& config, const NamedQueries& queries, const nlohmann::json& context);
 
   // Run benchmark in BenchmarkMode::PermutedQuerySets mode
   void _benchmark_permuted_query_sets();
@@ -44,8 +45,8 @@ class BenchmarkRunner {
   void _create_report(std::ostream& stream) const;
   // Get all the files/tables/queries from a given path
 
-  static std::vector<std::string> _parse_table_path(const std::string& table_path);
-  static NamedQueries _parse_query_path(const std::string& query_path);
+  static std::vector<std::string> _read_table_folder(const std::string& table_path);
+  static NamedQueries _read_query_folder(const std::string& query_path);
   static NamedQueries _parse_query_file(const std::string& query_path);
 
   static nlohmann::json _create_context(const BenchmarkConfig& config);
