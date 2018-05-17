@@ -35,8 +35,10 @@ ColumnIndexType IndexTuningEvaluator::_propose_index_type(const IndexTuningChoic
 }
 
 uintptr_t IndexTuningEvaluator::_predict_memory_cost(const IndexTuningChoice& index_evaluation) const {
-  const auto table = StorageManager::get().get_table(index_evaluation.column_ref.table_name);
   // ToDo(anyone) adapt for multi column indices...
+  DebugAssert(index_evaluation.column_ref.column_ids.size() == 1, "Multi-column indices are not supported yet");
+
+  const auto table = StorageManager::get().get_table(index_evaluation.column_ref.table_name);
   const auto column_statistics =
       table->table_statistics()->column_statistics().at(index_evaluation.column_ref.column_ids[0]);
   const auto distinct_value_count = column_statistics->distinct_count();
