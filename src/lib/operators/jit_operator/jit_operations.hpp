@@ -54,10 +54,12 @@ namespace opossum {
 
 #define JIT_AGGREGATE_COMPUTE_CASE(r, types)                                                                \
   case JIT_GET_ENUM_VALUE(0, types):                                                                        \
-    rhs.set<JIT_GET_DATA_TYPE(0, types)>(op_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(context),             \
-                                                 rhs.get<JIT_GET_DATA_TYPE(0, types)>(rhs_index, context)), \
-                                         rhs_index, context);                                               \
+    catching_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(context), rhs.get<JIT_GET_DATA_TYPE(0, types)>(rhs_index, context)); \
     break;
+    //rhs.set<JIT_GET_DATA_TYPE(0, types)>(op_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(context),             \
+    //                                             rhs.get<JIT_GET_DATA_TYPE(0, types)>(rhs_index, context)), \
+    //                                     rhs_index, context);                                               \
+    //break;
 
 /* Arithmetic operators */
 const auto jit_addition = [](const auto a, const auto b) -> decltype(a + b) { return a + b; };
@@ -66,9 +68,9 @@ const auto jit_multiplication = [](const auto a, const auto b) -> decltype(a * b
 const auto jit_division = [](const auto a, const auto b) -> decltype(a / b) { return a / b; };
 const auto jit_modulo = [](const auto a, const auto b) -> decltype(a % b) { return a % b; };
 const auto jit_power = [](const auto a, const auto b) -> decltype(std::pow(a, b)) { return std::pow(a, b); };
-const auto jit_maximum = [](const auto a, const auto b) -> decltype(a + b) { return std::max(a, b); };
-const auto jit_minimum = [](const auto a, const auto b) -> decltype(std::min(a, b)) { return std::min(a, b); };
 const auto jit_increment = [](const auto a, const auto b) -> decltype(b + 1) { return b + 1; };
+const auto jit_maximum = [](const auto a, const auto b) -> decltype(a + b) { return std::max(a, b); };
+const auto jit_minimum = [](const auto a, const auto b) -> decltype(a + b) { return std::min(a, b); };
 
 /* Comparison operators */
 const auto jit_equals = [](const auto a, const auto b) -> decltype(a == b) { return a == b; };
@@ -176,10 +178,6 @@ __attribute__((noinline)) size_t jit_grow_by_one(const JitHashmapValue& value,
                                                  const JitVariantVector::InitialValue initial_value,
                                                  JitRuntimeContext& context);
 
-#define JIT_DATA_TYPE_INFO_NO_STRING                                                               \
-  ((bool, Bool, "bool"))((int32_t, Int, "int"))((int64_t, Long, "long"))((float, Float, "float"))( \
-      (double, Double, "double"))
-
 template <typename T>
 __attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const JitTupleValue& lhs,
                                                      const JitHashmapValue& rhs, const size_t rhs_index,
@@ -188,8 +186,17 @@ __attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const Jit
     return;
   }
 
+  // This lambda calls the op_func (a lambda that performs the actual computation) with type arguments and stores
+  // the result.
+  const auto store_result_wrapper = [&](const auto typed_lhs, const auto typed_rhs) -> decltype(op_func(typed_lhs, typed_rhs), void()) {
+    using ResultType = typename std::remove_const<decltype(typed_rhs)>::type;
+    rhs.set<ResultType>(op_func(typed_lhs, typed_rhs), rhs_index, context);
+  };
+
+  const auto catching_func = InvalidTypeCatcher<decltype(store_result_wrapper), void>(store_result_wrapper);
+
   switch (rhs.data_type()) {
-    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_AGGREGATE_COMPUTE_CASE, (JIT_DATA_TYPE_INFO_NO_STRING))
+    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_AGGREGATE_COMPUTE_CASE, (JIT_DATA_TYPE_INFO))
     default:
       break;
   }
