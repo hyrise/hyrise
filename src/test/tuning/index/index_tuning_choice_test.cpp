@@ -1,8 +1,8 @@
 #include <memory>
 
 #include "../../base_test.hpp"
-#include "tuning/index/index_tuning_option.hpp"
 #include "tuning/index/index_tuning_operation.hpp"
+#include "tuning/index/index_tuning_option.hpp"
 
 namespace opossum {
 

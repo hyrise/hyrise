@@ -1,8 +1,8 @@
 #pragma once
 
 #include "tuning/abstract_tuning_selector.hpp"
-#include "tuning/tuning_option.hpp"
 #include "tuning/tuning_operation.hpp"
+#include "tuning/tuning_option.hpp"
 
 namespace opossum {
 

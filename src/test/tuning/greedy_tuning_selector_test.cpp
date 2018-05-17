@@ -2,11 +2,11 @@
 
 #include "storage/table.hpp"
 #include "tuning/greedy_tuning_selector.hpp"
-#include "tuning/index/index_tuning_option.hpp"
 #include "tuning/index/index_tuning_operation.hpp"
+#include "tuning/index/index_tuning_option.hpp"
 #include "tuning/null_tuning_operation.hpp"
-#include "tuning/tuning_option.hpp"
 #include "tuning/tuning_operation.hpp"
+#include "tuning/tuning_option.hpp"
 
 namespace opossum {
 

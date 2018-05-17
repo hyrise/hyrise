@@ -1,8 +1,8 @@
 #include "index_tuning_evaluator.hpp"
 
+#include "resolve_type.hpp"
 #include "statistics/column_statistics.hpp"
 #include "statistics/table_statistics.hpp"
-#include "resolve_type.hpp"
 #include "storage/index/base_index.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -15,8 +15,10 @@ IndexTuningEvaluator::IndexTuningEvaluator() {}
 void IndexTuningEvaluator::_setup() { _saved_work_per_index.clear(); }
 
 void IndexTuningEvaluator::_process_access_record(const AbstractIndexTuningEvaluator::AccessRecord& record) {
-  const auto table_statistics = StorageManager::get().get_table(record.column_ref.table_name)->table_statistics();
   // ToDo(anyone) adapt for multi column indices...
+  DebugAssert(record.column_ref.column_ids.size() == 1, "Multi-column indices are not supported yet");
+
+  const auto table_statistics = StorageManager::get().get_table(record.column_ref.table_name)->table_statistics();
   const auto predicate_statistics =
       table_statistics->estimate_predicate(record.column_ref.column_ids[0], record.condition, record.compare_value);
   const auto total_rows = table_statistics->row_count();
