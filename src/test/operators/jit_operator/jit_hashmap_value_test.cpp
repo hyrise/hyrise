@@ -102,8 +102,7 @@ TEST_F(JitTupleValueTest, IsNullAndSetIsNull) {
   }
 }
 
-} // namespace opossum
-
+}  // namespace opossum
 
 class JitHashmapValue {
  public:

@@ -10,8 +10,8 @@ namespace opossum {
     return std::hash<JIT_GET_DATA_TYPE(0, types)>()( \
         context.tuple.get<JIT_GET_DATA_TYPE(0, types)>(value.tuple_index()));
 
-#define JIT_AGGREGATE_EQUALS_CASE(r, types)    \
-  case JIT_GET_ENUM_VALUE(0, types): \
+#define JIT_AGGREGATE_EQUALS_CASE(r, types) \
+  case JIT_GET_ENUM_VALUE(0, types):        \
     return lhs.get<JIT_GET_DATA_TYPE(0, types)>(context) == rhs.get<JIT_GET_DATA_TYPE(0, types)>(rhs_index, context);
 
 #define JIT_ASSIGN_CASE(r, types)    \
