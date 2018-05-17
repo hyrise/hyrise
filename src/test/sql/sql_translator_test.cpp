@@ -410,6 +410,23 @@ TEST_F(SQLTranslatorTest, OrderByTest) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp)
 }
 
+TEST_F(SQLTranslatorTest, InArray) {
+  const auto actual_lqp = compile_query("SELECT * FROM int_float WHERE a + 7 IN (1+2,3,4)");
+
+  const auto a_plus_7_in = in(addition(int_float_a, 7), array(addition(1,2), 3, 4));
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float_a, int_float_b),
+    PredicateNode::make(not_equals(a_plus_7_in, 0),
+      ProjectionNode::make(expression_vector(a_plus_7_in, int_float_a, int_float_b),
+         stored_table_node_int_float
+  )));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 //TEST_F(SQLTranslatorTest, ExpressionStringTest) {
 //  const auto query = "SELECT * FROM table_a WHERE a = 'b'";
 //  const auto result_node = compile_query(query);

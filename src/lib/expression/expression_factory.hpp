@@ -3,12 +3,14 @@
 #include <memory>
 
 #include "abstract_expression.hpp"
+#include "array_expression.hpp"
 #include "aggregate_expression.hpp"
 #include "arithmetic_expression.hpp"
 #include "between_expression.hpp"
 #include "binary_predicate_expression.hpp"
 #include "case_expression.hpp"
 #include "external_expression.hpp"
+#include "in_expression.hpp"
 #include "lqp_column_expression.hpp"
 #include "value_expression.hpp"
 #include "value_placeholder_expression.hpp"
@@ -83,6 +85,7 @@ extern binary<ArithmeticOperator::Division, ArithmeticExpression> division;
 extern binary<ArithmeticOperator::Multiplication, ArithmeticExpression> multiplication;
 extern binary<ArithmeticOperator::Addition, ArithmeticExpression> addition;
 extern binary<PredicateCondition::Equals, BinaryPredicateExpression> equals;
+extern binary<PredicateCondition::NotEquals, BinaryPredicateExpression> not_equals;
 extern binary<PredicateCondition::LessThan, BinaryPredicateExpression> less_than;
 extern binary<PredicateCondition::GreaterThanEquals, BinaryPredicateExpression> greater_than_equals;
 extern binary<PredicateCondition::GreaterThan, BinaryPredicateExpression> greater_than;
@@ -103,6 +106,16 @@ std::vector<std::shared_ptr<AbstractExpression>> expression_vector(Args &&... ar
   return std::vector<std::shared_ptr<AbstractExpression>>({
     to_expression(args)...
   });
+}
+
+template<typename ... Args>
+std::shared_ptr<ArrayExpression> array(Args &&... args) {
+  return std::make_shared<ArrayExpression>(expression_vector(std::forward<Args>(args)...));
+}
+
+template<typename V, typename S>
+std::shared_ptr<InExpression> in(const V& v, const S& s) {
+  return std::make_shared<InExpression>(to_expression(v), to_expression(s));
 }
 
 }  // namespace expression_factory

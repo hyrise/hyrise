@@ -1045,7 +1045,7 @@ ExpressionResult<int32_t> ExpressionEvaluator::evaluate_in_expression<int32_t>(c
     const auto& array_expression = static_cast<const ArrayExpression&>(right_expression);
 
     /**
-     * To keep the code simpl for now, transform the InExpression like this:
+     * To keep the code simple for now, transform the InExpression like this:
      * "a IN (x, y, z)"   ---->   "a = x OR a = y OR a = z"
      *
      * But first, out of array_expression.elements(), pick those expressions whose type can be compared with

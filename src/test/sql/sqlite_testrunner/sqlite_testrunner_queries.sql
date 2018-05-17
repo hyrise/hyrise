@@ -194,9 +194,9 @@ SELECT CASE WHEN id < 50 THEN 'Hello' WHEN id < 70 THEN 'World' ELSE 'Ciao' END 
 SELECT CASE id + 10 WHEN 15 THEN a WHEN 26 THEN 'World' ELSE d END AS case_column FROM mixed;
 
 -- IN
--- SELECT * FROM id_int_int_int_100 WHERE a IN (24, 55, 78)
--- SELECT * FROM id_int_int_int_100 WHERE a IN (b - 48, b + 1)
--- SELECT a + c FROM id_int_int_int_100 WHERE a + c IN (9, "Hello", 13.345)
+SELECT * FROM id_int_int_int_100 WHERE a IN (24, 55, 78)
+SELECT * FROM id_int_int_int_100 WHERE a IN (b - 48, b + 1)
+SELECT a + c FROM id_int_int_int_100 WHERE a + c IN (110, 9, 'Hello', 13.345)
 
 -- EXTRACT()
 -- SELECT EXTRACT(MONTH FROM date) FROM int_date;

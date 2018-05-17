@@ -18,6 +18,7 @@
 #include "expression/between_expression.hpp"
 #include "expression/case_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/expression_factory.hpp"
 #include "expression/logical_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/lqp_select_expression.hpp"
@@ -72,6 +73,8 @@
 //}
 //
 //}  // namespace
+
+using namespace opossum::expression_factory;
 
 namespace {
 
@@ -760,8 +763,16 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
    * Translate AbstractPredicateExpression
    */
   if (expression->type == ExpressionType::Predicate) {
-    current_node = _add_expressions_if_unavailable(current_node, expression->arguments);
-    return PredicateNode::make(expression, current_node);
+    const auto predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(expression);
+
+    if (predicate_expression->predicate_condition == PredicateCondition::In) {
+      // TODO(anybody) Remove this branch. The TableScan doesn't support IN, atm
+      current_node = _add_expressions_if_unavailable(current_node, {expression});
+      return PredicateNode::make(not_equals(expression, 0), current_node);
+    } else {
+      current_node = _add_expressions_if_unavailable(current_node, expression->arguments);
+      return PredicateNode::make(expression, current_node);
+    }
   }
 
   /**

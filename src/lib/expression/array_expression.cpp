@@ -1,5 +1,7 @@
 #include "array_expression.hpp"
 
+#include <sstream>
+
 #include "expression_utils.hpp"
 #include "utils/assert.hpp"
 
@@ -32,8 +34,15 @@ std::shared_ptr<AbstractExpression> ArrayExpression::deep_copy() const {
 }
 
 std::string ArrayExpression::as_column_name() const {
-  Fail("Notyetimplemented");
-  return "";
+  std::stringstream stream;
+  stream << "(";
+  for (auto element_idx = size_t{0}; element_idx < elements().size(); ++element_idx) {
+    stream << elements()[element_idx]->as_column_name();
+    if (element_idx + 1 < elements().size()) stream << ", ";
+  }
+
+  stream << ")";
+  return stream.str();
 }
 
 }  // namespace opossum

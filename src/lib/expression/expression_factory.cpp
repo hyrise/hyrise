@@ -44,6 +44,7 @@ binary<ArithmeticOperator::Multiplication, ArithmeticExpression> multiplication;
 binary<ArithmeticOperator::Division, ArithmeticExpression> division;
 binary<ArithmeticOperator::Addition, ArithmeticExpression> addition;
 binary<PredicateCondition::Equals, BinaryPredicateExpression> equals;
+binary<PredicateCondition::NotEquals, BinaryPredicateExpression> not_equals;
 binary<PredicateCondition::LessThan, BinaryPredicateExpression> less_than;
 binary<PredicateCondition::GreaterThanEquals, BinaryPredicateExpression> greater_than_equals;
 binary<PredicateCondition::GreaterThan, BinaryPredicateExpression> greater_than;

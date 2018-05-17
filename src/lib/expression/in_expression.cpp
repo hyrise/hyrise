@@ -21,9 +21,7 @@ std::shared_ptr<AbstractExpression> InExpression::deep_copy() const {
 
 std::string InExpression::as_column_name() const {
   std::stringstream stream;
-
-  Fail("Todo");
-
+  stream << value()->as_column_name() << " IN " << set()->as_column_name();
   return stream.str();
 }
 
