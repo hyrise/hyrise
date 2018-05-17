@@ -69,8 +69,8 @@ const auto jit_division = [](const auto a, const auto b) -> decltype(a / b) { re
 const auto jit_modulo = [](const auto a, const auto b) -> decltype(a % b) { return a % b; };
 const auto jit_power = [](const auto a, const auto b) -> decltype(std::pow(a, b)) { return std::pow(a, b); };
 const auto jit_increment = [](const auto a, const auto b) -> decltype(b + 1) { return b + 1; };
-const auto jit_maximum = [](const auto a, const auto b) -> decltype(a + b) { return std::max(a, b); };
-const auto jit_minimum = [](const auto a, const auto b) -> decltype(a + b) { return std::min(a, b); };
+const auto jit_maximum = [](const auto a, const auto b) { return std::max(a, b); };
+const auto jit_minimum = [](const auto a, const auto b) { return std::min(a, b); };
 
 /* Comparison operators */
 const auto jit_equals = [](const auto a, const auto b) -> decltype(a == b) { return a == b; };
