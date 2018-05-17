@@ -10,8 +10,8 @@ namespace opossum {
  * A NullTuningOperation is the null-object-pattern implementation of a TuningOperation.
  * Consequently, it does nothing on execution.
  * It is created as a result of
- * - accepting a TuningChoice that is already chosen (keep the value as is)
- * - rejecting a TuningChoice that is not yet chosen (do not change status quo)
+ * - accepting a TuningOption that is already chosen (keep the value as is)
+ * - rejecting a TuningOption that is not yet chosen (do not change status quo)
  */
 class NullTuningOperation : public TuningOperation {
  public:

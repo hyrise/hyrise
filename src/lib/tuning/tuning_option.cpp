@@ -1,49 +1,49 @@
-#include "tuning_choice.hpp"
+#include "tuning_option.hpp"
 
 #include "null_tuning_operation.hpp"
 
 namespace opossum {
 
-float TuningChoice::accept_desirability() const {
+float TuningOption::accept_desirability() const {
   if (!is_currently_chosen()) {
     return desirability();
   }
   return 0.0f;
 }
 
-float TuningChoice::reject_desirability() const {
+float TuningOption::reject_desirability() const {
   if (is_currently_chosen()) {
     return -desirability();
   }
   return 0.0f;
 }
 
-float TuningChoice::current_cost() const {
+float TuningOption::current_cost() const {
   if (is_currently_chosen()) {
     return cost();
   }
   return 0.0f;
 }
 
-float TuningChoice::accept_cost() const {
+float TuningOption::accept_cost() const {
   if (!is_currently_chosen()) {
     return cost();
   }
   return 0.0f;
 }
 
-float TuningChoice::reject_cost() const {
+float TuningOption::reject_cost() const {
   if (is_currently_chosen()) {
     return -cost();
   }
   return 0.0f;
 }
 
-const std::vector<std::weak_ptr<TuningChoice> >& TuningChoice::invalidates() const { return _invalidates; }
+const std::vector<std::weak_ptr<TuningOption> >& TuningOption::invalidates() const { return _invalidates; }
 
-void TuningChoice::add_invalidate(std::shared_ptr<TuningChoice> choice) { _invalidates.push_back(choice); }
+void TuningOption::add_invalidate(std::shared_ptr<TuningOption> choice) { _invalidates.push_back(choice); }
 
-std::shared_ptr<TuningOperation> TuningChoice::accept() const {
+std::shared_ptr<TuningOperation> TuningOption::accept() const {
   if (is_currently_chosen()) {
     // No Operation
     return std::make_shared<NullTuningOperation>();
@@ -52,7 +52,7 @@ std::shared_ptr<TuningOperation> TuningChoice::accept() const {
   }
 }
 
-std::shared_ptr<TuningOperation> TuningChoice::reject() const {
+std::shared_ptr<TuningOperation> TuningOption::reject() const {
   if (is_currently_chosen()) {
     return _reject_operation();
   } else {
@@ -61,8 +61,8 @@ std::shared_ptr<TuningOperation> TuningChoice::reject() const {
   }
 }
 
-void TuningChoice::print_on(std::ostream& output) const {
-  output << "TuningChoice{desirability: " << desirability() << ", confidence: " << confidence() << ", cost: " << cost()
+void TuningOption::print_on(std::ostream& output) const {
+  output << "TuningOption{desirability: " << desirability() << ", confidence: " << confidence() << ", cost: " << cost()
          << ", chosen: " << is_currently_chosen() << "}\n";
 }
 

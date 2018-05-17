@@ -10,7 +10,7 @@
 #include "sql/sql_query_plan.hpp"
 #include "tuning/abstract_tuning_evaluator.hpp"
 #include "tuning/index/column_ref.hpp"
-#include "tuning/index/index_tuning_choice.hpp"
+#include "tuning/index/index_tuning_option.hpp"
 
 namespace opossum {
 
@@ -47,7 +47,7 @@ class AbstractIndexTuningEvaluator : public AbstractTuningEvaluator {
  public:
   AbstractIndexTuningEvaluator();
 
-  void evaluate(std::vector<std::shared_ptr<TuningChoice>>& choices) final;
+  void evaluate(std::vector<std::shared_ptr<TuningOption>>& choices) final;
 
  protected:
   /**
@@ -66,21 +66,21 @@ class AbstractIndexTuningEvaluator : public AbstractTuningEvaluator {
    * This method is called for every non-existing index to determine the best
    * index type to create.
    */
-  virtual ColumnIndexType _propose_index_type(const IndexTuningChoice& index_choice) const = 0;
+  virtual ColumnIndexType _propose_index_type(const IndexTuningOption& index_choice) const = 0;
   /**
    * This method is called on an existing index to determine its memory cost in bytes
    * The existing implementation simply accumulates the individual index costs
    * as reported by the specific index object over all chunks of a column.
    */
-  virtual uintptr_t _existing_memory_cost(const IndexTuningChoice& index_choice) const;
+  virtual uintptr_t _existing_memory_cost(const IndexTuningOption& index_choice) const;
   /**
    * This method is called for every non-existing index to predict its memory cost.
    */
-  virtual uintptr_t _predict_memory_cost(const IndexTuningChoice& index_choice) const = 0;
+  virtual uintptr_t _predict_memory_cost(const IndexTuningOption& index_choice) const = 0;
   /**
    * This method is called for every index to calculate its final desirability metric.
    */
-  virtual float _get_saved_work(const IndexTuningChoice& index_choice) const = 0;
+  virtual float _get_saved_work(const IndexTuningOption& index_choice) const = 0;
 
  protected:
   /**
@@ -102,19 +102,19 @@ class AbstractIndexTuningEvaluator : public AbstractTuningEvaluator {
    */
   std::set<ColumnRef> _aggregate_access_records(const std::vector<AccessRecord>& access_records);
   /**
-   * This method adds IndexTuningChoices (marked as already present) for every index that already exists.
+   * This method adds IndexTuningOptions (marked as already present) for every index that already exists.
    * It will delete entries from the passed new_indexes set that represent indexes that are already created.
    */
-  void _add_choices_for_existing_indexes(std::vector<IndexTuningChoice>& choices, std::set<ColumnRef>& new_indexes);
+  void _add_choices_for_existing_indexes(std::vector<IndexTuningOption>& choices, std::set<ColumnRef>& new_indexes);
   /**
-   * This method adds IndexTuningChoices for every index that was proposed.
+   * This method adds IndexTuningOptions for every index that was proposed.
    */
-  void _add_choices_for_new_indexes(std::vector<IndexTuningChoice>& choices, const std::set<ColumnRef>& new_indexes);
+  void _add_choices_for_new_indexes(std::vector<IndexTuningOption>& choices, const std::set<ColumnRef>& new_indexes);
 
   std::vector<AccessRecord> _access_records;
   std::set<ColumnRef> _new_indexes;
 
-  std::vector<IndexTuningChoice> _choices;
+  std::vector<IndexTuningOption> _choices;
 };
 
 }  // namespace opossum

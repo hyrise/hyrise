@@ -34,7 +34,7 @@ struct MockTuningSelector : public AbstractTuningSelector {
     }
   }
 
-  std::vector<std::shared_ptr<TuningOperation>> select(const std::vector<std::shared_ptr<TuningChoice>>& choices,
+  std::vector<std::shared_ptr<TuningOperation>> select(const std::vector<std::shared_ptr<TuningOption>>& choices,
                                                        float budget) final {
     std::this_thread::sleep_for(runtime);
 
@@ -48,7 +48,7 @@ struct MockTuningSelector : public AbstractTuningSelector {
 struct MockTuningEvaluator : public AbstractTuningEvaluator {
   explicit MockTuningEvaluator(RuntimeMs runtime) : runtime{runtime} {}
 
-  void evaluate(std::vector<std::shared_ptr<TuningChoice>>& choices) final { std::this_thread::sleep_for(runtime); }
+  void evaluate(std::vector<std::shared_ptr<TuningOption>>& choices) final { std::this_thread::sleep_for(runtime); }
 
   Runtime runtime;
 };

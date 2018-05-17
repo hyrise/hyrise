@@ -408,16 +408,16 @@ set(
     tuning/index/column_ref.hpp
     tuning/index/index_tuning_evaluator.cpp
     tuning/index/index_tuning_evaluator.hpp
-    tuning/index/index_tuning_choice.cpp
-    tuning/index/index_tuning_choice.hpp
+    tuning/index/index_tuning_option.cpp
+    tuning/index/index_tuning_option.hpp
     tuning/index/index_tuning_operation.cpp
     tuning/index/index_tuning_operation.hpp
     tuning/null_tuning_operation.cpp
     tuning/null_tuning_operation.hpp
     tuning/tuner.cpp
     tuning/tuner.hpp
-    tuning/tuning_choice.hpp
-    tuning/tuning_choice.cpp
+    tuning/tuning_option.hpp
+    tuning/tuning_option.cpp
     tuning/tuning_operation.hpp
     tuning/tuning_operation.cpp
     type_cast.hpp

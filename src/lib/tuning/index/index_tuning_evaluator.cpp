@@ -30,11 +30,11 @@ void IndexTuningEvaluator::_process_access_record(const AbstractIndexTuningEvalu
   }
 }
 
-ColumnIndexType IndexTuningEvaluator::_propose_index_type(const IndexTuningChoice& index_evaluation) const {
+ColumnIndexType IndexTuningEvaluator::_propose_index_type(const IndexTuningOption& index_evaluation) const {
   return ColumnIndexType::GroupKey;
 }
 
-uintptr_t IndexTuningEvaluator::_predict_memory_cost(const IndexTuningChoice& index_evaluation) const {
+uintptr_t IndexTuningEvaluator::_predict_memory_cost(const IndexTuningOption& index_evaluation) const {
   // ToDo(anyone) adapt for multi column indices...
   DebugAssert(index_evaluation.column_ref.column_ids.size() == 1, "Multi-column indices are not supported yet");
 
@@ -64,7 +64,7 @@ uintptr_t IndexTuningEvaluator::_predict_memory_cost(const IndexTuningChoice& in
   return memory_cost_per_chunk * chunk_count;
 }
 
-float IndexTuningEvaluator::_get_saved_work(const IndexTuningChoice& index_evaluation) const {
+float IndexTuningEvaluator::_get_saved_work(const IndexTuningOption& index_evaluation) const {
   if (_saved_work_per_index.count(index_evaluation.column_ref) > 0) {
     return _saved_work_per_index.at(index_evaluation.column_ref);
   } else {

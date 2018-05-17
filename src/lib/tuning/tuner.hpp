@@ -15,9 +15,9 @@ namespace opossum {
  * A Tuner encapsulates the process of analyzing the current system state and
  * performing specific modifications to optimize the systems performance.
  *
- * It uses AbstractTuningEvaluators to generate TuningChoices which represent possible
+ * It uses AbstractTuningEvaluators to generate TuningOptions which represent possible
  * modifications together with their expected performance impact and costs.
- * TuningChoices are transformed into a concrete operation sequence
+ * TuningOptions are transformed into a concrete operation sequence
  * by an AbstractTuningSelector, that also considers a cost budget that may not be
  * exceeded at any point in the sequence.
  *
@@ -144,7 +144,7 @@ class Tuner {
   Runtime _remaining_time_budget;
   bool _time_budget_exceeded;
 
-  std::vector<std::shared_ptr<TuningChoice>> _choices;
+  std::vector<std::shared_ptr<TuningOption>> _choices;
   std::vector<std::shared_ptr<TuningOperation>> _operations;
 };
 

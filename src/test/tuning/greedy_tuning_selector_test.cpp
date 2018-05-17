@@ -2,10 +2,10 @@
 
 #include "storage/table.hpp"
 #include "tuning/greedy_tuning_selector.hpp"
-#include "tuning/index/index_tuning_choice.hpp"
+#include "tuning/index/index_tuning_option.hpp"
 #include "tuning/index/index_tuning_operation.hpp"
 #include "tuning/null_tuning_operation.hpp"
-#include "tuning/tuning_choice.hpp"
+#include "tuning/tuning_option.hpp"
 #include "tuning/tuning_operation.hpp"
 
 namespace opossum {
@@ -27,9 +27,9 @@ class MockTuningOperation : public TuningOperation {
   bool _accepted;
 };
 
-class MockTuningChoice : public TuningChoice {
+class MockTuningOption : public TuningOption {
  public:
-  explicit MockTuningChoice(const std::string& name, float desirability, float cost, bool exists)
+  explicit MockTuningOption(const std::string& name, float desirability, float cost, bool exists)
       : _name{name}, _desirability{desirability}, _cost{cost}, _exists{exists} {}
 
   float desirability() const final { return _desirability; }
@@ -67,16 +67,16 @@ class GreedyTuningSelectorTest : public BaseTest {
   }
 };
 
-TEST_F(GreedyTuningSelectorTest, SelectsBestTuningChoicesInCorrectOrder) {
+TEST_F(GreedyTuningSelectorTest, SelectsBestTuningOptionsInCorrectOrder) {
   GreedyTuningSelector selector;
-  std::vector<std::shared_ptr<TuningChoice>> choices;
+  std::vector<std::shared_ptr<TuningOption>> choices;
 
-  choices.push_back(std::make_shared<MockTuningChoice>("a", 5.f, 1200.f, false));
-  choices.push_back(std::make_shared<MockTuningChoice>("b", 3.f, 500.f, true));
-  choices.push_back(std::make_shared<MockTuningChoice>("c", 3.f, 300.f, true));
-  choices.push_back(std::make_shared<MockTuningChoice>("d", -8.f, 600.f, true));
-  choices.push_back(std::make_shared<MockTuningChoice>("e", 7.f, 800.f, false));
-  choices.push_back(std::make_shared<MockTuningChoice>("f", 4.f, 500.f, false));
+  choices.push_back(std::make_shared<MockTuningOption>("a", 5.f, 1200.f, false));
+  choices.push_back(std::make_shared<MockTuningOption>("b", 3.f, 500.f, true));
+  choices.push_back(std::make_shared<MockTuningOption>("c", 3.f, 300.f, true));
+  choices.push_back(std::make_shared<MockTuningOption>("d", -8.f, 600.f, true));
+  choices.push_back(std::make_shared<MockTuningOption>("e", 7.f, 800.f, false));
+  choices.push_back(std::make_shared<MockTuningOption>("f", 4.f, 500.f, false));
 
   auto operations = selector.select(choices, 2000.f);
 

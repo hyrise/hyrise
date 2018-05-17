@@ -5,7 +5,7 @@
 namespace opossum {
 
 /**
- * A TuningOperation is created from a TuningChoice and either
+ * A TuningOperation is created from a TuningOption and either
  * performs or reverts the respective system modification.
  */
 class TuningOperation {

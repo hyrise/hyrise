@@ -17,8 +17,8 @@ namespace {
  * Otherwise the end() iterator is returned, that the constraints are not satisfied
  * by any continuous subsequence starting at sorted_choices.begin().
  */
-std::list<std::shared_ptr<TuningChoice>>::const_iterator determine_choices_to_sacrifice(
-    const std::list<std::shared_ptr<TuningChoice>>& sorted_choices, float required_cost_delta,
+std::list<std::shared_ptr<TuningOption>>::const_iterator determine_choices_to_sacrifice(
+    const std::list<std::shared_ptr<TuningOption>>& sorted_choices, float required_cost_delta,
     float acceptible_desirability_delta = -std::numeric_limits<float>::infinity()) {
   auto desirability_delta = 0.0f;
   auto cost_delta = 0.0f;
@@ -42,7 +42,7 @@ std::list<std::shared_ptr<TuningChoice>>::const_iterator determine_choices_to_sa
 }  // anonymous namespace
 
 std::vector<std::shared_ptr<TuningOperation>> GreedyTuningSelector::select(
-    const std::vector<std::shared_ptr<TuningChoice>>& choices, float cost_budget) {
+    const std::vector<std::shared_ptr<TuningOption>>& choices, float cost_budget) {
   std::vector<std::shared_ptr<TuningOperation>> operations;
   operations.reserve(choices.size());
 
@@ -66,9 +66,9 @@ std::vector<std::shared_ptr<TuningOperation>> GreedyTuningSelector::select(
   //  2) by accept_desirability() ascending stable
   // The most desirable choice is at back() and among equaly desirable choices
   // the least costly choices to accept are nearer back().
-  std::list<std::shared_ptr<TuningChoice>> sorted_choices(choices.cbegin(), choices.cend());
+  std::list<std::shared_ptr<TuningOption>> sorted_choices(choices.cbegin(), choices.cend());
 
-  sorted_choices.sort([](std::shared_ptr<TuningChoice> lhs, std::shared_ptr<TuningChoice> rhs) {
+  sorted_choices.sort([](std::shared_ptr<TuningOption> lhs, std::shared_ptr<TuningOption> rhs) {
     return (lhs->accept_desirability() == rhs->accept_desirability())
                ? lhs->reject_cost() < rhs->reject_cost()
                : lhs->accept_desirability() < rhs->accept_desirability();

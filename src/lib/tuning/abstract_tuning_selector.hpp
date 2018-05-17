@@ -3,13 +3,13 @@
 #include <memory>
 #include <vector>
 
-#include "tuning/tuning_choice.hpp"
+#include "tuning/tuning_option.hpp"
 #include "tuning/tuning_operation.hpp"
 
 namespace opossum {
 
 /**
- * An AbstractTuningSelector transforms an unordered list of TuningChoices into
+ * An AbstractTuningSelector transforms an unordered list of TuningOptions into
  * a concrete sequence of TuningOperations.
  *
  * It considers a cost budget that the entire operation sequence as well as any
@@ -31,7 +31,7 @@ class AbstractTuningSelector {
    * given list of choices and the budget value.
    */
   virtual std::vector<std::shared_ptr<TuningOperation>> select(
-      const std::vector<std::shared_ptr<TuningChoice>>& choices, float budget) = 0;
+      const std::vector<std::shared_ptr<TuningOption>>& choices, float budget) = 0;
 };
 
 }  // namespace opossum

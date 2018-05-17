@@ -73,13 +73,13 @@ TEST_F(IndexTuningEvaluatorTest, GenerateEvaluations) {
     SQLPipelineBuilder{query}.disable_mvcc().create_pipeline_statement().get_query_plan();
   }
 
-  std::vector<std::shared_ptr<TuningChoice>> tuning_choices;
-  _evaluator->evaluate(tuning_choices);
+  std::vector<std::shared_ptr<TuningOption>> tuning_options;
+  _evaluator->evaluate(tuning_options);
 
-  EXPECT_EQ(tuning_choices.size(), 2u);
+  EXPECT_EQ(tuning_options.size(), 2u);
 
-  std::shared_ptr<IndexTuningChoice> choice_col1 = std::dynamic_pointer_cast<IndexTuningChoice>(tuning_choices[0]);
-  std::shared_ptr<IndexTuningChoice> choice_col2 = std::dynamic_pointer_cast<IndexTuningChoice>(tuning_choices[1]);
+  std::shared_ptr<IndexTuningOption> choice_col1 = std::dynamic_pointer_cast<IndexTuningOption>(tuning_options[0]);
+  std::shared_ptr<IndexTuningOption> choice_col2 = std::dynamic_pointer_cast<IndexTuningOption>(tuning_options[1]);
 
   // Both indices aren't created yet
   EXPECT_EQ(choice_col1->is_currently_chosen(), false);

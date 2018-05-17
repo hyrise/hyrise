@@ -4,17 +4,17 @@
 
 #include "storage/index/column_index_type.hpp"
 #include "tuning/index/column_ref.hpp"
-#include "tuning/tuning_choice.hpp"
+#include "tuning/tuning_option.hpp"
 
 namespace opossum {
 
 /**
- * An IndexTuningChoice contains the characteristics of one particular index
+ * An IndexTuningOption contains the characteristics of one particular index
  * as recognized by an AbstractIndexTuningEvaluator
  */
-class IndexTuningChoice : public TuningChoice {
+class IndexTuningOption : public TuningOption {
  public:
-  explicit IndexTuningChoice(ColumnRef column_ref, bool exists = false)
+  explicit IndexTuningOption(ColumnRef column_ref, bool exists = false)
       : column_ref{column_ref},
         saved_work{0.0f},
         index_exists{exists},
@@ -33,7 +33,7 @@ class IndexTuningChoice : public TuningChoice {
 
   /**
     * Notice: we decided to keep public member variables and not create explicit setters/getters
-    * beyond the TuningChoice interface, since this class is 95% data object and 5% virtual.
+    * beyond the TuningOption interface, since this class is 95% data object and 5% virtual.
     */
 
   /**

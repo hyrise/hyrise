@@ -23,7 +23,7 @@ namespace opossum {
 
 AbstractIndexTuningEvaluator::AbstractIndexTuningEvaluator() {}
 
-void AbstractIndexTuningEvaluator::evaluate(std::vector<std::shared_ptr<TuningChoice>>& choices) {
+void AbstractIndexTuningEvaluator::evaluate(std::vector<std::shared_ptr<TuningOption>>& choices) {
   // Allow concrete implementation to initialize
   _setup();
 
@@ -49,7 +49,7 @@ void AbstractIndexTuningEvaluator::evaluate(std::vector<std::shared_ptr<TuningCh
     index_choice.saved_work = _get_saved_work(index_choice);
 
     // Transfer results to choices vector
-    choices.push_back(std::make_shared<IndexTuningChoice>(index_choice));
+    choices.push_back(std::make_shared<IndexTuningOption>(index_choice));
   }
 }
 
@@ -57,7 +57,7 @@ void AbstractIndexTuningEvaluator::_setup() {}
 
 void AbstractIndexTuningEvaluator::_process_access_record(const AbstractIndexTuningEvaluator::AccessRecord&) {}
 
-uintptr_t AbstractIndexTuningEvaluator::_existing_memory_cost(const IndexTuningChoice& index_choice) const {
+uintptr_t AbstractIndexTuningEvaluator::_existing_memory_cost(const IndexTuningOption& index_choice) const {
   const auto table = StorageManager::get().get_table(index_choice.column_ref.table_name);
   uintptr_t memory_cost = 0u;
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
@@ -165,13 +165,13 @@ std::set<ColumnRef> AbstractIndexTuningEvaluator::_aggregate_access_records(
   return new_indexes;
 }
 
-void AbstractIndexTuningEvaluator::_add_choices_for_existing_indexes(std::vector<IndexTuningChoice>& choices,
+void AbstractIndexTuningEvaluator::_add_choices_for_existing_indexes(std::vector<IndexTuningOption>& choices,
                                                                      std::set<ColumnRef>& new_indexes) {
   for (const auto& table_name : StorageManager::get().table_names()) {
     const auto& table = StorageManager::get().get_table(table_name);
 
     for (const auto& index_info : table->get_indexes()) {
-      auto index_choice = IndexTuningChoice{ColumnRef{table_name, index_info.column_ids}, true};
+      auto index_choice = IndexTuningOption{ColumnRef{table_name, index_info.column_ids}, true};
       index_choice.type = index_info.type;
       choices.emplace_back(index_choice);
       // Erase this index from the set of proposed new indexes as it already exists
@@ -180,7 +180,7 @@ void AbstractIndexTuningEvaluator::_add_choices_for_existing_indexes(std::vector
   }
 }
 
-void AbstractIndexTuningEvaluator::_add_choices_for_new_indexes(std::vector<IndexTuningChoice>& choices,
+void AbstractIndexTuningEvaluator::_add_choices_for_new_indexes(std::vector<IndexTuningOption>& choices,
                                                                 const std::set<ColumnRef>& new_indexes) {
   for (const auto& column_ref : new_indexes) {
     choices.emplace_back(column_ref, false);

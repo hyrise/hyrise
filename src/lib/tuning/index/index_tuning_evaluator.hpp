@@ -9,7 +9,7 @@
 #include "sql/sql_query_plan.hpp"
 #include "tuning/index/abstract_index_tuning_evaluator.hpp"
 #include "tuning/index/column_ref.hpp"
-#include "tuning/index/index_tuning_choice.hpp"
+#include "tuning/index/index_tuning_option.hpp"
 
 namespace opossum {
 
@@ -36,9 +36,9 @@ class IndexTuningEvaluator : public AbstractIndexTuningEvaluator {
  protected:
   void _setup() final;
   void _process_access_record(const AccessRecord& record) final;
-  ColumnIndexType _propose_index_type(const IndexTuningChoice& index_evaluation) const final;
-  uintptr_t _predict_memory_cost(const IndexTuningChoice& index_evaluation) const final;
-  float _get_saved_work(const IndexTuningChoice& index_evaluation) const final;
+  ColumnIndexType _propose_index_type(const IndexTuningOption& index_evaluation) const final;
+  uintptr_t _predict_memory_cost(const IndexTuningOption& index_evaluation) const final;
+  float _get_saved_work(const IndexTuningOption& index_evaluation) const final;
 
   std::map<ColumnRef, float> _saved_work_per_index;
 };
