@@ -1,16 +1,14 @@
 #pragma once
 
 #include <cstdlib>
+#include <map>
 
 namespace opossum {
 
-constexpr size_t NUM_TPCH_QUERIES = 22;
-constexpr size_t NUM_SUPPORTED_TPCH_QUERIES = 7;
-
-extern const char* tpch_queries[NUM_TPCH_QUERIES];
-
 /**
- * Indicates whether the query with a specific index is considered to be supported by Hyrise
+ * Contains all supported TPCH queries. Use ordered map to have queries sorted by query id.
+ * This allows for guaranteed execution order when iterating over the queries.
  */
-extern size_t tpch_supported_queries[NUM_SUPPORTED_TPCH_QUERIES];
+extern const std::map<size_t, const char*> tpch_queries;
+
 }  // namespace opossum

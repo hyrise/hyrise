@@ -1,65 +1,67 @@
 #include <memory>
 
 #include "../benchmark_basic_fixture.hpp"
-#include "../table_generator.hpp"
 #include "benchmark/benchmark.h"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
+#include "table_generator.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
-BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_TableScanConstant)(benchmark::State& state) {
-  clear_cache();
-
-  auto warm_up =
-      std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0} /* "a" */, PredicateCondition::GreaterThanEquals, 7);
+void BM_TableScan_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator> in,
+                       ColumnID left_column_id, const PredicateCondition predicate_condition,
+                       const AllParameterVariant right_parameter) {
+  auto warm_up = std::make_shared<TableScan>(in, left_column_id, predicate_condition, right_parameter);
   warm_up->execute();
   while (state.KeepRunning()) {
-    auto table_scan =
-        std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0} /* "a" */, PredicateCondition::GreaterThanEquals, 7);
+    auto table_scan = std::make_shared<TableScan>(in, left_column_id, predicate_condition, right_parameter);
     table_scan->execute();
   }
 }
 
-BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_TableScanConstantOnDict)(benchmark::State& state) {
+BENCHMARK_F(BenchmarkBasicFixture, BM_TableScanConstant)(benchmark::State& state) {
   clear_cache();
-  auto warm_up =
-      std::make_shared<TableScan>(_table_dict_wrapper, ColumnID{0} /* "a" */, PredicateCondition::GreaterThanEquals, 7);
-  warm_up->execute();
-  while (state.KeepRunning()) {
-    auto table_scan = std::make_shared<TableScan>(_table_dict_wrapper, ColumnID{0} /* "a" */,
-                                                  PredicateCondition::GreaterThanEquals, 7);
-    table_scan->execute();
-  }
+  BM_TableScan_impl(state, _table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 7);
 }
 
-BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_TableScanVariable)(benchmark::State& state) {
+BENCHMARK_F(BenchmarkBasicFixture, BM_TableScanVariable)(benchmark::State& state) {
   clear_cache();
-  auto warm_up =
-      std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, ColumnID{1});
-  warm_up->execute();
-  while (state.KeepRunning()) {
-    auto table_scan = std::make_shared<TableScan>(_table_wrapper_a, ColumnID{0} /* "a" */,
-                                                  PredicateCondition::GreaterThanEquals, ColumnID{1} /* "b" */);
-    table_scan->execute();
-  }
+  BM_TableScan_impl(state, _table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, ColumnID{1});
 }
 
-BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_TableScanVariableOnDict)(benchmark::State& state) {
+BENCHMARK_F(BenchmarkBasicFixture, BM_TableScanConstant_OnDict)(benchmark::State& state) {
   clear_cache();
-  auto warm_up = std::make_shared<TableScan>(_table_dict_wrapper, ColumnID{0} /* "a" */,
-                                             PredicateCondition::GreaterThanEquals, ColumnID{1} /* "b" */);
-  warm_up->execute();
-  while (state.KeepRunning()) {
-    auto table_scan = std::make_shared<TableScan>(_table_dict_wrapper, ColumnID{0} /* "a" */,
-                                                  PredicateCondition::GreaterThanEquals, ColumnID{1} /* "b" */);
-    table_scan->execute();
-  }
+  BM_TableScan_impl(state, _table_dict_wrapper, ColumnID{0}, PredicateCondition::GreaterThanEquals, 7);
 }
 
-BENCHMARK_REGISTER_F(BenchmarkBasicFixture, BM_TableScanConstant)->Apply(BenchmarkBasicFixture::ChunkSizeIn);
-BENCHMARK_REGISTER_F(BenchmarkBasicFixture, BM_TableScanConstantOnDict)->Apply(BenchmarkBasicFixture::ChunkSizeIn);
-BENCHMARK_REGISTER_F(BenchmarkBasicFixture, BM_TableScanVariable)->Apply(BenchmarkBasicFixture::ChunkSizeIn);
-BENCHMARK_REGISTER_F(BenchmarkBasicFixture, BM_TableScanVariableOnDict)->Apply(BenchmarkBasicFixture::ChunkSizeIn);
+BENCHMARK_F(BenchmarkBasicFixture, BM_TableScanVariable_OnDict)(benchmark::State& state) {
+  clear_cache();
+  BM_TableScan_impl(state, _table_dict_wrapper, ColumnID{0}, PredicateCondition::GreaterThanEquals, ColumnID{1});
+}
+
+BENCHMARK_F(BenchmarkBasicFixture, BM_TableScan_Like)(benchmark::State& state) {
+  const auto lineitem_table = load_table("src/test/tables/tpch/sf-0.001/lineitem.tbl");
+
+  const auto lineitem_wrapper = std::make_shared<TableWrapper>(lineitem_table);
+  lineitem_wrapper->execute();
+
+  const auto column_names_and_patterns = std::vector<std::pair<std::string, std::string>>({
+      {"l_comment", "%final%"},
+      {"l_comment", "%final%requests%"},
+      {"l_shipinstruct", "quickly%"},
+      {"l_comment", "%foxes"},
+      {"l_comment", "%quick_y__above%even%"},
+  });
+
+  while (state.KeepRunning()) {
+    for (const auto& column_name_and_pattern : column_names_and_patterns) {
+      auto table_scan = std::make_shared<TableScan>(lineitem_wrapper,
+                                                    lineitem_table->column_id_by_name(column_name_and_pattern.first),
+                                                    PredicateCondition::Like, column_name_and_pattern.second);
+      table_scan->execute();
+    }
+  }
+}
 
 }  // namespace opossum

@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-// We need a boolean data type in the JitOperator, but don't want to add it to
+// We need a boolean data type in the JitOperatorWrapper, but don't want to add it to
 // DATA_TYPE_INFO to avoid costly template instantiations.
 // See "all_type_variant.hpp" for details.
 #define JIT_DATA_TYPE_INFO ((bool, Bool, "bool")) DATA_TYPE_INFO
@@ -19,9 +19,9 @@ namespace opossum {
 
 #define JIT_VARIANT_VECTOR_RESIZE(r, d, type) BOOST_PP_TUPLE_ELEM(3, 1, type).resize(new_size);
 
-/* A brief overview of the type system and the way values are handled in the JitOperator:
+/* A brief overview of the type system and the way values are handled in the JitOperatorWrapper:
  *
- * The JitOperator performs most of its operations on variant values, since this allows writing generic operators with
+ * The JitOperatorWrapper performs most of its operations on variant values, since this allows writing generic operators with
  * an unlimited number of variably-typed operands (without the need for excessive templating).
  * While this sounds costly at first, the jit engine knows the actual type of each value in advance and replaces generic
  * operations with specialized versions for the concrete data types.
@@ -37,16 +37,14 @@ namespace opossum {
  * Both restrictions are enforced using the same mechanism:
  * All values (and other data that must not be available to the specialization engine) are encapsulated in the
  * JitRuntimeContext. This context is only passed to the operator after code specialization has taken place.
- * The JitRuntimeContext contains a vector of variant values (called tuple) which the JitOperator can access through
+ * The JitRuntimeContext contains a vector of variant values (called tuple) which the JitOperatorWrapper can access through
  * JitTupleValue instances.
- * The runtime tuple is created and destroyed outside the JitOperator's scope, so no memory management is
+ * The runtime tuple is created and destroyed outside the JitOperatorWrapper's scope, so no memory management is
  * required from within the operator.
  * Each JitTupleValue encapsulates information about how to access a single value in the runtime tuple. However, the
- * JitTupleValues are part of the JitOperator and must thus not store a reference to the JitRuntimeContext. So while
+ * JitTupleValues are part of the JitOperatorWrapper and must thus not store a reference to the JitRuntimeContext. So while
  * they "know" how to access values in the runtime tuple, they do not have the means to do so.
- * Only by passing the runtime context to a JitTupleValue, a JitMaterializedValue is created.
- * This materialized value contains a reference to the underlying vector and finally allows the operator to access a
- * data value.
+ * Only by passing the runtime context to a JitTupleValue allows the value to be accessed.
  */
 
 /* The JitVariantVector can be used in two ways:
@@ -90,51 +88,24 @@ class JitVariantVector {
   std::vector<uint8_t> _is_null;
 };
 
-// The structure encapsulates all data available to the JitOperator at runtime,
+class BaseJitColumnReader;
+class BaseJitColumnWriter;
+
+// The structure encapsulates all data available to the JitOperatorWrapper at runtime,
 // but NOT during code specialization.
 struct JitRuntimeContext {
   uint32_t chunk_size;
   ChunkOffset chunk_offset;
   JitVariantVector tuple;
-  std::vector<std::shared_ptr<JitBaseColumnIterator>> inputs;
-  std::vector<std::shared_ptr<BaseValueColumn>> outputs;
-  std::shared_ptr<Chunk> out_chunk;
-};
-
-// A JitMaterializedValue is a wrapper to access an actual value in the runtime context.
-// While a JitTupleValue is only an abstract representation of the value (knowing how to access it, but not being able
-// to actually do so), the JitMaterializedValue can access the value.
-// It is usually created from a JitTupleValue by providing the context at runtime.
-struct JitMaterializedValue {
-  JitMaterializedValue(const DataType data_type, const bool is_nullable, const size_t vector_index,
-                       JitVariantVector& vector)
-      : _data_type{data_type}, _is_nullable{is_nullable}, _vector_index{vector_index}, _vector{vector} {}
-
-  DataType data_type() const { return _data_type; }
-  bool is_nullable() const { return _is_nullable; }
-
-  template <typename T>
-  const T get() const {
-    return _vector.get<T>(_vector_index);
-  }
-  template <typename T>
-  void set(const T value) {
-    _vector.set<T>(_vector_index, value);
-  }
-  bool is_null() const { return _is_nullable && _vector.is_null(_vector_index); }
-  void set_is_null(const bool is_null) const { _vector.set_is_null(_vector_index, is_null); }
-
- private:
-  const DataType _data_type;
-  const bool _is_nullable;
-  const size_t _vector_index;
-  JitVariantVector& _vector;
+  std::vector<std::shared_ptr<BaseJitColumnReader>> inputs;
+  std::vector<std::shared_ptr<BaseJitColumnWriter>> outputs;
+  ChunkColumns out_chunk;
 };
 
 // The JitTupleValue represents a value in the runtime tuple.
 // The JitTupleValue has information about the DataType and index of the value it represents, but it does NOT have
 // a reference to the runtime tuple with the actual values.
-// however, this is enough for the jit engine to optimize any operation involving the value.
+// However, this is enough for the jit engine to optimize any operation involving the value.
 // It only knows how to access the value, once it gets converted to a JitMaterializedValue by providing the runtime
 // context.
 class JitTupleValue {
@@ -148,9 +119,20 @@ class JitTupleValue {
   bool is_nullable() const { return _is_nullable; }
   size_t tuple_index() const { return _tuple_index; }
 
-  // Converts this abstract value into an actually accessible value
-  JitMaterializedValue materialize(JitRuntimeContext& ctx) const {
-    return JitMaterializedValue(_data_type, _is_nullable, _tuple_index, ctx.tuple);
+  template <typename T>
+  T get(JitRuntimeContext& context) const {
+    return context.tuple.get<T>(_tuple_index);
+  }
+
+  template <typename T>
+  void set(const T value, JitRuntimeContext& context) const {
+    context.tuple.set<T>(_tuple_index, value);
+  }
+
+  inline bool is_null(JitRuntimeContext& context) const { return _is_nullable && context.tuple.is_null(_tuple_index); }
+
+  inline void set_is_null(const bool is_null, JitRuntimeContext& context) const {
+    context.tuple.set_is_null(_tuple_index, is_null);
   }
 
  private:

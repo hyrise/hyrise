@@ -119,6 +119,7 @@ class Console {
   int rollback_transaction(const std::string& input);
   int commit_transaction(const std::string& input);
   int print_transaction_info(const std::string& input);
+  int print_current_working_directory(const std::string& args);
 
   // Creates the pipelines and returns whether is was successful (true) or not (false)
   bool _initialize_pipeline(const std::string& sql);

@@ -49,7 +49,7 @@ namespace detail {
 #define DATA_TYPE_ENUM_VALUES BOOST_PP_SEQ_TRANSFORM(GET_ELEM, 1, DATA_TYPE_INFO)
 #define DATA_TYPE_STRINGS BOOST_PP_SEQ_TRANSFORM(GET_ELEM, 2, DATA_TYPE_INFO)
 
-// We use a boolean data type in the JitOperator.
+// We use a boolean data type in the JitOperatorWrapper.
 // However, adding it to DATA_TYPE_INFO would trigger many unnecessary template instantiations for all other operators
 // and should thus be avoided for compilation performance reasons.
 // We thus only add "Bool" to the DataType enum and define JIT_DATA_TYPE_INFO (with a boolean data type) in

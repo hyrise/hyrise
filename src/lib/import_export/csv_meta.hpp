@@ -25,6 +25,9 @@ struct ParseConfig {
   // If this is set to true, "4.3" will not be accepted as a value for a float column
   bool reject_quoted_nonstrings = true;
 
+  // If this is set to true, an unquoted null string causes an exception (only empty field is allowed as null value)
+  bool reject_null_strings = true;
+
   // Indicator whether the Csv follows RFC 4180. (see https://tools.ietf.org/html/rfc4180)
   bool rfc_mode = true;
 

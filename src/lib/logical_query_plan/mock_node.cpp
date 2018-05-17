@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "expression/lqp_column_expression.hpp"
-#include "optimizer/table_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

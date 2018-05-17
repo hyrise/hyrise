@@ -5,10 +5,11 @@
 
 #include <readline/history.h>
 #include <readline/readline.h>
-#include <setjmp.h>
 #include <sys/stat.h>
 #include <chrono>
+#include <csetjmp>
 #include <csignal>
+#include <cstdlib>
 #include <ctime>
 #include <iomanip>
 #include <iostream>
@@ -16,6 +17,14 @@
 #include <regex>
 #include <string>
 #include <vector>
+
+#if __has_include(<filesystem>)
+#include <filesystem>
+namespace filesystem = std::filesystem;
+#else
+#include <experimental/filesystem>
+namespace filesystem = std::experimental::filesystem;
+#endif
 
 #include "SQLParser.h"
 #include "concurrency/transaction_context.hpp"
@@ -47,7 +56,16 @@
 
 namespace {
 
-// Buffer for program state
+/**
+ * Buffer for program state
+ *
+ * We use this to make Ctrl+C work on all platforms by jumping back into main() from the Ctrl+C signal handler. This
+ * was the only way to get this to work on all platforms inclusing macOS.
+ * See here (https://github.com/hyrise/hyrise/pull/198#discussion_r135539719) for a discussion about this.
+ *
+ * The known caveats of goto/longjmp aside, this will probably also cause problems (queries continuing to run in the
+ * background) when the scheduler/multithreading is enabled.
+ */
 sigjmp_buf jmp_env;
 
 // Returns a string containing a timestamp of the current date and time
@@ -107,11 +125,12 @@ Console::Console()
   register_command("rollback", std::bind(&Console::rollback_transaction, this, std::placeholders::_1));
   register_command("commit", std::bind(&Console::commit_transaction, this, std::placeholders::_1));
   register_command("txinfo", std::bind(&Console::print_transaction_info, this, std::placeholders::_1));
+  register_command("pwd", std::bind(&Console::print_current_working_directory, this, std::placeholders::_1));
   register_command("setting", std::bind(&Console::change_runtime_setting, this, std::placeholders::_1));
 
   // Register words specifically for command completion purposes, e.g.
   // for TPC-C table generation, 'CUSTOMER', 'DISTRICT', etc
-  auto tpcc_generators = tpcc::TpccTableGenerator::tpcc_table_generator_functions();
+  auto tpcc_generators = opossum::TpccTableGenerator::tpcc_table_generator_functions();
   for (auto it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it) {
     _tpcc_commands.push_back(it->first);
   }
@@ -315,8 +334,17 @@ void Console::out(std::shared_ptr<const Table> table, uint32_t flags) {
   int size_y, size_x;
   rl_get_screen_size(&size_y, &size_x);
 
+  const bool fits_on_one_page = table->row_count() < static_cast<uint64_t>(size_y) - 1;
+
+  static bool pagination_disabled = false;
+  if (!fits_on_one_page && !std::getenv("TERM") && !pagination_disabled) {
+    out("Your TERM environment variable is not set - most likely because you are running the console from an IDE. "
+        "Pagination is disabled.\n\n");
+    pagination_disabled = true;
+  }
+
   // Paginate only if table has more rows that fit in the terminal
-  if (table->row_count() < static_cast<uint64_t>(size_y) - 1) {
+  if (fits_on_one_page || pagination_disabled) {
     Print::print(table, flags, _out);
   } else {
     std::stringstream stream;
@@ -348,6 +376,7 @@ int Console::help(const std::string&) {
   out("  rollback                         - Roll back a manually created transaction\n");
   out("  commit                           - Commit a manually created transaction\n");
   out("  txinfo                           - Print information on the current transaction\n");
+  out("  pwd                              - Print current working directory\n");
   out("  quit                             - Exit the HYRISE Console\n");
   out("  help                             - Show this message\n\n");
   out("  setting [property] [value]       - Change a runtime setting\n\n");
@@ -361,7 +390,7 @@ int Console::help(const std::string&) {
 int Console::generate_tpcc(const std::string& tablename) {
   if (tablename.empty() || "ALL" == tablename) {
     out("Generating TPCC tables (this might take a while) ...\n");
-    auto tables = tpcc::TpccTableGenerator().generate_all_tables();
+    auto tables = opossum::TpccTableGenerator().generate_all_tables();
     for (auto& pair : tables) {
       StorageManager::get().add_table(pair.first, pair.second);
     }
@@ -369,7 +398,7 @@ int Console::generate_tpcc(const std::string& tablename) {
   }
 
   out("Generating TPCC table: \"" + tablename + "\" ...\n");
-  auto table = tpcc::TpccTableGenerator::generate_tpcc_table(tablename);
+  auto table = opossum::TpccTableGenerator::generate_tpcc_table(tablename);
   if (table == nullptr) {
     out("Error: No TPCC table named \"" + tablename + "\" available.\n");
     return Console::ReturnCode::Error;
@@ -460,116 +489,116 @@ int Console::print_table(const std::string& args) {
 }
 
 int Console::visualize(const std::string& input) {
-  std::vector<std::string> input_words;
-  boost::algorithm::split(input_words, input, boost::is_any_of(" \n"));
-
-  const std::string noexec_string = "noexec";
-  const std::string lqp_string = "lqp";
-  const std::string lqpopt_string = "lqpopt";
-
-  std::string first_word, second_word;
-  if (!input_words.empty()) {
-    first_word = input_words[0];
-  }
-
-  if (input_words.size() > 1) {
-    second_word = input_words[1];
-  }
-
-  const bool no_execute = (first_word == noexec_string || second_word == noexec_string);
-
-  std::string mode;
-  if (first_word == lqp_string || first_word == lqpopt_string)
-    mode = first_word;
-  else if (second_word == lqp_string || second_word == lqpopt_string)
-    mode = second_word;
-
-  // Removes mode and noexec (+ leading whitespace) from sql string. If no mode or noexec is set, does nothing.
-  const auto noexec_size = no_execute ? noexec_string.length() : 0u;
-  auto sql_begin_pos = mode.size() + noexec_size;
-
-  // If we have both words present, we need to remove additional whitespace
-  if (no_execute && !mode.empty()) sql_begin_pos++;
-
-  const auto sql = input.substr(sql_begin_pos, input.size());
-
-  // If no SQL is provided, use the last execution. Else, create a new pipeline.
-  if (!sql.empty()) {
-    if (!_initialize_pipeline(sql)) return ReturnCode::Error;
-  }
-
-  if (no_execute && !sql.empty() && _sql_pipeline->requires_execution()) {
-    out("We do not support the visualization of multiple dependant statements in 'noexec' mode.\n");
-    return ReturnCode::Error;
-  }
-
-  std::string graph_filename, img_filename;
-
-  // Visualize the Logical Query Plan
-  if (mode == lqp_string || mode == lqpopt_string) {
-    std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
-
-    try {
-      if (!no_execute) {
-        // Run the query and then collect the LQPs
-        _sql_pipeline->get_result_table();
-      }
-
-      const auto& lqps = (mode == lqp_string) ? _sql_pipeline->get_unoptimized_logical_plans()
-                                              : _sql_pipeline->get_optimized_logical_plans();
-      for (const auto& lqp : lqps) {
-        lqp_roots.push_back(lqp);
-      }
-    } catch (const std::exception& exception) {
-      out(std::string(exception.what()) + "\n");
-      _handle_rollback();
-      return ReturnCode::Error;
-    }
-
-    graph_filename = "." + mode + ".dot";
-    img_filename = mode + ".png";
-    LQPVisualizer visualizer;
-    visualizer.visualize(lqp_roots, graph_filename, img_filename);
-
-  } else {
-    // Visualize the Physical Query Plan
-    SQLQueryPlan query_plan;
-
-    try {
-      if (!no_execute) {
-        _sql_pipeline->get_result_table();
-      }
-
-      // Create plan with all roots
-      const auto& plans = _sql_pipeline->get_query_plans();
-      for (const auto& plan : plans) {
-        query_plan.append_plan(*plan);
-      }
-    } catch (const std::exception& exception) {
-      out(std::string(exception.what()) + "\n");
-      _handle_rollback();
-      return ReturnCode::Error;
-    }
-
-    graph_filename = ".queryplan.dot";
-    img_filename = "queryplan.png";
-    SQLQueryPlanVisualizer visualizer;
-    visualizer.visualize(query_plan, graph_filename, img_filename);
-  }
-
-  auto ret = system("./scripts/planviz/is_iterm2.sh");
-  if (ret != 0) {
-    std::string msg{"Currently, only iTerm2 can print the visualization inline. You can find the plan at "};  // NOLINT
-    msg += img_filename + "\n";
-    out(msg);
-
-    return ReturnCode::Ok;
-  }
-
-  auto cmd = std::string("./scripts/planviz/imgcat.sh ") + img_filename;
-  ret = system(cmd.c_str());
-  Assert(ret == 0, "Printing the image using ./scripts/imgcat.sh failed.");
-
+//  std::vector<std::string> input_words;
+//  boost::algorithm::split(input_words, input, boost::is_any_of(" \n"));
+//
+//  const std::string noexec_string = "noexec";
+//  const std::string lqp_string = "lqp";
+//  const std::string lqpopt_string = "lqpopt";
+//
+//  std::string first_word, second_word;
+//  if (!input_words.empty()) {
+//    first_word = input_words[0];
+//  }
+//
+//  if (input_words.size() > 1) {
+//    second_word = input_words[1];
+//  }
+//
+//  const bool no_execute = (first_word == noexec_string || second_word == noexec_string);
+//
+//  std::string mode;
+//  if (first_word == lqp_string || first_word == lqpopt_string)
+//    mode = first_word;
+//  else if (second_word == lqp_string || second_word == lqpopt_string)
+//    mode = second_word;
+//
+//  // Removes mode and noexec (+ leading whitespace) from sql string. If no mode or noexec is set, does nothing.
+//  const auto noexec_size = no_execute ? noexec_string.length() : 0u;
+//  auto sql_begin_pos = mode.size() + noexec_size;
+//
+//  // If we have both words present, we need to remove additional whitespace
+//  if (no_execute && !mode.empty()) sql_begin_pos++;
+//
+//  const auto sql = input.substr(sql_begin_pos, input.size());
+//
+//  // If no SQL is provided, use the last execution. Else, create a new pipeline.
+//  if (!sql.empty()) {
+//    if (!_initialize_pipeline(sql)) return ReturnCode::Error;
+//  }
+//
+//  if (no_execute && !sql.empty() && _sql_pipeline->requires_execution()) {
+//    out("We do not support the visualization of multiple dependant statements in 'noexec' mode.\n");
+//    return ReturnCode::Error;
+//  }
+//
+//  std::string graph_filename, img_filename;
+//
+//  // Visualize the Logical Query Plan
+//  if (mode == lqp_string || mode == lqpopt_string) {
+//    std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
+//
+//    try {
+//      if (!no_execute) {
+//        // Run the query and then collect the LQPs
+//        _sql_pipeline->get_result_table();
+//      }
+//
+//      const auto& lqps = (mode == lqp_string) ? _sql_pipeline->get_unoptimized_logical_plans()
+//                                              : _sql_pipeline->get_optimized_logical_plans();
+//      for (const auto& lqp : lqps) {
+//        lqp_roots.push_back(lqp);
+//      }
+//    } catch (const std::exception& exception) {
+//      out(std::string(exception.what()) + "\n");
+//      _handle_rollback();
+//      return ReturnCode::Error;
+//    }
+//
+//    graph_filename = "." + mode + ".dot";
+//    img_filename = mode + ".png";
+//    LQPVisualizer visualizer;
+//    visualizer.visualize(lqp_roots, graph_filename, img_filename);
+//
+//  } else {
+//    // Visualize the Physical Query Plan
+//    SQLQueryPlan query_plan;
+//
+//    try {
+//      if (!no_execute) {
+//        _sql_pipeline->get_result_table();
+//      }
+//
+//      // Create plan with all roots
+//      const auto& plans = _sql_pipeline->get_query_plans();
+//      for (const auto& plan : plans) {
+//        query_plan.append_plan(*plan);
+//      }
+//    } catch (const std::exception& exception) {
+//      out(std::string(exception.what()) + "\n");
+//      _handle_rollback();
+//      return ReturnCode::Error;
+//    }
+//
+//    graph_filename = ".queryplan.dot";
+//    img_filename = "queryplan.png";
+//    SQLQueryPlanVisualizer visualizer;
+//    visualizer.visualize(query_plan, graph_filename, img_filename);
+//  }
+//
+//  auto ret = system("./scripts/planviz/is_iterm2.sh");
+//  if (ret != 0) {
+//    std::string msg{"Currently, only iTerm2 can print the visualization inline. You can find the plan at "};  // NOLINT
+//    msg += img_filename + "\n";
+//    out(msg);
+//
+//    return ReturnCode::Ok;
+//  }
+//
+//  auto cmd = std::string("./scripts/planviz/imgcat.sh ") + img_filename;
+//  ret = system(cmd.c_str());
+//  Assert(ret == 0, "Printing the image using ./scripts/imgcat.sh failed.");
+//
   return ReturnCode::Ok;
 }
 
@@ -638,7 +667,8 @@ void Console::handle_signal(int sig) {
     console._multiline_input = "";
     console.set_prompt("!> ");
     console._verbose = false;
-    // Restore program state stored in jmp_env set with sigsetjmp(2)
+    // Restore program state stored in jmp_env set with sigsetjmp(2).
+    // See comment on jmp_env for details
     siglongjmp(jmp_env, 1);
   }
 }
@@ -698,6 +728,11 @@ int Console::print_transaction_info(const std::string& input) {
   const auto snapshot_commit_id = std::to_string(_explicitly_created_transaction_context->snapshot_commit_id());
   out("Active transaction: { transaction id = " + transaction_id + ", snapshot commit id = " + snapshot_commit_id +
       " }\n");
+  return ReturnCode::Ok;
+}
+
+int Console::print_current_working_directory(const std::string&) {
+  out(filesystem::current_path().string() + "\n");
   return ReturnCode::Ok;
 }
 
@@ -841,6 +876,7 @@ int main(int argc, char** argv) {
   }
 
   // Set jmp_env to current program state in preparation for siglongjmp(2)
+  // See comment on jmp_env for details
   while (sigsetjmp(jmp_env, 1) != 0) {
   }
 

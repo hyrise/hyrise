@@ -10,6 +10,7 @@
 #include "sql/SelectStatement.h"
 
 #include "storage/encoding_type.hpp"
+#include "storage/table.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/aggregate_expression.hpp"
@@ -151,5 +152,8 @@ const std::unordered_map<VectorCompressionType, std::string> vector_compression_
     {VectorCompressionType::FixedSizeByteAligned, "Fixed-size byte-aligned"},
     {VectorCompressionType::SimdBp128, "SIMD-BP128"},
 };
+
+const boost::bimap<TableType, std::string> table_type_to_string =
+    make_bimap<TableType, std::string>({{TableType::Data, "Data"}, {TableType::References, "References"}});
 
 }  // namespace opossum

@@ -50,18 +50,19 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
   }
 
   // Visualize subselects
-  if (const auto projection = std::dynamic_pointer_cast<ProjectionNode>(node)) {
-    for (const auto& column_expression : projection->column_expressions()) {
-      if (column_expression->is_subselect()) {
-        _build_subtree(column_expression->subselect_node(), visualized_nodes);
-
-        auto edge_info = _default_edge;
-        edge_info.label = "Scalar Subquery";
-        edge_info.style = "dashed";
-        _add_edge(column_expression->subselect_node(), node, edge_info);
-      }
-    }
-  }
+  Fail("NYI");
+//  if (const auto projection = std::dynamic_pointer_cast<ProjectionNode>(node)) {
+//    for (const auto& column_expression : projection->column_expressions()) {
+//      if (column_expression->is_subselect()) {
+//        _build_subtree(column_expression->subselect_node(), visualized_nodes);
+//
+//        auto edge_info = _default_edge;
+//        edge_info.label = "Scalar Subquery";
+//        edge_info.style = "dashed";
+//        _add_edge(column_expression->subselect_node(), node, edge_info);
+//      }
+//    }
+//  }
 }
 
 void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from,

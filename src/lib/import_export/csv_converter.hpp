@@ -54,8 +54,16 @@ class CsvConverter : public BaseCsvConverter {
       _null_values[position] = true;
       return;
     }
-    Assert(boost::to_lower_copy(value) != ParseConfig::NULL_STRING,
-           "Unquoted null found in CSV file. Either quote it for string literal \"null\" or leave field empty.");
+
+    if (boost::to_lower_copy(value) == ParseConfig::NULL_STRING) {
+      Assert(!_config.reject_null_strings,
+             "Unquoted null found in CSV file. Quote it for string literal \"null\", leave field empty for null value, "
+             "or set 'reject_null_strings' to false in parse config.");
+      if (_is_nullable) {
+        _null_values[position] = true;
+        return;
+      }
+    }
 
     // clang-format off
     if constexpr(std::is_same_v<T, std::string>) {

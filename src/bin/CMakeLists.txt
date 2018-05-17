@@ -30,10 +30,6 @@ target_link_libraries(
     hyriseBenchmarkLib
 )
 
-# Configure tpccTableGenerator
-add_executable(tpccTableGenerator tpcc_table_generator.cpp)
-target_link_libraries(tpccTableGenerator hyrise hyriseBenchmarkLib)
-
 # Configure tpchTableGenerator
 add_executable(tpchTableGenerator tpch_table_generator.cpp)
 target_link_libraries(tpchTableGenerator hyrise hyriseBenchmarkLib)
@@ -64,6 +60,7 @@ target_link_libraries(
     hyriseBenchmarkLib
     ncurses
     ${READLINE_LIBRARY}
+    ${FILESYSTEM_LIBRARY}
 )
 target_include_directories(
     hyriseConsole

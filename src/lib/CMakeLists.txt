@@ -71,14 +71,27 @@ set(
     expression/value_placeholder_expression.cpp
     expression/value_placeholder_expression.hpp
 #    import_export/binary.hpp
-#    import_export/csv_converter.cpp
-#    import_export/csv_converter.hpp
-#    import_export/csv_meta.cpp
-#    import_export/csv_meta.hpp
-#    import_export/csv_parser.cpp
-#    import_export/csv_parser.hpp
+    import_export/csv_converter.cpp
+    import_export/csv_converter.hpp
+    import_export/csv_meta.cpp
+    import_export/csv_meta.hpp
+    import_export/csv_parser.cpp
+    import_export/csv_parser.hpp
 #    import_export/csv_writer.cpp
 #    import_export/csv_writer.hpp
+#    cost_model/abstract_cost_feature_proxy.cpp
+#    cost_model/abstract_cost_feature_proxy.hpp
+#    cost_model/abstract_cost_model.cpp
+#    cost_model/abstract_cost_model.hpp
+#    cost_model/cost_feature.cpp
+#    cost_model/cost_feature.hpp
+#    cost_model/cost_feature_lqp_node_proxy.cpp
+#    cost_model/cost_feature_lqp_node_proxy.hpp
+#    cost_model/cost_feature_operator_proxy.cpp
+#    cost_model/cost_feature_operator_proxy.hpp
+#    cost_model/cost.hpp
+#    cost_model/cost_model_logical.cpp
+#    cost_model/cost_model_logical.hpp
     logical_query_plan/abstract_lqp_node.cpp
     logical_query_plan/abstract_lqp_node.hpp
     logical_query_plan/alias_node.cpp
@@ -140,6 +153,7 @@ set(
     operators/aggregate/aggregate_traits.hpp
     operators/aggregate.cpp
     operators/aggregate.hpp
+    operators/base_operator_performance_data.hpp
     operators/alias_operator.cpp
     operators/alias_operator.hpp
 #    operators/delete.cpp
@@ -154,8 +168,8 @@ set(
     operators/get_table.hpp
 #    operators/import_binary.cpp
 #    operators/import_binary.hpp
-#    operators/import_csv.cpp
-#    operators/import_csv.hpp
+    operators/import_csv.cpp
+    operators/import_csv.hpp
 #    operators/index_scan.cpp
 #    operators/index_scan.hpp
 #    operators/insert.cpp
@@ -184,8 +198,8 @@ set(
 #    operators/maintenance/show_columns.hpp
 #    operators/maintenance/show_tables.cpp
 #    operators/maintenance/show_tables.hpp
-#    operators/print.cpp
-#    operators/print.hpp
+    operators/print.cpp
+    operators/print.hpp
 #    operators/product.cpp
 #    operators/product.hpp
     operators/projection.cpp
@@ -215,17 +229,15 @@ set(
 #    operators/update.hpp
 #    operators/validate.cpp
 #    operators/validate.hpp
-#    optimizer/base_column_statistics.cpp
-#    optimizer/base_column_statistics.hpp
-#    optimizer/chunk_statistics/abstract_filter.hpp
-#    optimizer/chunk_statistics/chunk_column_statistics.cpp
-#    optimizer/chunk_statistics/chunk_column_statistics.hpp
-#    optimizer/chunk_statistics/chunk_statistics.cpp
-#    optimizer/chunk_statistics/chunk_statistics.hpp
-#    optimizer/chunk_statistics/min_max_filter.hpp
-#    optimizer/chunk_statistics/range_filter.hpp
-#    optimizer/column_statistics.cpp
-#    optimizer/column_statistics.hpp
+    statistics/statistics_import_export.cpp
+    statistics/statistics_import_export.hpp
+    statistics/chunk_statistics/abstract_filter.hpp
+    statistics/chunk_statistics/chunk_column_statistics.cpp
+    statistics/chunk_statistics/chunk_column_statistics.hpp
+    statistics/chunk_statistics/chunk_statistics.cpp
+    statistics/chunk_statistics/chunk_statistics.hpp
+    statistics/chunk_statistics/min_max_filter.hpp
+    statistics/chunk_statistics/range_filter.hpp
 #    optimizer/join_ordering/join_edge.cpp
 #    optimizer/join_ordering/join_edge.hpp
 #    optimizer/join_ordering/join_graph_builder.cpp
@@ -253,15 +265,11 @@ set(
 #    optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/strategy/rule_batch.cpp
     optimizer/strategy/rule_batch.hpp
-#    optimizer/table_statistics.cpp
-#    optimizer/table_statistics.hpp
-#    plan_column_definition.cpp
-#    plan_column_definition.hpp
-#    planviz/abstract_visualizer.hpp
+    planviz/abstract_visualizer.hpp
 #    planviz/lqp_visualizer.cpp
 #    planviz/lqp_visualizer.hpp
-#    planviz/sql_query_plan_visualizer.cpp
-#    planviz/sql_query_plan_visualizer.hpp
+    planviz/sql_query_plan_visualizer.cpp
+    planviz/sql_query_plan_visualizer.hpp
     resolve_type.hpp
     scheduler/abstract_scheduler.cpp
     scheduler/abstract_scheduler.hpp
@@ -298,14 +306,21 @@ set(
     server/types.hpp
 #    server/use_boost_future.hpp
 #    server/use_boost_future_impl.hpp
-#    server/use_boost_future_legacy_impl.hpp
-#    sql/column_identifier_lookup.cpp
-#    sql/column_identifier_lookup.hpp
-#    sql/column_identifier_lookup_proxy.cpp
-#    sql/column_identifier_lookup_proxy.hpp
+    statistics/base_column_statistics.cpp
+    statistics/base_column_statistics.hpp
+    statistics/column_statistics.cpp
+    statistics/column_statistics.cpp
+    statistics/generate_table_statistics.cpp
+    statistics/generate_table_statistics.hpp
+    statistics/generate_column_statistics.cpp
+    statistics/generate_column_statistics.hpp
+    statistics/table_statistics.cpp
+    statistics/table_statistics.hpp
 #    sql/abstract_cache.hpp
 #    sql/gdfs_cache.hpp
 #    sql/gds_cache.hpp
+#    sql/hsql_expr_translator.cpp
+#    sql/hsql_expr_translator.hpp
 #    sql/lru_cache.hpp
 #    sql/lru_k_cache.hpp
 #    sql/random_cache.hpp
@@ -482,8 +497,10 @@ set(
     utils/performance_warning.cpp
     utils/performance_warning.hpp
     utils/print_directed_acyclic_graph.hpp
-#    utils/scoped_locking_ptr.hpp
-#    utils/template_type.hpp
+    utils/scoped_locking_ptr.hpp
+    utils/template_type.hpp
+    utils/timer.cpp
+    utils/timer.hpp
 )
 
 set(
@@ -493,17 +510,34 @@ set(
     ${TBB_LIBRARY}
 )
 
-if (NOT DISABLE_JIT_SUPPORT)
+if (${ENABLE_JIT_SUPPORT})
     include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
     set(JIT_EMBEDDED_SOURCES
         # Files listed here will be embedded into the binary as LLVM-IR
+        operators/jit_operator/jit_operations.cpp
         operators/jit_operator/jit_operations.hpp
         operators/jit_operator/jit_types.cpp
         operators/jit_operator/jit_types.hpp
+        operators/jit_operator/operators/abstract_jittable.hpp
+        operators/jit_operator/operators/abstract_jittable_sink.hpp
+        operators/jit_operator/operators/jit_compute.cpp
+        operators/jit_operator/operators/jit_compute.hpp
+        operators/jit_operator/operators/jit_expression.cpp
+        operators/jit_operator/operators/jit_expression.hpp
+        operators/jit_operator/operators/jit_filter.cpp
+        operators/jit_operator/operators/jit_filter.hpp
+        operators/jit_operator/operators/jit_read_tuples.cpp
+        operators/jit_operator/operators/jit_read_tuples.hpp
+        operators/jit_operator/operators/jit_write_tuples.cpp
+        operators/jit_operator/operators/jit_write_tuples.hpp
     )
     embed_llvm(LLVM_BUNDLE_FILE ${JIT_EMBEDDED_SOURCES})
     set(
         SOURCES
+        operators/jit_operator/jit_aware_lqp_translator.cpp
+        operators/jit_operator/jit_aware_lqp_translator.hpp
+        operators/jit_operator_wrapper.cpp
+        operators/jit_operator_wrapper.hpp
         ${SOURCES}
         ${JIT_EMBEDDED_SOURCES}
         ${LLVM_BUNDLE_FILE})
@@ -512,7 +546,7 @@ if (NOT DISABLE_JIT_SUPPORT)
     set(LIBRARIES ${LIBRARIES} ${LLVM_LIBRARY})
 endif()
 
-if (NOT DISABLE_NUMA_SUPPORT AND ${NUMA_FOUND})
+if (${ENABLE_NUMA_SUPPORT})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
 endif()
 

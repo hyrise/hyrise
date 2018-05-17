@@ -6,6 +6,14 @@
 
 namespace opossum {
 
+std::ostream& operator<<(std::ostream& stream, const LogicalOperator logical_operator) {
+  switch (logical_operator) {
+    case LogicalOperator::And: stream << "AND"; break;
+    case LogicalOperator::Or: stream << "OR"; break;
+  }
+  return stream;
+}
+
 LogicalExpression::LogicalExpression(const LogicalOperator logical_operator,
                                            const std::shared_ptr<AbstractExpression>& left_operand,
                                            const std::shared_ptr<AbstractExpression>& right_operand):
@@ -25,9 +33,7 @@ std::shared_ptr<AbstractExpression> LogicalExpression::deep_copy() const {
 
 std::string LogicalExpression::as_column_name() const {
   std::stringstream stream;
-
-
-  Fail("Todo");
+  stream << left_operand()->as_column_name() << " " << logical_operator << " " << right_operand()->as_column_name();
   return stream.str();
 }
 

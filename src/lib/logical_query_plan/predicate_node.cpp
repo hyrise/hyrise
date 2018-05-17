@@ -7,7 +7,6 @@
 
 #include "constant_mappings.hpp"
 #include "expression/expression_utils.hpp"
-#include "optimizer/table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

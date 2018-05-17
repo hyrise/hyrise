@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 #include "abstract_expression.hpp"
 
 namespace opossum {
@@ -8,6 +10,8 @@ enum class LogicalOperator {
   And,
   Or
 };
+
+std::ostream& operator<<(std::ostream& stream, const LogicalOperator logical_operator);
 
 class LogicalExpression : public AbstractExpression {
  public:

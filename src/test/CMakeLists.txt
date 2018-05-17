@@ -137,14 +137,26 @@ set(
 #    utils/cuckoo_hashtable_test.cpp
 #    utils/format_bytes_test.cpp
 #    utils/numa_memory_resource_test.cpp
-
     gtest_main.cpp
 )
+
+if (${ENABLE_JIT_SUPPORT})
+    set(HYRISE_UNIT_TEST_SOURCES
+        ${HYRISE_UNIT_TEST_SOURCES}
+        operators/jit_operator/jit_operations_test.cpp
+        operators/jit_operator/jit_tuple_value_test.cpp
+        operators/jit_operator/jit_variant_vector_test.cpp
+        operators/jit_operator/operators/jit_compute_test.cpp
+        operators/jit_operator/operators/jit_expression_test.cpp
+        operators/jit_operator/operators/jit_filter_test.cpp
+        operators/jit_operator/operators/jit_read_write_tuple_test.cpp
+    )
+endif()
 
 set (
     SYSTEM_TEST_SOURCES
     ${SHARED_SOURCES}
-    tpc/tpcc_ref_test.cpp
+    server/server_test_runner.cpp
     tpc/tpch_test.cpp
     tpc/tpch_db_generator_test.cpp
     gtest_main.cpp
@@ -173,5 +185,4 @@ target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
-target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES})
-add_dependencies(hyriseSystemTest tpccTableGenerator)
+target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES} pqxx)

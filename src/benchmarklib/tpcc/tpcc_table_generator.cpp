@@ -20,21 +20,21 @@
 #include "resolve_type.hpp"
 #include "types.hpp"
 
-namespace tpcc {
+namespace opossum {
 
-TpccTableGenerator::TpccTableGenerator(const opossum::ChunkOffset chunk_size, const size_t warehouse_size)
+TpccTableGenerator::TpccTableGenerator(const ChunkOffset chunk_size, const size_t warehouse_size)
     : AbstractBenchmarkTableGenerator(chunk_size),
       _warehouse_size(warehouse_size),
       _random_gen(TpccRandomGenerator()) {}
 
-std::shared_ptr<opossum::Table> TpccTableGenerator::generate_items_table() {
+std::shared_ptr<Table> TpccTableGenerator::generate_items_table() {
   auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{NUM_ITEMS});
 
   /**
    * indices[0] = item
    */
-  std::vector<opossum::ChunkColumns> columns_by_chunk;
-  opossum::TableColumnDefinitions column_definitions;
+  std::vector<ChunkColumns> columns_by_chunk;
+  TableColumnDefinitions column_definitions;
 
   auto original_ids = _random_gen.select_unique_ids(NUM_ITEMS / 10, NUM_ITEMS);
 
@@ -58,23 +58,22 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_items_table() {
         return data;
       });
 
-  auto table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, _chunk_size,
-                                                opossum::UseMvcc::Yes);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
-  opossum::ChunkEncoder::encode_all_chunks(table);
+  ChunkEncoder::encode_all_chunks(table);
 
   return table;
 }
 
-std::shared_ptr<opossum::Table> TpccTableGenerator::generate_warehouse_table() {
+std::shared_ptr<Table> TpccTableGenerator::generate_warehouse_table() {
   auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{_warehouse_size});
 
   /**
    * indices[0] = warehouse
    */
-  std::vector<opossum::ChunkColumns> columns_by_chunk;
-  opossum::TableColumnDefinitions column_definitions;
+  std::vector<ChunkColumns> columns_by_chunk;
+  TableColumnDefinitions column_definitions;
 
   add_column<int>(columns_by_chunk, column_definitions, "W_ID", cardinalities,
                   [&](std::vector<size_t> indices) { return indices[0]; });
@@ -97,16 +96,15 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_warehouse_table() {
     return CUSTOMER_YTD * NUM_CUSTOMERS_PER_DISTRICT * NUM_DISTRICTS_PER_WAREHOUSE;
   });
 
-  auto table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, _chunk_size,
-                                                opossum::UseMvcc::Yes);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
-  opossum::ChunkEncoder::encode_all_chunks(table);
+  ChunkEncoder::encode_all_chunks(table);
 
   return table;
 }
 
-std::shared_ptr<opossum::Table> TpccTableGenerator::generate_stock_table() {
+std::shared_ptr<Table> TpccTableGenerator::generate_stock_table() {
   auto cardinalities =
       std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{_warehouse_size, NUM_STOCK_ITEMS});
 
@@ -114,8 +112,8 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_stock_table() {
    * indices[0] = warehouse
    * indices[1] = stock
    */
-  std::vector<opossum::ChunkColumns> columns_by_chunk;
-  opossum::TableColumnDefinitions column_definitions;
+  std::vector<ChunkColumns> columns_by_chunk;
+  TableColumnDefinitions column_definitions;
 
   auto original_ids = _random_gen.select_unique_ids(NUM_ITEMS / 10, NUM_ITEMS);
 
@@ -148,15 +146,14 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_stock_table() {
         return data;
       });
 
-  auto table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, _chunk_size,
-                                                opossum::UseMvcc::Yes);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
-  opossum::ChunkEncoder::encode_all_chunks(table);
+  ChunkEncoder::encode_all_chunks(table);
   return table;
 }
 
-std::shared_ptr<opossum::Table> TpccTableGenerator::generate_district_table() {
+std::shared_ptr<Table> TpccTableGenerator::generate_district_table() {
   auto cardinalities = std::make_shared<std::vector<size_t>>(
       std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE});
 
@@ -164,8 +161,8 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_district_table() {
    * indices[0] = warehouse
    * indices[1] = district
    */
-  std::vector<opossum::ChunkColumns> columns_by_chunk;
-  opossum::TableColumnDefinitions column_definitions;
+  std::vector<ChunkColumns> columns_by_chunk;
+  TableColumnDefinitions column_definitions;
 
   add_column<int>(columns_by_chunk, column_definitions, "D_ID", cardinalities,
                   [&](std::vector<size_t> indices) { return indices[1]; });
@@ -191,15 +188,14 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_district_table() {
   add_column<int>(columns_by_chunk, column_definitions, "D_NEXT_O_ID", cardinalities,
                   [&](std::vector<size_t>) { return NUM_ORDERS + 1; });
 
-  auto table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, _chunk_size,
-                                                opossum::UseMvcc::Yes);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
-  opossum::ChunkEncoder::encode_all_chunks(table);
+  ChunkEncoder::encode_all_chunks(table);
   return table;
 }
 
-std::shared_ptr<opossum::Table> TpccTableGenerator::generate_customer_table() {
+std::shared_ptr<Table> TpccTableGenerator::generate_customer_table() {
   auto cardinalities = std::make_shared<std::vector<size_t>>(
       std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_CUSTOMERS_PER_DISTRICT});
 
@@ -208,8 +204,8 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_customer_table() {
    * indices[1] = district
    * indices[2] = customer
    */
-  std::vector<opossum::ChunkColumns> columns_by_chunk;
-  opossum::TableColumnDefinitions column_definitions;
+  std::vector<ChunkColumns> columns_by_chunk;
+  TableColumnDefinitions column_definitions;
 
   auto original_ids = _random_gen.select_unique_ids(NUM_ITEMS / 10, NUM_ITEMS);
 
@@ -259,15 +255,14 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_customer_table() {
   add_column<std::string>(columns_by_chunk, column_definitions, "C_DATA", cardinalities,
                           [&](std::vector<size_t>) { return _random_gen.astring(300, 500); });
 
-  auto table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, _chunk_size,
-                                                opossum::UseMvcc::Yes);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
-  opossum::ChunkEncoder::encode_all_chunks(table);
+  ChunkEncoder::encode_all_chunks(table);
   return table;
 }
 
-std::shared_ptr<opossum::Table> TpccTableGenerator::generate_history_table() {
+std::shared_ptr<Table> TpccTableGenerator::generate_history_table() {
   auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{
       _warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_CUSTOMERS_PER_DISTRICT, NUM_HISTORY_ENTRIES});
 
@@ -277,8 +272,8 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_history_table() {
    * indices[2] = customer
    * indices[3] = history
    */
-  std::vector<opossum::ChunkColumns> columns_by_chunk;
-  opossum::TableColumnDefinitions column_definitions;
+  std::vector<ChunkColumns> columns_by_chunk;
+  TableColumnDefinitions column_definitions;
 
   add_column<int>(columns_by_chunk, column_definitions, "H_C_ID", cardinalities,
                   [&](std::vector<size_t> indices) { return indices[2]; });
@@ -293,15 +288,14 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_history_table() {
   add_column<std::string>(columns_by_chunk, column_definitions, "H_DATA", cardinalities,
                           [&](std::vector<size_t>) { return _random_gen.astring(12, 24); });
 
-  auto table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, _chunk_size,
-                                                opossum::UseMvcc::Yes);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
-  opossum::ChunkEncoder::encode_all_chunks(table);
+  ChunkEncoder::encode_all_chunks(table);
   return table;
 }
 
-std::shared_ptr<opossum::Table> TpccTableGenerator::generate_order_table(
+std::shared_ptr<Table> TpccTableGenerator::generate_order_table(
     TpccTableGenerator::order_line_counts_type order_line_counts) {
   auto cardinalities = std::make_shared<std::vector<size_t>>(
       std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS});
@@ -311,8 +305,8 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_order_table(
    * indices[1] = district
    * indices[2] = order
    */
-  std::vector<opossum::ChunkColumns> columns_by_chunk;
-  opossum::TableColumnDefinitions column_definitions;
+  std::vector<ChunkColumns> columns_by_chunk;
+  TableColumnDefinitions column_definitions;
 
   // TODO(anyone): generate a new customer permutation for each district and warehouse. Currently they all have the
   // same permutation
@@ -339,11 +333,10 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_order_table(
   add_column<int>(columns_by_chunk, column_definitions, "O_ALL_LOCAL", cardinalities,
                   [&](std::vector<size_t>) { return 1; });
 
-  auto table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, _chunk_size,
-                                                opossum::UseMvcc::Yes);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
-  opossum::ChunkEncoder::encode_all_chunks(table);
+  ChunkEncoder::encode_all_chunks(table);
   return table;
 }
 
@@ -389,8 +382,8 @@ std::vector<T> TpccTableGenerator::generate_inner_order_line_column(
 }
 
 template <typename T>
-void TpccTableGenerator::add_order_line_column(std::vector<opossum::ChunkColumns>& columns_by_chunk,
-                                               opossum::TableColumnDefinitions& column_definitions, std::string name,
+void TpccTableGenerator::add_order_line_column(std::vector<ChunkColumns>& columns_by_chunk,
+                                               TableColumnDefinitions& column_definitions, std::string name,
                                                std::shared_ptr<std::vector<size_t>> cardinalities,
                                                TpccTableGenerator::order_line_counts_type order_line_counts,
                                                const std::function<T(std::vector<size_t>)>& generator_function) {
@@ -401,7 +394,7 @@ void TpccTableGenerator::add_order_line_column(std::vector<opossum::ChunkColumns
   add_column(columns_by_chunk, column_definitions, name, cardinalities, wrapped_generator_function);
 }
 
-std::shared_ptr<opossum::Table> TpccTableGenerator::generate_order_line_table(
+std::shared_ptr<Table> TpccTableGenerator::generate_order_line_table(
     TpccTableGenerator::order_line_counts_type order_line_counts) {
   auto cardinalities = std::make_shared<std::vector<size_t>>(
       std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS});
@@ -412,8 +405,8 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_order_line_table(
    * indices[2] = order
    * indices[3] = order_line_size
    */
-  std::vector<opossum::ChunkColumns> columns_by_chunk;
-  opossum::TableColumnDefinitions column_definitions;
+  std::vector<ChunkColumns> columns_by_chunk;
+  TableColumnDefinitions column_definitions;
 
   add_order_line_column<int>(columns_by_chunk, column_definitions, "OL_O_ID", cardinalities, order_line_counts,
                              [&](std::vector<size_t> indices) { return indices[2]; });
@@ -443,15 +436,14 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_order_line_table(
                                      order_line_counts,
                                      [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
 
-  auto table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, _chunk_size,
-                                                opossum::UseMvcc::Yes);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
-  opossum::ChunkEncoder::encode_all_chunks(table);
+  ChunkEncoder::encode_all_chunks(table);
   return table;
 }
 
-std::shared_ptr<opossum::Table> TpccTableGenerator::generate_new_order_table() {
+std::shared_ptr<Table> TpccTableGenerator::generate_new_order_table() {
   auto cardinalities = std::make_shared<std::vector<size_t>>(
       std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS});
 
@@ -460,8 +452,8 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_new_order_table() {
    * indices[1] = district
    * indices[2] = new_order
    */
-  std::vector<opossum::ChunkColumns> columns_by_chunk;
-  opossum::TableColumnDefinitions column_definitions;
+  std::vector<ChunkColumns> columns_by_chunk;
+  TableColumnDefinitions column_definitions;
 
   add_column<int>(columns_by_chunk, column_definitions, "NO_O_ID", cardinalities,
                   [&](std::vector<size_t> indices) { return indices[2] + NUM_ORDERS + 1 - NUM_NEW_ORDERS; });
@@ -470,15 +462,14 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_new_order_table() {
   add_column<int>(columns_by_chunk, column_definitions, "NO_W_ID", cardinalities,
                   [&](std::vector<size_t> indices) { return indices[0]; });
 
-  auto table = std::make_shared<opossum::Table>(column_definitions, opossum::TableType::Data, _chunk_size,
-                                                opossum::UseMvcc::Yes);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
-  opossum::ChunkEncoder::encode_all_chunks(table);
+  ChunkEncoder::encode_all_chunks(table);
   return table;
 }
 
-std::map<std::string, std::shared_ptr<opossum::Table>> TpccTableGenerator::generate_all_tables() {
+std::map<std::string, std::shared_ptr<Table>> TpccTableGenerator::generate_all_tables() {
   std::vector<std::thread> threads;
   auto item_table = std::async(std::launch::async, &TpccTableGenerator::generate_items_table, this);
   auto warehouse_table = std::async(std::launch::async, &TpccTableGenerator::generate_warehouse_table, this);
@@ -492,15 +483,15 @@ std::map<std::string, std::shared_ptr<opossum::Table>> TpccTableGenerator::gener
       std::async(std::launch::async, &TpccTableGenerator::generate_order_line_table, this, order_line_counts);
   auto new_order_table = std::async(std::launch::async, &TpccTableGenerator::generate_new_order_table, this);
 
-  return std::map<std::string, std::shared_ptr<opossum::Table>>({{"ITEM", item_table.get()},
-                                                                 {"WAREHOUSE", warehouse_table.get()},
-                                                                 {"STOCK", stock_table.get()},
-                                                                 {"DISTRICT", district_table.get()},
-                                                                 {"CUSTOMER", customer_table.get()},
-                                                                 {"HISTORY", history_table.get()},
-                                                                 {"ORDER", order_table.get()},
-                                                                 {"ORDER_LINE", order_line_table.get()},
-                                                                 {"NEW_ORDER", new_order_table.get()}});
+  return std::map<std::string, std::shared_ptr<Table>>({{"ITEM", item_table.get()},
+                                                        {"WAREHOUSE", warehouse_table.get()},
+                                                        {"STOCK", stock_table.get()},
+                                                        {"DISTRICT", district_table.get()},
+                                                        {"CUSTOMER", customer_table.get()},
+                                                        {"HISTORY", history_table.get()},
+                                                        {"ORDER", order_table.get()},
+                                                        {"ORDER_LINE", order_line_table.get()},
+                                                        {"NEW_ORDER", new_order_table.get()}});
 }
 
 /*
@@ -510,26 +501,26 @@ std::map<std::string, std::shared_ptr<opossum::Table>> TpccTableGenerator::gener
  */
 TpccTableGeneratorFunctions TpccTableGenerator::tpcc_table_generator_functions() {
   TpccTableGeneratorFunctions generators{
-      {"ITEM", []() { return tpcc::TpccTableGenerator().generate_items_table(); }},
-      {"WAREHOUSE", []() { return tpcc::TpccTableGenerator().generate_warehouse_table(); }},
-      {"STOCK", []() { return tpcc::TpccTableGenerator().generate_stock_table(); }},
-      {"DISTRICT", []() { return tpcc::TpccTableGenerator().generate_district_table(); }},
-      {"CUSTOMER", []() { return tpcc::TpccTableGenerator().generate_customer_table(); }},
-      {"HISTORY", []() { return tpcc::TpccTableGenerator().generate_history_table(); }},
-      {"ORDER", []() { return tpcc::TpccTableGenerator().generate_new_order_table(); }},
+      {"ITEM", []() { return TpccTableGenerator().generate_items_table(); }},
+      {"WAREHOUSE", []() { return TpccTableGenerator().generate_warehouse_table(); }},
+      {"STOCK", []() { return TpccTableGenerator().generate_stock_table(); }},
+      {"DISTRICT", []() { return TpccTableGenerator().generate_district_table(); }},
+      {"CUSTOMER", []() { return TpccTableGenerator().generate_customer_table(); }},
+      {"HISTORY", []() { return TpccTableGenerator().generate_history_table(); }},
+      {"ORDER", []() { return TpccTableGenerator().generate_new_order_table(); }},
       {"NEW_ORDER",
        []() {
-         auto order_line_counts = tpcc::TpccTableGenerator().generate_order_line_counts();
-         return tpcc::TpccTableGenerator().generate_order_table(order_line_counts);
+         auto order_line_counts = TpccTableGenerator().generate_order_line_counts();
+         return TpccTableGenerator().generate_order_table(order_line_counts);
        }},
       {"ORDER_LINE", []() {
-         auto order_line_counts = tpcc::TpccTableGenerator().generate_order_line_counts();
-         return tpcc::TpccTableGenerator().generate_order_line_table(order_line_counts);
+         auto order_line_counts = TpccTableGenerator().generate_order_line_counts();
+         return TpccTableGenerator().generate_order_line_table(order_line_counts);
        }}};
   return generators;
 }
 
-std::shared_ptr<opossum::Table> TpccTableGenerator::generate_tpcc_table(const std::string& tablename) {
+std::shared_ptr<Table> TpccTableGenerator::generate_tpcc_table(const std::string& tablename) {
   auto generators = TpccTableGenerator::tpcc_table_generator_functions();
   if (generators.find(tablename) == generators.end()) {
     return nullptr;
@@ -537,4 +528,4 @@ std::shared_ptr<opossum::Table> TpccTableGenerator::generate_tpcc_table(const st
   return generators[tablename]();
 }
 
-}  // namespace tpcc
+}  // namespace opossum
