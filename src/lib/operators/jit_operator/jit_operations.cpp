@@ -5,22 +5,12 @@ namespace opossum {
 #define JIT_GET_ENUM_VALUE(index, s) APPEND_ENUM_NAMESPACE(_, _, BOOST_PP_TUPLE_ELEM(3, 1, BOOST_PP_SEQ_ELEM(index, s)))
 #define JIT_GET_DATA_TYPE(index, s) BOOST_PP_TUPLE_ELEM(3, 0, BOOST_PP_SEQ_ELEM(index, s))
 
-#define JIT_COMPUTE_CASE(r, types)                                                                                   \
-  case static_cast<uint8_t>(JIT_GET_ENUM_VALUE(0, types)) << 8 | static_cast<uint8_t>(JIT_GET_ENUM_VALUE(1, types)): \
-    catching_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(context), rhs.get<JIT_GET_DATA_TYPE(1, types)>(context),      \
-                  result);                                                                                           \
-    break;
-
-#define JIT_COMPUTE_TYPE_CASE(r, types)                                                                              \
-  case static_cast<uint8_t>(JIT_GET_ENUM_VALUE(0, types)) << 8 | static_cast<uint8_t>(JIT_GET_ENUM_VALUE(1, types)): \
-    return catching_func(JIT_GET_DATA_TYPE(0, types)(), JIT_GET_DATA_TYPE(1, types)());
-
 #define JIT_HASH_CASE(r, types)                      \
   case JIT_GET_ENUM_VALUE(0, types):                 \
     return std::hash<JIT_GET_DATA_TYPE(0, types)>()( \
         context.tuple.get<JIT_GET_DATA_TYPE(0, types)>(value.tuple_index()));
 
-#define JIT_EQUALS_CASE(r, types)    \
+#define JIT_AGGREGATE_EQUALS_CASE(r, types)    \
   case JIT_GET_ENUM_VALUE(0, types): \
     return lhs.get<JIT_GET_DATA_TYPE(0, types)>(context) == rhs.get<JIT_GET_DATA_TYPE(0, types)>(rhs_index, context);
 
@@ -104,7 +94,7 @@ bool jit_aggregate_equals(const JitTupleValue& lhs, const JitHashmapValue& rhs, 
   }
 
   switch (lhs.data_type()) {
-    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_EQUALS_CASE, (JIT_DATA_TYPE_INFO))
+    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_AGGREGATE_EQUALS_CASE, (JIT_DATA_TYPE_INFO))
     default:
       return true;
   }
@@ -140,7 +130,7 @@ size_t jit_grow_by_one(const JitHashmapValue& value, const JitVariantVector::Ini
 #undef JIT_GET_ENUM_VALUE
 #undef JIT_GET_DATA_TYPE
 #undef JIT_HASH_CASE
-#undef JIT_EQUALS_CASE
+#undef JIT_AGGREGATE_EQUALS_CASE
 #undef JIT_ASSIGN_CASE
 #undef JIT_GROW_BY_ONE_CASE
 
