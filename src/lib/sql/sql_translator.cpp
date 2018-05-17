@@ -440,49 +440,47 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql:
   auto table_name = std::string{};
 
   switch (hsql_table_ref.type) {
-    case hsql::kTableName:
-    case hsql::kTableSelect: {
-      if (hsql_table_ref.type == hsql::kTableName) {
-        if (StorageManager::get().has_table(hsql_table_ref.name)) {
-          const auto stored_table_node = StoredTableNode::make(hsql_table_ref.name);
-          lqp = _validate_if_active(stored_table_node);
+    case hsql::kTableName: {
+      if (StorageManager::get().has_table(hsql_table_ref.name)) {
+        const auto stored_table_node = StoredTableNode::make(hsql_table_ref.name);
+        lqp = _validate_if_active(stored_table_node);
 
-          const auto table = StorageManager::get().get_table(hsql_table_ref.name);
+        const auto table = StorageManager::get().get_table(hsql_table_ref.name);
 
-          for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-            const auto& column_definition = table->column_definitions()[column_id];
-            const auto column_reference = LQPColumnReference{stored_table_node, column_id};
-            const auto column_expression = std::make_shared<LQPColumnExpression>(column_reference);
-            _sql_identifier_context->set_column_name(column_expression, column_definition.name);
-            _sql_identifier_context->set_table_name(column_expression, hsql_table_ref.name);
-          }
-
-        } else if (StorageManager::get().has_view(hsql_table_ref.name)) {
-          Fail("Views not supported yet");
-          lqp = StorageManager::get().get_view(hsql_table_ref.name);
-       //   Assert(!_validate || lqp->subplan_is_validated(), "Trying to add non-validated view to validated query");
-        } else {
-          Fail(std::string("Did not find a table or view with name ") + hsql_table_ref.name);
+        for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+          const auto& column_definition = table->column_definitions()[column_id];
+          const auto column_reference = LQPColumnReference{stored_table_node, column_id};
+          const auto column_expression = std::make_shared<LQPColumnExpression>(column_reference);
+          _sql_identifier_context->set_column_name(column_expression, column_definition.name);
+          _sql_identifier_context->set_table_name(column_expression, hsql_table_ref.name);
         }
-        table_name = hsql_table_ref.name;
-      } else if (hsql_table_ref.type == hsql::kTableSelect) {
-        Assert(hsql_table_ref.alias && hsql_table_ref.alias->name, "Every SubSelect must have its own alias");
-        table_name = hsql_table_ref.alias->name;
 
-        SQLTranslator sub_select_translator{_use_mvcc};
-        lqp = sub_select_translator.translate_select_statement(*hsql_table_ref.select);
-
-        for (const auto& sub_select_expression : lqp->output_column_expressions()) {
-          const auto identifier = sub_select_translator.sql_identifier_context()->get_expression_identifier(sub_select_expression);
-
-          if (identifier) {
-            _sql_identifier_context->set_column_name(sub_select_expression, identifier->column_name);
-          }
-          _sql_identifier_context->set_table_name(sub_select_expression, hsql_table_ref.alias->name);
-        }
+      } else if (StorageManager::get().has_view(hsql_table_ref.name)) {
+        Fail("Views not supported yet");
+        lqp = StorageManager::get().get_view(hsql_table_ref.name);
+        //   Assert(!_validate || lqp->subplan_is_validated(), "Trying to add non-validated view to validated query");
       } else {
-        Fail("Unsupported TableRef");
+        Fail(std::string("Did not find a table or view with name ") + hsql_table_ref.name);
       }
+      table_name = hsql_table_ref.alias ? hsql_table_ref.alias->name : hsql_table_ref.name;
+    } break;
+
+    case hsql::kTableSelect: {
+      Assert(hsql_table_ref.alias && hsql_table_ref.alias->name, "Every SubSelect must have its own alias");
+      table_name = hsql_table_ref.alias->name;
+
+      SQLTranslator sub_select_translator{_use_mvcc};
+      lqp = sub_select_translator.translate_select_statement(*hsql_table_ref.select);
+
+      for (const auto& sub_select_expression : lqp->output_column_expressions()) {
+        const auto identifier = sub_select_translator.sql_identifier_context()->get_expression_identifier(sub_select_expression);
+
+        if (identifier) {
+          _sql_identifier_context->set_column_name(sub_select_expression, identifier->column_name);
+        }
+      }
+
+      table_name = hsql_table_ref.alias->name;
     } break;
 
 //    case hsql::kTableJoin:
@@ -494,6 +492,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql:
 
     default:
       Fail("Unable to translate source table.");
+  }
+
+  for (const auto& expression : lqp->output_column_expressions()) {
+    _sql_identifier_context->set_table_name(expression, table_name);
   }
 
   const auto table_name_is_unique = _from_elements_by_table_name.emplace(table_name, lqp).second;

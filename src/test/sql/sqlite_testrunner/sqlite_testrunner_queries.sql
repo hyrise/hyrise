@@ -169,6 +169,7 @@ SELECT (SELECT MAX(b) + id_int_int_int_100.a + id_int_int_int_100.b FROM mixed) 
 SELECT (SELECT MIN(1 + 2) FROM mixed) AS foos FROM id_int_int_int_100;
 
 ---- Subqueries in WHERE statement
+SELECT a FROM id_int_int_int_100 AS r WHERE id + 1 = (SELECT MIN(b) + r.id FROM mixed)
 SELECT a FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
 SELECT * FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
 SELECT a, b FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
@@ -197,6 +198,7 @@ SELECT CASE id + 10 WHEN 15 THEN a WHEN 26 THEN 'World' ELSE d END AS case_colum
 SELECT * FROM id_int_int_int_100 WHERE a IN (24, 55, 78)
 SELECT * FROM id_int_int_int_100 WHERE a IN (b - 48, b + 1)
 SELECT a + c FROM id_int_int_int_100 WHERE a + c IN (110, 9, 'Hello', 13.345)
+SELECT id FROM mixed WHERE d IN ('hamqiv', 9, 'Hello', 13.345, 'xfkk', 13*13)
 
 -- EXTRACT()
 -- SELECT EXTRACT(MONTH FROM date) FROM int_date;
