@@ -8,8 +8,8 @@
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "tuning/index/column_ref.hpp"
 #include "tuning/index/index_tuning_operation.hpp"
+#include "tuning/index/indexable_column_set.hpp"
 
 namespace opossum {
 
@@ -45,26 +45,26 @@ class IndexTuningOperationTest : public BaseTest {
   }
 
   std::shared_ptr<Table> _table;
-  ColumnRef _column_ref{"table_name", ColumnID{0}};
+  IndexableColumnSet _indexable_column_set{"table_name", ColumnID{0}};
 };
 
 TEST_F(IndexTuningOperationTest, GetColumRef) {
-  IndexTuningOperation operation{_column_ref, ColumnIndexType::GroupKey, true};
-  EXPECT_EQ(operation.column(), _column_ref);
+  IndexTuningOperation operation{_indexable_column_set, ColumnIndexType::GroupKey, true};
+  EXPECT_EQ(operation.column(), _indexable_column_set);
 }
 
 TEST_F(IndexTuningOperationTest, GetColumnIndexType) {
-  IndexTuningOperation operation{_column_ref, ColumnIndexType::GroupKey, true};
+  IndexTuningOperation operation{_indexable_column_set, ColumnIndexType::GroupKey, true};
   EXPECT_EQ(operation.type(), ColumnIndexType::GroupKey);
 }
 
 TEST_F(IndexTuningOperationTest, GetCreate) {
-  IndexTuningOperation operation{_column_ref, ColumnIndexType::GroupKey, true};
+  IndexTuningOperation operation{_indexable_column_set, ColumnIndexType::GroupKey, true};
   EXPECT_EQ(operation.will_create_else_delete(), true);
 }
 
 TEST_F(IndexTuningOperationTest, PrintOnStream) {
-  IndexTuningOperation operation{_column_ref, ColumnIndexType::GroupKey, true};
+  IndexTuningOperation operation{_indexable_column_set, ColumnIndexType::GroupKey, true};
 
   std::stringstream stream;
   operation.print_on(stream);
@@ -80,7 +80,7 @@ TEST_F(IndexTuningOperationTest, CreateIndex) {
   for (auto index_type : supported_index_types) {
     _ensure_pristine_table();
 
-    IndexTuningOperation operation{_column_ref, index_type, true};
+    IndexTuningOperation operation{_indexable_column_set, index_type, true};
     operation.execute();
 
     auto index_infos = _table->get_indexes();
@@ -94,7 +94,7 @@ TEST_F(IndexTuningOperationTest, DeleteIndex) {
   auto column_ids = std::vector{ColumnID{0}};
   _table->create_index<GroupKeyIndex>(column_ids);
 
-  IndexTuningOperation operation{_column_ref, ColumnIndexType::GroupKey, false};
+  IndexTuningOperation operation{_indexable_column_set, ColumnIndexType::GroupKey, false};
   operation.execute();
 
   auto index_infos = _table->get_indexes();
@@ -116,7 +116,7 @@ TEST_F(IndexTuningOperationTest, ClearCacheWhenRemovingIndex) {
   auto column_ids = std::vector{ColumnID{0}};
   _table->create_index<GroupKeyIndex>(column_ids);
 
-  IndexTuningOperation operation{_column_ref, ColumnIndexType::GroupKey, false};
+  IndexTuningOperation operation{_indexable_column_set, ColumnIndexType::GroupKey, false};
   operation.execute();
 
   EXPECT_EQ(lqp_cache.size(), 0u);

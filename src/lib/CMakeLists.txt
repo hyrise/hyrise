@@ -404,8 +404,8 @@ set(
     tuning/greedy_tuning_selector.hpp
     tuning/index/abstract_index_tuning_evaluator.cpp
     tuning/index/abstract_index_tuning_evaluator.hpp
-    tuning/index/column_ref.cpp
-    tuning/index/column_ref.hpp
+    tuning/index/indexable_column_set.cpp
+    tuning/index/indexable_column_set.hpp
     tuning/index/index_tuning_evaluator.cpp
     tuning/index/index_tuning_evaluator.hpp
     tuning/index/index_tuning_option.cpp

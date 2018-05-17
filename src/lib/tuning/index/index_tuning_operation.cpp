@@ -67,7 +67,7 @@ void IndexTuningOperation::_invalidate_cache() {
   SQLQueryCache<SQLQueryPlan>::get().clear();
 }
 
-const ColumnRef& IndexTuningOperation::column() const { return _column; }
+const IndexableColumnSet& IndexTuningOperation::column() const { return _column; }
 
 ColumnIndexType IndexTuningOperation::type() { return _type; }
 

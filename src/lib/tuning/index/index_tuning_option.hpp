@@ -3,7 +3,7 @@
 #include <set>
 
 #include "storage/index/column_index_type.hpp"
-#include "tuning/index/column_ref.hpp"
+#include "tuning/index/indexable_column_set.hpp"
 #include "tuning/tuning_option.hpp"
 
 namespace opossum {
@@ -14,8 +14,8 @@ namespace opossum {
  */
 class IndexTuningOption : public TuningOption {
  public:
-  explicit IndexTuningOption(ColumnRef column_ref, bool exists = false)
-      : column_ref{column_ref},
+  explicit IndexTuningOption(IndexableColumnSet indexable_column_set, bool exists = false)
+      : indexable_column_set{indexable_column_set},
         saved_work{0.0f},
         index_exists{exists},
         type{ColumnIndexType::Invalid},
@@ -39,7 +39,7 @@ class IndexTuningOption : public TuningOption {
   /**
    * The column this index refers to
    */
-  ColumnRef column_ref;
+  IndexableColumnSet indexable_column_set;
 
   /**
    * An IndexTuningEvaluator specific, signed value that indicates

@@ -58,11 +58,11 @@ void AbstractIndexTuningEvaluator::_setup() {}
 void AbstractIndexTuningEvaluator::_process_access_record(const AbstractIndexTuningEvaluator::AccessRecord&) {}
 
 uintptr_t AbstractIndexTuningEvaluator::_existing_memory_cost(const IndexTuningOption& index_choice) const {
-  const auto table = StorageManager::get().get_table(index_choice.column_ref.table_name);
+  const auto table = StorageManager::get().get_table(index_choice.indexable_column_set.table_name);
   uintptr_t memory_cost = 0u;
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
-    const auto index = chunk->get_index(index_choice.type, index_choice.column_ref.column_ids);
+    const auto index = chunk->get_index(index_choice.type, index_choice.indexable_column_set.column_ids);
     if (index) {
       memory_cost += index->memory_consumption();
     }
@@ -134,7 +134,7 @@ void AbstractIndexTuningEvaluator::_inspect_lqp_node(const std::shared_ptr<const
           auto original_node = lqp_ref.original_node();
           auto original_column_id = original_node->find_output_column_id(lqp_ref);
           if (original_node->type() == LQPNodeType::StoredTable) {
-            DebugAssert(original_column_id, "Could not find column ID for LQPColumnReference");
+            DebugAssert(original_column_id, "Could not find column ID for LQPIndexableColumnSeterence");
             auto stored_table = std::dynamic_pointer_cast<const StoredTableNode>(original_node);
             DebugAssert(stored_table, "referenced node is not actually a StoredTableNode");
 
@@ -155,23 +155,23 @@ void AbstractIndexTuningEvaluator::_inspect_lqp_node(const std::shared_ptr<const
   }
 }
 
-std::set<ColumnRef> AbstractIndexTuningEvaluator::_aggregate_access_records(
+std::set<IndexableColumnSet> AbstractIndexTuningEvaluator::_aggregate_access_records(
     const std::vector<AccessRecord>& access_records) {
-  std::set<ColumnRef> new_indexes{};
+  std::set<IndexableColumnSet> new_indexes{};
   for (const auto& access_record : access_records) {
-    new_indexes.insert(access_record.column_ref);
+    new_indexes.insert(access_record.indexable_column_set);
     _process_access_record(access_record);
   }
   return new_indexes;
 }
 
 void AbstractIndexTuningEvaluator::_add_choices_for_existing_indexes(std::vector<IndexTuningOption>& choices,
-                                                                     std::set<ColumnRef>& new_indexes) {
+                                                                     std::set<IndexableColumnSet>& new_indexes) {
   for (const auto& table_name : StorageManager::get().table_names()) {
     const auto& table = StorageManager::get().get_table(table_name);
 
     for (const auto& index_info : table->get_indexes()) {
-      auto index_choice = IndexTuningOption{ColumnRef{table_name, index_info.column_ids}, true};
+      auto index_choice = IndexTuningOption{IndexableColumnSet{table_name, index_info.column_ids}, true};
       index_choice.type = index_info.type;
       choices.emplace_back(index_choice);
       // Erase this index from the set of proposed new indexes as it already exists
@@ -181,9 +181,9 @@ void AbstractIndexTuningEvaluator::_add_choices_for_existing_indexes(std::vector
 }
 
 void AbstractIndexTuningEvaluator::_add_choices_for_new_indexes(std::vector<IndexTuningOption>& choices,
-                                                                const std::set<ColumnRef>& new_indexes) {
-  for (const auto& column_ref : new_indexes) {
-    choices.emplace_back(column_ref, false);
+                                                                const std::set<IndexableColumnSet>& new_indexes) {
+  for (const auto& indexable_column_set : new_indexes) {
+    choices.emplace_back(indexable_column_set, false);
   }
 }
 

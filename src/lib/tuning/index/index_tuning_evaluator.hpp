@@ -8,8 +8,8 @@
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "tuning/index/abstract_index_tuning_evaluator.hpp"
-#include "tuning/index/column_ref.hpp"
 #include "tuning/index/index_tuning_option.hpp"
+#include "tuning/index/indexable_column_set.hpp"
 
 namespace opossum {
 
@@ -40,7 +40,7 @@ class IndexTuningEvaluator : public AbstractIndexTuningEvaluator {
   uintptr_t _predict_memory_cost(const IndexTuningOption& index_evaluation) const final;
   float _get_saved_work(const IndexTuningOption& index_evaluation) const final;
 
-  std::map<ColumnRef, float> _saved_work_per_index;
+  std::map<IndexableColumnSet, float> _saved_work_per_index;
 };
 
 }  // namespace opossum

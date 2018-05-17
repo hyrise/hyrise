@@ -9,8 +9,8 @@
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "tuning/abstract_tuning_evaluator.hpp"
-#include "tuning/index/column_ref.hpp"
 #include "tuning/index/index_tuning_option.hpp"
+#include "tuning/index/indexable_column_set.hpp"
 
 namespace opossum {
 
@@ -36,8 +36,8 @@ class AbstractIndexTuningEvaluator : public AbstractTuningEvaluator {
    */
   struct AccessRecord {
     AccessRecord(const std::string& table_name, ColumnID column_id, size_t number_of_usages)
-        : column_ref{table_name, column_id}, query_frequency{number_of_usages} {}
-    ColumnRef column_ref;
+        : indexable_column_set{table_name, column_id}, query_frequency{number_of_usages} {}
+    IndexableColumnSet indexable_column_set;
     size_t query_frequency;
 
     PredicateCondition condition;
@@ -100,19 +100,21 @@ class AbstractIndexTuningEvaluator : public AbstractTuningEvaluator {
    * It will call _process_access_record() of the derived class in order to let
    * the concrete implementation calculate e.g. usage and desirability metrics.
    */
-  std::set<ColumnRef> _aggregate_access_records(const std::vector<AccessRecord>& access_records);
+  std::set<IndexableColumnSet> _aggregate_access_records(const std::vector<AccessRecord>& access_records);
   /**
    * This method adds IndexTuningOptions (marked as already present) for every index that already exists.
    * It will delete entries from the passed new_indexes set that represent indexes that are already created.
    */
-  void _add_choices_for_existing_indexes(std::vector<IndexTuningOption>& choices, std::set<ColumnRef>& new_indexes);
+  void _add_choices_for_existing_indexes(std::vector<IndexTuningOption>& choices,
+                                         std::set<IndexableColumnSet>& new_indexes);
   /**
    * This method adds IndexTuningOptions for every index that was proposed.
    */
-  void _add_choices_for_new_indexes(std::vector<IndexTuningOption>& choices, const std::set<ColumnRef>& new_indexes);
+  void _add_choices_for_new_indexes(std::vector<IndexTuningOption>& choices,
+                                    const std::set<IndexableColumnSet>& new_indexes);
 
   std::vector<AccessRecord> _access_records;
-  std::set<ColumnRef> _new_indexes;
+  std::set<IndexableColumnSet> _new_indexes;
 
   std::vector<IndexTuningOption> _choices;
 };

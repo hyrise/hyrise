@@ -6,11 +6,11 @@
 #include "../../base_test.hpp"
 
 #include "storage/table.hpp"
-#include "tuning/index/column_ref.hpp"
+#include "tuning/index/indexable_column_set.hpp"
 
 namespace opossum {
 
-class ColumnRefTest : public BaseTest {
+class IndexableColumnSetTest : public BaseTest {
  protected:
   void SetUp() override {
     TableColumnDefinitions column_definitions;
@@ -22,69 +22,56 @@ class ColumnRefTest : public BaseTest {
   void TearDown() override { StorageManager::get().drop_table("table_name"); }
 };
 
-TEST_F(ColumnRefTest, GetProperties) {
+TEST_F(IndexableColumnSetTest, GetProperties) {
   std::vector<ColumnID> column_ids{ColumnID{123}};
-  ColumnRef column_ref{"table_name", column_ids};
+  IndexableColumnSet indexable_column_set{"table_name", column_ids};
 
-  EXPECT_EQ(column_ref.table_name, "table_name");
-  EXPECT_EQ(column_ref.column_ids, column_ids);
+  EXPECT_EQ(indexable_column_set.table_name, "table_name");
+  EXPECT_EQ(indexable_column_set.column_ids, column_ids);
 }
 
-TEST_F(ColumnRefTest, GreaterThanOperator) {
+TEST_F(IndexableColumnSetTest, LessThanOperator) {
   std::vector<ColumnID> column_ids_smaller{ColumnID{123}, ColumnID{456}};
   std::vector<ColumnID> column_ids_bigger{ColumnID{789}, ColumnID{901}};
 
-  ColumnRef cref_smaller{"table_name", column_ids_smaller};
-  ColumnRef cref_bigger{"table_name", column_ids_bigger};
-  ColumnRef cref_other_table{"other_table", column_ids_smaller};
-
-  EXPECT_GE(cref_smaller, cref_smaller);
-
-  EXPECT_GT(cref_smaller, cref_other_table);
-  EXPECT_GT(cref_bigger, cref_smaller);
-}
-
-TEST_F(ColumnRefTest, LessThanOperator) {
-  std::vector<ColumnID> column_ids_smaller{ColumnID{123}, ColumnID{456}};
-  std::vector<ColumnID> column_ids_bigger{ColumnID{789}, ColumnID{901}};
-
-  ColumnRef cref_smaller{"table_name", column_ids_smaller};
-  ColumnRef cref_bigger{"table_name", column_ids_bigger};
-  ColumnRef cref_other_table{"z_other_table", column_ids_smaller};
-
-  EXPECT_LE(cref_smaller, cref_smaller);
+  IndexableColumnSet cref_smaller{"table_name", column_ids_smaller};
+  IndexableColumnSet cref_bigger{"table_name", column_ids_bigger};
+  IndexableColumnSet cref_other_table{"z_other_table", column_ids_smaller};
 
   EXPECT_LT(cref_smaller, cref_other_table);
   EXPECT_LT(cref_smaller, cref_bigger);
+
+  EXPECT_FALSE(cref_other_table < cref_smaller);
+  EXPECT_FALSE(cref_bigger < cref_smaller);
 }
 
-TEST_F(ColumnRefTest, StreamingOperator) {
+TEST_F(IndexableColumnSetTest, StreamingOperator) {
   std::vector<ColumnID> column_ids{ColumnID{0}};
-  ColumnRef column_ref{"table_name", column_ids};
+  IndexableColumnSet indexable_column_set{"table_name", column_ids};
 
   std::stringstream stream;
-  stream << column_ref;
+  stream << indexable_column_set;
 
   std::string result = stream.str();
   EXPECT_EQ(result, "table_name.(column_name)");
 }
 
-TEST_F(ColumnRefTest, Equality) {
+TEST_F(IndexableColumnSetTest, Equality) {
   std::vector<ColumnID> column_ids{ColumnID{0}};
-  ColumnRef column_ref{"table_name", column_ids};
+  IndexableColumnSet indexable_column_set{"table_name", column_ids};
 
   std::vector<ColumnID> same_column_ids{ColumnID{0}};
-  ColumnRef column_ref_same_column_ids{"table_name", same_column_ids};
+  IndexableColumnSet indexable_column_set_same_column_ids{"table_name", same_column_ids};
 
   std::vector<ColumnID> different_column_ids{ColumnID{1}};
-  ColumnRef column_ref_different_column_ids{"table_name", different_column_ids};
+  IndexableColumnSet indexable_column_set_different_column_ids{"table_name", different_column_ids};
 
-  ColumnRef column_ref_other_table{"other_table", same_column_ids};
+  IndexableColumnSet indexable_column_set_other_table{"other_table", same_column_ids};
 
-  EXPECT_EQ(column_ref, column_ref);
-  EXPECT_EQ(column_ref, column_ref_same_column_ids);
+  EXPECT_EQ(indexable_column_set, indexable_column_set);
+  EXPECT_EQ(indexable_column_set, indexable_column_set_same_column_ids);
 
-  EXPECT_NE(column_ref, column_ref_other_table);
-  EXPECT_NE(column_ref, column_ref_different_column_ids);
+  EXPECT_FALSE(indexable_column_set == indexable_column_set_other_table);
+  EXPECT_FALSE(indexable_column_set == indexable_column_set_different_column_ids);
 }
 }  // namespace opossum

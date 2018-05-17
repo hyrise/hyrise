@@ -59,8 +59,8 @@ TEST_F(IndexTuningEvaluatorTest, InspectLQPOperator) {
   _inspect_lqp_operator(lqp_operator_root, 1, _access_records());
 
   EXPECT_EQ(_access_records().size(), 1u);
-  EXPECT_EQ(_access_records().back().column_ref.table_name, "t");
-  EXPECT_EQ(_access_records().back().column_ref.column_ids, std::vector<ColumnID>{ColumnID{0}});
+  EXPECT_EQ(_access_records().back().indexable_column_set.table_name, "t");
+  EXPECT_EQ(_access_records().back().indexable_column_set.column_ids, std::vector<ColumnID>{ColumnID{0}});
   EXPECT_EQ(_access_records().back().condition, PredicateCondition::Equals);
 }
 

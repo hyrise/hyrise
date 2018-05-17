@@ -1,7 +1,7 @@
 #pragma once
 
 #include "storage/index/column_index_type.hpp"
-#include "tuning/index/column_ref.hpp"
+#include "tuning/index/indexable_column_set.hpp"
 #include "tuning/tuning_operation.hpp"
 
 namespace opossum {
@@ -11,7 +11,7 @@ namespace opossum {
  */
 class IndexTuningOperation : public TuningOperation {
  public:
-  IndexTuningOperation(const ColumnRef& column, ColumnIndexType type, bool create_else_delete)
+  IndexTuningOperation(const IndexableColumnSet& column, ColumnIndexType type, bool create_else_delete)
       : _column{column}, _type{type}, _create_else_delete{create_else_delete} {}
 
   void execute() final;
@@ -21,7 +21,7 @@ class IndexTuningOperation : public TuningOperation {
   /**
    * The column the this operation refers to
    */
-  const ColumnRef& column() const;
+  const IndexableColumnSet& column() const;
 
   /**
    * The type of index that should be created or deleted
@@ -34,7 +34,7 @@ class IndexTuningOperation : public TuningOperation {
   bool will_create_else_delete();
 
  protected:
-  ColumnRef _column;
+  IndexableColumnSet _column;
   ColumnIndexType _type;
   bool _create_else_delete;
 
