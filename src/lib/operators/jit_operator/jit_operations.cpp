@@ -15,13 +15,6 @@ namespace opossum {
   case static_cast<uint8_t>(JIT_GET_ENUM_VALUE(0, types)) << 8 | static_cast<uint8_t>(JIT_GET_ENUM_VALUE(1, types)): \
     return catching_func(JIT_GET_DATA_TYPE(0, types)(), JIT_GET_DATA_TYPE(1, types)());
 
-#define JIT_AGGREGATE_COMPUTE_CASE(r, types)                                                                \
-  case JIT_GET_ENUM_VALUE(0, types):                                                                        \
-    rhs.set<JIT_GET_DATA_TYPE(0, types)>(op_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(context),             \
-                                                 rhs.get<JIT_GET_DATA_TYPE(0, types)>(rhs_index, context)), \
-                                         rhs_index, context);                                               \
-    break;
-
 #define JIT_HASH_CASE(r, types)                      \
   case JIT_GET_ENUM_VALUE(0, types):                 \
     return std::hash<JIT_GET_DATA_TYPE(0, types)>()( \
