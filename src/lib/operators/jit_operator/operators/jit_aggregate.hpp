@@ -6,10 +6,10 @@ namespace opossum {
 
 struct JitAggregateColumn {
   std::string column_name;
+  AggregateFunction function;
   JitTupleValue tuple_value;
   JitHashmapValue hashmap_value;
-  AggregateFunction function;
-  bool part_of_output;
+  JitHashmapValue hashmap_value_2;
 };
 
 struct JitGroupByColumn {

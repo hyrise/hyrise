@@ -99,7 +99,7 @@ uint64_t jit_hash(const JitTupleValue& value, JitRuntimeContext& context) {
     default:
       return 0;
   }
-};
+}
 
 bool jit_aggregate_equals(const JitTupleValue& lhs, const JitHashmapValue& rhs, const size_t rhs_index,
                           JitRuntimeContext& context) {
@@ -115,7 +115,7 @@ bool jit_aggregate_equals(const JitTupleValue& lhs, const JitHashmapValue& rhs, 
     default:
       return true;
   }
-};
+}
 
 void jit_assign(const JitTupleValue& from, const JitHashmapValue& to, const size_t to_index,
                 JitRuntimeContext& context) {
@@ -132,7 +132,7 @@ void jit_assign(const JitTupleValue& from, const JitHashmapValue& to, const size
     default:
       break;
   }
-};
+}
 
 size_t jit_grow_by_one(const JitHashmapValue& value, const JitVariantVector::InitialValue initial_value,
                        JitRuntimeContext& context) {
@@ -143,7 +143,7 @@ size_t jit_grow_by_one(const JitHashmapValue& value, const JitVariantVector::Ini
   }
 }
 
-//cleanup
+// cleanup
 #undef JIT_GET_ENUM_VALUE
 #undef JIT_GET_DATA_TYPE
 #undef JIT_HASH_CASE

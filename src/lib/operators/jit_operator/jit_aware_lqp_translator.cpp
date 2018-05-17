@@ -295,18 +295,25 @@ bool JitAwareLQPTranslator::_input_is_filtered(const std::shared_ptr<AbstractLQP
 
 bool JitAwareLQPTranslator::_node_is_jittable(const std::shared_ptr<AbstractLQPNode>& node,
                                               const bool allow_aggregate_node) const {
-  switch (node->type()) {
-    case LQPNodeType::Aggregate:
-      return allow_aggregate_node;
-    case LQPNodeType::Predicate:
-      return std::dynamic_pointer_cast<PredicateNode>(node)->scan_type() == ScanType::TableScan &&
-             std::dynamic_pointer_cast<PredicateNode>(node)->predicate_condition() != PredicateCondition::Between;
-    case LQPNodeType::Projection:
-    case LQPNodeType::Union:
-      return true;
-    default:
-      return false;
+  if (node->type() == LQPNodeType::Aggregate) {
+    auto aggregate_node = std::static_pointer_cast<AggregateNode>(node);
+    auto aggregate_expressions = aggregate_node->aggregate_expressions();
+    auto has_count_distict = std::count_if(
+        aggregate_expressions.begin(), aggregate_expressions.end(),
+        [](auto& expression) { return expression->aggregate_function() == AggregateFunction::CountDistinct; });
+    return allow_aggregate_node && !has_count_distict;
   }
+
+  if (node->type() == LQPNodeType::Predicate) {
+    auto predicate_node = std::static_pointer_cast<PredicateNode>(node);
+    return predicate_node->scan_type() == ScanType::TableScan;
+  }
+
+  if (node->type() == LQPNodeType::Projection || node->type() == LQPNodeType::Union) {
+    return true;
+  }
+
+  return false;
 }
 
 void JitAwareLQPTranslator::_visit(const std::shared_ptr<AbstractLQPNode>& node,

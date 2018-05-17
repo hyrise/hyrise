@@ -15,11 +15,21 @@ namespace opossum {
     BOOST_PP_TUPLE_ELEM(3, 1, type)[index] = value;                                             \
   }
 
-#define JIT_VARIANT_VECTOR_GROW_BY_ONE(r, d, type)                                                          \
-  template <>                                                                                               \
-  size_t JitVariantVector::grow_by_one<BOOST_PP_TUPLE_ELEM(3, 0, type)>(const InitialValue initial_value) { \
-    BOOST_PP_TUPLE_ELEM(3, 1, type).push_back(BOOST_PP_TUPLE_ELEM(3, 0, type)());                           \
-    return BOOST_PP_TUPLE_ELEM(3, 1, type).size() - 1;                                                      \
+#define JIT_VARIANT_VECTOR_GROW_BY_ONE(r, d, type)                                                              \
+  template <>                                                                                                   \
+  size_t JitVariantVector::grow_by_one<BOOST_PP_TUPLE_ELEM(3, 0, type)>(const InitialValue initial_value) {     \
+    switch (initial_value) {                                                                                    \
+      case InitialValue::Zero:                                                                                  \
+        BOOST_PP_TUPLE_ELEM(3, 1, type).push_back(BOOST_PP_TUPLE_ELEM(3, 0, type)());                           \
+        break;                                                                                                  \
+      case InitialValue::MaxValue:                                                                              \
+        BOOST_PP_TUPLE_ELEM(3, 1, type).push_back(std::numeric_limits<BOOST_PP_TUPLE_ELEM(3, 0, type)>::max()); \
+        break;                                                                                                  \
+      case InitialValue::MinValue:                                                                              \
+        BOOST_PP_TUPLE_ELEM(3, 1, type).push_back(std::numeric_limits<BOOST_PP_TUPLE_ELEM(3, 0, type)>::min()); \
+        break;                                                                                                  \
+    }                                                                                                           \
+    return BOOST_PP_TUPLE_ELEM(3, 1, type).size() - 1;                                                          \
   }
 
 #define JIT_VARIANT_VECTOR_GET_VECTOR(r, d, type)                                                                 \

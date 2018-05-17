@@ -30,7 +30,9 @@ std::shared_ptr<Table> JitAggregate::create_output_table(const uint32_t max_chun
   }
 
   for (const auto& aggregate_column : _aggregate_columns) {
-    const auto data_type = aggregate_column.hashmap_value.data_type();
+    const auto data_type = aggregate_column.function == AggregateFunction::Avg
+                               ? DataType::Double
+                               : aggregate_column.hashmap_value.data_type();
     const auto is_nullable = aggregate_column.hashmap_value.is_nullable();
     column_definitions.emplace_back(aggregate_column.column_name, data_type, is_nullable);
   }
@@ -40,6 +42,22 @@ std::shared_ptr<Table> JitAggregate::create_output_table(const uint32_t max_chun
 
 void JitAggregate::before_query(Table& out_table, JitRuntimeContext& context) const {
   context.hashmap.values.resize(_num_hashmap_values);
+}
+
+template <typename ColumnDataType>
+typename std::enable_if<std::is_arithmetic<ColumnDataType>::value, void>::type _compute_averages(
+    const std::vector<ColumnDataType>& sum_values, const std::vector<int64_t>& count_values,
+    std::vector<double>& avg_values) {
+  for (auto i = 0u; i < sum_values.size(); ++i) {
+    avg_values[i] = sum_values[i] / static_cast<double>(count_values[i]);
+  }
+}
+
+template <typename ColumnDataType>
+typename std::enable_if<!std::is_arithmetic<ColumnDataType>::value, void>::type _compute_averages(
+    const std::vector<ColumnDataType>& sum_values, const std::vector<int64_t>& count_values,
+    std::vector<double>& avg_values) {
+  Fail("Invalid aggregate");
 }
 
 void JitAggregate::after_query(Table& out_table, JitRuntimeContext& context) const {
@@ -59,13 +77,27 @@ void JitAggregate::after_query(Table& out_table, JitRuntimeContext& context) con
   for (const auto& aggregate_column : _aggregate_columns) {
     const auto data_type = aggregate_column.hashmap_value.data_type();
 
-    resolve_data_type(data_type, [&](auto type) {
-      using ColumnDataType = typename decltype(type)::type;
-      auto& values =
-          context.hashmap.values[aggregate_column.hashmap_value.column_index()].template get_vector<ColumnDataType>();
-      auto column = std::make_shared<ValueColumn<ColumnDataType>>(values);
-      chunk_columns.push_back(column);
-    });
+    if (aggregate_column.function == AggregateFunction::Avg) {
+      resolve_data_type(data_type, [&](auto type) {
+        using ColumnDataType = typename decltype(type)::type;
+        auto& sum_values =
+            context.hashmap.values[aggregate_column.hashmap_value.column_index()].template get_vector<ColumnDataType>();
+        auto& count_values =
+            context.hashmap.values[aggregate_column.hashmap_value_2.column_index()].get_vector<int64_t>();
+        auto avg_values = std::vector<double>(sum_values.size());
+        _compute_averages(sum_values, count_values, avg_values);
+        auto column = std::make_shared<ValueColumn<double>>(avg_values);
+        chunk_columns.push_back(column);
+      });
+    } else {
+      resolve_data_type(data_type, [&](auto type) {
+        using ColumnDataType = typename decltype(type)::type;
+        auto& values =
+            context.hashmap.values[aggregate_column.hashmap_value.column_index()].template get_vector<ColumnDataType>();
+        auto column = std::make_shared<ValueColumn<ColumnDataType>>(values);
+        chunk_columns.push_back(column);
+      });
+    }
   }
 
   out_table.append_chunk(chunk_columns);
@@ -75,17 +107,24 @@ void JitAggregate::add_aggregate_column(const std::string& column_name, const Ji
                                         const AggregateFunction function) {
   switch (function) {
     case AggregateFunction::Count:
-      _aggregate_columns.push_back(JitAggregateColumn{
-          column_name, value, JitHashmapValue(DataType::Long, false, _num_hashmap_values++), function, true});
+      _aggregate_columns.push_back(JitAggregateColumn{column_name, function, value,
+                                                      JitHashmapValue(DataType::Long, false, _num_hashmap_values++),
+                                                      JitHashmapValue(DataType::Null, false, -1)});
       break;
     case AggregateFunction::Sum:
     case AggregateFunction::Max:
     case AggregateFunction::Min:
-      _aggregate_columns.push_back(JitAggregateColumn{
-          column_name, value, JitHashmapValue(value.data_type(), false, _num_hashmap_values++), function, true});
+      _aggregate_columns.push_back(JitAggregateColumn{column_name, function, value,
+                                                      JitHashmapValue(value.data_type(), true, _num_hashmap_values++),
+                                                      JitHashmapValue(DataType::Null, false, -1)});
       break;
-    default:
-      Fail("Aggregate function not supported.");
+    case AggregateFunction::Avg:
+      _aggregate_columns.push_back(JitAggregateColumn{column_name, function, value,
+                                                      JitHashmapValue(value.data_type(), true, _num_hashmap_values++),
+                                                      JitHashmapValue(DataType::Long, false, _num_hashmap_values++)});
+      break;
+    case AggregateFunction::CountDistinct:
+      Fail("Not supported");
   }
 }
 
@@ -130,31 +169,58 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
       jit_assign(_groupby_columns[i].tuple_value, _groupby_columns[i].hashmap_value, match_index, context);
     }
     for (uint32_t i = 0; i < num_aggregate_columns; ++i) {
-      match_index = jit_grow_by_one(_aggregate_columns[i].hashmap_value, JitVariantVector::InitialValue::Zero, context);
-    }
-    hash_bucket.push_back(match_index);
-  } else {
-    for (uint32_t i = 0; i < num_aggregate_columns; ++i) {
       switch (_aggregate_columns[i].function) {
-        case AggregateFunction::Sum:
-          jit_aggregate_compute(jit_addition, _aggregate_columns[i].tuple_value, _aggregate_columns[i].hashmap_value,
-                                match_index, context);
-          break;
         case AggregateFunction::Count:
-          jit_aggregate_compute(jit_increment, _aggregate_columns[i].tuple_value, _aggregate_columns[i].hashmap_value,
-                                match_index, context);
+        case AggregateFunction::Sum:
+          match_index =
+              jit_grow_by_one(_aggregate_columns[i].hashmap_value, JitVariantVector::InitialValue::Zero, context);
           break;
         case AggregateFunction::Max:
-          jit_aggregate_compute(jit_maximum, _aggregate_columns[i].tuple_value, _aggregate_columns[i].hashmap_value,
-                                match_index, context);
+          match_index =
+              jit_grow_by_one(_aggregate_columns[i].hashmap_value, JitVariantVector::InitialValue::MinValue, context);
           break;
         case AggregateFunction::Min:
-          jit_aggregate_compute(jit_minimum, _aggregate_columns[i].tuple_value, _aggregate_columns[i].hashmap_value,
-                                match_index, context);
+          match_index =
+              jit_grow_by_one(_aggregate_columns[i].hashmap_value, JitVariantVector::InitialValue::MaxValue, context);
           break;
-        default:
+        case AggregateFunction::Avg:
+          match_index =
+              jit_grow_by_one(_aggregate_columns[i].hashmap_value, JitVariantVector::InitialValue::Zero, context);
+          jit_grow_by_one(_aggregate_columns[i].hashmap_value_2, JitVariantVector::InitialValue::Zero, context);
           break;
+        case AggregateFunction::CountDistinct:
+          Fail("Not supported");
       }
+    }
+    hash_bucket.push_back(match_index);
+  }
+
+  for (uint32_t i = 0; i < num_aggregate_columns; ++i) {
+    switch (_aggregate_columns[i].function) {
+      case AggregateFunction::Count:
+        jit_aggregate_compute(jit_increment, _aggregate_columns[i].tuple_value, _aggregate_columns[i].hashmap_value,
+                              match_index, context);
+        break;
+      case AggregateFunction::Sum:
+        jit_aggregate_compute(jit_addition, _aggregate_columns[i].tuple_value, _aggregate_columns[i].hashmap_value,
+                              match_index, context);
+        break;
+      case AggregateFunction::Max:
+        jit_aggregate_compute(jit_maximum, _aggregate_columns[i].tuple_value, _aggregate_columns[i].hashmap_value,
+                              match_index, context);
+        break;
+      case AggregateFunction::Min:
+        jit_aggregate_compute(jit_minimum, _aggregate_columns[i].tuple_value, _aggregate_columns[i].hashmap_value,
+                              match_index, context);
+        break;
+      case AggregateFunction::Avg:
+        jit_aggregate_compute(jit_addition, _aggregate_columns[i].tuple_value, _aggregate_columns[i].hashmap_value,
+                              match_index, context);
+        jit_aggregate_compute(jit_increment, _aggregate_columns[i].tuple_value, _aggregate_columns[i].hashmap_value_2,
+                              match_index, context);
+        break;
+      case AggregateFunction::CountDistinct:
+        Fail("Not supported");
     }
   }
 }
