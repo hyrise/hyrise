@@ -52,14 +52,11 @@ namespace opossum {
   case static_cast<uint8_t>(JIT_GET_ENUM_VALUE(0, types)) << 8 | static_cast<uint8_t>(JIT_GET_ENUM_VALUE(1, types)): \
     return catching_func(JIT_GET_DATA_TYPE(0, types)(), JIT_GET_DATA_TYPE(1, types)());
 
-#define JIT_AGGREGATE_COMPUTE_CASE(r, types)                                                                \
-  case JIT_GET_ENUM_VALUE(0, types):                                                                        \
-    catching_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(context), rhs.get<JIT_GET_DATA_TYPE(0, types)>(rhs_index, context)); \
+#define JIT_AGGREGATE_COMPUTE_CASE(r, types)                                 \
+  case JIT_GET_ENUM_VALUE(0, types):                                         \
+    catching_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(context),             \
+                  rhs.get<JIT_GET_DATA_TYPE(0, types)>(rhs_index, context)); \
     break;
-    //rhs.set<JIT_GET_DATA_TYPE(0, types)>(op_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(context),             \
-    //                                             rhs.get<JIT_GET_DATA_TYPE(0, types)>(rhs_index, context)), \
-    //                                     rhs_index, context);                                               \
-    //break;
 
 /* Arithmetic operators */
 const auto jit_addition = [](const auto a, const auto b) -> decltype(a + b) { return a + b; };
@@ -188,7 +185,8 @@ __attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const Jit
 
   // This lambda calls the op_func (a lambda that performs the actual computation) with type arguments and stores
   // the result.
-  const auto store_result_wrapper = [&](const auto typed_lhs, const auto typed_rhs) -> decltype(op_func(typed_lhs, typed_rhs), void()) {
+  const auto store_result_wrapper = [&](const auto typed_lhs,
+                                        const auto typed_rhs) -> decltype(op_func(typed_lhs, typed_rhs), void()) {
     using ResultType = typename std::remove_const<decltype(typed_rhs)>::type;
     rhs.set<ResultType>(op_func(typed_lhs, typed_rhs), rhs_index, context);
   };

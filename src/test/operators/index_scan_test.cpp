@@ -123,8 +123,8 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
 }
 
 TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionaryValue) {
-  const auto all_rows = std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108,
-                                                    110, 112};
+  const auto all_rows =
+      std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
   const auto no_rows = std::vector<AllTypeVariant>{};
 
   const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{30}};
@@ -155,8 +155,8 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionary
 }
 
 TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryValue) {
-  const auto all_rows = std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108,
-                                                    110, 112};
+  const auto all_rows =
+      std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
   const auto no_rows = std::vector<AllTypeVariant>{};
 
   const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{-10}};
