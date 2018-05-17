@@ -172,7 +172,9 @@ __attribute__((noinline)) bool jit_aggregate_equals(const JitTupleValue& lhs, co
 __attribute__((noinline)) void jit_assign(const JitTupleValue& from, const JitHashmapValue& to, const size_t to_index,
                                           JitRuntimeContext& context);
 
-__attribute__((noinline)) size_t jit_grow_by_one(const JitHashmapValue& value, JitRuntimeContext& context);
+__attribute__((noinline)) size_t jit_grow_by_one(const JitHashmapValue& value,
+                                                 const JitVariantVector::InitialValue initial_value,
+                                                 JitRuntimeContext& context);
 
 #define JIT_DATA_TYPE_INFO_NO_STRING                                                               \
   ((bool, Bool, "bool"))((int32_t, Int, "int"))((int64_t, Long, "long"))((float, Float, "float"))( \

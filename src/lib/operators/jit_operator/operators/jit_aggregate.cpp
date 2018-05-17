@@ -126,11 +126,11 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
 
   if (!found_match) {
     for (uint32_t i = 0; i < num_groupby_columns; ++i) {
-      match_index = jit_grow_by_one(_groupby_columns[i].hashmap_value, context);
+      match_index = jit_grow_by_one(_groupby_columns[i].hashmap_value, JitVariantVector::InitialValue::Zero, context);
       jit_assign(_groupby_columns[i].tuple_value, _groupby_columns[i].hashmap_value, match_index, context);
     }
     for (uint32_t i = 0; i < num_aggregate_columns; ++i) {
-      match_index = jit_grow_by_one(_aggregate_columns[i].hashmap_value, context);
+      match_index = jit_grow_by_one(_aggregate_columns[i].hashmap_value, JitVariantVector::InitialValue::Zero, context);
     }
     hash_bucket.push_back(match_index);
   } else {

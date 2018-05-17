@@ -71,6 +71,8 @@ namespace opossum {
  */
 class JitVariantVector {
  public:
+  enum class InitialValue { Zero, MinValue, MaxValue };
+
   void resize(const size_t new_size) {
     BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_RESIZE, _, JIT_DATA_TYPE_INFO)
     _is_null.resize(new_size);
@@ -84,7 +86,7 @@ class JitVariantVector {
   void set_is_null(const size_t index, const bool is_null) { _is_null[index] = is_null; }
 
   template <typename T>
-  size_t grow_by_one();
+  size_t grow_by_one(const InitialValue initial_value);
   template <typename T>
   std::vector<T>& get_vector();
 
