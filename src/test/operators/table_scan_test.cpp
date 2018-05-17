@@ -144,7 +144,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("a", DataType::Int, true);
-    column_definitions.emplace_back("b", DataType::Float, true);
+    column_definitions.emplace_back("b", DataType::Int, true);
     auto ref_table = std::make_shared<Table>(column_definitions, TableType::References);
 
     ChunkColumns columns({ref_column_a, ref_column_b});
