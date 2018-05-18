@@ -25,7 +25,9 @@ const std::string JitOperatorWrapper::description(DescriptionMode description_mo
 
 void JitOperatorWrapper::add_jit_operator(const std::shared_ptr<AbstractJittable>& op) { _jit_operators.push_back(op); }
 
-std::vector<std::shared_ptr<AbstractJittable>>& JitOperatorWrapper::jit_operators() { return _jit_operators; }
+const std::vector<std::shared_ptr<AbstractJittable>>& JitOperatorWrapper::jit_operators() const {
+  return _jit_operators;
+}
 
 const std::shared_ptr<JitReadTuples> JitOperatorWrapper::_source() const {
   return std::dynamic_pointer_cast<JitReadTuples>(_jit_operators.front());

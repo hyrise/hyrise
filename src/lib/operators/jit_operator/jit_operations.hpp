@@ -183,6 +183,10 @@ __attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const Jit
     return;
   }
 
+  if (rhs.is_nullable()) {
+    rhs.set_is_null(false, rhs_index, context);
+  }
+
   // This lambda calls the op_func (a lambda that performs the actual computation) with type arguments and stores
   // the result.
   const auto store_result_wrapper = [&](const auto typed_lhs,

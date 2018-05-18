@@ -89,10 +89,11 @@ class JitVariantVector {
   size_t grow_by_one(const InitialValue initial_value);
   template <typename T>
   std::vector<T>& get_vector();
+  std::vector<bool>& get_is_null_vector() { return _is_null; }
 
  private:
   BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_MEMBER, _, JIT_DATA_TYPE_INFO)
-  std::vector<uint8_t> _is_null;
+  std::vector<bool> _is_null;
 };
 
 class BaseJitColumnReader;

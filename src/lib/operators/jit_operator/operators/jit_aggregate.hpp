@@ -6,14 +6,16 @@ namespace opossum {
 
 struct JitAggregateColumn {
   std::string column_name;
+  uint64_t table_position;
   AggregateFunction function;
   JitTupleValue tuple_value;
   JitHashmapValue hashmap_value;
-  JitHashmapValue hashmap_value_2;
+  std::optional<JitHashmapValue> hashmap_value_2 = std::nullopt;
 };
 
 struct JitGroupByColumn {
   std::string column_name;
+  uint64_t table_position;
   JitTupleValue tuple_value;
   JitHashmapValue hashmap_value;
 };
@@ -29,6 +31,9 @@ class JitAggregate : public AbstractJittableSink {
   void add_aggregate_column(const std::string& column_name, const JitTupleValue& tuple_value,
                             const AggregateFunction function);
   void add_groupby_column(const std::string& column_name, const JitTupleValue& tuple_value);
+
+  const std::vector<JitAggregateColumn> aggregate_columns() const;
+  const std::vector<JitGroupByColumn> groupby_columns() const;
 
  private:
   void _consume(JitRuntimeContext& ctx) const final;

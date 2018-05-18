@@ -136,7 +136,7 @@ TEST_F(JitVariantVectorTest, GrowByOneAddsElementToCorrectInternalVector) {
 
 TEST_F(JitVariantVectorTest, GrowByOneAddsMultipleElements) {
   JitVariantVector vector;
-  for (auto i=1u; i<= 100u; ++i) {
+  for (auto i = 1u; i <= 100u; ++i) {
     vector.grow_by_one<int32_t>(JitVariantVector::InitialValue::Zero);
     EXPECT_EQ(vector.get_vector<int32_t>().size(), i);
   }

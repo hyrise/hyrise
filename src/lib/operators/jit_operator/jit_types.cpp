@@ -18,6 +18,7 @@ namespace opossum {
 #define JIT_VARIANT_VECTOR_GROW_BY_ONE(r, d, type)                                                              \
   template <>                                                                                                   \
   size_t JitVariantVector::grow_by_one<BOOST_PP_TUPLE_ELEM(3, 0, type)>(const InitialValue initial_value) {     \
+    _is_null.push_back(true);                                                                                   \
     switch (initial_value) {                                                                                    \
       case InitialValue::Zero:                                                                                  \
         BOOST_PP_TUPLE_ELEM(3, 1, type).push_back(BOOST_PP_TUPLE_ELEM(3, 0, type)());                           \
