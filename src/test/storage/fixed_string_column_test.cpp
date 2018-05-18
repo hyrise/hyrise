@@ -26,11 +26,15 @@ TEST_F(StorageFixedStringColumnTest, CompressColumnString) {
   vc_str->append("Hasso");
   vc_str->append("Bill");
 
+  std::cout << "been here1 " << std::endl;
   auto col = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
+  std::cout << "been here 2" << std::endl;
   auto dict_col = std::dynamic_pointer_cast<FixedStringColumn<std::string>>(col);
+  std::cout << "been here 3" << std::endl;
 
   // Test attribute_vector size
   EXPECT_EQ(dict_col->size(), 6u);
+  std::cout << "been here 4" << std::endl;
   EXPECT_EQ(dict_col->attribute_vector()->size(), 6u);
 
   // Test dictionary size (uniqueness)

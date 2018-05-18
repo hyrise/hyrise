@@ -70,6 +70,11 @@ size_t FixedStringVector::size() const {
   // If the string length is zero, `_chars` has always the size 0. Thus, we don't know
   // how many empty strings were added to the FixedStringVector. So the FixedStringVector size is
   // always 1 and it returns an empty string when the first element is accessed.
+std::cout << "before it" << std::endl;
+    for(const auto& c : _chars) {
+        std::cout << c << std::endl;
+    }
+std::cout << "after it" << std::endl;
   return _string_length == 0u ? 1u : _chars.size() / _string_length;
 }
 

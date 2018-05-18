@@ -24,6 +24,7 @@ namespace {
 static const auto encoder_for_type = std::map<EncodingType, std::shared_ptr<BaseColumnEncoder>>{
     {EncodingType::Dictionary, std::make_shared<DictionaryEncoder>()},
     {EncodingType::RunLength, std::make_shared<RunLengthEncoder>()},
+    // {EncodingType::FixedStringDictionary, std::make_shared<DictionaryEncoder>()},
     {EncodingType::FixedStringDictionary, std::make_shared<FixedStringDictionaryEncoder>()},
     {EncodingType::FrameOfReference, std::make_shared<FrameOfReferenceEncoder>()}};
 
