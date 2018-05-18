@@ -1,7 +1,5 @@
 #include "sql_pipeline_builder.hpp"
 
-#include "operators/jit_operator/jit_aware_lqp_translator.hpp"
-
 namespace opossum {
 
 SQLPipelineBuilder::SQLPipelineBuilder(const std::string& sql) : _sql(sql) {}

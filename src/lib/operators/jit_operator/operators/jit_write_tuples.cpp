@@ -42,6 +42,8 @@ void JitWriteTuples::add_output_column(const std::string& column_name, const Jit
   _output_columns.push_back({column_name, value});
 }
 
+std::vector<JitOutputColumn> JitWriteTuples::output_columns() const { return _output_columns; }
+
 void JitWriteTuples::_consume(JitRuntimeContext& context) const {
   for (const auto& output : context.outputs) {
     output->write_value(context);
