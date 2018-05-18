@@ -56,6 +56,9 @@ class FixedStringVector {
   reverse_iterator rbegin() noexcept;
   reverse_iterator rend() noexcept;
 
+  // Return a pointer to the underlying memory
+  char* data();
+
   // Return the number of entries in the column.
   size_t size() const;
 

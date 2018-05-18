@@ -232,4 +232,23 @@ TEST_F(FixedStringVectorTest, CompareStdStringToFixedString) {
   EXPECT_EQ("abc", fixed_string_vector.at(0u));
 }
 
+TEST_F(FixedStringVectorTest, MemoryLayout) {
+  auto fixed_string_vector = FixedStringVector(6u);
+  fixed_string_vector.push_back("abc");
+  fixed_string_vector.push_back("string");
+
+  EXPECT_EQ(*fixed_string_vector.data(), 'a');
+  EXPECT_EQ(*(fixed_string_vector.data() + 1), 'b');
+  EXPECT_EQ(*(fixed_string_vector.data() + 2), 'c');
+  EXPECT_EQ(*(fixed_string_vector.data() + 3), '\0');
+  EXPECT_EQ(*(fixed_string_vector.data() + 4), '\0');
+  EXPECT_EQ(*(fixed_string_vector.data() + 5), '\0');
+  EXPECT_EQ(*(fixed_string_vector.data() + 6), 's');
+  EXPECT_EQ(*(fixed_string_vector.data() + 7), 't');
+  EXPECT_EQ(*(fixed_string_vector.data() + 8), 'r');
+  EXPECT_EQ(*(fixed_string_vector.data() + 9), 'i');
+  EXPECT_EQ(*(fixed_string_vector.data() + 10), 'n');
+  EXPECT_EQ(*(fixed_string_vector.data() + 11), 'g');
+}
+
 }  // namespace opossum

@@ -64,6 +64,8 @@ const std::string FixedStringVector::get_string_at(const size_t value_id) const 
   }
 }
 
+char* FixedStringVector::data() { return _chars.data(); }
+
 size_t FixedStringVector::size() const {
   // If the string length is zero, `_chars` has always the size 0. Thus, we don't know
   // how many empty strings were added to the FixedStringVector. So the FixedStringVector size is
