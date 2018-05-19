@@ -405,7 +405,7 @@ TEST_F(JitAwareLQPTranslatorTest, AggregateOperator) {
   ASSERT_NE(jit_compute, nullptr);
   ASSERT_NE(jit_aggregate, nullptr);
 
-  // Check the structure of the computed filter expression
+  // Check the structure of the computed expression
   const auto expression = jit_compute->expression();
   ASSERT_EQ(expression->expression_type(), ExpressionType::Addition);
   ASSERT_EQ(jit_read_tuples->find_input_column(expression->left_child()->result()), ColumnID{0});
@@ -430,6 +430,7 @@ TEST_F(JitAwareLQPTranslatorTest, AggregateOperator) {
 
   ASSERT_EQ(aggregate_columns[2].column_name, "AVG(table_a.a + table_a.b)");
   ASSERT_EQ(aggregate_columns[2].function, AggregateFunction::Avg);
+  // This aggregate function should operates on the result of the previously computed expression
   ASSERT_EQ(aggregate_columns[2].tuple_value, expression->result());
 
   ASSERT_EQ(aggregate_columns[3].column_name, "MIN(table_a.a)");

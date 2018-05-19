@@ -38,7 +38,7 @@ namespace opossum {
     return BOOST_PP_TUPLE_ELEM(3, 1, type);                                                                       \
   }
 
-// Generate get and set methods for all data types defined in the JIT_DATA_TYPE_INFO
+// Generate get, get, grow_by_one, and get_vector methods for all data types defined in JIT_DATA_TYPE_INFO
 BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GET, _, JIT_DATA_TYPE_INFO)
 BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_SET, _, JIT_DATA_TYPE_INFO)
 BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GROW_BY_ONE, _, JIT_DATA_TYPE_INFO)

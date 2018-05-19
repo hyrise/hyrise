@@ -103,10 +103,6 @@ struct InvalidTypeCatcher : Functor {
   }
 };
 
-// We do not want to inline here, because:
-// These function tend to get quite complex due to the large switch statement. If we inline this function, this means a
-// lot of work for the JIT compiler. If we let the JIT compiler do the inlining instead, it is able to prune the
-// function to the relevant case during inlining. This allows for faster jitting.
 template <typename T>
 void jit_compute(const T& op_func, const JitTupleValue& lhs, const JitTupleValue& rhs, const JitTupleValue& result,
                  JitRuntimeContext& context) {

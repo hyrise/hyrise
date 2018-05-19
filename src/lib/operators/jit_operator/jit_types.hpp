@@ -64,10 +64,9 @@ namespace opossum {
  *    This data structure can also be used to store a vector of values of some unknown, but fixed type.
  *    Say you want to build an aggregate operator and need to store a column of aggregate values. All values
  *    produced will have the same type, but there is no way of knowing that type in advance.
- *    By adding a templated "push" function to the implementation below, we can add an arbitrary number of elements to
- *    the std::vector of that type. All other vectors will remain empty.
- *    This interpretation of the variant vector is not used in the code currently, but will be helpful when implementing
- *    further operators.
+ *    By adding a templated "grow_by_one" function to the implementation below, we can add an arbitrary number of
+ *    elements to the std::vector of that data type. All other vectors will remain empty.
+ *    This interpretation of the variant vector is used for the JitAggregate operator.
  */
 class JitVariantVector {
  public:
@@ -85,14 +84,24 @@ class JitVariantVector {
   bool is_null(const size_t index) { return _is_null[index]; }
   void set_is_null(const size_t index, const bool is_null) { _is_null[index] = is_null; }
 
+  // Adds an element to the internal vector for the specified data type.
+  // The initial value can be set to Zero, MaxValue, or MinValue in a data type independent way.
+  // The implementation will then construct the concrete initial value for the correct data type using
+  // std::numeric_limits.
   template <typename T>
   size_t grow_by_one(const InitialValue initial_value);
+
+  // Adds an element to the internal _is_null vector.
   size_t grow_is_null_by_one(const bool initial_value) {
     _is_null.push_back(initial_value);
     return _is_null.size() - 1;
   }
+
+  // Returns the internal vector for the specified data type.
   template <typename T>
   std::vector<T>& get_vector();
+
+  // Returns the internal _is_null vector.
   std::vector<bool>& get_is_null_vector() { return _is_null; }
 
  private:
@@ -103,6 +112,12 @@ class JitVariantVector {
 class BaseJitColumnReader;
 class BaseJitColumnWriter;
 
+// The JitAggregate operator (and possibly future hashing based operators) require an efficient way to hash tuples
+// across multiple columns (i.e., the key-type of the hashmap spans multiple columns).
+// Since the number / data types of the columns are not known at compile time, we use a regular
+// hashmap in combination with some JitVariantVectors to build the foundation for more flexible hashing.
+// See the JitAggregate operator (jit_aggregate.hpp) for details.
+// The runtime hashmap is part of the JitRuntimeContext to keep mutable state from the operators.
 struct JitRuntimeHashmap {
   std::unordered_map<uint64_t, std::vector<size_t>> indices;
   std::vector<JitVariantVector> values;
@@ -121,11 +136,10 @@ struct JitRuntimeContext {
 };
 
 // The JitTupleValue represents a value in the runtime tuple.
-// The JitTupleValue has information about the DataType and index of the value it represents, but it does NOT have
+// The JitTupleValue has information about the data type and index of the value it represents, but it does NOT have
 // a reference to the runtime tuple with the actual values.
 // However, this is enough for the jit engine to optimize any operation involving the value.
-// It only knows how to access the value, once it gets converted to a JitMaterializedValue by providing the runtime
-// context.
+// It only knows how to access the value from the runtime context.
 class JitTupleValue {
  public:
   JitTupleValue(const DataType data_type, const bool is_nullable, const size_t tuple_index)
@@ -167,6 +181,22 @@ class JitTupleValue {
   const size_t _tuple_index;
 };
 
+// The JitHashmapValue represents a value in the runtime hashmap.
+// The JitHashmapValue has information about the data type and index of the value it represents, but it does NOT have
+// a reference to the runtime hashmap with the actual values.
+// However, this is enough for the jit engine to optimize any operation involving the value.
+// It only knows how to access the value from the runtime context.
+// Compared to JitTupleValues, the hashmap values offer an additional dimension: The value is configured with a
+// column_index, which references a column in the runtime hashmap. However, this column is not a single value but a
+// vector. Whenever the JitHashmapValue is used in a computation, an additional row_index is required to specify the
+// value inside the vector that should be used for the computation.
+// Example: A JitHashmapValue may refer to an aggregate that is computed in the JitAggregate operator. The
+// JitHashmapValue stores information about the data type, nullability of the aggregate, and the index of the column in
+// the runtime hashmap that stores the computed aggregates.
+// However, the JitAggregate operator computes multiple aggregate values - one for each group of tuples.
+// The JitHashmapValue represents all these aggregates (i.e., the entire vector of aggregates) at once.
+// The additional row_index is needed to access one specific aggregate (e.g., when updating aggregates during tuple
+// processing).
 class JitHashmapValue {
  public:
   JitHashmapValue(const DataType data_type, const bool is_nullable, const size_t column_index)
