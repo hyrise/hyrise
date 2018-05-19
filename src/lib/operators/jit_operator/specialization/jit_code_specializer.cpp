@@ -151,6 +151,12 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context) 
     auto function_has_opossum_namespace = boost::starts_with(function.getName().str(), "_ZNK7opossum") ||
                                           boost::starts_with(function.getName().str(), "_ZN7opossum");
 
+    // A note about "__clang_call_terminate":
+    // __clang_call_terminate is generated / used internally by clang to call the std::terminate function when expection
+    // handling fails. For some unknown reason this function cannot be resolved in the Hyrise binary when jit-compiling
+    // bitcode that uses the function. The function is, however, present in the bitcode repository.
+    // We thus always inline this function from the repository.
+
     // All function that are not in the opossum:: namespace are not considered for inlining. Instead, a function
     // declaration (without a function body) is created.
     if (!function_has_opossum_namespace && function_name != "__clang_call_terminate") {

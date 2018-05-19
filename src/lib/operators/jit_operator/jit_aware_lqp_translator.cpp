@@ -48,8 +48,9 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_node_t
     }
   });
 
-  // It does not make sense to create a JitOperatorWrapper for fewer than 2 LQP nodes,
-  // but we may want a better heuristic here
+  // We use a really simple heuristic to decide when to introduce jittable operators:
+  // For aggregate operations replacing a single AggregateNode with a JitAggregate operator already yields significant
+  // runtime benefits. Otherwise, it does not make sense to create a JitOperatorWrapper for fewer than 2 LQP nodes.
   if (num_jittable_nodes < 1 || (num_jittable_nodes < 2 && node->type() != LQPNodeType::Aggregate) ||
       input_nodes.size() != 1) {
     return nullptr;
@@ -81,21 +82,29 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_node_t
   }
 
   if (node->type() == LQPNodeType::Aggregate) {
+    // Since aggregate nodes cause materialization, there is at most one JitAggregate operator in each operator chain and
+    // is must be the last operator of that chain. The _node_is_jittable function takes care of this by rejecting
+    // aggregate nodes in the middle of operator chains.
     const auto aggregate_node = std::static_pointer_cast<AggregateNode>(node);
 
     auto aggregate = std::make_shared<JitAggregate>();
     const auto column_names = aggregate_node->output_column_names();
     const auto groupby_columns = aggregate_node->groupby_column_references();
     const auto aggregate_columns = aggregate_node->aggregate_expressions();
+
+    // Split the output column names between groupby columns and aggregate expressions.
     const auto groupby_column_names = boost::adaptors::slice(column_names, 0, groupby_columns.size());
     const auto aggregate_column_names =
         boost::adaptors::slice(column_names, groupby_columns.size(), column_names.size());
 
     for (const auto& groupby_column : boost::combine(groupby_column_names, groupby_columns)) {
       const auto expression = _try_translate_column_to_jit_expression(groupby_column.get<1>(), *read_tuple, input_node);
+      if (!expression) return nullptr;
+      // Create a JitCompute oeprator for each computed groupby column ...
       if (expression->expression_type() != ExpressionType::Column) {
         jit_operator->add_jit_operator(std::make_shared<JitCompute>(expression));
       }
+      // ... and add the column to the JitAggregate operator.
       aggregate->add_groupby_column(groupby_column.get<0>(), expression->result());
     }
 
@@ -105,9 +114,11 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_node_t
       const auto expression = _try_translate_expression_to_jit_expression(
           *aggregate_expression->aggregate_function_arguments()[0], *read_tuple, input_node);
       if (!expression) return nullptr;
+      // Create a JitCompute oeprator for each aggregate expression on a computed value ...
       if (expression->expression_type() != ExpressionType::Column) {
         jit_operator->add_jit_operator(std::make_shared<JitCompute>(expression));
       }
+      // ... and add the aggregate expression to the JitAggregate operator.
       aggregate->add_aggregate_column(aggregate_column.get<0>(), expression->result(),
                                       aggregate_expression->aggregate_function());
     }
@@ -296,6 +307,7 @@ bool JitAwareLQPTranslator::_input_is_filtered(const std::shared_ptr<AbstractLQP
 bool JitAwareLQPTranslator::_node_is_jittable(const std::shared_ptr<AbstractLQPNode>& node,
                                               const bool allow_aggregate_node) const {
   if (node->type() == LQPNodeType::Aggregate) {
+    // We do not support the count distinct function yet and thus need to check all aggregate expressions.
     auto aggregate_node = std::static_pointer_cast<AggregateNode>(node);
     auto aggregate_expressions = aggregate_node->aggregate_expressions();
     auto has_count_distict = std::count_if(
