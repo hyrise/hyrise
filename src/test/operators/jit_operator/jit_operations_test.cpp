@@ -377,7 +377,7 @@ TEST_F(JitOperationsTest, JitHash) {
   // Check jit_hash with NULL value
   const JitTupleValue tuple_value{DataType::Int, true, 0};
   tuple_value.set_is_null(true, context);
-  EXPECT_EQ(jit_hash(tuple_value, context), 0);
+  EXPECT_EQ(jit_hash(tuple_value, context), 0u);
 }
 
 TEST_F(JitOperationsTest, JitAggregateEquals) {
@@ -491,21 +491,21 @@ TEST_F(JitOperationsTest, JitAggregateCompute) {
   {
     const JitTupleValue tuple_value{DataType::String, false, 0};
     const JitTupleValue null_tuple_value{DataType::String, true, 1};
-    const JitHashmapValue hashmap_value{DataType::String, false, 0};
+    const JitHashmapValue hashmap_value{DataType::Long, false, 0};
 
-    tuple_value.set<int32_t>("some string", context);
+    tuple_value.set<std::string>("some string", context);
     null_tuple_value.set_is_null(true, context);
-    hashmap_value.set<int32_t>(5, 0, context);
+    hashmap_value.set<int64_t>(5, 0, context);
 
-    ASSERT_EQ(5, hashmap_value.get<int32_t>(0, context));
+    ASSERT_EQ(5, hashmap_value.get<int64_t>(0, context));
     jit_aggregate_compute(jit_increment, tuple_value, hashmap_value, 0, context);
-    ASSERT_EQ(6, hashmap_value.get<int32_t>(0, context));
+    ASSERT_EQ(6, hashmap_value.get<int64_t>(0, context));
     jit_aggregate_compute(jit_increment, tuple_value, hashmap_value, 0, context);
-    ASSERT_EQ(7, hashmap_value.get<int32_t>(0, context));
+    ASSERT_EQ(7, hashmap_value.get<int64_t>(0, context));
 
     // NULL values should not change the aggregate
     jit_aggregate_compute(jit_increment, null_tuple_value, hashmap_value, 0, context);
-    ASSERT_EQ(7, hashmap_value.get<int32_t>(0, context));
+    ASSERT_EQ(7, hashmap_value.get<int64_t>(0, context));
   }
 
   // jit_maximum operation
