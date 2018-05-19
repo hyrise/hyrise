@@ -65,6 +65,10 @@ std::vector<std::shared_ptr<AbstractExpression>> SQLIdentifierContext::resolve_t
   return expressions;
 }
 
+void SQLIdentifierContext::append(SQLIdentifierContext&& rhs) {
+  _entries.insert(_entries.end(), rhs._entries.begin(), rhs._entries.end());
+}
+
 SQLIdentifierContextEntry& SQLIdentifierContext::_find_or_create_expression_entry(const std::shared_ptr<AbstractExpression>& expression) {
   auto entry_iter = std::find_if(_entries.begin(), _entries.end(), [&](const auto& entry) { return entry.expression->deep_equals(*expression); });
 

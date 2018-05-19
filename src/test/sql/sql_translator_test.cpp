@@ -491,13 +491,13 @@ TEST_F(SQLTranslatorTest, JoinNatural) {
                                         "FROM "
                                         "  int_float AS a NATURAL JOIN int_float2 AS b "
                                         "WHERE "
-                                        "  b.b > 10 AND a.a > 5");
+                                        "  a.b > 10 AND a.a > 5");
 
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-    PredicateNode::make(greater_than(int_float_b, 10),
-      PredicateNode::make(greater_than(int_float_a, 5),
+  PredicateNode::make(greater_than(int_float_b, 10),
+    PredicateNode::make(greater_than(int_float_a, 5),
+      ProjectionNode::make(expression_vector(int_float_a, int_float_b),
         PredicateNode::make(equals(int_float_b, int_float2_b),
           JoinNode::make(JoinMode::Inner, equals(int_float_a, int_float2_a),
             stored_table_node_int_float,

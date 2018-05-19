@@ -34,6 +34,8 @@ class SQLIdentifierContext final {
 
   std::vector<std::shared_ptr<AbstractExpression>> resolve_table_name(const std::string& table_name) const;
 
+  void append(SQLIdentifierContext&& rhs);
+
  private:
   SQLIdentifierContextEntry& _find_or_create_expression_entry(const std::shared_ptr<AbstractExpression>& expression);
 

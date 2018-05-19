@@ -40,12 +40,36 @@ class SQLTranslator final {
   std::shared_ptr<AbstractLQPNode> translate_statement(const hsql::SQLStatement &statement);
   std::shared_ptr<AbstractLQPNode> translate_select_statement(const hsql::SelectStatement &select);
 
- protected:
-  std::shared_ptr<AbstractLQPNode> _translate_table_ref(const hsql::TableRef &hsql_table_ref);
-  std::shared_ptr<AbstractLQPNode> _translate_table_source(const hsql::TableRef &hsql_table_ref);
-  std::shared_ptr<AbstractLQPNode> _translate_predicated_join(const hsql::JoinDefinition &join);
-  std::shared_ptr<AbstractLQPNode> _translate_natural_join(const hsql::JoinDefinition& join);
-  std::shared_ptr<AbstractLQPNode> _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
+ private:
+  // Track state while translating the FROM clause. This makes sure only the actually available SQL identifiers can be
+  // used, e.g. "SELECT * FROM t1, t2 JOIN t3 ON t1.a = t2.a" is illegal since t1 is invisible to the seconds entry.
+  // Also ensures the correct Columns go into Select wildcards, even in presence of NATURAL/SEMI joins that remove columns
+  // from input tables
+  struct TableSourceState final {
+    TableSourceState() = default;
+    TableSourceState(const std::shared_ptr<AbstractLQPNode>& lqp,
+                     const std::unordered_map<std::string, std::vector<std::shared_ptr<AbstractExpression>>>& elements_by_table_name,
+                     const std::vector<std::shared_ptr<AbstractExpression>>& elements_in_order,
+    const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context);
+
+    void append(TableSourceState&& rhs);
+
+    std::shared_ptr<AbstractLQPNode> lqp;
+
+    // Collects the output of the FROM clause to expand wildcards (*; <t>.*) used in the SELECT list
+    std::unordered_map<std::string, std::vector<std::shared_ptr<AbstractExpression>>> elements_by_table_name;
+
+    // To establish the correct order of columns in SELECT *
+    std::vector<std::shared_ptr<AbstractExpression>> elements_in_order;
+
+    std::shared_ptr<SQLIdentifierContext> sql_identifier_context;
+  };
+
+  TableSourceState _translate_table_ref(const hsql::TableRef &hsql_table_ref);
+  TableSourceState _translate_table_origin(const hsql::TableRef &hsql_table_ref);
+  TableSourceState _translate_predicated_join(const hsql::JoinDefinition &join);
+  TableSourceState _translate_natural_join(const hsql::JoinDefinition& join);
+  TableSourceState _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
 
   void _translate_select_list_groupby_having(const hsql::SelectStatement &select);
 //
@@ -87,8 +111,8 @@ class SQLTranslator final {
                                                                   const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const;
 
 
-  std::shared_ptr<AbstractExpression> _translate_hsql_expr(const hsql::Expr& expr) const;
-  std::shared_ptr<AbstractExpression> _translate_hsql_case(const hsql::Expr& expr) const;
+  std::shared_ptr<AbstractExpression> _translate_hsql_expr(const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context) const;
+  std::shared_ptr<AbstractExpression> _translate_hsql_case(const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context) const;
 
  private:
   const UseMvcc _use_mvcc;
@@ -96,11 +120,7 @@ class SQLTranslator final {
   std::shared_ptr<AbstractLQPNode> _current_lqp;
   std::shared_ptr<SQLIdentifierContext> _sql_identifier_context;
   std::shared_ptr<SQLIdentifierContextProxy> _external_sql_identifier_context_proxy;
-
-  // Collect the output of the FROM clause to expand wildcards (*; <t>.*) used in the SELECT list
-  std::unordered_map<std::string, std::shared_ptr<AbstractLQPNode>> _from_elements_by_table_name;
-  // To establish the correct order of columns in SELECT *
-  std::vector<std::shared_ptr<AbstractLQPNode>> _from_elements_in_order;
+  std::optional<TableSourceState> _from_clause_result;
 };
 
 }  // namespace opossum
