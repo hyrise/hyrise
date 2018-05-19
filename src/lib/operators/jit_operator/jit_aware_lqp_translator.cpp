@@ -82,9 +82,9 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_node_t
   }
 
   if (node->type() == LQPNodeType::Aggregate) {
-    // Since aggregate nodes cause materialization, there is at most one JitAggregate operator in each operator chain and
-    // is must be the last operator of that chain. The _node_is_jittable function takes care of this by rejecting
-    // aggregate nodes in the middle of operator chains.
+    // Since aggregate nodes cause materialization, there is at most one JitAggregate operator in each operator chain
+    // and it must be the last operator of the chain. The _node_is_jittable function takes care of this by rejecting
+    // aggregate nodes that would be placed in the middle of an operator chain.
     const auto aggregate_node = std::static_pointer_cast<AggregateNode>(node);
 
     auto aggregate = std::make_shared<JitAggregate>();

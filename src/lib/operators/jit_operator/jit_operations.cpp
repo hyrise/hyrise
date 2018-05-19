@@ -94,6 +94,8 @@ bool jit_aggregate_equals(const JitTupleValue& lhs, const JitHashmapValue& rhs, 
     return false;
   }
 
+  DebugAssert(lhs.data_type() == rhs.data_type(), "Data types don't match in jit_aggregate_equals.");
+
   switch (lhs.data_type()) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_AGGREGATE_EQUALS_CASE, (JIT_DATA_TYPE_INFO))
     default:
@@ -103,6 +105,8 @@ bool jit_aggregate_equals(const JitTupleValue& lhs, const JitHashmapValue& rhs, 
 
 void jit_assign(const JitTupleValue& from, const JitHashmapValue& to, const size_t to_index,
                 JitRuntimeContext& context) {
+  DebugAssert(from.data_type() == to.data_type(), "Data types don't match in jit_assign.");
+
   if (to.is_nullable()) {
     const bool is_null = from.is_null(context);
     to.set_is_null(is_null, to_index, context);
@@ -120,6 +124,10 @@ void jit_assign(const JitTupleValue& from, const JitHashmapValue& to, const size
 
 size_t jit_grow_by_one(const JitHashmapValue& value, const JitVariantVector::InitialValue initial_value,
                        JitRuntimeContext& context) {
+  if (value.is_nullable()) {
+    context.hashmap.values[value.column_index()].grow_is_null_by_one(true);
+  }
+
   switch (value.data_type()) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_GROW_BY_ONE_CASE, (JIT_DATA_TYPE_INFO))
     default:

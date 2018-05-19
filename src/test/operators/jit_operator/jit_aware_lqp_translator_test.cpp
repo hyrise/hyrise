@@ -431,7 +431,7 @@ TEST_F(JitAwareLQPTranslatorTest, AggregateOperator) {
   ASSERT_EQ(aggregate_columns[2].column_name, "AVG(table_a.a + table_a.b)");
   ASSERT_EQ(aggregate_columns[2].function, AggregateFunction::Avg);
   ASSERT_EQ(aggregate_columns[2].tuple_value, expression->result());
-j
+
   ASSERT_EQ(aggregate_columns[3].column_name, "MIN(table_a.a)");
   ASSERT_EQ(aggregate_columns[3].function, AggregateFunction::Min);
   ASSERT_EQ(jit_read_tuples->find_input_column(aggregate_columns[3].tuple_value), ColumnID{0});

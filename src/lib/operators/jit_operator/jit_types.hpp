@@ -87,6 +87,10 @@ class JitVariantVector {
 
   template <typename T>
   size_t grow_by_one(const InitialValue initial_value);
+  size_t grow_is_null_by_one(const bool initial_value) {
+    _is_null.push_back(initial_value);
+    return _is_null.size() - 1;
+  }
   template <typename T>
   std::vector<T>& get_vector();
   std::vector<bool>& get_is_null_vector() { return _is_null; }
