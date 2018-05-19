@@ -33,6 +33,7 @@ void load_test_tables() {
   opossum::StorageManager::get().add_table("int_float", opossum::load_table("src/test/tables/int_float.tbl"));
   opossum::StorageManager::get().add_table("int_float2", opossum::load_table("src/test/tables/int_float2.tbl"));
   opossum::StorageManager::get().add_table("int_float5", opossum::load_table("src/test/tables/int_float5.tbl"));
+  opossum::StorageManager::get().add_table("int_int_int", opossum::load_table("src/test/tables/int_int_int.tbl"));
 }
 }  // namespace
 
@@ -45,12 +46,16 @@ class SQLTranslatorTest : public ::testing::Test {
     stored_table_node_int_float = StoredTableNode::make("int_float");
     stored_table_node_int_float2 = StoredTableNode::make("int_float2");
     stored_table_node_int_float5 = StoredTableNode::make("int_float5");
+    stored_table_node_int_int_int = StoredTableNode::make("int_int_int");
     int_float_a = stored_table_node_int_float->get_column("a");
     int_float_b = stored_table_node_int_float->get_column("b");
     int_float2_a = stored_table_node_int_float2->get_column("a");
     int_float2_b = stored_table_node_int_float2->get_column("b");
     int_float5_a = stored_table_node_int_float5->get_column("a");
     int_float5_d = stored_table_node_int_float5->get_column("d");
+    int_int_int_a = stored_table_node_int_int_int->get_column("a");
+    int_int_int_b = stored_table_node_int_int_int->get_column("b");
+    int_int_int_c = stored_table_node_int_int_int->get_column("c");
   }
 
   void TearDown() override {
@@ -66,7 +71,8 @@ class SQLTranslatorTest : public ::testing::Test {
   std::shared_ptr<StoredTableNode> stored_table_node_int_float;
   std::shared_ptr<StoredTableNode> stored_table_node_int_float2;
   std::shared_ptr<StoredTableNode> stored_table_node_int_float5;
-  LQPColumnReference int_float_a, int_float_b, int_float5_a, int_float5_d, int_float2_a, int_float2_b;
+  std::shared_ptr<StoredTableNode> stored_table_node_int_int_int;
+  LQPColumnReference int_float_a, int_float_b, int_float5_a, int_float5_d, int_float2_a, int_float2_b, int_int_int_a, int_int_int_b, int_int_int_c;
 };
 
 // Not supported by SQLParser
@@ -483,7 +489,7 @@ TEST_F(SQLTranslatorTest, JoinLeftOuter) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, JoinNatural) {
+TEST_F(SQLTranslatorTest, JoinNaturalSimple) {
   // Also test that columns can be referenced after a natural join
 
   const auto actual_lqp = compile_query("SELECT "
@@ -503,6 +509,26 @@ TEST_F(SQLTranslatorTest, JoinNatural) {
             stored_table_node_int_float,
             stored_table_node_int_float2
   )))));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, JoinNaturalColumnAlias) {
+  // Test that the Natural join can work with column aliases and that the output columns have the correct name
+
+  const auto actual_lqp = compile_query("SELECT "
+                                        "  * "
+                                        "FROM "
+                                        "  int_float AS a NATURAL JOIN (SELECT a AS d, b AS a, c FROM int_int_int) AS b");
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float_a, int_float_b, int_int_int_a, int_int_int_c),
+      JoinNode::make(JoinMode::Inner, equals(int_float_a, int_int_int_b),
+        stored_table_node_int_float,
+        stored_table_node_int_int_int
+  ));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

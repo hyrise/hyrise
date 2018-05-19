@@ -536,7 +536,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_natural_join(const hsq
 
   if (join_predicates.empty()) {
     // No matching columns? Then the NATURAL JOIN becomes a Cross Join
-    lqp = JoinNode::make(JoinMode::Cross);
+    lqp = JoinNode::make(JoinMode::Cross, left_input_lqp, right_input_lqp);
   } else {
     // Turn one of the Join Predicates into an actual join
     lqp = JoinNode::make(JoinMode::Inner, join_predicates.front(), left_input_lqp, right_input_lqp);
