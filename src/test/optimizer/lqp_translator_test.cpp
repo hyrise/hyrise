@@ -14,7 +14,7 @@
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_select_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
-//#include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/join_node.hpp"
 //#include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -27,14 +27,14 @@
 #include "operators/aggregate.hpp"
 #include "operators/get_table.hpp"
 //#include "operators/index_scan.hpp"
-//#include "operators/join_hash.hpp"
-//#include "operators/join_sort_merge.hpp"
+#include "operators/join_hash.hpp"
+#include "operators/join_sort_merge.hpp"
 //#include "operators/limit.hpp"
 //#include "operators/maintenance/show_columns.hpp"
 //#include "operators/maintenance/show_tables.hpp"
-//#include "operators/pqp_expression.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
+#include "operators/product.hpp"
 #include "operators/table_scan.hpp"
 //#include "operators/union_positions.hpp"
 //#include "storage/chunk_encoder.hpp"
@@ -67,6 +67,10 @@ class LQPTranslatorTest : public ::testing::Test {
     int_float_a_expression = std::make_shared<LQPColumnExpression>(int_float_a);
     int_float_b_expression = std::make_shared<LQPColumnExpression>(int_float_b);
 
+    int_float2_node = StoredTableNode::make("table_int_float2");
+    int_float2_a = int_float2_node->get_column("a");
+    int_float2_b = int_float2_node->get_column("b");
+
     int_float5_node = StoredTableNode::make("table_int_float5");
     int_float5_a = int_float5_node->get_column("a");
     int_float5_d = int_float5_node->get_column("d");
@@ -85,8 +89,8 @@ class LQPTranslatorTest : public ::testing::Test {
 //  }
 
   std::shared_ptr<Table> table_int_float, table_int_float2, table_int_float5, table_alias_name;
-  std::shared_ptr<StoredTableNode> int_float_node, int_float5_node;
-  LQPColumnReference int_float_a, int_float_b, int_float5_a, int_float5_d;
+  std::shared_ptr<StoredTableNode> int_float_node, int_float2_node, int_float5_node;
+  LQPColumnReference int_float_a, int_float_b, int_float2_a, int_float2_b, int_float5_a, int_float5_d;
   std::shared_ptr<AbstractExpression> int_float_a_expression, int_float_b_expression;
 };
 
@@ -285,7 +289,39 @@ TEST_F(LQPTranslatorTest, Sort) {
 
   const auto get_table = std::dynamic_pointer_cast<const GetTable>(projection_b->input_left());
   ASSERT_TRUE(get_table);
+}
 
+TEST_F(LQPTranslatorTest, JoinNonEqui) {
+  /**
+   * Build LQP and translate to PQP
+   *
+   * LQP resembles:
+   *   SELECT * FROM int_float2 JOIN int_float ON int_float.a < int_float2.b
+   */
+  // clang-format off
+  const auto lqp =
+  JoinNode::make(JoinMode::Inner, less_than(int_float_a, int_float2_b),
+    int_float2_node, int_float_node
+  );
+  // clang-format on
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  /**
+   * Check PQP
+   */
+  const auto join_sort_merge = std::dynamic_pointer_cast<JoinSortMerge>(pqp);
+  ASSERT_TRUE(join_sort_merge);
+  EXPECT_EQ(join_sort_merge->column_ids().first, ColumnID{1});
+  EXPECT_EQ(join_sort_merge->column_ids().second, ColumnID{0});
+  EXPECT_EQ(join_sort_merge->predicate_condition(), PredicateCondition::GreaterThan);
+
+  const auto get_table_int_float2 = std::dynamic_pointer_cast<const GetTable>(join_sort_merge->input_left());
+  ASSERT_TRUE(get_table_int_float2);
+  EXPECT_EQ(get_table_int_float2->table_name(), "table_int_float2");
+
+  const auto get_table_int_float = std::dynamic_pointer_cast<const GetTable>(join_sort_merge->input_right());
+  ASSERT_TRUE(get_table_int_float);
+  EXPECT_EQ(get_table_int_float->table_name(), "table_int_float");
 }
 
 //TEST_F(LQPTranslatorTest, PredicateNodeUnaryScan) {

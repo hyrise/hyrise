@@ -142,8 +142,8 @@ set(
 #    logical_query_plan/validate_node.cpp
 #    logical_query_plan/validate_node.hpp
     null_value.hpp
-#    operators/abstract_join_operator.cpp
-#    operators/abstract_join_operator.hpp
+    operators/abstract_join_operator.cpp
+    operators/abstract_join_operator.hpp
     operators/abstract_operator.cpp
     operators/abstract_operator.hpp
     operators/abstract_read_only_operator.cpp
@@ -177,17 +177,17 @@ set(
 #    operators/jit_operator/jit_operations.hpp
 #    operators/jit_operator/jit_types.cpp
 #    operators/jit_operator/jit_types.hpp
-#    operators/join_hash.cpp
-#    operators/join_hash/hash_traits.hpp
-#    operators/join_hash.hpp
-#    operators/join_index.cpp
-#    operators/join_index.hpp
-#    operators/join_nested_loop.cpp
-#    operators/join_nested_loop.hpp
-#    operators/join_sort_merge/column_materializer.hpp
-#    operators/join_sort_merge.cpp
-#    operators/join_sort_merge.hpp
-#    operators/join_sort_merge/radix_cluster_sort.hpp
+    operators/join_hash.cpp
+    operators/join_hash/hash_traits.hpp
+    operators/join_hash.hpp
+    operators/join_index.cpp
+    operators/join_index.hpp
+    operators/join_nested_loop.cpp
+    operators/join_nested_loop.hpp
+    operators/join_sort_merge/column_materializer.hpp
+    operators/join_sort_merge.cpp
+    operators/join_sort_merge.hpp
+    operators/join_sort_merge/radix_cluster_sort.hpp
 #    operators/limit.cpp
 #    operators/limit.hpp
 #    operators/maintenance/create_view.cpp
@@ -200,8 +200,8 @@ set(
 #    operators/maintenance/show_tables.hpp
     operators/print.cpp
     operators/print.hpp
-#    operators/product.cpp
-#    operators/product.hpp
+    operators/product.cpp
+    operators/product.hpp
     operators/projection.cpp
     operators/projection.hpp
     operators/sort.cpp
@@ -490,8 +490,8 @@ set(
     utils/lambda_visitor.hpp
     utils/load_table.cpp
     utils/load_table.hpp
-#    utils/murmur_hash.cpp
-#    utils/murmur_hash.hpp
+    utils/murmur_hash.cpp
+    utils/murmur_hash.hpp
     utils/numa_memory_resource.cpp
     utils/numa_memory_resource.hpp
     utils/pausable_loop_thread.cpp

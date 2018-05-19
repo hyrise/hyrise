@@ -411,11 +411,11 @@ TEST_F(SQLTranslatorTest, InArray) {
 }
 
 TEST_F(SQLTranslatorTest, JoinInnerSimple) {
-  const auto actual_lqp = compile_query("SELECT * FROM int_float JOIN int_float2 ON int_float2.a > int_float.a + 3");
+  const auto actual_lqp = compile_query("SELECT * FROM int_float JOIN int_float2 ON int_float2.a > int_float.a");
 
   // clang-format off
   const auto expected_lqp =
-  JoinNode::make(JoinMode::Inner, greater_than(int_float2_a, addition(int_float_a, 3)),
+  JoinNode::make(JoinMode::Inner, greater_than(int_float2_a, int_float_a),
     stored_table_node_int_float,
     stored_table_node_int_float2
   );

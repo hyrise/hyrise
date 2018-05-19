@@ -204,7 +204,7 @@ bool is_ternary_predicate_condition(const PredicateCondition predicate_condition
 
 PredicateCondition flip_predicate_condition(const PredicateCondition predicate_condition);
 
-enum class JoinMode { Inner, Left, Right, Outer, Cross, Anti };
+enum class JoinMode { Inner, Left, Right, Outer, Cross, Semi, Anti };
 
 enum class UnionMode { Positions };
 

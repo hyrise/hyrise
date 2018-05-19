@@ -26,22 +26,22 @@
 #include "expression/value_expression.hpp"
 #include "expression/value_placeholder_expression.hpp"
 //#include "insert_node.hpp"
-//#include "join_node.hpp"
+#include "join_node.hpp"
 //#include "limit_node.hpp"
 #include "operators/aggregate.hpp"
 //#include "operators/delete.hpp"
 #include "operators/get_table.hpp"
 //#include "operators/index_scan.hpp"
 //#include "operators/insert.hpp"
-//#include "operators/join_hash.hpp"
-//#include "operators/join_sort_merge.hpp"
+#include "operators/join_hash.hpp"
+#include "operators/join_sort_merge.hpp"
 //#include "operators/limit.hpp"
 //#include "operators/maintenance/create_view.hpp"
 //#include "operators/maintenance/drop_view.hpp"
 //#include "operators/maintenance/show_columns.hpp"
 //#include "operators/maintenance/show_tables.hpp"
 //#include "operators/pqp_expression.hpp"
-//#include "operators/product.hpp"
+#include "operators/product.hpp"
 #include "operators/alias_operator.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
@@ -106,8 +106,8 @@ LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
       return _translate_projection_node(node);
     case LQPNodeType::Sort:
       return _translate_sort_node(node);
-//    case LQPNodeType::Join:
-//      return _translate_join_node(node);
+    case LQPNodeType::Join:
+      return _translate_join_node(node);
     case LQPNodeType::Aggregate:
       return _translate_aggregate_node(node);
 //    case LQPNodeType::Limit:
@@ -325,34 +325,59 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
   return current_pqp;
 }
 
-//std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
-//    const std::shared_ptr<AbstractLQPNode>& node) const {
-//  const auto input_left_operator = translate_node(node->left_input());
-//  const auto input_right_operator = translate_node(node->right_input());
-//
-//  auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
-//
-//  if (join_node->join_mode() == JoinMode::Cross) {
-//    PerformanceWarning("CROSS join used");
-//    return std::make_shared<Product>(input_left_operator, input_right_operator);
-//  }
-//
-//  DebugAssert(static_cast<bool>(join_node->join_column_references()), "Cannot translate Join without columns.");
-//  DebugAssert(static_cast<bool>(join_node->predicate_condition()), "Cannot translate Join without PredicateCondition.");
-//
-//  ColumnIDPair join_column_ids;
-//  join_column_ids.first = join_node->left_input()->get_output_column_id(join_node->join_column_references()->first);
-//  join_column_ids.second = join_node->right_input()->get_output_column_id(join_node->join_column_references()->second);
-//
-//  if (*join_node->predicate_condition() == PredicateCondition::Equals && join_node->join_mode() != JoinMode::Outer) {
-//    return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode(),
-//                                      join_column_ids, *(join_node->predicate_condition()));
-//  }
-//
-//  return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode(),
-//                                         join_column_ids, *(join_node->predicate_condition()));
-//}
-//
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto input_left_operator = translate_node(node->left_input());
+  const auto input_right_operator = translate_node(node->right_input());
+
+  auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
+
+  if (join_node->join_mode == JoinMode::Cross) {
+    PerformanceWarning("CROSS join used");
+    return std::make_shared<Product>(input_left_operator, input_right_operator);
+  }
+
+  Assert(join_node->join_predicate, "Need predicate for non Cross Join");
+
+  /**
+   * Assert that the Join Predicate is simple, e.g. of the form <column_a> <predicate> <column_b>.
+   * We do not require <column_a> to be in the left input though.
+   */
+  Assert(join_node->join_predicate->type == ExpressionType::Predicate,
+         "Join condition must be a simple Predicate for now. ("s + join_node->join_predicate->as_column_name() + ")");
+  const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_node->join_predicate);
+  Assert(binary_predicate_expression, "Expected binary predicate for Join ("s + join_node->join_predicate->as_column_name() + ")");
+
+  const auto left_operand = binary_predicate_expression->left_operand();
+  const auto right_operand = binary_predicate_expression->right_operand();
+
+  const auto left_column_id_in_left = node->left_input()->find_column_id(*left_operand);
+  const auto left_column_id_in_right = node->right_input()->find_column_id(*left_operand);
+  const auto right_column_id_in_left = node->left_input()->find_column_id(*right_operand);
+  const auto right_column_id_in_right = node->right_input()->find_column_id(*right_operand);
+
+  Assert(left_column_id_in_left || left_column_id_in_right,
+         "Left operand of Join Predicate is not a Column ("s + left_operand->as_column_name() + ")");
+  Assert(right_column_id_in_left || right_column_id_in_right,
+         "Right operand of Join Predicate is not a Column ("s + right_operand->as_column_name() + ")");
+
+  auto predicate_condition = binary_predicate_expression->predicate_condition;
+  auto left_column_id = left_column_id_in_left ? *left_column_id_in_left : *right_column_id_in_left;
+  auto right_column_id = right_column_id_in_right ? *right_column_id_in_right : *left_column_id_in_right;
+
+  if (left_column_id_in_right) {
+    predicate_condition = flip_predicate_condition(predicate_condition);
+  }
+
+  if (predicate_condition == PredicateCondition::Equals && join_node->join_mode != JoinMode::Outer) {
+    return std::make_shared<JoinHash>(input_left_operator, input_right_operator, join_node->join_mode,
+                                      std::make_pair(left_column_id, right_column_id), predicate_condition);
+  }
+
+  return std::make_shared<JoinSortMerge>(input_left_operator, input_right_operator, join_node->join_mode,
+                                         std::make_pair(left_column_id, right_column_id), predicate_condition);
+}
+
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(node);

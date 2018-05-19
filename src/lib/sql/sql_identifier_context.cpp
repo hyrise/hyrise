@@ -18,7 +18,7 @@ void SQLIdentifierContext::set_column_name(const std::shared_ptr<AbstractExpress
 
 void SQLIdentifierContext::set_table_name(const std::shared_ptr<AbstractExpression>& expression, const std::string& table_name) {
   auto& entry = _find_or_create_expression_entry(expression);
-  Assert(entry.identifier, "Can't set table name for expression without column name");
+  if (!entry.identifier) entry.identifier.emplace(expression->as_column_name());
 
   entry.identifier->table_name = table_name;
 }

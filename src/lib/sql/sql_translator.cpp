@@ -450,8 +450,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
     } else if (expression_evaluateable_on_lqp(predicate, *right_input_lqp)) {
       right_local_predicates.emplace_back(predicate);
     } else {
-      Assert(predicate->type == ExpressionType::Predicate,
-             "Join condition must be a simple Predicate for now. ("s + predicate->as_column_name() + ")");
+      // Accept any kind of predicate here and let the LQPTranslator fail on those that it doesn't support
       join_predicates.emplace_back(predicate);
     }
   }
@@ -510,17 +509,17 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_natural_join(const hsq
   // a) Find matching columns and create JoinPredicates from them
   // b) Add columns from right input to the output when they have no match in the left input
   for (const auto& right_expression : right_state.elements_in_order) {
-     const auto right_identifier = right_sql_identifier_context->get_expression_identifier(right_expression);
+    const auto right_identifier = right_sql_identifier_context->get_expression_identifier(right_expression);
 
-     if (right_identifier) {
-       const auto left_expression = left_sql_identifier_context->resolve_identifier_relaxed({right_identifier->column_name});
+    if (right_identifier) {
+      const auto left_expression = left_sql_identifier_context->resolve_identifier_relaxed({right_identifier->column_name});
 
-       if (left_expression) {
-          // Two columns match, let's join on them.
-         join_predicates.emplace_back(std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, left_expression, right_expression));
-         continue;
-       }
-     }
+      if (left_expression) {
+        // Two columns match, let's join on them.
+        join_predicates.emplace_back(std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, left_expression, right_expression));
+        continue;
+      }
+    }
 
      // No matching column in the left input found, add the column from the right input to the output
     result_state.elements_in_order.emplace_back(right_expression);
