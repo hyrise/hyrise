@@ -188,7 +188,7 @@ SELECT a, b FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
 ---- SELECT * FROM mixed_null WHERE b = NULL;
 ---- SELECT * FROM mixed_null WHERE b > NULL;
 ---- SELECT * FROM mixed_null WHERE b < NULL;
----- SELECT * FROM mixed_null WHERE b <> NULL;
+---- SELECT * FROM mixed_null WHERE b <> NULL;          
 ---- SELECT * FROM mixed_null WHERE b BETWEEN NULL AND NULL;
 
 -- CASE

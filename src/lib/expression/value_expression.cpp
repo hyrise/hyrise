@@ -19,7 +19,7 @@ std::string ValueExpression::as_column_name() const {
   std::stringstream stream;
   stream << value;
 
-  if (value.type() == typeid(int32_t)) stream << "l";
+  if (value.type() == typeid(int64_t)) stream << "l";
   else if (value.type() == typeid(float)) stream << "f";
 
   return stream.str();
