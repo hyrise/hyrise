@@ -375,7 +375,7 @@ TEST_F(JitOperationsTest, JitHash) {
   typed_test(DataType::String, std::string("some string"));
 
   // Check jit_hash with NULL value
-  const JitTupleValue tuple_value{data_type, true, 0};
+  const JitTupleValue tuple_value{DataType::Int, true, 0};
   tuple_value.set_is_null(true, context);
   EXPECT_EQ(jit_hash(tuple_value, context), 0);
 }
