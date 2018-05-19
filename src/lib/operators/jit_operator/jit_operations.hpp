@@ -159,20 +159,20 @@ void jit_or(const JitTupleValue& lhs, const JitTupleValue& rhs, const JitTupleVa
 void jit_is_null(const JitTupleValue& lhs, const JitTupleValue& result, JitRuntimeContext& context);
 void jit_is_not_null(const JitTupleValue& lhs, const JitTupleValue& result, JitRuntimeContext& context);
 
-__attribute__((noinline)) uint64_t jit_hash(const JitTupleValue& value, JitRuntimeContext& context);
+uint64_t jit_hash(const JitTupleValue& value, JitRuntimeContext& context);
 
-__attribute__((noinline)) bool jit_aggregate_equals(const JitTupleValue& lhs, const JitHashmapValue& rhs,
+bool jit_aggregate_equals(const JitTupleValue& lhs, const JitHashmapValue& rhs,
                                                     const size_t rhs_index, JitRuntimeContext& context);
 
-__attribute__((noinline)) void jit_assign(const JitTupleValue& from, const JitHashmapValue& to, const size_t to_index,
+void jit_assign(const JitTupleValue& from, const JitHashmapValue& to, const size_t to_index,
                                           JitRuntimeContext& context);
 
-__attribute__((noinline)) size_t jit_grow_by_one(const JitHashmapValue& value,
+size_t jit_grow_by_one(const JitHashmapValue& value,
                                                  const JitVariantVector::InitialValue initial_value,
                                                  JitRuntimeContext& context);
 
 template <typename T>
-__attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const JitTupleValue& lhs,
+void jit_aggregate_compute(const T& op_func, const JitTupleValue& lhs,
                                                      const JitHashmapValue& rhs, const size_t rhs_index,
                                                      JitRuntimeContext& context) {
   if (lhs.is_null(context)) {
