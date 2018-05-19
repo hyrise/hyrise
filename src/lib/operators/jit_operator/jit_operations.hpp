@@ -65,6 +65,8 @@ const auto jit_multiplication = [](const auto a, const auto b) -> decltype(a * b
 const auto jit_division = [](const auto a, const auto b) -> decltype(a / b) { return a / b; };
 const auto jit_modulo = [](const auto a, const auto b) -> decltype(a % b) { return a % b; };
 const auto jit_power = [](const auto a, const auto b) -> decltype(std::pow(a, b)) { return std::pow(a, b); };
+
+/* Aggregate operations */
 const auto jit_increment = [](const auto a, const auto b) -> decltype(b + 1) { return b + 1; };
 const auto jit_maximum = [](const auto a, const auto b) { return std::max(a, b); };
 const auto jit_minimum = [](const auto a, const auto b) { return std::min(a, b); };
@@ -113,7 +115,7 @@ void jit_compute(const T& op_func, const JitTupleValue& lhs, const JitTupleValue
     return;
   }
 
-  // This lambda calls the op_func (a lambda that performs the actual computation) with type arguments and stores
+  // This lambda calls the op_func (a lambda that performs the actual computation) with typed arguments and stores
   // the result.
   const auto store_result_wrapper = [&](const auto& typed_lhs, const auto& typed_rhs,
                                         auto& result) -> decltype(op_func(typed_lhs, typed_rhs), void()) {
@@ -159,31 +161,37 @@ void jit_or(const JitTupleValue& lhs, const JitTupleValue& rhs, const JitTupleVa
 void jit_is_null(const JitTupleValue& lhs, const JitTupleValue& result, JitRuntimeContext& context);
 void jit_is_not_null(const JitTupleValue& lhs, const JitTupleValue& result, JitRuntimeContext& context);
 
+// Computes the hash value for a JitTupleValue
 uint64_t jit_hash(const JitTupleValue& value, JitRuntimeContext& context);
 
-bool jit_aggregate_equals(const JitTupleValue& lhs, const JitHashmapValue& rhs,
-                                                    const size_t rhs_index, JitRuntimeContext& context);
+// Compares a JitTupleValue to a JitHashmapValue using NULL == NULL semantics
+bool jit_aggregate_equals(const JitTupleValue& lhs, const JitHashmapValue& rhs, const size_t rhs_index,
+                          JitRuntimeContext& context);
 
+// Copies a JitTupleValue to a JitHashmapValue. Both values MUST be of the same data type/
 void jit_assign(const JitTupleValue& from, const JitHashmapValue& to, const size_t to_index,
-                                          JitRuntimeContext& context);
+                JitRuntimeContext& context);
 
-size_t jit_grow_by_one(const JitHashmapValue& value,
-                                                 const JitVariantVector::InitialValue initial_value,
-                                                 JitRuntimeContext& context);
+// Adds an element to a column represented by some JitHashmapValue
+size_t jit_grow_by_one(const JitHashmapValue& value, const JitVariantVector::InitialValue initial_value,
+                       JitRuntimeContext& context);
 
+// Updates an aggregate by applying an operation to a JitTupleValue and a JitHashmapValue. The result is stored in the
+// hashmape value.
 template <typename T>
-void jit_aggregate_compute(const T& op_func, const JitTupleValue& lhs,
-                                                     const JitHashmapValue& rhs, const size_t rhs_index,
-                                                     JitRuntimeContext& context) {
+void jit_aggregate_compute(const T& op_func, const JitTupleValue& lhs, const JitHashmapValue& rhs,
+                           const size_t rhs_index, JitRuntimeContext& context) {
+  // NULL values are ignored in aggreagte computations
   if (lhs.is_null(context)) {
     return;
   }
 
+  // Since we are updating the aggregate with a valid value, the aggregate is no longer NULL
   if (rhs.is_nullable()) {
     rhs.set_is_null(false, rhs_index, context);
   }
 
-  // This lambda calls the op_func (a lambda that performs the actual computation) with type arguments and stores
+  // This lambda calls the op_func (a lambda that performs the actual computation) with typed arguments and stores
   // the result.
   const auto store_result_wrapper = [&](const auto typed_lhs,
                                         const auto typed_rhs) -> decltype(op_func(typed_lhs, typed_rhs), void()) {

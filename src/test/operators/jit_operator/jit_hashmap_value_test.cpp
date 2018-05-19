@@ -34,7 +34,7 @@ TEST_F(JitHashmapValueTest, GetAndSet) {
   context.hashmap.values[1].resize(10);
   context.hashmap.values[2].resize(10);
 
-  // The following test is performed for each opossum data type
+  // Perform the following test for each Hyrise data type
   const auto typed_test = [&](const DataType data_type, auto value_in) {
     using ValueType = decltype(value_in);
     // Set and get a value at a random location

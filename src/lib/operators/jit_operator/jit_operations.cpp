@@ -73,19 +73,22 @@ void jit_is_not_null(const JitTupleValue& lhs, const JitTupleValue& result, JitR
 }
 
 uint64_t jit_hash(const JitTupleValue& value, JitRuntimeContext& context) {
+  // NULL values hash to 0.
   if (value.is_null(context)) {
     return 0;
   }
 
+  // For all other values the hash is computed by the corresponding std::hash function
   switch (value.data_type()) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_HASH_CASE, (JIT_DATA_TYPE_INFO))
     default:
-      return 0;
+      Fail("unreachable");
   }
 }
 
 bool jit_aggregate_equals(const JitTupleValue& lhs, const JitHashmapValue& rhs, const size_t rhs_index,
                           JitRuntimeContext& context) {
+  // NULL == NULL when grouping tuples in the aggregate operator
   if (lhs.is_null(context) && rhs.is_null(rhs_index, context)) {
     return true;
   }
@@ -99,17 +102,21 @@ bool jit_aggregate_equals(const JitTupleValue& lhs, const JitHashmapValue& rhs, 
   switch (lhs.data_type()) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_AGGREGATE_EQUALS_CASE, (JIT_DATA_TYPE_INFO))
     default:
-      return true;
+      Fail("unreachable");
   }
 }
 
 void jit_assign(const JitTupleValue& from, const JitHashmapValue& to, const size_t to_index,
                 JitRuntimeContext& context) {
+  // jit_assign only supports identical data types. This is sufficient for the current JitAggregate implementation.
+  // However, this function could easily be extended to support cross-data type assignment in a fashion similar to the
+  // jit_compute function.
   DebugAssert(from.data_type() == to.data_type(), "Data types don't match in jit_assign.");
 
   if (to.is_nullable()) {
     const bool is_null = from.is_null(context);
     to.set_is_null(is_null, to_index, context);
+    // The value is NULL - our work is done here.
     if (is_null) {
       return;
     }
@@ -125,6 +132,7 @@ void jit_assign(const JitTupleValue& from, const JitHashmapValue& to, const size
 size_t jit_grow_by_one(const JitHashmapValue& value, const JitVariantVector::InitialValue initial_value,
                        JitRuntimeContext& context) {
   if (value.is_nullable()) {
+    // Grow the is_null vector for nullable values.
     context.hashmap.values[value.column_index()].grow_is_null_by_one(true);
   }
 

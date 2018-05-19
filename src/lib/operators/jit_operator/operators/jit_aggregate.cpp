@@ -241,10 +241,12 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
   // added value in the vector.
   if (!found_match) {
     for (uint32_t i = 0; i < num_groupby_columns; ++i) {
+      // Grow each groupby column vector and copy the value from the current tuple.
       row_index = jit_grow_by_one(_groupby_columns[i].hashmap_value, JitVariantVector::InitialValue::Zero, context);
       jit_assign(_groupby_columns[i].tuple_value, _groupby_columns[i].hashmap_value, row_index, context);
     }
     for (uint32_t i = 0; i < num_aggregate_columns; ++i) {
+      // Grow each aggregate column vector and initialize the aggregate with a proper initial value.
       switch (_aggregate_columns[i].function) {
         case AggregateFunction::Count:
         case AggregateFunction::Sum:
@@ -274,7 +276,7 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
     hash_bucket.push_back(row_index);
   }
 
-  // Step 3: Update the aggregate values.
+  // Step 3: Update the aggregate values by calling jit_aggregate_compute with appropriate operation lambdas.
   for (uint32_t i = 0; i < num_aggregate_columns; ++i) {
     switch (_aggregate_columns[i].function) {
       case AggregateFunction::Count:
