@@ -114,8 +114,8 @@ const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mo
 
 const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
     {JoinMode::Cross, "Cross"},     {JoinMode::Inner, "Inner"}, {JoinMode::Left, "Left"},
-    {JoinMode::Natural, "Natural"}, {JoinMode::Outer, "Outer"}, {JoinMode::Right, "Right"},
-    {JoinMode::Self, "Self"},       {JoinMode::Semi, "Semi"},   {JoinMode::Anti, "Anti"},
+    {JoinMode::Outer, "Outer"}, {JoinMode::Right, "Right"},
+    {JoinMode::Anti, "Anti"},
 };
 
 const std::unordered_map<UnionMode, std::string> union_mode_to_string = {{UnionMode::Positions, "UnionPositions"}};

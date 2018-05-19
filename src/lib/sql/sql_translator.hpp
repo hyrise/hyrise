@@ -41,14 +41,12 @@ class SQLTranslator final {
   std::shared_ptr<AbstractLQPNode> translate_select_statement(const hsql::SelectStatement &select);
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _translate_table_ref(const hsql::TableRef& hsql_table_ref);
-//
-//  std::shared_ptr<AbstractLQPNode> _translate_join(const hsql::JoinDefinition& select, const std::shared_ptr<SQLTranslationState>& translation_state);
-//
-//  std::shared_ptr<AbstractLQPNode> _translate_natural_join(const hsql::JoinDefinition& select, const std::shared_ptr<SQLTranslationState>& translation_state);
-//
-//  std::shared_ptr<AbstractLQPNode> _translate_cross_product(const std::vector<hsql::TableRef*>& tables, const std::shared_ptr<SQLTranslationState>& translation_state);
-//
+  std::shared_ptr<AbstractLQPNode> _translate_table_ref(const hsql::TableRef &hsql_table_ref);
+  std::shared_ptr<AbstractLQPNode> _translate_table_source(const hsql::TableRef &hsql_table_ref);
+  std::shared_ptr<AbstractLQPNode> _translate_predicated_join(const hsql::JoinDefinition &join);
+  std::shared_ptr<AbstractLQPNode> _translate_natural_join(const hsql::JoinDefinition& join);
+  std::shared_ptr<AbstractLQPNode> _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
+
   void _translate_select_list_groupby_having(const hsql::SelectStatement &select);
 //
   void _translate_order_by(const std::vector<hsql::OrderDescription*>& order_list);
@@ -101,6 +99,8 @@ class SQLTranslator final {
 
   // Collect the output of the FROM clause to expand wildcards (*; <t>.*) used in the SELECT list
   std::unordered_map<std::string, std::shared_ptr<AbstractLQPNode>> _from_elements_by_table_name;
+  // To establish the correct order of columns in SELECT *
+  std::vector<std::shared_ptr<AbstractLQPNode>> _from_elements_in_order;
 };
 
 }  // namespace opossum

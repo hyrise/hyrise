@@ -109,8 +109,8 @@ set(
     logical_query_plan/enable_make_for_lqp_node.hpp
 #    logical_query_plan/insert_node.cpp
 #    logical_query_plan/insert_node.hpp
-#    logical_query_plan/join_node.cpp
-#    logical_query_plan/join_node.hpp
+    logical_query_plan/join_node.cpp
+    logical_query_plan/join_node.hpp
 #    logical_query_plan/limit_node.cpp
 #    logical_query_plan/limit_node.hpp
     logical_query_plan/logical_plan_root_node.cpp
@@ -317,6 +317,8 @@ set(
     statistics/table_statistics.cpp
     statistics/table_statistics.hpp
 #    sql/abstract_cache.hpp
+    sql/create_sql_parser_error_message.cpp
+    sql/create_sql_parser_error_message.hpp
 #    sql/gdfs_cache.hpp
 #    sql/gds_cache.hpp
 #    sql/hsql_expr_translator.cpp

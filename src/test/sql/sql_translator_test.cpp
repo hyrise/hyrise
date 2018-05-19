@@ -1,3 +1,4 @@
+
 #include <expression/arithmetic_expression.hpp>
 #include "gtest/gtest.h"
 
@@ -14,6 +15,7 @@
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -45,16 +47,10 @@ class SQLTranslatorTest : public ::testing::Test {
     stored_table_node_int_float5 = StoredTableNode::make("int_float5");
     int_float_a = stored_table_node_int_float->get_column("a");
     int_float_b = stored_table_node_int_float->get_column("b");
+    int_float2_a = stored_table_node_int_float2->get_column("a");
+    int_float2_b = stored_table_node_int_float2->get_column("b");
     int_float5_a = stored_table_node_int_float5->get_column("a");
     int_float5_d = stored_table_node_int_float5->get_column("d");
-//    _table_b_a = _stored_table_node_b->get_column("a"s);
-//    _table_b_b = _stored_table_node_b->get_column("b"s);
-//    _table_c_a = _stored_table_node_c->get_column("a"s);
-//    _table_c_d = _stored_table_node_c->get_column("d"s);
-
-    int_float_a_expression = std::make_shared<LQPColumnExpression>(int_float_a);
-    int_float_b_expression = std::make_shared<LQPColumnExpression>(int_float_b);
-
   }
 
   void TearDown() override {
@@ -70,14 +66,7 @@ class SQLTranslatorTest : public ::testing::Test {
   std::shared_ptr<StoredTableNode> stored_table_node_int_float;
   std::shared_ptr<StoredTableNode> stored_table_node_int_float2;
   std::shared_ptr<StoredTableNode> stored_table_node_int_float5;
-  std::shared_ptr<AbstractExpression> int_float_a_expression;
-  std::shared_ptr<AbstractExpression> int_float_b_expression;
-  LQPColumnReference int_float_a, int_float_b, int_float5_a, int_float5_d;
-//  LQPColumnReference _table_a_b;
-//  LQPColumnReference _table_b_a;
-//  LQPColumnReference _table_b_b;
-//  LQPColumnReference _table_c_a;
-//  LQPColumnReference _table_c_d;
+  LQPColumnReference int_float_a, int_float_b, int_float5_a, int_float5_d, int_float2_a, int_float2_b;
 };
 
 // Not supported by SQLParser
@@ -96,10 +85,7 @@ TEST_F(SQLTranslatorTest, DISABLED_NoFromClause) {
 TEST_F(SQLTranslatorTest, SelectSingleColumn) {
   const auto actual_lqp = compile_query("SELECT a FROM int_float;");
 
-  const auto expected_expression = std::vector<std::shared_ptr<AbstractExpression>>({
-                                                                                    int_float_a_expression
-  });
-  const auto expected_lqp = ProjectionNode::make(expected_expression, stored_table_node_int_float);
+  const auto expected_lqp = ProjectionNode::make(expression_vector(int_float_a), stored_table_node_int_float);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -136,10 +122,7 @@ TEST_F(SQLTranslatorTest, SelectStarSelectsOnlyFromColumns) {
 TEST_F(SQLTranslatorTest, SimpleArithmeticExpression) {
   const auto actual_lqp = compile_query("SELECT a * b FROM int_float;");
 
-  const auto expected_expression = std::vector<std::shared_ptr<AbstractExpression>>({
-    std::make_shared<ArithmeticExpression>(ArithmeticOperator::Multiplication, int_float_a_expression, int_float_b_expression)
-  });
-  const auto expected_lqp = ProjectionNode::make(expected_expression, stored_table_node_int_float);
+  const auto expected_lqp = ProjectionNode::make(expression_vector(multiplication(int_float_a, int_float_b)), stored_table_node_int_float);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -422,6 +405,104 @@ TEST_F(SQLTranslatorTest, InArray) {
       ProjectionNode::make(expression_vector(a_plus_7_in, int_float_a, int_float_b),
          stored_table_node_int_float
   )));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, JoinInnerSimple) {
+  const auto actual_lqp = compile_query("SELECT * FROM int_float JOIN int_float2 ON int_float2.a > int_float.a + 3");
+
+  // clang-format off
+  const auto expected_lqp =
+  JoinNode::make(JoinMode::Inner, greater_than(int_float2_a, addition(int_float_a, 3)),
+    stored_table_node_int_float,
+    stored_table_node_int_float2
+  );
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, JoinCrossSelectStar) {
+  const auto actual_lqp = compile_query("SELECT * FROM int_float, int_float2 AS t, int_float5 WHERE t.a < 2");
+
+  // clang-format off
+  const auto expected_lqp =
+  PredicateNode::make(less_than(int_float2_a, 2),
+    JoinNode::make(JoinMode::Cross,
+      JoinNode::make(JoinMode::Cross,
+        stored_table_node_int_float,
+        stored_table_node_int_float2),
+    stored_table_node_int_float5
+  ));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, JoinCrossSelectElements) {
+  const auto actual_lqp = compile_query("SELECT int_float5.d, t.* FROM int_float, int_float2 AS t, int_float5 WHERE t.a < 2");
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float5_d, int_float2_a, int_float2_b),
+    PredicateNode::make(less_than(int_float2_a, 2),
+      JoinNode::make(JoinMode::Cross,
+        JoinNode::make(JoinMode::Cross,
+          stored_table_node_int_float,
+          stored_table_node_int_float2),
+      stored_table_node_int_float5
+  )));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, JoinLeftOuter) {
+  // Test local predicates in outer joins - those on the preserving side are discarded, those on the null supplying side
+  // are performed before the join
+
+  const auto actual_lqp = compile_query("SELECT"
+                                        "  * "
+                                        "FROM "
+                                        "  int_float AS a LEFT JOIN int_float2 AS b "
+                                        "    ON a.a = b.a AND b.a > 5 AND b.b <= 13 AND a.a < 3 "
+                                        "WHERE b.b < 2;");
+
+  // clang-format off
+  const auto expected_lqp =
+  PredicateNode::make(less_than(int_float2_b, 2),
+    JoinNode::make(JoinMode::Left, equals(int_float_a, int_float2_a),
+      stored_table_node_int_float,
+      PredicateNode::make(greater_than(int_float2_a, 5),
+        PredicateNode::make(less_than_equals(int_float2_b, 13), stored_table_node_int_float2))
+  ));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, JoinNatural) {
+  // Also test that columns can be referenced after a natural join
+
+  const auto actual_lqp = compile_query("SELECT "
+                                        "  * "
+                                        "FROM "
+                                        "  int_float AS a NATURAL JOIN int_float2 AS b "
+                                        "WHERE "
+                                        "  b.b > 10 AND a.a > 5");
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float_a, int_float_b),
+    PredicateNode::make(greater_than(int_float_b, 10),
+      PredicateNode::make(greater_than(int_float_a, 5),
+        PredicateNode::make(equals(int_float_b, int_float2_b),
+          JoinNode::make(JoinMode::Inner, equals(int_float_a, int_float2_a),
+            stored_table_node_int_float,
+            stored_table_node_int_float2
+  )))));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include "expression/expression_utils.hpp"
 #include "constant_mappings.hpp"
 #include "statistics/table_statistics.hpp"
 #include "types.hpp"
@@ -16,173 +17,61 @@
 
 namespace opossum {
 
-JoinNode::JoinNode(const JoinMode join_mode) : AbstractLQPNode(LQPNodeType::Join), _join_mode(join_mode) {
-  DebugAssert(join_mode == JoinMode::Cross || join_mode == JoinMode::Natural,
-              "Specified JoinMode must also specify column ids and predicate condition.");
+JoinNode::JoinNode(const JoinMode join_mode):
+AbstractLQPNode(LQPNodeType::Join), join_mode(join_mode) {
+  Assert(join_mode == JoinMode::Cross, "Only Cross Joins can be constructed without predicate");
 }
 
-JoinNode::JoinNode(const JoinMode join_mode, const LQPColumnReferencePair& join_column_references,
-                   const PredicateCondition predicate_condition)
-    : AbstractLQPNode(LQPNodeType::Join),
-      _join_mode(join_mode),
-      _join_column_references(join_column_references),
-      _predicate_condition(predicate_condition) {
-  DebugAssert(join_mode != JoinMode::Cross && join_mode != JoinMode::Natural,
-              "Specified JoinMode must specify neither column ids nor predicate condition.");
-}
-
-std::shared_ptr<AbstractLQPNode> JoinNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-    const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
-  if (_join_mode == JoinMode::Cross || _join_mode == JoinMode::Natural) {
-    return JoinNode::make(_join_mode);
-  } else {
-    Assert(left_input(), "Can't clone without input");
-
-    const auto join_column_references = LQPColumnReferencePair{
-        adapt_column_reference_to_different_lqp(_join_column_references->first, left_input(), copied_left_input),
-        adapt_column_reference_to_different_lqp(_join_column_references->first, right_input(), copied_right_input),
-    };
-    return JoinNode::make(_join_mode, join_column_references, *_predicate_condition);
-  }
+JoinNode::JoinNode(const JoinMode join_mode, const std::shared_ptr<AbstractExpression>& join_predicate):
+AbstractLQPNode(LQPNodeType::Join), join_mode(join_mode), join_predicate(join_predicate) {
+  Assert(join_mode != JoinMode::Cross , "Cross Joins take no predicate");
 }
 
 std::string JoinNode::description() const {
-  Assert(left_input() && right_input(), "Can't generate description if inputren aren't set");
+  std::stringstream stream;
+  stream << "[Join] Mode: " << join_mode_to_string.at(join_mode);
 
-  std::ostringstream desc;
+  if (join_predicate) stream << " " << join_predicate->as_column_name();
 
-  desc << "[" << join_mode_to_string.at(_join_mode) << " Join]";
-
-  if (_join_column_references && _predicate_condition) {
-    desc << " " << _join_column_references->first.description();
-    desc << " " << predicate_condition_to_string.left.at(*_predicate_condition);
-    desc << " " << _join_column_references->second.description();
-  }
-
-  return desc.str();
-}
-
-const std::vector<std::string>& JoinNode::output_column_names() const {
-  if (!_output_column_names) {
-    _update_output();
-  }
-
-  return *_output_column_names;
-}
-
-const std::vector<LQPColumnReference>& JoinNode::output_column_references() const {
-  if (!_output_column_references) {
-    _update_output();
-  }
-
-  return *_output_column_references;
+  return stream.str();
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::output_column_expressions() const {
-  if (!_output_column_expressions) {
-    Assert(left_input() && right_input(), "Can't perform action without inputs");
+  Assert(left_input() && right_input(), "Both inputs need to be set to determine a JoiNode's output expressions");
 
-    _output_column_expressions->emplace();
-    _output_column_expressions->insert(_output_column_expressions->end(),
-      left_input()->output_column_expressions().begin(),
-      left_input()->output_column_expressions().end());
-    _output_column_expressions->insert(_output_column_expressions->end(),
-      right_input()->output_column_expressions().begin(),
-                                       right_input()->output_column_expressions().end());
-  }
-  return *_output_column_expressions;
+  /**
+   * Update the JoinNode's output expressions every time they are requested. An overhead, but keeps the LQP code simple.
+   * Previously we propagated _input_changed() calls through the LQP every time a node changed and that required a lot
+   * of feeble code.
+   */
+
+  const auto& left_expressions = left_input()->output_column_expressions();
+  const auto& right_expressions = right_input()->output_column_expressions();
+
+  _output_column_expressions.resize(left_expressions.size() + right_expressions.size());
+
+  auto right_begin = std::copy(left_expressions.begin(), left_expressions.end(), _output_column_expressions.begin());
+  std::copy(right_expressions.begin(), right_expressions.end(), right_begin);
+
+  return _output_column_expressions;
 }
 
-std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
-    const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
-  if (_join_mode == JoinMode::Cross) {
-    return std::make_shared<TableStatistics>(
-        left_input->get_statistics()->estimate_cross_join(*right_input->get_statistics()));
+std::shared_ptr<AbstractLQPNode> JoinNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {
+  if (join_predicate) {
+    return JoinNode::make(join_mode, expression_copy_and_adapt_to_different_lqp(*join_predicate, node_mapping));
   } else {
-    Assert(_join_column_references,
-           "Only cross joins and joins with join column ids supported for generating join statistics");
-    Assert(_predicate_condition,
-           "Only cross joins and joins with predicate condition supported for generating join statistics");
-
-    ColumnIDPair join_colum_ids{left_input->get_output_column_id(_join_column_references->first),
-                                right_input->get_output_column_id(_join_column_references->second)};
-
-    return std::make_shared<TableStatistics>(left_input->get_statistics()->estimate_predicated_join(
-        *right_input->get_statistics(), _join_mode, join_colum_ids, *_predicate_condition));
+    return JoinNode::make(join_mode);
   }
 }
 
-const std::optional<LQPColumnReferencePair>& JoinNode::join_column_references() const {
-  return _join_column_references;
-}
-
-const std::optional<PredicateCondition>& JoinNode::predicate_condition() const { return _predicate_condition; }
-
-JoinMode JoinNode::join_mode() const { return _join_mode; }
-
-std::string JoinNode::get_verbose_column_name(ColumnID column_id) const {
-  Assert(left_input() && right_input(), "Can't generate column names without inputren being set");
-
-  if (column_id < left_input()->output_column_count()) {
-    return left_input()->get_verbose_column_name(column_id);
-  }
-  return right_input()->get_verbose_column_name(static_cast<ColumnID>(column_id - left_input()->output_column_count()));
-}
-
-bool JoinNode::shallow_equals(const AbstractLQPNode& rhs) const {
-  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+bool JoinNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const {
   const auto& join_node = static_cast<const JoinNode&>(rhs);
 
-  if (_join_mode != join_node._join_mode || _predicate_condition != join_node._predicate_condition) return false;
-  if (_join_column_references.has_value() != join_node._join_column_references.has_value()) return false;
+  if ((join_predicate == nullptr) != (join_node.join_predicate == nullptr)) return false;
+  if (join_mode != join_node.join_mode) return false;
+  if (!join_predicate && !join_node.join_predicate) return true;
 
-  if (!_join_column_references.has_value()) return true;
-
-  return _equals(*this, _join_column_references->first, join_node, join_node._join_column_references->first) &&
-         _equals(*this, _join_column_references->second, join_node, join_node._join_column_references->second);
-}
-
-void JoinNode::_on_input_changed() { _output_column_names.reset(); }
-
-void JoinNode::_update_output() const {
-  /**
-   * The output (column names and output-to-input mapping) of this node gets cleared whenever a input changed and is
-   * re-computed on request. This allows LQPs to be in temporary invalid states (e.g. no left input in Join) and thus
-   * allows easier manipulation in the optimizer.
-   */
-
-  DebugAssert(left_input() && right_input(), "Need both inputs to compute output");
-
-  /**
-   * Collect the output column names of the inputren on the fly, because the inputren might change.
-   */
-  const auto& left_names = left_input()->output_column_names();
-  const auto& right_names = right_input()->output_column_names();
-
-  _output_column_names.emplace();
-  const auto only_output_left_columns = _join_mode == JoinMode::Semi || _join_mode == JoinMode::Anti;
-
-  const auto output_column_count =
-      only_output_left_columns ? left_names.size() : left_names.size() + right_names.size();
-  _output_column_names->reserve(output_column_count);
-
-  _output_column_names->insert(_output_column_names->end(), left_names.begin(), left_names.end());
-
-  /**
-   * Collect the output ColumnIDs of the inputren on the fly, because the inputren might change.
-   */
-  _output_column_references.emplace();
-
-  _output_column_references->insert(_output_column_references->end(), left_input()->output_column_references().begin(),
-                                    left_input()->output_column_references().end());
-
-  if (!only_output_left_columns) {
-    _output_column_names->insert(_output_column_names->end(), right_names.begin(), right_names.end());
-    _output_column_references->insert(_output_column_references->end(),
-                                      right_input()->output_column_references().begin(),
-                                      right_input()->output_column_references().end());
-  }
+  return expression_equal_to_expression_in_different_lqp(*join_predicate, *join_node.join_predicate, node_mapping);
 }
 
 }  // namespace opossum

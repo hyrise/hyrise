@@ -57,9 +57,15 @@ std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(
 
 std::string expression_column_names(const std::vector<std::shared_ptr<AbstractExpression>> &expressions);
 
-template<typename Visitor>
-void visit_expression(std::shared_ptr<AbstractExpression>& expression, Visitor visitor){
-  std::queue<std::reference_wrapper<std::shared_ptr<AbstractExpression>>> expression_queue;
+/**
+ * @tparam Expression   Either `std::shared_ptr<AbstractExpression>` or `const std::shared_ptr<AbstractExpression>`
+ * @tparam Visitor      Functor called with every sub expression as a param.
+ *                      Return true to traverse to sub expressions of the current expression
+ */
+template<typename Expression, typename Visitor>
+void visit_expression(Expression& expression, Visitor visitor){
+  // The reference wrapper bit is important so we can manipulate the Expression even by replacing sub expression
+  std::queue<std::reference_wrapper<Expression>> expression_queue;
   expression_queue.push(expression);
 
   while (!expression_queue.empty()) {
@@ -75,5 +81,16 @@ void visit_expression(std::shared_ptr<AbstractExpression>& expression, Visitor v
 }
 
 DataType expression_common_type(const DataType lhs, const DataType rhs);
+
+/**
+ * @return Whether the expression only references expressions/columns that the specified LQP outputs
+ */
+bool expression_evaluateable_on_lqp(const std::shared_ptr<AbstractExpression>& expression, const AbstractLQPNode& lqp);
+
+/**
+ * Convert "a AND b AND c" to [a,b,c] where a,b,c can be arbitrarily complex expressions
+ */
+std::vector<std::shared_ptr<AbstractExpression>> expression_flatten_conjunction(
+const std::shared_ptr<AbstractExpression> &expression);
 
 }  // namespace opossum

@@ -201,7 +201,7 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpre
     case ExpressionType::Predicate: {
       const auto& predicate_expression = static_cast<const AbstractPredicateExpression&>(expression);
 
-      if (is_ordering_predicate_condition(predicate_expression.predicate_condition)) {
+      if (is_lexicographical_predicate_condition(predicate_expression.predicate_condition)) {
         return evaluate_binary_predicate_expression<T>(static_cast<const BinaryPredicateExpression&>(expression));
       } else if (predicate_expression.predicate_condition == PredicateCondition::In) {
         return evaluate_in_expression<T>(static_cast<const InExpression&>(expression));

@@ -16,6 +16,7 @@ set(
 #    lib/all_parameter_variant_test.cpp
 #    lib/all_type_variant_test.cpp
     expression/expression_test.cpp
+    expression/expression_utils_test.cpp
     expression/expression_evaluator_test.cpp
     logical_query_plan/alias_node_test.cpp
 #    logical_query_plan/aggregate_node_test.cpp

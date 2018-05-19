@@ -1,6 +1,7 @@
 #include "expression_factory.hpp"
 
 #include "expression/lqp_select_expression.hpp"
+#include "expression/lqp_select_expression.hpp"
 
 namespace opossum {
 
@@ -46,8 +47,11 @@ binary<ArithmeticOperator::Addition, ArithmeticExpression> addition;
 binary<PredicateCondition::Equals, BinaryPredicateExpression> equals;
 binary<PredicateCondition::NotEquals, BinaryPredicateExpression> not_equals;
 binary<PredicateCondition::LessThan, BinaryPredicateExpression> less_than;
+binary<PredicateCondition::LessThanEquals, BinaryPredicateExpression> less_than_equals;
 binary<PredicateCondition::GreaterThanEquals, BinaryPredicateExpression> greater_than_equals;
 binary<PredicateCondition::GreaterThan, BinaryPredicateExpression> greater_than;
+binary<LogicalOperator::And, LogicalExpression> and_;
+binary<LogicalOperator::Or, LogicalExpression> or_;
 ternary<BetweenExpression> between;
 ternary<CaseExpression> case_;
 

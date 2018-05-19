@@ -4,6 +4,7 @@
 #include <sstream>
 #include <queue>
 
+#include "logical_expression.hpp"
 #include "lqp_column_expression.hpp"
 
 namespace opossum {
@@ -135,4 +136,31 @@ DataType expression_common_type(const DataType lhs, const DataType rhs) {
   return DataType::Int;
 }
 
+bool expression_evaluateable_on_lqp(const std::shared_ptr<AbstractExpression>& expression, const AbstractLQPNode& lqp) {
+  auto evaluateable = true;
+
+  visit_expression(expression, [&](const auto& sub_expression) {
+    if (lqp.find_column_id(*sub_expression)) return false;
+    if (sub_expression->type == ExpressionType::Column) evaluateable = false;
+    return true;
+  });
+
+  return evaluateable;
+}
+
+std::vector<std::shared_ptr<AbstractExpression>> expression_flatten_conjunction(
+const std::shared_ptr<AbstractExpression> &expression) {
+  std::vector<std::shared_ptr<AbstractExpression>> flattened_expressions;
+
+  visit_expression(expression, [&](const auto& sub_expression) {
+    if (sub_expression->type == ExpressionType::Logical) {
+      const auto logical_expression = std::static_pointer_cast<LogicalExpression>(sub_expression);
+      if (logical_expression->logical_operator == LogicalOperator::And) return true;
+    }
+    flattened_expressions.emplace_back(sub_expression);
+    return false;
+  });
+
+  return flattened_expressions;
+}
 }  // namespace opossum

@@ -36,7 +36,7 @@
 //#include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 //#include "logical_query_plan/insert_node.hpp"
-//#include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/join_node.hpp"
 //#include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -54,26 +54,11 @@
 //#include "util/sqlhelper.h"
 //#include "utils/assert.hpp"
 #include "constant_mappings.hpp"
+#include "create_sql_parser_error_message.hpp"
 
 #include "SQLParser.h"
 
-//namespace {
-//
-//using namespace opossum;  // NOLINT
-//
-//JoinMode translate_join_mode(const hsql::JoinType join_type) {
-//  static const std::unordered_map<const hsql::JoinType, const JoinMode> join_type_to_mode = {
-//  {hsql::kJoinInner, JoinMode::Inner}, {hsql::kJoinFull, JoinMode::Outer},      {hsql::kJoinLeft, JoinMode::Left},
-//  {hsql::kJoinRight, JoinMode::Right}, {hsql::kJoinNatural, JoinMode::Natural}, {hsql::kJoinCross, JoinMode::Cross},
-//  };
-//
-//  auto it = join_type_to_mode.find(join_type);
-//  DebugAssert(it != join_type_to_mode.end(), "Unable to handle join type.");
-//  return it->second;
-//}
-//
-//}  // namespace
-
+using namespace std::string_literals;
 using namespace opossum::expression_factory;
 
 namespace {
@@ -106,6 +91,17 @@ const std::unordered_map<hsql::OperatorType, PredicateCondition> hsql_predicate_
 {hsql::kOpNotLike, PredicateCondition::NotLike},
 {hsql::kOpIsNull, PredicateCondition::IsNull}
 };
+
+JoinMode translate_join_mode(const hsql::JoinType join_type) {
+  static const std::unordered_map<const hsql::JoinType, const JoinMode> join_type_to_mode = {
+  {hsql::kJoinInner, JoinMode::Inner}, {hsql::kJoinFull, JoinMode::Outer},  {hsql::kJoinLeft, JoinMode::Left},
+  {hsql::kJoinRight, JoinMode::Right}, {hsql::kJoinCross, JoinMode::Cross},
+  };
+
+  auto it = join_type_to_mode.find(join_type);
+  DebugAssert(it != join_type_to_mode.end(), "Unable to handle join type.");
+  return it->second;
+}
 } // namespace
 
 namespace opossum {
@@ -121,7 +117,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> SQLTranslator::translate_sql(const
   hsql::SQLParserResult parser_result;
   hsql::SQLParser::parse(sql, &parser_result);
 
-  Assert(parser_result.isValid(), "Invalid SQL");
+  Assert(parser_result.isValid(), create_sql_parser_error_message(sql, parser_result));
   Assert(parser_result.size() > 0, "Cannot create empty SQLPipeline.");
 
   return translate_parser_result(parser_result);
@@ -299,107 +295,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select_statement(const
 //  return UpdateNode::make((update.table)->name, update_expressions, target_references_node);
 //}
 //
-//std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::JoinDefinition& join, SQLTranslationState& translation_state) {
-//  const auto join_mode = translate_join_mode(join.type);
-//
-//  if (join_mode == JoinMode::Natural) {
-//    return _translate_natural_join(join, translation_state);
-//  }
-//
-//  auto left_input =_translate_table_ref(*join.left, translation_state);
-//  auto right_input = _translate_table_ref(*join.right, translation_state);
-//
-//  const hsql::Expr& condition = *join.condition;
-//
-//  Assert(condition.type == hsql::kExprOperator, "Join condition must be operator.");
-//
-//  const auto join_condition_expression = _translate_hsql_expr(condition, translation_state, _validate);
-//  Assert(join_condition_expression->type == ExpressionType::Predicate, "Join condition must be predicate");
-//
-//  const auto join_condition_predicate_expression =
-//    std::static_pointer_cast<AbstractPredicateExpression>(join_condition_expression);
-//  // The Join operators only support simple comparisons for now.
-//  switch (join_condition_predicate_expression->predicate_condition) {
-//    case PredicateCondition::Equals: case PredicateCondition::NotEquals: case PredicateCondition::LessThan:
-//    case PredicateCondition::LessThanEquals:  case PredicateCondition::GreaterThan:
-//    case PredicateCondition::GreaterThanEquals:
-//      break;
-//    default:
-//      Fail("Join condition must be a simple comparison operator.");
-//  }
-//
-//  const auto left_operand_expression = _translate_hsql_expr(*condition.expr, translation_state, _validate);
-//  const auto right_operand_expression = _translate_hsql_expr(*condition.expr2, translation_state, _validate);
-//
-//  const auto join_expressions = std::make_pair(left_operand_expression, right_operand_expression);
-//
-//  return JoinNode::make(join_mode,
-//                        join_expressions,
-//                        join_condition_predicate_expression->predicate_condition,
-//                        left_input,
-//                        right_input);
-//}
-//
-//std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_natural_join(const hsql::JoinDefinition& join, SQLTranslationState& translation_state) {
-//  DebugAssert(translate_join_mode(join.type) == JoinMode::Natural, "join must be a natural join");
-//
-//  const auto left_node = _translate_table_ref(*join.left);
-//  const auto right_node = _translate_table_ref(*join.right);
-//
-//  // we need copies that we can sort on.
-//  auto left_column_names = left_node->output_column_names();
-//  auto right_column_names = right_node->output_column_names();
-//
-//  std::sort(left_column_names.begin(), left_column_names.end());
-//  std::sort(right_column_names.begin(), right_column_names.end());
-//
-//  std::vector<std::string> join_column_names;
-//  std::set_intersection(left_column_names.begin(), left_column_names.end(), right_column_names.begin(),
-//                        right_column_names.end(), std::back_inserter(join_column_names));
-//
-//  Assert(!join_column_names.empty(), "No matching columns for natural join found");
-//
-//  auto current_node = JoinNode::make(JoinMode::Cross, left_node, right_node);
-//
-//  for (const auto& join_column_name : join_column_names) {
-//    const auto left_column_reference = left_node->get_column({join_column_name});
-//    const auto right_column_reference = right_node->get_column({join_column_name});
-//
-//    current_node = PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
-//    PredicateCondition::Equals,
-//    std::make_shared<LQPColumnExpression>(left_column_reference),
-//    std::make_shared<LQPColumnExpression>(right_column_reference)
-//    ), current_node);
-//  }
-//
-//  // We need to collect the column origins so that we can remove the duplicate columns used in the join condition
-//  std::vector<std::shared_ptr<AbstractExpression>> column_expressions;
-//  for (auto column_id = ColumnID{0u}; column_id < current_node->output_column_count(); ++column_id) {
-//    const auto& column_name = current_node->output_column_names()[column_id];
-//
-//    if (static_cast<size_t>(column_id) >= left_node->output_column_count() &&
-//        std::find(join_column_names.begin(), join_column_names.end(), column_name) != join_column_names.end()) {
-//      continue;
-//    }
-//
-//    column_expressions.emplace_back(current_node->output_column_expressions()[column_id]);
-//  }
-//
-//  return ProjectionNode::make(column_expressions, current_node);
-//}
-//
-//std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_cross_product(const std::vector<hsql::TableRef*>& tables) {
-//  DebugAssert(!tables.empty(), "Cannot translate cross product without tables");
-//  auto product = _translate_table_ref(*tables.front());
-//
-//  for (auto table_idx = size_t{0}; table_idx < tables.size(); ++table_idx) {
-//    const auto node = _translate_table_ref(*tables[table_idx]);
-//    product = JoinNode::make(JoinMode::Cross, product, node);
-//  }
-//
-//  return product;
-//}
-//
 //std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_column_renamings(
 //const std::shared_ptr<AbstractLQPNode> &node,
 //const hsql::TableRef &table) {
@@ -433,7 +328,28 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select_statement(const
 //  return ProjectionNode::make(column_definitions, node);
 //}
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql::TableRef& hsql_table_ref) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql::TableRef &hsql_table_ref) {
+  switch (hsql_table_ref.type) {
+    case hsql::kTableName:
+    case hsql::kTableSelect:
+      return _translate_table_source(hsql_table_ref);
+
+    case hsql::kTableJoin:
+      if (hsql_table_ref.join->type == hsql::kJoinNatural) {
+        return _translate_natural_join(*hsql_table_ref.join);
+      } else {
+        return _translate_predicated_join(*hsql_table_ref.join);
+      }
+
+    case hsql::kTableCrossProduct:
+      return _translate_cross_product(*hsql_table_ref.list);
+
+    default:
+      Fail("Unexpect SQLParser TableRef in FROM");
+  }
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_source(const hsql::TableRef &hsql_table_ref) {
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
 
   // Each element in the FROM list needs to have a unique table name
@@ -458,6 +374,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql:
       } else if (StorageManager::get().has_view(hsql_table_ref.name)) {
         Fail("Views not supported yet");
         lqp = StorageManager::get().get_view(hsql_table_ref.name);
+        // TODO(moritz) enable this again
         //   Assert(!_validate || lqp->subplan_is_validated(), "Trying to add non-validated view to validated query");
       } else {
         Fail(std::string("Did not find a table or view with name ") + hsql_table_ref.name);
@@ -483,15 +400,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql:
       table_name = hsql_table_ref.alias->name;
     } break;
 
-//    case hsql::kTableJoin:
-//      lqp = _translate_join(*hsql_table_ref.join, translation_state);
-//      break;
-//    case hsql::kTableCrossProduct:
-//      lqp = _translate_cross_product(*hsql_table_ref.list, translation_state);
-//      break;
-
     default:
-      Fail("Unable to translate source table.");
+      Fail("_translate_table_source() is only for Tables, Views and Sub Selects.");
   }
 
   for (const auto& expression : lqp->output_column_expressions()) {
@@ -500,8 +410,139 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql:
 
   const auto table_name_is_unique = _from_elements_by_table_name.emplace(table_name, lqp).second;
   Assert(table_name_is_unique, "Table name '" + table_name + "' in FROM is not unique");
+  _from_elements_in_order.emplace_back(lqp);
 
   return lqp;
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicated_join(const hsql::JoinDefinition &join) {
+  const auto join_mode = translate_join_mode(join.type);
+
+  auto left_input =_translate_table_ref(*join.left);
+  auto right_input = _translate_table_ref(*join.right);
+
+  /**
+   * Hyrise doesn't have support for complex join predicates in OUTER JOINs
+   * The current implementation expects a single join condition in a set of conjunctive
+   * clauses. The remaining clauses are expected to be relevant for only one of
+   * the join partners and are therefore converted into predicates inserted in between the
+   * source relations and the actual join node.
+   * See TPC-H 13 for an example query.
+   */
+  const auto raw_join_predicate = _translate_hsql_expr(*join.condition);
+  const auto raw_join_predicate_cnf = expression_flatten_conjunction(raw_join_predicate);
+
+  auto left_local_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
+  auto right_local_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
+  auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
+
+  for (const auto& predicate : raw_join_predicate_cnf) {
+    if (expression_evaluateable_on_lqp(predicate, *left_input)) {
+      left_local_predicates.emplace_back(predicate);
+    } else if (expression_evaluateable_on_lqp(predicate, *right_input)) {
+      right_local_predicates.emplace_back(predicate);
+    } else {
+      Assert(predicate->type == ExpressionType::Predicate,
+             "Join condition must be a simple Predicate for now. ("s + predicate->as_column_name() + ")");
+      join_predicates.emplace_back(predicate);
+    }
+  }
+
+  Assert(join_mode == JoinMode::Inner || join_predicates.size(), "Multiple Predicates not supported in Outer Join");
+
+  /**
+   * Add local predicates - ignore local predicates on the preserving side of OUTER JOINs
+   */
+  if (join_mode != JoinMode::Left && join_mode != JoinMode::Outer) {
+    for (const auto &left_local_predicate : left_local_predicates) {
+      left_input = _translate_predicate_expression(left_local_predicate, left_input);
+    }
+  }
+  if (join_mode != JoinMode::Right && join_mode != JoinMode::Outer) {
+    for (const auto &right_local_predicate : right_local_predicates) {
+      right_input = _translate_predicate_expression(right_local_predicate, right_input);
+    }
+  }
+
+  /**
+   * Add the join predicates
+   */
+  auto lqp = std::shared_ptr<AbstractLQPNode>{};
+
+  if (join_predicates.empty()) {
+    lqp = JoinNode::make(JoinMode::Cross, left_input, right_input);
+  } else {
+    lqp = JoinNode::make(join_mode, join_predicates.front(), left_input, right_input);
+  }
+
+  // Add secondary join predicates as normal PredicateNodes
+  for (auto join_predicate_idx = size_t{1}; join_predicate_idx < join_predicates.size(); ++join_predicate_idx) {
+    PerformanceWarning("Secondary Join Predicates added as normal Predicates");
+    lqp = PredicateNode::make(join_predicates[join_predicate_idx], _current_lqp);
+  }
+
+  return lqp;
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_natural_join(const hsql::JoinDefinition& join) {
+  DebugAssert(translate_join_mode(join.type) == JoinMode::Natural, "join must be a natural join");
+
+  const auto left_input = _translate_table_ref(*join.left);
+  const auto right_input = _translate_table_ref(*join.right);
+
+  // we need copies that we can sort on.
+  auto left_column_names = left_node->output_column_names();
+  auto right_column_names = right_node->output_column_names();
+
+  std::sort(left_column_names.begin(), left_column_names.end());
+  std::sort(right_column_names.begin(), right_column_names.end());
+
+  std::vector<std::string> join_column_names;
+  std::set_intersection(left_column_names.begin(), left_column_names.end(), right_column_names.begin(),
+                        right_column_names.end(), std::back_inserter(join_column_names));
+
+  Assert(!join_column_names.empty(), "No matching columns for natural join found");
+
+  auto current_node = JoinNode::make(JoinMode::Cross, left_node, right_node);
+
+  for (const auto& join_column_name : join_column_names) {
+    const auto left_column_reference = left_node->get_column({join_column_name});
+    const auto right_column_reference = right_node->get_column({join_column_name});
+
+    current_node = PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
+    PredicateCondition::Equals,
+    std::make_shared<LQPColumnExpression>(left_column_reference),
+    std::make_shared<LQPColumnExpression>(right_column_reference)
+    ), current_node);
+  }
+
+  // We need to collect the column origins so that we can remove the duplicate columns used in the join condition
+  std::vector<std::shared_ptr<AbstractExpression>> column_expressions;
+  for (auto column_id = ColumnID{0u}; column_id < current_node->output_column_count(); ++column_id) {
+    const auto& column_name = current_node->output_column_names()[column_id];
+
+    if (static_cast<size_t>(column_id) >= left_node->output_column_count() &&
+        std::find(join_column_names.begin(), join_column_names.end(), column_name) != join_column_names.end()) {
+      continue;
+    }
+
+    column_expressions.emplace_back(current_node->output_column_expressions()[column_id]);
+  }
+
+  return ProjectionNode::make(column_expressions, current_node);
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_cross_product(const std::vector<hsql::TableRef*>& tables) {
+  Assert(!tables.empty(), "Cannot translate cross product without tables");
+
+  auto product = _translate_table_ref(*tables.front());
+
+  for (auto table_idx = size_t{1}; table_idx < tables.size(); ++table_idx) {
+    const auto node = _translate_table_ref(*tables[table_idx]);
+    product = JoinNode::make(JoinMode::Cross, product, node);
+  }
+
+  return product;
 }
 
 void SQLTranslator::_translate_select_list_groupby_having(
@@ -629,8 +670,8 @@ const hsql::SelectStatement &select) {
           output_expressions.insert(output_expressions.end(), group_by_expressions.begin(), group_by_expressions.end());
         } else {
           // Select all columns from the FROM elements
-          for (const auto& table_name_and_from_element : _from_elements_by_table_name) {
-            const auto& from_element_expressions = table_name_and_from_element.second->output_column_expressions();
+          for (const auto& from_element : _from_elements_in_order) {
+            const auto& from_element_expressions = from_element->output_column_expressions();
             output_expressions.insert(output_expressions.end(), from_element_expressions.begin(), from_element_expressions.end());
           }
         }
@@ -945,7 +986,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
       if (predicate_condition_iter != hsql_predicate_condition.end()) {
         const auto predicate_condition = predicate_condition_iter->second;
 
-        if (is_ordering_predicate_condition(predicate_condition)) {
+        if (is_lexicographical_predicate_condition(predicate_condition)) {
           Assert(left && right, "Unexpected SQLParserResult. Didn't receive two arguments for binary_expression");
           return std::make_shared<BinaryPredicateExpression>(predicate_condition, left, right);
         } else if (predicate_condition == PredicateCondition::Between) {

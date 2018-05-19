@@ -199,12 +199,12 @@ enum class PredicateCondition {
 };
 
 bool is_unary_predicate_condition(const PredicateCondition predicate_condition);
-bool is_ordering_predicate_condition(const PredicateCondition predicate_condition);
+bool is_lexicographical_predicate_condition(const PredicateCondition predicate_condition);
 bool is_ternary_predicate_condition(const PredicateCondition predicate_condition);
 
 PredicateCondition flip_predicate_condition(const PredicateCondition predicate_condition);
 
-enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self, Semi, Anti };
+enum class JoinMode { Inner, Left, Right, Outer, Cross, Anti };
 
 enum class UnionMode { Positions };
 

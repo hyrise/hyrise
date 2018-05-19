@@ -1,7 +1,10 @@
 #include "sql_pipeline.hpp"
+
 #include <boost/algorithm/string.hpp>
 #include <utility>
+
 #include "SQLParser.h"
+#include "create_sql_parser_error_message.hpp"
 
 namespace opossum {
 
@@ -22,7 +25,7 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
   }
 
   if (!parse_result.isValid()) {
-    throw std::runtime_error(SQLPipelineStatement::create_parse_error_message(sql, parse_result));
+    throw std::runtime_error(create_sql_parser_error_message(sql, parse_result));
   }
 
   DebugAssert(parse_result.size() > 0, "Cannot create empty SQLPipeline.");

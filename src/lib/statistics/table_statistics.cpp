@@ -107,7 +107,6 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
                                                           const JoinMode mode, const ColumnIDPair column_ids,
                                                           const PredicateCondition predicate_condition) const {
   Assert(mode != JoinMode::Cross, "Use function estimate_cross_join for cross joins.");
-  Assert(mode != JoinMode::Natural, "Natural joins are not supported by statistics component.");
 
   /**
    * The approach to calculate the join table statistics is to split the join into a cross join followed by a predicate.
@@ -166,12 +165,6 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
    * to the right columns would still be 1 + 1 = 2. However, no null values are added to the the left columns.
    * This results in a join result row count of 1 + 2 = 3.
    */
-
-  // For self joins right_table_statistics should be this.
-  if (mode == JoinMode::Self) {
-    Assert(this == &right_table_statistics, "Self joins should pass the same table as right_table_statistics again.");
-  }
-
   // copy column statistics and calculate cross join row count
   auto join_table_stats = estimate_cross_join(right_table_statistics);
 
@@ -239,7 +232,6 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
   };
 
   switch (mode) {
-    case JoinMode::Self:
     case JoinMode::Inner: {
       join_table_stats._column_statistics[column_ids.first] = stats_container.left_column_statistics;
       join_table_stats._column_statistics[new_right_column_id] = stats_container.right_column_statistics;

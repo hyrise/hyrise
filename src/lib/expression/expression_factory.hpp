@@ -11,6 +11,7 @@
 #include "case_expression.hpp"
 #include "external_expression.hpp"
 #include "in_expression.hpp"
+#include "logical_expression.hpp"
 #include "lqp_column_expression.hpp"
 #include "value_expression.hpp"
 #include "value_placeholder_expression.hpp"
@@ -87,8 +88,11 @@ extern binary<ArithmeticOperator::Addition, ArithmeticExpression> addition;
 extern binary<PredicateCondition::Equals, BinaryPredicateExpression> equals;
 extern binary<PredicateCondition::NotEquals, BinaryPredicateExpression> not_equals;
 extern binary<PredicateCondition::LessThan, BinaryPredicateExpression> less_than;
+extern binary<PredicateCondition::LessThanEquals, BinaryPredicateExpression> less_than_equals;
 extern binary<PredicateCondition::GreaterThanEquals, BinaryPredicateExpression> greater_than_equals;
 extern binary<PredicateCondition::GreaterThan, BinaryPredicateExpression> greater_than;
+extern binary<LogicalOperator::And, LogicalExpression> and_;
+extern binary<LogicalOperator::Or, LogicalExpression> or_;
 extern ternary<BetweenExpression> between;
 extern ternary<CaseExpression> case_;
 
