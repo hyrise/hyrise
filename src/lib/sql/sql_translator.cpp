@@ -356,7 +356,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_ref(const hsql::
 SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsql::TableRef &hsql_table_ref) {
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
 
-  // Each element in the FROM list needs to have a unique table name
+  // Each element in the FROM list needs to have a unique table name (i.e. Subselects are required to have an ALIAS)
   auto table_name = std::string{};
   auto sql_identifier_context = std::make_shared<SQLIdentifierContext>();
 
@@ -397,8 +397,11 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
       for (const auto& sub_select_expression : lqp->output_column_expressions()) {
         const auto identifier = sub_select_translator.sql_identifier_context()->get_expression_identifier(sub_select_expression);
 
+        // Make sure each column from the SubSelect has a name
         if (identifier) {
           sql_identifier_context->set_column_name(sub_select_expression, identifier->column_name);
+        } else {
+          sql_identifier_context->set_column_name(sub_select_expression, sub_select_expression->as_column_name());
         }
       }
 
@@ -407,6 +410,18 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
 
     default:
       Fail("_translate_table_origin() is only for Tables, Views and Sub Selects.");
+  }
+
+  // Rename columns as in "SELECT * FROM t AS x (y,z)"
+  if (hsql_table_ref.alias && hsql_table_ref.alias->columns) {
+    const auto& output_column_expressions = lqp->output_column_expressions();
+
+    Assert(hsql_table_ref.alias->columns->size() == output_column_expressions.size(),
+           "Must specify a name for exactly each column");
+
+    for (auto column_id = ColumnID{0}; column_id < hsql_table_ref.alias->columns->size(); ++column_id) {
+      sql_identifier_context->set_column_name(output_column_expressions[column_id], (*hsql_table_ref.alias->columns)[column_id]);
+    }
   }
 
   for (const auto& expression : lqp->output_column_expressions()) {
@@ -524,7 +539,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_natural_join(const hsq
      // No matching column in the left input found, add the column from the right input to the output
     result_state.elements_in_order.emplace_back(right_expression);
     if (right_identifier) {
-      result_state.sql_identifier_context->set_table_name(right_expression, right_identifier->column_name);
+      result_state.sql_identifier_context->set_column_name(right_expression, right_identifier->column_name);
       if (right_identifier->table_name) {
         result_state.elements_by_table_name[*right_identifier->table_name].emplace_back(right_expression);
         result_state.sql_identifier_context->set_table_name(right_expression, *right_identifier->table_name);

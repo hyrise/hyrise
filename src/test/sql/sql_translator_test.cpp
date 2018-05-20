@@ -522,16 +522,63 @@ TEST_F(SQLTranslatorTest, JoinNaturalColumnAlias) {
                                         "FROM "
                                         "  int_float AS a NATURAL JOIN (SELECT a AS d, b AS a, c FROM int_int_int) AS b");
 
+  const auto aliases = std::vector<std::string>{{"a", "b", "d", "c"}};
+  const auto sub_select_aliases = std::vector<std::string>{{"d", "a", "c"}};
+
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(int_float_a, int_float_b, int_int_int_a, int_int_int_c),
+  AliasNode::make(expression_vector(int_float_a, int_float_b, int_int_int_a, int_int_int_c), aliases,
+    ProjectionNode::make(expression_vector(int_float_a, int_float_b, int_int_int_a, int_int_int_c),
       JoinNode::make(JoinMode::Inner, equals(int_float_a, int_int_int_b),
         stored_table_node_int_float,
-        stored_table_node_int_int_int
-  ));
+        AliasNode::make(expression_vector(int_int_int_a, int_int_int_b, int_int_int_c), sub_select_aliases,
+          stored_table_node_int_int_int)
+  )));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, FromColumnAliasingSimple) {
+  const auto actual_lqp_a = compile_query("SELECT t.x FROM int_float AS t (x, y) WHERE x = t.y");
+  const auto actual_lqp_b = compile_query("SELECT t.x FROM (SELECT * FROM int_float) AS t (x, y) WHERE x = t.y");
+
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expression_vector(int_float_a), std::vector<std::string>({"x", }),
+    ProjectionNode::make(expression_vector(int_float_a),
+      PredicateNode::make(equals(int_float_a, int_float_b),
+        stored_table_node_int_float
+  )));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, FromColumnAliasingTablesSwitchNames) {
+  // Tricky: Tables "switch names". int_float becomes int_float2 and int_float2 becomes int_float
+
+  const auto actual_lqp_a = compile_query("SELECT int_float.y, int_float2.* "
+                                          "FROM int_float AS int_float2 (a, b), int_float2 AS int_float(x,y) "
+                                          "WHERE int_float.x = int_float2.b");
+  const auto actual_lqp_b = compile_query("SELECT int_float.y, int_float2.* "
+                                          "FROM (SELECT * FROM int_float) AS int_float2 (a, b), (SELECT * FROM int_float2) AS int_float(x,y) "
+                                          "WHERE int_float.x = int_float2.b");
+
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expression_vector(int_float2_b, int_float_a, int_float_b), std::vector<std::string>({"y", "a", "b"}),
+    ProjectionNode::make(expression_vector(int_float2_b, int_float_a, int_float_b),
+      PredicateNode::make(equals(int_float2_a, int_float_b),
+        JoinNode::make(JoinMode::Cross,
+          stored_table_node_int_float,
+          stored_table_node_int_float2
+  ))));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
 }
 
 //TEST_F(SQLTranslatorTest, ExpressionStringTest) {
