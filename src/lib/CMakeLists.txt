@@ -58,8 +58,6 @@ set(
     expression/lqp_column_expression.hpp
     expression/lqp_select_expression.cpp
     expression/lqp_select_expression.hpp
-    expression/sql_identifier_expression.cpp
-    expression/sql_identifier_expression.hpp
 #    expression/not_expression.cpp
 #    expression/not_expression.hpp
     expression/pqp_column_expression.cpp
