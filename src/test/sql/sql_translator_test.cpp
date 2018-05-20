@@ -612,6 +612,21 @@ TEST_F(SQLTranslatorTest, FromColumnAliasingTablesSwitchNames) {
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, Limit) {
+  // Most common case: LIMIT to a fixed number
+  const auto actual_lqp_a = compile_query("SELECT * FROM int_float LIMIT 1;");
+  const auto expected_lqp_a = LimitNode::make(value(1), stored_table_node_int_float);
+  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp_a)
+
+  // Uncommon: LIMIT to the result of an Expression (which has to be uncorelated
+  const auto actual_lqp_b = compile_query("SELECT int_float.a AS x FROM int_float LIMIT 3 + (SELECT MIN(b) FROM int_float2);");
+  const auto expected_lqp_b =
+  LimitNode::make(addition(3, select(sub_select)),
+    ProjectionNode(expression_vector())
+    stored_table_node_int_float);
+  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp_b)
+}
+
 //TEST_F(SQLTranslatorTest, ExpressionStringTest) {
 //  const auto query = "SELECT * FROM table_a WHERE a = 'b'";
 //  const auto result_node = compile_query(query);
