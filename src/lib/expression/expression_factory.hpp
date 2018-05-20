@@ -82,6 +82,8 @@ struct ternary final {
 
 extern unary<AggregateFunction::Sum, AggregateExpression> sum;
 extern unary<AggregateFunction::Min, AggregateExpression> min;
+extern unary<AggregateFunction::Count, AggregateExpression> count;
+extern unary<AggregateFunction::CountDistinct, AggregateExpression> count_distinct;
 extern binary<ArithmeticOperator::Division, ArithmeticExpression> division;
 extern binary<ArithmeticOperator::Multiplication, ArithmeticExpression> multiplication;
 extern binary<ArithmeticOperator::Addition, ArithmeticExpression> addition;
@@ -121,6 +123,8 @@ template<typename V, typename S>
 std::shared_ptr<InExpression> in(const V& v, const S& s) {
   return std::make_shared<InExpression>(to_expression(v), to_expression(s));
 }
+
+std::shared_ptr<AggregateExpression> count_star();
 
 }  // namespace expression_factory
 

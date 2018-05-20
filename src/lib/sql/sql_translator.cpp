@@ -996,8 +996,15 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
             Assert(arguments.size() == 1, "Expected exactly one argument for this AggregateFunction");
             return std::make_shared<AggregateExpression>(aggregate_function, arguments[0]);
 
-          case AggregateFunction::Count: case AggregateFunction::CountDistinct:
-            return std::make_shared<AggregateExpression>(aggregate_function);
+          case AggregateFunction::Count:
+          case AggregateFunction::CountDistinct:
+            Assert(arguments.size() == 1, "COUNT takes exactly one argument!");
+
+            if (arguments.front()->type == ExpressionType::Column) {
+              return std::make_shared<AggregateExpression>(aggregate_function, arguments.front());
+            } else {
+              return std::make_shared<AggregateExpression>(aggregate_function);
+            }
         }
 
       } else {

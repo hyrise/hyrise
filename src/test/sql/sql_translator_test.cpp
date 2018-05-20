@@ -279,6 +279,37 @@ TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, AggregateCount) {
+  const auto actual_lqp_count_a = compile_query("SELECT b, COUNT(a) FROM int_float GROUP BY b");
+  // clang-format off
+  const auto expected_lqp_a =
+  AggregateNode::make(expression_vector(int_float_b), expression_vector(count(int_float_a)),
+    stored_table_node_int_float
+  );
+  // clang-format on
+  EXPECT_LQP_EQ(actual_lqp_count_a, expected_lqp_a);
+
+
+  const auto actual_lqp_count_star = compile_query("SELECT b, COUNT(*) FROM int_float GROUP BY b");
+  // clang-format off
+  const auto expected_lqp_star =
+  AggregateNode::make(expression_vector(int_float_b), expression_vector(count_star()),
+    stored_table_node_int_float
+  );
+  // clang-format on
+  EXPECT_LQP_EQ(actual_lqp_count_star, expected_lqp_star);
+
+
+  const auto actual_lqp_count_distinct_a_plus_b = compile_query("SELECT a, b, COUNT(DISTINCT a + b) FROM int_float GROUP BY a, b");
+  // clang-format off
+  const auto expected_lqp_count_distinct_a_plus_b =
+  AggregateNode::make(expression_vector(int_float_a, int_float_b), expression_vector(count_distinct(addition(int_float_a, int_float_b))),
+    stored_table_node_int_float
+  );
+  // clang-format on
+  EXPECT_LQP_EQ(actual_lqp_count_distinct_a_plus_b, expected_lqp_count_distinct_a_plus_b);
+}
+
 TEST_F(SQLTranslatorTest, GroupByOnly) {
   const auto actual_lqp = compile_query("SELECT * FROM int_float GROUP BY b + 3, a / b, b");
 

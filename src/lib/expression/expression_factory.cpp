@@ -39,8 +39,14 @@ std::shared_ptr<AbstractExpression> select(const std::shared_ptr<AbstractLQPNode
   return std::make_shared<LQPSelectExpression>(lqp, referenced_external_expressions);
 }
 
+std::shared_ptr<AggregateExpression> count_star() {
+  return std::make_shared<AggregateExpression>(AggregateFunction::Count);
+}
+
 unary<AggregateFunction::Sum, AggregateExpression> sum;
 unary<AggregateFunction::Min, AggregateExpression> min;
+unary<AggregateFunction::Count, AggregateExpression> count;
+unary<AggregateFunction::CountDistinct, AggregateExpression> count_distinct;
 binary<ArithmeticOperator::Multiplication, ArithmeticExpression> multiplication;
 binary<ArithmeticOperator::Division, ArithmeticExpression> division;
 binary<ArithmeticOperator::Addition, ArithmeticExpression> addition;
