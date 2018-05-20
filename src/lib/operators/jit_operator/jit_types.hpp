@@ -135,6 +135,14 @@ class JitTupleValue {
     context.tuple.set_is_null(_tuple_index, is_null);
   }
 
+  // Compares two JitTupleValue instances for equality. This method does NOT compare actual concrete values but only the
+  // configuration (data type, nullability, tuple index) of the tuple values. I.e., two equal JitTupleValues refer to
+  // the same value in a given JitRuntimeContext.
+  bool operator==(const JitTupleValue& other) const {
+    return data_type() == other.data_type() && is_nullable() == other.is_nullable() &&
+           tuple_index() == other.tuple_index();
+  }
+
  private:
   const DataType _data_type;
   const bool _is_nullable;

@@ -2,7 +2,7 @@
 
 #include "../jit_operator_wrapper.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
-#include "operators/jit_compute.hpp"
+#include "operators/jit_expression.hpp"
 
 namespace opossum {
 

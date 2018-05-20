@@ -18,7 +18,7 @@ TEST_F(JitReadWriteTupleTest, CreateOutputTable) {
 
   for (const auto& column_definition : column_definitions) {
     write_tuples->add_output_column(column_definition.name,
-                                   JitTupleValue(column_definition.data_type, column_definition.nullable, 0));
+                                    JitTupleValue(column_definition.data_type, column_definition.nullable, 0));
   }
 
   auto output_table = write_tuples->create_output_table(1);

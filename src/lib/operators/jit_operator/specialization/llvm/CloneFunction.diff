@@ -1,0 +1,57 @@
+15a16,19
+> // clang-format off
+> 
+> #include "../llvm_extensions.hpp"
+> 
+274a279
+>     opossum::SpecializationContext& Context;
+279c284,285
+<                           const char *nameSuffix, ClonedCodeInfo *codeInfo)
+---
+>                           const char *nameSuffix, ClonedCodeInfo *codeInfo,
+>                           opossum::SpecializationContext& context)
+282c288,289
+<           CodeInfo(codeInfo) {}
+---
+>           CodeInfo(codeInfo),
+>           Context(context) {}
+387a395,398
+>       if (!Cond) {
+>         Cond = dyn_cast_or_null<ConstantInt>(opossum::ResolveCondition(BI->getCondition(), Context));
+>       }
+> 
+402a414,418
+> 
+>     if (!Cond) {
+>       Cond = dyn_cast_or_null<ConstantInt>(opossum::ResolveCondition(SI->getCondition(), Context));
+>     }
+> 
+441c457
+< void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
+---
+> void opossum::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
+447c463,464
+<                                      ClonedCodeInfo *CodeInfo) {
+---
+>                                      ClonedCodeInfo *CodeInfo,
+>                                      opossum::SpecializationContext& Context) {
+462c479
+<                             NameSuffix, CodeInfo);
+---
+>                             NameSuffix, CodeInfo, Context);
+710c727
+< void llvm::CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
+---
+> void opossum::CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
+716,718c733,736
+<                                      Instruction *TheCall) {
+<   CloneAndPruneIntoFromInst(NewFunc, OldFunc, &OldFunc->front().front(), VMap,
+<                             ModuleLevelChanges, Returns, NameSuffix, CodeInfo);
+---
+>                                      Instruction *TheCall,
+>                                      opossum::SpecializationContext& Context) {
+>   opossum::CloneAndPruneIntoFromInst(NewFunc, OldFunc, &OldFunc->front().front(), VMap,
+>                             ModuleLevelChanges, Returns, NameSuffix, CodeInfo, Context);
+830a849,850
+> 
+> // clang-format on

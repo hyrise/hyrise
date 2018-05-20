@@ -533,11 +533,24 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/operators/jit_write_tuples.cpp
         operators/jit_operator/operators/jit_write_tuples.hpp
     )
-    embed_llvm(LLVM_BUNDLE_FILE ${JIT_EMBEDDED_SOURCES})
+    embed_llvm(LLVM_BUNDLE_FILE jit_llvm_bundle ${JIT_EMBEDDED_SOURCES})
     set(
         SOURCES
         operators/jit_operator/jit_aware_lqp_translator.cpp
         operators/jit_operator/jit_aware_lqp_translator.hpp
+        operators/jit_operator/specialization/jit_compiler.cpp
+        operators/jit_operator/specialization/jit_compiler.hpp
+        operators/jit_operator/specialization/jit_code_specializer.cpp
+        operators/jit_operator/specialization/jit_code_specializer.hpp
+        operators/jit_operator/specialization/jit_repository.cpp
+        operators/jit_operator/specialization/jit_repository.hpp
+        operators/jit_operator/specialization/jit_runtime_pointer.hpp
+        operators/jit_operator/specialization/llvm/CloneFunction.cpp
+        operators/jit_operator/specialization/llvm/InlineFunction.cpp
+        operators/jit_operator/specialization/llvm_extensions.cpp
+        operators/jit_operator/specialization/llvm_extensions.hpp
+        operators/jit_operator/specialization/llvm_utils.cpp
+        operators/jit_operator/specialization/llvm_utils.hpp
         operators/jit_operator_wrapper.cpp
         operators/jit_operator_wrapper.hpp
         ${SOURCES}
