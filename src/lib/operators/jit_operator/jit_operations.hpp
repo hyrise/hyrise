@@ -170,22 +170,24 @@ void jit_is_not_null(const JitTupleValue& lhs, const JitTupleValue& result, JitR
 __attribute__((noinline)) uint64_t jit_hash(const JitTupleValue& value, JitRuntimeContext& context);
 
 // Compares a JitTupleValue to a JitHashmapValue using NULL == NULL semantics
-__attribute__((noinline)) bool jit_aggregate_equals(const JitTupleValue& lhs, const JitHashmapValue& rhs, const size_t rhs_index,
-                          JitRuntimeContext& context);
+__attribute__((noinline)) bool jit_aggregate_equals(const JitTupleValue& lhs, const JitHashmapValue& rhs,
+                                                    const size_t rhs_index, JitRuntimeContext& context);
 
 // Copies a JitTupleValue to a JitHashmapValue. Both values MUST be of the same data type/
 __attribute__((noinline)) void jit_assign(const JitTupleValue& from, const JitHashmapValue& to, const size_t to_index,
-                JitRuntimeContext& context);
+                                          JitRuntimeContext& context);
 
 // Adds an element to a column represented by some JitHashmapValue
-__attribute__((noinline)) size_t jit_grow_by_one(const JitHashmapValue& value, const JitVariantVector::InitialValue initial_value,
-                       JitRuntimeContext& context);
+__attribute__((noinline)) size_t jit_grow_by_one(const JitHashmapValue& value,
+                                                 const JitVariantVector::InitialValue initial_value,
+                                                 JitRuntimeContext& context);
 
 // Updates an aggregate by applying an operation to a JitTupleValue and a JitHashmapValue. The result is stored in the
 // hashmape value.
 template <typename T>
-__attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const JitTupleValue& lhs, const JitHashmapValue& rhs,
-                           const size_t rhs_index, JitRuntimeContext& context) {
+__attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const JitTupleValue& lhs,
+                                                     const JitHashmapValue& rhs, const size_t rhs_index,
+                                                     JitRuntimeContext& context) {
   // NULL values are ignored in aggreagte computations
   if (lhs.is_null(context)) {
     return;
