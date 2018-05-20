@@ -925,22 +925,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expressions_if_unavailable(
 std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context) const {
   auto name = expr.name != nullptr ? std::string(expr.name) : "";
 
-  std::shared_ptr<AbstractExpression> left;
-  std::shared_ptr<AbstractExpression> right;
-  std::vector<std::shared_ptr<AbstractExpression>> arguments;
-
-  // TODO(moritz) fix case parsing
-  if (!(expr.type == hsql::kExprOperator && expr.opType == hsql::kOpCase)) {
-    if (expr.exprList) {
-      arguments.reserve(expr.exprList->size());
-      for (const auto *hsql_argument : *(expr.exprList)) {
-        arguments.emplace_back(_translate_hsql_expr(*hsql_argument,sql_identifier_context));
-      }
-    }
-  }
-
-  if (expr.expr) left = _translate_hsql_expr(*expr.expr, sql_identifier_context);
-  if (expr.expr2) right = _translate_hsql_expr(*expr.expr2, sql_identifier_context);
+  const auto left = expr.expr ? _translate_hsql_expr(*expr.expr, sql_identifier_context) : nullptr;
+  const auto right = expr.expr2 ? _translate_hsql_expr(*expr.expr2, sql_identifier_context) : nullptr;
 
   switch (expr.type) {
     case hsql::kExprColumnRef: {
@@ -951,7 +937,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
       if (!expression && _external_sql_identifier_context_proxy) {
         expression = _external_sql_identifier_context_proxy->resolve_identifier_relaxed(identifier);
       }
-      Assert(expression, "Couldn't resolve identifier '" + identifier.as_string() + "'");
+      Assert(expression, "Couldn't resolve identifier '" + identifier.as_string() + "' or it is ambiguous");
 
       return expression;
     }
@@ -990,20 +976,20 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
           aggregate_function = AggregateFunction::CountDistinct;
         }
 
+        Assert(expr.exprList && expr.exprList->size() == 1, "Expected exactly one argument for this AggregateFunction");
+
         switch (aggregate_function) {
           case AggregateFunction::Min: case AggregateFunction::Max: case AggregateFunction::Sum:
           case AggregateFunction::Avg:
-            Assert(arguments.size() == 1, "Expected exactly one argument for this AggregateFunction");
-            return std::make_shared<AggregateExpression>(aggregate_function, arguments[0]);
+            return std::make_shared<AggregateExpression>(aggregate_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_context));
 
           case AggregateFunction::Count:
           case AggregateFunction::CountDistinct:
-            Assert(arguments.size() == 1, "COUNT takes exactly one argument!");
-
-            if (arguments.front()->type == ExpressionType::Column) {
-              return std::make_shared<AggregateExpression>(aggregate_function, arguments.front());
-            } else {
+            if (expr.exprList->front()->type == hsql::kExprStar) {
+              Assert(!expr.exprList->front()->name, "Illegal <t>.* in COUNT()");
               return std::make_shared<AggregateExpression>(aggregate_function);
+            } else {
+              return std::make_shared<AggregateExpression>(aggregate_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_context));
             }
         }
 
@@ -1035,8 +1021,10 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
           Assert(left && right, "Unexpected SQLParserResult. Didn't receive two arguments for binary_expression");
           return std::make_shared<BinaryPredicateExpression>(predicate_condition, left, right);
         } else if (predicate_condition == PredicateCondition::Between) {
-          Assert(arguments.size() == 2, "Expected two arguments for BETWEEN");
-          return std::make_shared<BetweenExpression>(left, arguments[0], arguments[1]);
+          Assert(expr.exprList && expr.exprList->size() == 2, "Expected two arguments for BETWEEN");
+          return std::make_shared<BetweenExpression>(left,
+                                                     _translate_hsql_expr(*(*expr.exprList)[0], sql_identifier_context),
+                                                     _translate_hsql_expr(*(*expr.exprList)[1], sql_identifier_context));
         }
       }
 
@@ -1045,6 +1033,14 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
         case hsql::kOpOr: return std::make_shared<LogicalExpression>(LogicalOperator::Or, left, right);
         case hsql::kOpAnd: return std::make_shared<LogicalExpression>(LogicalOperator::And, left, right);
         case hsql::kOpIn: {
+          std::vector<std::shared_ptr<AbstractExpression>> arguments;
+          if (expr.exprList) {
+            arguments.reserve(expr.exprList->size());
+            for (const auto *hsql_argument : *expr.exprList) {
+              arguments.emplace_back(_translate_hsql_expr(*hsql_argument, sql_identifier_context));
+            }
+          }
+
           const auto array = std::make_shared<ArrayExpression>(arguments);
           return std::make_shared<InExpression>(left, array);
         }

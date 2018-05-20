@@ -91,17 +91,17 @@ SELECT a, b, MAX(c), AVG(b) FROM mixed GROUP BY a, b;
 SELECT a AS whatever, SUM(b) FROM mixed GROUP BY whatever;
 
 -- Join, GROUP BY, Having, ...
--- SELECT c_custkey, c_name, COUNT(a) FROM tpch_customer JOIN id_int_int_int_100 ON c_custkey = a GROUP BY c_custkey, c_name HAVING COUNT(a) >= 2;
--- SELECT c_custkey, c_name, COUNT(a) FROM tpch_customer JOIN ( SELECT * FROM id_int_int_int_100 JOIN mixed ON id_int_int_int_100.a = mixed.id ) AS sub ON tpch_customer.c_custkey = sub.a GROUP BY c_custkey, c_name HAVING COUNT(sub.a) >= 2;
+SELECT c_custkey, c_name, COUNT(a) FROM tpch_customer JOIN id_int_int_int_100 ON c_custkey = a GROUP BY c_custkey, c_name HAVING COUNT(a) >= 2;
+SELECT c_custkey, c_name, COUNT(a) FROM tpch_customer JOIN ( SELECT * FROM id_int_int_int_100 JOIN mixed ON id_int_int_int_100.a = mixed.id ) AS sub ON tpch_customer.c_custkey = sub.a GROUP BY c_custkey, c_name HAVING COUNT(sub.a) >= 2;
 
 -- COUNT(*)
---SELECT COUNT(*) FROM mixed GROUP BY a;
---SELECT a, COUNT(*) FROM mixed GROUP BY a;
---SELECT COUNT(*), SUM(a + b) FROM id_int_int_int_100;
---
+SELECT COUNT(*) FROM mixed GROUP BY a;
+SELECT a, COUNT(*) FROM mixed GROUP BY a;
+SELECT COUNT(*), SUM(a + b) FROM id_int_int_int_100;
+
 -- COUNT(DISTINCT)
--- SELECT a, COUNT(DISTINCT b) FROM mixed GROUP BY a;
---
+SELECT a, COUNT(DISTINCT b) as d FROM mixed GROUP BY a;
+
 -- Case insensitivity
 sELEcT Sum(b + b) AS sum_b_b from mixed;
 
@@ -110,7 +110,7 @@ SELECT a, MAX(b) FROM mixed_null GROUP BY a;
 SELECT a, MIN(b) FROM mixed_null GROUP BY a;
 SELECT a, SUM(b) FROM mixed_null GROUP BY a;
 SELECT a, AVG(b) FROM mixed_null GROUP BY a;
--- SELECT a, COUNT(b) FROM mixed_null GROUP BY a;
+SELECT a, COUNT(b) FROM mixed_null GROUP BY a;
 
 -- Checks that output of Aggregate can be worked with correctly.
 SELECT b, sub.min_c, max_b FROM (SELECT a, b, MAX(b) AS max_b, MIN(c) AS min_c FROM mixed GROUP BY a, b) as sub WHERE b BETWEEN 20 AND 50 AND min_c > 15;

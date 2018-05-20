@@ -397,7 +397,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
     const auto& aggregate_expression = std::static_pointer_cast<AggregateExpression>(expression);
 
     if (aggregate_expression->argument()) {
-      Assert(aggregate_expression->argument()->type, "The argument of AggregateExpression '" + expression->as_column_name() + "' couldn't be resolved");
+      Assert(aggregate_expression->argument()->type == ExpressionType::Column, "The argument of AggregateExpression '" + expression->as_column_name() + "' couldn't be resolved");
 
       const auto column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(aggregate_expression->argument());
       Assert(column_expression, "Only PQPColumnExpressions valid here.");

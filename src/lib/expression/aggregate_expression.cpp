@@ -13,8 +13,8 @@
 namespace opossum {
 
 AggregateExpression::AggregateExpression(const AggregateFunction aggregate_function):
-  AbstractExpression(ExpressionType::Aggregate, {}) {
-
+  AbstractExpression(ExpressionType::Aggregate, {}), aggregate_function(aggregate_function) {
+  Assert(aggregate_function == AggregateFunction::Count || aggregate_function == AggregateFunction::CountDistinct, "Only COUNT aggregates can have no arguments");
 }
 
 AggregateExpression::AggregateExpression(const AggregateFunction aggregate_function,
@@ -29,16 +29,23 @@ std::shared_ptr<AbstractExpression> AggregateExpression::deep_copy() const {
   if (argument()) {
     return std::make_shared<AggregateExpression>(aggregate_function, argument()->deep_copy());
   } else {
-    return std::make_shared<AggregateExpression>(aggregate_function, nullptr);
+    return std::make_shared<AggregateExpression>(aggregate_function);
   }
 }
 
 std::string AggregateExpression::as_column_name() const {
   std::stringstream stream;
 
-  stream << aggregate_function_to_string.left.at(aggregate_function) << "(";
-  if (argument()) stream << argument()->as_column_name();
-  stream << ")";
+  if (aggregate_function == AggregateFunction::CountDistinct) {
+    Assert(argument(), "COUNT(DISTINCT ...) requires a argument");
+    stream << "COUNT(DISTINCT " << argument()->as_column_name() << ")";
+  } else if (aggregate_function == AggregateFunction::Count && !argument()) {
+    stream << "COUNT(*)";
+  } else {
+    stream << aggregate_function_to_string.left.at(aggregate_function) << "(";
+    if (argument()) stream << argument()->as_column_name();
+    stream << ")";
+  }
 
   return stream.str();
 }

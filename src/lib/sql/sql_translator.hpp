@@ -65,6 +65,12 @@ class SQLTranslator final {
     std::shared_ptr<SQLIdentifierContext> sql_identifier_context;
   };
 
+  // Represents the '*'/'<table>.*' wildcard in a Query. The SQLParser regards it as an Expression, but to Hyrise it
+  // isn't one
+  struct SQLWildcard final {
+    std::optional<std::string> table_name;
+  };
+
   TableSourceState _translate_table_ref(const hsql::TableRef &hsql_table_ref);
   TableSourceState _translate_table_origin(const hsql::TableRef &hsql_table_ref);
   TableSourceState _translate_predicated_join(const hsql::JoinDefinition &join);
