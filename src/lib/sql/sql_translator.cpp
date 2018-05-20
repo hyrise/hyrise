@@ -199,6 +199,28 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select_statement(const
 //    current_lqp = LimitNode::make(select.limit->limit, current_lqp, translation_state);
 //  }
 
+  // Check whether we need to create an AliasNode - this is the case whenever an Expression was assigned a column_name
+  // that is not its generated name.
+  const auto& output_column_expressions = _current_lqp->output_column_expressions();
+  const auto need_alias_node = std::any_of(output_column_expressions.begin(), output_column_expressions.end(), [&](const auto& expression) {
+    const auto identifier = _sql_identifier_context->get_expression_identifier(expression);
+    return identifier && identifier->column_name != expression->as_column_name();
+  }) ;
+
+  if (need_alias_node) {
+    std::vector<std::string> aliases;
+    for (const auto& output_column_expression : output_column_expressions) {
+      const auto identifier = _sql_identifier_context->get_expression_identifier(output_column_expression);
+      if (identifier) {
+        aliases.emplace_back(identifier->column_name);
+      } else {
+        aliases.emplace_back(output_column_expression->as_column_name());
+      }
+    }
+
+    _current_lqp = AliasNode::make(output_column_expressions, aliases, _current_lqp);
+  }
+
   return _current_lqp;
 }
 //
@@ -297,39 +319,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select_statement(const
 //  }
 //
 //  return UpdateNode::make((update.table)->name, update_expressions, target_references_node);
-//}
-//
-//std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_column_renamings(
-//const std::shared_ptr<AbstractLQPNode> &node,
-//const hsql::TableRef &table) {
-//
-//  // Check this here instead of on the caller side
-//  if (!table.alias || !table.alias->columns) {
-//    return node;
-//  }
-//
-//  // Add a new projection node for table alias with column alias declarations
-//  // e.g. select * from foo as bar(a, b)
-//
-//  Assert(table.type == hsql::kTableName || table.type == hsql::kTableSelect,
-//         "Aliases are only applicable to table names and subselects");
-//
-//  // To stick to the sql standard there must be an alias for every column of the renamed table
-//  // https://www.contrib.andrew.cmu.edu/~shadow/sql/sql1992.txt 6.3
-//  Assert(table.alias->columns->size() == node->output_column_count(),
-//         "The number of column aliases must match the number of columns");
-//
-//  const auto& column_expressions = node->output_column_expressions();
-//  std::vector<PlanColumnDefinition> column_definitions;
-//  column_definitions.reserve(column_expressions.size());
-//
-//  auto column_idx = size_t{0};
-//  for (const auto* alias : *(table.alias->columns)) {
-//    column_definitions.emplace_back(column_expressions[column_idx], alias);
-//    ++column_idx;
-//  }
-//
-//  return ProjectionNode::make(column_definitions, node);
 //}
 
 SQLTranslator::TableSourceState SQLTranslator::_translate_table_ref(const hsql::TableRef &hsql_table_ref) {
@@ -727,27 +716,6 @@ const hsql::SelectStatement &select) {
   // Only add a ProjectionNode if necessary
   if (!expressions_equal(_current_lqp->output_column_expressions(), output_expressions)) {
     _current_lqp = ProjectionNode::make(output_expressions, _current_lqp);
-  }
-
-  // Check whether we need to create an AliasNode - this is the case whenever a Expression was assigned a column_name
-  // that is not its generated name.
-  const auto need_alias_node = std::any_of(output_expressions.begin(), output_expressions.end(), [&](const auto& expression) {
-    const auto identifier = _sql_identifier_context->get_expression_identifier(expression);
-    return identifier && identifier->column_name != expression->as_column_name();
-  }) ;
-
-  if (need_alias_node) {
-    std::vector<std::string> aliases;
-    for (const auto& output_expression : output_expressions) {
-      const auto identifier = _sql_identifier_context->get_expression_identifier(output_expression);
-      if (identifier) {
-        aliases.emplace_back(identifier->column_name);
-      } else {
-        aliases.emplace_back(output_expression->as_column_name());
-      }
-    }
-
-    _current_lqp = AliasNode::make(output_expressions, aliases, _current_lqp);
   }
 }
 

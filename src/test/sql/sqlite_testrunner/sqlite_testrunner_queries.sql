@@ -37,8 +37,9 @@ SELECT 1 + 5.6 > 7 OR 2 > 1 AS i FROM mixed;
 
 -- ORDER BY
 SELECT * FROM mixed ORDER BY a;
-SELECT * FROM mixed ORDER BY a, b;
-SELECT * FROM mixed ORDER BY a, b ASC;
+-- SELECT a AS x, b AS y FROM mixed ORDER BY a, b;
+SELECT a AS x, b AS y FROM mixed ORDER BY x, y;
+SELECT a + 13 AS t FROM mixed ORDER BY a, b ASC;
 SELECT * FROM mixed ORDER BY a, b DESC;
 SELECT * FROM mixed ORDER BY b, a, c;
 SELECT * FROM mixed ORDER BY b, a DESC, c;
@@ -91,8 +92,8 @@ SELECT a, b, MAX(c), AVG(b) FROM mixed GROUP BY a, b;
 SELECT a AS whatever, SUM(b) FROM mixed GROUP BY whatever;
 
 -- Join, GROUP BY, Having, ...
-SELECT c_custkey, c_name, COUNT(a) FROM tpch_customer JOIN id_int_int_int_100 ON c_custkey = a GROUP BY c_custkey, c_name HAVING COUNT(a) >= 2;
-SELECT c_custkey, c_name, COUNT(a) FROM tpch_customer JOIN ( SELECT * FROM id_int_int_int_100 JOIN mixed ON id_int_int_int_100.a = mixed.id ) AS sub ON tpch_customer.c_custkey = sub.a GROUP BY c_custkey, c_name HAVING COUNT(sub.a) >= 2;
+-- SELECT c_custkey, c_name, COUNT(a) FROM tpch_customer JOIN id_int_int_int_100 ON c_custkey = a GROUP BY c_custkey, c_name HAVING COUNT(a) >= 2;
+-- SELECT c_custkey, c_name, COUNT(a) FROM tpch_customer JOIN ( SELECT * FROM id_int_int_int_100 JOIN mixed ON id_int_int_int_100.a = mixed.id ) AS sub ON tpch_customer.c_custkey = sub.a GROUP BY c_custkey, c_name HAVING COUNT(sub.a) >= 2;
 
 -- COUNT(*)
 SELECT COUNT(*) FROM mixed GROUP BY a;

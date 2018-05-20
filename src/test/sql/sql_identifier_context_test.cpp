@@ -5,7 +5,6 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_factory.hpp"
 #include "expression/lqp_column_expression.hpp"
-#include "expression/sql_identifier_expression.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "sql/sql_identifier_context.hpp"
 #include "sql/sql_identifier_context_proxy.hpp"
