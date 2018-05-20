@@ -161,25 +161,30 @@ void jit_or(const JitTupleValue& lhs, const JitTupleValue& rhs, const JitTupleVa
 void jit_is_null(const JitTupleValue& lhs, const JitTupleValue& result, JitRuntimeContext& context);
 void jit_is_not_null(const JitTupleValue& lhs, const JitTupleValue& result, JitRuntimeContext& context);
 
+// The following functions are used within loop bodies in the JitAggregate operator. They should not be inlined
+// automatically to reduce the amount of code produced during loop unrolling in the specialization process (a function
+// call vs the entire inlined body). These functions will be manually inlined more efficiently after loop unrolling by
+// the code specializer.
+
 // Computes the hash value for a JitTupleValue
-uint64_t jit_hash(const JitTupleValue& value, JitRuntimeContext& context);
+__attribute__((noinline)) uint64_t jit_hash(const JitTupleValue& value, JitRuntimeContext& context);
 
 // Compares a JitTupleValue to a JitHashmapValue using NULL == NULL semantics
-bool jit_aggregate_equals(const JitTupleValue& lhs, const JitHashmapValue& rhs, const size_t rhs_index,
+__attribute__((noinline)) bool jit_aggregate_equals(const JitTupleValue& lhs, const JitHashmapValue& rhs, const size_t rhs_index,
                           JitRuntimeContext& context);
 
 // Copies a JitTupleValue to a JitHashmapValue. Both values MUST be of the same data type/
-void jit_assign(const JitTupleValue& from, const JitHashmapValue& to, const size_t to_index,
+__attribute__((noinline)) void jit_assign(const JitTupleValue& from, const JitHashmapValue& to, const size_t to_index,
                 JitRuntimeContext& context);
 
 // Adds an element to a column represented by some JitHashmapValue
-size_t jit_grow_by_one(const JitHashmapValue& value, const JitVariantVector::InitialValue initial_value,
+__attribute__((noinline)) size_t jit_grow_by_one(const JitHashmapValue& value, const JitVariantVector::InitialValue initial_value,
                        JitRuntimeContext& context);
 
 // Updates an aggregate by applying an operation to a JitTupleValue and a JitHashmapValue. The result is stored in the
 // hashmape value.
 template <typename T>
-void jit_aggregate_compute(const T& op_func, const JitTupleValue& lhs, const JitHashmapValue& rhs,
+__attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const JitTupleValue& lhs, const JitHashmapValue& rhs,
                            const size_t rhs_index, JitRuntimeContext& context) {
   // NULL values are ignored in aggreagte computations
   if (lhs.is_null(context)) {
