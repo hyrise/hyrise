@@ -37,7 +37,7 @@
 #include "logical_query_plan/dummy_table_node.hpp"
 //#include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
-//#include "logical_query_plan/limit_node.hpp"
+#include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 //#include "logical_query_plan/show_columns_node.hpp"
@@ -192,12 +192,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select_statement(const
   // Translate SELECT, HAVING, GROUP BY in one go, as they are interdependent
   _translate_select_list_groupby_having(select);
 
-  // Translate ORDER BY
-  if (select.order != nullptr) _translate_order_by(*select.order);
-
-//  if (select.limit != nullptr) {
-//    current_lqp = LimitNode::make(select.limit->limit, current_lqp, translation_state);
-//  }
+  // Translate ORDER BY and LIMIT
+  if (select.order) _translate_order_by(*select.order);
+  if (select.limit) _translate_limit(*select.limit);
 
   /**
    * Name, select and arrange the Columns as specified in the SELECT clause
@@ -742,6 +739,12 @@ void SQLTranslator::_translate_order_by(const std::vector<hsql::OrderDescription
   if (input_lqp->output_column_expressions().size() != _current_lqp->output_column_expressions().size()) {
     _current_lqp = ProjectionNode::make(input_lqp->output_column_expressions(), _current_lqp);
   }
+}
+
+void SQLTranslator::_translate_limit(const hsql::LimitDescription& limit) {
+  // TODO(anybody) SQLParser doesn't support Expressions in LIMIT clause yet
+  const auto num_rows_expression = std::make_shared<ValueExpression>(limit.limit);
+  _current_lqp = LimitNode::make(num_rows_expression, _current_lqp);
 }
 
 //std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::ShowStatement& show_statement) {

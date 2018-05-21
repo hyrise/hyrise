@@ -33,6 +33,7 @@ namespace opossum {
 ExpressionEvaluator::ExpressionEvaluator(const std::shared_ptr<const Chunk>& chunk):
 _chunk(chunk)
 {
+  _output_row_count = _chunk->size();
   _column_materializations.resize(_chunk->column_count());
 }
 
@@ -218,6 +219,8 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpre
     }
 
     case ExpressionType::Column: {
+      Assert(_chunk, "Cannot access Columns in this Expression as it doesn't operate on a Table/Chunk");
+
       const auto* pqp_column_expression = dynamic_cast<const PQPColumnExpression*>(&expression);
       Assert(pqp_column_expression, "Can only evaluate PQPColumnExpressions");
 
@@ -316,10 +319,10 @@ ExpressionResult<std::string> ExpressionEvaluator::evaluate_substring(const Expr
 //   *
 //   */
 //
-//  auto result_values = std::vector<std::string>(_chunk->size());
-//  auto result_nulls = std::vector<bool>(_chunk->size());
+//  auto result_values = std::vector<std::string>(_output_row_count);
+//  auto result_nulls = std::vector<bool>(_output_row_count);
 //
-//  for (auto chunk_offset = 0; chunk_offset < _chunk->size(); ++chunk_offset) {
+//  for (auto chunk_offset = 0; chunk_offset < _output_row_count; ++chunk_offset) {
 //
 //  }
 }
@@ -503,7 +506,7 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_case_expression(const CaseExpr
 
 template<typename T>
 ExpressionResult<T> ExpressionEvaluator::evaluate_exists_expression(const ExistsExpression& exists_expression) {
-  std::vector<T> result_values(_chunk->size());
+  std::vector<T> result_values(_output_row_count);
 
   const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(exists_expression.select());
   for (const auto& parameter : pqp_select_expression->parameters) {
@@ -513,7 +516,7 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_exists_expression(const Exists
   resolve_data_type(pqp_select_expression->data_type(), [&](const auto select_data_type_t) {
     using SelectDataType = typename decltype(select_data_type_t)::type;
 
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
       const auto select_result = evaluate_select_expression_for_row<SelectDataType>(*pqp_select_expression, chunk_offset);
       const auto& select_result_values = boost::get<NonNullableValues<SelectDataType>>(select_result);
       result_values[chunk_offset] = !select_result_values.empty();
@@ -552,9 +555,9 @@ ExpressionResult<std::string> ExpressionEvaluator::evaluate_extract_substr(const
   } else if (is_non_nullable_values(from_result)) {
     const auto& from_values = boost::get<NonNullableValues<std::string>>(from_result);
 
-    auto result_values = NonNullableValues<std::string>(_chunk->size());
+    auto result_values = NonNullableValues<std::string>(_output_row_count);
 
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
       const auto& date = from_values[chunk_offset];
       DebugAssert(date.size() == 10, "String Date format required to be strictly YYYY-MM-DD");
       result_values[chunk_offset] = date.substr(offset, count);
@@ -567,9 +570,9 @@ ExpressionResult<std::string> ExpressionEvaluator::evaluate_extract_substr(const
     const auto& from_values = from_values_and_nulls.first;
     const auto& from_nulls = from_values_and_nulls.second;
 
-    auto result_values = std::vector<std::string>(_chunk->size());
+    auto result_values = std::vector<std::string>(_output_row_count);
 
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
       const auto& date = from_values[chunk_offset];
       DebugAssert(date.size() == 10, "String Date format required to be strictly YYYY-MM-DD");
       result_values[chunk_offset] = date.substr(offset, count);
@@ -629,7 +632,7 @@ ExpressionResult<ResultDataType> ExpressionEvaluator::evaluate_binary_operator(c
   const auto right_is_value = right_operands.type() == typeid(RightOperandDataType);
   const auto right_is_null = right_operands.type() == typeid(NullValue);
 
-  const auto result_size = _chunk->size();
+  const auto result_size = _output_row_count;
   std::vector<ResultDataType> result_values(result_size);
   std::vector<bool> result_nulls;
 
@@ -904,11 +907,11 @@ const PQPSelectExpression &expression) {
   }
 
   NonNullableValues<T> result;
-  result.reserve(_chunk->size());
+  result.reserve(_output_row_count);
 
   std::vector<AllParameterVariant> parameter_values(expression.parameters.size());
 
-  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
     const auto select_result = evaluate_select_expression_for_row<T>(expression, chunk_offset);
     const auto& select_result_values = boost::get<NonNullableValues<T>>(select_result);
 
@@ -921,6 +924,8 @@ const PQPSelectExpression &expression) {
 
 template<typename T>
 ExpressionResult<T> ExpressionEvaluator::evaluate_select_expression_for_row(const PQPSelectExpression& expression, const ChunkOffset chunk_offset) {
+  Assert(expression.parameters.empty() || _chunk, "Sub-SELECT references external Columns but Expression doesn't operate on a Table/Chunk");
+
   std::vector<AllParameterVariant> parameter_values(expression.parameters.size());
 
   for (auto parameter_idx = size_t{0}; parameter_idx < expression.parameters.size(); ++parameter_idx) {
@@ -957,6 +962,7 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_select_expression_for_row(cons
 }
 
 void ExpressionEvaluator::_ensure_column_materialization(const ColumnID column_id) {
+  Assert(_chunk, "Expression doesn't operate on a Chunk");
   Assert(column_id < _chunk->column_count(), "Column out of range");
 
   if (_column_materializations[column_id]) return;
@@ -1001,12 +1007,12 @@ std::shared_ptr<BaseColumn> ExpressionEvaluator::evaluate_expression_to_column(c
       nulls = pmr_concurrent_vector<bool>(result_nulls.begin(), result_nulls.end());
 
     } else if (result.type() == typeid(NullValue)) {
-      values.resize(_chunk->size(), ColumnDataType{});
-      nulls.resize(_chunk->size(), true);
+      values.resize(_output_row_count, ColumnDataType{});
+      nulls.resize(_output_row_count, true);
       has_nulls = true;
 
     } else if (result.type() == typeid(ColumnDataType)) {
-      values.resize(_chunk->size(), boost::get<ColumnDataType>(result));
+      values.resize(_output_row_count, boost::get<ColumnDataType>(result));
 
     }
 
@@ -1119,7 +1125,7 @@ ExpressionResult<int32_t> ExpressionEvaluator::evaluate_in_expression<int32_t>(c
 //          using RightDataType = typename decltype(right_data_type_t)::type;
 //
 //          if constexpr (supported_v<Functor, T, LeftDataType, RightDataType>) {
-//            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _chunk->size(); ++chunk_offset) {
+//            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
 //              Functor{}(chunk_offset, result, left_result, right_result);
 //            }
 //          } else {

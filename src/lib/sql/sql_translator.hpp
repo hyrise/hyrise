@@ -78,8 +78,9 @@ class SQLTranslator final {
   TableSourceState _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
 
   void _translate_select_list_groupby_having(const hsql::SelectStatement &select);
-//
+
   void _translate_order_by(const std::vector<hsql::OrderDescription*>& order_list);
+  void _translate_limit(const hsql::LimitDescription& limit);
 //
 //  std::shared_ptr<AbstractLQPNode> _translate_insert(const hsql::InsertStatement& insert);
 //

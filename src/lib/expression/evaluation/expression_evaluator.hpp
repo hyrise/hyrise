@@ -37,6 +37,10 @@ struct ColumnMaterialization : public BaseColumnMaterialization {
 
 class ExpressionEvaluator final {
  public:
+  // For Expressions that do not reference any columns (e.g. in the LIMIT clause)
+  ExpressionEvaluator() = default;
+
+  // For Expressions that reference Columns from a single table
   explicit ExpressionEvaluator(const std::shared_ptr<const Chunk>& chunk);
 
   void _ensure_column_materialization(const ColumnID column_id);
@@ -110,6 +114,7 @@ class ExpressionEvaluator final {
 
  private:
   std::shared_ptr<const Chunk> _chunk;
+  size_t _output_row_count{0};
 
   std::vector<std::unique_ptr<BaseColumnMaterialization>> _column_materializations;
 };

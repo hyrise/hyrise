@@ -99,7 +99,7 @@ extern ternary<BetweenExpression> between;
 extern ternary<CaseExpression> case_;
 
 std::shared_ptr<AbstractExpression> select(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                           const std::vector<std::shared_ptr<AbstractExpression>>& referenced_external_expressions);
+                                           const std::vector<std::shared_ptr<AbstractExpression>>& referenced_external_expressions = {});
 
 template<typename E>
 std::shared_ptr<ExternalExpression> external(const E& e, const uint16_t index) {

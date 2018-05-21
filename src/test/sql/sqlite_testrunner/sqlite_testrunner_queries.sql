@@ -47,10 +47,10 @@ SELECT sub.a, sub.b FROM (SELECT a, b FROM mixed WHERE a = 'a' ORDER BY b) AS su
 SELECT * FROM mixed_null ORDER BY b;
 
 ---- LIMIT
---SELECT * FROM mixed LIMIT 77;
---SELECT b FROM mixed LIMIT 10;
---
----- PRODUCT
+SELECT * FROM mixed LIMIT 77;
+SELECT b FROM mixed LIMIT 10;
+
+-- PRODUCT
 SELECT "left".a, "left".b, "right".a, "right".b FROM mixed AS "left", mixed_null AS "right" WHERE "left".a = "right".a;
 SELECT * FROM mixed AS "left", mixed_null AS "right" WHERE "left".a = "right".d;
 
