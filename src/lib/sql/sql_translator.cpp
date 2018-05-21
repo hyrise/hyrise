@@ -1093,7 +1093,15 @@ void SQLTranslator::TableSourceState::append(TableSourceState&& rhs) {
     Assert(unique, "Table Name '"s + table_name_and_elements.first + "' in FROM clause is not unique");
   }
 
-  elements_by_table_name.merge(std::move(rhs.elements_by_table_name));
+  // This should be ::merge, but that is not yet supported by clang.
+  // elements_by_table_name.merge(std::move(rhs.elements_by_table_name));
+  for(auto it = rhs.elements_by_table_name.begin(); it != rhs.elements_by_table_name.end(); ++it) {
+    auto inserted = elements_by_table_name.try_emplace(it->first, std::move(it->second));
+    if (inserted.second) {
+      it = rhs.elements_by_table_name.erase(it);
+    }
+  }
+
   elements_in_order.insert(elements_in_order.end(), rhs.elements_in_order.begin(), rhs.elements_in_order.end());
   sql_identifier_context->append(std::move(*rhs.sql_identifier_context));
 }

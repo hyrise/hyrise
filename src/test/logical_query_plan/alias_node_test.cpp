@@ -21,7 +21,7 @@ class AliasNodeTest : public ::testing::Test {
     const auto b_expression = std::make_shared<LQPColumnExpression>(LQPColumnReference{mock_node, ColumnID{1}});
     const auto expressions = std::vector<std::shared_ptr<AbstractExpression>>{{b_expression, a_expression}};
 
-    const auto aliases = std::vector<std::string>{{"x"s, "y"s}};
+    const auto aliases = std::vector<std::string>{"x", "y"};
 
     alias_node = AliasNode::make(expressions, aliases, mock_node);
   }
