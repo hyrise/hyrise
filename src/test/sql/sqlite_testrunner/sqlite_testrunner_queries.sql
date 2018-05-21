@@ -39,7 +39,7 @@ SELECT 1 + 5.6 > 7 OR 2 > 1 AS i FROM mixed;
 SELECT * FROM mixed ORDER BY a;
 -- SELECT a AS x, b AS y FROM mixed ORDER BY a, b;
 SELECT a AS x, b AS y FROM mixed ORDER BY x, y;
-SELECT a + 13 AS t FROM mixed ORDER BY a, b ASC;
+SELECT b + 13 AS t FROM mixed ORDER BY a, b ASC;
 SELECT * FROM mixed ORDER BY a, b DESC;
 SELECT * FROM mixed ORDER BY b, a, c;
 SELECT * FROM mixed ORDER BY b, a DESC, c;

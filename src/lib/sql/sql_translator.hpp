@@ -127,6 +127,9 @@ class SQLTranslator final {
   std::shared_ptr<SQLIdentifierContext> _sql_identifier_context;
   std::shared_ptr<SQLIdentifierContextProxy> _external_sql_identifier_context_proxy;
   std::optional<TableSourceState> _from_clause_result;
+
+  // "Inflated" because als wildcard will be inflated to the expressions they actually represent
+  std::vector<std::shared_ptr<AbstractExpression>> _inflated_select_list_expressions;
 };
 
 }  // namespace opossum

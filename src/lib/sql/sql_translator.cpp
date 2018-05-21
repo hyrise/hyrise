@@ -199,17 +199,24 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select_statement(const
 //    current_lqp = LimitNode::make(select.limit->limit, current_lqp, translation_state);
 //  }
 
+  /**
+   * Name, select and arrange the Columns as specified in the SELECT clause
+   */
+  // Only add a ProjectionNode if necessary
+  if (!expressions_equal(_current_lqp->output_column_expressions(), _inflated_select_list_expressions)) {
+    _current_lqp = ProjectionNode::make(_inflated_select_list_expressions, _current_lqp);
+  }
+
   // Check whether we need to create an AliasNode - this is the case whenever an Expression was assigned a column_name
   // that is not its generated name.
-  const auto& output_column_expressions = _current_lqp->output_column_expressions();
-  const auto need_alias_node = std::any_of(output_column_expressions.begin(), output_column_expressions.end(), [&](const auto& expression) {
+  const auto need_alias_node = std::any_of(_inflated_select_list_expressions.begin(), _inflated_select_list_expressions.end(), [&](const auto& expression) {
     const auto identifier = _sql_identifier_context->get_expression_identifier(expression);
     return identifier && identifier->column_name != expression->as_column_name();
   }) ;
 
   if (need_alias_node) {
     std::vector<std::string> aliases;
-    for (const auto& output_column_expression : output_column_expressions) {
+    for (const auto& output_column_expression : _inflated_select_list_expressions) {
       const auto identifier = _sql_identifier_context->get_expression_identifier(output_column_expression);
       if (identifier) {
         aliases.emplace_back(identifier->column_name);
@@ -218,7 +225,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select_statement(const
       }
     }
 
-    _current_lqp = AliasNode::make(output_column_expressions, aliases, _current_lqp);
+    _current_lqp = AliasNode::make(_inflated_select_list_expressions, aliases, _current_lqp);
   }
 
   return _current_lqp;
@@ -669,7 +676,6 @@ const hsql::SelectStatement &select) {
   }
 
   // Create output_expressions from SELECT list, including column wildcards
-  std::vector<std::shared_ptr<AbstractExpression>> output_expressions;
   std::unordered_map<std::shared_ptr<AbstractExpression>, std::string> column_aliases;
 
   for (auto select_list_idx = size_t{0}; select_list_idx < select.selectList->size(); ++select_list_idx) {
@@ -684,7 +690,7 @@ const hsql::SelectStatement &select) {
           for (const auto& group_by_expression : group_by_expressions) {
             const auto identifier = _sql_identifier_context->get_expression_identifier(group_by_expression);
             if (identifier && identifier->table_name == hsql_expr->table) {
-              output_expressions.emplace_back(group_by_expression);
+              _inflated_select_list_expressions.emplace_back(group_by_expression);
             }
           }
         } else {
@@ -692,30 +698,25 @@ const hsql::SelectStatement &select) {
           const auto from_element_iter = _from_clause_result->elements_by_table_name.find(hsql_expr->table);
           Assert(from_element_iter != _from_clause_result->elements_by_table_name.end(), std::string("No such element in FROM with table name '") + hsql_expr->table + "'");
 
-          output_expressions.insert(output_expressions.end(), from_element_iter->second.begin(), from_element_iter->second.end());
+          _inflated_select_list_expressions.insert(_inflated_select_list_expressions.end(), from_element_iter->second.begin(), from_element_iter->second.end());
         }
       } else {
         if (is_aggregate) {
           // Select all GROUP BY columns
-          output_expressions.insert(output_expressions.end(), group_by_expressions.begin(), group_by_expressions.end());
+          _inflated_select_list_expressions.insert(_inflated_select_list_expressions.end(), group_by_expressions.begin(), group_by_expressions.end());
         } else {
           // Select all columns from the FROM elements
-          output_expressions.insert(output_expressions.end(), _from_clause_result->elements_in_order.begin(), _from_clause_result->elements_in_order.end());
+          _inflated_select_list_expressions.insert(_inflated_select_list_expressions.end(), _from_clause_result->elements_in_order.begin(), _from_clause_result->elements_in_order.end());
         }
       }
     } else {
       auto output_expression = select_list_elements[select_list_idx];
-      output_expressions.emplace_back(output_expression);
+      _inflated_select_list_expressions.emplace_back(output_expression);
 
       if (hsql_expr->alias) {
         _sql_identifier_context->set_column_name(output_expression, hsql_expr->alias);
       }
     }
-  }
-
-  // Only add a ProjectionNode if necessary
-  if (!expressions_equal(_current_lqp->output_column_expressions(), output_expressions)) {
-    _current_lqp = ProjectionNode::make(output_expressions, _current_lqp);
   }
 }
 
