@@ -646,11 +646,6 @@ TEST_F(SQLTranslatorTest, DISABLED_LimitExpression) {
 //
 //  EXPECT_LQP_EQ(projection_node, result_node);
 //}
-//TEST_F(SQLTranslatorTest, AggregateWithInvalidGroupBy) {
-//  // Cannot select b without it being in the GROUP BY clause.
-//  const auto query = "SELECT b, SUM(b) AS s FROM table_a GROUP BY a;";
-//  EXPECT_THROW(compile_query(query), std::runtime_error);
-//}
 //
 //TEST_F(SQLTranslatorTest, AggregateWithCountDistinct) {
 //  const auto query = "SELECT a, COUNT(DISTINCT b) AS s FROM table_a GROUP BY a;";
@@ -680,35 +675,6 @@ TEST_F(SQLTranslatorTest, DISABLED_LimitExpression) {
 //  EXPECT_EQ(stored_table_node->type(), LQPNodeType::StoredTable);
 //  EXPECT_FALSE(stored_table_node->left_input());
 //  EXPECT_FALSE(stored_table_node->right_input());
-//}
-//
-//TEST_F(SQLTranslatorTest, SelectMultipleOrderBy) {
-//  const auto query = "SELECT * FROM table_a ORDER BY a DESC, b ASC;";
-//  const auto result_node = compile_query(query);
-//
-//  const auto projection_node =
-//      SortNode::make(OrderByDefinitions{{_table_a_a, OrderByMode::Descending}, {_table_a_b, OrderByMode::Ascending}},
-//                     ProjectionNode::make_pass_through(_stored_table_node_a));
-//
-//  EXPECT_LQP_EQ(projection_node, result_node);
-//}
-//
-//TEST_F(SQLTranslatorTest, SelectInnerJoin) {
-//  const auto query = "SELECT * FROM table_a AS a INNER JOIN table_b AS b ON a.a = b.a;";
-//  auto result_node = compile_query(query);
-//
-//  _stored_table_node_a->set_alias("a");
-//  _stored_table_node_b->set_alias("b");
-//
-//  // clang-format off
-//  const auto projection_node =
-//  ProjectionNode::make_pass_through(
-//    JoinNode::make(JoinMode::Inner, LQPColumnReferencePair{_table_a_a, _table_b_a}, PredicateCondition::Equals,
-//      _stored_table_node_a,
-//      _stored_table_node_b));
-//  // clang-format on
-//
-//  EXPECT_LQP_EQ(projection_node, result_node);
 //}
 //
 //class SQLTranslatorJoinTest : public ::testing::TestWithParam<JoinMode> {
@@ -765,52 +731,6 @@ TEST_F(SQLTranslatorTest, DISABLED_LimitExpression) {
 //
 //  EXPECT_LQP_EQ(projection_node, result_node);
 //}
-//
-//TEST_F(SQLTranslatorTest, SelectNaturalJoin) {
-//  const auto query = "SELECT * FROM table_a NATURAL JOIN table_c;";
-//  auto result_node = compile_query(query);
-//
-//  // clang-format off
-//  const auto projection_node =
-//  ProjectionNode::make(LQPExpression::create_columns({_table_a_a, _table_a_b, _table_c_d}),
-//    ProjectionNode::make(LQPExpression::create_columns({_table_a_a, _table_a_b, _table_c_d}),
-//      PredicateNode::make(_table_a_a, PredicateCondition::Equals, _table_c_a,
-//        JoinNode::make(JoinMode::Cross,
-//          _stored_table_node_a,
-//          _stored_table_node_c))));
-//  // clang-format on
-//
-//  EXPECT_LQP_EQ(projection_node, result_node);
-//}
-//
-//TEST_F(SQLTranslatorTest, SelectCrossJoin) {
-//  const auto query = "SELECT * FROM table_a AS a, table_b AS b WHERE a.a = b.a;";
-//  auto result_node = compile_query(query);
-//
-//  _stored_table_node_a->set_alias("a");
-//  _stored_table_node_b->set_alias("b");
-//
-//  // clang-format off
-//  const auto projection_node =
-//  ProjectionNode::make_pass_through(
-//    PredicateNode::make(_table_a_a, PredicateCondition::Equals, _table_b_a,
-//      JoinNode::make(JoinMode::Cross,
-//        _stored_table_node_a,
-//        _stored_table_node_b)));
-//  // clang-format on
-//
-//  EXPECT_LQP_EQ(projection_node, result_node);
-//}
-//
-//TEST_F(SQLTranslatorTest, SelectLimit) {
-//  const auto query = "SELECT * FROM table_a LIMIT 2;";
-//  auto result_node = compile_query(query);
-//
-//  const auto lqp = LimitNode::make(2, ProjectionNode::make_pass_through(_stored_table_node_a));
-//
-//  EXPECT_LQP_EQ(lqp, result_node);
-//}
-//
 //TEST_F(SQLTranslatorTest, InsertValues) {
 //  const auto query = "INSERT INTO table_a VALUES (10, 12.5);";
 //  auto result_node = compile_query(query);
@@ -946,76 +866,6 @@ TEST_F(SQLTranslatorTest, DISABLED_LimitExpression) {
 //  EXPECT_EQ(subselect_expression->type(), ExpressionType::Subselect);
 //}
 //
-//TEST_F(SQLTranslatorTest, MixedAggregateAndGroupBySelectList) {
-//  /**
-//   * Test:
-//   *    - Select list can contain both GroupBy and Aggregate Columns in any order
-//   *    - The order of GroupBy Columns in the SelectList can differ from the order in the GroupByList
-//   */
-//
-//  const auto query = R"(SELECT
-//                          table_b.a, SUM(table_c.a), table_a.b, table_b.b
-//                        FROM
-//                          table_a, table_b, table_c
-//                        GROUP BY
-//                          table_a.b, table_a.a, table_b.a, table_b.b)";
-//
-//  /**
-//   * Expect this AST:
-//   *
-//   * [Projection] table_b.a, SUM(table_c.a), table_a.b, table_a.b
-//   *  |_[Aggregate] SUM(table_c.a) GROUP BY [table_a.b, table_a.a, table_b.a, table_b.b]
-//   *     |_[Cross Join]
-//   *      | |_[Cross Join]                     (left_input)
-//   *      |   |_[StoredTable] Name: 'table_a'
-//   *      |   |_[StoredTable] Name: 'table_b'
-//   *      |_[StoredTable] Name: 'table_c'      (right_input)
-//   */
-//
-//  const auto result = compile_query(query);
-//
-//  ASSERT_NE(result->left_input(), nullptr);                                             // Aggregate
-//  ASSERT_NE(result->left_input()->left_input(), nullptr);                               // CrossJoin
-//  ASSERT_NE(result->left_input()->left_input()->left_input(), nullptr);                 // CrossJoin
-//  ASSERT_NE(result->left_input()->left_input()->left_input()->left_input(), nullptr);   // table_a
-//  ASSERT_NE(result->left_input()->left_input()->left_input()->right_input(), nullptr);  // table_b
-//  ASSERT_NE(result->left_input()->left_input()->right_input(), nullptr);                // table_c
-//
-//  ASSERT_EQ(result->left_input()->type(), LQPNodeType::Aggregate);
-//  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result->left_input());
-//  const auto table_a_node = result->left_input()->left_input()->left_input()->left_input();
-//  const auto table_b_node = result->left_input()->left_input()->left_input()->right_input();
-//  const auto table_c_node = result->left_input()->left_input()->right_input();
-//
-//  /**
-//   * Assert the Projection
-//   */
-//  ASSERT_EQ(result->type(), LQPNodeType::Projection);
-//  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result);
-//  ASSERT_EQ(projection_node->column_expressions().size(), 4u);
-//  ASSERT_COLUMN_EXPRESSION(projection_node->column_expressions()[0], LQPColumnReference(table_b_node, ColumnID{0}));
-//  ASSERT_COLUMN_EXPRESSION(projection_node->column_expressions()[1], LQPColumnReference(aggregate_node, ColumnID{4}));
-//  ASSERT_COLUMN_EXPRESSION(projection_node->column_expressions()[2], LQPColumnReference(table_a_node, ColumnID{1}));
-//  ASSERT_COLUMN_EXPRESSION(projection_node->column_expressions()[3], LQPColumnReference(table_b_node, ColumnID{1}));
-//
-//  /**
-//   * Assert the Aggregate
-//   */
-//  ASSERT_EQ(aggregate_node->groupby_column_references().size(), 4u);
-//  EXPECT_EQ(aggregate_node->groupby_column_references()[0], LQPColumnReference(table_a_node, ColumnID{1}));
-//  EXPECT_EQ(aggregate_node->groupby_column_references()[1], LQPColumnReference(table_a_node, ColumnID{0}));
-//  EXPECT_EQ(aggregate_node->groupby_column_references()[2], LQPColumnReference(table_b_node, ColumnID{0}));
-//  EXPECT_EQ(aggregate_node->groupby_column_references()[3], LQPColumnReference(table_b_node, ColumnID{1}));
-//  ASSERT_EQ(aggregate_node->aggregate_expressions().size(), 1u);
-//  const auto sum_expression = aggregate_node->aggregate_expressions()[0];
-//  ASSERT_EQ(sum_expression->type(), ExpressionType::Function);
-//  ASSERT_AGGREGATE_FUNCTION_EXPRESSION(sum_expression, AggregateFunction::Sum,
-//                                       LQPColumnReference(table_c_node, ColumnID{0}));
-//
-//  ASSERT_STORED_TABLE_NODE(table_b_node, "table_b");
-//  ASSERT_STORED_TABLE_NODE(table_c_node, "table_c");
-//  ASSERT_STORED_TABLE_NODE(table_a_node, "table_a");
-//}
 //
 //TEST_F(SQLTranslatorTest, CreateView) {
 //  const auto query = "CREATE VIEW my_first_view AS SELECT * FROM table_a WHERE a = 'b';";
@@ -1066,18 +916,6 @@ TEST_F(SQLTranslatorTest, DISABLED_LimitExpression) {
 //TEST_F(SQLTranslatorTest, AccessInvalidTable) {
 //  const auto query = "SELECT * FROM invalid_table;";
 //  EXPECT_THROW(compile_query(query), std::runtime_error);
-//}
-//
-//TEST_F(SQLTranslatorTest, ColumnAlias) {
-//  const auto query = "SELECT z, y FROM table_a AS x (y, z)";
-//  auto result_node = compile_query(query);
-//
-//  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
-//
-//  const auto& expressions = std::dynamic_pointer_cast<ProjectionNode>(result_node->left_input())->column_expressions();
-//  EXPECT_EQ(expressions.size(), 2u);
-//  EXPECT_EQ(*expressions[0]->alias(), std::string("y"));
-//  EXPECT_EQ(*expressions[1]->alias(), std::string("z"));
 //}
 
 }  // namespace opossum
