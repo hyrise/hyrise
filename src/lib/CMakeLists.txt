@@ -109,8 +109,8 @@ set(
 #    logical_query_plan/insert_node.hpp
     logical_query_plan/join_node.cpp
     logical_query_plan/join_node.hpp
-#    logical_query_plan/limit_node.cpp
-#    logical_query_plan/limit_node.hpp
+    logical_query_plan/limit_node.cpp
+    logical_query_plan/limit_node.hpp
     logical_query_plan/logical_plan_root_node.cpp
     logical_query_plan/logical_plan_root_node.hpp
     logical_query_plan/lqp_column_reference.cpp
@@ -186,8 +186,8 @@ set(
     operators/join_sort_merge.cpp
     operators/join_sort_merge.hpp
     operators/join_sort_merge/radix_cluster_sort.hpp
-#    operators/limit.cpp
-#    operators/limit.hpp
+    operators/limit.cpp
+    operators/limit.hpp
 #    operators/maintenance/create_view.cpp
 #    operators/maintenance/create_view.hpp
 #    operators/maintenance/drop_view.cpp

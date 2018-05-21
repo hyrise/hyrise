@@ -27,7 +27,7 @@
 #include "expression/value_placeholder_expression.hpp"
 //#include "insert_node.hpp"
 #include "join_node.hpp"
-//#include "limit_node.hpp"
+#include "limit_node.hpp"
 #include "operators/aggregate.hpp"
 //#include "operators/delete.hpp"
 #include "operators/get_table.hpp"
@@ -35,7 +35,7 @@
 //#include "operators/insert.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_sort_merge.hpp"
-//#include "operators/limit.hpp"
+#include "operators/limit.hpp"
 //#include "operators/maintenance/create_view.hpp"
 //#include "operators/maintenance/drop_view.hpp"
 //#include "operators/maintenance/show_columns.hpp"
@@ -110,8 +110,8 @@ LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
       return _translate_join_node(node);
     case LQPNodeType::Aggregate:
       return _translate_aggregate_node(node);
-//    case LQPNodeType::Limit:
-//      return _translate_limit_node(node);
+    case LQPNodeType::Limit:
+      return _translate_limit_node(node);
 //    case LQPNodeType::Insert:
 //      return _translate_insert_node(node);
 //    case LQPNodeType::Delete:
@@ -421,13 +421,13 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
 
   return std::make_shared<Aggregate>(input_operator, aggregate_column_definitions, group_by_column_ids);
 }
-//
-//std::shared_ptr<AbstractOperator> LQPTranslator::_translate_limit_node(
-//    const std::shared_ptr<AbstractLQPNode>& node) const {
-//  const auto input_operator = translate_node(node->left_input());
-//  auto limit_node = std::dynamic_pointer_cast<LimitNode>(node);
-//  return std::make_shared<Limit>(input_operator, limit_node->num_rows());
-//}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_limit_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto input_operator = translate_node(node->left_input());
+  auto limit_node = std::dynamic_pointer_cast<LimitNode>(node);
+  return std::make_shared<Limit>(input_operator, _translate_expressions({limit_node->num_rows_expression}, node->left_input()).front());
+}
 //
 //std::shared_ptr<AbstractOperator> LQPTranslator::_translate_insert_node(
 //    const std::shared_ptr<AbstractLQPNode>& node) const {

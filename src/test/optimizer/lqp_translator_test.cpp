@@ -15,7 +15,7 @@
 #include "expression/pqp_select_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
-//#include "logical_query_plan/limit_node.hpp"
+#include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -29,7 +29,7 @@
 //#include "operators/index_scan.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_sort_merge.hpp"
-//#include "operators/limit.hpp"
+#include "operators/limit.hpp"
 //#include "operators/maintenance/show_columns.hpp"
 //#include "operators/maintenance/show_tables.hpp"
 #include "operators/projection.hpp"
@@ -322,6 +322,30 @@ TEST_F(LQPTranslatorTest, JoinNonEqui) {
   const auto get_table_int_float = std::dynamic_pointer_cast<const GetTable>(join_sort_merge->input_right());
   ASSERT_TRUE(get_table_int_float);
   EXPECT_EQ(get_table_int_float->table_name(), "table_int_float");
+}
+
+TEST_F(LQPTranslatorTest, LimitLiteral) {
+  /**
+   * Build LQP and translate to PQP
+   *
+   * LQP resembles:
+   *   SELECT * FROM int_float LIMIT 1337
+   */
+  const auto lqp = LimitNode::make(value(static_cast<int64_t>(1337)), int_float_node);
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  /**
+   * Check PQP
+   */
+  const auto limit = std::dynamic_pointer_cast<Limit>(pqp);
+  ASSERT_TRUE(limit);
+  const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(limit->row_count_expression());
+  ASSERT_TRUE(value_expression);
+  ASSERT_EQ(value_expression->value, AllTypeVariant(static_cast<int64_t>(1337)));
+
+  const auto get_table = std::dynamic_pointer_cast<const GetTable>(limit->input_left());
+  ASSERT_TRUE(get_table);
+  EXPECT_EQ(get_table->table_name(), "table_int_float");
 }
 
 //TEST_F(LQPTranslatorTest, PredicateNodeUnaryScan) {

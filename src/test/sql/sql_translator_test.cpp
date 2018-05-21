@@ -1,8 +1,7 @@
-
-#include <expression/arithmetic_expression.hpp>
 #include "gtest/gtest.h"
 
 #include "constant_mappings.hpp"
+#include "expression/arithmetic_expression.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_factory.hpp"
@@ -16,6 +15,7 @@
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
 #include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -613,19 +613,28 @@ TEST_F(SQLTranslatorTest, FromColumnAliasingTablesSwitchNames) {
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, Limit) {
-//  // Most common case: LIMIT to a fixed number
-//  const auto actual_lqp_a = compile_query("SELECT * FROM int_float LIMIT 1;");
-//  const auto expected_lqp_a = LimitNode::make(value(1), stored_table_node_int_float);
-//  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp_a)
-//
-//  // Uncommon: LIMIT to the result of an Expression (which has to be uncorelated
-//  const auto actual_lqp_b = compile_query("SELECT int_float.a AS x FROM int_float LIMIT 3 + (SELECT MIN(b) FROM int_float2);");
-//  const auto expected_lqp_b =
-//  LimitNode::make(addition(3, select(sub_select)),
-//    ProjectionNode(expression_vector())
-//    stored_table_node_int_float);
-//  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp_b)
+TEST_F(SQLTranslatorTest, LimitLiteral) {
+  // Most common case: LIMIT to a fixed number
+  const auto actual_lqp = compile_query("SELECT * FROM int_float LIMIT 1;");
+  const auto expected_lqp = LimitNode::make(value(static_cast<int64_t>(1)), stored_table_node_int_float);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+// TODO(anybody) Disabled because SQLParser doesn't support Expressions in LIMIT clause
+TEST_F(SQLTranslatorTest, DISABLED_LimitExpression) {
+  // Uncommon: LIMIT to the result of an Expression (which has to be uncorelated
+  const auto actual_lqp = compile_query("SELECT int_float.a AS x FROM int_float LIMIT 3 + (SELECT MIN(b) FROM int_float2);");
+
+  // clang-format off
+  const auto sub_select =
+  AggregateNode::make(expression_vector(), expression_vector(min(int_float2_b)),
+                      stored_table_node_int_float2);
+
+  const auto expected_lqp =
+  LimitNode::make(addition(3, select(sub_select)),
+                  stored_table_node_int_float);
+  // clang-format on
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 //TEST_F(SQLTranslatorTest, ExpressionStringTest) {
