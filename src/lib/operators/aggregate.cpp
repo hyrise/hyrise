@@ -318,15 +318,22 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const
 std::shared_ptr<const Table> Aggregate::_on_execute() {
   auto input_table = input_table_left();
 
+  for (const auto groupby_column_id : _groupby_column_ids) {
+    DebugAssert(groupby_column_id < input_table->column_count(), "GroupBy column index out of bounds");
+  }
+
   // check for invalid aggregates
   for (const auto& aggregate : _aggregates) {
     if (!aggregate.column) {
       if (aggregate.function != AggregateFunction::Count) {
         Fail("Aggregate: Asterisk is only valid with COUNT");
       }
-    } else if (input_table->column_data_type(*aggregate.column) == DataType::String &&
+    } else {
+      DebugAssert(*aggregate.column < input_table->column_count(), "Aggregate column index out of bounds");
+      if (input_table->column_data_type(*aggregate.column) == DataType::String &&
                (aggregate.function == AggregateFunction::Sum || aggregate.function == AggregateFunction::Avg)) {
-      Fail("Aggregate: Cannot calculate SUM or AVG on string column");
+        Fail("Aggregate: Cannot calculate SUM or AVG on string column");
+      }
     }
   }
 
