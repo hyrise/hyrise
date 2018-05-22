@@ -7,8 +7,10 @@
 #include "storage/base_column_encoder.hpp"
 
 #include "storage/dictionary_column.hpp"
+#include "storage/fixed_string_dictionary_column/fixed_string_column.hpp"
 #include "storage/value_column.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
+
 #include "storage/vector_compression/vector_compression.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
@@ -34,6 +36,14 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
     const auto alloc = values.get_allocator();
 
     auto dictionary = pmr_vector<T>{values.cbegin(), values.cend(), alloc};
+
+    if constexpr (std::is_same<T, std::string>::value) {
+      auto dictionary2 = FixedStringVector{values.cbegin(), values.cend(), 111};
+      _test123(dictionary2);
+      std::cout << dictionary2.size() << std::endl;
+    } else {
+      _test123(dictionary);
+    }
 
     // Remove null values from value vector
     if (value_column->is_nullable()) {
@@ -103,6 +113,12 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
   static ValueID _get_value_id(const pmr_vector<T>& dictionary, const T& value) {
     return static_cast<ValueID>(
         std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
+  }
+
+  template <typename U>
+  void _test123(const U& dictionary) {
+    std::cout << "hi" << std::endl;
+    std::cout << dictionary.size() << std::endl;
   }
 };
 
