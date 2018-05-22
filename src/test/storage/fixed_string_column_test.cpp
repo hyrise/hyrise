@@ -61,6 +61,21 @@ TEST_F(StorageFixedStringColumnTest, Decode) {
   EXPECT_EQ((*dict_col)[2], AllTypeVariant("Bill"));
 }
 
+TEST_F(StorageFixedStringColumnTest, LongStrings) {
+  vc_str->append("ThisIsAVeryLongStringThisIsAVeryLongStringThisIsAVeryLongString");
+  vc_str->append("QuiteShort");
+  vc_str->append("Short");
+
+  auto col = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
+  auto dict_col = std::dynamic_pointer_cast<FixedStringColumn<std::string>>(col);
+
+  // Test sorting
+  auto dict = dict_col->dictionary();
+  EXPECT_EQ((*dict)[0], "QuiteShort");
+  EXPECT_EQ((*dict)[1], "Short");
+  EXPECT_EQ((*dict)[2], "ThisIsAVeryLongStringThisIsAVeryLongStringThisIsAVeryLongString");
+}
+
 TEST_F(StorageFixedStringColumnTest, CopyUsingAlloctor) {
   vc_str->append("Bill");
   vc_str->append("Steve");
