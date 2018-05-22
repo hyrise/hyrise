@@ -23,9 +23,10 @@ namespace opossum {
  * The algorithm first creates an attribute vector of standard size (uint32_t) and then compresses it
  * using fixed-size byte-aligned encoding.
  */
-class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
+template <auto Encoding>
+class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
  public:
-  static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::Dictionary>;
+  static constexpr auto _encoding_type = enum_c<EncodingType, Encoding>;
   static constexpr auto _uses_vector_compression = true;  // see base_column_encoder.hpp for details
 
   template <typename T>
@@ -35,14 +36,21 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
     const auto& values = value_column->values();
     const auto alloc = values.get_allocator();
 
-    if constexpr (false && std::is_same<T, std::string>::value) {
+    if constexpr (Encoding == EncodingType::FixedStringDictionary) {
+      // if constexpr (std::is_same<T, std::string>::value) {
       auto dictionary = FixedStringVector{values.cbegin(), values.cend(), 111};
       auto encoded_attribute_vector = _encode_dictionary(dictionary, value_column);
+      const auto null_value_id = static_cast<uint32_t>(dictionary.size());
+
+      std::cout << "dictionary size: " << dictionary.size() << std::endl;
+      for (const auto& d : dictionary) {
+        std::cout << d << std::endl;
+      }
 
       auto dictionary_sptr = std::allocate_shared<FixedStringVector>(alloc, std::move(dictionary));
       auto attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(encoded_attribute_vector));
       return std::allocate_shared<FixedStringColumn<std::string>>(alloc, dictionary_sptr, attribute_vector_sptr,
-                                                                  ValueID{static_cast<uint32_t>(dictionary.size())});
+                                                                  ValueID{null_value_id});
     } else {
       std::cout << " " << std::endl;
       auto dictionary = pmr_vector<T>{values.cbegin(), values.cend(), alloc};
@@ -86,25 +94,30 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
       // Swap values to back if value is null
       auto erase_from_here_it = dictionary.end();
       auto null_it = null_values.crbegin();
+      std::cout << "attribute_vector:" << std::endl;
       for (auto dict_it = dictionary.rbegin(); dict_it != dictionary.rend(); ++dict_it, ++null_it) {
         if (*null_it) {
-          std::swap(*dict_it, *(--erase_from_here_it));
+          std::iter_swap(dict_it, --erase_from_here_it);
         }
       }
+      std::cout << "attribute_vector:" << std::endl;
 
       // Erase null values
       dictionary.erase(erase_from_here_it, dictionary.end());
     }
+    std::cout << "attribute_vector222:" << std::endl;
 
     std::sort(dictionary.begin(), dictionary.end());
     dictionary.erase(std::unique(dictionary.begin(), dictionary.end()), dictionary.end());
     dictionary.shrink_to_fit();
+    std::cout << "attribute_vector:" << std::endl;
 
     auto attribute_vector = pmr_vector<uint32_t>{values.get_allocator()};
     attribute_vector.reserve(values.size());
 
     const auto null_value_id = static_cast<uint32_t>(dictionary.size());
 
+    std::cout << "attribute_vector:" << std::endl;
     if (value_column->is_nullable()) {
       const auto& null_values = value_column->null_values();
 
@@ -139,7 +152,8 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
     // We need to increment the dictionary size here because of possible null values.
     const auto max_value = dictionary.size() + 1u;
 
-    return compress_vector(attribute_vector, vector_compression_type(), alloc, {max_value});
+    return compress_vector(attribute_vector, ColumnEncoder<DictionaryEncoder<Encoding>>::vector_compression_type(),
+                           alloc, {max_value});
   }
 };
 
