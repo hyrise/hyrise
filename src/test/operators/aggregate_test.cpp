@@ -281,8 +281,9 @@ TEST_F(OperatorsAggregateTest, TwoAggregateSumAvg) {
 }
 
 TEST_F(OperatorsAggregateTest, TwoAggregateSumAvgAlias) {
-  this->test_output(_table_wrapper_1_2, {{ColumnID{1}, AggregateFunction::Sum, std::optional<std::string>("sum_b")},
-                                         {ColumnID{2}, AggregateFunction::Avg}},
+  this->test_output(_table_wrapper_1_2,
+                    {{ColumnID{1}, AggregateFunction::Sum, std::optional<std::string>("sum_b")},
+                     {ColumnID{2}, AggregateFunction::Avg}},
                     {ColumnID{0}}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg_alias.tbl", 1);
 }
 
@@ -479,15 +480,22 @@ TEST_F(OperatorsAggregateTest, DictionarySingleAggregateCountWithNull) {
 TEST_F(OperatorsAggregateTest, TwoAggregateEmptyTable) {
   auto filtered = std::make_shared<TableScan>(_table_wrapper_1_2, ColumnID{0}, PredicateCondition::LessThan, 0);
   filtered->execute();
-  this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Max}, {ColumnID{2}, AggregateFunction::Count}, {std::nullopt, AggregateFunction::Count}},
+  this->test_output(filtered,
+                    {{ColumnID{1}, AggregateFunction::Max},
+                     {ColumnID{2}, AggregateFunction::Count},
+                     {std::nullopt, AggregateFunction::Count}},
                     {}, "src/test/tables/aggregateoperator/0gb_3agg/max_count_count_empty.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoAggregateEmptyTableGrouped) {
   auto filtered = std::make_shared<TableScan>(_table_wrapper_1_2, ColumnID{0}, PredicateCondition::LessThan, 0);
   filtered->execute();
-  this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Max}, {ColumnID{2}, AggregateFunction::Count}, {std::nullopt, AggregateFunction::Count}},
-                    {ColumnID{0}}, "src/test/tables/aggregateoperator/groupby_int_1gb_3agg/max_count_count_empty.tbl", 1);
+  this->test_output(filtered,
+                    {{ColumnID{1}, AggregateFunction::Max},
+                     {ColumnID{2}, AggregateFunction::Count},
+                     {std::nullopt, AggregateFunction::Count}},
+                    {ColumnID{0}}, "src/test/tables/aggregateoperator/groupby_int_1gb_3agg/max_count_count_empty.tbl",
+                    1);
 }
 
 // (debug)> SELECT COUNT(a) FROM a WHERE a>1000000
