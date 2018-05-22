@@ -38,7 +38,7 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
 
     if constexpr (Encoding == EncodingType::FixedStringDictionary) {
       // if constexpr (std::is_same<T, std::string>::value) {
-      auto dictionary = FixedStringVector{values.cbegin(), values.cend(), 111};
+      auto dictionary = FixedStringVector{values.cbegin(), values.cend(), _calculate_fixed_string_length(values)};
       auto encoded_attribute_vector = _encode_dictionary(dictionary, value_column);
       const auto null_value_id = static_cast<uint32_t>(dictionary.size());
 
@@ -154,6 +154,14 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
 
     return compress_vector(attribute_vector, ColumnEncoder<DictionaryEncoder<Encoding>>::vector_compression_type(),
                            alloc, {max_value});
+  }
+
+  size_t _calculate_fixed_string_length(const pmr_concurrent_vector<std::string>& values) const {
+    size_t max_string_length = 0;
+    for (const auto& value : values) {
+      if (value.size() > max_string_length) max_string_length = value.size();
+    }
+    return max_string_length;
   }
 };
 
