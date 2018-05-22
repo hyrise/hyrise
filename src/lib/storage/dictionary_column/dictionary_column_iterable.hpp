@@ -14,28 +14,18 @@ namespace opossum {
 template <typename T>
 class DictionaryColumnIterable : public PointAccessibleColumnIterable<DictionaryColumnIterable<T>> {
  public:
-  explicit DictionaryColumnIterable(const DictionaryColumn<T>& column) : _column{column}, _dictionary(column.dictionary()) {
-    std::cout << "regular dict one";
-}
+  explicit DictionaryColumnIterable(const DictionaryColumn<T>& column)
+      : _column{column}, _dictionary(column.dictionary()) {}
 
-  template<typename U = T,
-  typename std::enable_if<std::is_same<U, std::string>::value>::type>
-  explicit DictionaryColumnIterable(const FixedStringColumn<T>& column)
-  : _column{column}, _dictionary(column.dictionary()) {
-    std::cout << "new constr." << std::endl;
-  }  
-  explicit DictionaryColumnIterable(const FixedStringColumn<T>& column) : _column{column}, _dictionary{std::make_shared<const pmr_vector<T>>()} {
-    std::cout << "shitty one";
-  }
+  explicit DictionaryColumnIterable(const FixedStringColumn<std::string>& column)
+      : _column{column}, _dictionary(column.dictionary()) {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
-    std::cout << "im here 1" << std::endl;
     resolve_compressed_vector_type(*_column.attribute_vector(), [&](const auto& vector) {
       using ZsIteratorType = decltype(vector.cbegin());
 
-      auto begin =
-          Iterator<ZsIteratorType>{*_dictionary, _column.null_value_id(), vector.cbegin(), ChunkOffset{0u}};
+      auto begin = Iterator<ZsIteratorType>{*_dictionary, _column.null_value_id(), vector.cbegin(), ChunkOffset{0u}};
       auto end = Iterator<ZsIteratorType>{*_dictionary, _column.null_value_id(), vector.cend(),
                                           static_cast<ChunkOffset>(_column.size())};
       functor(begin, end);
@@ -44,7 +34,6 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
 
   template <typename Functor>
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
-    std::cout << "im here 2" << std::endl;
     resolve_compressed_vector_type(*_column.attribute_vector(), [&](const auto& vector) {
       auto decoder = vector.create_decoder();
       using ZsDecoderType = std::decay_t<decltype(*decoder)>;
@@ -59,7 +48,7 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
 
  private:
   const BaseDictionaryColumn& _column;
-  const std::shared_ptr<const pmr_vector<T>> _dictionary;
+  std::shared_ptr<const pmr_vector<T>> _dictionary;
 
  private:
   template <typename ZsIteratorType>

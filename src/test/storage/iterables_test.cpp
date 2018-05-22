@@ -13,7 +13,6 @@
 #include "storage/dictionary_column.hpp"
 #include "storage/dictionary_column/dictionary_column_iterable.hpp"
 #include "storage/fixed_string_dictionary_column/fixed_string_column.hpp"
-#include "storage/fixed_string_dictionary_column/fixed_string_column_iterable.hpp"
 #include "storage/reference_column/reference_column_iterable.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
@@ -177,7 +176,7 @@ TEST_F(IterablesTest, FixedStringDictionaryColumnIteratorWithIterators) {
   auto column = chunk->get_column(ColumnID{0u});
   auto dict_column = std::dynamic_pointer_cast<const FixedStringColumn<std::string>>(column);
 
-  auto iterable = FixedStringColumnIterable<std::string>{*dict_column};
+  auto iterable = DictionaryColumnIterable<std::string>{*dict_column};
 
   auto concatenate = std::string();
   iterable.with_iterators(AppendWithIterator{concatenate});
@@ -195,7 +194,7 @@ TEST_F(IterablesTest, FixedStringDictionaryColumnReferencedIteratorWithIterators
 
   auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
 
-  auto iterable = FixedStringColumnIterable<std::string>{*dict_column};
+  auto iterable = DictionaryColumnIterable<std::string>{*dict_column};
 
   auto concatenate = std::string();
   iterable.with_iterators(&chunk_offsets, AppendWithIterator{concatenate});

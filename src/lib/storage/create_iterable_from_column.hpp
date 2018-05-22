@@ -3,7 +3,6 @@
 #include "storage/column_iterables/any_column_iterable.hpp"
 #include "storage/dictionary_column/dictionary_column_iterable.hpp"
 #include "storage/encoding_type.hpp"
-#include "storage/fixed_string_dictionary_column/fixed_string_column_iterable.hpp"
 
 #include "storage/frame_of_reference/frame_of_reference_iterable.hpp"
 #include "storage/reference_column.hpp"
@@ -47,13 +46,8 @@ auto create_iterable_from_column(const RunLengthColumn<T>& column) {
 
 template <typename T>
 auto create_iterable_from_column(const FixedStringColumn<T>& column) {
-  return erase_type_from_iterable_if_debug(FixedStringColumnIterable<T>{column});
+  return erase_type_from_iterable_if_debug(DictionaryColumnIterable<T>{column});
 }
-
-// template <typename T>
-// auto create_iterable_from_column(const FixedStringColumn<T>& column) {
-//   return erase_type_from_iterable_if_debug(DictionaryColumnIterable<T>{column});
-// }
 
 template <typename T>
 auto create_iterable_from_column(const FrameOfReferenceColumn<T>& column) {
