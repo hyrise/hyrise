@@ -42,25 +42,14 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
       auto encoded_attribute_vector = _encode_dictionary(dictionary, value_column);
       const auto null_value_id = static_cast<uint32_t>(dictionary.size());
 
-      std::cout << "dictionary size: " << dictionary.size() << std::endl;
-      for (const auto& d : dictionary) {
-        std::cout << d << std::endl;
-      }
-
       auto dictionary_sptr = std::allocate_shared<FixedStringVector>(alloc, std::move(dictionary));
       auto attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(encoded_attribute_vector));
       return std::allocate_shared<FixedStringColumn<std::string>>(alloc, dictionary_sptr, attribute_vector_sptr,
                                                                   ValueID{null_value_id});
     } else {
-      std::cout << " " << std::endl;
       auto dictionary = pmr_vector<T>{values.cbegin(), values.cend(), alloc};
       auto encoded_attribute_vector = _encode_dictionary(dictionary, value_column);
       const auto null_value_id = static_cast<uint32_t>(dictionary.size());
-
-      std::cout << "dictionary size: " << dictionary.size() << std::endl;
-      for (const auto& d : dictionary) {
-        std::cout << d << std::endl;
-      }
 
       auto dictionary_sptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(dictionary));
       auto attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(encoded_attribute_vector));
@@ -82,11 +71,6 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
     const auto& values = value_column->values();
     const auto alloc = values.get_allocator();
 
-    std::cout << "values:" << std::endl;
-    for (const auto& v : values) {
-      std::cout << v << std::endl;
-    }
-
     // Remove null values from value vector
     if (value_column->is_nullable()) {
       const auto& null_values = value_column->null_values();
@@ -94,30 +78,25 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
       // Swap values to back if value is null
       auto erase_from_here_it = dictionary.end();
       auto null_it = null_values.crbegin();
-      std::cout << "attribute_vector:" << std::endl;
       for (auto dict_it = dictionary.rbegin(); dict_it != dictionary.rend(); ++dict_it, ++null_it) {
         if (*null_it) {
           std::iter_swap(dict_it, --erase_from_here_it);
         }
       }
-      std::cout << "attribute_vector:" << std::endl;
 
       // Erase null values
       dictionary.erase(erase_from_here_it, dictionary.end());
     }
-    std::cout << "attribute_vector222:" << std::endl;
 
     std::sort(dictionary.begin(), dictionary.end());
     dictionary.erase(std::unique(dictionary.begin(), dictionary.end()), dictionary.end());
     dictionary.shrink_to_fit();
-    std::cout << "attribute_vector:" << std::endl;
 
     auto attribute_vector = pmr_vector<uint32_t>{values.get_allocator()};
     attribute_vector.reserve(values.size());
 
     const auto null_value_id = static_cast<uint32_t>(dictionary.size());
 
-    std::cout << "attribute_vector:" << std::endl;
     if (value_column->is_nullable()) {
       const auto& null_values = value_column->null_values();
 
@@ -142,11 +121,6 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
         const auto value_id = _get_value_id(dictionary, *value_it);
         attribute_vector.push_back(value_id);
       }
-    }
-
-    std::cout << "attribute_vector:" << std::endl;
-    for (const auto& v : attribute_vector) {
-      std::cout << v << std::endl;
     }
 
     // We need to increment the dictionary size here because of possible null values.

@@ -29,8 +29,6 @@ const AllTypeVariant DictionaryColumn<T>::operator[](const ChunkOffset chunk_off
   auto decoder = _attribute_vector->create_base_decoder();
   const auto value_id = decoder->get(chunk_offset);
 
-  std::cout << "val id " << value_id << std::endl;
-  std::cout << "null id " << _null_value_id << std::endl;
   if (value_id == _null_value_id) {
     return NULL_VALUE;
   }
