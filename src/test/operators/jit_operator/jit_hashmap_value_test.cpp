@@ -29,10 +29,10 @@ TEST_F(JitHashmapValueTest, Accessors) {
 TEST_F(JitHashmapValueTest, GetAndSet) {
   JitRuntimeContext context;
   // Create a hashmap data structure with three columns with ten elements each
-  context.hashmap.values.resize(3);
-  context.hashmap.values[0].resize(10);
-  context.hashmap.values[1].resize(10);
-  context.hashmap.values[2].resize(10);
+  context.hashmap.columns.resize(3);
+  context.hashmap.columns[0].resize(10);
+  context.hashmap.columns[1].resize(10);
+  context.hashmap.columns[2].resize(10);
 
   // Perform the following test for each Hyrise data type
   const auto typed_test = [&](const DataType data_type, auto value_in) {
@@ -55,10 +55,10 @@ TEST_F(JitHashmapValueTest, GetAndSet) {
 
 TEST_F(JitHashmapValueTest, IsNullAndSetIsNull) {
   JitRuntimeContext context;
-  context.hashmap.values.resize(3);
-  context.hashmap.values[0].resize(10);
-  context.hashmap.values[1].resize(10);
-  context.hashmap.values[2].resize(10);
+  context.hashmap.columns.resize(3);
+  context.hashmap.columns[0].resize(10);
+  context.hashmap.columns[1].resize(10);
+  context.hashmap.columns[2].resize(10);
 
   {
     const auto column_index = static_cast<size_t>(std::rand()) % 3;

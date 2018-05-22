@@ -2,7 +2,10 @@
 
 namespace opossum {
 
+// Returns the enum value (e.g., DataType::Int, DataType::String) of a data type defined in the DATA_TYPE_INFO sequence
 #define JIT_GET_ENUM_VALUE(index, s) APPEND_ENUM_NAMESPACE(_, _, BOOST_PP_TUPLE_ELEM(3, 1, BOOST_PP_SEQ_ELEM(index, s)))
+
+// Returns the data type (e.g., int32_t, std::string) of a data type defined in the DATA_TYPE_INFO sequence
 #define JIT_GET_DATA_TYPE(index, s) BOOST_PP_TUPLE_ELEM(3, 0, BOOST_PP_SEQ_ELEM(index, s))
 
 #define JIT_HASH_CASE(r, types)                      \
@@ -20,7 +23,7 @@ namespace opossum {
 
 #define JIT_GROW_BY_ONE_CASE(r, types) \
   case JIT_GET_ENUM_VALUE(0, types):   \
-    return context.hashmap.values[value.column_index()].grow_by_one<JIT_GET_DATA_TYPE(0, types)>(initial_value);
+    return context.hashmap.columns[value.column_index()].grow_by_one<JIT_GET_DATA_TYPE(0, types)>(initial_value);
 
 void jit_not(const JitTupleValue& lhs, const JitTupleValue& result, JitRuntimeContext& context) {
   DebugAssert(lhs.data_type() == DataType::Bool && result.data_type() == DataType::Bool, "invalid type for operation");
@@ -131,11 +134,6 @@ void jit_assign(const JitTupleValue& from, const JitHashmapValue& to, const size
 
 size_t jit_grow_by_one(const JitHashmapValue& value, const JitVariantVector::InitialValue initial_value,
                        JitRuntimeContext& context) {
-  if (value.is_nullable()) {
-    // Grow the is_null vector for nullable values.
-    context.hashmap.values[value.column_index()].grow_is_null_by_one(true);
-  }
-
   switch (value.data_type()) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_GROW_BY_ONE_CASE, (JIT_DATA_TYPE_INFO))
     default:

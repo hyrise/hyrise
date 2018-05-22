@@ -17,8 +17,6 @@ namespace opossum {
 #define JIT_VARIANT_VECTOR_MEMBER(r, d, type) \
   std::vector<BOOST_PP_TUPLE_ELEM(3, 0, type)> BOOST_PP_TUPLE_ELEM(3, 1, type);
 
-#define JIT_VARIANT_VECTOR_RESIZE(r, d, type) BOOST_PP_TUPLE_ELEM(3, 1, type).resize(new_size);
-
 /* A brief overview of the type system and the way values are handled in the JitOperatorWrapper:
  *
  * The JitOperatorWrapper performs most of its operations on variant values, since this allows writing generic operators with
@@ -72,17 +70,14 @@ class JitVariantVector {
  public:
   enum class InitialValue { Zero, MinValue, MaxValue };
 
-  void resize(const size_t new_size) {
-    BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_RESIZE, _, JIT_DATA_TYPE_INFO)
-    _is_null.resize(new_size);
-  }
+  void resize(const size_t new_size);
 
   template <typename T>
   T get(const size_t index) const;
   template <typename T>
   void set(const size_t index, const T value);
-  bool is_null(const size_t index) { return _is_null[index]; }
-  void set_is_null(const size_t index, const bool is_null) { _is_null[index] = is_null; }
+  bool is_null(const size_t index);
+  void set_is_null(const size_t index, const bool is_null);
 
   // Adds an element to the internal vector for the specified data type.
   // The initial value can be set to Zero, MaxValue, or MinValue in a data type independent way.
@@ -91,18 +86,12 @@ class JitVariantVector {
   template <typename T>
   size_t grow_by_one(const InitialValue initial_value);
 
-  // Adds an element to the internal _is_null vector.
-  size_t grow_is_null_by_one(const bool initial_value) {
-    _is_null.push_back(initial_value);
-    return _is_null.size() - 1;
-  }
-
   // Returns the internal vector for the specified data type.
   template <typename T>
   std::vector<T>& get_vector();
 
   // Returns the internal _is_null vector.
-  std::vector<bool>& get_is_null_vector() { return _is_null; }
+  std::vector<bool>& get_is_null_vector();
 
  private:
   BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_MEMBER, _, JIT_DATA_TYPE_INFO)
@@ -120,7 +109,7 @@ class BaseJitColumnWriter;
 // The runtime hashmap is part of the JitRuntimeContext to keep mutable state from the operators.
 struct JitRuntimeHashmap {
   std::unordered_map<uint64_t, std::vector<size_t>> indices;
-  std::vector<JitVariantVector> values;
+  std::vector<JitVariantVector> columns;
 };
 
 // The structure encapsulates all data available to the JitOperatorWrapper at runtime,
@@ -142,14 +131,12 @@ struct JitRuntimeContext {
 // It only knows how to access the value from the runtime context.
 class JitTupleValue {
  public:
-  JitTupleValue(const DataType data_type, const bool is_nullable, const size_t tuple_index)
-      : _data_type{data_type}, _is_nullable{is_nullable}, _tuple_index{tuple_index} {}
-  JitTupleValue(const std::pair<const DataType, const bool> data_type, const size_t tuple_index)
-      : _data_type{data_type.first}, _is_nullable{data_type.second}, _tuple_index{tuple_index} {}
+  JitTupleValue(const DataType data_type, const bool is_nullable, const size_t tuple_index);
+  JitTupleValue(const std::pair<const DataType, const bool> data_type, const size_t tuple_index);
 
-  DataType data_type() const { return _data_type; }
-  bool is_nullable() const { return _is_nullable; }
-  size_t tuple_index() const { return _tuple_index; }
+  DataType data_type() const;
+  bool is_nullable() const;
+  size_t tuple_index() const;
 
   template <typename T>
   T get(JitRuntimeContext& context) const {
@@ -161,19 +148,13 @@ class JitTupleValue {
     context.tuple.set<T>(_tuple_index, value);
   }
 
-  inline bool is_null(JitRuntimeContext& context) const { return _is_nullable && context.tuple.is_null(_tuple_index); }
-
-  inline void set_is_null(const bool is_null, JitRuntimeContext& context) const {
-    context.tuple.set_is_null(_tuple_index, is_null);
-  }
+  bool is_null(JitRuntimeContext& context) const;
+  void set_is_null(const bool is_null, JitRuntimeContext& context) const;
 
   // Compares two JitTupleValue instances for equality. This method does NOT compare actual concrete values but only the
   // configuration (data type, nullability, tuple index) of the tuple values. I.e., two equal JitTupleValues refer to
   // the same value in a given JitRuntimeContext.
-  bool operator==(const JitTupleValue& other) const {
-    return data_type() == other.data_type() && is_nullable() == other.is_nullable() &&
-           tuple_index() == other.tuple_index();
-  }
+  bool operator==(const JitTupleValue& other) const;
 
  private:
   const DataType _data_type;
@@ -199,27 +180,23 @@ class JitTupleValue {
 // processing).
 class JitHashmapValue {
  public:
-  JitHashmapValue(const DataType data_type, const bool is_nullable, const size_t column_index)
-      : _data_type{data_type}, _is_nullable{is_nullable}, _column_index{column_index} {}
+  JitHashmapValue(const DataType data_type, const bool is_nullable, const size_t column_index);
 
-  DataType data_type() const { return _data_type; }
-  bool is_nullable() const { return _is_nullable; }
-  size_t column_index() const { return _column_index; }
+  DataType data_type() const;
+  bool is_nullable() const;
+  size_t column_index() const;
 
   template <typename T>
   T get(const size_t index, JitRuntimeContext& context) const {
-    return context.hashmap.values[_column_index].get<T>(index);
+    return context.hashmap.columns[_column_index].get<T>(index);
   }
   template <typename T>
   void set(const T value, const size_t index, JitRuntimeContext& context) const {
-    context.hashmap.values[_column_index].set<T>(index, value);
+    context.hashmap.columns[_column_index].set<T>(index, value);
   }
-  inline bool is_null(const size_t index, JitRuntimeContext& context) const {
-    return _is_nullable && context.hashmap.values[_column_index].is_null(index);
-  }
-  inline void set_is_null(const bool is_null, const size_t index, JitRuntimeContext& context) const {
-    context.hashmap.values[_column_index].set_is_null(index, is_null);
-  }
+
+  bool is_null(const size_t index, JitRuntimeContext& context) const;
+  void set_is_null(const bool is_null, const size_t index, JitRuntimeContext& context) const;
 
  private:
   const DataType _data_type;

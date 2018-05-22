@@ -16,7 +16,7 @@ std::string JitWriteTuples::description() const {
   return desc.str();
 }
 
-std::shared_ptr<Table> JitWriteTuples::create_output_table(const uint32_t max_chunk_size) const {
+std::shared_ptr<Table> JitWriteTuples::create_output_table(const ChunkOffset max_chunk_size) const {
   TableColumnDefinitions column_definitions;
 
   for (const auto& output_column : _output_columns) {

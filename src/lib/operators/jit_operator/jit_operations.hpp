@@ -39,7 +39,10 @@ namespace opossum {
  * different (i.e. a NULL as either input does not result in the output being NULL as well).
  */
 
+// Returns the enum value (e.g., DataType::Int, DataType::String) of a data type defined in the DATA_TYPE_INFO sequence
 #define JIT_GET_ENUM_VALUE(index, s) APPEND_ENUM_NAMESPACE(_, _, BOOST_PP_TUPLE_ELEM(3, 1, BOOST_PP_SEQ_ELEM(index, s)))
+
+// Returns the data type (e.g., int32_t, std::string) of a data type defined in the DATA_TYPE_INFO sequence
 #define JIT_GET_DATA_TYPE(index, s) BOOST_PP_TUPLE_ELEM(3, 0, BOOST_PP_SEQ_ELEM(index, s))
 
 #define JIT_COMPUTE_CASE(r, types)                                                                                   \
@@ -57,6 +60,13 @@ namespace opossum {
     catching_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(context),             \
                   rhs.get<JIT_GET_DATA_TYPE(0, types)>(rhs_index, context)); \
     break;
+
+/* The lambdas below are instanciated by the compiler for different combinations of data types. The decltype return
+ * types are necessary in most cases, since we rely on the SFINAE pattern to divert to an alternative implementation
+ * (which throws a runtime error) for invalid data type combinations. Without the decltype return type declaration, the
+ * compiler is unable to detect invalid data type combinations at template instanciation time and produces compilation
+ * errors.
+ */
 
 /* Arithmetic operators */
 const auto jit_addition = [](const auto a, const auto b) -> decltype(a + b) { return a + b; };
@@ -164,7 +174,15 @@ void jit_is_not_null(const JitTupleValue& lhs, const JitTupleValue& result, JitR
 // The following functions are used within loop bodies in the JitAggregate operator. They should not be inlined
 // automatically to reduce the amount of code produced during loop unrolling in the specialization process (a function
 // call vs the entire inlined body). These functions will be manually inlined more efficiently after loop unrolling by
-// the code specializer.
+// the code specializer, since we can apply load replacement and branch pruning and only inline the code necessary for
+// each specific loop iteration.
+// Example: If we compute aggregates in a loop in the JitAggregate operator, the generic loop body will call the
+// jit_aggregate_compute function, which can handle different data types. Nothing can be specialized here, because
+// different iterations may work with different data types. Inlining the jit_aggregate_compute function into the loop
+// would require inlining the entire (generic) function.
+// However, after loop unrolling each copy of the unrolled body only computes a single aggregate with a definite data
+// type. When inlining the function now, the code specializer will prune all code related to other data types,
+// nullability etc.
 
 // Computes the hash value for a JitTupleValue
 __attribute__((noinline)) uint64_t jit_hash(const JitTupleValue& value, JitRuntimeContext& context);
@@ -173,7 +191,7 @@ __attribute__((noinline)) uint64_t jit_hash(const JitTupleValue& value, JitRunti
 __attribute__((noinline)) bool jit_aggregate_equals(const JitTupleValue& lhs, const JitHashmapValue& rhs,
                                                     const size_t rhs_index, JitRuntimeContext& context);
 
-// Copies a JitTupleValue to a JitHashmapValue. Both values MUST be of the same data type/
+// Copies a JitTupleValue to a JitHashmapValue. Both values MUST be of the same data type.
 __attribute__((noinline)) void jit_assign(const JitTupleValue& from, const JitHashmapValue& to, const size_t to_index,
                                           JitRuntimeContext& context);
 
@@ -183,12 +201,12 @@ __attribute__((noinline)) size_t jit_grow_by_one(const JitHashmapValue& value,
                                                  JitRuntimeContext& context);
 
 // Updates an aggregate by applying an operation to a JitTupleValue and a JitHashmapValue. The result is stored in the
-// hashmape value.
+// hashmap value.
 template <typename T>
 __attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const JitTupleValue& lhs,
                                                      const JitHashmapValue& rhs, const size_t rhs_index,
                                                      JitRuntimeContext& context) {
-  // NULL values are ignored in aggreagte computations
+  // NULL values are ignored in aggregate computations
   if (lhs.is_null(context)) {
     return;
   }

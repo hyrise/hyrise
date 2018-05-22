@@ -65,13 +65,13 @@ TEST_F(JitAggregateTest, AddsAggregateColumnsToOutputTable) {
 
   const auto expected_column_definitions = TableColumnDefinitions({{"count", DataType::Long, false},
                                                                    {"count_nullable", DataType::Long, false},
-                                                                   {"max", DataType::Float, false},
+                                                                   {"max", DataType::Float, true},
                                                                    {"max_nullable", DataType::Double, true},
-                                                                   {"min", DataType::Long, false},
+                                                                   {"min", DataType::Long, true},
                                                                    {"min_nullable", DataType::Int, true},
-                                                                   {"avg", DataType::Double, false},
+                                                                   {"avg", DataType::Double, true},
                                                                    {"avg_nullable", DataType::Double, true},
-                                                                   {"sum", DataType::Long, false},
+                                                                   {"sum", DataType::Long, true},
                                                                    {"sum_nullable", DataType::Int, true}});
 
   EXPECT_EQ(output_table->column_definitions(), expected_column_definitions);
@@ -239,6 +239,105 @@ TEST_F(JitAggregateTest, CorrectlyComputesAggregates) {
   expected_output_table->append({1, 10, 45, 9, 0, 4.5});
   expected_output_table->append({2, 10, 155, 20, 11, 15.5});
 
+  EXPECT_TRUE(check_table_equal(output_table, expected_output_table, OrderSensitivity::No, TypeCmpMode::Strict,
+                                FloatComparisonMode::AbsoluteDifference));
+}
+
+// Check the computation of aggregate values when there are no groupby columns.
+TEST_F(JitAggregateTest, NoGroupByColumns) {
+  JitRuntimeContext context;
+  context.tuple.resize(1);
+
+  const auto value = JitTupleValue(DataType::Int, false, 0);
+
+  // We compute an aggregate of each type.
+  _aggregate->add_aggregate_column("count", value, AggregateFunction::Count);
+  _aggregate->add_aggregate_column("sum", value, AggregateFunction::Sum);
+  _aggregate->add_aggregate_column("max", value, AggregateFunction::Max);
+  _aggregate->add_aggregate_column("min", value, AggregateFunction::Min);
+  _aggregate->add_aggregate_column("avg", value, AggregateFunction::Avg);
+
+  auto output_table = _aggregate->create_output_table(Chunk::MAX_SIZE);
+  _aggregate->before_query(*output_table, context);
+
+  value.set<int32_t>(1, context);
+  _source->emit(context);
+  value.set<int32_t>(5, context);
+  _source->emit(context);
+
+  _aggregate->after_query(*output_table, context);
+
+  const auto expected_column_definitions = TableColumnDefinitions({{"count", DataType::Long, false},
+                                                                   {"sum", DataType::Int, true},
+                                                                   {"max", DataType::Int, true},
+                                                                   {"min", DataType::Int, true},
+                                                                   {"avg", DataType::Double, true}});
+
+  auto expected_output_table = std::make_shared<Table>(expected_column_definitions, TableType::Data);
+  expected_output_table->append({2, 6, 5, 1, 3});
+
+  EXPECT_TRUE(check_table_equal(output_table, expected_output_table, OrderSensitivity::No, TypeCmpMode::Strict,
+                                FloatComparisonMode::AbsoluteDifference));
+}
+
+// Check the computation of aggregate values on an empty table.
+TEST_F(JitAggregateTest, EmptyInputTable) {
+  JitRuntimeContext context;
+  context.tuple.resize(2);
+
+  const auto value_a = JitTupleValue(DataType::Int, false, 0);
+  const auto value_b = JitTupleValue(DataType::Int, true, 1);
+
+  // We compute an aggregate of each type on the same input value.
+  _aggregate->add_groupby_column("groupby", value_a);
+  _aggregate->add_aggregate_column("count", value_b, AggregateFunction::Count);
+  _aggregate->add_aggregate_column("sum", value_b, AggregateFunction::Sum);
+  _aggregate->add_aggregate_column("max", value_b, AggregateFunction::Max);
+  _aggregate->add_aggregate_column("min", value_b, AggregateFunction::Min);
+  _aggregate->add_aggregate_column("avg", value_b, AggregateFunction::Avg);
+
+  auto output_table = _aggregate->create_output_table(Chunk::MAX_SIZE);
+  _aggregate->before_query(*output_table, context);
+  _aggregate->after_query(*output_table, context);
+
+  const auto expected_column_definitions = TableColumnDefinitions({{"groupby", DataType::Int, false},
+                                                                   {"count", DataType::Long, false},
+                                                                   {"sum", DataType::Int, true},
+                                                                   {"max", DataType::Int, true},
+                                                                   {"min", DataType::Int, true},
+                                                                   {"avg", DataType::Double, true}});
+
+  auto expected_output_table = std::make_shared<Table>(expected_column_definitions, TableType::Data);
+  EXPECT_TRUE(check_table_equal(output_table, expected_output_table, OrderSensitivity::No, TypeCmpMode::Strict,
+                                FloatComparisonMode::AbsoluteDifference));
+}
+
+// Check the computation of aggregate values on an empty table with no groupby columns.
+TEST_F(JitAggregateTest, EmptyInputTableNoGroupbyColumns) {
+  JitRuntimeContext context;
+  context.tuple.resize(1);
+
+  const auto value = JitTupleValue(DataType::Int, false, 0);
+
+  // We compute an aggregate of each type on the same input value.
+  _aggregate->add_aggregate_column("count", value, AggregateFunction::Count);
+  _aggregate->add_aggregate_column("sum", value, AggregateFunction::Sum);
+  _aggregate->add_aggregate_column("max", value, AggregateFunction::Max);
+  _aggregate->add_aggregate_column("min", value, AggregateFunction::Min);
+  _aggregate->add_aggregate_column("avg", value, AggregateFunction::Avg);
+
+  auto output_table = _aggregate->create_output_table(Chunk::MAX_SIZE);
+  _aggregate->before_query(*output_table, context);
+  _aggregate->after_query(*output_table, context);
+
+  const auto expected_column_definitions = TableColumnDefinitions({{"count", DataType::Long, false},
+                                                                   {"sum", DataType::Int, true},
+                                                                   {"max", DataType::Int, true},
+                                                                   {"min", DataType::Int, true},
+                                                                   {"avg", DataType::Double, true}});
+
+  auto expected_output_table = std::make_shared<Table>(expected_column_definitions, TableType::Data);
+  expected_output_table->append({0, NullValue{}, NullValue{}, NullValue{}, NullValue{}});
   EXPECT_TRUE(check_table_equal(output_table, expected_output_table, OrderSensitivity::No, TypeCmpMode::Strict,
                                 FloatComparisonMode::AbsoluteDifference));
 }

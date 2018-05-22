@@ -383,15 +383,15 @@ TEST_F(JitOperationsTest, JitHash) {
 TEST_F(JitOperationsTest, JitAggregateEquals) {
   JitRuntimeContext context;
   context.tuple.resize(3);
-  context.hashmap.values.resize(1);
-  context.hashmap.values[0].resize(2);
+  context.hashmap.columns.resize(1);
+  context.hashmap.columns[0].resize(2);
 
   const JitTupleValue tuple_value_1{DataType::Int, false, 0};
   const JitTupleValue tuple_value_2{DataType::Int, false, 1};
   const JitTupleValue tuple_value_3{DataType::Int, true, 2};
 
   const JitHashmapValue hashmap_value_1{DataType::Int, false, 0};
-  const JitHashmapValue hashmap_value_2{DataType::Int, true, 0};
+  const JitHashmapValue hashmap_second_avg_value{DataType::Int, true, 0};
 
   const auto value = static_cast<int32_t>(std::rand());
   tuple_value_1.set<int32_t>(value, context);
@@ -399,7 +399,7 @@ TEST_F(JitOperationsTest, JitAggregateEquals) {
   tuple_value_3.set_is_null(true, context);
 
   hashmap_value_1.set<int32_t>(value, 0, context);
-  hashmap_value_2.set_is_null(true, 1, context);
+  hashmap_second_avg_value.set_is_null(true, 1, context);
 
   // Equal values
   EXPECT_TRUE(jit_aggregate_equals(tuple_value_1, hashmap_value_1, 0, context));
@@ -408,18 +408,18 @@ TEST_F(JitOperationsTest, JitAggregateEquals) {
   EXPECT_FALSE(jit_aggregate_equals(tuple_value_2, hashmap_value_1, 0, context));
 
   // Comparing value to NULL
-  EXPECT_FALSE(jit_aggregate_equals(tuple_value_1, hashmap_value_2, 1, context));
+  EXPECT_FALSE(jit_aggregate_equals(tuple_value_1, hashmap_second_avg_value, 1, context));
   EXPECT_FALSE(jit_aggregate_equals(tuple_value_3, hashmap_value_1, 0, context));
 
   // Comparing NULL to NULL
-  EXPECT_TRUE(jit_aggregate_equals(tuple_value_3, hashmap_value_2, 1, context));
+  EXPECT_TRUE(jit_aggregate_equals(tuple_value_3, hashmap_second_avg_value, 1, context));
 }
 
 TEST_F(JitOperationsTest, JitAssign) {
   JitRuntimeContext context;
   context.tuple.resize(4);
-  context.hashmap.values.resize(1);
-  context.hashmap.values[0].resize(1);
+  context.hashmap.columns.resize(1);
+  context.hashmap.columns[0].resize(1);
 
   // Perform the following test for each Hyrise data type
   const auto typed_test = [&](const DataType data_type, auto value) {
@@ -452,7 +452,7 @@ TEST_F(JitOperationsTest, JitAssign) {
 
 TEST_F(JitOperationsTest, JitGrowByOne) {
   JitRuntimeContext context;
-  context.hashmap.values.resize(5);
+  context.hashmap.columns.resize(5);
 
   // Perform the following test for each Hyrise data type
   const auto typed_test = [&](const DataType data_type, auto value, size_t column_index) {
@@ -460,7 +460,7 @@ TEST_F(JitOperationsTest, JitGrowByOne) {
     JitHashmapValue hashmap_value{data_type, false, column_index};
 
     // The vector should be empty initially
-    EXPECT_EQ(context.hashmap.values[0].get_vector<ValueType>().size(), 0u);
+    EXPECT_EQ(context.hashmap.columns[0].get_vector<ValueType>().size(), 0u);
 
     // Add one of each possible initial values to the vector
     jit_grow_by_one(hashmap_value, JitVariantVector::InitialValue::Zero, context);
@@ -468,10 +468,10 @@ TEST_F(JitOperationsTest, JitGrowByOne) {
     jit_grow_by_one(hashmap_value, JitVariantVector::InitialValue::MinValue, context);
 
     // Check, that the vector contains the correct three values
-    EXPECT_EQ(context.hashmap.values[column_index].get_vector<ValueType>().size(), 3u);
-    EXPECT_EQ(context.hashmap.values[column_index].get_vector<ValueType>()[0], ValueType{});
-    EXPECT_EQ(context.hashmap.values[column_index].get_vector<ValueType>()[1], std::numeric_limits<ValueType>::max());
-    EXPECT_EQ(context.hashmap.values[column_index].get_vector<ValueType>()[2], std::numeric_limits<ValueType>::min());
+    EXPECT_EQ(context.hashmap.columns[column_index].get_vector<ValueType>().size(), 3u);
+    EXPECT_EQ(context.hashmap.columns[column_index].get_vector<ValueType>()[0], ValueType{});
+    EXPECT_EQ(context.hashmap.columns[column_index].get_vector<ValueType>()[1], std::numeric_limits<ValueType>::max());
+    EXPECT_EQ(context.hashmap.columns[column_index].get_vector<ValueType>()[2], std::numeric_limits<ValueType>::min());
   };
 
   typed_test(DataType::Int, int32_t{}, 0);
@@ -484,8 +484,8 @@ TEST_F(JitOperationsTest, JitGrowByOne) {
 TEST_F(JitOperationsTest, JitAggregateCompute) {
   JitRuntimeContext context;
   context.tuple.resize(3);
-  context.hashmap.values.resize(1);
-  context.hashmap.values[0].resize(1);
+  context.hashmap.columns.resize(1);
+  context.hashmap.columns[0].resize(1);
 
   // jit_increment operation
   {

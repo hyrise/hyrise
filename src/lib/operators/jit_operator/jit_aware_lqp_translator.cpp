@@ -93,6 +93,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_node_t
     const auto aggregate_columns = aggregate_node->aggregate_expressions();
 
     // Split the output column names between groupby columns and aggregate expressions.
+    // The AggregateNode::_update_output() function node will always output groupby columns first.
     const auto groupby_column_names = boost::adaptors::slice(column_names, 0, groupby_columns.size());
     const auto aggregate_column_names =
         boost::adaptors::slice(column_names, groupby_columns.size(), column_names.size());
@@ -100,7 +101,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_node_t
     for (const auto& groupby_column : boost::combine(groupby_column_names, groupby_columns)) {
       const auto expression = _try_translate_column_to_jit_expression(groupby_column.get<1>(), *read_tuple, input_node);
       if (!expression) return nullptr;
-      // Create a JitCompute oeprator for each computed groupby column ...
+      // Create a JitCompute operator for each computed groupby column ...
       if (expression->expression_type() != ExpressionType::Column) {
         jit_operator->add_jit_operator(std::make_shared<JitCompute>(expression));
       }
@@ -114,7 +115,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_node_t
       const auto expression = _try_translate_expression_to_jit_expression(
           *aggregate_expression->aggregate_function_arguments()[0], *read_tuple, input_node);
       if (!expression) return nullptr;
-      // Create a JitCompute oeprator for each aggregate expression on a computed value ...
+      // Create a JitCompute operator for each aggregate expression on a computed value ...
       if (expression->expression_type() != ExpressionType::Column) {
         jit_operator->add_jit_operator(std::make_shared<JitCompute>(expression));
       }
@@ -318,7 +319,8 @@ bool JitAwareLQPTranslator::_node_is_jittable(const std::shared_ptr<AbstractLQPN
 
   if (node->type() == LQPNodeType::Predicate) {
     auto predicate_node = std::static_pointer_cast<PredicateNode>(node);
-    return predicate_node->scan_type() == ScanType::TableScan;
+    return predicate_node->scan_type() == ScanType::TableScan &&
+           std::dynamic_pointer_cast<PredicateNode>(node)->predicate_condition() != PredicateCondition::Between;
   }
 
   if (node->type() == LQPNodeType::Projection || node->type() == LQPNodeType::Union) {
