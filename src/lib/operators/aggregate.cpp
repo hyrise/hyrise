@@ -411,6 +411,10 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   for (ColumnID column_id{0}; column_id < _aggregates.size(); ++column_id) {
     const auto& aggregate = _aggregates[column_id];
     if (!aggregate.column && aggregate.function == AggregateFunction::Count) {
+      // SELECT COUNT(*) - we know the template arguments, so we don't need a visitor
+      auto context = std::make_shared<AggregateContext<CountColumnType, CountAggregateType>>();
+      context->results = std::make_shared<std::map<AggregateKey, AggregateResult<CountAggregateType, CountColumnType>>>();
+      _contexts_per_column[column_id] = context;
       continue;
     }
     auto data_type = input_table->column_data_type(*aggregate.column);
@@ -465,20 +469,8 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
          * specific output logic for COUNT(*).
          */
         if (!aggregate.column && aggregate.function == AggregateFunction::Count) {
-          // We know the template arguments, so we don't need a visitor
-          if (!_contexts_per_column[column_index]) {
-            _contexts_per_column[column_index] =
-                std::make_shared<AggregateContext<CountColumnType, CountAggregateType>>();
-          }
-
           auto context = std::static_pointer_cast<AggregateContext<CountColumnType, CountAggregateType>>(
               _contexts_per_column[column_index]);
-
-          if (!context->results) {
-            // create result map for the first time if necessary
-            context->results =
-                std::make_shared<std::map<AggregateKey, AggregateResult<CountAggregateType, CountColumnType>>>();
-          }
 
           auto& results = *context->results;
 
