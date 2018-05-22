@@ -35,14 +35,48 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
     const auto& values = value_column->values();
     const auto alloc = values.get_allocator();
 
-    auto dictionary = pmr_vector<T>{values.cbegin(), values.cend(), alloc};
+    if constexpr (false && std::is_same<T, std::string>::value) {
+      auto dictionary = FixedStringVector{values.cbegin(), values.cend(), 111};
+      auto encoded_attribute_vector = _encode_dictionary(dictionary, value_column);
 
-    if constexpr (std::is_same<T, std::string>::value) {
-      auto dictionary2 = FixedStringVector{values.cbegin(), values.cend(), 111};
-      _test123(dictionary2);
-      std::cout << dictionary2.size() << std::endl;
+      auto dictionary_sptr = std::allocate_shared<FixedStringVector>(alloc, std::move(dictionary));
+      auto attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(encoded_attribute_vector));
+      return std::allocate_shared<FixedStringColumn<std::string>>(alloc, dictionary_sptr, attribute_vector_sptr,
+                                                                  ValueID{static_cast<uint32_t>(dictionary.size())});
     } else {
-      _test123(dictionary);
+      std::cout << " " << std::endl;
+      auto dictionary = pmr_vector<T>{values.cbegin(), values.cend(), alloc};
+      auto encoded_attribute_vector = _encode_dictionary(dictionary, value_column);
+      const auto null_value_id = static_cast<uint32_t>(dictionary.size());
+
+      std::cout << "dictionary size: " << dictionary.size() << std::endl;
+      for (const auto& d : dictionary) {
+        std::cout << d << std::endl;
+      }
+
+      auto dictionary_sptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(dictionary));
+      auto attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(encoded_attribute_vector));
+      return std::allocate_shared<DictionaryColumn<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
+                                                       ValueID{null_value_id});
+    }
+  }
+
+ private:
+  template <typename U, typename T>
+  static ValueID _get_value_id(const U& dictionary, const T& value) {
+    return static_cast<ValueID>(
+        std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
+  }
+
+  template <typename U, typename T>
+  std::unique_ptr<const BaseCompressedVector> _encode_dictionary(
+      U& dictionary, const std::shared_ptr<const ValueColumn<T>>& value_column) {
+    const auto& values = value_column->values();
+    const auto alloc = values.get_allocator();
+
+    std::cout << "values:" << std::endl;
+    for (const auto& v : values) {
+      std::cout << v << std::endl;
     }
 
     // Remove null values from value vector
@@ -97,28 +131,15 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder> {
       }
     }
 
+    std::cout << "attribute_vector:" << std::endl;
+    for (const auto& v : attribute_vector) {
+      std::cout << v << std::endl;
+    }
+
     // We need to increment the dictionary size here because of possible null values.
     const auto max_value = dictionary.size() + 1u;
 
-    auto encoded_attribute_vector = compress_vector(attribute_vector, vector_compression_type(), alloc, {max_value});
-
-    auto dictionary_sptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(dictionary));
-    auto attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(encoded_attribute_vector));
-    return std::allocate_shared<DictionaryColumn<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
-                                                     ValueID{null_value_id});
-  }
-
- private:
-  template <typename T>
-  static ValueID _get_value_id(const pmr_vector<T>& dictionary, const T& value) {
-    return static_cast<ValueID>(
-        std::distance(dictionary.cbegin(), std::lower_bound(dictionary.cbegin(), dictionary.cend(), value)));
-  }
-
-  template <typename U>
-  void _test123(const U& dictionary) {
-    std::cout << "hi" << std::endl;
-    std::cout << dictionary.size() << std::endl;
+    return compress_vector(attribute_vector, vector_compression_type(), alloc, {max_value});
   }
 };
 
