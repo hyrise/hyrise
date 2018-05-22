@@ -726,7 +726,16 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
   }
 
   // write aggregated values into the column
-  _write_aggregate_values<ColumnType, decltype(aggregate_type), function>(col, context->results);
+  if (!context->results->empty()) {
+    _write_aggregate_values<ColumnType, decltype(aggregate_type), function>(col, context->results);
+  } else if (_groupby_columns.empty()) {
+    // If we did not GROUP BY anything and we have no results, we need to add NULL for most aggregates and 0 for count
+    col->values().push_back(decltype(aggregate_type){});
+    if (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct) {
+      col->null_values().push_back(true);
+    }
+  }
+
   _output_columns.push_back(col);
 }
 
