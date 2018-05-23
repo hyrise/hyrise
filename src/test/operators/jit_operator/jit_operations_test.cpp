@@ -393,7 +393,7 @@ TEST_F(JitOperationsTest, JitAggregateEquals) {
   const JitHashmapValue hashmap_value_1{DataType::Int, false, 0};
   const JitHashmapValue hashmap_count_for_avg{DataType::Int, true, 0};
 
-  const auto value = static_cast<int32_t>(std::rand());
+  const auto value = static_cast<int32_t>(std::rand() % 1000);
   tuple_value_1.set<int32_t>(value, context);
   tuple_value_2.set<int32_t>(value + 1, context);
   tuple_value_3.set_is_null(true, context);
