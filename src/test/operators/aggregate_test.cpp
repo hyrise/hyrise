@@ -498,9 +498,6 @@ TEST_F(OperatorsAggregateTest, TwoAggregateEmptyTableGrouped) {
                     1);
 }
 
-// (debug)> SELECT COUNT(a) FROM a WHERE a>1000000
-// (debug)> SELECT COUNT(*) FROM a WHERE a>1000000
-
 /**
  * Tests for ReferenceColumns
  */

@@ -319,7 +319,7 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const
 std::shared_ptr<const Table> Aggregate::_on_execute() {
   auto input_table = input_table_left();
 
-  for (const auto groupby_column_id : _groupby_column_ids) {
+  for ([[maybe_unused]] const auto groupby_column_id : _groupby_column_ids) {
     DebugAssert(groupby_column_id < input_table->column_count(), "GroupBy column index out of bounds");
   }
 
