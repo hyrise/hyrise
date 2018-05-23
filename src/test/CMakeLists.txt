@@ -191,9 +191,11 @@ if (${ENABLE_JIT_SUPPORT})
         ${RESOLVE_CONDITION_TEST_MODULE}
         operators/jit_operator_wrapper_test.cpp
         operators/jit_operator/jit_aware_lqp_translator_test.cpp
+        operators/jit_operator/jit_hashmap_value_test.cpp
         operators/jit_operator/jit_operations_test.cpp
         operators/jit_operator/jit_tuple_value_test.cpp
         operators/jit_operator/jit_variant_vector_test.cpp
+        operators/jit_operator/operators/jit_aggregate_test.cpp
         operators/jit_operator/operators/jit_compute_test.cpp
         operators/jit_operator/operators/jit_expression_test.cpp
         operators/jit_operator/operators/jit_filter_test.cpp

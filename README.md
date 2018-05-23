@@ -100,6 +100,7 @@ Contact: firstname.lastname@hpi.de
 -	Moritz   Eyssen
 -	Martin   Fischer
 -	Pedro    Flemming
+-	Johannes Frohnhofen
 -	Sven     Ihde
 -	Michael  Janke
 -	Max      Jendruk

@@ -1,5 +1,7 @@
 #include "jit_operator_wrapper.hpp"
 
+#include "operators/jit_operator/operators/jit_aggregate.hpp"
+
 namespace opossum {
 
 JitOperatorWrapper::JitOperatorWrapper(const std::shared_ptr<const AbstractOperator> left,
@@ -23,7 +25,9 @@ const std::string JitOperatorWrapper::description(DescriptionMode description_mo
 
 void JitOperatorWrapper::add_jit_operator(const std::shared_ptr<AbstractJittable>& op) { _jit_operators.push_back(op); }
 
-std::vector<std::shared_ptr<AbstractJittable>>& JitOperatorWrapper::jit_operators() { return _jit_operators; }
+const std::vector<std::shared_ptr<AbstractJittable>>& JitOperatorWrapper::jit_operators() const {
+  return _jit_operators;
+}
 
 const std::shared_ptr<JitReadTuples> JitOperatorWrapper::_source() const {
   return std::dynamic_pointer_cast<JitReadTuples>(_jit_operators.front());
@@ -51,12 +55,15 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
   }
 
   std::function<void(const JitReadTuples*, JitRuntimeContext&)> execute_func;
+  // We want to perform two specialization passes if the operator chain contains a JitAggregate operator, since the
+  // JitAggregate operator contains multiple loops that need unrolling.
+  auto two_specialization_passes = static_cast<bool>(std::dynamic_pointer_cast<JitAggregate>(_sink()));
   switch (_execution_mode) {
     case JitExecutionMode::Compile:
       // this corresponds to "opossum::JitReadTuples::execute(opossum::JitRuntimeContext&) const"
       execute_func = _module.specialize_and_compile_function<void(const JitReadTuples*, JitRuntimeContext&)>(
           "_ZNK7opossum13JitReadTuples7executeERNS_17JitRuntimeContextE",
-          std::make_shared<JitConstantRuntimePointer>(_source().get()), false);
+          std::make_shared<JitConstantRuntimePointer>(_source().get()), two_specialization_passes);
       break;
     case JitExecutionMode::Interpret:
       execute_func = &JitReadTuples::execute;
