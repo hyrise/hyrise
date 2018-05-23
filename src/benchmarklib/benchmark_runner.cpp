@@ -1,13 +1,5 @@
 #include <random>
 
-#if __has_include(<filesystem>)
-#include <filesystem>
-namespace fs = std::filesystem;
-#else
-#include <experimental/filesystem>
-#endif
-namespace fs = std::experimental::filesystem;
-
 #include <json.hpp>
 #include <storage/chunk_encoder.hpp>
 
@@ -21,6 +13,7 @@ namespace fs = std::experimental::filesystem;
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_db_generator.hpp"
 #include "tpch/tpch_queries.hpp"
+#include "utils/filesystem.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
@@ -174,53 +167,21 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
   stream << std::setw(2) << report << std::endl;
 }
 
-BenchmarkRunner BenchmarkRunner::create_tpch(const BenchmarkConfig& config, const std::vector<QueryID>& query_ids,
-                                             float scale_factor) {
-  NamedQueries queries;
-  queries.reserve(query_ids.size());
-
-  for (const auto query_id : query_ids) {
-    queries.emplace_back("TPC-H " + std::to_string(query_id), tpch_queries.at(query_id));
-  }
-
-  config.out << "- Generating TPCH Tables with scale_factor=" << scale_factor << "..." << std::endl;
-
-  ColumnEncodingSpec encoding_spec{config.encoding_type};
-  const auto tables = TpchDbGenerator(scale_factor, config.chunk_size).generate();
-
-  for (auto& table : tables) {
-    if (config.encoding_type != EncodingType::Unencoded) {
-      ChunkEncoder::encode_all_chunks(table.second, encoding_spec);
-    }
-
-    StorageManager::get().add_table(tpch_table_names.at(table.first), table.second);
-  }
-  config.out << "- Done." << std::endl;
-
-  auto context = _create_context(config);
-  // Add TPCH-specific information
-  context.emplace("scale_factor", scale_factor);
-
-  return BenchmarkRunner(config, queries, context);
-}
-
 BenchmarkRunner BenchmarkRunner::create(const BenchmarkConfig& config, const std::string& table_path,
                                         const std::string& query_path) {
   const auto tables = _read_table_folder(table_path);
-  if (tables.empty()) {
-    throw std::runtime_error("No tables found in '" + table_path + "'");
-  }
+  Assert(!tables.empty(), "No tables found in '" + table_path + "'");
 
   ColumnEncodingSpec encoding_spec{config.encoding_type};
 
-  for (const auto& table_str : tables) {
-    const auto table_name = fs::path{table_str}.stem().string();
+  for (const auto& table_path_str : tables) {
+    const auto table_name = filesystem::path{table_path_str}.stem().string();
 
     std::shared_ptr<Table> table;
-    if (boost::algorithm::ends_with(table_str, ".tbl")) {
-      table = load_table(table_str, config.chunk_size);
+    if (boost::algorithm::ends_with(table_path_str, ".tbl")) {
+      table = load_table(table_path_str, config.chunk_size);
     } else {
-      table = CsvParser{}.parse(table_str);
+      table = CsvParser{}.parse(table_path_str);
     }
 
     if (config.encoding_type != EncodingType::Unencoded) {
@@ -240,27 +201,22 @@ std::vector<std::string> BenchmarkRunner::_read_table_folder(const std::string& 
     return (boost::algorithm::ends_with(filename, ".csv") || boost::algorithm::ends_with(filename, ".tbl"));
   };
 
-  fs::path path{table_path};
-  if (!fs::exists(path)) {
-    throw std::runtime_error("No such file or directory '" + table_path + "'");
-  }
+  filesystem::path path{table_path};
+  Assert(filesystem::exists(path), "No such file or directory '" + table_path + "'");
 
   std::vector<std::string> tables;
 
   // If only one file was specified, add it and return
-  if (fs::is_regular_file(path)) {
-    if (is_table_file(table_path)) {
-      tables.push_back(table_path);
-      return tables;
-    } else {
-      throw std::runtime_error("Specified file '" + table_path + "' is not a .csv or .tbl file");
-    }
+  if (filesystem::is_regular_file(path)) {
+    Assert(is_table_file(table_path), "Specified file '" + table_path + "' is not a .csv or .tbl file");
+    tables.push_back(table_path);
+    return tables;
   }
 
   // Recursively walk through the specified directory and add all files on the way
-  for (const auto& entry : fs::recursive_directory_iterator(path)) {
+  for (const auto& entry : filesystem::recursive_directory_iterator(path)) {
     const auto filename = entry.path().string();
-    if (fs::is_regular_file(entry) && is_table_file(filename)) {
+    if (filesystem::is_regular_file(entry) && is_table_file(filename)) {
       tables.push_back(filename);
     }
   }
@@ -271,24 +227,19 @@ std::vector<std::string> BenchmarkRunner::_read_table_folder(const std::string& 
 NamedQueries BenchmarkRunner::_read_query_folder(const std::string& query_path) {
   const auto is_sql_file = [](const std::string& filename) { return boost::algorithm::ends_with(filename, ".sql"); };
 
-  fs::path path{query_path};
-  if (!fs::exists(path)) {
-    throw std::runtime_error("No such file or directory '" + query_path + "'");
-  }
+  filesystem::path path{query_path};
+  Assert(filesystem::exists(path), "No such file or directory '" + query_path + "'");
 
-  if (fs::is_regular_file(path)) {
-    if (is_sql_file(query_path)) {
-      return _parse_query_file(query_path);
-    } else {
-      throw std::runtime_error("Specified file '" + query_path + "' is not an .sql file");
-    }
+  if (filesystem::is_regular_file(path)) {
+    Assert(is_sql_file(query_path), "Specified file '" + query_path + "' is not an .sql file");
+    return _parse_query_file(query_path);
   }
 
   // Recursively walk through the specified directory and add all files on the way
   NamedQueries queries;
-  for (const auto& entry : fs::recursive_directory_iterator(path)) {
+  for (const auto& entry : filesystem::recursive_directory_iterator(path)) {
     const auto filename = entry.path().string();
-    if (fs::is_regular_file(entry) && is_sql_file(filename)) {
+    if (filesystem::is_regular_file(entry) && is_sql_file(filename)) {
       const auto file_queries = _parse_query_file(filename);
       queries.insert(queries.end(), file_queries.begin(), file_queries.end());
     }
@@ -301,7 +252,7 @@ NamedQueries BenchmarkRunner::_parse_query_file(const std::string& query_path) {
   auto query_id = 0u;
 
   std::ifstream file(query_path);
-  const auto filename = fs::path{query_path}.stem().string();
+  const auto filename = filesystem::path{query_path}.stem().string();
 
   NamedQueries queries;
   std::string query;

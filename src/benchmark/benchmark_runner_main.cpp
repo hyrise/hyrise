@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
   const bool verbose = cli_parse_result["verbose"].as<bool>();
   auto& out = opossum::get_out_stream(verbose);
 
-  // Check that the options 'queries' and 'tables' were specified
+  // Check that the options 'queries' and 'tables' were specifiedc
   if (cli_parse_result.count("queries") == 0 || cli_parse_result.count("tables") == 0) {
     std::cerr << "Need to specify --queries=path/to/queries and --tables=path/to/tables" << std::endl;
     std::cerr << cli_options.help({}) << std::endl;

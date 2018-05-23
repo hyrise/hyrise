@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <random>
+#include <storage/storage_manager.hpp>
 #include <string>
 
 #include "SQLParser.h"
@@ -73,6 +74,33 @@ int main(int argc, char* argv[]) {
 
   const auto scale_factor = cli_parse_result["scale"].as<float>();
 
+  // Set up TPCH benchmark
+  opossum::NamedQueries queries;
+  queries.reserve(query_ids.size());
+
+  for (const auto query_id : query_ids) {
+    queries.emplace_back("TPC-H " + std::to_string(query_id), opossum::tpch_queries.at(query_id));
+  }
+
+  config.out << "- Generating TPCH Tables with scale_factor=" << scale_factor << "..." << std::endl;
+
+  opossum::ColumnEncodingSpec encoding_spec{config.encoding_type};
+  const auto tables = opossum::TpchDbGenerator(scale_factor, config.chunk_size).generate();
+
+  for (auto& table : tables) {
+    if (config.encoding_type != opossum::EncodingType::Unencoded) {
+      opossum::ChunkEncoder::encode_all_chunks(table.second, encoding_spec);
+    }
+
+    opossum::StorageManager::get().add_table(tpch_table_names.at(table.first), table.second);
+  }
+  config.out << "- Done." << std::endl;
+
+  auto context = _create_context(config);
+
+  // Add TPCH-specific information
+  context.emplace("scale_factor", scale_factor);
+
   // Run the benchmark
-  opossum::BenchmarkRunner::create_tpch(config, query_ids, scale_factor).run();
+  opossum::BenchmarkRunner(config, queries, context).run();
 }

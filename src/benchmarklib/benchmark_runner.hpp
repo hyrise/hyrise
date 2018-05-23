@@ -19,20 +19,18 @@ namespace opossum {
 
 class BenchmarkRunner {
  public:
-  static BenchmarkRunner create_tpch(const BenchmarkConfig& config, const std::vector<QueryID>& query_ids = {},
-                                     float scale_factor = 1.0f);
+  BenchmarkRunner(const BenchmarkConfig& config, const NamedQueries& queries, const nlohmann::json& context);
+
   static BenchmarkRunner create(const BenchmarkConfig& config, const std::string& table_path,
                                 const std::string& query_path);
 
   void run();
-
   static BenchmarkConfig parse_default_cli_options(const cxxopts::ParseResult& parse_result,
                                                    const cxxopts::Options& cli_options);
+
   static cxxopts::Options get_default_cli_options(const std::string& benchmark_name);
 
  private:
-  BenchmarkRunner(const BenchmarkConfig& config, const NamedQueries& queries, const nlohmann::json& context);
-
   // Run benchmark in BenchmarkMode::PermutedQuerySets mode
   void _benchmark_permuted_query_sets();
 
