@@ -2,7 +2,6 @@
 #include <fstream>
 #include <iostream>
 #include <random>
-#include <storage/storage_manager.hpp>
 #include <string>
 
 #include "SQLParser.h"
@@ -17,6 +16,8 @@
 #include "scheduler/topology.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "storage/chunk_encoder.hpp"
+#include "storage/storage_manager.hpp"
 #include "tpch/tpch_db_generator.hpp"
 #include "tpch/tpch_queries.hpp"
 
@@ -92,11 +93,11 @@ int main(int argc, char* argv[]) {
       opossum::ChunkEncoder::encode_all_chunks(table.second, encoding_spec);
     }
 
-    opossum::StorageManager::get().add_table(tpch_table_names.at(table.first), table.second);
+    opossum::StorageManager::get().add_table(opossum::tpch_table_names.at(table.first), table.second);
   }
   config.out << "- Done." << std::endl;
 
-  auto context = _create_context(config);
+  auto context = opossum::BenchmarkRunner::create_context(config);
 
   // Add TPCH-specific information
   context.emplace("scale_factor", scale_factor);

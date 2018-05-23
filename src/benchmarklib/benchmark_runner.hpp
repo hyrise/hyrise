@@ -30,6 +30,8 @@ class BenchmarkRunner {
 
   static cxxopts::Options get_default_cli_options(const std::string& benchmark_name);
 
+  static nlohmann::json create_context(const BenchmarkConfig& config);
+
  private:
   // Run benchmark in BenchmarkMode::PermutedQuerySets mode
   void _benchmark_permuted_query_sets();
@@ -38,16 +40,14 @@ class BenchmarkRunner {
   void _benchmark_individual_queries();
 
   void _execute_query(const NamedQuery& named_query);
-
   // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json
   void _create_report(std::ostream& stream) const;
-  // Get all the files/tables/queries from a given path
 
+  // Get all the files/tables/queries from a given path
   static std::vector<std::string> _read_table_folder(const std::string& table_path);
   static NamedQueries _read_query_folder(const std::string& query_path);
-  static NamedQueries _parse_query_file(const std::string& query_path);
 
-  static nlohmann::json _create_context(const BenchmarkConfig& config);
+  static NamedQueries _parse_query_file(const std::string& query_path);
 
   struct QueryPlans final {
     // std::vector<>s, since queries can contain multiple statements

@@ -1,7 +1,6 @@
-#include <random>
-
 #include <json.hpp>
-#include <storage/chunk_encoder.hpp>
+
+#include <random>
 
 #include "benchmark_runner.hpp"
 #include "constant_mappings.hpp"
@@ -10,6 +9,7 @@
 #include "planviz/sql_query_plan_visualizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_db_generator.hpp"
 #include "tpch/tpch_queries.hpp"
@@ -193,7 +193,7 @@ BenchmarkRunner BenchmarkRunner::create(const BenchmarkConfig& config, const std
   }
 
   const auto queries = _read_query_folder(query_path);
-  return BenchmarkRunner(config, queries, _create_context(config));
+  return BenchmarkRunner(config, queries, create_context(config));
 }
 
 std::vector<std::string> BenchmarkRunner::_read_table_folder(const std::string& table_path) {
@@ -387,7 +387,7 @@ BenchmarkConfig BenchmarkRunner::parse_default_cli_options(const cxxopts::ParseR
       benchmark_mode, verbose,          chunk_size,       encoding_type,        max_runs, timeout_duration,
       use_mvcc,       output_file_path, enable_scheduler, enable_visualization, out};
 }
-nlohmann::json BenchmarkRunner::_create_context(const BenchmarkConfig& config) {
+nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   // Generate YY-MM-DD hh:mm::ss
   auto current_time = std::time(nullptr);
   auto local_time = *std::localtime(&current_time);
