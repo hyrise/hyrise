@@ -814,6 +814,8 @@ char* Console::command_generator_tpcc(const char* text, int state) {
 
 bool Console::_handle_rollback() {
   auto failed_pipeline = _sql_pipeline->failed_pipeline_statement();
+  if (!_sql_pipeline->failed_pipeline_statement()) return false;
+
   if (failed_pipeline->transaction_context() && failed_pipeline->transaction_context()->aborted()) {
     out("The transaction has been rolled back.\n");
     _explicitly_created_transaction_context = nullptr;
