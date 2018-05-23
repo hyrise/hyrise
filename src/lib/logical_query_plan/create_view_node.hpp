@@ -18,6 +18,8 @@ class CreateViewNode : public AbstractLQPNode {
   std::string view_name() const;
   std::shared_ptr<const AbstractLQPNode> lqp() const;
 
+  virtual ~CreateViewNode() = default;
+
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl() const override;
   const std::string _view_name;

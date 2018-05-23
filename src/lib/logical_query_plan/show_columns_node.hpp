@@ -17,6 +17,8 @@ class ShowColumnsNode : public AbstractLQPNode {
 
   const std::string& table_name() const;
 
+  virtual ~ShowColumnsNode() = default;
+
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl() const override;
 

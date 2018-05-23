@@ -39,6 +39,8 @@ struct ColumnID;
  * should be rare anyway.
  */
 class JoinDetectionRule : public AbstractRule {
+ public:
+  virtual ~JoinDetectionRule() = default;
  protected:
   std::string name() const override;
 

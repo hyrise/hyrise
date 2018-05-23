@@ -17,6 +17,8 @@ class LimitNode : public AbstractLQPNode {
 
   size_t num_rows() const;
 
+  virtual ~LimitNode() = default;
+
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl() const override;
 

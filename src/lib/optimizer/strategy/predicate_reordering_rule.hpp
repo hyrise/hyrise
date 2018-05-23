@@ -28,6 +28,8 @@ class PredicateReorderingRule : public AbstractRule {
   std::string name() const override;
   bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) override;
 
+  virtual ~PredicateReorderingRule() = default;
+
  private:
   bool _reorder_predicates(std::vector<std::shared_ptr<PredicateNode>>& predicates) const;
 };

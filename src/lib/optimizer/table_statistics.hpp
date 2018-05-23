@@ -45,6 +45,7 @@ class Table;
  */
 class TableStatistics : public std::enable_shared_from_this<TableStatistics> {
  public:
+  virtual ~TableStatistics() = default;
   /**
    * Creates a table statistics from a table.
    * This should only be done by the storage manager when adding a table to storage manager.

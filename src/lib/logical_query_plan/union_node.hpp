@@ -33,6 +33,8 @@ class UnionNode : public AbstractLQPNode {
 
   std::vector<ColumnID> get_output_column_ids_for_table(const std::string& table_name) const override;
 
+  virtual ~UnionNode() = default;
+
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl() const override;
 

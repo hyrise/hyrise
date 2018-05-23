@@ -37,6 +37,8 @@ class PredicateNode : public AbstractLQPNode {
       const std::shared_ptr<AbstractLQPNode>& left_child,
       const std::shared_ptr<AbstractLQPNode>& right_child = nullptr) const override;
 
+  virtual ~PredicateNode() = default;
+
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl() const override;
 

@@ -19,6 +19,8 @@ class DropViewNode : public AbstractLQPNode {
 
   const std::string& view_name() const;
 
+  virtual ~DropViewNode() = default;
+
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl() const override;
   const std::string _view_name;

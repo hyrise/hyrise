@@ -30,6 +30,8 @@ class SortNode : public AbstractLQPNode {
 
   const std::vector<OrderByDefinition>& order_by_definitions() const;
 
+  virtual ~SortNode() = default;
+
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl() const override;
 

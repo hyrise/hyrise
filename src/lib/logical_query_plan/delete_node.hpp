@@ -19,6 +19,8 @@ class DeleteNode : public AbstractLQPNode {
 
   const std::string& table_name() const;
 
+  virtual ~DeleteNode() = default;
+
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl() const override;
   const std::string _table_name;

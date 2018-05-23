@@ -34,6 +34,8 @@ class AggregateNode : public AbstractLQPNode {
   std::optional<ColumnID> find_column_id_by_named_column_reference(
       const NamedColumnReference& named_column_reference) const override;
 
+  virtual ~AggregateNode() = default;
+
   // @{
   /**
    * AggregateNode::find_column_id_for_expression() looks for the @param expression in the columns this

@@ -15,6 +15,8 @@ class ValidateNode : public AbstractLQPNode {
 
   std::string description() const override;
 
+  virtual ~ValidateNode() = default;
+
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl() const override;
 };

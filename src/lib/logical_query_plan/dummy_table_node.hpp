@@ -20,6 +20,8 @@ class DummyTableNode : public AbstractLQPNode {
 
   const std::vector<std::string>& output_column_names() const override;
 
+  virtual ~DummyTableNode() = default;
+
  protected:
   std::shared_ptr<AbstractLQPNode> _deep_copy_impl() const override;
   std::vector<std::string> _output_column_names;

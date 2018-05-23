@@ -21,6 +21,7 @@ namespace opossum {
 class ColumnCompressorBase {
  public:
   virtual std::shared_ptr<BaseColumn> compress_column(const std::shared_ptr<BaseColumn>& column) = 0;
+  virtual ~ColumnCompressorBase() = default;
 
  protected:
   static std::shared_ptr<BaseAttributeVector> _create_fitted_attribute_vector(size_t unique_values_count, size_t size) {
@@ -37,6 +38,7 @@ class ColumnCompressorBase {
 template <typename T>
 class ColumnCompressor : public ColumnCompressorBase {
  public:
+  virtual ~ColumnCompressor() = default;
   std::shared_ptr<BaseColumn> compress_column(const std::shared_ptr<BaseColumn>& column) override {
     auto value_column = std::dynamic_pointer_cast<const ValueColumn<T>>(column);
 
