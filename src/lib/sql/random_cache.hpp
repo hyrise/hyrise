@@ -82,9 +82,8 @@ class RandomCache : public AbstractCache<Key, Value> {
   void resize(size_t capacity) {
     if (_list.size() > capacity) {
       for (size_t difference = 0; difference < _list.size() - capacity; ++difference) {
-        size_t index = _list.size() - 1;
-        _map.erase(_list[index].first);
-        _list.erase(_list.cbegin() + index);
+        _map.erase(_list[difference].first);
+        _list.erase(_list.cbegin() + difference);
       }
     }
 
