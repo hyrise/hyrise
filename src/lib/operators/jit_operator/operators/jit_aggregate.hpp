@@ -7,7 +7,7 @@ namespace opossum {
 // Represents an aggregate expression computed by the operator.
 // The tuple_value provides the values that are to be aggregated.
 // The resulting aggregates for each group of tuples are stored in the hashmap_value.
-// The optional hashmap_second_avg_value is used for computing averages. In this case the aggregate operator computes
+// The optional hashmap_count_for_avg is used for computing averages. In this case the aggregate operator computes
 // two aggregates (a SUM and a COUNT) and divides the two in a post-processing step.
 // Each aggregate and groupby column stores its position in the output table. This allows the operator to maintain
 // arbitrary orders of groupby and aggregate columns.
@@ -17,7 +17,7 @@ struct JitAggregateColumn {
   AggregateFunction function;
   JitTupleValue tuple_value;
   JitHashmapValue hashmap_value;
-  std::optional<JitHashmapValue> hashmap_second_avg_value = std::nullopt;
+  std::optional<JitHashmapValue> hashmap_count_for_avg = std::nullopt;
 };
 
 // Represents a column that is used as a GROUP BY column.
@@ -59,7 +59,7 @@ class JitAggregate : public AbstractJittableSink {
   std::string description() const final;
 
   // Creates the output table with appropriate column definitions
-  std::shared_ptr<Table> create_output_table(const ChunkOffset max_chunk_size) const final;
+  std::shared_ptr<Table> create_output_table(const ChunkOffset input_table_chunk_size) const final;
 
   // Is called by the JitOperatorWrapper before any tuple is consumed.
   // This is used to initialize the internal hashmap data structure to the correct size.

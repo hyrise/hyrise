@@ -391,7 +391,7 @@ TEST_F(JitOperationsTest, JitAggregateEquals) {
   const JitTupleValue tuple_value_3{DataType::Int, true, 2};
 
   const JitHashmapValue hashmap_value_1{DataType::Int, false, 0};
-  const JitHashmapValue hashmap_second_avg_value{DataType::Int, true, 0};
+  const JitHashmapValue hashmap_count_for_avg{DataType::Int, true, 0};
 
   const auto value = static_cast<int32_t>(std::rand());
   tuple_value_1.set<int32_t>(value, context);
@@ -399,7 +399,7 @@ TEST_F(JitOperationsTest, JitAggregateEquals) {
   tuple_value_3.set_is_null(true, context);
 
   hashmap_value_1.set<int32_t>(value, 0, context);
-  hashmap_second_avg_value.set_is_null(true, 1, context);
+  hashmap_count_for_avg.set_is_null(true, 1, context);
 
   // Equal values
   EXPECT_TRUE(jit_aggregate_equals(tuple_value_1, hashmap_value_1, 0, context));
@@ -408,11 +408,11 @@ TEST_F(JitOperationsTest, JitAggregateEquals) {
   EXPECT_FALSE(jit_aggregate_equals(tuple_value_2, hashmap_value_1, 0, context));
 
   // Comparing value to NULL
-  EXPECT_FALSE(jit_aggregate_equals(tuple_value_1, hashmap_second_avg_value, 1, context));
+  EXPECT_FALSE(jit_aggregate_equals(tuple_value_1, hashmap_count_for_avg, 1, context));
   EXPECT_FALSE(jit_aggregate_equals(tuple_value_3, hashmap_value_1, 0, context));
 
   // Comparing NULL to NULL
-  EXPECT_TRUE(jit_aggregate_equals(tuple_value_3, hashmap_second_avg_value, 1, context));
+  EXPECT_TRUE(jit_aggregate_equals(tuple_value_3, hashmap_count_for_avg, 1, context));
 }
 
 TEST_F(JitOperationsTest, JitAssign) {

@@ -21,7 +21,7 @@ std::string JitAggregate::description() const {
   return desc.str();
 }
 
-std::shared_ptr<Table> JitAggregate::create_output_table(const ChunkOffset max_chunk_size) const {
+std::shared_ptr<Table> JitAggregate::create_output_table(const ChunkOffset input_table_chunk_size) const {
   auto num_columns = _aggregate_columns.size() + _groupby_columns.size();
   TableColumnDefinitions column_definitions(num_columns);
 
@@ -35,14 +35,14 @@ std::shared_ptr<Table> JitAggregate::create_output_table(const ChunkOffset max_c
   // Add each aggregate to the output table
   for (const auto& column : _aggregate_columns) {
     // Computed averages are always of type double. The hashmap_value, however, is used to compute a SUM aggregate
-    // (that is lated used to produce averages in a post-processing step) and may thus have a different data type.
+    // (that is later used to produce averages in a post-processing step) and may thus have a different data type.
     const auto data_type =
         column.function == AggregateFunction::Avg ? DataType::Double : column.hashmap_value.data_type();
     const auto is_nullable = column.hashmap_value.is_nullable();
     column_definitions[column.position_in_table] = {column.column_name, data_type, is_nullable};
   }
 
-  return std::make_shared<Table>(column_definitions, TableType::Data, Chunk::MAX_SIZE);
+  return std::make_shared<Table>(column_definitions, TableType::Data);
 }
 
 void JitAggregate::before_query(Table& out_table, JitRuntimeContext& context) const {
@@ -131,10 +131,10 @@ void JitAggregate::after_query(Table& out_table, JitRuntimeContext& context) con
         using ColumnDataType = typename decltype(type)::type;
 
         // First get the vectors for both internal aggregates (SUM and COUNT).
-        DebugAssert(column.hashmap_second_avg_value, "Invalid avg aggregate column.");
+        DebugAssert(column.hashmap_count_for_avg, "Invalid avg aggregate column.");
         auto sum_column_index = column.hashmap_value.column_index();
         auto& sum_values = context.hashmap.columns[sum_column_index].template get_vector<ColumnDataType>();
-        auto count_column_index = column.hashmap_second_avg_value.value().column_index();
+        auto count_column_index = column.hashmap_count_for_avg.value().column_index();
         auto& count_values = context.hashmap.columns[count_column_index].get_vector<int64_t>();
 
         // Then compute the averages.
@@ -282,8 +282,8 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
         case AggregateFunction::Avg:
           row_index =
               jit_grow_by_one(_aggregate_columns[i].hashmap_value, JitVariantVector::InitialValue::Zero, context);
-          DebugAssert(_aggregate_columns[i].hashmap_second_avg_value, "Invalid avg aggregate column.");
-          jit_grow_by_one(_aggregate_columns[i].hashmap_second_avg_value.value(), JitVariantVector::InitialValue::Zero,
+          DebugAssert(_aggregate_columns[i].hashmap_count_for_avg, "Invalid avg aggregate column.");
+          jit_grow_by_one(_aggregate_columns[i].hashmap_count_for_avg.value(), JitVariantVector::InitialValue::Zero,
                           context);
           break;
         case AggregateFunction::CountDistinct:
@@ -318,9 +318,9 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
         // In case of an average aggregate, the two auxiliary aggregates need to be updated.
         jit_aggregate_compute(jit_addition, _aggregate_columns[i].tuple_value, _aggregate_columns[i].hashmap_value,
                               row_index, context);
-        DebugAssert(_aggregate_columns[i].hashmap_second_avg_value, "Invalid avg aggregate column.");
+        DebugAssert(_aggregate_columns[i].hashmap_count_for_avg, "Invalid avg aggregate column.");
         jit_aggregate_compute(jit_increment, _aggregate_columns[i].tuple_value,
-                              _aggregate_columns[i].hashmap_second_avg_value.value(), row_index, context);
+                              _aggregate_columns[i].hashmap_count_for_avg.value(), row_index, context);
         break;
       case AggregateFunction::CountDistinct:
         Fail("Not supported");

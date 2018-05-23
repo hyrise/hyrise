@@ -43,7 +43,7 @@ TEST_F(JitAggregateTest, AddsGroupByColumnsToOutputTable) {
                                    JitTupleValue(column_definition.data_type, column_definition.nullable, 0));
   }
 
-  auto output_table = _aggregate->create_output_table(1);
+  auto output_table = _aggregate->create_output_table(Chunk::MAX_SIZE);
   EXPECT_EQ(output_table->column_definitions(), column_definitions);
 }
 
@@ -61,7 +61,7 @@ TEST_F(JitAggregateTest, AddsAggregateColumnsToOutputTable) {
   _aggregate->add_aggregate_column("sum", JitTupleValue(DataType::Long, false, 0), AggregateFunction::Sum);
   _aggregate->add_aggregate_column("sum_nullable", JitTupleValue(DataType::Int, true, 0), AggregateFunction::Sum);
 
-  const auto output_table = _aggregate->create_output_table(1);
+  const auto output_table = _aggregate->create_output_table(Chunk::MAX_SIZE);
 
   const auto expected_column_definitions = TableColumnDefinitions({{"count", DataType::Long, false},
                                                                    {"count_nullable", DataType::Long, false},
@@ -103,7 +103,7 @@ TEST_F(JitAggregateTest, MaintainsColumnOrderInOutputTable) {
   _aggregate->add_aggregate_column("c", JitTupleValue(DataType::Long, true, 0), AggregateFunction::Min);
   _aggregate->add_groupby_column("d", JitTupleValue(DataType::Int, true, 0));
 
-  const auto output_table = _aggregate->create_output_table(1);
+  const auto output_table = _aggregate->create_output_table(Chunk::MAX_SIZE);
   const auto expected_column_names = std::vector<std::string>({"a", "b", "c", "d"});
   EXPECT_EQ(output_table->column_names(), expected_column_names);
 }
