@@ -92,6 +92,15 @@ const std::unordered_map<hsql::OperatorType, PredicateCondition> hsql_predicate_
 {hsql::kOpIsNull, PredicateCondition::IsNull}
 };
 
+const std::unordered_map<hsql::DatetimeField, DatetimeComponent> hsql_datetime_field = {
+{hsql::kDatetimeYear, DatetimeComponent::Year},
+{hsql::kDatetimeMonth, DatetimeComponent::Month},
+{hsql::kDatetimeDay, DatetimeComponent::Day},
+{hsql::kDatetimeHour, DatetimeComponent::Hour},
+{hsql::kDatetimeMinute, DatetimeComponent::Minute},
+{hsql::kDatetimeSecond, DatetimeComponent::Second},
+};
+
 JoinMode translate_join_mode(const hsql::JoinType join_type) {
   static const std::unordered_map<const hsql::JoinType, const JoinMode> join_type_to_mode = {
   {hsql::kJoinInner, JoinMode::Inner}, {hsql::kJoinFull, JoinMode::Outer},  {hsql::kJoinLeft, JoinMode::Left},
@@ -935,10 +944,18 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
       return std::make_shared<ValuePlaceholderExpression>(ValuePlaceholder{static_cast<uint16_t>(expr.ival)});
 
     case hsql::kExprFunctionRef: {
-      Assert(expr.exprList, "FunctionRef has no exprList. Bug in sqlparser?");
-
       // convert to upper-case to find mapping
       std::transform(name.begin(), name.end(), name.begin(), [](const auto c) { return std::toupper(c); });
+
+      if (name == "EXTRACT"s) {
+        Assert(expr.datetimeField != hsql::kDatetimeNone, "No DatetimeField specified in EXTRACT. Bug in sqlparser?");
+
+        auto datetime_component = hsql_datetime_field.at(expr.datetimeField);
+        return std::make_shared<ExtractExpression>(datetime_component, left);
+      }
+
+      Assert(expr.exprList, "FunctionRef has no exprList. Bug in sqlparser?");
+
 
       const auto aggregate_iter = aggregate_function_to_string.right.find(name);
       if (aggregate_iter != aggregate_function_to_string.right.end()) {

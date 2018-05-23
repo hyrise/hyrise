@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <unordered_set>
 #include <optional>
 #include <string>
 #include <vector>
@@ -46,22 +47,7 @@ class JoinDetectionRule : public AbstractRule {
   bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) override;
 
  private:
-  struct JoinCondition {
-    std::shared_ptr<PredicateNode> predicate_node;
-    LQPColumnReference left_column_reference;
-    LQPColumnReference right_column_reference;
-  };
-
-  std::optional<JoinCondition> _find_predicate_for_cross_join(const std::shared_ptr<JoinNode>& cross_join);
-
-  /**
-   * Used to check whether a Predicate working on the ColumnIDs left and right could be used as a JoinCondition
-   * of a Cross Product joining tables with left_num_cols and right_num_cols respectively.
-   *
-   * left must be in range of [0, left_num_cols) and right in range [left_num_cols, left_num_cols + right_num_cols)
-   */
-  bool _is_join_condition(LQPColumnReference left, LQPColumnReference right, size_t left_num_cols,
-                          size_t right_num_cols) const;
+  void _traverse(const std::shared_ptr<AbstractLQPNode>& node, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& predicate_nodes);
 };
 
 }  // namespace opossum

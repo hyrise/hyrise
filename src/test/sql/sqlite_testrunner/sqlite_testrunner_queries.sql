@@ -204,4 +204,5 @@ SELECT a + c FROM id_int_int_int_100 WHERE a + c IN (110, 9, 'Hello', 13.345)
 SELECT id FROM mixed WHERE d IN ('hamqiv', 9, 'Hello', 13.345, 'xfkk', 13*13)
 
 -- EXTRACT()
--- SELECT EXTRACT(MONTH FROM date) FROM int_date;
+-- SELECT EXTRACT(DAY FROM '1993-05-01') FROM int_date;
+-- SELECT EXTRACT(MONTH FROM "date") FROM int_date;

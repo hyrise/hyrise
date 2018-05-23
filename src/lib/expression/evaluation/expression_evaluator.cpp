@@ -530,10 +530,15 @@ template<>
 ExpressionResult<std::string> ExpressionEvaluator::evaluate_extract_expression<std::string>(const ExtractExpression& extract_expression) {
   const auto from_result = evaluate_expression<std::string>(*extract_expression.from());
 
-  switch (extract_expression.date_component) {
-    case DateComponent::Year: return evaluate_extract_substr<0, 4>(from_result);
-    case DateComponent::Month: return evaluate_extract_substr<5, 2>(from_result);
-    case DateComponent::Day: return evaluate_extract_substr<8, 2>(from_result);
+  switch (extract_expression.datetime_component) {
+    case DatetimeComponent::Year: return evaluate_extract_substr<0, 4>(from_result);
+    case DatetimeComponent::Month: return evaluate_extract_substr<5, 2>(from_result);
+    case DatetimeComponent::Day: return evaluate_extract_substr<8, 2>(from_result);
+
+    case DatetimeComponent::Hour:
+    case DatetimeComponent::Minute:
+    case DatetimeComponent::Second:
+      Fail("Hour, Minute and Second not available in String Datetimes");
   }
 }
 

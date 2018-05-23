@@ -650,6 +650,17 @@ TEST_F(SQLTranslatorTest, DISABLED_LimitExpression) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, Extract) {
+  const auto actual_lqp = compile_query("SELECT EXTRACT(MONTH FROM '1993-08-01');");
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(extract(DatetimeComponent::Month, "1993-08-01")), DummyTableNode::make());
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 // Test parsing the TPCH queries for a bit of stress testing
 class SQLTranslatorTestTPCH : public ::testing::Test {
  public:

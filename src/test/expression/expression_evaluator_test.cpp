@@ -199,17 +199,17 @@ TEST_F(ExpressionEvaluatorTest, Exists) {
 }
 
 TEST_F(ExpressionEvaluatorTest, Extract) {
-  const auto extract_year_expression = std::make_shared<ExtractExpression>(DateComponent::Year, dates);
+  const auto extract_year_expression = std::make_shared<ExtractExpression>(DatetimeComponent::Year, dates);
   const auto actual_years = boost::get<NonNullableValues<std::string>>(evaluator->evaluate_expression<std::string>(*extract_year_expression));
   const auto expected_years = std::vector<std::string>({"2017", "2014", "2011", "2010"});
   EXPECT_EQ(actual_years, expected_years);
   
-  const auto extract_month_expression = std::make_shared<ExtractExpression>(DateComponent::Month, dates);
+  const auto extract_month_expression = std::make_shared<ExtractExpression>(DatetimeComponent::Month, dates);
   const auto actual_months = boost::get<NonNullableValues<std::string>>(evaluator->evaluate_expression<std::string>(*extract_month_expression));
   const auto expected_months = std::vector<std::string>({"12", "08", "09", "01"});
   EXPECT_EQ(actual_months, expected_months);
   
-  const auto extract_day_expression = std::make_shared<ExtractExpression>(DateComponent::Day, dates);
+  const auto extract_day_expression = std::make_shared<ExtractExpression>(DatetimeComponent::Day, dates);
   const auto actual_days = boost::get<NonNullableValues<std::string>>(evaluator->evaluate_expression<std::string>(*extract_day_expression));
   const auto expected_days = std::vector<std::string>({"06", "05", "03", "02"});
   EXPECT_EQ(actual_days, expected_days);
