@@ -23,9 +23,10 @@ std::shared_ptr<AbstractExpression> LQPSelectExpression::deep_copy() const {
 }
 
 std::string LQPSelectExpression::as_column_name() const {
-  std::stringstream stream;
-  lqp->print(stream);
-  return stream.str();
+//  std::stringstream stream;
+//  lqp->print(stream);
+//  return stream.str();
+  return "SUBSELECT";
 }
 
 DataType LQPSelectExpression::data_type() const {

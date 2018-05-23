@@ -52,6 +52,9 @@ TEST_P(TPCHTest, TPCHQueryTest) {
   const auto sqlite_result_table = _sqlite_wrapper->execute_query(query);
 
   auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline();
+
+  sql_pipeline.get_optimized_logical_plans().at(0)->print();
+
   const auto& result_table = sql_pipeline.get_result_table();
 
   EXPECT_TABLE_EQ(result_table, sqlite_result_table, OrderSensitivity::No, TypeCmpMode::Lenient,

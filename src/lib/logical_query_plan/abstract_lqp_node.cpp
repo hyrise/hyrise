@@ -8,6 +8,8 @@
 #include "utils/print_directed_acyclic_graph.hpp"
 #include "lqp_utils.hpp"
 
+using namespace std::string_literals;
+
 namespace opossum {
 
 AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type) : type(node_type) {}
@@ -147,7 +149,7 @@ std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression
 
 ColumnID AbstractLQPNode::get_column_id(const AbstractExpression &expression) const {
   const auto column_id = find_column_id(expression);
-  Assert(column_id, "Couldn't resolve column");
+  Assert(column_id, "Couldn't resolve column '"s + expression.as_column_name() + "'");
   return *column_id;
 }
 

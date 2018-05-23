@@ -55,7 +55,7 @@ class LQPTranslator final {
 //  std::shared_ptr<AbstractOperator> _translate_create_view_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 //  std::shared_ptr<AbstractOperator> _translate_drop_view_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 
-  static std::shared_ptr<AbstractOperator> _translate_predicate(const AbstractLQPNode& input_node, const std::shared_ptr<AbstractOperator>& input_operator, const AbstractExpression& left, const PredicateCondition predicate_condition, const AbstractExpression& right);
+  static std::shared_ptr<AbstractOperator> _translate_predicate(const AbstractLQPNode& input_node, const std::shared_ptr<AbstractOperator>& input_operator, const AbstractExpression& left_operand, const PredicateCondition predicate_condition, const AbstractExpression& right_operand);
 
   // Cache operator subtrees by LQP node to avoid executing operators below a diamond shape multiple times
   mutable std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractOperator>>

@@ -70,4 +70,57 @@ lqp_find_subplan_mismatch(const std::shared_ptr<AbstractLQPNode>& lhs, const std
   return lqp_find_subplan_mismatch_impl(node_mapping, lhs, rhs);
 }
 
+void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
+                      const std::shared_ptr<AbstractLQPNode>& replacement_node) {
+  DebugAssert(replacement_node->outputs().empty(), "Node can't have outputs");
+  DebugAssert(!replacement_node->left_input() && !replacement_node->right_input(), "Node can't have inputs");
+
+  const auto outputs = original_node->outputs();
+  const auto input_sides = original_node->get_input_sides();
+
+  /**
+   * Tie the replacement_node with this nodes inputs
+   */
+  replacement_node->set_left_input(original_node->left_input());
+  replacement_node->set_right_input(original_node->right_input());
+
+  /**
+   * Tie the replacement_node with this nodes outputs. This will effectively perform clear_outputs() on this node.
+   */
+  for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
+    outputs[output_idx]->set_input(input_sides[output_idx], replacement_node);
+  }
+
+  /**
+   * Untie this node from the LQP
+   */
+  original_node->set_left_input(nullptr);
+  original_node->set_right_input(nullptr);
+}
+
+void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node) {
+  Assert(!node->right_input(), "Can only remove nodes that only have a left input or no inputs");
+
+  /**
+   * Back up outputs and in which input side they hold this node
+   */
+  auto outputs = node->outputs();
+  auto input_sides = node->get_input_sides();
+
+  /**
+   * Hold left_input ptr in extra variable to keep the ref count up and untie it from this node.
+   * left_input might be nullptr
+   */
+  auto left_input = node->left_input();
+  node->set_left_input(nullptr);
+
+  /**
+   * Tie this node's previous outputs with this nodes previous left input
+   * If left_input is nullptr, still call set_input so this node will get untied from the LQP.
+   */
+  for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
+    outputs[output_idx]->set_input(input_sides[output_idx], left_input);
+  }
+}
+
 }  // namespace opossum

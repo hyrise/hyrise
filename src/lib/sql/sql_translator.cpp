@@ -1006,7 +1006,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
       if (predicate_condition_iter != hsql_predicate_condition.end()) {
         const auto predicate_condition = predicate_condition_iter->second;
 
-        if (is_lexicographical_predicate_condition(predicate_condition)) {
+        if (is_binary_predicate_condition(predicate_condition)) {
           Assert(left && right, "Unexpected SQLParserResult. Didn't receive two arguments for binary_expression");
           return std::make_shared<BinaryPredicateExpression>(predicate_condition, left, right);
         } else if (predicate_condition == PredicateCondition::Between) {
@@ -1033,6 +1033,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
           const auto array = std::make_shared<ArrayExpression>(arguments);
           return std::make_shared<InExpression>(left, array);
         }
+        case hsql::kOpLike:
 
         default:
           Fail("Not handling this OperatorType yet");

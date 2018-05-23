@@ -25,5 +25,8 @@ LQPNodeMapping lqp_create_node_mapping(
  */
 std::optional<LQPMismatch> lqp_find_subplan_mismatch(const std::shared_ptr<AbstractLQPNode>& lhs, const std::shared_ptr<AbstractLQPNode>& rhs);
 
+void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node, const std::shared_ptr<AbstractLQPNode>& replacement_node);
+
+void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node);
 
 }  // namespace opossum

@@ -16,6 +16,7 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
+#include "expression/external_expression.hpp"
 #include "expression/between_expression.hpp"
 #include "expression/is_null_expression.hpp"
 #include "expression/expression_utils.hpp"
@@ -559,26 +560,33 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
   return pqp_expressions;
 }
 
-std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate(const AbstractLQPNode& input_node, const std::shared_ptr<AbstractOperator>& input_operator, const AbstractExpression& left, const PredicateCondition predicate_condition, const AbstractExpression& right) {
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate(const AbstractLQPNode& input_node,
+                                                                      const std::shared_ptr<AbstractOperator>& input_operator,
+                                                                      const AbstractExpression& left_operand,
+                                                                      const PredicateCondition predicate_condition,
+                                                                      const AbstractExpression& right_operand) {
   // LeftOperand must be a column, if it isn't switch operands
-  if (!input_node.find_column_id(left)) {
-    Assert(input_node.find_column_id(right), "One Predicate argument must be a column");
-    return _translate_predicate(input_node, input_operator, right, flip_predicate_condition(predicate_condition), left);
+  if (!input_node.find_column_id(left_operand)) {
+    Assert(input_node.find_column_id(right_operand), "One Predicate argument must be a column");
+    return _translate_predicate(input_node, input_operator, right_operand, flip_predicate_condition(predicate_condition), left_operand);
   }
 
-  const auto left_column_id = input_node.get_column_id(left);
+  const auto left_column_id = input_node.get_column_id(left_operand);
 
   auto right_parameter = AllParameterVariant{};
 
   // Except for Value and ValuePlaceholders every expression is resolved to a column
-  if (right.type == ExpressionType::Value) {
-    const auto& value_expression = static_cast<const ValueExpression&>(right);
+  if (right_operand.type == ExpressionType::Value) {
+    const auto& value_expression = static_cast<const ValueExpression&>(right_operand);
     right_parameter = value_expression.value;
-  } else if (right.type == ExpressionType::ValuePlaceholder) {
-    const auto& value_placeholder_expression = static_cast<const ValuePlaceholderExpression&>(right);
+  } else if (right_operand.type == ExpressionType::ValuePlaceholder) {
+    const auto& value_placeholder_expression = static_cast<const ValuePlaceholderExpression&>(right_operand);
     right_parameter = value_placeholder_expression.value_placeholder;
+  } else if (right_operand.type == ExpressionType::External) {
+    const auto& external_expression = static_cast<const ExternalExpression&>(right_operand);
+    right_parameter = external_expression.value_placeholder;
   } else {
-    right_parameter = input_node.get_column_id(right);
+    right_parameter = input_node.get_column_id(right_operand);
   }
 
   return std::make_shared<TableScan>(input_operator,

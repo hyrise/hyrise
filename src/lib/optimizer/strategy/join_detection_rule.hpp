@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <unordered_set>
 #include <optional>
 #include <string>
 #include <vector>
@@ -12,6 +11,7 @@
 
 namespace opossum {
 
+class AbstractExpression;
 class AbstractLQPNode;
 class JoinNode;
 class PredicateNode;
@@ -47,7 +47,7 @@ class JoinDetectionRule : public AbstractRule {
   bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) override;
 
  private:
-  void _traverse(const std::shared_ptr<AbstractLQPNode>& node, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& predicate_nodes);
+  std::shared_ptr<PredicateNode> _find_predicate_for_cross_join(const std::shared_ptr<JoinNode>& cross_join);
 };
 
 }  // namespace opossum
