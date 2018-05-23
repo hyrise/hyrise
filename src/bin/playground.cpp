@@ -78,8 +78,10 @@ int main() {
 
     uWS::Hub h;
 
-    h.onConnection([&workloads](uWS::WebSocket<uWS::SERVER> *ws, uWS::HttpRequest req) {
+    h.onConnection([&workloads, &execution_id](uWS::WebSocket<uWS::SERVER> *ws, uWS::HttpRequest req) {
         std::cout << "Connected!" << std::endl;
+
+        execution_id = 1;
 
         nlohmann::json initial_data;
         initial_data["message"]  = "startup";
@@ -114,7 +116,7 @@ int main() {
             size_t query_id = message_json["data"]["query"];
             std::string query_key = workload_id + std::string("__") + std::to_string(query_id);
 
-            std::cout << "Execute query: " << query_id << " from workload: " << workload_id << std::endl;
+            // std::cout << "Execute query: " << query_id << " from workload: " << workload_id << std::endl;
 
             auto& query = workloads[workload_id][query_id];
 
@@ -124,23 +126,29 @@ int main() {
             results["workload"] = workload_id;
             results["query"] = query_id;
             results["cacheHits"] = {};
-            results["planningTime"] = {};
+            results["planningTimePostgres"] = {};
+            results["planningTimeHyrise"] = {};
+            results["planningTimeMysql"] = {};
             results["cacheContents"] = {};
 
             for (auto &[strategy, cache] : caches) {
                 std::optional<CacheValueType> cached_plan = cache->try_get(query_key);
                 std::optional<CacheKeyType> evicted;
                 bool hit;
-                float planning_time;
+                float postgres_planning_time, hyrise_planning_time, mysql_planning_time;
                 if (cached_plan) {
                     // std::cout << "Cache Hit: " << query_key << std::endl;
                     hit = true;
-                    planning_time = 0.0f;
+                    postgres_planning_time = 0.0f;
+                    hyrise_planning_time = 0.0f;
+                    mysql_planning_time = 0.0f;
                 } else {
                     // std::cout << "Cache Miss: " << query_key << std::endl;
                     hit = false;
-                    planning_time = query.planning_time;
-                    evicted = cache->set(query_key, query.sql_string, query.planning_time, query.num_tokens);
+                    postgres_planning_time = query.postgres_planning_time;
+                    hyrise_planning_time = query.hyrise_planning_time;
+                    mysql_planning_time = query.mysql_planning_time;
+                    evicted = cache->set(query_key, query.sql_string, query.postgres_planning_time, query.num_tokens);
                 }
                 if (strategy.find("LRU_") == std::string::npos || strategy.find(std::to_string(lru_k_value)) != std::string::npos) {
                     auto current_strategy = strategy;
@@ -149,7 +157,9 @@ int main() {
                     }
 
                     results["cacheHits"][current_strategy] = hit;
-                    results["planningTime"][current_strategy] = planning_time;
+                    results["planningTimePostgres"][current_strategy] = postgres_planning_time;
+                    results["planningTimeHyrise"][current_strategy] = hyrise_planning_time;
+                    results["planningTimeMysql"][current_strategy] = mysql_planning_time;
                     results["evictedQuery"][current_strategy] = evicted ? *evicted : "-1";
 
                     auto cache_content = cache->dump_cache();
