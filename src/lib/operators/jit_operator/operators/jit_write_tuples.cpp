@@ -26,7 +26,7 @@ std::shared_ptr<Table> JitWriteTuples::create_output_table(const ChunkOffset inp
     column_definitions.emplace_back(output_column.column_name, data_type, is_nullable);
   }
 
-  return std::make_shared<Table>(column_definitions, TableType::Data, max_chunk_size);
+  return std::make_shared<Table>(column_definitions, TableType::Data, input_table_chunk_size);
 }
 
 void JitWriteTuples::before_query(Table& out_table, JitRuntimeContext& context) const { _create_output_chunk(context); }
