@@ -21,7 +21,7 @@ class ExpressionTest : public ::testing::Test {
     const auto a = LQPColumnReference{int_float_node_a, ColumnID{0}};
     const auto b = LQPColumnReference{int_float_node_a, ColumnID{1}};
 
-    case_a = case_(equals(addition(a, 5), b), addition(5, b), a);
+    case_a = case_(equals(add(a, 5), b), add(5, b), a);
     case_b = case_(a, 1, 3);
     case_c = case_(equals(a, 123), b, case_(equals(a, 1234), a, null()));
   }

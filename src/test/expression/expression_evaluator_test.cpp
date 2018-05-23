@@ -216,7 +216,7 @@ TEST_F(ExpressionEvaluatorTest, Extract) {
 }
 
 TEST_F(ExpressionEvaluatorTest, NullLiteral) {
-  const auto actual_result = evaluator->evaluate_expression<int32_t>(*addition(a, null()));
+  const auto actual_result = evaluator->evaluate_expression<int32_t>(*add(a, null()));
   ASSERT_EQ(actual_result.type(), typeid(NullValue));
 }
 

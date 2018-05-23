@@ -19,10 +19,10 @@ namespace opossum {
 std::string JoinDetectionRule::name() const { return "Join Detection Rule"; }
 
 bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
-  if (node->type() == LQPNodeType::Join) {
+  if (node->type == LQPNodeType::Join) {
     // ... "potential"_cross_join_node until this if below
     auto cross_join_node = std::dynamic_pointer_cast<JoinNode>(node);
-    if (cross_join_node->join_mode() == JoinMode::Cross) {
+    if (cross_join_node->join_mode == JoinMode::Cross) {
       /**
        * If we find a predicate with a condition that operates on the cross-joined tables,
        * replace the cross join and the predicate with a conditional inner join

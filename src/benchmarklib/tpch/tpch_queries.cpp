@@ -74,14 +74,14 @@ const char* const tpch_query_1 =
  * Changes:
  *  1. Random values are hardcoded
  */
-// const char* const tpch_query_2 =
-//    R"(SELECT s_acctbal, s_name, n_name, p_partkey, p_mfgr, s_address, s_phone, s_comment
-//       FROM "part", supplier, partsupp, nation, region
-//       WHERE p_partkey = ps_partkey AND s_suppkey = ps_suppkey AND p_size = 15 AND p_type like '%BRASS' AND
-//       s_nationkey = n_nationkey AND n_regionkey = r_regionkey AND r_name = 'EUROPE' AND
-//       ps_supplycost = (SELECT min(ps_supplycost) FROM partsupp, supplier, nation, region
-//       WHERE p_partkey = ps_partkey AND s_suppkey = ps_suppkey AND s_nationkey = n_nationkey
-//       AND n_regionkey = r_regionkey AND r_name = 'EUROPE') ORDER BY s_acctbal DESC, n_name, s_name, p_partkey;)";
+const char* const tpch_query_2 =
+   R"(SELECT s_acctbal, s_name, n_name, p_partkey, p_mfgr, s_address, s_phone, s_comment
+       FROM "part", supplier, partsupp, nation, region
+       WHERE p_partkey = ps_partkey AND s_suppkey = ps_suppkey AND p_size = 15 AND p_type like '%BRASS' AND
+       s_nationkey = n_nationkey AND n_regionkey = r_regionkey AND r_name = 'EUROPE' AND
+       ps_supplycost = (SELECT min(ps_supplycost) FROM partsupp, supplier, nation, region
+       WHERE p_partkey = ps_partkey AND s_suppkey = ps_suppkey AND s_nationkey = n_nationkey
+       AND n_regionkey = r_regionkey AND r_name = 'EUROPE') ORDER BY s_acctbal DESC, n_name, s_name, p_partkey;)";
 
 /**
  * TPC-H 3
@@ -137,11 +137,11 @@ const char* const tpch_query_3 =
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
  */
-// const char* const tpch_query_4 =
-//    R"(SELECT o_orderpriority, count(*) as order_count FROM orders WHERE o_orderdate >= '1996-07-01' AND
-//      o_orderdate < '1996-10-01' AND exists (
-//      SELECT *FROM lineitem WHERE l_orderkey = o_orderkey AND l_commitdate < l_receiptdate)
-//      GROUP BY o_orderpriority ORDER BY o_orderpriority;)";
+const char* const tpch_query_4 =
+  R"(SELECT o_orderpriority, count(*) as order_count FROM orders WHERE o_orderdate >= '1996-07-01' AND
+    o_orderdate < '1996-10-01' AND exists (
+    SELECT *FROM lineitem WHERE l_orderkey = o_orderkey AND l_commitdate < l_receiptdate)
+    GROUP BY o_orderpriority ORDER BY o_orderpriority;)";
 
 /**
  * TPC-H 5
@@ -332,14 +332,14 @@ const char* const tpch_query_7 =
  *  3. Extract is not supported
  *    a. Use full date instead
  */
-// const char* const tpch_query_8 =
-//    R"(SELECT o_year, SUM(case when nation = 'BRAZIL' then volume else 0 end) / SUM(volume) as mkt_share
-//      FROM (SELECT o_orderdate as o_year, l_extendedprice * (1-l_discount) as volume,
-//      n2.n_name as nation FROM "part", supplier, lineitem, orders, customer, nation n1, nation n2, region
-//      WHERE p_partkey = l_partkey AND s_suppkey = l_suppkey AND l_orderkey = o_orderkey AND
-//      o_custkey = c_custkey AND c_nationkey = n1.n_nationkey AND n1.n_regionkey = r_regionkey AND
-//      r_name = 'AMERICA' AND s_nationkey = n2.n_nationkey AND o_orderdate between '1995-01-01'
-//      AND '1996-12-31' AND p_type = 'ECONOMY ANODIZED STEEL') as all_nations GROUP BY o_year ORDER BY o_year;)";
+const char* const tpch_query_8 =
+   R"(SELECT o_year, SUM(case when nation = 'BRAZIL' then volume else 0 end) / SUM(volume) as mkt_share
+     FROM (SELECT o_orderdate as o_year, l_extendedprice * (1-l_discount) as volume,
+     n2.n_name as nation FROM "part", supplier, lineitem, orders, customer, nation n1, nation n2, region
+     WHERE p_partkey = l_partkey AND s_suppkey = l_suppkey AND l_orderkey = o_orderkey AND
+     o_custkey = c_custkey AND c_nationkey = n1.n_nationkey AND n1.n_regionkey = r_regionkey AND
+     r_name = 'AMERICA' AND s_nationkey = n2.n_nationkey AND o_orderdate between '1995-01-01'
+     AND '1996-12-31' AND p_type = 'ECONOMY ANODIZED STEEL') as all_nations GROUP BY o_year ORDER BY o_year;)";
 
 /**
  * TPC-H 9
@@ -469,12 +469,12 @@ const char* const tpch_query_10 =
  *  1. Random values are hardcoded
 
  */
-// const char* const tpch_query_11 =
-//    R"(SELECT ps_partkey, SUM(ps_supplycost * ps_availqty) as value FROM partsupp, supplier, nation
-//      WHERE ps_suppkey = s_suppkey AND s_nationkey = n_nationkey AND n_name = 'GERMANY'
-//      GROUP BY ps_partkey having SUM(ps_supplycost * ps_availqty) > (
-//      SELECT SUM(ps_supplycost * ps_availqty) * 0.0001 FROM partsupp, supplier, nation
-//      WHERE ps_suppkey = s_suppkey AND s_nationkey = n_nationkey AND n_name = 'GERMANY') ORDER BY value DESC;)";
+const char* const tpch_query_11 =
+    R"(SELECT ps_partkey, SUM(ps_supplycost * ps_availqty) as value FROM partsupp, supplier, nation
+      WHERE ps_suppkey = s_suppkey AND s_nationkey = n_nationkey AND n_name = 'GERMANY'
+      GROUP BY ps_partkey having SUM(ps_supplycost * ps_availqty) > (
+      SELECT SUM(ps_supplycost * ps_availqty) * 0.0001 FROM partsupp, supplier, nation
+      WHERE ps_suppkey = s_suppkey AND s_nationkey = n_nationkey AND n_name = 'GERMANY') ORDER BY value DESC;)";
 
 /**
  * TPC-H 12
@@ -510,13 +510,13 @@ const char* const tpch_query_10 =
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
  */
-// const char* const tpch_query_12 =
-//    R"(SELECT l_shipmode, SUM(case when o_orderpriority ='1-URGENT' or o_orderpriority ='2-HIGH' then 1 else 0 end)
-//      as high_line_count, SUM(case when o_orderpriority <> '1-URGENT' AND
-//      o_orderpriority <> '2-HIGH' then 1 else 0 end) as low_line_count FROM orders, lineitem
-//      WHERE o_orderkey = l_orderkey AND l_shipmode IN ('MAIL','SHIP') AND l_commitdate < l_receiptdate
-//      AND l_shipdate < l_commitdate AND l_receiptdate >= '1994-01-01' AND
-//      l_receiptdate < '1995-01-01' GROUP BY l_shipmode ORDER BY l_shipmode;)";
+const char* const tpch_query_12 =
+    R"(SELECT l_shipmode, SUM(case when o_orderpriority ='1-URGENT' or o_orderpriority ='2-HIGH' then 1 else 0 end)
+      as high_line_count, SUM(case when o_orderpriority <> '1-URGENT' AND
+      o_orderpriority <> '2-HIGH' then 1 else 0 end) as low_line_count FROM orders, lineitem
+      WHERE o_orderkey = l_orderkey AND l_shipmode IN ('MAIL','SHIP') AND l_commitdate < l_receiptdate
+      AND l_shipdate < l_commitdate AND l_receiptdate >= '1994-01-01' AND
+      l_receiptdate < '1995-01-01' GROUP BY l_shipmode ORDER BY l_shipmode;)";
 
 /**
  * TPC-H 13
@@ -567,10 +567,10 @@ const char* const tpch_query_13 =
  *  3. implicit type conversions for arithmetic operations are not supported
  *    a. changed 1 to 1.0 explicitly
  */
-// const char* const tpch_query_14 =
-//    R"(SELECT 100.00 * SUM(case when p_type like 'PROMO%' then l_extendedprice*(1.0-l_discount) else 0 end)
-//      / SUM(l_extendedprice * (1.0 - l_discount)) as promo_revenue FROM lineitem, "part" WHERE l_partkey = p_partkey
-//      AND l_shipdate >= '1995-09-01' AND l_shipdate < '1995-10-01';)";
+const char* const tpch_query_14 =
+    R"(SELECT 100.00 * SUM(case when p_type like 'PROMO%' then l_extendedprice*(1.0-l_discount) else 0 end)
+      / SUM(l_extendedprice * (1.0 - l_discount)) as promo_revenue FROM lineitem, "part" WHERE l_partkey = p_partkey
+      AND l_shipdate >= '1995-09-01' AND l_shipdate < '1995-10-01';)";
 
 /**
  * TPC-H 15
@@ -899,19 +899,19 @@ namespace opossum {
 
 const std::map<size_t, const char*> tpch_queries = {
     {1, tpch_query_1},
-    /* {2, tpch_query_2},   Enable once we support Subselects in WHERE condition */
+    {2, tpch_query_2},
     {3, tpch_query_3},
-    /* {4, tpch_query_4},   Enable once we support Exists and Subselects in WHERE condition */
+    {4, tpch_query_4},
     {5, tpch_query_5},
     {6, tpch_query_6},
     {7, tpch_query_7},
-    /* {8, tpch_query_8},   Enable once CASE and arithmetic operations of Aggregations are supported */
+    {8, tpch_query_8},
     {9, tpch_query_9},
     {10, tpch_query_10},
-    /* {11, tpch_query_11}, Enable once we support Subselects in Having clause */
-    /* {12, tpch_query_12}, Enable once we support IN */
+    {11, tpch_query_11},
+    {12, tpch_query_12},
     {13, tpch_query_13},
-    /* {14, tpch_query_14}, Enable once we support Case */
+    {14, tpch_query_14},
     /* {15, tpch_query_15}, Enable once we support Subselects in WHERE condition */
     /* {16, tpch_query_16}, Enable once we support Subselects in WHERE condition */
     /* {17, tpch_query_17}, Enable once we support Subselects in WHERE condition */

@@ -210,7 +210,7 @@ endif()
 set (
     SYSTEM_TEST_SOURCES
     ${SHARED_SOURCES}
-    server/server_test_runner.cpp
+    #server/server_test_runner.cpp
     tpc/tpch_test.cpp
     tpc/tpch_db_generator_test.cpp
     gtest_main.cpp
@@ -235,7 +235,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
-target_link_libraries(hyriseTest hyrise ${LIBRARIES})
+target_link_libraries(hyriseTest hyrise hyriseBenchmarkLib ${LIBRARIES})
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})

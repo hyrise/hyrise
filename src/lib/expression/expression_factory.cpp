@@ -45,11 +45,13 @@ std::shared_ptr<AggregateExpression> count_star() {
 
 unary<AggregateFunction::Sum, AggregateExpression> sum;
 unary<AggregateFunction::Min, AggregateExpression> min;
+unary<AggregateFunction::Avg, AggregateExpression> avg;
 unary<AggregateFunction::Count, AggregateExpression> count;
 unary<AggregateFunction::CountDistinct, AggregateExpression> count_distinct;
-binary<ArithmeticOperator::Multiplication, ArithmeticExpression> multiplication;
+binary<ArithmeticOperator::Multiplication, ArithmeticExpression> mul;
 binary<ArithmeticOperator::Division, ArithmeticExpression> division;
-binary<ArithmeticOperator::Addition, ArithmeticExpression> addition;
+binary<ArithmeticOperator::Addition, ArithmeticExpression> add;
+binary<ArithmeticOperator::Subtraction, ArithmeticExpression> sub;
 binary<PredicateCondition::Equals, BinaryPredicateExpression> equals;
 binary<PredicateCondition::NotEquals, BinaryPredicateExpression> not_equals;
 binary<PredicateCondition::LessThan, BinaryPredicateExpression> less_than;

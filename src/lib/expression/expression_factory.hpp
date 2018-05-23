@@ -82,11 +82,13 @@ struct ternary final {
 
 extern unary<AggregateFunction::Sum, AggregateExpression> sum;
 extern unary<AggregateFunction::Min, AggregateExpression> min;
+extern unary<AggregateFunction::Avg, AggregateExpression> avg;
 extern unary<AggregateFunction::Count, AggregateExpression> count;
 extern unary<AggregateFunction::CountDistinct, AggregateExpression> count_distinct;
 extern binary<ArithmeticOperator::Division, ArithmeticExpression> division;
-extern binary<ArithmeticOperator::Multiplication, ArithmeticExpression> multiplication;
-extern binary<ArithmeticOperator::Addition, ArithmeticExpression> addition;
+extern binary<ArithmeticOperator::Multiplication, ArithmeticExpression> mul;
+extern binary<ArithmeticOperator::Addition, ArithmeticExpression> add;
+extern binary<ArithmeticOperator::Subtraction, ArithmeticExpression> sub;
 extern binary<PredicateCondition::Equals, BinaryPredicateExpression> equals;
 extern binary<PredicateCondition::NotEquals, BinaryPredicateExpression> not_equals;
 extern binary<PredicateCondition::LessThan, BinaryPredicateExpression> less_than;

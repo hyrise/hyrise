@@ -207,7 +207,7 @@ TEST_F(LQPTranslatorTest, SelectExpressionCorelated) {
    * LQP resembles:
    *   SELECT (SELECT MIN(a + d) FROM int_float), a FROM int_float5 AS f;
    */
-  const auto a_plus_d = addition(int_float_a, external(int_float5_d, 0));
+  const auto a_plus_d = add(int_float_a, external(int_float5_d, 0));
 
   // clang-format off
   const auto sub_select_lqp =
@@ -256,8 +256,8 @@ TEST_F(LQPTranslatorTest, Sort) {
   // clang-format off
   const auto lqp =
   ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-    SortNode::make(expression_vector(int_float_a, addition(int_float_a, int_float_b), int_float_b), order_by_modes,
-      ProjectionNode::make(expression_vector(addition(int_float_a, int_float_b), int_float_a, int_float_b),
+    SortNode::make(expression_vector(int_float_a, add(int_float_a, int_float_b), int_float_b), order_by_modes,
+      ProjectionNode::make(expression_vector(add(int_float_a, int_float_b), int_float_a, int_float_b),
         int_float_node
   )));
   // clang-format on
@@ -579,8 +579,8 @@ TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
    */
   // clang-format off
   const auto lqp =
-  AggregateNode::make(expression_vector(int_float_a), expression_vector(sum(addition(int_float_b, int_float_a))),
-    ProjectionNode::make(expression_vector(int_float_b, int_float_a, addition(int_float_b, int_float_a)),
+  AggregateNode::make(expression_vector(int_float_a), expression_vector(sum(add(int_float_b, int_float_a))),
+    ProjectionNode::make(expression_vector(int_float_b, int_float_a, add(int_float_b, int_float_a)),
       int_float_node));
   // clang-format on
   const auto op = LQPTranslator{}.translate_node(lqp);
