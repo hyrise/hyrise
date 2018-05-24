@@ -10,10 +10,10 @@ namespace opossum {
 class FixedStringTest : public BaseTest {
  public:
   void SetUp() override {}
-    std::vector<char> char_vector1 = {'f', 'o', 'o'};
-    std::vector<char> char_vector2 = {'b', 'a', 'r', 'b', 'a', 'z'};
-    FixedString fixed_string1 = FixedString(&char_vector1[0], 3u); 
-    FixedString fixed_string2 = FixedString(&char_vector2[0], 6u);
+  std::vector<char> char_vector1 = {'f', 'o', 'o'};
+  std::vector<char> char_vector2 = {'b', 'a', 'r', 'b', 'a', 'z'};
+  FixedString fixed_string1 = FixedString(&char_vector1[0], 3u);
+  FixedString fixed_string2 = FixedString(&char_vector2[0], 6u);
 };
 
 TEST_F(FixedStringTest, Constructors) {
@@ -25,7 +25,6 @@ TEST_F(FixedStringTest, Constructors) {
 
   auto str2 = FixedString(str1);
   EXPECT_EQ(str2, "foo");
-
 
   if (IS_DEBUG) {
     EXPECT_THROW(str1 = FixedString(&charvector2[0], 6u), std::exception);
@@ -67,7 +66,6 @@ TEST_F(FixedStringTest, CompareStrings) {
   EXPECT_FALSE(fixed_string2 == bar);
   EXPECT_FALSE(bar == fixed_string2);
 }
-
 
 TEST_F(FixedStringTest, Swap) {
   std::vector<char> char_vector = {'b', 'a', 'r'};
