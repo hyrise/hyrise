@@ -15,6 +15,7 @@ set(
     concurrency/transaction_context_test.cpp
     gtest_main.cpp
     import_export/csv_meta_test.cpp
+    cost_model/cost_feature_proxy_test.cpp
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
     lib/fixed_string_test.cpp
@@ -115,7 +116,7 @@ set(
     storage/chunk_test.cpp
     storage/composite_group_key_index_test.cpp
     storage/dictionary_column_test.cpp
-    storage/fixedstring_column_test.cpp
+    storage/fixed_string_column_test.cpp
     storage/encoding_test.hpp
     storage/encoded_column_test.cpp
     storage/group_key_index_test.cpp
@@ -133,7 +134,7 @@ set(
     storage/variable_length_key_base_test.cpp
     storage/variable_length_key_store_test.cpp
     storage/variable_length_key_test.cpp
-    storage/fixedstring_vector_test.cpp
+    storage/fixed_string_vector_test.cpp
     tasks/chunk_compression_task_test.cpp
     tasks/operator_task_test.cpp
     testing_assert.cpp

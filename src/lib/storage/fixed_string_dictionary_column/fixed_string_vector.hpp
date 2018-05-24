@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "fixed_string.hpp"
-#include "fixedstring_vector_iterator.hpp"
+#include "fixed_string_vector_iterator.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -18,20 +18,18 @@ namespace opossum {
 
 class FixedStringVector {
  public:
-  explicit FixedStringVector(size_t string_length) : _string_length(string_length) {}
+  explicit FixedStringVector(size_t string_length);
+
+  // Create a FixedStringVector of FixedStrings with given values
+  FixedStringVector(const FixedStringVector&& other);
+  FixedStringVector(const FixedStringVector& other);
+  FixedStringVector(const FixedStringVector& other, const PolymorphicAllocator<size_t>& alloc);
 
   // Create a FixedStringVector of FixedStrings with given values by iterating over other container
   template <class Iter>
   FixedStringVector(Iter first, Iter last, size_t string_length) : _string_length(string_length) {
     _iterator_push_back(first, last);
   }
-
-  // Create a FixedStringVector of FixedStrings with given values
-  FixedStringVector(const FixedStringVector&& other)
-      : _string_length(std::move(other._string_length)), _chars(std::move(other._chars)) {}
-  FixedStringVector(const FixedStringVector& other) : _string_length(other._string_length), _chars(other._chars) {}
-  FixedStringVector(const FixedStringVector& other, const PolymorphicAllocator<size_t>& alloc)
-      : _string_length(other._string_length), _chars(other._chars, alloc) {}
 
   // Add a string to the end of the vector
   void push_back(const std::string& string);
@@ -55,6 +53,9 @@ class FixedStringVector {
   typedef boost::reverse_iterator<FixedStringIterator> reverse_iterator;
   reverse_iterator rbegin() noexcept;
   reverse_iterator rend() noexcept;
+
+  // Return a pointer to the underlying memory
+  char* data();
 
   // Return the number of entries in the column.
   size_t size() const;

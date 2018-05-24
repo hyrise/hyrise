@@ -5,6 +5,8 @@
 #include "storage/column_iterables.hpp"
 
 #include "storage/dictionary_column.hpp"
+#include "storage/fixed_string_dictionary_column/fixed_string_column.hpp"
+
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace opossum {
@@ -12,16 +14,19 @@ namespace opossum {
 template <typename T>
 class DictionaryColumnIterable : public PointAccessibleColumnIterable<DictionaryColumnIterable<T>> {
  public:
-  explicit DictionaryColumnIterable(const DictionaryColumn<T>& column) : _column{column} {}
+  explicit DictionaryColumnIterable(const DictionaryColumn<T>& column)
+      : _column{column}, _dictionary(column.dictionary()) {}
+
+  explicit DictionaryColumnIterable(const FixedStringColumn<std::string>& column)
+      : _column{column}, _dictionary(column.dictionary()) {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
     resolve_compressed_vector_type(*_column.attribute_vector(), [&](const auto& vector) {
       using ZsIteratorType = decltype(vector.cbegin());
 
-      auto begin =
-          Iterator<ZsIteratorType>{*_column.dictionary(), _column.null_value_id(), vector.cbegin(), ChunkOffset{0u}};
-      auto end = Iterator<ZsIteratorType>{*_column.dictionary(), _column.null_value_id(), vector.cend(),
+      auto begin = Iterator<ZsIteratorType>{*_dictionary, _column.null_value_id(), vector.cbegin(), ChunkOffset{0u}};
+      auto end = Iterator<ZsIteratorType>{*_dictionary, _column.null_value_id(), vector.cend(),
                                           static_cast<ChunkOffset>(_column.size())};
       functor(begin, end);
     });
@@ -33,16 +38,17 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
       auto decoder = vector.create_decoder();
       using ZsDecoderType = std::decay_t<decltype(*decoder)>;
 
-      auto begin = PointAccessIterator<ZsDecoderType>{*_column.dictionary(), _column.null_value_id(), *decoder,
+      auto begin = PointAccessIterator<ZsDecoderType>{*_dictionary, _column.null_value_id(), *decoder,
                                                       mapped_chunk_offsets.cbegin()};
-      auto end = PointAccessIterator<ZsDecoderType>{*_column.dictionary(), _column.null_value_id(), *decoder,
+      auto end = PointAccessIterator<ZsDecoderType>{*_dictionary, _column.null_value_id(), *decoder,
                                                     mapped_chunk_offsets.cend()};
       functor(begin, end);
     });
   }
 
  private:
-  const DictionaryColumn<T>& _column;
+  const BaseDictionaryColumn& _column;
+  std::shared_ptr<const pmr_vector<T>> _dictionary;
 
  private:
   template <typename ZsIteratorType>

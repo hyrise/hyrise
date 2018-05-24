@@ -7,85 +7,83 @@
 
 namespace opossum {
 
-class FixedStringTest : public BaseTest {};
-
-TEST_F(FixedStringTest, StringLength) {
-  FixedString str1 = FixedString(std::string("astring"));
-  FixedString str2 = FixedString(std::string("astring\0\0", 9));
-
-  EXPECT_EQ(str1.size(), 7u);
-  EXPECT_EQ(str1.maximum_length(), 7u);
-  EXPECT_EQ(str2.size(), 7u);
-  EXPECT_EQ(str2.maximum_length(), 9u);
-}
-
-TEST_F(FixedStringTest, CharvectorToString) {
-  std::vector<char> charvector = {'a', 'b', 'c', 'f'};
-
-  auto str1 = FixedString(&charvector[0], 3);
-  EXPECT_EQ(str1.string(), "abc");
-}
+class FixedStringTest : public BaseTest {
+ public:
+  void SetUp() override {}
+  std::vector<char> char_vector1 = {'f', 'o', 'o'};
+  std::vector<char> char_vector2 = {'b', 'a', 'r', 'b', 'a', 'z'};
+  FixedString fixed_string1 = FixedString(&char_vector1[0], 3u);
+  FixedString fixed_string2 = FixedString(&char_vector2[0], 6u);
+};
 
 TEST_F(FixedStringTest, Constructors) {
   std::vector<char> charvector = {'f', 'o', 'o'};
+  std::vector<char> charvector2 = {'b', 'a', 'r', 'b', 'a', 'z'};
 
   auto str1 = FixedString(&charvector[0], 3);
-  EXPECT_EQ(str1.string(), "foo");
+  EXPECT_EQ(str1, "foo");
 
-  auto str3 = FixedString("barbaz");
-  EXPECT_EQ(str3.string(), "barbaz");
+  auto str2 = FixedString(str1);
+  EXPECT_EQ(str2, "foo");
 
-  auto str4 = FixedString(str1);
-  EXPECT_EQ(str4.string(), "foo");
+  if (IS_DEBUG) {
+    EXPECT_THROW(str1 = FixedString(&charvector2[0], 6u), std::exception);
+  } else {
+    str1 = FixedString(&charvector2[0], 6u);
+    EXPECT_EQ(str1, "bar");
+  }
+}
 
-  FixedString str5("barbaz");
-  str5 = FixedString("foo");
-  EXPECT_EQ(str5.string(), "foo");
+TEST_F(FixedStringTest, StringLength) {
+  std::vector<char> char_vector = {'f', 'o', 'o', '\0', '\0'};
+  FixedString fixed_string = FixedString(&char_vector[0], 5u);
+
+  EXPECT_EQ(fixed_string1.size(), 3u);
+  EXPECT_EQ(fixed_string1.maximum_length(), 3u);
+  EXPECT_EQ(fixed_string.size(), 3u);
+  EXPECT_EQ(fixed_string.maximum_length(), 5u);
+  EXPECT_EQ(fixed_string.string(), "foo");
+  EXPECT_EQ(fixed_string, "foo");
 }
 
 TEST_F(FixedStringTest, CompareStrings) {
-  EXPECT_TRUE(FixedString("abcd") < FixedString("bbcd"));
-  EXPECT_TRUE(FixedString("abcd") < FixedString("bcd"));
-  EXPECT_TRUE(FixedString("abc") < FixedString("abcd"));
-  EXPECT_TRUE(FixedString("abc\0") < FixedString("abcd"));
-  EXPECT_FALSE(FixedString("abcdd") < FixedString("abcd"));
-  EXPECT_FALSE(FixedString("abcdd") < FixedString("abcd\0"));
-  EXPECT_FALSE(FixedString("abcd") < FixedString("abcd"));
+  std::vector<char> bar_help = {'b', 'a', 'r', '\0'};
+  std::vector<char> bars_help = {'b', 'a', 'r', 's'};
+  FixedString bar = FixedString(&bar_help[0], 3u);
+  FixedString bar_terminator = FixedString(&bar_help[0], 4u);
+  FixedString bars = FixedString(&bars_help[0], 4u);
 
-  EXPECT_TRUE(FixedString("abcd") == FixedString("abcd"));
-  EXPECT_TRUE(FixedString("abcd\0") == FixedString("abcd"));
-  EXPECT_FALSE(FixedString("abcd") == FixedString("abc"));
-  EXPECT_FALSE(FixedString("abc") == FixedString("abcd"));
-  EXPECT_FALSE(FixedString("abc") == FixedString("bbcd"));
-}
+  EXPECT_TRUE(bar < fixed_string1);
+  EXPECT_TRUE(bars < fixed_string1);
+  EXPECT_TRUE(bar < bars);
+  EXPECT_TRUE(bar_terminator < bars);
+  EXPECT_FALSE(bars < bar);
+  EXPECT_FALSE(bars < bar_terminator);
+  EXPECT_FALSE(bar < bar);
 
-TEST_F(FixedStringTest, CompareStringsRef) {
-  std::vector<char> charvector = {'a', 'b', 'c', 'f'};
-
-  auto str1 = FixedString(&charvector[0], 4);
-  auto str2 = FixedString("bbcf");
-
-  EXPECT_TRUE(str1 < str2);
+  EXPECT_TRUE(bar == bar);
+  EXPECT_TRUE(bar == bar_terminator);
+  EXPECT_FALSE(fixed_string2 == bar);
+  EXPECT_FALSE(bar == fixed_string2);
 }
 
 TEST_F(FixedStringTest, Swap) {
-  auto str1 = FixedString("foo");
-  auto str2 = FixedString("bar");
+  std::vector<char> char_vector = {'b', 'a', 'r'};
+  FixedString fixed_string = FixedString(&char_vector[0], 3u);
 
-  std::swap(str1, str2);
-  EXPECT_EQ(str1.string(), "bar");
-  EXPECT_EQ(str2.string(), "foo");
+  std::swap(fixed_string1, fixed_string);
+  EXPECT_EQ(fixed_string1, "bar");
+  EXPECT_EQ(fixed_string, "foo");
 }
 
 TEST_F(FixedStringTest, Print) {
-  auto fs = FixedString("foo");
   std::stringstream sstream;
-  sstream << fs;
+  sstream << fixed_string1;
   EXPECT_EQ(sstream.str().find("foo"), 0u);
 }
 
 TEST_F(FixedStringTest, ImplicitCast) {
-  std::string std_string = FixedString("foo");
+  std::string std_string = fixed_string1;
   EXPECT_EQ(std_string, "foo");
 }
 

@@ -1,6 +1,6 @@
-#include "fixedstring_column.hpp"
+#include "fixed_string_column.hpp"
 
-#include "fixedstring_vector_iterator.hpp"
+#include "fixed_string_vector_iterator.hpp"
 
 #include <memory>
 #include <string>

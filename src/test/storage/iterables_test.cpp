@@ -12,8 +12,7 @@
 #include "storage/column_iterables/constant_value_iterable.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/dictionary_column/dictionary_column_iterable.hpp"
-#include "storage/fixedstring_dictionary_column/fixedstring_column.hpp"
-#include "storage/fixedstring_dictionary_column/fixedstring_column_iterable.hpp"
+#include "storage/fixed_string_dictionary_column/fixed_string_column.hpp"
 #include "storage/reference_column/reference_column_iterable.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
@@ -21,7 +20,7 @@
 
 namespace opossum {
 
-struct SumUpWithIt {
+struct SumUpWithIterator {
   template <typename Iterator>
   void operator()(Iterator begin, Iterator end) const {
     _sum = 0u;
@@ -47,7 +46,7 @@ struct SumUp {
   uint32_t& _sum;
 };
 
-struct AppendWithIt {
+struct AppendWithIterator {
   template <typename Iterator>
   void operator()(Iterator begin, Iterator end) const {
     _concatenate = "";
@@ -84,7 +83,7 @@ TEST_F(IterablesTest, ValueColumnIteratorWithIterators) {
   auto iterable = ValueColumnIterable<int>{*int_column};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(SumUpWithIt{sum});
+  iterable.with_iterators(SumUpWithIterator{sum});
 
   EXPECT_EQ(sum, 24'825u);
 }
@@ -100,7 +99,7 @@ TEST_F(IterablesTest, ValueColumnReferencedIteratorWithIterators) {
   auto iterable = ValueColumnIterable<int>{*int_column};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(&chunk_offsets, SumUpWithIt{sum});
+  iterable.with_iterators(&chunk_offsets, SumUpWithIterator{sum});
 
   EXPECT_EQ(sum, 12'480u);
 }
@@ -114,7 +113,7 @@ TEST_F(IterablesTest, ValueColumnNullableIteratorWithIterators) {
   auto iterable = ValueColumnIterable<int>{*int_column};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(SumUpWithIt{sum});
+  iterable.with_iterators(SumUpWithIterator{sum});
 
   EXPECT_EQ(sum, 13'702u);
 }
@@ -130,7 +129,7 @@ TEST_F(IterablesTest, ValueColumnNullableReferencedIteratorWithIterators) {
   auto iterable = ValueColumnIterable<int>{*int_column};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(&chunk_offsets, SumUpWithIt{sum});
+  iterable.with_iterators(&chunk_offsets, SumUpWithIterator{sum});
 
   EXPECT_EQ(sum, 13'579u);
 }
@@ -146,7 +145,7 @@ TEST_F(IterablesTest, DictionaryColumnIteratorWithIterators) {
   auto iterable = DictionaryColumnIterable<int>{*dict_column};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(SumUpWithIt{sum});
+  iterable.with_iterators(SumUpWithIterator{sum});
 
   EXPECT_EQ(sum, 24'825u);
 }
@@ -164,7 +163,7 @@ TEST_F(IterablesTest, DictionaryColumnReferencedIteratorWithIterators) {
   auto iterable = DictionaryColumnIterable<int>{*dict_column};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(&chunk_offsets, SumUpWithIt{sum});
+  iterable.with_iterators(&chunk_offsets, SumUpWithIterator{sum});
 
   EXPECT_EQ(sum, 12'480u);
 }
@@ -177,10 +176,10 @@ TEST_F(IterablesTest, FixedStringDictionaryColumnIteratorWithIterators) {
   auto column = chunk->get_column(ColumnID{0u});
   auto dict_column = std::dynamic_pointer_cast<const FixedStringColumn<std::string>>(column);
 
-  auto iterable = FixedStringColumnIterable<std::string>{*dict_column};
+  auto iterable = DictionaryColumnIterable<std::string>{*dict_column};
 
   auto concatenate = std::string();
-  iterable.with_iterators(AppendWithIt{concatenate});
+  iterable.with_iterators(AppendWithIterator{concatenate});
 
   EXPECT_EQ(concatenate, "xxxwwwyyyuuutttzzz");
 }
@@ -195,10 +194,10 @@ TEST_F(IterablesTest, FixedStringDictionaryColumnReferencedIteratorWithIterators
 
   auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
 
-  auto iterable = FixedStringColumnIterable<std::string>{*dict_column};
+  auto iterable = DictionaryColumnIterable<std::string>{*dict_column};
 
   auto concatenate = std::string();
-  iterable.with_iterators(&chunk_offsets, AppendWithIt{concatenate});
+  iterable.with_iterators(&chunk_offsets, AppendWithIterator{concatenate});
 
   EXPECT_EQ(concatenate, "xxxyyyuuu");
 }
@@ -213,7 +212,7 @@ TEST_F(IterablesTest, ReferenceColumnIteratorWithIterators) {
   auto iterable = ReferenceColumnIterable<int>{*reference_column};
 
   auto sum = uint32_t{0};
-  iterable.with_iterators(SumUpWithIt{sum});
+  iterable.with_iterators(SumUpWithIterator{sum});
 
   EXPECT_EQ(sum, 24'825u);
 }

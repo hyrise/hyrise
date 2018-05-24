@@ -4,7 +4,6 @@
 #include <memory>
 
 #include "storage/dictionary_column/dictionary_encoder.hpp"
-#include "storage/fixedstring_dictionary_column/fixedstring_encoder.hpp"
 #include "storage/frame_of_reference/frame_of_reference_encoder.hpp"
 #include "storage/run_length_column/run_length_encoder.hpp"
 
@@ -22,9 +21,9 @@ namespace {
  * Add your column encoder here!
  */
 static const auto encoder_for_type = std::map<EncodingType, std::shared_ptr<BaseColumnEncoder>>{
-    {EncodingType::Dictionary, std::make_shared<DictionaryEncoder>()},
+    {EncodingType::Dictionary, std::make_shared<DictionaryEncoder<EncodingType::Dictionary>>()},
     {EncodingType::RunLength, std::make_shared<RunLengthEncoder>()},
-    {EncodingType::FixedStringDictionary, std::make_shared<FixedStringDictionaryEncoder>()},
+    {EncodingType::FixedStringDictionary, std::make_shared<DictionaryEncoder<EncodingType::FixedStringDictionary>>()},
     {EncodingType::FrameOfReference, std::make_shared<FrameOfReferenceEncoder>()}};
 
 }  // namespace

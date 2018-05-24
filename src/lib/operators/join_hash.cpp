@@ -20,6 +20,7 @@
 #include "utils/assert.hpp"
 #include "utils/cuckoo_hashtable.hpp"
 #include "utils/murmur_hash.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 
@@ -105,8 +106,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   const JoinMode _mode;
   const ColumnIDPair _column_ids;
   const PredicateCondition _predicate_condition;
-
   const bool _inputs_swapped;
+
   std::shared_ptr<Table> _output_table;
 
   const unsigned int _partitioning_seed = 13;
@@ -608,6 +609,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
       right_chunk_offsets->operator[](i) = offset_right;
       offset_right += _right_in_table->get_chunk(i)->size();
     }
+
+    Timer performance_timer;
 
     // Materialization phase
     std::vector<std::shared_ptr<std::vector<size_t>>> histograms_left;

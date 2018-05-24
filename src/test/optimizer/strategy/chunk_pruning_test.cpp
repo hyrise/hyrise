@@ -35,13 +35,13 @@ class ChunkPruningTest : public StrategyBaseTest {
     storage_manager.add_table("long_compressed", load_table("src/test/tables/25_ints_sorted.tbl", 25u));
     storage_manager.add_table("run_length_compressed", load_table("src/test/tables/10_ints.tbl", 5u));
     storage_manager.add_table("string_compressed", load_table("src/test/tables/string.tbl", 3u));
-    storage_manager.add_table("fixedstring_compressed", load_table("src/test/tables/string.tbl", 3u));
+    storage_manager.add_table("fixed_string_compressed", load_table("src/test/tables/string.tbl", 3u));
 
     ChunkEncoder::encode_all_chunks(storage_manager.get_table("compressed"), EncodingType::Dictionary);
     ChunkEncoder::encode_all_chunks(storage_manager.get_table("long_compressed"), EncodingType::Dictionary);
     ChunkEncoder::encode_all_chunks(storage_manager.get_table("run_length_compressed"), EncodingType::RunLength);
     ChunkEncoder::encode_all_chunks(storage_manager.get_table("string_compressed"), EncodingType::Dictionary);
-    ChunkEncoder::encode_all_chunks(storage_manager.get_table("fixedstring_compressed"),
+    ChunkEncoder::encode_all_chunks(storage_manager.get_table("fixed_string_compressed"),
                                     EncodingType::FixedStringDictionary);
     _rule = std::make_shared<ChunkPruningRule>();
 
@@ -243,7 +243,7 @@ TEST_F(ChunkPruningTest, StringPruningTest) {
 }
 
 TEST_F(ChunkPruningTest, FixedStringPruningTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("fixedstring_compressed");
+  auto stored_table_node = std::make_shared<StoredTableNode>("fixed_string_compressed");
 
   auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}),
                                                         PredicateCondition::Equals, "zzz");
