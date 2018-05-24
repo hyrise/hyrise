@@ -1,0 +1,39 @@
+14a15,18
+> // clang-format off
+> 
+> #include "../llvm_extensions.hpp"
+> 
+77c81
+< EnableNoAliasConversion("enable-noalias-to-md-conversion", cl::init(true),
+---
+> EnableNoAliasConversion("opossum-enable-noalias-to-md-conversion", cl::init(true),
+82c86
+< PreserveAlignmentAssumptions("preserve-alignment-assumptions-during-inlining",
+---
+> PreserveAlignmentAssumptions("opossum-preserve-alignment-assumptions-during-inlining",
+1492c1496
+< bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
+---
+> bool opossum::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
+1494c1498,1499
+<                           Function *ForwardVarArgsTo) {
+---
+>                           Function *ForwardVarArgsTo,
+>                           opossum::SpecializationContext& Context) {
+1626a1632
+>     // TODO(Fabian) Check, if map is correctly copied
+1627a1634
+>     VMap.insert(Context.llvm_value_map.begin(), Context.llvm_value_map.end());
+1667c1674
+<     CloneAndPruneFunctionInto(Caller, CalledFunc, VMap,
+---
+>     opossum::CloneAndPruneFunctionInto(Caller, CalledFunc, VMap,
+1669c1676
+<                               &InlinedFunctionInfo, TheCall);
+---
+>                               &InlinedFunctionInfo, TheCall, Context);
+2339a2347,2350
+> 
+> template constexpr bool llvm::DominatorTreeBase<llvm::BasicBlock, false>::IsPostDominator;
+> 
+> // clang-format on

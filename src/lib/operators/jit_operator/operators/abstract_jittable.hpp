@@ -19,6 +19,8 @@ class AbstractJittable {
 
   void set_next_operator(const std::shared_ptr<AbstractJittable>& next_operator) { _next_operator = next_operator; }
 
+  std::shared_ptr<AbstractJittable> next_operator() { return _next_operator; }
+
   virtual std::string description() const = 0;
 
  protected:

@@ -38,6 +38,17 @@ ValueColumn<T>::ValueColumn(pmr_concurrent_vector<T>&& values, pmr_concurrent_ve
       _null_values({std::move(null_values), alloc}) {}
 
 template <typename T>
+ValueColumn<T>::ValueColumn(std::vector<T>& values, const PolymorphicAllocator<T>& alloc)
+    : BaseValueColumn(data_type_from_type<T>()), _values(values, alloc) {}
+
+template <typename T>
+ValueColumn<T>::ValueColumn(std::vector<T>& values, std::vector<bool>& null_values,
+                            const PolymorphicAllocator<T>& alloc)
+    : BaseValueColumn(data_type_from_type<T>()),
+      _values(values, alloc),
+      _null_values(pmr_concurrent_vector<bool>(null_values, alloc)) {}
+
+template <typename T>
 const AllTypeVariant ValueColumn<T>::operator[](const ChunkOffset chunk_offset) const {
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
   PerformanceWarning("operator[] used");
