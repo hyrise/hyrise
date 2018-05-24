@@ -26,6 +26,8 @@ int main(int argc, char* argv[]) {
     return 0;
   }
 
+  cli_parse_result.arguments();
+
   const bool verbose = cli_parse_result["verbose"].as<bool>();
   auto& out = opossum::get_out_stream(verbose);
 

@@ -4,6 +4,7 @@
 
 #include <chrono>
 #include <iostream>
+#include <json.hpp>
 #include <unordered_map>
 
 #include "storage/chunk.hpp"
@@ -62,17 +63,35 @@ struct BenchmarkConfig {
                   const UseMvcc use_mvcc, const std::optional<std::string>& output_file_path,
                   const bool enable_scheduler, const bool enable_visualization, std::ostream& out);
 
-  const BenchmarkMode benchmark_mode;
-  const bool verbose;
-  const ChunkOffset chunk_size;
-  const EncodingType encoding_type;
-  const size_t max_num_query_runs;
-  const Duration max_duration;
-  const UseMvcc use_mvcc;
-  const std::optional<std::string> output_file_path;
-  const bool enable_scheduler;
-  const bool enable_visualization;
+  static BenchmarkConfig get_default_config();
+
+  const BenchmarkMode benchmark_mode = BenchmarkMode::IndividualQueries;
+  const bool verbose = false;
+  const ChunkOffset chunk_size = Chunk::MAX_SIZE;
+  const EncodingType encoding_type = EncodingType::Dictionary;
+  const size_t max_num_query_runs = 1000;
+  const Duration max_duration = std::chrono::seconds(5);
+  const UseMvcc use_mvcc = UseMvcc::No;
+  const std::optional<std::string> output_file_path = std::nullopt;
+  const bool enable_scheduler = false;
+  const bool enable_visualization = false;
   std::ostream& out;
+
+ private:
+  BenchmarkConfig() : out(std::cout){};
+};
+
+class CLIConfigParser {
+ public:
+  static bool cli_has_json_config(const int argc, char** argv);
+
+  static nlohmann::json config_file_to_json(const std::string& json_file_str);
+
+  static nlohmann::json default_cli_options_to_json(const cxxopts::ParseResult& parse_result);
+
+  static BenchmarkConfig parse_default_json_config(const nlohmann::json& json_config);
+
+  static BenchmarkConfig parse_default_cli_options(const cxxopts::ParseResult& parse_result);
 };
 
 }  // namespace opossum

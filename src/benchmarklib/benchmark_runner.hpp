@@ -25,8 +25,6 @@ class BenchmarkRunner {
                                 const std::string& query_path);
 
   void run();
-  static BenchmarkConfig parse_default_cli_options(const cxxopts::ParseResult& parse_result,
-                                                   const cxxopts::Options& cli_options);
 
   static cxxopts::Options get_default_cli_options(const std::string& benchmark_name);
 
