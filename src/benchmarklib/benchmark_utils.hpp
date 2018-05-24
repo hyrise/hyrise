@@ -1,10 +1,10 @@
 #pragma once
 
 #include <cxxopts.hpp>
+#include <json.hpp>
 
 #include <chrono>
 #include <iostream>
-#include <json.hpp>
 #include <unordered_map>
 
 #include "storage/chunk.hpp"
@@ -78,7 +78,7 @@ struct BenchmarkConfig {
   std::ostream& out;
 
  private:
-  BenchmarkConfig() : out(std::cout){};
+  BenchmarkConfig() : out(std::cout) {}
 };
 
 class CLIConfigParser {

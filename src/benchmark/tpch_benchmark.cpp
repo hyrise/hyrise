@@ -42,13 +42,12 @@ int main(int argc, char* argv[]) {
     ("queries", "Specify queries to run, default is all that are supported", cxxopts::value<std::vector<opossum::QueryID>>()); // NOLINT
   // clang-format on
 
-  const auto has_json_config = opossum::CLIConfigParser::cli_has_json_config(argc, argv);
-
   std::unique_ptr<opossum::BenchmarkConfig> config;
   std::vector<opossum::QueryID> query_ids;
   float scale_factor;
 
-  if (has_json_config) {
+  if (opossum::CLIConfigParser::cli_has_json_config(argc, argv)) {
+    // JSON config file was passed in
     const auto json_config = opossum::CLIConfigParser::config_file_to_json(argv[1]);
     scale_factor = json_config.value("scale", 0.001f);
     query_ids = json_config.value("queries", std::vector<opossum::QueryID>());
@@ -57,6 +56,7 @@ int main(int argc, char* argv[]) {
         std::make_unique<opossum::BenchmarkConfig>(opossum::CLIConfigParser::parse_default_json_config(json_config));
 
   } else {
+    // Parse regular command line args
     const auto cli_parse_result = cli_options.parse(argc, argv);
 
     // Display usage and quit

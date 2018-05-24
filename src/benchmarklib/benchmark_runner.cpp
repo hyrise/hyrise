@@ -4,6 +4,7 @@
 
 #include "benchmark_runner.hpp"
 #include "constant_mappings.hpp"
+#include "git.hpp"
 #include "import_export/csv_parser.hpp"
 #include "planviz/lqp_visualizer.hpp"
 #include "planviz/sql_query_plan_visualizer.hpp"
@@ -15,7 +16,6 @@
 #include "tpch/tpch_queries.hpp"
 #include "utils/filesystem.hpp"
 #include "utils/load_table.hpp"
-#include "git.hpp"
 
 namespace opossum {
 
