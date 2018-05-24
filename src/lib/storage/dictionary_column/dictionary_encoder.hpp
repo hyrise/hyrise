@@ -37,24 +37,19 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
     const auto alloc = values.get_allocator();
 
     if constexpr (Encoding == EncodingType::FixedStringDictionary) {
-      // if constexpr (std::is_same<T, std::string>::value) {
       auto dictionary = FixedStringVector{values.cbegin(), values.cend(), _calculate_fixed_string_length(values)};
-      auto encoded_attribute_vector = _encode_dictionary(dictionary, value_column);
-      const auto null_value_id = static_cast<uint32_t>(dictionary.size());
+      auto attribute_vector_sptr = _encode_dictionary_column(dictionary, value_column);
 
       auto dictionary_sptr = std::allocate_shared<FixedStringVector>(alloc, std::move(dictionary));
-      auto attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(encoded_attribute_vector));
-      return std::allocate_shared<FixedStringColumn<std::string>>(alloc, dictionary_sptr, attribute_vector_sptr,
-                                                                  ValueID{null_value_id});
+      return std::allocate_shared<FixedStringColumn<std::string>>(
+          alloc, dictionary_sptr, attribute_vector_sptr, ValueID{static_cast<uint32_t>(dictionary_sptr->size())});
     } else {
       auto dictionary = pmr_vector<T>{values.cbegin(), values.cend(), alloc};
-      auto encoded_attribute_vector = _encode_dictionary(dictionary, value_column);
-      const auto null_value_id = static_cast<uint32_t>(dictionary.size());
+      auto attribute_vector_sptr = _encode_dictionary_column(dictionary, value_column);
 
       auto dictionary_sptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(dictionary));
-      auto attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(encoded_attribute_vector));
       return std::allocate_shared<DictionaryColumn<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
-                                                       ValueID{null_value_id});
+                                                       ValueID{static_cast<uint32_t>(dictionary_sptr->size())});
     }
   }
 
@@ -66,7 +61,7 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
   }
 
   template <typename U, typename T>
-  std::unique_ptr<const BaseCompressedVector> _encode_dictionary(
+  std::shared_ptr<const BaseCompressedVector> _encode_dictionary_column(
       U& dictionary, const std::shared_ptr<const ValueColumn<T>>& value_column) {
     const auto& values = value_column->values();
     const auto alloc = values.get_allocator();
@@ -126,8 +121,9 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
     // We need to increment the dictionary size here because of possible null values.
     const auto max_value = dictionary.size() + 1u;
 
-    return compress_vector(attribute_vector, ColumnEncoder<DictionaryEncoder<Encoding>>::vector_compression_type(),
-                           alloc, {max_value});
+    auto encoded_attribute_vector = compress_vector(
+        attribute_vector, ColumnEncoder<DictionaryEncoder<Encoding>>::vector_compression_type(), alloc, {max_value});
+    return std::shared_ptr<const BaseCompressedVector>(std::move(encoded_attribute_vector));
   }
 
   size_t _calculate_fixed_string_length(const pmr_concurrent_vector<std::string>& values) const {
