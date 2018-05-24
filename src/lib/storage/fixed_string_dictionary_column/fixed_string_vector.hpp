@@ -18,20 +18,18 @@ namespace opossum {
 
 class FixedStringVector {
  public:
-  explicit FixedStringVector(size_t string_length) : _string_length(string_length) {}
+  explicit FixedStringVector(size_t string_length);
+
+  // Create a FixedStringVector of FixedStrings with given values
+  FixedStringVector(const FixedStringVector&& other);
+  FixedStringVector(const FixedStringVector& other);
+  FixedStringVector(const FixedStringVector& other, const PolymorphicAllocator<size_t>& alloc);
 
   // Create a FixedStringVector of FixedStrings with given values by iterating over other container
   template <class Iter>
   FixedStringVector(Iter first, Iter last, size_t string_length) : _string_length(string_length) {
     _iterator_push_back(first, last);
   }
-
-  // Create a FixedStringVector of FixedStrings with given values
-  FixedStringVector(const FixedStringVector&& other)
-      : _string_length(std::move(other._string_length)), _chars(std::move(other._chars)) {}
-  FixedStringVector(const FixedStringVector& other) : _string_length(other._string_length), _chars(other._chars) {}
-  FixedStringVector(const FixedStringVector& other, const PolymorphicAllocator<size_t>& alloc)
-      : _string_length(other._string_length), _chars(other._chars, alloc) {}
 
   // Add a string to the end of the vector
   void push_back(const std::string& string);

@@ -11,6 +11,16 @@
 
 namespace opossum {
 
+FixedStringVector::FixedStringVector(size_t string_length) : _string_length(string_length) {}
+
+FixedStringVector::FixedStringVector(const FixedStringVector&& other)
+      : _string_length(std::move(other._string_length)), _chars(std::move(other._chars)) {}
+
+FixedStringVector::FixedStringVector(const FixedStringVector& other) : _string_length(other._string_length), _chars(other._chars) {}
+
+FixedStringVector::FixedStringVector(const FixedStringVector& other, const PolymorphicAllocator<size_t>& alloc)
+      : _string_length(other._string_length), _chars(other._chars, alloc) {}
+
 void FixedStringVector::push_back(const std::string& string) {
   DebugAssert(string.size() <= _string_length, "Inserted string is too long to insert in FixedStringVector");
   const auto pos = _chars.size();
