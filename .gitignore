@@ -21,6 +21,7 @@ queryplan.png
 lqp*.png
 compile_times.txt
 exported_table_statistics.json
+git.hpp
 
 # Ignore cmake user files
 *.txt.user
