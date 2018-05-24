@@ -15,6 +15,7 @@
 #include "tpch/tpch_queries.hpp"
 #include "utils/filesystem.hpp"
 #include "utils/load_table.hpp"
+#include "git.hpp"
 
 namespace opossum {
 
@@ -324,7 +325,8 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"using_visualization", config.enable_visualization},
       {"output_file_path", config.output_file_path ? *(config.output_file_path) : "stdout"},
       {"using_scheduler", config.enable_scheduler},
-      {"verbose", config.verbose}};
+      {"verbose", config.verbose},
+      {"GIT-HASH", GIT_HEAD_SHA1}};
 }
 
 }  // namespace opossum
