@@ -310,7 +310,6 @@ set(
     storage/encoding_type.hpp
     storage/fixed_string_dictionary_column/fixed_string_column.cpp
     storage/fixed_string_dictionary_column/fixed_string_column.hpp
-    storage/fixed_string_dictionary_column/fixed_string_encoder.hpp
     storage/fixed_string_dictionary_column/fixed_string_vector.cpp
     storage/fixed_string_dictionary_column/fixed_string_vector.hpp
     storage/fixed_string_dictionary_column/fixed_string_vector_iterator.cpp
