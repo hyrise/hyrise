@@ -34,22 +34,15 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
     // See: https://goo.gl/MCM5rr
     // Create dictionary (enforce uniqueness and sorting)
     const auto& values = value_column->values();
-    const auto alloc = values.get_allocator();
 
     if constexpr (Encoding == EncodingType::FixedStringDictionary) {
-      auto dictionary = FixedStringVector{values.cbegin(), values.cend(), _calculate_fixed_string_length(values)};
-      auto attribute_vector_sptr = _encode_dictionary_column(dictionary, value_column);
-
-      auto dictionary_sptr = std::allocate_shared<FixedStringVector>(alloc, std::move(dictionary));
-      return std::allocate_shared<FixedStringColumn<std::string>>(
-          alloc, dictionary_sptr, attribute_vector_sptr, ValueID{static_cast<uint32_t>(dictionary_sptr->size())});
+      // Encode a column with a FixedStringVector as dictionary. std::string is the only supported type
+      return _encode_dictionary_column(
+          FixedStringVector{values.cbegin(), values.cend(), _calculate_fixed_string_length(values)}, value_column);
     } else {
-      auto dictionary = pmr_vector<T>{values.cbegin(), values.cend(), alloc};
-      auto attribute_vector_sptr = _encode_dictionary_column(dictionary, value_column);
-
-      auto dictionary_sptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(dictionary));
-      return std::allocate_shared<DictionaryColumn<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
-                                                       ValueID{static_cast<uint32_t>(dictionary_sptr->size())});
+      // Encode a column with a pmr_vector<T> as dictionary
+      return _encode_dictionary_column(pmr_vector<T>{values.cbegin(), values.cend(), values.get_allocator()},
+                                       value_column);
     }
   }
 
@@ -61,8 +54,8 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
   }
 
   template <typename U, typename T>
-  std::shared_ptr<const BaseCompressedVector> _encode_dictionary_column(
-      U& dictionary, const std::shared_ptr<const ValueColumn<T>>& value_column) {
+  std::shared_ptr<BaseEncodedColumn> _encode_dictionary_column(
+      U dictionary, const std::shared_ptr<const ValueColumn<T>>& value_column) {
     const auto& values = value_column->values();
     const auto alloc = values.get_allocator();
 
@@ -123,7 +116,16 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
 
     auto encoded_attribute_vector = compress_vector(
         attribute_vector, ColumnEncoder<DictionaryEncoder<Encoding>>::vector_compression_type(), alloc, {max_value});
-    return std::shared_ptr<const BaseCompressedVector>(std::move(encoded_attribute_vector));
+    auto dictionary_sptr = std::allocate_shared<U>(alloc, std::move(dictionary));
+    auto attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(encoded_attribute_vector));
+
+    if constexpr (Encoding == EncodingType::FixedStringDictionary) {
+      return std::allocate_shared<FixedStringColumn<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
+                                                        ValueID{null_value_id});
+    } else {
+      return std::allocate_shared<DictionaryColumn<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
+                                                       ValueID{null_value_id});
+    }
   }
 
   size_t _calculate_fixed_string_length(const pmr_concurrent_vector<std::string>& values) const {
