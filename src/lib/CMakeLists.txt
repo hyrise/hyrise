@@ -396,6 +396,7 @@ set(
     utils/copyable_atomic.hpp
     utils/cuckoo_hashtable.hpp
     utils/enum_constant.hpp
+    utils/filesystem.hpp
     utils/format_bytes.cpp
     utils/format_bytes.hpp
     utils/format_duration.cpp
@@ -452,7 +453,7 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator_wrapper.hpp
         ${SOURCES}
         ${JIT_EMBEDDED_SOURCES}
-        ${LLVM_BUNDLE_FILE} utils/filesystem.hpp)
+        ${LLVM_BUNDLE_FILE})
     # Prevent clang from complaining about unused defines when compiling the assembly file
     set_property(SOURCE ${LLVM_BUNDLE_FILE} PROPERTY COMPILE_FLAGS -Qunused-arguments)
     set(LIBRARIES ${LIBRARIES} ${LLVM_LIBRARY})
