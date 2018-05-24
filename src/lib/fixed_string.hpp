@@ -66,9 +66,6 @@ class FixedString {
   char* const _mem;
   const size_t _maximum_length;
   const bool _owns_memory = true;
-
-  // Copy chars of current FixedString to a new destination
-  size_t _copy_to(char* destination, size_t len, size_t pos = 0) const;
 };
 
 }  // namespace opossum
