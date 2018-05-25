@@ -56,17 +56,25 @@ void LikeTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
 
 void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
                                       std::shared_ptr<ColumnVisitableContext> base_context) {
-  const auto& left_column = static_cast<const DictionaryColumn<std::string>&>(base_column);
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
   const auto chunk_id = context->_chunk_id;
 
-  const auto result = _find_matches_in_dictionary(*left_column.dictionary());
+  std::pair<size_t, std::vector<bool>> result;
+
+  if (base_column.encoding_type() == EncodingType::Dictionary) {
+    const auto& left_column = static_cast<const DictionaryColumn<std::string>&>(base_column);
+    result = _find_matches_in_dictionary(*left_column.dictionary());
+  } else {
+    const auto& left_column = static_cast<const FixedStringColumn<std::string>&>(base_column);
+    result = _find_matches_in_dictionary(*left_column.dictionary());
+  }
+
   const auto& match_count = result.first;
   const auto& dictionary_matches = result.second;
 
-  auto attribute_vector_iterable = create_iterable_from_attribute_vector(left_column);
+  auto attribute_vector_iterable = create_iterable_from_attribute_vector(base_column);
 
   // LIKE matches all rows
   if (match_count == dictionary_matches.size()) {
