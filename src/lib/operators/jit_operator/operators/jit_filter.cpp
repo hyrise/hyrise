@@ -8,6 +8,8 @@ JitFilter::JitFilter(const JitTupleValue& condition) : _condition{condition} {
 
 std::string JitFilter::description() const { return "[Filter] on x" + std::to_string(_condition.tuple_index()); }
 
+JitTupleValue JitFilter::condition() { return _condition; }
+
 void JitFilter::_consume(JitRuntimeContext& context) const {
   if (!_condition.is_null(context) && _condition.get<bool>(context)) {
     _emit(context);
