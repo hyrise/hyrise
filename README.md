@@ -11,13 +11,13 @@ Papers that were published before October 2017 were based on the previous versio
 
 *Have a look at our [contributor guidelines](CONTRIBUTING.md)*
 
-You can find definitions of most of the terms and abbreviations used in the code in the [glossary](GLOSSARY.md). If you ca not find something that you are looking for, feel free to open an issue.
+You can find definitions of most of the terms and abbreviations used in the code in the [glossary](GLOSSARY.md). If you cannot find something that you are looking for, feel free to open an issue.
 
 The [Step by Step Guide](https://github.com/hyrise/hyrise/wiki/Step-by-Step-Guide) is a good starting point to get to know Hyrise.
 
 ## Native Setup
 You can install the dependencies on your own or use the install.sh script (**recommended**) which installs all of the therein listed dependencies and submodules.
-The install script was tested under macOS (brew) and Ubuntu 17.04/17.10 (apt-get).
+The install script was tested under macOS High Sierra and Ubuntu 18.04 (apt-get).
 
 See [dependencies](DEPENDENCIES.md) for a detailed list of dependencies to use with `brew install` or `apt-get install`, depending on your platform. As compilers, we generally use the most recent version of clang and gcc (Linux only). Please make sure that the system compiler points to the most recent version or use cmake (see below) accordingly.
 Older versions may work, but are neither tested nor supported.
@@ -64,17 +64,18 @@ The binary can be executed with `./<YourBuildDirectory>/hyriseTest`.
 Note, that the tests/sanitizers/etc need to be executed from the project root in order for table files to be found.
 
 ### Coverage
-`./scripts/coverage.sh <build dir>` will print a summary to the command line and create detailed html reports at ./coverage/index.html
+`./scripts/coverage.sh` will print a summary to the command line and create detailed html reports at ./coverage/index.html
 
 *Supports only clang on MacOS and only gcc on linux*
 
 ### Address/UndefinedBehavior Sanitizers
-`make hyriseSanitizers` will build Hyrise's tests with enabled AddressSanitizer and Undefined Behavior options. Execute `./<YourBuildDirectory>/hyriseSanitizers` from the project root to run the tests with enabled sanitization.
+`cmake -DENABLE_SANITIZATION=ON` will generate Makefiles with AddressSanitizer and Undefined Behavior options.
+Compile and run them as normal - if any issues are detected, they will be printed to the console.
 It will fail on the first detected error and will print a summary.
 To convert addresses to actual source code locations, make sure llvm-symbolizer is installed (included in the llvm package) and is available in `$PATH`.
 To specify a custom location for the symbolizer, set `$ASAN_SYMBOLIZER_PATH` to the path of the executable.
 This seems to work out of the box on macOS - If not, make sure to have llvm installed.
-The binary can be executed with `LSAN_OPTIONS=suppressions=asan-ignore.txt ./<YourBuildDirectory>/hyriseSanitizers`.
+The binary can be executed with `LSAN_OPTIONS=suppressions=asan-ignore.txt ./<YourBuildDirectory>/hyriseTest`.
 
 ### Compile Times
 When trying to optimize the time spent building the project, it is often helpful to have an idea how much time is spent where.
@@ -99,6 +100,7 @@ Contact: firstname.lastname@hpi.de
 -	Moritz   Eyssen
 -	Martin   Fischer
 -	Pedro    Flemming
+-	Johannes Frohnhofen
 -	Sven     Ihde
 -	Michael  Janke
 -	Max      Jendruk

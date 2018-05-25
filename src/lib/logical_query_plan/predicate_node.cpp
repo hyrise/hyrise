@@ -6,7 +6,7 @@
 #include <string>
 
 #include "constant_mappings.hpp"
-#include "optimizer/table_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -96,8 +96,8 @@ std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
     value = static_cast<ColumnID::base_type>(left_input->get_output_column_id(boost::get<LQPColumnReference>(value)));
   }
 
-  return left_input->get_statistics()->predicate_statistics(left_input->get_output_column_id(_column_reference),
-                                                            _predicate_condition, value, _value2);
+  return std::make_shared<TableStatistics>(left_input->get_statistics()->estimate_predicate(
+      left_input->get_output_column_id(_column_reference), _predicate_condition, value, _value2));
 }
 
 bool PredicateNode::shallow_equals(const AbstractLQPNode& rhs) const {

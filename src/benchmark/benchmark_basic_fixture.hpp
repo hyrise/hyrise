@@ -13,8 +13,6 @@ class BenchmarkBasicFixture : public benchmark::Fixture {
   void SetUp(::benchmark::State& state) override;
   void TearDown(::benchmark::State&) override;
 
-  static void ChunkSizeIn(benchmark::internal::Benchmark* b);
-
  protected:
   void clear_cache();
 
@@ -22,7 +20,6 @@ class BenchmarkBasicFixture : public benchmark::Fixture {
   std::shared_ptr<TableWrapper> _table_wrapper_a;
   std::shared_ptr<TableWrapper> _table_wrapper_b;
   std::shared_ptr<TableWrapper> _table_dict_wrapper;
-  ChunkID _chunk_size;
 };
 
 }  // namespace opossum

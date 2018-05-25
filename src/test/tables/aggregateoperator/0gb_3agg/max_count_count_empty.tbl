@@ -1,0 +1,3 @@
+MAX(b)|COUNT(c)|COUNT(*)
+float_null|long|long
+null|0|0

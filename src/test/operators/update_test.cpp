@@ -12,7 +12,7 @@
 #include "operators/table_scan.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
-#include "optimizer/table_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
@@ -79,13 +79,7 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
   auto updated_table = std::make_shared<GetTable>("updateTestTable");
   updated_table->execute();
   ASSERT_NE(updated_table->get_output()->table_statistics(), nullptr);
-  EXPECT_EQ(updated_table->get_output()->table_statistics()->row_count(), original_row_count);
-  // TODO(anybody) atm the statistics will just be informed about the new invalid rows, not about the inserted rows.
-  // fix this
-  EXPECT_EQ(updated_table->get_output()->table_statistics()->approx_valid_row_count(), 0u);
-  EXPECT_EQ(updated_table->get_output()->row_count(), original_row_count * 2);
-
-  // The total row count (valid + invalid) should have increased by the number of rows that were updated.
+  EXPECT_EQ(updated_table->get_output()->table_statistics()->row_count(), 0u);
   EXPECT_EQ(updated_table->get_output()->row_count(), original_row_count + updated_rows_count);
 }
 

@@ -187,10 +187,11 @@ struct AggregateTraits<
 
 // invalid: AVG on non-arithmetic types
 template <typename ColumnType, AggregateFunction function>
-struct AggregateTraits<ColumnType, function, typename std::enable_if_t<!std::is_arithmetic<ColumnType>::value &&
-                                                                           (function == AggregateFunction::Avg ||
-                                                                            function == AggregateFunction::Sum),
-                                                                       void>> {
+struct AggregateTraits<
+    ColumnType, function,
+    typename std::enable_if_t<!std::is_arithmetic<ColumnType>::value &&
+                                  (function == AggregateFunction::Avg || function == AggregateFunction::Sum),
+                              void>> {
   typedef ColumnType column_type;
   typedef ColumnType aggregate_type;
   static constexpr DataType aggregate_data_type = DataType::Null;
@@ -318,15 +319,22 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const
 std::shared_ptr<const Table> Aggregate::_on_execute() {
   auto input_table = input_table_left();
 
+  for ([[maybe_unused]] const auto groupby_column_id : _groupby_column_ids) {
+    DebugAssert(groupby_column_id < input_table->column_count(), "GroupBy column index out of bounds");
+  }
+
   // check for invalid aggregates
   for (const auto& aggregate : _aggregates) {
     if (!aggregate.column) {
       if (aggregate.function != AggregateFunction::Count) {
         Fail("Aggregate: Asterisk is only valid with COUNT");
       }
-    } else if (input_table->column_data_type(*aggregate.column) == DataType::String &&
-               (aggregate.function == AggregateFunction::Sum || aggregate.function == AggregateFunction::Avg)) {
-      Fail("Aggregate: Cannot calculate SUM or AVG on string column");
+    } else {
+      DebugAssert(*aggregate.column < input_table->column_count(), "Aggregate column index out of bounds");
+      if (input_table->column_data_type(*aggregate.column) == DataType::String &&
+          (aggregate.function == AggregateFunction::Sum || aggregate.function == AggregateFunction::Avg)) {
+        Fail("Aggregate: Cannot calculate SUM or AVG on string column");
+      }
     }
   }
 
@@ -404,6 +412,11 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   for (ColumnID column_id{0}; column_id < _aggregates.size(); ++column_id) {
     const auto& aggregate = _aggregates[column_id];
     if (!aggregate.column && aggregate.function == AggregateFunction::Count) {
+      // SELECT COUNT(*) - we know the template arguments, so we don't need a visitor
+      auto context = std::make_shared<AggregateContext<CountColumnType, CountAggregateType>>();
+      context->results =
+          std::make_shared<std::map<AggregateKey, AggregateResult<CountAggregateType, CountColumnType>>>();
+      _contexts_per_column[column_id] = context;
       continue;
     }
     auto data_type = input_table->column_data_type(*aggregate.column);
@@ -458,20 +471,8 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
          * specific output logic for COUNT(*).
          */
         if (!aggregate.column && aggregate.function == AggregateFunction::Count) {
-          // We know the template arguments, so we don't need a visitor
-          if (!_contexts_per_column[column_index]) {
-            _contexts_per_column[column_index] =
-                std::make_shared<AggregateContext<CountColumnType, CountAggregateType>>();
-          }
-
           auto context = std::static_pointer_cast<AggregateContext<CountColumnType, CountAggregateType>>(
               _contexts_per_column[column_index]);
-
-          if (!context->results) {
-            // create result map for the first time if necessary
-            context->results =
-                std::make_shared<std::map<AggregateKey, AggregateResult<CountAggregateType, CountColumnType>>>();
-          }
 
           auto& results = *context->results;
 
@@ -650,8 +651,8 @@ _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
 // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
 template <typename ColumnType, typename AggregateType, AggregateFunction func>
 typename std::enable_if<func == AggregateFunction::Avg && !std::is_arithmetic<AggregateType>::value, void>::type
-    _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>>,
-                            std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType, ColumnType>>>) {
+_write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>>,
+                        std::shared_ptr<std::map<AggregateKey, AggregateResult<AggregateType, ColumnType>>>) {
   Fail("Invalid aggregate");
 }
 
@@ -727,7 +728,16 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
   }
 
   // write aggregated values into the column
-  _write_aggregate_values<ColumnType, decltype(aggregate_type), function>(col, context->results);
+  if (!context->results->empty()) {
+    _write_aggregate_values<ColumnType, decltype(aggregate_type), function>(col, context->results);
+  } else if (_groupby_columns.empty()) {
+    // If we did not GROUP BY anything and we have no results, we need to add NULL for most aggregates and 0 for count
+    col->values().push_back(decltype(aggregate_type){});
+    if (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct) {
+      col->null_values().push_back(true);
+    }
+  }
+
   _output_columns.push_back(col);
 }
 

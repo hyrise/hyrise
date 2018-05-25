@@ -15,6 +15,7 @@ set(
     concurrency/transaction_context_test.cpp
     gtest_main.cpp
     import_export/csv_meta_test.cpp
+    cost_model/cost_feature_proxy_test.cpp
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
     logical_query_plan/aggregate_node_test.cpp
@@ -72,8 +73,6 @@ set(
     operators/update_test.cpp
     operators/validate_test.cpp
     operators/validate_visibility_test.cpp
-    optimizer/chunk_statistics/pruning_filters_test.cpp
-    optimizer/column_statistics_test.cpp
     optimizer/expression_test.cpp
     optimizer/join_ordering/join_graph_builder_test.cpp
     optimizer/join_ordering/join_graph_test.cpp
@@ -88,8 +87,13 @@ set(
     optimizer/strategy/predicate_pushdown_rule_test.cpp
     optimizer/strategy/strategy_base_test.cpp
     optimizer/strategy/strategy_base_test.hpp
-    optimizer/table_statistics_join_test.cpp
-    optimizer/table_statistics_test.cpp
+    statistics/table_statistics_join_test.cpp
+    statistics/table_statistics_test.cpp
+    statistics/chunk_statistics/pruning_filters_test.cpp
+    statistics/column_statistics_test.cpp
+    statistics/generate_table_statistics_test.cpp
+    statistics/statistics_import_export_test.cpp
+    statistics/statistics_test_utils.hpp
     scheduler/scheduler_test.cpp
     server/mock_connection.hpp
     server/mock_task_runner.hpp
@@ -134,13 +138,83 @@ set(
     testing_assert.hpp
     utils/cuckoo_hashtable_test.cpp
     utils/format_bytes_test.cpp
+    utils/format_duration_test.cpp
     utils/numa_memory_resource_test.cpp
     gtest_main.cpp
 )
 
+if (${ENABLE_JIT_SUPPORT})
+    # Some of the JIT test cases require pre-compiled LLVM bitcode.
+    # To ensure this bitcode is always up-to-date and works across operating systems, the bitcode is automatically
+    # compiled along with the hyriseTest binary (see cmake/EmbedLLVM.cmake for details of this process).
+    # The C++ input files for the bitcode generation are located in
+    # src/test/operators/jit_operator/specialization/modules/.
+    # Each line below starting with "embed_llvm(" embeds on of these test files and exposes it as a different symbol
+    # name. Each test case can the access the required bitcode using this symbol.
+    include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
+    embed_llvm(
+        JIT_CODE_SPECIALIZER_TEST_MODULE
+        jit_code_specializer_test_module
+        operators/jit_operator/specialization/modules/jit_code_specializer_test_module.cpp
+    )
+    embed_llvm(
+        JIT_COMPILER_TEST_MODULE
+        jit_compiler_test_module
+        operators/jit_operator/specialization/modules/jit_compiler_test_module.cpp
+    )
+    embed_llvm(
+        JIT_REPOSITORY_TEST_MODULE
+        jit_repository_test_module
+        operators/jit_operator/specialization/modules/jit_repository_test_module.cpp
+    )
+    embed_llvm(
+        RESOLVE_CONDITION_TEST_MODULE
+        resolve_condition_test_module
+        operators/jit_operator/specialization/modules/resolve_condition_test_module.cpp
+    )
+
+    # Prevent clang from complaining about unused defines when compiling the assembly file
+    set_property(
+        SOURCE
+        ${JIT_CODE_SPECIALIZER_TEST_MODULE}
+        ${JIT_COMPILER_TEST_MODULE}
+        ${JIT_REPOSITORY_TEST_MODULE}
+        ${RESOLVE_CONDITION_TEST_MODULE}
+        PROPERTY COMPILE_FLAGS -Qunused-arguments
+    )
+
+    set(HYRISE_UNIT_TEST_SOURCES
+        ${HYRISE_UNIT_TEST_SOURCES}
+        ${JIT_CODE_SPECIALIZER_TEST_MODULE}
+        ${JIT_COMPILER_TEST_MODULE}
+        ${JIT_REPOSITORY_TEST_MODULE}
+        ${RESOLVE_CONDITION_TEST_MODULE}
+        operators/jit_operator_wrapper_test.cpp
+        operators/jit_operator/jit_aware_lqp_translator_test.cpp
+        operators/jit_operator/jit_hashmap_value_test.cpp
+        operators/jit_operator/jit_operations_test.cpp
+        operators/jit_operator/jit_tuple_value_test.cpp
+        operators/jit_operator/jit_variant_vector_test.cpp
+        operators/jit_operator/operators/jit_aggregate_test.cpp
+        operators/jit_operator/operators/jit_compute_test.cpp
+        operators/jit_operator/operators/jit_expression_test.cpp
+        operators/jit_operator/operators/jit_filter_test.cpp
+        operators/jit_operator/operators/jit_read_write_tuple_test.cpp
+        operators/jit_operator/specialization/get_runtime_pointer_for_value_test.cpp
+        operators/jit_operator/specialization/jit_code_specializer_test.cpp
+        operators/jit_operator/specialization/jit_compiler_test.cpp
+        operators/jit_operator/specialization/jit_repository_test.cpp
+        operators/jit_operator/specialization/jit_runtime_pointer_test.cpp
+        operators/jit_operator/specialization/resolve_condition_test.cpp
+        operators/jit_operator/specialization/modules/jit_code_specializer_test_module.cpp
+        operators/jit_operator/specialization/modules/jit_code_specializer_test_module.hpp
+    )
+endif()
+
 set (
     SYSTEM_TEST_SOURCES
     ${SHARED_SOURCES}
+    server/server_test_runner.cpp
     tpc/tpch_test.cpp
     tpc/tpch_db_generator_test.cpp
     gtest_main.cpp
@@ -169,4 +243,4 @@ target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
-target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES})
+target_link_libraries(hyriseSystemTest hyrise hyriseBenchmarkLib ${LIBRARIES} pqxx)

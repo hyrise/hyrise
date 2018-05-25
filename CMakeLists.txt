@@ -3,6 +3,12 @@ cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
 project(Hyrise)
 
+if(APPLE)
+    set(CMAKE_EXE_LINKER_FLAGS -Wl,-export_dynamic)
+else()
+    set(CMAKE_EXE_LINKER_FLAGS -Wl,--export-dynamic)
+endif()
+
 option(ENABLE_UNSUPPORTED_COMPILER "Set to ON to build Hyrise even if the compiler is not supported. Default: OFF" OFF)
 function(compiler_not_supported message)
     if (${ENABLE_UNSUPPORTED_COMPILER})
@@ -25,7 +31,10 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
         compiler_not_supported("Your clang version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
     endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-    compiler_not_supported("Apple's clang compiler is not supported because it is lacking support for recent C++ features. Please use the official llvm/clang version.")
+    if(NOT EXISTS "/usr/local/opt/llvm/bin/clang")
+        set(CMAKE_OSX_INSTALL_TEXT "install the official llvm/clang package using `install.sh` or `brew install llvm --with-toolchain` and then ")
+    endif()
+    compiler_not_supported("Apple's clang compiler is not supported because it is lacking support for recent C++ features. Please ${CMAKE_OSX_INSTALL_TEXT}run cmake with `-DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++`.")
 else()
     compiler_not_supported("You are using an unsupported compiler (${CMAKE_CXX_COMPILER_ID})! Compilation has only been tested with Clang (Linux + OS X) and GCC (Linux).")
 endif()
@@ -72,11 +81,12 @@ set(CURSES_NEED_NCURSES TRUE)
 # Dependencies
 find_package(FS REQUIRED)
 find_package(Numa)
-find_package(LLVM 5.0.0)
+find_package(LLVM 6.0.0 CONFIG)
 find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
 find_package(Curses REQUIRED)
 find_package(Sqlite3 REQUIRED)
+find_package(PQ REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system thread)
 
 add_definitions(-DBOOST_THREAD_VERSION=5)
@@ -86,6 +96,18 @@ if(${LLVM_FOUND})
     set(LLVM_LIBRARY ${LLVM_LIBRARY_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}LLVM${CMAKE_SHARED_LIBRARY_SUFFIX})
     message(STATUS "Found llvm library: inc=${LLVM_INCLUDE_DIR}, lib=${LLVM_LIBRARY}")
 endif()
+
+# If we are building Hyrise for the CI server, we want to make sure that all optional features are available and can be tested
+if(${CI_BUILD})
+    if(NOT ${LLVM_FOUND})
+        message(FATAL_ERROR "-DCI_BUILD=ON was set, but LLVM was not found.")
+    endif()
+
+    if(NOT ${NUMA_FOUND})
+        message(FATAL_ERROR "-DCI_BUILD=ON was set, but libnuma was not found.")
+    endif()
+endif()
+
 
 # Include sub-CMakeLists.txt
 add_subdirectory(third_party/ EXCLUDE_FROM_ALL)

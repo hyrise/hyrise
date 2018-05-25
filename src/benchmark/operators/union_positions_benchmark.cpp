@@ -22,8 +22,10 @@ constexpr auto GENERATED_TABLE_NUM_CHUNKS = 4;
  * Generate a random pos_list of length std::floor(pos_list_size) with ChunkIDs from [0,REFERENCED_TABLE_CHUNK_COUNT)
  * and ChunkOffsets within [0, std::floor(referenced_table_chunk_size))
  */
-std::shared_ptr<opossum::PosList> generate_pos_list(std::default_random_engine& random_engine,
-                                                    float referenced_table_chunk_size, float pos_list_size) {
+std::shared_ptr<opossum::PosList> generate_pos_list(float referenced_table_chunk_size, float pos_list_size) {
+  std::random_device random_device;
+  std::default_random_engine random_engine(random_device());
+
   std::uniform_int_distribution<opossum::ChunkID::base_type> chunk_id_distribution(
       0, static_cast<opossum::ChunkID::base_type>(REFERENCED_TABLE_CHUNK_COUNT - 1));
   std::uniform_int_distribution<opossum::ChunkOffset> chunk_offset_distribution(
@@ -45,107 +47,83 @@ std::shared_ptr<opossum::PosList> generate_pos_list(std::default_random_engine& 
 
 namespace opossum {
 
-class UnionPositionsBenchmarkFixture : public benchmark::Fixture {
- public:
-  UnionPositionsBenchmarkFixture() : _random_device(), _random_engine(_random_device()) {}
+std::shared_ptr<Table> create_reference_table(std::shared_ptr<Table> _referenced_table, size_t num_rows,
+                                              size_t num_columns) {
+  const auto num_rows_per_chunk = num_rows / GENERATED_TABLE_NUM_CHUNKS;
 
-  void SetUp(::benchmark::State& state) override {
-    const auto num_rows = state.range(0);
-    const auto num_columns = state.range(1);
+  TableColumnDefinitions column_definitions;
+  for (size_t column_idx = 0; column_idx < num_columns; ++column_idx) {
+    column_definitions.emplace_back("c" + std::to_string(column_idx), DataType::Int);
+  }
+  auto table = std::make_shared<Table>(column_definitions, TableType::References);
 
-    /**
-     * Create the referenced table, that doesn't actually contain any data - but UnionPositions won't care, it just
-     * operates on RowIDs
-     */
-    TableColumnDefinitions column_definitions;
+  for (size_t row_idx = 0; row_idx < num_rows;) {
+    const auto num_rows_in_this_chunk = std::min(num_rows_per_chunk, num_rows - row_idx);
 
-    for (auto column_idx = 0; column_idx < num_columns; ++column_idx) {
-      column_definitions.emplace_back("c" + std::to_string(column_idx), DataType::Int);
+    ChunkColumns columns;
+    for (auto column_idx = ColumnID{0}; column_idx < num_columns; ++column_idx) {
+      /**
+       * By specifying a chunk size of num_rows * 0.2f for the referenced table, we're emulating a referenced table
+       * of (num_rows * 0.2f) * REFERENCED_TABLE_CHUNK_COUNT rows - i.e. twice as many rows as the referencing table
+       * we're creating. So when creating TWO referencing tables, there should be a fair amount of overlap.
+       */
+      auto pos_list = generate_pos_list(num_rows * 0.2f, num_rows_per_chunk);
+      columns.push_back(std::make_shared<ReferenceColumn>(_referenced_table, column_idx, pos_list));
     }
-    _referenced_table = std::make_shared<Table>(column_definitions, TableType::Data);
+    table->append_chunk(columns);
 
-    /**
-     * Create the referencing tables, the ones we're actually going to perform the benchmark on
-     */
-    _table_wrapper_left = std::make_shared<TableWrapper>(_create_reference_table(num_rows, num_columns));
-    _table_wrapper_left->execute();
-    _table_wrapper_right = std::make_shared<TableWrapper>(_create_reference_table(num_rows, num_columns));
-    _table_wrapper_right->execute();
+    row_idx += num_rows_in_this_chunk;
   }
 
- protected:
-  std::random_device _random_device;
-  mutable std::default_random_engine _random_engine;
-  std::shared_ptr<TableWrapper> _table_wrapper_left;
-  std::shared_ptr<TableWrapper> _table_wrapper_right;
-  std::shared_ptr<Table> _referenced_table;
+  return table;
+}
 
-  std::shared_ptr<Table> _create_reference_table(size_t num_rows, size_t num_columns) const {
-    const auto num_rows_per_chunk = num_rows / GENERATED_TABLE_NUM_CHUNKS;
+void BM_UnionPositions(::benchmark::State& state) {
+  const auto num_rows = 500000;
+  const auto num_columns = 5;
 
-    TableColumnDefinitions column_definitions;
-    for (size_t column_idx = 0; column_idx < num_columns; ++column_idx) {
-      column_definitions.emplace_back("c" + std::to_string(column_idx), DataType::Int);
-    }
-    auto table = std::make_shared<Table>(column_definitions, TableType::References);
+  /**
+   * Create the referenced table, that doesn't actually contain any data - but UnionPositions won't care, it just
+   * operates on RowIDs
+   */
+  TableColumnDefinitions column_definitions;
 
-    for (size_t row_idx = 0; row_idx < num_rows;) {
-      const auto num_rows_in_this_chunk = std::min(num_rows_per_chunk, num_rows - row_idx);
-
-      ChunkColumns columns;
-      for (auto column_idx = ColumnID{0}; column_idx < num_columns; ++column_idx) {
-        /**
-         * By specifying a chunk size of num_rows * 0.2f for the referenced table, we're emulating a referenced table
-         * of (num_rows * 0.2f) * REFERENCED_TABLE_CHUNK_COUNT rows - i.e. twice as many rows as the referencing table
-         * we're creating. So when creating TWO referencing tables, there should be a fair amount of overlap.
-         */
-        auto pos_list = generate_pos_list(_random_engine, num_rows * 0.2f, num_rows_per_chunk);
-        columns.push_back(std::make_shared<ReferenceColumn>(_referenced_table, column_idx, pos_list));
-      }
-      table->append_chunk(columns);
-
-      row_idx += num_rows_in_this_chunk;
-    }
-
-    return table;
+  for (auto column_idx = 0; column_idx < num_columns; ++column_idx) {
+    column_definitions.emplace_back("c" + std::to_string(column_idx), DataType::Int);
   }
-};
+  auto _referenced_table = std::make_shared<Table>(column_definitions, TableType::Data);
 
-BENCHMARK_DEFINE_F(UnionPositionsBenchmarkFixture, Benchmark)(::benchmark::State& state) {
+  /**
+   * Create the referencing tables, the ones we're actually going to perform the benchmark on
+   */
+  auto _table_wrapper_left =
+      std::make_shared<TableWrapper>(create_reference_table(_referenced_table, num_rows, num_columns));
+  _table_wrapper_left->execute();
+  auto _table_wrapper_right =
+      std::make_shared<TableWrapper>(create_reference_table(_referenced_table, num_rows, num_columns));
+  _table_wrapper_right->execute();
+
   while (state.KeepRunning()) {
     auto set_union = std::make_shared<UnionPositions>(_table_wrapper_left, _table_wrapper_right);
     set_union->execute();
   }
 }
-BENCHMARK_REGISTER_F(UnionPositionsBenchmarkFixture, Benchmark)->Ranges({{100, 5 * 1000 * 1000}, {1, 4}});
+BENCHMARK(BM_UnionPositions);
 
 /**
  * Measure what sorting and merging two pos lists would cost - that's the core of the UnionPositions implementation and sets
  * a performance base line for what UnionPositions could achieve in an overhead-free implementation.
  */
-class UnionPositionsBaseLineBenchmarkFixture : public benchmark::Fixture {
- public:
-  UnionPositionsBaseLineBenchmarkFixture() : _random_device(), _random_engine(_random_device()) {}
+void BM_UnionPositionsBaseLine(::benchmark::State& state) {
+  auto num_table_rows = 500000;
 
-  void SetUp(::benchmark::State& state) override {
-    auto num_table_rows = state.range(0);
+  auto pos_list_left = generate_pos_list(num_table_rows * 0.2f, num_table_rows);
+  auto pos_list_right = generate_pos_list(num_table_rows * 0.2f, num_table_rows);
 
-    _pos_list_left = generate_pos_list(_random_engine, num_table_rows * 0.2f, num_table_rows);
-    _pos_list_right = generate_pos_list(_random_engine, num_table_rows * 0.2f, num_table_rows);
-  }
-
- protected:
-  std::random_device _random_device;
-  std::default_random_engine _random_engine;
-  std::shared_ptr<PosList> _pos_list_left;
-  std::shared_ptr<PosList> _pos_list_right;
-};
-
-BENCHMARK_DEFINE_F(UnionPositionsBaseLineBenchmarkFixture, Benchmark)(::benchmark::State& state) {
   while (state.KeepRunning()) {
     // Create copies, this would need to be done the UnionPositions Operator as well
-    auto left = *_pos_list_left;
-    auto right = *_pos_list_right;
+    auto left = *pos_list_left;
+    auto right = *pos_list_right;
 
     std::sort(left.begin(), left.end());
     std::sort(right.begin(), right.end());
@@ -155,5 +133,5 @@ BENCHMARK_DEFINE_F(UnionPositionsBaseLineBenchmarkFixture, Benchmark)(::benchmar
     std::set_union(left.begin(), left.end(), right.begin(), right.end(), std::back_inserter(result));
   }
 }
-BENCHMARK_REGISTER_F(UnionPositionsBaseLineBenchmarkFixture, Benchmark)->Range(100, 5 * 1000 * 1000);
+BENCHMARK(BM_UnionPositionsBaseLine);
 }  // namespace opossum

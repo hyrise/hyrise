@@ -10,15 +10,10 @@ namespace opossum {
  * @param state
  */
 static void BM_TpchDbGenerator(benchmark::State& state) {
-  /**
-   * TPCH scale factor is roughly in GB
-   */
-  const auto mega_bytes = state.range(0);
-  const auto scale_factor = static_cast<float>(mega_bytes) / 1000.0f;
-
   while (state.KeepRunning()) {
-    TpchDbGenerator(scale_factor, 1000).generate();
+    TpchDbGenerator(0.5f, 1000).generate();
   }
 }
-BENCHMARK(BM_TpchDbGenerator)->Range(1, 1024);
+BENCHMARK(BM_TpchDbGenerator);
+
 }  // namespace opossum

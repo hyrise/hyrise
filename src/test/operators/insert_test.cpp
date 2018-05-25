@@ -211,6 +211,26 @@ TEST_F(OperatorsInsertTest, InsertIntFloatNullValues) {
   EXPECT_TRUE(variant_is_null(null_val_float));
 }
 
+TEST_F(OperatorsInsertTest, InsertNullIntoNonNull) {
+  auto t_name = "test1";
+  auto t_name2 = "test2";
+
+  auto t = load_table("src/test/tables/int_float.tbl", 3u);
+  StorageManager::get().add_table(t_name, t);
+
+  auto t2 = load_table("src/test/tables/int_float_with_null.tbl", 4u);
+  StorageManager::get().add_table(t_name2, t2);
+
+  auto gt2 = std::make_shared<GetTable>(t_name2);
+  gt2->execute();
+
+  auto ins = std::make_shared<Insert>(t_name, gt2);
+  auto context = TransactionManager::get().new_transaction_context();
+  ins->set_transaction_context(context);
+  EXPECT_THROW(ins->execute(), std::logic_error);
+  context->rollback();
+}
+
 TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
   auto t_name = "test1";
 
