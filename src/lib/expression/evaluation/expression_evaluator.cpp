@@ -28,6 +28,8 @@
 #include "storage/value_column.hpp"
 #include "utils/assert.hpp"
 
+using namespace std::string_literals;
+
 namespace opossum {
 
 ExpressionEvaluator::ExpressionEvaluator(const std::shared_ptr<const Chunk>& chunk):
@@ -182,12 +184,31 @@ template<typename O, typename L, typename R> using LessThan = Comparison<std::le
 template<typename O, typename L, typename R> using LessThanEquals = Comparison<std::less_equal, O, L, R>;
 
 template<typename O, typename L, typename R> using And = Logical<std::logical_and, O, L, R>;
-template<typename O, typename L, typename R> using TernaryOr = TernaryOrImpl<O, L, R>;
+// template<typename O, typename L, typename R> using TernaryOr = TernaryOrImpl<O, L, R>;
 
 template<typename O, typename L, typename R> using Addition = ArithmeticFunctor<std::plus, O, L, R>;
 template<typename O, typename L, typename R> using Subtraction = ArithmeticFunctor<std::minus, O, L, R>;
 template<typename O, typename L, typename R> using Multiplication = ArithmeticFunctor<std::multiplies, O, L, R>;
 template<typename O, typename L, typename R> using Division = ArithmeticFunctor<std::divides, O, L, R>;
+// clang-format on
+
+
+// clang-format off
+struct TernaryOr {
+  template<typename R, typename A, typename B> struct supports           { static constexpr bool value = std::is_same_v<int32_t, R> && std::is_same_v<int32_t, A> && std::is_same_v<int32_t, B>; };
+  template<typename A, typename B>             struct evaluate_as_series { static constexpr bool value = is_series<A>::value || is_series<B>::value; };
+  static constexpr auto may_produce_value_from_null = true;
+
+  template<typename R, typename A, typename B>
+  static void perform(const ChunkOffset chunk_offset, R& result, const A& a, const B& b) {
+    const auto left_is_true = !get_null(a, chunk_offset) && static_cast<bool>(get_value(a, chunk_offset));
+    const auto right_is_true = !get_null(b, chunk_offset) && static_cast<bool>(get_value(b, chunk_offset));
+    const auto result_is_true = left_is_true || right_is_true;
+
+    set_value(result, chunk_offset, static_cast<typename expression_result_data_type<R>::type>(result_is_true));
+    set_null(result, chunk_offset, (get_null(a, chunk_offset) || get_null(b, chunk_offset)) && !result_is_true);
+  };
+};
 // clang-format on
 
 template<typename T>
@@ -1038,7 +1059,7 @@ ExpressionResult<int32_t> ExpressionEvaluator::evaluate_logical_expression<int32
 
   // clang-format off
   switch (expression.logical_operator) {
-    case LogicalOperator::Or:  return evaluate_binary_expression<int32_t, TernaryOr>(left, right);
+    case LogicalOperator::Or:  return evaluate_binary<int32_t, TernaryOr>(left, right);
     case LogicalOperator::And: return evaluate_binary_expression<int32_t, And>(left, right);
   }
   // clang-format on
@@ -1102,47 +1123,60 @@ ExpressionResult<int32_t> ExpressionEvaluator::evaluate_in_expression<int32_t>(c
 
 
 
-//template<typename T, template<typename...> typename Functor>
-//ExpressionResult<T> ExpressionEvaluator::evaluate_binary_expression2(const AbstractExpression& left_expression,
-//                                                const AbstractExpression& right_expression) {
-//  ExpressionResult<T> result_variant;
-//
-//  resolve_expression(left_expression, [](const auto& left_result) {
-//    using LeftResultType = decltype(left_result);
-//
-//    resolve_expression(right_expression, [](const auto& right_result) {
-//      using RightResultType = decltype(right_result);
-//
-//      if constexpr (!is_series_v(left_result) && !is_series(right_result)) {
-//        result_variant = resolve_value_result<T>(left_result, right_result, [&](auto& result, const auto& left_data_type_t, const auto right_data_type_t) {
-//          using LeftDataType = typename decltype(left_data_type_t)::type;
-//          using RightDataType = typename decltype(right_data_type_t)::type;
-//
-//          if constexpr (supported_v<Functor, T, LeftDataType, RightDataType>) {
-//            Functor{}(0, result, left_result, right_result);
-//          } else {
-//            Fail("Not supported");
-//          }
-//        });
-//      } else {
-//        result_variant = resolve_series_result<T>(left_result, right_result, [&](auto& result, const auto& left_data_type_t, const auto right_data_type_t) {
-//          using LeftDataType = typename decltype(left_data_type_t)::type;
-//          using RightDataType = typename decltype(right_data_type_t)::type;
-//
-//          if constexpr (supported_v<Functor, T, LeftDataType, RightDataType>) {
-//            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-//              Functor{}(chunk_offset, result, left_result, right_result);
-//            }
-//          } else {
-//            Fail("Not supported");
-//          }
-//        });
-//      }
-//    });
-//  });
-//
-//  return result_variant;
-//}
+template<typename R, typename Functor>
+ExpressionResult<R> ExpressionEvaluator::evaluate_binary(const AbstractExpression& left_expression,
+                                                         const AbstractExpression& right_expression) {
+  ExpressionResult<R> result_variant;
 
+  resolve_expression(left_expression, [&](const auto& left_result) {
+    using LeftResultType = std::decay_t<decltype(left_result)>;
+    using LeftDataType = typename expression_result_data_type<LeftResultType>::type;
+
+    resolve_expression(right_expression, [&](const auto& right_result) {
+      using RightResultType = std::decay_t<decltype(right_result)>;
+      using RightDataType = typename expression_result_data_type<RightResultType>::type;
+
+      if constexpr (Functor::template supports<R, LeftDataType, RightDataType>::value) {
+        using ResultType = typename resolve_result_type<R, LeftResultType, RightResultType, Functor>::type;
+
+        ResultType result;
+
+        if constexpr (is_series<ResultType>::value) {
+          expression_result_allocate(result, _output_row_count);
+
+          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
+            Functor::perform(chunk_offset, result, left_result, right_result);
+          }
+        } else {
+          Functor::perform(ChunkOffset{0}, result, left_result, right_result);
+        }
+
+        result_variant = result;
+
+      } else {
+        Fail("Operation not supported: "s + typeid(R).name() + " - " + typeid(LeftResultType).name() + " - " + typeid(RightResultType).name());
+      }
+    });
+  });
+
+  return result_variant;
+}
+
+template<typename Functor>
+void ExpressionEvaluator::resolve_expression(const AbstractExpression& expression, const Functor& fn) {
+  // resolve_data_type() doesn't support Null, so we have handle it explicitly
+  if (expression.data_type() == DataType::Null) {
+    fn(NullValue{});
+  } else {
+    resolve_data_type(expression.data_type(), [&] (const auto data_type_t) {
+      using ExpressionDataType = typename decltype(data_type_t)::type;
+      const auto expression_result_variant = evaluate_expression<ExpressionDataType>(expression);
+
+      boost::apply_visitor([&](const auto& expression_result) {
+        fn(expression_result);
+      }, expression_result_variant);
+    });
+  }
+}
 
 }  // namespace opossum

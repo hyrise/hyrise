@@ -99,9 +99,6 @@ class ExpressionEvaluator final {
   ExpressionResult<T> evaluate_binary_expression(const AbstractExpression& left_operand,
                                                  const AbstractExpression& right_operand);
 
-//  template<typename T, template<typename...> typename Functor>
-//  ExpressionResult<T> evaluate_binary_expression2(const AbstractExpression& left_expression,
-//                                                 const AbstractExpression& right_expression);
 
 
   template<typename ResultDataType,
@@ -111,6 +108,14 @@ class ExpressionEvaluator final {
   ExpressionResult<ResultDataType> evaluate_binary_operator(const ExpressionResult<LeftOperandDataType>& left_operands,
                                                                    const ExpressionResult<RightOperandDataType>& right_operands,
                                                                    const Functor &functor);
+
+
+  template<typename R, typename Functor>
+  ExpressionResult<R> evaluate_binary(const AbstractExpression& left_expression,
+                                      const AbstractExpression& right_expression);
+
+  template<typename Functor>
+  void resolve_expression(const AbstractExpression& expression, const Functor& fn);
 
  private:
   std::shared_ptr<const Chunk> _chunk;
