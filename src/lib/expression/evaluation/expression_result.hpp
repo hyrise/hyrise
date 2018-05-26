@@ -5,64 +5,86 @@
 #include "boost/variant.hpp"
 #include "boost/variant/apply_visitor.hpp"
 
+#include "storage/column_iterables/column_iterator_values.hpp"
+#include "storage/create_iterable_from_column.hpp"
 #include "null_value.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-template<typename T> using NullableValues = std::pair<std::vector<T>, std::vector<bool>>;
-template<typename T> using NonNullableValues = std::vector<T>;
-template<typename T> using NullableArrays = std::vector<NullableValues<T>>;
-template<typename T> using NonNullableArrays = std::vector<NonNullableValues<T>>;
+// clang-format off
+template<typename T> using NullableValues     = std::pair<std::vector<T>, std::vector<bool>>;
+template<typename T> using NonNullableValues  = std::vector<T>;
+template<typename T> using NullableArrays     = std::vector<NullableValues<T>>;
+template<typename T> using NonNullableArrays  = std::vector<NonNullableValues<T>>;
+template<typename T> using NullableValue      = std::optional<T>;
 
-// Don't change the order! is_*() functions rely on which()
 template<typename T> using ExpressionResult = boost::variant<
-NullableValues<T>,
-NonNullableValues<T>,
-T,
-NullValue,
-NullableArrays<T>,
-NonNullableArrays<T>
+  // Don't change the order! is_*() functions rely on which()
+  NullableValue<T>,
+  NullableValues<T>,
+  NonNullableValues<T>,
+  NullableArrays<T>,
+  NonNullableArrays<T>
 >;
 
-template<typename T> bool is_nullable_values(const ExpressionResult<T>& result){ return result.which() == 0; }
-template<typename T> bool is_non_nullable_values(const ExpressionResult<T>& result){ return result.which() == 1; }
-template<typename T> bool is_value(const ExpressionResult<T>& result) { return result.which() == 2; }
-template<typename T> bool is_null(const ExpressionResult<T>& result){ return result.which() == 3; }
-template<typename T> bool is_nullable_array(const ExpressionResult<T>& result) { return result.which() == 4; }
-template<typename T> bool is_non_nullable_array(const ExpressionResult<T>& result){ return result.which() == 5; }
+template<typename T> bool is_nullable_value(const ExpressionResult<T>& result)      { return result.which() == 0; }
+template<typename T> bool is_nullable_values(const ExpressionResult<T>& result)     { return result.which() == 1; }
+template<typename T> bool is_non_nullable_values(const ExpressionResult<T>& result) { return result.which() == 2; }
+template<typename T> bool is_nullable_array(const ExpressionResult<T>& result)      { return result.which() == 3; }
+template<typename T> bool is_non_nullable_array(const ExpressionResult<T>& result)  { return result.which() == 4; }
 
-template<typename T> struct expression_result_data_type { using type = T; };
-template<typename T> struct expression_result_data_type<NullableValues<T>> { using type = T; };
+template<typename T> struct expression_result_data_type                       { };
+template<>           struct expression_result_data_type<NullValue>            { using type = NullValue; };
+template<typename T> struct expression_result_data_type<NullableValue<T>>     { using type = T; };
+template<typename T> struct expression_result_data_type<NullableValues<T>>    { using type = T; };
 template<typename T> struct expression_result_data_type<NonNullableValues<T>> { using type = T; };
-template<typename T> struct expression_result_data_type<NullableArrays<T>> { using type = T; };
+template<typename T> struct expression_result_data_type<NullableArrays<T>>    { using type = T; };
 template<typename T> struct expression_result_data_type<NonNullableArrays<T>> { using type = T; };
 
-template<typename T> struct is_series { static constexpr bool value = false; };
-template<typename T> struct is_series<NullableValues<T>> { static constexpr bool value = true; };
-template<typename T> struct is_series<NonNullableValues<T>> { static constexpr bool value = true; };
-template<typename T> struct is_series<NullableArrays<T>> { static constexpr bool value = true; };
-template<typename T> struct is_series<NonNullableArrays<T>> { static constexpr bool value = true; };
+// Default is true, so that all ColumnIterators are though of as Series
+template<typename T> struct is_series                               { static constexpr bool value = true; };
+template<>           struct is_series<NullValueIterator>            { static constexpr bool value = false; };
+template<typename T> struct is_series<NullableValueIteratpr<T>>     { static constexpr bool value = false; };
 
-template<typename T> struct is_null_t { static constexpr bool value = std::is_same_v<NullValue, T>; };
-template<typename T> constexpr bool is_null_v = is_null_t<T>::value;
+template<typename T> constexpr bool is_null_v = std::is_same_v<T, NullValue>;
 
-template<typename T> struct is_value_t { static constexpr bool value = std::is_same_v<expression_result_data_type<T>::type, T>; };
-template<typename T> constexpr bool is_value_v = is_value_t<T>::value;
+template<typename T> struct is_nullable_value_t                       { static constexpr bool value = false; };
+template<typename T> struct is_nullable_value_t<NullableValues<T>>    { static constexpr bool value = true; };
+template<typename T> constexpr bool is_nullable_value_v = is_nullable_value_t<T>::value;
 
-template<typename T> struct is_nullable_values_t { static constexpr bool value = false; };
-template<typename T> struct is_nullable_values_t<NullableValues<T>> { static constexpr bool value = true; };
+template<typename T> struct is_nullable_values_t                      { static constexpr bool value = false; };
+template<typename T> struct is_nullable_values_t<NullableValues<T>>   { static constexpr bool value = true; };
 template<typename T> constexpr bool is_nullable_values_v = is_nullable_values_t<T>::value;
 
-template<typename T> struct is_non_nullable_values_t { static constexpr bool value = false; };
-template<typename T> struct is_non_nullable_values_t<NonNullableValues<T>> { static constexpr bool value = true; };
+template<typename T> struct is_non_nullable_values_t                        { static constexpr bool value = false; };
+template<typename T> struct is_non_nullable_values_t<NonNullableValues<T>>  { static constexpr bool value = true; };
 template<typename T> constexpr bool is_non_nullable_values_v = is_non_nullable_values_t<T>::value;
+
+template<typename T> struct is_nullable_arrays_t                    { static constexpr bool value = false; };
+template<typename T> struct is_nullable_arrays_t<NullableArrays<T>>  { static constexpr bool value = true; };
+template<typename T> constexpr bool is_nullable_arrays_v = is_nullable_arrays_t<T>::value;
+
+template<typename T> struct is_non_nullable_arrays_t                    { static constexpr bool value = false; };
+template<typename T> struct is_non_nullable_arrays_t<NonNullableArrays<T>>  { static constexpr bool value = true; };
+template<typename T> constexpr bool is_non_nullable_arrays_v = is_non_nullable_arrays_t<T>::value;
+
+
+
 
 /**
  * @defgroup Determine the ExpressionResult member
+ *
+ * @tparam A  IteratorValue of the operand A
+ * @tparam B  IteratorValue of the operand B
+ *
  * @{
  */
-template<typename R, typename A, typename B, typename Functor, typename Enable = void> struct resolve_result_type { using type = NullableValues<R>; };
+template<typename R, typename A, typename B, typename Fn, typename Enable = void> struct resolve_result_type { using type = NullableValues<R>; };
+
+template<typename R, typename A, typename B, typename Fn> struct resolve_result_type<R, A, B, Fn,
+  std::enable_if_t<(is_series_v<A> || is_series_v<B>) && (!is_nullable_v<A> && !is_nullable_v<B>)>
+  > { using type = NonNullableValues<R>; };
 
 //template<typename R, typename A, typename B, typename Functor> struct resolve_result_type<R, A, B, Functor,
 //  std::enable_if_t<(is_null_v<A> && is_null_v<B>) || ((is_null_v<A> || is_null_v<B>) && Functor::may_produce_value_from_null)>>{ using type = NullValue; };
@@ -77,35 +99,30 @@ template<typename R, typename A, typename B, typename Functor, typename Enable =
  * @defgroup Iterative access for the different ExpressionResult members
  * @{
  */
-template<typename T> const T& get_value(const T& value, const ChunkOffset chunk_offset) { return value; }
-template<typename T> bool get_null(const T& value, const ChunkOffset chunk_offset) { return false; }
-template<typename T> void set_value(T& out_value, const ChunkOffset chunk_offset, const T& value) { out_value = value; }
-template<typename T> void set_null(T& out_value, const ChunkOffset chunk_offset, const bool null) { }
+template<typename T, typename S> void set_expression_result(NullableValue<T>& nullable_value, const ChunkOffset chunk_offset, const S& value, const bool null) {
+  if (null) {
+    nullable_value.reset();
+  } else {
+    nullable_value.emplace(static_cast<T>(value));
+  }
+}
 
-template<typename T> const T& get_value(const NullableValues<T>& nullable_values, const ChunkOffset chunk_offset) { return nullable_values.first[chunk_offset]; }
-template<typename T> bool get_null(const NullableValues<T>& nullable_values, const ChunkOffset chunk_offset) { return nullable_values.second[chunk_offset]; }
-template<typename T> void set_value(NullableValues<T>& nullable_values, const ChunkOffset chunk_offset, const T& value) { nullable_values.first[chunk_offset] = value; }
-template<typename T> void set_null(NullableValues<T>& nullable_values, const ChunkOffset chunk_offset, const bool null) { nullable_values.second[chunk_offset] = null; }
+template<typename T, typename S> void set_expression_result(NullableValues<T>& nullable_values, const ChunkOffset chunk_offset, const S& value, const bool null) {
+  nullable_values.first[chunk_offset] = static_cast<T>(value);
+  nullable_values.second[chunk_offset] = null;
+}
 
-template<typename T> const T& get_value(const NonNullableValues<T>& non_nullable_values, const ChunkOffset chunk_offset) { return non_nullable_values[chunk_offset]; }
-template<typename T> bool get_null(const NonNullableValues<T>& non_nullable_values, const ChunkOffset chunk_offset) { return false; }
-template<typename T> void set_value(NonNullableValues<T>& non_nullable_values, const ChunkOffset chunk_offset, const T& value) { non_nullable_values[chunk_offset] = value; }
-template<typename T> void set_null(NonNullableValues<T>& non_nullable_values, const ChunkOffset chunk_offset, const bool null) { }
+template<typename T, typename S> void set_expression_result(NonNullableValues<T>& non_nullable_values, const ChunkOffset chunk_offset, const S& value, const bool null) {
+  non_nullable_values[chunk_offset] = static_cast<T>(value);
+}
 
-template<typename T> const T& get_value(const NullableArrays<T>& non_nullable_values, const ChunkOffset chunk_offset) { Fail("Can't access Arrays with this API"); }
-template<typename T> bool get_null(const NullableArrays<T>& non_nullable_values, const ChunkOffset chunk_offset) { Fail("Can't access Arrays with this API"); }
-template<typename T> void set_value(NullableArrays<T>& non_nullable_values, const ChunkOffset chunk_offset, const T& value) { Fail("Can't access Arrays with this API"); }
-template<typename T> void set_null(NullableArrays<T>& non_nullable_values, const ChunkOffset chunk_offset, const bool null) { Fail("Can't access Arrays with this API"); }
+template<typename T, typename S> void set_expression_result(NullableArrays<T>& nullable_arrays, const ChunkOffset chunk_offset, const S& value, const bool null) {
+  Fail("Can't write to array using this API");
+}
 
-template<typename T> const T& get_value(const NonNullableArrays<T>& non_nullable_values, const ChunkOffset chunk_offset) { Fail("Can't access Arrays with this API"); }
-template<typename T> bool get_null(const NonNullableArrays<T>& non_nullable_values, const ChunkOffset chunk_offset) { Fail("Can't access Arrays with this API"); }
-template<typename T> void set_value(NonNullableArrays<T>& non_nullable_values, const ChunkOffset chunk_offset, const T& value) { Fail("Can't access Arrays with this API"); }
-template<typename T> void set_null(NonNullableArrays<T>& non_nullable_values, const ChunkOffset chunk_offset, const bool null) { Fail("Can't access Arrays with this API"); }
-
-template<> inline const NullValue& get_value<NullValue>(const NullValue& value, const ChunkOffset chunk_offset) { return value; }
-template<> inline bool get_null<NullValue>(const NullValue& value, const ChunkOffset chunk_offset) { return true; }
-template<> inline void set_value<NullValue>(NullValue& out_value, const ChunkOffset chunk_offset, const NullValue& value) { }
-template<> inline void set_null<NullValue>(NullValue& out_value, const ChunkOffset chunk_offset, const bool null) { }
+template<typename T, typename S> void set_expression_result(NonNullableArrays<T>& non_nullable_arrays, const ChunkOffset chunk_offset, const S& value, const bool null) {
+  Fail("Can't write to array using this API");
+}
 /**
  * @}
  */
@@ -123,6 +140,8 @@ template<typename T>
 void expression_result_allocate(NonNullableValues<T>& non_nullable_values, const size_t size) {
   non_nullable_values.resize(size);
 }
+// clang-format on
+
 
 
 }  // namespace opossum

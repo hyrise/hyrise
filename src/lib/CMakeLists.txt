@@ -38,6 +38,7 @@ set(
     expression/evaluation/expression_evaluator.cpp
     expression/evaluation/expression_evaluator.hpp
     expression/evaluation/expression_result.hpp
+    expression/evaluation/expression_result_iterators.hpp
     expression/expression_factory.cpp
     expression/expression_factory.hpp
     expression/expression_utils.cpp
