@@ -42,162 +42,6 @@ _chunk(chunk)
   _output_row_count = _chunk->size();
   _column_materializations.resize(_chunk->column_count());
 }
-//
-//
-//template<bool null_from_values, bool value_from_null, bool per_row_evaluation>
-//struct OperatorTraits {
-//  static constexpr auto may_produce_null_from_values = null_from_values;
-//  static constexpr auto may_produce_value_from_null = value_from_null;
-//  static constexpr auto force_per_row_evaluation = per_row_evaluation;
-//};
-//
-//template<typename Functor, typename O, typename L, typename R, bool null_from_values, bool value_from_null, bool per_row_evaluation>
-//struct BinaryFunctorWrapper : public OperatorTraits<null_from_values, value_from_null, per_row_evaluation> {
-//  void operator()(const ChunkOffset chunk_offset,
-//                  O &result_value,
-//                  bool& result_null,
-//                  const L left_value,
-//                  const bool left_null,
-//                  const R right_value,
-//                  const bool right_null) const {
-//    result_value = Functor{}(left_value, right_value);
-//    result_null = left_null || right_null;
-//  }
-//};
-//
-//template<template<typename> typename Fn, typename O, typename L, typename R, typename Enable = void>
-//struct Comparison {
-//  static constexpr auto supported = false;
-//};
-//template<template<typename> typename Fn, typename O, typename L, typename R>
-//struct Comparison<Fn, O, L, R, std::enable_if_t<std::is_same_v<int32_t, O> && std::is_same_v<std::string, L> == std::is_same_v<std::string, R>>> :  public BinaryFunctorWrapper<Fn<std::common_type_t<L, R>>, O, L, R, false, false, false> {
-//  static constexpr auto supported = true;
-//};
-//
-//template<typename O, typename L, typename R, typename Enable = void>
-//struct TernaryOrImpl {
-//  static constexpr auto supported = false;
-//};
-//
-//template<typename O, typename L, typename R>
-//struct TernaryOrImpl<O, L, R, std::enable_if_t<std::is_same_v<int32_t, O> && std::is_same_v<int32_t, L> && std::is_same_v<int32_t, R>>> : public OperatorTraits<false, true, false> {
-//  static constexpr auto supported = true;
-//  void operator()(const ChunkOffset chunk_offset, int32_t &result_value, bool& result_null, const int32_t left_value, const bool left_null,
-//                  const int32_t right_value, const bool right_null) const {
-//    const auto left_is_true = !left_null && left_value;
-//    const auto right_is_true = !right_null && right_value;
-//
-//    result_value = left_is_true || right_is_true;
-//    result_null = (left_null || right_null) && !result_value;
-//  }
-//};
-//
-//template<typename O, typename L, typename R, typename Enable = void>
-//struct CaseNonNullableCondition {
-//  static constexpr auto supported = false;
-//};
-//
-//template<typename O, typename L, typename R>
-//struct CaseNonNullableCondition<O, L, R, std::enable_if_t<std::is_same_v<std::string, O> == std::is_same_v<std::string, L> && std::is_same_v<std::string, L> == std::is_same_v<std::string, R>>> : public OperatorTraits<false, true, true> {
-//  static constexpr auto supported = true;
-//
-//  const std::vector<int32_t> when_values;
-//
-//  CaseNonNullableCondition(std::vector<int32_t> when_values):
-//    when_values(when_values) {}
-//
-//  void operator()(const ChunkOffset chunk_offset, O &result_value, bool& result_null, const L left_value, const bool left_null,
-//                  const R right_value, const bool right_null) const {
-//    if (when_values[chunk_offset]) {
-//      if (left_null) {
-//        result_null = true;
-//      } else {
-//        result_null = false;
-//        result_value = static_cast<O>(left_value);
-//      }
-//    } else {
-//      if (right_null) {
-//        result_null = true;
-//      } else {
-//        result_null = false;
-//        result_value = static_cast<O>(right_value);
-//      }
-//    }
-//  }
-//};
-//
-//template<typename O, typename L, typename R, typename Enable = void>
-//struct CaseNullableCondition {
-//  static constexpr auto supported = false;
-//};
-//
-//template<typename O, typename L, typename R>
-//struct CaseNullableCondition<O, L, R, std::enable_if_t<std::is_same_v<std::string, O> == std::is_same_v<std::string, L> && std::is_same_v<std::string, L> == std::is_same_v<std::string, R>>> : public OperatorTraits<false, true, true> {
-//  static constexpr auto supported = true;
-//
-//  const std::vector<int32_t> when_values;
-//  const std::vector<bool> when_nulls;
-//
-//  CaseNullableCondition(std::vector<int32_t> when_values, std::vector<bool> when_nulls):
-//    when_values(when_values), when_nulls(when_nulls) {}
-//
-//  void operator()(const ChunkOffset chunk_offset, O &result_value, bool& result_null, const L left_value, const bool left_null,
-//                  const R right_value, const bool right_null) const {
-//    if (when_nulls[chunk_offset] || when_values[chunk_offset]) {
-//      if (left_null) {
-//        result_null = true;
-//      } else {
-//        result_null = false;
-//        result_value = static_cast<O>(left_value);
-//      }
-//    } else {
-//      if (right_null) {
-//        result_null = true;
-//      } else {
-//        result_null = false;
-//        result_value = static_cast<O>(right_value);
-//      }
-//    }
-//  }
-//};
-//
-//template<template<typename> typename Fn, typename O, typename L, typename R, typename Enable = void>
-//struct Logical {
-//  static constexpr auto supported = false;
-//};
-//template<template<typename> typename Fn, typename O, typename L, typename R>
-//struct Logical<Fn, O, L, R, std::enable_if_t<std::is_same_v<int32_t, O> && std::is_same_v<int32_t, L> && std::is_same_v<int32_t, R>>> : public BinaryFunctorWrapper<Fn<O>, O, L, R, false, false, false>{
-//  static constexpr auto supported = true;
-//};
-//
-//template<template<typename> typename Fn, typename O, typename L, typename R, typename Enable = void>
-//struct ArithmeticFunctor {
-//  static constexpr auto supported = false;
-//};
-//template<template<typename> typename Fn, typename O, typename L, typename R>
-//struct ArithmeticFunctor<Fn, O, L, R, std::enable_if_t<!std::is_same_v<std::string, O> && !std::is_same_v<std::string, L> && !std::is_same_v<std::string, R>>> : public BinaryFunctorWrapper<Fn<O>, O, L, R, false, false, false> {
-//  static constexpr auto supported = true;
-//};
-//
-//// clang-format off
-//template<typename O, typename L, typename R> using Equals = Comparison<std::equal_to, O, L, R>;
-//template<typename O, typename L, typename R> using NotEquals = Comparison<std::not_equal_to, O, L, R>;
-//template<typename O, typename L, typename R> using GreaterThan = Comparison<std::greater, O, L, R>;
-//template<typename O, typename L, typename R> using GreaterThanEquals = Comparison<std::greater_equal, O, L, R>;
-//template<typename O, typename L, typename R> using LessThan = Comparison<std::less, O, L, R>;
-//template<typename O, typename L, typename R> using LessThanEquals = Comparison<std::less_equal, O, L, R>;
-//
-//template<typename O, typename L, typename R> using And = Logical<std::logical_and, O, L, R>;
-//// template<typename O, typename L, typename R> using TernaryOr = TernaryOrImpl<O, L, R>;
-//
-//template<typename O, typename L, typename R> using Addition = ArithmeticFunctor<std::plus, O, L, R>;
-//template<typename O, typename L, typename R> using Subtraction = ArithmeticFunctor<std::minus, O, L, R>;
-//template<typename O, typename L, typename R> using Multiplication = ArithmeticFunctor<std::multiplies, O, L, R>;
-//template<typename O, typename L, typename R> using Division = ArithmeticFunctor<std::divides, O, L, R>;
-//// clang-format on
-
-
-
 
 template<typename T>
 ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpression& expression) {
@@ -357,24 +201,29 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_arithmetic_expression(const Ar
   // clang-format on
 }
 
-template<typename T>
-ExpressionResult<T> ExpressionEvaluator::evaluate_binary_predicate_expression(const BinaryPredicateExpression& expression) {
+template<>
+ExpressionResult<int32_t> ExpressionEvaluator::evaluate_binary_predicate_expression<int32_t>(const BinaryPredicateExpression& expression) {
   const auto& left = *expression.left_operand();
   const auto& right = *expression.right_operand();
 
   // clang-format off
   switch (expression.predicate_condition) {
-    case PredicateCondition::Equals:            return evaluate_binary_with_default_null_logic<T, Equals>(left, right);
-    case PredicateCondition::NotEquals:         return evaluate_binary_with_default_null_logic<T, NotEquals>(left, right);  // NOLINT
-    case PredicateCondition::LessThan:          return evaluate_binary_with_default_null_logic<T, LessThan>(left, right);  // NOLINT
-    case PredicateCondition::LessThanEquals:    return evaluate_binary_with_default_null_logic<T, LessThanEquals>(left, right);  // NOLINT
-    case PredicateCondition::GreaterThan:       return evaluate_binary_with_default_null_logic<T, GreaterThan>(left, right);  // NOLINT
-    case PredicateCondition::GreaterThanEquals: return evaluate_binary_with_default_null_logic<T, GreaterThanEquals>(left, right);  // NOLINT
+    case PredicateCondition::Equals:            return evaluate_binary_with_default_null_logic<int32_t, Equals>(left, right);
+    case PredicateCondition::NotEquals:         return evaluate_binary_with_default_null_logic<int32_t, NotEquals>(left, right);  // NOLINT
+    case PredicateCondition::LessThan:          return evaluate_binary_with_default_null_logic<int32_t, LessThan>(left, right);  // NOLINT
+    case PredicateCondition::LessThanEquals:    return evaluate_binary_with_default_null_logic<int32_t, LessThanEquals>(left, right);  // NOLINT
+    case PredicateCondition::GreaterThan:       return evaluate_binary_with_default_null_logic<int32_t, GreaterThan>(left, right);  // NOLINT
+    case PredicateCondition::GreaterThanEquals: return evaluate_binary_with_default_null_logic<int32_t, GreaterThanEquals>(left, right);  // NOLINT
 
     default:
       Fail("PredicateCondition evaluation not yet implemented");
   }
   // clang-format on
+}
+
+template<typename T>
+ExpressionResult<T> ExpressionEvaluator::evaluate_binary_predicate_expression(const BinaryPredicateExpression& expression) {
+  Fail("Can only evaluate binary predicate to int32_t");
 }
 
 
@@ -769,6 +618,53 @@ template<typename R, typename Functor>
 ExpressionResult<R> ExpressionEvaluator::evaluate_binary_with_default_null_logic(const AbstractExpression& left_expression,
                                                          const AbstractExpression& right_expression) {
   ExpressionResult<R> result;
+
+
+  resolve_expression(left_expression, [&](const auto& left_result) {
+    resolve_expression(right_expression, [&](const auto& right_result) {
+      using LeftDataType = typename std::decay_t<decltype(left_result)>::Type;
+      using RightDataType = typename std::decay_t<decltype(right_result)>::Type;
+
+      if constexpr (Functor::template supports<R, LeftDataType, RightDataType>::value) {
+        const auto output_row_count = std::max(left_result.size(), right_result.size());
+
+        /**
+         * Compute nulls
+         */
+        std::vector<bool> nulls;
+        if (left_result.is_nullable() || right_result.is_nullable()) {
+          nulls.resize(output_row_count);
+
+          if (left_result.is_nullable() && !right_result.is_nullable()) {
+            for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
+              nulls[row_idx] = left_result.null(row_idx);
+            }
+          } else if (!left_result.is_nullable() && right_result.is_nullable()) {
+            for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
+              nulls[row_idx] = right_result.null(row_idx);
+            }
+          } else {
+            for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
+              nulls[row_idx] = left_result.null(row_idx) || right_result.null(row_idx);
+            }
+          }
+        }
+
+        /**
+         * Compute values
+         */
+        if (left_result.size() == right_result.sie())
+
+
+        std::vector<R> values(output_row_count);
+        for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
+          Functor{}(values[row_idx], left.value(row_idx), right.value(row_idx));
+        }
+      } else {
+        Fail("BinaryOperation not supported on the requested DataTypes");
+      }
+    });
+  });
 
   resolve_binary(left_expression, right_expression, [&] (const ChunkOffset output_row_count, const auto& left, const auto& right) {
     using LeftDataType = typename std::decay_t<decltype(left)>::Type;
