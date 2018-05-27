@@ -69,45 +69,15 @@ class ExpressionEvaluatorTest : public ::testing::Test {
    */
   template<typename T>
   std::vector<std::optional<T>> normalize_expression_result(const ExpressionResult<T> &result) {
+    std::vector<std::optional<T>> normalized(result.size());
 
-    if (result.type() == typeid(NullValue)) {
-      return {{std::nullopt,}};
-
-    } else if (result.type() == typeid(NullableValue<T>)) {
-      const auto& nullable_value = boost::get<NullableValue<T>>(result);
-
-      if (nullable_value) {
-        return {{*nullable_value}};
-      } else {
-        return {{std::nullopt}};
+    resolve_expression_result(result, [&](const auto& resolved) {
+      for (auto idx = size_t{0}; idx < result.size(); ++idx) {
+        if (!result.is_nullable() || !resolved.null(idx)) normalized[idx] = resolved.value(idx);
       }
+    });
 
-    } else if (result.type() == typeid(NullableValues<T>)) {
-      const auto& nullable_values = boost::get<NullableValues<T>>(result);
-
-      std::vector<std::optional<T>> normalized_result(nullable_values.first.size());
-
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < nullable_values.first.size(); ++chunk_offset) {
-        if (nullable_values.second[chunk_offset]) {
-          normalized_result[chunk_offset] = std::nullopt;
-        } else {
-          normalized_result[chunk_offset] = nullable_values.first[chunk_offset];
-        }
-      }
-
-      return normalized_result;
-
-    } else if (result.type() == typeid(NonNullableValues<T>)) {
-      const auto& non_nullable_values = boost::get<NonNullableValues<T>>(result);
-
-      std::vector<std::optional<T>> normalized_result(non_nullable_values.begin(), non_nullable_values.end());
-
-      return normalized_result;
-
-    } else {
-      Fail("Can't normalize this ExpressionType");
-
-    }
+    return normalized;
   }
 
   template<typename R>
@@ -141,14 +111,16 @@ class ExpressionEvaluatorTest : public ::testing::Test {
   std::shared_ptr<BinaryPredicateExpression> s1_lt_s2;
 };
 
-TEST_F(ExpressionEvaluatorTest, TernaryOrNull) {
-  const auto passed = test_expression<int32_t>(*or_(NullValue{}, NullValue{}), {std::nullopt});
-  EXPECT_TRUE(passed);
-}
-
-TEST_F(ExpressionEvaluatorTest, TernaryOrValue) {
-  const auto passed = test_expression<int32_t>(*or_(1, NullValue{}), {1});
-  EXPECT_TRUE(passed);
+TEST_F(ExpressionEvaluatorTest, TernaryOrLiteral) {
+  EXPECT_TRUE(test_expression<int32_t>(*or_(1, 0), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*or_(1, 1), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*or_(0, 1), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*or_(0, 0), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*or_(0, NullValue{}), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*or_(1, NullValue{}), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*or_(NullValue{}, NullValue{}), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*or_(NullValue{}, 0), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*or_(NullValue{}, 1), {1}));
 }
 
 TEST_F(ExpressionEvaluatorTest, TernaryOrNonNull) {
@@ -163,6 +135,18 @@ TEST_F(ExpressionEvaluatorTest, TernaryOrNullable) {
                                                {0, 1, std::nullopt, 0, 1, std::nullopt, 1, 1, 1, 1, 1, 1});
 
   EXPECT_TRUE(passed);
+}
+
+TEST_F(ExpressionEvaluatorTest, TernaryAndLiteral) {
+  EXPECT_TRUE(test_expression<int32_t>(*and_(1, 0), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*and_(1, 1), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*and_(0, 1), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*and_(0, 0), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*and_(0, NullValue{}), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*and_(1, NullValue{}), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*and_(NullValue{}, NullValue{}), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*and_(NullValue{}, 0), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*and_(NullValue{}, 1), {std::nullopt}));
 }
 
 //TEST_F(ExpressionEvaluatorTest, ArithmeticExpression) {
@@ -217,12 +201,12 @@ TEST_F(ExpressionEvaluatorTest, TernaryOrNullable) {
 //  EXPECT_EQ(actual_nulls, expected_nulls);
 //}
 
-TEST_F(ExpressionEvaluatorTest, In) {
-  const auto passed = test_expression<int32_t>(chunk_a, *in(a, array(1.0, 3.0)),
-                                               {1, 0, 1, 0});
+//TEST_F(ExpressionEvaluatorTest, In) {
+//  const auto passed = test_expression<int32_t>(chunk_a, *in(a, array(1.0, 3.0)),
+//                                               {1, 0, 1, 0});
 
-  EXPECT_TRUE(passed);
-}
+//  EXPECT_TRUE(passed);
+//}
 
 //TEST_F(ExpressionEvaluatorTest, Case) {
 //  /**

@@ -29,8 +29,6 @@
 #include "utils/lambda_visitor.hpp"
 #include "storage/value_column.hpp"
 #include "utils/assert.hpp"
-#include "determine_expression_result_type.hpp"
-#include "expression_result_iterators.hpp"
 #include "expression_functors.hpp"
 
 using namespace std::string_literals;
@@ -204,8 +202,8 @@ _chunk(chunk)
 template<typename T>
 ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpression& expression) {
   switch (expression.type) {
-//    case ExpressionType::Arithmetic:
-//      return evaluate_arithmetic_expression<T>(static_cast<const ArithmeticExpression&>(expression));
+    case ExpressionType::Arithmetic:
+      return evaluate_arithmetic_expression<T>(static_cast<const ArithmeticExpression&>(expression));
 
     case ExpressionType::Logical:
       return evaluate_logical_expression<T>(static_cast<const LogicalExpression&>(expression));
@@ -216,7 +214,8 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpre
       if (is_lexicographical_predicate_condition(predicate_expression.predicate_condition)) {
         return evaluate_binary_predicate_expression<T>(static_cast<const BinaryPredicateExpression&>(expression));
       } else if (predicate_expression.predicate_condition == PredicateCondition::In) {
-        return evaluate_in_expression<T>(static_cast<const InExpression&>(expression));
+        Fail("Unsupported Predicate Expression");
+        //return evaluate_in_expression<T>(static_cast<const InExpression&>(expression));
       } else {
         Fail("Unsupported Predicate Expression");
       }
@@ -244,10 +243,10 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpre
         std::vector<bool> nulls;
         materialize_nulls<T>(column, nulls);
 
-        return std::make_pair(values, nulls);
+        return ExpressionResult<T>(std::move(values), std::move(nulls));
       }
 
-      return values;
+      return ExpressionResult<T>{std::move(values), {}};
     }
 
     case ExpressionType::Value: {
@@ -256,14 +255,14 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpre
 
       Assert(value.type() == typeid(T), "Can't evaluate ValueExpression to requested type T");
 
-      return std::optional<T>{boost::get<T>(value)};
+      return ExpressionResult<T>{{{boost::get<T>(value)}}, {{false}}};
     }
 //
 //    case ExpressionType::Function:
 //      return evaluate_function_expression<T>(static_cast<const FunctionExpression&>(expression));
 //
-//    case ExpressionType::Case:
-//      return evaluate_case_expression<T>(static_cast<const CaseExpression&>(expression));
+    case ExpressionType::Case:
+      return evaluate_case_expression<T>(static_cast<const CaseExpression&>(expression));
 //
 //    case ExpressionType::Exists:
 //      return evaluate_exists_expression<T>(static_cast<const ExistsExpression&>(expression));
@@ -340,23 +339,23 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpre
 ////  }
 //}
 
-//template<typename T>
-//ExpressionResult<T> ExpressionEvaluator::evaluate_arithmetic_expression(const ArithmeticExpression& expression) {
-//  const auto& left = *expression.left_operand();
-//  const auto& right = *expression.right_operand();
-//
-//  // clang-format off
-//  switch (expression.arithmetic_operator) {
-//    case ArithmeticOperator::Addition:       return evaluate_binary_expression<T, Addition>(left, right);
-//    case ArithmeticOperator::Subtraction:    return evaluate_binary_expression<T, Subtraction>(left, right);
-//    case ArithmeticOperator::Multiplication: return evaluate_binary_expression<T, Multiplication>(left, right);
-//    case ArithmeticOperator::Division:       return evaluate_binary_expression<T, Division>(left, right);
-//
-//    default:
-//      Fail("ArithmeticOperator evaluation not yet implemented");
-//  }
-//  // clang-format on
-//}
+template<typename T>
+ExpressionResult<T> ExpressionEvaluator::evaluate_arithmetic_expression(const ArithmeticExpression& expression) {
+  const auto& left = *expression.left_operand();
+  const auto& right = *expression.right_operand();
+
+  // clang-format off
+  switch (expression.arithmetic_operator) {
+    case ArithmeticOperator::Addition:       return evaluate_binary_with_default_null_logic<T, Addition>(left, right);
+    case ArithmeticOperator::Subtraction:    return evaluate_binary_with_default_null_logic<T, Subtraction>(left, right);
+    case ArithmeticOperator::Multiplication: return evaluate_binary_with_default_null_logic<T, Multiplication>(left, right);
+    case ArithmeticOperator::Division:       return evaluate_binary_with_default_null_logic<T, Division>(left, right);
+
+    default:
+      Fail("ArithmeticOperator evaluation not yet implemented");
+  }
+  // clang-format on
+}
 
 template<typename T>
 ExpressionResult<T> ExpressionEvaluator::evaluate_binary_predicate_expression(const BinaryPredicateExpression& expression) {
@@ -365,12 +364,12 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_binary_predicate_expression(co
 
   // clang-format off
   switch (expression.predicate_condition) {
-    case PredicateCondition::Equals:            return evaluate_binary<T, Equals>(left, right);
-    case PredicateCondition::NotEquals:         return evaluate_binary<T, NotEquals>(left, right);
-    case PredicateCondition::LessThan:          return evaluate_binary<T, LessThan>(left, right);
-    case PredicateCondition::LessThanEquals:    return evaluate_binary<T, LessThanEquals>(left, right);
-    case PredicateCondition::GreaterThan:       return evaluate_binary<T, GreaterThan>(left, right);
-    case PredicateCondition::GreaterThanEquals: return evaluate_binary<T, GreaterThanEquals>(left, right);
+    case PredicateCondition::Equals:            return evaluate_binary_with_default_null_logic<T, Equals>(left, right);
+    case PredicateCondition::NotEquals:         return evaluate_binary_with_default_null_logic<T, NotEquals>(left, right);  // NOLINT
+    case PredicateCondition::LessThan:          return evaluate_binary_with_default_null_logic<T, LessThan>(left, right);  // NOLINT
+    case PredicateCondition::LessThanEquals:    return evaluate_binary_with_default_null_logic<T, LessThanEquals>(left, right);  // NOLINT
+    case PredicateCondition::GreaterThan:       return evaluate_binary_with_default_null_logic<T, GreaterThan>(left, right);  // NOLINT
+    case PredicateCondition::GreaterThanEquals: return evaluate_binary_with_default_null_logic<T, GreaterThanEquals>(left, right);  // NOLINT
 
     default:
       Fail("PredicateCondition evaluation not yet implemented");
@@ -450,72 +449,58 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_in_expression(const InExpressi
   Fail("InExpression supports only int32_t as result");
 }
 
-//template<typename T>
-//ExpressionResult<T> ExpressionEvaluator::evaluate_case_expression(const CaseExpression& case_expression) {
-//  const auto when = evaluate_expression<int32_t>(*case_expression.when());
+template<typename T>
+ExpressionResult<T> ExpressionEvaluator::evaluate_case_expression(const CaseExpression& case_expression) {
+  const auto when = evaluate_expression<int32_t>(*case_expression.when());
 
-//  /**
-//   * Handle cases where the CASE condition ("WHEN") is a fixed value/NULL (e.g. CASE 5+3 > 2 THEN ... ELSE ...)
-//   *    fixed_branch: std::nullopt, if CASE condition is not a value/NULL
-//   *    fixed_branch: CaseBranch::Then, if CASE condition if value is not FALSE
-//   *    fixed_branch: CaseBranch::Else, if CASE condition if value false or NULL
-//   * This avoids computing branches we don't need to compute.
-//   */
-//  enum class CaseBranch { Then, Else };
-//  auto fixed_branch = std::optional<CaseBranch>{};
+  /**
+   * Handle cases where the CASE condition ("WHEN") is a fixed value/NULL (e.g. CASE 5+3 > 2 THEN ... ELSE ...)
+   * This avoids computing branches we don't need to compute.
+   */
+  if (when.is_literal()) {
+    const auto when_literal = when.to_literal();
 
-//  if (is_value(when)) fixed_branch = boost::get<int32_t>(when) != 0 ? CaseBranch::Then : CaseBranch::Else;
-//  if (is_null(when)) fixed_branch = CaseBranch::Else;
+    if (when_literal.value() && !when_literal.null()) {
+      return evaluate_expression<T>(*case_expression.then());
+    } else {
+      return evaluate_expression<T>(*case_expression.else_());
+    }
+  }
 
-//  if (fixed_branch) {
-//    switch (*fixed_branch) {
-//      case CaseBranch::Then: return evaluate_expression<T>(*case_expression.then());
-//      case CaseBranch::Else: return evaluate_expression<T>(*case_expression.else_());
-//    }
-//  }
-//
-//  /**
-//   * Handle cases where the CASE condition is a per-row expression
-//   */
-//  const auto then_is_null = case_expression.then()->data_type() == DataType::Null;
-//  const auto else_is_null = case_expression.else_()->data_type() == DataType::Null;
+  /**
+   * Handle cases where the CASE condition is a series
+   */
+  const auto when_series = when.to_series();
 
-//  if (then_is_null && else_is_null) return NullValue{};
+  std::vector<T> values(when.size());
+  std::vector<bool> nulls(when.size(), false);
 
-//  ExpressionResult<T> result;
+  resolve_expression(*case_expression.then(), [&] (const auto& then_result) {
+    using ThenResultType = typename std::decay_t<decltype(then_result)>::Type;
 
-//  if (then_is_null) {
-//    resolve_data_type(case_expression.else_()->data_type(), [&](const auto else_data_type_t) {
-//      using ElseDataType = typename decltype(else_data_type_t)::type;
-//      const auto else_result = evaluate_expression<ElseDataType>(*case_expression.then());
+    resolve_expression(*case_expression.else_(), [&] (const auto& else_result) {
+      using ElseResultType = typename std::decay_t<decltype(else_result)>::Type;
 
-//      result = evaluate_case<T>(when, ExpressionResult<T>(NullValue{}), else_result);
-//    });
+      if constexpr (Case::template supports<T, ThenResultType, ElseResultType>::value) {
 
-//  } else if (else_is_null) {
-//    resolve_data_type(case_expression.then()->data_type(), [&](const auto then_data_type_t) {
-//      using ThenDataType = typename decltype(then_data_type_t)::type;
-//      const auto then_result = evaluate_expression<ThenDataType>(*case_expression.then());
+        resolve_expression_result(then_result, [&](const auto &then_view) {
+          resolve_expression_result(else_result, [&](const auto &else_view) {
 
-//      result = evaluate_case<T>(when, then_result, ExpressionResult<T>(NullValue{}));
-//    });
+            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < when.size(); ++chunk_offset) {
+              Case{}(values[chunk_offset], when_series.value(chunk_offset), then_view.value(chunk_offset), else_view.value(chunk_offset));
+            }
 
-//  } else {
-//    resolve_data_type(case_expression.then()->data_type(), [&](const auto then_data_type_t) {
-//      using ThenDataType = typename decltype(then_data_type_t)::type;
-//      const auto then_result = evaluate_expression<ThenDataType>(*case_expression.then());
+          });
+        });
 
-//      resolve_data_type(case_expression.else_()->data_type(), [&](const auto else_data_type_t) {
-//        using ElseDataType = typename decltype(else_data_type_t)::type;
-//        const auto else_result = evaluate_expression<ElseDataType>(*case_expression.else_());
+      } else {
+        Fail("CASE not supported on these operand types");
+      }
+    });
+  });
 
-//        result = evaluate_case<T>(when, then_result, else_result);
-//      });
-//    });
-//  }
-
-//  return result;
-//}
+  return {std::move(values), std::move(nulls)};
+}
 //
 //template<typename T>
 //ExpressionResult<T> ExpressionEvaluator::evaluate_exists_expression(const ExistsExpression& exists_expression) {
@@ -602,7 +587,7 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_in_expression(const InExpressi
 //    Fail("Can't EXTRACT from this Expression");
 //  }
 //}
-//
+
 //template<typename ResultDataType,
 //typename ThenDataType,
 //typename ElseDataType>
@@ -632,7 +617,7 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_in_expression(const InExpressi
 //    }
 //  }
 //}
-//
+
 //template<typename T>
 //ExpressionResult<T> ExpressionEvaluator::evaluate_select_expression_for_chunk(
 //const PQPSelectExpression &expression) {
@@ -698,41 +683,38 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_in_expression(const InExpressi
 std::shared_ptr<BaseColumn> ExpressionEvaluator::evaluate_expression_to_column(const AbstractExpression& expression) {
   std::shared_ptr<BaseColumn> column;
 
-  resolve_expression_to_iterator(expression, [&](const auto iterator) {
-    using IteratorType = decltype(iterator);
-    using IteratorValue = typename std::iterator_traits<IteratorType>::value_type;
-    using ColumnDataType = typename IteratorValue::Type;
+  resolve_expression(expression, [&](const auto& expression_result) {
+    using ColumnDataType = typename std::decay_t<decltype(expression_result)>::Type;
 
     // clang-format off
-    if constexpr (is_null_v<ColumnDataType> ||
-                  is_nullable_values_v<ColumnDataType> ||
-                  is_non_nullable_values_v<ColumnDataType>) {
+    if constexpr (std::is_same_v<ColumnDataType, NullValue>) {
       Fail("Can't create a Column from a NULLs and Arrays");
     } else {
-      if constexpr (IteratorValue::Nullable) {
-        pmr_concurrent_vector<ColumnDataType> values(_output_row_count);
+      pmr_concurrent_vector<ColumnDataType> values(_output_row_count);
+
+      if (expression_result.is_series()) {
+        std::copy(expression_result.values.begin(), expression_result.values.end(), values.begin());
+      } else {
+        std::fill(values.begin(), values.end(), expression_result.values.front());
+      }
+
+      if (expression_result.is_nullable()) {
         pmr_concurrent_vector<bool> nulls(_output_row_count);
 
-        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-          values[chunk_offset] = iterator->value();
-          nulls[chunk_offset] = iterator->is_null();
+        if (expression_result.is_series()) {
+          std::copy(expression_result.nulls.begin(), expression_result.nulls.end(), nulls.begin());
+        } else {
+          std::fill(nulls.begin(), nulls.end(), expression_result.nulls.front());
         }
 
         column = std::make_shared<ValueColumn<ColumnDataType>>(std::move(values), std::move(nulls));
 
       } else {
-        pmr_concurrent_vector<ColumnDataType> values(_output_row_count);
-
-        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-          values[chunk_offset] = iterator->value();
-        }
-
         column = std::make_shared<ValueColumn<ColumnDataType>>(std::move(values));
       }
     }
     // clang-format on
   });
-
 
   return column;
 }
@@ -744,61 +726,59 @@ ExpressionResult<int32_t> ExpressionEvaluator::evaluate_logical_expression<int32
 
   // clang-format off
   switch (expression.logical_operator) {
-    case LogicalOperator::Or:  return evaluate_binary<int32_t, TernaryOr>(left, right);
-//    case LogicalOperator::And: return evaluate_binary_expression<int32_t, And>(left, right);
-    default:
-      Fail("temporary fail");
+    case LogicalOperator::Or:  return evaluate_binary_with_custom_null_logic<int32_t, TernaryOr>(left, right);
+    case LogicalOperator::And: return evaluate_binary_with_custom_null_logic<int32_t, TernaryAnd>(left, right);
   }
   // clang-format on
 }
 
-template<>
-ExpressionResult<int32_t> ExpressionEvaluator::evaluate_in_expression<int32_t>(const InExpression& in_expression) {
-  const auto& left_expression = *in_expression.value();
-  const auto& right_expression = *in_expression.set();
-
-  std::vector<int32_t> result_values;
-  std::vector<bool> result_nulls;
-
-  if (right_expression.type == ExpressionType::Array) {
-    const auto& array_expression = static_cast<const ArrayExpression&>(right_expression);
-
-    /**
-     * To keep the code simple for now, transform the InExpression like this:
-     * "a IN (x, y, z)"   ---->   "a = x OR a = y OR a = z"
-     *
-     * But first, out of array_expression.elements(), pick those expressions whose type can be compared with
-     * in_expression.value() so we're not getting "Can't compare Int and String" when doing something crazy like
-     * "5 IN (6, 5, "Hello")
-     */
-    const auto left_is_string = left_expression.data_type() == DataType::String;
-    std::vector<std::shared_ptr<AbstractExpression>> type_compatible_elements;
-    for (const auto& element : array_expression.elements()) {
-      if ((element->data_type() == DataType::String) == left_is_string) {
-        type_compatible_elements.emplace_back(element);
-      }
-    }
-
-    if (type_compatible_elements.empty()) {
-      // NULL IN () is NULL, <not_null> IN () is FALSE
-      Fail("Not supported yet");
-    }
-
-    std::shared_ptr<AbstractExpression> predicate_disjunction = equals(in_expression.value(), type_compatible_elements.front());
-    for (auto element_idx = size_t{1}; element_idx < type_compatible_elements.size(); ++element_idx) {
-      const auto equals_element = equals(in_expression.value(), type_compatible_elements[element_idx]);
-      predicate_disjunction = or_(predicate_disjunction, equals_element);
-    }
-
-    return evaluate_expression<int32_t>(*predicate_disjunction);
-  } else if (right_expression.type == ExpressionType::Select) {
-    Fail("Unsupported ExpressionType used in InExpression");
-  } else {
-    Fail("Unsupported ExpressionType used in InExpression");
-  }
-
-  return {};
-}
+//template<>
+//ExpressionResult<int32_t> ExpressionEvaluator::evaluate_in_expression<int32_t>(const InExpression& in_expression) {
+//  const auto& left_expression = *in_expression.value();
+//  const auto& right_expression = *in_expression.set();
+//
+//  std::vector<int32_t> result_values;
+//  std::vector<bool> result_nulls;
+//
+//  if (right_expression.type == ExpressionType::Array) {
+//    const auto& array_expression = static_cast<const ArrayExpression&>(right_expression);
+//
+//    /**
+//     * To keep the code simple for now, transform the InExpression like this:
+//     * "a IN (x, y, z)"   ---->   "a = x OR a = y OR a = z"
+//     *
+//     * But first, out of array_expression.elements(), pick those expressions whose type can be compared with
+//     * in_expression.value() so we're not getting "Can't compare Int and String" when doing something crazy like
+//     * "5 IN (6, 5, "Hello")
+//     */
+//    const auto left_is_string = left_expression.data_type() == DataType::String;
+//    std::vector<std::shared_ptr<AbstractExpression>> type_compatible_elements;
+//    for (const auto& element : array_expression.elements()) {
+//      if ((element->data_type() == DataType::String) == left_is_string) {
+//        type_compatible_elements.emplace_back(element);
+//      }
+//    }
+//
+//    if (type_compatible_elements.empty()) {
+//      // NULL IN () is NULL, <not_null> IN () is FALSE
+//      Fail("Not supported yet");
+//    }
+//
+//    std::shared_ptr<AbstractExpression> predicate_disjunction = equals(in_expression.value(), type_compatible_elements.front());
+//    for (auto element_idx = size_t{1}; element_idx < type_compatible_elements.size(); ++element_idx) {
+//      const auto equals_element = equals(in_expression.value(), type_compatible_elements[element_idx]);
+//      predicate_disjunction = or_(predicate_disjunction, equals_element);
+//    }
+//
+//    return evaluate_expression<int32_t>(*predicate_disjunction);
+//  } else if (right_expression.type == ExpressionType::Select) {
+//    Fail("Unsupported ExpressionType used in InExpression");
+//  } else {
+//    Fail("Unsupported ExpressionType used in InExpression");
+//  }
+//
+//  return {};
+//}
 
 
 //template<typename T>
@@ -817,86 +797,135 @@ ExpressionResult<int32_t> ExpressionEvaluator::evaluate_in_expression<int32_t>(c
 
 
 template<typename R, typename Functor>
-ExpressionResult<R> ExpressionEvaluator::evaluate_binary(const AbstractExpression& left_expression,
+ExpressionResult<R> ExpressionEvaluator::evaluate_binary_with_default_null_logic(const AbstractExpression& left_expression,
                                                          const AbstractExpression& right_expression) {
-  ExpressionResult<R> result_variant;
+  ExpressionResult<R> result;
 
-  resolve_expression_to_iterator(left_expression, [&](auto left_iterator) {
-    using LeftIterator = decltype(left_iterator);
-    using LeftDataType = typename std::iterator_traits<LeftIterator>::value_type::Type;
+  resolve_binary(left_expression, right_expression, [&] (const ChunkOffset output_row_count, const auto& left, const auto& right) {
+    using LeftDataType = typename std::decay_t<decltype(left)>::Type;
+    using RightDataType = typename std::decay_t<decltype(right)>::Type;
 
-    resolve_expression_to_iterator(right_expression, [&](auto right_iterator) {
-      using RightIterator = decltype(right_iterator);
-      using RightDataType = typename std::iterator_traits<RightIterator>::value_type::Type;
+    if constexpr (Functor::template supports<R, LeftDataType, RightDataType>::value) {
+      std::vector<bool> nulls;
 
-      if constexpr (Functor::template supports<R, LeftDataType, RightDataType>::value) {
-        using ResultType = typename determine_expression_result_type<R, LeftIterator, RightIterator, Functor>::type;
+      if (left.is_nullable() || right.is_nullable()) {
+        // TODO(moritz) Optimize for a) only one side nullable b) one side null/non-null literal
+        nulls.resize(output_row_count);
 
-        ResultType result;
-
-        if constexpr (is_series<ResultType>::value) {
-          expression_result_allocate(result, _output_row_count);
-
-          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-            Functor{}(chunk_offset, result, *left_iterator, *right_iterator);
-            ++left_iterator;
-            ++right_iterator;
+        if (left.is_nullable() && !right.is_nullable()) {
+          for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
+            nulls[row_idx] = left.null(row_idx);
+          }
+        } else if (!left.is_nullable() && right.is_nullable()) {
+          for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
+            nulls[row_idx] = right.null(row_idx);
           }
         } else {
-          Functor{}(ChunkOffset{0}, result, *left_iterator, *right_iterator);
+          for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
+            nulls[row_idx] = left.null(row_idx) || right.null(row_idx);
+          }
         }
-
-        result_variant = result;
-
-      } else {
-        Fail("Operation not supported");
       }
-    });
+
+      std::vector<R> values(output_row_count);
+      for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
+        Functor{}(values[row_idx], left.value(row_idx), right.value(row_idx));
+      }
+
+      result = ExpressionResult<R>{std::move(values), std::move(nulls)};
+    } else {
+      Fail("BinaryOperation not supported on the requested DataTypes");
+    }
   });
 
-  return result_variant;
+  return result;
+}
+
+template<typename R, typename Functor>
+ExpressionResult<R> ExpressionEvaluator::evaluate_binary_with_custom_null_logic(const AbstractExpression& left_expression,
+                                                         const AbstractExpression& right_expression) {
+  ExpressionResult<R> result;
+
+  resolve_binary(left_expression, right_expression, [&] (const ChunkOffset output_row_count, const auto& left, const auto& right) {
+    using LeftDataType = typename std::decay_t<decltype(left)>::Type;
+    using RightDataType = typename std::decay_t<decltype(right)>::Type;
+
+    if constexpr (Functor::template supports<R, LeftDataType, RightDataType>::value) {
+      std::vector<bool> nulls(output_row_count);
+      std::vector<R> values(output_row_count);
+
+      if (left.is_nullable() && right.is_nullable()) {
+        for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
+          bool null;
+          Functor{}(values[row_idx], null, left.value(row_idx), left.null(row_idx), right.value(row_idx), right.null(row_idx));
+          nulls[row_idx] = null;
+        }
+      } else if (left.is_nullable() && !right.is_nullable()) {
+        for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
+          bool null;
+          Functor{}(values[row_idx], null, left.value(row_idx), left.null(row_idx), right.value(row_idx), false);
+          nulls[row_idx] = null;
+        }
+      } else if (!left.is_nullable() && right.is_nullable()) {
+        for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
+          bool null;
+          Functor{}(values[row_idx], null, left.value(row_idx), false, right.value(row_idx), right.null(row_idx));
+          nulls[row_idx] = null;
+        }
+      } else if (!left.is_nullable() && !right.is_nullable()) {
+        for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
+          bool null;
+          Functor{}(values[row_idx], null, left.value(row_idx), false, right.value(row_idx), false);
+          nulls[row_idx] = null;
+        }
+      }
+
+      result = ExpressionResult<R>{std::move(values), std::move(nulls)};
+
+    } else {
+      Fail("BinaryOperation not supported on the requested DataTypes");
+    }
+  });
+
+  return result;
 }
 
 template<typename Functor>
-void ExpressionEvaluator::resolve_expression_to_iterator(const AbstractExpression& expression, const Functor& fn) {
-  if (expression.type == ExpressionType::Array) {
-    Fail("Can't iterate over ArrayExpression");
+void ExpressionEvaluator::resolve_binary(const AbstractExpression& left_expression,
+                                                        const AbstractExpression& right_expression,
+                                                        const Functor& fn) {
+  resolve_expression(left_expression, [&](const auto& left_result) {
+    resolve_expression(right_expression, [&](const auto& right_result) {
+      const auto output_row_count = std::max(left_result.size(), right_result.size());
 
-  } else if (expression.type == ExpressionType::Select) {
-    Fail("Can't iterate over SelectExpression");
+      if ((left_result.is_series() && right_result.is_series()) || (left_result.is_literal() && left_result.is_literal())) {
+        fn(output_row_count, left_result.to_series(), right_result.to_series());
+      } else if (left_result.is_series() && right_result.is_literal()) {
+        fn(output_row_count, left_result.to_series(), right_result.to_literal());
+      } else if (left_result.is_literal() && right_result.is_literal()) {
+        fn(output_row_count, left_result.to_literal(), right_result.to_literal());
+      }
+    });
+  });
+}
 
-  } else if (expression.data_type() == DataType::Null) {
+template<typename Functor>
+void ExpressionEvaluator::resolve_expression(const AbstractExpression& expression, const Functor& fn) {
+  Assert(expression.type != ExpressionType::Array, "Can't resolve ArrayExpression")
+  Assert(expression.type != ExpressionType::Select, "Can't resolve SelectExpression")
+
+  if (expression.data_type() == DataType::Null) {
     // resolve_data_type() doesn't support Null, so we have handle it explicitly
-    fn(NullValueIterator{});
+    ExpressionResult<NullValue> null_value_result({{NullValue{}}}, {true});
+    fn(null_value_result);
 
   } else {
     resolve_data_type(expression.data_type(), [&] (const auto data_type_t) {
       using ExpressionDataType = typename decltype(data_type_t)::type;
 
-      if (expression.type == ExpressionType::Column) {
-//        Assert(_chunk, "Cannot access Columns in this ExpressionEvaluator as it doesn't operate on a Table/Chunk");
-//
-//        const auto* pqp_column_expression = dynamic_cast<const PQPColumnExpression*>(&expression);
-//        Assert(pqp_column_expression, "ExpressionEvaluator only takes PQP expressions");
-//
-//        const auto& base_column = *_chunk->get_column(pqp_column_expression->column_id);
-//
-//        resolve_column_type<ExpressionDataType>(base_column, [&](const auto& column) {
-//          const auto iterable = create_iterable_from_column<ExpressionDataType>(column);
-//
-//          iterable.with_iterators([&](auto begin_iter, const auto end_iter) {
-//            fn(begin_iter);
-//          });
-//        });
-      } else {
-        const auto expression_result_variant = evaluate_expression<ExpressionDataType>(expression);
-
-        boost::apply_visitor([&](const auto& expression_result) {
-          fn(create_iterator_for_expression_result(expression_result));
-        }, expression_result_variant);
-      }
+      const auto expression_result = evaluate_expression<ExpressionDataType>(expression);
+      fn(expression_result);
     });
-
   }
 }
 

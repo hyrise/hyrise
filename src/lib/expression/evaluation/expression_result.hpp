@@ -12,87 +12,94 @@
 
 namespace opossum {
 
-// clang-format off
-template<typename T> using NullableValue      = std::optional<T>;
-template<typename T> using NullableValues     = std::pair<std::vector<T>, std::vector<bool>>;
-template<typename T> using NonNullableValues  = std::vector<T>;
+template<typename T>
+class ExpressionResultSeries {
+ public:
+  using Type = T;
 
-template<typename T> using ExpressionResult = boost::variant<
-  // Don't change the order! is_*() functions rely on which()
-  NullableValue<T>,
-  NullableValues<T>,
-  NonNullableValues<T>
->;
+  ExpressionResultSeries(const std::vector<T>& values, const std::vector<bool>& nulls):
+  _values(values), _nulls(nulls) {}
 
-template<typename T> bool is_nullable_value(const ExpressionResult<T>& result)      { return result.which() == 0; }
-template<typename T> bool is_nullable_values(const ExpressionResult<T>& result)     { return result.which() == 1; }
-template<typename T> bool is_non_nullable_values(const ExpressionResult<T>& result) { return result.which() == 2; }
+  bool is_series() const { return true; }
+  bool is_literal() const { return false; }
+  bool is_nullable() const { return !_nulls.empty(); }
 
-template<typename T> struct expression_result_data_type                       { };
-template<>           struct expression_result_data_type<NullValue>            { using type = NullValue; };
-template<typename T> struct expression_result_data_type<NullableValue<T>>     { using type = T; };
-template<typename T> struct expression_result_data_type<NullableValues<T>>    { using type = T; };
-template<typename T> struct expression_result_data_type<NonNullableValues<T>> { using type = T; };
-
-// Default is true, so that all ColumnIterators are though of as Series
-template<typename T> struct is_series                       { static constexpr bool value = true; };
-template<>           struct is_series<NullValue>            { static constexpr bool value = false; };
-template<typename T> struct is_series<NullableValue<T>>     { static constexpr bool value = false; };
-
-template<typename T> constexpr bool is_null_v = std::is_same_v<T, NullValue>;
-
-template<typename T> struct is_nullable_value_t                      { static constexpr bool value = false; };
-template<typename T> struct is_nullable_value_t<NullableValue<T>>    { static constexpr bool value = true; };
-template<typename T> constexpr bool is_nullable_value_v = is_nullable_value_t<T>::value;
-
-template<typename T> struct is_nullable_values_t                      { static constexpr bool value = false; };
-template<typename T> struct is_nullable_values_t<NullableValues<T>>   { static constexpr bool value = true; };
-template<typename T> constexpr bool is_nullable_values_v = is_nullable_values_t<T>::value;
-
-template<typename T> struct is_non_nullable_values_t                        { static constexpr bool value = false; };
-template<typename T> struct is_non_nullable_values_t<NonNullableValues<T>>  { static constexpr bool value = true; };
-template<typename T> constexpr bool is_non_nullable_values_v = is_non_nullable_values_t<T>::value;
-
-
-/**
- * @defgroup Iterative access for the different ExpressionResult members
- * @{
- */
-template<typename T, typename S> void set_expression_result(NullableValue<T>& nullable_value, const ChunkOffset chunk_offset, const S& value, const bool null) {
-  if (null) {
-    nullable_value.reset();
-  } else {
-    nullable_value.emplace(static_cast<T>(value));
+  const T& value(const size_t idx) const {
+    DebugAssert(idx < _values.size(), "Index out of range");
+    return _values[idx];
   }
-}
 
-template<typename T, typename S> void set_expression_result(NullableValues<T>& nullable_values, const ChunkOffset chunk_offset, const S& value, const bool null) {
-  nullable_values.first[chunk_offset] = static_cast<T>(value);
-  nullable_values.second[chunk_offset] = null;
-}
+  bool null(const size_t idx) const {
+    DebugAssert(idx < _values.size(), "Index out of range");
+    return _nulls[idx];
+  }
 
-template<typename T, typename S> void set_expression_result(NonNullableValues<T>& non_nullable_values, const ChunkOffset chunk_offset, const S& value, const bool null) {
-  non_nullable_values[chunk_offset] = static_cast<T>(value);
-}
-/**
- * @}
- */
+ private:
+  const std::vector<T>& _values;
+  const std::vector<bool>& _nulls;
+};
 
 template<typename T>
-void expression_result_allocate(const T& expression_result, const size_t size) {}
+class ExpressionResultLiteral {
+ public:
+  using Type = T;
+
+  ExpressionResultLiteral(const T& value, const bool null):
+  _value(value), _null(null) {}
+
+  bool is_series() const { return false; }
+  bool is_literal() const { return true; }
+  bool is_nullable() const { return _null; }
+
+  const T& value(const size_t = 0) const { return _value; }
+  bool null(const size_t = 0) const { return _null; }
+
+ private:
+  T _value;
+  bool _null;
+};
 
 template<typename T>
-void expression_result_allocate(NullableValues<T>& nullable_values, const size_t size) {
-  nullable_values.first.resize(size);
-  nullable_values.second.resize(size);
-}
+class ExpressionResult {
+ public:
+  using Type = T;
 
-template<typename T>
-void expression_result_allocate(NonNullableValues<T>& non_nullable_values, const size_t size) {
-  non_nullable_values.resize(size);
-}
-// clang-format on
+  ExpressionResult() = default;
 
+  ExpressionResult(std::vector<T> values, std::vector<bool> nulls):
+    values(std::move(values)), nulls(std::move(nulls)) {
+    Assert(!this->values.empty(), "Can't handle empty ExpressionResult");
+    Assert(this->nulls.empty() || this->nulls.size() == this->values.size(), "Need either none or as many nulls as values");
+  }
 
+  bool is_series() const { return size() > 1; }
+  bool is_literal() const { return size() == 1; }
+
+  bool is_nullable() const { return !nulls.empty(); }
+
+  ExpressionResultLiteral<T> to_literal() const {
+    Assert(is_literal(), "Can't turn non-literal to literal");
+    const auto null = is_nullable() ? nulls.front() : false;
+    return {values.front(), null};
+  }
+
+  ExpressionResultSeries<T> to_series() const {
+    return {values, nulls};
+  }
+
+  size_t size() const { return values.size(); }
+
+  std::vector<T> values;
+  std::vector<bool> nulls;
+};
+
+template<typename T, typename Functor>
+void resolve_expression_result(const ExpressionResult<T>& result, const Functor& fn) {
+  if (result.is_series()) {
+    fn(result.to_series());
+  } else {
+    fn(result.to_literal());
+  }
+};
 
 }  // namespace opossum

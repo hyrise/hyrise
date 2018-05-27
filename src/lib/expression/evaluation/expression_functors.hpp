@@ -4,57 +4,45 @@
 
 namespace opossum {
 
-// clang-format off
+template<typename T> constexpr bool is_logical_operand = std::is_same_v<int32_t, T> || std::is_same_v<NullValue, T>;
+
 bool to_bool(const bool value) { return value; }
-bool to_bool(const int32_t value) { return value != 0; }
-bool to_bool(const NullValue value) { return false; }
+bool to_bool(const NullValue& value) { return false; }
 
-template<typename R, typename T>
-struct to_value {
-  static R cast(const T& value) { return static_cast<R>(value); }
-};
-
-template<typename R>
-struct to_value<R, NullValue> {
-  static R cast(const NullValue&) { return R{}; }
-};
-
-template<typename A, typename B> struct common_type { using type = std::common_type_t<A, B>; };
-template<typename A> struct common_type<A, NullValue> { using type = A; };
-template<typename B> struct common_type<NullValue, B> { using type = B; };
-template<> struct common_type<NullValue, NullValue> { using type = NullValue; };
-
-template<typename T> size_t size(const NullableValues<T>& nullable_values) { return nullable_values.first.size(); }
-template<typename T> size_t size(const NonNullableValues<T>& non_nullable_values) { return non_nullable_values.size(); }
-
-template<typename T> T value(const NullableValues<T>& nullable_values, const size_t idx) { return nullable_values.first[idx]; }
-template<typename T> T value(const NonNullableValues<T>& non_nullable_values, const size_t idx) { return non_nullable_values[idx]; }
-
-template<typename T> bool null(const NullableValues<T>& nullable_values, const size_t idx) { return nullable_values.second[idx]; }
-template<typename T> bool null(const NonNullableValues<T>& non_nullable_values, const size_t idx) { return false; }
-// clang-format on
+template<typename T> const T& to_value(const T& value) { return value; }
+template<typename T> bool to_value(const NullValue& value) { return false; }
 
 struct TernaryOr {
   template<typename R, typename A, typename B> struct supports {
-    static constexpr bool value = std::is_same_v<int32_t, R> &&
-                                  (std::is_same_v<NullValue, A> || std::is_same_v<int32_t, A>) &&
-                                  (std::is_same_v<NullValue, B> || std::is_same_v<int32_t, B>);
+    static constexpr bool value = is_logical_operand<R> &&
+    is_logical_operand<A> && is_logical_operand<B>;
   };
-
-  template<typename A, typename B> struct evaluate_as_series {
-    static constexpr bool value = is_series<A>::value || is_series<B>::value;
-  };
-
-  static constexpr auto may_produce_value_from_null = true;
 
   template<typename R, typename A, typename B>
-  void operator()(const ChunkOffset chunk_offset, R& result, const A& a, const B& b) {
-    const auto a_is_true = !a.is_null() && to_bool(a.value());
-    const auto b_is_true = !b.is_null() && to_bool(b.value());
-    const auto result_is_true = a_is_true || b_is_true;
-    const auto result_is_null = (a.is_null() || b.is_null()) && !result_is_true;
+  void operator()(R& result_value, bool& result_null, const A& a_value, const bool a_null, const B& b_value, const bool b_null) {
+    const auto a_is_true = !a_null && to_bool(a_value);
+    const auto b_is_true = !b_null && to_bool(b_value);
+    result_value = a_is_true || b_is_true;
+    result_null = (a_null || b_null) && !result_value;
+  };
+};
 
-    set_expression_result(result, chunk_offset, result_is_true, result_is_null);
+struct TernaryAnd {
+  template<typename R, typename A, typename B> struct supports {
+    static constexpr bool value = is_logical_operand<R> &&
+                                  is_logical_operand<A> && is_logical_operand<B>;
+  };
+
+  template<typename R, typename A, typename B>
+  void operator()(R& result_value, bool& result_null, const A& a_value, const bool a_null, const B& b_value, const bool b_null) {
+    // Is this the least verbose way to implement ternary and?
+    const auto a_is_true = !a_null && to_bool(a_value);
+    const auto b_is_true = !b_null && to_bool(b_value);
+    result_value = a_is_true && b_is_true;
+    result_null = a_null && b_null;
+
+    if constexpr (!std::is_same_v<NullValue, A>) result_null |= a_value && b_null;
+    if constexpr (!std::is_same_v<NullValue, B>) result_null |= b_value && a_null;
   };
 };
 
@@ -96,36 +84,71 @@ struct TernaryOr {
 //};
 
 template<template<typename T> typename Functor>
-struct STLFunctorWrapper {
+struct STLComparisonFunctorWrapper {
   template<typename R, typename A, typename B> struct supports {
     static constexpr bool value = std::is_same_v<int32_t, R> &&
     (std::is_same_v<std::string, A> == std::is_same_v<std::string, B>);
   };
 
-  template<typename A, typename B> struct evaluate_as_series {
-    static constexpr bool value = is_series<A>::value || is_series<B>::value;
-  };
-
-  static constexpr auto may_produce_value_from_null = false;
-
   template<typename R, typename A, typename B>
-  void operator()(const ChunkOffset chunk_offset, R& result, const A& a, const B& b) {
-    using TypeA = typename A::Type;
-    using TypeB = typename B::Type;
-    using TypeCommon = typename common_type<TypeA, TypeB>::type;
-
-    const auto result_value = Functor<TypeCommon>{}(to_value<TypeCommon, TypeA>{}.cast(a.value()),
-                                               to_value<TypeCommon, TypeB>{}.cast(b.value()));
-
-    set_expression_result(result, chunk_offset, result_value, a.is_null() || b.is_null());
+  void operator()(R& result, const A& a, const B& b) {
+    if constexpr (std::is_same_v<NullValue, A> || std::is_same_v<NullValue, B>) {
+      result = R{};
+    } else {
+      result = static_cast<R>(Functor<std::common_type_t<A, B>>{}(a, b));
+    }
   };
 };
 
-using Equals = STLFunctorWrapper<std::equal_to>;
-using NotEquals = STLFunctorWrapper<std::not_equal_to>;
-using GreaterThan = STLFunctorWrapper<std::greater>;
-using GreaterThanEquals = STLFunctorWrapper<std::greater_equal>;
-using LessThan = STLFunctorWrapper<std::less>;
-using LessThanEquals = STLFunctorWrapper<std::less_equal>;
+using Equals = STLComparisonFunctorWrapper<std::equal_to>;
+using NotEquals = STLComparisonFunctorWrapper<std::not_equal_to>;
+using GreaterThan = STLComparisonFunctorWrapper<std::greater>;
+using GreaterThanEquals = STLComparisonFunctorWrapper<std::greater_equal>;
+using LessThan = STLComparisonFunctorWrapper<std::less>;
+using LessThanEquals = STLComparisonFunctorWrapper<std::less_equal>;
+
+template<template<typename T> typename Functor>
+struct STLArithmeticFunctorWrapper {
+  template<typename R, typename A, typename B> struct supports {
+    static constexpr bool value = !std::is_same_v<std::string, R> && !std::is_same_v<std::string, A> && !std::is_same_v<std::string, B>;
+  };
+
+  template<typename R, typename A, typename B>
+  void operator()(R& result, const A& a, const B& b) {
+    if constexpr (std::is_same_v<NullValue, R> || std::is_same_v<NullValue, A> || std::is_same_v<NullValue, B>) {
+      result = R{};
+    } else {
+      result = Functor<std::common_type_t<A, B>>{}(a, b);
+    }
+  };
+};
+
+using Addition = STLArithmeticFunctorWrapper<std::plus>;
+using Subtraction = STLArithmeticFunctorWrapper<std::minus>;
+using Multiplication = STLArithmeticFunctorWrapper<std::multiplies>;
+using Division = STLArithmeticFunctorWrapper<std::divides>;
+
+struct Case {
+  template<typename R, typename A, typename B> struct supports {
+    static constexpr bool value = (std::is_same_v<std::string, A> == std::is_same_v<std::string, B>) && (std::is_same_v<std::string, A> == std::is_same_v<std::string, R>);
+  };
+
+  template<typename R, typename W, typename A, typename B>
+  void operator()(R& result, const W& w, const A& a, const B& b) {
+    if (w) {
+      if constexpr (std::is_same_v<NullValue, A>) {
+        result = R{};
+      } else {
+        result = a;
+      }
+    } else {
+      if constexpr (std::is_same_v<NullValue, B>) {
+        result = R{};
+      } else {
+        result = b;
+      }
+    }
+  };
+};
 
 }  // namespace opossum

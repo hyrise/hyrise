@@ -34,11 +34,10 @@ std::shared_ptr<const Table> Limit::_on_execute() {
    * Evaluate the _row_count_expression to determine the actual number of rows to "Limit" the output to
    */
   const auto num_rows_expression_result = ExpressionEvaluator{}.evaluate_expression<int64_t>(*_row_count_expression);
-  Assert(is_nullable_value(num_rows_expression_result), "Expected non-NULL value in LIMIT clause");
-  const auto signed_num_rows = boost::get<NullableValue<int64_t>>(num_rows_expression_result);
-  Assert(*signed_num_rows, "Limit can't be NULL");
-  Assert(*signed_num_rows >= 0, "Can't Limit to a negative number of Rows");
-  const auto num_rows = static_cast<size_t>(*signed_num_rows);
+  Assert(num_rows_expression_result.is_literal() && !num_rows_expression_result.is_nullable(), "Expected non-NULL literal in LIMIT clause");
+  const auto signed_num_rows = num_rows_expression_result.to_literal().value();
+  Assert(signed_num_rows >= 0, "Can't Limit to a negative number of Rows");
+  const auto num_rows = static_cast<size_t>(signed_num_rows);
 
   /**
    * Perform the actual limitting

@@ -56,9 +56,9 @@ class ExpressionEvaluator final {
 //                                         const ExpressionResult<OffsetDataType>& offset_result,
 //                                         const ExpressionResult<CharCountDataType>& char_count_result);
 //
-//  template<typename T>
-//  ExpressionResult<T> evaluate_arithmetic_expression(const ArithmeticExpression& expression);
-//
+  template<typename T>
+  ExpressionResult<T> evaluate_arithmetic_expression(const ArithmeticExpression& expression);
+
   template<typename T>
   ExpressionResult<T> evaluate_logical_expression(const LogicalExpression& expression);
 
@@ -76,9 +76,9 @@ class ExpressionEvaluator final {
 //
 //  template<typename T>
 //  ExpressionResult<T> evaluate_select_expression_for_row(const PQPSelectExpression& expression, const ChunkOffset chunk_offset);
-//
-//  template<typename T>
-//  ExpressionResult<T> evaluate_case_expression(const CaseExpression& case_expression);
+
+  template<typename T>
+  ExpressionResult<T> evaluate_case_expression(const CaseExpression& case_expression);
 //
 //  template<typename T>
 //  ExpressionResult<T> evaluate_extract_expression(const ExtractExpression& extract_expression);
@@ -112,15 +112,23 @@ class ExpressionEvaluator final {
 
 
   template<typename R, typename Functor>
-  ExpressionResult<R> evaluate_binary(const AbstractExpression& left_expression,
+  ExpressionResult<R> evaluate_binary_with_default_null_logic(const AbstractExpression& left_expression,
                                       const AbstractExpression& right_expression);
 
+  template<typename R, typename Functor>
+  ExpressionResult<R> evaluate_binary_with_custom_null_logic(const AbstractExpression& left_expression,
+                                                 const AbstractExpression& right_expression);
+
   template<typename Functor>
-  void resolve_expression_to_iterator(const AbstractExpression& expression, const Functor& fn);
+  void resolve_binary(const AbstractExpression& left_expression,
+                                     const AbstractExpression& right_expression, const Functor& fn);
+
+  template<typename Functor>
+  void resolve_expression(const AbstractExpression& expression, const Functor& fn);
 
  private:
   std::shared_ptr<const Chunk> _chunk;
-  size_t _output_row_count{0};
+  size_t _output_row_count{1};
 
   std::vector<std::unique_ptr<BaseColumnMaterialization>> _column_materializations;
 };
