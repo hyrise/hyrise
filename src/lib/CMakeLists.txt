@@ -39,6 +39,7 @@ set(
     expression/evaluation/expression_evaluator.hpp
     expression/evaluation/expression_result.hpp
     expression/evaluation/expression_result_iterators.hpp
+    expression/evaluation/determine_expression_result_type.hpp
     expression/expression_factory.cpp
     expression/expression_factory.hpp
     expression/expression_utils.cpp

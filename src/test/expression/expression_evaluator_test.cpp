@@ -56,10 +56,75 @@ class ExpressionEvaluatorTest : public ::testing::Test {
     x = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_b, "x"));
 
     table_bools = load_table("src/test/tables/expression_evaluator/input_bools.tbl");
+    chunk_bools = table_bools->get_chunk(ChunkID{0});
     bool_a = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_bools, "a"));
     bool_b = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_bools, "b"));
     bool_c = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_bools, "c"));
-    evaluator_bools.emplace(table_bools->get_chunk(ChunkID{0}));
+    evaluator_bools.emplace(chunk_bools);
+  }
+
+  /**
+   * Turn an ExpressionResult<T> into a canoncial form "std::vector<std::optional<T>>" to make the writing of tests
+   * easier.
+   */
+  template<typename T>
+  std::vector<std::optional<T>> normalize_expression_result(const ExpressionResult<T> &result) {
+
+    if (result.type() == typeid(NullValue)) {
+      return {{std::nullopt,}};
+
+    } else if (result.type() == typeid(NullableValue<T>)) {
+      const auto& nullable_value = boost::get<NullableValue<T>>(result);
+
+      if (nullable_value) {
+        return {{*nullable_value}};
+      } else {
+        return {{std::nullopt}};
+      }
+
+    } else if (result.type() == typeid(NullableValues<T>)) {
+      const auto& nullable_values = boost::get<NullableValues<T>>(result);
+
+      std::vector<std::optional<T>> normalized_result(nullable_values.first.size());
+
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < nullable_values.first.size(); ++chunk_offset) {
+        if (nullable_values.second[chunk_offset]) {
+          normalized_result[chunk_offset] = std::nullopt;
+        } else {
+          normalized_result[chunk_offset] = nullable_values.first[chunk_offset];
+        }
+      }
+
+      return normalized_result;
+
+    } else if (result.type() == typeid(NonNullableValues<T>)) {
+      const auto& non_nullable_values = boost::get<NonNullableValues<T>>(result);
+
+      std::vector<std::optional<T>> normalized_result(non_nullable_values.begin(), non_nullable_values.end());
+
+      return normalized_result;
+
+    } else {
+      Fail("Can't normalize this ExpressionType");
+
+    }
+  }
+
+  template<typename R>
+  bool test_expression(const std::shared_ptr<Chunk>& chunk,
+                       const AbstractExpression& expression,
+                       const std::vector<std::optional<R>>& expected) {
+    const auto actual_result = ExpressionEvaluator{chunk}.evaluate_expression<R>(expression);
+    const auto actual_normalized = normalize_expression_result(actual_result);
+    return actual_normalized == expected;
+  }
+
+  template<typename R>
+  bool test_expression(const AbstractExpression& expression,
+                       const std::vector<std::optional<R>>& expected) {
+    const auto actual_result = ExpressionEvaluator{}.evaluate_expression<R>(expression);
+    const auto actual_normalized = normalize_expression_result(actual_result);
+    return actual_normalized == expected;
   }
 
   std::shared_ptr<Table> table_a, table_b, table_bools;
@@ -76,14 +141,28 @@ class ExpressionEvaluatorTest : public ::testing::Test {
   std::shared_ptr<BinaryPredicateExpression> s1_lt_s2;
 };
 
-TEST_F(ExpressionEvaluatorTest, TernaryOr) {
-  const auto a_or_b = or_(bool_a, bool_b);
+TEST_F(ExpressionEvaluatorTest, TernaryOrNull) {
+  const auto passed = test_expression<int32_t>(*or_(NullValue{}, NullValue{}), {std::nullopt});
+  EXPECT_TRUE(passed);
+}
 
-  const auto expected_result = NonNullableValues<int32_t>{0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-  const auto actual_result = evaluator_bools->evaluate_expression<int32_t>(*a_or_b);
-  const auto& actual_values = boost::get<NonNullableValues<int32_t>>(actual_result);
+TEST_F(ExpressionEvaluatorTest, TernaryOrValue) {
+  const auto passed = test_expression<int32_t>(*or_(1, NullValue{}), {1});
+  EXPECT_TRUE(passed);
+}
 
-  EXPECT_EQ(actual_values, expected_result);
+TEST_F(ExpressionEvaluatorTest, TernaryOrNonNull) {
+  const auto passed = test_expression<int32_t>(chunk_bools, *or_(bool_a, bool_b),
+                                               {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1});
+
+  EXPECT_TRUE(passed);
+}
+
+TEST_F(ExpressionEvaluatorTest, TernaryOrNullable) {
+  const auto passed = test_expression<int32_t>(chunk_bools, *or_(bool_a, bool_c),
+                                               {0, 1, std::nullopt, 0, 1, std::nullopt, 1, 1, 1, 1, 1, 1});
+
+  EXPECT_TRUE(passed);
 }
 
 //TEST_F(ExpressionEvaluatorTest, ArithmeticExpression) {

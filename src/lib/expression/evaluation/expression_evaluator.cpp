@@ -28,6 +28,7 @@
 #include "utils/lambda_visitor.hpp"
 #include "storage/value_column.hpp"
 #include "utils/assert.hpp"
+#include "determine_expression_result_type.hpp"
 #include "expression_result_iterators.hpp"
 
 using namespace std::string_literals;
@@ -198,14 +199,21 @@ bool to_bool(const bool value) { return value; }
 bool to_bool(const int32_t value) { return value != 0; }
 bool to_bool(const NullValue value) { return false; }
 
-// clang-format off
 struct TernaryOr {
-  template<typename R, typename A, typename B> struct supports           { static constexpr bool value = std::is_same_v<int32_t, R> && std::is_same_v<int32_t, A> && std::is_same_v<int32_t, B>; };
-  template<typename A, typename B>             struct evaluate_as_series { static constexpr bool value = is_series<A>::value || is_series<B>::value; };
+  template<typename R, typename A, typename B> struct supports {
+    static constexpr bool value = std::is_same_v<int32_t, R> &&
+                                  (std::is_same_v<NullValue, A> || std::is_same_v<int32_t, A>) &&
+                                  (std::is_same_v<NullValue, B> || std::is_same_v<int32_t, B>);
+  };
+
+  template<typename A, typename B> struct evaluate_as_series {
+    static constexpr bool value = is_series<A>::value || is_series<B>::value;
+  };
+
   static constexpr auto may_produce_value_from_null = true;
 
   template<typename R, typename A, typename B>
-  static void perform(const ChunkOffset chunk_offset, R& result, const A& a, const B& b) {
+  void operator()(const ChunkOffset chunk_offset, R& result, const A& a, const B& b) {
     const auto a_is_true = !a.is_null() && to_bool(a.value());
     const auto b_is_true = !b.is_null() && to_bool(b.value());
     const auto result_is_true = a_is_true || b_is_true;
@@ -214,7 +222,6 @@ struct TernaryOr {
     set_expression_result(result, chunk_offset, result_is_true, result_is_null);
   };
 };
-// clang-format on
 
 template<typename T>
 ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpression& expression) {
@@ -265,14 +272,14 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpre
       return values;
     }
 
-//    case ExpressionType::Value: {
-//      const auto& value_expression = static_cast<const ValueExpression &>(expression);
-//      const auto& value = value_expression.value;
-//
-//      Assert(value.type() == typeid(T), "Can't evaluate ValueExpression to requested type T");
-//
-//      return boost::get<T>(value);
-//    }
+    case ExpressionType::Value: {
+      const auto& value_expression = static_cast<const ValueExpression &>(expression);
+      const auto& value = value_expression.value;
+
+      Assert(value.type() == typeid(T), "Can't evaluate ValueExpression to requested type T");
+
+      return std::optional<T>{boost::get<T>(value)};
+    }
 //
 //    case ExpressionType::Function:
 //      return evaluate_function_expression<T>(static_cast<const FunctionExpression&>(expression));
@@ -1144,27 +1151,32 @@ ExpressionResult<R> ExpressionEvaluator::evaluate_binary(const AbstractExpressio
       using RightDataType = typename RightIteratorValue::Type;
 
       if constexpr (Functor::template supports<R, LeftDataType, RightDataType>::value) {
-        using ResultType = typename resolve_result_type<R, LeftIteratorValue, RightIteratorValue, Functor>::type;
+        std::cout << "is_series_iter_v<A>: " << is_series_iter_v<LeftIterator> << std::endl;
+        std::cout << "is_series_iter_v<B>: " << is_series_iter_v<RightIterator> << std::endl;
+        std::cout << "is_nullable_iter_v<A>: " << is_nullable_iter_v<LeftIterator> << std::endl;
+        std::cout << "is_nullable_iter_v<B>: " << is_nullable_iter_v<RightIterator> << std::endl;
 
-        if constexpr (is_null_v<ResultType>) {
-          Fail("ExpressionEvaluator doesn't support operations on multiple NULLs right now");
-        } else {
+        using ResultType = typename determine_expression_result_type<R, LeftIterator, RightIterator, Functor>::type;
+
+//        if constexpr (is_null_v<ResultType>) {
+//          Fail("ExpressionEvaluator doesn't support operations only on NULLs right now");
+//        } else {
           ResultType result;
 
           if constexpr (is_series<ResultType>::value) {
             expression_result_allocate(result, _output_row_count);
 
             for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-              Functor::perform(chunk_offset, result, *left_iterator, *right_iterator);
+              Functor{}(chunk_offset, result, *left_iterator, *right_iterator);
               ++left_iterator;
               ++right_iterator;
             }
           } else {
-            Functor::perform(ChunkOffset{0}, result, *left_iterator, *right_iterator);
+            Functor{}(ChunkOffset{0}, result, *left_iterator, *right_iterator);
           }
 
           result_variant = result;
-        }
+//        }
 
       } else {
         Fail("Operation not supported");

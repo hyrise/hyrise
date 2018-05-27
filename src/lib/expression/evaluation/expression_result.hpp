@@ -43,9 +43,9 @@ template<typename T> struct expression_result_data_type<NullableArrays<T>>    { 
 template<typename T> struct expression_result_data_type<NonNullableArrays<T>> { using type = T; };
 
 // Default is true, so that all ColumnIterators are though of as Series
-template<typename T> struct is_series                               { static constexpr bool value = true; };
-template<>           struct is_series<NullValueIterator>            { static constexpr bool value = false; };
-template<typename T> struct is_series<NullableValueIteratpr<T>>     { static constexpr bool value = false; };
+template<typename T> struct is_series                       { static constexpr bool value = true; };
+template<>           struct is_series<NullValue>            { static constexpr bool value = false; };
+template<typename T> struct is_series<NullableValue<T>>     { static constexpr bool value = false; };
 
 template<typename T> constexpr bool is_null_v = std::is_same_v<T, NullValue>;
 
@@ -68,32 +68,6 @@ template<typename T> constexpr bool is_nullable_arrays_v = is_nullable_arrays_t<
 template<typename T> struct is_non_nullable_arrays_t                    { static constexpr bool value = false; };
 template<typename T> struct is_non_nullable_arrays_t<NonNullableArrays<T>>  { static constexpr bool value = true; };
 template<typename T> constexpr bool is_non_nullable_arrays_v = is_non_nullable_arrays_t<T>::value;
-
-
-
-
-/**
- * @defgroup Determine the ExpressionResult member
- *
- * @tparam A  IteratorValue of the operand A
- * @tparam B  IteratorValue of the operand B
- *
- * @{
- */
-template<typename R, typename A, typename B, typename Fn, typename Enable = void> struct resolve_result_type { using type = NullableValues<R>; };
-
-template<typename R, typename A, typename B, typename Fn> struct resolve_result_type<R, A, B, Fn,
-  std::enable_if_t<(is_series_v<A> || is_series_v<B>) && (!is_nullable_v<A> && !is_nullable_v<B>)>
-  > { using type = NonNullableValues<R>; };
-
-//template<typename R, typename A, typename B, typename Functor> struct resolve_result_type<R, A, B, Functor,
-//  std::enable_if_t<(is_null_v<A> && is_null_v<B>) || ((is_null_v<A> || is_null_v<B>) && Functor::may_produce_value_from_null)>>{ using type = NullValue; };
-//
-//template<typename R, typename A, typename B> struct resolve_result_type<R, A, B, Functor,
-//  std::enable_if_t<(is_value_v<A> && is_value_v<B>)>{ using type = R; };
-/**
- * @}
- */
 
 /**
  * @defgroup Iterative access for the different ExpressionResult members
