@@ -93,57 +93,57 @@ class NonNullableValuesIterator : public BaseColumnIterator<NonNullableValuesIte
   ValuesIterator _values_iter;
 };
 
-template<typename T>
-class NullableArraysIterator : public BaseColumnIterator<NullableArraysIterator<T>, NonNullColumnIteratorValue<NullableValues<T>>> {
- public:
-  using ValuesIterator = typename NullableArrays<T>::const_iterator;
-
-  explicit NullableArraysIterator(const ValuesIterator& values_iter):
-  _values_iter(values_iter) {}
-
- private:
-  friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
-
-  void increment() {
-    ++_values_iter;
-  }
-
-  bool equal(const NullableArraysIterator<T>& other) const {
-    return _values_iter == other._values_iter;
-  }
-
-  NonNullColumnIteratorValue<NullableValues<T>> dereference() const {
-    return {*_values_iter, ChunkOffset{0}};
-  }
-
-  ValuesIterator _values_iter;
-};
-
-template<typename T>
-class NonNullableArraysIterator : public BaseColumnIterator<NonNullableArraysIterator<T>, NonNullColumnIteratorValue<NonNullableValues<T>>> {
- public:
-  using ValuesIterator = typename NonNullableArrays<T>::const_iterator;
-
-  explicit NonNullableArraysIterator(const ValuesIterator& values_iter):
-  _values_iter(values_iter) {}
-
- private:
-  friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
-
-  void increment() {
-    ++_values_iter;
-  }
-
-  bool equal(const NonNullableArraysIterator<T>& other) const {
-    return _values_iter == other._values_iter;
-  }
-
-  NonNullColumnIteratorValue<NonNullableValues<T>> dereference() const {
-    return {*_values_iter, ChunkOffset{0}};
-  }
-
-  ValuesIterator _values_iter;
-};
+//template<typename T>
+//class NullableArraysIterator : public BaseColumnIterator<NullableArraysIterator<T>, NonNullColumnIteratorValue<NullableValues<T>>> {
+// public:
+//  using ValuesIterator = typename NullableArrays<T>::const_iterator;
+//
+//  explicit NullableArraysIterator(const ValuesIterator& values_iter):
+//  _values_iter(values_iter) {}
+//
+// private:
+//  friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
+//
+//  void increment() {
+//    ++_values_iter;
+//  }
+//
+//  bool equal(const NullableArraysIterator<T>& other) const {
+//    return _values_iter == other._values_iter;
+//  }
+//
+//  NonNullColumnIteratorValue<NullableValues<T>> dereference() const {
+//    return {*_values_iter, ChunkOffset{0}};
+//  }
+//
+//  ValuesIterator _values_iter;
+//};
+//
+//template<typename T>
+//class NonNullableArraysIterator : public BaseColumnIterator<NonNullableArraysIterator<T>, NonNullColumnIteratorValue<NonNullableValues<T>>> {
+// public:
+//  using ValuesIterator = typename NonNullableArrays<T>::const_iterator;
+//
+//  explicit NonNullableArraysIterator(const ValuesIterator& values_iter):
+//  _values_iter(values_iter) {}
+//
+// private:
+//  friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
+//
+//  void increment() {
+//    ++_values_iter;
+//  }
+//
+//  bool equal(const NonNullableArraysIterator<T>& other) const {
+//    return _values_iter == other._values_iter;
+//  }
+//
+//  NonNullColumnIteratorValue<NonNullableValues<T>> dereference() const {
+//    return {*_values_iter, ChunkOffset{0}};
+//  }
+//
+//  ValuesIterator _values_iter;
+//};
 
 template<typename T>
 NullableValueIterator<T> create_iterator_for_expression_result(const NullableValue<T>& nullable_value) {
@@ -160,15 +160,15 @@ NonNullableValuesIterator<T> create_iterator_for_expression_result(const NonNull
   return NonNullableValuesIterator<T>(non_nullable_values.begin());
 }
 
-template<typename T>
-NullableArraysIterator<T> create_iterator_for_expression_result(const NullableArrays<T>& nullable_arrays) {
-  return NullableArraysIterator<T>(nullable_arrays.begin());
-}
-
-template<typename T>
-NonNullableArraysIterator<T> create_iterator_for_expression_result(const NonNullableArrays<T>& non_nullable_arrays) {
-  return NonNullableArraysIterator<T>(non_nullable_arrays.begin());
-}
+//template<typename T>
+//NullableArraysIterator<T> create_iterator_for_expression_result(const NullableArrays<T>& nullable_arrays) {
+//  return NullableArraysIterator<T>(nullable_arrays.begin());
+//}
+//
+//template<typename T>
+//NonNullableArraysIterator<T> create_iterator_for_expression_result(const NonNullableArrays<T>& non_nullable_arrays) {
+//  return NonNullableArraysIterator<T>(non_nullable_arrays.begin());
+//}
 
 
 }  // namespace opossum

@@ -21,7 +21,11 @@ struct NullValue {};
 
 // Relational operators
 inline bool operator==(const NullValue&, const NullValue&) { return false; }
+inline bool operator!=(const NullValue&, const NullValue&) { return false; }
 inline bool operator<(const NullValue&, const NullValue&) { return false; }
+inline bool operator<=(const NullValue&, const NullValue&) { return false; }
+inline bool operator>(const NullValue&, const NullValue&) { return false; }
+inline bool operator>=(const NullValue&, const NullValue&) { return false; }
 
 // Streaming support
 

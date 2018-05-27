@@ -9,6 +9,21 @@ bool to_bool(const bool value) { return value; }
 bool to_bool(const int32_t value) { return value != 0; }
 bool to_bool(const NullValue value) { return false; }
 
+template<typename R, typename T>
+struct to_value {
+  static R cast(const T& value) { return static_cast<R>(value); }
+};
+
+template<typename R>
+struct to_value<R, NullValue> {
+  static R cast(const NullValue&) { return R{}; }
+};
+
+template<typename A, typename B> struct common_type { using type = std::common_type_t<A, B>; };
+template<typename A> struct common_type<A, NullValue> { using type = A; };
+template<typename B> struct common_type<NullValue, B> { using type = B; };
+template<> struct common_type<NullValue, NullValue> { using type = NullValue; };
+
 template<typename T> size_t size(const NullableValues<T>& nullable_values) { return nullable_values.first.size(); }
 template<typename T> size_t size(const NonNullableValues<T>& non_nullable_values) { return non_nullable_values.size(); }
 
@@ -43,41 +58,74 @@ struct TernaryOr {
   };
 };
 
-struct In {
+//struct In {
+//  template<typename R, typename A, typename B> struct supports {
+//    static constexpr bool value = std::is_same_v<int32_t, R> &&
+//                                  is_nullable_value_v<A> &&
+//                                  (is_nullable_values_v<B> || is_non_nullable_values_v<B>);
+//  };
+//
+//  template<typename A, typename B> struct evaluate_as_series {
+//    static constexpr bool value = is_series<A>::value || is_series<B>::value;
+//  };
+//
+//  static constexpr auto may_produce_value_from_null = true;
+//
+//  template<typename R, typename A, typename B>
+//  void operator()(const ChunkOffset chunk_offset, R& result, const A& a, const B& b) {
+//    // "NULL IN (...)" is always NULL
+//    if (a.is_null()) {
+//      set_expression_result(result, chunk_offset, false, true);
+//    } else {
+//      const auto& a_value = a.value();
+//      const auto& array = b.value();
+//
+//      static_assert(is_nullable_value_v<std::decay_t<decltype(a_value)>>);
+//      static_assert(is_nullable_values_v<std::decay_t<decltype(array)>> ||
+//                    is_non_nullable_values_v<std::decay_t<decltype(array)>>);
+//
+//      for (auto element_idx = size_t{0}; element_idx < size(array); ++element_idx) {
+//        if (!null(array, element_idx) && a_value == value(array, element_idx)) {
+//          set_expression_result(result, chunk_offset, true, false);
+//          return;
+//        }
+//      }
+//      set_expression_result(result, chunk_offset, false, true);
+//    }
+//  };
+//};
+
+template<template<typename T> typename Functor>
+struct STLFunctorWrapper {
   template<typename R, typename A, typename B> struct supports {
     static constexpr bool value = std::is_same_v<int32_t, R> &&
-                                  is_nullable_value_v<A> &&
-                                  (is_nullable_values_v<B> || is_non_nullable_values_v<B>);
+    (std::is_same_v<std::string, A> == std::is_same_v<std::string, B>);
   };
 
   template<typename A, typename B> struct evaluate_as_series {
     static constexpr bool value = is_series<A>::value || is_series<B>::value;
   };
 
-  static constexpr auto may_produce_value_from_null = true;
+  static constexpr auto may_produce_value_from_null = false;
 
   template<typename R, typename A, typename B>
   void operator()(const ChunkOffset chunk_offset, R& result, const A& a, const B& b) {
-    // "NULL IN (...)" is always NULL
-    if (a.is_null()) {
-      set_expression_result(result, chunk_offset, false, true);
-    } else {
-      const auto& a_value = a.value();
-      const auto& array = b.value();
+    using TypeA = typename A::Type;
+    using TypeB = typename B::Type;
+    using TypeCommon = typename common_type<TypeA, TypeB>::type;
 
-      static_assert(is_nullable_value_v<std::decay_t<decltype(a_value)>>);
-      static_assert(is_nullable_values_v<std::decay_t<decltype(array)>> ||
-                    is_non_nullable_values_v<std::decay_t<decltype(array)>>);
+    const auto result_value = Functor<TypeCommon>{}(to_value<TypeCommon, TypeA>{}.cast(a.value()),
+                                               to_value<TypeCommon, TypeB>{}.cast(b.value()));
 
-      for (auto element_idx = size_t{0}; element_idx < size(array); ++element_idx) {
-        if (!null(array, element_idx) && a_value == value(array, element_idx)) {
-          set_expression_result(result, chunk_offset, true, false);
-          return;
-        }
-      }
-      set_expression_result(result, chunk_offset, false, true);
-    }
+    set_expression_result(result, chunk_offset, result_value, a.is_null() || b.is_null());
   };
 };
+
+using Equals = STLFunctorWrapper<std::equal_to>;
+using NotEquals = STLFunctorWrapper<std::not_equal_to>;
+using GreaterThan = STLFunctorWrapper<std::greater>;
+using GreaterThanEquals = STLFunctorWrapper<std::greater_equal>;
+using LessThan = STLFunctorWrapper<std::less>;
+using LessThanEquals = STLFunctorWrapper<std::less_equal>;
 
 }  // namespace opossum

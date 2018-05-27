@@ -61,15 +61,15 @@ class ExpressionEvaluator final {
 //
   template<typename T>
   ExpressionResult<T> evaluate_logical_expression(const LogicalExpression& expression);
-//
-//  template<typename T>
-//  ExpressionResult<T> evaluate_binary_predicate_expression(const BinaryPredicateExpression& expression);
+
+  template<typename T>
+  ExpressionResult<T> evaluate_binary_predicate_expression(const BinaryPredicateExpression& expression);
 
   template<typename T>
   ExpressionResult<T> evaluate_in_expression(const InExpression& in_expression);
 
 //  template<typename T>
-//  ExpressionResult<T> evaluate_array_expression(const ArrayExpression& array_expression);
+//  std::vector<ExpressionResult<T>> evaluate_array_expression(const ArrayExpression& array_expression);
 
 //  template<typename T>
 //  ExpressionResult<T> evaluate_select_expression_for_chunk(const PQPSelectExpression &expression);

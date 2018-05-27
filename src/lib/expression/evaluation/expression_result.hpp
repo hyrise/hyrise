@@ -13,34 +13,26 @@
 namespace opossum {
 
 // clang-format off
+template<typename T> using NullableValue      = std::optional<T>;
 template<typename T> using NullableValues     = std::pair<std::vector<T>, std::vector<bool>>;
 template<typename T> using NonNullableValues  = std::vector<T>;
-template<typename T> using NullableArrays     = std::vector<NullableValues<T>>;
-template<typename T> using NonNullableArrays  = std::vector<NonNullableValues<T>>;
-template<typename T> using NullableValue      = std::optional<T>;
 
 template<typename T> using ExpressionResult = boost::variant<
   // Don't change the order! is_*() functions rely on which()
   NullableValue<T>,
   NullableValues<T>,
-  NonNullableValues<T>,
-  NullableArrays<T>,
-  NonNullableArrays<T>
+  NonNullableValues<T>
 >;
 
 template<typename T> bool is_nullable_value(const ExpressionResult<T>& result)      { return result.which() == 0; }
 template<typename T> bool is_nullable_values(const ExpressionResult<T>& result)     { return result.which() == 1; }
 template<typename T> bool is_non_nullable_values(const ExpressionResult<T>& result) { return result.which() == 2; }
-template<typename T> bool is_nullable_array(const ExpressionResult<T>& result)      { return result.which() == 3; }
-template<typename T> bool is_non_nullable_array(const ExpressionResult<T>& result)  { return result.which() == 4; }
 
 template<typename T> struct expression_result_data_type                       { };
 template<>           struct expression_result_data_type<NullValue>            { using type = NullValue; };
 template<typename T> struct expression_result_data_type<NullableValue<T>>     { using type = T; };
 template<typename T> struct expression_result_data_type<NullableValues<T>>    { using type = T; };
 template<typename T> struct expression_result_data_type<NonNullableValues<T>> { using type = T; };
-template<typename T> struct expression_result_data_type<NullableArrays<T>>    { using type = T; };
-template<typename T> struct expression_result_data_type<NonNullableArrays<T>> { using type = T; };
 
 // Default is true, so that all ColumnIterators are though of as Series
 template<typename T> struct is_series                       { static constexpr bool value = true; };
@@ -61,13 +53,6 @@ template<typename T> struct is_non_nullable_values_t                        { st
 template<typename T> struct is_non_nullable_values_t<NonNullableValues<T>>  { static constexpr bool value = true; };
 template<typename T> constexpr bool is_non_nullable_values_v = is_non_nullable_values_t<T>::value;
 
-template<typename T> struct is_nullable_arrays_t                    { static constexpr bool value = false; };
-template<typename T> struct is_nullable_arrays_t<NullableArrays<T>>  { static constexpr bool value = true; };
-template<typename T> constexpr bool is_nullable_arrays_v = is_nullable_arrays_t<T>::value;
-
-template<typename T> struct is_non_nullable_arrays_t                    { static constexpr bool value = false; };
-template<typename T> struct is_non_nullable_arrays_t<NonNullableArrays<T>>  { static constexpr bool value = true; };
-template<typename T> constexpr bool is_non_nullable_arrays_v = is_non_nullable_arrays_t<T>::value;
 
 /**
  * @defgroup Iterative access for the different ExpressionResult members
@@ -88,14 +73,6 @@ template<typename T, typename S> void set_expression_result(NullableValues<T>& n
 
 template<typename T, typename S> void set_expression_result(NonNullableValues<T>& non_nullable_values, const ChunkOffset chunk_offset, const S& value, const bool null) {
   non_nullable_values[chunk_offset] = static_cast<T>(value);
-}
-
-template<typename T, typename S> void set_expression_result(NullableArrays<T>& nullable_arrays, const ChunkOffset chunk_offset, const S& value, const bool null) {
-  Fail("Can't write to array using this API");
-}
-
-template<typename T, typename S> void set_expression_result(NonNullableArrays<T>& non_nullable_arrays, const ChunkOffset chunk_offset, const S& value, const bool null) {
-  Fail("Can't write to array using this API");
 }
 /**
  * @}

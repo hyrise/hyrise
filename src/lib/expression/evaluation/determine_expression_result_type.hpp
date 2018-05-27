@@ -32,16 +32,18 @@ template<typename T> constexpr bool is_nullable_value_iter_v = is_nullable_value
  */
 template<typename R, typename A, typename B, typename Fn, typename Enable = void> struct determine_expression_result_type { };
 
+template<typename A, typename B, typename Functor> constexpr bool is_null_result_v = (is_null_iter_v<A> && is_null_iter_v<B>) || ((is_null_iter_v<A> || is_null_iter_v<B>) && !Functor::may_produce_value_from_null);
+
 template<typename R, typename A, typename B, typename Functor> struct determine_expression_result_type<R, A, B, Functor,
-  std::enable_if_t<(is_null_iter_v<A> && is_null_iter_v<B>) || ((is_null_iter_v<A> || is_null_iter_v<B>) && !Functor::may_produce_value_from_null)>
+  std::enable_if_t<is_null_result_v<A, B, Functor>>
 >{ using type = NullableValue<R>; };
 
 template<typename R, typename A, typename B, typename Functor> struct determine_expression_result_type<R, A, B, Functor,
-  std::enable_if_t<!is_series_iter_v<A> && !is_series_iter_v<B> && (is_nullable_value_iter_v<A> || is_nullable_value_iter_v<B>)>
+  std::enable_if_t<!is_null_result_v<A, B, Functor> && !is_series_iter_v<A> && !is_series_iter_v<B> && (is_nullable_value_iter_v<A> || is_nullable_value_iter_v<B>)>
 >{ using type = NullableValue<R>; };
 
 template<typename R, typename A, typename B, typename Functor> struct determine_expression_result_type<R, A, B, Functor,
-  std::enable_if_t<(is_series_iter_v<A> || is_series_iter_v<B>) && (is_nullable_iter_v<A> || is_nullable_iter_v<B>)>
+  std::enable_if_t<!is_null_result_v<A, B, Functor> && ((is_series_iter_v<A> || is_series_iter_v<B>) && (is_nullable_iter_v<A> || is_nullable_iter_v<B>))>
 >{ using type = NullableValues<R>; };
 
 template<typename R, typename A, typename B, typename Functor> struct determine_expression_result_type<R, A, B, Functor,
