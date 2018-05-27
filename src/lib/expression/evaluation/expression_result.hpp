@@ -40,6 +40,29 @@ class ExpressionResultSeries {
 };
 
 template<typename T>
+class ExpressionResultNonNullSeries {
+ public:
+  using Type = T;
+
+  explicit ExpressionResultNonNullSeries(const std::vector<T>& values):
+    _values(values){}
+
+  bool is_series() const { return true; }
+  bool is_literal() const { return false; }
+  bool is_nullable() const { return false; }
+
+  const T& value(const size_t idx) const {
+    DebugAssert(idx < _values.size(), "Index out of range");
+    return _values[idx];
+  }
+
+  bool null(const size_t idx) const { return false;  }
+
+ private:
+  const std::vector<T>& _values;
+};
+
+template<typename T>
 class ExpressionResultLiteral {
  public:
   using Type = T;
@@ -74,7 +97,6 @@ class ExpressionResult {
 
   bool is_series() const { return size() > 1; }
   bool is_literal() const { return size() == 1; }
-
   bool is_nullable() const { return !nulls.empty(); }
 
   ExpressionResultLiteral<T> to_literal() const {
@@ -84,7 +106,13 @@ class ExpressionResult {
   }
 
   ExpressionResultSeries<T> to_series() const {
+    Assert(is_nullable(), "Can't turn non-nullable to nullable series");
     return {values, nulls};
+  }
+
+  ExpressionResultNonNullSeries<T> to_non_null_series() const {
+    Assert(!is_nullable(), "Can't turn nullable to nonnullable series");
+    return ExpressionResultNonNullSeries<T>{values};
   }
 
   size_t size() const { return values.size(); }
@@ -96,7 +124,11 @@ class ExpressionResult {
 template<typename T, typename Functor>
 void resolve_expression_result(const ExpressionResult<T>& result, const Functor& fn) {
   if (result.is_series()) {
-    fn(result.to_series());
+    if (result.is_nullable()) {
+      fn(result.to_series());
+    } else {
+      fn(result.to_non_null_series());
+    }
   } else {
     fn(result.to_literal());
   }

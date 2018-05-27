@@ -231,10 +231,10 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpre
     case ExpressionType::Column: {
       Assert(_chunk, "Cannot access Columns in this Expression as it doesn't operate on a Table/Chunk");
 
-      const auto* pqp_column_expression = dynamic_cast<const PQPColumnExpression*>(&expression);
+      const auto *pqp_column_expression = dynamic_cast<const PQPColumnExpression *>(&expression);
       Assert(pqp_column_expression, "Can only evaluate PQPColumnExpressions");
 
-      const auto& column = *_chunk->get_column(pqp_column_expression->column_id);
+      const auto &column = *_chunk->get_column(pqp_column_expression->column_id);
 
       std::vector<T> values;
       materialize_values(column, values);
@@ -587,37 +587,6 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_case_expression(const CaseExpr
 //    Fail("Can't EXTRACT from this Expression");
 //  }
 //}
-
-//template<typename ResultDataType,
-//typename ThenDataType,
-//typename ElseDataType>
-//ExpressionResult<ResultDataType> ExpressionEvaluator::evaluate_case(const ExpressionResult<int32_t>& when_result,
-//                                               const ExpressionResult<ThenDataType>& then_result,
-//                                               const ExpressionResult<ElseDataType>& else_result) {
-//  if (is_nullable_values(when_result)) {
-//    using CaseFunctor = CaseNullableCondition<ResultDataType, ThenDataType, ElseDataType>;
-//
-//    if constexpr (CaseFunctor::supported) {
-//      const auto& when_values = boost::get<NullableValues<int32_t>>(when_result).first;
-//      const auto& when_nulls = boost::get<NullableValues<int32_t>>(when_result).second;
-//
-//      return evaluate_binary_operator<ResultDataType>(then_result, else_result, CaseFunctor(when_values, when_nulls));
-//    } else {
-//      Fail("Operand types not support for CASE");
-//    }
-//  } else {
-//    using CaseFunctor = CaseNonNullableCondition<ResultDataType, ThenDataType, ElseDataType>;
-//
-//    if constexpr (CaseFunctor::supported) {
-//      const auto& when_values = boost::get<NonNullableValues<int32_t>>(when_result);
-//
-//      return evaluate_binary_operator<ResultDataType>(then_result, else_result, CaseFunctor{when_values});
-//    } else {
-//      Fail("Operand types not support for CASE");
-//    }
-//  }
-//}
-
 //template<typename T>
 //ExpressionResult<T> ExpressionEvaluator::evaluate_select_expression_for_chunk(
 //const PQPSelectExpression &expression) {
@@ -854,30 +823,10 @@ ExpressionResult<R> ExpressionEvaluator::evaluate_binary_with_custom_null_logic(
       std::vector<bool> nulls(output_row_count);
       std::vector<R> values(output_row_count);
 
-      if (left.is_nullable() && right.is_nullable()) {
-        for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
-          bool null;
-          Functor{}(values[row_idx], null, left.value(row_idx), left.null(row_idx), right.value(row_idx), right.null(row_idx));
-          nulls[row_idx] = null;
-        }
-      } else if (left.is_nullable() && !right.is_nullable()) {
-        for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
-          bool null;
-          Functor{}(values[row_idx], null, left.value(row_idx), left.null(row_idx), right.value(row_idx), false);
-          nulls[row_idx] = null;
-        }
-      } else if (!left.is_nullable() && right.is_nullable()) {
-        for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
-          bool null;
-          Functor{}(values[row_idx], null, left.value(row_idx), false, right.value(row_idx), right.null(row_idx));
-          nulls[row_idx] = null;
-        }
-      } else if (!left.is_nullable() && !right.is_nullable()) {
-        for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
-          bool null;
-          Functor{}(values[row_idx], null, left.value(row_idx), false, right.value(row_idx), false);
-          nulls[row_idx] = null;
-        }
+      for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
+        bool null;
+        Functor{}(values[row_idx], null, left.value(row_idx), left.null(row_idx), right.value(row_idx), right.null(row_idx));
+        nulls[row_idx] = null;
       }
 
       result = ExpressionResult<R>{std::move(values), std::move(nulls)};
@@ -898,13 +847,11 @@ void ExpressionEvaluator::resolve_binary(const AbstractExpression& left_expressi
     resolve_expression(right_expression, [&](const auto& right_result) {
       const auto output_row_count = std::max(left_result.size(), right_result.size());
 
-      if ((left_result.is_series() && right_result.is_series()) || (left_result.is_literal() && left_result.is_literal())) {
-        fn(output_row_count, left_result.to_series(), right_result.to_series());
-      } else if (left_result.is_series() && right_result.is_literal()) {
-        fn(output_row_count, left_result.to_series(), right_result.to_literal());
-      } else if (left_result.is_literal() && right_result.is_literal()) {
-        fn(output_row_count, left_result.to_literal(), right_result.to_literal());
-      }
+      resolve_expression_result(left_result, [&](const auto& left_view) {
+        resolve_expression_result(right_result, [&](const auto& right_view) {
+          fn(output_row_count, left_view, right_view);
+        });
+      });
     });
   });
 }
@@ -916,7 +863,8 @@ void ExpressionEvaluator::resolve_expression(const AbstractExpression& expressio
 
   if (expression.data_type() == DataType::Null) {
     // resolve_data_type() doesn't support Null, so we have handle it explicitly
-    ExpressionResult<NullValue> null_value_result({{NullValue{}}}, {true});
+    ExpressionResult<NullValue> null_value_result{{NullValue{}}, {true}};
+
     fn(null_value_result);
 
   } else {

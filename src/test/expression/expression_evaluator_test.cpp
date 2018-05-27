@@ -123,18 +123,11 @@ TEST_F(ExpressionEvaluatorTest, TernaryOrLiteral) {
   EXPECT_TRUE(test_expression<int32_t>(*or_(NullValue{}, 1), {1}));
 }
 
-TEST_F(ExpressionEvaluatorTest, TernaryOrNonNull) {
-  const auto passed = test_expression<int32_t>(chunk_bools, *or_(bool_a, bool_b),
-                                               {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1});
-
-  EXPECT_TRUE(passed);
-}
-
-TEST_F(ExpressionEvaluatorTest, TernaryOrNullable) {
-  const auto passed = test_expression<int32_t>(chunk_bools, *or_(bool_a, bool_c),
-                                               {0, 1, std::nullopt, 0, 1, std::nullopt, 1, 1, 1, 1, 1, 1});
-
-  EXPECT_TRUE(passed);
+TEST_F(ExpressionEvaluatorTest, TernaryOrSeries) {
+  // clang-format off
+  EXPECT_TRUE(test_expression<int32_t>(chunk_bools, *or_(bool_a, bool_b), {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(chunk_bools, *or_(bool_a, bool_c), {0, 1, std::nullopt, 0, 1, std::nullopt, 1, 1, 1, 1, 1, 1}));  // NOLINT
+  // clang-format on
 }
 
 TEST_F(ExpressionEvaluatorTest, TernaryAndLiteral) {
@@ -147,6 +140,20 @@ TEST_F(ExpressionEvaluatorTest, TernaryAndLiteral) {
   EXPECT_TRUE(test_expression<int32_t>(*and_(NullValue{}, NullValue{}), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*and_(NullValue{}, 0), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*and_(NullValue{}, 1), {std::nullopt}));
+}
+
+TEST_F(ExpressionEvaluatorTest, ArithmeticsLiterals) {
+  EXPECT_TRUE(test_expression<int32_t>(*mul(5, 3), {15}));
+  EXPECT_TRUE(test_expression<int32_t>(*mul(5, NullValue{}), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*sub(15, 12), {3}));
+  EXPECT_TRUE(test_expression<float>(*division(10.0, 4.0), {2.5f}));
+  EXPECT_TRUE(test_expression<int32_t>(*sub(NullValue{}, NullValue{}), {std::nullopt}));
+}
+
+TEST_F(ExpressionEvaluatorTest, CaseLiterals) {
+  EXPECT_TRUE(test_expression<int32_t>(*case_(1, 2, 1), {2}));
+  EXPECT_TRUE(test_expression<int32_t>(*case_(0, 2, 1), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*case_(0, 2, case_(1, 5, 13)), {5}));
 }
 
 //TEST_F(ExpressionEvaluatorTest, ArithmeticExpression) {
