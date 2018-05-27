@@ -29,6 +29,18 @@ const std::vector<std::shared_ptr<AbstractExpression>>& ArrayExpression::element
   return arguments;
 }
 
+std::optional<DataType> ArrayExpression::common_element_data_type() const {
+  if (elements().empty()) return std::nullopt;
+
+  auto data_type = elements().front()->data_type();
+
+  for (auto element_idx = size_t{1}; element_idx < elements().size(); ++element_idx) {
+    data_type = expression_common_type(data_type, elements()[element_idx]->data_type());
+  }
+
+  return data_type;
+}
+
 std::shared_ptr<AbstractExpression> ArrayExpression::deep_copy() const {
     return std::make_shared<ArrayExpression>(expressions_copy(arguments));
 }

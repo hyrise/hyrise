@@ -216,23 +216,14 @@ TEST_F(ExpressionEvaluatorTest, TernaryOrNullable) {
 //  std::vector<bool> expected_nulls = {false, true, false, true};
 //  EXPECT_EQ(actual_nulls, expected_nulls);
 //}
-//
-//TEST_F(ExpressionEvaluatorTest, In) {
-//  std::vector<std::shared_ptr<AbstractExpression>> array_elements;
-//  array_elements.emplace_back(std::make_shared<ValueExpression>(3.0));
-//  array_elements.emplace_back(s1);
-//  array_elements.emplace_back(std::make_shared<ArithmeticExpression>(ArithmeticOperator::Subtraction, d, std::make_shared<ValueExpression>(1)));
-//
-//  const auto array = std::make_shared<ArrayExpression>(array_elements);
-//
-//  const auto in = std::make_shared<InExpression>(a, array);
-//
-//  const auto actual_values = boost::get<NonNullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*in));
-//
-//  std::vector<int32_t> expected_values = {1, 0, 1, 0};
-//  EXPECT_EQ(actual_values, expected_values);
-//}
-//
+
+TEST_F(ExpressionEvaluatorTest, In) {
+  const auto passed = test_expression<int32_t>(chunk_a, *in(a, array(1.0, 3.0)),
+                                               {1, 0, 1, 0});
+
+  EXPECT_TRUE(passed);
+}
+
 //TEST_F(ExpressionEvaluatorTest, Case) {
 //  /**
 //   * SELECT

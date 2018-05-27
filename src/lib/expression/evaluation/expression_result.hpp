@@ -49,8 +49,8 @@ template<typename T> struct is_series<NullableValue<T>>     { static constexpr b
 
 template<typename T> constexpr bool is_null_v = std::is_same_v<T, NullValue>;
 
-template<typename T> struct is_nullable_value_t                       { static constexpr bool value = false; };
-template<typename T> struct is_nullable_value_t<NullableValues<T>>    { static constexpr bool value = true; };
+template<typename T> struct is_nullable_value_t                      { static constexpr bool value = false; };
+template<typename T> struct is_nullable_value_t<NullableValue<T>>    { static constexpr bool value = true; };
 template<typename T> constexpr bool is_nullable_value_v = is_nullable_value_t<T>::value;
 
 template<typename T> struct is_nullable_values_t                      { static constexpr bool value = false; };

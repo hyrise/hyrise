@@ -43,8 +43,6 @@ class ExpressionEvaluator final {
   // For Expressions that reference Columns from a single table
   explicit ExpressionEvaluator(const std::shared_ptr<const Chunk>& chunk);
 
-//  void _ensure_column_materialization(const ColumnID column_id);
-//
   std::shared_ptr<BaseColumn> evaluate_expression_to_column(const AbstractExpression& expression);
 
   template<typename T>
@@ -66,10 +64,13 @@ class ExpressionEvaluator final {
 //
 //  template<typename T>
 //  ExpressionResult<T> evaluate_binary_predicate_expression(const BinaryPredicateExpression& expression);
-//
+
+  template<typename T>
+  ExpressionResult<T> evaluate_in_expression(const InExpression& in_expression);
+
 //  template<typename T>
-//  ExpressionResult<T> evaluate_in_expression(const InExpression& in_expression);
-//
+//  ExpressionResult<T> evaluate_array_expression(const ArrayExpression& array_expression);
+
 //  template<typename T>
 //  ExpressionResult<T> evaluate_select_expression_for_chunk(const PQPSelectExpression &expression);
 //

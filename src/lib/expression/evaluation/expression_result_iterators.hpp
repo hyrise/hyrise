@@ -37,8 +37,6 @@ class NullableValueIterator : public BaseColumnIterator<NullableValueIterator<T>
 template<typename T>
 class NullableValuesIterator : public BaseColumnIterator<NullableValuesIterator<T>, ColumnIteratorValue<T>> {
  public:
-  static constexpr bool Nullable = true;
-
   using ValuesIterator = typename NullableValues<T>::first_type::const_iterator;
   using NullsIterator = typename NullableValues<T>::second_type::const_iterator;
 
@@ -68,11 +66,9 @@ class NullableValuesIterator : public BaseColumnIterator<NullableValuesIterator<
 };
 
 template<typename T>
-class NonNullableValuesIterator : public BaseColumnIterator<NonNullableValuesIterator<T>, ColumnIteratorValue<T>> {
+class NonNullableValuesIterator : public BaseColumnIterator<NonNullableValuesIterator<T>, NonNullColumnIteratorValue<T>> {
  public:
-  static constexpr bool Nullable = false;
-
-  using ValuesIterator = typename NullableValues<T>::first_type::const_iterator;
+  using ValuesIterator = typename NonNullableValues<T>::const_iterator;
 
   NonNullableValuesIterator(const ValuesIterator& values_iter):
   _values_iter(values_iter) {}
@@ -88,20 +84,18 @@ class NonNullableValuesIterator : public BaseColumnIterator<NonNullableValuesIte
     return _values_iter == other._values_iter;
   }
 
-  ColumnIteratorValue<T> dereference() const {
+  NonNullColumnIteratorValue<T> dereference() const {
     // Intentionally don't pass in a ChunkOffset - the ExpressionEvaluator will never use it
     // TODO(moritz) investigate whether passing it it makes any perf difference
-    return ColumnIteratorValue<T>(*_values_iter, false, ChunkOffset{0});
+    return {*_values_iter, ChunkOffset{0}};
   }
 
   ValuesIterator _values_iter;
 };
 
 template<typename T>
-class NullableArraysIterator : public BaseColumnIterator<NullableArraysIterator<T>, ColumnIteratorValue<typename NullableArrays<T>::value_type>> {
+class NullableArraysIterator : public BaseColumnIterator<NullableArraysIterator<T>, NonNullColumnIteratorValue<NullableValues<T>>> {
  public:
-  static constexpr bool Nullable = false;
-
   using ValuesIterator = typename NullableArrays<T>::const_iterator;
 
   explicit NullableArraysIterator(const ValuesIterator& values_iter):
@@ -118,18 +112,16 @@ class NullableArraysIterator : public BaseColumnIterator<NullableArraysIterator<
     return _values_iter == other._values_iter;
   }
 
-  ColumnIteratorValue<typename NullableArrays<T>::value_type> dereference() const {
-    return {*_values_iter, false, ChunkOffset{0}};
+  NonNullColumnIteratorValue<NullableValues<T>> dereference() const {
+    return {*_values_iter, ChunkOffset{0}};
   }
 
   ValuesIterator _values_iter;
 };
 
 template<typename T>
-class NonNullableArraysIterator : public BaseColumnIterator<NonNullableArraysIterator<T>, ColumnIteratorValue<typename NonNullableArrays<T>::value_type>> {
+class NonNullableArraysIterator : public BaseColumnIterator<NonNullableArraysIterator<T>, NonNullColumnIteratorValue<NonNullableValues<T>>> {
  public:
-  static constexpr bool Nullable = false;
-
   using ValuesIterator = typename NonNullableArrays<T>::const_iterator;
 
   explicit NonNullableArraysIterator(const ValuesIterator& values_iter):
@@ -146,8 +138,8 @@ class NonNullableArraysIterator : public BaseColumnIterator<NonNullableArraysIte
     return _values_iter == other._values_iter;
   }
 
-  ColumnIteratorValue<typename NonNullableArrays<T>::value_type> dereference() const {
-    return {*_values_iter, false, ChunkOffset{0}};
+  NonNullColumnIteratorValue<NonNullableValues<T>> dereference() const {
+    return {*_values_iter, ChunkOffset{0}};
   }
 
   ValuesIterator _values_iter;

@@ -30,6 +30,7 @@
 #include "utils/assert.hpp"
 #include "determine_expression_result_type.hpp"
 #include "expression_result_iterators.hpp"
+#include "expression_functors.hpp"
 
 using namespace std::string_literals;
 
@@ -195,33 +196,8 @@ _chunk(chunk)
 //template<typename O, typename L, typename R> using Division = ArithmeticFunctor<std::divides, O, L, R>;
 //// clang-format on
 
-bool to_bool(const bool value) { return value; }
-bool to_bool(const int32_t value) { return value != 0; }
-bool to_bool(const NullValue value) { return false; }
 
-struct TernaryOr {
-  template<typename R, typename A, typename B> struct supports {
-    static constexpr bool value = std::is_same_v<int32_t, R> &&
-                                  (std::is_same_v<NullValue, A> || std::is_same_v<int32_t, A>) &&
-                                  (std::is_same_v<NullValue, B> || std::is_same_v<int32_t, B>);
-  };
 
-  template<typename A, typename B> struct evaluate_as_series {
-    static constexpr bool value = is_series<A>::value || is_series<B>::value;
-  };
-
-  static constexpr auto may_produce_value_from_null = true;
-
-  template<typename R, typename A, typename B>
-  void operator()(const ChunkOffset chunk_offset, R& result, const A& a, const B& b) {
-    const auto a_is_true = !a.is_null() && to_bool(a.value());
-    const auto b_is_true = !b.is_null() && to_bool(b.value());
-    const auto result_is_true = a_is_true || b_is_true;
-    const auto result_is_null = (a.is_null() || b.is_null()) && !result_is_true;
-
-    set_expression_result(result, chunk_offset, result_is_true, result_is_null);
-  };
-};
 
 template<typename T>
 ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpression& expression) {
@@ -232,17 +208,18 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpre
     case ExpressionType::Logical:
       return evaluate_logical_expression<T>(static_cast<const LogicalExpression&>(expression));
 
-//    case ExpressionType::Predicate: {
-//      const auto& predicate_expression = static_cast<const AbstractPredicateExpression&>(expression);
+    case ExpressionType::Predicate: {
+      const auto& predicate_expression = static_cast<const AbstractPredicateExpression&>(expression);
 
-//      if (is_lexicographical_predicate_condition(predicate_expression.predicate_condition)) {
-//        return evaluate_binary_predicate_expression<T>(static_cast<const BinaryPredicateExpression&>(expression));
-//      } else if (predicate_expression.predicate_condition == PredicateCondition::In) {
-//        return evaluate_in_expression<T>(static_cast<const InExpression&>(expression));
-//      } else {
-//        Fail("Unsupported Predicate Expression");
-//      }
-//    }
+      if (is_lexicographical_predicate_condition(predicate_expression.predicate_condition)) {
+        Fail("Unsupported Predicate Expression");
+        //return evaluate_binary_predicate_expression<T>(static_cast<const BinaryPredicateExpression&>(expression));
+      } else if (predicate_expression.predicate_condition == PredicateCondition::In) {
+        return evaluate_in_expression<T>(static_cast<const InExpression&>(expression));
+      } else {
+        Fail("Unsupported Predicate Expression");
+      }
+    }
 
 //    case ExpressionType::Select: {
 //      const auto* pqp_select_expression = dynamic_cast<const PQPSelectExpression*>(&expression);
@@ -295,11 +272,10 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpre
 //
 //    case ExpressionType::Not:
 //      Fail("Not not yet implemented");
-//
+
 //    case ExpressionType::Array:
-//      Fail("Can't 'evaluate' an Array as a top level expression, can only handle them as part of an InExpression. "
-//           "The expression you are passing in is probably malformed");
-//
+//      return evaluate_array<T>(static_cast<const ArrayExpression&>(expression));
+
 //    case ExpressionType::External:
 //    case ExpressionType::ValuePlaceholder:
 //    case ExpressionType::Mock:
@@ -468,10 +444,10 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_logical_expression(const Logic
   Fail("LogicalExpression can only output int32_t");
 }
 
-//template<typename T>
-//ExpressionResult<T> ExpressionEvaluator::evaluate_in_expression(const InExpression& expression) {
-//  Fail("InExpression supports only int32_t as result");
-//}
+template<typename T>
+ExpressionResult<T> ExpressionEvaluator::evaluate_in_expression(const InExpression& expression) {
+  Fail("InExpression supports only int32_t as result");
+}
 
 //template<typename T>
 //ExpressionResult<T> ExpressionEvaluator::evaluate_case_expression(const CaseExpression& case_expression) {
@@ -1077,16 +1053,23 @@ ExpressionResult<int32_t> ExpressionEvaluator::evaluate_logical_expression<int32
   // clang-format on
 }
 
-//template<>
-//ExpressionResult<int32_t> ExpressionEvaluator::evaluate_in_expression<int32_t>(const InExpression& in_expression) {
-//  const auto& left_expression = *in_expression.value();
-//  const auto& right_expression = *in_expression.set();
-//
-//  std::vector<int32_t> result_values;
-//  std::vector<bool> result_nulls;
-//
-//  if (right_expression.type == ExpressionType::Array) {
-//    const auto& array_expression = static_cast<const ArrayExpression&>(right_expression);
+template<>
+ExpressionResult<int32_t> ExpressionEvaluator::evaluate_in_expression<int32_t>(const InExpression& in_expression) {
+  const auto& left_expression = *in_expression.value();
+  const auto& right_expression = *in_expression.set();
+
+  std::vector<int32_t> result_values;
+  std::vector<bool> result_nulls;
+
+  if (right_expression.type == ExpressionType::Array) {
+    const auto& array_expression = static_cast<const ArrayExpression&>(right_expression);
+
+    const auto common_element_data_type = array_expression.common_element_data_type();
+
+    if (common_element_data_type) {
+      return evaluate_binary<int32_t, In>(left_expression, right_expression);
+    }
+
 //
 //    /**
 //     * To keep the code simple for now, transform the InExpression like this:
@@ -1116,23 +1099,21 @@ ExpressionResult<int32_t> ExpressionEvaluator::evaluate_logical_expression<int32
 //    }
 //
 //    return evaluate_expression<int32_t>(*predicate_disjunction);
-//  } else if (right_expression.type == ExpressionType::Select) {
-//    Fail("Unsupported ExpressionType used in InExpression");
-//  } else {
-//    Fail("Unsupported ExpressionType used in InExpression");
-//  }
+  } else if (right_expression.type == ExpressionType::Select) {
+    Fail("Unsupported ExpressionType used in InExpression");
+  } else {
+    Fail("Unsupported ExpressionType used in InExpression");
+  }
+
+  return {};
+}
+
 //
-//  return {};
+//template<typename T>
+//ExpressionResult<T> ExpressionEvaluator::evaluate_array_expression(const ArrayExpression& array_expression) {
+//
+//
 //}
-//
-
-
-
-
-
-
-
-
 
 
 template<typename R, typename Functor>
@@ -1142,41 +1123,30 @@ ExpressionResult<R> ExpressionEvaluator::evaluate_binary(const AbstractExpressio
 
   resolve_expression_to_iterator(left_expression, [&](auto left_iterator) {
     using LeftIterator = decltype(left_iterator);
-    using LeftIteratorValue = typename std::iterator_traits<LeftIterator>::value_type;
-    using LeftDataType = typename LeftIteratorValue::Type;
+    using LeftDataType = typename std::iterator_traits<LeftIterator>::value_type::Type;
 
     resolve_expression_to_iterator(right_expression, [&](auto right_iterator) {
       using RightIterator = decltype(right_iterator);
-      using RightIteratorValue = typename std::iterator_traits<RightIterator>::value_type;
-      using RightDataType = typename RightIteratorValue::Type;
+      using RightDataType = typename std::iterator_traits<RightIterator>::value_type::Type;
 
       if constexpr (Functor::template supports<R, LeftDataType, RightDataType>::value) {
-        std::cout << "is_series_iter_v<A>: " << is_series_iter_v<LeftIterator> << std::endl;
-        std::cout << "is_series_iter_v<B>: " << is_series_iter_v<RightIterator> << std::endl;
-        std::cout << "is_nullable_iter_v<A>: " << is_nullable_iter_v<LeftIterator> << std::endl;
-        std::cout << "is_nullable_iter_v<B>: " << is_nullable_iter_v<RightIterator> << std::endl;
-
         using ResultType = typename determine_expression_result_type<R, LeftIterator, RightIterator, Functor>::type;
 
-//        if constexpr (is_null_v<ResultType>) {
-//          Fail("ExpressionEvaluator doesn't support operations only on NULLs right now");
-//        } else {
-          ResultType result;
+        ResultType result;
 
-          if constexpr (is_series<ResultType>::value) {
-            expression_result_allocate(result, _output_row_count);
+        if constexpr (is_series<ResultType>::value) {
+          expression_result_allocate(result, _output_row_count);
 
-            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-              Functor{}(chunk_offset, result, *left_iterator, *right_iterator);
-              ++left_iterator;
-              ++right_iterator;
-            }
-          } else {
-            Functor{}(ChunkOffset{0}, result, *left_iterator, *right_iterator);
+          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
+            Functor{}(chunk_offset, result, *left_iterator, *right_iterator);
+            ++left_iterator;
+            ++right_iterator;
           }
+        } else {
+          Functor{}(ChunkOffset{0}, result, *left_iterator, *right_iterator);
+        }
 
-          result_variant = result;
-//        }
+        result_variant = result;
 
       } else {
         Fail("Operation not supported");
@@ -1189,15 +1159,31 @@ ExpressionResult<R> ExpressionEvaluator::evaluate_binary(const AbstractExpressio
 
 template<typename Functor>
 void ExpressionEvaluator::resolve_expression_to_iterator(const AbstractExpression& expression, const Functor& fn) {
-  // resolve_data_type() doesn't support Null, so we have handle it explicitly
-  if (expression.data_type() == DataType::Null) {
+  if (expression.type == ExpressionType::Array) {
+//    const auto& array_expression = static_cast<const ArrayExpression&>(expression);
+//
+//    const auto common_element_data_type = array_expression.common_element_data_type();
+//    Assert(common_element_data_type, "Can't resolve array without common ElementDataType");
+//
+//    resolve_data_type(*common_element_data_type, [&](const auto element_data_type_t) {
+//      using ElementDataType = typename decltype(element_data_type_t)::type;
+//
+//      const auto expression_result_variant = evaluate_array_expression<ElementDataType>(array_expression);
+//
+//      boost::apply_visitor([&](const auto& expression_result) {
+//        fn(create_iterator_for_expression_result(expression_result));
+//      }, expression_result_variant);
+//    });
+  } else if (expression.data_type() == DataType::Null) {
+    // resolve_data_type() doesn't support Null, so we have handle it explicitly
     fn(NullValueIterator{});
+
   } else {
     resolve_data_type(expression.data_type(), [&] (const auto data_type_t) {
       using ExpressionDataType = typename decltype(data_type_t)::type;
 
       if (expression.type == ExpressionType::Column) {
-        Assert(_chunk, "Cannot access Columns in this Expression as it doesn't operate on a Table/Chunk");
+        Assert(_chunk, "Cannot access Columns in this ExpressionEvaluator as it doesn't operate on a Table/Chunk");
 
         const auto* pqp_column_expression = dynamic_cast<const PQPColumnExpression*>(&expression);
         Assert(pqp_column_expression, "ExpressionEvaluator only takes PQP expressions");
