@@ -55,7 +55,7 @@ class ExpressionEvaluator final {
 //  ExpressionResult<std::string> evaluate_substring(const ExpressionResult<std::string>& string_result,
 //                                         const ExpressionResult<OffsetDataType>& offset_result,
 //                                         const ExpressionResult<CharCountDataType>& char_count_result);
-//
+
   template<typename T>
   ExpressionResult<T> evaluate_arithmetic_expression(const ArithmeticExpression& expression);
 
@@ -65,8 +65,8 @@ class ExpressionEvaluator final {
   template<typename T>
   ExpressionResult<T> evaluate_binary_predicate_expression(const BinaryPredicateExpression& expression);
 
-  template<typename T>
-  ExpressionResult<T> evaluate_in_expression(const InExpression& in_expression);
+//  template<typename T>
+//  ExpressionResult<T> evaluate_in_expression(const InExpression& in_expression);
 
 //  template<typename T>
 //  std::vector<ExpressionResult<T>> evaluate_array_expression(const ArrayExpression& array_expression);
@@ -120,13 +120,22 @@ class ExpressionEvaluator final {
                                                  const AbstractExpression& right_expression);
 
   template<typename Functor>
-  void resolve_binary(const AbstractExpression& left_expression,
-                                     const AbstractExpression& right_expression, const Functor& fn);
+  void resolve_to_expression_result_views(const AbstractExpression &left_expression,
+                                          const AbstractExpression &right_expression, const Functor &fn);
 
   template<typename Functor>
-  void resolve_expression(const AbstractExpression& expression, const Functor& fn);
+  void resolve_to_expression_results(const AbstractExpression &left_expression,
+                                          const AbstractExpression &right_expression, const Functor &fn);
+
+  template<typename Functor>
+  void resolve_to_expression_result(const AbstractExpression &expression, const Functor &fn);
 
  private:
+  template<typename A, typename B>
+  static ChunkOffset _result_size(const A& a, const B& b);
+
+  static std::vector<bool> _evaluate_default_null_logic(const std::vector<bool>& left, const std::vector<bool>& right);
+
   std::shared_ptr<const Chunk> _chunk;
   size_t _output_row_count{1};
 

@@ -42,6 +42,8 @@ class ExpressionEvaluatorTest : public ::testing::Test {
     b = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "b"));
     c = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "c"));
     d = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "d"));
+    e = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "e"));
+    f = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "f"));
     s1 = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "s1"));
     s2 = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "s2"));
     dates = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "dates"));
@@ -71,7 +73,7 @@ class ExpressionEvaluatorTest : public ::testing::Test {
   std::vector<std::optional<T>> normalize_expression_result(const ExpressionResult<T> &result) {
     std::vector<std::optional<T>> normalized(result.size());
 
-    resolve_expression_result(result, [&](const auto& resolved) {
+    resolve_expression_result_to_view(result, [&](const auto &resolved) {
       for (auto idx = size_t{0}; idx < result.size(); ++idx) {
         if (!result.is_nullable() || !resolved.null(idx)) normalized[idx] = resolved.value(idx);
       }
@@ -102,7 +104,7 @@ class ExpressionEvaluatorTest : public ::testing::Test {
   std::optional<ExpressionEvaluator> evaluator;
   std::optional<ExpressionEvaluator> evaluator_bools;
 
-  std::shared_ptr<PQPColumnExpression> a, b, c, d, s1, s2, dates, x, bool_a, bool_b, bool_c;
+  std::shared_ptr<PQPColumnExpression> a, b, c, d, e, f, s1, s2, dates, x, bool_a, bool_b, bool_c;
   std::shared_ptr<ArithmeticExpression> a_plus_b;
   std::shared_ptr<ArithmeticExpression> a_plus_c;
   std::shared_ptr<BinaryPredicateExpression> a_lt_b;
@@ -148,6 +150,10 @@ TEST_F(ExpressionEvaluatorTest, ArithmeticsLiterals) {
   EXPECT_TRUE(test_expression<int32_t>(*sub(15, 12), {3}));
   EXPECT_TRUE(test_expression<float>(*division(10.0, 4.0), {2.5f}));
   EXPECT_TRUE(test_expression<int32_t>(*sub(NullValue{}, NullValue{}), {std::nullopt}));
+}
+
+TEST_F(ExpressionEvaluatorTest, ArithmeticsColumns) {
+  EXPECT_TRUE(test_expression<int32_t>(chunk_a, *mul(a, b), {2, 6, 12, 20}));
 }
 
 TEST_F(ExpressionEvaluatorTest, CaseLiterals) {

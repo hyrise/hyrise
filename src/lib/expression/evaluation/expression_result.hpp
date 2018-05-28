@@ -29,6 +29,8 @@ class ExpressionResultSeries {
     return _values[idx];
   }
 
+  size_t size() const { return _values.size(); }
+
   bool null(const size_t idx) const {
     DebugAssert(idx < _values.size(), "Index out of range");
     return _nulls[idx];
@@ -50,6 +52,8 @@ class ExpressionResultNonNullSeries {
   bool is_series() const { return true; }
   bool is_literal() const { return false; }
   bool is_nullable() const { return false; }
+
+  size_t size() const { return _values.size(); }
 
   const T& value(const size_t idx) const {
     DebugAssert(idx < _values.size(), "Index out of range");
@@ -74,6 +78,8 @@ class ExpressionResultLiteral {
   bool is_literal() const { return true; }
   bool is_nullable() const { return _null; }
 
+  size_t size() const { return 1u; }
+
   const T& value(const size_t = 0) const { return _value; }
   bool null(const size_t = 0) const { return _null; }
 
@@ -89,15 +95,14 @@ class ExpressionResult {
 
   ExpressionResult() = default;
 
-  ExpressionResult(std::vector<T> values, std::vector<bool> nulls):
+  ExpressionResult(std::vector<T> values, std::vector<bool> nulls = {false}):
     values(std::move(values)), nulls(std::move(nulls)) {
-    Assert(!this->values.empty(), "Can't handle empty ExpressionResult");
-    Assert(this->nulls.empty() || this->nulls.size() == this->values.size(), "Need either none or as many nulls as values");
+    Assert(!this->values.empty() && !this->nulls.empty(), "Can't handle empty ExpressionResult");
   }
 
   bool is_series() const { return size() > 1; }
   bool is_literal() const { return size() == 1; }
-  bool is_nullable() const { return !nulls.empty(); }
+  bool is_nullable() const { return nulls.size() > 1 || nulls.front(); }
 
   ExpressionResultLiteral<T> to_literal() const {
     Assert(is_literal(), "Can't turn non-literal to literal");
@@ -121,8 +126,12 @@ class ExpressionResult {
   std::vector<bool> nulls;
 };
 
+/**
+ * Resolve ExpressionResult<T> to ExpressionResultSeries<T>, ExpressionResultNonNullSeries<T> or
+ * ExpressionResultLiteral<T>
+ */
 template<typename T, typename Functor>
-void resolve_expression_result(const ExpressionResult<T>& result, const Functor& fn) {
+void resolve_expression_result_to_view(const ExpressionResult<T> &result, const Functor &fn) {
   if (result.is_series()) {
     if (result.is_nullable()) {
       fn(result.to_series());

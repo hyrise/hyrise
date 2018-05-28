@@ -88,9 +88,11 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpre
         materialize_nulls<T>(column, nulls);
 
         return ExpressionResult<T>(std::move(values), std::move(nulls));
-      }
 
-      return ExpressionResult<T>{std::move(values), {}};
+      } else {
+        return ExpressionResult<T>{std::move(values)};
+
+      }
     }
 
     case ExpressionType::Value: {
@@ -99,7 +101,7 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpre
 
       Assert(value.type() == typeid(T), "Can't evaluate ValueExpression to requested type T");
 
-      return ExpressionResult<T>{{{boost::get<T>(value)}}, {{false}}};
+      return ExpressionResult<T>{{{boost::get<T>(value)}}};
     }
 //
 //    case ExpressionType::Function:
@@ -292,11 +294,11 @@ template<typename T>
 ExpressionResult<T> ExpressionEvaluator::evaluate_logical_expression(const LogicalExpression& expression) {
   Fail("LogicalExpression can only output int32_t");
 }
-
-template<typename T>
-ExpressionResult<T> ExpressionEvaluator::evaluate_in_expression(const InExpression& expression) {
-  Fail("InExpression supports only int32_t as result");
-}
+//
+//template<typename T>
+//ExpressionResult<T> ExpressionEvaluator::evaluate_in_expression(const InExpression& expression) {
+//  Fail("InExpression supports only int32_t as result");
+//}
 
 template<typename T>
 ExpressionResult<T> ExpressionEvaluator::evaluate_case_expression(const CaseExpression& case_expression) {
@@ -324,19 +326,20 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_case_expression(const CaseExpr
   std::vector<T> values(when.size());
   std::vector<bool> nulls(when.size(), false);
 
-  resolve_expression(*case_expression.then(), [&] (const auto& then_result) {
+  resolve_to_expression_result(*case_expression.then(), [&](const auto &then_result) {
     using ThenResultType = typename std::decay_t<decltype(then_result)>::Type;
 
-    resolve_expression(*case_expression.else_(), [&] (const auto& else_result) {
+    resolve_to_expression_result(*case_expression.else_(), [&](const auto &else_result) {
       using ElseResultType = typename std::decay_t<decltype(else_result)>::Type;
 
       if constexpr (Case::template supports<T, ThenResultType, ElseResultType>::value) {
 
-        resolve_expression_result(then_result, [&](const auto &then_view) {
-          resolve_expression_result(else_result, [&](const auto &else_view) {
+        resolve_expression_result_to_view(then_result, [&](const auto &then_view) {
+          resolve_expression_result_to_view(else_result, [&](const auto &else_view) {
 
             for (auto chunk_offset = ChunkOffset{0}; chunk_offset < when.size(); ++chunk_offset) {
-              Case{}(values[chunk_offset], when_series.value(chunk_offset), then_view.value(chunk_offset), else_view.value(chunk_offset));
+              Case{}(values[chunk_offset], when_series.value(chunk_offset), then_view.value(chunk_offset),
+                     else_view.value(chunk_offset));
             }
 
           });
@@ -501,7 +504,7 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_case_expression(const CaseExpr
 std::shared_ptr<BaseColumn> ExpressionEvaluator::evaluate_expression_to_column(const AbstractExpression& expression) {
   std::shared_ptr<BaseColumn> column;
 
-  resolve_expression(expression, [&](const auto& expression_result) {
+  resolve_to_expression_result(expression, [&](const auto &expression_result) {
     using ColumnDataType = typename std::decay_t<decltype(expression_result)>::Type;
 
     // clang-format off
@@ -619,82 +622,28 @@ ExpressionResult<R> ExpressionEvaluator::evaluate_binary_with_default_null_logic
                                                          const AbstractExpression& right_expression) {
   ExpressionResult<R> result;
 
-
-  resolve_expression(left_expression, [&](const auto& left_result) {
-    resolve_expression(right_expression, [&](const auto& right_result) {
-      using LeftDataType = typename std::decay_t<decltype(left_result)>::Type;
-      using RightDataType = typename std::decay_t<decltype(right_result)>::Type;
-
-      if constexpr (Functor::template supports<R, LeftDataType, RightDataType>::value) {
-        const auto output_row_count = std::max(left_result.size(), right_result.size());
-
-        /**
-         * Compute nulls
-         */
-        std::vector<bool> nulls;
-        if (left_result.is_nullable() || right_result.is_nullable()) {
-          nulls.resize(output_row_count);
-
-          if (left_result.is_nullable() && !right_result.is_nullable()) {
-            for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
-              nulls[row_idx] = left_result.null(row_idx);
-            }
-          } else if (!left_result.is_nullable() && right_result.is_nullable()) {
-            for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
-              nulls[row_idx] = right_result.null(row_idx);
-            }
-          } else {
-            for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
-              nulls[row_idx] = left_result.null(row_idx) || right_result.null(row_idx);
-            }
-          }
-        }
-
-        /**
-         * Compute values
-         */
-        if (left_result.size() == right_result.sie())
-
-
-        std::vector<R> values(output_row_count);
-        for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
-          Functor{}(values[row_idx], left.value(row_idx), right.value(row_idx));
-        }
-      } else {
-        Fail("BinaryOperation not supported on the requested DataTypes");
-      }
-    });
-  });
-
-  resolve_binary(left_expression, right_expression, [&] (const ChunkOffset output_row_count, const auto& left, const auto& right) {
+  resolve_to_expression_results(left_expression, right_expression, [&](const auto &left, const auto &right) {
     using LeftDataType = typename std::decay_t<decltype(left)>::Type;
     using RightDataType = typename std::decay_t<decltype(right)>::Type;
 
+
     if constexpr (Functor::template supports<R, LeftDataType, RightDataType>::value) {
-      std::vector<bool> nulls;
+      const auto result_size = _result_size(left, right);
+      auto nulls = _evaluate_default_null_logic(left.nulls, right.nulls);
 
-      if (left.is_nullable() || right.is_nullable()) {
-        // TODO(moritz) Optimize for a) only one side nullable b) one side null/non-null literal
-        nulls.resize(output_row_count);
-
-        if (left.is_nullable() && !right.is_nullable()) {
-          for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
-            nulls[row_idx] = left.null(row_idx);
-          }
-        } else if (!left.is_nullable() && right.is_nullable()) {
-          for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
-            nulls[row_idx] = right.null(row_idx);
-          }
-        } else {
-          for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
-            nulls[row_idx] = left.null(row_idx) || right.null(row_idx);
-          }
+      std::vector<R> values(result_size);
+      if (left.size() == right.size()) {
+        for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
+          Functor{}(values[row_idx], left.values[row_idx], right.values[row_idx]);
         }
-      }
-
-      std::vector<R> values(output_row_count);
-      for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
-        Functor{}(values[row_idx], left.value(row_idx), right.value(row_idx));
+      } else if (left.size() > right.size()) {
+        for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
+          Functor{}(values[row_idx], left.values[row_idx], right.values.front());
+        }
+      } else {
+        for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
+          Functor{}(values[row_idx], left.values.front(), right.values[row_idx]);
+        }
       }
 
       result = ExpressionResult<R>{std::move(values), std::move(nulls)};
@@ -711,17 +660,21 @@ ExpressionResult<R> ExpressionEvaluator::evaluate_binary_with_custom_null_logic(
                                                          const AbstractExpression& right_expression) {
   ExpressionResult<R> result;
 
-  resolve_binary(left_expression, right_expression, [&] (const ChunkOffset output_row_count, const auto& left, const auto& right) {
+  resolve_to_expression_result_views(left_expression, right_expression, [&](const auto &left, const auto &right) {
     using LeftDataType = typename std::decay_t<decltype(left)>::Type;
     using RightDataType = typename std::decay_t<decltype(right)>::Type;
 
     if constexpr (Functor::template supports<R, LeftDataType, RightDataType>::value) {
-      std::vector<bool> nulls(output_row_count);
-      std::vector<R> values(output_row_count);
+      const auto result_row_count = _result_size(left, right);
 
-      for (auto row_idx = ChunkOffset{0}; row_idx < output_row_count; ++row_idx) {
+      std::vector<bool> nulls(result_row_count);
+      std::vector<R> values(result_row_count);
+
+      for (auto row_idx = ChunkOffset{0}; row_idx < result_row_count; ++row_idx) {
         bool null;
-        Functor{}(values[row_idx], null, left.value(row_idx), left.null(row_idx), right.value(row_idx), right.null(row_idx));
+        Functor{}(values[row_idx], null, left.value(row_idx),
+                  left.null(row_idx), right.value(row_idx),
+                  right.null(row_idx));
         nulls[row_idx] = null;
       }
 
@@ -736,24 +689,31 @@ ExpressionResult<R> ExpressionEvaluator::evaluate_binary_with_custom_null_logic(
 }
 
 template<typename Functor>
-void ExpressionEvaluator::resolve_binary(const AbstractExpression& left_expression,
-                                                        const AbstractExpression& right_expression,
-                                                        const Functor& fn) {
-  resolve_expression(left_expression, [&](const auto& left_result) {
-    resolve_expression(right_expression, [&](const auto& right_result) {
-      const auto output_row_count = std::max(left_result.size(), right_result.size());
-
-      resolve_expression_result(left_result, [&](const auto& left_view) {
-        resolve_expression_result(right_result, [&](const auto& right_view) {
-          fn(output_row_count, left_view, right_view);
-        });
+void ExpressionEvaluator::resolve_to_expression_result_views(const AbstractExpression &left_expression,
+                                                             const AbstractExpression &right_expression,
+                                                             const Functor &fn) {
+  resolve_to_expression_results(left_expression, right_expression, [&](const auto& left_result, const auto& right_result) {
+    resolve_expression_result_to_view(left_result, [&](const auto &left_view) {
+      resolve_expression_result_to_view(right_result, [&](const auto &right_view) {
+        fn(left_view, right_view);
       });
     });
   });
 }
 
 template<typename Functor>
-void ExpressionEvaluator::resolve_expression(const AbstractExpression& expression, const Functor& fn) {
+void ExpressionEvaluator::resolve_to_expression_results(const AbstractExpression &left_expression,
+                                                             const AbstractExpression &right_expression,
+                                                             const Functor &fn) {
+  resolve_to_expression_result(left_expression, [&](const auto &left_result) {
+    resolve_to_expression_result(right_expression, [&](const auto &right_result) {
+      fn(left_result, right_result);
+    });
+  });
+}
+
+template<typename Functor>
+void ExpressionEvaluator::resolve_to_expression_result(const AbstractExpression &expression, const Functor &fn) {
   Assert(expression.type != ExpressionType::Array, "Can't resolve ArrayExpression")
   Assert(expression.type != ExpressionType::Select, "Can't resolve SelectExpression")
 
@@ -770,6 +730,33 @@ void ExpressionEvaluator::resolve_expression(const AbstractExpression& expressio
       const auto expression_result = evaluate_expression<ExpressionDataType>(expression);
       fn(expression_result);
     });
+  }
+}
+
+template<typename A, typename B>
+ChunkOffset ExpressionEvaluator::_result_size(const A& a, const B& b) {
+  return std::max(a.size(), b.size());
+}
+
+std::vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const std::vector<bool>& left,
+                                                                           const std::vector<bool>& right) {
+  DebugAssert(left.size() >= 1 && right.size() >= 1, "ExpressionEvaluator requires at least one row");
+
+  const auto result_size = _result_size(left, right);
+
+
+  if (left.size() == right.size()) {
+    std::vector<bool> nulls(result_size);
+    std::transform(left.begin(), left.end(), right.begin(), nulls.begin(), [](auto l, auto r) { return l || r; });
+    return nulls;
+  } else if (left.size() > right.size()) {
+    DebugAssert(right.size() == 1, "Operand should have either the same row as the other or 1, to represent a literal");
+    if (right.front()) return std::vector<bool>({true});
+    else return left;
+  } else {
+    DebugAssert(left.size() == 1, "Operand should have either the same row as the other or 1, to represent a literal");
+    if (left.front()) return std::vector<bool>({true});
+    else return right;
   }
 }
 
