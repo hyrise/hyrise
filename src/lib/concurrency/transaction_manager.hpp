@@ -59,6 +59,7 @@ class TransactionManager : private Noncopyable {
 
  private:
   friend class TransactionContext;
+  friend class Recovery;
 
   TransactionManager();
 

@@ -4,11 +4,39 @@
 #include "types.hpp"
 #include "../../storage/storage_manager.hpp"
 #include "../../storage/table.hpp"
+#include "../../operators/insert.hpp"
+#include "../transaction_manager.hpp"
 
 #include <fstream>
 #include <sstream>
 
 namespace opossum {
+
+enum class LogType {Value, Invalidation};
+
+class LoggedItem {
+ public:
+  LoggedItem(LogType type, TransactionID &transaction_id, std::string &table_name, RowID &row_id, std::vector<AllTypeVariant> &values)
+  : type(type)
+  , transaction_id(transaction_id)
+  , table_name(table_name)
+  , row_id(row_id)
+  , values(values) {
+  };
+
+  LoggedItem(LogType type, TransactionID &transaction_id, std::string &table_name, RowID &row_id)
+  : type(type)
+  , transaction_id(transaction_id)
+  , table_name(table_name)
+  , row_id(row_id){
+  };
+
+  LogType type;
+  TransactionID transaction_id;
+  std::string table_name;
+  RowID row_id;
+  std::optional<std::vector<AllTypeVariant>> values;
+};
 
 Recovery& Recovery::getInstance() {
   static Recovery instance;
@@ -18,6 +46,8 @@ Recovery& Recovery::getInstance() {
 void Recovery::recover() {
   std::ifstream log_file(Logger::directory + Logger::filename);
 
+  std::vector<LoggedItem> transactions;
+
   std::string line;
   while (std::getline(log_file, line))
   {
@@ -26,7 +56,41 @@ void Recovery::recover() {
     // commit
     if (log_type == 't'){
       TransactionID transaction_id = std::stoull(line.substr(3, line.length() - 4));
-      Logger::getInstance().commit(transaction_id);
+
+      // perform transaction
+      for (auto &transaction : transactions) {
+        if (transaction.transaction_id != transaction_id)
+          continue;
+
+        auto table = StorageManager::get().get_table(transaction.table_name);
+        auto chunk = table->get_chunk(transaction.row_id.chunk_id);
+
+        if (transaction.type == LogType::Value) {
+          chunk->append(*transaction.values);
+
+          auto mvcc_columns = chunk->mvcc_columns();
+          mvcc_columns->grow_by(1, MvccColumns::MAX_COMMIT_ID);
+          mvcc_columns->begin_cids[mvcc_columns->begin_cids.size() - 2] = transaction_id;
+
+          mvcc_columns->print();
+
+          DebugAssert(mvcc_columns->begin_cids.size() - 2 == transaction.row_id.chunk_offset, "recovery rowID " + std::to_string(mvcc_columns->begin_cids.size() - 2) + " != logged rowID " + std::to_string(transaction.row_id.chunk_offset));
+          continue;
+        }
+
+        if (transaction.type == LogType::Invalidation) {
+          auto mvcc_columns = chunk->mvcc_columns();
+          mvcc_columns->end_cids[transaction.row_id.chunk_offset] = transaction_id;
+          mvcc_columns->print();
+          continue;
+        }
+
+      }
+
+      TransactionManager::get()._last_commit_id = transaction_id;
+
+      // TODO: delete elements in transactions vector
+
     } else {  // 'v' or 'i'
 
       // transaction_id_end  rowID_end
@@ -53,7 +117,7 @@ void Recovery::recover() {
       std::string table_name = line.substr(transaction_id_end + 2, rowID_position - transaction_id_end - 3);
 
       if (log_type == 'i'){
-        Logger::getInstance().invalidate(transaction_id, table_name, row_id);
+        transactions.push_back(LoggedItem(LogType::Invalidation, transaction_id, table_name, row_id));
         continue;
       }
 
@@ -76,12 +140,7 @@ void Recovery::recover() {
         (void) data_type; // TODO REMOVE THIS SHIT
       }
 
-
-      std::stringstream ss;
-      for (auto &value : values){
-        ss << value;
-      }
-      Logger::getInstance().value(transaction_id, table_name, row_id, ss);
+      transactions.push_back(LoggedItem(LogType::Value, transaction_id, table_name, row_id, values));
     }
   }
 }
