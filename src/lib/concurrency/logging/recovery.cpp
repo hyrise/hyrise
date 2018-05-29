@@ -69,12 +69,17 @@ void Recovery::recover() {
           chunk->append(*transaction.values);
 
           auto mvcc_columns = chunk->mvcc_columns();
-          mvcc_columns->grow_by(1, MvccColumns::MAX_COMMIT_ID);
-          mvcc_columns->begin_cids[mvcc_columns->begin_cids.size() - 2] = transaction_id;
 
           mvcc_columns->print();
 
-          DebugAssert(mvcc_columns->begin_cids.size() - 2 == transaction.row_id.chunk_offset, "recovery rowID " + std::to_string(mvcc_columns->begin_cids.size() - 2) + " != logged rowID " + std::to_string(transaction.row_id.chunk_offset));
+          // mvcc_columns is grown by chunk->append()
+          // mvcc_columns->grow_by(1u, MvccColumns::MAX_COMMIT_ID);
+
+          mvcc_columns->begin_cids[mvcc_columns->begin_cids.size() - 1] = transaction_id;
+
+          mvcc_columns->print();
+
+          DebugAssert(mvcc_columns->begin_cids.size() - 1 == transaction.row_id.chunk_offset, "recovery rowID " + std::to_string(mvcc_columns->begin_cids.size() - 1) + " != logged rowID " + std::to_string(transaction.row_id.chunk_offset));
           continue;
         }
 
@@ -87,7 +92,10 @@ void Recovery::recover() {
 
       }
 
-      TransactionManager::get()._last_commit_id = transaction_id;
+      if (TransactionManager::get()._last_commit_id <= transaction_id) {
+        TransactionManager::get()._last_commit_id = transaction_id + 1;
+      }
+      
 
       // TODO: delete elements in transactions vector
 
