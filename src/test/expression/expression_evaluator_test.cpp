@@ -145,6 +145,7 @@ TEST_F(ExpressionEvaluatorTest, TernaryAndLiteral) {
 }
 
 TEST_F(ExpressionEvaluatorTest, ArithmeticsLiterals) {
+  EXPECT_TRUE(test_expression<std::string>(*add("Hello", add(" ", "World")), {"Hello World"}));
   EXPECT_TRUE(test_expression<int32_t>(*mul(5, 3), {15}));
   EXPECT_TRUE(test_expression<int32_t>(*mul(5, NullValue{}), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*sub(15, 12), {3}));

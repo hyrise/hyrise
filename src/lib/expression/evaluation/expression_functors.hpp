@@ -107,10 +107,22 @@ using GreaterThanEquals = STLComparisonFunctorWrapper<std::greater_equal>;
 using LessThan = STLComparisonFunctorWrapper<std::less>;
 using LessThanEquals = STLComparisonFunctorWrapper<std::less_equal>;
 
-template<template<typename T> typename Functor>
+template<typename R, typename A, typename B>
+struct DefaultArithmeticTraits {
+  static constexpr bool supported = !std::is_same_v<std::string, R> && !std::is_same_v<std::string, A> && !std::is_same_v<std::string, B>;
+};
+
+// Addition additionally (huehue) supports string concatenation
+template<typename R, typename A, typename B>
+struct AdditionTraits {
+  static constexpr bool supported = DefaultArithmeticTraits<R, A, B>::supported ||
+                                    (std::is_same_v<std::string, R> && std::is_same_v<std::string, A> && std::is_same_v<std::string, B>);
+};
+
+template<template<typename T> typename Functor, template<typename R, typename A, typename B> typename Traits = DefaultArithmeticTraits>
 struct STLArithmeticFunctorWrapper {
   template<typename R, typename A, typename B> struct supports {
-    static constexpr bool value = !std::is_same_v<std::string, R> && !std::is_same_v<std::string, A> && !std::is_same_v<std::string, B>;
+    static constexpr bool value = Traits<R, A, B>::supported;
   };
 
   template<typename R, typename A, typename B>
@@ -123,7 +135,7 @@ struct STLArithmeticFunctorWrapper {
   };
 };
 
-using Addition = STLArithmeticFunctorWrapper<std::plus>;
+using Addition = STLArithmeticFunctorWrapper<std::plus, AdditionTraits>;
 using Subtraction = STLArithmeticFunctorWrapper<std::minus>;
 using Multiplication = STLArithmeticFunctorWrapper<std::multiplies>;
 using Division = STLArithmeticFunctorWrapper<std::divides>;
