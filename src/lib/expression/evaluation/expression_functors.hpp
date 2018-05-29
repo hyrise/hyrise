@@ -9,8 +9,13 @@ template<typename T> constexpr bool is_logical_operand = std::is_same_v<int32_t,
 bool to_bool(const bool value) { return value; }
 bool to_bool(const NullValue& value) { return false; }
 
-template<typename T> const T& to_value(const T& value) { return value; }
-template<typename T> bool to_value(const NullValue& value) { return false; }
+template<typename T, typename V> T to_value(const V& v) {
+  if constexpr (std::is_same_v<NullValue, V>) {
+    return T{};
+  } else {
+    return v;
+  }
+}
 
 struct TernaryOr {
   template<typename R, typename A, typename B> struct supports {
@@ -142,25 +147,11 @@ using Division = STLArithmeticFunctorWrapper<std::divides>;
 
 struct Case {
   template<typename R, typename A, typename B> struct supports {
-    static constexpr bool value = (std::is_same_v<std::string, A> == std::is_same_v<std::string, B>) && (std::is_same_v<std::string, A> == std::is_same_v<std::string, R>);
+    static constexpr bool value = (std::is_same_v<std::string, A> == std::is_same_v<std::string, B>) &&
+                                  (std::is_same_v<std::string, A> == std::is_same_v<std::string, R>);
   };
 
-  template<typename R, typename W, typename A, typename B>
-  void operator()(R& result, const W& w, const A& a, const B& b) {
-    if (w) {
-      if constexpr (std::is_same_v<NullValue, A>) {
-        result = R{};
-      } else {
-        result = a;
-      }
-    } else {
-      if constexpr (std::is_same_v<NullValue, B>) {
-        result = R{};
-      } else {
-        result = b;
-      }
-    }
-  };
+  // Implementation is in ExpressionEvaluator::evaluate_case_expression
 };
 
 }  // namespace opossum

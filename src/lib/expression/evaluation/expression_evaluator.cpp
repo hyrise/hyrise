@@ -99,9 +99,15 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_expression(const AbstractExpre
       const auto& value_expression = static_cast<const ValueExpression &>(expression);
       const auto& value = value_expression.value;
 
-      Assert(value.type() == typeid(T), "Can't evaluate ValueExpression to requested type T");
-
-      return ExpressionResult<T>{{{boost::get<T>(value)}}};
+      if (value.type() == typeid(NullValue)) {
+        // NullValue can be evaluated to any type - it is then a null value of that type.
+        // This makes it easier to implement expressions where a certain data type is expected, but a Null literal is
+        // given. Think `CASE NULL THEN ... ELSE ...` - the NULL will be evaluated to be a bool.
+        return ExpressionResult<T>{{{T{}}}, {true}};
+      } else {
+        Assert(value.type() == typeid(T), "Can't evaluate ValueExpression to requested type T");
+        return ExpressionResult<T>{{{boost::get<T>(value)}}};
+      }
     }
 //
 //    case ExpressionType::Function:
@@ -300,54 +306,50 @@ ExpressionResult<T> ExpressionEvaluator::evaluate_logical_expression(const Logic
 //  Fail("InExpression supports only int32_t as result");
 //}
 
-template<typename T>
-ExpressionResult<T> ExpressionEvaluator::evaluate_case_expression(const CaseExpression& case_expression) {
+template<typename R>
+ExpressionResult<R> ExpressionEvaluator::evaluate_case_expression(const CaseExpression& case_expression) {
   const auto when = evaluate_expression<int32_t>(*case_expression.when());
 
   /**
-   * Handle cases where the CASE condition ("WHEN") is a fixed value/NULL (e.g. CASE 5+3 > 2 THEN ... ELSE ...)
-   * This avoids computing branches we don't need to compute.
+   * Optimization - but block below relies on the case where WHEN is a literal to be handled separately
+   *    Handle cases where the CASE condition ("WHEN") is a fixed value/NULL (e.g. CASE 5+3 > 2 THEN ... ELSE ...)
+   *    This avoids computing branches we don't need to compute.
    */
   if (when.is_literal()) {
     const auto when_literal = when.to_literal();
 
     if (when_literal.value() && !when_literal.null()) {
-      return evaluate_expression<T>(*case_expression.then());
+      return evaluate_expression<R>(*case_expression.then());
     } else {
-      return evaluate_expression<T>(*case_expression.else_());
+      return evaluate_expression<R>(*case_expression.else_());
     }
   }
 
   /**
-   * Handle cases where the CASE condition is a series
+   * Handle cases where the CASE condition is a series and thus we need to evaluate row by row.
+   * Think `CASE a > b THEN ... ELSE ...`
    */
-  const auto when_series = when.to_series();
+  std::vector<R> values(when.size());
+  std::vector<bool> nulls(when.size());
 
-  std::vector<T> values(when.size());
-  std::vector<bool> nulls(when.size(), false);
+  resolve_expression_result_to_view(when, [&] (const auto& when_view) {
+    resolve_to_expression_result_views(*case_expression.then(), *case_expression.else_(), [&] (const auto& then_view, const auto& else_view) {
+      using ThenResultType = typename std::decay_t<decltype(then_view)>::Type;
+      using ElseResultType = typename std::decay_t<decltype(else_view)>::Type;
 
-  resolve_to_expression_result(*case_expression.then(), [&](const auto &then_result) {
-    using ThenResultType = typename std::decay_t<decltype(then_result)>::Type;
-
-    resolve_to_expression_result(*case_expression.else_(), [&](const auto &else_result) {
-      using ElseResultType = typename std::decay_t<decltype(else_result)>::Type;
-
-      if constexpr (Case::template supports<T, ThenResultType, ElseResultType>::value) {
-
-        resolve_expression_result_to_view(then_result, [&](const auto &then_view) {
-          resolve_expression_result_to_view(else_result, [&](const auto &else_view) {
-
-            for (auto chunk_offset = ChunkOffset{0}; chunk_offset < when.size(); ++chunk_offset) {
-              Case{}(values[chunk_offset], when_series.value(chunk_offset), then_view.value(chunk_offset),
-                     else_view.value(chunk_offset));
-            }
-
-          });
-        });
-
-      } else {
-        Fail("CASE not supported on these operand types");
+      // clang-format off
+      if constexpr (Case::template supports<R, ThenResultType, ElseResultType>::value) {
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < when.size(); ++chunk_offset) {
+          if (when_view.value(chunk_offset) && !when_view.null(chunk_offset)) {
+            values[chunk_offset] = to_value<R>(then_view.value(chunk_offset));
+            nulls[chunk_offset] = then_view.null(chunk_offset);
+          } else {
+            values[chunk_offset] = to_value<R>(else_view.value(chunk_offset));
+            nulls[chunk_offset] = else_view.null(chunk_offset);
+          }
+        }
       }
+      // clang-format on
     });
   });
 

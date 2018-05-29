@@ -161,6 +161,16 @@ TEST_F(ExpressionEvaluatorTest, CaseLiterals) {
   EXPECT_TRUE(test_expression<int32_t>(*case_(1, 2, 1), {2}));
   EXPECT_TRUE(test_expression<int32_t>(*case_(0, 2, 1), {1}));
   EXPECT_TRUE(test_expression<int32_t>(*case_(0, 2, case_(1, 5, 13)), {5}));
+  EXPECT_TRUE(test_expression<int32_t>(*case_(NullValue{}, 42, add(5, 3)), {8}));
+  EXPECT_TRUE(test_expression<int32_t>(*case_(1, NullValue{}, 5), {std::nullopt}));
+}
+
+TEST_F(ExpressionEvaluatorTest, CaseColumns) {
+  // clang-format off
+  EXPECT_TRUE(test_expression<int32_t>(chunk_a, *case_(greater_than(c, a), b, 1337), {2, 1337, 4, 1337}));
+  EXPECT_TRUE(test_expression<int32_t>(chunk_a, *case_(greater_than(c, 0), NullValue{}, c), {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));  // NOLINT
+  EXPECT_TRUE(test_expression<int32_t>(chunk_a, *case_(1, c, a), {33, std::nullopt, 34, std::nullopt}));  // NOLINT
+  // clang-format on
 }
 
 //TEST_F(ExpressionEvaluatorTest, ArithmeticExpression) {
