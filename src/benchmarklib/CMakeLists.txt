@@ -27,7 +27,7 @@ set(
     benchmark_utils.cpp
     benchmark_utils.hpp
 
-    git.hpp  # Automatically created by the git_watcher
+        # Automatically created by the git_watcher
 )
 
 
