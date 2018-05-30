@@ -4,7 +4,6 @@
 
 #include "benchmark_runner.hpp"
 #include "constant_mappings.hpp"
-#include "git.hpp"
 #include "import_export/csv_parser.hpp"
 #include "planviz/lqp_visualizer.hpp"
 #include "planviz/sql_query_plan_visualizer.hpp"
@@ -16,6 +15,7 @@
 #include "tpch/tpch_queries.hpp"
 #include "utils/filesystem.hpp"
 #include "utils/load_table.hpp"
+#include "version.hpp"
 
 namespace opossum {
 
@@ -265,6 +265,12 @@ NamedQueries BenchmarkRunner::_parse_query_file(const std::string& query_path) {
     const auto query_name = filename + '.' + std::to_string(query_id);
     queries.emplace_back(query_name, std::move(query));
     query_id++;
+  }
+
+  // More convinient names if there is only one query per file
+  if (queries.size() == 1) {
+    auto& query_name = queries[0].first;
+    query_name.erase(query_name.end() - 2, query_name.end()); // -2 because .0 at end of name
   }
 
   return queries;

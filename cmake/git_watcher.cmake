@@ -25,7 +25,7 @@
 #     consider that it can run in one of two scopes.
 
 if(NOT DEFINED post_configure_file)
-    set(post_configure_file "${CMAKE_CURRENT_SOURCE_DIR}/src/benchmarklib/git.hpp")
+    set(post_configure_file "${CMAKE_CURRENT_SOURCE_DIR}/src/lib/version.hpp")
 endif()
 if(NOT DEFINED pre_configure_file)
     set(pre_configure_file "${post_configure_file}.in")
