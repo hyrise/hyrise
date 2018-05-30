@@ -103,10 +103,10 @@ class SQLPipelineStatement : public Noncopyable {
   bool _query_plan_cache_hit = false;
 
   // Execution times
-  std::chrono::microseconds _translate_time_micros;
-  std::chrono::microseconds _optimize_time_micros;
-  std::chrono::microseconds _compile_time_micros;
-  std::chrono::microseconds _execution_time_micros;
+  std::chrono::microseconds _translate_time_micros{};
+  std::chrono::microseconds _optimize_time_micros{};
+  std::chrono::microseconds _compile_time_micros{};
+  std::chrono::microseconds _execution_time_micros{};
 
   PreparedStatementCache _prepared_statements;
   // Number of placeholders in prepared statement; default 0 becasue we assume no prepared statement

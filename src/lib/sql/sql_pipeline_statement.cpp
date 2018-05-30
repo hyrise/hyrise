@@ -258,13 +258,14 @@ const std::shared_ptr<TransactionContext>& SQLPipelineStatement::transaction_con
 }
 
 std::chrono::microseconds SQLPipelineStatement::translate_time_microseconds() const {
-  Assert(_unoptimized_logical_plan != nullptr || _optimized_logical_plan,
+  Assert(_unoptimized_logical_plan || _optimized_logical_plan || _query_plan,
          "Cannot return translation duration without having translated.");
   return _translate_time_micros;
 }
 
 std::chrono::microseconds SQLPipelineStatement::optimize_time_microseconds() const {
-  Assert(_optimized_logical_plan != nullptr, "Cannot return optimization duration without having optimized.");
+  Assert(_optimized_logical_plan || _query_plan,
+         "Cannot return optimization duration without having optimized.");
   return _optimize_time_micros;
 }
 
