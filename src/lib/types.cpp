@@ -15,6 +15,7 @@ bool is_binary_predicate_condition(const PredicateCondition predicate_condition)
   predicate_condition == PredicateCondition::GreaterThanEquals ||
   predicate_condition == PredicateCondition::Like;
 }
+
 bool is_lexicographical_predicate_condition(const PredicateCondition predicate_condition) {
   return predicate_condition == PredicateCondition::Equals ||
   predicate_condition == PredicateCondition::NotEquals ||

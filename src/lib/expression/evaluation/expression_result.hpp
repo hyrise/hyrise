@@ -120,6 +120,16 @@ class ExpressionResult {
     return ExpressionResultNonNullSeries<T>{values};
   }
 
+  const T& value(const size_t idx) const {
+    DebugAssert(values.size() == 1 || idx < values.size(), "Invalid ExpressionResult state");
+    return values[std::min(idx, values.size() - 1)];
+  }
+
+  bool null(const size_t idx) const {
+    DebugAssert(nulls.size() == 1 || idx < nulls.size(), "Invalid ExpressionResult state");
+    return nulls[std::min(idx, nulls.size() - 1)];
+  }
+
   size_t size() const { return values.size(); }
 
   std::vector<T> values;

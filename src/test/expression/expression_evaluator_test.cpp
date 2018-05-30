@@ -144,6 +144,13 @@ TEST_F(ExpressionEvaluatorTest, TernaryAndLiteral) {
   EXPECT_TRUE(test_expression<int32_t>(*and_(NullValue{}, 1), {std::nullopt}));
 }
 
+TEST_F(ExpressionEvaluatorTest, NotColumn) {
+  // clang-format off
+  EXPECT_TRUE(test_expression<int32_t>(chunk_bools, *not_(bool_a), {1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(chunk_bools, *not_(bool_c), {1, 0, std::nullopt, 1, 0, std::nullopt, 1, 0, std::nullopt, 1, 0, std::nullopt}));  // NOLINT
+  // clang-format on
+}
+
 TEST_F(ExpressionEvaluatorTest, ArithmeticsLiterals) {
   EXPECT_TRUE(test_expression<std::string>(*add("Hello", add(" ", "World")), {"Hello World"}));
   EXPECT_TRUE(test_expression<int32_t>(*mul(5, 3), {15}));
@@ -225,12 +232,9 @@ TEST_F(ExpressionEvaluatorTest, CaseColumns) {
 //  EXPECT_EQ(actual_nulls, expected_nulls);
 //}
 
-//TEST_F(ExpressionEvaluatorTest, In) {
-//  const auto passed = test_expression<int32_t>(chunk_a, *in(a, array(1.0, 3.0)),
-//                                               {1, 0, 1, 0});
-
-//  EXPECT_TRUE(passed);
-//}
+TEST_F(ExpressionEvaluatorTest, In) {
+  EXPECT_TRUE(test_expression<int32_t>(chunk_a, *in(a, array(1.0, 3.0)),  {1, 0, 1, 0}));
+}
 
 //TEST_F(ExpressionEvaluatorTest, Case) {
 //  /**
