@@ -270,7 +270,7 @@ NamedQueries BenchmarkRunner::_parse_query_file(const std::string& query_path) {
   // More convinient names if there is only one query per file
   if (queries.size() == 1) {
     auto& query_name = queries[0].first;
-    query_name.erase(query_name.end() - 2, query_name.end()); // -2 because .0 at end of name
+    query_name.erase(query_name.end() - 2, query_name.end());  // -2 because .0 at end of name
   }
 
   return queries;
