@@ -25,16 +25,6 @@ class FunctionExpression;
 class InExpression;
 class PQPSelectExpression;
 
-struct BaseColumnMaterialization {
-  virtual ~BaseColumnMaterialization() = default;
-};
-
-template<typename T>
-struct ColumnMaterialization : public BaseColumnMaterialization {
-  std::optional<std::vector<bool>> nulls;
-  std::vector<T> values;
-};
-
 class ExpressionEvaluator final {
  public:
   // For Expressions that do not reference any columns (e.g. in the LIMIT clause)
@@ -46,31 +36,28 @@ class ExpressionEvaluator final {
   std::shared_ptr<BaseColumn> evaluate_expression_to_column(const AbstractExpression& expression);
 
   template<typename T>
-  ExpressionResult<T> evaluate_expression(const AbstractExpression& expression);
-//
-//  template<typename T>
-//  ExpressionResult<T> evaluate_function_expression(const FunctionExpression& expression);
+  std::shared_ptr<ExpressionResult<T>> evaluate_expression(const AbstractExpression& expression);
 
   template<typename T>
-  ExpressionResult<T> evaluate_arithmetic_expression(const ArithmeticExpression& expression);
+  std::shared_ptr<ExpressionResult<T>> evaluate_arithmetic_expression(const ArithmeticExpression& expression);
 
   template<typename T>
-  ExpressionResult<T> evaluate_logical_expression(const LogicalExpression& expression);
+  std::shared_ptr<ExpressionResult<T>> evaluate_logical_expression(const LogicalExpression& expression);
 
   template<typename T>
-  ExpressionResult<T> evaluate_binary_predicate_expression(const BinaryPredicateExpression& expression);
+  std::shared_ptr<ExpressionResult<T>> evaluate_binary_predicate_expression(const BinaryPredicateExpression& expression);
 
   template<typename T>
-  ExpressionResult<T> evaluate_in_expression(const InExpression& in_expression);
+  std::shared_ptr<ExpressionResult<T>> evaluate_in_expression(const InExpression& in_expression);
 
   template<typename T>
-  ExpressionResult<T> evaluate_select_expression_for_chunk(const PQPSelectExpression &expression);
+  std::shared_ptr<ExpressionResult<T>> evaluate_select_expression_for_chunk(const PQPSelectExpression &expression);
 
   template<typename T>
-  ExpressionResult<T> evaluate_select_expression_for_row(const PQPSelectExpression& expression, const ChunkOffset chunk_offset);
+  std::shared_ptr<ExpressionResult<T>> evaluate_select_expression_for_row(const PQPSelectExpression& expression, const ChunkOffset chunk_offset);
 
   template<typename T>
-  ExpressionResult<T> evaluate_case_expression(const CaseExpression& case_expression);
+  std::shared_ptr<ExpressionResult<T>> evaluate_case_expression(const CaseExpression& case_expression);
 //
 //  template<typename T>
 //  ExpressionResult<T> evaluate_extract_expression(const ExtractExpression& extract_expression);
@@ -82,11 +69,11 @@ class ExpressionEvaluator final {
 //  ExpressionResult<T> evaluate_exists_expression(const ExistsExpression& exists_expression);
 
   template<typename R, typename Functor>
-  ExpressionResult<R> evaluate_binary_with_default_null_logic(const AbstractExpression& left_expression,
+  std::shared_ptr<ExpressionResult<R>> evaluate_binary_with_default_null_logic(const AbstractExpression& left_expression,
                                       const AbstractExpression& right_expression);
 
   template<typename R, typename Functor>
-  ExpressionResult<R> evaluate_binary_with_custom_null_logic(const AbstractExpression& left_expression,
+  std::shared_ptr<ExpressionResult<R>> evaluate_binary_with_custom_null_logic(const AbstractExpression& left_expression,
                                                  const AbstractExpression& right_expression);
 
   template<typename Functor>
@@ -106,10 +93,13 @@ class ExpressionEvaluator final {
 
   static std::vector<bool> _evaluate_default_null_logic(const std::vector<bool>& left, const std::vector<bool>& right);
 
+  void _ensure_column_materialization(ColumnID column_id)
+
   std::shared_ptr<const Chunk> _chunk;
   size_t _output_row_count{1};
 
-  std::vector<std::unique_ptr<BaseColumnMaterialization>> _column_materializations;
+  // One entry for each column in the _chunk, may be nullptr if the column hasn't been materialized
+  std::vector<std::shared_ptr<BaseExpressionResult>> _column_materializations;
 };
 
 }  // namespace opossum

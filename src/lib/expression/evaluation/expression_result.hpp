@@ -88,8 +88,13 @@ class ExpressionResultLiteral {
   bool _null;
 };
 
+class BaseExpressionResult {
+ public:
+  virtual ~BaseExpressionResult() = default;
+};
+
 template<typename T>
-class ExpressionResult {
+class ExpressionResult : public BaseExpressionResult {
  public:
   using Type = T;
 
