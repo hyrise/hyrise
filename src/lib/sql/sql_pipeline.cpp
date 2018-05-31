@@ -218,6 +218,7 @@ const SQLPipelineExecutionInfo& SQLPipeline::execution_info() {
     for (const auto& pipeline_statement : _sql_pipeline_statements) {
       _execution_info.statement_infos.push_back(pipeline_statement->execution_info());
     }
+  }
 
   return _execution_info;
 }
