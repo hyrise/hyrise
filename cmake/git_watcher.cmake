@@ -34,7 +34,6 @@ if(NOT EXISTS "${pre_configure_file}")
     message(FATAL_ERROR "Runtime error: the preconfigure file doesn't exist.")
 endif()
 
-include_directories(${CMAKE_BINARY_DIR})
 
 # This variable describes where we record the state of the git repo.
 set(git_state_file "${CMAKE_CURRENT_BINARY_DIR}/git-state")

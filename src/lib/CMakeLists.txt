@@ -2,6 +2,7 @@
 # Include this here because we need the GENERATED property on version.hpp and in CMake that property has directory
 # scope
 include(${PROJECT_SOURCE_DIR}/cmake/git_watcher.cmake)
+include_directories(${CMAKE_BINARY_DIR})
 
 # Sources and libraries shared among the different builds of the lib
 set(
