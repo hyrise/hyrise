@@ -102,9 +102,6 @@ if(${CI_BUILD})
     endif()
 endif()
 
-# Add git watcher to provide git hash to our binaries through a git.hpp file
-include(cmake/git_watcher.cmake)
-
 # Include sub-CMakeLists.txt
 add_subdirectory(third_party/ EXCLUDE_FROM_ALL)
 add_subdirectory(src)

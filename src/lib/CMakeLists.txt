@@ -1,3 +1,8 @@
+# Setup the version.hpp file.
+# Include this here because we need the GENERATED property on version.hpp and in CMake that property has directory
+# scope
+include(${PROJECT_SOURCE_DIR}/cmake/git_watcher.cmake)
+
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
@@ -414,6 +419,8 @@ set(
     utils/print_directed_acyclic_graph.hpp
     utils/scoped_locking_ptr.hpp
     utils/template_type.hpp
+
+    ${CMAKE_BINARY_DIR}/version.hpp
 )
 
 set(
