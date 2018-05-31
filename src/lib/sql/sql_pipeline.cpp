@@ -218,7 +218,6 @@ const SQLPipelineExecutionInfo& SQLPipeline::execution_info() {
     for (const auto& pipeline_statement : _sql_pipeline_statements) {
       _execution_info.statement_infos.push_back(pipeline_statement->execution_info());
     }
-  }
 
   return _execution_info;
 }
@@ -228,7 +227,6 @@ std::string SQLPipelineExecutionInfo::to_string() const {
   auto total_optimize_micros = std::chrono::microseconds::zero();
   auto total_compile_micros = std::chrono::microseconds::zero();
   auto total_execute_micros = std::chrono::microseconds::zero();
-
   std::vector<bool> query_plan_cache_hits;
 
   for (const auto& statement_info : statement_infos) {

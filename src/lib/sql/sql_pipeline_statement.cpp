@@ -91,7 +91,11 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   _unoptimized_logical_plan = lqp_roots.front();
 
   const auto done = std::chrono::high_resolution_clock::now();
+<<<<<<< HEAD
   _execution_info.translate_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
+=======
+  _translate_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
+>>>>>>> origin
 
   return _unoptimized_logical_plan;
 }
@@ -108,7 +112,11 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   _optimized_logical_plan = _optimizer->optimize(unoptimized_lqp);
 
   const auto done = std::chrono::high_resolution_clock::now();
+<<<<<<< HEAD
   _execution_info.optimize_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
+=======
+  _optimize_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
+>>>>>>> origin
 
   // The optimizer works on the original unoptimized LQP nodes. After optimizing, the unoptimized version is also
   // optimized, which could lead to subtle bugs. optimized_logical_plan holds the original values now.
@@ -152,7 +160,11 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
     assert_same_mvcc_mode(plan);
 
     _query_plan->append_plan(plan.recreate());
+<<<<<<< HEAD
     _execution_info.query_plan_cache_hit = true;
+=======
+    _query_plan_cache_hit = true;
+>>>>>>> origin
     done = std::chrono::high_resolution_clock::now();
   } else if (const auto* execute_statement = dynamic_cast<const hsql::ExecuteStatement*>(statement)) {
     // Handle query plan if we are executing a prepared statement
@@ -200,7 +212,11 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
     SQLQueryCache<SQLQueryPlan>::get().set(_sql_string, *_query_plan);
   }
 
+<<<<<<< HEAD
   _execution_info.compile_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
+=======
+  _compile_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - started);
+>>>>>>> origin
 
   return _query_plan;
 }
@@ -257,6 +273,38 @@ const std::shared_ptr<TransactionContext>& SQLPipelineStatement::transaction_con
   return _transaction_context;
 }
 
+<<<<<<< HEAD
+=======
+std::chrono::microseconds SQLPipelineStatement::translate_time_microseconds() const {
+  Assert(_unoptimized_logical_plan || _optimized_logical_plan || _query_plan,
+         "Cannot return translation duration without having translated.");
+  return _translate_time_micros;
+}
+
+std::chrono::microseconds SQLPipelineStatement::optimize_time_microseconds() const {
+  Assert(_optimized_logical_plan || _query_plan,
+         "Cannot return optimization duration without having optimized.");
+  return _optimize_time_micros;
+}
+
+std::chrono::microseconds SQLPipelineStatement::compile_time_microseconds() const {
+  Assert(_query_plan != nullptr, "Cannot return compile duration without having created the query plan.");
+  return _compile_time_micros;
+}
+
+std::chrono::microseconds SQLPipelineStatement::execution_time_microseconds() const {
+  Assert(_result_table != nullptr || !_query_has_output, "Cannot return execution duration without having executed.");
+  return _execution_time_micros;
+}
+
+std::string SQLPipelineStatement::get_time_string() const {
+  return "(TRANSLATE: " + std::to_string(translate_time_microseconds().count()) +
+         " µs, OPTIMIZE: " + std::to_string(optimize_time_microseconds().count()) +
+         " µs, COMPILE: " + std::to_string(compile_time_microseconds().count()) +
+         " µs, EXECUTE: " + std::to_string(execution_time_microseconds().count()) + " µs (wall time))\n";
+}
+
+>>>>>>> origin
 std::string SQLPipelineStatement::create_parse_error_message(const std::string& sql,
                                                              const hsql::SQLParserResult& result) {
   std::stringstream error_msg;
