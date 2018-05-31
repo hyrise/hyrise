@@ -27,7 +27,7 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
   }
 
   const auto done = std::chrono::high_resolution_clock::now();
-  _execution_info.parse_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - start);
+  _metrics.parse_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - start);
 
   if (!parse_result.isValid()) {
     throw std::runtime_error(SQLPipelineStatement::create_parse_error_message(sql, parse_result));
@@ -212,31 +212,31 @@ size_t SQLPipeline::statement_count() const { return _sql_pipeline_statements.si
 
 bool SQLPipeline::requires_execution() const { return _requires_execution; }
 
-const SQLPipelineExecutionInfo& SQLPipeline::execution_info() {
-  if (_execution_info.statement_infos.empty()) {
-    _execution_info.statement_infos.reserve(statement_count());
+const SQLPipelineMetrics& SQLPipeline::metrics() {
+  if (_metrics.statement_metrics.empty()) {
+    _metrics.statement_metrics.reserve(statement_count());
     for (const auto& pipeline_statement : _sql_pipeline_statements) {
-      _execution_info.statement_infos.push_back(pipeline_statement->execution_info());
+      _metrics.statement_metrics.push_back(pipeline_statement->metrics());
     }
   }
 
-  return _execution_info;
+  return _metrics;
 }
 
-std::string SQLPipelineExecutionInfo::to_string() const {
+std::string SQLPipelineMetrics::to_string() const {
   auto total_translate_micros = std::chrono::microseconds::zero();
   auto total_optimize_micros = std::chrono::microseconds::zero();
   auto total_compile_micros = std::chrono::microseconds::zero();
   auto total_execute_micros = std::chrono::microseconds::zero();
   std::vector<bool> query_plan_cache_hits;
 
-  for (const auto& statement_info : statement_infos) {
-    total_translate_micros += statement_info.get().translate_time_micros;
-    total_optimize_micros += statement_info.get().optimize_time_micros;
-    total_compile_micros += statement_info.get().compile_time_micros;
-    total_execute_micros += statement_info.get().execution_time_micros;
+  for (const auto& statement_metric : statement_metrics) {
+    total_translate_micros += statement_metric.get().translate_time_micros;
+    total_optimize_micros += statement_metric.get().optimize_time_micros;
+    total_compile_micros += statement_metric.get().compile_time_micros;
+    total_execute_micros += statement_metric.get().execution_time_micros;
 
-    query_plan_cache_hits.push_back(statement_info.get().query_plan_cache_hit);
+    query_plan_cache_hits.push_back(statement_metric.get().query_plan_cache_hit);
   }
 
   const auto num_cache_hits = std::count(query_plan_cache_hits.begin(), query_plan_cache_hits.end(), true);

@@ -15,8 +15,8 @@
 namespace opossum {
 
 // Holds relevant information about the execution of an SQLPipeline.
-struct SQLPipelineExecutionInfo {
-  std::vector<std::reference_wrapper<const SQLPipelineStatementExecutionInfo>> statement_infos;
+struct SQLPipelineMetrics {
+  std::vector<std::reference_wrapper<const SQLPipelineStatementMetrics>> statement_metrics;
 
   // This is different from the other measured times as we only get this for all statements at once
   std::chrono::microseconds parse_time_micros{};
@@ -81,7 +81,7 @@ class SQLPipeline : public Noncopyable {
   // Returns whether the pipeline requires execution to handle all statements
   bool requires_execution() const;
 
-  const SQLPipelineExecutionInfo& execution_info();
+  const SQLPipelineMetrics& metrics();
 
  private:
   std::vector<std::shared_ptr<SQLPipelineStatement>> _sql_pipeline_statements;
@@ -106,7 +106,7 @@ class SQLPipeline : public Noncopyable {
   // --> requires execution of first statement before the second one can be translated
   bool _requires_execution{false};
 
-  SQLPipelineExecutionInfo _execution_info{};
+  SQLPipelineMetrics _metrics{};
 
   std::shared_ptr<SQLPipelineStatement> _failed_pipeline_statement;
 };

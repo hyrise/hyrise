@@ -295,5 +295,5 @@ std::string SQLPipelineStatement::create_parse_error_message(const std::string& 
   return error_msg.str();
 }
 
-const SQLPipelineStatementExecutionInfo& SQLPipelineStatement::execution_info() const { return _execution_info; }
+const SQLPipelineStatementMetrics& SQLPipelineStatement::metrics() const { return _execution_info; }
 }  // namespace opossum
