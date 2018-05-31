@@ -73,4 +73,109 @@ TEST_F(JitVariantVectorTest, IsNullAndSetIsNull) {
   }
 }
 
+TEST_F(JitVariantVectorTest, GetVector) {
+  const auto vector_size = 10u;
+  JitVariantVector vector;
+  vector.resize(vector_size);
+
+  {
+    const auto value = 1234.5f;
+    const auto index = 2;
+    vector.set(index, value);
+    EXPECT_EQ(vector.get_vector<float>().size(), vector_size);
+    EXPECT_EQ(vector.get_vector<float>()[index], value);
+  }
+  {
+    const auto value = 1234;
+    const auto index = 4;
+    vector.set(index, value);
+    EXPECT_EQ(vector.get_vector<int32_t>().size(), vector_size);
+    EXPECT_EQ(vector.get_vector<int32_t>()[index], value);
+  }
+  {
+    const auto value = std::string("1234");
+    const auto index = 6;
+    vector.set(index, value);
+    EXPECT_EQ(vector.get_vector<std::string>().size(), vector_size);
+    EXPECT_EQ(vector.get_vector<std::string>()[index], value);
+  }
+}
+
+TEST_F(JitVariantVectorTest, GrowByOneAddsElementToCorrectInternalVector) {
+  {
+    JitVariantVector vector;
+    vector.grow_by_one<bool>(JitVariantVector::InitialValue::Zero);
+    EXPECT_EQ(vector.get_vector<bool>().size(), 1u);
+    EXPECT_EQ(vector.get_vector<int32_t>().size(), 0u);
+    EXPECT_EQ(vector.get_vector<int64_t>().size(), 0u);
+    EXPECT_EQ(vector.get_vector<float>().size(), 0u);
+    EXPECT_EQ(vector.get_vector<double>().size(), 0u);
+    EXPECT_EQ(vector.get_vector<std::string>().size(), 0u);
+  }
+  {
+    JitVariantVector vector;
+    vector.grow_by_one<double>(JitVariantVector::InitialValue::Zero);
+    EXPECT_EQ(vector.get_vector<bool>().size(), 0u);
+    EXPECT_EQ(vector.get_vector<int32_t>().size(), 0u);
+    EXPECT_EQ(vector.get_vector<int64_t>().size(), 0u);
+    EXPECT_EQ(vector.get_vector<float>().size(), 0u);
+    EXPECT_EQ(vector.get_vector<double>().size(), 1u);
+    EXPECT_EQ(vector.get_vector<std::string>().size(), 0u);
+  }
+  {
+    JitVariantVector vector;
+    vector.grow_by_one<std::string>(JitVariantVector::InitialValue::Zero);
+    EXPECT_EQ(vector.get_vector<bool>().size(), 0u);
+    EXPECT_EQ(vector.get_vector<int32_t>().size(), 0u);
+    EXPECT_EQ(vector.get_vector<int64_t>().size(), 0u);
+    EXPECT_EQ(vector.get_vector<float>().size(), 0u);
+    EXPECT_EQ(vector.get_vector<double>().size(), 0u);
+    EXPECT_EQ(vector.get_vector<std::string>().size(), 1u);
+  }
+}
+
+TEST_F(JitVariantVectorTest, GrowByOneAddsMultipleElements) {
+  JitVariantVector vector;
+  for (auto i = 1u; i <= 100u; ++i) {
+    vector.grow_by_one<int32_t>(JitVariantVector::InitialValue::Zero);
+    EXPECT_EQ(vector.get_vector<int32_t>().size(), i);
+  }
+}
+
+TEST_F(JitVariantVectorTest, GrowByOneProperlyInitializesValues) {
+  {
+    JitVariantVector vector;
+    vector.grow_by_one<int32_t>(JitVariantVector::InitialValue::Zero);
+    vector.grow_by_one<int32_t>(JitVariantVector::InitialValue::MaxValue);
+    vector.grow_by_one<int32_t>(JitVariantVector::InitialValue::MinValue);
+    const auto& int_vector = vector.get_vector<int32_t>();
+    EXPECT_EQ(int_vector.size(), 3u);
+    EXPECT_EQ(int_vector[0], 0);
+    EXPECT_EQ(int_vector[1], std::numeric_limits<int32_t>::max());
+    EXPECT_EQ(int_vector[2], std::numeric_limits<int32_t>::min());
+  }
+  {
+    JitVariantVector vector;
+    vector.grow_by_one<float>(JitVariantVector::InitialValue::Zero);
+    vector.grow_by_one<float>(JitVariantVector::InitialValue::MaxValue);
+    vector.grow_by_one<float>(JitVariantVector::InitialValue::MinValue);
+    const auto& double_vector = vector.get_vector<float>();
+    EXPECT_EQ(double_vector.size(), 3u);
+    EXPECT_EQ(double_vector[0], 0.0f);
+    EXPECT_EQ(double_vector[1], std::numeric_limits<float>::max());
+    EXPECT_EQ(double_vector[2], std::numeric_limits<float>::min());
+  }
+  {
+    JitVariantVector vector;
+    vector.grow_by_one<double>(JitVariantVector::InitialValue::Zero);
+    vector.grow_by_one<double>(JitVariantVector::InitialValue::MaxValue);
+    vector.grow_by_one<double>(JitVariantVector::InitialValue::MinValue);
+    const auto& double_vector = vector.get_vector<double>();
+    EXPECT_EQ(double_vector.size(), 3u);
+    EXPECT_EQ(double_vector[0], 0.0);
+    EXPECT_EQ(double_vector[1], std::numeric_limits<double>::max());
+    EXPECT_EQ(double_vector[2], std::numeric_limits<double>::min());
+  }
+}
+
 }  // namespace opossum

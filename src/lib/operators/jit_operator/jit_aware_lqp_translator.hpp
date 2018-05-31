@@ -2,7 +2,7 @@
 
 #include "../jit_operator_wrapper.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
-#include "operators/jit_compute.hpp"
+#include "operators/jit_expression.hpp"
 
 namespace opossum {
 
@@ -77,7 +77,7 @@ class JitAwareLQPTranslator final : public LQPTranslator {
   bool _input_is_filtered(const std::shared_ptr<AbstractLQPNode>& node) const;
 
   // Returns whether an LQP node with its current configuration can be part of an operator pipeline.
-  bool _node_is_jittable(const std::shared_ptr<AbstractLQPNode>& node) const;
+  bool _node_is_jittable(const std::shared_ptr<AbstractLQPNode>& node, const bool allow_aggregate_node) const;
 
   // Traverses the LQP in a breadth-first fashion and passes all visited nodes to a lambda. The boolean returned
   // from the lambda determines whether the current node should be explored further.

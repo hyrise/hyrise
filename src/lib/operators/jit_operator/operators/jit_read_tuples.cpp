@@ -98,4 +98,31 @@ size_t JitReadTuples::add_temporary_value() {
   return _num_tuple_values++;
 }
 
+std::vector<JitInputColumn> JitReadTuples::input_columns() const { return _input_columns; }
+
+std::vector<JitInputLiteral> JitReadTuples::input_literals() const { return _input_literals; }
+
+std::optional<ColumnID> JitReadTuples::find_input_column(const JitTupleValue& tuple_value) const {
+  const auto it = std::find_if(_input_columns.begin(), _input_columns.end(), [&tuple_value](const auto& input_column) {
+    return input_column.tuple_value == tuple_value;
+  });
+
+  if (it != _input_columns.end()) {
+    return it->column_id;
+  } else {
+    return {};
+  }
+}
+
+std::optional<AllTypeVariant> JitReadTuples::find_literal_value(const JitTupleValue& tuple_value) const {
+  const auto it = std::find_if(_input_literals.begin(), _input_literals.end(),
+                               [&tuple_value](const auto& literal) { return literal.tuple_value == tuple_value; });
+
+  if (it != _input_literals.end()) {
+    return it->value;
+  } else {
+    return {};
+  }
+}
+
 }  // namespace opossum

@@ -485,12 +485,16 @@ TEST_F(SQLPipelineStatementTest, GetResultTableNoMVCC) {
 TEST_F(SQLPipelineStatementTest, GetTimes) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
 
+  EXPECT_THROW(sql_pipeline.translate_time_microseconds(), std::exception);
+  EXPECT_THROW(sql_pipeline.optimize_time_microseconds(), std::exception);
   EXPECT_THROW(sql_pipeline.compile_time_microseconds(), std::exception);
   EXPECT_THROW(sql_pipeline.execution_time_microseconds(), std::exception);
 
   // Run to get times
   sql_pipeline.get_result_table();
 
+  EXPECT_GT(sql_pipeline.translate_time_microseconds().count(), 0);
+  EXPECT_GT(sql_pipeline.optimize_time_microseconds().count(), 0);
   EXPECT_GT(sql_pipeline.compile_time_microseconds().count(), 0);
   EXPECT_GT(sql_pipeline.execution_time_microseconds().count(), 0);
 }

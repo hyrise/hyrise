@@ -69,9 +69,9 @@ void SQLQueryPlanVisualizer::_add_operator(const std::shared_ptr<const AbstractO
   auto label = op->description(DescriptionMode::MultiLine);
 
   if (op->get_output()) {
-    auto wall_time = op->performance_data().walltime_ns;
-    label += "\n\n" + format_duration(wall_time);
-    info.pen_width = std::fmax(1, std::ceil(std::log10(wall_time) / 2));
+    auto total = op->base_performance_data().walltime;
+    label += "\n\n" + format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(total));
+    info.pen_width = std::fmax(1, std::ceil(std::log10(total.count()) / 2));
   }
 
   info.label = label;

@@ -273,9 +273,7 @@ int Console::_eval_sql(const std::string& sql) {
   }
 
   out("===\n");
-  out(std::to_string(row_count) + " rows total (" + "COMPILE: " +
-      std::to_string(_sql_pipeline->compile_time_microseconds().count()) + " µs, " + "EXECUTE: " +
-      std::to_string(_sql_pipeline->execution_time_microseconds().count()) + " µs (wall time))\n");
+  out(std::to_string(row_count) + " rows total " + _sql_pipeline->get_time_string());
 
   return ReturnCode::Ok;
 }
