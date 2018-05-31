@@ -142,7 +142,7 @@ TEST_F(IterablesTest, DictionaryColumnIteratorWithIterators) {
   auto column = chunk->get_column(ColumnID{0u});
   auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<int>>(column);
 
-  auto iterable = DictionaryColumnIterable<int>{*dict_column};
+  auto iterable = DictionaryColumnIterable<int, pmr_vector<int>>{*dict_column};
 
   auto sum = uint32_t{0};
   iterable.with_iterators(SumUpWithIterator{sum});
@@ -160,7 +160,7 @@ TEST_F(IterablesTest, DictionaryColumnReferencedIteratorWithIterators) {
 
   auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
 
-  auto iterable = DictionaryColumnIterable<int>{*dict_column};
+  auto iterable = DictionaryColumnIterable<int, pmr_vector<int>>{*dict_column};
 
   auto sum = uint32_t{0};
   iterable.with_iterators(&chunk_offsets, SumUpWithIterator{sum});
@@ -176,7 +176,7 @@ TEST_F(IterablesTest, FixedStringDictionaryColumnIteratorWithIterators) {
   auto column = chunk->get_column(ColumnID{0u});
   auto dict_column = std::dynamic_pointer_cast<const FixedStringColumn<std::string>>(column);
 
-  auto iterable = DictionaryColumnIterable<std::string>{*dict_column};
+  auto iterable = DictionaryColumnIterable<std::string, FixedStringVector>{*dict_column};
 
   auto concatenate = std::string();
   iterable.with_iterators(AppendWithIterator{concatenate});
@@ -194,7 +194,7 @@ TEST_F(IterablesTest, FixedStringDictionaryColumnReferencedIteratorWithIterators
 
   auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
 
-  auto iterable = DictionaryColumnIterable<std::string>{*dict_column};
+  auto iterable = DictionaryColumnIterable<std::string, FixedStringVector>{*dict_column};
 
   auto concatenate = std::string();
   iterable.with_iterators(&chunk_offsets, AppendWithIterator{concatenate});

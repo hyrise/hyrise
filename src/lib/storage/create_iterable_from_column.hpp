@@ -36,7 +36,7 @@ auto create_iterable_from_column(const ValueColumn<T>& column) {
 
 template <typename T>
 auto create_iterable_from_column(const DictionaryColumn<T>& column) {
-  return erase_type_from_iterable_if_debug(DictionaryColumnIterable<T>{column});
+  return erase_type_from_iterable_if_debug(DictionaryColumnIterable<T, pmr_vector<T>>{column});
 }
 
 template <typename T>
@@ -46,7 +46,7 @@ auto create_iterable_from_column(const RunLengthColumn<T>& column) {
 
 template <typename T>
 auto create_iterable_from_column(const FixedStringColumn<T>& column) {
-  return erase_type_from_iterable_if_debug(DictionaryColumnIterable<T>{column});
+  return erase_type_from_iterable_if_debug(DictionaryColumnIterable<T, FixedStringVector>{column});
 }
 
 template <typename T>

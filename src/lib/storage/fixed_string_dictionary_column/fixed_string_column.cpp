@@ -42,6 +42,11 @@ std::shared_ptr<const pmr_vector<std::string>> FixedStringColumn<T>::dictionary(
 }
 
 template <typename T>
+std::shared_ptr<const FixedStringVector> FixedStringColumn<T>::fixed_string_dictionary() const {
+  return _dictionary;
+}
+
+template <typename T>
 size_t FixedStringColumn<T>::size() const {
   return _attribute_vector->size();
 }

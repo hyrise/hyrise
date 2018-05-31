@@ -24,8 +24,11 @@ class FixedStringColumn : public BaseDictionaryColumn {
                              const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
                              const ValueID null_value_id);
 
-  // returns an underlying dictionary
+  // returns the dictionary as pmr_vector
   std::shared_ptr<const pmr_vector<std::string>> dictionary() const;
+
+  // returns an underlying dictionary
+  std::shared_ptr<const FixedStringVector> fixed_string_dictionary() const;
 
   /**
    * @defgroup BaseColumn interface
