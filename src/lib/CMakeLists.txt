@@ -1,3 +1,7 @@
+# Setup the version.hpp file.
+# Include this here because we need the GENERATED property on version.hpp and in CMake that property has directory
+# scope
+include(${PROJECT_SOURCE_DIR}/cmake/git_watcher.cmake)
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
@@ -409,6 +413,7 @@ set(
     utils/copyable_atomic.hpp
     utils/cuckoo_hashtable.hpp
     utils/enum_constant.hpp
+    utils/filesystem.hpp
     utils/format_bytes.cpp
     utils/format_bytes.hpp
     utils/format_duration.cpp
@@ -428,6 +433,7 @@ set(
     utils/template_type.hpp
     utils/timer.cpp
     utils/timer.hpp
+    ${CMAKE_BINARY_DIR}/version.hpp
 )
 
 set(
@@ -497,3 +503,4 @@ endif()
 # Configure the regular hyrise library used for tests/server/playground...
 add_library(hyrise STATIC ${SOURCES})
 target_link_libraries(hyrise ${LIBRARIES})
+target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR})
