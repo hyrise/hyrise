@@ -2,8 +2,6 @@
 # Include this here because we need the GENERATED property on version.hpp and in CMake that property has directory
 # scope
 include(${PROJECT_SOURCE_DIR}/cmake/git_watcher.cmake)
-include_directories(${CMAKE_BINARY_DIR})
-
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
@@ -235,21 +233,21 @@ set(
     scheduler/topology.hpp
     scheduler/worker.cpp
     scheduler/worker.hpp
-    server/client_connection.cpp
-    server/client_connection.hpp
-    server/postgres_wire_handler.cpp
-    server/postgres_wire_handler.hpp
-    server/query_response_builder.cpp
-    server/query_response_builder.hpp
-    server/server.cpp
-    server/server.hpp
-    server/server_session.cpp
-    server/server_session.hpp
-    server/task_runner.hpp
-    server/then_operator.hpp
-    server/types.hpp
-    server/use_boost_future.hpp
-    server/use_boost_future_impl.hpp
+    #server/client_connection.cpp
+    #server/client_connection.hpp
+    #server/postgres_wire_handler.cpp
+    #server/postgres_wire_handler.hpp
+    #server/query_response_builder.cpp
+    #server/query_response_builder.hpp
+    #server/server.cpp
+    #server/server.hpp
+    #server/server_session.cpp
+    #server/server_session.hpp
+    #server/task_runner.hpp
+    #server/then_operator.hpp
+    #server/types.hpp
+    #server/use_boost_future.hpp
+    #server/use_boost_future_impl.hpp
     statistics/base_column_statistics.cpp
     statistics/base_column_statistics.hpp
     statistics/column_statistics.cpp
@@ -505,3 +503,4 @@ endif()
 # Configure the regular hyrise library used for tests/server/playground...
 add_library(hyrise STATIC ${SOURCES})
 target_link_libraries(hyrise ${LIBRARIES})
+target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR})
