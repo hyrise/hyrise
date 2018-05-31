@@ -80,7 +80,12 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool 
 BenchmarkConfig BenchmarkConfig::get_default_config() { return BenchmarkConfig(); }
 
 bool CLIConfigParser::cli_has_json_config(const int argc, char** argv) {
-  return argc > 1 && boost::algorithm::ends_with(argv[1], ".json");
+  const auto has_json = argc > 1 && boost::algorithm::ends_with(argv[1], ".json");
+  if (has_json && argc > 2) {
+      std::cout << "Passed multiple args with a json config. All CLI args will be ignored...";
+  }
+
+  return has_json;
 }
 
 nlohmann::json CLIConfigParser::config_file_to_json(const std::string& json_file_str) {
