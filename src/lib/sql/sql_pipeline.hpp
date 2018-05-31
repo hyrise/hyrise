@@ -71,12 +71,14 @@ class SQLPipeline : public Noncopyable {
   // Returns whether the pipeline requires execution to handle all statements
   bool requires_execution() const;
 
-  // Returns the entire compile time. Only possible to get this after all statements have been executed or if the
+  // Returns the entire time for X. Only possible to get this after all statements have been executed or if the
   // pipeline does not require previous execution to compile all statements.
+  std::chrono::microseconds translate_time_microseconds();
+  std::chrono::microseconds optimize_time_microseconds();
   std::chrono::microseconds compile_time_microseconds();
-
-  // Returns the entire execution time
   std::chrono::microseconds execution_time_microseconds();
+
+  std::string get_time_string();
 
  private:
   std::vector<std::shared_ptr<SQLPipelineStatement>> _sql_pipeline_statements;
@@ -104,6 +106,8 @@ class SQLPipeline : public Noncopyable {
   std::shared_ptr<SQLPipelineStatement> _failed_pipeline_statement;
 
   // Execution times
+  std::chrono::microseconds _translate_time_microseconds{};
+  std::chrono::microseconds _optimize_time_microseconds{};
   std::chrono::microseconds _compile_time_microseconds{};
   std::chrono::microseconds _execution_time_microseconds{};
 };
