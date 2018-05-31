@@ -231,12 +231,12 @@ std::string SQLPipelineExecutionInfo::to_string() const {
   std::vector<bool> query_plan_cache_hits;
 
   for (const auto& statement_info : statement_infos) {
-    total_translate_micros += statement_info.translate_time_micros;
-    total_optimize_micros += statement_info.optimize_time_micros;
-    total_compile_micros += statement_info.compile_time_micros;
-    total_execute_micros += statement_info.execution_time_micros;
+    total_translate_micros += statement_info.get().translate_time_micros;
+    total_optimize_micros += statement_info.get().optimize_time_micros;
+    total_compile_micros += statement_info.get().compile_time_micros;
+    total_execute_micros += statement_info.get().execution_time_micros;
 
-    query_plan_cache_hits.push_back(statement_info.query_plan_cache_hit);
+    query_plan_cache_hits.push_back(statement_info.get().query_plan_cache_hit);
   }
 
   const auto num_cache_hits = std::count(query_plan_cache_hits.begin(), query_plan_cache_hits.end(), true);

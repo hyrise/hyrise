@@ -16,7 +16,7 @@ namespace opossum {
 
 // Holds relevant information about the execution of an SQLPipeline.
 struct SQLPipelineExecutionInfo {
-  std::vector<SQLPipelineStatementExecutionInfo> statement_infos;
+  std::vector<std::reference_wrapper<const SQLPipelineStatementExecutionInfo>> statement_infos;
 
   // This is different from the other measured times as we only get this for all statements at once
   std::chrono::microseconds parse_time_micros{};
