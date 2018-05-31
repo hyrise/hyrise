@@ -204,6 +204,40 @@ size_t SQLPipeline::statement_count() const { return _sql_pipeline_statements.si
 
 bool SQLPipeline::requires_execution() const { return _requires_execution; }
 
+std::chrono::microseconds SQLPipeline::translate_time_microseconds() {
+  if (_translate_time_microseconds.count() > 0) {
+    return _translate_time_microseconds;
+  }
+
+  if (_requires_execution || _unoptimized_logical_plans.empty()) {
+    Assert(_pipeline_was_executed,
+           "Cannot get translation time without having translated or having executed a multi-statement query");
+  }
+
+  for (const auto& pipeline_statement : _sql_pipeline_statements) {
+    _translate_time_microseconds += pipeline_statement->translate_time_microseconds();
+  }
+
+  return _translate_time_microseconds;
+}
+
+std::chrono::microseconds SQLPipeline::optimize_time_microseconds() {
+  if (_optimize_time_microseconds.count() > 0) {
+    return _optimize_time_microseconds;
+  }
+
+  if (_requires_execution || _optimized_logical_plans.empty()) {
+    Assert(_pipeline_was_executed,
+           "Cannot get optimization time without having optimized or having executed a multi-statement query");
+  }
+
+  for (const auto& pipeline_statement : _sql_pipeline_statements) {
+    _optimize_time_microseconds += pipeline_statement->optimize_time_microseconds();
+  }
+
+  return _optimize_time_microseconds;
+}
+
 std::chrono::microseconds SQLPipeline::compile_time_microseconds() {
   if (_compile_time_microseconds.count() > 0) {
     return _compile_time_microseconds;
@@ -220,6 +254,7 @@ std::chrono::microseconds SQLPipeline::compile_time_microseconds() {
 
   return _compile_time_microseconds;
 }
+
 std::chrono::microseconds SQLPipeline::execution_time_microseconds() {
   Assert(_pipeline_was_executed, "Cannot return execution duration without having executed.");
 
@@ -230,6 +265,13 @@ std::chrono::microseconds SQLPipeline::execution_time_microseconds() {
   }
 
   return _execution_time_microseconds;
+}
+
+std::string SQLPipeline::get_time_string() {
+  return "(TRANSLATE: " + std::to_string(translate_time_microseconds().count()) +
+         " µs, OPTIMIZE: " + std::to_string(optimize_time_microseconds().count()) +
+         " µs, COMPILE: " + std::to_string(compile_time_microseconds().count()) +
+         " µs, EXECUTE: " + std::to_string(execution_time_microseconds().count()) + " µs (wall time))\n";
 }
 
 }  // namespace opossum

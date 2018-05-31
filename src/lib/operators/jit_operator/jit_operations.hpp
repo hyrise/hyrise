@@ -39,7 +39,10 @@ namespace opossum {
  * different (i.e. a NULL as either input does not result in the output being NULL as well).
  */
 
+// Returns the enum value (e.g., DataType::Int, DataType::String) of a data type defined in the DATA_TYPE_INFO sequence
 #define JIT_GET_ENUM_VALUE(index, s) APPEND_ENUM_NAMESPACE(_, _, BOOST_PP_TUPLE_ELEM(3, 1, BOOST_PP_SEQ_ELEM(index, s)))
+
+// Returns the data type (e.g., int32_t, std::string) of a data type defined in the DATA_TYPE_INFO sequence
 #define JIT_GET_DATA_TYPE(index, s) BOOST_PP_TUPLE_ELEM(3, 0, BOOST_PP_SEQ_ELEM(index, s))
 
 #define JIT_COMPUTE_CASE(r, types)                                                                                   \
@@ -52,6 +55,19 @@ namespace opossum {
   case static_cast<uint8_t>(JIT_GET_ENUM_VALUE(0, types)) << 8 | static_cast<uint8_t>(JIT_GET_ENUM_VALUE(1, types)): \
     return catching_func(JIT_GET_DATA_TYPE(0, types)(), JIT_GET_DATA_TYPE(1, types)());
 
+#define JIT_AGGREGATE_COMPUTE_CASE(r, types)                                 \
+  case JIT_GET_ENUM_VALUE(0, types):                                         \
+    catching_func(lhs.get<JIT_GET_DATA_TYPE(0, types)>(context),             \
+                  rhs.get<JIT_GET_DATA_TYPE(0, types)>(rhs_index, context)); \
+    break;
+
+/* The lambdas below are instanciated by the compiler for different combinations of data types. The decltype return
+ * types are necessary in most cases, since we rely on the SFINAE pattern to divert to an alternative implementation
+ * (which throws a runtime error) for invalid data type combinations. Without the decltype return type declaration, the
+ * compiler is unable to detect invalid data type combinations at template instanciation time and produces compilation
+ * errors.
+ */
+
 /* Arithmetic operators */
 const auto jit_addition = [](const auto a, const auto b) -> decltype(a + b) { return a + b; };
 const auto jit_subtraction = [](const auto a, const auto b) -> decltype(a - b) { return a - b; };
@@ -59,6 +75,11 @@ const auto jit_multiplication = [](const auto a, const auto b) -> decltype(a * b
 const auto jit_division = [](const auto a, const auto b) -> decltype(a / b) { return a / b; };
 const auto jit_modulo = [](const auto a, const auto b) -> decltype(a % b) { return a % b; };
 const auto jit_power = [](const auto a, const auto b) -> decltype(std::pow(a, b)) { return std::pow(a, b); };
+
+/* Aggregate operations */
+const auto jit_increment = [](const auto a, const auto b) -> decltype(b + 1) { return b + 1; };
+const auto jit_maximum = [](const auto a, const auto b) { return std::max(a, b); };
+const auto jit_minimum = [](const auto a, const auto b) { return std::min(a, b); };
 
 /* Comparison operators */
 const auto jit_equals = [](const auto a, const auto b) -> decltype(a == b) { return a == b; };
@@ -94,10 +115,6 @@ struct InvalidTypeCatcher : Functor {
   }
 };
 
-// We do not want to inline here, because:
-// These function tend to get quite complex due to the large switch statement. If we inline this function, this means a
-// lot of work for the JIT compiler. If we let the JIT compiler do the inlining instead, it is able to prune the
-// function to the relevant case during inlining. This allows for faster jitting.
 template <typename T>
 void jit_compute(const T& op_func, const JitTupleValue& lhs, const JitTupleValue& rhs, const JitTupleValue& result,
                  JitRuntimeContext& context) {
@@ -108,10 +125,10 @@ void jit_compute(const T& op_func, const JitTupleValue& lhs, const JitTupleValue
     return;
   }
 
-  // This lambda calls the op_func (a lambda that performs the actual computation) with type arguments and stores
+  // This lambda calls the op_func (a lambda that performs the actual computation) with typed arguments and stores
   // the result.
-  const auto store_result_wrapper = [&](const auto& typed_lhs, const auto& typed_rhs, auto& result) -> decltype(
-      op_func(typed_lhs, typed_rhs), void()) {
+  const auto store_result_wrapper = [&](const auto& typed_lhs, const auto& typed_rhs,
+                                        auto& result) -> decltype(op_func(typed_lhs, typed_rhs), void()) {
     using ResultType = decltype(op_func(typed_lhs, typed_rhs));
     result.template set<ResultType>(op_func(typed_lhs, typed_rhs), context);
   };
@@ -127,8 +144,8 @@ template <typename T>
 DataType jit_compute_type(const T& op_func, const DataType lhs, const DataType rhs) {
   // This lambda calls the op_func (a lambda that could performs the actual computation) and determines the return type
   // of that lambda.
-  const auto determine_return_type_wrapper = [&](const auto& typed_lhs, const auto& typed_rhs) -> decltype(
-      op_func(typed_lhs, typed_rhs), DataType()) {
+  const auto determine_return_type_wrapper =
+      [&](const auto& typed_lhs, const auto& typed_rhs) -> decltype(op_func(typed_lhs, typed_rhs), DataType()) {
     using ResultType = decltype(op_func(typed_lhs, typed_rhs));
     // This templated function returns the DataType enum value for a given ResultType.
     return data_type_from_type<ResultType>();
@@ -154,10 +171,73 @@ void jit_or(const JitTupleValue& lhs, const JitTupleValue& rhs, const JitTupleVa
 void jit_is_null(const JitTupleValue& lhs, const JitTupleValue& result, JitRuntimeContext& context);
 void jit_is_not_null(const JitTupleValue& lhs, const JitTupleValue& result, JitRuntimeContext& context);
 
+// The following functions are used within loop bodies in the JitAggregate operator. They should not be inlined
+// automatically to reduce the amount of code produced during loop unrolling in the specialization process (a function
+// call vs the entire inlined body). These functions will be manually inlined more efficiently after loop unrolling by
+// the code specializer, since we can apply load replacement and branch pruning and only inline the code necessary for
+// each specific loop iteration.
+// Example: If we compute aggregates in a loop in the JitAggregate operator, the generic loop body will call the
+// jit_aggregate_compute function, which can handle different data types. Nothing can be specialized here, because
+// different iterations may work with different data types. Inlining the jit_aggregate_compute function into the loop
+// would require inlining the entire (generic) function.
+// However, after loop unrolling each copy of the unrolled body only computes a single aggregate with a definite data
+// type. When inlining the function now, the code specializer will prune all code related to other data types,
+// nullability etc.
+
+// Computes the hash value for a JitTupleValue
+__attribute__((noinline)) uint64_t jit_hash(const JitTupleValue& value, JitRuntimeContext& context);
+
+// Compares a JitTupleValue to a JitHashmapValue using NULL == NULL semantics
+__attribute__((noinline)) bool jit_aggregate_equals(const JitTupleValue& lhs, const JitHashmapValue& rhs,
+                                                    const size_t rhs_index, JitRuntimeContext& context);
+
+// Copies a JitTupleValue to a JitHashmapValue. Both values MUST be of the same data type.
+__attribute__((noinline)) void jit_assign(const JitTupleValue& from, const JitHashmapValue& to, const size_t to_index,
+                                          JitRuntimeContext& context);
+
+// Adds an element to a column represented by some JitHashmapValue
+__attribute__((noinline)) size_t jit_grow_by_one(const JitHashmapValue& value,
+                                                 const JitVariantVector::InitialValue initial_value,
+                                                 JitRuntimeContext& context);
+
+// Updates an aggregate by applying an operation to a JitTupleValue and a JitHashmapValue. The result is stored in the
+// hashmap value.
+template <typename T>
+__attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const JitTupleValue& lhs,
+                                                     const JitHashmapValue& rhs, const size_t rhs_index,
+                                                     JitRuntimeContext& context) {
+  // NULL values are ignored in aggregate computations
+  if (lhs.is_null(context)) {
+    return;
+  }
+
+  // Since we are updating the aggregate with a valid value, the aggregate is no longer NULL
+  if (rhs.is_nullable()) {
+    rhs.set_is_null(false, rhs_index, context);
+  }
+
+  // This lambda calls the op_func (a lambda that performs the actual computation) with typed arguments and stores
+  // the result.
+  const auto store_result_wrapper = [&](const auto typed_lhs,
+                                        const auto typed_rhs) -> decltype(op_func(typed_lhs, typed_rhs), void()) {
+    using ResultType = typename std::remove_const<decltype(typed_rhs)>::type;
+    rhs.set<ResultType>(op_func(typed_lhs, typed_rhs), rhs_index, context);
+  };
+
+  const auto catching_func = InvalidTypeCatcher<decltype(store_result_wrapper), void>(store_result_wrapper);
+
+  switch (rhs.data_type()) {
+    BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_AGGREGATE_COMPUTE_CASE, (JIT_DATA_TYPE_INFO))
+    default:
+      break;
+  }
+}
+
 // cleanup
 #undef JIT_GET_ENUM_VALUE
 #undef JIT_GET_DATA_TYPE
 #undef JIT_COMPUTE_CASE
 #undef JIT_COMPUTE_TYPE_CASE
+#undef JIT_AGGREGATE_COMPUTE_CASE
 
 }  // namespace opossum

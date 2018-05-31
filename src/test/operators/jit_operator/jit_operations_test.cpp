@@ -1,5 +1,5 @@
-#include "operators/jit_operator/jit_operations.hpp"
 #include "../../base_test.hpp"
+#include "operators/jit_operator/jit_operations.hpp"
 
 namespace opossum {
 
@@ -351,6 +351,230 @@ TEST_F(JitOperationsTest, JitIs_Not_Null) {
     jit_is_not_null(non_null_value, result_value, context);
     EXPECT_FALSE(result_value.is_null(context));
     EXPECT_FALSE(result_value.get<bool>(context));
+  }
+}
+
+TEST_F(JitOperationsTest, JitHash) {
+  JitRuntimeContext context;
+  context.tuple.resize(1);
+
+  // Perform the following test for each Hyrise data type
+  const auto typed_test = [&](const DataType data_type, auto value) {
+    using ValueType = decltype(value);
+    const JitTupleValue tuple_value{data_type, false, 0};
+    tuple_value.set(value, context);
+    const auto expected_hash = std::hash<ValueType>()(value);
+    const auto actual_hash = jit_hash(tuple_value, context);
+    EXPECT_EQ(expected_hash, actual_hash);
+  };
+
+  typed_test(DataType::Int, static_cast<int32_t>(std::rand()));
+  typed_test(DataType::Long, static_cast<int64_t>(std::rand()));
+  typed_test(DataType::Float, static_cast<float>(std::rand()));
+  typed_test(DataType::Double, static_cast<double>(std::rand()));
+  typed_test(DataType::String, std::string("some string"));
+
+  // Check jit_hash with NULL value
+  const JitTupleValue tuple_value{DataType::Int, true, 0};
+  tuple_value.set_is_null(true, context);
+  EXPECT_EQ(jit_hash(tuple_value, context), 0u);
+}
+
+TEST_F(JitOperationsTest, JitAggregateEquals) {
+  JitRuntimeContext context;
+  context.tuple.resize(3);
+  context.hashmap.columns.resize(1);
+  context.hashmap.columns[0].resize(2);
+
+  const JitTupleValue tuple_value_1{DataType::Int, false, 0};
+  const JitTupleValue tuple_value_2{DataType::Int, false, 1};
+  const JitTupleValue tuple_value_3{DataType::Int, true, 2};
+
+  const JitHashmapValue hashmap_value_1{DataType::Int, false, 0};
+  const JitHashmapValue hashmap_count_for_avg{DataType::Int, true, 0};
+
+  const auto value = static_cast<int32_t>(std::rand() % 1000);
+  tuple_value_1.set<int32_t>(value, context);
+  tuple_value_2.set<int32_t>(value + 1, context);
+  tuple_value_3.set_is_null(true, context);
+
+  hashmap_value_1.set<int32_t>(value, 0, context);
+  hashmap_count_for_avg.set_is_null(true, 1, context);
+
+  // Equal values
+  EXPECT_TRUE(jit_aggregate_equals(tuple_value_1, hashmap_value_1, 0, context));
+
+  // Unequal values
+  EXPECT_FALSE(jit_aggregate_equals(tuple_value_2, hashmap_value_1, 0, context));
+
+  // Comparing value to NULL
+  EXPECT_FALSE(jit_aggregate_equals(tuple_value_1, hashmap_count_for_avg, 1, context));
+  EXPECT_FALSE(jit_aggregate_equals(tuple_value_3, hashmap_value_1, 0, context));
+
+  // Comparing NULL to NULL
+  EXPECT_TRUE(jit_aggregate_equals(tuple_value_3, hashmap_count_for_avg, 1, context));
+}
+
+TEST_F(JitOperationsTest, JitAssign) {
+  JitRuntimeContext context;
+  context.tuple.resize(4);
+  context.hashmap.columns.resize(1);
+  context.hashmap.columns[0].resize(1);
+
+  // Perform the following test for each Hyrise data type
+  const auto typed_test = [&](const DataType data_type, auto value) {
+    using ValueType = decltype(value);
+    const JitTupleValue tuple_value{data_type, true, 0};
+    const JitHashmapValue hashmap_value{data_type, true, 0};
+
+    tuple_value.set(value, context);
+    jit_assign(tuple_value, hashmap_value, 0, context);
+
+    EXPECT_FALSE(hashmap_value.is_null(0, context));
+    EXPECT_EQ(hashmap_value.get<ValueType>(0, context), value);
+  };
+
+  typed_test(DataType::Int, static_cast<int32_t>(std::rand()));
+  typed_test(DataType::Long, static_cast<int64_t>(std::rand()));
+  typed_test(DataType::Float, static_cast<float>(std::rand()));
+  typed_test(DataType::Double, static_cast<double>(std::rand()));
+  typed_test(DataType::String, std::string("some string"));
+
+  const JitTupleValue tuple_value{DataType::Int, true, 0};
+  const JitHashmapValue hashmap_value{DataType::Int, true, 0};
+
+  // Check jit_assign with NULL value
+  tuple_value.set_is_null(true, context);
+  jit_assign(tuple_value, hashmap_value, 0, context);
+
+  EXPECT_TRUE(hashmap_value.is_null(0, context));
+}
+
+TEST_F(JitOperationsTest, JitGrowByOne) {
+  JitRuntimeContext context;
+  context.hashmap.columns.resize(5);
+
+  // Perform the following test for each Hyrise data type
+  const auto typed_test = [&](const DataType data_type, auto value, size_t column_index) {
+    using ValueType = decltype(value);
+    JitHashmapValue hashmap_value{data_type, false, column_index};
+
+    // The vector should be empty initially
+    EXPECT_EQ(context.hashmap.columns[0].get_vector<ValueType>().size(), 0u);
+
+    // Add one of each possible initial values to the vector
+    jit_grow_by_one(hashmap_value, JitVariantVector::InitialValue::Zero, context);
+    jit_grow_by_one(hashmap_value, JitVariantVector::InitialValue::MaxValue, context);
+    jit_grow_by_one(hashmap_value, JitVariantVector::InitialValue::MinValue, context);
+
+    // Check, that the vector contains the correct three values
+    EXPECT_EQ(context.hashmap.columns[column_index].get_vector<ValueType>().size(), 3u);
+    EXPECT_EQ(context.hashmap.columns[column_index].get_vector<ValueType>()[0], ValueType{});
+    EXPECT_EQ(context.hashmap.columns[column_index].get_vector<ValueType>()[1], std::numeric_limits<ValueType>::max());
+    EXPECT_EQ(context.hashmap.columns[column_index].get_vector<ValueType>()[2], std::numeric_limits<ValueType>::min());
+  };
+
+  typed_test(DataType::Int, int32_t{}, 0);
+  typed_test(DataType::Long, int64_t{}, 1);
+  typed_test(DataType::Float, float{}, 2);
+  typed_test(DataType::Double, double{}, 3);
+  typed_test(DataType::String, std::string{}, 4);
+}
+
+TEST_F(JitOperationsTest, JitAggregateCompute) {
+  JitRuntimeContext context;
+  context.tuple.resize(3);
+  context.hashmap.columns.resize(1);
+  context.hashmap.columns[0].resize(1);
+
+  // jit_increment operation
+  {
+    const JitTupleValue tuple_value{DataType::String, false, 0};
+    const JitTupleValue null_tuple_value{DataType::String, true, 1};
+    const JitHashmapValue hashmap_value{DataType::Long, false, 0};
+
+    tuple_value.set<std::string>("some string", context);
+    null_tuple_value.set_is_null(true, context);
+    hashmap_value.set<int64_t>(5, 0, context);
+
+    ASSERT_EQ(5, hashmap_value.get<int64_t>(0, context));
+    jit_aggregate_compute(jit_increment, tuple_value, hashmap_value, 0, context);
+    ASSERT_EQ(6, hashmap_value.get<int64_t>(0, context));
+    jit_aggregate_compute(jit_increment, tuple_value, hashmap_value, 0, context);
+    ASSERT_EQ(7, hashmap_value.get<int64_t>(0, context));
+
+    // NULL values should not change the aggregate
+    jit_aggregate_compute(jit_increment, null_tuple_value, hashmap_value, 0, context);
+    ASSERT_EQ(7, hashmap_value.get<int64_t>(0, context));
+  }
+
+  // jit_maximum operation
+  {
+    const JitTupleValue tuple_value_1{DataType::Float, false, 0};
+    const JitTupleValue tuple_value_2{DataType::Float, false, 1};
+    const JitTupleValue null_tuple_value{DataType::Float, true, 2};
+    const JitHashmapValue hashmap_value{DataType::Float, false, 0};
+
+    tuple_value_1.set<float>(1.234f, context);
+    tuple_value_2.set<float>(3.456f, context);
+    null_tuple_value.set_is_null(true, context);
+    hashmap_value.set<float>(2.345f, 0, context);
+
+    ASSERT_EQ(2.345f, hashmap_value.get<float>(0, context));
+    jit_aggregate_compute(jit_maximum, tuple_value_1, hashmap_value, 0, context);
+    ASSERT_EQ(2.345f, hashmap_value.get<float>(0, context));
+    jit_aggregate_compute(jit_maximum, tuple_value_2, hashmap_value, 0, context);
+    ASSERT_EQ(3.456f, hashmap_value.get<float>(0, context));
+
+    // NULL values should not change the aggregate
+    jit_aggregate_compute(jit_maximum, null_tuple_value, hashmap_value, 0, context);
+    ASSERT_EQ(3.456f, hashmap_value.get<float>(0, context));
+  }
+
+  // jit_minimum operation
+  {
+    const JitTupleValue tuple_value_1{DataType::Double, false, 0};
+    const JitTupleValue tuple_value_2{DataType::Double, false, 1};
+    const JitTupleValue null_tuple_value{DataType::Double, true, 2};
+    const JitHashmapValue hashmap_value{DataType::Double, false, 0};
+
+    tuple_value_1.set<double>(3.456f, context);
+    tuple_value_2.set<double>(1.234f, context);
+    null_tuple_value.set_is_null(true, context);
+    hashmap_value.set<double>(2.345f, 0, context);
+
+    ASSERT_EQ(2.345f, hashmap_value.get<double>(0, context));
+    jit_aggregate_compute(jit_minimum, tuple_value_1, hashmap_value, 0, context);
+    ASSERT_EQ(2.345f, hashmap_value.get<double>(0, context));
+    jit_aggregate_compute(jit_minimum, tuple_value_2, hashmap_value, 0, context);
+    ASSERT_EQ(1.234f, hashmap_value.get<double>(0, context));
+
+    // NULL values should not change the aggregate
+    jit_aggregate_compute(jit_minimum, null_tuple_value, hashmap_value, 0, context);
+    ASSERT_EQ(1.234f, hashmap_value.get<double>(0, context));
+  }
+
+  // jit_addition operation
+  {
+    const JitTupleValue tuple_value_1{DataType::Long, false, 0};
+    const JitTupleValue tuple_value_2{DataType::Long, false, 1};
+    const JitTupleValue null_tuple_value{DataType::Long, true, 2};
+    const JitHashmapValue hashmap_value{DataType::Long, false, 0};
+
+    tuple_value_1.set<int64_t>(5, context);
+    tuple_value_2.set<int64_t>(-10, context);
+    null_tuple_value.set_is_null(true, context);
+    hashmap_value.set<int64_t>(100, 0, context);
+
+    ASSERT_EQ(100, hashmap_value.get<int64_t>(0, context));
+    jit_aggregate_compute(jit_addition, tuple_value_1, hashmap_value, 0, context);
+    ASSERT_EQ(105, hashmap_value.get<int64_t>(0, context));
+    jit_aggregate_compute(jit_addition, tuple_value_2, hashmap_value, 0, context);
+    ASSERT_EQ(95, hashmap_value.get<int64_t>(0, context));
+
+    // NULL values should not change the aggregate
+    jit_aggregate_compute(jit_addition, null_tuple_value, hashmap_value, 0, context);
+    ASSERT_EQ(95, hashmap_value.get<int64_t>(0, context));
   }
 }
 

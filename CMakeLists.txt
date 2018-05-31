@@ -3,6 +3,12 @@ cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
 project(Hyrise)
 
+if(APPLE)
+    set(CMAKE_EXE_LINKER_FLAGS -Wl,-export_dynamic)
+else()
+    set(CMAKE_EXE_LINKER_FLAGS -Wl,--export-dynamic)
+endif()
+
 option(ENABLE_UNSUPPORTED_COMPILER "Set to ON to build Hyrise even if the compiler is not supported. Default: OFF" OFF)
 function(compiler_not_supported message)
     if (${ENABLE_UNSUPPORTED_COMPILER})
@@ -101,9 +107,6 @@ if(${CI_BUILD})
         message(FATAL_ERROR "-DCI_BUILD=ON was set, but libnuma was not found.")
     endif()
 endif()
-
-# Add git watcher to provide git hash to our binaries through a git.hpp file
-include(cmake/git_watcher.cmake)
 
 # Include sub-CMakeLists.txt
 add_subdirectory(third_party/ EXCLUDE_FROM_ALL)

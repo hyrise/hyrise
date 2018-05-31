@@ -17,8 +17,8 @@ class LQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<Abst
  public:
   LQPVisualizer();
 
-  LQPVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info,
-                VizEdgeInfo edge_info);
+  LQPVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info = {}, VizVertexInfo vertex_info = {},
+                VizEdgeInfo edge_info = {});
 
  protected:
   void _build_graph(const std::vector<std::shared_ptr<AbstractLQPNode>>& lqp_roots) override;

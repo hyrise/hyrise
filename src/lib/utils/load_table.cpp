@@ -32,8 +32,10 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
 
   TableColumnDefinitions column_definitions;
   for (size_t i = 0; i < col_names.size(); i++) {
-    const auto data_type = data_type_to_string.right.at(col_types[i]);
-    column_definitions.emplace_back(col_names[i], data_type, col_nullable[i]);
+    const auto data_type = data_type_to_string.right.find(col_types[i]);
+    Assert(data_type != data_type_to_string.right.end(),
+           std::string("Invalid data type ") + col_types[i] + " for column " + col_names[i]);
+    column_definitions.emplace_back(col_names[i], data_type->second, col_nullable[i]);
   }
   std::shared_ptr<Table> test_table =
       std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);

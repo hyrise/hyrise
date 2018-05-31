@@ -36,6 +36,7 @@
 
 int main(int argc, char* argv[]) {
   auto cli_options = opossum::BenchmarkRunner::get_default_cli_options("TPCH Benchmark");
+
   // clang-format off
   cli_options.add_options()
     ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("0.001"))

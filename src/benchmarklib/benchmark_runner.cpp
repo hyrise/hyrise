@@ -293,16 +293,16 @@ cxxopts::Options BenchmarkRunner::get_default_cli_options(const std::string& ben
   // clang-format off
   cli_options.add_options()
     ("help", "print this help message")
-    ("v,verbose", "Print log messages", cxxopts::value<bool>())
+    ("v,verbose", "Print log messages", cxxopts::value<bool>()->default_value("false"))
     ("r,runs", "Maximum number of runs of a single query(set)", cxxopts::value<size_t>()->default_value("1000")) // NOLINT
     ("c,chunk_size", "ChunkSize, default is 2^32-1", cxxopts::value<ChunkOffset>()->default_value(std::to_string(Chunk::MAX_SIZE))) // NOLINT
     ("t,time", "Maximum seconds that a query(set) is run", cxxopts::value<size_t>()->default_value("5")) // NOLINT
     ("o,output", "File to output results to, don't specify for stdout", cxxopts::value<std::string>())
     ("m,mode", "IndividualQueries or PermutedQuerySets, default is IndividualQueries", cxxopts::value<std::string>()->default_value("IndividualQueries")) // NOLINT
     ("e,encoding", "Specify Chunk encoding. Options: " + encoding_strings_option + " (default: dictionary)", cxxopts::value<std::string>()->default_value("dictionary"))  // NOLINT
-    ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>()) // NOLINT
-    ("mvcc", "Enable MVCC", cxxopts::value<bool>()) // NOLINT
-    ("visualize", "Create a visualization image of one LQP and PQP for each query", cxxopts::value<bool>()); // NOLINT
+    ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>()->default_value("false")) // NOLINT
+    ("mvcc", "Enable MVCC", cxxopts::value<bool>()->default_value("false")) // NOLINT
+    ("visualize", "Create a visualization image of one LQP and PQP for each query", cxxopts::value<bool>()->default_value("false")); // NOLINT
   // clang-format on
 
   return cli_options;

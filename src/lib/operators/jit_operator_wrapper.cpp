@@ -1,5 +1,7 @@
 #include "jit_operator_wrapper.hpp"
 
+#include "operators/jit_operator/operators/jit_aggregate.hpp"
+
 namespace opossum {
 
 JitOperatorWrapper::JitOperatorWrapper(const std::shared_ptr<const AbstractOperator> left,
@@ -23,6 +25,10 @@ const std::string JitOperatorWrapper::description(DescriptionMode description_mo
 
 void JitOperatorWrapper::add_jit_operator(const std::shared_ptr<AbstractJittable>& op) { _jit_operators.push_back(op); }
 
+const std::vector<std::shared_ptr<AbstractJittable>>& JitOperatorWrapper::jit_operators() const {
+  return _jit_operators;
+}
+
 const std::shared_ptr<JitReadTuples> JitOperatorWrapper::_source() const {
   return std::dynamic_pointer_cast<JitReadTuples>(_jit_operators.front());
 }
@@ -32,8 +38,8 @@ const std::shared_ptr<AbstractJittableSink> JitOperatorWrapper::_sink() const {
 }
 
 std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
-  DebugAssert(_source(), "JitOperatorWrapper does not have a valid source node.");
-  DebugAssert(_sink(), "JitOperatorWrapper does not have a valid sink node.");
+  Assert(_source(), "JitOperatorWrapper does not have a valid source node.");
+  Assert(_sink(), "JitOperatorWrapper does not have a valid sink node.");
 
   const auto& in_table = *input_left()->get_output();
 
@@ -49,10 +55,15 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
   }
 
   std::function<void(const JitReadTuples*, JitRuntimeContext&)> execute_func;
+  // We want to perform two specialization passes if the operator chain contains a JitAggregate operator, since the
+  // JitAggregate operator contains multiple loops that need unrolling.
+  auto two_specialization_passes = static_cast<bool>(std::dynamic_pointer_cast<JitAggregate>(_sink()));
   switch (_execution_mode) {
     case JitExecutionMode::Compile:
-      // TODO(johannes) code specialization will be added here in a later PR
-      execute_func = &JitReadTuples::execute;
+      // this corresponds to "opossum::JitReadTuples::execute(opossum::JitRuntimeContext&) const"
+      execute_func = _module.specialize_and_compile_function<void(const JitReadTuples*, JitRuntimeContext&)>(
+          "_ZNK7opossum13JitReadTuples7executeERNS_17JitRuntimeContextE",
+          std::make_shared<JitConstantRuntimePointer>(_source().get()), two_specialization_passes);
       break;
     case JitExecutionMode::Interpret:
       execute_func = &JitReadTuples::execute;
@@ -61,10 +72,6 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
 
   for (opossum::ChunkID chunk_id{0}; chunk_id < in_table.chunk_count(); ++chunk_id) {
     const auto& in_chunk = *in_table.get_chunk(chunk_id);
-
-    context.chunk_size = in_chunk.size();
-    context.chunk_offset = 0;
-
     _source()->before_chunk(in_table, in_chunk, context);
     execute_func(_source().get(), context);
     _sink()->after_chunk(*out_table, context);

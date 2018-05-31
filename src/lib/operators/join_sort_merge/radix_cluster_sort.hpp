@@ -185,7 +185,7 @@ class RadixClusterSort {
       auto input_chunk = (*input_chunks)[chunk_number];
 
       // Count the number of entries for each cluster to be able to reserve the appropriate output space later.
-      auto job = std::make_shared<JobTask>([&input_chunk, &clusterer, &chunk_information] {
+      auto job = std::make_shared<JobTask>([input_chunk, &clusterer, &chunk_information] {
         for (auto& entry : *input_chunk) {
           auto cluster_id = clusterer(entry.value);
           ++chunk_information.cluster_histogram[cluster_id];
