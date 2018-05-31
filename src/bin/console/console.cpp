@@ -280,7 +280,8 @@ int Console::_eval_sql(const std::string& sql) {
   }
 
   out("===\n");
-  out(std::to_string(row_count) + " rows total " + _sql_pipeline->get_time_string());
+  out(std::to_string(row_count) + " rows total\n");
+  out(_sql_pipeline->execution_info().to_string());
 
   return ReturnCode::Ok;
 }
