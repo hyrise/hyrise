@@ -82,11 +82,11 @@ int main(int argc, char* argv[]) {
                    [](auto& pair) { return pair.first; });
   }
 
-  config->out << "- Benchmarking Queries ";
+  config->out << "- Benchmarking Queries: [ ";
   for (const auto query_id : query_ids) {
-    config->out << (query_id) << " ";
+    config->out << (query_id) << ", ";
   }
-  config->out << std::endl;
+  config->out << "]" << std::endl;
 
   // Set up TPCH benchmark
   opossum::NamedQueries queries;

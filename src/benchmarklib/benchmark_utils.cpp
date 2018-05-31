@@ -173,7 +173,8 @@ BenchmarkConfig CLIConfigParser::parse_default_json_config(const nlohmann::json&
   const auto max_runs = json_config.value("runs", default_config.max_num_query_runs);
   out << "- Max runs per query is " << max_runs << std::endl;
 
-  const auto max_duration = json_config.value("time", default_config.max_duration.count());
+  const auto default_duration_seconds = std::chrono::duration_cast<std::chrono::seconds>(default_config.max_duration);
+  const auto max_duration = json_config.value("time", default_duration_seconds.count());
   out << "- Max duration per query is " << max_duration << " seconds" << std::endl;
   const Duration timeout_duration = std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{max_duration});
 
