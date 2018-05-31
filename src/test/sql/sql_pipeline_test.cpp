@@ -420,6 +420,7 @@ TEST_F(SQLPipelineTest, GetTimes) {
   // Run to get times
   sql_pipeline.get_result_table();
 
+  EXPECT_GT(execution_info.parse_time_micros, zero_duration);
   EXPECT_GT(statement_info.translate_time_micros, zero_duration);
   EXPECT_GT(statement_info.optimize_time_micros, zero_duration);
   EXPECT_GT(statement_info.compile_time_micros, zero_duration);

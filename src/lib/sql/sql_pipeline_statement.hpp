@@ -20,8 +20,6 @@ struct SQLPipelineStatementExecutionInfo {
   std::chrono::microseconds execution_time_micros{};
 
   bool query_plan_cache_hit = false;
-
-  std::string to_string() const;
 };
 
 using PreparedStatementCache = std::shared_ptr<SQLQueryCache<SQLQueryPlan>>;
