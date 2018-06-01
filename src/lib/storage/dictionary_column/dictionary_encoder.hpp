@@ -38,7 +38,7 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
     if constexpr (Encoding == EncodingType::FixedStringDictionary) {
       // Encode a column with a FixedStringVector as dictionary. std::string is the only supported type
       return _encode_dictionary_column(
-          FixedStringVector{values.cbegin(), values.cend(), _calculate_fixed_string_length(values)}, value_column);
+          FixedStringVector{values.cbegin(), values.cend(), _calculate_fixed_string_length(values), values.size()}, value_column);
     } else {
       // Encode a column with a pmr_vector<T> as dictionary
       return _encode_dictionary_column(pmr_vector<T>{values.cbegin(), values.cend(), values.get_allocator()},

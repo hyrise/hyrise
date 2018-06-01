@@ -18,16 +18,13 @@ namespace opossum {
 
 class FixedStringVector {
  public:
-  explicit FixedStringVector(size_t string_length);
-
   // Create a FixedStringVector of FixedStrings with given values
-  FixedStringVector(const FixedStringVector&& other);
-  FixedStringVector(const FixedStringVector& other);
-  FixedStringVector(const FixedStringVector& other, const PolymorphicAllocator<size_t>& alloc);
+  FixedStringVector(const FixedStringVector& other) = default;
 
   // Create a FixedStringVector of FixedStrings with given values by iterating over other container
   template <class Iter>
-  FixedStringVector(Iter first, Iter last, size_t string_length) : _string_length(string_length) {
+  FixedStringVector(Iter first, Iter last, size_t string_length, size_t amount_values) : _string_length(string_length) {
+    _chars.reserve(_string_length * amount_values);
     _iterator_push_back(first, last);
   }
 
