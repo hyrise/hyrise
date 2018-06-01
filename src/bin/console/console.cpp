@@ -18,14 +18,6 @@
 #include <string>
 #include <vector>
 
-#if __has_include(<filesystem>)
-#include <filesystem>
-namespace filesystem = std::filesystem;
-#else
-#include <experimental/filesystem>
-namespace filesystem = std::experimental::filesystem;
-#endif
-
 #include "SQLParser.h"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
@@ -44,6 +36,7 @@ namespace filesystem = std::experimental::filesystem;
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
+#include "utils/filesystem.hpp"
 #include "utils/load_table.hpp"
 
 #define ANSI_COLOR_RED "\x1B[31m"
@@ -280,9 +273,7 @@ int Console::_eval_sql(const std::string& sql) {
   }
 
   out("===\n");
-  out(std::to_string(row_count) + " rows total (" + "COMPILE: " +
-      std::to_string(_sql_pipeline->compile_time_microseconds().count()) + " µs, " + "EXECUTE: " +
-      std::to_string(_sql_pipeline->execution_time_microseconds().count()) + " µs (wall time))\n");
+  out(std::to_string(row_count) + " rows total " + _sql_pipeline->get_time_string());
 
   return ReturnCode::Ok;
 }

@@ -20,7 +20,8 @@ queryplan.png
 .lqp*.dot
 lqp*.png
 compile_times.txt
-CMakeLists.txt.user
+exported_table_statistics.json
+version.hpp
 *.autosave
 
 # Ignore cmake user files

@@ -37,7 +37,7 @@ make hyriseTest -j $((cores / 2))
 cd -
 
 rm -fr coverage; mkdir coverage
-./build-coverage/hyriseTest build-coverage
+./build-coverage/hyriseTest build-coverage --gtest_filter=-SQLiteTestRunnerInstances/*
 
 if [[ "$unamestr" == 'Darwin' ]]; then
   # LLVM has its own way of dealing with coverage...

@@ -13,8 +13,8 @@ class SQLQueryPlanVisualizer : public AbstractVisualizer<SQLQueryPlan> {
  public:
   SQLQueryPlanVisualizer();
 
-  SQLQueryPlanVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info,
-                         VizEdgeInfo edge_info);
+  SQLQueryPlanVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info = {}, VizVertexInfo vertex_info = {},
+                         VizEdgeInfo edge_info = {});
 
  protected:
   void _build_graph(const SQLQueryPlan& plan) override;

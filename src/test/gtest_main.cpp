@@ -1,15 +1,8 @@
-#if __has_include(<filesystem>)
-#include <filesystem>
-namespace filesystem = std::filesystem;
-#else
-#include <experimental/filesystem>
-namespace filesystem = std::experimental::filesystem;
-#endif
-
 #include <gtest/gtest.h>
 #include "base_test.hpp"
 
 #include "utils/assert.hpp"
+#include "utils/filesystem.hpp"
 #include "utils/performance_warning.hpp"
 
 void create_test_data_directory(std::optional<std::string>& prefix) {
