@@ -14,7 +14,6 @@ class FixedStringVectorTest : public BaseTest {
     std::vector<std::string> strings = {"foo", "barbaz", "str3"};
     fixed_string_vector =
         std::make_shared<FixedStringVector>(FixedStringVector(strings.begin(), strings.end(), 6u, strings.size()));
-    // fixed_string_vector = &fs;
   }
   std::shared_ptr<FixedStringVector> fixed_string_vector = nullptr;
 };
