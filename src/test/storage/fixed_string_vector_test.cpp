@@ -9,11 +9,12 @@
 namespace opossum {
 
 class FixedStringVectorTest : public BaseTest {
-    protected:
+ protected:
   void SetUp() override {
-  std::vector<std::string> strings = {"foo", "barbaz", "str3"};
-  fixed_string_vector = std::make_shared<FixedStringVector>(FixedStringVector(strings.begin(), strings.end(), 6u, strings.size()));
-  // fixed_string_vector = &fs;
+    std::vector<std::string> strings = {"foo", "barbaz", "str3"};
+    fixed_string_vector =
+        std::make_shared<FixedStringVector>(FixedStringVector(strings.begin(), strings.end(), 6u, strings.size()));
+    // fixed_string_vector = &fs;
   }
   std::shared_ptr<FixedStringVector> fixed_string_vector = nullptr;
 };
@@ -102,9 +103,7 @@ TEST_F(FixedStringVectorTest, ReverseIterator) {
   EXPECT_EQ((*fixed_string_vector)[2u], "abcd");
 }
 
-TEST_F(FixedStringVectorTest, Size) {
-  EXPECT_EQ(fixed_string_vector->size(), 3u);
-}
+TEST_F(FixedStringVectorTest, Size) { EXPECT_EQ(fixed_string_vector->size(), 3u); }
 
 TEST_F(FixedStringVectorTest, Erase) {
   EXPECT_EQ(fixed_string_vector->size(), 3u);
@@ -144,9 +143,7 @@ TEST_F(FixedStringVectorTest, ConstIteratorConstructor) {
   EXPECT_EQ(v4.size(), 1u);
 }
 
-TEST_F(FixedStringVectorTest, DataSize) {
-  EXPECT_EQ(fixed_string_vector->data_size(), 58u);
-}
+TEST_F(FixedStringVectorTest, DataSize) { EXPECT_EQ(fixed_string_vector->data_size(), 58u); }
 
 TEST_F(FixedStringVectorTest, Reserve) {
   fixed_string_vector->reserve(5u);
