@@ -863,15 +863,15 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
     }
   }
 
-  /**
-   * Translate NotExpression
-   */
-  if (expression->type == ExpressionType::Not) {
-    // Fallback implementation for NOT, for now
-    current_node = _add_expressions_if_unavailable(current_node, {expression});
-    return PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
-    PredicateCondition::NotEquals, expression, std::make_shared<ValueExpression>(0)), current_node);
-  }
+//  /**
+//   * Translate NotExpression
+//   */
+//  if (expression->type == ExpressionType::Not) {
+//    // Fallback implementation for NOT, for now
+//    current_node = _add_expressions_if_unavailable(current_node, {expression});
+//    return PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
+//    PredicateCondition::NotEquals, expression, std::make_shared<ValueExpression>(0)), current_node);
+//  }
 
   Fail("Non-predicate Expression used as Predicate");
 }

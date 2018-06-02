@@ -36,7 +36,6 @@ class ExpressionEvaluatorTest : public ::testing::Test {
   void SetUp() override {
     table_a = load_table("src/test/tables/expression_evaluator/input_a.tbl");
     chunk_a = table_a->get_chunk(ChunkID{0});
-    evaluator.emplace(chunk_a);
 
     a = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "a"));
     b = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "b"));
@@ -62,20 +61,19 @@ class ExpressionEvaluatorTest : public ::testing::Test {
     bool_a = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_bools, "a"));
     bool_b = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_bools, "b"));
     bool_c = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_bools, "c"));
-    evaluator_bools.emplace(chunk_bools);
   }
 
   /**
-   * Turn an ExpressionResult<T> into a canoncial form "std::vector<std::optional<T>>" to make the writing of tests
+   * Turn an ExpressionResult<T> into a canonical form "std::vector<std::optional<T>>" to make the writing of tests
    * easier.
    */
   template<typename T>
   std::vector<std::optional<T>> normalize_expression_result(const ExpressionResult<T> &result) {
     std::vector<std::optional<T>> normalized(result.size());
 
-    resolve_expression_result_to_view(result, [&](const auto &resolved) {
+    result.as_view([&](const auto &resolved) {
       for (auto idx = size_t{0}; idx < result.size(); ++idx) {
-        if (!result.is_nullable() || !resolved.null(idx)) normalized[idx] = resolved.value(idx);
+        if (!resolved.null(idx)) normalized[idx] = resolved.value(idx);
       }
     });
 
@@ -83,26 +81,53 @@ class ExpressionEvaluatorTest : public ::testing::Test {
   }
 
   template<typename R>
-  bool test_expression(const std::shared_ptr<Chunk>& chunk,
+  void print(const std::vector<std::optional<R>>& values_or_nulls) {
+    for (const auto& value_or_null : values_or_nulls) {
+      if (value_or_null) {
+        std::cout << *value << ", ";
+      } else {
+        std::cout << "NULL, ";
+      }
+    }
+  }
+
+  template<typename R>
+  bool test_expression(const std::shared_ptr<Table>& table,
                        const AbstractExpression& expression,
                        const std::vector<std::optional<R>>& expected) {
-    const auto actual_result = ExpressionEvaluator{chunk}.evaluate_expression<R>(expression);
-    const auto actual_normalized = normalize_expression_result(actual_result);
-    return actual_normalized == expected;
+    const auto actual_result = ExpressionEvaluator{table, ChunkID{0}}.evaluate_expression<R>(expression);
+    const auto actual_normalized = normalize_expression_result(*actual_result);
+    if (actual_normalized == expected) return true;
+
+    std::cout << "Actual:\n  ";
+    print(actual_normalized);
+    std::cout << std::endl;
+    std::cout << "Expected:\n  ";
+    print(expected);
+    std::cout << std::endl;
+
+    return false;
   }
 
   template<typename R>
   bool test_expression(const AbstractExpression& expression,
                        const std::vector<std::optional<R>>& expected) {
     const auto actual_result = ExpressionEvaluator{}.evaluate_expression<R>(expression);
-    const auto actual_normalized = normalize_expression_result(actual_result);
-    return actual_normalized == expected;
+    const auto actual_normalized = normalize_expression_result(*actual_result);
+    if (actual_normalized == expected) return true;
+
+    std::cout << "Actual:\n  ";
+    print(actual_normalized);
+    std::cout << std::endl;
+    std::cout << "Expected:\n  ";
+    print(expected);
+    std::cout << std::endl;
+
+    return false;
   }
 
   std::shared_ptr<Table> table_a, table_b, table_bools;
   std::shared_ptr<Chunk> chunk_a, chunk_bools;
-  std::optional<ExpressionEvaluator> evaluator;
-  std::optional<ExpressionEvaluator> evaluator_bools;
 
   std::shared_ptr<PQPColumnExpression> a, b, c, d, e, f, s1, s2, dates, x, bool_a, bool_b, bool_c;
   std::shared_ptr<ArithmeticExpression> a_plus_b;
@@ -127,8 +152,8 @@ TEST_F(ExpressionEvaluatorTest, TernaryOrLiteral) {
 
 TEST_F(ExpressionEvaluatorTest, TernaryOrSeries) {
   // clang-format off
-  EXPECT_TRUE(test_expression<int32_t>(chunk_bools, *or_(bool_a, bool_b), {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1}));
-  EXPECT_TRUE(test_expression<int32_t>(chunk_bools, *or_(bool_a, bool_c), {0, 1, std::nullopt, 0, 1, std::nullopt, 1, 1, 1, 1, 1, 1}));  // NOLINT
+  EXPECT_TRUE(test_expression<int32_t>(table_bools, *or_(bool_a, bool_b), {0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_bools, *or_(bool_a, bool_c), {0, 1, std::nullopt, 0, 1, std::nullopt, 1, 1, 1, 1, 1, 1}));  // NOLINT
   // clang-format on
 }
 
@@ -144,13 +169,6 @@ TEST_F(ExpressionEvaluatorTest, TernaryAndLiteral) {
   EXPECT_TRUE(test_expression<int32_t>(*and_(NullValue{}, 1), {std::nullopt}));
 }
 
-TEST_F(ExpressionEvaluatorTest, NotColumn) {
-  // clang-format off
-  EXPECT_TRUE(test_expression<int32_t>(chunk_bools, *not_(bool_a), {1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0}));
-  EXPECT_TRUE(test_expression<int32_t>(chunk_bools, *not_(bool_c), {1, 0, std::nullopt, 1, 0, std::nullopt, 1, 0, std::nullopt, 1, 0, std::nullopt}));  // NOLINT
-  // clang-format on
-}
-
 TEST_F(ExpressionEvaluatorTest, ArithmeticsLiterals) {
   EXPECT_TRUE(test_expression<std::string>(*add("Hello", add(" ", "World")), {"Hello World"}));
   EXPECT_TRUE(test_expression<int32_t>(*mul(5, 3), {15}));
@@ -161,7 +179,10 @@ TEST_F(ExpressionEvaluatorTest, ArithmeticsLiterals) {
 }
 
 TEST_F(ExpressionEvaluatorTest, ArithmeticsColumns) {
-  EXPECT_TRUE(test_expression<int32_t>(chunk_a, *mul(a, b), {2, 6, 12, 20}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *mul(a, b), {2, 6, 12, 20}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *add(a, add(b, c)), {36, std::nullopt, 41, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *add(a, NullValue{}), {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *add(a, add(b, NullValue{})), {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
 }
 
 TEST_F(ExpressionEvaluatorTest, CaseLiterals) {
@@ -174,9 +195,9 @@ TEST_F(ExpressionEvaluatorTest, CaseLiterals) {
 
 TEST_F(ExpressionEvaluatorTest, CaseColumns) {
   // clang-format off
-  EXPECT_TRUE(test_expression<int32_t>(chunk_a, *case_(greater_than(c, a), b, 1337), {2, 1337, 4, 1337}));
-  EXPECT_TRUE(test_expression<int32_t>(chunk_a, *case_(greater_than(c, 0), NullValue{}, c), {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));  // NOLINT
-  EXPECT_TRUE(test_expression<int32_t>(chunk_a, *case_(1, c, a), {33, std::nullopt, 34, std::nullopt}));  // NOLINT
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *case_(greater_than(c, a), b, 1337), {2, 1337, 4, 1337}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *case_(greater_than(c, 0), NullValue{}, c), {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));  // NOLINT
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *case_(1, c, a), {33, std::nullopt, 34, std::nullopt}));  // NOLINT
   // clang-format on
 }
 
@@ -233,7 +254,7 @@ TEST_F(ExpressionEvaluatorTest, CaseColumns) {
 //}
 
 TEST_F(ExpressionEvaluatorTest, In) {
-  EXPECT_TRUE(test_expression<int32_t>(chunk_a, *in(a, array(1.0, 3.0)),  {1, 0, 1, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(a, array(1.0, 3.0)),  {1, 0, 1, 0}));
 }
 
 //TEST_F(ExpressionEvaluatorTest, Case) {

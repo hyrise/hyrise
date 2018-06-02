@@ -31,7 +31,7 @@ class ExpressionEvaluator final {
   ExpressionEvaluator() = default;
 
   // For Expressions that reference Columns from a single table
-  explicit ExpressionEvaluator(const std::shared_ptr<const Chunk>& chunk);
+  explicit ExpressionEvaluator(const std::shared_ptr<const Table>& table, const ChunkID chunk_id);
 
   std::shared_ptr<BaseColumn> evaluate_expression_to_column(const AbstractExpression& expression);
 
@@ -77,6 +77,9 @@ class ExpressionEvaluator final {
                                                  const AbstractExpression& right_expression);
 
   template<typename Functor>
+  void resolve_to_expression_result_view(const AbstractExpression &left_expression, const Functor &fn);
+
+  template<typename Functor>
   void resolve_to_expression_result_views(const AbstractExpression &left_expression,
                                           const AbstractExpression &right_expression, const Functor &fn);
 
@@ -93,8 +96,9 @@ class ExpressionEvaluator final {
 
   static std::vector<bool> _evaluate_default_null_logic(const std::vector<bool>& left, const std::vector<bool>& right);
 
-  void _ensure_column_materialization(ColumnID column_id)
+  void _ensure_column_materialization(const ColumnID column_id);
 
+  std::shared_ptr<const Table> _table;
   std::shared_ptr<const Chunk> _chunk;
   size_t _output_row_count{1};
 

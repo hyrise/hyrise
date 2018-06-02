@@ -59,7 +59,7 @@ struct TernaryAnd {
 //  };
 //
 //  template<typename A, typename B> struct evaluate_as_series {
-//    static constexpr bool value = is_series<A>::value || is_series<B>::value;
+//    static constexpr bool value = is_series<A>::value || is_nullable_series<B>::value;
 //  };
 //
 //  static constexpr auto may_produce_value_from_null = true;

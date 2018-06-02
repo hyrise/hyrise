@@ -88,6 +88,9 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   const std::string query = GetParam();
 
   auto sql_pipeline = SQLPipelineBuilder{query}.create_pipeline();
+
+  sql_pipeline.get_optimized_logical_plans().at(0)->print();
+
   const auto& result_table = sql_pipeline.get_result_table();
 
   auto sqlite_result_table = _sqlite->execute_query(query);

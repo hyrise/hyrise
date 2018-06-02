@@ -51,7 +51,7 @@ SELECT * FROM mixed LIMIT 77;
 SELECT b FROM mixed LIMIT 10;
 
 -- PRODUCT
-SELECT "left".a, "left".b, "right".a, "right".b FROM mixed AS "left", mixed_null AS "right" WHERE "left".a = "right".a;
+SELECT "right".b FROM mixed AS "left", mixed_null AS "right" WHERE "left".a = "right".a AND "left".b = 2;
 SELECT * FROM mixed AS "left", mixed_null AS "right" WHERE "left".a = "right".d;
 
 -- JOIN

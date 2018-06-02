@@ -75,7 +75,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     ChunkColumns output_columns;
     output_columns.reserve(expressions.size());
 
-    ExpressionEvaluator evaluator(input_table_left()->get_chunk(chunk_id));
+    ExpressionEvaluator evaluator(input_table_left(), chunk_id);
 
     for (const auto& expression : expressions) {
       output_columns.emplace_back(evaluator.evaluate_expression_to_column(*expression));
