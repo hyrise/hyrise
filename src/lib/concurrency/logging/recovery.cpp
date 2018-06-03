@@ -48,6 +48,8 @@ void Recovery::recover() {
 
   std::vector<LoggedItem> transactions;
 
+  TransactionID last_transaction_id{1};
+
   std::string line;
   while (std::getline(log_file, line))
   {
@@ -58,6 +60,7 @@ void Recovery::recover() {
       TransactionID transaction_id = std::stoull(line.substr(3, line.length() - 4));
 
       // perform transaction
+      // TODO: perform in right order
       for (auto &transaction : transactions) {
         if (transaction.transaction_id != transaction_id)
           continue;
@@ -67,35 +70,17 @@ void Recovery::recover() {
 
         if (transaction.type == LogType::Value) {
           chunk->append(*transaction.values);
-
+          
           auto mvcc_columns = chunk->mvcc_columns();
-
-          mvcc_columns->print();
-
-          // mvcc_columns is grown by chunk->append()
-          // mvcc_columns->grow_by(1u, MvccColumns::MAX_COMMIT_ID);
-
-          mvcc_columns->begin_cids[mvcc_columns->begin_cids.size() - 1] = transaction_id;
-
-          mvcc_columns->print();
-
           DebugAssert(mvcc_columns->begin_cids.size() - 1 == transaction.row_id.chunk_offset, "recovery rowID " + std::to_string(mvcc_columns->begin_cids.size() - 1) + " != logged rowID " + std::to_string(transaction.row_id.chunk_offset));
-          continue;
-        }
-
-        if (transaction.type == LogType::Invalidation) {
+          mvcc_columns->begin_cids[mvcc_columns->begin_cids.size() - 1] = transaction_id;          
+        } else if (transaction.type == LogType::Invalidation) {
           auto mvcc_columns = chunk->mvcc_columns();
           mvcc_columns->end_cids[transaction.row_id.chunk_offset] = transaction_id;
-          mvcc_columns->print();
-          continue;
         }
-
       }
 
-      if (TransactionManager::get()._last_commit_id <= transaction_id) {
-        TransactionManager::get()._last_commit_id = transaction_id + 1;
-      }
-      
+      last_transaction_id = std::max(transaction_id, last_transaction_id);      
 
       // TODO: delete elements in transactions vector
 
@@ -151,6 +136,9 @@ void Recovery::recover() {
       transactions.push_back(LoggedItem(LogType::Value, transaction_id, table_name, row_id, values));
     }
   }
+
+  ++last_transaction_id;
+  TransactionManager::_reset_to_id(last_transaction_id);
 }
 
 }  // namespace opossum
