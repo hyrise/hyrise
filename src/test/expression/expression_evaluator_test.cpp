@@ -95,7 +95,7 @@ class ExpressionEvaluatorTest : public ::testing::Test {
   bool test_expression(const std::shared_ptr<Table>& table,
                        const AbstractExpression& expression,
                        const std::vector<std::optional<R>>& expected) {
-    const auto actual_result = ExpressionEvaluator{table, ChunkID{0}}.evaluate_expression<R>(expression);
+    const auto actual_result = ExpressionEvaluator{table, ChunkID{0}}.evaluate_expression_to_result<R>(expression);
     const auto actual_normalized = normalize_expression_result(*actual_result);
     if (actual_normalized == expected) return true;
 
@@ -112,7 +112,7 @@ class ExpressionEvaluatorTest : public ::testing::Test {
   template<typename R>
   bool test_expression(const AbstractExpression& expression,
                        const std::vector<std::optional<R>>& expected) {
-    const auto actual_result = ExpressionEvaluator{}.evaluate_expression<R>(expression);
+    const auto actual_result = ExpressionEvaluator{}.evaluate_expression_to_result<R>(expression);
     const auto actual_normalized = normalize_expression_result(*actual_result);
     if (actual_normalized == expected) return true;
 

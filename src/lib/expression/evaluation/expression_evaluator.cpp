@@ -44,7 +44,8 @@ _table(table), _chunk(_table->get_chunk(chunk_id))
 }
 
 template<typename R>
-std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_expression(const AbstractExpression& expression) {
+std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_expression_to_result(
+const AbstractExpression &expression) {
   switch (expression.type) {
     case ExpressionType::Arithmetic:
       return evaluate_arithmetic_expression<R>(static_cast<const ArithmeticExpression&>(expression));
@@ -209,7 +210,7 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_in_expr
       predicate_disjunction = or_(predicate_disjunction, equals_element);
     }
 
-    return evaluate_expression<int32_t>(*predicate_disjunction);
+    return evaluate_expression_to_result<int32_t>(*predicate_disjunction);
 
   } else if (right_expression.type == ExpressionType::Select) {
     Fail("Unsupported ExpressionType used in InExpression");
@@ -230,7 +231,7 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_in_expression
 
 template<typename R>
 std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_case_expression(const CaseExpression& case_expression) {
-  const auto when = evaluate_expression<int32_t>(*case_expression.when());
+  const auto when = evaluate_expression_to_result<int32_t>(*case_expression.when());
 
   /**
    * Optimization - but block below relies on the case where WHEN is a literal to be handled separately
@@ -239,9 +240,9 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_case_expressi
    */
   if (when->size() == 1) {
     if (when->value(0) && !when->null(0)) {
-      return evaluate_expression<R>(*case_expression.then());
+      return evaluate_expression_to_result<R>(*case_expression.then());
     } else {
-      return evaluate_expression<R>(*case_expression.else_());
+      return evaluate_expression_to_result<R>(*case_expression.else_());
     }
   }
 
@@ -400,7 +401,7 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_select_expres
 
   std::vector<R> result_values;
   result_values.reserve(result_table->row_count());
-  
+
   for (auto chunk_id = ChunkID{0}; chunk_id < result_table->chunk_count(); ++chunk_id) {
     const auto &result_column = *result_table->get_chunk(chunk_id)->get_column(ColumnID{0});
     materialize_values(result_column, result_values);
@@ -467,7 +468,6 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_binary_with_d
   resolve_to_expression_results(left_expression, right_expression, [&](const auto &left, const auto &right) {
     using LeftDataType = typename std::decay_t<decltype(left)>::Type;
     using RightDataType = typename std::decay_t<decltype(right)>::Type;
-
 
     if constexpr (Functor::template supports<R, LeftDataType, RightDataType>::value) {
       const auto result_size = _result_size(left, right);
@@ -578,7 +578,7 @@ void ExpressionEvaluator::resolve_to_expression_result(const AbstractExpression 
     resolve_data_type(expression.data_type(), [&] (const auto data_type_t) {
       using ExpressionDataType = typename decltype(data_type_t)::type;
 
-      const auto expression_result = evaluate_expression<ExpressionDataType>(expression);
+      const auto expression_result = evaluate_expression_to_result<ExpressionDataType>(expression);
       fn(*expression_result);
     });
   }

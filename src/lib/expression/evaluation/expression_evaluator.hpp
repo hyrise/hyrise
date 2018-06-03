@@ -36,7 +36,7 @@ class ExpressionEvaluator final {
   std::shared_ptr<BaseColumn> evaluate_expression_to_column(const AbstractExpression& expression);
 
   template<typename T>
-  std::shared_ptr<ExpressionResult<T>> evaluate_expression(const AbstractExpression& expression);
+  std::shared_ptr<ExpressionResult<T>> evaluate_expression_to_result(const AbstractExpression &expression);
 
   template<typename T>
   std::shared_ptr<ExpressionResult<T>> evaluate_arithmetic_expression(const ArithmeticExpression& expression);
