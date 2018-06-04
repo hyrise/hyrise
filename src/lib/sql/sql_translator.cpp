@@ -1037,6 +1037,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
         case hsql::kOpIsNull: return is_null(left);
 
         case hsql::kOpNot: {
+          Assert(left->type == ExpressionType::Logical || left->type == ExpressionType::Predicate, "Can only negate predicate expressions and logical expressions");
+
           // If the argument is a predicate, just inverse it (e.g. NOT (a > b) becomes b <= a)
           if (left->type == ExpressionType::Predicate) {
             if (const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(left);
@@ -1055,7 +1057,10 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
             }
           }
 
-          Fail("Not able to handle this NOT yet");
+          /**
+           * "NOT <some_expression>" becomes "<some_expression> == 0"
+           */
+          return equals(left, 0);
         }
 
         case hsql::kOpLike:

@@ -1,9 +1,11 @@
+-- Select entire table
 SELECT * FROM mixed;
 SELECT * FROM mixed_null;
 
 -- No FROM clause
--- SELECT 1;
--- SELECT (1 + 3.0) * 13.0;
+SELECT 1;
+SELECT (1 + 3.0) * 13.0 as some_arithmetics;
+SELECT 22 / 5;
 
 -- Table Scans
 SELECT * FROM mixed WHERE b = 10;
@@ -20,6 +22,8 @@ SELECT * FROM mixed WHERE b + c < c * b - 100;
 SELECT * FROM mixed_null WHERE b IS NULL;
 SELECT * FROM mixed_null WHERE b*c IS NOT NULL;
 SELECT * FROM mixed_null WHERE b = 12;
+SELECT * FROM mixed_null WHERE NOT (b = 12);
+SELECT * FROM mixed_null WHERE NOT (b IN (12, 13, 14));
 
 -- Projection
 SELECT a FROM mixed;
@@ -34,7 +38,6 @@ SELECT a, b, a+b AS e, a+b+NULL AS f FROM id_int_int_int_100;
 SELECT a, b, b+b AS e, b+b+NULL AS f FROM mixed;
 SELECT a, b, b+b AS e, b+b+NULL AS f FROM mixed_null;
 SELECT 1 + 5.6 > 7 OR 2 > 1 AS i FROM mixed;
-SELECT 22 / 5;
 
 -- ORDER BY
 SELECT * FROM mixed ORDER BY a;

@@ -158,19 +158,19 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
   Assert(predicate_node->predicate->type == ExpressionType::Predicate, "Only PredicateExpressions can be translated to Table/IndexScans");
 
   if (const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node->predicate); binary_predicate_expression) {
-    return _translate_predicate(*input_node,
+    return _translate_binary_predicate(*input_node,
                                 input_operator,
                                 *binary_predicate_expression->left_operand(),
                                 binary_predicate_expression->predicate_condition,
                                 *binary_predicate_expression->right_operand());
 
   } else if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(predicate_node->predicate); between_expression) {
-    const auto lower_bound_op = _translate_predicate(*input_node,
+    const auto lower_bound_op = _translate_binary_predicate(*input_node,
                                                      input_operator,
                                                      *between_expression->value(),
                                                      PredicateCondition::GreaterThanEquals,
                                                      *between_expression->lower_bound());
-    const auto upper_bound_op = _translate_predicate(*input_node,
+    const auto upper_bound_op = _translate_binary_predicate(*input_node,
                                                      lower_bound_op,
                                                      *between_expression->value(),
                                                      PredicateCondition::LessThanEquals,
@@ -178,10 +178,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
     return upper_bound_op;
 
   } else if (const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(predicate_node->predicate); is_null_expression) {
-    return _translate_predicate(*input_node,
+    return _translate_unary_predicate(*input_node,
                                 input_operator,
-                                *is_null_expression->operand(),
-                                binary_predicate_expression->predicate_condition);
+                                *is_null_expression->operand(), is_null_expression->predicate_condition);
 
   } else if (const auto array_expression = std::dynamic_pointer_cast<ArrayExpression>(predicate_node->predicate); array_expression) {
     Fail("TableScan doesn't support IN yet");
@@ -566,39 +565,58 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
   return pqp_expressions;
 }
 
-std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate(const AbstractLQPNode& input_node,
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_binary_predicate(const AbstractLQPNode& input_node,
                                                                       const std::shared_ptr<AbstractOperator>& input_operator,
                                                                       const AbstractExpression& left_operand,
                                                                       const PredicateCondition predicate_condition,
                                                                       const AbstractExpression& right_operand) {
-  // LeftOperand must be a column, if it isn't switch operands
+  // LeftOperand must be a column, if it isn't switch operands and flip condition (5 > a -> a < 5)
   if (!input_node.find_column_id(left_operand)) {
     Assert(input_node.find_column_id(right_operand), "One Predicate argument must be a column");
-    return _translate_predicate(input_node, input_operator, right_operand, flip_predicate_condition(predicate_condition), left_operand);
+    return _translate_binary_predicate(input_node,
+                                input_operator,
+                                right_operand,
+                                flip_predicate_condition(predicate_condition),
+                                left_operand);
   }
 
   const auto left_column_id = input_node.get_column_id(left_operand);
 
-  auto right_parameter = AllParameterVariant{};
-
-  // Except for Value and ValuePlaceholders every expression is resolved to a column
-  if (right_operand.type == ExpressionType::Value) {
-    const auto& value_expression = static_cast<const ValueExpression&>(right_operand);
-    right_parameter = value_expression.value;
-  } else if (right_operand.type == ExpressionType::ValuePlaceholder) {
-    const auto& value_placeholder_expression = static_cast<const ValuePlaceholderExpression&>(right_operand);
-    right_parameter = value_placeholder_expression.value_placeholder;
-  } else if (right_operand.type == ExpressionType::External) {
-    const auto& external_expression = static_cast<const ExternalExpression&>(right_operand);
-    right_parameter = external_expression.value_placeholder;
-  } else {
-    right_parameter = input_node.get_column_id(right_operand);
-  }
+  auto right_parameter = _translate_to_all_parameter_variant(input_node, right_operand);
 
   return std::make_shared<TableScan>(input_operator,
                                      left_column_id,
                                      predicate_condition,
                                      right_parameter);
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_unary_predicate(const AbstractLQPNode& input_node,
+                                                             const std::shared_ptr<AbstractOperator>& input_operator,
+                                                             const AbstractExpression& operand,
+                                                             const PredicateCondition predicate_condition) {
+  const auto column_id = input_node.get_column_id(operand);
+  return std::make_shared<TableScan>(input_operator, column_id, predicate_condition, AllParameterVariant{});
+}
+
+
+AllParameterVariant LQPTranslator::_translate_to_all_parameter_variant(const AbstractLQPNode& input_node, const AbstractExpression& expression) {
+  auto parameter = AllParameterVariant{};
+
+  // Except for Value and ValuePlaceholders every expression is resolved to a column
+  if (expression.type == ExpressionType::Value) {
+    const auto& value_expression = static_cast<const ValueExpression&>(expression);
+    parameter = value_expression.value;
+  } else if (expression.type == ExpressionType::ValuePlaceholder) {
+    const auto& value_placeholder_expression = static_cast<const ValuePlaceholderExpression&>(expression);
+    parameter = value_placeholder_expression.value_placeholder;
+  } else if (expression.type == ExpressionType::External) {
+    const auto& external_expression = static_cast<const ExternalExpression&>(expression);
+    parameter = external_expression.value_placeholder;
+  } else {
+    parameter = input_node.get_column_id(expression);
+  }
+
+  return parameter;
 }
 
 }  // namespace opossum

@@ -55,7 +55,18 @@ class LQPTranslator final {
 //  std::shared_ptr<AbstractOperator> _translate_create_view_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 //  std::shared_ptr<AbstractOperator> _translate_drop_view_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 
-  static std::shared_ptr<AbstractOperator> _translate_predicate(const AbstractLQPNode& input_node, const std::shared_ptr<AbstractOperator>& input_operator, const AbstractExpression& left_operand, const PredicateCondition predicate_condition, const AbstractExpression& right_operand);
+  static std::shared_ptr<AbstractOperator> _translate_binary_predicate(const AbstractLQPNode& input_node,
+                                                                const std::shared_ptr<AbstractOperator>& input_operator,
+                                                                const AbstractExpression& left_operand,
+                                                                const PredicateCondition predicate_condition,
+                                                                const AbstractExpression& right_operand);
+
+  static std::shared_ptr<AbstractOperator> _translate_unary_predicate(const AbstractLQPNode& input_node,
+                                                                const std::shared_ptr<AbstractOperator>& input_operator,
+                                                                const AbstractExpression& operand,
+                                                                const PredicateCondition predicate_condition);
+
+  static AllParameterVariant _translate_to_all_parameter_variant(const AbstractLQPNode& input_node, const AbstractExpression& expression);
 
   // Cache operator subtrees by LQP node to avoid executing operators below a diamond shape multiple times
   mutable std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractOperator>>

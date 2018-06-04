@@ -146,7 +146,7 @@ TEST_F(LQPTranslatorTest, ArithmeticExpression) {
   EXPECT_EQ(get_table_op->table_name(), "table_int_float");
 }
 
-TEST_F(LQPTranslatorTest, PredicateNodeSimple) {
+TEST_F(LQPTranslatorTest, PredicateNodeSimpleBinary) {
   /**
    * Build LQP and translate to PQP
    *
@@ -164,6 +164,30 @@ TEST_F(LQPTranslatorTest, PredicateNodeSimple) {
   EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1});
   EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::LessThan);
   EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant(5));
+
+  const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->input_left());
+  ASSERT_TRUE(get_table_op);
+  EXPECT_EQ(get_table_op->table_name(), "table_int_float");
+}
+
+TEST_F(LQPTranslatorTest, PredicateNodeUnary) {
+  /**
+   * Build LQP and translate to PQP
+   *
+   * LQP resembles:
+   *   SELECT * FROM int_float WHERE b IS NOT NULL;
+   */
+  const auto predicate_node = PredicateNode::make(is_not_null(int_float_b), int_float_node);
+  const auto pqp = LQPTranslator{}.translate_node(predicate_node);
+
+  /**
+   * Check PQP
+   */
+  const auto table_scan_op = std::dynamic_pointer_cast<TableScan>(pqp);
+  ASSERT_TRUE(table_scan_op);
+  EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1});
+  EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::IsNotNull);
+  EXPECT_TRUE(is_variant(table_scan_op->right_parameter()));
 
   const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->input_left());
   ASSERT_TRUE(get_table_op);

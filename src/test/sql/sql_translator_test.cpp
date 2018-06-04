@@ -325,6 +325,56 @@ TEST_F(SQLTranslatorTest, WhereIsNotNull) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, WhereNotPredicate) {
+  const auto actual_lqp_a = compile_query("SELECT * FROM int_float WHERE NOT (a = b);");
+  const auto actual_lqp_b = compile_query("SELECT * FROM int_float WHERE NOT (a != b);");
+  const auto actual_lqp_c = compile_query("SELECT * FROM int_float WHERE NOT (a > b);");
+  const auto actual_lqp_d = compile_query("SELECT * FROM int_float WHERE NOT (a < b);");
+  const auto actual_lqp_e = compile_query("SELECT * FROM int_float WHERE NOT (a >= b);");
+  const auto actual_lqp_f = compile_query("SELECT * FROM int_float WHERE NOT (a <= b);");
+  const auto actual_lqp_g = compile_query("SELECT * FROM int_float WHERE NOT (a IS NULL);");
+  const auto actual_lqp_h = compile_query("SELECT * FROM int_float WHERE NOT (a IS NOT NULL);");
+
+  // clang-format off
+  const auto expected_lqp_a = PredicateNode::make(not_equals(int_float_a, int_float_b), stored_table_node_int_float);
+  const auto expected_lqp_b = PredicateNode::make(equals(int_float_a, int_float_b), stored_table_node_int_float);
+  const auto expected_lqp_c = PredicateNode::make(less_than_equals(int_float_a, int_float_b), stored_table_node_int_float);  // NOLINT
+  const auto expected_lqp_d = PredicateNode::make(greater_than_equals(int_float_a, int_float_b), stored_table_node_int_float);  // NOLINT
+  const auto expected_lqp_e = PredicateNode::make(less_than(int_float_a, int_float_b), stored_table_node_int_float);
+  const auto expected_lqp_f = PredicateNode::make(greater_than(int_float_a, int_float_b), stored_table_node_int_float);
+  const auto expected_lqp_g = PredicateNode::make(is_not_null(int_float_a), stored_table_node_int_float);
+  const auto expected_lqp_h = PredicateNode::make(is_null(int_float_a), stored_table_node_int_float);
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp_a);
+  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp_b);
+  EXPECT_LQP_EQ(actual_lqp_c, expected_lqp_c);
+  EXPECT_LQP_EQ(actual_lqp_d, expected_lqp_d);
+  EXPECT_LQP_EQ(actual_lqp_e, expected_lqp_e);
+  EXPECT_LQP_EQ(actual_lqp_f, expected_lqp_f);
+  EXPECT_LQP_EQ(actual_lqp_g, expected_lqp_g);
+  EXPECT_LQP_EQ(actual_lqp_h, expected_lqp_h);
+}
+
+TEST_F(SQLTranslatorTest, WhereNotFallback) {
+  /**
+   * If we can't inverse a predicate to apply NOT, we translate the not expression from
+   * "NOT <some_expression>" to "<some_expression> == 0"
+   */
+
+  const auto actual_lqp = compile_query("SELECT * FROM int_float WHERE NOT (a IN (1, 2));");
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float_a, int_float_b),
+    PredicateNode::make(equals(in(int_float_a, array(1, 2)), 0),
+        ProjectionNode::make(expression_vector(in(int_float_a, array(1, 2)), int_float_a, int_float_b),
+      stored_table_node_int_float)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
   const auto actual_lqp = compile_query("SELECT SUM(a * 3) * b FROM int_float GROUP BY b");
 
