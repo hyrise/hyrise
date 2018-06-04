@@ -51,8 +51,8 @@ set(
     expression/function_expression.hpp
     expression/in_expression.cpp
     expression/in_expression.hpp
-#    expression/is_null_expression.cpp
-#    expression/is_null_expression.hpp
+    expression/is_null_expression.cpp
+    expression/is_null_expression.hpp
     expression/logical_expression.cpp
     expression/logical_expression.hpp
     expression/lqp_column_expression.cpp

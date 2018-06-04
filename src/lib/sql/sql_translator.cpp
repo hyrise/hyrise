@@ -1033,6 +1033,31 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
           const auto array = std::make_shared<ArrayExpression>(arguments);
           return std::make_shared<InExpression>(left, array);
         }
+
+        case hsql::kOpIsNull: return is_null(left);
+
+        case hsql::kOpNot: {
+          // If the argument is a predicate, just inverse it (e.g. NOT (a > b) becomes b <= a)
+          if (left->type == ExpressionType::Predicate) {
+            if (const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(left);
+              binary_predicate_expression) {
+              return std::make_shared<BinaryPredicateExpression>(
+                inverse_predicate_condition(binary_predicate_expression->predicate_condition),
+                binary_predicate_expression->left_operand(),
+                binary_predicate_expression->right_operand()
+              );
+            } else if (const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(left);
+            is_null_expression) {
+              return std::make_shared<IsNullExpression>(
+                inverse_predicate_condition(is_null_expression->predicate_condition),
+                is_null_expression->operand()
+              );
+            }
+          }
+
+          Fail("Not able to handle this NOT yet");
+        }
+
         case hsql::kOpLike:
 
         default:

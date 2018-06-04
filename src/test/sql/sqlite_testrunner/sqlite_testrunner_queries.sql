@@ -17,7 +17,8 @@ SELECT * FROM mixed WHERE b >= 21 OR c < 72.76;
 SELECT * FROM mixed WHERE b >= 21 OR (b <= 30 AND c > 50.0);
 SELECT * FROM mixed WHERE b >= 21 OR c < 72.76 OR (b <= 30 AND c > 50.0);
 SELECT * FROM mixed WHERE b + c < c * b - 100;
-
+SELECT * FROM mixed_null WHERE b IS NULL;
+SELECT * FROM mixed_null WHERE b*c IS NOT NULL;
 SELECT * FROM mixed_null WHERE b = 12;
 
 -- Projection
@@ -25,7 +26,6 @@ SELECT a FROM mixed;
 SELECT b + b FROM mixed;
 SELECT b + c FROM mixed;
 SELECT (b * c) / b + (c * c) / b - b / b as x FROM mixed;
---SELECT a + d FROM mixed;
 SELECT a as b FROM mixed;
 SELECT b, 4+6 as c, b+4 AS d, 5.0+c AS e FROM mixed_null;
 SELECT a*b/c AS calc FROM id_int_int_int_100;
@@ -34,6 +34,7 @@ SELECT a, b, a+b AS e, a+b+NULL AS f FROM id_int_int_int_100;
 SELECT a, b, b+b AS e, b+b+NULL AS f FROM mixed;
 SELECT a, b, b+b AS e, b+b+NULL AS f FROM mixed_null;
 SELECT 1 + 5.6 > 7 OR 2 > 1 AS i FROM mixed;
+SELECT 22 / 5;
 
 -- ORDER BY
 SELECT * FROM mixed ORDER BY a;
@@ -63,7 +64,7 @@ SELECT * FROM mixed NATURAL JOIN (SELECT id FROM id_int_int_int_100) AS T2;
 SELECT * FROM mixed NATURAL JOIN (SELECT c AS foo, id FROM id_int_int_int_100) AS T2;
 SELECT * FROM (SELECT "right".a a, "left".b b FROM mixed AS "left" LEFT JOIN mixed AS "right" ON "left".a = "right".a) t where t.a > 0;
 -- (#511) SELECT * FROM int_float4 NATURAL JOIN (SELECT b, a FROM int_float6) AS T2;
---
+
 -- JOIN multiple tables
 SELECT * FROM mixed_null AS t1 INNER JOIN id_int_int_int_100 AS t2 ON t1.b = t2.a INNER JOIN mixed AS t3 ON t1.b = t3.b;
 

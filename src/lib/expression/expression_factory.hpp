@@ -9,6 +9,8 @@
 #include "extract_expression.hpp"
 #include "between_expression.hpp"
 #include "binary_predicate_expression.hpp"
+#include "is_null_expression.hpp"
+#include "lqp_select_expression.hpp"
 #include "case_expression.hpp"
 #include "external_expression.hpp"
 #include "in_expression.hpp"
@@ -35,8 +37,6 @@
  *            case_(equals(a, 1234),
  *                  a,
  *                  null()))
- *
- * Intended for tests, etc.
  */
 
 
@@ -81,7 +81,10 @@ struct ternary final {
   };
 };
 
+extern unary<PredicateCondition::IsNull, IsNullExpression> is_null;
+extern unary<PredicateCondition::IsNotNull, IsNullExpression> is_not_null;
 extern unary<AggregateFunction::Sum, AggregateExpression> sum;
+extern unary<AggregateFunction::Max, AggregateExpression> max;
 extern unary<AggregateFunction::Min, AggregateExpression> min;
 extern unary<AggregateFunction::Avg, AggregateExpression> avg;
 extern unary<AggregateFunction::Count, AggregateExpression> count;
@@ -101,8 +104,11 @@ extern binary<LogicalOperator::Or, LogicalExpression> or_;
 extern ternary<BetweenExpression> between;
 extern ternary<CaseExpression> case_;
 
+template<typename ... Args>
 std::shared_ptr<AbstractExpression> select(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                           const std::vector<std::shared_ptr<AbstractExpression>>& referenced_external_expressions = {});
+                                           Args &&... referenced_external_expressions) {
+  return std::make_shared<LQPSelectExpression>(lqp, std::vector<std::shared_ptr<AbstractExpression>>{to_expression(referenced_external_expressions)...});
+}
 
 template<typename E>
 std::shared_ptr<ExternalExpression> external(const E& e, const uint16_t index) {

@@ -201,6 +201,20 @@ TEST_F(ExpressionEvaluatorTest, CaseColumns) {
   // clang-format on
 }
 
+TEST_F(ExpressionEvaluatorTest, IsNullLiteral) {
+  EXPECT_TRUE(test_expression<int32_t>(*is_null(0), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*is_null(1), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*is_null(null()), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*is_not_null(0), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*is_not_null(1), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*is_not_null(null()), {0}));
+}
+
+TEST_F(ExpressionEvaluatorTest, IsNullColumns) {
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *is_null(add(c, a)), {0, 1, 0, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *is_not_null(add(c, a)), {1, 0, 1, 0}));
+}
+
 //TEST_F(ExpressionEvaluatorTest, ArithmeticExpression) {
 //  const auto expected_result = std::vector<int32_t>({3, 5, 7, 9});
 //  EXPECT_EQ(boost::get<std::vector<int32_t>>(evaluator->evaluate_expression<int32_t>(*a_plus_b)), expected_result);

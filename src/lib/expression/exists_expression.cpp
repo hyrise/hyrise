@@ -25,7 +25,7 @@ std::string ExistsExpression::as_column_name() const {
 }
 
 std::shared_ptr<AbstractExpression> ExistsExpression::deep_copy() const {
-  return std::make_shared<ExistsExpression>(select());
+  return std::make_shared<ExistsExpression>(std::dynamic_pointer_cast<AbstractSelectExpression>(select()->deep_copy()));
 }
 
 DataType ExistsExpression::data_type() const {

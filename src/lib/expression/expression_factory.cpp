@@ -1,8 +1,5 @@
 #include "expression_factory.hpp"
 
-#include "expression/lqp_select_expression.hpp"
-#include "expression/lqp_select_expression.hpp"
-
 namespace opossum {
 
 namespace expression_factory  {
@@ -35,15 +32,14 @@ std::shared_ptr<ValueExpression> null() {
   return std::make_shared<ValueExpression>(NullValue{});
 }
 
-std::shared_ptr<AbstractExpression> select(const std::shared_ptr<AbstractLQPNode>& lqp, const std::vector<std::shared_ptr<AbstractExpression>>& referenced_external_expressions) {
-  return std::make_shared<LQPSelectExpression>(lqp, referenced_external_expressions);
-}
-
 std::shared_ptr<AggregateExpression> count_star() {
   return std::make_shared<AggregateExpression>(AggregateFunction::Count);
 }
 
+unary<PredicateCondition::IsNull, IsNullExpression> is_null;
+unary<PredicateCondition::IsNotNull, IsNullExpression> is_not_null;
 unary<AggregateFunction::Sum, AggregateExpression> sum;
+unary<AggregateFunction::Max, AggregateExpression> max;
 unary<AggregateFunction::Min, AggregateExpression> min;
 unary<AggregateFunction::Avg, AggregateExpression> avg;
 unary<AggregateFunction::Count, AggregateExpression> count;

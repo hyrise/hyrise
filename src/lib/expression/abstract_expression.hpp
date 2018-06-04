@@ -7,6 +7,7 @@
 
 #include "all_type_variant.hpp"
 #include "types.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 
 namespace opossum {
 

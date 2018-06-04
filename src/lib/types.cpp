@@ -48,4 +48,23 @@ PredicateCondition flip_predicate_condition(const PredicateCondition predicate_c
   }
 }
 
+PredicateCondition inverse_predicate_condition(const PredicateCondition predicate_condition) {
+  switch (predicate_condition) {
+    case PredicateCondition::Equals: return PredicateCondition::NotEquals;
+    case PredicateCondition::NotEquals: return PredicateCondition::Equals;
+    case PredicateCondition::GreaterThan: return PredicateCondition::LessThanEquals;
+    case PredicateCondition::LessThanEquals: return PredicateCondition::GreaterThan;
+    case PredicateCondition::GreaterThanEquals: return PredicateCondition::LessThan;
+    case PredicateCondition::LessThan: return PredicateCondition::GreaterThanEquals;
+    case PredicateCondition::Like: return PredicateCondition::NotLike;
+    case PredicateCondition::NotLike: return PredicateCondition::Like;
+    case PredicateCondition::IsNull: return PredicateCondition::IsNotNull;
+    case PredicateCondition::IsNotNull: return PredicateCondition::IsNull;
+
+    default:
+      Fail("Can't inverse the specified PredicateCondition");
+  }
+}
+
+
 }  // namespace opossum

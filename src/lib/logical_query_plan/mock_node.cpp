@@ -8,10 +8,12 @@
 #include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
+using namespace std::string_literals;
+
 namespace opossum {
 
-MockNode::MockNode(const ColumnDefinitions& column_definitions)
-    : AbstractLQPNode(LQPNodeType::Mock), _constructor_arguments(column_definitions) {
+MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& name)
+    : AbstractLQPNode(LQPNodeType::Mock), _name(name), _constructor_arguments(column_definitions) {
 }
 
 //MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics, const std::optional<std::string>& alias)
@@ -23,6 +25,16 @@ MockNode::MockNode(const ColumnDefinitions& column_definitions)
 //    _output_column_names.emplace_back("MockCol" + std::to_string(column_statistics_idx));
 //  }
 //}
+
+LQPColumnReference MockNode::get_column(const std::string& name) const {
+  const auto& column_definitions = this->column_definitions();
+
+  for (auto column_id = ColumnID{0}; column_id < column_definitions.size(); ++column_id) {
+    if (column_definitions[column_id].second == name) return LQPColumnReference{shared_from_this(), column_id};
+  }
+
+  Fail("Couldn't find column named '"s + name + "' in MockNode");
+}
 
 const MockNode::ColumnDefinitions& MockNode::column_definitions() const {
   Assert(_constructor_arguments.type() == typeid(ColumnDefinitions), "Unexpected type");
@@ -49,7 +61,9 @@ const std::vector<std::shared_ptr<AbstractExpression>>& MockNode::output_column_
   return *_output_column_expressions;
 }
 
-std::string MockNode::description() const { return "[MockTable]"; }
+std::string MockNode::description() const {
+  return "[MockNode '"s + _name.value_or("Unnamed") + "']";
+}
 
 std::shared_ptr<AbstractLQPNode> MockNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {
 //  if (_constructor_arguments.type() == typeid(std::shared_ptr<TableStatistics>)) {

@@ -56,10 +56,14 @@ const AbstractExpression &expression) {
     case ExpressionType::Predicate: {
       const auto& predicate_expression = static_cast<const AbstractPredicateExpression&>(expression);
 
+
       if (is_lexicographical_predicate_condition(predicate_expression.predicate_condition)) {
         return evaluate_binary_predicate_expression<R>(static_cast<const BinaryPredicateExpression&>(expression));
       } else if (predicate_expression.predicate_condition == PredicateCondition::In) {
         return evaluate_in_expression<R>(static_cast<const InExpression&>(expression));
+      } else if (predicate_expression.predicate_condition == PredicateCondition::IsNull ||
+                 predicate_expression.predicate_condition == PredicateCondition::IsNotNull) {
+        return evaluate_is_null_expression<R>(static_cast<const IsNullExpression&>(expression));
       } else {
         Fail("Unsupported Predicate Expression");
       }
@@ -170,6 +174,32 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_binary_
 
 template<typename R>
 std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_binary_predicate_expression(const BinaryPredicateExpression& expression) {
+  Fail("Can only evaluate predicates to int32_t (aka bool)");
+}
+
+template<>
+std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_is_null_expression<int32_t>(const IsNullExpression& expression) {
+  std::vector<int32_t> result_values;
+
+  resolve_to_expression_result_view(*expression.operand(), [&](const auto& view) {
+    result_values.resize(view.size());
+
+    if (expression.predicate_condition == PredicateCondition::IsNull) {
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < view.size(); ++chunk_offset) {
+        result_values[chunk_offset] = view.null(chunk_offset);
+      }
+    } else {
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < view.size(); ++chunk_offset) {
+        result_values[chunk_offset] = !view.null(chunk_offset);
+      }
+    }
+  });
+
+  return std::make_shared<ExpressionResult<int32_t>>(std::move(result_values));
+}
+
+template<typename T>
+std::shared_ptr<ExpressionResult<T>> ExpressionEvaluator::evaluate_is_null_expression(const IsNullExpression& expression) {
   Fail("Can only evaluate predicates to int32_t (aka bool)");
 }
 

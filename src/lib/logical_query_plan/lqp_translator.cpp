@@ -177,6 +177,12 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
                                                      *between_expression->upper_bound());
     return upper_bound_op;
 
+  } else if (const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(predicate_node->predicate); is_null_expression) {
+    return _translate_predicate(*input_node,
+                                input_operator,
+                                *is_null_expression->operand(),
+                                binary_predicate_expression->predicate_condition);
+
   } else if (const auto array_expression = std::dynamic_pointer_cast<ArrayExpression>(predicate_node->predicate); array_expression) {
     Fail("TableScan doesn't support IN yet");
   }

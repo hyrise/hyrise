@@ -23,6 +23,7 @@ class ExistsExpression;
 class ExtractExpression;
 class FunctionExpression;
 class InExpression;
+class IsNullExpression;
 class PQPSelectExpression;
 
 class ExpressionEvaluator final {
@@ -46,6 +47,9 @@ class ExpressionEvaluator final {
 
   template<typename T>
   std::shared_ptr<ExpressionResult<T>> evaluate_binary_predicate_expression(const BinaryPredicateExpression& expression);
+
+  template<typename T>
+  std::shared_ptr<ExpressionResult<T>> evaluate_is_null_expression(const IsNullExpression& expression);
 
   template<typename T>
   std::shared_ptr<ExpressionResult<T>> evaluate_in_expression(const InExpression& in_expression);

@@ -19,7 +19,9 @@ AbstractSelectExpression(referenced_external_expressions), lqp(lqp) {
 }
 
 std::shared_ptr<AbstractExpression> LQPSelectExpression::deep_copy() const {
-  return std::make_shared<LQPSelectExpression>(lqp->deep_copy(), expressions_copy(referenced_external_expressions()));
+  const auto lqp_copy = lqp->deep_copy();
+
+  return std::make_shared<LQPSelectExpression>(lqp_copy, expressions_copy(referenced_external_expressions()));
 }
 
 std::string LQPSelectExpression::as_column_name() const {

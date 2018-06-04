@@ -101,7 +101,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /** @} */
 
   /**
-   * @param extern_node_mapping     if the LQP contains ExternalExpressions, a mapping for the nodes used by them needs
+   * @param extern_node_mapping     if the LQP contains external expressions, a mapping for the nodes used by them needs
    *                                to be provided
    * @return                        A deep copy of the LQP this Node is the root of
    */

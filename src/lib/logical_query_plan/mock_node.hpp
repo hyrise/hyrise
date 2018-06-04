@@ -6,6 +6,7 @@
 #include "boost/variant.hpp"
 
 #include "abstract_lqp_node.hpp"
+#include "lqp_column_reference.hpp"
 #include "all_type_variant.hpp"
 
 namespace opossum {
@@ -23,8 +24,10 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
  public:
   using ColumnDefinitions = std::vector<std::pair<DataType, std::string>>;
 
-  explicit MockNode(const ColumnDefinitions& column_definitions);
+  explicit MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& name = {});
 //  explicit MockNode(const std::shared_ptr<TableStatistics>& statistics);
+
+  LQPColumnReference get_column(const std::string& name) const;
 
   const ColumnDefinitions& column_definitions() const;
   const boost::variant<ColumnDefinitions, std::shared_ptr<TableStatistics>>& constructor_arguments() const;
@@ -38,6 +41,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   bool _shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const override;
 
  private:
+  std::optional<std::string> _name;
   mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _output_column_expressions;
 
   // Constructor args to keep around for deep_copy()

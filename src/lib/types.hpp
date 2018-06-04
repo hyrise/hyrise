@@ -204,6 +204,7 @@ bool is_lexicographical_predicate_condition(const PredicateCondition predicate_c
 bool is_ternary_predicate_condition(const PredicateCondition predicate_condition);
 
 PredicateCondition flip_predicate_condition(const PredicateCondition predicate_condition);
+PredicateCondition inverse_predicate_condition(const PredicateCondition predicate_condition);
 
 enum class JoinMode { Inner, Left, Right, Outer, Cross, Semi, Anti };
 

@@ -1,11 +1,16 @@
 #include "is_null_expression.hpp"
 
+#include <sstream>
+
 #include "utils/assert.hpp"
 
 namespace opossum {
 
 IsNullExpression::IsNullExpression(const PredicateCondition predicate_condition, const std::shared_ptr<AbstractExpression>& operand):
-  AbstractPredicateExpression(predicate_condition, {operand}) {}
+  AbstractPredicateExpression(predicate_condition, {operand}) {
+  Assert(predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull,
+  "IsNullExpression only supports PredicateCondition::IsNull and PredicateCondition::IsNotNull")
+}
 
 const std::shared_ptr<AbstractExpression>& IsNullExpression::operand() const {
   return arguments[0];
@@ -16,8 +21,15 @@ std::shared_ptr<AbstractExpression> IsNullExpression::deep_copy() const {
 }
 
 std::string IsNullExpression::as_column_name() const {
-  Fail("Notyetimpleented");
-  return "";
+  std::stringstream stream;
+
+  if (predicate_condition == PredicateCondition::IsNull) {
+    stream << operand()->as_column_name() << " IS NULL";
+  } else {
+    stream << operand()->as_column_name() << " IS NOT NULL";
+  }
+
+  return stream.str();
 }
 
 }  // namespace opossum

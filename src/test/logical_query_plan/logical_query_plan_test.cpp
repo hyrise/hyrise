@@ -1,12 +1,18 @@
 #include "gtest/gtest.h"
 
+#include "expression/expression_factory.hpp"
 #include "expression/lqp_column_expression.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/mock_node.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
 #include "testing_assert.hpp"
+
+using namespace opossum::expression_factory;
 
 namespace opossum {
 
@@ -70,6 +76,40 @@ TEST_F(LogicalQueryPlanTest, DeepCopyBasics) {
   EXPECT_EQ(copied_expression_a->column_reference.original_node(), copied_stored_table_node);
   EXPECT_EQ(copied_expression_b->column_reference.original_node(), copied_stored_table_node);
 }
+
+//TEST_F(LogicalQueryPlanTest, DeepCopySubSelects) {
+//  /**
+//   * Test that ExternalExpressions in nested SubSelects are adjusted to point to expressions in the new LQP.
+//   */
+
+//  const auto mock_node_a = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "a"}, {DataType::Int, "b"}}}, "a");
+//  const auto mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "u"}, {DataType::Int, "v"}}}, "b");
+//  const auto mock_node_c = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}, {DataType::Int, "y"}}}, "c");
+
+//  const auto a = mock_node_a->get_column("a");
+//  const auto b = mock_node_a->get_column("b");
+//  const auto u = mock_node_b->get_column("u");
+//  const auto v = mock_node_b->get_column("v");
+//  const auto x = mock_node_c->get_column("x");
+//  const auto y = mock_node_c->get_column("y");
+
+//  // clang-format off
+//  const auto lqp_c = AggregateNode::make(expression_vector(), expression_vector(min(add(add(x, a), v))), mock_node_c);
+
+//  const auto lqp_b =
+//  AggregateNode::make(expression_vector(), expression_vector(max(add(select(lqp_c, a, v), b))),
+//    ProjectionNode::make(expression_vector(add(select(lqp_c, a, v), b)),
+//      mock_node_b
+//  ));
+
+//  const auto lqp_a = ProjectionNode::make(expression_vector(select(lqp_b, a, b)), mock_node_a);
+//  // clang-format on
+
+
+//  const auto copied_lqp_a = lqp_a->deep_copy();
+
+//  EXPECT_LQP_EQ(lqp_a, copied_lqp_a);
+//}
 
 }  // namespace opossum
 
