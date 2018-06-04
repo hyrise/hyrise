@@ -13,15 +13,25 @@
 namespace opossum {
 
 LQPSelectExpression::LQPSelectExpression(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                         const std::vector<std::shared_ptr<AbstractExpression>>& referenced_external_expressions):
-AbstractSelectExpression(referenced_external_expressions), lqp(lqp) {
+                                         const std::vector<std::pair<ValuePlaceholder, std::shared_ptr<AbstractExpression>>>& referenced_external_expressions):
+ lqp(lqp), referenced_external_expressions(referenced_external_expressions) {
 
 }
 
 std::shared_ptr<AbstractExpression> LQPSelectExpression::deep_copy() const {
   const auto lqp_copy = lqp->deep_copy();
 
-  return std::make_shared<LQPSelectExpression>(lqp_copy, expressions_copy(referenced_external_expressions()));
+  std::vector<std::pair<ValuePlaceholder, std::shared_ptr<AbstractExpression>>> copied_referenced_external_expressions;
+  copied_referenced_external_expressions.reserve(referenced_external_expressions.size());
+
+  for (const auto& referenced_external_expression : referenced_external_expressions) {
+    copied_referenced_external_expressions.emplace_back(
+      referenced_external_expression.first,
+      referenced_external_expression.second->deep_copy()
+    );
+  }
+
+  return std::make_shared<LQPSelectExpression>(lqp_copy, copied_referenced_external_expressions);
 }
 
 std::string LQPSelectExpression::as_column_name() const {
@@ -34,10 +44,6 @@ std::string LQPSelectExpression::as_column_name() const {
 DataType LQPSelectExpression::data_type() const {
   Assert(lqp->output_column_expressions().size() == 1, "Subselects must return one column");
   return lqp->output_column_expressions()[0]->data_type();
-}
-
-const std::vector<std::shared_ptr<AbstractExpression>>& LQPSelectExpression::referenced_external_expressions() const {
-  return arguments;
 }
 
 bool LQPSelectExpression::_shallow_equals(const AbstractExpression& expression) const {

@@ -106,8 +106,10 @@ extern ternary<CaseExpression> case_;
 
 template<typename ... Args>
 std::shared_ptr<AbstractExpression> select(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                           Args &&... referenced_external_expressions) {
-  return std::make_shared<LQPSelectExpression>(lqp, std::vector<std::shared_ptr<AbstractExpression>>{to_expression(referenced_external_expressions)...});
+                                           Args &&... value_placeholder_expression_pairs) {
+  return std::make_shared<LQPSelectExpression>(
+    lqp,
+    std::vector<std::pair<ValuePlaceholder, std::shared_ptr<AbstractExpression>>>{{std::make_pair(value_placeholder_expression_pairs.first, to_expression(value_placeholder_expression_pairs.second))...}});
 }
 
 template<typename E>

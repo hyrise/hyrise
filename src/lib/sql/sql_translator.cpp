@@ -1076,8 +1076,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
 
       auto sub_select_translator = SQLTranslator{_use_mvcc, sql_identifier_proxy};
       const auto sub_select_lqp = sub_select_translator.translate_select_statement(*expr.select);
-
-      return std::make_shared<LQPSelectExpression>(sub_select_lqp, sql_identifier_proxy->accessed_expressions());
+      Fail("Reactivate!!");
+//      return std::make_shared<LQPSelectExpression>(sub_select_lqp, sql_identifier_proxy->accessed_expressions());
     }
 
     case hsql::kExprArray:

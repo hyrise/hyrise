@@ -761,6 +761,40 @@ TEST_F(SQLTranslatorTest, Extract) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, ValuePlaceholders) {
+  const auto actual_lqp = compile_query("SELECT a + ?, ? FROM int_float WHERE a > ?");
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(add(int_float_a, value_placeholder(0)), value_placeholder(1)),
+    PredicateNode::make(greater_than(int_float_a, value_placeholder(2)),
+      stored_table_node_int_float
+  ));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, ValuePlaceholdersAndCorelatedSubSelect) {
+  const auto actual_lqp = compile_query("SELECT ?, (SELECT MIN(b) + int_float.a FROM int_float2) WHERE a > ? FROM int_float");
+
+  // clang-format off
+  const auto expected_sub_select_lqp =
+  ProjectionNode::make(expression_vector(add(min(int_float2_b), external(int_float_a, 1))),
+    AggregateNode::make(expression_vector(), expression_vector(min(int_float2_b)),
+      stored_table_node_int_float2
+  ));
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(value_placeholder(0u), select(expected_sub_select_lqp, std::make_pair(ValuePlaceholder{1}, int_float_a))),
+    PredicateNode::make(greater_than(int_float_a, value_placeholder(2u)),
+      stored_table_node_int_float
+  ));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 // Test parsing the TPCH queries for a bit of stress testing
 class SQLTranslatorTestTPCH : public ::testing::Test {
  public:

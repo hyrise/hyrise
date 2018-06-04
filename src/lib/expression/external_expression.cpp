@@ -14,10 +14,6 @@ AbstractExpression(ExpressionType::External, {}), value_placeholder(value_placeh
 
 }
 
-const std::shared_ptr<AbstractExpression>& ExternalExpression::referenced_expression() const {
-  return arguments[0];
-}
-
 std::shared_ptr<AbstractExpression> ExternalExpression::deep_copy() const  {
   return std::make_shared<ExternalExpression>(value_placeholder, _data_type, _nullable, _column_name);
 }
