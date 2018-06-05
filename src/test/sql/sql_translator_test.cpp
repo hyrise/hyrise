@@ -1102,8 +1102,7 @@ TEST_F(SQLTranslatorTest, CreateView) {
 }
 
 TEST_F(SQLTranslatorTest, CreateAliasView) {
-  const auto query = "CREATE VIEW my_second_view (c, d) AS SELECT * FROM int_float WHERE a = 'b';";
-  auto result_node = compile_query(query);
+  const auto actual_lqp = compile_query("CREATE VIEW my_second_view (c, d) AS SELECT * FROM int_float WHERE a = 'b';");
 
   // clang-format off
   const auto aliases = std::vector<std::string>({"c", "d"});
@@ -1112,9 +1111,9 @@ TEST_F(SQLTranslatorTest, CreateAliasView) {
     PredicateNode::make(equals(int_float_a, "b"), stored_table_node_int_float));
   // clang-format on
 
-  const auto lqp = std::make_shared<CreateViewNode>("my_second_view", view_node);
+  const auto expected_lqp = std::make_shared<CreateViewNode>("my_second_view", view_node);
 
-  EXPECT_LQP_EQ(result_node, lqp);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, DropView) {

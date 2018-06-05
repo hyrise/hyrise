@@ -159,15 +159,15 @@ SELECT a, b, AVG(b) FROM mixed GROUP BY a, b HAVING MAX(c) > 10 AND MAX(c) <= 30
 --INSERT INTO mixed_null (b, c, a, d) SELECT b, c, a, d FROM mixed WHERE id < 13; SELECT * FROM mixed_null;
 --
 --
----- VIEWS disabled because of #367
---CREATE VIEW count_view1 AS SELECT a, COUNT(DISTINCT b) FROM id_int_int_int_100 GROUP BY a; SELECT * FROM count_view1;
---CREATE VIEW count_view2 AS SELECT a, COUNT(DISTINCT b) FROM id_int_int_int_100 GROUP BY a; SELECT * FROM count_view2 WHERE a > 10;
---CREATE VIEW count_view3 (foo, bar) AS SELECT a, COUNT(DISTINCT b) FROM id_int_int_int_100 GROUP BY a; SELECT * FROM count_view3 WHERE foo > 10;
---
----- NULL Semantics
---SELECT * FROM mixed WHERE b IS NOT NULL;
---SELECT * FROM mixed_null WHERE b IS NULL;
---SELECT * FROM mixed_null WHERE b IS NOT NULL;
+-- VIEWS disabled because of #367
+CREATE VIEW count_view1 AS SELECT a, COUNT(DISTINCT b) FROM id_int_int_int_100 GROUP BY a; SELECT * FROM count_view1;
+CREATE VIEW count_view2 AS SELECT a, COUNT(DISTINCT b) FROM id_int_int_int_100 GROUP BY a; SELECT * FROM count_view2 WHERE a > 10;
+CREATE VIEW count_view3 (foo, bar) AS SELECT a, COUNT(DISTINCT b) FROM id_int_int_int_100 GROUP BY a; SELECT * FROM count_view3 WHERE foo > 10;
+
+-- NULL Semantics
+SELECT * FROM mixed WHERE b IS NOT NULL;
+SELECT * FROM mixed_null WHERE b IS NULL;
+SELECT * FROM mixed_null WHERE b IS NOT NULL;
 
 -- Subqueries in SELECT statement
 SELECT a, (SELECT MAX(b) FROM mixed) AS foo FROM id_int_int_int_100;

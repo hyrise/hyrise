@@ -8,9 +8,9 @@
 #include "abstract_lqp_node.hpp"
 #include "aggregate_node.hpp"
 //#include "constant_mappings.hpp"
-//#include "create_view_node.hpp"
+#include "create_view_node.hpp"
 //#include "delete_node.hpp"
-//#include "drop_view_node.hpp"
+#include "drop_view_node.hpp"
 #include "dummy_table_node.hpp"
 #include "expression/array_expression.hpp"
 #include "expression/abstract_expression.hpp"
@@ -37,8 +37,8 @@
 #include "operators/join_hash.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
-//#include "operators/maintenance/create_view.hpp"
-//#include "operators/maintenance/drop_view.hpp"
+#include "operators/maintenance/create_view.hpp"
+#include "operators/maintenance/drop_view.hpp"
 //#include "operators/maintenance/show_columns.hpp"
 //#include "operators/maintenance/show_tables.hpp"
 //#include "operators/pqp_expression.hpp"
@@ -98,43 +98,34 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
 LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
   switch (type) {
+    // clang-format off
     case LQPNodeType::Alias:        return _translate_alias_node(node);
-    case LQPNodeType::StoredTable:
-      return _translate_stored_table_node(node);
-    case LQPNodeType::Predicate:
-      return _translate_predicate_node(node);
-    case LQPNodeType::Projection:
-      return _translate_projection_node(node);
-    case LQPNodeType::Sort:
-      return _translate_sort_node(node);
-    case LQPNodeType::Join:
-      return _translate_join_node(node);
-    case LQPNodeType::Aggregate:
-      return _translate_aggregate_node(node);
-    case LQPNodeType::Limit:
-      return _translate_limit_node(node);
+    case LQPNodeType::StoredTable:  return _translate_stored_table_node(node);
+    case LQPNodeType::Predicate:    return _translate_predicate_node(node);
+    case LQPNodeType::Projection:   return _translate_projection_node(node);
+    case LQPNodeType::Sort:         return _translate_sort_node(node);
+    case LQPNodeType::Join:         return _translate_join_node(node);
+    case LQPNodeType::Aggregate:    return _translate_aggregate_node(node);
+    case LQPNodeType::Limit:        return _translate_limit_node(node);
 //    case LQPNodeType::Insert:
 //      return _translate_insert_node(node);
 //    case LQPNodeType::Delete:
 //      return _translate_delete_node(node);
-    case LQPNodeType::DummyTable:
-      return _translate_dummy_table_node(node);
+    case LQPNodeType::DummyTable:  return _translate_dummy_table_node(node);
 //    case LQPNodeType::Update:
 //      return _translate_update_node(node);
 //    case LQPNodeType::Validate:
 //      return _translate_validate_node(node);
-    case LQPNodeType::Union:
-      return _translate_union_node(node);
+    case LQPNodeType::Union:       return _translate_union_node(node);
 
 //      // Maintenance operators
 //    case LQPNodeType::ShowTables:
 //      return _translate_show_tables_node(node);
 //    case LQPNodeType::ShowColumns:
 //      return _translate_show_columns_node(node);
-//    case LQPNodeType::CreateView:
-//      return _translate_create_view_node(node);
-//    case LQPNodeType::DropView:
-//      return _translate_drop_view_node(node);
+    case LQPNodeType::CreateView:  return _translate_create_view_node(node);
+    case LQPNodeType::DropView:    return _translate_drop_view_node(node);
+    // clang-format on
 
     default:
       Fail("Unknown node type encountered.");
@@ -491,19 +482,19 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
 //  const auto show_columns_node = std::dynamic_pointer_cast<ShowColumnsNode>(node);
 //  return std::make_shared<ShowColumns>(show_columns_node->table_name());
 //}
-//
-//std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_view_node(
-//    const std::shared_ptr<AbstractLQPNode>& node) const {
-//  const auto create_view_node = std::dynamic_pointer_cast<CreateViewNode>(node);
-//  return std::make_shared<CreateView>(create_view_node->view_name(), create_view_node->lqp());
-//}
-//
-//std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_view_node(
-//    const std::shared_ptr<AbstractLQPNode>& node) const {
-//  const auto drop_view_node = std::dynamic_pointer_cast<DropViewNode>(node);
-//  return std::make_shared<DropView>(drop_view_node->view_name());
-//}
-//
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_view_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto create_view_node = std::dynamic_pointer_cast<CreateViewNode>(node);
+  return std::make_shared<CreateView>(create_view_node->view_name(), create_view_node->lqp());
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_view_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto drop_view_node = std::dynamic_pointer_cast<DropViewNode>(node);
+  return std::make_shared<DropView>(drop_view_node->view_name());
+}
+
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_dummy_table_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   return std::make_shared<TableWrapper>(Projection::dummy_table());

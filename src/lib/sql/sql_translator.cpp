@@ -379,7 +379,6 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
         }
 
       } else if (StorageManager::get().has_view(hsql_table_ref.name)) {
-        Fail("Views not supported yet");
         lqp = StorageManager::get().get_view(hsql_table_ref.name);
         // TODO(moritz) enable this again
         //   Assert(!_validate || lqp->subplan_is_validated(), "Trying to add non-validated view to validated query");
@@ -778,7 +777,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::Cr
                "Number of Columns in CREATE VIEW does not match SELECT statement");
 
         std::vector<std::string> aliases(create_statement.viewColumns->begin(), create_statement.viewColumns->end());
-        view = AliasNode::make(view->output_column_expressions(), aliases);
+        view = AliasNode::make(view->output_column_expressions(), aliases, view);
       }
 
       return std::make_shared<CreateViewNode>(create_statement.tableName, view);

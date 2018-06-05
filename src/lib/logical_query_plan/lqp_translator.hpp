@@ -52,8 +52,8 @@ class LQPTranslator final {
       const std::vector<std::shared_ptr<AbstractExpression>>& lqp_expressions,
       const std::shared_ptr<AbstractLQPNode>& node) const;
 
-//  std::shared_ptr<AbstractOperator> _translate_create_view_node(const std::shared_ptr<AbstractLQPNode>& node) const;
-//  std::shared_ptr<AbstractOperator> _translate_drop_view_node(const std::shared_ptr<AbstractLQPNode>& node) const;
+  std::shared_ptr<AbstractOperator> _translate_create_view_node(const std::shared_ptr<AbstractLQPNode>& node) const;
+  std::shared_ptr<AbstractOperator> _translate_drop_view_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 
   static std::shared_ptr<AbstractOperator> _translate_binary_predicate(const AbstractLQPNode& input_node,
                                                                 const std::shared_ptr<AbstractOperator>& input_operator,
