@@ -11,6 +11,8 @@
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/create_view_node.hpp"
+#include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
@@ -776,7 +778,7 @@ TEST_F(SQLTranslatorTest, ValuePlaceholders) {
 }
 
 TEST_F(SQLTranslatorTest, ValuePlaceholdersAndCorelatedSubSelect) {
-  const auto actual_lqp = compile_query("SELECT ?, (SELECT MIN(b) + int_float.a FROM int_float2) WHERE a > ? FROM int_float");
+  const auto actual_lqp = compile_query("SELECT ?, (SELECT MIN(b) + int_float.a FROM int_float2) FROM int_float WHERE a > ?");
 
   // clang-format off
   const auto expected_sub_select_lqp =
@@ -1088,47 +1090,42 @@ TEST_F(SQLTranslatorTestTPCH, Query01) {
 //}
 //
 //
-//TEST_F(SQLTranslatorTest, CreateView) {
-//  const auto query = "CREATE VIEW my_first_view AS SELECT * FROM table_a WHERE a = 'b';";
-//  const auto result_node = compile_query(query);
-//
-//  const auto view_node = ProjectionNode::make_pass_through(
-//      PredicateNode::make(_table_a_a, PredicateCondition::Equals, "b", _stored_table_node_a));
-//
-//  const auto lqp = std::make_shared<CreateViewNode>("my_first_view", view_node);
-//
-//  EXPECT_LQP_EQ(lqp, result_node);
-//}
-//
-//TEST_F(SQLTranslatorTest, CreateAliasView) {
-//  const auto query = "CREATE VIEW my_second_view (c, d) AS SELECT * FROM table_a WHERE a = 'b';";
-//  auto result_node = compile_query(query);
-//
-//  const auto alias_c = LQPExpression::create_column(_table_a_a, "c");
-//  const auto alias_d = LQPExpression::create_column(_table_a_b, "d");
-//
-//  // clang-format off
-//  const auto view_node =
-//  ProjectionNode::make(std::vector<std::shared_ptr<LQPExpression>>{alias_c, alias_d},
-//    ProjectionNode::make_pass_through(
-//      PredicateNode::make(_table_a_a, PredicateCondition::Equals, "b",
-//        _stored_table_node_a)));
-//  // clang-format on
-//
-//  const auto lqp = std::make_shared<CreateViewNode>("my_second_view", view_node);
-//
-//  EXPECT_LQP_EQ(lqp, result_node);
-//}
-//
-//TEST_F(SQLTranslatorTest, DropView) {
-//  const auto query = "DROP VIEW my_third_view";
-//  auto result_node = compile_query(query);
-//
-//  const auto lqp = DropViewNode::make("my_third_view");
-//
-//  EXPECT_LQP_EQ(lqp, result_node);
-//}
-//
+TEST_F(SQLTranslatorTest, CreateView) {
+  const auto query = "CREATE VIEW my_first_view AS SELECT * FROM int_float WHERE a = 'b';";
+  const auto result_node = compile_query(query);
+
+  const auto view_node = PredicateNode::make(equals(int_float_a, "b"), stored_table_node_int_float);
+
+  const auto lqp = std::make_shared<CreateViewNode>("my_first_view", view_node);
+
+  EXPECT_LQP_EQ(lqp, result_node);
+}
+
+TEST_F(SQLTranslatorTest, CreateAliasView) {
+  const auto query = "CREATE VIEW my_second_view (c, d) AS SELECT * FROM int_float WHERE a = 'b';";
+  auto result_node = compile_query(query);
+
+  // clang-format off
+  const auto aliases = std::vector<std::string>({"c", "d"});
+  const auto view_node =
+  AliasNode::make(expression_vector(int_float_a, int_float_b), aliases,
+    PredicateNode::make(equals(int_float_a, "b"), stored_table_node_int_float));
+  // clang-format on
+
+  const auto lqp = std::make_shared<CreateViewNode>("my_second_view", view_node);
+
+  EXPECT_LQP_EQ(result_node, lqp);
+}
+
+TEST_F(SQLTranslatorTest, DropView) {
+  const auto query = "DROP VIEW my_third_view";
+  auto result_node = compile_query(query);
+
+  const auto lqp = DropViewNode::make("my_third_view");
+
+  EXPECT_LQP_EQ(lqp, result_node);
+}
+
 //TEST_F(SQLTranslatorTest, AccessInvalidColumn) {
 //  const auto query = "SELECT * FROM table_a WHERE invalidname = 0;";
 //  EXPECT_THROW(compile_query(query), std::runtime_error);

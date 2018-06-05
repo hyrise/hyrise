@@ -87,10 +87,10 @@ class SQLTranslator final {
 //  std::shared_ptr<AbstractLQPNode> _translate_delete(const hsql::DeleteStatement& del);
 //
 //  std::shared_ptr<AbstractLQPNode> _translate_update(const hsql::UpdateStatement& update);
-//
-//  std::shared_ptr<AbstractLQPNode> _translate_create(const hsql::CreateStatement& update);
-//
-//  std::shared_ptr<AbstractLQPNode> _translate_drop(const hsql::DropStatement& update);
+
+  std::shared_ptr<AbstractLQPNode> _translate_create(const hsql::CreateStatement& create_statement);
+
+  std::shared_ptr<AbstractLQPNode> _translate_drop(const hsql::DropStatement& update_statement);
 //
 //  /**
 //   * Translate column renamings such as

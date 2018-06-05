@@ -76,8 +76,8 @@ set(
     import_export/csv_meta.hpp
     import_export/csv_parser.cpp
     import_export/csv_parser.hpp
-#    import_export/csv_writer.cpp
-#    import_export/csv_writer.hpp
+    import_export/csv_writer.cpp
+    import_export/csv_writer.hpp
 #    cost_model/abstract_cost_feature_proxy.cpp
 #    cost_model/abstract_cost_feature_proxy.hpp
 #    cost_model/abstract_cost_model.cpp
@@ -97,12 +97,12 @@ set(
     logical_query_plan/alias_node.hpp
     logical_query_plan/aggregate_node.cpp
     logical_query_plan/aggregate_node.hpp
-#    logical_query_plan/create_view_node.cpp
-#    logical_query_plan/create_view_node.hpp
+    logical_query_plan/create_view_node.cpp
+    logical_query_plan/create_view_node.hpp
 #    logical_query_plan/delete_node.cpp
 #    logical_query_plan/delete_node.hpp
-#    logical_query_plan/drop_view_node.cpp
-#    logical_query_plan/drop_view_node.hpp
+    logical_query_plan/drop_view_node.cpp
+    logical_query_plan/drop_view_node.hpp
     logical_query_plan/dummy_table_node.cpp
     logical_query_plan/dummy_table_node.hpp
     logical_query_plan/enable_make_for_lqp_node.hpp
@@ -159,10 +159,10 @@ set(
 #    operators/delete.hpp
 #    operators/difference.cpp
 #    operators/difference.hpp
-#    operators/export_binary.cpp
-#    operators/export_binary.hpp
-#    operators/export_csv.cpp
-#    operators/export_csv.hpp
+    operators/export_binary.cpp
+    operators/export_binary.hpp
+    operators/export_csv.cpp
+    operators/export_csv.hpp
     operators/get_table.cpp
     operators/get_table.hpp
 #    operators/import_binary.cpp
@@ -189,14 +189,14 @@ set(
     operators/join_sort_merge/radix_cluster_sort.hpp
     operators/limit.cpp
     operators/limit.hpp
-#    operators/maintenance/create_view.cpp
-#    operators/maintenance/create_view.hpp
-#    operators/maintenance/drop_view.cpp
-#    operators/maintenance/drop_view.hpp
-#    operators/maintenance/show_columns.cpp
-#    operators/maintenance/show_columns.hpp
-#    operators/maintenance/show_tables.cpp
-#    operators/maintenance/show_tables.hpp
+    operators/maintenance/create_view.cpp
+    operators/maintenance/create_view.hpp
+    operators/maintenance/drop_view.cpp
+    operators/maintenance/drop_view.hpp
+    operators/maintenance/show_columns.cpp
+    operators/maintenance/show_columns.hpp
+    operators/maintenance/show_tables.cpp
+    operators/maintenance/show_tables.hpp
     operators/print.cpp
     operators/print.hpp
     operators/product.cpp
