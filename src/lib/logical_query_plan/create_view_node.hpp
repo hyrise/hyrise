@@ -4,6 +4,7 @@
 
 #include "abstract_lqp_node.hpp"
 #include "enable_make_for_lqp_node.hpp"
+#include "storage/view.hpp"
 
 namespace opossum {
 
@@ -12,12 +13,12 @@ namespace opossum {
  */
 class CreateViewNode : public AbstractLQPNode {
  public:
-  explicit CreateViewNode(const std::string& view_name, const std::shared_ptr<AbstractLQPNode>& lqp);
+  CreateViewNode(const std::string& view_name, const View& view);
 
   std::string description() const override;
 
   std::string view_name() const;
-  std::shared_ptr<AbstractLQPNode> lqp() const;
+  const View& view() const;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _shallow_copy_impl(LQPNodeMapping & node_mapping) const override;
@@ -25,7 +26,7 @@ class CreateViewNode : public AbstractLQPNode {
 
  private:
   const std::string _view_name;
-  const std::shared_ptr<AbstractLQPNode> _lqp;
+  const View _view;
 };
 
 }  // namespace opossum

@@ -50,6 +50,7 @@
 //#include "sql/hsql_expr_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+#include "storage/view.hpp"
 //#include "types.hpp"
 //#include "util/sqlhelper.h"
 //#include "utils/assert.hpp"
@@ -379,7 +380,18 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
         }
 
       } else if (StorageManager::get().has_view(hsql_table_ref.name)) {
-        lqp = StorageManager::get().get_view(hsql_table_ref.name);
+        const auto& view = StorageManager::get().get_view(hsql_table_ref.name);
+
+        for (auto column_id = ColumnID{0}; column_id < view.lqp->output_column_expressions().size(); ++column_id) {
+          const auto column_expression = view.lqp->output_column_expressions();
+
+          const auto column_name_iter = view.column_names.find(column_id);
+          if (column_name_iter != view.column_names.end()) {
+            sql_identifier_context->set_column_name(column_expression, column_name_iter->second);
+          }
+          sql_identifier_context->set_table_name(column_expression, hsql_table_ref.name);
+        }
+
         // TODO(moritz) enable this again
         //   Assert(!_validate || lqp->subplan_is_validated(), "Trying to add non-validated view to validated query");
       } else {
@@ -769,18 +781,31 @@ void SQLTranslator::_translate_limit(const hsql::LimitDescription& limit) {
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::CreateStatement& create_statement) {
   switch (create_statement.type) {
     case hsql::CreateType::kCreateView: {
-      auto view = translate_select_statement((const hsql::SelectStatement &) *create_statement.select);
+      auto lqp = translate_select_statement((const hsql::SelectStatement &) *create_statement.select);
+
+      std::unordered_map<ColumnID, std::string> column_names;
 
       if (create_statement.viewColumns) {
         // The CREATE VIEW statement has renamed the columns: CREATE VIEW myview (foo, bar) AS SELECT ...
-        Assert(create_statement.viewColumns->size() == view->output_column_expressions().size(),
+        Assert(create_statement.viewColumns->size() == lqp->output_column_expressions().size(),
                "Number of Columns in CREATE VIEW does not match SELECT statement");
 
         std::vector<std::string> aliases(create_statement.viewColumns->begin(), create_statement.viewColumns->end());
-        view = AliasNode::make(view->output_column_expressions(), aliases, view);
+        lqp = AliasNode::make(lqp->output_column_expressions(), aliases, lqp);
+
+        for (auto column_id = ColumnID{0}; column_id < aliases.size(); ++column_id) {
+          column_names.emplace(column_id, aliases[column_id]);
+        }
+      } else {
+        for (auto column_id = ColumnID{0}; column_id < lqp->output_column_expressions().size(); ++column_id) {
+          const auto identifier = _sql_identifier_context->get_expression_identifier(lqp->output_column_expressions()[column_id]);
+          if (identifier) {
+            column_names.emplace(column_id, identifier->column_name);
+          }
+        }
       }
 
-      return std::make_shared<CreateViewNode>(create_statement.tableName, view);
+      return std::make_shared<CreateViewNode>(create_statement.tableName, View{lqp, column_names});
     }
     default:
       Fail("hsql::CreateType is not supported.");

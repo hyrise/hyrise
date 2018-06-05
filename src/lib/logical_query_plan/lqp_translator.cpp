@@ -486,7 +486,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_view_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto create_view_node = std::dynamic_pointer_cast<CreateViewNode>(node);
-  return std::make_shared<CreateView>(create_view_node->view_name(), create_view_node->lqp());
+  return std::make_shared<CreateView>(create_view_node->view_name(), create_view_node->view());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_drop_view_node(

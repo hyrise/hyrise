@@ -417,6 +417,8 @@ set(
     storage/run_length_column.hpp
     storage/run_length_column/run_length_column_iterable.hpp
     storage/run_length_column/run_length_encoder.hpp
+    storage/view.cpp
+    storage/view.hpp
     storage/storage_manager.cpp
     storage/storage_manager.hpp
     storage/table_column_definition.cpp

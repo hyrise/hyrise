@@ -58,7 +58,8 @@ std::vector<std::string> StorageManager::table_names() const {
   return table_names;
 }
 
-void StorageManager::add_view(const std::string& name, std::shared_ptr<const AbstractLQPNode> view) {
+void StorageManager::add_view(const std::string& name,
+                              const std::shared_ptr<View>& view) {
   Assert(_tables.find(name) == _tables.end(),
          "Cannot add view " + name + " - a table with the same name already exists");
   Assert(_views.find(name) == _views.end(), "A view with the name " + name + " already exists");
@@ -71,11 +72,14 @@ void StorageManager::drop_view(const std::string& name) {
   Assert(num_deleted == 1, "Error deleting view " + name + ": _erase() returned " + std::to_string(num_deleted) + ".");
 }
 
-std::shared_ptr<AbstractLQPNode> StorageManager::get_view(const std::string& name) const {
+const View& StorageManager::get_view(const std::string& name) const {
   const auto iter = _views.find(name);
   Assert(iter != _views.end(), "No such view named '" + name + "'");
 
-  return iter->second->deep_copy();
+  auto view = iter->second;
+  view->lqp = view->lqp->deep_copy();
+
+  return view;
 }
 
 bool StorageManager::has_view(const std::string& name) const { return _views.count(name); }
