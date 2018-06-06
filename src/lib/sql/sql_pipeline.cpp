@@ -231,12 +231,12 @@ std::string SQLPipelineMetrics::to_string() const {
   std::vector<bool> query_plan_cache_hits;
 
   for (const auto& statement_metric : statement_metrics) {
-    total_translate_micros += statement_metric.get().translate_time_micros;
-    total_optimize_micros += statement_metric.get().optimize_time_micros;
-    total_compile_micros += statement_metric.get().compile_time_micros;
-    total_execute_micros += statement_metric.get().execution_time_micros;
+    total_translate_micros += statement_metric->translate_time_micros;
+    total_optimize_micros += statement_metric->optimize_time_micros;
+    total_compile_micros += statement_metric->compile_time_micros;
+    total_execute_micros += statement_metric->execution_time_micros;
 
-    query_plan_cache_hits.push_back(statement_metric.get().query_plan_cache_hit);
+    query_plan_cache_hits.push_back(statement_metric->query_plan_cache_hit);
   }
 
   const auto num_cache_hits = std::count(query_plan_cache_hits.begin(), query_plan_cache_hits.end(), true);

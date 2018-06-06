@@ -72,7 +72,7 @@ class SQLPipelineStatement : public Noncopyable {
   // This can be a nullptr if no transaction management is wanted.
   const std::shared_ptr<TransactionContext>& transaction_context() const;
 
-  const SQLPipelineStatementMetrics& metrics() const;
+  const std::shared_ptr<SQLPipelineStatementMetrics>& metrics() const;
 
   // Helper function to create a pretty print error message after an invalid SQL parse
   static std::string create_parse_error_message(const std::string& sql, const hsql::SQLParserResult& result);
@@ -102,7 +102,7 @@ class SQLPipelineStatement : public Noncopyable {
   // Assume there is an output table. Only change if nullptr is returned from execution.
   bool _query_has_output = true;
 
-  SQLPipelineStatementMetrics _execution_info{};
+  std::shared_ptr<SQLPipelineStatementMetrics> _metrics{};
 
   PreparedStatementCache _prepared_statements;
   // Number of placeholders in prepared statement; default 0 because we assume no prepared statement

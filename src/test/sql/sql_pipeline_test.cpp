@@ -276,10 +276,10 @@ TEST_F(SQLPipelineTest, GetQueryPlanTwice) {
 
   sql_pipeline.get_query_plans();
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
-  auto duration = metrics.statement_metrics[0].get().compile_time_micros;
+  auto duration = metrics.statement_metrics[0]->compile_time_micros;
 
   const auto& plans = sql_pipeline.get_query_plans();
-  auto duration2 = metrics.statement_metrics[0].get().compile_time_micros;
+  auto duration2 = metrics.statement_metrics[0]->compile_time_micros;
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
@@ -357,11 +357,11 @@ TEST_F(SQLPipelineTest, GetResultTableTwice) {
 
   sql_pipeline.get_result_table();
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
-  auto duration = metrics.statement_metrics[0].get().execution_time_micros;
+  auto duration = metrics.statement_metrics[0]->execution_time_micros;
 
   const auto& table = sql_pipeline.get_result_table();
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
-  auto duration2 = metrics.statement_metrics[0].get().execution_time_micros;
+  auto duration2 = metrics.statement_metrics[0]->execution_time_micros;
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
@@ -408,23 +408,23 @@ TEST_F(SQLPipelineTest, GetTimes) {
 
   const auto& metrics = sql_pipeline.metrics();
   ASSERT_EQ(metrics.statement_metrics.size(), 1u);
-  const auto& statement_metrics = metrics.statement_metrics[0].get();
+  const auto& statement_metrics = metrics.statement_metrics[0];
 
   const auto zero_duration = std::chrono::microseconds::zero();
 
-  EXPECT_EQ(statement_metrics.translate_time_micros, zero_duration);
-  EXPECT_EQ(statement_metrics.optimize_time_micros, zero_duration);
-  EXPECT_EQ(statement_metrics.compile_time_micros, zero_duration);
-  EXPECT_EQ(statement_metrics.execution_time_micros, zero_duration);
+  EXPECT_EQ(statement_metrics->translate_time_micros, zero_duration);
+  EXPECT_EQ(statement_metrics->optimize_time_micros, zero_duration);
+  EXPECT_EQ(statement_metrics->compile_time_micros, zero_duration);
+  EXPECT_EQ(statement_metrics->execution_time_micros, zero_duration);
 
   // Run to get times
   sql_pipeline.get_result_table();
 
   EXPECT_GT(metrics.parse_time_micros, zero_duration);
-  EXPECT_GT(statement_metrics.translate_time_micros, zero_duration);
-  EXPECT_GT(statement_metrics.optimize_time_micros, zero_duration);
-  EXPECT_GT(statement_metrics.compile_time_micros, zero_duration);
-  EXPECT_GT(statement_metrics.execution_time_micros, zero_duration);
+  EXPECT_GT(statement_metrics->translate_time_micros, zero_duration);
+  EXPECT_GT(statement_metrics->optimize_time_micros, zero_duration);
+  EXPECT_GT(statement_metrics->compile_time_micros, zero_duration);
+  EXPECT_GT(statement_metrics->execution_time_micros, zero_duration);
 }
 
 TEST_F(SQLPipelineTest, RequiresExecutionVariations) {
