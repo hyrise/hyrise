@@ -50,7 +50,7 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
 //#include "operators/update.hpp"
-//#include "operators/validate.hpp"
+#include "operators/validate.hpp"
 #include "alias_node.hpp"
 #include "predicate_node.hpp"
 #include "projection_node.hpp"
@@ -61,7 +61,7 @@
 #include "union_node.hpp"
 //#include "update_node.hpp"
 //#include "utils/performance_warning.hpp"
-//#include "validate_node.hpp"
+#include "validate_node.hpp"
 
 using namespace std::string_literals;
 
@@ -114,8 +114,8 @@ LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
     case LQPNodeType::DummyTable:  return _translate_dummy_table_node(node);
 //    case LQPNodeType::Update:
 //      return _translate_update_node(node);
-//    case LQPNodeType::Validate:
-//      return _translate_validate_node(node);
+    case LQPNodeType::Validate:
+      return _translate_validate_node(node);
     case LQPNodeType::Union:       return _translate_union_node(node);
 
 //      // Maintenance operators
@@ -463,13 +463,13 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
       return std::make_shared<UnionPositions>(input_operator_left, input_operator_right);
   }
 }
-//
-//std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
-//    const std::shared_ptr<AbstractLQPNode>& node) const {
-//  const auto input_operator = translate_node(node->left_input());
-//  return std::make_shared<Validate>(input_operator);
-//}
-//
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto input_operator = translate_node(node->left_input());
+  return std::make_shared<Validate>(input_operator);
+}
+
 //std::shared_ptr<AbstractOperator> LQPTranslator::_translate_show_tables_node(
 //    const std::shared_ptr<AbstractLQPNode>& node) const {
 //  DebugAssert(node->left_input() == nullptr, "ShowTables should not have an input operator.");

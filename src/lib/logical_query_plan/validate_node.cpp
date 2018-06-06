@@ -6,16 +6,13 @@ namespace opossum {
 
 ValidateNode::ValidateNode() : AbstractLQPNode(LQPNodeType::Validate) {}
 
-std::shared_ptr<AbstractLQPNode> ValidateNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-    const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
+std::string ValidateNode::description() const { return "[Validate]"; }
+
+std::shared_ptr<AbstractLQPNode> ValidateNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {
   return ValidateNode::make();
 }
 
-std::string ValidateNode::description() const { return "[Validate]"; }
-
-bool ValidateNode::shallow_equals(const AbstractLQPNode& rhs) const {
-  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+bool ValidateNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const {
   return true;
 }
 

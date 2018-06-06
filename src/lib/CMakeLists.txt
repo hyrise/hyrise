@@ -138,8 +138,8 @@ set(
     logical_query_plan/union_node.hpp
 #    logical_query_plan/update_node.cpp
 #    logical_query_plan/update_node.hpp
-#    logical_query_plan/validate_node.cpp
-#    logical_query_plan/validate_node.hpp
+    logical_query_plan/validate_node.cpp
+    logical_query_plan/validate_node.hpp
     null_value.hpp
     operators/abstract_join_operator.cpp
     operators/abstract_join_operator.hpp
@@ -226,8 +226,8 @@ set(
     operators/union_positions.hpp
 #    operators/update.cpp
 #    operators/update.hpp
-#    operators/validate.cpp
-#    operators/validate.hpp
+    operators/validate.cpp
+    operators/validate.hpp
     statistics/statistics_import_export.cpp
     statistics/statistics_import_export.hpp
     statistics/chunk_statistics/abstract_filter.hpp

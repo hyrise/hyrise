@@ -123,4 +123,13 @@ void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node) {
   }
 }
 
+bool lqp_is_validated(const std::shared_ptr<AbstractLQPNode>& lqp) {
+  if (!lqp) return true;
+  if (lqp->type == LQPNodeType::Validate) return true;
+
+  if (!lqp->left_input() && !lqp->right_input()) return false;
+
+  return lqp_is_validated(lqp->left_input()) && lqp_is_validated(lqp->right_input());
+}
+
 }  // namespace opossum

@@ -797,6 +797,14 @@ TEST_F(SQLTranslatorTest, ValuePlaceholdersAndCorelatedSubSelect) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, UseMvcc) {
+  const auto lqp_a = SQLTranslator{UseMvcc::No}.translate_sql("SELECT * FROM int_float, int_float2 WHERE int_float.a = int_float2.b").at(0);
+  const auto lqp_b = SQLTranslator{UseMvcc::Yes}.translate_sql("SELECT * FROM int_float, int_float2 WHERE int_float.a = int_float2.b").at(0);
+
+  EXPECT_FALSE(lqp_is_validated(lqp_a));
+  EXPECT_TRUE(lqp_is_validated(lqp_b));
+}
+
 // Test parsing the TPCH queries for a bit of stress testing
 class SQLTranslatorTestTPCH : public ::testing::Test {
  public:

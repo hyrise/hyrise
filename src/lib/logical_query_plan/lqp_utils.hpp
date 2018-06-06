@@ -29,4 +29,9 @@ void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node, con
 
 void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node);
 
+/**
+ * @return whether all paths to all leafs contain a Validate node - i.e. the LQP can be used in an MVCC aware context
+ */
+bool lqp_is_validated(const std::shared_ptr<AbstractLQPNode>& lqp);
+
 }  // namespace opossum

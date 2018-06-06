@@ -46,7 +46,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 //#include "logical_query_plan/update_node.hpp"
-//#include "logical_query_plan/validate_node.hpp"
+#include "logical_query_plan/validate_node.hpp"
 //#include "sql/hsql_expr_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -396,8 +396,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
           sql_identifier_context->set_table_name(column_expression, hsql_table_ref.name);
         }
 
-        // TODO(moritz) enable this again
-        //   Assert(!_validate || lqp->subplan_is_validated(), "Trying to add non-validated view to validated query");
+        Assert(_use_mvcc == UseMvcc::No || lqp_is_validated(view->lqp), "Can't use unvalidated View in validated Query");
       } else {
         Fail(std::string("Did not find a table or view with name ") + hsql_table_ref.name);
       }
@@ -823,11 +822,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::Drop
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(
     const std::shared_ptr<AbstractLQPNode>& input_node) {
-//  if (!_validate) return input_node;
-//
-//  auto validate_node = ValidateNode::make();
-//  validate_node->set_left_input(input_node);
-  return input_node;
+  if (_use_mvcc == UseMvcc::No) return input_node;
+
+  return ValidateNode::make(input_node);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(const std::shared_ptr<AbstractExpression> &expression,

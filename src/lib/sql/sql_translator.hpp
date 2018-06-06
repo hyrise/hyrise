@@ -91,16 +91,7 @@ class SQLTranslator final {
   std::shared_ptr<AbstractLQPNode> _translate_create(const hsql::CreateStatement& create_statement);
 
   std::shared_ptr<AbstractLQPNode> _translate_drop(const hsql::DropStatement& update_statement);
-//
-//  /**
-//   * Translate column renamings such as
-//   *    SELECT (<SUBSELECT>) (name_column_a, name_column_b) ....
-//   * OR
-//   *    SELECT ... FROM foo AS bar(name_column_a, name_column_b) ...
-//   */
-//  std::shared_ptr<AbstractLQPNode> _translate_column_renamings(const std::shared_ptr<AbstractLQPNode> &node,
-//                                                               const hsql::TableRef &table);
-//
+
   std::shared_ptr<AbstractLQPNode> _translate_predicate_expression(
   const std::shared_ptr<AbstractExpression> &expression, std::shared_ptr<AbstractLQPNode> current_node) const;
 //
