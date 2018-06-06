@@ -72,14 +72,11 @@ void StorageManager::drop_view(const std::string& name) {
   Assert(num_deleted == 1, "Error deleting view " + name + ": _erase() returned " + std::to_string(num_deleted) + ".");
 }
 
-const View& StorageManager::get_view(const std::string& name) const {
+std::shared_ptr<View> StorageManager::get_view(const std::string& name) const {
   const auto iter = _views.find(name);
   Assert(iter != _views.end(), "No such view named '" + name + "'");
 
-  auto view = iter->second;
-  view->lqp = view->lqp->deep_copy();
-
-  return view;
+  return iter->second->deep_copy();
 }
 
 bool StorageManager::has_view(const std::string& name) const { return _views.count(name); }

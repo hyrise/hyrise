@@ -43,7 +43,7 @@ class StorageManager : private Noncopyable {
   void drop_view(const std::string& name);
 
   // returns the view instance with the given name
-  const View& get_view(const std::string& name) const;
+  std::shared_ptr<View> get_view(const std::string& name) const;
 
   // returns whether the storage manager holds a table with the given name
   bool has_view(const std::string& name) const;
@@ -70,6 +70,6 @@ class StorageManager : private Noncopyable {
   StorageManager& operator=(StorageManager&&) = default;
 
   std::map<std::string, std::shared_ptr<Table>> _tables;
-  std::map<std::string, View> _views;
+  std::map<std::string, std::shared_ptr<View>> _views;
 };
 }  // namespace opossum

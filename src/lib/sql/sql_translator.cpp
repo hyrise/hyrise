@@ -380,13 +380,17 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
         }
 
       } else if (StorageManager::get().has_view(hsql_table_ref.name)) {
-        const auto& view = StorageManager::get().get_view(hsql_table_ref.name);
+        const auto view = StorageManager::get().get_view(hsql_table_ref.name);
+        lqp = view->lqp;
 
-        for (auto column_id = ColumnID{0}; column_id < view.lqp->output_column_expressions().size(); ++column_id) {
-          const auto column_expression = view.lqp->output_column_expressions();
+        /**
+         * Add all named columns from the view to the IdentifierContext
+         */
+        for (auto column_id = ColumnID{0}; column_id < view->lqp->output_column_expressions().size(); ++column_id) {
+          const auto column_expression = view->lqp->output_column_expressions()[column_id];
 
-          const auto column_name_iter = view.column_names.find(column_id);
-          if (column_name_iter != view.column_names.end()) {
+          const auto column_name_iter = view->column_names.find(column_id);
+          if (column_name_iter != view->column_names.end()) {
             sql_identifier_context->set_column_name(column_expression, column_name_iter->second);
           }
           sql_identifier_context->set_table_name(column_expression, hsql_table_ref.name);
@@ -790,11 +794,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::Cr
         Assert(create_statement.viewColumns->size() == lqp->output_column_expressions().size(),
                "Number of Columns in CREATE VIEW does not match SELECT statement");
 
-        std::vector<std::string> aliases(create_statement.viewColumns->begin(), create_statement.viewColumns->end());
-        lqp = AliasNode::make(lqp->output_column_expressions(), aliases, lqp);
-
-        for (auto column_id = ColumnID{0}; column_id < aliases.size(); ++column_id) {
-          column_names.emplace(column_id, aliases[column_id]);
+        for (auto column_id = ColumnID{0}; column_id < create_statement.viewColumns->size(); ++column_id) {
+          column_names.emplace(column_id, (*create_statement.viewColumns)[column_id]);
         }
       } else {
         for (auto column_id = ColumnID{0}; column_id < lqp->output_column_expressions().size(); ++column_id) {
@@ -805,7 +806,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::Cr
         }
       }
 
-      return std::make_shared<CreateViewNode>(create_statement.tableName, View{lqp, column_names});
+      return std::make_shared<CreateViewNode>(create_statement.tableName, std::make_shared<View>(lqp, column_names));
     }
     default:
       Fail("hsql::CreateType is not supported.");

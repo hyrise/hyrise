@@ -13,12 +13,12 @@ namespace opossum {
  */
 class CreateViewNode : public AbstractLQPNode {
  public:
-  CreateViewNode(const std::string& view_name, const View& view);
+  CreateViewNode(const std::string& view_name, const std::shared_ptr<View>& view);
 
   std::string description() const override;
 
   std::string view_name() const;
-  const View& view() const;
+  std::shared_ptr<View> view() const;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _shallow_copy_impl(LQPNodeMapping & node_mapping) const override;
@@ -26,7 +26,7 @@ class CreateViewNode : public AbstractLQPNode {
 
  private:
   const std::string _view_name;
-  const View _view;
+  const std::shared_ptr<View> _view;
 };
 
 }  // namespace opossum

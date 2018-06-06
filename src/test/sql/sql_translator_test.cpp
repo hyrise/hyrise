@@ -1091,12 +1091,28 @@ TEST_F(SQLTranslatorTestTPCH, Query01) {
 //
 //
 TEST_F(SQLTranslatorTest, CreateView) {
-  const auto query = "CREATE VIEW my_first_view AS SELECT * FROM int_float WHERE a = 'b';";
+  const auto query = "CREATE VIEW my_first_view AS SELECT a, b, a + b, a*b AS t FROM int_float WHERE a = 'b';";
   const auto result_node = compile_query(query);
 
-  const auto view_node = PredicateNode::make(equals(int_float_a, "b"), stored_table_node_int_float);
+  // clang-format off
+  const auto select_list_expressions = expression_vector(int_float_a, int_float_b, add(int_float_a, int_float_b), mul(int_float_a, int_float_b));  // NOLINT
 
-  const auto lqp = std::make_shared<CreateViewNode>("my_first_view", view_node);
+  const auto view_lqp =
+  AliasNode::make(select_list_expressions, std::vector<std::string>({"a", "b", "a + b", "t"}),
+    ProjectionNode::make(select_list_expressions,
+      PredicateNode::make(equals(int_float_a, "b"),
+        stored_table_node_int_float)));
+
+  const auto view_columns = std::unordered_map<ColumnID, std::string>({
+    {ColumnID{0}, "a"},
+    {ColumnID{1}, "b"},
+    {ColumnID{3}, "t"},
+  });
+  // clang-format on
+
+  const auto view = std::make_shared<View>(view_lqp, view_columns);
+
+  const auto lqp = std::make_shared<CreateViewNode>("my_first_view", view);
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -1105,13 +1121,17 @@ TEST_F(SQLTranslatorTest, CreateAliasView) {
   const auto actual_lqp = compile_query("CREATE VIEW my_second_view (c, d) AS SELECT * FROM int_float WHERE a = 'b';");
 
   // clang-format off
-  const auto aliases = std::vector<std::string>({"c", "d"});
-  const auto view_node =
-  AliasNode::make(expression_vector(int_float_a, int_float_b), aliases,
-    PredicateNode::make(equals(int_float_a, "b"), stored_table_node_int_float));
+  const auto view_columns = std::unordered_map<ColumnID, std::string>({
+    {ColumnID{0}, "c"},
+    {ColumnID{1}, "d"},
+  });
+
+  const auto view_lqp = PredicateNode::make(equals(int_float_a, "b"), stored_table_node_int_float);
   // clang-format on
 
-  const auto expected_lqp = std::make_shared<CreateViewNode>("my_second_view", view_node);
+  const auto view = std::make_shared<View>(view_lqp, view_columns);
+
+  const auto expected_lqp = std::make_shared<CreateViewNode>("my_second_view", view);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }

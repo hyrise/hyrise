@@ -14,6 +14,9 @@ class View {
   View(const std::shared_ptr<AbstractLQPNode>& lqp,
              const std::unordered_map<ColumnID, std::string>& column_names);
 
+  std::shared_ptr<View> deep_copy() const;
+  bool deep_equals(const View& other) const;
+
   const std::shared_ptr<AbstractLQPNode> lqp;
   const std::unordered_map<ColumnID, std::string> column_names;
 };
