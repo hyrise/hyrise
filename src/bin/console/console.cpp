@@ -876,8 +876,8 @@ int main(int argc, char** argv) {
     console.out(" build.\n\n");
   }
 
-  console.out("Running recovery.\n\n");
-  opossum::Recovery::getInstance().recover();
+  // console.out("Running recovery.\n\n");
+  // opossum::Recovery::getInstance().recover();
 
   // Set jmp_env to current program state in preparation for siglongjmp(2)
   // See comment on jmp_env for details

@@ -20,19 +20,18 @@ void AbstractLogger::flush() {
 }
 
 AbstractLogger::AbstractLogger(){
-  // std::string directory = "/Users/Dimitri/transaction_logs";
-  std::string path = Logger::directory + Logger::filename;
+  // std::string path = Logger::directory + Logger::filename;
 
-  // TODO: what if directory does not exists?
+  // // TODO: what if directory does not exists?
 
-  int oflags = O_WRONLY | O_APPEND | O_CREAT;
+  // int oflags = O_WRONLY | O_APPEND | O_CREAT;
 
-  // read and write rights needed, since default rights do not allow to reopen the file after restarting the db
-  mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+  // // read and write rights needed, since default rights do not allow to reopen the file after restarting the db
+  // mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 
-  _file_descriptor = open(path.c_str(), oflags, mode);
+  // _file_descriptor = open(path.c_str(), oflags, mode);
 
-  DebugAssert(_file_descriptor != -1, "Logfile could not be opened or created: " + path);
+  // DebugAssert(_file_descriptor != -1, "Logfile could not be opened or created: " + path);
 }
 
 }  // namespace opossum

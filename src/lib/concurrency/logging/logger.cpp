@@ -1,6 +1,7 @@
 #include "logger.hpp"
 #include "abstract_logger.hpp"
 #include "initial_logger.hpp"
+#include "group_commit_logger.hpp"
 
 #include <fcntl.h>
 #include <sys/types.h>
@@ -10,7 +11,8 @@
 namespace opossum {
 
 AbstractLogger& Logger::getInstance() {
-  static InitialLogger instance;
+  // static InitialLogger instance;
+  static GroupCommitLogger instance;
   return instance;
 }
 

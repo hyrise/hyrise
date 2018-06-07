@@ -59,7 +59,7 @@ void Recovery::recover() {
     if (log_type == 't'){
       TransactionID transaction_id = std::stoull(line.substr(3, line.length() - 4));
 
-      // perform transaction
+      // perform transactions
       // TODO: perform in right order
       for (auto &transaction : transactions) {
         if (transaction.transaction_id != transaction_id)
@@ -70,7 +70,7 @@ void Recovery::recover() {
 
         if (transaction.type == LogType::Value) {
           chunk->append(*transaction.values);
-          
+
           auto mvcc_columns = chunk->mvcc_columns();
           DebugAssert(mvcc_columns->begin_cids.size() - 1 == transaction.row_id.chunk_offset, "recovery rowID " + std::to_string(mvcc_columns->begin_cids.size() - 1) + " != logged rowID " + std::to_string(transaction.row_id.chunk_offset));
           mvcc_columns->begin_cids[mvcc_columns->begin_cids.size() - 1] = transaction_id;          

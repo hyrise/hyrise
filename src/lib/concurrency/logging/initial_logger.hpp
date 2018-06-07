@@ -17,7 +17,7 @@ class InitialLogger : public AbstractLogger{
 
   void invalidate(const TransactionID transaction_id, const std::string table_name, const RowID row_id) override;
 
-  void flush();
+  // void flush() override;
 
  private:
   friend class Logger;

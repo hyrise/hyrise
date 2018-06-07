@@ -19,12 +19,12 @@ class AbstractLogger {
 
   virtual void invalidate(const TransactionID transaction_id, const std::string table_name, const RowID row_id) = 0;
 
-  void flush();
+  virtual void flush();
 
   virtual ~AbstractLogger() = default;
 
  protected:
-  void _write_to_logfile(const std::stringstream& ss);
+  virtual void _write_to_logfile(const std::stringstream& ss);
 
   int _file_descriptor;
   std::mutex _mutex;
@@ -32,6 +32,7 @@ class AbstractLogger {
  private:
   friend class Logger;
   friend class InitialLogger;
+  friend class GroupCommitLogger;
   AbstractLogger();
 };
 

@@ -11,6 +11,8 @@ set(
     concurrency/commit_context.hpp
     concurrency/logging/abstract_logger.cpp
     concurrency/logging/abstract_logger.hpp
+    concurrency/logging/group_commit_logger.cpp
+    concurrency/logging/group_commit_logger.hpp
     concurrency/logging/initial_logger.cpp
     concurrency/logging/initial_logger.hpp
     concurrency/logging/logger.cpp
