@@ -62,8 +62,8 @@ struct BenchmarkState {
 
 struct EncodingConfig {
   EncodingConfig();
-  EncodingConfig(ColumnEncodingSpec default_encoding_spec);
   EncodingConfig(ColumnEncodingSpec default_encoding_spec, EncodingMapping encoding_mapping);
+  explicit EncodingConfig(ColumnEncodingSpec default_encoding_spec);
 
   const ColumnEncodingSpec default_encoding_spec;
   const EncodingMapping encoding_mapping;
