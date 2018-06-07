@@ -1,0 +1,22 @@
+{
+  "default_encoding": "dictionary",
+  "default_compression": "simdbp128",
+
+  "custom": {
+    "ITEM" : {
+      "date": {
+        "encoding": "dictionary",
+        "compression": "fsba"
+      },
+      "id": {
+        "encoding": "runlength",
+        "compression": "simdbp128"
+      }
+    },
+    "NATION": {
+      "id": {
+        "encoding": "frameofreference"
+      }
+    }
+  }
+}

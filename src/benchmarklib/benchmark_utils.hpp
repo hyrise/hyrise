@@ -8,6 +8,7 @@
 #include <unordered_map>
 
 #include "storage/chunk.hpp"
+#include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 
 namespace opossum {
@@ -23,6 +24,8 @@ using TimePoint = std::chrono::high_resolution_clock::time_point;
 
 using NamedQuery = std::pair<std::string, std::string>;
 using NamedQueries = std::vector<NamedQuery>;
+
+using EncodingMapping = std::unordered_map<std::string, std::map<std::string, ColumnEncodingSpec>>;
 
 /**
  * @return std::cout if `verbose` is true, otherwise returns a discarding stream
@@ -57,9 +60,25 @@ struct BenchmarkState {
   Duration max_duration;
 };
 
+struct EncodingConfig {
+  EncodingConfig();
+  EncodingConfig(ColumnEncodingSpec default_encoding_spec);
+  EncodingConfig(ColumnEncodingSpec default_encoding_spec, EncodingMapping encoding_mapping);
+
+  const ColumnEncodingSpec default_encoding_spec;
+  const EncodingMapping encoding_mapping;
+
+  static ColumnEncodingSpec encoding_spec_from_strings(const std::string& encoding_str,
+                                                       const std::string& compression_str);
+  static EncodingType encoding_string_to_type(const std::string& encoding_str);
+  static std::optional<VectorCompressionType> compression_string_to_type(const std::string& compression_str);
+
+  nlohmann::json to_json() const;
+};
+
 struct BenchmarkConfig {
   BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool verbose, const ChunkOffset chunk_size,
-                  const EncodingType encoding_type, const size_t max_num_query_runs, const Duration& max_duration,
+                  const EncodingConfig encoding_config, const size_t max_num_query_runs, const Duration& max_duration,
                   const UseMvcc use_mvcc, const std::optional<std::string>& output_file_path,
                   const bool enable_scheduler, const bool enable_visualization, std::ostream& out);
 
@@ -68,7 +87,7 @@ struct BenchmarkConfig {
   const BenchmarkMode benchmark_mode = BenchmarkMode::IndividualQueries;
   const bool verbose = false;
   const ChunkOffset chunk_size = Chunk::MAX_SIZE;
-  const EncodingType encoding_type = EncodingType::Dictionary;
+  const EncodingConfig encoding_config = EncodingConfig{};
   const size_t max_num_query_runs = 1000;
   const Duration max_duration = std::chrono::seconds(5);
   const UseMvcc use_mvcc = UseMvcc::No;
@@ -92,6 +111,8 @@ class CLIConfigParser {
   static BenchmarkConfig parse_default_json_config(const nlohmann::json& json_config);
 
   static BenchmarkConfig parse_default_cli_options(const cxxopts::ParseResult& parse_result);
+
+  static EncodingConfig parse_encoding_config(const std::string& encoding_file_str);
 };
 
 }  // namespace opossum

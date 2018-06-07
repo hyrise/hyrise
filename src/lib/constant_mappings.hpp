@@ -26,8 +26,8 @@ extern const std::unordered_map<JoinMode, std::string> join_mode_to_string;
 extern const std::unordered_map<UnionMode, std::string> union_mode_to_string;
 extern const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string;
 extern const boost::bimap<DataType, std::string> data_type_to_string;
-extern const std::unordered_map<EncodingType, std::string> encoding_type_to_string;
-extern const std::unordered_map<VectorCompressionType, std::string> vector_compression_type_to_string;
+extern const boost::bimap<EncodingType, std::string> encoding_type_to_string;
+extern const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string;
 extern const boost::bimap<TableType, std::string> table_type_to_string;
 
 }  // namespace opossum

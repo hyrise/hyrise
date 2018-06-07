@@ -32,7 +32,6 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     // partly compresed table
     ChunkEncoder::encode_chunks(int_int_5, {ChunkID{0}, ChunkID{1}}, {_encoding_type});
 
-
     _int_int_compressed = std::make_shared<TableWrapper>(std::move(int_int_7));
     _int_int_compressed->execute();
     _int_int_partly_compressed = std::make_shared<TableWrapper>(std::move(int_int_5));
@@ -131,7 +130,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     const auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
 
     if (references_dict_column) {
-      ChunkEncoder::encode_all_chunks(table, {_encoding_type});
+      ChunkEncoder::encode_all_chunks(table, _encoding_type);
     }
 
     auto pos_list_a = std::make_shared<PosList>(
@@ -285,8 +284,7 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedCompressedColumn) {
   tests[PredicateCondition::IsNotNull] = {100, 102, 104, 106, 100, 102, 104, 106};
 
   for (const auto& test : tests) {
-    auto scan1 =
-        std::make_shared<TableScan>(_int_int_compressed, ColumnID{1}, PredicateCondition::LessThan, 108);
+    auto scan1 = std::make_shared<TableScan>(_int_int_compressed, ColumnID{1}, PredicateCondition::LessThan, 108);
     scan1->execute();
 
     auto scan_partly1 =
@@ -332,8 +330,8 @@ TEST_P(OperatorsTableScanTest, ScanWeirdPosList) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanOnCompressedColumnValueGreaterThanMaxDictionaryValue) {
-  const auto all_rows = std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106,
-                                                    108, 110, 112};
+  const auto all_rows =
+      std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
   const auto no_rows = std::vector<AllTypeVariant>{};
 
   std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
@@ -357,8 +355,8 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedColumnValueGreaterThanMaxDictiona
 }
 
 TEST_P(OperatorsTableScanTest, ScanOnCompressedColumnValueLessThanMinDictionaryValue) {
-  const auto all_rows = std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106,
-                                                    108, 110, 112};
+  const auto all_rows =
+      std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
   const auto no_rows = std::vector<AllTypeVariant>{};
 
   std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
@@ -411,7 +409,7 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedIntValueColumnWithFloatColumnWith
 
 TEST_P(OperatorsTableScanTest, ScanOnIntCompressedColumnWithFloatColumnWithNullValues) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
-  ChunkEncoder::encode_all_chunks(table, {_encoding_type});
+  ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
@@ -426,7 +424,7 @@ TEST_P(OperatorsTableScanTest, ScanOnIntCompressedColumnWithFloatColumnWithNullV
 
 TEST_P(OperatorsTableScanTest, ScanOnReferencedIntCompressedColumnWithFloatColumnWithNullValues) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
-  ChunkEncoder::encode_all_chunks(table, {_encoding_type});
+  ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
@@ -515,7 +513,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueColumn) {
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedColumn) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
-  ChunkEncoder::encode_all_chunks(table, {_encoding_type});
+  ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
@@ -566,7 +564,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumn) {
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedCompressedColumn) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
-  ChunkEncoder::encode_all_chunks(table, {_encoding_type});
+  ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
