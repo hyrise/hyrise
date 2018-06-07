@@ -30,6 +30,7 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
       _lqp_translator(lqp_translator),
       _optimizer(optimizer),
       _parsed_sql_statement(std::move(parsed_sql)),
+      _metrics(std::make_shared<SQLPipelineStatementMetrics>()),
       _prepared_statements(prepared_statements) {
   Assert(!_parsed_sql_statement || _parsed_sql_statement->size() == 1,
          "SQLPipelineStatement must hold exactly one SQL statement");

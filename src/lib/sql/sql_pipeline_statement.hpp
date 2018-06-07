@@ -102,7 +102,7 @@ class SQLPipelineStatement : public Noncopyable {
   // Assume there is an output table. Only change if nullptr is returned from execution.
   bool _query_has_output = true;
 
-  std::shared_ptr<SQLPipelineStatementMetrics> _metrics{};
+  std::shared_ptr<SQLPipelineStatementMetrics> _metrics;
 
   PreparedStatementCache _prepared_statements;
   // Number of placeholders in prepared statement; default 0 because we assume no prepared statement
