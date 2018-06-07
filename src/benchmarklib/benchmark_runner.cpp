@@ -303,8 +303,8 @@ cxxopts::Options BenchmarkRunner::get_default_cli_options(const std::string& ben
     ("t,time", "Maximum seconds that a query(set) is run", cxxopts::value<size_t>()->default_value("5")) // NOLINT
     ("o,output", "File to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value("")) // NOLINT
     ("m,mode", "IndividualQueries or PermutedQuerySets, default is IndividualQueries", cxxopts::value<std::string>()->default_value("IndividualQueries")) // NOLINT
-    ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration. String options: " + encoding_strings_option + " (default: Dictionary)", cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT
-    ("compression", "Specify vector compression as a string. Options: " + compression_strings_option + " (default: none)", cxxopts::value<std::string>()->default_value(""))  // NOLINT
+    ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration. String options: " + encoding_strings_option, cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT
+    ("compression", "Specify vector compression as a string. Options: " + compression_strings_option, cxxopts::value<std::string>()->default_value(""))  // NOLINT
     ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("mvcc", "Enable MVCC", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("visualize", "Create a visualization image of one LQP and PQP for each query", cxxopts::value<bool>()->default_value("false")); // NOLINT
