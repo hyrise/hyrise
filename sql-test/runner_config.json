@@ -1,8 +1,0 @@
-{
-  "verbose": true,
-  "queries": [1, 9],
-  "scale": 0.001,
-  "chunk_size": 10000,
-  "encoding": "sql-test/encoding.json",
-  "time": 5
-}
