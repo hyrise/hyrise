@@ -216,7 +216,7 @@ TEST_F(ExpressionEvaluatorTest, IsNullColumns) {
 }
 
 TEST_F(ExpressionEvaluatorTest, SubstrValues) {
-  /** Hyrise follows SQLite semantics for negative indices in SUBSTR*/
+  /** Hyrise follows SQLite semantics for negative indices in SUBSTR */
 
   EXPECT_TRUE(test_expression<std::string>(*substr("", 3, 4), {""}));
   EXPECT_TRUE(test_expression<std::string>(*substr("Hello World", 4, 4), {"lo W"}));
