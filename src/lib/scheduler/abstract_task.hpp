@@ -100,6 +100,9 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
 
   /**
    * Executes the task in the current Thread, blocks until all operations are finished
+   * If an exception occurs, it is
+   *   - thrown immediately if no scheduler is present
+   *   - thrown in the thread that created the task when it tries to join
    */
   void execute();
 
@@ -127,6 +130,16 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
    */
   void _on_predecessor_done();
 
+  /**
+   * Sets the done flag and notifies listener
+   */
+  void _mark_as_done();
+
+  /**
+   * Sets the done flag for this and all following tasks without executing anything
+   */
+  void _on_exception_in_predecessor(const std::exception_ptr exception);
+
   TaskID _id = INVALID_TASK_ID;
   NodeID _node_id = INVALID_NODE_ID;
   bool _done = false;
@@ -151,6 +164,9 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
 
   // To make sure a task is never executed twice
   std::atomic_bool _started{false};
+
+  // Stores an exception if it occured during execution.
+  std::exception_ptr _exception;
 };
 
 }  // namespace opossum

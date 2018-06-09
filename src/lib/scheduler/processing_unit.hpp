@@ -62,6 +62,11 @@ class ProcessingUnit final : public std::enable_shared_from_this<ProcessingUnit>
   void shutdown();
   uint64_t num_finished_tasks() const;
 
+  // It is important to limit the number of workers per core to avoid
+  // resource depletion. This number is an arbitrary pick, but has been reached
+  // and exceeded in experiments.
+  static constexpr size_t MAX_WORKERS_PER_CORE = 200;
+
  private:
   std::shared_ptr<TaskQueue> _queue;
   std::shared_ptr<UidAllocator> _worker_id_allocator;

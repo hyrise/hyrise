@@ -10,6 +10,7 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
+#include "scheduler/processing_unit.hpp"
 #include "scheduler/topology.hpp"
 #include "storage/storage_manager.hpp"
 
@@ -164,21 +165,107 @@ TEST_F(SchedulerTest, DiamondDependenciesWithScheduler) {
 }
 
 TEST_F(SchedulerTest, LinearDependenciesWithoutScheduler) {
+  CurrentScheduler::set(nullptr);
+
   std::atomic_uint counter{0u};
   stress_linear_dependencies(counter);
   ASSERT_EQ(counter, 3u);
 }
 
 TEST_F(SchedulerTest, MultipleDependenciesWithoutScheduler) {
+  CurrentScheduler::set(nullptr);
+
   std::atomic_uint counter{0u};
   stress_multiple_dependencies(counter);
   ASSERT_EQ(counter, 4u);
 }
 
 TEST_F(SchedulerTest, DiamondDependenciesWithoutScheduler) {
+  CurrentScheduler::set(nullptr);
+
   std::atomic_uint counter{0};
   stress_diamond_dependencies(counter);
   ASSERT_EQ(counter, 7u);
+}
+
+TEST_F(SchedulerTest, ExceptionInTaskWithScheduler) {
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(1, 1)));
+
+  std::vector<std::shared_ptr<AbstractTask>> jobs;
+  for (auto i = 0u; i < ProcessingUnit::MAX_WORKERS_PER_CORE + 5; ++i) {
+    auto job = std::make_shared<JobTask>([]() { throw std::runtime_error("Something went wrong!"); });
+    job->schedule();
+    jobs.emplace_back(job);
+  }
+  EXPECT_THROW(CurrentScheduler::wait_for_tasks(jobs), std::exception);
+
+  bool is_there_still_a_worker = false;
+  jobs = {};
+  auto job = std::make_shared<JobTask>([&]() { is_there_still_a_worker = true; });
+  job->schedule();
+  jobs.emplace_back(job);
+  CurrentScheduler::wait_for_tasks(jobs);
+  EXPECT_TRUE(is_there_still_a_worker);
+
+  CurrentScheduler::get()->finish();
+}
+
+TEST_F(SchedulerTest, ExceptionInTaskWithoutScheduler) {
+  CurrentScheduler::set(nullptr);
+
+  // If we don't have a scheduler, the exception should not get caught. This should call the terminate handler.
+  ASSERT_DEATH(
+      {
+        std::vector<std::shared_ptr<AbstractTask>> jobs;
+        for (auto i = 0u; i < 5; ++i) {
+          auto job = std::make_shared<JobTask>([]() { throw std::runtime_error("Something went wrong!"); });
+          job->schedule();
+          jobs.emplace_back(job);
+        }
+      },
+      ".*");
+}
+
+TEST_F(SchedulerTest, ExceptionInDependentTaskWithScheduler) {
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(1, 1)));
+
+  std::vector<std::shared_ptr<AbstractTask>> jobs;
+  int step = 0;
+  jobs.emplace_back(std::make_shared<JobTask>([&]() { step = 1; }));
+  jobs.emplace_back(std::make_shared<JobTask>([&]() {
+    step = 2;
+    throw std::runtime_error("Boom");
+  }));
+  jobs.emplace_back(std::make_shared<JobTask>([&]() { step = 3; }));
+  jobs[0]->set_as_predecessor_of(jobs[1]);
+  jobs[1]->set_as_predecessor_of(jobs[2]);
+  jobs[2]->schedule();
+  jobs[1]->schedule();
+  jobs[0]->schedule();
+
+  EXPECT_THROW(CurrentScheduler::wait_for_tasks(jobs), std::exception);
+  EXPECT_EQ(step, 2);
+
+  CurrentScheduler::get()->finish();
+}
+
+TEST_F(SchedulerTest, ExceptionInDependentTaskWithoutScheduler) {
+  CurrentScheduler::set(nullptr);
+
+  std::vector<std::shared_ptr<AbstractTask>> jobs;
+  int step = 0;
+  jobs.emplace_back(std::make_shared<JobTask>([&]() { step = 1; }));
+  jobs.emplace_back(std::make_shared<JobTask>([&]() {
+    step = 2;
+    throw std::runtime_error("Boom");
+  }));
+  jobs.emplace_back(std::make_shared<JobTask>([&]() { step = 3; }));
+  jobs[0]->set_as_predecessor_of(jobs[1]);
+  jobs[1]->set_as_predecessor_of(jobs[2]);
+  jobs[2]->schedule();
+  jobs[1]->schedule();
+  EXPECT_THROW(jobs[0]->schedule(), std::exception);
+  EXPECT_EQ(step, 2);
 }
 
 TEST_F(SchedulerTest, MultipleOperators) {
