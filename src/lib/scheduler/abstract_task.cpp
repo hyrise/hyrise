@@ -44,7 +44,14 @@ void AbstractTask::set_node_id(NodeID node_id) { _node_id = node_id; }
 
 bool AbstractTask::try_mark_as_enqueued() { return !_is_enqueued.exchange(true); }
 
+void AbstractTask::set_exception_callback(const std::function<void(const std::exception_ptr)>& exception_callback) {
+  DebugAssert((!_is_scheduled), "Possible race: Don't set callback after the Task was scheduled");
+
+  _exception_callback = exception_callback;
+}
+
 void AbstractTask::set_done_callback(const std::function<void()>& done_callback) {
+  Assert((!_exception_callback), "An exception callback needs to be provided to avoid endless waiting");
   DebugAssert((!_is_scheduled), "Possible race: Don't set callback after the Task was scheduled");
 
   _done_callback = done_callback;
@@ -96,26 +103,22 @@ void AbstractTask::execute() {
   try {
     _on_execute();
   } catch (...) {
-    if (CurrentScheduler::is_set() && Worker::get_this_thread_worker()) {
+    if(_exception_callback) {
+      // An exception callback was explicitly provided so we let the receiver handle the exception
+      _exception_callback(std::current_exception());
+    } else if (CurrentScheduler::is_set() && Worker::get_this_thread_worker()) {
       // We don't want the worker to die because of an exception. Instead, whoever created the task should deal with it
       _exception = std::current_exception();
-
-      // Someone might be waiting on this. Right now, we don't have a better way of notifying the creator of the task
-      // that they will wait forever.
-      // TODO introduce exeception callback, make sure it is set befor done_callback is called
-      if (_done_callback) {
-        throw;
-      }
 
       _mark_as_done();
       for (auto& successor : _successors) {
         successor->_on_exception_in_predecessor(_exception);
       }
-      return;
     } else {
       // No worker, so we just throw it right here and now.
       throw;
     }
+    return;
   }
 
   for (auto& successor : _successors) {

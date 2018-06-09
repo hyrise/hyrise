@@ -69,7 +69,15 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   void set_node_id(NodeID node_id);
 
   /**
-   * Callback to be executed right after the Task finished.
+   * Callback to be executed if a task throws an exception. If set exceptions will be caught and handed to
+   * the provided function.
+   * Notice the execution of the callback might happen on ANY thread
+   */
+  void set_exception_callback(const std::function<void(const std::exception_ptr)>& done_callback);
+
+  /**
+   * Callback to be executed right after the Task finished. An exception callback is mandatory and needs to 
+   * be set beforehand.
    * Notice the execution of the callback might happen on ANY thread
    */
   void set_done_callback(const std::function<void()>& done_callback);
@@ -143,6 +151,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   TaskID _id = INVALID_TASK_ID;
   NodeID _node_id = INVALID_NODE_ID;
   bool _done = false;
+  std::function<void(const std::exception_ptr)> _exception_callback;
   std::function<void()> _done_callback;
 
   // For dependencies
