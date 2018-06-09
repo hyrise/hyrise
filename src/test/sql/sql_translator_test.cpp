@@ -782,16 +782,28 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
    * Test that ParameterIDs are correctly allocated to ValuePlaceholders and External Parameters
    */
 
-  const auto actual_lqp = compile_query("SELECT ?, (SELECT MIN(b) + int_float.a FROM int_float2), (SELECT MAX(b) + int_float.b FROM int_float2) FROM int_float WHERE a > ?");
+  const auto actual_lqp = compile_query("SELECT ?, "
+                                        "  (SELECT MIN(b) + int_float.a FROM int_float2), "
+                                        "  (SELECT MAX(b) + int_float.b + (SELECT int_float2.a + int_float.b) FROM int_float2)"
+                                        "FROM int_float WHERE a > ?");
 
   // clang-format off
+  const auto parameter_int_float_a = parameter(ParameterID{2}, int_float_a);
+  const auto parameter_int_float_b = parameter(ParameterID{3}, int_float_b);
+  const auto parameter_int_float2_a = parameter(ParameterID{4}, int_float2_a);
+
   const auto expected_sub_select_lqp_a =
-  ProjectionNode::make(expression_vector(add(min(int_float2_b), parameter(ParameterID{2}, int_float_a))),
+  ProjectionNode::make(expression_vector(add(min(int_float2_b), parameter_int_float_a)),
     AggregateNode::make(expression_vector(), expression_vector(min(int_float2_b)),
       stored_table_node_int_float2
   ));
+  const auto expected_sub_sub_select_lqp =
+  ProjectionNode::make(expression_vector(add(parameter_int_float2_a, parameter_int_float_b)),
+    DummyTableNode::make()
+  );
+  const auto sub_sub_select = select(expected_sub_sub_select_lqp, std::make_pair(ParameterID{4}, int_float2_a), std::make_pair(ParameterID{3}, int_float_b));
   const auto expected_sub_select_lqp_b =
-  ProjectionNode::make(expression_vector(add(max(int_float2_b), parameter(ParameterID{3}, int_float_b))),
+  ProjectionNode::make(expression_vector(add(add(max(int_float2_b), parameter_int_float_b), sub_sub_select)),
     AggregateNode::make(expression_vector(), expression_vector(max(int_float2_b)),
       stored_table_node_int_float2
   ));
