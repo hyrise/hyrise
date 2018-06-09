@@ -45,6 +45,7 @@ class ExpressionEvaluatorTest : public ::testing::Test {
     f = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "f"));
     s1 = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "s1"));
     s2 = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "s2"));
+    s3 = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "s3"));
     dates = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "dates"));
     a_plus_b = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, a, b);
     a_plus_c = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, a, c);
@@ -129,7 +130,7 @@ class ExpressionEvaluatorTest : public ::testing::Test {
   std::shared_ptr<Table> table_a, table_b, table_bools;
   std::shared_ptr<Chunk> chunk_a, chunk_bools;
 
-  std::shared_ptr<PQPColumnExpression> a, b, c, d, e, f, s1, s2, dates, x, bool_a, bool_b, bool_c;
+  std::shared_ptr<PQPColumnExpression> a, b, c, d, e, f, s1, s2, s3, dates, x, bool_a, bool_b, bool_c;
   std::shared_ptr<ArithmeticExpression> a_plus_b;
   std::shared_ptr<ArithmeticExpression> a_plus_c;
   std::shared_ptr<BinaryPredicateExpression> a_lt_b;
@@ -170,7 +171,6 @@ TEST_F(ExpressionEvaluatorTest, TernaryAndLiteral) {
 }
 
 TEST_F(ExpressionEvaluatorTest, ArithmeticsLiterals) {
-  EXPECT_TRUE(test_expression<std::string>(*add("Hello", add(" ", "World")), {"Hello World"}));
   EXPECT_TRUE(test_expression<int32_t>(*mul(5, 3), {15}));
   EXPECT_TRUE(test_expression<int32_t>(*mul(5, NullValue{}), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*sub(15, 12), {3}));
@@ -215,11 +215,33 @@ TEST_F(ExpressionEvaluatorTest, IsNullColumns) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *is_not_null(add(c, a)), {1, 0, 1, 0}));
 }
 
-//TEST_F(ExpressionEvaluatorTest, ArithmeticExpression) {
-//  const auto expected_result = std::vector<int32_t>({3, 5, 7, 9});
-//  EXPECT_EQ(boost::get<std::vector<int32_t>>(evaluator->evaluate_expression<int32_t>(*a_plus_b)), expected_result);
-//}
-//
+TEST_F(ExpressionEvaluatorTest, SubstrValues) {
+  /** Hyrise follows SQLite semantics for negative indices in SUBSTR*/
+
+  EXPECT_TRUE(test_expression<std::string>(*substr("", 3, 4), {""}));
+  EXPECT_TRUE(test_expression<std::string>(*substr("Hello World", 4, 4), {"lo W"}));
+  EXPECT_TRUE(test_expression<std::string>(*substr("Hello World", -18, 4), {""}));
+  EXPECT_TRUE(test_expression<std::string>(*substr("Hello World", -12, 1), {""}));
+  EXPECT_TRUE(test_expression<std::string>(*substr("Hello World", -12, 2), {"H"}));
+  EXPECT_TRUE(test_expression<std::string>(*substr("Hello World", -12, 12), {"Hello World"}));
+  EXPECT_TRUE(test_expression<std::string>(*substr("Hello World", -5, 2), {"Wo"}));
+  EXPECT_TRUE(test_expression<std::string>(*substr("Hello World", -5, -2), {""}));
+  EXPECT_TRUE(test_expression<std::string>(*substr("Hello World", 4, 40), {"lo World"}));
+  EXPECT_TRUE(test_expression<std::string>(*substr("Hello World", 20, 1), {""}));
+  //EXPECT_TRUE(test_expression<std::string>(*substr("Hello World", int64_t{4}, 4), {"lo W"}));
+  EXPECT_TRUE(test_expression<std::string>(*substr(null(), 1, 2), {std::nullopt}));
+  EXPECT_TRUE(test_expression<std::string>(*substr("Hello World", null(), 2), {std::nullopt}));
+  EXPECT_TRUE(test_expression<std::string>(*substr("Hello World", 2, null()), {std::nullopt}));
+}
+
+TEST_F(ExpressionEvaluatorTest, SubstrColumns) {
+  EXPECT_TRUE(test_expression<std::string>(table_a, *substr(s1, 2, 3), {"", "ell", "hat", "ame"}));
+  EXPECT_TRUE(test_expression<std::string>(table_a, *substr(s3, 4, 1), {std::nullopt, "d", "l", std::nullopt}));
+  EXPECT_TRUE(test_expression<std::string>(table_a, *substr(s1, a, b), {"a", "ell", "at", "e"}));
+  EXPECT_TRUE(test_expression<std::string>(table_a, *substr(s3, 2, a), {std::nullopt, "bc", "yzl", std::nullopt}));
+  EXPECT_TRUE(test_expression<std::string>(table_a, *substr("test", 2, c), {"est", std::nullopt, "est", std::nullopt}));
+}
+
 //TEST_F(ExpressionEvaluatorTest, ArithmeticExpressionWithNull) {
 //  const auto actual_result = boost::get<NullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*a_plus_c));
 //  const auto& actual_values = actual_result.first;

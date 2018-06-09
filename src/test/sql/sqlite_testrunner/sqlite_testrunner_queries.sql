@@ -210,3 +210,12 @@ SELECT id FROM mixed WHERE d IN ('hamqiv', 9, 'Hello', 13.345, 'xfkk', 13*13)
 -- EXTRACT()
 -- SELECT EXTRACT(DAY FROM '1993-05-01') FROM int_date;
 -- SELECT EXTRACT(MONTH FROM "date") FROM int_date;
+
+-- SUBSTR
+SELECT SUBSTR('HELLO', 2, 3) AS s;
+SELECT SUBSTR('HELLO', -4, 3) AS s;
+SELECT SUBSTR('HELLO', -4, 0) AS s;
+SELECT SUBSTR('migz', -18, 19) AS s;
+SELECT SUBSTR('HELLO', 5000, 20) AS s;
+SELECT SUBSTR(d, id - 10, b) AS s FROM mixed ORDER BY id;
+SELECT SUBSTR(d, b / 10, b / 20) AS s FROM mixed_null;

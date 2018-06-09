@@ -805,6 +805,21 @@ TEST_F(SQLTranslatorTest, UseMvcc) {
   EXPECT_TRUE(lqp_is_validated(lqp_b));
 }
 
+TEST_F(SQLTranslatorTest, Substr) {
+  const auto actual_lqp_a = compile_query("SELECT SUBSTR('Hello', 3, 2 + 3)");
+  const auto actual_lqp_b = compile_query("SELECT substr('Hello', 3, 2 + 3)");
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(substr("Hello", 3, add(2, 3))),
+    DummyTableNode::make()
+  );
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
+}
+
 // Test parsing the TPCH queries for a bit of stress testing
 class SQLTranslatorTestTPCH : public ::testing::Test {
  public:

@@ -36,41 +36,45 @@ class ExpressionEvaluator final {
 
   std::shared_ptr<BaseColumn> evaluate_expression_to_column(const AbstractExpression& expression);
 
-  template<typename T>
-  std::shared_ptr<ExpressionResult<T>> evaluate_expression_to_result(const AbstractExpression &expression);
+  template<typename R>
+  std::shared_ptr<ExpressionResult<R>> evaluate_expression_to_result(const AbstractExpression &expression);
 
-  template<typename T>
-  std::shared_ptr<ExpressionResult<T>> evaluate_arithmetic_expression(const ArithmeticExpression& expression);
+  template<typename R>
+  std::shared_ptr<ExpressionResult<R>> evaluate_arithmetic_expression(const ArithmeticExpression& expression);
 
-  template<typename T>
-  std::shared_ptr<ExpressionResult<T>> evaluate_logical_expression(const LogicalExpression& expression);
+  template<typename R>
+  std::shared_ptr<ExpressionResult<R>> evaluate_logical_expression(const LogicalExpression& expression);
 
-  template<typename T>
-  std::shared_ptr<ExpressionResult<T>> evaluate_binary_predicate_expression(const BinaryPredicateExpression& expression);
+  template<typename R>
+  std::shared_ptr<ExpressionResult<R>> evaluate_binary_predicate_expression(const BinaryPredicateExpression& expression);
 
-  template<typename T>
-  std::shared_ptr<ExpressionResult<T>> evaluate_is_null_expression(const IsNullExpression& expression);
+  template<typename R>
+  std::shared_ptr<ExpressionResult<R>> evaluate_is_null_expression(const IsNullExpression& expression);
 
-  template<typename T>
-  std::shared_ptr<ExpressionResult<T>> evaluate_in_expression(const InExpression& in_expression);
+  template<typename R>
+  std::shared_ptr<ExpressionResult<R>> evaluate_in_expression(const InExpression& in_expression);
 
-  template<typename T>
-  std::shared_ptr<ExpressionResult<T>> evaluate_select_expression_for_chunk(const PQPSelectExpression &expression);
+  template<typename R>
+  std::shared_ptr<ExpressionResult<R>> evaluate_select_expression_for_chunk(const PQPSelectExpression &expression);
 
-  template<typename T>
-  std::shared_ptr<ExpressionResult<T>> evaluate_select_expression_for_row(const PQPSelectExpression& expression, const ChunkOffset chunk_offset);
+  template<typename R>
+  std::shared_ptr<ExpressionResult<R>> evaluate_select_expression_for_row(const PQPSelectExpression& expression, const ChunkOffset chunk_offset);
 
-  template<typename T>
-  std::shared_ptr<ExpressionResult<T>> evaluate_case_expression(const CaseExpression& case_expression);
+  template<typename R>
+  std::shared_ptr<ExpressionResult<R>> evaluate_case_expression(const CaseExpression& case_expression);
+
+  template<typename R>
+  std::shared_ptr<ExpressionResult<R>> evaluate_function_expression(const FunctionExpression& expression);
+
 //
-//  template<typename T>
-//  ExpressionResult<T> evaluate_extract_expression(const ExtractExpression& extract_expression);
+//  template<typename R>
+//  ExpressionResult<R> evaluate_extract_expression(const ExtractExpression& extract_expression);
 //
 //  template<size_t offset, size_t count>
 //  ExpressionResult<std::string> evaluate_extract_substr(const ExpressionResult<std::string>& from_result);
 //
-//  template<typename T>
-//  ExpressionResult<T> evaluate_exists_expression(const ExistsExpression& exists_expression);
+//  template<typename R>
+//  ExpressionResult<R> evaluate_exists_expression(const ExistsExpression& exists_expression);
 
   template<typename R, typename Functor>
   std::shared_ptr<ExpressionResult<R>> evaluate_binary_with_default_null_logic(const AbstractExpression& left_expression,
@@ -93,6 +97,8 @@ class ExpressionEvaluator final {
 
   template<typename Functor>
   void resolve_to_expression_result(const AbstractExpression &expression, const Functor &fn);
+
+  std::shared_ptr<ExpressionResult<std::string>> _evaluate_substr(const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
 
  private:
   template<typename A, typename B>

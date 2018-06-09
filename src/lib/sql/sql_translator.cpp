@@ -964,7 +964,9 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
 
       Assert(expr.exprList, "FunctionRef has no exprList. Bug in sqlparser?");
 
-
+      /**
+       * Aggregate function
+       */
       const auto aggregate_iter = aggregate_function_to_string.right.find(name);
       if (aggregate_iter != aggregate_function_to_string.right.end()) {
         auto aggregate_function = aggregate_iter->second;
@@ -989,15 +991,24 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
               return std::make_shared<AggregateExpression>(aggregate_function, _translate_hsql_expr(*expr.exprList->front(), sql_identifier_context));
             }
         }
+      }
 
+      /**
+       * "Normal" function
+       */
+      const auto function_iter = function_type_to_string.right.find(name);
+
+      if (function_iter != function_type_to_string.right.end()) {
+        auto arguments = std::vector<std::shared_ptr<AbstractExpression>>{};
+        arguments.reserve(expr.exprList->size());
+
+        for (const auto * hsql_argument : *expr.exprList) {
+          arguments.emplace_back(_translate_hsql_expr(*hsql_argument, sql_identifier_context));
+        }
+
+        return std::make_shared<FunctionExpression>(function_iter->second, arguments);
       } else {
-//        const auto function_iter = function_type_to_string.right.find(name);
-
-//        if (function_iter != function_type_to_string.right.end()) {
-//          return std::make_shared<FunctionExpression>(function_iter->second, arguments);
-//        } else {
         Fail(std::string{"Couldn't resolve function '"} + name + "'");
-//        }
       }
     }
 

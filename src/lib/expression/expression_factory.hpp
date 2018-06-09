@@ -10,6 +10,7 @@
 #include "between_expression.hpp"
 #include "binary_predicate_expression.hpp"
 #include "is_null_expression.hpp"
+#include "function_expression.hpp"
 #include "lqp_select_expression.hpp"
 #include "case_expression.hpp"
 #include "external_expression.hpp"
@@ -123,6 +124,11 @@ std::vector<std::shared_ptr<AbstractExpression>> expression_vector(Args &&... ar
   return std::vector<std::shared_ptr<AbstractExpression>>({
     to_expression(args)...
   });
+}
+
+template<typename String, typename Start, typename Length>
+std::shared_ptr<AbstractExpression> substr(const String& string, const Start& start, const Length& length) {
+  return std::make_shared<FunctionExpression>(FunctionType::Substring, expression_vector(to_expression(string), to_expression(start), to_expression(length)));
 }
 
 template<typename ... Args>

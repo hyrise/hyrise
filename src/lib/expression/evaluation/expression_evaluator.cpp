@@ -105,10 +105,10 @@ const AbstractExpression &expression) {
         return std::make_shared<ExpressionResult<R>>(std::vector<R>{{boost::get<R>(value)}});
       }
     }
-//
-//    case ExpressionType::Function:
-//      return evaluate_function_expression<R>(static_cast<const FunctionExpression&>(expression));
-//
+
+    case ExpressionType::Function:
+      return evaluate_function_expression<R>(static_cast<const FunctionExpression&>(expression));
+
     case ExpressionType::Case:
       return evaluate_case_expression<R>(static_cast<const CaseExpression&>(expression));
 //
@@ -304,6 +304,20 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_case_expressi
   });
 
   return std::make_shared<ExpressionResult<R>>(std::move(values), std::move(nulls));
+}
+
+template<typename R>
+std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_function_expression(const FunctionExpression& expression) {
+  switch (expression.function_type) {
+    case FunctionType::Substring:
+      // clang-format off
+      if constexpr (std::is_same_v<R, std::string>) {
+        return _evaluate_substr(expression.arguments);
+      } else {
+        Fail("SUBSTR can only be evaluated to a string");
+      }
+      // clang-format on
+  }
 }
 
 //template<>
@@ -664,6 +678,65 @@ void ExpressionEvaluator::_ensure_column_materialization(const ColumnID column_i
 
     }
   });
+}
+
+std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_substr(const std::vector<std::shared_ptr<AbstractExpression>>& arguments) {
+  Assert(arguments.size() == 3, "SUBSTR expects three arguments");
+
+  const auto strings = evaluate_expression_to_result<std::string>(*arguments[0]);
+  const auto starts = evaluate_expression_to_result<int32_t>(*arguments[1]);
+  const auto lengths = evaluate_expression_to_result<int32_t>(*arguments[2]);
+
+  const auto row_count = std::max({strings->size(), starts->size(), lengths->size()});
+
+  std::vector<std::string> result_values(row_count);
+  std::vector<bool> result_nulls(row_count);
+
+  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < row_count; ++chunk_offset) {
+    result_nulls[chunk_offset] = strings->null(chunk_offset) || starts->null(chunk_offset) || lengths->null(chunk_offset);
+
+    const auto& string = strings->value(chunk_offset);
+    Assert(string.size() < std::numeric_limits<int32_t>::max(), "String is too long to be handled by SUBSTR. Switch to int64_t in the SUBSTR implementation if you really need to.");
+
+    const auto signed_string_size = static_cast<int32_t>(string.size());
+
+    auto length = lengths->value(chunk_offset);
+    if (length <= 0) continue;
+
+    auto start = starts->value(chunk_offset);
+
+    /**
+     * Hyrise SUBSTR follows SQLite semantics for negative indices. SUBSTRS lives in this weird space
+     *
+     * START -8 -7 -6 -5 -4 -3 -2 -1 || 0  || 1 2 3 4 5 6  7  8
+     * CHAR  // // // H  e  l  l  o  || // || H e l l o // // //
+     */
+    auto end = int32_t{0};
+    if (start < 0) {
+      start += signed_string_size;
+    } else {
+      if (start == 0) {
+        start = 1;
+        length -= 1;
+      }
+
+      start -= 1;
+    }
+
+    end = start + length;
+    start = std::max(0, start);
+    end = std::min(end, signed_string_size);
+    length = end - start;
+
+    // Any invalid arguments, like SUBSTR("HELLO", 4000, -2), lead to an empty string
+    if (!string.empty() && start >= 0 && start < signed_string_size && length > 0) {
+
+      length = std::min<int32_t>(signed_string_size - start, length);
+      result_values[chunk_offset] = string.substr(static_cast<size_t>(start), static_cast<size_t>(length));
+    }
+  }
+
+  return std::make_shared<ExpressionResult<std::string>>(result_values, result_nulls);
 }
 
 }  // namespace opossum

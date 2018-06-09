@@ -5,16 +5,19 @@
 #include "boost/functional/hash.hpp"
 
 #include "utils/assert.hpp"
+#include "constant_mappings.hpp"
 #include "expression_utils.hpp"
 
 namespace opossum {
 
 FunctionExpression::FunctionExpression(const FunctionType function_type,
                                          const std::vector<std::shared_ptr<AbstractExpression>>& arguments):
-AbstractExpression(ExpressionType::Function, arguments) {
+AbstractExpression(ExpressionType::Function, arguments), function_type(function_type) {
 
   switch (function_type) {
-    case FunctionType::Substring: Assert(arguments.size() == 3, "SUBSTRING expects 3 parameters"); break;
+    case FunctionType::Substring:
+      Assert(arguments.size() == 3, "SUBSTRING expects 3 parameters");
+      break;
   }
 }
 
@@ -25,8 +28,12 @@ std::shared_ptr<AbstractExpression> FunctionExpression::deep_copy() const {
 std::string FunctionExpression::as_column_name() const {
   std::stringstream stream;
 
-  Fail("Todo");
-
+  stream << function_type_to_string.left.at(function_type) << "(";
+  for (auto argument_idx = size_t{0}; argument_idx < arguments.size(); ++argument_idx) {
+    stream << arguments[argument_idx]->as_column_name();
+    if (argument_idx + 1 < arguments.size()) stream << ", ";
+  }
+  stream << ")";
   return stream.str();
 }
 
