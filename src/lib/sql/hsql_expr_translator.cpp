@@ -10,6 +10,7 @@
 #include "constant_mappings.hpp"
 #include "logical_query_plan/lqp_expression.hpp"
 #include "utils/assert.hpp"
+#include "utils/exception.hpp"
 
 #include "SQLParser.h"
 
@@ -64,7 +65,7 @@ std::shared_ptr<LQPExpression> HSQLExprTranslator::to_lqp_expression(
       std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) { return std::toupper(c); });
 
       const auto aggregate_function_iter = aggregate_function_to_string.right.find(name);
-      DebugAssert(aggregate_function_iter != aggregate_function_to_string.right.end(),
+      InputAssert(aggregate_function_iter != aggregate_function_to_string.right.end(),
                   std::string("No such aggregate function '") + name + "'");
 
       auto aggregate_function = aggregate_function_iter->second;
