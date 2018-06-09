@@ -164,7 +164,7 @@ const std::shared_ptr<AbstractExpression> &expression) {
   return flattened_expressions;
 }
 
-void expressions_set_parameters(const std::shared_ptr<AbstractExpression>& expression, const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+void expression_set_parameters(const std::shared_ptr<AbstractExpression>& expression, const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
   visit_expression(expression, [&](auto& sub_expression) {
     if (sub_expression->type != ExpressionType::Parameter) return true;
 
@@ -180,7 +180,7 @@ void expressions_set_parameters(const std::shared_ptr<AbstractExpression>& expre
 
 void expressions_set_parameters(const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
   for (const auto& expression : expressions) {
-    expressions_set_parameters(expression, parameters);
+    expression_set_parameters(expression, parameters);
   }
 }
 

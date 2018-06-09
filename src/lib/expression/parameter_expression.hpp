@@ -45,8 +45,8 @@ class ParameterExpression : public AbstractExpression {
   DataType data_type() const override;
   bool is_nullable() const override;
 
-  const AllTypeVariant& value() const;
-  void set_value(const AllTypeVariant& value);
+  const std::optional<AllTypeVariant>& value() const;
+  void set_value(const std::optional<AllTypeVariant>& value);
 
   const ParameterID parameter_id;
   const ParameterExpressionType parameter_expression_type;
@@ -60,7 +60,7 @@ class ParameterExpression : public AbstractExpression {
 
   // Value placeholder: Get's set once during EXECUTE <prepared-statement>
   // External value: Get's set (multiple times) in AbstractOperator::set_parameter during expression execution
-  AllTypeVariant _value;
+  std::optional<AllTypeVariant> _value;
 };
 
 }  // namespace opossum

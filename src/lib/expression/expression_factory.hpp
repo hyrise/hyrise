@@ -17,6 +17,7 @@
 #include "in_expression.hpp"
 #include "logical_expression.hpp"
 #include "lqp_column_expression.hpp"
+#include "parameter_expression.hpp"
 #include "value_expression.hpp"
 #include "value_placeholder_expression.hpp"
 
@@ -144,6 +145,11 @@ std::shared_ptr<InExpression> in(const V& v, const S& s) {
 template<typename F>
 std::shared_ptr<ExtractExpression> extract(const DatetimeComponent datetime_component, const F& from) {
   return std::make_shared<ExtractExpression>(datetime_component, to_expression(from));
+}
+
+template<typename ReferencedExpression>
+std::shared_ptr<ParameterExpression> parameter(const ParameterID parameter_id, const ReferencedExpression& referenced) {
+  return std::make_shared<ParameterExpression>(parameter_id, *to_expression(referenced));
 }
 
 std::shared_ptr<AggregateExpression> count_star();

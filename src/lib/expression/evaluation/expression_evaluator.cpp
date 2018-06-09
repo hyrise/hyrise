@@ -89,9 +89,18 @@ const AbstractExpression &expression) {
       return std::static_pointer_cast<ExpressionResult<R>>(_column_materializations[pqp_column_expression->column_id]);
     }
 
+    case ExpressionType::Parameter:
     case ExpressionType::Value: {
-      const auto& value_expression = static_cast<const ValueExpression &>(expression);
-      const auto& value = value_expression.value;
+      AllTypeVariant value;
+
+      if (expression.type == ExpressionType::Value) {
+        const auto& value_expression = static_cast<const ValueExpression &>(expression);
+        value = value_expression.value;
+      } else {
+        const auto& parameter_expression = static_cast<const ParameterExpression &>(expression);
+        Assert(parameter_expression.value().has_value(), "ParameterExpression: Parameter not set, cannot evaluate");
+        value = *parameter_expression.value();
+      }
 
       if (value.type() == typeid(NullValue)) {
         // NullValue can be evaluated to any type - it is then a null value of that type.
@@ -111,7 +120,7 @@ const AbstractExpression &expression) {
 
     case ExpressionType::Case:
       return evaluate_case_expression<R>(static_cast<const CaseExpression&>(expression));
-//
+
 //    case ExpressionType::Exists:
 //      return evaluate_exists_expression<R>(static_cast<const ExistsExpression&>(expression));
 //

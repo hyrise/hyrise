@@ -97,7 +97,7 @@ const std::shared_ptr<AbstractExpression> &expression);
 /**
  * Traverse the expression for ParameterExpressions and set them to the requested values
  */
-void expressions_set_parameters(const std::shared_ptr<AbstractExpression>& expression, const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
+void expression_set_parameters(const std::shared_ptr<AbstractExpression>& expression, const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
 
 /**
  * Call expression_set_parameters on each expression

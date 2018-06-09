@@ -9,6 +9,7 @@
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/evaluation/expression_result.hpp"
 #include "expression/expression_factory.hpp"
+#include "expression/expression_utils.hpp"
 #include "expression/function_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -241,6 +242,20 @@ TEST_F(ExpressionEvaluatorTest, SubstrColumns) {
   EXPECT_TRUE(test_expression<std::string>(table_a, *substr(s1, a, b), {"a", "ell", "at", "e"}));
   EXPECT_TRUE(test_expression<std::string>(table_a, *substr(s3, 2, a), {std::nullopt, "bc", "yzl", std::nullopt}));
   EXPECT_TRUE(test_expression<std::string>(table_a, *substr("test", 2, c), {"est", std::nullopt, "est", std::nullopt}));
+}
+
+TEST_F(ExpressionEvaluatorTest, Parameter) {
+  const auto a_id = ParameterID{0};
+  const auto b_id = ParameterID{1};
+
+  auto a_plus_5_times_b = mul(add(parameter(a_id, a), 5), parameter(b_id, b));
+
+  expression_set_parameters(a_plus_5_times_b, {{a_id, 12}, {b_id, 2}});
+  EXPECT_TRUE(test_expression<int32_t>(*a_plus_5_times_b, {34}));
+
+  expression_set_parameters(a_plus_5_times_b, {{b_id, 4}});
+  EXPECT_TRUE(test_expression<int32_t>(*a_plus_5_times_b, {68}));
+
 }
 
 //TEST_F(ExpressionEvaluatorTest, ArithmeticExpressionWithNull) {
