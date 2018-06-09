@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "all_parameter_variant.hpp"
+#include "expression/parameter_expression.hpp"
 #include "base_operator_performance_data.hpp"
 #include "types.hpp"
 
@@ -117,6 +118,10 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   void print(std::ostream& stream = std::cout) const;
 
+  // Set all specified parameters within this Operator's expressions and its inputs
+  // Parameters can be ValuePlaceholders of prepared SQL statements, or external values in corelated subslects
+  void set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
+
  protected:
   // abstract method to actually execute the operator
   // execute and get_output are split into two methods to allow for easier
@@ -127,6 +132,9 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // separate from _on_execute for readability and as a reminder to
   // clean up after execution (if it makes sense)
   virtual void _on_cleanup();
+
+  // override this if the Operator uses Expressions and set the parameters within them
+  virtual void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
 
   void _print_impl(std::ostream& out, std::vector<bool>& levels,
                    std::unordered_map<const AbstractOperator*, size_t>& id_by_operator, size_t& id_counter) const;

@@ -45,12 +45,11 @@ class ParameterExpression : public AbstractExpression {
   DataType data_type() const override;
   bool is_nullable() const override;
 
+  const AllTypeVariant& value() const;
+  void set_value(const AllTypeVariant& value);
+
   const ParameterID parameter_id;
   const ParameterExpressionType parameter_expression_type;
-
-  // Value placeholder: Get's set once during EXECUTE <prepared-statement>
-  // External value: Get's set (multiple times) in AbstractOperator::set_parameter during expression execution
-  AllTypeVariant value;
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
@@ -58,6 +57,10 @@ class ParameterExpression : public AbstractExpression {
 
  private:
   std::optional<ReferencedExpressionInfo> _referenced_expression_info;
+
+  // Value placeholder: Get's set once during EXECUTE <prepared-statement>
+  // External value: Get's set (multiple times) in AbstractOperator::set_parameter during expression execution
+  AllTypeVariant _value;
 };
 
 }  // namespace opossum

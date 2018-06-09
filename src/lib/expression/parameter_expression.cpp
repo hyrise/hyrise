@@ -6,6 +6,8 @@
 
 #include "boost/functional/hash.hpp"
 
+#include "resolve_type.hpp"
+
 namespace opossum {
 
 ParameterExpression::ParameterExpression(const ParameterID parameter_id):
@@ -40,7 +42,7 @@ std::string ParameterExpression::as_column_name() const {
     stream << " '" <<  _referenced_expression_info->column_name << "'";
   }
 
-  stream << "=" << value;
+  stream << "=" << _value;
 
   return stream.str();
 }
@@ -55,21 +57,30 @@ bool ParameterExpression::is_nullable() const {
   return _referenced_expression_info->nullable;
 }
 
+const AllTypeVariant& ParameterExpression::value() const {
+  return _value;
+}
+
+void ParameterExpression::set_value(const AllTypeVariant& value) {
+  Assert(parameter_expression_type == ParameterExpressionType::ValuePlaceholder || data_type_from_all_type_variant(value) == _referenced_expression_info->data_type, "Can't set Parameter to this DataType");
+  _value = value;
+}
+
 bool ParameterExpression::_shallow_equals(const AbstractExpression& expression) const {
   const auto& parameter_expression_rhs = static_cast<const ParameterExpression&>(expression);
 
-  auto both_are_null = variant_is_null(parameter_expression_rhs.value) && variant_is_null(value);
+  auto both_are_null = variant_is_null(parameter_expression_rhs._value) && variant_is_null(_value);
 
   return parameter_id == parameter_expression_rhs.parameter_id &&
          parameter_expression_type == parameter_expression_rhs.parameter_expression_type &&
-         (both_are_null || value == parameter_expression_rhs.value) &&
+         (both_are_null || _value == parameter_expression_rhs._value) &&
          _referenced_expression_info == parameter_expression_rhs._referenced_expression_info;
 }
 
 size_t ParameterExpression::_on_hash() const {
   auto hash = boost::hash_value(parameter_id.t);
   boost::hash_combine(hash, static_cast<std::underlying_type_t<ParameterExpressionType>>(parameter_expression_type));
-  boost::hash_combine(hash, std::hash<AllTypeVariant>{}(value));
+  boost::hash_combine(hash, std::hash<AllTypeVariant>{}(_value));
   boost::hash_combine(hash, _referenced_expression_info.has_value());
   if (_referenced_expression_info) {
     boost::hash_combine(hash, static_cast<std::underlying_type_t<DataType>>(_referenced_expression_info->data_type));

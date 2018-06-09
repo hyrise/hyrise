@@ -51,6 +51,10 @@ std::shared_ptr<AbstractOperator> Projection::_on_recreate(
   return std::make_shared<Projection>(recreated_input_left, expressions);
 }
 
+void Projection::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+  expressions_set_parameters(expressions, parameters);
+}
+
 std::shared_ptr<const Table> Projection::_on_execute() {
   /**
    * Determine the TableColumnDefinitions and create the output table from them

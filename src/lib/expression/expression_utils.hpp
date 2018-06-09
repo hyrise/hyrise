@@ -7,6 +7,7 @@
 #include <queue>
 
 #include "abstract_expression.hpp"
+#include "parameter_expression.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 
 namespace opossum {
@@ -92,5 +93,15 @@ bool expression_evaluateable_on_lqp(const std::shared_ptr<AbstractExpression>& e
  */
 std::vector<std::shared_ptr<AbstractExpression>> expression_flatten_conjunction(
 const std::shared_ptr<AbstractExpression> &expression);
+
+/**
+ * Traverse the expression for ParameterExpressions and set them to the requested values
+ */
+void expressions_set_parameters(const std::shared_ptr<AbstractExpression>& expression, const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
+
+/**
+ * Call expression_set_parameters on each expression
+ */
+void expressions_set_parameters(const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
 
 }  // namespace opossum

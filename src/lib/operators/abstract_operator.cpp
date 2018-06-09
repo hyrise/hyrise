@@ -139,6 +139,14 @@ void AbstractOperator::print(std::ostream& stream) const {
   print_directed_acyclic_graph<const AbstractOperator>(shared_from_this(), get_children_fn, node_print_fn, stream);
 }
 
+void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+  _on_set_parameters(parameters);
+  if (input_left()) mutable_input_left()->set_parameters(parameters);
+  if (input_right()) mutable_input_right()->set_parameters(parameters);
+}
+
+void AbstractOperator::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) { }
+
 void AbstractOperator::_on_cleanup() {}
 
 std::shared_ptr<AbstractOperator> AbstractOperator::_recreate_impl(

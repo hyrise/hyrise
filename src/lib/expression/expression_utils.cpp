@@ -163,4 +163,26 @@ const std::shared_ptr<AbstractExpression> &expression) {
 
   return flattened_expressions;
 }
+
+void expressions_set_parameters(const std::shared_ptr<AbstractExpression>& expression, const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+  visit_expression(expression, [&](auto& sub_expression) {
+    if (sub_expression->type != ExpressionType::Parameter) return true;
+
+    auto parameter_expression = std::static_pointer_cast<ParameterExpression>(sub_expression);
+    const auto value_iter = parameters.find(parameter_expression->parameter_id);
+    if (value_iter != parameters.end()) {
+      parameter_expression->set_value(value_iter->second);
+    }
+
+    return false;
+  });
+}
+
+void expressions_set_parameters(const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+  for (const auto& expression : expressions) {
+    expressions_set_parameters(expression, parameters);
+  }
+}
+
+
 }  // namespace opossum
