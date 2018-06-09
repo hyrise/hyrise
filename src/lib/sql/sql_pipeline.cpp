@@ -1,7 +1,9 @@
 #include "sql_pipeline.hpp"
 #include <boost/algorithm/string.hpp>
+#include <stdexcept>
 #include <utility>
 #include "SQLParser.h"
+#include "utils/exception.hpp"
 
 namespace opossum {
 
@@ -15,14 +17,11 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
               "Transaction context without MVCC enabled makes no sense");
 
   hsql::SQLParserResult parse_result;
-  try {
-    hsql::SQLParser::parse(sql, &parse_result);
-  } catch (const std::exception& exception) {
-    throw std::runtime_error("Error while parsing SQL query:\n  " + std::string(exception.what()));
-  }
+
+  hsql::SQLParser::parse(sql, &parse_result);
 
   if (!parse_result.isValid()) {
-    throw std::runtime_error(SQLPipelineStatement::create_parse_error_message(sql, parse_result));
+    throw InvalidInput(SQLPipelineStatement::create_parse_error_message(sql, parse_result));
   }
 
   DebugAssert(parse_result.size() > 0, "Cannot create empty SQLPipeline.");
