@@ -228,6 +228,7 @@ TEST_F(ExpressionEvaluatorTest, SubstrValues) {
   EXPECT_TRUE(test_expression<std::string>(*substr("Hello World", -5, -2), {""}));
   EXPECT_TRUE(test_expression<std::string>(*substr("Hello World", 4, 40), {"lo World"}));
   EXPECT_TRUE(test_expression<std::string>(*substr("Hello World", 20, 1), {""}));
+  // TODO(moritz) enable once casting expressions are in, so SUBSTR can cast this 4ul -> 4i
   //EXPECT_TRUE(test_expression<std::string>(*substr("Hello World", int64_t{4}, 4), {"lo W"}));
   EXPECT_TRUE(test_expression<std::string>(*substr(null(), 1, 2), {std::nullopt}));
   EXPECT_TRUE(test_expression<std::string>(*substr("Hello World", null(), 2), {std::nullopt}));
