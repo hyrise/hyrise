@@ -103,7 +103,7 @@ void AbstractTask::execute() {
   try {
     _on_execute();
   } catch (...) {
-    if(_exception_callback) {
+    if (_exception_callback) {
       // An exception callback was explicitly provided so we let the receiver handle the exception
       _exception_callback(std::current_exception());
     } else if (CurrentScheduler::is_set() && Worker::get_this_thread_worker()) {

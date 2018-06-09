@@ -855,8 +855,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
       const auto iter =
           std::find(groupby_column_references.begin(), groupby_column_references.end(), *column_reference);
 
-      InputAssert(iter != groupby_column_references.end(), std::string("Column '") + select_column_hsql_expr->getName() +
-                                                          "' is specified in SELECT list, but not in GROUP BY clause.");
+      InputAssert(iter != groupby_column_references.end(), std::string("Column '") + select_column_hsql_expr->getName()
+                                                        + "' is specified in SELECT list, but not in GROUP BY clause.");
 
       const auto column_id = static_cast<ColumnID>(std::distance(groupby_column_references.begin(), iter));
       output_columns.emplace_back(column_id, alias);

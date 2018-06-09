@@ -36,7 +36,7 @@
  *     very cheap or the invariant is considered very important
  *
  * --> Use AssertInput() to check if the user input is correct. This provides a more specific error handling since an
- * 	   invalid input might want to be caught.
+ *     invalid input might want to be caught.
  */
 
 // __FILENAME__ is __FILE__ with irrelevant leading chars trimmed
@@ -57,7 +57,7 @@ namespace opossum {
 
 #define AssertInput(expr, msg)                                                             \
   if (!static_cast<bool>(expr)) {                                                          \
-    throw InvalidInput("Invalid input error: " + msg); 									   \
+    throw InvalidInput("Invalid input error: " + msg);                                     \
   }
 
 #if IS_DEBUG
