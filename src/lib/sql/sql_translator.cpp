@@ -116,8 +116,12 @@ JoinMode translate_join_mode(const hsql::JoinType join_type) {
 
 namespace opossum {
 
-SQLTranslator::SQLTranslator(const UseMvcc use_mvcc, const std::shared_ptr<SQLIdentifierContextProxy>& external_sql_identifier_context_proxy):
-  _use_mvcc(use_mvcc), _external_sql_identifier_context_proxy(external_sql_identifier_context_proxy) {}
+SQLTranslator::SQLTranslator(const UseMvcc use_mvcc,
+                             const std::shared_ptr<SQLIdentifierContextProxy>& external_sql_identifier_context_proxy,
+                             const std::shared_ptr<ParameterID>& parameter_id_counter):
+  _use_mvcc(use_mvcc), _external_sql_identifier_context_proxy(external_sql_identifier_context_proxy), _parameter_id_counter(parameter_id_counter) {
+
+}
 
 std::shared_ptr<SQLIdentifierContext> SQLTranslator::sql_identifier_context() const {
   return _sql_identifier_context;
@@ -949,7 +953,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
       return std::make_shared<ValueExpression>(NullValue{});
 
     case hsql::kExprParameter:
-      return std::make_shared<ValuePlaceholderExpression>(ValuePlaceholder{static_cast<uint16_t>(expr.ival)});
+      return std::make_shared<ParameterExpression>(ParameterID{(*_parameter_id_counter)++});
 
     case hsql::kExprFunctionRef: {
       // convert to upper-case to find mapping
@@ -1091,12 +1095,19 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
 
     case hsql::kExprSelect: {
       const auto sql_identifier_proxy = std::make_shared<SQLIdentifierContextProxy>(sql_identifier_context,
-                                                                                            _external_sql_identifier_context_proxy);
+                                                                                    _parameter_id_counter,
+                                                                                    _external_sql_identifier_context_proxy);
 
-      auto sub_select_translator = SQLTranslator{_use_mvcc, sql_identifier_proxy};
+      auto sub_select_translator = SQLTranslator{_use_mvcc, sql_identifier_proxy, _parameter_id_counter};
       const auto sub_select_lqp = sub_select_translator.translate_select_statement(*expr.select);
-      Fail("Reactivate!!");
-//      return std::make_shared<LQPSelectExpression>(sub_select_lqp, sql_identifier_proxy->accessed_expressions());
+      auto parameters = LQPSelectExpression::Parameters{};
+      parameters.reserve(sql_identifier_proxy->accessed_expressions().size());
+
+      for (const auto& expression_and_parameter_id : sql_identifier_proxy->accessed_expressions()) {
+        parameters.emplace_back(expression_and_parameter_id.second, expression_and_parameter_id.first);
+      }
+
+      return std::make_shared<LQPSelectExpression>(sub_select_lqp, parameters);
     }
 
     case hsql::kExprArray:

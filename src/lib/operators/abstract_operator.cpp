@@ -89,6 +89,7 @@ std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() cons
 
 void AbstractOperator::set_transaction_context(std::weak_ptr<TransactionContext> transaction_context) {
   _transaction_context = transaction_context;
+  _on_set_transaction_context(transaction_context);
 }
 
 void AbstractOperator::set_transaction_context_recursively(std::weak_ptr<TransactionContext> transaction_context) {
@@ -147,6 +148,8 @@ void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllT
 
 void AbstractOperator::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) { }
 
+void AbstractOperator::_on_set_transaction_context(std::weak_ptr<TransactionContext> transaction_context) { }
+
 void AbstractOperator::_on_cleanup() {}
 
 std::shared_ptr<AbstractOperator> AbstractOperator::_recreate_impl(
@@ -161,6 +164,8 @@ std::shared_ptr<AbstractOperator> AbstractOperator::_recreate_impl(
       input_right() ? input_right()->_recreate_impl(recreated_ops, args) : std::shared_ptr<AbstractOperator>{};
 
   const auto recreated_op = _on_recreate(args, recreated_input_left, recreated_input_right);
+  if (_transaction_context) recreated_op->set_transaction_context(*_transaction_context);
+
   recreated_ops.emplace(this, recreated_op);
 
   return recreated_op;

@@ -14,6 +14,7 @@ namespace opossum {
 
 class AbstractLQPNode;
 class LQPColumnExpression;
+class TransactionContext;
 
 bool expressions_equal(const std::vector<std::shared_ptr<AbstractExpression>>& expressions_a,
                              const std::vector<std::shared_ptr<AbstractExpression>>& expressions_b);
@@ -95,13 +96,15 @@ std::vector<std::shared_ptr<AbstractExpression>> expression_flatten_conjunction(
 const std::shared_ptr<AbstractExpression> &expression);
 
 /**
- * Traverse the expression for ParameterExpressions and set them to the requested values
+ * Traverse the expression(s) for ParameterExpressions and set them to the requested values
  */
 void expression_set_parameters(const std::shared_ptr<AbstractExpression>& expression, const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
+void expressions_set_parameters(const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
 
 /**
- * Call expression_set_parameters on each expression
+ * Traverse the expression(s) for subselects and set the transaction context in them
  */
-void expressions_set_parameters(const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
+void expression_set_transaction_context(const std::shared_ptr<AbstractExpression>& expression, std::weak_ptr<TransactionContext> transaction_context);
+void expressions_set_transaction_context(const std::vector<std::shared_ptr<AbstractExpression>>& expressions, std::weak_ptr<TransactionContext> transaction_context);
 
 }  // namespace opossum

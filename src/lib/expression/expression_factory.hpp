@@ -108,10 +108,17 @@ extern ternary<CaseExpression> case_;
 
 template<typename ... Args>
 std::shared_ptr<AbstractExpression> select(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                           Args &&... value_placeholder_expression_pairs) {
-  return std::make_shared<LQPSelectExpression>(
+                                           Args &&... parameter_id_expression_pairs) {
+  if constexpr (sizeof...(Args) > 0) {
+    // Corelated subselect
+    return std::make_shared<LQPSelectExpression>(
     lqp,
-    std::vector<std::pair<ValuePlaceholder, std::shared_ptr<AbstractExpression>>>{{std::make_pair(value_placeholder_expression_pairs.first, to_expression(value_placeholder_expression_pairs.second))...}});
+    std::vector<std::pair<ParameterID, std::shared_ptr<AbstractExpression>>>{{std::make_pair(
+    parameter_id_expression_pairs.first, to_expression(parameter_id_expression_pairs.second))...}});
+  } else {
+    // Not corelated
+    return std::make_shared<LQPSelectExpression>(lqp);
+  }
 }
 
 template<typename E>
@@ -146,6 +153,8 @@ template<typename F>
 std::shared_ptr<ExtractExpression> extract(const DatetimeComponent datetime_component, const F& from) {
   return std::make_shared<ExtractExpression>(datetime_component, to_expression(from));
 }
+
+std::shared_ptr<ParameterExpression> parameter(const ParameterID parameter_id);
 
 template<typename ReferencedExpression>
 std::shared_ptr<ParameterExpression> parameter(const ParameterID parameter_id, const ReferencedExpression& referenced) {

@@ -11,7 +11,7 @@ namespace opossum {
 PQPSelectExpression::PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp,
                                          const DataType data_type,
                                          const bool nullable,
-                                         const std::vector<ColumnID>& parameters):
+                                         const std::vector<std::pair<ParameterID, ColumnID>>& parameters):
   pqp(pqp), parameters(parameters), _data_type(data_type), _nullable(nullable) {
 
 }

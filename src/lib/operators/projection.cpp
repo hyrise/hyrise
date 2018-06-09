@@ -55,6 +55,10 @@ void Projection::_on_set_parameters(const std::unordered_map<ParameterID, AllTyp
   expressions_set_parameters(expressions, parameters);
 }
 
+void Projection::_on_set_transaction_context(std::weak_ptr<TransactionContext> transaction_context) {
+  expressions_set_transaction_context(expressions, transaction_context);
+}
+
 std::shared_ptr<const Table> Projection::_on_execute() {
   /**
    * Determine the TableColumnDefinitions and create the output table from them

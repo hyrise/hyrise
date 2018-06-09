@@ -768,8 +768,8 @@ TEST_F(SQLTranslatorTest, ValuePlaceholders) {
 
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(add(int_float_a, value_placeholder(0)), value_placeholder(1)),
-    PredicateNode::make(greater_than(int_float_a, value_placeholder(2)),
+  ProjectionNode::make(expression_vector(add(int_float_a, parameter(ParameterID{1})), parameter(ParameterID{2})),
+    PredicateNode::make(greater_than(int_float_a, parameter(ParameterID{0})),
       stored_table_node_int_float
   ));
   // clang-format on
@@ -777,19 +777,31 @@ TEST_F(SQLTranslatorTest, ValuePlaceholders) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, ValuePlaceholdersAndCorelatedSubSelect) {
-  const auto actual_lqp = compile_query("SELECT ?, (SELECT MIN(b) + int_float.a FROM int_float2) FROM int_float WHERE a > ?");
+TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
+  /**
+   * Test that ParameterIDs are correctly allocated to ValuePlaceholders and External Parameters
+   */
+
+  const auto actual_lqp = compile_query("SELECT ?, (SELECT MIN(b) + int_float.a FROM int_float2), (SELECT MAX(b) + int_float.b FROM int_float2) FROM int_float WHERE a > ?");
 
   // clang-format off
-  const auto expected_sub_select_lqp =
-  ProjectionNode::make(expression_vector(add(min(int_float2_b), external(int_float_a, 1))),
+  const auto expected_sub_select_lqp_a =
+  ProjectionNode::make(expression_vector(add(min(int_float2_b), parameter(ParameterID{2}, int_float_a))),
     AggregateNode::make(expression_vector(), expression_vector(min(int_float2_b)),
+      stored_table_node_int_float2
+  ));
+  const auto expected_sub_select_lqp_b =
+  ProjectionNode::make(expression_vector(add(max(int_float2_b), parameter(ParameterID{3}, int_float_b))),
+    AggregateNode::make(expression_vector(), expression_vector(max(int_float2_b)),
       stored_table_node_int_float2
   ));
 
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(value_placeholder(0u), select(expected_sub_select_lqp, std::make_pair(ValuePlaceholder{1}, int_float_a))),
-    PredicateNode::make(greater_than(int_float_a, value_placeholder(2u)),
+  ProjectionNode::make(expression_vector(parameter(ParameterID{1}),
+                                         select(expected_sub_select_lqp_a, std::make_pair(ParameterID{2}, int_float_a)),
+                                         select(expected_sub_select_lqp_b, std::make_pair(ParameterID{3}, int_float_b))
+                       ),
+    PredicateNode::make(greater_than(int_float_a, parameter(ParameterID{0})),
       stored_table_node_int_float
   ));
   // clang-format on

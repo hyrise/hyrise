@@ -4,8 +4,10 @@
 #include <sstream>
 #include <queue>
 
+#include "operators/abstract_operator.hpp"
 #include "logical_expression.hpp"
 #include "lqp_column_expression.hpp"
+#include "pqp_select_expression.hpp"
 
 namespace opossum {
 
@@ -183,6 +185,25 @@ void expressions_set_parameters(const std::vector<std::shared_ptr<AbstractExpres
     expression_set_parameters(expression, parameters);
   }
 }
+
+void expression_set_transaction_context(const std::shared_ptr<AbstractExpression>& expression, std::weak_ptr<TransactionContext> transaction_context) {
+  visit_expression(expression, [&](auto& sub_expression) {
+    if (sub_expression->type != ExpressionType::Select) return true;
+
+    const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression);
+    Assert(pqp_select_expression, "Expected a PQPSelectExpression here")
+    pqp_select_expression->pqp->set_transaction_context_recursively(transaction_context);
+
+    return false;
+  });
+}
+
+void expressions_set_transaction_context(const std::vector<std::shared_ptr<AbstractExpression>>& expressions, std::weak_ptr<TransactionContext> transaction_context) {
+  for (const auto& expression : expressions) {
+    expression_set_transaction_context(expression, transaction_context);
+  }
+}
+
 
 
 }  // namespace opossum

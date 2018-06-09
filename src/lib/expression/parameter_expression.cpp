@@ -17,9 +17,8 @@ ParameterExpression::ParameterExpression(const ParameterID parameter_id):
 }
 
 ParameterExpression::ParameterExpression(const ParameterID parameter_id, const AbstractExpression& referenced_expression):
-AbstractExpression(ExpressionType::Parameter, {}), parameter_id(parameter_id), parameter_expression_type(ParameterExpressionType::External)
+AbstractExpression(ExpressionType::Parameter, {}), parameter_id(parameter_id), parameter_expression_type(ParameterExpressionType::External), _referenced_expression_info(std::in_place, referenced_expression.data_type(), referenced_expression.is_nullable(), referenced_expression.as_column_name())
 {
-  _referenced_expression_info.emplace(referenced_expression.data_type(), referenced_expression.is_nullable(), referenced_expression.as_column_name());
 }
 
 ParameterExpression::ParameterExpression(const ParameterID parameter_id, const ReferencedExpressionInfo& referenced_expression_info):
@@ -29,9 +28,11 @@ AbstractExpression(ExpressionType::Parameter, {}), parameter_id(parameter_id), p
 
 
 std::shared_ptr<AbstractExpression> ParameterExpression::deep_copy() const {
-  const auto copy = std::make_shared<ParameterExpression>(parameter_id);
-  copy->_referenced_expression_info = _referenced_expression_info;
-  return copy;
+  if (_referenced_expression_info) {
+    return std::make_shared<ParameterExpression>(parameter_id, *_referenced_expression_info);
+  } else {
+    return std::make_shared<ParameterExpression>(parameter_id);
+  }
 }
 
 std::string ParameterExpression::as_column_name() const {
@@ -89,10 +90,7 @@ bool ParameterExpression::_shallow_equals(const AbstractExpression& expression) 
   const auto both_are_null = _value && parameter_expression_rhs._value &&
                        variant_is_null(*parameter_expression_rhs._value) && variant_is_null(*_value);
 
-  return parameter_id == parameter_expression_rhs.parameter_id &&
-         parameter_expression_type == parameter_expression_rhs.parameter_expression_type &&
-         (both_are_null || _value == parameter_expression_rhs._value) &&
-         _referenced_expression_info == parameter_expression_rhs._referenced_expression_info;
+  return parameter_id == parameter_expression_rhs.parameter_id && parameter_expression_type == parameter_expression_rhs.parameter_expression_type && (both_are_null || _value == parameter_expression_rhs._value) && _referenced_expression_info == parameter_expression_rhs._referenced_expression_info;
 }
 
 size_t ParameterExpression::_on_hash() const {

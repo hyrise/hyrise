@@ -46,9 +46,8 @@ class Projection : public AbstractReadOnlyOperator {
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
-
-  // override this if the Operator uses Expressions and set the parameters within them
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
+  void _on_set_transaction_context(std::weak_ptr<TransactionContext> transaction_context) override;
 
   std::shared_ptr<AbstractOperator> _on_recreate(
       const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,

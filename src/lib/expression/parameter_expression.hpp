@@ -56,7 +56,7 @@ class ParameterExpression : public AbstractExpression {
   size_t _on_hash() const override;
 
  private:
-  std::optional<ReferencedExpressionInfo> _referenced_expression_info;
+  const std::optional<ReferencedExpressionInfo> _referenced_expression_info;
 
   // Value placeholder: Get's set once during EXECUTE <prepared-statement>
   // External value: Get's set (multiple times) in AbstractOperator::set_parameter during expression execution

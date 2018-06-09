@@ -3,6 +3,8 @@
 #include <memory>
 #include <vector>
 
+#include "expression/parameter_expression.hpp"
+
 namespace opossum {
 
 class AbstractExpression;
@@ -11,16 +13,21 @@ class SQLIdentifierContext;
 
 class SQLIdentifierContextProxy final {
  public:
-  explicit SQLIdentifierContextProxy(const std::shared_ptr<SQLIdentifierContext>& wrapped_context, const std::shared_ptr<SQLIdentifierContextProxy>& outer_context_proxy = {});
+  SQLIdentifierContextProxy(const std::shared_ptr<SQLIdentifierContext>& wrapped_context,
+                                     const std::shared_ptr<ParameterID>& parameter_id_counter,
+                                     const std::shared_ptr<SQLIdentifierContextProxy>& outer_context_proxy = {});
 
   std::shared_ptr<AbstractExpression> resolve_identifier_relaxed(const SQLIdentifier& identifier);
 
-  const std::vector<std::shared_ptr<AbstractExpression>>& accessed_expressions() const;
+  const ExpressionUnorderedMap<ParameterID>& accessed_expressions() const;
 
  private:
   std::shared_ptr<SQLIdentifierContext> _wrapped_context;
+  std::shared_ptr<ParameterID> _parameter_id_counter;
   std::shared_ptr<SQLIdentifierContextProxy> _outer_context_proxy;
-  std::vector<std::shared_ptr<AbstractExpression>> _accessed_expressions;
+
+  // Previously accessed expressions that were already assigned a ParameterID
+  ExpressionUnorderedMap<ParameterID> _accessed_expressions;
 };
 
 

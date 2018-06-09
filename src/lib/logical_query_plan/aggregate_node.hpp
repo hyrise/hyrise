@@ -7,7 +7,6 @@
 
 #include "abstract_lqp_node.hpp"
 #include "lqp_column_reference.hpp"
-#include "plan_column_definition.hpp"
 #include "types.hpp"
 
 namespace opossum {

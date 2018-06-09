@@ -9,8 +9,8 @@
 
 #include "all_parameter_variant.hpp"
 #include "sql_identifier_context.hpp"
-
 #include "expression/abstract_expression.hpp"
+#include "expression/parameter_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "sql_identifier_context.hpp"
 #include "sql_identifier_context_proxy.hpp"
@@ -18,8 +18,6 @@
 namespace opossum {
 
 class AggregateNode;
-class ColumnIdentifierLookup;
-class LQPExpression;
 
 /**
 * Produces an LQP (Logical Query Plan), as defined in src/logical_query_plan/, from an hsql::SQLParseResult.
@@ -31,7 +29,16 @@ class LQPExpression;
  */
 class SQLTranslator final {
  public:
-  explicit SQLTranslator(const UseMvcc use_mvcc = UseMvcc::No, const std::shared_ptr<SQLIdentifierContextProxy>& external_sql_identifier_context_proxy = {});
+  /**
+   * @param use_mvcc                                Whether ValidateNodes should be compiled into the plan
+   * @param external_sql_identifier_context_proxy   Set during recursive invocations to resolve external identifiers
+   *                                                in corelated subqueries
+   * @param parameter_id_counter                    Set during recursive invocations to allocate unique ParameterIDs
+   *                                                for each encountered parameter
+   */
+  explicit SQLTranslator(const UseMvcc use_mvcc = UseMvcc::No,
+                         const std::shared_ptr<SQLIdentifierContextProxy>& external_sql_identifier_context_proxy = {},
+                         const std::shared_ptr<ParameterID>& parameter_id_counter = std::make_shared<ParameterID>(ParameterID{0}));
 
   std::shared_ptr<SQLIdentifierContext> sql_identifier_context() const;
 
@@ -118,6 +125,7 @@ class SQLTranslator final {
   std::shared_ptr<AbstractLQPNode> _current_lqp;
   std::shared_ptr<SQLIdentifierContext> _sql_identifier_context;
   std::shared_ptr<SQLIdentifierContextProxy> _external_sql_identifier_context_proxy;
+  std::shared_ptr<ParameterID> _parameter_id_counter;
   std::optional<TableSourceState> _from_clause_result;
 
   // "Inflated" because als wildcard will be inflated to the expressions they actually represent

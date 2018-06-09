@@ -398,13 +398,11 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_select_expres
 const PQPSelectExpression &expression) {
   // Make sure all Columns that are parameters are materialized
   for (const auto& parameter : expression.parameters) {
-    _ensure_column_materialization(parameter);
+    _ensure_column_materialization(parameter.second);
   }
 
   std::vector<R> result_values(_output_row_count);
   std::vector<bool> result_nulls(_output_row_count);
-
-  std::vector<AllParameterVariant> parameter_values(expression.parameters.size());
 
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
     const auto select_result = evaluate_select_expression_for_row<R>(expression, chunk_offset);
@@ -421,26 +419,30 @@ template<typename R>
 std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_select_expression_for_row(const PQPSelectExpression& expression, const ChunkOffset chunk_offset) {
   Assert(expression.parameters.empty() || _chunk, "Sub-SELECT references external Columns but Expression doesn't operate on a Table/Chunk");
 
-  std::vector<AllParameterVariant> parameter_values(expression.parameters.size());
+  std::unordered_map<ParameterID, AllTypeVariant> parameters;
 
   for (auto parameter_idx = size_t{0}; parameter_idx < expression.parameters.size(); ++parameter_idx) {
-    const auto parameter_column_id = expression.parameters[parameter_idx];
-    const auto& column = *_chunk->get_column(parameter_column_id);
+    const auto& parameter_id_column_id = expression.parameters[parameter_idx];
+    const auto parameter_id = parameter_id_column_id.first;
+    const auto column_id = parameter_id_column_id.second;
+    const auto& column = *_chunk->get_column(column_id);
 
     resolve_data_type(column.data_type(), [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
 
-      const auto column_materialization = std::dynamic_pointer_cast<ExpressionResult<ColumnDataType>>(_column_materializations[parameter_column_id]);
+      const auto column_materialization = std::dynamic_pointer_cast<ExpressionResult<ColumnDataType>>(_column_materializations[column_id]);
 
       if (column_materialization->null(chunk_offset)) {
-        parameter_values[parameter_idx] = NullValue{};
+        parameters.emplace(parameter_id, NullValue{});
       } else {
-        parameter_values[parameter_idx] = column_materialization->value(chunk_offset);
+        parameters.emplace(parameter_id, column_materialization->value(chunk_offset));
       }
     });
   }
 
-  auto row_pqp = expression.pqp->recreate(parameter_values);
+  // TODO(moritz) recreate() shouldn't be necessary for every row if we could re-execute PQPs...
+  auto row_pqp = expression.pqp->recreate();
+  row_pqp->set_parameters(parameters);
 
   SQLQueryPlan query_plan;
   query_plan.add_tree_by_root(row_pqp);

@@ -4,6 +4,7 @@
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_factory.hpp"
+#include "expression/parameter_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "sql/sql_identifier_context.hpp"
@@ -32,11 +33,14 @@ class SQLIdentifierContextTest : public ::testing::Test {
     context.set_table_name(expression_a, {"T1"s});
     context.set_table_name(expression_b, {"T1"s});
     context.set_table_name(expression_c, {"T2"s});
+
+    parameter_id_counter = std::make_shared<ParameterID>(ParameterID{0});
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c;
   std::shared_ptr<AbstractExpression> expression_a, expression_b, expression_c, expression_unnamed;
   SQLIdentifierContext context;
+  std::shared_ptr<ParameterID> parameter_id_counter;
 };
 
 TEST_F(SQLIdentifierContextTest, ResolveIdentifier) {
@@ -105,7 +109,7 @@ TEST_F(SQLIdentifierContextTest, ResolveOuterExpression) {
   outermost_context->set_column_name(outermost_expression_c, "c"); // Intentionally named just "c"
   outermost_context->set_table_name(outermost_expression_b, "Outermost");
 
-  const auto outermost_context_proxy = std::make_shared<SQLIdentifierContextProxy>(outermost_context);
+  const auto outermost_context_proxy = std::make_shared<SQLIdentifierContextProxy>(outermost_context, parameter_id_counter);
 
   /**
    * Create context and context proxy for the nested ("intermediate") query
@@ -117,8 +121,7 @@ TEST_F(SQLIdentifierContextTest, ResolveOuterExpression) {
   intermediate_context->set_column_name(intermediate_expression_b, "b"); // Intentionally named just "b"
   intermediate_context->set_table_name(intermediate_expression_b, "Intermediate");
 
-  // TODO(moritz) No outer proxy yet because the ValuePlaceholder system doesn't support multiple levels of nesting
-  const auto intermediate_context_proxy = std::make_shared<SQLIdentifierContextProxy>(intermediate_context, nullptr /*outermost_context_proxy*/);
+  const auto intermediate_context_proxy = std::make_shared<SQLIdentifierContextProxy>(intermediate_context, parameter_id_counter, outermost_context_proxy);
 
   /**
    * Test whether identifiers are resolved correctly
@@ -127,26 +130,24 @@ TEST_F(SQLIdentifierContextTest, ResolveOuterExpression) {
   EXPECT_EQ(context.resolve_identifier_relaxed({"b"}), expression_b);
   EXPECT_EQ(context.resolve_identifier_relaxed({"b", "T1"}), expression_b);
 
-  EXPECT_TRUE(intermediate_context_proxy->resolve_identifier_relaxed({"b", "Intermediate"})->deep_equals(*external(intermediate_expression_b, 0)));
-  EXPECT_TRUE(intermediate_context_proxy->resolve_identifier_relaxed({"intermediate_a"})->deep_equals(*external(intermediate_expression_a, 1)));
-  EXPECT_TRUE(intermediate_context_proxy->resolve_identifier_relaxed({"b"})->deep_equals(*external(intermediate_expression_b, 0)));
+  EXPECT_TRUE(intermediate_context_proxy->resolve_identifier_relaxed({"b", "Intermediate"})->deep_equals(*parameter(ParameterID{0}, intermediate_expression_b)));
+  EXPECT_TRUE(intermediate_context_proxy->resolve_identifier_relaxed({"intermediate_a"})->deep_equals(*parameter(ParameterID{1}, intermediate_expression_a)));
+  EXPECT_TRUE(intermediate_context_proxy->resolve_identifier_relaxed({"b"})->deep_equals(*parameter(ParameterID{0}, intermediate_expression_b)));
   EXPECT_EQ(intermediate_context_proxy->resolve_identifier_relaxed({"intermediate_a", "Intermediate"}), nullptr);
 
-  // TODO(moritz) Doesn't work yet because the ValuePlaceholder system doesn't support multiple levels of nesting
-//  EXPECT_EQ(intermediate_context_proxy->resolve_identifier_relaxed({"outermost_a"}), outermost_expression_a);
-//  EXPECT_EQ(intermediate_context_proxy->resolve_identifier_relaxed({"b", "Outermost"}), outermost_expression_b);
+  EXPECT_TRUE(intermediate_context_proxy->resolve_identifier_relaxed({"outermost_a"})->deep_equals(*parameter(ParameterID{2}, outermost_expression_a)));
+  EXPECT_TRUE(intermediate_context_proxy->resolve_identifier_relaxed({"b", "Outermost"})->deep_equals(*parameter(ParameterID{3}, outermost_expression_b)));
 
   /**
    * Test whether the proxies tracked accesses to their contexts correctly
    */
-  // TODO(moritz) Doesn't work yet because the ValuePlaceholder system doesn't support multiple levels of nesting
-//  ASSERT_EQ(outermost_context_proxy->accessed_expressions().size(), 2u);
-//  EXPECT_EQ(outermost_context_proxy->accessed_expressions().at(0), outermost_expression_a);
-//  EXPECT_EQ(outermost_context_proxy->accessed_expressions().at(1), outermost_expression_b);
+  ASSERT_EQ(outermost_context_proxy->accessed_expressions().size(), 2u);
+  EXPECT_EQ(outermost_context_proxy->accessed_expressions().count(outermost_expression_a), 1u);
+  EXPECT_EQ(outermost_context_proxy->accessed_expressions().count(outermost_expression_b), 1u);
 
   ASSERT_EQ(intermediate_context_proxy->accessed_expressions().size(), 2u);
-  EXPECT_EQ(intermediate_context_proxy->accessed_expressions().at(0), intermediate_expression_b);
-  EXPECT_EQ(intermediate_context_proxy->accessed_expressions().at(1), intermediate_expression_a);
+  EXPECT_EQ(intermediate_context_proxy->accessed_expressions().count(intermediate_expression_b), 1u);
+  EXPECT_EQ(intermediate_context_proxy->accessed_expressions().count(intermediate_expression_a), 1u);
 }
 
 TEST_F(SQLIdentifierContextTest, GetExpressionIdentifier) {
