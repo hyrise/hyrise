@@ -710,17 +710,21 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_su
      *
      * START -8 -7 -6 -5 -4 -3 -2 -1 || 0  || 1 2 3 4 5 6  7  8
      * CHAR  // // // H  e  l  l  o  || // || H e l l o // // //
+     *
+     * SUBSTR('HELLO', 0, 2) -> 'H'
+     * SUBSTR('HELLO', -1, 2) -> 'O'
+     * SUBSTR('HELLO', -8, 1) -> ''
+     * SUBSTR('HELLO', -8, 5) -> 'HE'
      */
     auto end = int32_t{0};
     if (start < 0) {
       start += signed_string_size;
     } else {
       if (start == 0) {
-        start = 1;
         length -= 1;
+      } else {
+        start -= 1;
       }
-
-      start -= 1;
     }
 
     end = start + length;
