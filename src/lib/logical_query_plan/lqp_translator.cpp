@@ -16,7 +16,6 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
-#include "expression/external_expression.hpp"
 #include "expression/between_expression.hpp"
 #include "expression/is_null_expression.hpp"
 #include "expression/expression_utils.hpp"
@@ -25,7 +24,6 @@
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_select_expression.hpp"
 #include "expression/value_expression.hpp"
-#include "expression/value_placeholder_expression.hpp"
 //#include "insert_node.hpp"
 #include "join_node.hpp"
 #include "limit_node.hpp"
@@ -597,12 +595,6 @@ AllParameterVariant LQPTranslator::_translate_to_all_parameter_variant(const Abs
   if (expression.type == ExpressionType::Value) {
     const auto& value_expression = static_cast<const ValueExpression&>(expression);
     parameter = value_expression.value;
-  } else if (expression.type == ExpressionType::ValuePlaceholder) {
-    const auto& value_placeholder_expression = static_cast<const ValuePlaceholderExpression&>(expression);
-    parameter = value_placeholder_expression.value_placeholder;
-  } else if (expression.type == ExpressionType::External) {
-    const auto& external_expression = static_cast<const ExternalExpression&>(expression);
-    parameter = external_expression.value_placeholder;
   } else {
     parameter = input_node.get_column_id(expression);
   }

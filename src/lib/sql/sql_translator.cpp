@@ -26,7 +26,6 @@
 #include "expression/in_expression.hpp"
 //#include "expression/not_expression.hpp"
 #include "expression/value_expression.hpp"
-#include "expression/value_placeholder_expression.hpp"
 //#include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/alias_node.hpp"

@@ -20,14 +20,6 @@ std::shared_ptr<ValueExpression> value(const AllTypeVariant& value) {
   return std::make_shared<ValueExpression>(value);
 }
 
-std::shared_ptr<ValuePlaceholderExpression> value_placeholder(const ValuePlaceholder& value_placeholder) {
-  return std::make_shared<ValuePlaceholderExpression>(value_placeholder);
-}
-
-std::shared_ptr<ValuePlaceholderExpression> value_placeholder(const uint16_t index) {
-  return std::make_shared<ValuePlaceholderExpression>(ValuePlaceholder{index});
-}
-
 std::shared_ptr<ValueExpression> null() {
   return std::make_shared<ValueExpression>(NullValue{});
 }

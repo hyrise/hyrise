@@ -10,9 +10,7 @@
 
 #include "expression/expression_utils.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
-#include "expression/external_expression.hpp"
 #include "expression/value_expression.hpp"
-#include "expression/value_placeholder_expression.hpp"
 
 namespace opossum {
 
@@ -24,31 +22,7 @@ const std::string Projection::name() const { return "Projection"; }
 std::shared_ptr<AbstractOperator> Projection::_on_recreate(
     const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
     const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-
-  /**
-   * Replace ExternalExpressions and ValuePlaceholderExpressions with actual values. This makes corelated subqueries
-   * and parameterised queries work.
-   */
-  auto expressions = expressions_copy(this->expressions);
-  for (auto& expression : expressions) {
-    visit_expression(expression, [&](auto& current_expression) {
-      if (current_expression->type != ExpressionType::ValuePlaceholder && current_expression->type != ExpressionType::External) return true;
-
-      auto value_placeholder_idx = uint16_t{0};
-      if (current_expression->type == ExpressionType::ValuePlaceholder) {
-        const auto value_placeholder_expression = std::static_pointer_cast<ValuePlaceholderExpression>(current_expression);
-        value_placeholder_idx = value_placeholder_expression->value_placeholder.index();
-      } else {
-        const auto external_expression = std::static_pointer_cast<ExternalExpression>(current_expression);
-        value_placeholder_idx = external_expression->value_placeholder.index();
-      }
-
-      current_expression = std::make_shared<ValueExpression>(boost::get<AllTypeVariant>(args[value_placeholder_idx]));
-      return false;
-    });
-  }
-
-  return std::make_shared<Projection>(recreated_input_left, expressions);
+  return std::make_shared<Projection>(recreated_input_left, expressions_copy(expressions));
 }
 
 void Projection::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {

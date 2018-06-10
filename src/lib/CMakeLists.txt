@@ -45,8 +45,6 @@ set(
     expression/expression_utils.hpp
     expression/extract_expression.cpp
     expression/extract_expression.hpp
-    expression/external_expression.cpp
-    expression/external_expression.hpp
     expression/function_expression.cpp
     expression/function_expression.hpp
     expression/in_expression.cpp
@@ -67,8 +65,6 @@ set(
     expression/pqp_select_expression.hpp
     expression/value_expression.cpp
     expression/value_expression.hpp
-    expression/value_placeholder_expression.cpp
-    expression/value_placeholder_expression.hpp
 #    import_export/binary.hpp
     import_export/csv_converter.cpp
     import_export/csv_converter.hpp

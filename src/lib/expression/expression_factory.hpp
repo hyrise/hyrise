@@ -13,13 +13,11 @@
 #include "function_expression.hpp"
 #include "lqp_select_expression.hpp"
 #include "case_expression.hpp"
-#include "external_expression.hpp"
 #include "in_expression.hpp"
 #include "logical_expression.hpp"
 #include "lqp_column_expression.hpp"
 #include "parameter_expression.hpp"
 #include "value_expression.hpp"
-#include "value_placeholder_expression.hpp"
 
 /**
  * This file provides convenience methods to create (nested) Expression objects with little boilerplate
@@ -55,8 +53,6 @@ std::shared_ptr<LQPColumnExpression> to_expression(const LQPColumnReference& col
 std::shared_ptr<ValueExpression> to_expression(const AllTypeVariant& value);
 
 std::shared_ptr<ValueExpression> value(const AllTypeVariant& value);
-std::shared_ptr<ValuePlaceholderExpression> value_placeholder(const ValuePlaceholder& value_placeholder);
-std::shared_ptr<ValuePlaceholderExpression> value_placeholder(const uint16_t index);
 std::shared_ptr<ValueExpression> null();
 
 template<auto t, typename E>
@@ -119,12 +115,6 @@ std::shared_ptr<AbstractExpression> select(const std::shared_ptr<AbstractLQPNode
     // Not corelated
     return std::make_shared<LQPSelectExpression>(lqp);
   }
-}
-
-template<typename E>
-std::shared_ptr<ExternalExpression> external(const E& e, const uint16_t index) {
-  const auto expression = to_expression(e);
-  return std::make_shared<ExternalExpression>(ValuePlaceholder{index}, expression->data_type(), expression->is_nullable(), expression->as_column_name());
 }
 
 template<typename ... Args>

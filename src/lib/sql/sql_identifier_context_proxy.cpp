@@ -1,6 +1,5 @@
 #include "sql_identifier_context_proxy.hpp"
 
-#include "expression/external_expression.hpp"
 #include "parameter_id_allocator.hpp"
 #include "sql_identifier_context.hpp"
 
