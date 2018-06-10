@@ -111,6 +111,26 @@ JoinMode translate_join_mode(const hsql::JoinType join_type) {
   DebugAssert(it != join_type_to_mode.end(), "Unable to handle join type.");
   return it->second;
 }
+
+/**
+ * Is the expression a predicate that our Join Operators can process directly?
+ * That is, is it of the form <column> <predicate_condition> <column>?
+ */
+bool is_trivial_join_predicate(const AbstractExpression& expression,
+                               const AbstractLQPNode& left_input,
+                               const AbstractLQPNode& right_input) {
+  if (expression.type != ExpressionType::Predicate) return false;
+
+  const auto* binary_predicate_expression = dynamic_cast<const BinaryPredicateExpression*>(&expression);
+  if (!binary_predicate_expression) return false;
+
+  const auto left_in_left = left_input.find_column_id(*binary_predicate_expression->left_operand());
+  const auto right_in_right = right_input.find_column_id(*binary_predicate_expression->right_operand());
+  const auto right_in_left = left_input.find_column_id(*binary_predicate_expression->right_operand());
+  const auto left_in_right = right_input.find_column_id(*binary_predicate_expression->left_operand());
+
+  return (left_in_left && right_in_right) || (right_in_left && left_in_right);
+}
 } // namespace
 
 namespace opossum {
@@ -514,16 +534,21 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
    */
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
 
-  if (join_predicates.empty()) {
+  const auto join_predicate_iter = std::find_if(join_predicates.begin(), join_predicates.end(), [&](const auto& join_predicate) {
+    return is_trivial_join_predicate(*join_predicate, *left_input_lqp, *right_input_lqp);
+  });
+
+  if (join_predicate_iter == join_predicates.end()) {
     lqp = JoinNode::make(JoinMode::Cross, left_input_lqp, right_input_lqp);
   } else {
-    lqp = JoinNode::make(join_mode, join_predicates.front(), left_input_lqp, right_input_lqp);
+    lqp = JoinNode::make(join_mode, *join_predicate_iter, left_input_lqp, right_input_lqp);
+    join_predicates.erase(join_predicate_iter);
   }
 
   // Add secondary join predicates as normal PredicateNodes
-  for (auto join_predicate_idx = size_t{1}; join_predicate_idx < join_predicates.size(); ++join_predicate_idx) {
+  for (const auto& join_predicate : join_predicates) {
     PerformanceWarning("Secondary Join Predicates added as normal Predicates");
-    lqp = PredicateNode::make(join_predicates[join_predicate_idx], _current_lqp);
+    lqp = _translate_predicate_expression(join_predicate, lqp);
   }
 
   result_state.lqp = lqp;

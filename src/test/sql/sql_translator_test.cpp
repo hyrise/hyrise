@@ -686,6 +686,25 @@ TEST_F(SQLTranslatorTest, JoinNaturalColumnAlias) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, JoinInnerComplexPredicate) {
+  const auto actual_lqp = compile_query("SELECT * FROM int_float JOIN int_float2 ON int_float.a + int_float2.a = int_float2.b * int_float.a;");
+
+  // clang-format off
+  const auto a_plus_a = add(int_float_a, int_float2_a);
+  const auto b_times_a = mul(int_float2_b, int_float_a);
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float_a, int_float_b, int_float2_a, int_float2_b),
+    PredicateNode::make(equals(a_plus_a, b_times_a),
+      ProjectionNode::make(expression_vector(a_plus_a, b_times_a, int_float_a, int_float_b, int_float2_a, int_float2_b),
+        JoinNode::make(JoinMode::Cross,
+          stored_table_node_int_float,
+          stored_table_node_int_float2)
+  )));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, FromColumnAliasingSimple) {
   const auto actual_lqp_a = compile_query("SELECT t.x FROM int_float AS t (x, y) WHERE x = t.y");
   const auto actual_lqp_b = compile_query("SELECT t.x FROM (SELECT * FROM int_float) AS t (x, y) WHERE x = t.y");
