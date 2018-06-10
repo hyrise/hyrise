@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "expression/evaluation/expression_evaluator.hpp"
+#include "expression/expression_utils.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/table.hpp"
 
@@ -82,6 +83,14 @@ std::shared_ptr<const Table> Limit::_on_execute() {
   }
 
   return output_table;
+}
+
+void Limit::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+  expression_set_parameters(_row_count_expression, parameters);
+}
+
+void Limit::_on_set_transaction_context(std::weak_ptr<TransactionContext> transaction_context) {
+  expression_set_transaction_context(_row_count_expression, transaction_context);
 }
 
 }  // namespace opossum

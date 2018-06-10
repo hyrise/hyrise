@@ -68,14 +68,15 @@ TableStatistics TableStatistics::estimate_predicate(const ColumnID column_id,
     predicated_column_statistics[column_id] = estimate.column_statistics;
     predicated_row_count *= estimate.selectivity;
   } else {
-    Assert(is_placeholder(value), "AllParameterVariant type is not implemented in statistics component.");
-    const auto value_placeholder = boost::get<ValuePlaceholder>(value);
-
-    const auto estimate = left_operand_column_statistics->estimate_predicate_with_value_placeholder(predicate_condition,
-                                                                                                    value_placeholder);
-
-    predicated_column_statistics[column_id] = estimate.column_statistics;
-    predicated_row_count *= estimate.selectivity;
+    Fail("Reactivate");
+//    Assert(is_parameter(value), "AllParameterVariant type is not implemented in statistics component.");
+//    const auto value_placeholder = boost::get<ValuePlaceholder>(value);
+//
+//    const auto estimate = left_operand_column_statistics->estimate_predicate_with_value_placeholder(predicate_condition,
+//                                                                                                    value_placeholder);
+//
+//    predicated_column_statistics[column_id] = estimate.column_statistics;
+//    predicated_row_count *= estimate.selectivity;
   }
 
   return {TableType::References, predicated_row_count, predicated_column_statistics};

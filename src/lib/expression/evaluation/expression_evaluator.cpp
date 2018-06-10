@@ -130,8 +130,6 @@ const AbstractExpression &expression) {
 //    case ExpressionType::Array:
 //      return evaluate_array<R>(static_cast<const ArrayExpression&>(expression));
 
-    case ExpressionType::External:
-    case ExpressionType::ValuePlaceholder:
     case ExpressionType::Mock:
       Fail("Can't handle External/ValuePlaceholders/Mocks since they don't have a value.");
 

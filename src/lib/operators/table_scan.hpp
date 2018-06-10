@@ -54,6 +54,8 @@ class TableScan : public AbstractReadOnlyOperator {
       const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
       const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
 
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
+
   void _on_cleanup() override;
 
   void _init_scan();
@@ -61,7 +63,7 @@ class TableScan : public AbstractReadOnlyOperator {
  private:
   const ColumnID _left_column_id;
   const PredicateCondition _predicate_condition;
-  const AllParameterVariant _right_parameter;
+  AllParameterVariant _right_parameter;
 
   std::vector<ChunkID> _excluded_chunk_ids;
 

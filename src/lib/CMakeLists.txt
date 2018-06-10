@@ -116,6 +116,8 @@ set(
     logical_query_plan/lqp_translator.hpp
     logical_query_plan/lqp_utils.cpp
     logical_query_plan/lqp_utils.hpp
+    logical_query_plan/logical_query_plan.cpp
+    logical_query_plan/logical_query_plan.hpp
     logical_query_plan/mock_node.cpp
     logical_query_plan/mock_node.hpp
     logical_query_plan/predicate_node.cpp
@@ -193,6 +195,8 @@ set(
     operators/maintenance/show_columns.hpp
     operators/maintenance/show_tables.cpp
     operators/maintenance/show_tables.hpp
+    operators/physical_query_plan.cpp
+    operators/physical_query_plan.hpp
     operators/print.cpp
     operators/print.hpp
     operators/product.cpp

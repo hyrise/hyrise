@@ -9,7 +9,7 @@ ParameterID ParameterIDAllocator::allocate() {
 ParameterID ParameterIDAllocator::allocate_for_value_placeholder(const ValuePlaceholderID value_placeholder_id) {
   const auto parameter_id = allocate();
   const auto is_unique = _value_placeholders.emplace(value_placeholder_id, parameter_id).second;
-  Assert(is_unique, "Duplicate ValuePlaceholder");
+  Assert(is_unique, "Duplicate ValuePlaceholderID");
 
   return parameter_id;
 }
