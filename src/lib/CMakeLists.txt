@@ -325,6 +325,8 @@ set(
 #    sql/lru_cache.hpp
 #    sql/lru_k_cache.hpp
 #    sql/random_cache.hpp
+    sql/parameter_id_allocator.cpp
+    sql/parameter_id_allocator.hpp
     sql/sql_pipeline_builder.cpp
     sql/sql_pipeline_builder.hpp
     sql/sql_pipeline.cpp

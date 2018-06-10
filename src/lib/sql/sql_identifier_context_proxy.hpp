@@ -10,11 +10,12 @@ namespace opossum {
 class AbstractExpression;
 struct SQLIdentifier;
 class SQLIdentifierContext;
+class ParameterIDAllocator;
 
 class SQLIdentifierContextProxy final {
  public:
   SQLIdentifierContextProxy(const std::shared_ptr<SQLIdentifierContext>& wrapped_context,
-                                     const std::shared_ptr<ParameterID>& parameter_id_counter,
+                                     const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
                                      const std::shared_ptr<SQLIdentifierContextProxy>& outer_context_proxy = {});
 
   std::shared_ptr<AbstractExpression> resolve_identifier_relaxed(const SQLIdentifier& identifier);
@@ -23,7 +24,7 @@ class SQLIdentifierContextProxy final {
 
  private:
   std::shared_ptr<SQLIdentifierContext> _wrapped_context;
-  std::shared_ptr<ParameterID> _parameter_id_counter;
+  std::shared_ptr<ParameterIDAllocator> _parameter_id_allocator;
   std::shared_ptr<SQLIdentifierContextProxy> _outer_context_proxy;
 
   // Previously accessed expressions that were already assigned a ParameterID

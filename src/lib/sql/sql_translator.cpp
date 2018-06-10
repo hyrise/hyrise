@@ -118,10 +118,14 @@ namespace opossum {
 
 SQLTranslator::SQLTranslator(const UseMvcc use_mvcc,
                              const std::shared_ptr<SQLIdentifierContextProxy>& external_sql_identifier_context_proxy,
-                             const std::shared_ptr<ParameterID>& parameter_id_counter):
-  _use_mvcc(use_mvcc), _external_sql_identifier_context_proxy(external_sql_identifier_context_proxy), _parameter_id_counter(parameter_id_counter) {
+                             const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator):
+  _use_mvcc(use_mvcc), _external_sql_identifier_context_proxy(external_sql_identifier_context_proxy), _parameter_id_allocator(parameter_id_allocator) {
 
 }
+
+const std::unordered_map<ValuePlaceholderID, ParameterID>& SQLTranslator::value_placeholders() const {
+  return _parameter_id_allocator->value_placeholders();
+};
 
 std::shared_ptr<SQLIdentifierContext> SQLTranslator::sql_identifier_context() const {
   return _sql_identifier_context;
@@ -952,8 +956,11 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
     case hsql::kExprLiteralNull:
       return std::make_shared<ValueExpression>(NullValue{});
 
-    case hsql::kExprParameter:
-      return std::make_shared<ParameterExpression>(ParameterID{(*_parameter_id_counter)++});
+    case hsql::kExprParameter: {
+      Assert(expr.ival >= 0 && expr.ival <= std::numeric_limits<ValuePlaceholderID::base_type>::max(), "ValuePlaceholderID out of range");
+      auto value_placeholder_id = ValuePlaceholderID{static_cast<uint16_t>(expr.ival)};
+      return std::make_shared<ParameterExpression>(_parameter_id_allocator->allocate_for_value_placeholder(value_placeholder_id));
+    }
 
     case hsql::kExprFunctionRef: {
       // convert to upper-case to find mapping
@@ -1095,10 +1102,10 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
 
     case hsql::kExprSelect: {
       const auto sql_identifier_proxy = std::make_shared<SQLIdentifierContextProxy>(sql_identifier_context,
-                                                                                    _parameter_id_counter,
+                                                                                    _parameter_id_allocator,
                                                                                     _external_sql_identifier_context_proxy);
 
-      auto sub_select_translator = SQLTranslator{_use_mvcc, sql_identifier_proxy, _parameter_id_counter};
+      auto sub_select_translator = SQLTranslator{_use_mvcc, sql_identifier_proxy, _parameter_id_allocator};
       const auto sub_select_lqp = sub_select_translator.translate_select_statement(*expr.select);
       auto parameters = LQPSelectExpression::Parameters{};
       parameters.reserve(sql_identifier_proxy->accessed_expressions().size());

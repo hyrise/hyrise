@@ -12,6 +12,7 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/parameter_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "parameter_id_allocator.hpp"
 #include "sql_identifier_context.hpp"
 #include "sql_identifier_context_proxy.hpp"
 
@@ -38,8 +39,9 @@ class SQLTranslator final {
    */
   explicit SQLTranslator(const UseMvcc use_mvcc = UseMvcc::No,
                          const std::shared_ptr<SQLIdentifierContextProxy>& external_sql_identifier_context_proxy = {},
-                         const std::shared_ptr<ParameterID>& parameter_id_counter = std::make_shared<ParameterID>(ParameterID{0}));
+                         const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator = std::make_shared<ParameterIDAllocator>());
 
+  const std::unordered_map<ValuePlaceholderID, ParameterID>& value_placeholders() const;
   std::shared_ptr<SQLIdentifierContext> sql_identifier_context() const;
 
   std::vector<std::shared_ptr<AbstractLQPNode>> translate_sql(const std::string& sql);
@@ -125,7 +127,7 @@ class SQLTranslator final {
   std::shared_ptr<AbstractLQPNode> _current_lqp;
   std::shared_ptr<SQLIdentifierContext> _sql_identifier_context;
   std::shared_ptr<SQLIdentifierContextProxy> _external_sql_identifier_context_proxy;
-  std::shared_ptr<ParameterID> _parameter_id_counter;
+  std::shared_ptr<ParameterIDAllocator> _parameter_id_allocator;
   std::optional<TableSourceState> _from_clause_result;
 
   // "Inflated" because als wildcard will be inflated to the expressions they actually represent

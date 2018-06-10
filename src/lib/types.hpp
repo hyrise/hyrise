@@ -40,6 +40,7 @@ STRONG_TYPEDEF(uint16_t, ColumnID);
 STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
 STRONG_TYPEDEF(uint32_t, NodeID);
 STRONG_TYPEDEF(int32_t, CpuID);
+STRONG_TYPEDEF(uint16_t, ValuePlaceholderID);
 
 namespace opossum {
 
@@ -166,9 +167,10 @@ enum class SchedulePriority {
 // Part of AllParameterVariant to reference parameters that will be replaced later.
 // When stored in an operator, the operator's recreate method can contain functionality
 // that will replace a ValuePlaceholder with an explicit value from a given list of arguments
+
 class ValuePlaceholder {
  public:
-  explicit ValuePlaceholder(uint16_t index) : _index(index) {}
+  explicit ValuePlaceholder(const uint16_t index) : _index(index) {}
 
   uint16_t index() const { return _index; }
 

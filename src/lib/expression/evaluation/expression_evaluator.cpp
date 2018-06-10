@@ -717,7 +717,8 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_su
     auto start = starts->value(chunk_offset);
 
     /**
-     * Hyrise SUBSTR follows SQLite semantics for negative indices. SUBSTRS lives in this weird space
+     * Hyrise SUBSTR follows SQLite semantics for negative indices. SUBSTRS lives in this weird space.
+     * Note that different DBMS behave differently when it comes to negative indices.
      *
      * START -8 -7 -6 -5 -4 -3 -2 -1 || 0  || 1 2 3 4 5 6  7  8
      * CHAR  // // // H  e  l  l  o  || // || H e l l o // // //
@@ -743,9 +744,8 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_su
     end = std::min(end, signed_string_size);
     length = end - start;
 
-    // Any invalid arguments, like SUBSTR("HELLO", 4000, -2), lead to an empty string
+    // Invalid/out of range arguments, like SUBSTR("HELLO", 4000, -2), lead to an empty string
     if (!string.empty() && start >= 0 && start < signed_string_size && length > 0) {
-
       length = std::min<int32_t>(signed_string_size - start, length);
       result_values[chunk_offset] = string.substr(static_cast<size_t>(start), static_cast<size_t>(length));
     }

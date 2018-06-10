@@ -9,6 +9,7 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "sql/sql_identifier_context.hpp"
 #include "sql/sql_identifier_context_proxy.hpp"
+#include "sql/parameter_id_allocator.hpp"
 
 using namespace std::string_literals;  // NOLINT
 using namespace opossum::expression_factory;  // NOLINT
@@ -34,13 +35,13 @@ class SQLIdentifierContextTest : public ::testing::Test {
     context.set_table_name(expression_b, {"T1"s});
     context.set_table_name(expression_c, {"T2"s});
 
-    parameter_id_counter = std::make_shared<ParameterID>(ParameterID{0});
+    parameter_id_allocator = std::make_shared<ParameterIDAllocator>();
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c;
   std::shared_ptr<AbstractExpression> expression_a, expression_b, expression_c, expression_unnamed;
   SQLIdentifierContext context;
-  std::shared_ptr<ParameterID> parameter_id_counter;
+  std::shared_ptr<ParameterIDAllocator> parameter_id_allocator;
 };
 
 TEST_F(SQLIdentifierContextTest, ResolveIdentifier) {
@@ -109,7 +110,7 @@ TEST_F(SQLIdentifierContextTest, ResolveOuterExpression) {
   outermost_context->set_column_name(outermost_expression_c, "c"); // Intentionally named just "c"
   outermost_context->set_table_name(outermost_expression_b, "Outermost");
 
-  const auto outermost_context_proxy = std::make_shared<SQLIdentifierContextProxy>(outermost_context, parameter_id_counter);
+  const auto outermost_context_proxy = std::make_shared<SQLIdentifierContextProxy>(outermost_context, parameter_id_allocator);
 
   /**
    * Create context and context proxy for the nested ("intermediate") query
@@ -121,7 +122,7 @@ TEST_F(SQLIdentifierContextTest, ResolveOuterExpression) {
   intermediate_context->set_column_name(intermediate_expression_b, "b"); // Intentionally named just "b"
   intermediate_context->set_table_name(intermediate_expression_b, "Intermediate");
 
-  const auto intermediate_context_proxy = std::make_shared<SQLIdentifierContextProxy>(intermediate_context, parameter_id_counter, outermost_context_proxy);
+  const auto intermediate_context_proxy = std::make_shared<SQLIdentifierContextProxy>(intermediate_context, parameter_id_allocator, outermost_context_proxy);
 
   /**
    * Test whether identifiers are resolved correctly
