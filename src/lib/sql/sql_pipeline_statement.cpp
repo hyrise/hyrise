@@ -22,7 +22,7 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
                                            const std::shared_ptr<TransactionContext>& transaction_context,
                                            const std::shared_ptr<LQPTranslator>& lqp_translator,
                                            const std::shared_ptr<Optimizer>& optimizer,
-                                           const PreparedStatementCache& prepared_statements)
+                                           const std::shared_ptr<PreparedStatementCache>& prepared_statements)
     : _sql_string(sql),
       _use_mvcc(use_mvcc),
       _auto_commit(_use_mvcc == UseMvcc::Yes && !transaction_context),
@@ -76,15 +76,22 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   auto parsed_sql = get_parsed_sql_statement();
 
   const auto* statement = parsed_sql->getStatement(0);
+
+  SQLTranslator sql_translator{_use_mvcc};
+
+  std::vector<std::shared_ptr<AbstractLQPNode>> lqp_roots;
+
   if (const auto prepared_statement = dynamic_cast<const hsql::PrepareStatement*>(statement)) {
     // If this is as PreparedStatement, we want to translate the actual query and not the PREPARE FROM ... part.
     // However, that part is not yet parsed, so we need to parse the raw string from the PreparedStatement.
     Assert(_prepared_statements, "Cannot prepare statement without prepared statement cache.");
-    parsed_sql = SQLPipelineBuilder{prepared_statement->query}.create_pipeline_statement().get_parsed_sql_statement();
-    _num_parameters = static_cast<uint16_t>(parsed_sql->parameters().size());
+
+    lqp_roots = sql_translator.translate_sql(prepared_statement->query);
+    _parameter_ids = sql_translator.value_placeholders();
+  } else {
+    lqp_roots = sql_translator.translate_parser_result(*parsed_sql);
   }
 
-  const auto lqp_roots = SQLTranslator{_use_mvcc}.translate_parser_result(*parsed_sql);
   DebugAssert(lqp_roots.size() == 1, "LQP translation returned no or more than one LQP root for a single statement.");
   _unoptimized_logical_plan = lqp_roots.front();
 
@@ -143,13 +150,16 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
   } else if (const auto* execute_statement = dynamic_cast<const hsql::ExecuteStatement*>(statement)) {
     // Handle query plan if we are executing a prepared statement
     Assert(_prepared_statements, "Cannot execute statement without prepared statement cache.");
-    const auto plan = _prepared_statements->try_get(execute_statement->name);
+    auto plan = _prepared_statements->try_get(execute_statement->name);
 
     Assert(plan, "Requested prepared statement does not exist!");
     assert_same_mvcc_mode(*plan);
 
+    // We don't want to set the parameters of the "prototype" plan in the cache
+    plan = plan->recreate();
+
     // Get list of arguments from EXECUTE statement.
-    std::vector<AllParameterVariant> arguments;
+    std::unordered_map<ParameterID, AllTypeVariant> parameters;
     if (execute_statement->parameters != nullptr) {
       Fail("NYI");
 //      for (const auto* expr : *execute_statement->parameters) {
@@ -157,17 +167,17 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
 //      }
     }
 
-    Assert(arguments.size() == plan->num_parameters(),
+    Assert(parameters.size() == plan->parameter_ids().size(),
            "Number of arguments provided does not match expected number of arguments.");
 
-    _query_plan->append_plan(plan->recreate(arguments));
+    _query_plan->append_plan(plan);
   } else {
     // "Normal" mode in which the query plan is created
     const auto& lqp = get_optimized_logical_plan();
     _query_plan->add_tree_by_root(_lqp_translator->translate_node(lqp));
 
     // Set number of parameters to match later in case of prepared statement
-    _query_plan->set_num_parameters(_num_parameters);
+    _query_plan->set_parameter_ids(_parameter_ids);
   }
 
   if (_use_mvcc == UseMvcc::Yes) _query_plan->set_transaction_context(_transaction_context);

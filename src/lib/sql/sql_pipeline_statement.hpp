@@ -12,7 +12,7 @@
 
 namespace opossum {
 
-using PreparedStatementCache = std::shared_ptr<SQLQueryCache<SQLQueryPlan>>;
+using PreparedStatementCache = SQLQueryCache<SQLQueryPlan>;
 
 /**
  * This is the unified interface to handle SQL queries and related operations.
@@ -35,7 +35,7 @@ class SQLPipelineStatement : public Noncopyable {
   SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                        const UseMvcc use_mvcc, const std::shared_ptr<TransactionContext>& transaction_context,
                        const std::shared_ptr<LQPTranslator>& lqp_translator,
-                       const std::shared_ptr<Optimizer>& optimizer, const PreparedStatementCache& prepared_statements);
+                       const std::shared_ptr<Optimizer>& optimizer, const std::shared_ptr<PreparedStatementCache>& prepared_statements);
 
   // Returns the raw SQL string.
   const std::string& get_sql_string();
@@ -97,9 +97,8 @@ class SQLPipelineStatement : public Noncopyable {
   std::chrono::microseconds _compile_time_micros;
   std::chrono::microseconds _execution_time_micros;
 
-  PreparedStatementCache _prepared_statements;
-  // Number of placeholders in prepared statement; default 0 becasue we assume no prepared statement
-  uint16_t _num_parameters = 0;
+  std::shared_ptr<PreparedStatementCache> _prepared_statements;
+  std::unordered_map<ValuePlaceholderID, ParameterID> _parameter_ids;
 };
 
 }  // namespace opossum

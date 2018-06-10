@@ -8,8 +8,6 @@
 
 namespace opossum {
 
-SQLQueryPlan::SQLQueryPlan() : _num_parameters(0) {}
-
 void SQLQueryPlan::add_tree_by_root(std::shared_ptr<AbstractOperator> op) { _roots.push_back(op); }
 
 void SQLQueryPlan::append_plan(const SQLQueryPlan& other_plan) {
@@ -48,8 +46,12 @@ void SQLQueryPlan::set_transaction_context(std::shared_ptr<TransactionContext> c
   }
 }
 
-void SQLQueryPlan::set_num_parameters(uint16_t num_parameters) { _num_parameters = num_parameters; }
+void SQLQueryPlan::set_parameter_ids(const std::unordered_map<ValuePlaceholderID, ParameterID>& parameter_ids) {
+  _parameter_ids = parameter_ids;
+}
 
-uint16_t SQLQueryPlan::num_parameters() const { return _num_parameters; }
+const std::unordered_map<ValuePlaceholderID, ParameterID>& SQLQueryPlan::parameter_ids() const {
+  return _parameter_ids;
+}
 
 }  // namespace opossum

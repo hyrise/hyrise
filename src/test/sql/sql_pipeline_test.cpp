@@ -128,7 +128,7 @@ TEST_F(SQLPipelineTest, SimpleCreationInvalid) {
 TEST_F(SQLPipelineTest, ConstructorCombinations) {
   // Simple sanity test for all other constructor options
   const auto optimizer = Optimizer::create_default_optimizer();
-  auto prepared_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
+  auto prepared_cache = std::make_shared<PreparedStatementCache>(5);
   auto transaction_context = TransactionManager::get().new_transaction_context();
 
   // No transaction context

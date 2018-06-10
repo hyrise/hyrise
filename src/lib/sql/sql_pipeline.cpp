@@ -10,7 +10,7 @@ namespace opossum {
 
 SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context,
                          const UseMvcc use_mvcc, const std::shared_ptr<LQPTranslator>& lqp_translator,
-                         const std::shared_ptr<Optimizer>& optimizer, const PreparedStatementCache& prepared_statements)
+                         const std::shared_ptr<Optimizer>& optimizer, const std::shared_ptr<PreparedStatementCache>& prepared_statements)
     : _transaction_context(transaction_context), _optimizer(optimizer) {
   DebugAssert(!_transaction_context || _transaction_context->phase() == TransactionPhase::Active,
               "The transaction context cannot have been committed already.");

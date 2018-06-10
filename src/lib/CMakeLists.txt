@@ -346,6 +346,8 @@ set(
 #    sql/sql_translation_state.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
+    sql/query_plan.cpp
+    sql/query_plan.hpp
     storage/base_column.cpp
     storage/base_column_encoder.hpp
     storage/base_column.hpp
