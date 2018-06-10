@@ -135,10 +135,10 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
     if (mismatch) {                                              \
       std::cout << "Differing subtrees" << std::endl;            \
       std::cout << "-------------- Actual LQP --------------" << std::endl;            \
-      mismatch->first->print();                                  \
+      if (mismatch->first) mismatch->first->print(); else std::cout << "NULL" << std::endl;          \
       std::cout << std::endl;                                    \
-      std::cout << "------------- Expected LQP -------------" << std::endl;            \
-      mismatch->second->print();                                 \
+      std::cout << "------------- Expected LQP -------------" << std::endl;  \
+      if (mismatch->second) mismatch->second->print(); else std::cout << "NULL" << std::endl;          \
       std::cout << "-------------..............-------------" << std::endl;            \
       GTEST_FAIL();                                              \
     }                                                            \

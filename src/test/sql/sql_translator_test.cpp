@@ -705,6 +705,29 @@ TEST_F(SQLTranslatorTest, JoinInnerComplexPredicate) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, JoinInnerComplexLogicalPredicate) {
+  const auto actual_lqp = compile_query("SELECT * FROM int_float AS m1 JOIN int_float AS m2 ON m1.a * 3 = m2.a - 5 OR m1.a > 20;");
+
+  // clang-format off
+  const auto a_times_3 = mul(int_float_a, 3);
+  const auto a_minus_5 = sub(int_float_a, 5);
+
+  const auto join_cross = JoinNode::make(JoinMode::Cross, stored_table_node_int_float, stored_table_node_int_float);
+
+  const auto expected_lqp =
+  UnionNode::make(UnionMode::Positions,
+    ProjectionNode::make(expression_vector(int_float_a, int_float_b, int_float_a, int_float_b),
+      PredicateNode::make(equals(a_times_3, a_minus_5),
+        ProjectionNode::make(expression_vector(a_times_3, a_minus_5, int_float_a, int_float_b, int_float_a, int_float_b),
+          join_cross))),
+    PredicateNode::make(greater_than(int_float_a, 20),
+      join_cross)
+  );
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, FromColumnAliasingSimple) {
   const auto actual_lqp_a = compile_query("SELECT t.x FROM int_float AS t (x, y) WHERE x = t.y");
   const auto actual_lqp_b = compile_query("SELECT t.x FROM (SELECT * FROM int_float) AS t (x, y) WHERE x = t.y");
