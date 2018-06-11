@@ -103,8 +103,8 @@ set(
 #    sql/hsql_expression_translator_test.cpp
     sql/sqlite_testrunner/sqlite_testrunner.cpp
     sql/sql_identifier_context_test.cpp
-#    sql/sql_pipeline_statement_test.cpp
-#    sql/sql_pipeline_test.cpp
+    sql/sql_pipeline_statement_test.cpp
+    sql/sql_pipeline_test.cpp
 #    sql/sql_query_plan_cache_test.cpp
 #    sql/sql_query_plan_test.cpp
     sql/sql_translator_test.cpp

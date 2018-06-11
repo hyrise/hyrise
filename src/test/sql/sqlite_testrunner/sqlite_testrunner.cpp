@@ -87,7 +87,9 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner_queries.sql");
   const std::string query = GetParam();
 
-  auto sql_pipeline = SQLPipelineBuilder{query}.create_pipeline();
+  const auto prepared_statement_cache = std::make_shared<PreparedStatementCache>();
+
+  auto sql_pipeline = SQLPipelineBuilder{query}.with_prepared_statement_cache(prepared_statement_cache).create_pipeline();
 
   const auto& result_table = sql_pipeline.get_result_table();
 

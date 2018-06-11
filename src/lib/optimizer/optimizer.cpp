@@ -6,7 +6,7 @@
 //#include "strategy/chunk_pruning_rule.hpp"
 //#include "strategy/constant_calculation_rule.hpp"
 //#include "strategy/index_scan_rule.hpp"
-//#include "strategy/join_detection_rule.hpp"
+#include "strategy/join_detection_rule.hpp"
 //#include "strategy/predicate_pushdown_rule.hpp"
 //#include "strategy/predicate_reordering_rule.hpp"
 
@@ -15,11 +15,11 @@ namespace opossum {
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   auto optimizer = std::make_shared<Optimizer>(10);
 
-//  RuleBatch main_batch(RuleBatchExecutionPolicy::Iterative);
+  RuleBatch main_batch(RuleBatchExecutionPolicy::Iterative);
 //  main_batch.add_rule(std::make_shared<PredicatePushdownRule>());
 //  main_batch.add_rule(std::make_shared<PredicateReorderingRule>());
-//  main_batch.add_rule(std::make_shared<JoinDetectionRule>());
-//  optimizer->add_rule_batch(main_batch);
+  main_batch.add_rule(std::make_shared<JoinDetectionRule>());
+  optimizer->add_rule_batch(main_batch);
 
 //  RuleBatch final_batch(RuleBatchExecutionPolicy::Once);
 //  final_batch.add_rule(std::make_shared<ChunkPruningRule>());

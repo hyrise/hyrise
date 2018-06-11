@@ -144,7 +144,7 @@ SQLTranslator::SQLTranslator(const UseMvcc use_mvcc,
 
 const std::unordered_map<ValuePlaceholderID, ParameterID>& SQLTranslator::value_placeholders() const {
   return _parameter_id_allocator->value_placeholders();
-};
+}
 
 std::shared_ptr<SQLIdentifierContext> SQLTranslator::sql_identifier_context() const {
   return _sql_identifier_context;
@@ -263,6 +263,11 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select_statement(const
   }
 
   return _current_lqp;
+}
+
+std::shared_ptr<AbstractExpression> SQLTranslator::translate_hsql_expr(const hsql::Expr& hsql_expr) {
+  // Create an empty SQLIdentifier context - thus the expression cannot refer to any external columns
+  return SQLTranslator{}._translate_hsql_expr(hsql_expr, std::make_shared<SQLIdentifierContext>());
 }
 //
 //std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::InsertStatement& insert) {

@@ -7,6 +7,7 @@
 
 #include "SQLParser.h"
 #include "concurrency/transaction_manager.hpp"
+#include "expression/value_expression.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_pipeline_builder.hpp"
@@ -147,10 +148,12 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
 
     _query_plan->append_plan(plan.recreate());
     _query_plan_cache_hit = true;
+
   } else if (const auto* execute_statement = dynamic_cast<const hsql::ExecuteStatement*>(statement)) {
     // Handle query plan if we are executing a prepared statement
     Assert(_prepared_statements, "Cannot execute statement without prepared statement cache.");
     auto plan = _prepared_statements->try_get(execute_statement->name);
+    _parameter_ids = plan->parameter_ids();
 
     Assert(plan, "Requested prepared statement does not exist!");
     assert_same_mvcc_mode(*plan);
@@ -160,17 +163,24 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
 
     // Get list of arguments from EXECUTE statement.
     std::unordered_map<ParameterID, AllTypeVariant> parameters;
-    if (execute_statement->parameters != nullptr) {
-      Fail("NYI");
-//      for (const auto* expr : *execute_statement->parameters) {
-//        arguments.push_back(HSQLExprTranslator::to_all_parameter_variant(*expr));
-//      }
+    if (execute_statement->parameters) {
+      for (auto value_placeholder_id = ValuePlaceholderID{0}; value_placeholder_id < execute_statement->parameters->size(); ++value_placeholder_id) {
+        const auto parameter_id_iter = _parameter_ids.find(value_placeholder_id);
+        Assert(parameter_id_iter != _parameter_ids.end(), "Invalid number of parameters in EXECUTE");
+
+        const auto parameter = SQLTranslator::translate_hsql_expr(*(*execute_statement->parameters)[value_placeholder_id]);
+        Assert(parameter->type == ExpressionType::Value, "Illegal parameter in EXECUTE, only values accepted");
+
+        parameters.emplace(parameter_id_iter->second, std::static_pointer_cast<ValueExpression>(parameter)->value);
+      }
     }
 
     Assert(parameters.size() == plan->parameter_ids().size(),
            "Number of arguments provided does not match expected number of arguments.");
 
-    _query_plan->append_plan(plan);
+    _query_plan->append_plan(*plan);
+    _query_plan->tree_roots().front()->set_parameters(parameters);
+
   } else {
     // "Normal" mode in which the query plan is created
     const auto& lqp = get_optimized_logical_plan();
@@ -178,6 +188,7 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
 
     // Set number of parameters to match later in case of prepared statement
     _query_plan->set_parameter_ids(_parameter_ids);
+
   }
 
   if (_use_mvcc == UseMvcc::Yes) _query_plan->set_transaction_context(_transaction_context);

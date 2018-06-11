@@ -49,6 +49,11 @@ class SQLTranslator final {
   std::shared_ptr<AbstractLQPNode> translate_statement(const hsql::SQLStatement &statement);
   std::shared_ptr<AbstractLQPNode> translate_select_statement(const hsql::SelectStatement &select);
 
+  /**
+   * Translate an hsql::Expr
+   */
+  static std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& hsql_expr);
+
  private:
   // Track state while translating the FROM clause. This makes sure only the actually available SQL identifiers can be
   // used, e.g. "SELECT * FROM t1, t2 JOIN t3 ON t1.a = t2.a" is illegal since t1 is invisible to the seconds entry.

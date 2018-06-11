@@ -37,6 +37,8 @@ SQLQueryPlan SQLQueryPlan::recreate(const std::vector<AllParameterVariant>& argu
     new_plan.add_tree_by_root(new_root);
   }
 
+  new_plan._parameter_ids = _parameter_ids;
+
   return new_plan;
 }
 
