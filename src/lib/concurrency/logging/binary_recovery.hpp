@@ -18,7 +18,7 @@ class BinaryRecovery {
  private:
   BinaryRecovery(){};
 
-  bool _is_empty(std::ifstream& file);
+  // bool _is_empty(std::ifstream& file);
 };
 
 }  // namespace opossum

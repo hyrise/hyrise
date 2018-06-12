@@ -1,6 +1,6 @@
 /*
  *     Commit Entries:
- *       - log entry type ('c') : sizeof(char)
+ *       - log entry type ('t') : sizeof(char)
  *       - transaction_id       : sizeof(TransactionID)
  * 
  *     Value Entries:
@@ -47,7 +47,7 @@ constexpr size_t LOG_BUFFER_CAPACITY = 16384;
 void GroupCommitLogger::commit(const TransactionID transaction_id){
   constexpr auto entry_length = sizeof(char) + sizeof(TransactionID);
   auto entry = (char*) malloc(entry_length);
-  *entry = 'c';
+  *entry = 't';
   *(TransactionID*) (entry + sizeof(char)) = transaction_id;
   // _write_to_buffer(entry, entry_length);
   _write_to_buffer(entry, 5u);
