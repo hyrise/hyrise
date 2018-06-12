@@ -14,7 +14,7 @@ class GroupCommitLogger : public AbstractLogger{
 
   void commit(const TransactionID transaction_id) override;
 
-  void value(const TransactionID transaction_id, const std::string table_name, const RowID row_id, const std::stringstream &values) override;
+  void value(const TransactionID transaction_id, const std::string table_name, const RowID row_id, const std::vector<AllTypeVariant> values) override;
 
   void invalidate(const TransactionID transaction_id, const std::string table_name, const RowID row_id) override;
 
@@ -25,15 +25,19 @@ class GroupCommitLogger : public AbstractLogger{
   GroupCommitLogger();
 
  private:
+  char* _put_into_entry(char* entry, const TransactionID &transaction_id, const std::string &table_name, const RowID &row_id);
+
   void _flush_to_disk_after_timeout();
   void _write_buffer_to_logfile();
   void _write_to_buffer(char* entry, size_t length);
   
   char* _buffer;
   size_t _buffer_capacity;
-  uint _buffer_position;
-  std::fstream _log_file;
+  size_t _buffer_position;
   bool _has_unflushed_buffer;
+  std::mutex _buffer_mutex;
+
+  std::fstream _log_file;
 };
 
 }  // namespace opossum

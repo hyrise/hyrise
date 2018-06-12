@@ -10,9 +10,9 @@
 namespace opossum {
 
 void AbstractLogger::_write_to_logfile(const std::stringstream& ss) {
-  _mutex.lock();
+  _file_mutex.lock();
   write(_file_descriptor, (void*)ss.str().c_str(), ss.str().length());
-  _mutex.unlock();
+  _file_mutex.unlock();
 }
 
 void AbstractLogger::flush() {

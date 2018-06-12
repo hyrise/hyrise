@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "types.hpp"
 #include "../concurrency/logging/logger.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "resolve_type.hpp"
@@ -184,13 +185,29 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       // logging start
       const auto column_count = source_chunk->column_count();
       for (decltype(source_chunk->size()) row_index = 0; row_index < source_chunk->size(); ++row_index){
-        std::stringstream row_values{};
-        row_values << "(";
-        row_values << (*source_chunk->columns()[0])[row_index];
-        for (decltype(source_chunk->column_count()) column_index = 1; column_index < column_count; ++column_index){
-          row_values << "," << (*source_chunk->columns()[column_index])[row_index];
+        // std::stringstream row_values{};
+        // row_values << "(";
+        // row_values << (*source_chunk->columns()[0])[row_index];
+        // for (decltype(source_chunk->column_count()) column_index = 1; column_index < column_count; ++column_index){
+        //   row_values << "," << (*source_chunk->columns()[column_index])[row_index];
+        // }
+        // row_values << ")";
+
+        // char* row_values;
+        // char* position = row_values;
+        std::vector<AllTypeVariant> row_values;
+        for (decltype(source_chunk->column_count()) column_index = 0; column_index < column_count; ++column_index){
+          row_values.push_back((*source_chunk->columns()[column_index])[row_index]);
+          // auto column = dynamic_cast<ValueColumn>(source_chunk->columns()[column_index]);
+          // auto value = column.get(row_index);
+          // auto value_size = sizeof(value);
+
+          // *(*size_t) position = value_size;
+          // position += sizeof(size_t);
+
+          // *(*decltype(value)) position = value;
+          // position += value_size;
         }
-        row_values << ")";
 
         Logger::getInstance().value(context->transaction_id(), _target_table_name, RowID{target_chunk_id, target_start_index + row_index}, row_values);
       }

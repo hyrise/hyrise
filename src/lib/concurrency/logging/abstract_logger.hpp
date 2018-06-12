@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.hpp"
+#include "all_type_variant.hpp"
 
 namespace opossum {
 
@@ -15,7 +16,7 @@ class AbstractLogger {
 
   virtual void commit(const TransactionID transaction_id) = 0;
 
-  virtual void value(const TransactionID transaction_id, const std::string table_name, const RowID row_id, const std::stringstream &values) = 0;
+  virtual void value(const TransactionID transaction_id, const std::string table_name, const RowID row_id, const std::vector<AllTypeVariant> values) = 0;
 
   virtual void invalidate(const TransactionID transaction_id, const std::string table_name, const RowID row_id) = 0;
 
@@ -27,7 +28,7 @@ class AbstractLogger {
   virtual void _write_to_logfile(const std::stringstream& ss);
 
   int _file_descriptor;
-  std::mutex _mutex;
+  std::mutex _file_mutex;
 
  private:
   friend class Logger;

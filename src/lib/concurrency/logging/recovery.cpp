@@ -48,7 +48,7 @@ void Recovery::recover() {
 
   std::vector<LoggedItem> transactions;
 
-  TransactionID last_transaction_id{1};
+  TransactionID last_transaction_id{0};
 
   std::string line;
   while (std::getline(log_file, line))
@@ -137,8 +137,10 @@ void Recovery::recover() {
     }
   }
 
-  ++last_transaction_id;
-  TransactionManager::_reset_to_id(last_transaction_id);
+  if (last_transaction_id > 0) {
+    ++last_transaction_id;
+    TransactionManager::_reset_to_id(last_transaction_id);
+  }
 }
 
 }  // namespace opossum

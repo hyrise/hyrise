@@ -13,7 +13,7 @@ class InitialLogger : public AbstractLogger{
 
   void commit(const TransactionID transaction_id) override;
 
-  void value(const TransactionID transaction_id, const std::string table_name, const RowID row_id, const std::stringstream &values) override;
+  void value(const TransactionID transaction_id, const std::string table_name, const RowID row_id, const std::vector<AllTypeVariant> values) override;
 
   void invalidate(const TransactionID transaction_id, const std::string table_name, const RowID row_id) override;
 
