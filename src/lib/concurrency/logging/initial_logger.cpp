@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-void InitialLogger::commit(const TransactionID transaction_id){
+void InitialLogger::commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback){
   std::stringstream ss;
   ss << "(t," << transaction_id << ")\n";
   _write_to_logfile(ss);

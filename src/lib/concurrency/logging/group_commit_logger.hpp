@@ -12,7 +12,7 @@ class GroupCommitLogger : public AbstractLogger{
   GroupCommitLogger(const GroupCommitLogger&) = delete;
   GroupCommitLogger& operator=(const GroupCommitLogger&) = delete;
 
-  void commit(const TransactionID transaction_id) override;
+  void commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) override;
 
   void value(const TransactionID transaction_id, const std::string table_name, const RowID row_id, const std::vector<AllTypeVariant> values) override;
 
@@ -36,6 +36,8 @@ class GroupCommitLogger : public AbstractLogger{
   size_t _buffer_position;
   bool _has_unflushed_buffer;
   std::mutex _buffer_mutex;
+
+  std::vector<std::pair<std::function<void(TransactionID)>, TransactionID>> _commit_callbacks;
 
   std::fstream _log_file;
 };

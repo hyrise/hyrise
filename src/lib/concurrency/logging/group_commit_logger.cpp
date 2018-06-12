@@ -44,11 +44,14 @@ namespace opossum {
 
 constexpr size_t LOG_BUFFER_CAPACITY = 16384;
 
-void GroupCommitLogger::commit(const TransactionID transaction_id){
+void GroupCommitLogger::commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback){
   constexpr auto entry_length = sizeof(char) + sizeof(TransactionID);
   auto entry = (char*) malloc(entry_length);
   *entry = 't';
   *(TransactionID*) (entry + sizeof(char)) = transaction_id;
+
+  _commit_callbacks.emplace_back(std::make_pair(callback, transaction_id));
+
   _write_to_buffer(entry, entry_length);
 }
 
@@ -140,7 +143,9 @@ void GroupCommitLogger::_write_to_buffer(char* entry, size_t length) {
 
   _buffer_mutex.unlock();
 
-  // TODO: write to file if buffer full
+  if (_buffer_position > _buffer_capacity / 2) {
+    flush();
+  }
 }
 
 void GroupCommitLogger::_write_buffer_to_logfile(){
@@ -155,6 +160,11 @@ void GroupCommitLogger::_write_buffer_to_logfile(){
 
   _buffer_position = 0u;
   _has_unflushed_buffer = false;
+
+  for (auto &tuple : _commit_callbacks) {
+    tuple.first(tuple.second);
+  }
+  _commit_callbacks.clear();
 
   _buffer_mutex.unlock();
 }

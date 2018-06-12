@@ -11,7 +11,7 @@ class InitialLogger : public AbstractLogger{
   InitialLogger(const InitialLogger&) = delete;
   InitialLogger& operator=(const InitialLogger&) = delete;
 
-  void commit(const TransactionID transaction_id) override;
+  void commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) override;
 
   void value(const TransactionID transaction_id, const std::string table_name, const RowID row_id, const std::vector<AllTypeVariant> values) override;
 

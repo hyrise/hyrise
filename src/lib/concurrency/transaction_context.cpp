@@ -159,10 +159,9 @@ void TransactionContext::_mark_as_pending_and_try_commit(std::function<void(Tran
       context_ptr->_phase = TransactionPhase::Committed;
     }
 
-    Logger::getInstance().commit(transaction_id);
-    // Logger::getInstance().flush();
+    Logger::getInstance().commit(transaction_id, callback);
 
-    if (callback) callback(transaction_id);
+    // if (callback) callback(transaction_id);
   });
 
   TransactionManager::get()._try_increment_last_commit_id(_commit_context);
