@@ -14,7 +14,8 @@ FrameOfReferenceColumn<T, U>::FrameOfReferenceColumn(const pmr_vector<T> block_m
     : BaseEncodedColumn{data_type_from_type<T>()},
       _block_minima{std::move(block_minima)},
       _null_values{std::move(null_values)},
-      _offset_values{std::move(offset_values)} {}
+      _offset_values{std::move(offset_values)},
+      _decoder{_offset_values->create_base_decoder()} {}
 
 template <typename T, typename U>
 const pmr_vector<T>& FrameOfReferenceColumn<T, U>::block_minima() const {
@@ -43,8 +44,7 @@ const AllTypeVariant FrameOfReferenceColumn<T, U>::operator[](const ChunkOffset 
 
   const auto minimum = _block_minima[chunk_offset / block_size];
 
-  auto decoder = _offset_values->create_base_decoder();
-  const auto value = static_cast<T>(decoder->get(chunk_offset)) + minimum;
+  const auto value = static_cast<T>(_decoder->get(chunk_offset)) + minimum;
 
   return value;
 }
