@@ -28,6 +28,7 @@ namespace filesystem = std::experimental::filesystem;
 
 #include "SQLParser.h"
 #include "concurrency/logging/recovery.hpp"
+#include "concurrency/logging/binary_recovery.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "operators/get_table.hpp"
@@ -876,8 +877,8 @@ int main(int argc, char** argv) {
     console.out(" build.\n\n");
   }
 
-  // console.out("Running recovery.\n\n");
-  // opossum::Recovery::getInstance().recover();
+  console.out("Running recovery.\n\n");
+  opossum::BinaryRecovery::getInstance().recover();
 
   // Set jmp_env to current program state in preparation for siglongjmp(2)
   // See comment on jmp_env for details
