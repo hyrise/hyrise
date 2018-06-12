@@ -3,7 +3,6 @@
 #include <stdexcept>
 #include <utility>
 #include "SQLParser.h"
-#include "utils/exception.hpp"
 
 namespace opossum {
 
