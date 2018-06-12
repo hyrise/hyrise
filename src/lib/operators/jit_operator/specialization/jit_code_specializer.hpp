@@ -53,7 +53,8 @@ class JitCodeSpecializer {
   }
 
  private:
-  //
+  // Undefined Behavior Sanitizer disabled here to prevent false positive through reinterpret_cast.
+  __attribute__((no_sanitize("vptr")))
   void _inline_function_calls(SpecializationContext& context) const;
 
   // Iterates over all load instruction in the function and tries to determine their value from the provided runtime
