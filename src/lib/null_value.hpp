@@ -23,6 +23,12 @@ struct NullValue {};
 inline bool operator==(const NullValue&, const NullValue&) { return false; }
 inline bool operator<(const NullValue&, const NullValue&) { return false; }
 
+inline size_t hash_value(const NullValue& null_value) {
+	// try to put NULL values in different buckets, because they don't compare equal.
+	static size_t i = 0;
+	return i++;
+}
+
 // Streaming support
 
 #if !defined(BOOST_NO_IOSTREAM)
@@ -39,7 +45,6 @@ inline BOOST_TEMPLATED_STREAM(ostream, E, T)& operator<<(BOOST_TEMPLATED_STREAM(
 }  // namespace opossum
 
 namespace boost {
-
 // Type traits specializations
 
 template <>
