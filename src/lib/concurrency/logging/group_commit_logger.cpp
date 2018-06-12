@@ -49,8 +49,7 @@ void GroupCommitLogger::commit(const TransactionID transaction_id){
   auto entry = (char*) malloc(entry_length);
   *entry = 't';
   *(TransactionID*) (entry + sizeof(char)) = transaction_id;
-  // _write_to_buffer(entry, entry_length);
-  _write_to_buffer(entry, 5u);
+  _write_to_buffer(entry, entry_length);
 }
 
 char* GroupCommitLogger::_put_into_entry(char* entry, const TransactionID &transaction_id, const std::string &table_name, const RowID &row_id) {

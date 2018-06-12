@@ -19,8 +19,8 @@ set(
     concurrency/logging/logger.hpp
     concurrency/logging/binary_recovery.hpp
     concurrency/logging/binary_recovery.cpp
-    concurrency/logging/recovery.hpp
-    concurrency/logging/recovery.cpp
+    concurrency/logging/text_recovery.hpp
+    concurrency/logging/text_recovery.cpp
     concurrency/transaction_context.cpp
     concurrency/transaction_context.hpp
     concurrency/transaction_manager.cpp

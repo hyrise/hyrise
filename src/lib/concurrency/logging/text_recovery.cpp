@@ -1,4 +1,4 @@
-#include "recovery.hpp"
+#include "text_recovery.hpp"
 
 #include "logger.hpp"
 #include "types.hpp"
@@ -38,12 +38,12 @@ class LoggedItem {
   std::optional<std::vector<AllTypeVariant>> values;
 };
 
-Recovery& Recovery::getInstance() {
-  static Recovery instance;
+TextRecovery& TextRecovery::getInstance() {
+  static TextRecovery instance;
   return instance;
 }
 
-void Recovery::recover() {
+void TextRecovery::recover() {
   std::ifstream log_file(Logger::directory + Logger::filename);
 
   std::vector<LoggedItem> transactions;

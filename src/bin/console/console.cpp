@@ -27,7 +27,7 @@ namespace filesystem = std::experimental::filesystem;
 #endif
 
 #include "SQLParser.h"
-#include "concurrency/logging/recovery.hpp"
+#include "concurrency/logging/text_recovery.hpp"
 #include "concurrency/logging/binary_recovery.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"

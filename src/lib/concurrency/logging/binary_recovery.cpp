@@ -43,22 +43,13 @@ BinaryRecovery& BinaryRecovery::getInstance() {
   return instance;
 }
 
-// bool BinaryRecovery::_is_empty(std::ifstream& file) {
-//   return file.peek() == std::ifstream::traits_type::eof();
-// }
-
 void BinaryRecovery::recover() {
-  std::ifstream log_file{Logger::directory + Logger::filename, std::ios::binary};
-
   // TODO: check if file exists
-  // if (_is_empty(log_file)) {
-  //   return;
-  // }
+  std::ifstream log_file{Logger::directory + Logger::filename, std::ios::binary};
 
   std::vector<LoggedItem> transactions;
 
   TransactionID last_transaction_id{0};
-
 
   while(true) {
     char log_type;
@@ -131,9 +122,15 @@ void BinaryRecovery::recover() {
         continue;
       }
       else {
+        // TODO: insert values
         break;
       }
     }
+  }
+
+  if (last_transaction_id > 0) {
+    ++last_transaction_id;
+    TransactionManager::_reset_to_id(last_transaction_id);
   }
 
 }
