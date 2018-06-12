@@ -24,9 +24,8 @@ inline bool operator==(const NullValue&, const NullValue&) { return false; }
 inline bool operator<(const NullValue&, const NullValue&) { return false; }
 
 inline size_t hash_value(const NullValue& null_value) {
-	// try to put NULL values in different buckets, because they don't compare equal.
-	static size_t i = 0;
-	return i++;
+	// Aggregate wants all NULLs in one bucket
+	return 0;
 }
 
 // Streaming support
