@@ -293,54 +293,24 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     radix_output.partition_offsets.resize(num_partitions + 1);
 
     // use histograms to calculate partition offsets
-    for (ChunkID chunk_id{0}; chunk_id < offsets.size(); ++chunk_id) {
-      size_t local_sum = 0;
-      auto& histogram = static_cast<std::vector<size_t>&>(*histograms[chunk_id]);
-
-      for (size_t partition_id = 0; partition_id < num_partitions; ++partition_id) {
-        // update local prefix sum
-        local_sum += histogram[partition_id];
-        // update output partition offsets
-        radix_output.partition_offsets[partition_id] += histogram[partition_id];
-        // save offsets
-        histogram[partition_id] = local_sum;
+    size_t offset = 0;
+    std::vector<std::vector<size_t>> output_offsets_by_chunk(offsets.size(), std::vector<size_t>(num_partitions));
+    for (size_t partition_id = 0; partition_id < num_partitions; ++partition_id) {
+      radix_output.partition_offsets[partition_id] = offset;
+      for (ChunkID chunk_id{0}; chunk_id < offsets.size(); ++chunk_id) {
+        output_offsets_by_chunk[chunk_id][partition_id] = offset;
+        offset += (*histograms[chunk_id])[partition_id];
       }
     }
-
-    /*
-    At this point, partition_offsets only contains the size of each partition.
-    We now calculate the offsets by adding up the sizes previous partitions.
-    */
-    size_t offset = 0;
-    for (size_t partition_id = 0; partition_id < num_partitions + 1; ++partition_id) {
-      size_t next_offset = offset + radix_output.partition_offsets[partition_id];
-      radix_output.partition_offsets[partition_id] = offset;
-      offset = next_offset;
-    }
+    radix_output.partition_offsets[num_partitions] = offset;
 
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     jobs.reserve(offsets.size());
 
     for (ChunkID chunk_id{0}; chunk_id < offsets.size(); ++chunk_id) {
-      jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id] {
-        // calculate output offsets for each partition
-        auto output_offsets = std::vector<size_t>(num_partitions, 0);
-
-        // add up the output offsets for chunks before this one
-        for (ChunkID i{0}; i < chunk_id; ++i) {
-          const auto& histogram = *histograms[i];
-          for (size_t j = 0; j < num_partitions; ++j) {
-            output_offsets[j] += histogram[j];
-          }
-        }
-        for (auto i = chunk_id; i < offsets.size(); ++i) {
-          const auto& histogram = *histograms[i];
-          for (size_t j = 1; j < num_partitions; ++j) {
-            output_offsets[j] += histogram[j - 1];
-          }
-        }
-
+      jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
         size_t input_offset = offsets[chunk_id];
+        auto& output_offsets = output_offsets_by_chunk[chunk_id];
 
         size_t input_size = 0;
         if (chunk_id < offsets.size() - 1) {
