@@ -666,10 +666,12 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     }
 
     for (size_t partition_id = 0; partition_id < left_pos_lists.size(); ++partition_id) {
-      auto& left = left_pos_lists[partition_id];
-      auto& right = right_pos_lists[partition_id];
+      // moving the values into a shared pos list saves us some work in write_output_columns. We know that 
+      // left_pos_lists and right_pos_lists will not be used again.
+      auto left = std::make_shared<PosList>(std::move(left_pos_lists[partition_id]));
+      auto right = std::make_shared<PosList>(std::move(right_pos_lists[partition_id]));
 
-      if (left.empty() && right.empty()) {
+      if (left->empty() && right->empty()) {
         continue;
       }
 
@@ -727,8 +729,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   }
 
   static void write_output_columns(ChunkColumns& output_columns, const std::shared_ptr<const Table> input_table,
-                                   const PosListsByColumn& input_pos_list_ptrs_sptrs_by_column, PosList& pos_list) {
+                                   const PosListsByColumn& input_pos_list_ptrs_sptrs_by_column, std::shared_ptr<PosList> pos_list) {
     std::map<std::shared_ptr<PosLists>, std::shared_ptr<PosList>> output_pos_list_cache;
+
+    // We might use this later, but want to have it outside of the for loop
+    std::shared_ptr<Table> dummy_table;
 
     // Add columns from input table to output chunk
     for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
@@ -740,9 +745,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           auto iter = output_pos_list_cache.find(input_table_pos_lists);
           if (iter == output_pos_list_cache.end()) {
             // Get the row ids that are referenced
-            auto new_pos_list = std::make_shared<PosList>(pos_list.size());
+            auto new_pos_list = std::make_shared<PosList>(pos_list->size());
             auto new_pos_list_iter = new_pos_list->begin();
-            for (const auto& row : pos_list) {
+            for (const auto& row : *pos_list) {
               if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
                 *new_pos_list_iter = row;
               } else {
@@ -764,13 +769,13 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceColumn that
           // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceColumn ref
           // it.
-          const auto dummy_table = Table::create_dummy_table(input_table->column_definitions());
+          if (!dummy_table) dummy_table = Table::create_dummy_table(input_table->column_definitions());
           output_columns.push_back(
-              std::make_shared<ReferenceColumn>(dummy_table, column_id, std::make_shared<PosList>(pos_list)));
+              std::make_shared<ReferenceColumn>(dummy_table, column_id, pos_list));
         }
       } else {
         output_columns.push_back(
-            std::make_shared<ReferenceColumn>(input_table, column_id, std::make_shared<PosList>(pos_list)));
+            std::make_shared<ReferenceColumn>(input_table, column_id, pos_list));
       }
     }
   }
