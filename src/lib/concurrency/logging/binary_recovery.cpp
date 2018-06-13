@@ -44,86 +44,97 @@ BinaryRecovery& BinaryRecovery::getInstance() {
 }
 
 void BinaryRecovery::recover() {
-  // TODO: check if file exists
-  std::ifstream log_file{Logger::directory + Logger::filename, std::ios::binary};
-
-  std::vector<LoggedItem> transactions;
+  std::fstream last_log_number_file(Logger::directory + Logger::last_log_filename, std::ios::in);
+  uint log_number;
+  last_log_number_file >> log_number;
+  last_log_number_file.close();
+  --log_number;
 
   TransactionID last_transaction_id{0};
 
-  while(true) {
-    char log_type;
-    log_file.read(&log_type, sizeof(char));
+  // for every logfile: read and redo logged entries
+  for (auto i = 1u; i < log_number; ++i){
+    // TODO: check if file exists
+    std::ifstream log_file{Logger::directory + Logger::filename + std::to_string(log_number), std::ios::binary};
 
-    if (log_file.eof()){ break; }
+    std::vector<LoggedItem> transactions;
 
-    TransactionID transaction_id;
-    log_file.read(reinterpret_cast<char*>(&transaction_id), sizeof(TransactionID));
+    // TransactionID last_transaction_id{0};
 
-    if (log_type == 't'){   // commit 
-      /*
-      *     Commit Entries:
-      *       - log entry type ('t') : sizeof(char)
-      *       - transaction_id       : sizeof(TransactionID)
-      */
+    while(true) {
+      char log_type;
+      log_file.read(&log_type, sizeof(char));
 
-      // TODO refactor: same as text file recovery
-      for (auto &transaction : transactions) {
-        if (transaction.transaction_id != transaction_id)
-          continue;
+      if (log_file.eof()){ break; }
 
-        auto table = StorageManager::get().get_table(transaction.table_name);
-        auto chunk = table->get_chunk(transaction.row_id.chunk_id);
+      TransactionID transaction_id;
+      log_file.read(reinterpret_cast<char*>(&transaction_id), sizeof(TransactionID));
 
-        if (transaction.type == LogType::Value) {
-          chunk->append(*transaction.values);
+      if (log_type == 't'){   // commit 
+        /*
+        *     Commit Entries:
+        *       - log entry type ('t') : sizeof(char)
+        *       - transaction_id       : sizeof(TransactionID)
+        */
 
-          auto mvcc_columns = chunk->mvcc_columns();
-          DebugAssert(mvcc_columns->begin_cids.size() - 1 == transaction.row_id.chunk_offset, "recovery rowID " + std::to_string(mvcc_columns->begin_cids.size() - 1) + " != logged rowID " + std::to_string(transaction.row_id.chunk_offset));
-          mvcc_columns->begin_cids[mvcc_columns->begin_cids.size() - 1] = transaction_id;          
-        } else if (transaction.type == LogType::Invalidation) {
-          auto mvcc_columns = chunk->mvcc_columns();
-          mvcc_columns->end_cids[transaction.row_id.chunk_offset] = transaction_id;
+        // TODO refactor: same as text file recovery
+        for (auto &transaction : transactions) {
+          if (transaction.transaction_id != transaction_id)
+            continue;
+
+          auto table = StorageManager::get().get_table(transaction.table_name);
+          auto chunk = table->get_chunk(transaction.row_id.chunk_id);
+
+          if (transaction.type == LogType::Value) {
+            chunk->append(*transaction.values);
+
+            auto mvcc_columns = chunk->mvcc_columns();
+            DebugAssert(mvcc_columns->begin_cids.size() - 1 == transaction.row_id.chunk_offset, "recovery rowID " + std::to_string(mvcc_columns->begin_cids.size() - 1) + " != logged rowID " + std::to_string(transaction.row_id.chunk_offset));
+            mvcc_columns->begin_cids[mvcc_columns->begin_cids.size() - 1] = transaction_id;          
+          } else if (transaction.type == LogType::Invalidation) {
+            auto mvcc_columns = chunk->mvcc_columns();
+            mvcc_columns->end_cids[transaction.row_id.chunk_offset] = transaction_id;
+          }
         }
+
+        last_transaction_id = std::max(transaction_id, last_transaction_id); 
+
+        // TODO: delete elements in transactions vector
+
       }
+      else { // 'v' or 'i'
+        DebugAssert(log_type == 'v' || log_type == 'i', "recovery first token of new entry is neither c, v nor i");
+        /*     Invalidation and begin of value entries:
+        *       - log entry type       : sizeof(char)
+        *       - transaction_id       : sizeof(TransactionID)
+        *       - table_name.size()    : sizeof(size_t)             --> what is max table_name size?
+        *       - table_name           : table_name.size()
+        *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset) 
+        *  1 + 4 + 8 + 6 + 4 +4 = 27
+        */
 
-      last_transaction_id = std::max(transaction_id, last_transaction_id); 
+        size_t table_name_size;
+        log_file.read(reinterpret_cast<char*>(&table_name_size), sizeof(size_t));
 
-      // TODO: delete elements in transactions vector
+        std::string table_name(table_name_size, '\0');
+        log_file.read(table_name.data(), table_name_size);
 
-    }
-    else { // 'v' or 'i'
-      DebugAssert(log_type == 'v' || log_type == 'i', "recovery first token of new entry is neither c, v nor i");
-      /*     Invalidation and begin of value entries:
-      *       - log entry type       : sizeof(char)
-      *       - transaction_id       : sizeof(TransactionID)
-      *       - table_name.size()    : sizeof(size_t)             --> what is max table_name size?
-      *       - table_name           : table_name.size()
-      *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset) 
-      *  1 + 4 + 8 + 6 + 4 +4 = 27
-      */
+        ChunkID chunk_id;
+        log_file.read(reinterpret_cast<char*>(&chunk_id), sizeof(ChunkID));
 
-      size_t table_name_size;
-      log_file.read(reinterpret_cast<char*>(&table_name_size), sizeof(size_t));
+        ChunkOffset chunk_offset;
+        log_file.read(reinterpret_cast<char*>(&chunk_offset), sizeof(ChunkOffset));
 
-      std::string table_name(table_name_size, '\0');
-      log_file.read(table_name.data(), table_name_size);
+        RowID row_id(chunk_id, chunk_offset);
 
-      ChunkID chunk_id;
-      log_file.read(reinterpret_cast<char*>(&chunk_id), sizeof(ChunkID));
-
-      ChunkOffset chunk_offset;
-      log_file.read(reinterpret_cast<char*>(&chunk_offset), sizeof(ChunkOffset));
-
-      RowID row_id(chunk_id, chunk_offset);
-
-      if (log_type == 'i'){
-        transactions.push_back(LoggedItem(LogType::Invalidation, transaction_id, table_name, row_id));
-        continue;
-      }
-      else {
-        // TODO: insert values
-        break;
+        if (log_type == 'i'){
+          transactions.push_back(LoggedItem(LogType::Invalidation, transaction_id, table_name, row_id));
+          continue;
+        }
+        else {
+          // TODO: insert values
+          break;
+        }
       }
     }
   }

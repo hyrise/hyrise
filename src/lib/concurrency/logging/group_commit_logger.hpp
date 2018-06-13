@@ -20,6 +20,8 @@ class GroupCommitLogger : public AbstractLogger{
 
   void flush() override;
 
+  void recover() override;
+
  private:
   friend class Logger;
   GroupCommitLogger();
@@ -30,6 +32,8 @@ class GroupCommitLogger : public AbstractLogger{
   void _flush_to_disk_after_timeout();
   void _write_buffer_to_logfile();
   void _write_to_buffer(char* entry, size_t length);
+
+  ~GroupCommitLogger();
   
   char* _buffer;
   size_t _buffer_capacity;

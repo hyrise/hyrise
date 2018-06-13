@@ -17,11 +17,18 @@ class InitialLogger : public AbstractLogger{
 
   void invalidate(const TransactionID transaction_id, const std::string table_name, const RowID row_id) override;
 
-  // void flush() override;
+  void flush() override;
+
+  void recover() override;
 
  private:
   friend class Logger;
   InitialLogger();
+
+ private:
+  void _write_to_logfile(const std::stringstream& ss);
+
+  int _file_descriptor;
 };
 
 }  // namespace opossum

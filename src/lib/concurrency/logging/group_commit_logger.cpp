@@ -27,6 +27,7 @@
 
 #include "group_commit_logger.hpp"
 #include "logger.hpp"
+#include "binary_recovery.hpp"
 #include "types.hpp"
 
 #include <chrono>
@@ -37,12 +38,15 @@
 #include <thread>
 #include <fstream>
 #include <future>
+#include <string>
 
 #include <iostream>
 
 namespace opossum {
 
 constexpr size_t LOG_BUFFER_CAPACITY = 16384;
+
+constexpr auto LOG_INTERVAL = std::chrono::seconds(5);
 
 void GroupCommitLogger::commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback){
   constexpr auto entry_length = sizeof(char) + sizeof(TransactionID);
@@ -53,6 +57,8 @@ void GroupCommitLogger::commit(const TransactionID transaction_id, std::function
   _commit_callbacks.emplace_back(std::make_pair(callback, transaction_id));
 
   _write_to_buffer(entry, entry_length);
+
+  free(entry);
 }
 
 char* GroupCommitLogger::_put_into_entry(char* entry, const TransactionID &transaction_id, const std::string &table_name, const RowID &row_id) {
@@ -119,7 +125,8 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
   *(size_t*) current_pos = 0;
 
   _write_to_buffer(entry, entry_length);
-  //free entry
+  
+  free(entry);
 }
 
 void GroupCommitLogger::invalidate(const TransactionID transaction_id, const std::string table_name, const RowID row_id){
@@ -132,6 +139,8 @@ void GroupCommitLogger::invalidate(const TransactionID transaction_id, const std
   current_pos = _put_into_entry(current_pos, transaction_id, table_name, row_id);
 
   _write_to_buffer(entry, entry_length);
+
+  free(entry);
 }
 
 void GroupCommitLogger::_write_to_buffer(char* entry, size_t length) {
@@ -161,8 +170,8 @@ void GroupCommitLogger::_write_buffer_to_logfile(){
   _buffer_position = 0u;
   _has_unflushed_buffer = false;
 
-  for (auto &tuple : _commit_callbacks) {
-    tuple.first(tuple.second);
+  for (auto &callback_tuple : _commit_callbacks) {
+    callback_tuple.first(callback_tuple.second);
   }
   _commit_callbacks.clear();
 
@@ -172,7 +181,7 @@ void GroupCommitLogger::_write_buffer_to_logfile(){
 void GroupCommitLogger::_flush_to_disk_after_timeout(){
   // TODO: while loop should be exited on program termination
   while (true) {
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    std::this_thread::sleep_for(LOG_INTERVAL);
     flush();
   }
 }
@@ -181,6 +190,10 @@ void GroupCommitLogger::flush(){
   if (_has_unflushed_buffer) {
     _write_buffer_to_logfile();
   }
+}
+
+void GroupCommitLogger::recover() {
+  BinaryRecovery::getInstance().recover();
 }
 
 
@@ -192,11 +205,26 @@ GroupCommitLogger::GroupCommitLogger()
   _buffer = (char*)malloc(_buffer_capacity);
   memset(_buffer, 0, _buffer_capacity);
 
+  std::fstream last_log_number_file(Logger::directory + Logger::last_log_filename, std::ios::in);
+  uint log_number;
+  last_log_number_file >> log_number;
+  last_log_number_file.close();
+  ++log_number;
+
+  _log_file.open(Logger::directory + Logger::filename + std::to_string(log_number), std::ios::out | std::ios::binary);
+
+  last_log_number_file.open(Logger::directory + Logger::last_log_filename, std::ios::out | std::ofstream::trunc);
+  last_log_number_file << std::to_string(log_number);
+  last_log_number_file.close();
+
   // TODO: thread should be joined at the end of the program
   std::thread t1(&GroupCommitLogger::_flush_to_disk_after_timeout, this);
   t1.detach();
-
-  _log_file.open(Logger::directory + Logger::filename, std::ios::out | std::ios::binary);
 };
+
+GroupCommitLogger::~GroupCommitLogger() {
+  _log_file.close();
+  free(_buffer);
+}
 
 }  // namespace opossum
