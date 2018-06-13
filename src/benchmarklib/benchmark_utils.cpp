@@ -82,13 +82,13 @@ BenchmarkConfig BenchmarkConfig::get_default_config() { return BenchmarkConfig()
 bool CLIConfigParser::cli_has_json_config(const int argc, char** argv) {
   const auto has_json = argc > 1 && boost::algorithm::ends_with(argv[1], ".json");
   if (has_json && argc > 2) {
-      std::cout << "Passed multiple args with a json config. All CLI args will be ignored...";
+    std::cout << "Passed multiple args with a json config. All CLI args will be ignored...";
   }
 
   return has_json;
 }
 
-nlohmann::json CLIConfigParser::config_file_to_json(const std::string& json_file_str) {
+nlohmann::json CLIConfigParser::parse_json_config_file(const std::string& json_file_str) {
   Assert(filesystem::is_regular_file(json_file_str), "No such file " + json_file_str);
 
   nlohmann::json json_config;
@@ -98,18 +98,12 @@ nlohmann::json CLIConfigParser::config_file_to_json(const std::string& json_file
   return json_config;
 }
 
-BenchmarkConfig CLIConfigParser::parse_default_json_config(const nlohmann::json& json_config) {
+BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann::json& json_config) {
   const auto default_config = BenchmarkConfig::get_default_config();
 
   // Should the benchmark be run in verbose mode
   const auto verbose = json_config.value("verbose", default_config.verbose);
   auto& out = get_out_stream(verbose);
-
-  // In non-verbose mode, disable performance warnings
-  std::optional<PerformanceWarningDisabler> performance_warning_disabler;
-  if (!verbose) {
-    performance_warning_disabler.emplace();
-  }
 
   // Display info about output destination
   std::optional<std::string> output_file_path;
@@ -126,18 +120,8 @@ BenchmarkConfig CLIConfigParser::parse_default_json_config(const nlohmann::json&
   const auto use_mvcc = enable_mvcc ? UseMvcc::Yes : UseMvcc::No;
   out << "- MVCC is " << (enable_mvcc ? "enabled" : "disabled") << std::endl;
 
-  // Initialise the scheduler if the benchmark was requested to run multi-threaded
   const auto enable_scheduler = json_config.value("scheduler", default_config.enable_scheduler);
-  if (enable_scheduler) {
-    const auto topology = Topology::create_numa_topology();
-    out << "- Running in multi-threaded mode, with the following Topology:" << std::endl;
-    topology->print(out);
-
-    const auto scheduler = std::make_shared<NodeQueueScheduler>(topology);
-    CurrentScheduler::set(scheduler);
-  } else {
-    out << "- Running in single-threaded mode" << std::endl;
-  }
+  out << "- Running in " + std::string(enable_scheduler ? "multi" : "single") + "-threaded mode" << std::endl;
 
   // Determine benchmark and display it
   const auto benchmark_mode_str = json_config.value("mode", "IndividualQueries");
@@ -188,11 +172,11 @@ BenchmarkConfig CLIConfigParser::parse_default_json_config(const nlohmann::json&
       use_mvcc,       output_file_path, enable_scheduler, enable_visualization, out};
 }
 
-BenchmarkConfig CLIConfigParser::parse_default_cli_options(const cxxopts::ParseResult& parse_result) {
-  return parse_default_json_config(default_cli_options_to_json(parse_result));
+BenchmarkConfig CLIConfigParser::parse_basic_cli_options(const cxxopts::ParseResult& parse_result) {
+  return parse_basic_options_json_config(basic_cli_options_to_json(parse_result));
 }
 
-nlohmann::json CLIConfigParser::default_cli_options_to_json(const cxxopts::ParseResult& parse_result) {
+nlohmann::json CLIConfigParser::basic_cli_options_to_json(const cxxopts::ParseResult& parse_result) {
   nlohmann::json json_config;
 
   json_config.emplace("verbose", parse_result["verbose"].as<bool>());

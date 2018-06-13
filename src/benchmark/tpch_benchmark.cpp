@@ -35,7 +35,7 @@
  */
 
 int main(int argc, char* argv[]) {
-  auto cli_options = opossum::BenchmarkRunner::get_default_cli_options("TPCH Benchmark");
+  auto cli_options = opossum::BenchmarkRunner::get_basic_cli_options("TPCH Benchmark");
 
   // clang-format off
   cli_options.add_options()
@@ -49,12 +49,12 @@ int main(int argc, char* argv[]) {
 
   if (opossum::CLIConfigParser::cli_has_json_config(argc, argv)) {
     // JSON config file was passed in
-    const auto json_config = opossum::CLIConfigParser::config_file_to_json(argv[1]);
+    const auto json_config = opossum::CLIConfigParser::parse_json_config_file(argv[1]);
     scale_factor = json_config.value("scale", 0.001f);
     query_ids = json_config.value("queries", std::vector<opossum::QueryID>());
 
-    config =
-        std::make_unique<opossum::BenchmarkConfig>(opossum::CLIConfigParser::parse_default_json_config(json_config));
+    config = std::make_unique<opossum::BenchmarkConfig>(
+        opossum::CLIConfigParser::parse_basic_options_json_config(json_config));
 
   } else {
     // Parse regular command line args
@@ -72,8 +72,8 @@ int main(int argc, char* argv[]) {
 
     scale_factor = cli_parse_result["scale"].as<float>();
 
-    config = std::make_unique<opossum::BenchmarkConfig>(
-        opossum::CLIConfigParser::parse_default_cli_options(cli_parse_result));
+    config =
+        std::make_unique<opossum::BenchmarkConfig>(opossum::CLIConfigParser::parse_basic_cli_options(cli_parse_result));
   }
 
   // Build list of query ids to be benchmarked and display it
