@@ -72,8 +72,7 @@ class JitKnownRuntimePointer : public JitRuntimePointer {
 #if __has_feature(address_sanitizer)
   __attribute__((no_sanitize("address")))
 #endif
-  bool
-  is_valid() const override {
+  bool is_valid() const override {
     const auto ptr = reinterpret_cast<void*>(address());
     auto fd = open("/dev/random", O_WRONLY);
     bool result = (write(fd, ptr, 8) == 8);
