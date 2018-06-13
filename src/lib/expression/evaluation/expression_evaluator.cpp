@@ -316,10 +316,14 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_case_expressi
 template<typename R>
 std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_function_expression(const FunctionExpression& expression) {
   switch (expression.function_type) {
+    case FunctionType::Concatenate:
     case FunctionType::Substring:
       // clang-format off
       if constexpr (std::is_same_v<R, std::string>) {
-        return _evaluate_substr(expression.arguments);
+        switch (expression.function_type) {
+          case FunctionType::Substring: return _evaluate_substring(expression.arguments);
+          case FunctionType::Concatenate: return _evaluate_concatenate(expression.arguments);
+        }
       } else {
         Fail("SUBSTR can only be evaluated to a string");
       }
@@ -689,7 +693,7 @@ void ExpressionEvaluator::_ensure_column_materialization(const ColumnID column_i
   });
 }
 
-std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_substr(const std::vector<std::shared_ptr<AbstractExpression>>& arguments) {
+std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_substring(const std::vector<std::shared_ptr<AbstractExpression>>& arguments) {
   Assert(arguments.size() == 3, "SUBSTR expects three arguments");
 
   const auto strings = evaluate_expression_to_result<std::string>(*arguments[0]);
@@ -750,6 +754,57 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_su
   }
 
   return std::make_shared<ExpressionResult<std::string>>(result_values, result_nulls);
+}
+
+std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_concatenate(const std::vector<std::shared_ptr<AbstractExpression>>& arguments) {
+  std::vector<std::shared_ptr<ExpressionResult<std::string>>> argument_results;
+  argument_results.reserve(arguments.size());
+
+  auto result_size = size_t{0};
+  auto result_is_nullable = false;
+
+  // I - Compute the arguments
+  for (const auto& argument : arguments) {
+    // CONCAT with a NULL literal argument -> result is NULL
+    if (argument->data_type() == DataType::Null) {
+      auto null_value_result = ExpressionResult<std::string>{{{}}, {true}};
+      return std::make_shared<ExpressionResult<std::string>>(null_value_result);
+    }
+
+    const auto argument_result = evaluate_expression_to_result<std::string>(*argument);
+    argument_results.emplace_back(argument_result);
+
+    result_size = std::max(result_size, argument_result->size());
+    result_is_nullable |= argument_result->is_nullable();
+  }
+
+  // II - Concatenate the values
+  std::vector<std::string> result_values(result_size);
+  for (const auto& argument_result : argument_results) {
+    argument_result->as_view([&](const auto& argument_view) {
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
+        // The actual CONCAT
+        result_values[chunk_offset] += argument_view.value(chunk_offset);
+      }
+    });
+  }
+
+  // III - Optionally concatenate the nulls and return
+  if (result_is_nullable) {
+    std::vector<bool> result_nulls(result_size, false);
+    for (const auto& argument_result : argument_results) {
+      argument_result->as_view([&](const auto& argument_view) {
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
+          result_nulls[chunk_offset] = result_nulls[chunk_offset] || argument_view.null(chunk_offset);
+        }
+      });
+    }
+
+    return std::make_shared<ExpressionResult<std::string>>(std::move(result_values), std::move(result_nulls));
+  } else {
+
+    return std::make_shared<ExpressionResult<std::string>>(std::move(result_values));
+  }
 }
 
 }  // namespace opossum

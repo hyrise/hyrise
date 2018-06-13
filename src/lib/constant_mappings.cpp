@@ -132,7 +132,8 @@ const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string 
 
 const boost::bimap<FunctionType, std::string> function_type_to_string =
 make_bimap<FunctionType, std::string>({
-                                       {FunctionType::Substring, "SUBSTR"}
+                                       {FunctionType::Substring, "SUBSTR"},
+                                       {FunctionType::Concatenate, "CONCAT"}
 });
 
 const boost::bimap<DataType, std::string> data_type_to_string =

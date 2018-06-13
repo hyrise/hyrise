@@ -16,7 +16,13 @@ AbstractExpression(ExpressionType::Function, arguments), function_type(function_
 
   switch (function_type) {
     case FunctionType::Substring:
-      Assert(arguments.size() == 3, "SUBSTRING expects 3 parameters");
+      Assert(arguments.size() == 3, "Substring expects 3 parameters");
+      break;
+    case FunctionType::Concatenate:
+      Assert(arguments.size() >= 2, "Concatenate expects at least 2 parameters");
+      for (const auto& argument : arguments) {
+        Assert(argument->data_type() == DataType::String || argument->data_type() == DataType::Null, "Concatenate takes only Strings and Nulls as arguments");
+      }
       break;
   }
 }
@@ -40,6 +46,7 @@ std::string FunctionExpression::as_column_name() const {
 DataType FunctionExpression::data_type() const {
   switch (function_type) {
     case FunctionType::Substring: return DataType::String;
+    case FunctionType::Concatenate: return DataType::String;
   }
 }
 

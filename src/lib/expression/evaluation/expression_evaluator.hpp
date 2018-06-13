@@ -98,7 +98,8 @@ class ExpressionEvaluator final {
   template<typename Functor>
   void resolve_to_expression_result(const AbstractExpression &expression, const Functor &fn);
 
-  std::shared_ptr<ExpressionResult<std::string>> _evaluate_substr(const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
+  std::shared_ptr<ExpressionResult<std::string>> _evaluate_substring(const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
+  std::shared_ptr<ExpressionResult<std::string>> _evaluate_concatenate(const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
 
  private:
   template<typename A, typename B>

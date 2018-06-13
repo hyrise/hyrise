@@ -243,6 +243,22 @@ TEST_F(ExpressionEvaluatorTest, SubstrColumns) {
   EXPECT_TRUE(test_expression<std::string>(table_a, *substr("test", 2, c), {"est", std::nullopt, "est", std::nullopt}));
 }
 
+TEST_F(ExpressionEvaluatorTest, ConcatValues) {
+  EXPECT_TRUE(test_expression<std::string>(*concat(null(), "world"), {std::nullopt}));
+  EXPECT_TRUE(test_expression<std::string>(*concat("hello ", "world"), {"hello world"}));
+  EXPECT_TRUE(test_expression<std::string>(*concat("hello", " ", "world"), {"hello world"}));
+  EXPECT_TRUE(test_expression<std::string>(*concat("hello", " ", "world", " are you, ", "okay?"), {"hello world are you, okay?"}));
+  EXPECT_TRUE(test_expression<std::string>(*concat("hello", " ", null(), " are you, ", "okay?"), {std::nullopt}));
+}
+
+TEST_F(ExpressionEvaluatorTest, ConcatColumns) {
+  EXPECT_TRUE(test_expression<std::string>(table_a, *concat(s1, s2), {"ab", "HelloWorld", "whatup", "SameSame"}));
+  EXPECT_TRUE(test_expression<std::string>(table_a, *concat("yo", s1, s2), {"yoab", "yoHelloWorld", "yowhatup", "yoSameSame"}));
+  EXPECT_TRUE(test_expression<std::string>(table_a, *concat(concat("a", "b", "c"), s1, s2), {"abcab", "abcHelloWorld", "abcwhatup", "abcSameSame"}));
+  EXPECT_TRUE(test_expression<std::string>(table_a, *concat("nope", s1, null()), {std::nullopt}));
+  EXPECT_TRUE(test_expression<std::string>(table_a, *concat(s1, s2, s3), {std::nullopt, "HelloWorldabcd", "whatupxyzlol", std::nullopt}));
+}
+
 TEST_F(ExpressionEvaluatorTest, Parameter) {
   const auto a_id = ParameterID{0};
   const auto b_id = ParameterID{1};

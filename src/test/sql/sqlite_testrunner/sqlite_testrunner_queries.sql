@@ -222,3 +222,5 @@ SELECT SUBSTR('HELLO', 5000, 20) AS s;
 SELECT SUBSTR(d, id - 10, b) AS s FROM mixed ORDER BY id;
 SELECT SUBSTR(d, b / 10, b / 20) AS s FROM mixed_null;
 
+-- CONCAT
+-- SELECT CONCAT('HELLO', ' ', 'WORLD') AS s;

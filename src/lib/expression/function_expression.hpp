@@ -6,7 +6,8 @@ namespace opossum {
 
 // For a possible list of functions, see https://www.w3schools.com/sql/sql_ref_sqlserver.asp
 enum class FunctionType {
-  Substring
+  Substring,    // SUBSTR()
+  Concatenate   // CONCAT()
 };
 
 class FunctionExpression : public AbstractExpression {

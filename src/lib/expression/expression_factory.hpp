@@ -125,8 +125,13 @@ std::vector<std::shared_ptr<AbstractExpression>> expression_vector(Args &&... ar
 }
 
 template<typename String, typename Start, typename Length>
-std::shared_ptr<AbstractExpression> substr(const String& string, const Start& start, const Length& length) {
+std::shared_ptr<FunctionExpression> substr(const String& string, const Start& start, const Length& length) {
   return std::make_shared<FunctionExpression>(FunctionType::Substring, expression_vector(to_expression(string), to_expression(start), to_expression(length)));
+}
+
+template<typename ... Args>
+std::shared_ptr<FunctionExpression> concat(const Args ... args) {
+  return std::make_shared<FunctionExpression>(FunctionType::Concatenate, expression_vector(to_expression(args)...));
 }
 
 template<typename ... Args>
