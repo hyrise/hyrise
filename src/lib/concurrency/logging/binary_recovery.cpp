@@ -48,14 +48,13 @@ void BinaryRecovery::recover() {
   uint log_number;
   last_log_number_file >> log_number;
   last_log_number_file.close();
-  --log_number;
 
   TransactionID last_transaction_id{0};
 
   // for every logfile: read and redo logged entries
   for (auto i = 1u; i < log_number; ++i){
     // TODO: check if file exists
-    std::ifstream log_file{Logger::directory + Logger::filename + std::to_string(log_number), std::ios::binary};
+    std::ifstream log_file{Logger::directory + Logger::filename + std::to_string(i), std::ios::binary};
 
     std::vector<LoggedItem> transactions;
 
