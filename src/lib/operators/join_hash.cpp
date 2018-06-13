@@ -666,7 +666,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     }
 
     for (size_t partition_id = 0; partition_id < left_pos_lists.size(); ++partition_id) {
-      // moving the values into a shared pos list saves us some work in write_output_columns. We know that 
+      // moving the values into a shared pos list saves us some work in write_output_columns. We know that
       // left_pos_lists and right_pos_lists will not be used again.
       auto left = std::make_shared<PosList>(std::move(left_pos_lists[partition_id]));
       auto right = std::make_shared<PosList>(std::move(right_pos_lists[partition_id]));
@@ -729,7 +729,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   }
 
   static void write_output_columns(ChunkColumns& output_columns, const std::shared_ptr<const Table> input_table,
-                                   const PosListsByColumn& input_pos_list_ptrs_sptrs_by_column, std::shared_ptr<PosList> pos_list) {
+                                   const PosListsByColumn& input_pos_list_ptrs_sptrs_by_column,
+                                   std::shared_ptr<PosList> pos_list) {
     std::map<std::shared_ptr<PosLists>, std::shared_ptr<PosList>> output_pos_list_cache;
 
     // We might use this later, but want to have it outside of the for loop
@@ -770,12 +771,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceColumn ref
           // it.
           if (!dummy_table) dummy_table = Table::create_dummy_table(input_table->column_definitions());
-          output_columns.push_back(
-              std::make_shared<ReferenceColumn>(dummy_table, column_id, pos_list));
+          output_columns.push_back(std::make_shared<ReferenceColumn>(dummy_table, column_id, pos_list));
         }
       } else {
-        output_columns.push_back(
-            std::make_shared<ReferenceColumn>(input_table, column_id, pos_list));
+        output_columns.push_back(std::make_shared<ReferenceColumn>(input_table, column_id, pos_list));
       }
     }
   }

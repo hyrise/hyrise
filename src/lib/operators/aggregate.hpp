@@ -137,10 +137,8 @@ class Aggregate : public AbstractReadOnlyOperator {
 }  // namespace opossum
 
 namespace std {
-  template<>
-  struct hash<opossum::AggregateKey> {
-    size_t operator()(const opossum::AggregateKey& key) const {
-      return boost::hash_range(key.begin(), key.end());
-    }
-  };
+template <>
+struct hash<opossum::AggregateKey> {
+  size_t operator()(const opossum::AggregateKey& key) const { return boost::hash_range(key.begin(), key.end()); }
+};
 }  // namespace std
