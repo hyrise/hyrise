@@ -135,7 +135,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_statement(const hsql::
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::InsertStatement& insert) {
   const std::string table_name{insert.tableName};
 
-  AssertInput(!StorageManager::get().has_table(table_name), std::string("Insert: Invalid table name"));
+  AssertInput(StorageManager::get().has_table(table_name), std::string("Insert: Invalid table name: " + table_name));
 
   auto target_table = StorageManager::get().get_table(table_name);
 

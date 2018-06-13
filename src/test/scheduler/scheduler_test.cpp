@@ -214,7 +214,7 @@ TEST_F(SchedulerTest, ExceptionInTaskWithoutScheduler) {
   CurrentScheduler::set(nullptr);
 
   // If we don't have a scheduler, the exception should not get caught. This should call the terminate handler.
-  ASSERT_DEATH(
+  EXPECT_THROW(
       {
         std::vector<std::shared_ptr<AbstractTask>> jobs;
         for (auto i = 0u; i < 5; ++i) {
@@ -223,7 +223,7 @@ TEST_F(SchedulerTest, ExceptionInTaskWithoutScheduler) {
           jobs.emplace_back(job);
         }
       },
-      ".*");
+      std::exception);
 }
 
 TEST_F(SchedulerTest, ExceptionInDependentTaskWithScheduler) {
