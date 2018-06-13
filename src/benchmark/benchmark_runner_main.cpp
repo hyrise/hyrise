@@ -10,7 +10,7 @@
 #include "utils/performance_warning.hpp"
 
 int main(int argc, char* argv[]) {
-  auto cli_options = opossum::BenchmarkRunner::get_default_cli_options("Hyrise Benchmark Runner");
+  auto cli_options = opossum::BenchmarkRunner::get_basic_cli_options("Hyrise Benchmark Runner");
 
   // clang-format off
   cli_options.add_options()
@@ -24,12 +24,12 @@ int main(int argc, char* argv[]) {
 
   if (opossum::CLIConfigParser::cli_has_json_config(argc, argv)) {
     // JSON config file was passed in
-    const auto json_config = opossum::CLIConfigParser::config_file_to_json(argv[1]);
+    const auto json_config = opossum::CLIConfigParser::parse_json_config_file(argv[1]);
     table_path = json_config.value("tables", "");
     query_path = json_config.value("queries", "");
 
-    config =
-        std::make_unique<opossum::BenchmarkConfig>(opossum::CLIConfigParser::parse_default_json_config(json_config));
+    config = std::make_unique<opossum::BenchmarkConfig>(
+        opossum::CLIConfigParser::parse_basic_options_json_config(json_config));
 
   } else {
     // Parse regular command line args
@@ -44,8 +44,8 @@ int main(int argc, char* argv[]) {
     query_path = cli_parse_result["queries"].as<std::string>();
     table_path = cli_parse_result["tables"].as<std::string>();
 
-    config = std::make_unique<opossum::BenchmarkConfig>(
-        opossum::CLIConfigParser::parse_default_cli_options(cli_parse_result));
+    config =
+        std::make_unique<opossum::BenchmarkConfig>(opossum::CLIConfigParser::parse_basic_cli_options(cli_parse_result));
   }
 
   // Check that the options 'queries' and 'tables' were specifiedc
