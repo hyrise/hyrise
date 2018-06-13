@@ -68,10 +68,6 @@ class JitKnownRuntimePointer : public JitRuntimePointer {
  public:
   // Checks whether the address pointed to is valid (i.e., can be dereferenced).
   // This solution is based on https://stackoverflow.com/questions/4611776/isbadreadptr-analogue-on-unix
-  // Address sanitizer is disabled to ensure that checking an invalid address is not identified as a false positive.
-#if __has_feature(address_sanitizer)
-  __attribute__((no_sanitize("address")))
-#endif
   bool is_valid() const override {
     const auto ptr = reinterpret_cast<void*>(address());
     auto fd = open("/dev/random", O_WRONLY);
