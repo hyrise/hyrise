@@ -139,7 +139,7 @@ class ExpressionEvaluatorTest : public ::testing::Test {
   std::shared_ptr<BinaryPredicateExpression> s1_lt_s2;
 };
 
-TEST_F(ExpressionEvaluatorTest, TernaryOrLiteral) {
+TEST_F(ExpressionEvaluatorTest, TernaryOrLiterals) {
   EXPECT_TRUE(test_expression<int32_t>(*or_(1, 0), {1}));
   EXPECT_TRUE(test_expression<int32_t>(*or_(1, 1), {1}));
   EXPECT_TRUE(test_expression<int32_t>(*or_(0, 1), {1}));
@@ -158,7 +158,7 @@ TEST_F(ExpressionEvaluatorTest, TernaryOrSeries) {
   // clang-format on
 }
 
-TEST_F(ExpressionEvaluatorTest, TernaryAndLiteral) {
+TEST_F(ExpressionEvaluatorTest, TernaryAndLiterals) {
   EXPECT_TRUE(test_expression<int32_t>(*and_(1, 0), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*and_(1, 1), {1}));
   EXPECT_TRUE(test_expression<int32_t>(*and_(0, 1), {0}));
@@ -178,7 +178,7 @@ TEST_F(ExpressionEvaluatorTest, ArithmeticsLiterals) {
   EXPECT_TRUE(test_expression<int32_t>(*sub(NullValue{}, NullValue{}), {std::nullopt}));
 }
 
-TEST_F(ExpressionEvaluatorTest, ArithmeticsColumns) {
+TEST_F(ExpressionEvaluatorTest, ArithmeticsSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *mul(a, b), {2, 6, 12, 20}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *add(a, add(b, c)), {36, std::nullopt, 41, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *add(a, NullValue{}), {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
@@ -193,7 +193,7 @@ TEST_F(ExpressionEvaluatorTest, CaseLiterals) {
   EXPECT_TRUE(test_expression<int32_t>(*case_(1, NullValue{}, 5), {std::nullopt}));
 }
 
-TEST_F(ExpressionEvaluatorTest, CaseColumns) {
+TEST_F(ExpressionEvaluatorTest, CaseSeries) {
   // clang-format off
   EXPECT_TRUE(test_expression<int32_t>(table_a, *case_(greater_than(c, a), b, 1337), {2, 1337, 4, 1337}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *case_(greater_than(c, 0), NullValue{}, c), {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));  // NOLINT
@@ -210,12 +210,12 @@ TEST_F(ExpressionEvaluatorTest, IsNullLiteral) {
   EXPECT_TRUE(test_expression<int32_t>(*is_not_null(null()), {0}));
 }
 
-TEST_F(ExpressionEvaluatorTest, IsNullColumns) {
+TEST_F(ExpressionEvaluatorTest, IsNullSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *is_null(add(c, a)), {0, 1, 0, 1}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *is_not_null(add(c, a)), {1, 0, 1, 0}));
 }
 
-TEST_F(ExpressionEvaluatorTest, SubstrValues) {
+TEST_F(ExpressionEvaluatorTest, SubstrLiterals) {
   /** Hyrise follows SQLite semantics for negative indices in SUBSTR */
 
   EXPECT_TRUE(test_expression<std::string>(*substr("", 3, 4), {""}));
@@ -235,7 +235,7 @@ TEST_F(ExpressionEvaluatorTest, SubstrValues) {
   EXPECT_TRUE(test_expression<std::string>(*substr("Hello World", 2, null()), {std::nullopt}));
 }
 
-TEST_F(ExpressionEvaluatorTest, SubstrColumns) {
+TEST_F(ExpressionEvaluatorTest, SubstrSeries) {
   EXPECT_TRUE(test_expression<std::string>(table_a, *substr(s1, 2, 3), {"", "ell", "hat", "ame"}));
   EXPECT_TRUE(test_expression<std::string>(table_a, *substr(s3, 4, 1), {std::nullopt, "d", "l", std::nullopt}));
   EXPECT_TRUE(test_expression<std::string>(table_a, *substr(s1, a, b), {"a", "ell", "at", "e"}));
@@ -243,7 +243,7 @@ TEST_F(ExpressionEvaluatorTest, SubstrColumns) {
   EXPECT_TRUE(test_expression<std::string>(table_a, *substr("test", 2, c), {"est", std::nullopt, "est", std::nullopt}));
 }
 
-TEST_F(ExpressionEvaluatorTest, ConcatValues) {
+TEST_F(ExpressionEvaluatorTest, ConcatLiterals) {
   EXPECT_TRUE(test_expression<std::string>(*concat(null(), "world"), {std::nullopt}));
   EXPECT_TRUE(test_expression<std::string>(*concat("hello ", "world"), {"hello world"}));
   EXPECT_TRUE(test_expression<std::string>(*concat("hello", " ", "world"), {"hello world"}));
@@ -251,7 +251,7 @@ TEST_F(ExpressionEvaluatorTest, ConcatValues) {
   EXPECT_TRUE(test_expression<std::string>(*concat("hello", " ", null(), " are you, ", "okay?"), {std::nullopt}));
 }
 
-TEST_F(ExpressionEvaluatorTest, ConcatColumns) {
+TEST_F(ExpressionEvaluatorTest, ConcatSeries) {
   EXPECT_TRUE(test_expression<std::string>(table_a, *concat(s1, s2), {"ab", "HelloWorld", "whatup", "SameSame"}));
   EXPECT_TRUE(test_expression<std::string>(table_a, *concat("yo", s1, s2), {"yoab", "yoHelloWorld", "yowhatup", "yoSameSame"}));
   EXPECT_TRUE(test_expression<std::string>(table_a, *concat(concat("a", "b", "c"), s1, s2), {"abcab", "abcHelloWorld", "abcwhatup", "abcSameSame"}));
@@ -320,8 +320,10 @@ TEST_F(ExpressionEvaluatorTest, Parameter) {
 //  EXPECT_EQ(actual_nulls, expected_nulls);
 //}
 
-TEST_F(ExpressionEvaluatorTest, In) {
+TEST_F(ExpressionEvaluatorTest, InSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in(a, array(1.0, 3.0)),  {1, 0, 1, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(a, array(null(), 1.0, 3.0)),  {1, std::nullopt, 1, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(sub(mul(a, 2), 2), array(b, 6, null(), 0)),  {1, std::nullopt, 1, 1}));
 }
 
 //TEST_F(ExpressionEvaluatorTest, Case) {
