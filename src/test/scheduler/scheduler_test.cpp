@@ -213,7 +213,7 @@ TEST_F(SchedulerTest, ExceptionInTaskWithScheduler) {
 TEST_F(SchedulerTest, ExceptionInTaskWithoutScheduler) {
   CurrentScheduler::set(nullptr);
 
-  // If we don't have a scheduler, the exception should not get caught. This should call the terminate handler.
+  // If we don't have a scheduler, the exception should not get caught.
   EXPECT_THROW(
       {
         std::vector<std::shared_ptr<AbstractTask>> jobs;
