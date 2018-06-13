@@ -15,7 +15,7 @@ class PQPSelectExpression : public AbstractSelectExpression {
   PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp,
                                const DataType data_type,
                                const bool nullable,
-                               const Parameters& parameters);
+                               const Parameters& parameters = {});
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;

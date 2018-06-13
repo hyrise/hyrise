@@ -11,7 +11,7 @@
 
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
-#include "expression/array_expression.hpp"
+#include "expression/list_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "expression/aggregate_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -1089,7 +1089,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
             }
           }
 
-          const auto array = std::make_shared<ArrayExpression>(arguments);
+          const auto array = std::make_shared<ListExpression>(arguments);
           return std::make_shared<InExpression>(left, array);
         }
 
@@ -1148,7 +1148,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
 
     case hsql::kExprArray:
       Fail("Nyi");
-      //return std::make_shared<ArrayExpression>(arguments);
+      //return std::make_shared<ListExpression>(arguments);
 
     case hsql::kExprHint:
     case hsql::kExprStar:

@@ -98,6 +98,11 @@ class ExpressionResult : public BaseExpressionResult {
  public:
   using Type = T;
 
+  static std::shared_ptr<ExpressionResult<T>> make_null() {
+    ExpressionResult<T> null_value({{T{}}}, {true});
+    return std::make_shared<ExpressionResult<T>>(null_value);
+  }
+
   ExpressionResult() = default;
 
   ExpressionResult(std::vector<T> values, std::vector<bool> nulls = {false}):

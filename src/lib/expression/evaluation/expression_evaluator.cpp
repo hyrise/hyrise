@@ -6,7 +6,7 @@
 #include "boost/variant/apply_visitor.hpp"
 
 #include "expression/abstract_expression.hpp"
-#include "expression/array_expression.hpp"
+#include "expression/list_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/case_expression.hpp"
@@ -127,8 +127,8 @@ const AbstractExpression &expression) {
 //    case ExpressionType::Extract:
 //      return evaluate_extract_expression<R>(static_cast<const ExtractExpression&>(expression));
 
-//    case ExpressionType::Array:
-//      return evaluate_array<R>(static_cast<const ArrayExpression&>(expression));
+//    case ExpressionType::List:
+//      return evaluate_array<R>(static_cast<const ListExpression&>(expression));
 
     case ExpressionType::Mock:
       Fail("Can't handle External/ValuePlaceholders/Mocks since they don't have a value.");
@@ -218,8 +218,8 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_in_expr
   std::vector<int32_t> result_values;
   std::vector<bool> result_nulls;
 
-  if (right_expression.type == ExpressionType::Array) {
-    const auto& array_expression = static_cast<const ArrayExpression&>(right_expression);
+  if (right_expression.type == ExpressionType::List) {
+    const auto& array_expression = static_cast<const ListExpression&>(right_expression);
 
     /**
      * To keep the code simple for now, transform the InExpression like this:
@@ -238,7 +238,12 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_in_expr
     }
 
     if (type_compatible_elements.empty()) {
-      Fail("Not supported yet");
+      if (left_expression.data_type() == DataType::Null) {
+        return ExpressionResult<int32_t>::make_null();
+      } else {
+        // 5 IN () is FALSE
+        return std::make_shared<ExpressionResult<int32_t>>(std::vector<int32_t>{0});
+      }
     }
 
     std::shared_ptr<AbstractExpression> predicate_disjunction = equals(in_expression.value(), type_compatible_elements.front());
@@ -250,7 +255,21 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_in_expr
     return evaluate_expression_to_result<int32_t>(*predicate_disjunction);
 
   } else if (right_expression.type == ExpressionType::Select) {
-    Fail("Unsupported ExpressionType used in InExpression");
+    /**
+     * If the Select is uncorelated, as in `a IN (SELECT x FROM some_table)`, then evaluate the Select once and
+     * evaluate the IN as a normal `a IN <list>` expression.
+     *
+     * If the SELECT is corelated, as in `SELECT a IN (SELECT x + table_a.b FROM table_b) FROM table_a;`, then evaluate
+     * the Select for every row.
+     */
+     
+
+    const auto select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(right_expression);
+    Assert(select_expression, "Expected PQPSelectExpression");
+
+    if (select_expression->parameters.empty()) {
+
+    }
 
   } else {
     Fail("Unsupported ExpressionType used in InExpression");
@@ -623,7 +642,7 @@ void ExpressionEvaluator::resolve_to_expression_results(const AbstractExpression
 
 template<typename Functor>
 void ExpressionEvaluator::resolve_to_expression_result(const AbstractExpression &expression, const Functor &fn) {
-  Assert(expression.type != ExpressionType::Array, "Can't resolve ArrayExpression to ExpressionResult");
+  Assert(expression.type != ExpressionType::List, "Can't resolve ListExpression to ExpressionResult");
 
   if (expression.data_type() == DataType::Null) {
     // resolve_data_type() doesn't support Null, so we have handle it explicitly

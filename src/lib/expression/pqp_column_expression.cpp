@@ -6,9 +6,9 @@
 
 namespace opossum {
 
-PQPColumnExpression PQPColumnExpression::from_table(const Table& table, const std::string& column_name) {
+std::shared_ptr<PQPColumnExpression> PQPColumnExpression::from_table(const Table& table, const std::string& column_name) {
   const auto column_id = table.column_id_by_name(column_name);
-  return {column_id, table.column_data_type(column_id), table.column_is_nullable(column_id), column_name};
+  return std::make_shared<PQPColumnExpression>(column_id, table.column_data_type(column_id), table.column_is_nullable(column_id), column_name);
 }
 
 PQPColumnExpression::PQPColumnExpression(const ColumnID column_id, const DataType data_type, const bool nullable, const std::string& column_name): column_id(column_id), _data_type(data_type), _nullable(nullable), _column_name(column_name) {}

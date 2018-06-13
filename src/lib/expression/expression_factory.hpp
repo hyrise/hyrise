@@ -3,7 +3,7 @@
 #include <memory>
 
 #include "abstract_expression.hpp"
-#include "array_expression.hpp"
+#include "list_expression.hpp"
 #include "aggregate_expression.hpp"
 #include "arithmetic_expression.hpp"
 #include "extract_expression.hpp"
@@ -16,6 +16,7 @@
 #include "in_expression.hpp"
 #include "logical_expression.hpp"
 #include "lqp_column_expression.hpp"
+#include "pqp_select_expression.hpp"
 #include "parameter_expression.hpp"
 #include "value_expression.hpp"
 
@@ -42,6 +43,7 @@
 
 namespace opossum {
 
+class AbstractOperator;
 class LQPColumnReference;
 
 namespace expression_factory  {
@@ -103,7 +105,7 @@ extern ternary<BetweenExpression> between;
 extern ternary<CaseExpression> case_;
 
 template<typename ... Args>
-std::shared_ptr<AbstractExpression> select(const std::shared_ptr<AbstractLQPNode>& lqp,
+std::shared_ptr<LQPSelectExpression> select(const std::shared_ptr<AbstractLQPNode>& lqp,
                                            Args &&... parameter_id_expression_pairs) {
   if constexpr (sizeof...(Args) > 0) {
     // Corelated subselect
@@ -114,6 +116,23 @@ std::shared_ptr<AbstractExpression> select(const std::shared_ptr<AbstractLQPNode
   } else {
     // Not corelated
     return std::make_shared<LQPSelectExpression>(lqp);
+  }
+}
+
+template<typename ... Args>
+std::shared_ptr<AbstractExpression> select(const std::shared_ptr<AbstractOperator>& pqp,
+                                           const DataType data_type, const bool nullable,
+                                           Args &&... parameter_id_column_id_pairs) {
+  if constexpr (sizeof...(Args) > 0) {
+    // Corelated subselect
+    return std::make_shared<PQPSelectExpression>(
+    pqp,
+    data_type, nullable,
+    std::vector<std::pair<ParameterID, ColumnID>>{{std::make_pair(
+    parameter_id_column_id_pairs.first, parameter_id_column_id_pairs.second)...}});
+  } else {
+    // Not corelated
+    return std::make_shared<PQPSelectExpression>(pqp, data_type, nullable);
   }
 }
 
@@ -135,8 +154,8 @@ std::shared_ptr<FunctionExpression> concat(const Args ... args) {
 }
 
 template<typename ... Args>
-std::shared_ptr<ArrayExpression> array(Args &&... args) {
-  return std::make_shared<ArrayExpression>(expression_vector(std::forward<Args>(args)...));
+std::shared_ptr<ListExpression> list(Args &&... args) {
+  return std::make_shared<ListExpression>(expression_vector(std::forward<Args>(args)...));
 }
 
 template<typename V, typename S>

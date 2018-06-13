@@ -2,7 +2,7 @@
 
 #include <optional>
 
-#include "expression/array_expression.hpp"
+#include "expression/list_expression.hpp"
 #include "expression/case_expression.hpp"
 #include "expression/extract_expression.hpp"
 #include "expression/exists_expression.hpp"
@@ -37,16 +37,16 @@ class ExpressionEvaluatorTest : public ::testing::Test {
     table_a = load_table("src/test/tables/expression_evaluator/input_a.tbl");
     chunk_a = table_a->get_chunk(ChunkID{0});
 
-    a = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "a"));
-    b = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "b"));
-    c = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "c"));
-    d = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "d"));
-    e = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "e"));
-    f = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "f"));
-    s1 = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "s1"));
-    s2 = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "s2"));
-    s3 = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "s3"));
-    dates = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_a, "dates"));
+    a = PQPColumnExpression::from_table(*table_a, "a");
+    b = PQPColumnExpression::from_table(*table_a, "b");
+    c = PQPColumnExpression::from_table(*table_a, "c");
+    d = PQPColumnExpression::from_table(*table_a, "d");
+    e = PQPColumnExpression::from_table(*table_a, "e");
+    f = PQPColumnExpression::from_table(*table_a, "f");
+    s1 = PQPColumnExpression::from_table(*table_a, "s1");
+    s2 = PQPColumnExpression::from_table(*table_a, "s2");
+    s3 = PQPColumnExpression::from_table(*table_a, "s3");
+    dates = PQPColumnExpression::from_table(*table_a, "dates");
     a_plus_b = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, a, b);
     a_plus_c = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, a, c);
     s1_gt_s2 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThan, s1, s2);
@@ -55,13 +55,13 @@ class ExpressionEvaluatorTest : public ::testing::Test {
     a_lt_c = std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, a, c);
 
     table_b = load_table("src/test/tables/expression_evaluator/input_b.tbl");
-    x = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_b, "x"));
+    x = PQPColumnExpression::from_table(*table_b, "x");
 
     table_bools = load_table("src/test/tables/expression_evaluator/input_bools.tbl");
     chunk_bools = table_bools->get_chunk(ChunkID{0});
-    bool_a = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_bools, "a"));
-    bool_b = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_bools, "b"));
-    bool_c = std::make_shared<PQPColumnExpression>(PQPColumnExpression::from_table(*table_bools, "c"));
+    bool_a = PQPColumnExpression::from_table(*table_bools, "a");
+    bool_b = PQPColumnExpression::from_table(*table_bools, "b");
+    bool_c = PQPColumnExpression::from_table(*table_bools, "c");
   }
 
   /**
@@ -320,46 +320,81 @@ TEST_F(ExpressionEvaluatorTest, Parameter) {
 //  EXPECT_EQ(actual_nulls, expected_nulls);
 //}
 
-TEST_F(ExpressionEvaluatorTest, InSeries) {
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(a, array(1.0, 3.0)),  {1, 0, 1, 0}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(a, array(null(), 1.0, 3.0)),  {1, std::nullopt, 1, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(sub(mul(a, 2), 2), array(b, 6, null(), 0)),  {1, std::nullopt, 1, 1}));
+TEST_F(ExpressionEvaluatorTest, InListLiterals) {
+  EXPECT_TRUE(test_expression<int32_t>(*in(null(), list()), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*in(null(), list(1, 2, 3, 4)), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*in(null(), list(null(), 2, 3, 4)), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*in(5, list()), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*in(5, list(null(), 5, null())), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*in(5, list(null(), 6, null())), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*in(5, list(1.0, 3.0)), {0}));
 }
 
-//TEST_F(ExpressionEvaluatorTest, Case) {
-//  /**
-//   * SELECT
-//   *    CASE a = 2 THEN b
-//   *    CASE a > 3 THEN c
-//   *    ELSE NULL
-//   * FROM
-//   *    table_a
-//   */
-//  const auto else_ = std::make_shared<ValueExpression>(NullValue{});
-//  const auto a_eq_2 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals,
-//                                                                  a, std::make_shared<ValueExpression>(2));
-//  const auto a_ge_3 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThanEquals,
-//                                                                  a, std::make_shared<ValueExpression>(3));
-//  const auto case_a_ge_3 = std::make_shared<CaseExpression>(a_ge_3, c, else_);
-//
-//  const auto case_a_eq_2 = std::make_shared<CaseExpression>(a_eq_2, b, case_a_ge_3);
-//
-//  EXPECT_EQ(case_a_ge_3->data_type(), DataType::Int);
-//  EXPECT_EQ(case_a_eq_2->data_type(), DataType::Int);
-//  EXPECT_TRUE(case_a_ge_3->is_nullable());
-//  EXPECT_TRUE(case_a_eq_2->is_nullable());
-//
-//  const auto actual_result = evaluator->evaluate_expression<int32_t>(*case_a_eq_2);
-//  const auto& actual_nullable_values = boost::get<NullableValues<int32_t>>(actual_result);
-//  const auto& actual_values = actual_nullable_values.first;
-//  const auto& actual_nulls = actual_nullable_values.second;
-//
-//  std::vector<bool> expected_nulls = {true, false, false, true};
-//  EXPECT_EQ(actual_nulls, expected_nulls);
-//
-//  EXPECT_EQ(actual_values.at(1), 3);
-//  EXPECT_EQ(actual_values.at(2), 34);
-//}
+TEST_F(ExpressionEvaluatorTest, InListSeries) {
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(a, list(1.0, 3.0)),  {1, 0, 1, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(a, list(null(), 1.0, 3.0)),  {1, std::nullopt, 1, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(sub(mul(a, 2), 2), list(b, 6, null(), 0)),  {1, std::nullopt, 1, 1}));
+}
+
+TEST_F(ExpressionEvaluatorTest, InSelectUncorelated) {
+  // PQP that returns the column "a"
+  const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
+  const auto pqp_a = std::make_shared<Projection>(table_wrapper_a, expression_vector(PQPColumnExpression::from_table(*table_a, "a")));
+  const auto select_a = select(pqp_a, DataType::Int, false);
+
+  // PQP that returns the column "c"
+  const auto table_wrapper_b = std::make_shared<TableWrapper>(table_a);
+  const auto pqp_b = std::make_shared<Projection>(table_wrapper_b, expression_vector(PQPColumnExpression::from_table(*table_a, "c")));
+  const auto select_b = select(pqp_b, DataType::Int, true);
+
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(6, select_a),  {0, 0, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(a, select_a),  {1, 1, 1, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(add(a, 2), select_a),  {1, 1, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(b, select_a),  {1, 1, 1, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34, select_b),  {1, 1, 1, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34.0, select_b),  {1, 1, 1, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34.5, select_b),  {0, 0, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in("hello", select_b),  {0, 0, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(c, select_b),  {1, std::nullopt, 1, std::nullopt}));
+}
+
+TEST_F(ExpressionEvaluatorTest, InSelectCorelated) {
+  // PQP that returns the column "b" multiplied with the current value in "a"
+  //
+  // row   list returned from select
+  //  0      (2, 3, 4, 5)
+  //  1      (4, 6, 8, 10)
+  //  2      (6, 9, 12, 15)
+  //  3      (8, 12, 16, 20)
+  const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
+  const auto mul_a = mul(parameter(ParameterID{0}), PQPColumnExpression::from_table(*table_a, "a"));
+  const auto pqp_a = std::make_shared<Projection>(table_wrapper_a, expression_vector(mul_a));
+  const auto select_a = select(pqp_a, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
+
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(4, select_a),  {1, 1, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(6, select_a),  {0, 1, 1, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(b, select_a),  {1, 0, 0, 0}));
+
+  // PQP that returns the column "c" added to the current value in "a"
+  //
+  // row   list returned from select
+  //  0      (34, NULL, 35, NULL)
+  //  1      (35, NULL, 36, NULL)
+  //  2      (36, NULL, 37, NULL)
+  //  3      (37, NULL, 38, NULL)
+  const auto table_wrapper_b = std::make_shared<TableWrapper>(table_a);
+  const auto add_b = add(parameter(ParameterID{0}), PQPColumnExpression::from_table(*table_a, "c"));
+  const auto pqp_b = std::make_shared<Projection>(table_wrapper_b, expression_vector(add_b));
+  const auto select_b = select(pqp_a, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
+
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34, select_b),  {1, 0, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(35, select_b),  {1, 1, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(null(), select_b),  {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(36, select_b),  {std::nullopt, std::nullopt, 1, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(36.0, select_b),  {std::nullopt, std::nullopt, 1, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(36.3, select_b),  {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
+}
+
 //
 //TEST_F(ExpressionEvaluatorTest, Exists) {
 //  /**
@@ -404,27 +439,6 @@ TEST_F(ExpressionEvaluatorTest, InSeries) {
 //  const auto expected_days = std::vector<std::string>({"06", "05", "03", "02"});
 //  EXPECT_EQ(actual_days, expected_days);
 //}
-//
-//TEST_F(ExpressionEvaluatorTest, NullLiteral) {
-//  const auto actual_result = evaluator->evaluate_expression<int32_t>(*add(a, null()));
-//  ASSERT_EQ(actual_result.type(), typeid(NullValue));
-//}
-//
-////TEST_F(ExpressionEvaluatorTest, Substring) {
-////  /**
-////   * SELECT
-////   *    SUBSTRING(s1, a, b)
-////   * FROM
-////   *    table_a
-////   */
-////  const auto substring_expression = std::make_shared<FunctionExpression>(FunctionType::Substring, s1, a, b);
-////  const auto actual_values = boost::get<NonNullableValues<std::string>>(evaluator->evaluate_expression<std::string>(*substring_expression));
-////
-////  const auto expected_values = std::vector<std::string>({"a", "ell", "at", "e"});
-////
-////  EXPECT_EQ(actual_values, expected_values);
-////}
-//
 //TEST_F(ExpressionEvaluatorTest, PQPSelectExpression) {
 //  const auto table_wrapper_b = std::make_shared<TableWrapper>(table_b);
 //  const auto external_b = std::make_shared<ValuePlaceholderExpression>(ValuePlaceholder{0});

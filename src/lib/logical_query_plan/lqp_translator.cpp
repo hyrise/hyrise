@@ -12,7 +12,7 @@
 //#include "delete_node.hpp"
 #include "drop_view_node.hpp"
 #include "dummy_table_node.hpp"
-#include "expression/array_expression.hpp"
+#include "expression/list_expression.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -171,7 +171,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
                                 input_operator,
                                 *is_null_expression->operand(), is_null_expression->predicate_condition);
 
-  } else if (const auto array_expression = std::dynamic_pointer_cast<ArrayExpression>(predicate_node->predicate); array_expression) {
+  } else if (const auto array_expression = std::dynamic_pointer_cast<ListExpression>(predicate_node->predicate); array_expression) {
     Fail("TableScan doesn't support IN yet");
   }
 

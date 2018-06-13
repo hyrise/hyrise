@@ -369,8 +369,8 @@ TEST_F(SQLTranslatorTest, WhereNotFallback) {
   // clang-format off
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-    PredicateNode::make(equals(in(int_float_a, array(1, 2)), 0),
-        ProjectionNode::make(expression_vector(in(int_float_a, array(1, 2)), int_float_a, int_float_b),
+    PredicateNode::make(equals(in(int_float_a, list(1, 2)), 0),
+        ProjectionNode::make(expression_vector(in(int_float_a, list(1, 2)), int_float_a, int_float_b),
       stored_table_node_int_float)));
   // clang-format on
 
@@ -549,7 +549,7 @@ TEST_F(SQLTranslatorTest, OrderByTest) {
 TEST_F(SQLTranslatorTest, InArray) {
   const auto actual_lqp = compile_query("SELECT * FROM int_float WHERE a + 7 IN (1+2,3,4)");
 
-  const auto a_plus_7_in = in(add(int_float_a, 7), array(add(1,2), 3, 4));
+  const auto a_plus_7_in = in(add(int_float_a, 7), list(add(1,2), 3, 4));
 
   // clang-format off
   const auto expected_lqp =

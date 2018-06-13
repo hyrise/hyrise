@@ -6,9 +6,9 @@
 
 namespace opossum {
 
-class ArrayExpression : public AbstractExpression {
+class ListExpression : public AbstractExpression {
  public:
-  explicit ArrayExpression(const std::vector<std::shared_ptr<AbstractExpression>>& elements);
+  explicit ListExpression(const std::vector<std::shared_ptr<AbstractExpression>>& elements);
 
   DataType data_type() const override;
   bool is_nullable() const override;
