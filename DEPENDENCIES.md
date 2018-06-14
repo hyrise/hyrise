@@ -27,7 +27,7 @@
 
 ## Dependencies that are integrated in our build process via git submodules
 - benchmark (https://github.com/google/benchmark)
-- cqqopts (https://github.com/jarro2783/cxxopts.git)
+- cxxopts (https://github.com/jarro2783/cxxopts.git)
 - googletest (https://github.com/google/googletest)
 - libpqxx (https://github.com/jtv/libpqxx)
 - sql-parser (https://github.com/hyrise/sql-parser)
