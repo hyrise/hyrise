@@ -14,6 +14,7 @@
 #include "sql/sql_query_plan.hpp"
 #include "storage/chunk.hpp"
 #include "storage/encoding_type.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 
@@ -25,10 +26,8 @@ class BenchmarkRunner {
                                 const std::string& query_path);
 
   void run();
-  static BenchmarkConfig parse_default_cli_options(const cxxopts::ParseResult& parse_result,
-                                                   const cxxopts::Options& cli_options);
 
-  static cxxopts::Options get_default_cli_options(const std::string& benchmark_name);
+  static cxxopts::Options get_basic_cli_options(const std::string& benchmark_name);
 
   static nlohmann::json create_context(const BenchmarkConfig& config);
 
@@ -65,6 +64,8 @@ class BenchmarkRunner {
   BenchmarkResults _query_results_by_query_name;
 
   nlohmann::json _context;
+
+  std::optional<PerformanceWarningDisabler> _performance_warning_disabler;
 };
 
 }  // namespace opossum
