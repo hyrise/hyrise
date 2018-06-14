@@ -74,7 +74,7 @@ cat coverage_output.txt
 if [ "true" == "$generate_badge" ]
 then
     # generate XML for pycobertura
-    gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches -g --xml > coverage.xml
+    gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --gcov-exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches -g --xml > coverage.xml
     curl -g -o coverage_master.xml https://ares.epic.hpi.uni-potsdam.de/jenkins/job/Hyrise/job/hyrise/job/master/lastStableBuild/artifact/coverage.xml
     pycobertura diff coverage_master.xml coverage.xml --format html --output coverage_diff.html || true
 
