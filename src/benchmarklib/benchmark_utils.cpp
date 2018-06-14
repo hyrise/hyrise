@@ -1,9 +1,9 @@
 #include <boost/algorithm/string.hpp>
 
-#include <constant_mappings.hpp>
 #include <fstream>
 
 #include "benchmark_utils.hpp"
+#include "constant_mappings.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
@@ -140,6 +140,7 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   out << "- Visualization is " << (enable_visualization ? "on" : "off") << std::endl;
 
   // Get the specified encoding type
+<<<<<<< HEAD
   std::unique_ptr<EncodingConfig> encoding_config{};
   const auto encoding_type_str = json_config.value("encoding", "Dictionary");
   const auto compression_type_str = json_config.value("compression", "");
@@ -157,6 +158,24 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
     out << "- Encoding is '" << encoding_type_str << "'" << std::endl;
   }
 
+=======
+  const auto encoding_type_str = json_config.value("encoding", "dictionary");
+  auto encoding_type = EncodingType::Dictionary;  // Just to init it deterministically
+  if (encoding_type_str == "dictionary") {
+    encoding_type = EncodingType::Dictionary;
+  } else if (encoding_type_str == "runlength") {
+    encoding_type = EncodingType::RunLength;
+  } else if (encoding_type_str == "frameofreference") {
+    encoding_type = EncodingType::FrameOfReference;
+  } else if (encoding_type_str == "unencoded") {
+    encoding_type = EncodingType::Unencoded;
+  } else {
+    throw std::runtime_error("Invalid encoding type: '" + encoding_type_str + "'");
+  }
+
+  out << "- Encoding is '" << encoding_type_str << "'" << std::endl;
+
+>>>>>>> origin
   // Get all other variables
   const auto chunk_size = json_config.value("chunk_size", default_config.chunk_size);
   out << "- Chunk size is " << chunk_size << std::endl;
@@ -170,7 +189,11 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
   const Duration timeout_duration = std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{max_duration});
 
   return BenchmarkConfig{
+<<<<<<< HEAD
       benchmark_mode, verbose,          chunk_size,       *encoding_config,     max_runs, timeout_duration,
+=======
+      benchmark_mode, verbose,          chunk_size,       encoding_type,        max_runs, timeout_duration,
+>>>>>>> origin
       use_mvcc,       output_file_path, enable_scheduler, enable_visualization, out};
 }
 
@@ -187,6 +210,7 @@ nlohmann::json CLIConfigParser::basic_cli_options_to_json(const cxxopts::ParseRe
   json_config.emplace("time", parse_result["time"].as<size_t>());
   json_config.emplace("mode", parse_result["mode"].as<std::string>());
   json_config.emplace("encoding", parse_result["encoding"].as<std::string>());
+<<<<<<< HEAD
   json_config.emplace("compression", parse_result["compression"].as<std::string>());
   json_config.emplace("scheduler", parse_result["scheduler"].as<bool>());
   json_config.emplace("mvcc", parse_result["mvcc"].as<bool>());
@@ -296,4 +320,18 @@ nlohmann::json EncodingConfig::to_json() const {
   return json;
 }
 
+=======
+  json_config.emplace("scheduler", parse_result["scheduler"].as<bool>());
+  json_config.emplace("mvcc", parse_result["mvcc"].as<bool>());
+  json_config.emplace("visualize", parse_result["visualize"].as<bool>());
+
+  std::string output_file_path;
+  if (parse_result.count("output") > 0) {
+    output_file_path = parse_result["output"].as<std::string>();
+  }
+  json_config.emplace("output", output_file_path);
+
+  return json_config;
+}
+>>>>>>> origin
 }  // namespace opossum
