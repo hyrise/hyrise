@@ -59,7 +59,7 @@ fi
 # Continuing only with Linux/gcc
 
 # call gcovr twice b/c of https://github.com/gcovr/gcovr/issues/112
-gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --gcov-exclude='.*/(?:third_party|src/test|src/benchmark).*' -v --exclude-unreachable-branches -k
+gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*|third_party/.*' --exclude-unreachable-branches -k
 
 if [ "true" == "$generate_badge" ]
 then
@@ -68,13 +68,13 @@ then
 fi
 
 # generate HTML
-gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --gcov-exclude='.*/(?:third_party|src/test|src/benchmark).*' -v --exclude-unreachable-branches $keep -g --html --html-details -o coverage/index.html > coverage_output.txt
+gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*|third_party/.*' --exclude-unreachable-branches $keep -g --html --html-details -o coverage/index.html > coverage_output.txt
 cat coverage_output.txt
 
 if [ "true" == "$generate_badge" ]
 then
     # generate XML for pycobertura
-    gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --gcov-exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches -g --xml > coverage.xml
+    gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -p --exclude='.*/(?:third_party|src/test|src/benchmark).*|third_party/.*' --exclude-unreachable-branches -g --xml > coverage.xml
     curl -g -o coverage_master.xml https://ares.epic.hpi.uni-potsdam.de/jenkins/job/Hyrise/job/hyrise/job/master/lastStableBuild/artifact/coverage.xml
     pycobertura diff coverage_master.xml coverage.xml --format html --output coverage_diff.html || true
 
