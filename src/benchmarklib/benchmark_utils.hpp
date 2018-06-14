@@ -110,6 +110,24 @@ struct EncodingConfig {
   nlohmann::json to_json() const;
 };
 
+/**
+ * Represents the configurable options for a benchmark run. This can be provided via command line args (see `help`
+ * command or look at the basic_cli_options in benchmark_runner.cpp). This can also be provided as a JSON config file.
+ * The options are indentical to and behave like the CLI options. Example:
+ * {
+ *   "verbose": true,
+ *   "scheduler": true,
+ *   "chunk_size": 10000,
+ *   "time": 5
+ * }
+ *
+ * The JSON config can also include benchmark-specific options (e.g. TPCH's scale option). They will be parsed like the
+ * CLI options.
+ * {
+ *   "verbose": true,
+ *   "scale": 0.01
+ * }
+ */
 struct BenchmarkConfig {
   BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool verbose, const ChunkOffset chunk_size,
                   const EncodingConfig encoding_config, const size_t max_num_query_runs, const Duration& max_duration,
