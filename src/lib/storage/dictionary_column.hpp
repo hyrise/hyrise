@@ -4,6 +4,7 @@
 #include <string>
 
 #include "base_dictionary_column.hpp"
+#include "storage/vector_compression/base_compressed_vector.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -65,6 +66,7 @@ class DictionaryColumn : public BaseDictionaryColumn {
   const std::shared_ptr<const pmr_vector<T>> _dictionary;
   const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
   const ValueID _null_value_id;
+  std::unique_ptr<BaseVectorDecompressor> _decoder;
 };
 
 }  // namespace opossum

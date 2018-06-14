@@ -14,6 +14,16 @@
 
 namespace opossum {
 
+// Holds relevant information about the execution of an SQLPipeline.
+struct SQLPipelineMetrics {
+  std::vector<std::shared_ptr<const SQLPipelineStatementMetrics>> statement_metrics;
+
+  // This is different from the other measured times as we only get this for all statements at once
+  std::chrono::microseconds parse_time_micros{0};
+
+  std::string to_string() const;
+};
+
 /**
  * This is the unified interface to handle SQL queries and related operations.
  * This should be preferred over using SQLPipelineStatement directly, unless you really know why you need it.
@@ -71,14 +81,7 @@ class SQLPipeline : public Noncopyable {
   // Returns whether the pipeline requires execution to handle all statements
   bool requires_execution() const;
 
-  // Returns the entire time for X. Only possible to get this after all statements have been executed or if the
-  // pipeline does not require previous execution to compile all statements.
-  std::chrono::microseconds translate_time_microseconds();
-  std::chrono::microseconds optimize_time_microseconds();
-  std::chrono::microseconds compile_time_microseconds();
-  std::chrono::microseconds execution_time_microseconds();
-
-  std::string get_time_string();
+  const SQLPipelineMetrics& metrics();
 
  private:
   std::vector<std::shared_ptr<SQLPipelineStatement>> _sql_pipeline_statements;
@@ -103,13 +106,9 @@ class SQLPipeline : public Noncopyable {
   // --> requires execution of first statement before the second one can be translated
   bool _requires_execution{false};
 
-  std::shared_ptr<SQLPipelineStatement> _failed_pipeline_statement;
+  SQLPipelineMetrics _metrics{};
 
-  // Execution times
-  std::chrono::microseconds _translate_time_microseconds{};
-  std::chrono::microseconds _optimize_time_microseconds{};
-  std::chrono::microseconds _compile_time_microseconds{};
-  std::chrono::microseconds _execution_time_microseconds{};
+  std::shared_ptr<SQLPipelineStatement> _failed_pipeline_statement;
 };
 
 }  // namespace opossum
