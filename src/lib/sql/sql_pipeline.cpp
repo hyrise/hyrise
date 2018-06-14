@@ -1,6 +1,10 @@
 #include "sql_pipeline.hpp"
+
 #include <boost/algorithm/string.hpp>
+
+#include <algorithm>
 #include <utility>
+
 #include "SQLParser.h"
 
 namespace opossum {
@@ -15,11 +19,15 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
               "Transaction context without MVCC enabled makes no sense");
 
   hsql::SQLParserResult parse_result;
+  const auto start = std::chrono::high_resolution_clock::now();
   try {
     hsql::SQLParser::parse(sql, &parse_result);
   } catch (const std::exception& exception) {
     throw std::runtime_error("Error while parsing SQL query:\n  " + std::string(exception.what()));
   }
+
+  const auto done = std::chrono::high_resolution_clock::now();
+  _metrics.parse_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - start);
 
   if (!parse_result.isValid()) {
     throw std::runtime_error(SQLPipelineStatement::create_parse_error_message(sql, parse_result));
@@ -204,74 +212,46 @@ size_t SQLPipeline::statement_count() const { return _sql_pipeline_statements.si
 
 bool SQLPipeline::requires_execution() const { return _requires_execution; }
 
-std::chrono::microseconds SQLPipeline::translate_time_microseconds() {
-  if (_translate_time_microseconds.count() > 0) {
-    return _translate_time_microseconds;
-  }
-
-  if (_requires_execution || _unoptimized_logical_plans.empty()) {
-    Assert(_pipeline_was_executed,
-           "Cannot get translation time without having translated or having executed a multi-statement query");
-  }
-
-  for (const auto& pipeline_statement : _sql_pipeline_statements) {
-    _translate_time_microseconds += pipeline_statement->translate_time_microseconds();
-  }
-
-  return _translate_time_microseconds;
-}
-
-std::chrono::microseconds SQLPipeline::optimize_time_microseconds() {
-  if (_optimize_time_microseconds.count() > 0) {
-    return _optimize_time_microseconds;
-  }
-
-  if (_requires_execution || _optimized_logical_plans.empty()) {
-    Assert(_pipeline_was_executed,
-           "Cannot get optimization time without having optimized or having executed a multi-statement query");
-  }
-
-  for (const auto& pipeline_statement : _sql_pipeline_statements) {
-    _optimize_time_microseconds += pipeline_statement->optimize_time_microseconds();
-  }
-
-  return _optimize_time_microseconds;
-}
-
-std::chrono::microseconds SQLPipeline::compile_time_microseconds() {
-  if (_compile_time_microseconds.count() > 0) {
-    return _compile_time_microseconds;
-  }
-
-  if (_requires_execution || _query_plans.empty()) {
-    Assert(_pipeline_was_executed,
-           "Cannot get compile time without having compiled or having executed a multi-statement query");
-  }
-
-  for (const auto& pipeline_statement : _sql_pipeline_statements) {
-    _compile_time_microseconds += pipeline_statement->compile_time_microseconds();
-  }
-
-  return _compile_time_microseconds;
-}
-
-std::chrono::microseconds SQLPipeline::execution_time_microseconds() {
-  Assert(_pipeline_was_executed, "Cannot return execution duration without having executed.");
-
-  if (_execution_time_microseconds.count() == 0) {
+const SQLPipelineMetrics& SQLPipeline::metrics() {
+  if (_metrics.statement_metrics.empty()) {
+    _metrics.statement_metrics.reserve(statement_count());
     for (const auto& pipeline_statement : _sql_pipeline_statements) {
-      _execution_time_microseconds += pipeline_statement->execution_time_microseconds();
+      _metrics.statement_metrics.push_back(pipeline_statement->metrics());
     }
   }
 
-  return _execution_time_microseconds;
+  return _metrics;
 }
 
-std::string SQLPipeline::get_time_string() {
-  return "(TRANSLATE: " + std::to_string(translate_time_microseconds().count()) +
-         " µs, OPTIMIZE: " + std::to_string(optimize_time_microseconds().count()) +
-         " µs, COMPILE: " + std::to_string(compile_time_microseconds().count()) +
-         " µs, EXECUTE: " + std::to_string(execution_time_microseconds().count()) + " µs (wall time))\n";
+std::string SQLPipelineMetrics::to_string() const {
+  auto total_translate_micros = std::chrono::microseconds::zero();
+  auto total_optimize_micros = std::chrono::microseconds::zero();
+  auto total_compile_micros = std::chrono::microseconds::zero();
+  auto total_execute_micros = std::chrono::microseconds::zero();
+  std::vector<bool> query_plan_cache_hits;
+
+  for (const auto& statement_metric : statement_metrics) {
+    total_translate_micros += statement_metric->translate_time_micros;
+    total_optimize_micros += statement_metric->optimize_time_micros;
+    total_compile_micros += statement_metric->compile_time_micros;
+    total_execute_micros += statement_metric->execution_time_micros;
+
+    query_plan_cache_hits.push_back(statement_metric->query_plan_cache_hit);
+  }
+
+  const auto num_cache_hits = std::count(query_plan_cache_hits.begin(), query_plan_cache_hits.end(), true);
+
+  std::ostringstream info_string;
+  info_string << "Execution info: [";
+  info_string << "PARSE: " << parse_time_micros.count() << " µs, ";
+  info_string << "TRANSLATE: " << total_translate_micros.count() << " µs, ";
+  info_string << "OPTIMIZE: " << total_optimize_micros.count() << " µs, ";
+  info_string << "COMPILE: " << total_compile_micros.count() << " µs, ";
+  info_string << "EXECUTE: " << total_execute_micros.count() << " µs (wall time) | ";
+  info_string << "QUERY PLAN CACHE HITS: " << num_cache_hits << "/" << query_plan_cache_hits.size() << " statement(s)";
+  info_string << "]\n";
+
+  return info_string.str();
 }
 
 }  // namespace opossum
