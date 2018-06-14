@@ -60,6 +60,40 @@ struct BenchmarkState {
   Duration max_duration;
 };
 
+/**
+ * Represents the column encodings specified for a benchmark. If encoding (and vector compression) were specified via
+ * command line args, this will contain no custom encoding mapping but only the column default. This will lead to each
+ * column in each chunk to be encoded/compressed by this default. If a JSON config was provided, a column specific
+ * encoding/compression can be chosen (same in each chunk). The JSON config must look like this:
+ *
+ * All encoding/compression types can be viewed with the `help` command or seen in constant_mappings.cpp.
+ * The encoding is always required, the compression is optional.
+ *
+ * {
+ *   "default": {
+ *     "encoding": <ENCODING_TYPE_STRING>,               // required
+ *     "compression": <VECTOR_COMPRESSION_TYPE_STRING>,  // optional
+ *   },
+ *
+ *   "custom": {
+ *     <TABLE_NAME>: {
+ *       <COLUMN_NAME>: {
+ *         "encoding": <ENCODING_TYPE_STRING>,
+ *         "compression": <VECTOR_COMPRESSION_TYPE_STRING>
+ *       },
+ *       <COLUMN_NAME>: {
+ *         "encoding": <ENCODING_TYPE_STRING>
+ *       }
+ *     },
+ *     <TABLE_NAME>: {
+ *       <COLUMN_NAME>: {
+ *         "encoding": <ENCODING_TYPE_STRING>,
+ *         "compression": <VECTOR_COMPRESSION_TYPE_STRING>
+ *       }
+ *     }
+ *   }
+ * }
+ */
 struct EncodingConfig {
   EncodingConfig();
   EncodingConfig(ColumnEncodingSpec default_encoding_spec, EncodingMapping encoding_mapping);
