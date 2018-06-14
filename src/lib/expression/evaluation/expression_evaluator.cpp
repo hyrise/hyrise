@@ -73,7 +73,25 @@ const AbstractExpression &expression) {
       const auto* pqp_select_expression = dynamic_cast<const PQPSelectExpression*>(&expression);
       Assert(pqp_select_expression, "Can only evaluate PQPSelectExpression");
 
-      return evaluate_select_expression_for_chunk<R>(*pqp_select_expression);
+      const auto results = evaluate_select_expression<R>(*pqp_select_expression);
+
+      std::vector<R> result_values(results.size());
+
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < results.size(); ++chunk_offset) {
+        Assert(results[chunk_offset]->size() == 1, "Expected precisely one to be returned from SelectExpression");
+        result_values[chunk_offset] = results[chunk_offset]->value(0);
+      }
+
+      if (expression.is_nullable()) {
+        std::vector<bool> result_nulls(results.size());
+
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < results.size(); ++chunk_offset) {
+          result_nulls[chunk_offset] = results[chunk_offset]->null(0);
+        }
+        return std::make_shared<ExpressionResult<R>>(std::move(result_values), std::move(result_nulls));
+      } else {
+        return std::make_shared<ExpressionResult<R>>(std::move(result_values));
+      }
     }
 
     case ExpressionType::Column: {
@@ -255,28 +273,63 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_in_expr
     return evaluate_expression_to_result<int32_t>(*predicate_disjunction);
 
   } else if (right_expression.type == ExpressionType::Select) {
-    /**
-     * If the Select is uncorelated, as in `a IN (SELECT x FROM some_table)`, then evaluate the Select once and
-     * evaluate the IN as a normal `a IN <list>` expression.
-     *
-     * If the SELECT is corelated, as in `SELECT a IN (SELECT x + table_a.b FROM table_b) FROM table_a;`, then evaluate
-     * the Select for every row.
-     */
-     
-
-    const auto select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(right_expression);
+    const auto* select_expression = dynamic_cast<const PQPSelectExpression*>(&right_expression);
     Assert(select_expression, "Expected PQPSelectExpression");
 
-    if (select_expression->parameters.empty()) {
+    resolve_data_type(select_expression->data_type(), [&](const auto select_data_type_t) {
+      using SelectDataType = typename decltype(select_data_type_t)::type;
 
-    }
+      const auto select_results = evaluate_select_expression<SelectDataType>(*select_expression);
+      Assert(select_results.size() == 1 || select_results.size() == _output_row_count,
+             "Unexpected number of lists returned from Select. Should be one, or one per row");
+
+      resolve_to_expression_result_view(left_expression, [&](const auto& left_view) {
+        using ValueDataType = typename std::decay_t<decltype(left_view)>::Type;
+
+        if constexpr (Equals::supports<int32_t, ValueDataType, SelectDataType>::value) {
+          const auto output_row_count = std::max(left_view.size(), select_results.size());
+
+          result_values.resize(output_row_count, 0);
+          // TODO(moritz) The InExpression doesn't in all cases need to return a nullable
+          result_nulls.resize(output_row_count);
+
+          for (auto chunk_offset = ChunkOffset{0}; chunk_offset < output_row_count; ++chunk_offset) {
+            // If the SELECT returned just one list, always perform the IN check with that one list
+            // If the SELECT returned multiple lists, then the Select was corelated and we need to do the IN check
+            // against the list of the current column
+            const auto &list = *select_results[select_results.size() == 1 ? 0 : chunk_offset];
+
+            auto list_contains_null = false;
+
+            for (auto list_element_idx = ChunkOffset{0}; list_element_idx < list.size(); ++list_element_idx) {
+              Equals{}(result_values[chunk_offset], list.value(list_element_idx), left_view.value(chunk_offset));
+              if (result_values[chunk_offset]) break;
+
+              list_contains_null |= list.null(list_element_idx);
+            }
+
+            result_nulls[chunk_offset] = (result_values[chunk_offset] == 0 && list_contains_null) || left_view.null(chunk_offset);
+          }
+
+
+        } else {
+          // Tried to do, e.g., `5 IN (<select_returning_string>)` - return false instead of failing, because that's
+          // what we do for `5 IN ('Hello', 'World')
+          result_values.resize(1, 0);
+        }
+      });
+    });
 
   } else {
     Fail("Unsupported ExpressionType used in InExpression");
 
   }
 
-  return {};
+  if (result_nulls.empty()) {
+    return std::make_shared<ExpressionResult<int32_t>>(std::move(result_values));
+  } else {
+    return std::make_shared<ExpressionResult<int32_t>>(std::move(result_values), std::move(result_nulls));
+  }
 }
 
 
@@ -290,7 +343,7 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_case_expressi
   const auto when = evaluate_expression_to_result<int32_t>(*case_expression.when());
 
   /**
-   * Optimization - but block below relies on the case where WHEN is a literal to be handled separately
+   * Merely optimization - but the block below relies on the case where WHEN is a literal to be handled separately
    *    Handle cases where the CASE condition ("WHEN") is a fixed value/NULL (e.g. CASE 5+3 > 2 THEN ... ELSE ...)
    *    This avoids computing branches we don't need to compute.
    */
@@ -415,25 +468,25 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_function_expr
 //}
 
 template<typename R>
-std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_select_expression_for_chunk(
+std::vector<std::shared_ptr<ExpressionResult<R>>> ExpressionEvaluator::evaluate_select_expression(
 const PQPSelectExpression &expression) {
+  // If the SelectExpression is uncorelated, evaluating it once is sufficient
+  if (expression.parameters.empty()) {
+    return {evaluate_select_expression_for_row<R>(expression, ChunkOffset{0})};
+  }
+
   // Make sure all Columns that are parameters are materialized
   for (const auto& parameter : expression.parameters) {
     _ensure_column_materialization(parameter.second);
   }
 
-  std::vector<R> result_values(_output_row_count);
-  std::vector<bool> result_nulls(_output_row_count);
+  std::vector<std::shared_ptr<ExpressionResult<R>>> results(_output_row_count);
 
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-    const auto select_result = evaluate_select_expression_for_row<R>(expression, chunk_offset);
-
-    Assert(select_result->size() == 1, "Expected precisely one row from SubSelect");
-    result_values[chunk_offset] = select_result->value(0);
-    result_nulls[chunk_offset] = select_result->null(0);
+    results[chunk_offset] = evaluate_select_expression_for_row<R>(expression, chunk_offset);
   }
 
-  return std::make_shared<ExpressionResult<R>>(std::move(result_values), std::move(result_nulls));
+  return results;
 }
 
 template<typename R>
@@ -483,7 +536,19 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_select_expres
     materialize_values(result_column, result_values);
   }
 
-  return std::make_shared<ExpressionResult<R>>(std::move(result_values));
+  if (expression.is_nullable()) {
+    std::vector<bool> result_nulls;
+    result_nulls.reserve(result_table->row_count());
+
+    for (auto chunk_id = ChunkID{0}; chunk_id < result_table->chunk_count(); ++chunk_id) {
+      const auto &result_column = *result_table->get_chunk(chunk_id)->get_column(ColumnID{0});
+      materialize_nulls<R>(result_column, result_nulls);
+    }
+
+    return std::make_shared<ExpressionResult<R>>(std::move(result_values), std::move(result_nulls));
+  } else {
+    return std::make_shared<ExpressionResult<R>>(std::move(result_values));
+  }
 }
 
 std::shared_ptr<BaseColumn> ExpressionEvaluator::evaluate_expression_to_column(const AbstractExpression& expression) {

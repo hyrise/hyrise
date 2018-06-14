@@ -85,7 +85,7 @@ class ExpressionEvaluatorTest : public ::testing::Test {
   void print(const std::vector<std::optional<R>>& values_or_nulls) {
     for (const auto& value_or_null : values_or_nulls) {
       if (value_or_null) {
-        std::cout << *value << ", ";
+        std::cout << *value_or_null << ", ";
       } else {
         std::cout << "NULL, ";
       }
@@ -347,14 +347,14 @@ TEST_F(ExpressionEvaluatorTest, InSelectUncorelated) {
   const auto pqp_b = std::make_shared<Projection>(table_wrapper_b, expression_vector(PQPColumnExpression::from_table(*table_a, "c")));
   const auto select_b = select(pqp_b, DataType::Int, true);
 
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(6, select_a),  {0, 0, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(6, select_a),  {0}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in(a, select_a),  {1, 1, 1, 1}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in(add(a, 2), select_a),  {1, 1, 0, 0}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in(b, select_a),  {1, 1, 1, 0}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34, select_b),  {1, 1, 1, 1}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34.0, select_b),  {1, 1, 1, 1}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34.5, select_b),  {0, 0, 0, 0}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in("hello", select_b),  {0, 0, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34, select_b),  {1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34.0, select_b),  {1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34.5, select_b),  {0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in("hello", select_b),  {0}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in(c, select_b),  {1, std::nullopt, 1, std::nullopt}));
 }
 
@@ -362,18 +362,20 @@ TEST_F(ExpressionEvaluatorTest, InSelectCorelated) {
   // PQP that returns the column "b" multiplied with the current value in "a"
   //
   // row   list returned from select
-  //  0      (2, 3, 4, 5)
-  //  1      (4, 6, 8, 10)
-  //  2      (6, 9, 12, 15)
-  //  3      (8, 12, 16, 20)
+  //  0      (1, 2, 3, 4)
+  //  1      (2, 4, 6, 8)
+  //  2      (3, 6, 9, 12)
+  //  3      (4, 8, 12, 16)
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
   const auto mul_a = mul(parameter(ParameterID{0}), PQPColumnExpression::from_table(*table_a, "a"));
   const auto pqp_a = std::make_shared<Projection>(table_wrapper_a, expression_vector(mul_a));
   const auto select_a = select(pqp_a, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
 
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(4, select_a),  {1, 1, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(4, select_a),  {1, 1, 0, 1}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in(6, select_a),  {0, 1, 1, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(16, select_a),  {0, 0, 0, 1}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in(b, select_a),  {1, 0, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(null(), select_a),  {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
 
   // PQP that returns the column "c" added to the current value in "a"
   //
@@ -385,13 +387,13 @@ TEST_F(ExpressionEvaluatorTest, InSelectCorelated) {
   const auto table_wrapper_b = std::make_shared<TableWrapper>(table_a);
   const auto add_b = add(parameter(ParameterID{0}), PQPColumnExpression::from_table(*table_a, "c"));
   const auto pqp_b = std::make_shared<Projection>(table_wrapper_b, expression_vector(add_b));
-  const auto select_b = select(pqp_a, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
+  const auto select_b = select(pqp_b, DataType::Int, true, std::make_pair(ParameterID{0}, ColumnID{0}));
 
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34, select_b),  {1, 0, 0, 0}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(35, select_b),  {1, 1, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34, select_b),  {1, std::nullopt, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(35, select_b),  {1, 1, std::nullopt, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in(null(), select_b),  {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(36, select_b),  {std::nullopt, std::nullopt, 1, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(36.0, select_b),  {std::nullopt, std::nullopt, 1, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(36, select_b),  {std::nullopt, 1, 1, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(36.0, select_b),  {std::nullopt, 1, 1, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in(36.3, select_b),  {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
 }
 

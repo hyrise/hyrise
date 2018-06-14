@@ -55,7 +55,7 @@ class ExpressionEvaluator final {
   std::shared_ptr<ExpressionResult<R>> evaluate_in_expression(const InExpression& in_expression);
 
   template<typename R>
-  std::shared_ptr<ExpressionResult<R>> evaluate_select_expression_for_chunk(const PQPSelectExpression &expression);
+  std::vector<std::shared_ptr<ExpressionResult<R>>> evaluate_select_expression(const PQPSelectExpression &expression);
 
   template<typename R>
   std::shared_ptr<ExpressionResult<R>> evaluate_select_expression_for_row(const PQPSelectExpression& expression, const ChunkOffset chunk_offset);
