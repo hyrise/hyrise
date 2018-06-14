@@ -59,7 +59,7 @@ fi
 # Continuing only with Linux/gcc
 
 # call gcovr twice b/c of https://github.com/gcovr/gcovr/issues/112
-gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches -k
+gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude='.*/(?:third_party|src/test|src/benchmark).*' --exclude-unreachable-branches -k -v
 
 if [ "true" == "$generate_badge" ]
 then
