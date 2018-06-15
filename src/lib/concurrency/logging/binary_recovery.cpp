@@ -58,8 +58,6 @@ void BinaryRecovery::recover() {
 
     std::vector<LoggedItem> transactions;
 
-    // TransactionID last_transaction_id{0};
-
     while(true) {
       char log_type;
       log_file.read(&log_type, sizeof(char));
@@ -102,21 +100,20 @@ void BinaryRecovery::recover() {
 
       }
       else { // 'v' or 'i'
-        DebugAssert(log_type == 'v' || log_type == 'i', "recovery first token of new entry is neither c, v nor i");
+        DebugAssert(log_type == 'v' || log_type == 'i', "recovery: first token of new entry is neither c, v nor i");
         /*     Invalidation and begin of value entries:
-        *       - log entry type       : sizeof(char)
-        *       - transaction_id       : sizeof(TransactionID)
-        *       - table_name.size()    : sizeof(size_t)             --> what is max table_name size?
-        *       - table_name           : table_name.size()
-        *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset) 
-        *  1 + 4 + 8 + 6 + 4 +4 = 27
+        *       - log entry type ('v') : sizeof(char)
+        *       - transaction_id       : sizeof(transaction_id_t)
+        *       - table_name           : table_name.size() + 1, terminated with \0
+        *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset)
         */
 
-        size_t table_name_size;
-        log_file.read(reinterpret_cast<char*>(&table_name_size), sizeof(size_t));
 
-        std::string table_name(table_name_size, '\0');
-        log_file.read(table_name.data(), table_name_size);
+        std::string table_name;
+        std::getline(log_file, table_name, '\0');
+        std::cout << table_name << std::endl;
+        // std::string table_name(table_name_size, '\0');
+        // log_file.read(table_name.data(), table_name_size);
 
         ChunkID chunk_id;
         log_file.read(reinterpret_cast<char*>(&chunk_id), sizeof(ChunkID));
