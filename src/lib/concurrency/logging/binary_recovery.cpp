@@ -43,6 +43,53 @@ BinaryRecovery& BinaryRecovery::getInstance() {
   return instance;
 }
 
+
+  // ((int32_t,     Int,        "int"))    \
+  // ((int64_t,     Long,       "long"))   \
+  // ((float,       Float,      "float"))  \
+  // ((double,      Double,     "double")) \
+  // ((std::string, String,     "string"))
+
+AllTypeVariant _read(std::ifstream& file, DataType data_type){
+  AllTypeVariant value;
+  switch (data_type){
+    case DataType::Int: {
+      int32_t v;
+      file.read(reinterpret_cast<char*>(&v), sizeof(int32_t));
+      value = v;
+      break;
+    }
+    case DataType::Long: {
+      int64_t v;
+      file.read(reinterpret_cast<char*>(&v), sizeof(int64_t));
+      value = v;
+      break;
+    }
+    case DataType::Float: {
+      float v;
+      file.read(reinterpret_cast<char*>(&v), sizeof(float));
+      value = v;
+      break;
+    }
+    case DataType::Double: {
+      double v;
+      file.read(reinterpret_cast<char*>(&v), sizeof(double));
+      value = v;
+      break;
+    }
+    case DataType::String: {
+      std::string v;
+      std::getline(file, v, '\0');
+      value = v;
+      break;
+    }
+    default:
+      DebugAssert(false, "recovery: read unknown type");
+  }
+
+  return value;
+}
+
 void BinaryRecovery::recover() {
   std::fstream last_log_number_file(Logger::directory + Logger::last_log_filename, std::ios::in);
   uint log_number;
@@ -91,6 +138,8 @@ void BinaryRecovery::recover() {
           } else if (transaction.type == LogType::Invalidation) {
             auto mvcc_columns = chunk->mvcc_columns();
             mvcc_columns->end_cids[transaction.row_id.chunk_offset] = transaction_id;
+          } else {
+            DebugAssert(false, "recovery: transaction type not implemented yet");
           }
         }
 
@@ -111,9 +160,6 @@ void BinaryRecovery::recover() {
 
         std::string table_name;
         std::getline(log_file, table_name, '\0');
-        std::cout << table_name << std::endl;
-        // std::string table_name(table_name_size, '\0');
-        // log_file.read(table_name.data(), table_name_size);
 
         ChunkID chunk_id;
         log_file.read(reinterpret_cast<char*>(&chunk_id), sizeof(ChunkID));
@@ -128,8 +174,27 @@ void BinaryRecovery::recover() {
           continue;
         }
         else {
-          // TODO: insert values
-          break;
+          /*  Remainder of value entries:
+           *       - NULL bitmap          : ceil(values.size() / 8.0)
+           *       - value                : length(value)
+           *       - any optional values
+           */
+
+          auto table = StorageManager::get().get_table(table_name);
+          auto data_types = table->column_data_types();
+
+          auto null_bitmap_number_of_bytes = ceil(data_types.size() / 8.0);
+          std::vector<char> null_bitmap(null_bitmap_number_of_bytes);
+          log_file.read(&null_bitmap[0], null_bitmap_number_of_bytes);
+
+          // TODO use bitmap
+          std::vector<AllTypeVariant> values;
+          for (auto &data_type : data_types) {
+            values.push_back(_read(log_file, data_type));
+          }
+
+          transactions.push_back(LoggedItem(LogType::Value, transaction_id, table_name, row_id, values));
+          continue;
         }
       }
     }

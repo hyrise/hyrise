@@ -8,7 +8,7 @@
  *       - transaction_id       : sizeof(transaction_id_t)
  *       - table_name           : table_name.size() + 1, terminated with \0
  *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset)
- *       - NULL bitmap          : ceil(values.size() / 8)
+ *       - NULL bitmap          : ceil(values.size() / 8.0)
  *       - value                : length(value)
  *       - any optional values
  * 
@@ -114,7 +114,7 @@ TODO:
  *       - transaction_id       : sizeof(transaction_id_t)
  *       - table_name           : table_name.size() + 1, terminated with \0
  *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset)
- *       - NULL bitmap          : ceil(values.size() / 8)
+ *       - NULL bitmap          : ceil(values.size() / 8.0)
  *       - value                : length(value)
  *       - any optional values
  */
