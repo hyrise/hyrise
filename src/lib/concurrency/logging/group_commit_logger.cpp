@@ -6,21 +6,17 @@
  *     Value Entries:
  *       - log entry type ('v') : sizeof(char)
  *       - transaction_id       : sizeof(transaction_id_t)
- *       - table_name.size()    : sizeof(size_t)             --> what is max table_name size?
- *       - table_name           : table_name.size()
+ *       - table_name           : table_name.size() + 1, terminated with \0
  *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset)
- *       - length(value)        : sizeof(size_t)
+ *       - NULL bitmap          : ceil(values.size() / 8)
  *       - value                : length(value)
- *       - { length(value) + value } *
- *       - end indicator        : sizeof(int)
- *         (-> length(value) = 0)
+ *       - any optional values
  * 
  *     Invalidation Entries:
  *       - log entry type ('i') : sizeof(char)
- *       - transaction_id       : sizeof(TransactionID)
- *       - table_name.size()    : sizeof(size_t)             --> what is max table_name size?
- *       - table_name           : table_name.size()
- *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset)     
+ *       - transaction_id       : sizeof(transaction_id_t)
+ *       - table_name           : table_name.size() + 1, terminated with \0
+ *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset) 
  *
  */
 
@@ -39,6 +35,7 @@
 #include <fstream>
 #include <future>
 #include <string>
+#include <math.h>
 
 #include <iostream>
 
@@ -75,7 +72,6 @@ void GroupCommitLogger::commit(const TransactionID transaction_id, std::function
 
 char* GroupCommitLogger::_put_into_entry(char* cursor, const TransactionID &transaction_id, const std::string &table_name, const RowID &row_id) {
   _write_value<TransactionID>(cursor, transaction_id);
-  _write_value<size_t>(cursor, table_name.size());
   _write_value<std::string>(cursor, table_name);
   _write_value<ChunkID>(cursor, row_id.chunk_id);
   _write_value<ChunkOffset>(cursor, row_id.chunk_offset);
@@ -113,10 +109,9 @@ TODO:
 */
 
 
- /*     Value Entries:    TODO!!!
+ /*     Value Entries:
  *       - log entry type ('v') : sizeof(char)
  *       - transaction_id       : sizeof(transaction_id_t)
- *       - table_name.size()    : sizeof(size_t)             --> what is max table_name size?
  *       - table_name           : table_name.size() + 1, terminated with \0
  *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset)
  *       - NULL bitmap          : ceil(values.size() / 8)
@@ -125,7 +120,7 @@ TODO:
  */
 void GroupCommitLogger::value(const TransactionID transaction_id, const std::string table_name, const RowID row_id, const std::vector<AllTypeVariant> values){
 
-  auto entry_length = sizeof(char) + sizeof(TransactionID) + sizeof(size_t) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset) + sizeof(size_t);
+  auto entry_length = sizeof(char) + sizeof(TransactionID) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset);
   // TODO: use mmap ?
 
   std::vector<std::pair<char*, size_t>> value_binaries;
@@ -136,6 +131,10 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
     entry_length += value_binary.second;
   }
 
+  // Bitmap of NULL values
+  uint null_bitmap_number_of_bytes = ceil(value_binaries.size() / 8.0);
+  entry_length += null_bitmap_number_of_bytes;
+
   auto entry = (char*) malloc(entry_length);
   auto current_pos = entry;
 
@@ -143,13 +142,19 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
 
   current_pos = _put_into_entry(current_pos, transaction_id, table_name, row_id);
 
+  // TODO: write bitmap of NULL values
+  // auto bitmap_pos = current_pos;
+  // char bitmap[null_bitmap_number_of_bytes];
+  for (auto i = 0u; i < null_bitmap_number_of_bytes; ++i) {
+    _write_value<char>(current_pos, '\0');
+  }
+  // memcpy( bitmap_pos, bitmap, null_bitmap_number_of_bytes );
+  // current_pos += null_bitmap_number_of_bytes;
+
   for (auto & binary : value_binaries){
     memcpy( current_pos, binary.first, binary.second );
     current_pos += binary.second;
   }
-
-  // end indicator: length of next value = 0
-  _write_value<size_t>(current_pos, 0);
 
   _write_to_buffer(entry, entry_length);
   
@@ -157,7 +162,7 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
 }
 
 void GroupCommitLogger::invalidate(const TransactionID transaction_id, const std::string table_name, const RowID row_id){
-  const auto entry_length = sizeof(char) + sizeof(TransactionID) + sizeof(size_t) + table_name.size() + sizeof(ChunkID) + sizeof(ChunkOffset);
+  const auto entry_length = sizeof(char) + sizeof(TransactionID) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset);
   auto entry = (char*) malloc(entry_length);
   auto current_pos = entry;
 
