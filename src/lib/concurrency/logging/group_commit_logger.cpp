@@ -61,11 +61,10 @@ void GroupCommitLogger::_write_value<std::string>(char*& cursor, const std::stri
 void GroupCommitLogger::commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback){
   constexpr auto entry_length = sizeof(char) + sizeof(TransactionID);
   auto entry = (char*) malloc(entry_length);
+  auto cursor = entry;
 
-  // _write_value<char>(entry, 't');
-  // _write_value<TransactionID>(entry, transaction_id);
-  *entry = 't';
-  *(TransactionID*) (entry + sizeof(char)) = transaction_id;
+  _write_value<char>(cursor, 't');
+  _write_value<TransactionID>(cursor, transaction_id);
 
   _commit_callbacks.emplace_back(std::make_pair(callback, transaction_id));
 
@@ -74,14 +73,14 @@ void GroupCommitLogger::commit(const TransactionID transaction_id, std::function
   free(entry);
 }
 
-char* GroupCommitLogger::_put_into_entry(char* entry, const TransactionID &transaction_id, const std::string &table_name, const RowID &row_id) {
-  _write_value<TransactionID>(entry, transaction_id);
-  _write_value<size_t>(entry, table_name.size());
-  _write_value<std::string>(entry, table_name);
-  _write_value<ChunkID>(entry, row_id.chunk_id);
-  _write_value<ChunkOffset>(entry, row_id.chunk_offset);
+char* GroupCommitLogger::_put_into_entry(char* cursor, const TransactionID &transaction_id, const std::string &table_name, const RowID &row_id) {
+  _write_value<TransactionID>(cursor, transaction_id);
+  _write_value<size_t>(cursor, table_name.size());
+  _write_value<std::string>(cursor, table_name);
+  _write_value<ChunkID>(cursor, row_id.chunk_id);
+  _write_value<ChunkOffset>(cursor, row_id.chunk_offset);
 
-  return entry;
+  return cursor;
 }
 
 class value_visitor : public boost::static_visitor<std::pair<char*, size_t>>
@@ -135,18 +134,12 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
     auto value_binary = boost::apply_visitor( value_visitor(), value );
     value_binaries.push_back(value_binary);
     entry_length += value_binary.second;
-
-    // std::cout << value_binary.second << std::endl;
-    // for (auto i = 0u; i < value_binary.second; ++i) {
-    //   std::cout << value_binary.first[i];
-    // }
-    // std::cout << std::endl;
   }
 
   auto entry = (char*) malloc(entry_length);
+  auto current_pos = entry;
 
-  *entry = 'v';
-  auto current_pos = entry + sizeof(char);
+  _write_value<char>(current_pos, 'v');
 
   current_pos = _put_into_entry(current_pos, transaction_id, table_name, row_id);
 
@@ -156,7 +149,7 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
   }
 
   // end indicator: length of next value = 0
-  *(size_t*) current_pos = 0;
+  _write_value<size_t>(current_pos, 0);
 
   _write_to_buffer(entry, entry_length);
   
@@ -166,9 +159,9 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
 void GroupCommitLogger::invalidate(const TransactionID transaction_id, const std::string table_name, const RowID row_id){
   const auto entry_length = sizeof(char) + sizeof(TransactionID) + sizeof(size_t) + table_name.size() + sizeof(ChunkID) + sizeof(ChunkOffset);
   auto entry = (char*) malloc(entry_length);
-  
-  *entry = 'i';
-  auto current_pos = entry + sizeof(char);
+  auto current_pos = entry;
+
+  _write_value<char>(current_pos, 'i');
 
   current_pos = _put_into_entry(current_pos, transaction_id, table_name, row_id);
 
