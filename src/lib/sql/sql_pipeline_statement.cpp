@@ -156,9 +156,8 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
     Assert(_prepared_statements, "Cannot execute statement without prepared statement cache.");
     const auto plan = _prepared_statements->try_get(execute_statement->name);
 
-    if (!plan) {
-      throw InvalidInput("Requested prepared statement does not exist!");
-    }
+    AssertInput(plan, std::string("Requested prepared statement does not exist!"));
+
     assert_same_mvcc_mode(*plan);
 
     // Get list of arguments from EXECUTE statement.
