@@ -6,6 +6,7 @@
 #include "boost/variant/apply_visitor.hpp"
 
 #include "expression/abstract_expression.hpp"
+#include "expression/exists_expression.hpp"
 #include "expression/list_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -73,20 +74,21 @@ const AbstractExpression &expression) {
       const auto* pqp_select_expression = dynamic_cast<const PQPSelectExpression*>(&expression);
       Assert(pqp_select_expression, "Can only evaluate PQPSelectExpression");
 
-      const auto results = evaluate_select_expression<R>(*pqp_select_expression);
+      const auto select_result_tables = evaluate_select_expression(*pqp_select_expression);
+      const auto select_result_columns = _prune_tables_to_expression_results<R>(select_result_tables);
 
-      std::vector<R> result_values(results.size());
+      std::vector<R> result_values(select_result_columns.size());
 
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < results.size(); ++chunk_offset) {
-        Assert(results[chunk_offset]->size() == 1, "Expected precisely one to be returned from SelectExpression");
-        result_values[chunk_offset] = results[chunk_offset]->value(0);
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_columns.size(); ++chunk_offset) {
+        Assert(select_result_columns[chunk_offset]->size() == 1, "Expected precisely one to be returned from SelectExpression");
+        result_values[chunk_offset] = select_result_columns[chunk_offset]->value(0);
       }
 
       if (expression.is_nullable()) {
-        std::vector<bool> result_nulls(results.size());
+        std::vector<bool> result_nulls(select_result_columns.size());
 
-        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < results.size(); ++chunk_offset) {
-          result_nulls[chunk_offset] = results[chunk_offset]->null(0);
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_columns.size(); ++chunk_offset) {
+          result_nulls[chunk_offset] = select_result_columns[chunk_offset]->null(0);
         }
         return std::make_shared<ExpressionResult<R>>(std::move(result_values), std::move(result_nulls));
       } else {
@@ -139,8 +141,8 @@ const AbstractExpression &expression) {
     case ExpressionType::Case:
       return evaluate_case_expression<R>(static_cast<const CaseExpression&>(expression));
 
-//    case ExpressionType::Exists:
-//      return evaluate_exists_expression<R>(static_cast<const ExistsExpression&>(expression));
+    case ExpressionType::Exists:
+      return evaluate_exists_expression<R>(static_cast<const ExistsExpression&>(expression));
 //
 //    case ExpressionType::Extract:
 //      return evaluate_extract_expression<R>(static_cast<const ExtractExpression&>(expression));
@@ -279,15 +281,17 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_in_expr
     resolve_data_type(select_expression->data_type(), [&](const auto select_data_type_t) {
       using SelectDataType = typename decltype(select_data_type_t)::type;
 
-      const auto select_results = evaluate_select_expression<SelectDataType>(*select_expression);
-      Assert(select_results.size() == 1 || select_results.size() == _output_row_count,
+      const auto select_result_tables = evaluate_select_expression(*select_expression);
+      const auto select_result_columns = _prune_tables_to_expression_results<SelectDataType>(select_result_tables);
+
+      Assert(select_result_columns.size() == 1 || select_result_columns.size() == _output_row_count,
              "Unexpected number of lists returned from Select. Should be one, or one per row");
 
       resolve_to_expression_result_view(left_expression, [&](const auto& left_view) {
         using ValueDataType = typename std::decay_t<decltype(left_view)>::Type;
 
         if constexpr (Equals::supports<int32_t, ValueDataType, SelectDataType>::value) {
-          const auto output_row_count = std::max(left_view.size(), select_results.size());
+          const auto output_row_count = std::max(left_view.size(), select_result_columns.size());
 
           result_values.resize(output_row_count, 0);
           // TODO(moritz) The InExpression doesn't in all cases need to return a nullable
@@ -296,8 +300,8 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_in_expr
           for (auto chunk_offset = ChunkOffset{0}; chunk_offset < output_row_count; ++chunk_offset) {
             // If the SELECT returned just one list, always perform the IN check with that one list
             // If the SELECT returned multiple lists, then the Select was corelated and we need to do the IN check
-            // against the list of the current column
-            const auto &list = *select_results[select_results.size() == 1 ? 0 : chunk_offset];
+            // against the list of the current row
+            const auto &list = *select_result_columns[select_result_columns.size() == 1 ? 0 : chunk_offset];
 
             auto list_contains_null = false;
 
@@ -385,6 +389,26 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_case_expressi
   return std::make_shared<ExpressionResult<R>>(std::move(values), std::move(nulls));
 }
 
+template<>
+std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_exists_expression<int32_t>(const ExistsExpression& exists_expression) {
+  const auto select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(exists_expression.select());
+  Assert(select_expression, "Expexted PQPSelectExpression");
+
+  const auto select_result_tables = evaluate_select_expression(*select_expression);
+
+  std::vector<int32_t> result_values(select_result_tables.size());
+  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
+    result_values[chunk_offset] = select_result_tables[chunk_offset]->row_count() > 0;
+  }
+
+  return std::make_shared<ExpressionResult<int32_t>>(std::move(result_values));
+}
+
+template<typename R>
+std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_exists_expression(const ExistsExpression& exists_expression) {
+  Fail("Exists can only return int32_t");
+}
+
 template<typename R>
 std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_function_expression(const FunctionExpression& expression) {
   switch (expression.function_type) {
@@ -467,12 +491,11 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_function_expr
 //  }
 //}
 
-template<typename R>
-std::vector<std::shared_ptr<ExpressionResult<R>>> ExpressionEvaluator::evaluate_select_expression(
+std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::evaluate_select_expression(
 const PQPSelectExpression &expression) {
   // If the SelectExpression is uncorelated, evaluating it once is sufficient
   if (expression.parameters.empty()) {
-    return {evaluate_select_expression_for_row<R>(expression, ChunkOffset{0})};
+    return {evaluate_select_expression_for_row(expression, ChunkOffset{0})};
   }
 
   // Make sure all Columns that are parameters are materialized
@@ -480,17 +503,16 @@ const PQPSelectExpression &expression) {
     _ensure_column_materialization(parameter.second);
   }
 
-  std::vector<std::shared_ptr<ExpressionResult<R>>> results(_output_row_count);
+  std::vector<std::shared_ptr<const Table>> results(_output_row_count);
 
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-    results[chunk_offset] = evaluate_select_expression_for_row<R>(expression, chunk_offset);
+    results[chunk_offset] = evaluate_select_expression_for_row(expression, chunk_offset);
   }
 
   return results;
 }
 
-template<typename R>
-std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_select_expression_for_row(const PQPSelectExpression& expression, const ChunkOffset chunk_offset) {
+std::shared_ptr<const Table> ExpressionEvaluator::evaluate_select_expression_for_row(const PQPSelectExpression& expression, const ChunkOffset chunk_offset) {
   Assert(expression.parameters.empty() || _chunk, "Sub-SELECT references external Columns but Expression doesn't operate on a Table/Chunk");
 
   std::unordered_map<ParameterID, AllTypeVariant> parameters;
@@ -523,32 +545,7 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_select_expres
   const auto tasks = query_plan.create_tasks();
   CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 
-  const auto result_table = row_pqp->get_output();
-
-  Assert(result_table->column_count() == 1, "Expected precisely one column from SubSelect");
-  Assert(result_table->column_data_type(ColumnID{0}) == data_type_from_type<R>(), "Expected different DataType from SubSelect");
-
-  std::vector<R> result_values;
-  result_values.reserve(result_table->row_count());
-
-  for (auto chunk_id = ChunkID{0}; chunk_id < result_table->chunk_count(); ++chunk_id) {
-    const auto &result_column = *result_table->get_chunk(chunk_id)->get_column(ColumnID{0});
-    materialize_values(result_column, result_values);
-  }
-
-  if (expression.is_nullable()) {
-    std::vector<bool> result_nulls;
-    result_nulls.reserve(result_table->row_count());
-
-    for (auto chunk_id = ChunkID{0}; chunk_id < result_table->chunk_count(); ++chunk_id) {
-      const auto &result_column = *result_table->get_chunk(chunk_id)->get_column(ColumnID{0});
-      materialize_nulls<R>(result_column, result_nulls);
-    }
-
-    return std::make_shared<ExpressionResult<R>>(std::move(result_values), std::move(result_nulls));
-  } else {
-    return std::make_shared<ExpressionResult<R>>(std::move(result_values));
-  }
+  return row_pqp->get_output();
 }
 
 std::shared_ptr<BaseColumn> ExpressionEvaluator::evaluate_expression_to_column(const AbstractExpression& expression) {
@@ -889,6 +886,42 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_co
 
     return std::make_shared<ExpressionResult<std::string>>(std::move(result_values));
   }
+}
+
+template<typename R>
+std::vector<std::shared_ptr<ExpressionResult<R>>> ExpressionEvaluator::_prune_tables_to_expression_results(const std::vector<std::shared_ptr<const Table>>& tables) {
+  std::vector<std::shared_ptr<ExpressionResult<R>>> results(tables.size());
+
+  for (auto table_idx = size_t{0}; table_idx < tables.size(); ++table_idx) {
+    const auto& table = tables[table_idx];
+
+    Assert(table->column_count() == 1, "Expected precisely one column from SubSelect");
+    Assert(table->column_data_type(ColumnID{0}) == data_type_from_type<R>(), "Expected different DataType from SubSelect");
+
+    std::vector<R> result_values;
+    result_values.reserve(table->row_count());
+
+    for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+      const auto &result_column = *table->get_chunk(chunk_id)->get_column(ColumnID{0});
+      materialize_values(result_column, result_values);
+    }
+
+    if (table->column_is_nullable(ColumnID{0})) {
+      std::vector<bool> result_nulls;
+      result_nulls.reserve(table->row_count());
+
+      for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+        const auto &result_column = *table->get_chunk(chunk_id)->get_column(ColumnID{0});
+        materialize_nulls<R>(result_column, result_nulls);
+      }
+
+      results[table_idx] = std::make_shared<ExpressionResult<R>>(std::move(result_values), std::move(result_nulls));
+    } else {
+      results[table_idx] = std::make_shared<ExpressionResult<R>>(std::move(result_values));
+    }
+  }
+
+  return results;
 }
 
 }  // namespace opossum

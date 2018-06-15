@@ -54,11 +54,9 @@ class ExpressionEvaluator final {
   template<typename R>
   std::shared_ptr<ExpressionResult<R>> evaluate_in_expression(const InExpression& in_expression);
 
-  template<typename R>
-  std::vector<std::shared_ptr<ExpressionResult<R>>> evaluate_select_expression(const PQPSelectExpression &expression);
+  std::vector<std::shared_ptr<const Table>> evaluate_select_expression(const PQPSelectExpression &expression);
 
-  template<typename R>
-  std::shared_ptr<ExpressionResult<R>> evaluate_select_expression_for_row(const PQPSelectExpression& expression, const ChunkOffset chunk_offset);
+  std::shared_ptr<const Table> evaluate_select_expression_for_row(const PQPSelectExpression& expression, const ChunkOffset chunk_offset);
 
   template<typename R>
   std::shared_ptr<ExpressionResult<R>> evaluate_case_expression(const CaseExpression& case_expression);
@@ -73,8 +71,8 @@ class ExpressionEvaluator final {
 //  template<size_t offset, size_t count>
 //  ExpressionResult<std::string> evaluate_extract_substr(const ExpressionResult<std::string>& from_result);
 //
-//  template<typename R>
-//  ExpressionResult<R> evaluate_exists_expression(const ExistsExpression& exists_expression);
+  template<typename R>
+  std::shared_ptr<ExpressionResult<R>> evaluate_exists_expression(const ExistsExpression& exists_expression);
 
   template<typename R, typename Functor>
   std::shared_ptr<ExpressionResult<R>> evaluate_binary_with_default_null_logic(const AbstractExpression& left_expression,
@@ -98,8 +96,6 @@ class ExpressionEvaluator final {
   template<typename Functor>
   void resolve_to_expression_result(const AbstractExpression &expression, const Functor &fn);
 
-  std::shared_ptr<ExpressionResult<std::string>> _evaluate_substring(const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
-  std::shared_ptr<ExpressionResult<std::string>> _evaluate_concatenate(const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
 
  private:
   template<typename A, typename B>
@@ -108,6 +104,12 @@ class ExpressionEvaluator final {
   static std::vector<bool> _evaluate_default_null_logic(const std::vector<bool>& left, const std::vector<bool>& right);
 
   void _ensure_column_materialization(const ColumnID column_id);
+
+  std::shared_ptr<ExpressionResult<std::string>> _evaluate_substring(const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
+  std::shared_ptr<ExpressionResult<std::string>> _evaluate_concatenate(const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
+
+  template<typename R>
+  static std::vector<std::shared_ptr<ExpressionResult<R>>> _prune_tables_to_expression_results(const std::vector<std::shared_ptr<const Table>>& tables);
 
   std::shared_ptr<const Table> _table;
   std::shared_ptr<const Chunk> _chunk;

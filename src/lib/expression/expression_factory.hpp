@@ -120,7 +120,7 @@ std::shared_ptr<LQPSelectExpression> select(const std::shared_ptr<AbstractLQPNod
 }
 
 template<typename ... Args>
-std::shared_ptr<AbstractExpression> select(const std::shared_ptr<AbstractOperator>& pqp,
+std::shared_ptr<PQPSelectExpression> select(const std::shared_ptr<AbstractOperator>& pqp,
                                            const DataType data_type, const bool nullable,
                                            Args &&... parameter_id_column_id_pairs) {
   if constexpr (sizeof...(Args) > 0) {

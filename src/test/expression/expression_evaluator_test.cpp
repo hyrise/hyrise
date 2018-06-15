@@ -353,7 +353,7 @@ TEST_F(ExpressionEvaluatorTest, InSelectUncorelated) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in(b, select_a),  {1, 1, 1, 0}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34, select_b),  {1}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34.0, select_b),  {1}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34.5, select_b),  {0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34.5, select_b),  {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in("hello", select_b),  {0}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in(c, select_b),  {1, std::nullopt, 1, std::nullopt}));
 }
@@ -397,34 +397,25 @@ TEST_F(ExpressionEvaluatorTest, InSelectCorelated) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in(36.3, select_b),  {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
 }
 
-//
-//TEST_F(ExpressionEvaluatorTest, Exists) {
-//  /**
-//   * Test a co-related EXISTS query
-//   *
-//   * SELECT
-//   *    EXISTS (SELECT a + x FROM table_b WHERE a + b = 13)
-//   * FROM
-//   *    table_a;
-//   */
-//  const auto table_wrapper = std::make_shared<TableWrapper>(table_b);
-//  const auto a_placeholder = std::make_shared<ValuePlaceholderExpression>(ValuePlaceholder{0});
-//  const auto projection_expressions = std::vector<std::shared_ptr<AbstractExpression>>({
-//    std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, a_placeholder, x)
-//  });
-//  const auto projection = std::make_shared<Projection>(table_wrapper, projection_expressions);
-//  const auto a_plus_x_eq_13 = std::make_shared<TableScan>(projection, ColumnID{0}, PredicateCondition::Equals, 13);
-//  const auto pqp_select_expression = std::make_shared<PQPSelectExpression>(a_plus_x_eq_13, DataType::Int, false, std::vector<ColumnID>{ColumnID{0}});
-//
-//  const auto exists_expression = std::make_shared<ExistsExpression>(pqp_select_expression);
-//
-//  const auto actual_result = evaluator->evaluate_expression<int32_t>(*exists_expression);
-//  const auto actual_values = boost::get<NonNullableValues<int32_t>>(actual_result);
-//
-//  std::vector<int32_t> expected_values = {0, 0, 1, 1};
-//  EXPECT_EQ(actual_values, expected_values);
-//}
-//
+TEST_F(ExpressionEvaluatorTest, Exists) {
+  /**
+   * Test a co-related EXISTS query
+   *
+   * SELECT
+   *    EXISTS (SELECT a + x, x FROM table_b WHERE a + x = 13)
+   * FROM
+   *    table_a;
+   */
+  const auto table_wrapper = std::make_shared<TableWrapper>(table_b);
+  const auto parameter_a = parameter(ParameterID{0});
+  const auto a_plus_x_projection = std::make_shared<Projection>(table_wrapper, expression_vector(add(parameter_a, x), x));
+  const auto a_plus_x_eq_13_scan = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, PredicateCondition::Equals, 13);
+  const auto pqp_select_expression = select(a_plus_x_eq_13_scan, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
+
+  const auto exists_expression = std::make_shared<ExistsExpression>(pqp_select_expression);
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *exists_expression,  {0, 0, 1, 1}));
+}
+
 //TEST_F(ExpressionEvaluatorTest, Extract) {
 //  const auto extract_year_expression = std::make_shared<ExtractExpression>(DatetimeComponent::Year, dates);
 //  const auto actual_years = boost::get<NonNullableValues<std::string>>(evaluator->evaluate_expression<std::string>(*extract_year_expression));
