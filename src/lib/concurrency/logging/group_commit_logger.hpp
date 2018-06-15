@@ -33,6 +33,12 @@ class GroupCommitLogger : public AbstractLogger{
   void _write_buffer_to_logfile();
   void _write_to_buffer(char* entry, size_t length);
 
+  template <typename T>
+  void _write_value(char*& cursor, const T value) {
+    *(T*)cursor = value;
+    cursor += sizeof(T);
+  }
+
   ~GroupCommitLogger();
   
   char* _buffer;

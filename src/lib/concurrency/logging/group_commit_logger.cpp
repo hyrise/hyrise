@@ -42,15 +42,28 @@
 
 #include <iostream>
 
+#include <boost/serialization/variant.hpp>
+#include <boost/variant/apply_visitor.hpp>
+
 namespace opossum {
 
 constexpr size_t LOG_BUFFER_CAPACITY = 16384;
 
 constexpr auto LOG_INTERVAL = std::chrono::seconds(5);
 
+template <>
+void GroupCommitLogger::_write_value<std::string>(char*& cursor, const std::string value) {
+  value.copy(cursor, value.size());
+  cursor[value.size()] = '\0';
+  cursor += value.size() + 1;
+}
+
 void GroupCommitLogger::commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback){
   constexpr auto entry_length = sizeof(char) + sizeof(TransactionID);
   auto entry = (char*) malloc(entry_length);
+
+  // _write_value<char>(entry, 't');
+  // _write_value<TransactionID>(entry, transaction_id);
   *entry = 't';
   *(TransactionID*) (entry + sizeof(char)) = transaction_id;
 
@@ -62,48 +75,72 @@ void GroupCommitLogger::commit(const TransactionID transaction_id, std::function
 }
 
 char* GroupCommitLogger::_put_into_entry(char* entry, const TransactionID &transaction_id, const std::string &table_name, const RowID &row_id) {
-  *(TransactionID*) entry = transaction_id;
-  entry += sizeof(TransactionID);
-
-  *(size_t*) entry = table_name.size();
-  entry += sizeof(size_t);
-
-  table_name.copy(entry, table_name.size());
-  entry += table_name.size();
-
-  *(ChunkID*) entry = row_id.chunk_id;
-  entry += sizeof(ChunkID);
-
-  *(ChunkOffset*) entry = row_id.chunk_offset;
-  entry += sizeof(ChunkOffset);
+  _write_value<TransactionID>(entry, transaction_id);
+  _write_value<size_t>(entry, table_name.size());
+  _write_value<std::string>(entry, table_name);
+  _write_value<ChunkID>(entry, row_id.chunk_id);
+  _write_value<ChunkOffset>(entry, row_id.chunk_offset);
 
   return entry;
 }
 
- /*     Value Entries:
+class value_visitor : public boost::static_visitor<std::pair<char*, size_t>>
+{
+public:
+  template <typename T>
+  std::pair<char*, size_t> operator()(T v) const {
+    auto bytes = (char*) malloc(sizeof(T));
+    *(T*) bytes = v;
+    return std::make_pair(bytes, sizeof(T));
+  }
+};
+
+template <>
+std::pair<char*, size_t> value_visitor::operator()(std::string v) const {
+  auto bytes = (char*) malloc(v.size() + 1);
+  v.copy(bytes, v.size());
+  bytes[v.size()] = '\0';
+  return std::make_pair(bytes, v.size() + 1); 
+}
+
+/*
+TODO:
+*  use vecotr, don't foget resize(). perhaps use reserve()
+*  vec.resize(vec.size()+sizeof(T))
+*  &vec[i]   isse char*
+
+  buffer an visitor übergeben
+*
+*/
+
+
+ /*     Value Entries:    TODO!!!
  *       - log entry type ('v') : sizeof(char)
  *       - transaction_id       : sizeof(transaction_id_t)
  *       - table_name.size()    : sizeof(size_t)             --> what is max table_name size?
- *       - table_name           : table_name.size()
+ *       - table_name           : table_name.size() + 1, terminated with \0
  *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset)
- *       - length(value)        : sizeof(int)
+ *       - NULL bitmap          : ceil(values.size() / 8)
  *       - value                : length(value)
- *       - { length(value) + value } *
- *       - end indicator        : sizeof(int)
- *         (-> length(value) = 0)
+ *       - any optional values
  */
 void GroupCommitLogger::value(const TransactionID transaction_id, const std::string table_name, const RowID row_id, const std::vector<AllTypeVariant> values){
-  auto entry_length = sizeof(char) + sizeof(TransactionID) + sizeof(size_t) + table_name.size() + sizeof(ChunkID) + sizeof(ChunkOffset) + sizeof(size_t);
+
+  auto entry_length = sizeof(char) + sizeof(TransactionID) + sizeof(size_t) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset) + sizeof(size_t);
   // TODO: use mmap ?
 
-  std::vector<std::string> value_strings;
+  std::vector<std::pair<char*, size_t>> value_binaries;
+
   for (auto &value : values) {
-    std::stringstream value_ss;
-    value_ss << value;
+    auto value_binary = boost::apply_visitor( value_visitor(), value );
+    value_binaries.push_back(value_binary);
+    entry_length += value_binary.second;
 
-    value_strings.push_back(value_ss.str());
-
-    entry_length += sizeof(size_t) + value_ss.str().length();
+    // std::cout << value_binary.second << std::endl;
+    // for (auto i = 0u; i < value_binary.second; ++i) {
+    //   std::cout << value_binary.first[i];
+    // }
+    // std::cout << std::endl;
   }
 
   auto entry = (char*) malloc(entry_length);
@@ -113,12 +150,9 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
 
   current_pos = _put_into_entry(current_pos, transaction_id, table_name, row_id);
 
-  for (auto &value_str : value_strings){
-    *(size_t*)(current_pos) = value_str.length();
-    current_pos += sizeof(size_t);
-
-    *current_pos = *value_str.c_str();
-    current_pos += value_str.length();
+  for (auto & binary : value_binaries){
+    memcpy( current_pos, binary.first, binary.second );
+    current_pos += binary.second;
   }
 
   // end indicator: length of next value = 0
