@@ -965,6 +965,19 @@ TEST_F(SQLTranslatorTest, Exists) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, NotExists) {
+  const auto actual_lqp = compile_query("SELECT NOT EXISTS(SELECT * FROM int_float);");
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(equals(exists(select(stored_table_node_int_float)), 0)),
+    DummyTableNode::make()
+  );
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, ExistsCorelated) {
   const auto actual_lqp = compile_query("SELECT EXISTS(SELECT * FROM int_float WHERE int_float.a > int_float2.b) FROM int_float2");
 
