@@ -159,9 +159,9 @@ SELECT a, b, AVG(b) FROM mixed GROUP BY a, b HAVING MAX(c) > 10 AND MAX(c) <= 30
 --INSERT INTO mixed_null SELECT a, b, c, d FROM mixed WHERE a = 'c' AND b > 15;
 --INSERT INTO mixed_null SELECT a, b, c, d FROM mixed WHERE d = 'caoe';
 --INSERT INTO mixed_null (b, c, a, d) SELECT b, c, a, d FROM mixed WHERE id < 13; SELECT * FROM mixed_null;
---
---
--- VIEWS disabled because of #367
+
+
+-- VIEWS
 CREATE VIEW count_view1 AS SELECT a, COUNT(DISTINCT b) FROM id_int_int_int_100 GROUP BY a; SELECT * FROM count_view1;
 CREATE VIEW count_view2 AS SELECT a, COUNT(DISTINCT b) FROM id_int_int_int_100 GROUP BY a; SELECT * FROM count_view2 WHERE a > 10;
 CREATE VIEW count_view3 (foo, bar) AS SELECT a, COUNT(DISTINCT b) FROM id_int_int_int_100 GROUP BY a; SELECT * FROM count_view3 WHERE foo > 10;
@@ -177,7 +177,7 @@ SELECT (SELECT MAX(b) + id_int_int_int_100.a FROM mixed) AS foo FROM id_int_int_
 SELECT (SELECT MAX(b) + id_int_int_int_100.a + id_int_int_int_100.b FROM mixed) AS foo FROM id_int_int_int_100;
 SELECT (SELECT MIN(1 + 2) FROM mixed) AS foos FROM id_int_int_int_100;
 
----- Subqueries in WHERE statement
+-- Subqueries in WHERE statement
 SELECT a FROM id_int_int_int_100 AS r WHERE id + 1 = (SELECT MIN(b) + r.id FROM mixed)
 SELECT a FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
 SELECT * FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
@@ -236,3 +236,4 @@ SELECT NOT EXISTS(SELECT * FROM id_int_int_int_100) AS some_exists;
 -- Cannot test the following expressions, because sqlite doesn't support them:
 --  * EXTRACT
 --  * CONCAT
+--  * PREPARE/EXECUTE

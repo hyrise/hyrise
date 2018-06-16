@@ -67,7 +67,7 @@ set(
     expression/pqp_select_expression.hpp
     expression/value_expression.cpp
     expression/value_expression.hpp
-#    import_export/binary.hpp
+    import_export/binary.hpp
     import_export/csv_converter.cpp
     import_export/csv_converter.hpp
     import_export/csv_meta.cpp
@@ -155,24 +155,24 @@ set(
     operators/base_operator_performance_data.hpp
     operators/alias_operator.cpp
     operators/alias_operator.hpp
-#    operators/delete.cpp
-#    operators/delete.hpp
-#    operators/difference.cpp
-#    operators/difference.hpp
+    operators/delete.cpp
+    operators/delete.hpp
+    operators/difference.cpp
+    operators/difference.hpp
     operators/export_binary.cpp
     operators/export_binary.hpp
     operators/export_csv.cpp
     operators/export_csv.hpp
     operators/get_table.cpp
     operators/get_table.hpp
-#    operators/import_binary.cpp
-#    operators/import_binary.hpp
+    operators/import_binary.cpp
+    operators/import_binary.hpp
     operators/import_csv.cpp
     operators/import_csv.hpp
 #    operators/index_scan.cpp
 #    operators/index_scan.hpp
-#    operators/insert.cpp
-#    operators/insert.hpp
+    operators/insert.cpp
+    operators/insert.hpp
 #    operators/jit_operator/jit_operations.hpp
 #    operators/jit_operator/jit_types.cpp
 #    operators/jit_operator/jit_types.hpp
@@ -222,12 +222,12 @@ set(
     operators/table_scan/single_column_table_scan_impl.hpp
     operators/table_wrapper.cpp
     operators/table_wrapper.hpp
-#    operators/union_all.cpp
-#    operators/union_all.hpp
+    operators/union_all.cpp
+    operators/union_all.hpp
     operators/union_positions.cpp
     operators/union_positions.hpp
-#    operators/update.cpp
-#    operators/update.hpp
+    operators/update.cpp
+    operators/update.hpp
     operators/validate.cpp
     operators/validate.hpp
     statistics/statistics_import_export.cpp
@@ -322,8 +322,6 @@ set(
     sql/create_sql_parser_error_message.hpp
 #    sql/gdfs_cache.hpp
 #    sql/gds_cache.hpp
-#    sql/hsql_expr_translator.cpp
-#    sql/hsql_expr_translator.hpp
 #    sql/lru_cache.hpp
 #    sql/lru_k_cache.hpp
 #    sql/random_cache.hpp
@@ -344,8 +342,6 @@ set(
     sql/sql_identifier_context.hpp
     sql/sql_identifier_context_proxy.cpp
     sql/sql_identifier_context_proxy.hpp
-#    sql/sql_translation_state.cpp
-#    sql/sql_translation_state.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
     sql/query_plan.cpp
@@ -478,18 +474,16 @@ set(
 #    tasks/server/execute_server_query_task.hpp
 #    tasks/server/load_server_file_task.cpp
 #    tasks/server/load_server_file_task.hpp
-#    type_cast.hpp
-#    type_comparison.hpp
+    type_cast.hpp
+    type_comparison.hpp
     types.cpp
     types.hpp
-#    uid_allocator.hpp
-#    utils/arithmetic_operator_expression.hpp
-#    utils/arithmetic_operator_expression_impl.hpp
+    uid_allocator.hpp
     utils/assert.hpp
     utils/boost_default_memory_resource.cpp
-#    utils/copyable_atomic.hpp
-#    utils/cuckoo_hashtable.hpp
-#    utils/enum_constant.hpp
+    utils/copyable_atomic.hpp
+    utils/cuckoo_hashtable.hpp
+    utils/enum_constant.hpp
     utils/format_bytes.cpp
     utils/format_bytes.hpp
     utils/format_duration.cpp
