@@ -50,11 +50,13 @@ class LQPTranslatorTest : public ::testing::Test {
  public:
   void SetUp() override {
     table_int_float = load_table("src/test/tables/int_float.tbl");
+    table_int_string = load_table("src/test/tables/int_string.tbl");
     table_int_float2 = load_table("src/test/tables/int_float2.tbl");
     table_int_float5 = load_table("src/test/tables/int_float5.tbl");
     table_alias_name = load_table("src/test/tables/table_alias_name.tbl");
 
     StorageManager::get().add_table("table_int_float", table_int_float);
+    StorageManager::get().add_table("table_int_string", table_int_string);
     StorageManager::get().add_table("table_int_float2", table_int_float2);
     StorageManager::get().add_table("table_int_float5", table_int_float5);
     StorageManager::get().add_table("table_alias_name", table_alias_name);
@@ -66,6 +68,10 @@ class LQPTranslatorTest : public ::testing::Test {
     int_float_b = int_float_node->get_column("b");
     int_float_a_expression = std::make_shared<LQPColumnExpression>(int_float_a);
     int_float_b_expression = std::make_shared<LQPColumnExpression>(int_float_b);
+
+    int_string_node = StoredTableNode::make("table_int_string");
+    int_string_a = int_string_node->get_column("a");
+    int_string_b = int_string_node->get_column("b");
 
     int_float2_node = StoredTableNode::make("table_int_float2");
     int_float2_a = int_float2_node->get_column("a");
@@ -88,9 +94,9 @@ class LQPTranslatorTest : public ::testing::Test {
 //    return table_scan->_excluded_chunk_ids;
 //  }
 
-  std::shared_ptr<Table> table_int_float, table_int_float2, table_int_float5, table_alias_name;
-  std::shared_ptr<StoredTableNode> int_float_node, int_float2_node, int_float5_node;
-  LQPColumnReference int_float_a, int_float_b, int_float2_a, int_float2_b, int_float5_a, int_float5_d;
+  std::shared_ptr<Table> table_int_float, table_int_float2, table_int_float5, table_alias_name, table_int_string;
+  std::shared_ptr<StoredTableNode> int_float_node, int_string_node, int_float2_node, int_float5_node;
+  LQPColumnReference int_float_a, int_float_b, int_string_a, int_string_b, int_float2_a, int_float2_b, int_float5_a, int_float5_d;
   std::shared_ptr<AbstractExpression> int_float_a_expression, int_float_b_expression;
 };
 
@@ -168,6 +174,30 @@ TEST_F(LQPTranslatorTest, PredicateNodeSimpleBinary) {
   const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->input_left());
   ASSERT_TRUE(get_table_op);
   EXPECT_EQ(get_table_op->table_name(), "table_int_float");
+}
+
+TEST_F(LQPTranslatorTest, PredicateNodeLike) {
+  /**
+   * Build LQP and translate to PQP
+   *
+   * LQP resembles:
+   *   SELECT * FROM int_string WHERE b LIKE 'hello%';
+   */
+  const auto lqp = PredicateNode::make(like(int_string_b, "hello%"), int_string_node);
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  /**
+   * Check PQP
+   */
+  const auto table_scan_op = std::dynamic_pointer_cast<TableScan>(pqp);
+  ASSERT_TRUE(table_scan_op);
+  EXPECT_EQ(table_scan_op->left_column_id(), ColumnID{1});
+  EXPECT_EQ(table_scan_op->predicate_condition(), PredicateCondition::Like);
+  EXPECT_EQ(table_scan_op->right_parameter(), AllParameterVariant("hello%"));
+
+  const auto get_table_op = std::dynamic_pointer_cast<const GetTable>(pqp->input_left());
+  ASSERT_TRUE(get_table_op);
+  EXPECT_EQ(get_table_op->table_name(), "table_int_string");
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeUnary) {

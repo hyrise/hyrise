@@ -59,8 +59,10 @@ const AbstractExpression &expression) {
 
       if (is_lexicographical_predicate_condition(predicate_expression.predicate_condition)) {
         return evaluate_binary_predicate_expression<R>(static_cast<const BinaryPredicateExpression&>(expression));
+
       } else if (predicate_expression.predicate_condition == PredicateCondition::In) {
         return evaluate_in_expression<R>(static_cast<const InExpression&>(expression));
+
       } else if (predicate_expression.predicate_condition == PredicateCondition::IsNull ||
                  predicate_expression.predicate_condition == PredicateCondition::IsNotNull) {
         return evaluate_is_null_expression<R>(static_cast<const IsNullExpression&>(expression));
