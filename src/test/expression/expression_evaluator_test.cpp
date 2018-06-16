@@ -321,7 +321,7 @@ TEST_F(ExpressionEvaluatorTest, Parameter) {
 //}
 
 TEST_F(ExpressionEvaluatorTest, InListLiterals) {
-  EXPECT_TRUE(test_expression<int32_t>(*in(null(), list()), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*in(null(), list()), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*in(null(), list(1, 2, 3, 4)), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*in(null(), list(null(), 2, 3, 4)), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*in(5, list()), {0}));
@@ -409,7 +409,7 @@ TEST_F(ExpressionEvaluatorTest, Exists) {
   const auto table_wrapper = std::make_shared<TableWrapper>(table_b);
   const auto parameter_a = parameter(ParameterID{0});
   const auto a_plus_x_projection = std::make_shared<Projection>(table_wrapper, expression_vector(add(parameter_a, x), x));
-  const auto a_plus_x_eq_13_scan = std::make_shared<TableScan>(table_wrapper, ColumnID{0}, PredicateCondition::Equals, 13);
+  const auto a_plus_x_eq_13_scan = std::make_shared<TableScan>(a_plus_x_projection, ColumnID{0}, PredicateCondition::Equals, 13);
   const auto pqp_select_expression = select(a_plus_x_eq_13_scan, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
 
   const auto exists_expression = std::make_shared<ExistsExpression>(pqp_select_expression);

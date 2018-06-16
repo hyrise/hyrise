@@ -258,12 +258,8 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_in_expr
     }
 
     if (type_compatible_elements.empty()) {
-      if (left_expression.data_type() == DataType::Null) {
-        return ExpressionResult<int32_t>::make_null();
-      } else {
-        // 5 IN () is FALSE
-        return std::make_shared<ExpressionResult<int32_t>>(std::vector<int32_t>{0});
-      }
+      // `5 IN ()` is FALSE as is `NULL IN ()`
+      return std::make_shared<ExpressionResult<int32_t>>(std::vector<int32_t>{0});
     }
 
     std::shared_ptr<AbstractExpression> predicate_disjunction = equals(in_expression.value(), type_compatible_elements.front());
@@ -306,6 +302,8 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_in_expr
             auto list_contains_null = false;
 
             for (auto list_element_idx = ChunkOffset{0}; list_element_idx < list.size(); ++list_element_idx) {
+              // `a IN (x,y,z)` is supposed to have the same semantics as `a = x OR a = y OR a = z`, so we use `Equals`
+              // here as well.
               Equals{}(result_values[chunk_offset], list.value(list_element_idx), left_view.value(chunk_offset));
               if (result_values[chunk_offset]) break;
 
