@@ -1076,6 +1076,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
         }
       }
 
+      // Translate all other expression types
       switch (expr.opType) {
         case hsql::kOpCase: return _translate_hsql_case(expr, sql_identifier_context);
         case hsql::kOpOr: return std::make_shared<LogicalExpression>(LogicalOperator::Or, left, right);
@@ -1131,8 +1132,6 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
         case hsql::kOpExists:
           Assert(expr.select, "Expected SELECT argument for EXISTS");
           return std::make_shared<ExistsExpression>(_translate_hsql_sub_select(*expr.select, sql_identifier_context));
-
-        case hsql::kOpLike:
 
         default:
           Fail("Not handling this OperatorType yet");

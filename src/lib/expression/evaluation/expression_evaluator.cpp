@@ -57,7 +57,6 @@ const AbstractExpression &expression) {
     case ExpressionType::Predicate: {
       const auto& predicate_expression = static_cast<const AbstractPredicateExpression&>(expression);
 
-
       if (is_lexicographical_predicate_condition(predicate_expression.predicate_condition)) {
         return evaluate_binary_predicate_expression<R>(static_cast<const BinaryPredicateExpression&>(expression));
       } else if (predicate_expression.predicate_condition == PredicateCondition::In) {

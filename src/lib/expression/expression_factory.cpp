@@ -48,6 +48,8 @@ binary<ArithmeticOperator::Multiplication, ArithmeticExpression> mul;
 binary<ArithmeticOperator::Division, ArithmeticExpression> division;
 binary<ArithmeticOperator::Addition, ArithmeticExpression> add;
 binary<ArithmeticOperator::Subtraction, ArithmeticExpression> sub;
+binary<PredicateCondition::Like, BinaryPredicateExpression> like;
+binary<PredicateCondition::NotLike, BinaryPredicateExpression> not_like;
 binary<PredicateCondition::Equals, BinaryPredicateExpression> equals;
 binary<PredicateCondition::NotEquals, BinaryPredicateExpression> not_equals;
 binary<PredicateCondition::LessThan, BinaryPredicateExpression> less_than;

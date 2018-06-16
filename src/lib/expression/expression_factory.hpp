@@ -94,6 +94,8 @@ extern binary<ArithmeticOperator::Division, ArithmeticExpression> division;
 extern binary<ArithmeticOperator::Multiplication, ArithmeticExpression> mul;
 extern binary<ArithmeticOperator::Addition, ArithmeticExpression> add;
 extern binary<ArithmeticOperator::Subtraction, ArithmeticExpression> sub;
+extern binary<PredicateCondition::Like, BinaryPredicateExpression> like;
+extern binary<PredicateCondition::NotLike, BinaryPredicateExpression> not_like;
 extern binary<PredicateCondition::Equals, BinaryPredicateExpression> equals;
 extern binary<PredicateCondition::NotEquals, BinaryPredicateExpression> not_equals;
 extern binary<PredicateCondition::LessThan, BinaryPredicateExpression> less_than;

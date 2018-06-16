@@ -13,6 +13,7 @@ bool is_binary_predicate_condition(const PredicateCondition predicate_condition)
   predicate_condition == PredicateCondition::LessThanEquals ||
   predicate_condition == PredicateCondition::GreaterThan ||
   predicate_condition == PredicateCondition::GreaterThanEquals ||
+  predicate_condition == PredicateCondition::NotLike ||
   predicate_condition == PredicateCondition::Like;
 }
 

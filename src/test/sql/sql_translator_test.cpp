@@ -35,6 +35,7 @@ using namespace std::string_literals;  // NOLINT
 namespace {
 void load_test_tables() {
   opossum::StorageManager::get().add_table("int_float", opossum::load_table("src/test/tables/int_float.tbl"));
+  opossum::StorageManager::get().add_table("int_string", opossum::load_table("src/test/tables/int_string.tbl"));
   opossum::StorageManager::get().add_table("int_float2", opossum::load_table("src/test/tables/int_float2.tbl"));
   opossum::StorageManager::get().add_table("int_float5", opossum::load_table("src/test/tables/int_float5.tbl"));
   opossum::StorageManager::get().add_table("int_int_int", opossum::load_table("src/test/tables/int_int_int.tbl"));
@@ -54,11 +55,14 @@ class SQLTranslatorTest : public ::testing::Test {
   void SetUp() override {
     load_test_tables();
     stored_table_node_int_float = StoredTableNode::make("int_float");
+    stored_table_node_int_string = StoredTableNode::make("int_string");
     stored_table_node_int_float2 = StoredTableNode::make("int_float2");
     stored_table_node_int_float5 = StoredTableNode::make("int_float5");
     stored_table_node_int_int_int = StoredTableNode::make("int_int_int");
     int_float_a = stored_table_node_int_float->get_column("a");
     int_float_b = stored_table_node_int_float->get_column("b");
+    int_string_a = stored_table_node_int_string->get_column("a");
+    int_string_b = stored_table_node_int_string->get_column("b");
     int_float2_a = stored_table_node_int_float2->get_column("a");
     int_float2_b = stored_table_node_int_float2->get_column("b");
     int_float5_a = stored_table_node_int_float5->get_column("a");
@@ -73,10 +77,11 @@ class SQLTranslatorTest : public ::testing::Test {
   }
 
   std::shared_ptr<StoredTableNode> stored_table_node_int_float;
+  std::shared_ptr<StoredTableNode> stored_table_node_int_string;
   std::shared_ptr<StoredTableNode> stored_table_node_int_float2;
   std::shared_ptr<StoredTableNode> stored_table_node_int_float5;
   std::shared_ptr<StoredTableNode> stored_table_node_int_int_int;
-  LQPColumnReference int_float_a, int_float_b, int_float5_a, int_float5_d, int_float2_a, int_float2_b, int_int_int_a, int_int_int_b, int_int_int_c;
+  LQPColumnReference int_float_a, int_float_b, int_string_a, int_string_b, int_float5_a, int_float5_d, int_float2_a, int_float2_b, int_int_int_a, int_int_int_b, int_int_int_c;
 };
 
 TEST_F(SQLTranslatorTest, NoFromClause) {
@@ -256,6 +261,26 @@ TEST_F(SQLTranslatorTest, WhereWithArithmetics) {
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, WhereWithLike) {
+  const auto actual_lqp_a = compile_query("SELECT * FROM int_string WHERE b LIKE '%test1%';");
+  const auto actual_lqp_b = compile_query("SELECT * FROM int_string WHERE b NOT LIKE '%test1%';");
+  const auto actual_lqp_c = compile_query("SELECT * FROM int_string WHERE b NOT LIKE CONCAT('%test1', '%');");
+
+  // clang-format off
+  const auto expected_lqp_a = PredicateNode::make(like(int_string_b, "%test1%"), stored_table_node_int_string);
+  const auto expected_lqp_b = PredicateNode::make(not_like(int_string_b, "%test1%"), stored_table_node_int_string);
+  const auto expected_lqp_c =
+  ProjectionNode::make(expression_vector(int_string_a, int_string_b),
+    PredicateNode::make(not_like(int_string_b, concat("%test1", "%")),
+      ProjectionNode::make(expression_vector(concat("%test1", "%"), int_string_a, int_string_b),
+        stored_table_node_int_string)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp_a);
+  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp_b);
+  EXPECT_LQP_EQ(actual_lqp_c, expected_lqp_c);
 }
 
 TEST_F(SQLTranslatorTest, WhereWithOr) {
