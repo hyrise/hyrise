@@ -26,33 +26,28 @@
 #include "expression/in_expression.hpp"
 #include "expression/exists_expression.hpp"
 #include "expression/value_expression.hpp"
-//#include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
-//#include "logical_query_plan/delete_node.hpp"
+#include "logical_query_plan/delete_node.hpp"
 #include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
-//#include "logical_query_plan/insert_node.hpp"
+#include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-//#include "logical_query_plan/show_columns_node.hpp"
-//#include "logical_query_plan/show_tables_node.hpp"
+#include "logical_query_plan/show_columns_node.hpp"
+#include "logical_query_plan/show_tables_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
-//#include "logical_query_plan/update_node.hpp"
+#include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
-//#include "sql/hsql_expr_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "storage/view.hpp"
-//#include "types.hpp"
-//#include "util/sqlhelper.h"
-//#include "utils/assert.hpp"
 #include "constant_mappings.hpp"
 #include "create_sql_parser_error_message.hpp"
 
@@ -177,12 +172,12 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_statement(const hsql::
   switch (statement.type()) {
     case hsql::kStmtSelect:
       return translate_select_statement(static_cast<const hsql::SelectStatement &>(statement));
-//    case hsql::kStmtInsert:
-//      return _translate_insert(static_cast<const hsql::InsertStatement&>(statement));
-//    case hsql::kStmtDelete:
-//      return _translate_delete(static_cast<const hsql::DeleteStatement&>(statement));
-//    case hsql::kStmtUpdate:
-//      return _translate_update(static_cast<const hsql::UpdateStatement&>(statement));
+    case hsql::kStmtInsert:
+      return _translate_insert(static_cast<const hsql::InsertStatement&>(statement));
+    case hsql::kStmtDelete:
+      return _translate_delete(static_cast<const hsql::DeleteStatement&>(statement));
+    case hsql::kStmtUpdate:
+      return _translate_update(static_cast<const hsql::UpdateStatement&>(statement));
 //    case hsql::kStmtShow:
 //      return _translate_show(static_cast<const hsql::ShowStatement&>(statement));
     case hsql::kStmtCreate:
@@ -269,103 +264,101 @@ std::shared_ptr<AbstractExpression> SQLTranslator::translate_hsql_expr(const hsq
   // Create an empty SQLIdentifier context - thus the expression cannot refer to any external columns
   return SQLTranslator{}._translate_hsql_expr(hsql_expr, std::make_shared<SQLIdentifierContext>());
 }
-//
-//std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::InsertStatement& insert) {
-//  const auto table_name = std::string{insert.tableName};
-//  auto target_table = StorageManager::get().get_table(table_name);
-//  auto target_table_node = std::make_shared<StoredTableNode>(table_name);
-//
-//  Assert(target_table, "INSERT: Invalid table name");
-//
-//  // Plan that generates the data to insert
-//  auto insert_data_node = std::shared_ptr<AbstractLQPNode>{};
-//
-//  // Check for `INSERT ... INTO newtable FROM oldtable WHERE condition` query
-//  if (insert.type == hsql::kInsertSelect) {
-//    Assert(insert.select, "INSERT INTO ... SELECT ...: No SELECT statement given");
-//
-//    insert_data_node = translate_select_statement(*insert.select);
-//  } else {
-//    Assert(insert.values, "INSERT INTO ... VALUES: No values given");
-//
-//    std::vector<std::shared_ptr<AbstractExpression>> value_expressions(insert.values->size());
-//    for (const auto* value : *insert.values) {
-//      value_expressions.emplace_back(_translate_hsql_expr(*value, nullptr, _validate));
-//    }
-//
-//    insert_data_node = ProjectionNode::make(value_expressions, DummyTableNode::make());
-//  }
-//
-//  if (insert.columns) {
-//    Assert(insert.columns->size() == insert_data_node->output_column_count(), "INSERT: Target column count and number of input columns mismatch");
-//
-//    // Certain columns have been specified. In this case we create a new expression list
-//    // for the Projection, so that it contains as many columns as the target table.
-//
-//    // pre-fill new projection list with NULLs
-//    std::vector<std::shared_ptr<AbstractExpression>> expressions(target_table->column_count(),
-//                                                            std::make_shared<ValueExpression>(NullValue{}));
-//
-//    ColumnID source_column_idx{0};
-//    for (const auto& column_name : *insert.columns) {
-//      // retrieve correct ColumnID from the target table
-//      const auto target_column_id = target_table->column_id_by_name(column_name);
-//      expressions[target_column_id] = insert_data_node->output_column_expressions()[source_column_idx];
-//      ++source_column_idx;
-//    }
-//
-//    // create projection and add to the node chain
-//    insert_data_node = ProjectionNode::make(expressions, insert_data_node);
-//  }
-//
-//  Assert(insert_data_node->output_column_count() == target_table->column_count(), "INSERT: Column count mismatch");
-//  // DataType checking has to be done at runtime, as Query could still contains Placeholder with unspecified type
-//
-//  return InsertNode::make(table_name, insert_data_node);
-//}
-//
-//std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::DeleteStatement& delete_) {
-//  auto data_to_delete_node = StoredTableNode::make(delete_.tableName);
-//  data_to_delete_node = _validate_if_active(data_to_delete_node);
-//
-//  auto translation_state = std::make_shared<SQLTranslationState>();
-//  translation_state->add_columns(data_to_delete_node->output_column_expressions(), data_to_delete_node->output_column_names());
-//
-//  if (delete_.expr) {
-//    const auto delete_where_expression = _translate_hsql_expr(*delete_.expr, translation_state, _validate);
-//    data_to_delete_node = _translate_predicate_expression(delete_where_expression, data_to_delete_node);
-//  }
-//
-//  return DeleteNode::make(delete_.tableName, data_to_delete_node);
-//}
-//
-//std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::UpdateStatement& update) {
-//  auto translation_state = std::make_shared<SQLTranslationState>();
-//
-//  std::shared_ptr<AbstractLQPNode> target_references_node = _translate_table_ref(*update.table, translation_state);
-//  if (update.where) {
-//    const auto where_expression = _translate_hsql_expr(*update.where, translation_state, _validate);
-//    target_references_node = _translate_predicate_expression(where_expression, {target_references_node});
-//  }
-//
-//  // The update operator wants ReferenceColumns on its left side
-//  // TODO(anyone): fix this
-//  Assert(!std::dynamic_pointer_cast<StoredTableNode>(target_references_node),
-//         "Unconditional updates are currently not supported");
-//
-//  auto update_expressions = target_references_node->output_column_expressions();
-//
-//  for (const auto* update_clause : *update.updates) {
-//    const auto column_reference = target_references_node->get_column(update_clause->column);
-//    const auto column_expression = std::make_shared<LQPColumnExpression>(column_expression);
-//    const auto column_id = target_references_node->get_output_column_id(column_expression);
-//
-//    auto value_expression = _translate_hsql_expr(*update_clause->value, translation_state, _validate);
-//    update_expressions[column_id] = value_expression;
-//  }
-//
-//  return UpdateNode::make((update.table)->name, update_expressions, target_references_node);
-//}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::InsertStatement& insert) {
+  const auto table_name = std::string{insert.tableName};
+  auto target_table = StorageManager::get().get_table(table_name);
+  auto target_table_node = std::make_shared<StoredTableNode>(table_name);
+
+  // Plan that generates the data to insert
+  auto insert_data_node = std::shared_ptr<AbstractLQPNode>{};
+
+  // Check for `INSERT ... INTO newtable FROM oldtable WHERE condition` query
+  if (insert.type == hsql::kInsertSelect) {
+    Assert(insert.select, "INSERT INTO ... SELECT ...: No SELECT statement given");
+
+    insert_data_node = translate_select_statement(*insert.select);
+  } else {
+    Assert(insert.values, "INSERT INTO ... VALUES: No values given");
+
+    std::vector<std::shared_ptr<AbstractExpression>> expressions;
+    expressions.reserve(insert.values->size());
+    for (const auto* value : *insert.values) {
+      expressions.emplace_back(_translate_hsql_expr(*value, _sql_identifier_context));
+    }
+
+    insert_data_node = ProjectionNode::make(expressions, DummyTableNode::make());
+  }
+
+  if (insert.columns) {
+    // Certain columns have been specified. In this case we create a new expression list
+    // for the Projection, so that it contains as many columns as the target table.
+
+    Assert(insert.columns->size() == insert_data_node->output_column_expressions().size(), "INSERT: Target column count and number of input columns mismatch");
+
+    // pre-fill new projection list with NULLs
+    std::vector<std::shared_ptr<AbstractExpression>> expressions(target_table->column_count(),
+                                                            std::make_shared<ValueExpression>(NullValue{}));
+
+    ColumnID source_column_id{0};
+    for (const auto& column_name : *insert.columns) {
+      // retrieve correct ColumnID from the target table
+      const auto target_column_id = target_table->column_id_by_name(column_name);
+      expressions[target_column_id] = insert_data_node->output_column_expressions()[source_column_id];
+      ++source_column_id;
+    }
+
+    // create projection and add to the node chain
+    insert_data_node = ProjectionNode::make(expressions, insert_data_node);
+  }
+
+  Assert(insert_data_node->output_column_expressions().size() == target_table->column_count(), "INSERT: Column count mismatch");
+  // DataType checking has to be done at runtime, as Query could still contains Placeholder with unspecified type
+
+  return InsertNode::make(table_name, insert_data_node);
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::DeleteStatement& delete_) {
+  const auto sql_identifier_context = std::make_shared<SQLIdentifierContext>();
+  auto data_to_delete_node = _translate_stored_table(delete_.tableName, sql_identifier_context);
+
+  if (delete_.expr) {
+    const auto delete_where_expression = _translate_hsql_expr(*delete_.expr, sql_identifier_context);
+    data_to_delete_node = _translate_predicate_expression(delete_where_expression, data_to_delete_node);
+  }
+
+  return DeleteNode::make(delete_.tableName, data_to_delete_node);
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::UpdateStatement& update) {
+  auto translation_state = _translate_table_ref(*update.table);
+
+  // The LQP that selects the fields to update
+  auto selection_lqp = translation_state.lqp;
+
+  // Take a copy intentionally, we're going to replace some of these later
+  auto update_expressions = selection_lqp->output_column_expressions();
+
+  if (update.where) {
+    const auto where_expression = _translate_hsql_expr(*update.where, translation_state.sql_identifier_context);
+    selection_lqp = _translate_predicate_expression(where_expression, selection_lqp);
+  }
+
+  // The update operator wants ReferenceColumns on its left side
+  // TODO(anyone): fix this
+  Assert(!std::dynamic_pointer_cast<StoredTableNode>(selection_lqp),
+         "Unconditional updates are currently not supported");
+
+  for (const auto* update_clause : *update.updates) {
+    const auto column_name = std::string{update_clause->column};
+    const auto column_expression = translation_state.sql_identifier_context->resolve_identifier_relaxed(column_name);
+    const auto column_id = selection_lqp->get_column_id(*column_expression);
+
+    update_expressions[column_id] = _translate_hsql_expr(*update_clause->value, translation_state.sql_identifier_context);
+  }
+
+  return UpdateNode::make((update.table)->name, update_expressions, selection_lqp);
+}
 
 SQLTranslator::TableSourceState SQLTranslator::_translate_table_ref(const hsql::TableRef &hsql_table_ref) {
   switch (hsql_table_ref.type) {
@@ -398,18 +391,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
   switch (hsql_table_ref.type) {
     case hsql::kTableName: {
       if (StorageManager::get().has_table(hsql_table_ref.name)) {
-        const auto stored_table_node = StoredTableNode::make(hsql_table_ref.name);
-        lqp = _validate_if_active(stored_table_node);
-
-        const auto table = StorageManager::get().get_table(hsql_table_ref.name);
-
-        for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-          const auto& column_definition = table->column_definitions()[column_id];
-          const auto column_reference = LQPColumnReference{stored_table_node, column_id};
-          const auto column_expression = std::make_shared<LQPColumnExpression>(column_reference);
-          sql_identifier_context->set_column_name(column_expression, column_definition.name);
-          sql_identifier_context->set_table_name(column_expression, hsql_table_ref.name);
-        }
+        lqp = _translate_stored_table(hsql_table_ref.name, sql_identifier_context);
 
       } else if (StorageManager::get().has_view(hsql_table_ref.name)) {
         const auto view = StorageManager::get().get_view(hsql_table_ref.name);
@@ -477,6 +459,24 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
   }
 
   return {lqp, {{{table_name, lqp->output_column_expressions()},}}, {lqp->output_column_expressions()}, sql_identifier_context};
+}
+
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_stored_table(const std::string& name, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context) {
+  const auto stored_table_node = StoredTableNode::make(name);
+  const auto validated_stored_table_node = _validate_if_active(stored_table_node);
+
+  const auto table = StorageManager::get().get_table(name);
+
+  // Publish the columns of the table in the SQLIdentifierContext
+  for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+    const auto& column_definition = table->column_definitions()[column_id];
+    const auto column_reference = LQPColumnReference{stored_table_node, column_id};
+    const auto column_expression = std::make_shared<LQPColumnExpression>(column_reference);
+    sql_identifier_context->set_column_name(column_expression, column_definition.name);
+    sql_identifier_context->set_table_name(column_expression, name);
+  }
+
+  return validated_stored_table_node;
 }
 
 SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const hsql::JoinDefinition &join) {

@@ -41,7 +41,9 @@ std::string BinaryPredicateExpression::as_column_name() const {
 }
 
 bool BinaryPredicateExpression::_shallow_equals(const AbstractExpression& expression) const {
-  return predicate_condition == static_cast<const BinaryPredicateExpression&>(expression).predicate_condition;
+  const auto* binary_predicate_expression = dynamic_cast<const BinaryPredicateExpression*>(&expression);
+  Assert(binary_predicate_expression, "Expected binary predicate");
+  return predicate_condition == binary_predicate_expression->predicate_condition;
 }
 
 }  // namespace opossum

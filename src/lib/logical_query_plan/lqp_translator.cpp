@@ -9,7 +9,7 @@
 #include "aggregate_node.hpp"
 //#include "constant_mappings.hpp"
 #include "create_view_node.hpp"
-//#include "delete_node.hpp"
+#include "delete_node.hpp"
 #include "drop_view_node.hpp"
 #include "dummy_table_node.hpp"
 #include "expression/list_expression.hpp"
@@ -24,14 +24,14 @@
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_select_expression.hpp"
 #include "expression/value_expression.hpp"
-//#include "insert_node.hpp"
+#include "insert_node.hpp"
 #include "join_node.hpp"
 #include "limit_node.hpp"
 #include "operators/aggregate.hpp"
-//#include "operators/delete.hpp"
+#include "operators/delete.hpp"
 #include "operators/get_table.hpp"
 //#include "operators/index_scan.hpp"
-//#include "operators/insert.hpp"
+#include "operators/insert.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
@@ -39,7 +39,6 @@
 #include "operators/maintenance/drop_view.hpp"
 //#include "operators/maintenance/show_columns.hpp"
 //#include "operators/maintenance/show_tables.hpp"
-//#include "operators/pqp_expression.hpp"
 #include "operators/product.hpp"
 #include "operators/alias_operator.hpp"
 #include "operators/projection.hpp"
@@ -47,7 +46,7 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
-//#include "operators/update.hpp"
+#include "operators/update.hpp"
 #include "operators/validate.hpp"
 #include "alias_node.hpp"
 #include "predicate_node.hpp"
@@ -57,7 +56,7 @@
 //#include "storage/storage_manager.hpp"
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
-//#include "update_node.hpp"
+#include "update_node.hpp"
 //#include "utils/performance_warning.hpp"
 #include "validate_node.hpp"
 
@@ -105,16 +104,12 @@ LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
     case LQPNodeType::Join:         return _translate_join_node(node);
     case LQPNodeType::Aggregate:    return _translate_aggregate_node(node);
     case LQPNodeType::Limit:        return _translate_limit_node(node);
-//    case LQPNodeType::Insert:
-//      return _translate_insert_node(node);
-//    case LQPNodeType::Delete:
-//      return _translate_delete_node(node);
-    case LQPNodeType::DummyTable:  return _translate_dummy_table_node(node);
-//    case LQPNodeType::Update:
-//      return _translate_update_node(node);
-    case LQPNodeType::Validate:
-      return _translate_validate_node(node);
-    case LQPNodeType::Union:       return _translate_union_node(node);
+    case LQPNodeType::Insert:       return _translate_insert_node(node);
+    case LQPNodeType::Delete:       return _translate_delete_node(node);
+    case LQPNodeType::DummyTable:   return _translate_dummy_table_node(node);
+    case LQPNodeType::Update:       return _translate_update_node(node);
+    case LQPNodeType::Validate:     return _translate_validate_node(node);
+    case LQPNodeType::Union:        return _translate_union_node(node);
 
 //      // Maintenance operators
 //    case LQPNodeType::ShowTables:
@@ -423,32 +418,32 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_limit_node(
   auto limit_node = std::dynamic_pointer_cast<LimitNode>(node);
   return std::make_shared<Limit>(input_operator, _translate_expressions({limit_node->num_rows_expression}, node->left_input()).front());
 }
-//
-//std::shared_ptr<AbstractOperator> LQPTranslator::_translate_insert_node(
-//    const std::shared_ptr<AbstractLQPNode>& node) const {
-//  const auto input_operator = translate_node(node->left_input());
-//  auto insert_node = std::dynamic_pointer_cast<InsertNode>(node);
-//  return std::make_shared<Insert>(insert_node->table_name(), input_operator);
-//}
-//
-//std::shared_ptr<AbstractOperator> LQPTranslator::_translate_delete_node(
-//    const std::shared_ptr<AbstractLQPNode>& node) const {
-//  const auto input_operator = translate_node(node->left_input());
-//  auto delete_node = std::dynamic_pointer_cast<DeleteNode>(node);
-//  return std::make_shared<Delete>(delete_node->table_name(), input_operator);
-//}
-//
-//std::shared_ptr<AbstractOperator> LQPTranslator::_translate_update_node(
-//    const std::shared_ptr<AbstractLQPNode>& node) const {
-//  const auto input_operator = translate_node(node->left_input());
-//  auto update_node = std::dynamic_pointer_cast<UpdateNode>(node);
-//
-//  auto new_value_exprs = _translate_expressions(update_node->column_expressions(), node);
-//
-//  auto projection = std::make_shared<Projection>(input_operator, new_value_exprs);
-//  return std::make_shared<Update>(update_node->table_name(), input_operator, projection);
-//}
-//
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_insert_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto input_operator = translate_node(node->left_input());
+  auto insert_node = std::dynamic_pointer_cast<InsertNode>(node);
+  return std::make_shared<Insert>(insert_node->table_name(), input_operator);
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_delete_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto input_operator = translate_node(node->left_input());
+  auto delete_node = std::dynamic_pointer_cast<DeleteNode>(node);
+  return std::make_shared<Delete>(delete_node->table_name(), input_operator);
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_update_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  const auto input_operator = translate_node(node->left_input());
+  auto update_node = std::dynamic_pointer_cast<UpdateNode>(node);
+
+  auto new_value_exprs = _translate_expressions(update_node->column_expressions(), node);
+
+  auto projection = std::make_shared<Projection>(input_operator, new_value_exprs);
+  return std::make_shared<Update>(update_node->table_name(), input_operator, projection);
+}
+
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto union_node = std::dynamic_pointer_cast<UnionNode>(node);

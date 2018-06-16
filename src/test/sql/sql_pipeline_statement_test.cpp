@@ -385,8 +385,6 @@ TEST_F(SQLPipelineStatementTest, GetQueryPlanWithCustomTransactionContext) {
 TEST_F(SQLPipelineStatementTest, GetTasks) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
 
-  sql_pipeline.get_unoptimized_logical_plan()->print();
-
   const auto& tasks = sql_pipeline.get_tasks();
 
   //  [0] [Validate]

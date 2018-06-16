@@ -14,8 +14,12 @@
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/drop_view_node.hpp"
 #include "logical_query_plan/alias_node.hpp"
+#include "logical_query_plan/delete_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
+#include "logical_query_plan/insert_node.hpp"
+#include "logical_query_plan/update_node.hpp"
+#include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -1178,80 +1182,105 @@ TEST_F(SQLTranslatorTestTPCH, Query01) {
 //
 //  EXPECT_LQP_EQ(projection_node, result_node);
 //}
-//TEST_F(SQLTranslatorTest, InsertValues) {
-//  const auto query = "INSERT INTO table_a VALUES (10, 12.5);";
-//  auto result_node = compile_query(query);
-//
-//  const auto value_a = LQPExpression::create_literal(10);
-//  const auto value_b = LQPExpression::create_literal(12.5f);
-//
-//  const auto lqp = InsertNode::make(
-//      "table_a",
-//      ProjectionNode::make(std::vector<std::shared_ptr<LQPExpression>>{value_a, value_b}, DummyTableNode::make()));
-//
-//  EXPECT_LQP_EQ(lqp, result_node);
-//}
-//
-//TEST_F(SQLTranslatorTest, InsertValuesColumnReorder) {
-//  const auto query = "INSERT INTO table_a (b, a) VALUES (12.5, 10);";
-//  auto result_node = compile_query(query);
-//
-//  const auto value_a = LQPExpression::create_literal(10);
-//  const auto value_b = LQPExpression::create_literal(12.5f);
-//
-//  const auto lqp = InsertNode::make(
-//      "table_a",
-//      ProjectionNode::make(std::vector<std::shared_ptr<LQPExpression>>{value_a, value_b}, DummyTableNode::make()));
-//
-//  EXPECT_LQP_EQ(lqp, result_node);
-//}
-//
-//TEST_F(SQLTranslatorTest, InsertValuesIncompleteColumns) {
-//  const auto query = "INSERT INTO table_a (a) VALUES (10);";
-//  auto result_node = compile_query(query);
-//
-//  const auto value_a = LQPExpression::create_literal(10);
-//  const auto value_b = LQPExpression::create_literal(NullValue{});
-//
-//  const auto lqp = InsertNode::make(
-//      "table_a",
-//      ProjectionNode::make(std::vector<std::shared_ptr<LQPExpression>>{value_a, value_b}, DummyTableNode::make()));
-//
-//  EXPECT_LQP_EQ(lqp, result_node);
-//}
-//
-//TEST_F(SQLTranslatorTest, InsertSubquery) {
-//  const auto query = "INSERT INTO table_a SELECT a, b FROM table_b;";
-//  auto result_node = compile_query(query);
-//
-//  const auto columns = LQPExpression::create_columns({_table_b_a, _table_b_b});
-//
-//  const auto lqp = InsertNode::make("table_a", ProjectionNode::make(columns, _stored_table_node_b));
-//
-//  EXPECT_LQP_EQ(lqp, result_node);
-//}
-//
-//TEST_F(SQLTranslatorTest, InsertInvalidDataType) {
-//  auto query = "INSERT INTO table_a VALUES (10, 11);";
-//  EXPECT_THROW(compile_query(query), std::runtime_error);
-//
-//  query = "INSERT INTO table_a (b, a) VALUES (10, 12.5);";
-//  EXPECT_THROW(compile_query(query), std::runtime_error);
-//}
-//
-//TEST_F(SQLTranslatorTest, Update) {
-//  const auto query = "UPDATE table_a SET b = 3.2 WHERE a > 1;";
-//  auto result_node = compile_query(query);
-//
-//  const auto update_a = LQPExpression::create_column(_table_a_a);
-//  const auto update_b = LQPExpression::create_literal(3.2f);
-//
-//  const auto lqp = UpdateNode::make(
-//      "table_a", std::vector<std::shared_ptr<LQPExpression>>{update_a, update_b},
-//      PredicateNode::make(_table_a_a, PredicateCondition::GreaterThan, int64_t(1), _stored_table_node_a));
-//
-//  EXPECT_LQP_EQ(lqp, result_node);
-//}
+TEST_F(SQLTranslatorTest, InsertValues) {
+  const auto actual_lqp = compile_query("INSERT INTO int_float VALUES (10, 12.5);");
+
+  // clang-format off
+  const auto expected_lqp =
+  InsertNode::make("int_float",
+    ProjectionNode::make(expression_vector(10, 12.5f),
+      DummyTableNode::make()
+  ));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, InsertValuesColumnReorder) {
+  const auto actual_lqp = compile_query("INSERT INTO int_float (b, a) VALUES (12.5, 10);");
+
+  // clang-format off
+  const auto expected_lqp =
+  InsertNode::make("int_float",
+    ProjectionNode::make(expression_vector(10, 12.5f),
+      ProjectionNode::make(expression_vector(12.5f, 10),
+        DummyTableNode::make()
+  )));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, InsertValuesColumnSubset) {
+  const auto actual_lqp = compile_query("INSERT INTO int_float (b) VALUES (12.5);");
+
+  // clang-format off
+  const auto expected_lqp =
+  InsertNode::make("int_float",
+    ProjectionNode::make(expression_vector(null(), 12.5f),
+      ProjectionNode::make(expression_vector(12.5f),
+        DummyTableNode::make()
+  )));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, InsertSubquery) {
+  const auto actual_lqp = compile_query("INSERT INTO int_float SELECT a, b FROM int_float2 WHERE a > 5;");
+
+  // clang-format off
+  const auto expected_lqp =
+  InsertNode::make("int_float",
+    PredicateNode::make(greater_than(int_float2_a, 5),
+      stored_table_node_int_float2
+  ));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, DeleteSimple) {
+  const auto actual_lqp = compile_query("DELETE FROM int_float");
+
+  // clang-format off
+  const auto expected_lqp =
+  DeleteNode::make("int_float",
+    StoredTableNode::make("int_float")
+  );
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+
+TEST_F(SQLTranslatorTest, DeleteConditional) {
+  const auto actual_lqp = compile_query("DELETE FROM int_float WHERE a > 5");
+
+  // clang-format off
+  const auto expected_lqp =
+  DeleteNode::make("int_float",
+    PredicateNode::make(greater_than(int_float_a, 5),
+      stored_table_node_int_float
+  ));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, UpdateConditional) {
+  const auto actual_lqp = compile_query("UPDATE int_float SET b = 3.2 WHERE a > 1;");
+
+  // clang-format off
+  const auto expected_lqp =
+  UpdateNode::make("int_float", expression_vector(int_float_a, 3.2f),
+    PredicateNode::make(greater_than(int_float_a, 1),
+      stored_table_node_int_float
+  ));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
 //
 //TEST_F(SQLTranslatorTest, WhereSubquery) {
 //  const auto query = "SELECT * FROM table_a WHERE a < (SELECT MAX(a) FROM table_b);";

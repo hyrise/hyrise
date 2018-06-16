@@ -65,7 +65,7 @@ bool LQPColumnExpression::is_nullable() const {
 
 bool LQPColumnExpression::_shallow_equals(const AbstractExpression& expression) const {
   const auto* lqp_column_expression = dynamic_cast<const LQPColumnExpression*>(&expression);
-  if (!lqp_column_expression) return false;
+  Assert(lqp_column_expression, "Expected LQPColumnExpression");
   return column_reference == lqp_column_expression->column_reference;
 }
 

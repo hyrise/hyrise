@@ -88,6 +88,7 @@ class SQLTranslator final {
 
   TableSourceState _translate_table_ref(const hsql::TableRef &hsql_table_ref);
   TableSourceState _translate_table_origin(const hsql::TableRef &hsql_table_ref);
+  std::shared_ptr<AbstractLQPNode> _translate_stored_table(const std::string& name, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context);
   TableSourceState _translate_predicated_join(const hsql::JoinDefinition &join);
   TableSourceState _translate_natural_join(const hsql::JoinDefinition& join);
   TableSourceState _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
@@ -96,12 +97,10 @@ class SQLTranslator final {
 
   void _translate_order_by(const std::vector<hsql::OrderDescription*>& order_list);
   void _translate_limit(const hsql::LimitDescription& limit);
-//
-//  std::shared_ptr<AbstractLQPNode> _translate_insert(const hsql::InsertStatement& insert);
-//
-//  std::shared_ptr<AbstractLQPNode> _translate_delete(const hsql::DeleteStatement& del);
-//
-//  std::shared_ptr<AbstractLQPNode> _translate_update(const hsql::UpdateStatement& update);
+
+  std::shared_ptr<AbstractLQPNode> _translate_insert(const hsql::InsertStatement& insert);
+  std::shared_ptr<AbstractLQPNode> _translate_delete(const hsql::DeleteStatement& delete_);
+  std::shared_ptr<AbstractLQPNode> _translate_update(const hsql::UpdateStatement& update);
 
   std::shared_ptr<AbstractLQPNode> _translate_create(const hsql::CreateStatement& create_statement);
 

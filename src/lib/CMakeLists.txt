@@ -97,15 +97,15 @@ set(
     logical_query_plan/aggregate_node.hpp
     logical_query_plan/create_view_node.cpp
     logical_query_plan/create_view_node.hpp
-#    logical_query_plan/delete_node.cpp
-#    logical_query_plan/delete_node.hpp
+    logical_query_plan/delete_node.cpp
+    logical_query_plan/delete_node.hpp
     logical_query_plan/drop_view_node.cpp
     logical_query_plan/drop_view_node.hpp
     logical_query_plan/dummy_table_node.cpp
     logical_query_plan/dummy_table_node.hpp
     logical_query_plan/enable_make_for_lqp_node.hpp
-#    logical_query_plan/insert_node.cpp
-#    logical_query_plan/insert_node.hpp
+    logical_query_plan/insert_node.cpp
+    logical_query_plan/insert_node.hpp
     logical_query_plan/join_node.cpp
     logical_query_plan/join_node.hpp
     logical_query_plan/limit_node.cpp
@@ -126,18 +126,18 @@ set(
     logical_query_plan/predicate_node.hpp
     logical_query_plan/projection_node.cpp
     logical_query_plan/projection_node.hpp
-#    logical_query_plan/show_columns_node.cpp
-#    logical_query_plan/show_columns_node.hpp
-#    logical_query_plan/show_tables_node.cpp
-#    logical_query_plan/show_tables_node.hpp
+    logical_query_plan/show_columns_node.cpp
+    logical_query_plan/show_columns_node.hpp
+    logical_query_plan/show_tables_node.cpp
+    logical_query_plan/show_tables_node.hpp
     logical_query_plan/sort_node.cpp
     logical_query_plan/sort_node.hpp
     logical_query_plan/stored_table_node.cpp
     logical_query_plan/stored_table_node.hpp
     logical_query_plan/union_node.cpp
     logical_query_plan/union_node.hpp
-#    logical_query_plan/update_node.cpp
-#    logical_query_plan/update_node.hpp
+    logical_query_plan/update_node.cpp
+    logical_query_plan/update_node.hpp
     logical_query_plan/validate_node.cpp
     logical_query_plan/validate_node.hpp
     null_value.hpp

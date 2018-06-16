@@ -8,31 +8,29 @@
 
 namespace opossum {
 
-class LQPExpression;
+class AbstractExpression;
 
 /**
  * Node type to represent updates (i.e., invalidation and inserts) in a table.
  */
 class UpdateNode : public EnableMakeForLQPNode<UpdateNode>, public AbstractLQPNode {
  public:
-  explicit UpdateNode(const std::string& table_name,
-                      const std::vector<std::shared_ptr<LQPExpression>>& column_expressions);
+  UpdateNode(const std::string& table_name,
+                      const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions);
 
   std::string description() const override;
-  bool subplan_is_read_only() const override;
 
   const std::string& table_name() const;
 
-  const std::vector<std::shared_ptr<LQPExpression>>& column_expressions() const;
-
-  bool shallow_equals(const AbstractLQPNode& rhs) const override;
+  const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
+  std::shared_ptr<AbstractLQPNode> _shallow_copy_impl(LQPNodeMapping & node_mapping) const override;
+  bool _shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const override;
+
+ private:
   const std::string _table_name;
-  std::vector<std::shared_ptr<LQPExpression>> _column_expressions;
+  const std::vector<std::shared_ptr<AbstractExpression>> _column_expressions;
 };
 
 }  // namespace opossum

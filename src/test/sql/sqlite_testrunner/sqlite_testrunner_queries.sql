@@ -134,32 +134,30 @@ SELECT a, b, MAX(b), AVG(c) FROM mixed GROUP BY a, b HAVING b > 33 OR b = 1 OR b
 SELECT a, b, AVG(b) FROM mixed GROUP BY a, b HAVING MAX(c) > 10 AND MAX(c) <= 30;
 
 -- DELETE
---DELETE FROM id_int_int_int_100; INSERT INTO id_int_int_int_100 VALUES (1, 2, 3, 4); SELECT * FROM id_int_int_int_100;
---DELETE FROM id_int_int_int_100 WHERE id > 75; SELECT * FROM id_int_int_int_100;
---
----- Update
---UPDATE id_int_int_int_100 SET a = a + 1 WHERE id > 10; SELECT * FROM id_int_int_int_100;
---
----- INSERT
---INSERT INTO id_int_int_int_100 VALUES (100, 1, 2, 3); SELECT * FROM id_int_int_int_100;
---INSERT INTO id_int_int_int_100 (id, a, b, c) VALUES (100, 1, 2, 3); SELECT * FROM id_int_int_int_100;
---INSERT INTO id_int_int_int_100 (id, c, b, a) VALUES (100, 3, 2, 1); SELECT * FROM id_int_int_int_100;
---
---INSERT INTO id_int_int_int_100 VALUES (100, 1, 2, 3); INSERT INTO id_int_int_int_100 VALUES (101, 3, 2, 1); INSERT INTO id_int_int_int_100 VALUES (102, 42, 77992, 1000000); SELECT * FROM id_int_int_int_100;
---
----- INSERT with mixed types
---INSERT INTO mixed VALUES (100, 'x', 42, 123.456, 'xkcd'); SELECT * FROM mixed;
---
----- INSERT ... INTO ... (with literal projection)
---INSERT INTO id_int_int_int_100 SELECT 100, 1, 2, 3 FROM id_int_int_int_100; SELECT * FROM id_int_int_int_100;
---INSERT INTO id_int_int_int_100 (id, a, b, c) SELECT 100, 1, 2, 3 FROM id_int_int_int_100; SELECT * FROM id_int_int_int_100;
---INSERT INTO id_int_int_int_100 (b, id, c, a) SELECT 2, 100, 3, 1 FROM id_int_int_int_100; SELECT * FROM id_int_int_int_100;
---
----- INSERT ... INTO ... (with regular queries)
---INSERT INTO mixed_null SELECT a, b, c, d FROM mixed WHERE a = 'c' AND b > 15;
---INSERT INTO mixed_null SELECT a, b, c, d FROM mixed WHERE d = 'caoe';
---INSERT INTO mixed_null (b, c, a, d) SELECT b, c, a, d FROM mixed WHERE id < 13; SELECT * FROM mixed_null;
+DELETE FROM id_int_int_int_100; INSERT INTO id_int_int_int_100 VALUES (1, 2, 3, 4); SELECT * FROM id_int_int_int_100;
+DELETE FROM id_int_int_int_100 WHERE id > 75; SELECT * FROM id_int_int_int_100;
 
+-- Update
+UPDATE id_int_int_int_100 SET a = a + 1 WHERE id > 10; SELECT * FROM id_int_int_int_100;
+
+-- INSERT
+INSERT INTO id_int_int_int_100 VALUES (100, 1, 2, 3); SELECT * FROM id_int_int_int_100;
+INSERT INTO id_int_int_int_100 (id, a, b, c) VALUES (100, 1, 2, 3); SELECT * FROM id_int_int_int_100;
+INSERT INTO id_int_int_int_100 (id, c, b, a) VALUES (100, 3, 2, 1); SELECT * FROM id_int_int_int_100;
+INSERT INTO id_int_int_int_100 VALUES (100, 1, 2, 3); INSERT INTO id_int_int_int_100 VALUES (101, 3, 2, 1); INSERT INTO id_int_int_int_100 VALUES (102, 42, 77992, 1000000); SELECT * FROM id_int_int_int_100;
+
+-- INSERT with mixed types
+INSERT INTO mixed VALUES (100, 'x', 42, 123.456, 'xkcd'); SELECT * FROM mixed;
+
+-- INSERT ... INTO ... (with literal projection)
+INSERT INTO id_int_int_int_100 SELECT 100, 1, 2, 3 FROM id_int_int_int_100; SELECT * FROM id_int_int_int_100;
+INSERT INTO id_int_int_int_100 (id, a, b, c) SELECT 100, 1, 2, 3 FROM id_int_int_int_100; SELECT * FROM id_int_int_int_100;
+INSERT INTO id_int_int_int_100 (b, id, c, a) SELECT 2, 100, 3, 1 FROM id_int_int_int_100; SELECT * FROM id_int_int_int_100;
+
+-- INSERT ... INTO ... (with regular queries)
+INSERT INTO mixed_null SELECT a, b, c, d FROM mixed WHERE a = 'c' AND b > 15; SELECT * FROM mixed_null;
+INSERT INTO mixed_null SELECT a, b, c, d FROM mixed WHERE d = 'caoe'; SELECT * FROM mixed_null;
+INSERT INTO mixed_null (b, c, a, d) SELECT b, c, a, d FROM mixed WHERE id < 13; SELECT * FROM mixed_null;
 
 -- VIEWS
 CREATE VIEW count_view1 AS SELECT a, COUNT(DISTINCT b) FROM id_int_int_int_100 GROUP BY a; SELECT * FROM count_view1;
