@@ -49,6 +49,9 @@ class ExpressionEvaluator final {
   std::shared_ptr<ExpressionResult<R>> evaluate_binary_predicate_expression(const BinaryPredicateExpression& expression);
 
   template<typename R>
+  std::shared_ptr<ExpressionResult<R>> evaluate_like_expression(const BinaryPredicateExpression& expression);
+
+  template<typename R>
   std::shared_ptr<ExpressionResult<R>> evaluate_is_null_expression(const IsNullExpression& expression);
 
   template<typename R>

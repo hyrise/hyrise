@@ -39,6 +39,8 @@ set(
     expression/evaluation/expression_evaluator.hpp
     expression/evaluation/expression_result.hpp
     expression/evaluation/expression_functors.hpp
+    expression/evaluation/like_matcher.cpp
+    expression/evaluation/like_matcher.hpp
     expression/expression_factory.cpp
     expression/expression_factory.hpp
     expression/expression_utils.cpp

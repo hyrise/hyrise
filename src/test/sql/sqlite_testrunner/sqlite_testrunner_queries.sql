@@ -221,10 +221,15 @@ SELECT SUBSTR('HELLO', 5000, 20) AS s;
 SELECT SUBSTR(d, id - 10, b) AS s FROM mixed ORDER BY id;
 SELECT SUBSTR(d, b / 10, b / 20) AS s FROM mixed_null;
 
+-- LIKE
+SELECT * FROM mixed WHERE d LIKE '%a%b%';
+SELECT * FROM mixed WHERE d NOT LIKE 'ldggoca';
+SELECT * FROM mixed WHERE d LIKE '%y__%g_%';
+SELECT * FROM mixed WHERE d LIKE '%y__%g_%' OR (id > 50 AND a LIKE '%a%');
+SELECT CASE WHEN d LIKE '%ab%' THEN 'contains AB' WHEN d NOT LIKE '%x%' THEN 'doesnt contain x' ELSE a END AS c FROM mixed;
+
 -- EXISTS
 SELECT EXISTS(SELECT 1) AS some_exists;
--- SELECT EXISTS(SELECT NULL) AS some_exists;
--- SELECT NOT EXISTS(SELECT NULL) AS some_exists;
 SELECT EXISTS(SELECT * FROM id_int_int_int_100) AS some_exists;
 SELECT NOT EXISTS(SELECT * FROM id_int_int_int_100) AS some_exists;
 

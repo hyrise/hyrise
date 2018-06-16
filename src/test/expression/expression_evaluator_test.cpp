@@ -219,8 +219,8 @@ TEST_F(ExpressionEvaluatorTest, LikeLiteral) {
   EXPECT_TRUE(test_expression<int32_t>(*like("hello", "hello"), {1}));
   EXPECT_TRUE(test_expression<int32_t>(*like("hello", "Hello"), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*not_like("hello", "Hello"), {1}));
-  EXPECT_TRUE(test_expression<int32_t>(*like("hello", "h_ll_o"), {1}));
-  EXPECT_TRUE(test_expression<int32_t>(*not_like("hello", "h_ll_o"), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*like("hello", "h_ll%o"), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*not_like("hello", "h_ll%o"), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*like("hello", "H_ll_o"), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*not_like("hello", "H_ll_o"), {1}));
   EXPECT_TRUE(test_expression<int32_t>(*like("hello", "%h%_l%o"), {1}));
@@ -234,8 +234,7 @@ TEST_F(ExpressionEvaluatorTest, LikeLiteral) {
 }
 
 TEST_F(ExpressionEvaluatorTest, LikeSeries) {
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *like(s1, "%a%"), {1, 0, 1, 1}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *like(s1, concat(s1, "a")), {1, 1, 1, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *like(s1, concat(s1, "%")), {1, 1, 1, 1}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *like(s1, concat(s1, "a")), {0, 0, 0, 0}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *not_like(s1, "%a%"), {0, 1, 0, 0}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *like(s1, "%A%"), {0, 0, 0, 0}));
@@ -243,6 +242,9 @@ TEST_F(ExpressionEvaluatorTest, LikeSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *not_like(s1, "%H%e%_%l%"), {1, 0, 1, 1}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *like(s3, "%a%"), {std::nullopt, 1, 0, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *not_like(s3, "%a%"), {std::nullopt, 0, 1, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *like(s1, "%a%"), {1, 0, 1, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *like("Same", s1), {0, 0, 0, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_like("Same", s1), {1, 1, 1, 0}));
 }
 
 TEST_F(ExpressionEvaluatorTest, SubstrLiterals) {

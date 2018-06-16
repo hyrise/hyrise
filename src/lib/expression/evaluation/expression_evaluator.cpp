@@ -30,6 +30,7 @@
 #include "utils/lambda_visitor.hpp"
 #include "storage/value_column.hpp"
 #include "utils/assert.hpp"
+#include "like_matcher.hpp"
 #include "expression_functors.hpp"
 
 using namespace std::string_literals;
@@ -66,6 +67,9 @@ const AbstractExpression &expression) {
       } else if (predicate_expression.predicate_condition == PredicateCondition::IsNull ||
                  predicate_expression.predicate_condition == PredicateCondition::IsNotNull) {
         return evaluate_is_null_expression<R>(static_cast<const IsNullExpression&>(expression));
+      } else if (predicate_expression.predicate_condition == PredicateCondition::Like ||
+                 predicate_expression.predicate_condition == PredicateCondition::NotLike) {
+        return evaluate_like_expression<R>(static_cast<const BinaryPredicateExpression&>(expression));
       } else {
         Fail("Unsupported Predicate Expression");
       }
@@ -202,6 +206,53 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_binary_
 
 template<typename R>
 std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_binary_predicate_expression(const BinaryPredicateExpression& expression) {
+  Fail("Can only evaluate predicates to int32_t (aka bool)");
+}
+
+template<>
+std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_like_expression<int32_t>(const BinaryPredicateExpression& expression) {
+  Assert(expression.predicate_condition == PredicateCondition::Like || expression.predicate_condition == PredicateCondition::NotLike, "Expected PredicateCondition Like or NotLike");
+
+  const auto left_results = evaluate_expression_to_result<std::string>(*expression.left_operand());
+  const auto right_results = evaluate_expression_to_result<std::string>(*expression.right_operand());
+
+  const auto invert_results = expression.predicate_condition == PredicateCondition::NotLike;
+
+  const auto result_size = _result_size(*left_results, *right_results);
+  std::vector<int32_t> result_values(result_size, 0);
+
+  if (left_results->size() == right_results->size()) {
+    // E.g., `a LIKE b` - A new matcher for each row and a different value as well
+    for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
+      LikeMatcher{right_results->values[row_idx]}.resolve(invert_results, [&](const auto& matcher) {
+        result_values[row_idx] = matcher(left_results->values[row_idx]);
+      });
+    }
+  } else if (left_results->size() > right_results->size()) {
+    // E.g., `a LIKE '%hello%'` -- A single matcher for all rows
+    LikeMatcher like_matcher{right_results->values.front()};
+
+    for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
+      like_matcher.resolve(invert_results, [&](const auto& matcher) {
+        result_values[row_idx] = matcher(left_results->values[row_idx]);
+      });
+    }
+  } else {
+    // E.g., `'hello' LIKE b` -- A new matcher for each row but the value to check is constant
+    for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
+      LikeMatcher{right_results->values[row_idx]}.resolve(invert_results, [&](const auto& matcher) {
+        result_values[row_idx] = matcher(left_results->values.front());
+      });
+    }
+  }
+
+  auto result_nulls = _evaluate_default_null_logic(left_results->nulls, right_results->nulls);
+
+  return std::make_shared<ExpressionResult<int32_t>>(std::move(result_values), std::move(result_nulls));
+}
+
+template<typename R>
+std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_like_expression(const BinaryPredicateExpression& expression) {
   Fail("Can only evaluate predicates to int32_t (aka bool)");
 }
 
