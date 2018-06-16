@@ -1081,16 +1081,24 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
         case hsql::kOpOr: return std::make_shared<LogicalExpression>(LogicalOperator::Or, left, right);
         case hsql::kOpAnd: return std::make_shared<LogicalExpression>(LogicalOperator::And, left, right);
         case hsql::kOpIn: {
-          std::vector<std::shared_ptr<AbstractExpression>> arguments;
-          if (expr.exprList) {
-            arguments.reserve(expr.exprList->size());
-            for (const auto *hsql_argument : *expr.exprList) {
-              arguments.emplace_back(_translate_hsql_expr(*hsql_argument, sql_identifier_context));
-            }
-          }
+          if (expr.select) {
+            // `a IN (SELECT ...)`
+            const auto sub_select = _translate_hsql_sub_select(*expr.select, sql_identifier_context);
+            return std::make_shared<InExpression>(left, sub_select);
 
-          const auto array = std::make_shared<ListExpression>(arguments);
-          return std::make_shared<InExpression>(left, array);
+          } else {
+            // `a IN (x, y, z)`
+            std::vector<std::shared_ptr<AbstractExpression>> arguments;
+            if (expr.exprList) {
+              arguments.reserve(expr.exprList->size());
+              for (const auto *hsql_argument : *expr.exprList) {
+                arguments.emplace_back(_translate_hsql_expr(*hsql_argument, sql_identifier_context));
+              }
+            }
+
+            const auto array = std::make_shared<ListExpression>(arguments);
+            return std::make_shared<InExpression>(left, array);
+          }
         }
 
         case hsql::kOpIsNull: return is_null(left);
@@ -1129,22 +1137,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
       }
     }
 
-    case hsql::kExprSelect: {
-      const auto sql_identifier_proxy = std::make_shared<SQLIdentifierContextProxy>(sql_identifier_context,
-                                                                                    _parameter_id_allocator,
-                                                                                    _external_sql_identifier_context_proxy);
-
-      auto sub_select_translator = SQLTranslator{_use_mvcc, sql_identifier_proxy, _parameter_id_allocator};
-      const auto sub_select_lqp = sub_select_translator.translate_select_statement(*expr.select);
-      auto parameters = LQPSelectExpression::Parameters{};
-      parameters.reserve(sql_identifier_proxy->accessed_expressions().size());
-
-      for (const auto& expression_and_parameter_id : sql_identifier_proxy->accessed_expressions()) {
-        parameters.emplace_back(expression_and_parameter_id.second, expression_and_parameter_id.first);
-      }
-
-      return std::make_shared<LQPSelectExpression>(sub_select_lqp, parameters);
-    }
+    case hsql::kExprSelect: return _translate_hsql_sub_select(*expr.select, sql_identifier_context);
 
     case hsql::kExprArray:
       Fail("Nyi");
@@ -1158,6 +1151,23 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
     default:
       Fail("Nyie");
   }
+}
+
+std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_sub_select(const hsql::SelectStatement& select, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context) const {
+  const auto sql_identifier_proxy = std::make_shared<SQLIdentifierContextProxy>(sql_identifier_context,
+                                                                                _parameter_id_allocator,
+                                                                                _external_sql_identifier_context_proxy);
+
+  auto sub_select_translator = SQLTranslator{_use_mvcc, sql_identifier_proxy, _parameter_id_allocator};
+  const auto sub_select_lqp = sub_select_translator.translate_select_statement(select);
+  auto parameters = LQPSelectExpression::Parameters{};
+  parameters.reserve(sql_identifier_proxy->accessed_expressions().size());
+
+  for (const auto& expression_and_parameter_id : sql_identifier_proxy->accessed_expressions()) {
+    parameters.emplace_back(expression_and_parameter_id.second, expression_and_parameter_id.first);
+  }
+
+  return std::make_shared<LQPSelectExpression>(sub_select_lqp, parameters);
 }
 
 std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_case(const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context) const {

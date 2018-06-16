@@ -360,7 +360,7 @@ TEST_F(SQLTranslatorTest, WhereNotPredicate) {
 
 TEST_F(SQLTranslatorTest, WhereNotFallback) {
   /**
-   * If we can't inverse a predicate to apply NOT, we translate the not expression from
+   * If we can't inverse a predicate to apply NOT, we translate the NOT expression from
    * "NOT <some_expression>" to "<some_expression> == 0"
    */
 
@@ -556,6 +556,59 @@ TEST_F(SQLTranslatorTest, InArray) {
   ProjectionNode::make(expression_vector(int_float_a, int_float_b),
     PredicateNode::make(not_equals(a_plus_7_in, 0),
       ProjectionNode::make(expression_vector(a_plus_7_in, int_float_a, int_float_b),
+         stored_table_node_int_float
+  )));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, InSelect) {
+  const auto actual_lqp = compile_query("SELECT * FROM int_float WHERE a + 7 IN (SELECT * FROM int_float2)");
+
+  // clang-format off
+  const auto sub_select_lqp = stored_table_node_int_float2;
+  const auto sub_select = select(sub_select_lqp);
+
+  const auto a_plus_7_in = in(add(int_float_a, 7), sub_select);
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float_a, int_float_b),
+    PredicateNode::make(not_equals(a_plus_7_in, 0),
+      ProjectionNode::make(expression_vector(a_plus_7_in, int_float_a, int_float_b),
+         stored_table_node_int_float
+  )));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, InCorelatedSelect) {
+  const auto actual_lqp = compile_query("SELECT * FROM int_float WHERE a IN (SELECT * FROM int_float2 WHERE int_float.b * int_float.a * int_float.a > b)");
+
+  // clang-format off
+  const auto parameter_a = parameter(ParameterID{1}, int_float_a);
+  const auto parameter_b = parameter(ParameterID{0}, int_float_b);
+
+  const auto b_times_a_times_a = mul(mul(parameter_b, parameter_a), parameter_a);
+
+  const auto sub_select_lqp =
+  ProjectionNode::make(expression_vector(int_float2_a, int_float2_b),
+    PredicateNode::make(greater_than(b_times_a_times_a, int_float2_b),
+      ProjectionNode::make(expression_vector(b_times_a_times_a, int_float2_a, int_float2_b),
+        stored_table_node_int_float2
+  )));
+
+  const auto sub_select = select(sub_select_lqp, parameter_a, parameter_b);
+
+  const auto a_in_sub_select = in(int_float_a, sub_select);
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float_a, int_float_b),
+    PredicateNode::make(not_equals(a_in_sub_select, 0),
+      ProjectionNode::make(expression_vector(a_in_sub_select, int_float_a, int_float_b),
          stored_table_node_int_float
   )));
   // clang-format on
@@ -848,8 +901,8 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
     DummyTableNode::make()
   );
   const auto sub_sub_select = select(expected_sub_sub_select_lqp,
-                                     std::make_pair(ParameterID{4}, int_float2_a),
-                                     std::make_pair(ParameterID{3}, int_float_b));
+                                     parameter_int_float2_a,
+                                     parameter_int_float_b);
 
 
   // "(SELECT MAX(b) + int_float.b + (SELECT int_float2.a + int_float.b) FROM int_float2)"
@@ -861,8 +914,8 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(parameter(ParameterID{1}),
-                                         select(expected_sub_select_lqp_a, std::make_pair(ParameterID{2}, int_float_a)),
-                                         select(expected_sub_select_lqp_b, std::make_pair(ParameterID{3}, int_float_b))
+                                         select(expected_sub_select_lqp_a, parameter_int_float_a),
+                                         select(expected_sub_select_lqp_b, parameter_int_float_b)
                        ),
     PredicateNode::make(greater_than(int_float_a, parameter(ParameterID{0})),
       stored_table_node_int_float

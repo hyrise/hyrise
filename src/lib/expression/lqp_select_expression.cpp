@@ -13,7 +13,7 @@
 namespace opossum {
 
 LQPSelectExpression::LQPSelectExpression(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                         const std::vector<std::pair<ParameterID, std::shared_ptr<AbstractExpression>>>& parameters):
+                                         const Parameters& parameters):
  lqp(lqp), parameters(parameters) {
 
 }
@@ -21,13 +21,12 @@ LQPSelectExpression::LQPSelectExpression(const std::shared_ptr<AbstractLQPNode>&
 std::shared_ptr<AbstractExpression> LQPSelectExpression::deep_copy() const {
   const auto lqp_copy = lqp->deep_copy();
 
-  std::vector<std::pair<ParameterID, std::shared_ptr<AbstractExpression>>> copied_parameters;
+  Parameters copied_parameters;
   copied_parameters.reserve(parameters.size());
 
   for (const auto& referenced_external_expression : parameters) {
     copied_parameters.emplace_back(
-      referenced_external_expression.first,
-      referenced_external_expression.second->deep_copy()
+      std::dynamic_pointer_cast<ParameterExpression>(referenced_external_expression->deep_copy())
     );
   }
 

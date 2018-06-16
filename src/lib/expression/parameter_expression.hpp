@@ -37,7 +37,7 @@ class ParameterExpression : public AbstractExpression {
   explicit ParameterExpression(const ParameterID parameter_id);
 
   // Constructs an external value
-  ParameterExpression(const ParameterID parameter_id, const AbstractExpression& referenced_expression);
+  ParameterExpression(const ParameterID parameter_id, const std::shared_ptr<AbstractExpression>& referenced_expression);
   ParameterExpression(const ParameterID parameter_id, const ReferencedExpressionInfo& referenced_expression_info);
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;

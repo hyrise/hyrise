@@ -32,6 +32,8 @@ bool all_type_variant_near(const AllTypeVariant& lhs, const AllTypeVariant& rhs,
 namespace std {
 
 size_t hash<opossum::AllTypeVariant>::operator()(const opossum::AllTypeVariant& all_type_variant) const {
+  // For null, hash a random number to avoid collisions
+  if (all_type_variant.type() == typeid(opossum::NullValue{})) return boost::hash_value(0xf569a38f);
   if (all_type_variant.type() == typeid(int32_t)) return boost::hash_value(static_cast<int32_t>(boost::get<int32_t>(all_type_variant)));
   if (all_type_variant.type() == typeid(int64_t)) return boost::hash_value(boost::get<int64_t>(all_type_variant));
   if (all_type_variant.type() == typeid(float)) return boost::hash_value(boost::get<float>(all_type_variant));

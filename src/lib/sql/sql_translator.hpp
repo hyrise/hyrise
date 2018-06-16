@@ -124,6 +124,7 @@ class SQLTranslator final {
 
 
   std::shared_ptr<AbstractExpression> _translate_hsql_expr(const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context) const;
+  std::shared_ptr<AbstractExpression> _translate_hsql_sub_select(const hsql::SelectStatement& select, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context) const;
   std::shared_ptr<AbstractExpression> _translate_hsql_case(const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context) const;
 
  private:

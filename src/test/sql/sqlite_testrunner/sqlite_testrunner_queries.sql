@@ -182,11 +182,13 @@ SELECT a FROM id_int_int_int_100 AS r WHERE id + 1 = (SELECT MIN(b) + r.id FROM 
 SELECT a FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
 SELECT * FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
 SELECT a, b FROM id_int_int_int_100 WHERE a > (SELECT MIN(b) FROM mixed)
--- SELECT * FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
--- SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
--- SELECT a, b FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
---
----- cannot test these because we cannot handle empty query results here
+SELECT * FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
+SELECT * FROM id_int_int_int_100 WHERE a * 10 IN (SELECT b FROM mixed)
+SELECT * FROM id_int_int_int_100 WHERE a * 10 NOT IN (SELECT b FROM mixed)
+SELECT a FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
+SELECT a, b FROM id_int_int_int_100 WHERE a IN (SELECT b FROM mixed)
+
+-- cannot test these because we cannot handle empty query results here
 ---- SELECT * FROM mixed WHERE b IS NULL;
 ---- SELECT * FROM mixed WHERE b = NULL;
 ---- SELECT * FROM mixed WHERE b > NULL;

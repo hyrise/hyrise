@@ -522,7 +522,7 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
         sub_select_parameters.reserve(lqp_select_expression->parameters.size());
 
         for (const auto& lqp_parameter : lqp_select_expression->parameters) {
-          sub_select_parameters.emplace_back(lqp_parameter.first, node->get_column_id(*lqp_parameter.second));
+          sub_select_parameters.emplace_back(lqp_parameter, node->get_column_id(*lqp_parameter.second)));
         }
 
         expression = std::make_shared<PQPSelectExpression>(
