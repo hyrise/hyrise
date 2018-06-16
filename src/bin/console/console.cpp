@@ -390,7 +390,7 @@ int Console::generate_tpcc(const std::string& tablename) {
   }
 
   out("Generating TPCC table: \"" + tablename + "\" ...\n");
-  auto table = opossum::TpccTableGenerator::generate_tpcc_table(tablename);
+  auto table = opossum::TpccTableGenerator().generate_table(tablename);
   if (table == nullptr) {
     out("Error: No TPCC table named \"" + tablename + "\" available.\n");
     return Console::ReturnCode::Error;

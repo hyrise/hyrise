@@ -22,9 +22,11 @@
 
 namespace opossum {
 
-TpccTableGenerator::TpccTableGenerator(const ChunkOffset chunk_size, const size_t warehouse_size)
+TpccTableGenerator::TpccTableGenerator(const ChunkOffset chunk_size, const size_t warehouse_size,
+   const bool encode_chunks)
     : AbstractBenchmarkTableGenerator(chunk_size),
       _warehouse_size(warehouse_size),
+      _encode_chunks(encode_chunks),
       _random_gen(TpccRandomGenerator()) {}
 
 std::shared_ptr<Table> TpccTableGenerator::generate_items_table() {
@@ -61,7 +63,9 @@ std::shared_ptr<Table> TpccTableGenerator::generate_items_table() {
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
-  ChunkEncoder::encode_all_chunks(table);
+  if (_encode_chunks) {
+    ChunkEncoder::encode_all_chunks(table);
+  }
 
   return table;
 }
@@ -99,7 +103,9 @@ std::shared_ptr<Table> TpccTableGenerator::generate_warehouse_table() {
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
-  ChunkEncoder::encode_all_chunks(table);
+  if (_encode_chunks) {
+    ChunkEncoder::encode_all_chunks(table);
+  }
 
   return table;
 }
@@ -149,7 +155,9 @@ std::shared_ptr<Table> TpccTableGenerator::generate_stock_table() {
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
-  ChunkEncoder::encode_all_chunks(table);
+  if (_encode_chunks) {
+    ChunkEncoder::encode_all_chunks(table);
+  }
   return table;
 }
 
@@ -191,7 +199,9 @@ std::shared_ptr<Table> TpccTableGenerator::generate_district_table() {
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
-  ChunkEncoder::encode_all_chunks(table);
+  if (_encode_chunks) {
+    ChunkEncoder::encode_all_chunks(table);
+  }
   return table;
 }
 
@@ -258,7 +268,9 @@ std::shared_ptr<Table> TpccTableGenerator::generate_customer_table() {
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
-  ChunkEncoder::encode_all_chunks(table);
+  if (_encode_chunks) {
+    ChunkEncoder::encode_all_chunks(table);
+  }
   return table;
 }
 
@@ -291,7 +303,9 @@ std::shared_ptr<Table> TpccTableGenerator::generate_history_table() {
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
-  ChunkEncoder::encode_all_chunks(table);
+  if (_encode_chunks) {
+    ChunkEncoder::encode_all_chunks(table);
+  }
   return table;
 }
 
@@ -336,7 +350,9 @@ std::shared_ptr<Table> TpccTableGenerator::generate_order_table(
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
-  ChunkEncoder::encode_all_chunks(table);
+  if (_encode_chunks) {
+    ChunkEncoder::encode_all_chunks(table);
+  }
   return table;
 }
 
@@ -439,7 +455,9 @@ std::shared_ptr<Table> TpccTableGenerator::generate_order_line_table(
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
-  ChunkEncoder::encode_all_chunks(table);
+  if (_encode_chunks) {
+    ChunkEncoder::encode_all_chunks(table);
+  }
   return table;
 }
 
@@ -465,7 +483,9 @@ std::shared_ptr<Table> TpccTableGenerator::generate_new_order_table() {
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
 
-  ChunkEncoder::encode_all_chunks(table);
+  if (_encode_chunks) {
+    ChunkEncoder::encode_all_chunks(table);
+  }
   return table;
 }
 
@@ -499,7 +519,7 @@ std::map<std::string, std::shared_ptr<Table>> TpccTableGenerator::generate_all_t
  * a) generate a TPC-C table by table name (e.g. ITEM, WAREHOUSE), and
  * b) have all available table names browsable for the Console auto completion.
  */
-TpccTableGeneratorFunctions TpccTableGenerator::tpcc_table_generator_functions() {
+TpccTableGeneratorFunctions TpccTableGenerator::table_generator_functions() {
   TpccTableGeneratorFunctions generators{
       {"ITEM", []() { return TpccTableGenerator().generate_items_table(); }},
       {"WAREHOUSE", []() { return TpccTableGenerator().generate_warehouse_table(); }},
@@ -520,12 +540,30 @@ TpccTableGeneratorFunctions TpccTableGenerator::tpcc_table_generator_functions()
   return generators;
 }
 
-std::shared_ptr<Table> TpccTableGenerator::generate_tpcc_table(const std::string& tablename) {
-  auto generators = TpccTableGenerator::tpcc_table_generator_functions();
-  if (generators.find(tablename) == generators.end()) {
+std::shared_ptr<Table> TpccTableGenerator::generate_table(const std::string& tablename) {
+  if (tablename == "ITEM") {
+    return generate_items_table();
+  } else if (tablename == "WAREHOUSE") {
+    return generate_warehouse_table();
+  } else if (tablename == "STOCK") {
+    return generate_stock_table();
+  } else if (tablename == "DISTRICT") {
+    return generate_district_table();
+  } else if (tablename == "CUSTOMER") {
+    return generate_customer_table();
+  } else if (tablename == "HISTORY") {
+    return generate_history_table();
+  } else if (tablename == "ORDER") {
+    return generate_new_order_table();
+  } else if (tablename == "NEW_ORDER") {
+    auto order_line_counts = generate_order_line_counts();
+    return generate_order_table(order_line_counts);
+  } else if (tablename == "ORDER_LINE") {
+    auto order_line_counts = generate_order_line_counts();
+    return generate_order_line_table(order_line_counts);
+  } else {
     return nullptr;
   }
-  return generators[tablename]();
 }
 
 }  // namespace opossum
