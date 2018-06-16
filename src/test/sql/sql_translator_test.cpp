@@ -25,6 +25,8 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "logical_query_plan/show_tables_node.hpp"
+#include "logical_query_plan/show_columns_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "storage/storage_manager.hpp"
@@ -1022,6 +1024,18 @@ TEST_F(SQLTranslatorTest, ExistsCorelated) {
   );
   // clang-format on
 
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, ShowTables) {
+  const auto actual_lqp = compile_query("SHOW TABLES");
+  const auto expected_lqp = ShowTablesNode::make();
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, ShowColumns) {
+  const auto actual_lqp = compile_query("SHOW COLUMNS int_float");
+  const auto expected_lqp = ShowColumnsNode::make("int_float");
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 

@@ -178,8 +178,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_statement(const hsql::
       return _translate_delete(static_cast<const hsql::DeleteStatement&>(statement));
     case hsql::kStmtUpdate:
       return _translate_update(static_cast<const hsql::UpdateStatement&>(statement));
-//    case hsql::kStmtShow:
-//      return _translate_show(static_cast<const hsql::ShowStatement&>(statement));
+    case hsql::kStmtShow:
+      return _translate_show(static_cast<const hsql::ShowStatement&>(statement));
     case hsql::kStmtCreate:
       return _translate_create(static_cast<const hsql::CreateStatement&>(statement));
     case hsql::kStmtDrop:
@@ -807,16 +807,16 @@ void SQLTranslator::_translate_limit(const hsql::LimitDescription& limit) {
   _current_lqp = LimitNode::make(num_rows_expression, _current_lqp);
 }
 
-//std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
-//  switch (show_statement.type) {
-//    case hsql::ShowType::kShowTables:
-//      return ShowTablesNode::make();
-//    case hsql::ShowType::kShowColumns:
-//      return ShowColumnsNode::make(std::string(show_statement.name));
-//    default:
-//      Fail("hsql::ShowType is not supported.");
-//  }
-//}
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::ShowStatement& show_statement) {
+  switch (show_statement.type) {
+    case hsql::ShowType::kShowTables:
+      return ShowTablesNode::make();
+    case hsql::ShowType::kShowColumns:
+      return ShowColumnsNode::make(std::string(show_statement.name));
+    default:
+      Fail("hsql::ShowType is not supported.");
+  }
+}
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::CreateStatement& create_statement) {
   switch (create_statement.type) {

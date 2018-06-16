@@ -108,13 +108,10 @@ class SQLTranslator final {
 
   std::shared_ptr<AbstractLQPNode> _translate_predicate_expression(
   const std::shared_ptr<AbstractExpression> &expression, std::shared_ptr<AbstractLQPNode> current_node) const;
-//
-//  std::shared_ptr<AbstractLQPNode> _translate_show(const hsql::ShowStatement& show_statement);
-//
+
+  std::shared_ptr<AbstractLQPNode> _translate_show(const hsql::ShowStatement& show_statement);
+
   std::shared_ptr<AbstractLQPNode> _validate_if_active(const std::shared_ptr<AbstractLQPNode>& input_node);
-//
-//  std::vector<std::shared_ptr<LQPExpression>> _retrieve_having_aggregates(
-//      const hsql::Expr& expr, const std::shared_ptr<AbstractLQPNode>& input_node);
 
   std::shared_ptr<AbstractLQPNode> _prune_expressions(const std::shared_ptr<AbstractLQPNode>& node,
                                                       const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const;

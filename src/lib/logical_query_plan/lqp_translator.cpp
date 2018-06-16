@@ -37,8 +37,8 @@
 #include "operators/limit.hpp"
 #include "operators/maintenance/create_view.hpp"
 #include "operators/maintenance/drop_view.hpp"
-//#include "operators/maintenance/show_columns.hpp"
-//#include "operators/maintenance/show_tables.hpp"
+#include "operators/maintenance/show_columns.hpp"
+#include "operators/maintenance/show_tables.hpp"
 #include "operators/product.hpp"
 #include "operators/alias_operator.hpp"
 #include "operators/projection.hpp"
@@ -51,9 +51,9 @@
 #include "alias_node.hpp"
 #include "predicate_node.hpp"
 #include "projection_node.hpp"
-//#include "show_columns_node.hpp"
+#include "show_columns_node.hpp"
 #include "sort_node.hpp"
-//#include "storage/storage_manager.hpp"
+#include "storage/storage_manager.hpp"
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
 #include "update_node.hpp"
@@ -111,11 +111,9 @@ LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
     case LQPNodeType::Validate:     return _translate_validate_node(node);
     case LQPNodeType::Union:        return _translate_union_node(node);
 
-//      // Maintenance operators
-//    case LQPNodeType::ShowTables:
-//      return _translate_show_tables_node(node);
-//    case LQPNodeType::ShowColumns:
-//      return _translate_show_columns_node(node);
+      // Maintenance operators
+    case LQPNodeType::ShowTables:  return _translate_show_tables_node(node);
+    case LQPNodeType::ShowColumns: return _translate_show_columns_node(node);
     case LQPNodeType::CreateView:  return _translate_create_view_node(node);
     case LQPNodeType::DropView:    return _translate_drop_view_node(node);
     // clang-format on
@@ -463,18 +461,18 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_validate_node(
   return std::make_shared<Validate>(input_operator);
 }
 
-//std::shared_ptr<AbstractOperator> LQPTranslator::_translate_show_tables_node(
-//    const std::shared_ptr<AbstractLQPNode>& node) const {
-//  DebugAssert(node->left_input() == nullptr, "ShowTables should not have an input operator.");
-//  return std::make_shared<ShowTables>();
-//}
-//
-//std::shared_ptr<AbstractOperator> LQPTranslator::_translate_show_columns_node(
-//    const std::shared_ptr<AbstractLQPNode>& node) const {
-//  DebugAssert(node->left_input() == nullptr, "ShowColumns should not have an input operator.");
-//  const auto show_columns_node = std::dynamic_pointer_cast<ShowColumnsNode>(node);
-//  return std::make_shared<ShowColumns>(show_columns_node->table_name());
-//}
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_show_tables_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  DebugAssert(node->left_input() == nullptr, "ShowTables should not have an input operator.");
+  return std::make_shared<ShowTables>();
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_show_columns_node(
+    const std::shared_ptr<AbstractLQPNode>& node) const {
+  DebugAssert(node->left_input() == nullptr, "ShowColumns should not have an input operator.");
+  const auto show_columns_node = std::dynamic_pointer_cast<ShowColumnsNode>(node);
+  return std::make_shared<ShowColumns>(show_columns_node->table_name());
+}
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_view_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
