@@ -19,6 +19,10 @@ enum class ParameterExpressionType { ValuePlaceholder, External };
  * (e.g. `extern.x` in `SELECT (SELECT MIN(a) WHERE a > extern.x) FROM extern.x`).
  *
  * If it is a value placeholder no type info/nullable info/column name is available.
+ *
+ * Does NOT contain a shared_ptr to the expression it references since that would make LQP/PQP/Expression deep_copy()ing
+ * extremely hard. Instead, it extracts all information it needs from the referenced expression into
+ * ReferencedExpressionInfo
  */
 class ParameterExpression : public AbstractExpression {
  public:
@@ -37,7 +41,7 @@ class ParameterExpression : public AbstractExpression {
   explicit ParameterExpression(const ParameterID parameter_id);
 
   // Constructs an external value
-  ParameterExpression(const ParameterID parameter_id, const std::shared_ptr<AbstractExpression>& referenced_expression);
+  ParameterExpression(const ParameterID parameter_id, const AbstractExpression& referenced_expression);
   ParameterExpression(const ParameterID parameter_id, const ReferencedExpressionInfo& referenced_expression_info);
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;

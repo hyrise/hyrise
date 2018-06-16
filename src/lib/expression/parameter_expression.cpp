@@ -16,8 +16,8 @@ ParameterExpression::ParameterExpression(const ParameterID parameter_id):
 
 }
 
-ParameterExpression::ParameterExpression(const ParameterID parameter_id, const std::shared_ptr<AbstractExpression>& referenced_expression):
-AbstractExpression(ExpressionType::Parameter, {referenced_expression}), parameter_id(parameter_id), parameter_expression_type(ParameterExpressionType::External))
+ParameterExpression::ParameterExpression(const ParameterID parameter_id, const AbstractExpression& referenced_expression):
+AbstractExpression(ExpressionType::Parameter, {}), parameter_id(parameter_id), parameter_expression_type(ParameterExpressionType::External), _referenced_expression_info(std::in_place, referenced_expression.data_type(), referenced_expression.is_nullable(), referenced_expression.as_column_name())
 {
 }
 
@@ -106,7 +106,6 @@ size_t ParameterExpression::_on_hash() const {
     boost::hash_combine(hash, _referenced_expression_info->nullable);
     boost::hash_combine(hash, _referenced_expression_info->column_name);
   } else {
-    // Hash some 0s in to avoid collisions
     boost::hash_combine(hash, 0);
     boost::hash_combine(hash, 0);
     boost::hash_combine(hash, 0);

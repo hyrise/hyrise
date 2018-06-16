@@ -104,14 +104,15 @@ extern binary<LogicalOperator::Or, LogicalExpression> or_;
 extern ternary<BetweenExpression> between;
 extern ternary<CaseExpression> case_;
 
-template<typename ... Parameters>
+template<typename ... Args>
 std::shared_ptr<LQPSelectExpression> select(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                            Parameters &&... parameters) {
-  if constexpr (sizeof...(Parameters) > 0) {
+                                           Args &&... parameter_id_expression_pairs) {
+  if constexpr (sizeof...(Args) > 0) {
     // Corelated subselect
     return std::make_shared<LQPSelectExpression>(
     lqp,
-    LQPSelectExpression::Parameters{parameters...});
+    std::vector<std::pair<ParameterID, std::shared_ptr<AbstractExpression>>>{{std::make_pair(
+    parameter_id_expression_pairs.first, to_expression(parameter_id_expression_pairs.second))...}});
   } else {
     // Not corelated
     return std::make_shared<LQPSelectExpression>(lqp);

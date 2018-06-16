@@ -12,7 +12,7 @@ class ExternalExpression;
 
 class LQPSelectExpression : public AbstractSelectExpression {
  public:
-  using Parameters = std::vector<std::shared_ptr<ParameterExpression>>;
+  using Parameters = std::vector<std::pair<ParameterID, std::shared_ptr<AbstractExpression>>>;
 
   explicit LQPSelectExpression(const std::shared_ptr<AbstractLQPNode>& lqp,
                       const Parameters& parameters = {});

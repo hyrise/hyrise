@@ -600,7 +600,7 @@ TEST_F(SQLTranslatorTest, InCorelatedSelect) {
         stored_table_node_int_float2
   )));
 
-  const auto sub_select = select(sub_select_lqp, parameter_a, parameter_b);
+  const auto sub_select = select(sub_select_lqp, std::make_pair(ParameterID{1}, int_float_a), std::make_pair(ParameterID{0}, int_float_b));
 
   const auto a_in_sub_select = in(int_float_a, sub_select);
 
@@ -901,8 +901,8 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
     DummyTableNode::make()
   );
   const auto sub_sub_select = select(expected_sub_sub_select_lqp,
-                                     parameter_int_float2_a,
-                                     parameter_int_float_b);
+                                     std::make_pair(ParameterID{4}, int_float2_a),
+                                     std::make_pair(ParameterID{3}, int_float_b));
 
 
   // "(SELECT MAX(b) + int_float.b + (SELECT int_float2.a + int_float.b) FROM int_float2)"
@@ -914,8 +914,8 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(parameter(ParameterID{1}),
-                                         select(expected_sub_select_lqp_a, parameter_int_float_a),
-                                         select(expected_sub_select_lqp_b, parameter_int_float_b)
+                                         select(expected_sub_select_lqp_a, std::make_pair(ParameterID{2}, int_float_a)),
+                                         select(expected_sub_select_lqp_b, std::make_pair(ParameterID{3}, int_float_b))
                        ),
     PredicateNode::make(greater_than(int_float_a, parameter(ParameterID{0})),
       stored_table_node_int_float
