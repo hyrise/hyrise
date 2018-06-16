@@ -123,7 +123,7 @@ Console::Console()
 
   // Register words specifically for command completion purposes, e.g.
   // for TPC-C table generation, 'CUSTOMER', 'DISTRICT', etc
-  auto tpcc_generators = opossum::TpccTableGenerator::tpcc_table_generator_functions();
+  auto tpcc_generators = opossum::TpccTableGenerator::table_generator_functions();
   for (auto it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it) {
     _tpcc_commands.push_back(it->first);
   }
