@@ -24,7 +24,7 @@
 #include "expression/lqp_select_expression.hpp"
 #include "expression/is_null_expression.hpp"
 #include "expression/in_expression.hpp"
-//#include "expression/not_expression.hpp"
+#include "expression/exists_expression.hpp"
 #include "expression/value_expression.hpp"
 //#include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -1104,8 +1104,6 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
         case hsql::kOpIsNull: return is_null(left);
 
         case hsql::kOpNot: {
-          Assert(left->type == ExpressionType::Logical || left->type == ExpressionType::Predicate, "Can only negate predicate expressions and logical expressions");
-
           // If the argument is a predicate, just inverse it (e.g. NOT (a > b) becomes b <= a)
           if (left->type == ExpressionType::Predicate) {
             if (const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(left);
@@ -1130,6 +1128,10 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
           return equals(left, 0);
         }
 
+        case hsql::kOpExists:
+          Assert(expr.select, "Expected SELECT argument for EXISTS");
+          return std::make_shared<ExistsExpression>(_translate_hsql_sub_select(*expr.select, sql_identifier_context));
+
         case hsql::kOpLike:
 
         default:
@@ -1153,7 +1155,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
   }
 }
 
-std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_sub_select(const hsql::SelectStatement& select, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context) const {
+std::shared_ptr<LQPSelectExpression> SQLTranslator::_translate_hsql_sub_select(const hsql::SelectStatement& select, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context) const {
   const auto sql_identifier_proxy = std::make_shared<SQLIdentifierContextProxy>(sql_identifier_context,
                                                                                 _parameter_id_allocator,
                                                                                 _external_sql_identifier_context_proxy);

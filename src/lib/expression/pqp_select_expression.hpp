@@ -12,10 +12,15 @@ class PQPSelectExpression : public AbstractSelectExpression {
  public:
   using Parameters = std::vector<std::pair<ParameterID, ColumnID>>;
 
+  // Constructor for single-column PQPSelectExpressions as used in `a IN (SELECT ...)` or `SELECT (SELECT ...)`
   PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp,
-                               const DataType data_type,
-                               const bool nullable,
-                               const Parameters& parameters = {});
+                      const DataType data_type,
+                      const bool nullable,
+                      const Parameters& parameters = {});
+
+  // Constructor for (potentially) multi-column PQPSelectExpressions as used in `EXISTS(SELECT ...)`
+  PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp,
+                      const Parameters& parameters = {});
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
@@ -30,8 +35,15 @@ class PQPSelectExpression : public AbstractSelectExpression {
   size_t _on_hash() const override;
 
  private:
-  const DataType _data_type;
-  const bool _nullable;
+  // If the PQPSelectExpression returns precisely one column, it "has" this column's data type and nullability.
+  struct DataTypeInfo {
+    DataTypeInfo(const DataType data_type, const bool nullable);
+
+    const DataType data_type;
+    const bool nullable;
+  };
+
+  const std::optional<DataTypeInfo> _data_type_info;
 };
 
 }  // namespace opossum

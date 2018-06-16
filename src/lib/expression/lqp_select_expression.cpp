@@ -42,7 +42,7 @@ std::string LQPSelectExpression::as_column_name() const {
 }
 
 DataType LQPSelectExpression::data_type() const {
-  Assert(lqp->output_column_expressions().size() == 1, "Subselects must return one column");
+  Assert(lqp->output_column_expressions().size() == 1, "Can only determine the DataType of SelectExpressions that return exactly one column");
   return lqp->output_column_expressions()[0]->data_type();
 }
 

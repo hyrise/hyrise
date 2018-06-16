@@ -7,6 +7,7 @@
 #include "aggregate_expression.hpp"
 #include "arithmetic_expression.hpp"
 #include "extract_expression.hpp"
+#include "exists_expression.hpp"
 #include "between_expression.hpp"
 #include "binary_predicate_expression.hpp"
 #include "is_null_expression.hpp"
@@ -162,6 +163,8 @@ template<typename V, typename S>
 std::shared_ptr<InExpression> in(const V& v, const S& s) {
   return std::make_shared<InExpression>(to_expression(v), to_expression(s));
 }
+
+std::shared_ptr<ExistsExpression> exists(const std::shared_ptr<AbstractSelectExpression>& select_expression);
 
 template<typename F>
 std::shared_ptr<ExtractExpression> extract(const DatetimeComponent datetime_component, const F& from) {

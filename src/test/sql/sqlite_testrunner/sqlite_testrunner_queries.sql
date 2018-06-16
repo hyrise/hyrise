@@ -50,7 +50,7 @@ SELECT * FROM mixed ORDER BY b, a DESC, c;
 SELECT sub.a, sub.b FROM (SELECT a, b FROM mixed WHERE a = 'a' ORDER BY b) AS sub WHERE sub.b > 10 ORDER BY b;
 SELECT * FROM mixed_null ORDER BY b;
 
----- LIMIT
+-- LIMIT
 SELECT * FROM mixed LIMIT 77;
 SELECT b FROM mixed LIMIT 10;
 
@@ -212,10 +212,6 @@ SELECT * FROM id_int_int_int_100 WHERE a IN (b - 48, b + 1)
 SELECT a + c FROM id_int_int_int_100 WHERE a + c IN (110, 9, 'Hello', 13.345)
 SELECT id FROM mixed WHERE d IN ('hamqiv', 9, 'Hello', 13.345, 'xfkk', 13*13)
 
--- EXTRACT()
--- SELECT EXTRACT(DAY FROM '1993-05-01') FROM int_date;
--- SELECT EXTRACT(MONTH FROM "date") FROM int_date;
-
 -- SUBSTR
 SELECT SUBSTR('HELLO', 2, 3) AS s;
 SELECT SUBSTR('HELLO', -4, 3) AS s;
@@ -225,5 +221,13 @@ SELECT SUBSTR('HELLO', 5000, 20) AS s;
 SELECT SUBSTR(d, id - 10, b) AS s FROM mixed ORDER BY id;
 SELECT SUBSTR(d, b / 10, b / 20) AS s FROM mixed_null;
 
--- CONCAT
--- SELECT CONCAT('HELLO', ' ', 'WORLD') AS s;
+-- EXISTS
+SELECT EXISTS(SELECT 1) AS some_exists;
+-- SELECT EXISTS(SELECT NULL) AS some_exists;
+-- SELECT NOT EXISTS(SELECT NULL) AS some_exists;
+SELECT EXISTS(SELECT * FROM id_int_int_int_100) AS some_exists;
+SELECT NOT EXISTS(SELECT * FROM id_int_int_int_100) AS some_exists;
+
+-- Cannot test the following expressions, because sqlite doesn't support them:
+--  * EXTRACT
+--  * CONCAT

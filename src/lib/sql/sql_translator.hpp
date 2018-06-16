@@ -19,9 +19,10 @@
 namespace opossum {
 
 class AggregateNode;
+class LQPSelectExpression;
 
 /**
-* Produces an LQP (Logical Query Plan), as defined in src/logical_query_plan/, from an hsql::SQLParseResult.
+ * Produces an LQP (Logical Query Plan), as defined in src/logical_query_plan/, from an hsql::SQLParseResult.
  *
  * The elements of the vector returned by SQLTranslator::translate_parse_result(const hsql::SQLParserResult&)
  * point to the root/result nodes of the LQPs.
@@ -124,7 +125,7 @@ class SQLTranslator final {
 
 
   std::shared_ptr<AbstractExpression> _translate_hsql_expr(const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context) const;
-  std::shared_ptr<AbstractExpression> _translate_hsql_sub_select(const hsql::SelectStatement& select, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context) const;
+  std::shared_ptr<LQPSelectExpression> _translate_hsql_sub_select(const hsql::SelectStatement& select, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context) const;
   std::shared_ptr<AbstractExpression> _translate_hsql_case(const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context) const;
 
  private:

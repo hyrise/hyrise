@@ -12,21 +12,32 @@ PQPSelectExpression::PQPSelectExpression(const std::shared_ptr<AbstractOperator>
                                          const DataType data_type,
                                          const bool nullable,
                                          const std::vector<std::pair<ParameterID, ColumnID>>& parameters):
-  pqp(pqp), parameters(parameters), _data_type(data_type), _nullable(nullable) {
+  pqp(pqp), parameters(parameters), _data_type_info(std::in_place, data_type, nullable) {
 
 }
 
+PQPSelectExpression::PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp,
+                    const Parameters& parameters):
+  pqp(pqp), parameters(parameters) {
+
+}
 
 std::shared_ptr<AbstractExpression> PQPSelectExpression::deep_copy() const {
-  return std::make_shared<PQPSelectExpression>(pqp->recreate(), _data_type, _nullable, parameters);
+  if (_data_type_info) {
+    return std::make_shared<PQPSelectExpression>(pqp->recreate(), _data_type_info->data_type, _data_type_info->nullable, parameters);
+  } else {
+    return std::make_shared<PQPSelectExpression>(pqp->recreate(), parameters);
+  }
 }
 
 DataType PQPSelectExpression::data_type() const {
-  return _data_type;
+  Assert(_data_type_info, "Can't determine the DataType of this SelectExpression, probably because it returns multiple columns");
+  return _data_type_info->data_type;
 }
 
 bool PQPSelectExpression::is_nullable() const {
-  return _nullable;
+  Assert(_data_type_info, "Can't determine the nullability of this SelectExpression, probably because it returns multiple columns");
+  return _data_type_info->nullable;
 }
 
 std::string PQPSelectExpression::as_column_name() const {
@@ -36,11 +47,14 @@ std::string PQPSelectExpression::as_column_name() const {
 }
 
 bool PQPSelectExpression::_shallow_equals(const AbstractExpression& expression) const {
-  Fail("Can't compare PQPSelectExpression");
+  Fail("Can't compare PQPSelectExpressions");
 }
 
 size_t PQPSelectExpression::_on_hash() const {
   Fail("PQPSelectExpressions can't, shouldn't and shouldn't need to be hashed");
 }
+
+PQPSelectExpression::DataTypeInfo::DataTypeInfo(const DataType data_type, const bool nullable):
+  data_type(data_type), nullable(nullable) {}
 
 }  // namespace opossum

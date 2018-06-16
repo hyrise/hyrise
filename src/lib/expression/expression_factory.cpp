@@ -32,6 +32,10 @@ std::shared_ptr<AggregateExpression> count_star() {
   return std::make_shared<AggregateExpression>(AggregateFunction::Count);
 }
 
+std::shared_ptr<ExistsExpression> exists(const std::shared_ptr<AbstractSelectExpression>& select_expression) {
+  return std::make_shared<ExistsExpression>(select_expression);
+}
+
 unary<PredicateCondition::IsNull, IsNullExpression> is_null;
 unary<PredicateCondition::IsNotNull, IsNullExpression> is_not_null;
 unary<AggregateFunction::Sum, AggregateExpression> sum;

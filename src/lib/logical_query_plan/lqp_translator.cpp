@@ -516,8 +516,7 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
         Assert(lqp_select_expression, "Expected LQPSelectExpression");
 
         const auto sub_select_pqp = LQPTranslator{}.translate_node(lqp_select_expression->lqp);
-        const auto sub_select_data_type = lqp_select_expression->data_type();
-        const auto sub_select_nullable = lqp_select_expression->is_nullable();
+
         auto sub_select_parameters = PQPSelectExpression::Parameters{};
         sub_select_parameters.reserve(lqp_select_expression->parameters.size());
 
@@ -525,12 +524,24 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
           sub_select_parameters.emplace_back(lqp_parameter.first, node->get_column_id(*lqp_parameter.second));
         }
 
-        expression = std::make_shared<PQPSelectExpression>(
+        // Only specify a type for the SubSelect if it has exactly one column. Otherwise the DataType of the Expression
+        // is undefined and obtaining it will result in a runtime error.
+        if (lqp_select_expression->lqp->output_column_expressions().size() == 1u) {
+          const auto sub_select_data_type = lqp_select_expression->data_type();
+          const auto sub_select_nullable = lqp_select_expression->is_nullable();
+
+          expression = std::make_shared<PQPSelectExpression>(
           sub_select_pqp,
           sub_select_data_type,
           sub_select_nullable,
           sub_select_parameters
-        );
+          );
+        } else {
+          expression = std::make_shared<PQPSelectExpression>(
+          sub_select_pqp,
+          sub_select_parameters
+          );
+        }
         return false;
       }
 

@@ -952,6 +952,37 @@ TEST_F(SQLTranslatorTest, Substr) {
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, Exists) {
+  const auto actual_lqp = compile_query("SELECT EXISTS(SELECT * FROM int_float);");
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(exists(select(stored_table_node_int_float))),
+    DummyTableNode::make()
+  );
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, ExistsCorelated) {
+  const auto actual_lqp = compile_query("SELECT EXISTS(SELECT * FROM int_float WHERE int_float.a > int_float2.b) FROM int_float2");
+
+  // clang-format off
+  const auto sub_select_lqp =
+  PredicateNode::make(greater_than(int_float_a, parameter(ParameterID{0}, int_float2_b)),
+    stored_table_node_int_float);
+  const auto sub_select = select(sub_select_lqp, std::make_pair(ParameterID{0}, int_float2_b));
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(exists(sub_select)),
+    stored_table_node_int_float2
+  );
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 // Test parsing the TPCH queries for a bit of stress testing
 class SQLTranslatorTestTPCH : public ::testing::Test {
  public:
@@ -1207,32 +1238,6 @@ TEST_F(SQLTranslatorTestTPCH, Query01) {
 //  const auto subselect_expression = expand_projection_node->column_expressions().back();
 //  EXPECT_EQ(subselect_expression->type(), ExpressionType::Subselect);
 //}
-//
-//TEST_F(SQLTranslatorTest, InSubquery) {
-//  const auto query = "SELECT * FROM table_a WHERE a IN (SELECT a FROM table_b);";
-//  auto result_node = compile_query(query);
-//
-//  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
-//  const auto final_projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
-//
-//  EXPECT_EQ(final_projection_node->left_input()->type(), LQPNodeType::Join);
-//  const auto semi_join_node = std::dynamic_pointer_cast<JoinNode>(final_projection_node->left_input());
-//  EXPECT_EQ(semi_join_node->join_mode(), JoinMode::Semi);
-//
-//  const auto table_a_node = semi_join_node->left_input();
-//  ASSERT_STORED_TABLE_NODE(table_a_node, "table_a");
-//
-//  EXPECT_EQ(semi_join_node->right_input()->type(), LQPNodeType::Projection);
-//
-//  const auto table_b_node = semi_join_node->right_input()->left_input();
-//  ASSERT_STORED_TABLE_NODE(table_b_node, "table_b");
-//}
-//
-//TEST_F(SQLTranslatorTest, InSubquerySeveralColumns) {
-//  const auto query = "SELECT * FROM table_a WHERE a IN (SELECT * FROM table_b);";
-//  EXPECT_THROW(compile_query(query), std::runtime_error);
-//}
-//
 //TEST_F(SQLTranslatorTest, SelectSubquery) {
 //  const auto query = "SELECT a, (SELECT MAX(b) FROM table_b) FROM table_a;";
 //  auto result_node = compile_query(query);
