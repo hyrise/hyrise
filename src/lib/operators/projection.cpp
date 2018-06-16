@@ -20,7 +20,7 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator>& in, const 
 const std::string Projection::name() const { return "Projection"; }
 
 std::shared_ptr<AbstractOperator> Projection::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_left,
     const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
   return std::make_shared<Projection>(recreated_input_left, expressions_copy(expressions));
 }

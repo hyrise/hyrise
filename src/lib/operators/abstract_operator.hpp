@@ -94,10 +94,9 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   void set_transaction_context_recursively(std::weak_ptr<TransactionContext> transaction_context);
 
   // Returns a new instance of the same operator with the same configuration.
-  // The given arguments are used to replace the ValuePlaceholder objects within the new operator, if applicable.
-  // Recursively recreates the input operators and passes the argument list along.
+  // Recursively recreates the input operators.
   // An operator needs to implement this method in order to be cacheable.
-  std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args = {}) const;
+  std::shared_ptr<AbstractOperator> recreate() const;
 
   // Get the input operators.
   std::shared_ptr<const AbstractOperator> input_left() const;
@@ -144,11 +143,9 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   // Looks itself up in @param recreated_ops to support diamond shapes in PQPs, if not found calls _on_recreate()
   std::shared_ptr<AbstractOperator> _recreate_impl(
-      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& recreated_ops,
-      const std::vector<AllParameterVariant>& args) const;
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& recreated_ops) const;
 
-  virtual std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+  virtual std::shared_ptr<AbstractOperator> _on_recreate(const std::shared_ptr<AbstractOperator>& recreated_input_left,
       const std::shared_ptr<AbstractOperator>& recreated_input_right) const = 0;
 
   const OperatorType _type;

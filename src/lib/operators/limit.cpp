@@ -23,7 +23,7 @@ std::shared_ptr<AbstractExpression> Limit::row_count_expression() const {
 }
 
 std::shared_ptr<AbstractOperator> Limit::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_left,
     const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
   return std::make_shared<Limit>(recreated_input_left, _row_count_expression->deep_copy());
 }

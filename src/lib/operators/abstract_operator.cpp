@@ -70,9 +70,9 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const {
 
 const std::string AbstractOperator::description(DescriptionMode description_mode) const { return name(); }
 
-std::shared_ptr<AbstractOperator> AbstractOperator::recreate(const std::vector<AllParameterVariant>& args) const {
+std::shared_ptr<AbstractOperator> AbstractOperator::recreate() const {
   std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>> recreated_ops;
-  return _recreate_impl(recreated_ops, args);
+  return _recreate_impl(recreated_ops);
 }
 
 std::shared_ptr<const Table> AbstractOperator::input_table_left() const { return _input_left->get_output(); }
@@ -153,17 +153,16 @@ void AbstractOperator::_on_set_transaction_context(std::weak_ptr<TransactionCont
 void AbstractOperator::_on_cleanup() {}
 
 std::shared_ptr<AbstractOperator> AbstractOperator::_recreate_impl(
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& recreated_ops,
-    const std::vector<AllParameterVariant>& args) const {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& recreated_ops) const {
   const auto recreated_ops_iter = recreated_ops.find(this);
   if (recreated_ops_iter != recreated_ops.end()) return recreated_ops_iter->second;
 
   const auto recreated_input_left =
-      input_left() ? input_left()->_recreate_impl(recreated_ops, args) : std::shared_ptr<AbstractOperator>{};
+      input_left() ? input_left()->_recreate_impl(recreated_ops) : std::shared_ptr<AbstractOperator>{};
   const auto recreated_input_right =
-      input_right() ? input_right()->_recreate_impl(recreated_ops, args) : std::shared_ptr<AbstractOperator>{};
+      input_right() ? input_right()->_recreate_impl(recreated_ops) : std::shared_ptr<AbstractOperator>{};
 
-  const auto recreated_op = _on_recreate(args, recreated_input_left, recreated_input_right);
+  const auto recreated_op = _on_recreate(recreated_input_left, recreated_input_right);
   if (_transaction_context) recreated_op->set_transaction_context(*_transaction_context);
 
   recreated_ops.emplace(this, recreated_op);

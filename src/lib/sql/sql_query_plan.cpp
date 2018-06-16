@@ -28,12 +28,12 @@ std::vector<std::shared_ptr<OperatorTask>> SQLQueryPlan::create_tasks() const {
 
 const std::vector<std::shared_ptr<AbstractOperator>>& SQLQueryPlan::tree_roots() const { return _roots; }
 
-SQLQueryPlan SQLQueryPlan::recreate(const std::vector<AllParameterVariant>& arguments) const {
+SQLQueryPlan SQLQueryPlan::recreate() const {
   SQLQueryPlan new_plan;
 
   for (const auto& root : _roots) {
     DebugAssert(root.get() != nullptr, "Root operator in plan should not be null.");
-    std::shared_ptr<AbstractOperator> new_root = root->recreate(arguments);
+    std::shared_ptr<AbstractOperator> new_root = root->recreate();
     new_plan.add_tree_by_root(new_root);
   }
 

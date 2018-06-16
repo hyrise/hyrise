@@ -76,7 +76,7 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
 }
 
 std::shared_ptr<AbstractOperator> JitOperatorWrapper::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_left,
     const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
   return std::make_shared<JitOperatorWrapper>(recreated_input_left, _execution_mode, _jit_operators);
 }

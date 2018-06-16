@@ -31,8 +31,7 @@ class SQLQueryPlan {
   const std::vector<std::shared_ptr<AbstractOperator>>& tree_roots() const;
 
   // Recreates the query plan with a new and equivalent set of operator trees.
-  // The given list of arguments is passed to the recreate method of all operators to replace ValuePlaceholders.
-  SQLQueryPlan recreate(const std::vector<AllParameterVariant>& arguments = {}) const;
+  SQLQueryPlan recreate() const;
 
   // Calls set_transaction_context_recursively on all roots.
   void set_transaction_context(std::shared_ptr<TransactionContext> context);

@@ -50,7 +50,7 @@ class Projection : public AbstractReadOnlyOperator {
   void _on_set_transaction_context(std::weak_ptr<TransactionContext> transaction_context) override;
 
   std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& recreated_input_left,
       const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
 };
 

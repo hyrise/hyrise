@@ -46,7 +46,7 @@ std::shared_ptr<const Table> ImportCsv::_on_execute() {
 }
 
 std::shared_ptr<AbstractOperator> ImportCsv::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_left,
     const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
   return std::make_shared<ImportCsv>(_filename, _tablename, _csv_meta);
 }

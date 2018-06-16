@@ -41,7 +41,7 @@ class CommitFuncOp : public AbstractReadWriteOperator {
   }
 
   std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& recreated_input_left,
       const std::shared_ptr<AbstractOperator>& recreated_input_right) const override {
     Fail("Unexpected function call");
   }
