@@ -601,7 +601,6 @@ AllParameterVariant LQPTranslator::_translate_to_all_parameter_variant(const Abs
     parameter = value_expression.value;
   } else if (expression.type == ExpressionType::Parameter) {
     const auto& parameter_expression = static_cast<const ParameterExpression&>(expression);
-    Assert(parameter_expression.parameter_expression_type == ParameterExpressionType::ValuePlaceholder, "Can't turn non-ValuePlaceholders into AllParameterVariant");
     parameter = parameter_expression.parameter_id;
   }  else {
     parameter = input_node.get_column_id(expression);

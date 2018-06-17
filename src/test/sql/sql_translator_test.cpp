@@ -1485,4 +1485,11 @@ TEST_F(SQLTranslatorTestTPCH, Query02) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTestTPCH, Query22) {
+  const auto actual_lqp = compile_query(tpch_queries.at(22));
+
+  actual_lqp->print();
+  FAIL();
+}
+
 }  // namespace opossum
