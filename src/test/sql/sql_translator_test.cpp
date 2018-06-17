@@ -1444,16 +1444,17 @@ TEST_F(SQLTranslatorTestTPCH, Query02) {
   AggregateNode::make(expression_vector(), expression_vector(min(ps_supplycost)),
     PredicateNode::make(equals(parameter_p_partkey, ps_partkey),
       PredicateNode::make(equals(s_suppkey, ps_suppkey),
-        PredicateNode::make(equals(n_regionkey, r_regionkey),
-          PredicateNode::make(equals(r_name, "EUROPE"),
-            JoinNode::make(JoinMode::Cross,
+        PredicateNode::make(equals(s_nationkey, n_nationkey),
+          PredicateNode::make(equals(n_regionkey, r_regionkey),
+            PredicateNode::make(equals(r_name, "EUROPE"),
               JoinNode::make(JoinMode::Cross,
                 JoinNode::make(JoinMode::Cross,
-                  partsupp,
-                  supplier),
-                nation),
-              region
-  ))))));
+                  JoinNode::make(JoinMode::Cross,
+                    partsupp,
+                    supplier),
+                  nation),
+                region
+  )))))));
 
   const auto expected_sub_select = select(expected_sub_select_lqp, std::make_pair(ParameterID{0}, p_partkey));
 
