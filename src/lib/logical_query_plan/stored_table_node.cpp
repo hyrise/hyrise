@@ -37,6 +37,12 @@ const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::output_
   return *_expressions;
 }
 
+std::shared_ptr<TableStatistics> StoredTableNode::derive_statistics_from(
+const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
+  DebugAssert(!left_input && !right_input, "StoredTableNode must be leaf");
+  return StorageManager::get().get_table(table_name)->table_statistics();
+}
+
 std::shared_ptr<AbstractLQPNode> StoredTableNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {
   return make(table_name);
 }

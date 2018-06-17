@@ -20,6 +20,11 @@ const std::vector<std::shared_ptr<AbstractExpression>>& UnionNode::output_column
   return left_input()->output_column_expressions();
 }
 
+std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
+const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
+  Fail("Statistics for UNION not yet implemented");
+}
+
 std::shared_ptr<AbstractLQPNode> UnionNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {
   return UnionNode::make(union_mode);
 }

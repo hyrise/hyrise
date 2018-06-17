@@ -26,8 +26,8 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   explicit JoinNode(const JoinMode join_mode, const std::shared_ptr<AbstractExpression>& join_predicate);
 
   std::string description() const override;
-
   const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const override;
+  std::shared_ptr<TableStatistics> derive_statistics_from(const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const override;
 
   const JoinMode join_mode;
   const std::shared_ptr<AbstractExpression> join_predicate;

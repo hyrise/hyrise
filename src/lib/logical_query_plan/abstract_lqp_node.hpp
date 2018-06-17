@@ -10,6 +10,7 @@
 namespace opossum {
 
 class AbstractExpression;
+class TableStatistics;
 
 enum class LQPNodeType {
   Aggregate,
@@ -129,6 +130,25 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   ColumnID get_column_id(const AbstractExpression &expression) const;
 
+  // @{
+  /**
+   * These functions provide access to statistics for this particular node.
+   *
+   * AbstractLQPNode::derive_statistics_from() calculates new statistics for this node as they would appear if
+   * left_input and right_input WERE its inputs. This works for the actual inputs of this node during the lazy
+   * initialization in get_statistics() as well as e.g. in an optimizer rule
+   * that tries to reorder nodes based on some statistics. In that case it will call this function for all the nodes
+   * that shall be reordered with the same reference node.
+   *
+   * Inheriting nodes are free to override AbstractLQPNode::derive_statistics_from().
+   */
+  void set_statistics(const std::shared_ptr<TableStatistics>& statistics);
+  const std::shared_ptr<TableStatistics> get_statistics();
+  virtual std::shared_ptr<TableStatistics> derive_statistics_from(
+  const std::shared_ptr<AbstractLQPNode>& left_input,
+  const std::shared_ptr<AbstractLQPNode>& right_input = nullptr) const;
+  // @}
+
   /**
    * Prints this node and all its descendants formatted as a tree
    */
@@ -155,6 +175,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 
   std::vector<std::weak_ptr<AbstractLQPNode>> _outputs;
   std::array<std::shared_ptr<AbstractLQPNode>, 2> _inputs;
+  std::shared_ptr<TableStatistics> _statistics;
 };
 
 }  // namespace opossum

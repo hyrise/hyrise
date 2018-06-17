@@ -67,9 +67,11 @@ const AbstractExpression &expression) {
       } else if (predicate_expression.predicate_condition == PredicateCondition::IsNull ||
                  predicate_expression.predicate_condition == PredicateCondition::IsNotNull) {
         return evaluate_is_null_expression<R>(static_cast<const IsNullExpression&>(expression));
+
       } else if (predicate_expression.predicate_condition == PredicateCondition::Like ||
                  predicate_expression.predicate_condition == PredicateCondition::NotLike) {
         return evaluate_like_expression<R>(static_cast<const BinaryPredicateExpression&>(expression));
+
       } else {
         Fail("Unsupported Predicate Expression");
       }

@@ -9,6 +9,8 @@
 #include <utility>
 #include <vector>
 
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "constant_mappings.hpp"
 #include "statistics/table_statistics.hpp"
@@ -54,6 +56,39 @@ const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::output_column_
   std::copy(right_expressions.begin(), right_expressions.end(), right_begin);
 
   return _output_column_expressions;
+}
+
+std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
+const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
+  DebugAssert(left_input && right_input, "JoinNode need left_input and no right_input");
+
+  const auto cross_join_statistics = std::make_shared<TableStatistics>(left_input->get_statistics()->estimate_cross_join(*right_input->get_statistics()));
+
+  if (join_mode == JoinMode::Cross) {
+    return cross_join_statistics;
+
+  } else {
+    // If the JoinPredicate is a not simple `<column_a> <predicate_condition> <column_b>` predicate, then we have to
+    // fall back to a selectivity of 1 (== CrossJoin) atm, because computing statistics for complex join predicates is
+    // not implemented
+    if (join_predicate->type != ExpressionType::Predicate) return cross_join_statistics;
+
+    const auto binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicate);
+    if (!binary_predicate) return cross_join_statistics;
+
+    const auto left_column = std::dynamic_pointer_cast<LQPColumnExpression>(binary_predicate->left_operand());
+    const auto right_column = std::dynamic_pointer_cast<LQPColumnExpression>(binary_predicate->right_operand());
+    if (!left_column || !right_column) return cross_join_statistics;
+
+    const auto predicate_condition = binary_predicate->predicate_condition;
+
+    ColumnIDPair join_colum_ids{left_input->get_column_id(*left_column),
+                                right_input->get_column_id(*right_column)};
+
+
+    return std::make_shared<TableStatistics>(left_input->get_statistics()->estimate_predicated_join(
+    *right_input->get_statistics(), join_mode, join_colum_ids, predicate_condition));
+  }
 }
 
 std::shared_ptr<AbstractLQPNode> JoinNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {

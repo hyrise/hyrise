@@ -153,6 +153,26 @@ ColumnID AbstractLQPNode::get_column_id(const AbstractExpression &expression) co
   return *column_id;
 }
 
+void AbstractLQPNode::set_statistics(const std::shared_ptr<TableStatistics>& statistics) { _statistics = statistics; }
+
+const std::shared_ptr<TableStatistics> AbstractLQPNode::get_statistics() {
+  if (!_statistics) {
+    _statistics = derive_statistics_from(left_input(), right_input());
+  }
+
+  return _statistics;
+}
+
+std::shared_ptr<TableStatistics> AbstractLQPNode::derive_statistics_from(
+const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
+  DebugAssert(left_input,
+              "Default implementation of derive_statistics_from() requires a left input, override in concrete node "
+              "implementation for different behavior");
+  DebugAssert(!right_input, "Default implementation of derive_statistics_from() cannot have a right_input");
+
+  return left_input->get_statistics();
+}
+
 void AbstractLQPNode::print(std::ostream& out) const {
   const auto get_inputs_fn = [](const auto& node) {
     std::vector<std::shared_ptr<const AbstractLQPNode>> inputs;
