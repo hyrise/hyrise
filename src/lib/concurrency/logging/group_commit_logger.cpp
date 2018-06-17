@@ -78,34 +78,51 @@ void GroupCommitLogger::commit(const TransactionID transaction_id, std::function
   _write_to_buffer(entry);
 }
 
-class value_visitor : public boost::static_visitor<std::pair<char*, size_t>>
+// perhaps use reserve()
+class value_visitor : public boost::static_visitor<bool>
 {
 public:
+  value_visitor(std::vector<char> &entry, size_t &cursor, size_t number_of_values)
+  : _entry_vector(entry)
+  , _cursor(cursor) {
+
+    // auto bitmap_position = cursor;
+    uint number_of_bitmap_bytes = ceil(number_of_values / 8.0);
+    _entry_vector.resize(_entry_vector.size() + number_of_bitmap_bytes);
+
+    _cursor += number_of_bitmap_bytes;
+  };
+
   template <typename T>
-  std::pair<char*, size_t> operator()(T v) const {
-    auto bytes = (char*) malloc(sizeof(T));
-    *(T*) bytes = v;
-    return std::make_pair(bytes, sizeof(T));
+  bool operator()(T v) {
+    // TODO check if NULL
+    // if so return false
+
+    _entry_vector.resize(_entry_vector.size() + sizeof(T));
+    *(T*) &_entry_vector[_cursor] = v;
+    _cursor += sizeof(T);
+    
+    // return that value is not NULL
+    return true;
   }
+
+private:
+  std::vector<char>& _entry_vector;
+  size_t &_cursor;
 };
 
 template <>
-std::pair<char*, size_t> value_visitor::operator()(std::string v) const {
-  auto bytes = (char*) malloc(v.size() + 1);
-  v.copy(bytes, v.size());
-  bytes[v.size()] = '\0';
-  return std::make_pair(bytes, v.size() + 1); 
+bool value_visitor::operator()(std::string v) {
+  _entry_vector.resize(_entry_vector.size() + v.size() + 1);
+  v.copy(&_entry_vector[_cursor], v.size());
+  _entry_vector[_cursor + v.size()] = '\0';
+  // // Assume that memory is NULL, so the next byte terminates the string
+  // DebugAssert(*(_cursor + v.size()) == '\0', "logging: memory is not NULL");
+  _cursor += v.size() + 1;
+
+  // return that value is not NULL
+  return true;
 }
-
-/*
-TODO:
-*  use vecotr, don't foget resize(). perhaps use reserve()
-*  vec.resize(vec.size()+sizeof(T))
-*  &vec[i]   isse char*
-
-  buffer an visitor übergeben
-*
-*/
 
 
  /*     Value Entries:
@@ -122,36 +139,17 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
   auto entry_length = sizeof(char) + sizeof(TransactionID) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset);
   // TODO: use mmap ?
 
-  std::vector<std::pair<char*, size_t>> value_binaries;
-
-  for (auto &value : values) {
-    auto value_binary = boost::apply_visitor( value_visitor(), value );
-    value_binaries.push_back(value_binary);
-    entry_length += value_binary.second;
-  }
-
-  // Bitmap of NULL values
-  uint null_bitmap_number_of_bytes = ceil(value_binaries.size() / 8.0);
-  entry_length += null_bitmap_number_of_bytes;
-
   // While operating on the underlying char* : Before each write into entry, resize the vector if necessary.
   std::vector<char> entry(entry_length);
   auto current_pos = &entry[0];
 
+
   _put_into_entry(current_pos, 'v', transaction_id, table_name, row_id);
+  size_t cursor = current_pos - &entry[0];
 
-  // TODO: write bitmap of NULL values
-  // auto bitmap_pos = current_pos;
-  // char bitmap[null_bitmap_number_of_bytes];
-  for (auto i = 0u; i < null_bitmap_number_of_bytes; ++i) {
-    _write_value<char>(current_pos, '\0');
-  }
-  // memcpy( bitmap_pos, bitmap, null_bitmap_number_of_bytes );
-  // current_pos += null_bitmap_number_of_bytes;
-
-  for (auto & binary : value_binaries){
-    memcpy( current_pos, binary.first, binary.second );
-    current_pos += binary.second;
+  value_visitor visitor(entry, cursor, values.size());
+  for (auto &value : values) {
+    boost::apply_visitor( visitor, value );
   }
 
   _write_to_buffer(entry);
@@ -174,6 +172,7 @@ void GroupCommitLogger::_write_to_buffer(std::vector<char> &entry) {
   _buffer_mutex.lock();
 
   memcpy(_buffer + _buffer_position, &entry[0], entry.size());
+
   _buffer_position += entry.size();
   _has_unflushed_buffer = true;
 
