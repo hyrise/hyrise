@@ -1039,79 +1039,6 @@ TEST_F(SQLTranslatorTest, ShowColumns) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// Test parsing the TPCH queries for a bit of stress testing
-class SQLTranslatorTestTPCH : public ::testing::Test {
- public:
-  void SetUp() override {
-    StorageManager::get().add_table("customer", load_table("src/test/tables/tpch/minimal/customer.tbl"));
-    StorageManager::get().add_table("lineitem", load_table("src/test/tables/tpch/minimal/lineitem.tbl"));
-    StorageManager::get().add_table("nation", load_table("src/test/tables/tpch/minimal/nation.tbl"));
-    StorageManager::get().add_table("orders", load_table("src/test/tables/tpch/minimal/orders.tbl"));
-    StorageManager::get().add_table("part", load_table("src/test/tables/tpch/minimal/part.tbl"));
-    StorageManager::get().add_table("partsupp", load_table("src/test/tables/tpch/minimal/partsupp.tbl"));
-    StorageManager::get().add_table("region", load_table("src/test/tables/tpch/minimal/region.tbl"));
-    StorageManager::get().add_table("supplier", load_table("src/test/tables/tpch/minimal/supplier.tbl"));
-
-    customer = StoredTableNode::make("customer");
-    lineitem = StoredTableNode::make("lineitem");
-    nation = StoredTableNode::make("nation");
-    orders = StoredTableNode::make("orders");
-    part = StoredTableNode::make("part");
-    partsupp = StoredTableNode::make("partsupp");
-    region = StoredTableNode::make("region");
-    supplier = StoredTableNode::make("supplier");
-
-    l_returnflag = lineitem->get_column("l_returnflag");
-    l_linestatus = lineitem->get_column("l_linestatus");
-    l_quantity = lineitem->get_column("l_quantity");
-    l_extendedprice = lineitem->get_column("l_extendedprice");
-    l_discount = lineitem->get_column("l_discount");
-    l_tax = lineitem->get_column("l_tax");
-    l_linenumber = lineitem->get_column("l_linenumber");
-    l_receiptdate = lineitem->get_column("l_receiptdate");
-    l_comment = lineitem->get_column("l_comment");
-    l_shipmode = lineitem->get_column("l_shipmode");
-    l_orderkey = lineitem->get_column("l_orderkey");
-    l_partkey = lineitem->get_column("l_partkey");
-    l_suppkey = lineitem->get_column("l_suppkey");
-    l_shipdate = lineitem->get_column("l_shipdate");
-    l_commitdate = lineitem->get_column("l_commitdate");
-    l_shipinstruct = lineitem->get_column("l_shipinstruct");
-  }
-
-  void TearDown() override {
-    StorageManager::reset();
-  }
-
-  std::shared_ptr<StoredTableNode> customer, lineitem, nation, orders, part, partsupp, region, supplier;
-  LQPColumnReference l_returnflag, l_linestatus, l_quantity, l_extendedprice, l_discount, l_tax, l_linenumber,
-    l_receiptdate, l_comment, l_shipmode, l_orderkey, l_partkey, l_suppkey, l_shipdate, l_commitdate, l_shipinstruct;
-};
-
-TEST_F(SQLTranslatorTestTPCH, Query01) {
-  const auto actual_lqp = compile_query(tpch_queries.at(1));
-
-  const auto aliases = std::vector<std::string>{{"l_returnflag", "l_linestatus", "sum_qty", "sum_base_price", "sum_disc_price",
-                                                "sum_charge", "avg_qty", "avg_price", "avg_disc", "count_order"}};
-
-  const auto sum_disc_price_arg = mul(l_extendedprice, sub(1.0f, l_discount));
-  const auto sum_charge_arg = mul(mul(l_extendedprice, sub(1.0f, l_discount)), add(1.0f, l_tax));
-
-  // clang-format off
-  const auto expected_lqp =
-  AliasNode::make(expression_vector(l_returnflag, l_linestatus, sum(l_quantity), sum(l_extendedprice), sum(sum_disc_price_arg), sum(sum_charge_arg), avg(l_quantity), avg(l_extendedprice), avg(l_discount), count_star()), aliases,  // NOLINT
-    SortNode::make(expression_vector(l_returnflag, l_linestatus), std::vector<OrderByMode>({OrderByMode::Ascending, OrderByMode::Ascending}),  // NOLINT
-      AggregateNode::make(expression_vector(l_returnflag, l_linestatus), expression_vector(sum(l_quantity), sum(l_extendedprice), sum(sum_disc_price_arg), sum(sum_charge_arg), avg(l_quantity), avg(l_extendedprice), avg(l_discount), count_star()),  // NOLINT
-        ProjectionNode::make(expression_vector(l_orderkey, l_partkey, l_suppkey, l_linenumber, l_quantity, l_extendedprice, l_discount, l_tax, l_returnflag, l_linestatus, l_shipdate, l_commitdate, l_receiptdate, l_shipinstruct, l_shipmode, l_comment, sum_disc_price_arg, sum_charge_arg),  // NOLINT
-          PredicateNode::make(less_than_equals(l_shipdate, "1998-12-01"s),
-            lineitem
-  )))));
-  // clang-format on
-
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
 //TEST_F(SQLTranslatorTest, AggregateWithCountDistinct) {
 //  const auto query = "SELECT a, COUNT(DISTINCT b) AS s FROM table_a GROUP BY a;";
 //  const auto result_node = compile_query(query);
@@ -1202,9 +1129,9 @@ TEST_F(SQLTranslatorTest, InsertValues) {
   // clang-format off
   const auto expected_lqp =
   InsertNode::make("int_float",
-    ProjectionNode::make(expression_vector(10, 12.5f),
-      DummyTableNode::make()
-  ));
+                   ProjectionNode::make(expression_vector(10, 12.5f),
+                                        DummyTableNode::make()
+                   ));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -1216,10 +1143,10 @@ TEST_F(SQLTranslatorTest, InsertValuesColumnReorder) {
   // clang-format off
   const auto expected_lqp =
   InsertNode::make("int_float",
-    ProjectionNode::make(expression_vector(10, 12.5f),
-      ProjectionNode::make(expression_vector(12.5f, 10),
-        DummyTableNode::make()
-  )));
+                   ProjectionNode::make(expression_vector(10, 12.5f),
+                                        ProjectionNode::make(expression_vector(12.5f, 10),
+                                                             DummyTableNode::make()
+                                        )));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -1231,10 +1158,10 @@ TEST_F(SQLTranslatorTest, InsertValuesColumnSubset) {
   // clang-format off
   const auto expected_lqp =
   InsertNode::make("int_float",
-    ProjectionNode::make(expression_vector(null(), 12.5f),
-      ProjectionNode::make(expression_vector(12.5f),
-        DummyTableNode::make()
-  )));
+                   ProjectionNode::make(expression_vector(null(), 12.5f),
+                                        ProjectionNode::make(expression_vector(12.5f),
+                                                             DummyTableNode::make()
+                                        )));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -1246,9 +1173,9 @@ TEST_F(SQLTranslatorTest, InsertSubquery) {
   // clang-format off
   const auto expected_lqp =
   InsertNode::make("int_float",
-    PredicateNode::make(greater_than(int_float2_a, 5),
-      stored_table_node_int_float2
-  ));
+                   PredicateNode::make(greater_than(int_float2_a, 5),
+                                       stored_table_node_int_float2
+                   ));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -1260,7 +1187,7 @@ TEST_F(SQLTranslatorTest, DeleteSimple) {
   // clang-format off
   const auto expected_lqp =
   DeleteNode::make("int_float",
-    StoredTableNode::make("int_float")
+                   StoredTableNode::make("int_float")
   );
   // clang-format on
 
@@ -1274,9 +1201,9 @@ TEST_F(SQLTranslatorTest, DeleteConditional) {
   // clang-format off
   const auto expected_lqp =
   DeleteNode::make("int_float",
-    PredicateNode::make(greater_than(int_float_a, 5),
-      stored_table_node_int_float
-  ));
+                   PredicateNode::make(greater_than(int_float_a, 5),
+                                       stored_table_node_int_float
+                   ));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -1288,9 +1215,9 @@ TEST_F(SQLTranslatorTest, UpdateConditional) {
   // clang-format off
   const auto expected_lqp =
   UpdateNode::make("int_float", expression_vector(int_float_a, 3.2f),
-    PredicateNode::make(greater_than(int_float_a, 1),
-      stored_table_node_int_float
-  ));
+                   PredicateNode::make(greater_than(int_float_a, 1),
+                                       stored_table_node_int_float
+                   ));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -1340,15 +1267,15 @@ TEST_F(SQLTranslatorTest, CreateView) {
 
   const auto view_lqp =
   AliasNode::make(select_list_expressions, std::vector<std::string>({"a", "b", "a + b", "t"}),
-    ProjectionNode::make(select_list_expressions,
-      PredicateNode::make(equals(int_float_a, "b"),
-        stored_table_node_int_float)));
+                  ProjectionNode::make(select_list_expressions,
+                                       PredicateNode::make(equals(int_float_a, "b"),
+                                                           stored_table_node_int_float)));
 
   const auto view_columns = std::unordered_map<ColumnID, std::string>({
-    {ColumnID{0}, "a"},
-    {ColumnID{1}, "b"},
-    {ColumnID{3}, "t"},
-  });
+                                                                      {ColumnID{0}, "a"},
+                                                                      {ColumnID{1}, "b"},
+                                                                      {ColumnID{3}, "t"},
+                                                                      });
   // clang-format on
 
   const auto view = std::make_shared<View>(view_lqp, view_columns);
@@ -1363,9 +1290,9 @@ TEST_F(SQLTranslatorTest, CreateAliasView) {
 
   // clang-format off
   const auto view_columns = std::unordered_map<ColumnID, std::string>({
-    {ColumnID{0}, "c"},
-    {ColumnID{1}, "d"},
-  });
+                                                                      {ColumnID{0}, "c"},
+                                                                      {ColumnID{1}, "d"},
+                                                                      });
 
   const auto view_lqp = PredicateNode::make(equals(int_float_a, "b"), stored_table_node_int_float);
   // clang-format on
@@ -1395,5 +1322,166 @@ TEST_F(SQLTranslatorTest, DropView) {
 //  const auto query = "SELECT * FROM invalid_table;";
 //  EXPECT_THROW(compile_query(query), std::runtime_error);
 //}
+
+
+// Test parsing the TPCH queries for a bit of stress testing
+class SQLTranslatorTestTPCH : public ::testing::Test {
+ public:
+  void SetUp() override {
+    StorageManager::get().add_table("customer", load_table("src/test/tables/tpch/minimal/customer.tbl"));
+    StorageManager::get().add_table("lineitem", load_table("src/test/tables/tpch/minimal/lineitem.tbl"));
+    StorageManager::get().add_table("nation", load_table("src/test/tables/tpch/minimal/nation.tbl"));
+    StorageManager::get().add_table("orders", load_table("src/test/tables/tpch/minimal/orders.tbl"));
+    StorageManager::get().add_table("part", load_table("src/test/tables/tpch/minimal/part.tbl"));
+    StorageManager::get().add_table("partsupp", load_table("src/test/tables/tpch/minimal/partsupp.tbl"));
+    StorageManager::get().add_table("region", load_table("src/test/tables/tpch/minimal/region.tbl"));
+    StorageManager::get().add_table("supplier", load_table("src/test/tables/tpch/minimal/supplier.tbl"));
+
+    customer = StoredTableNode::make("customer");
+    lineitem = StoredTableNode::make("lineitem");
+    nation = StoredTableNode::make("nation");
+    orders = StoredTableNode::make("orders");
+    part = StoredTableNode::make("part");
+    partsupp = StoredTableNode::make("partsupp");
+    region = StoredTableNode::make("region");
+    supplier = StoredTableNode::make("supplier");
+
+    l_returnflag = lineitem->get_column("l_returnflag");
+    l_linestatus = lineitem->get_column("l_linestatus");
+    l_quantity = lineitem->get_column("l_quantity");
+    l_extendedprice = lineitem->get_column("l_extendedprice");
+    l_discount = lineitem->get_column("l_discount");
+    l_tax = lineitem->get_column("l_tax");
+    l_linenumber = lineitem->get_column("l_linenumber");
+    l_receiptdate = lineitem->get_column("l_receiptdate");
+    l_comment = lineitem->get_column("l_comment");
+    l_shipmode = lineitem->get_column("l_shipmode");
+    l_orderkey = lineitem->get_column("l_orderkey");
+    l_partkey = lineitem->get_column("l_partkey");
+    l_suppkey = lineitem->get_column("l_suppkey");
+    l_shipdate = lineitem->get_column("l_shipdate");
+    l_commitdate = lineitem->get_column("l_commitdate");
+    l_shipinstruct = lineitem->get_column("l_shipinstruct");
+
+    ps_supplycost = partsupp->get_column("ps_supplycost");
+    ps_partkey = partsupp->get_column("ps_partkey");
+    ps_suppkey = partsupp->get_column("ps_suppkey");
+    ps_availqty = partsupp->get_column("ps_availqty");
+    ps_comment = partsupp->get_column("ps_comment");
+
+    p_partkey = part->get_column("p_partkey");
+    p_mfgr = part->get_column("p_mfgr");
+    p_size = part->get_column("p_size");
+    p_type = part->get_column("p_type");
+    p_name = part->get_column("p_name");
+    p_brand = part->get_column("p_brand");
+    p_container = part->get_column("p_container");
+    p_retailsize = part->get_column("p_retailsize");
+    p_comment = part->get_column("p_comment");
+
+    s_suppkey = supplier->get_column("s_suppkey");
+    s_acctbal = supplier->get_column("s_acctbal");
+    s_name = supplier->get_column("s_name");
+    s_address = supplier->get_column("s_address");
+    s_phone = supplier->get_column("s_phone");
+    s_comment = supplier->get_column("s_comment");
+    s_nationkey = supplier->get_column("s_nationkey");
+
+    n_nationkey = nation->get_column("n_nationkey");
+    n_regionkey = nation->get_column("n_regionkey");
+    n_name = nation->get_column("n_name");
+    n_comment = nation->get_column("n_comment");
+
+    r_regionkey = region->get_column("r_regionkey");
+    r_name = region->get_column("r_name");
+    r_comment = region->get_column("r_comment");
+  }
+
+  void TearDown() override {
+    StorageManager::reset();
+  }
+
+  std::shared_ptr<StoredTableNode> customer, lineitem, nation, orders, part, partsupp, region, supplier;
+  LQPColumnReference l_returnflag, l_linestatus, l_quantity, l_extendedprice, l_discount, l_tax, l_linenumber,
+    l_receiptdate, l_comment, l_shipmode, l_orderkey, l_partkey, l_suppkey, l_shipdate, l_commitdate, l_shipinstruct;
+  LQPColumnReference ps_supplycost, ps_partkey, ps_suppkey, ps_availqty, ps_comment;
+  LQPColumnReference p_partkey, p_mfgr, p_size, p_type, p_name, p_brand, p_container, p_retailsize, p_comment;
+  LQPColumnReference s_suppkey, s_acctbal, s_name, s_address, s_phone, s_comment, s_nationkey;
+  LQPColumnReference n_regionkey, n_name, n_nationkey, n_comment;
+  LQPColumnReference r_regionkey, r_name, r_comment;
+};
+
+TEST_F(SQLTranslatorTestTPCH, Query01) {
+  const auto actual_lqp = compile_query(tpch_queries.at(1));
+
+  const auto aliases = std::vector<std::string>{{"l_returnflag", "l_linestatus", "sum_qty", "sum_base_price", "sum_disc_price",
+                                                "sum_charge", "avg_qty", "avg_price", "avg_disc", "count_order"}};
+
+  const auto sum_disc_price_arg = mul(l_extendedprice, sub(1.0f, l_discount));
+  const auto sum_charge_arg = mul(mul(l_extendedprice, sub(1.0f, l_discount)), add(1.0f, l_tax));
+
+  // clang-format off
+  const auto expected_lqp =
+  AliasNode::make(expression_vector(l_returnflag, l_linestatus, sum(l_quantity), sum(l_extendedprice), sum(sum_disc_price_arg), sum(sum_charge_arg), avg(l_quantity), avg(l_extendedprice), avg(l_discount), count_star()), aliases,  // NOLINT
+    SortNode::make(expression_vector(l_returnflag, l_linestatus), std::vector<OrderByMode>({OrderByMode::Ascending, OrderByMode::Ascending}),  // NOLINT
+      AggregateNode::make(expression_vector(l_returnflag, l_linestatus), expression_vector(sum(l_quantity), sum(l_extendedprice), sum(sum_disc_price_arg), sum(sum_charge_arg), avg(l_quantity), avg(l_extendedprice), avg(l_discount), count_star()),  // NOLINT
+        ProjectionNode::make(expression_vector(l_orderkey, l_partkey, l_suppkey, l_linenumber, l_quantity, l_extendedprice, l_discount, l_tax, l_returnflag, l_linestatus, l_shipdate, l_commitdate, l_receiptdate, l_shipinstruct, l_shipmode, l_comment, sum_disc_price_arg, sum_charge_arg),  // NOLINT
+          PredicateNode::make(less_than_equals(l_shipdate, "1998-12-01"s),
+            lineitem
+  )))));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTestTPCH, Query02) {
+  const auto actual_lqp = compile_query(tpch_queries.at(2));
+
+  // clang-format off
+  const auto parameter_p_partkey = parameter(ParameterID{0}, p_partkey);
+
+  const auto expected_sub_select_lqp =
+  AggregateNode::make(expression_vector(), expression_vector(min(ps_supplycost)),
+    PredicateNode::make(equals(parameter_p_partkey, ps_partkey),
+      PredicateNode::make(equals(s_suppkey, ps_suppkey),
+        PredicateNode::make(equals(n_regionkey, r_regionkey),
+          PredicateNode::make(equals(r_name, "EUROPE"),
+            JoinNode::make(JoinMode::Cross,
+              JoinNode::make(JoinMode::Cross,
+                JoinNode::make(JoinMode::Cross,
+                  partsupp,
+                  supplier),
+                nation),
+              region
+  ))))));
+
+  const auto expected_sub_select = select(expected_sub_select_lqp, std::make_pair(ParameterID{0}, p_partkey));
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(s_acctbal, s_name, n_name, p_partkey, p_mfgr, s_address, s_phone, s_comment),
+    SortNode::make(expression_vector(s_acctbal, n_name, s_name, p_partkey), std::vector<OrderByMode>{OrderByMode::Descending, OrderByMode::Ascending, OrderByMode::Ascending, OrderByMode::Ascending}, // NOLINT
+      PredicateNode::make(equals(p_partkey, ps_partkey),
+        PredicateNode::make(equals(s_suppkey, ps_suppkey),
+          PredicateNode::make(equals(p_size, 15),
+            PredicateNode::make(like(p_type, "%BRASS"),
+              PredicateNode::make(equals(s_nationkey, n_nationkey),
+                PredicateNode::make(equals(n_regionkey, r_regionkey),
+                 PredicateNode::make(equals(r_name, "EUROPE"),
+                   PredicateNode::make(equals(ps_supplycost, expected_sub_select),
+                     ProjectionNode::make(expression_vector(expected_sub_select, p_partkey, p_name, p_mfgr, p_brand, p_type, p_size, p_container, p_retailsize, p_comment, s_suppkey, s_name, s_address, s_nationkey, s_phone, s_acctbal, s_comment, ps_partkey, ps_suppkey, ps_availqty, ps_supplycost, ps_comment, n_nationkey, n_name, n_regionkey, n_comment, r_regionkey, r_name, r_comment),
+                       JoinNode::make(JoinMode::Cross,
+                         JoinNode::make(JoinMode::Cross,
+                           JoinNode::make(JoinMode::Cross,
+                             JoinNode::make(JoinMode::Cross,
+                               part,
+                               supplier),
+                           partsupp),
+                         nation),
+                       region)
+  )))))))))));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
 
 }  // namespace opossum
