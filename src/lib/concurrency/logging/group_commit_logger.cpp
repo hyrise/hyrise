@@ -54,25 +54,28 @@ void GroupCommitLogger::_write_value<std::string>(char*& cursor, const std::stri
   cursor += value.size() + 1;
 }
 
+void GroupCommitLogger::_put_into_entry(char*& entry_cursor, const char &type, const TransactionID &transaction_id) {
+  _write_value<char>(entry_cursor, type);
+  _write_value<TransactionID>(entry_cursor, transaction_id);
+}
+
+void GroupCommitLogger::_put_into_entry(char*& entry_cursor, const char &type, const TransactionID &transaction_id, const std::string &table_name, const RowID &row_id) {
+  _put_into_entry(entry_cursor, type, transaction_id);
+  _write_value<std::string>(entry_cursor, table_name);
+  _write_value<ChunkID>(entry_cursor, row_id.chunk_id);
+  _write_value<ChunkOffset>(entry_cursor, row_id.chunk_offset);
+}
+
 void GroupCommitLogger::commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback){
   constexpr auto entry_length = sizeof(char) + sizeof(TransactionID);
   std::vector<char> entry(entry_length);
   auto cursor = &entry[0];
 
-  _write_value<char>(cursor, 't');
-  _write_value<TransactionID>(cursor, transaction_id);
+  _put_into_entry(cursor, 't', transaction_id);
 
   _commit_callbacks.emplace_back(std::make_pair(callback, transaction_id));
 
   _write_to_buffer(entry);
-}
-
-void GroupCommitLogger::_put_into_entry(char*& entry_cursor, const char &type, const TransactionID &transaction_id, const std::string &table_name, const RowID &row_id) {
-  _write_value<char>(entry_cursor, type);
-  _write_value<TransactionID>(entry_cursor, transaction_id);
-  _write_value<std::string>(entry_cursor, table_name);
-  _write_value<ChunkID>(entry_cursor, row_id.chunk_id);
-  _write_value<ChunkOffset>(entry_cursor, row_id.chunk_offset);
 }
 
 class value_visitor : public boost::static_visitor<std::pair<char*, size_t>>

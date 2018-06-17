@@ -28,6 +28,8 @@ class GroupCommitLogger : public AbstractLogger{
 
  private:
   void _put_into_entry(char*& entry_cursor, const char &type, const TransactionID &transaction_id, const std::string &table_name, const RowID &row_id);
+  void _put_into_entry(char*& entry_cursor, const char &type, const TransactionID &transaction_id);
+  
 
   void _flush_to_disk_after_timeout();
   void _write_buffer_to_logfile();
