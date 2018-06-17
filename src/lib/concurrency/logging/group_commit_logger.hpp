@@ -34,7 +34,7 @@ class GroupCommitLogger : public AbstractLogger{
   void _write_to_buffer(std::vector<char> &entry);
 
   template <typename T>
-  void _write_value(char*& cursor, const T value) {
+  void _write_value(char* &cursor, const T &value) {
     *(T*)cursor = value;
     cursor += sizeof(T);
   }

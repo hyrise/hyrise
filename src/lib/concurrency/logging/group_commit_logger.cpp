@@ -48,7 +48,7 @@ constexpr size_t LOG_BUFFER_CAPACITY = 16384;
 constexpr auto LOG_INTERVAL = std::chrono::seconds(5);
 
 template <>
-void GroupCommitLogger::_write_value<std::string>(char*& cursor, const std::string value) {
+void GroupCommitLogger::_write_value<std::string>(char*& cursor, const std::string &value) {
   value.copy(cursor, value.size());
   cursor[value.size()] = '\0';
   cursor += value.size() + 1;
