@@ -50,10 +50,13 @@ const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::output_column_
   const auto& left_expressions = left_input()->output_column_expressions();
   const auto& right_expressions = right_input()->output_column_expressions();
 
-  _output_column_expressions.resize(left_expressions.size() + right_expressions.size());
+  const auto output_both_inputs = join_mode != JoinMode::Semi && join_mode != JoinMode::Anti;
+
+  _output_column_expressions.resize(left_expressions.size() + (output_both_inputs ? right_expressions.size() : 0));
 
   auto right_begin = std::copy(left_expressions.begin(), left_expressions.end(), _output_column_expressions.begin());
-  std::copy(right_expressions.begin(), right_expressions.end(), right_begin);
+
+  if (output_both_inputs) std::copy(right_expressions.begin(), right_expressions.end(), right_begin);
 
   return _output_column_expressions;
 }

@@ -26,15 +26,15 @@ set(
     logical_query_plan/dummy_table_node_test.cpp
     #    logical_query_plan/lqp_find_first_subplan_mismatch_test.cpp
     logical_query_plan/insert_node_test.cpp
-#    logical_query_plan/join_node_test.cpp
-#    logical_query_plan/limit_node_test.cpp
+    logical_query_plan/join_node_test.cpp
+    logical_query_plan/limit_node_test.cpp
     logical_query_plan/logical_query_plan_test.cpp
 #    logical_query_plan/mock_node_test.cpp
-#    logical_query_plan/predicate_node_test.cpp
+    logical_query_plan/predicate_node_test.cpp
 #    logical_query_plan/projection_node_test.cpp
 #    logical_query_plan/show_columns_node_test.cpp
 #    logical_query_plan/show_tables_node_test.cpp
-#    logical_query_plan/sort_node_test.cpp
+    logical_query_plan/sort_node_test.cpp
 #    logical_query_plan/stored_table_node_test.cpp
 #    logical_query_plan/union_node_test.cpp
 #    logical_query_plan/update_node_test.cpp
