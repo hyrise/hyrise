@@ -3,7 +3,7 @@
 #include "base_b_tree_index.hpp"
 #include "types.hpp"
 
-#include <btree_map.h>
+#include "btree_map.h"
 
 namespace opossum {
 
