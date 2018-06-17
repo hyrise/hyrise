@@ -85,24 +85,15 @@ public:
   value_visitor(std::vector<char> &entry, size_t &cursor, size_t number_of_values)
   : _entry_vector(entry)
   , _cursor(cursor) {
-
-    // auto bitmap_position = cursor;
-    uint number_of_bitmap_bytes = ceil(number_of_values / 8.0);
-    _entry_vector.resize(_entry_vector.size() + number_of_bitmap_bytes);
-
-    _cursor += number_of_bitmap_bytes;
   };
 
   template <typename T>
   bool operator()(T v) {
-    // TODO check if NULL
-    // if so return false
-
     _entry_vector.resize(_entry_vector.size() + sizeof(T));
     *(T*) &_entry_vector[_cursor] = v;
     _cursor += sizeof(T);
     
-    // return that value is not NULL
+    // return that value has content
     return true;
   }
 
@@ -115,13 +106,20 @@ template <>
 bool value_visitor::operator()(std::string v) {
   _entry_vector.resize(_entry_vector.size() + v.size() + 1);
   v.copy(&_entry_vector[_cursor], v.size());
-  _entry_vector[_cursor + v.size()] = '\0';
-  // // Assume that memory is NULL, so the next byte terminates the string
-  // DebugAssert(*(_cursor + v.size()) == '\0', "logging: memory is not NULL");
+
+  // Assume that memory is NULL, so the next byte terminates the string
+  DebugAssert(_entry_vector[_cursor + v.size()] == '\0', "logging: memory is not NULL");
+  
   _cursor += v.size() + 1;
 
-  // return that value is not NULL
+  // return that value has content
   return true;
+}
+
+template <>
+bool value_visitor::operator()(NullValue v) {
+  // return that value has no content
+  return false;
 }
 
 
@@ -143,13 +141,32 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
   std::vector<char> entry(entry_length);
   auto current_pos = &entry[0];
 
-
   _put_into_entry(current_pos, 'v', transaction_id, table_name, row_id);
   size_t cursor = current_pos - &entry[0];
 
+  uint number_of_bitmap_bytes = ceil(values.size() / 8.0);
+  entry.resize(entry.size() + number_of_bitmap_bytes);
+  auto null_bitmap_pos = cursor;
+  cursor += number_of_bitmap_bytes;
+
   value_visitor visitor(entry, cursor, values.size());
+  auto bit_pos = 0u;
+  --null_bitmap_pos; // decreased, because it will be increased in the for loop
   for (auto &value : values) {
-    boost::apply_visitor( visitor, value );
+
+    auto has_content = boost::apply_visitor( visitor, value );
+    
+    if (bit_pos == 0) {
+      ++null_bitmap_pos;
+      DebugAssert(entry[null_bitmap_pos] == '\0', "logger: memory is not NULL");
+    }
+
+    if(!has_content) {
+      entry[null_bitmap_pos] |= 1u << bit_pos;
+    }
+
+    bit_pos = (bit_pos + 1) % 4;
+    
   }
 
   _write_to_buffer(entry);
