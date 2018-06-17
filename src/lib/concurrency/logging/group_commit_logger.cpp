@@ -30,7 +30,6 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sstream>
 #include <thread>
 #include <fstream>
 #include <future>
@@ -57,26 +56,23 @@ void GroupCommitLogger::_write_value<std::string>(char*& cursor, const std::stri
 
 void GroupCommitLogger::commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback){
   constexpr auto entry_length = sizeof(char) + sizeof(TransactionID);
-  auto entry = (char*) malloc(entry_length);
-  auto cursor = entry;
+  std::vector<char> entry(entry_length);
+  auto cursor = &entry[0];
 
   _write_value<char>(cursor, 't');
   _write_value<TransactionID>(cursor, transaction_id);
 
   _commit_callbacks.emplace_back(std::make_pair(callback, transaction_id));
 
-  _write_to_buffer(entry, entry_length);
-
-  free(entry);
+  _write_to_buffer(entry);
 }
 
-char* GroupCommitLogger::_put_into_entry(char* cursor, const TransactionID &transaction_id, const std::string &table_name, const RowID &row_id) {
-  _write_value<TransactionID>(cursor, transaction_id);
-  _write_value<std::string>(cursor, table_name);
-  _write_value<ChunkID>(cursor, row_id.chunk_id);
-  _write_value<ChunkOffset>(cursor, row_id.chunk_offset);
-
-  return cursor;
+void GroupCommitLogger::_put_into_entry(char*& entry_cursor, const char &type, const TransactionID &transaction_id, const std::string &table_name, const RowID &row_id) {
+  _write_value<char>(entry_cursor, type);
+  _write_value<TransactionID>(entry_cursor, transaction_id);
+  _write_value<std::string>(entry_cursor, table_name);
+  _write_value<ChunkID>(entry_cursor, row_id.chunk_id);
+  _write_value<ChunkOffset>(entry_cursor, row_id.chunk_offset);
 }
 
 class value_visitor : public boost::static_visitor<std::pair<char*, size_t>>
@@ -135,12 +131,11 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
   uint null_bitmap_number_of_bytes = ceil(value_binaries.size() / 8.0);
   entry_length += null_bitmap_number_of_bytes;
 
-  auto entry = (char*) malloc(entry_length);
-  auto current_pos = entry;
+  // While operating on the underlying char* : Before each write into entry, resize the vector if necessary.
+  std::vector<char> entry(entry_length);
+  auto current_pos = &entry[0];
 
-  _write_value<char>(current_pos, 'v');
-
-  current_pos = _put_into_entry(current_pos, transaction_id, table_name, row_id);
+  _put_into_entry(current_pos, 'v', transaction_id, table_name, row_id);
 
   // TODO: write bitmap of NULL values
   // auto bitmap_pos = current_pos;
@@ -156,30 +151,27 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
     current_pos += binary.second;
   }
 
-  _write_to_buffer(entry, entry_length);
-  
-  free(entry);
+  _write_to_buffer(entry);
 }
 
 void GroupCommitLogger::invalidate(const TransactionID transaction_id, const std::string table_name, const RowID row_id){
   const auto entry_length = sizeof(char) + sizeof(TransactionID) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset);
-  auto entry = (char*) malloc(entry_length);
-  auto current_pos = entry;
+  std::vector<char> entry(entry_length);
+  auto cursor = &entry[0];
 
-  _write_value<char>(current_pos, 'i');
+  _put_into_entry(cursor, 'i', transaction_id, table_name, row_id);
 
-  current_pos = _put_into_entry(current_pos, transaction_id, table_name, row_id);
-
-  _write_to_buffer(entry, entry_length);
-
-  free(entry);
+  _write_to_buffer(entry);
 }
 
-void GroupCommitLogger::_write_to_buffer(char* entry, size_t length) {
+void GroupCommitLogger::_write_to_buffer(std::vector<char> &entry) {
+  // Assume that there is always enough space in the buffer, since it is flushed on hitting half its capacity
+  DebugAssert(_buffer_position + entry.size() < _buffer_capacity, "logging: entry does not fit into buffer");
+
   _buffer_mutex.lock();
 
-  memcpy(_buffer + _buffer_position, entry, length);
-  _buffer_position += length;
+  memcpy(_buffer + _buffer_position, &entry[0], entry.size());
+  _buffer_position += entry.size();
   _has_unflushed_buffer = true;
 
   _buffer_mutex.unlock();

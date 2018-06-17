@@ -27,11 +27,11 @@ class GroupCommitLogger : public AbstractLogger{
   GroupCommitLogger();
 
  private:
-  char* _put_into_entry(char* entry, const TransactionID &transaction_id, const std::string &table_name, const RowID &row_id);
+  void _put_into_entry(char*& entry_cursor, const char &type, const TransactionID &transaction_id, const std::string &table_name, const RowID &row_id);
 
   void _flush_to_disk_after_timeout();
   void _write_buffer_to_logfile();
-  void _write_to_buffer(char* entry, size_t length);
+  void _write_to_buffer(std::vector<char> &entry);
 
   template <typename T>
   void _write_value(char*& cursor, const T value) {
