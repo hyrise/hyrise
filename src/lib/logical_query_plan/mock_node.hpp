@@ -25,7 +25,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   using ColumnDefinitions = std::vector<std::pair<DataType, std::string>>;
 
   explicit MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& name = {});
-//  explicit MockNode(const std::shared_ptr<TableStatistics>& statistics);
+  explicit MockNode(const std::shared_ptr<TableStatistics>& statistics);
 
   LQPColumnReference get_column(const std::string& name) const;
 

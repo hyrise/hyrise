@@ -289,7 +289,7 @@ TEST_F(SQLTranslatorTest, WhereWithLike) {
   EXPECT_LQP_EQ(actual_lqp_c, expected_lqp_c);
 }
 
-TEST_F(SQLTranslatorTest, WhereWithOr) {
+TEST_F(SQLTranslatorTest, WhereWithLogical) {
   const auto actual_lqp = compile_query("SELECT a FROM int_float WHERE 5 >= b + a OR (a > 2 AND b > 2);");
 
   const auto b_plus_a = add(int_float_b, int_float_a);
@@ -353,6 +353,26 @@ TEST_F(SQLTranslatorTest, WhereIsNotNull) {
     PredicateNode::make(is_not_null(int_float_a),
       stored_table_node_int_float
   ));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, WhereExists) {
+  const auto actual_lqp = compile_query("SELECT * FROM int_float WHERE EXISTS(SELECT * FROM int_float2 WHERE int_float.a = int_float2.a);");
+
+  // clang-format off
+  const auto parameter_int_float_a = parameter(ParameterID{0}, int_float_a);
+  const auto sub_select_lqp =
+  PredicateNode::make(equals(parameter_int_float_a, int_float2_a), stored_table_node_int_float2);
+  const auto sub_select = select(sub_select_lqp, std::make_pair(ParameterID{0}, int_float_a));
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float_a, int_float_b),
+    PredicateNode::make(not_equals(exists(sub_select), 0),
+      ProjectionNode::make(expression_vector(exists(sub_select), int_float_a, int_float_b),
+        stored_table_node_int_float
+  )));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

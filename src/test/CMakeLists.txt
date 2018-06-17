@@ -29,7 +29,7 @@ set(
     logical_query_plan/join_node_test.cpp
     logical_query_plan/limit_node_test.cpp
     logical_query_plan/logical_query_plan_test.cpp
-#    logical_query_plan/mock_node_test.cpp
+    logical_query_plan/mock_node_test.cpp
     logical_query_plan/predicate_node_test.cpp
 #    logical_query_plan/projection_node_test.cpp
 #    logical_query_plan/show_columns_node_test.cpp

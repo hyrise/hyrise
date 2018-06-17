@@ -399,33 +399,24 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_case_expressi
   const auto when = evaluate_expression_to_result<int32_t>(*case_expression.when());
 
   /**
-   * Merely optimization - but the block below relies on the case where WHEN is a literal to be handled separately
-   *    Handle cases where the CASE condition ("WHEN") is a fixed value/NULL (e.g. CASE 5+3 > 2 THEN ... ELSE ...)
-   *    This avoids computing branches we don't need to compute.
-   */
-  if (when->size() == 1) {
-    if (when->value(0) && !when->null(0)) {
-      return evaluate_expression_to_result<R>(*case_expression.then());
-    } else {
-      return evaluate_expression_to_result<R>(*case_expression.else_());
-    }
-  }
-
-  /**
    * Handle cases where the CASE condition is a series and thus we need to evaluate row by row.
    * Think `CASE a > b THEN ... ELSE ...`
    */
-  std::vector<R> values(when->size());
-  std::vector<bool> nulls(when->size());
+
+  std::shared_ptr<ExpressionResult<R>> result;
 
   const auto& when_view = *when;
   resolve_to_expression_results(*case_expression.then(), *case_expression.else_(), [&] (const auto& then_view, const auto& else_view) {
     using ThenResultType = typename std::decay_t<decltype(then_view)>::Type;
     using ElseResultType = typename std::decay_t<decltype(else_view)>::Type;
 
+    const auto result_size = std::max({when_view.size(), then_view.size(), else_view.size()});
+    std::vector<R> values(result_size);
+    std::vector<bool> nulls(result_size);
+
     // clang-format off
     if constexpr (Case::template supports<R, ThenResultType, ElseResultType>::value) {
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < when->size(); ++chunk_offset) {
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
         if (when_view.value(chunk_offset) && !when_view.null(chunk_offset)) {
           values[chunk_offset] = to_value<R>(then_view.value(chunk_offset));
           nulls[chunk_offset] = then_view.null(chunk_offset);
@@ -434,11 +425,15 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_case_expressi
           nulls[chunk_offset] = else_view.null(chunk_offset);
         }
       }
+    } else {
+      Fail("Illegal operands for CaseExpression");
     }
     // clang-format on
+
+    result = std::make_shared<ExpressionResult<R>>(std::move(values), std::move(nulls));
   });
 
-  return std::make_shared<ExpressionResult<R>>(std::move(values), std::move(nulls));
+  return result;
 }
 
 template<>

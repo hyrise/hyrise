@@ -187,6 +187,10 @@ TEST_F(ExpressionEvaluatorTest, ArithmeticsSeries) {
 
 TEST_F(ExpressionEvaluatorTest, CaseLiterals) {
   EXPECT_TRUE(test_expression<int32_t>(*case_(1, 2, 1), {2}));
+  EXPECT_TRUE(test_expression<int32_t>(*case_(1, NullValue{}, 1), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*case_(1, 2.3, 1), {2.3}));
+  EXPECT_TRUE(test_expression<int32_t>(*case_(0, 2.3, 1), {1.0}));
+  EXPECT_TRUE(test_expression<int32_t>(*case_(0, 2.3, NullValue{}), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*case_(0, 2, 1), {1}));
   EXPECT_TRUE(test_expression<int32_t>(*case_(0, 2, case_(1, 5, 13)), {5}));
   EXPECT_TRUE(test_expression<int32_t>(*case_(NullValue{}, 42, add(5, 3)), {8}));

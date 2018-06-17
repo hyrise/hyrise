@@ -230,6 +230,7 @@ SELECT CASE WHEN d LIKE '%ab%' THEN 'contains AB' WHEN d NOT LIKE '%x%' THEN 'do
 SELECT EXISTS(SELECT 1) AS some_exists;
 SELECT EXISTS(SELECT * FROM id_int_int_int_100) AS some_exists;
 SELECT NOT EXISTS(SELECT * FROM id_int_int_int_100) AS some_exists;
+SELECT * FROM mixed AS outer_mixed WHERE EXISTS(SELECT * FROM mixed AS inner_mixed WHERE inner_mixed.id = outer_mixed.id * 10);
 
 -- Cannot test the following expressions, because sqlite doesn't support them:
 --  * EXTRACT

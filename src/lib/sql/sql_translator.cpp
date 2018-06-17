@@ -869,56 +869,51 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
   /**
    * Translate AbstractPredicateExpression
    */
-  if (expression->type == ExpressionType::Predicate) {
-    const auto predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(expression);
+  switch (expression->type) {
+    case ExpressionType::Predicate: {
+      const auto predicate_expression = std::static_pointer_cast<AbstractPredicateExpression>(expression);
 
-    if (predicate_expression->predicate_condition == PredicateCondition::In) {
-      // TODO(anybody) Remove this branch. The TableScan doesn't support IN, atm
+      if (predicate_expression->predicate_condition == PredicateCondition::In) {
+        current_node = _add_expressions_if_unavailable(current_node, {expression});
+        return PredicateNode::make(not_equals(expression, 0), current_node);
+      } else {
+        current_node = _add_expressions_if_unavailable(current_node, expression->arguments);
+        return PredicateNode::make(expression, current_node);
+      }
+    }
+
+    case ExpressionType::Logical: {
+      const auto logical_expression = std::static_pointer_cast<LogicalExpression>(expression);
+
+      switch (logical_expression->logical_operator) {
+        case LogicalOperator::And: {
+          current_node = _translate_predicate_expression(logical_expression->right_operand(), current_node);
+          return _translate_predicate_expression(logical_expression->left_operand(), current_node);
+        }
+        case LogicalOperator::Or: {
+          const auto input_expressions = current_node->output_column_expressions();
+
+          const auto left_input = _translate_predicate_expression(logical_expression->left_operand(), current_node);
+          const auto right_input = _translate_predicate_expression(logical_expression->right_operand(), current_node);
+
+          // For Union to work we need to eliminate all potential temporary columns added in the branches of the Union
+          // E.g. "a+b" in "a+b > 5 OR a < 3"
+          return UnionNode::make(UnionMode::Positions,
+                                 _prune_expressions(left_input, input_expressions),
+                                 _prune_expressions(right_input, input_expressions));
+        }
+      }
+    }
+
+    case ExpressionType::Exists: {
       current_node = _add_expressions_if_unavailable(current_node, {expression});
       return PredicateNode::make(not_equals(expression, 0), current_node);
-    } else {
-      current_node = _add_expressions_if_unavailable(current_node, expression->arguments);
-      return PredicateNode::make(expression, current_node);
     }
+
+    default:
+      Fail("Cannot use this ExpressionType as predicate");
   }
 
-  /**
-   * Translate LogicalExpression
-   */
-  if (expression->type == ExpressionType::Logical) {
-    const auto logical_expression = std::static_pointer_cast<LogicalExpression>(expression);
-
-    switch (logical_expression->logical_operator) {
-      case LogicalOperator::And: {
-        current_node = _translate_predicate_expression(logical_expression->right_operand(), current_node);
-        return _translate_predicate_expression(logical_expression->left_operand(), current_node);
-      }
-      case LogicalOperator::Or: {
-        const auto input_expressions = current_node->output_column_expressions();
-
-        const auto left_input = _translate_predicate_expression(logical_expression->left_operand(), current_node);
-        const auto right_input = _translate_predicate_expression(logical_expression->right_operand(), current_node);
-
-        // For Union to work we need to eliminate all potential temporary columns added in the branches of the Union
-        // E.g. "a+b" in "a+b > 5 OR a < 3"
-        return UnionNode::make(UnionMode::Positions,
-                               _prune_expressions(left_input, input_expressions),
-                               _prune_expressions(right_input, input_expressions));
-      }
-    }
-  }
-
-//  /**
-//   * Translate NotExpression
-//   */
-//  if (expression->type == ExpressionType::Not) {
-//    // Fallback implementation for NOT, for now
-//    current_node = _add_expressions_if_unavailable(current_node, {expression});
-//    return PredicateNode::make(std::make_shared<BinaryPredicateExpression>(
-//    PredicateCondition::NotEquals, expression, std::make_shared<ValueExpression>(0)), current_node);
-//  }
-
-  Fail("Non-predicate Expression used as Predicate");
 }
 
 
