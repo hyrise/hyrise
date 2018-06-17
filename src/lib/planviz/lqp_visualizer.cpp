@@ -7,6 +7,8 @@
 #include <utility>
 #include <vector>
 
+#include "expression/expression_utils.hpp"
+#include "expression/lqp_select_expression.hpp"
 #include "logical_query_plan/projection_node.hpp"
 
 namespace opossum {
@@ -50,19 +52,27 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
   }
 
   // Visualize subselects
-  Fail("NYI");
-//  if (const auto projection = std::dynamic_pointer_cast<ProjectionNode>(node)) {
-//    for (const auto& column_expression : projection->column_expressions()) {
-//      if (column_expression->is_subselect()) {
-//        _build_subtree(column_expression->subselect_node(), visualized_nodes);
-//
-//        auto edge_info = _default_edge;
-//        edge_info.label = "Scalar Subquery";
-//        edge_info.style = "dashed";
-//        _add_edge(column_expression->subselect_node(), node, edge_info);
-//      }
-//    }
-//  }
+  if (const auto projection = std::dynamic_pointer_cast<ProjectionNode>(node)) {
+    for (const auto& column_expression : projection->output_column_expressions()) {
+      visit_expression(column_expression, [&](const auto& sub_expression) {
+        const auto lqp_select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression);
+        if (!lqp_select_expression) return true;
+
+        // If an input already had this subselect, don't visualize again
+        if (node->left_input() && node->left_input()->find_column_id(*lqp_select_expression)) return true;
+        if (node->right_input() && node->right_input()->find_column_id(*lqp_select_expression)) return true;
+
+        _build_subtree(lqp_select_expression->lqp, visualized_nodes);
+
+        auto edge_info = _default_edge;
+        edge_info.label = "Subquery";
+        edge_info.style = "dashed";
+        _add_edge(lqp_select_expression->lqp, node, edge_info);
+
+        return true;
+      });
+    }
+  }
 }
 
 void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from,

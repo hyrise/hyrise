@@ -7,6 +7,7 @@
 #include "operators/maintenance/drop_view.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+#include "storage/view.hpp"
 
 #include "utils/assert.hpp"
 
@@ -20,7 +21,10 @@ class DropViewTest : public BaseTest {
 
     sm.add_table("first_table", t1);
 
-    sm.add_view("view_name", StoredTableNode::make("first_table"));
+    const auto view_lqp = StoredTableNode::make("first_table");
+    const auto view = std::make_shared<View>(view_lqp, std::unordered_map<ColumnID, std::string>{});
+
+    sm.add_view("view_name", view);
   }
 };
 

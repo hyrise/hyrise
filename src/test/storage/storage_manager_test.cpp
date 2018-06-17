@@ -21,8 +21,11 @@ class StorageManagerTest : public BaseTest {
     sm.add_table("first_table", t1);
     sm.add_table("second_table", t2);
 
-    auto v1 = StoredTableNode::make("first_table");
-    auto v2 = StoredTableNode::make("second_table");
+    const auto v1_lqp = StoredTableNode::make("first_table");
+    const auto v1 = std::make_shared<View>(v1_lqp, std::unordered_map<ColumnID, std::string>{});
+
+    const auto v2_lqp = StoredTableNode::make("second_table");
+    const auto v2 = std::make_shared<View>(v2_lqp, std::unordered_map<ColumnID, std::string>{});
 
     sm.add_view("first_view", std::move(v1));
     sm.add_view("second_view", std::move(v2));
@@ -64,9 +67,12 @@ TEST_F(StorageManagerTest, HasTable) {
 }
 
 TEST_F(StorageManagerTest, AddViewTwice) {
+  const auto v1_lqp = StoredTableNode::make("first_table");
+  const auto v1 = std::make_shared<View>(v1_lqp, std::unordered_map<ColumnID, std::string>{});
+
   auto& sm = StorageManager::get();
-  EXPECT_THROW(sm.add_view("first_table", StoredTableNode::make("first_table")), std::exception);
-  EXPECT_THROW(sm.add_view("first_view", StoredTableNode::make("first_table")), std::exception);
+  EXPECT_THROW(sm.add_view("first_table", v1), std::exception);
+  EXPECT_THROW(sm.add_view("first_view", v1), std::exception);
 }
 
 TEST_F(StorageManagerTest, GetView) {

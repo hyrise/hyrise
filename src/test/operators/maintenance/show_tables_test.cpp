@@ -22,7 +22,7 @@ TEST_F(ShowTablesTest, OperatorName) {
 TEST_F(ShowTablesTest, CanBeRecreated) {
   auto st = std::make_shared<ShowTables>();
 
-  auto recreated = st->recreate({});
+  auto recreated = st->recreate();
   ASSERT_NE(nullptr, std::dynamic_pointer_cast<ShowTables>(recreated));
   ASSERT_NE(st, recreated) << "Recreate returned the same object";
 }

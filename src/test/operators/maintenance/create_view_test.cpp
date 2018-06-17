@@ -8,6 +8,7 @@
 #include "operators/maintenance/create_view.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+#include "storage/view.hpp"
 
 #include "utils/assert.hpp"
 
@@ -24,15 +25,20 @@ class CreateViewTest : public BaseTest {
 };
 
 TEST_F(CreateViewTest, OperatorName) {
-  auto cv =
-      std::make_shared<CreateView>("view_name", MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}}));
+  const auto view_lqp = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
+  const auto view = std::make_shared<View>(view_lqp, std::unordered_map<ColumnID, std::string>{});
+
+  auto cv = std::make_shared<CreateView>("view_name", view);
 
   EXPECT_EQ(cv->name(), "CreateView");
 }
 
 TEST_F(CreateViewTest, Recreate) {
+  const auto view_lqp = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
+  const auto view = std::make_shared<View>(view_lqp, std::unordered_map<ColumnID, std::string>{});
+
   auto cv =
-      std::make_shared<CreateView>("view_name", MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}}));
+      std::make_shared<CreateView>("view_name", view);
 
   cv->execute();
   EXPECT_NE(cv->get_output(), nullptr);
@@ -42,16 +48,18 @@ TEST_F(CreateViewTest, Recreate) {
 }
 
 TEST_F(CreateViewTest, CanCreateViews) {
-  auto lqp = StoredTableNode::make("first_table");
-  auto cv = std::make_shared<CreateView>("view_name", lqp);
+  const auto view_lqp = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
+  const auto view_in = std::make_shared<View>(view_lqp, std::unordered_map<ColumnID, std::string>{});
+
+  auto cv = std::make_shared<CreateView>("view_name", view_in);
   cv->execute();
 
   EXPECT_EQ(cv->get_output()->row_count(), 0u) << "CreateView returned non-empty table";
 
   EXPECT_TRUE(StorageManager::get().has_view("view_name")) << "View was not added";
 
-  auto stored_lqp = StorageManager::get().get_view("view_name");
-  EXPECT_EQ(stored_lqp->type(), LQPNodeType::StoredTable);
+  auto view_out = StorageManager::get().get_view("view_name");
+  EXPECT_EQ(view_out->lqp->type, LQPNodeType::Mock);
 }
 
 }  // namespace opossum

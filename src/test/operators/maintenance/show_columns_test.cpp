@@ -31,7 +31,7 @@ TEST_F(ShowColumnsTest, OperatorName) {
 TEST_F(ShowColumnsTest, CanBeRecreated) {
   auto sc = std::make_shared<ShowColumns>("table_name");
 
-  auto recreated = sc->recreate({});
+  auto recreated = sc->recreate();
   ASSERT_NE(nullptr, std::dynamic_pointer_cast<ShowColumns>(recreated));
   ASSERT_NE(sc, recreated) << "Recreate returned the same object";
 }

@@ -6,8 +6,8 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "expression/expression_factory.hpp"
 #include "operators/abstract_read_only_operator.hpp"
-#include "operators/pqp_expression.hpp"
 #include "operators/print.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
@@ -16,6 +16,8 @@
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
+
+using namespace opossum::expression_factory;
 
 namespace opossum {
 
@@ -54,11 +56,7 @@ class OperatorsProjectionTest : public BaseTest {
     _dummy_wrapper->execute();
 
     // Projection Expression: a + b + c
-    _sum_a_b_c_expr = Projection::ColumnExpressions{PQPExpression::create_binary_operator(
-        ExpressionType::Addition, PQPExpression::create_column(ColumnID{0}),
-        PQPExpression::create_binary_operator(ExpressionType::Addition, PQPExpression::create_column(ColumnID{1}),
-                                              PQPExpression::create_column(ColumnID{2})),
-        {"sum"})};
+    _sum_a_b_c_expr = expression_vector(add(a, add(b, c)));
 
     // Projection Expression: (a + b) * c
     _mul_a_b_c_expr = Projection::ColumnExpressions{PQPExpression::create_binary_operator(
@@ -108,18 +106,18 @@ class OperatorsProjectionTest : public BaseTest {
                                               PQPExpression::create_literal(NullValue{}), {"b"})};
   }
 
-  Projection::ColumnExpressions _sum_a_b_expr;
-  Projection::ColumnExpressions _div_a_b_expr;
-  Projection::ColumnExpressions _div_a_zero_expr;
-  Projection::ColumnExpressions _sum_a_b_c_expr;
-  Projection::ColumnExpressions _mul_a_b_c_expr;
-  Projection::ColumnExpressions _a_expr;
-  Projection::ColumnExpressions _b_expr;
-  Projection::ColumnExpressions _b_a_expr;
-  Projection::ColumnExpressions _a_b_expr;
-  Projection::ColumnExpressions _literal_expr;
-  Projection::ColumnExpressions _concat_expr;
-  Projection::ColumnExpressions _add_null_expr;
+  std::vector<std::shared_ptr<AbstractExpression>> _sum_a_b_expr;
+  std::vector<std::shared_ptr<AbstractExpression>> _div_a_b_expr;
+  std::vector<std::shared_ptr<AbstractExpression>> _div_a_zero_expr;
+  std::vector<std::shared_ptr<AbstractExpression>> _sum_a_b_c_expr;
+  std::vector<std::shared_ptr<AbstractExpression>> _mul_a_b_c_expr;
+  std::vector<std::shared_ptr<AbstractExpression>> _a_expr;
+  std::vector<std::shared_ptr<AbstractExpression>> _b_expr;
+  std::vector<std::shared_ptr<AbstractExpression>> _b_a_expr;
+  std::vector<std::shared_ptr<AbstractExpression>> _a_b_expr;
+  std::vector<std::shared_ptr<AbstractExpression>> _literal_expr;
+  std::vector<std::shared_ptr<AbstractExpression>> _concat_expr;
+  std::vector<std::shared_ptr<AbstractExpression>> _add_null_expr;
   std::shared_ptr<TableWrapper> _table_wrapper, _table_wrapper_int, _table_wrapper_int_null, _table_wrapper_int_zero,
       _table_wrapper_int_dict, _table_wrapper_int_dict_null, _table_wrapper_float, _dummy_wrapper,
       _table_wrapper_string;

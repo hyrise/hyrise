@@ -13,14 +13,7 @@ ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<AbstractExpress
 std::string ProjectionNode::description() const {
   std::stringstream stream;
 
-  stream << "[Projection] ";
-
-  for (size_t column_idx = 0; column_idx < expressions.size(); ++column_idx) {
-    stream << expressions[column_idx]->as_column_name();
-    if (column_idx + 1 < expressions.size()) {
-      stream << ", ";
-    }
-  }
+  stream << "[Projection] " << expression_column_names(expressions);
 
   return stream.str();
 }

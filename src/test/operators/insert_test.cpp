@@ -7,15 +7,17 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "expression/expression_factory.hpp"
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
-#include "operators/pqp_expression.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+
+using namespace opossum::expression_factory;
 
 namespace opossum {
 
@@ -240,8 +242,7 @@ TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
   auto dummy_wrapper = std::make_shared<TableWrapper>(Projection::dummy_table());
   dummy_wrapper->execute();
 
-  auto literal = Projection::ColumnExpressions{PQPExpression::create_literal(NullValue{})};
-  auto projection = std::make_shared<Projection>(dummy_wrapper, literal);
+  auto projection = std::make_shared<Projection>(dummy_wrapper, expression_vector(null()));
   projection->execute();
 
   auto ins = std::make_shared<Insert>(t_name, projection);

@@ -4,7 +4,6 @@
 #include "benchmark/benchmark.h"
 
 #include "../benchmark_basic_fixture.hpp"
-#include "operators/pqp_expression.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"

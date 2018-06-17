@@ -7,7 +7,6 @@
 #include "gtest/gtest.h"
 
 #include "operators/difference.hpp"
-#include "operators/pqp_expression.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/storage_manager.hpp"
@@ -42,7 +41,7 @@ TEST_F(OperatorsDifferenceTest, DifferenceOnValueTables) {
 TEST_F(OperatorsDifferenceTest, DifferneceOnReferenceTables) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_float_filtered2.tbl", 2);
 
-  Projection::ColumnExpressions column_expressions(
+  const auto column_expressions = expression_vector(column)
       {PQPExpression::create_column(ColumnID{0}), PQPExpression::create_column(ColumnID{1})});
 
   auto projection1 = std::make_shared<Projection>(_table_wrapper_a, column_expressions);

@@ -599,20 +599,21 @@ const char* const tpch_query_14 =
  *
  * Changes:
  *  1. Random values are hardcoded
+ *  2. "revenue[STREAM_ID]" renamed to "revenue"
  *  2. dates are not supported
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
  */
  const char* const tpch_query_15 =
-    R"(create view revenue[STREAM_ID] (supplier_no, total_revenue) as SELECT l_suppkey,
-      SUM(l_extendedprice * (1.0 - l_discount)) FROM lineitem WHERE l_shipdate >= date '[DATE]'
-      AND l_shipdate < date '[DATE]' + interval '3' month GROUP BY l_suppkey;
+    R"(create view revenue (supplier_no, total_revenue) as SELECT l_suppkey,
+      SUM(l_extendedprice * (1.0 - l_discount)) FROM lineitem WHERE l_shipdate >= '1995-02-13'
+      AND l_shipdate < '1995-05-13' GROUP BY l_suppkey;
 
-      SELECT s_suppkey, s_name, s_address, s_phone, total_revenue FROM supplier, revenue[STREAM_ID]
+      SELECT s_suppkey, s_name, s_address, s_phone, total_revenue FROM supplier, revenue
       WHERE s_suppkey = supplier_no AND total_revenue = (SELECT max(total_revenue)
-      FROM revenue[STREAM_ID]) ORDER BY s_suppkey;
+      FROM revenue) ORDER BY s_suppkey;
 
-      drop view revenue[STREAM_ID];)";
+      drop view revenue;)";
 
 /**
  * TPC-H 16

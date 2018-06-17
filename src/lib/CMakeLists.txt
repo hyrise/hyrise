@@ -169,8 +169,8 @@ set(
     operators/import_binary.hpp
     operators/import_csv.cpp
     operators/import_csv.hpp
-#    operators/index_scan.cpp
-#    operators/index_scan.hpp
+    operators/index_scan.cpp
+    operators/index_scan.hpp
     operators/insert.cpp
     operators/insert.hpp
 #    operators/jit_operator/jit_operations.hpp
@@ -267,8 +267,8 @@ set(
     optimizer/strategy/rule_batch.cpp
     optimizer/strategy/rule_batch.hpp
     planviz/abstract_visualizer.hpp
-#    planviz/lqp_visualizer.cpp
-#    planviz/lqp_visualizer.hpp
+    planviz/lqp_visualizer.cpp
+    planviz/lqp_visualizer.hpp
     planviz/sql_query_plan_visualizer.cpp
     planviz/sql_query_plan_visualizer.hpp
     resolve_type.hpp

@@ -55,7 +55,10 @@ TEST_P(TPCHTest, TPCHQueryTest) {
 
   sql_pipeline.get_optimized_logical_plans().at(0)->print();
 
-  if (query_idx == 7 || query_idx == 2) return;
+  if (query_idx == 7 || query_idx == 2) {
+    FAIL();
+  }
+  
   const auto& result_table = sql_pipeline.get_result_table();
 
   EXPECT_TABLE_EQ(result_table, sqlite_result_table, OrderSensitivity::No, TypeCmpMode::Lenient,
