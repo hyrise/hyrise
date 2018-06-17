@@ -7,23 +7,23 @@ namespace opossum {
 
 class Table;
 
-class BaseBTreeIndex : private Noncopyable {
+class BaseBTreeIndex : private BaseIndex {
  public:
-  using Iterator = std::vector<RowID>::const_iterator;
+  using Iterator = std::vector<ChunkOffset>::const_iterator;
 
   BaseBTreeIndex() = delete;
-  explicit BaseBTreeIndex(const Table& table, const ColumnID column_id);
-  BaseBTreeIndex(BaseBTreeIndex&&) = default;
-  BaseBTreeIndex& operator=(BaseBTreeIndex&&) = default;
-  virtual ~BaseBTreeIndex() = default;
+  explicit BaseBTreeIndex(const std::vector<std::shared_ptr<const BaseColumn>> index_columns);
 
-  virtual Iterator lower_bound_all_type(AllTypeVariant value) const = 0;
-  virtual Iterator upper_bound_all_type(AllTypeVariant value) const = 0;
   virtual uint64_t memory_consumption() const = 0;
 
  protected:
-  const Table& _table;
-  const ColumnID _column_id;
+  virtual Iterator _lower_bound(const std::vector<AllTypeVariant>&) const = 0;
+  virtual Iterator _upper_bound(const std::vector<AllTypeVariant>&) const = 0;
+  virtual Iterator _cbegin() const = 0;
+  virtual Iterator _cend() const = 0;
+  virtual std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const override;
+
+  std::shared_ptr<const BaseColumn> _index_column;
 };
 
 } // namespace opossum
