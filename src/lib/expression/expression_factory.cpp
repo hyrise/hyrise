@@ -28,6 +28,10 @@ std::shared_ptr<ParameterExpression> parameter(const ParameterID parameter_id) {
   return std::make_shared<ParameterExpression>(parameter_id);
 }
 
+std::shared_ptr<LQPColumnExpression> column(const LQPColumnReference& column_reference) {
+  return std::make_shared<LQPColumnExpression>(column_reference);
+}
+
 std::shared_ptr<AggregateExpression> count_star() {
   return std::make_shared<AggregateExpression>(AggregateFunction::Count);
 }

@@ -11,8 +11,6 @@
 namespace opossum {
 
 DummyTableNode::DummyTableNode() : AbstractLQPNode(LQPNodeType::DummyTable) {
-//  // just a dummy expression that will never be accessed
-//  _output_column_expressions.emplace_back(std::make_shared<ValueExpression>(0);
 }
 
 std::string DummyTableNode::description() const {

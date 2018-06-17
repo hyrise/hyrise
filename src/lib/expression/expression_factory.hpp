@@ -174,6 +174,7 @@ std::shared_ptr<ExtractExpression> extract(const DatetimeComponent datetime_comp
 }
 
 std::shared_ptr<ParameterExpression> parameter(const ParameterID parameter_id);
+std::shared_ptr<LQPColumnExpression> column(const LQPColumnReference& column_reference);
 
 template<typename ReferencedExpression>
 std::shared_ptr<ParameterExpression> parameter(const ParameterID parameter_id, const ReferencedExpression& referenced) {

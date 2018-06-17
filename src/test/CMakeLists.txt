@@ -19,13 +19,13 @@ set(
     expression/expression_utils_test.cpp
     expression/expression_evaluator_test.cpp
     logical_query_plan/alias_node_test.cpp
-#    logical_query_plan/aggregate_node_test.cpp
-#    logical_query_plan/create_view_node_test.cpp
-#    logical_query_plan/drop_view_node_test.cpp
-#    logical_query_plan/lqp_find_first_subplan_mismatch_test.cpp
-#    logical_query_plan/delete_node_test.cpp
-#    logical_query_plan/dummy_table_node_test.cpp
-#    logical_query_plan/insert_node_test.cpp
+    logical_query_plan/aggregate_node_test.cpp
+    logical_query_plan/create_view_node_test.cpp
+    logical_query_plan/delete_node_test.cpp
+    logical_query_plan/drop_view_node_test.cpp
+    logical_query_plan/dummy_table_node_test.cpp
+    #    logical_query_plan/lqp_find_first_subplan_mismatch_test.cpp
+    logical_query_plan/insert_node_test.cpp
 #    logical_query_plan/join_node_test.cpp
 #    logical_query_plan/limit_node_test.cpp
     logical_query_plan/logical_query_plan_test.cpp

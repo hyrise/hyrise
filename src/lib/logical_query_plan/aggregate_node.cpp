@@ -32,17 +32,8 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpressio
 std::string AggregateNode::description() const {
   std::stringstream stream;
 
-  stream << "[Aggregate] GroupBy: [";
-  for (auto expression_idx = size_t{0}; expression_idx < group_by_expressions.size(); ++expression_idx) {
-    stream << group_by_expressions[expression_idx]->as_column_name();
-    if (expression_idx + 1 < group_by_expressions.size()) stream << ", ";
-  }
-  stream << "] Aggregates: [";
-  for (auto expression_idx = size_t{0}; expression_idx < aggregate_expressions.size(); ++expression_idx) {
-    stream << aggregate_expressions[expression_idx]->as_column_name();
-    if (expression_idx + 1 < aggregate_expressions.size()) stream << ", ";
-  }
-  stream << "]";
+  stream << "[Aggregate] GroupBy: [" << expression_column_names(group_by_expressions);
+  stream << "] Aggregates: [" << expression_column_names(aggregate_expressions) << "]";
 
   return stream.str();
 }
