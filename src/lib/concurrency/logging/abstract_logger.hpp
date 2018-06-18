@@ -5,10 +5,6 @@
 
 namespace opossum {
 
-/*
-  Existence of logfile is only checked on instantiation. Therefore deleting the log during runtime is undetected.
-*/
-
 class AbstractLogger {
  public:
   AbstractLogger(const AbstractLogger&) = delete;
@@ -27,13 +23,11 @@ class AbstractLogger {
 
   virtual ~AbstractLogger() = default;
 
- protected:
-  std::mutex _file_mutex;
-
  private:
   friend class Logger;
   friend class InitialLogger;
   friend class GroupCommitLogger;
+  friend class NoLogger;
   AbstractLogger(){}
 };
 

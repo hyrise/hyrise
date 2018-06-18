@@ -30,6 +30,7 @@ class InitialLogger : public AbstractLogger {
   void _write_to_logfile(const std::stringstream& ss);
 
   int _file_descriptor;
+  std::mutex _file_mutex;
 };
 
 }  // namespace opossum

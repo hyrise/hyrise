@@ -71,8 +71,10 @@ class GroupCommitLogger : public AbstractLogger {
   char* _buffer;
   size_t _buffer_capacity;
   size_t _buffer_position;
-  bool _has_unflushed_buffer;
+  bool _has_unflushed_buffer; 
   std::mutex _buffer_mutex;
+  
+  std::mutex _file_mutex;
 
   std::vector<std::pair<std::function<void(TransactionID)>, TransactionID>> _commit_callbacks;
 

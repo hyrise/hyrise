@@ -8,12 +8,14 @@
 #include "abstract_logger.hpp"
 #include "group_commit_logger.hpp"
 #include "initial_logger.hpp"
+#include "no_logger.hpp"
 
 namespace opossum {
 
 AbstractLogger& Logger::getInstance() {
   // static InitialLogger instance;
-  static GroupCommitLogger instance;
+  // static GroupCommitLogger instance;
+  static NoLogger instance;
   return instance;
 }
 

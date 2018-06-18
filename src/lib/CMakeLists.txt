@@ -11,14 +11,15 @@ set(
     concurrency/commit_context.hpp
     concurrency/logging/abstract_logger.cpp
     concurrency/logging/abstract_logger.hpp
+    concurrency/logging/binary_recovery.hpp
+    concurrency/logging/binary_recovery.cpp
     concurrency/logging/group_commit_logger.cpp
     concurrency/logging/group_commit_logger.hpp
     concurrency/logging/initial_logger.cpp
     concurrency/logging/initial_logger.hpp
+    concurrency/logging/no_logger.hpp
     concurrency/logging/logger.cpp
     concurrency/logging/logger.hpp
-    concurrency/logging/binary_recovery.hpp
-    concurrency/logging/binary_recovery.cpp
     concurrency/logging/text_recovery.hpp
     concurrency/logging/text_recovery.cpp
     concurrency/transaction_context.cpp
