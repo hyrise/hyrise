@@ -9,6 +9,7 @@
 
 // Include your encoded column file here!
 #include "storage/dictionary_column.hpp"
+#include "storage/fixed_string_dictionary_column.hpp"
 #include "storage/frame_of_reference_column.hpp"
 #include "storage/run_length_column.hpp"
 
@@ -29,6 +30,7 @@ namespace hana = boost::hana;
 constexpr auto encoded_column_for_type = hana::make_map(
     hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, template_c<DictionaryColumn>),
     hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, template_c<RunLengthColumn>),
+    hana::make_pair(enum_c<EncodingType, EncodingType::FixedStringDictionary>, template_c<FixedStringDictionaryColumn>),
     hana::make_pair(enum_c<EncodingType, EncodingType::FrameOfReference>, template_c<FrameOfReferenceColumn>));
 
 /**

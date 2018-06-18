@@ -85,6 +85,7 @@ TEST_F(OperatorsExportBinaryTest, SingleChunkSingleFloatColumn) {
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files("src/test/binary/SingleChunkSingleFloatColumn.bin", filename));
 }
+
 TEST_F(OperatorsExportBinaryTest, MultipleChunkSingleFloatColumn) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Float);
@@ -143,6 +144,27 @@ TEST_F(OperatorsExportBinaryTest, StringDictionaryColumn) {
   EXPECT_TRUE(compare_files("src/test/binary/StringDictionaryColumn.bin", filename));
 }
 
+TEST_F(OperatorsExportBinaryTest, FixedStringDictionaryColumn) {
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
+
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  table->append({"This"});
+  table->append({"is"});
+  table->append({"a"});
+  table->append({"test"});
+
+  ChunkEncoder::encode_all_chunks(table, EncodingType::FixedStringDictionary);
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportBinary>(table_wrapper, filename);
+  ex->execute();
+
+  EXPECT_TRUE(file_exists(filename));
+  EXPECT_TRUE(compare_files("src/test/binary/StringDictionaryColumn.bin", filename));
+}
+
 TEST_F(OperatorsExportBinaryTest, AllTypesValueColumn) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String);
@@ -166,6 +188,7 @@ TEST_F(OperatorsExportBinaryTest, AllTypesValueColumn) {
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files("src/test/binary/AllTypesValueColumn.bin", filename));
 }
+
 TEST_F(OperatorsExportBinaryTest, AllTypesDictionaryColumn) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String);

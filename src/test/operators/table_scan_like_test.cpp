@@ -47,7 +47,9 @@ class OperatorsTableScanLikeTest : public BaseTest, public ::testing::WithParamI
       // Not all tests are parameterized - only those using compressed columns are. We have to ask the testing
       // framework if a parameter is set. Otherwise, GetParam would fail.
       auto test_table_string_compressed = load_table("src/test/tables/int_string_like.tbl", 5);
-      ChunkEncoder::encode_chunks(test_table_string_compressed, {ChunkID{0}}, GetParam());
+      std::vector<ChunkEncodingSpec> spec = {{EncodingType::Unencoded, GetParam()},
+                                             {EncodingType::Unencoded, GetParam()}};
+      ChunkEncoder::encode_all_chunks(test_table_string_compressed, spec);
 
       StorageManager::get().add_table("table_string_compressed", test_table_string_compressed);
 
@@ -82,7 +84,9 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
 };
 
 INSTANTIATE_TEST_CASE_P(EncodingTypes, OperatorsTableScanLikeTest,
-                        ::testing::Values(EncodingType::Dictionary, EncodingType::RunLength), formatter);
+                        ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary,
+                                          EncodingType::FixedStringDictionary, EncodingType::RunLength),
+                        formatter);
 
 TEST_F(OperatorsTableScanLikeTest, ScanLikeNonStringColumn) {
   auto scan = std::make_shared<TableScan>(_gt, ColumnID{0}, PredicateCondition::Like, "%test");
