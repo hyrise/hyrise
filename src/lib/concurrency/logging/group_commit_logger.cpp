@@ -51,31 +51,33 @@ constexpr size_t LOG_BUFFER_CAPACITY = 16384;
 constexpr auto LOG_INTERVAL = std::chrono::seconds(5);
 
 template <>
-void GroupCommitLogger::_write_value<std::string>(char*& cursor, const std::string& value) {
-  value.copy(cursor, value.size());
-  cursor[value.size()] = '\0';
+void GroupCommitLogger::_write_value<std::string>(std::vector<char>& vector, size_t& cursor, const std::string& value) {
+  value.copy(&vector[cursor], value.size());
+  vector[cursor + value.size()] = '\0';
   cursor += value.size() + 1;
 }
 
-void GroupCommitLogger::_put_into_entry(char*& entry_cursor, const char& type, const TransactionID& transaction_id) {
-  _write_value<char>(entry_cursor, type);
-  _write_value<TransactionID>(entry_cursor, transaction_id);
+void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, size_t& entry_cursor, const char& type,
+                                        const TransactionID& transaction_id) {
+  _write_value<char>(entry, entry_cursor, type);
+  _write_value<TransactionID>(entry, entry_cursor, transaction_id);
 }
 
-void GroupCommitLogger::_put_into_entry(char*& entry_cursor, const char& type, const TransactionID& transaction_id,
-                                        const std::string& table_name, const RowID& row_id) {
-  _put_into_entry(entry_cursor, type, transaction_id);
-  _write_value<std::string>(entry_cursor, table_name);
-  _write_value<ChunkID>(entry_cursor, row_id.chunk_id);
-  _write_value<ChunkOffset>(entry_cursor, row_id.chunk_offset);
+void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, size_t& entry_cursor, const char& type,
+                                        const TransactionID& transaction_id, const std::string& table_name,
+                                        const RowID& row_id) {
+  _put_into_entry(entry, entry_cursor, type, transaction_id);
+  _write_value<std::string>(entry, entry_cursor, table_name);
+  _write_value<ChunkID>(entry, entry_cursor, row_id.chunk_id);
+  _write_value<ChunkOffset>(entry, entry_cursor, row_id.chunk_offset);
 }
 
 void GroupCommitLogger::commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) {
   constexpr auto entry_length = sizeof(char) + sizeof(TransactionID);
   std::vector<char> entry(entry_length);
-  auto cursor = &entry[0];
+  size_t cursor = 0;
 
-  _put_into_entry(cursor, 't', transaction_id);
+  _put_into_entry(entry, cursor, 't', transaction_id);
 
   _commit_callbacks.emplace_back(std::make_pair(callback, transaction_id));
 
@@ -140,10 +142,9 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
 
   // While operating on the underlying char* : Before each write into entry, resize the vector if necessary.
   std::vector<char> entry(entry_length);
-  auto current_pos = &entry[0];
-
-  _put_into_entry(current_pos, 'v', transaction_id, table_name, row_id);
-  size_t cursor = current_pos - &entry[0];
+  size_t cursor = 0;
+  
+  _put_into_entry(entry, cursor, 'v', transaction_id, table_name, row_id);
 
   uint number_of_bitmap_bytes = ceil(values.size() / 8.0);
   entry.resize(entry.size() + number_of_bitmap_bytes);
@@ -176,9 +177,9 @@ void GroupCommitLogger::invalidate(const TransactionID transaction_id, const std
   const auto entry_length =
       sizeof(char) + sizeof(TransactionID) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset);
   std::vector<char> entry(entry_length);
-  auto cursor = &entry[0];
+  size_t cursor = 0;
 
-  _put_into_entry(cursor, 'i', transaction_id, table_name, row_id);
+  _put_into_entry(entry, cursor, 'i', transaction_id, table_name, row_id);
 
   _write_to_buffer(entry);
 }
@@ -202,7 +203,6 @@ void GroupCommitLogger::_write_to_buffer(std::vector<char>& entry) {
 }
 
 void GroupCommitLogger::_write_buffer_to_logfile() {
-  // TODO: perhaps second buffer, then buffer has not to be locked
   _file_mutex.lock();
   _buffer_mutex.lock();
 
@@ -231,7 +231,7 @@ void GroupCommitLogger::flush() {
 void GroupCommitLogger::recover() { BinaryRecovery::getInstance().recover(); }
 
 GroupCommitLogger::GroupCommitLogger()
-    : AbstractLogger(), _buffer_capacity(LOG_BUFFER_CAPACITY), _buffer_position(0u), _has_unflushed_buffer(false) {
+    : AbstractLogger(), _buffer_capacity(LOG_BUFFER_CAPACITY), _buffer_position(0), _has_unflushed_buffer(false) {
   _buffer = reinterpret_cast<char*>(malloc(_buffer_capacity));
   memset(_buffer, 0, _buffer_capacity);
 
@@ -247,8 +247,7 @@ GroupCommitLogger::GroupCommitLogger()
   last_log_number_file << std::to_string(log_number);
   last_log_number_file.close();
 
-  _flush_thread = std::make_unique<LoopThread>(
-    LOG_INTERVAL, [this]() { GroupCommitLogger::flush(); });
+  _flush_thread = std::make_unique<LoopThread>(LOG_INTERVAL, [this]() { GroupCommitLogger::flush(); });
 }
 
 GroupCommitLogger::~GroupCommitLogger() {

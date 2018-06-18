@@ -54,23 +54,25 @@ class GroupCommitLogger : public AbstractLogger {
   GroupCommitLogger();
 
  private:
-  void _put_into_entry(char*& entry_cursor, const char& type, const TransactionID& transaction_id,
+  void _put_into_entry(std::vector<char>& entry, size_t& entry_cursor, const char& type, const TransactionID& transaction_id,
                        const std::string& table_name, const RowID& row_id);
-  void _put_into_entry(char*& entry_cursor, const char& type, const TransactionID& transaction_id);
+  void _put_into_entry(std::vector<char>& entry, size_t& entry_cursor, const char& type, const TransactionID& transaction_id);
 
   void _write_buffer_to_logfile();
   void _write_to_buffer(std::vector<char>& entry);
 
   template <typename T>
-  void _write_value(char*& cursor, const T& value) {
-    *reinterpret_cast<T*>(cursor) = value;
+  void _write_value(std::vector<char>& vector, size_t& cursor, const T& value) {
+    DebugAssert(cursor + sizeof(T) <= vector.size(), 
+                "logger: value does not fit into vector, call resize() beforehand");
+    *reinterpret_cast<T*>(&vector[cursor]) = value;
     cursor += sizeof(T);
   }
 
   ~GroupCommitLogger();
 
   char* _buffer;
-  size_t _buffer_capacity;
+  const size_t _buffer_capacity;
   size_t _buffer_position;
   bool _has_unflushed_buffer; 
   std::mutex _buffer_mutex;
