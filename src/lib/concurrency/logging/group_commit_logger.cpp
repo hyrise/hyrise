@@ -53,7 +53,10 @@ constexpr auto LOG_INTERVAL = std::chrono::seconds(5);
 template <>
 void GroupCommitLogger::_write_value<std::string>(std::vector<char>& vector, size_t& cursor, const std::string& value) {
   value.copy(&vector[cursor], value.size());
-  vector[cursor + value.size()] = '\0';
+
+  // Assume that the next byte is NULL so the string gets terminated
+  DebugAssert(vector[cursor + value.size()] == '\0', "Logger: Byte is not NULL initiated");
+
   cursor += value.size() + 1;
 }
 
@@ -84,44 +87,46 @@ void GroupCommitLogger::commit(const TransactionID transaction_id, std::function
   _write_to_buffer(entry);
 }
 
-// perhaps use reserve()
-class value_visitor : public boost::static_visitor<bool> {
+// ValueVisitor is used to write multiple AllTypeVariants into an entry successively.
+// Returns boolean to indicate if something has been written into entry.
+// Therefore the visitation returns false if the AllTypeVariant is a NullValue. 
+// This is used to set the corresponding bit in the null_value_bitmap.
+// The current implementation resizes the entry for every value.
+// It might improve performance to iterate twice over all values: 
+// Acumulate the bytes needed for all values in the first pass,
+// resize the vector and write the values in the second pass.
+class ValueVisitor : public boost::static_visitor<bool> {
  public:
-  value_visitor(std::vector<char>& entry, size_t& cursor, size_t number_of_values)
-      : _entry_vector(entry), _cursor(cursor) {}
+  ValueVisitor(std::vector<char>& entry, size_t& cursor, size_t number_of_values)
+  : _entry_vector(entry), _cursor(cursor) {}
 
   template <typename T>
   bool operator()(T v) {
     _entry_vector.resize(_entry_vector.size() + sizeof(T));
     *reinterpret_cast<T*>(&_entry_vector[_cursor]) = v;
     _cursor += sizeof(T);
-
-    // return that value has content
     return true;
   }
 
- private:
   std::vector<char>& _entry_vector;
   size_t& _cursor;
 };
 
 template <>
-bool value_visitor::operator()(std::string v) {
+bool ValueVisitor::operator()(std::string v) {
   _entry_vector.resize(_entry_vector.size() + v.size() + 1);
   v.copy(&_entry_vector[_cursor], v.size());
 
   // Assume that memory is NULL, so the next byte terminates the string
-  DebugAssert(_entry_vector[_cursor + v.size()] == '\0', "logging: memory is not NULL");
+  DebugAssert(_entry_vector[_cursor + v.size()] == '\0', "Logger: Byte is not NULL initiated");
 
   _cursor += v.size() + 1;
 
-  // return that value has content
   return true;
 }
 
 template <>
-bool value_visitor::operator()(NullValue v) {
-  // return that value has no content
+bool ValueVisitor::operator()(NullValue v) {
   return false;
 }
 
@@ -140,7 +145,6 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
       sizeof(char) + sizeof(TransactionID) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset);
   // TODO: use mmap ?
 
-  // While operating on the underlying char* : Before each write into entry, resize the vector if necessary.
   std::vector<char> entry(entry_length);
   size_t cursor = 0;
   
@@ -151,7 +155,7 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
   auto null_bitmap_pos = cursor;
   cursor += number_of_bitmap_bytes;
 
-  value_visitor visitor(entry, cursor, values.size());
+  ValueVisitor visitor(entry, cursor, values.size());
   auto bit_pos = 0u;
   --null_bitmap_pos;  // decreased, because it will be increased in the for loop
   for (auto& value : values) {
@@ -159,7 +163,7 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
 
     if (bit_pos == 0) {
       ++null_bitmap_pos;
-      DebugAssert(entry[null_bitmap_pos] == '\0', "logger: memory is not NULL");
+      DebugAssert(entry[null_bitmap_pos] == '\0', "Logger: memory is not NULL");
     }
 
     if (!has_content) {
