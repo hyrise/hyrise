@@ -25,14 +25,16 @@ LQPVisualizer::LQPVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_
 
 void LQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractLQPNode>>& lqp_roots) {
   std::unordered_set<std::shared_ptr<const AbstractLQPNode>> visualized_nodes;
+  ExpressionUnorderedSet visualized_sub_queries;
 
   for (const auto& root : lqp_roots) {
-    _build_subtree(root, visualized_nodes);
+    _build_subtree(root, visualized_nodes, visualized_sub_queries);
   }
 }
 
 void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
-                                   std::unordered_set<std::shared_ptr<const AbstractLQPNode>>& visualized_nodes) {
+                                   std::unordered_set<std::shared_ptr<const AbstractLQPNode>>& visualized_nodes,
+                                   ExpressionUnorderedSet& visualized_sub_queries) {
   // Avoid drawing dataflows/ops redundantly in diamond shaped Nodes
   if (visualized_nodes.find(node) != visualized_nodes.end()) return;
   visualized_nodes.insert(node);
@@ -41,13 +43,13 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
 
   if (node->left_input()) {
     auto left_input = node->left_input();
-    _build_subtree(left_input, visualized_nodes);
+    _build_subtree(left_input, visualized_nodes, visualized_sub_queries);
     _build_dataflow(left_input, node);
   }
 
   if (node->right_input()) {
     auto right_input = node->right_input();
-    _build_subtree(right_input, visualized_nodes);
+    _build_subtree(right_input, visualized_nodes, visualized_sub_queries);
     _build_dataflow(right_input, node);
   }
 
@@ -58,11 +60,9 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
         const auto lqp_select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression);
         if (!lqp_select_expression) return true;
 
-        // If an input already had this subselect, don't visualize again
-        if (node->left_input() && node->left_input()->find_column_id(*lqp_select_expression)) return true;
-        if (node->right_input() && node->right_input()->find_column_id(*lqp_select_expression)) return true;
+        if (!visualized_sub_queries.emplace(lqp_select_expression).second) return true;
 
-        _build_subtree(lqp_select_expression->lqp, visualized_nodes);
+        _build_subtree(lqp_select_expression->lqp, visualized_nodes, visualized_sub_queries);
 
         auto edge_info = _default_edge;
         edge_info.label = "Subquery";
