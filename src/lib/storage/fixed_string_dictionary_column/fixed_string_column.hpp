@@ -3,8 +3,8 @@
 #include <memory>
 #include <string>
 
-#include "base_dictionary_column.hpp"
-#include "storage/vector_compression/base_compressed_vector.hpp"
+#include "../base_dictionary_column.hpp"
+#include "fixed_string_vector.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -12,19 +12,23 @@ namespace opossum {
 class BaseCompressedVector;
 
 /**
- * @brief Column implementing dictionary encoding
+ * @brief Column implementing dictionary encoding for strings
  *
+ * It compresses string columns by avoiding small string optimization.
  * Uses vector compression schemes for its attribute vector.
  */
 template <typename T>
-class DictionaryColumn : public BaseDictionaryColumn {
+class FixedStringColumn : public BaseDictionaryColumn {
  public:
-  explicit DictionaryColumn(const std::shared_ptr<const pmr_vector<T>>& dictionary,
-                            const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
-                            const ValueID null_value_id);
+  explicit FixedStringColumn(const std::shared_ptr<const FixedStringVector>& dictionary,
+                             const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
+                             const ValueID null_value_id);
+
+  // returns the dictionary as pmr_vector
+  std::shared_ptr<const pmr_vector<std::string>> dictionary() const;
 
   // returns an underlying dictionary
-  std::shared_ptr<const pmr_vector<T>> dictionary() const;
+  std::shared_ptr<const FixedStringVector> fixed_string_dictionary() const;
 
   /**
    * @defgroup BaseColumn interface
@@ -65,10 +69,9 @@ class DictionaryColumn : public BaseDictionaryColumn {
   /**@}*/
 
  protected:
-  const std::shared_ptr<const pmr_vector<T>> _dictionary;
+  const std::shared_ptr<const FixedStringVector> _dictionary;
   const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
   const ValueID _null_value_id;
-  std::unique_ptr<BaseVectorDecompressor> _decoder;
 };
 
 }  // namespace opossum

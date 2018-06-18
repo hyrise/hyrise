@@ -5,23 +5,28 @@
 #include "storage/column_iterables.hpp"
 
 #include "storage/dictionary_column.hpp"
+#include "storage/fixed_string_dictionary_column/fixed_string_column.hpp"
+
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace opossum {
 
-template <typename T>
-class DictionaryColumnIterable : public PointAccessibleColumnIterable<DictionaryColumnIterable<T>> {
+template <typename T, typename U>
+class DictionaryColumnIterable : public PointAccessibleColumnIterable<DictionaryColumnIterable<T, U>> {
  public:
-  explicit DictionaryColumnIterable(const DictionaryColumn<T>& column) : _column{column} {}
+  explicit DictionaryColumnIterable(const DictionaryColumn<T>& column)
+      : _column{column}, _dictionary(column.dictionary()) {}
+
+  explicit DictionaryColumnIterable(const FixedStringColumn<std::string>& column)
+      : _column{column}, _dictionary(column.fixed_string_dictionary()) {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
     resolve_compressed_vector_type(*_column.attribute_vector(), [&](const auto& vector) {
       using ZsIteratorType = decltype(vector.cbegin());
 
-      auto begin =
-          Iterator<ZsIteratorType>{*_column.dictionary(), _column.null_value_id(), vector.cbegin(), ChunkOffset{0u}};
-      auto end = Iterator<ZsIteratorType>{*_column.dictionary(), _column.null_value_id(), vector.cend(),
+      auto begin = Iterator<ZsIteratorType>{*_dictionary, _column.null_value_id(), vector.cbegin(), ChunkOffset{0u}};
+      auto end = Iterator<ZsIteratorType>{*_dictionary, _column.null_value_id(), vector.cend(),
                                           static_cast<ChunkOffset>(_column.size())};
       functor(begin, end);
     });
@@ -33,22 +38,23 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
       auto decoder = vector.create_decoder();
       using ZsDecoderType = std::decay_t<decltype(*decoder)>;
 
-      auto begin = PointAccessIterator<ZsDecoderType>{*_column.dictionary(), _column.null_value_id(), *decoder,
+      auto begin = PointAccessIterator<ZsDecoderType>{*_dictionary, _column.null_value_id(), *decoder,
                                                       mapped_chunk_offsets.cbegin()};
-      auto end = PointAccessIterator<ZsDecoderType>{*_column.dictionary(), _column.null_value_id(), *decoder,
+      auto end = PointAccessIterator<ZsDecoderType>{*_dictionary, _column.null_value_id(), *decoder,
                                                     mapped_chunk_offsets.cend()};
       functor(begin, end);
     });
   }
 
  private:
-  const DictionaryColumn<T>& _column;
+  const BaseDictionaryColumn& _column;
+  std::shared_ptr<const U> _dictionary;
 
  private:
   template <typename ZsIteratorType>
   class Iterator : public BaseColumnIterator<Iterator<ZsIteratorType>, ColumnIteratorValue<T>> {
    public:
-    explicit Iterator(const pmr_vector<T>& dictionary, const ValueID null_value_id, const ZsIteratorType attribute_it,
+    explicit Iterator(const U& dictionary, const ValueID null_value_id, const ZsIteratorType attribute_it,
                       ChunkOffset chunk_offset)
         : _dictionary{dictionary},
           _null_value_id{null_value_id},
@@ -71,11 +77,15 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
 
       if (is_null) return ColumnIteratorValue<T>{T{}, true, _chunk_offset};
 
-      return ColumnIteratorValue<T>{_dictionary[value_id], false, _chunk_offset};
+      if constexpr (std::is_same<FixedStringVector, U>::value) {
+        return ColumnIteratorValue<T>{_dictionary.get_string_at(value_id), false, _chunk_offset};
+      } else {
+        return ColumnIteratorValue<T>{_dictionary[value_id], false, _chunk_offset};
+      }
     }
 
    private:
-    const pmr_vector<T>& _dictionary;
+    const U& _dictionary;
     const ValueID _null_value_id;
     ZsIteratorType _attribute_it;
     ChunkOffset _chunk_offset;
@@ -85,7 +95,7 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
   class PointAccessIterator
       : public BasePointAccessColumnIterator<PointAccessIterator<ZsDecoderType>, ColumnIteratorValue<T>> {
    public:
-    PointAccessIterator(const pmr_vector<T>& dictionary, const ValueID null_value_id, ZsDecoderType& attribute_decoder,
+    PointAccessIterator(const U& dictionary, const ValueID null_value_id, ZsDecoderType& attribute_decoder,
                         ChunkOffsetsIterator chunk_offsets_it)
         : BasePointAccessColumnIterator<PointAccessIterator<ZsDecoderType>, ColumnIteratorValue<T>>{chunk_offsets_it},
           _dictionary{dictionary},
@@ -103,11 +113,15 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
 
       if (is_null) return ColumnIteratorValue<T>{T{}, true, chunk_offsets.into_referencing};
 
-      return ColumnIteratorValue<T>{_dictionary[value_id], false, chunk_offsets.into_referencing};
+      if constexpr (std::is_same<FixedStringVector, U>::value) {
+        return ColumnIteratorValue<T>{_dictionary.get_string_at(value_id), false, chunk_offsets.into_referencing};
+      } else {
+        return ColumnIteratorValue<T>{_dictionary[value_id], false, chunk_offsets.into_referencing};
+      }
     }
 
    private:
-    const pmr_vector<T>& _dictionary;
+    const U& _dictionary;
     const ValueID _null_value_id;
     ZsDecoderType& _attribute_decoder;
   };

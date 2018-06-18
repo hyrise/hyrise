@@ -35,11 +35,14 @@ class ChunkPruningTest : public StrategyBaseTest {
     storage_manager.add_table("long_compressed", load_table("src/test/tables/25_ints_sorted.tbl", 25u));
     storage_manager.add_table("run_length_compressed", load_table("src/test/tables/10_ints.tbl", 5u));
     storage_manager.add_table("string_compressed", load_table("src/test/tables/string.tbl", 3u));
+    storage_manager.add_table("fixed_string_compressed", load_table("src/test/tables/string.tbl", 3u));
 
     ChunkEncoder::encode_all_chunks(storage_manager.get_table("compressed"), EncodingType::Dictionary);
     ChunkEncoder::encode_all_chunks(storage_manager.get_table("long_compressed"), EncodingType::Dictionary);
     ChunkEncoder::encode_all_chunks(storage_manager.get_table("run_length_compressed"), EncodingType::RunLength);
     ChunkEncoder::encode_all_chunks(storage_manager.get_table("string_compressed"), EncodingType::Dictionary);
+    ChunkEncoder::encode_all_chunks(storage_manager.get_table("fixed_string_compressed"),
+                                    EncodingType::FixedStringDictionary);
     _rule = std::make_shared<ChunkPruningRule>();
 
     storage_manager.add_table("uncompressed", load_table("src/test/tables/int_float2.tbl", 10u));
@@ -226,6 +229,21 @@ TEST_F(ChunkPruningTest, GetTablePruningTest) {
 
 TEST_F(ChunkPruningTest, StringPruningTest) {
   auto stored_table_node = std::make_shared<StoredTableNode>("string_compressed");
+
+  auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}),
+                                                        PredicateCondition::Equals, "zzz");
+  predicate_node->set_left_input(stored_table_node);
+
+  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+
+  EXPECT_EQ(pruned, predicate_node);
+  std::vector<ChunkID> expected = {ChunkID{0}};
+  std::vector<ChunkID> excluded = stored_table_node->excluded_chunk_ids();
+  EXPECT_EQ(excluded, expected);
+}
+
+TEST_F(ChunkPruningTest, FixedStringPruningTest) {
+  auto stored_table_node = std::make_shared<StoredTableNode>("fixed_string_compressed");
 
   auto predicate_node = std::make_shared<PredicateNode>(LQPColumnReference(stored_table_node, ColumnID{0}),
                                                         PredicateCondition::Equals, "zzz");
