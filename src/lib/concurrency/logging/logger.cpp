@@ -19,8 +19,6 @@ AbstractLogger& Logger::getInstance() {
   return instance;
 }
 
-void Logger::recover() { getInstance().recover(); }
-
 const std::string Logger::directory = "/Users/Dimitri/transaction_logs/";
 const std::string Logger::filename = "hyrise-log";
 const std::string Logger::last_log_filename = "last_log_number.txt";
