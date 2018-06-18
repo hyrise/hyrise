@@ -247,9 +247,8 @@ GroupCommitLogger::GroupCommitLogger()
   last_log_number_file << std::to_string(log_number);
   last_log_number_file.close();
 
-  _flush_thread = std::make_unique<PausableLoopThread>(
-    LOG_INTERVAL, [this](size_t) { GroupCommitLogger::flush(); });
-  _flush_thread->resume();
+  _flush_thread = std::make_unique<LoopThread>(
+    LOG_INTERVAL, [this]() { GroupCommitLogger::flush(); });
 }
 
 GroupCommitLogger::~GroupCommitLogger() {
