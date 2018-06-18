@@ -4,6 +4,7 @@
 #include <string>
 #include <utility>
 
+#include "expression/abstract_expression.hpp"
 #include "planviz/abstract_visualizer.hpp"
 #include "sql/sql_query_plan.hpp"
 
