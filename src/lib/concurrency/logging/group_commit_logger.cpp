@@ -1,4 +1,7 @@
 /*
+ *  TODO: use mmap ?
+ * 
+ * 
  *     Commit Entries:
  *       - log entry type ('t') : sizeof(char)
  *       - transaction_id       : sizeof(TransactionID)
@@ -97,7 +100,7 @@ void GroupCommitLogger::commit(const TransactionID transaction_id, std::function
 // resize the vector and write the values in the second pass.
 class ValueVisitor : public boost::static_visitor<bool> {
  public:
-  ValueVisitor(std::vector<char>& entry, size_t& cursor, size_t number_of_values)
+  ValueVisitor(std::vector<char>& entry, size_t& cursor)
   : _entry_vector(entry), _cursor(cursor) {}
 
   template <typename T>
@@ -117,7 +120,7 @@ bool ValueVisitor::operator()(std::string v) {
   _entry_vector.resize(_entry_vector.size() + v.size() + 1);
   v.copy(&_entry_vector[_cursor], v.size());
 
-  // Assume that memory is NULL, so the next byte terminates the string
+  // Assume that the next byte is NULL so the string gets terminated
   DebugAssert(_entry_vector[_cursor + v.size()] == '\0', "Logger: Byte is not NULL initiated");
 
   _cursor += v.size() + 1;
@@ -130,20 +133,10 @@ bool ValueVisitor::operator()(NullValue v) {
   return false;
 }
 
-/*     Value Entries:
- *       - log entry type ('v') : sizeof(char)
- *       - transaction_id       : sizeof(transaction_id_t)
- *       - table_name           : table_name.size() + 1, terminated with \0
- *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset)
- *       - NULL bitmap          : ceil(values.size() / 8.0)
- *       - value                : length(value)
- *       - any optional values
- */
 void GroupCommitLogger::value(const TransactionID transaction_id, const std::string table_name, const RowID row_id,
                               const std::vector<AllTypeVariant> values) {
   auto entry_length =
       sizeof(char) + sizeof(TransactionID) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset);
-  // TODO: use mmap ?
 
   std::vector<char> entry(entry_length);
   size_t cursor = 0;
@@ -155,22 +148,24 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
   auto null_bitmap_pos = cursor;
   cursor += number_of_bitmap_bytes;
 
-  ValueVisitor visitor(entry, cursor, values.size());
+  DebugAssert(entry[null_bitmap_pos] == '\0', "Logger: memory is not NULL");
+
+  ValueVisitor visitor(entry, cursor);
   auto bit_pos = 0u;
-  --null_bitmap_pos;  // decreased, because it will be increased in the for loop
   for (auto& value : values) {
     auto has_content = boost::apply_visitor(visitor, value);
 
-    if (bit_pos == 0) {
-      ++null_bitmap_pos;
-      DebugAssert(entry[null_bitmap_pos] == '\0', "Logger: memory is not NULL");
-    }
-
+    // Set corresponding bit in bitmap to 1 if the value was a NullValue
     if (!has_content) {
       entry[null_bitmap_pos] |= 1u << bit_pos;
     }
 
-    bit_pos = (bit_pos + 1) % 4;
+    // increase bit_pos for next value and increase null_bitmap_pos every eigth values 
+    if (bit_pos == 7) {
+      ++null_bitmap_pos;
+      DebugAssert(entry[null_bitmap_pos] == '\0', "Logger: memory is not NULL");
+    }
+    bit_pos = (bit_pos + 1) % 8;
   }
 
   _write_to_buffer(entry);
