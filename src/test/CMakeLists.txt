@@ -116,7 +116,7 @@ set(
     storage/chunk_test.cpp
     storage/composite_group_key_index_test.cpp
     storage/dictionary_column_test.cpp
-    storage/fixed_string_column_test.cpp
+    storage/fixed_string_dictionary_column_test.cpp
     storage/encoding_test.hpp
     storage/encoded_column_test.cpp
     storage/group_key_index_test.cpp

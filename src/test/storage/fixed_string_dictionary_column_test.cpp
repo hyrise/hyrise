@@ -7,18 +7,18 @@
 
 #include "storage/chunk_encoder.hpp"
 #include "storage/column_encoding_utils.hpp"
-#include "storage/fixed_string_dictionary_column/fixed_string_column.hpp"
+#include "storage/fixed_string_dictionary_column.hpp"
 #include "storage/value_column.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 
 namespace opossum {
 
-class StorageFixedStringColumnTest : public BaseTest {
+class StorageFixedStringDictionaryColumnTest : public BaseTest {
  protected:
   std::shared_ptr<ValueColumn<std::string>> vc_str = std::make_shared<ValueColumn<std::string>>();
 };
 
-TEST_F(StorageFixedStringColumnTest, CompressColumnString) {
+TEST_F(StorageFixedStringDictionaryColumnTest, CompressColumnString) {
   vc_str->append("Bill");
   vc_str->append("Steve");
   vc_str->append("Alexander");
@@ -27,7 +27,7 @@ TEST_F(StorageFixedStringColumnTest, CompressColumnString) {
   vc_str->append("Bill");
 
   auto col = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
-  auto dict_col = std::dynamic_pointer_cast<FixedStringColumn<std::string>>(col);
+  auto dict_col = std::dynamic_pointer_cast<FixedStringDictionaryColumn<std::string>>(col);
 
   // Test attribute_vector size
   EXPECT_EQ(dict_col->size(), 6u);
@@ -44,13 +44,13 @@ TEST_F(StorageFixedStringColumnTest, CompressColumnString) {
   EXPECT_EQ((*dict)[3], "Steve");
 }
 
-TEST_F(StorageFixedStringColumnTest, Decode) {
+TEST_F(StorageFixedStringDictionaryColumnTest, Decode) {
   vc_str->append("Bill");
   vc_str->append("Steve");
   vc_str->append("Bill");
 
   auto col = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
-  auto dict_col = std::dynamic_pointer_cast<FixedStringColumn<std::string>>(col);
+  auto dict_col = std::dynamic_pointer_cast<FixedStringDictionaryColumn<std::string>>(col);
 
   EXPECT_EQ(dict_col->encoding_type(), EncodingType::FixedStringDictionary);
   EXPECT_EQ(dict_col->compressed_vector_type(), CompressedVectorType::FixedSize1ByteAligned);
@@ -61,13 +61,13 @@ TEST_F(StorageFixedStringColumnTest, Decode) {
   EXPECT_EQ((*dict_col)[2], AllTypeVariant("Bill"));
 }
 
-TEST_F(StorageFixedStringColumnTest, LongStrings) {
+TEST_F(StorageFixedStringDictionaryColumnTest, LongStrings) {
   vc_str->append("ThisIsAVeryLongStringThisIsAVeryLongStringThisIsAVeryLongString");
   vc_str->append("QuiteShort");
   vc_str->append("Short");
 
   auto col = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
-  auto dict_col = std::dynamic_pointer_cast<FixedStringColumn<std::string>>(col);
+  auto dict_col = std::dynamic_pointer_cast<FixedStringDictionaryColumn<std::string>>(col);
 
   // Test sorting
   auto dict = dict_col->dictionary();
@@ -76,17 +76,17 @@ TEST_F(StorageFixedStringColumnTest, LongStrings) {
   EXPECT_EQ((*dict)[2], "ThisIsAVeryLongStringThisIsAVeryLongStringThisIsAVeryLongString");
 }
 
-TEST_F(StorageFixedStringColumnTest, CopyUsingAlloctor) {
+TEST_F(StorageFixedStringDictionaryColumnTest, CopyUsingAlloctor) {
   vc_str->append("Bill");
   vc_str->append("Steve");
   vc_str->append("Alexander");
 
   auto col = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
-  auto dict_col = std::dynamic_pointer_cast<FixedStringColumn<std::string>>(col);
+  auto dict_col = std::dynamic_pointer_cast<FixedStringDictionaryColumn<std::string>>(col);
 
   auto alloc = dict_col->dictionary()->get_allocator();
   auto base_column = dict_col->copy_using_allocator(alloc);
-  auto dict_col_copy = std::dynamic_pointer_cast<FixedStringColumn<std::string>>(base_column);
+  auto dict_col_copy = std::dynamic_pointer_cast<FixedStringDictionaryColumn<std::string>>(base_column);
 
   EXPECT_EQ(dict_col->dictionary()->get_allocator(), dict_col_copy->dictionary()->get_allocator());
   auto dict = dict_col_copy->dictionary();
@@ -96,7 +96,7 @@ TEST_F(StorageFixedStringColumnTest, CopyUsingAlloctor) {
   EXPECT_EQ((*dict)[2], "Steve");
 }
 
-TEST_F(StorageFixedStringColumnTest, LowerUpperBound) {
+TEST_F(StorageFixedStringDictionaryColumnTest, LowerUpperBound) {
   vc_str->append("A");
   vc_str->append("C");
   vc_str->append("E");
@@ -105,7 +105,7 @@ TEST_F(StorageFixedStringColumnTest, LowerUpperBound) {
   vc_str->append("K");
 
   auto col = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
-  auto dict_col = std::dynamic_pointer_cast<FixedStringColumn<std::string>>(col);
+  auto dict_col = std::dynamic_pointer_cast<FixedStringDictionaryColumn<std::string>>(col);
 
   // Test for AllTypeVariant as parameter
   EXPECT_EQ(dict_col->lower_bound(AllTypeVariant("E")), (ValueID)2);
@@ -118,7 +118,7 @@ TEST_F(StorageFixedStringColumnTest, LowerUpperBound) {
   EXPECT_EQ(dict_col->upper_bound(AllTypeVariant("Z")), INVALID_VALUE_ID);
 }
 
-TEST_F(StorageFixedStringColumnTest, NullValues) {
+TEST_F(StorageFixedStringDictionaryColumnTest, NullValues) {
   std::shared_ptr<ValueColumn<std::string>> vc_str = std::make_shared<ValueColumn<std::string>>(true);
 
   vc_str->append("A");
@@ -126,13 +126,13 @@ TEST_F(StorageFixedStringColumnTest, NullValues) {
   vc_str->append("E");
 
   auto col = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
-  auto dict_col = std::dynamic_pointer_cast<FixedStringColumn<std::string>>(col);
+  auto dict_col = std::dynamic_pointer_cast<FixedStringDictionaryColumn<std::string>>(col);
 
   EXPECT_EQ(dict_col->null_value_id(), 2u);
   EXPECT_TRUE(variant_is_null((*dict_col)[1]));
 }
 
-TEST_F(StorageFixedStringColumnTest, MemoryUsageEstimation) {
+TEST_F(StorageFixedStringDictionaryColumnTest, MemoryUsageEstimation) {
   /**
    * WARNING: Since it's hard to assert what constitutes a correct "estimation", this just tests basic sanity of the
    * memory usage estimations
@@ -145,7 +145,7 @@ TEST_F(StorageFixedStringColumnTest, MemoryUsageEstimation) {
   vc_str->append("B");
   vc_str->append("C");
   const auto compressed_column = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
-  const auto dictionary_column = std::dynamic_pointer_cast<FixedStringColumn<std::string>>(compressed_column);
+  const auto dictionary_column = std::dynamic_pointer_cast<FixedStringDictionaryColumn<std::string>>(compressed_column);
 
   static constexpr auto size_of_attribute = 1u;
   static constexpr auto size_of_dictionary = 3u;

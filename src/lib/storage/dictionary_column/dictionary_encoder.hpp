@@ -7,7 +7,7 @@
 #include "storage/base_column_encoder.hpp"
 
 #include "storage/dictionary_column.hpp"
-#include "storage/fixed_string_dictionary_column/fixed_string_column.hpp"
+#include "storage/fixed_string_dictionary_column.hpp"
 #include "storage/value_column.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 
@@ -121,8 +121,8 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
     auto attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(encoded_attribute_vector));
 
     if constexpr (Encoding == EncodingType::FixedStringDictionary) {
-      return std::allocate_shared<FixedStringColumn<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
-                                                        ValueID{null_value_id});
+      return std::allocate_shared<FixedStringDictionaryColumn<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
+                                                                  ValueID{null_value_id});
     } else {
       return std::allocate_shared<DictionaryColumn<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
                                                        ValueID{null_value_id});

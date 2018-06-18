@@ -67,7 +67,7 @@ void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
     const auto& left_column = static_cast<const DictionaryColumn<std::string>&>(base_column);
     result = _find_matches_in_dictionary(*left_column.dictionary());
   } else {
-    const auto& left_column = static_cast<const FixedStringColumn<std::string>&>(base_column);
+    const auto& left_column = static_cast<const FixedStringDictionaryColumn<std::string>&>(base_column);
     result = _find_matches_in_dictionary(*left_column.dictionary());
   }
 

@@ -3,8 +3,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/fixed_string.hpp"
-#include "../lib/storage/fixed_string_dictionary_column/fixed_string_vector.hpp"
+#include "storage/fixed_string_dictionary_column/fixed_string_vector.hpp"
 
 namespace opossum {
 

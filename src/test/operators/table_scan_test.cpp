@@ -25,13 +25,13 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
  protected:
   void SetUp() override {
     _encoding_type = GetParam();
+
     auto int_int_7 = load_table("src/test/tables/int_int_shuffled.tbl", 7);
     auto int_int_5 = load_table("src/test/tables/int_int_shuffled_2.tbl", 5);
 
     ChunkEncoder::encode_chunks(int_int_7, {ChunkID{0}, ChunkID{1}}, {_encoding_type});
-    // partly compresed table
+    // partly compressed table
     ChunkEncoder::encode_chunks(int_int_5, {ChunkID{0}, ChunkID{1}}, {_encoding_type});
-
 
     _int_int_compressed = std::make_shared<TableWrapper>(std::move(int_int_7));
     _int_int_compressed->execute();
@@ -204,7 +204,7 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
 };
 
 INSTANTIATE_TEST_CASE_P(EncodingTypes, OperatorsTableScanTest,
-                        ::testing::Values(EncodingType::Dictionary, EncodingType::RunLength,
+                        ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
                                           EncodingType::FrameOfReference),
                         formatter);
 
@@ -285,8 +285,7 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedCompressedColumn) {
   tests[PredicateCondition::IsNotNull] = {100, 102, 104, 106, 100, 102, 104, 106};
 
   for (const auto& test : tests) {
-    auto scan1 =
-        std::make_shared<TableScan>(_int_int_compressed, ColumnID{1}, PredicateCondition::LessThan, 108);
+    auto scan1 = std::make_shared<TableScan>(_int_int_compressed, ColumnID{1}, PredicateCondition::LessThan, 108);
     scan1->execute();
 
     auto scan_partly1 =
@@ -332,8 +331,8 @@ TEST_P(OperatorsTableScanTest, ScanWeirdPosList) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanOnCompressedColumnValueGreaterThanMaxDictionaryValue) {
-  const auto all_rows = std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106,
-                                                    108, 110, 112};
+  const auto all_rows =
+      std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
   const auto no_rows = std::vector<AllTypeVariant>{};
 
   std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
@@ -357,8 +356,8 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedColumnValueGreaterThanMaxDictiona
 }
 
 TEST_P(OperatorsTableScanTest, ScanOnCompressedColumnValueLessThanMinDictionaryValue) {
-  const auto all_rows = std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106,
-                                                    108, 110, 112};
+  const auto all_rows =
+      std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
   const auto no_rows = std::vector<AllTypeVariant>{};
 
   std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;

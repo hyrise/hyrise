@@ -5,19 +5,19 @@
 #include "storage/column_iterables.hpp"
 
 #include "storage/dictionary_column.hpp"
-#include "storage/fixed_string_dictionary_column/fixed_string_column.hpp"
+#include "storage/fixed_string_dictionary_column.hpp"
 
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace opossum {
 
-template <typename T, typename U>
-class DictionaryColumnIterable : public PointAccessibleColumnIterable<DictionaryColumnIterable<T, U>> {
+template <typename T, typename Dictionary>
+class DictionaryColumnIterable : public PointAccessibleColumnIterable<DictionaryColumnIterable<T, Dictionary>> {
  public:
   explicit DictionaryColumnIterable(const DictionaryColumn<T>& column)
       : _column{column}, _dictionary(column.dictionary()) {}
 
-  explicit DictionaryColumnIterable(const FixedStringColumn<std::string>& column)
+  explicit DictionaryColumnIterable(const FixedStringDictionaryColumn<std::string>& column)
       : _column{column}, _dictionary(column.fixed_string_dictionary()) {}
 
   template <typename Functor>
@@ -48,13 +48,13 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
 
  private:
   const BaseDictionaryColumn& _column;
-  std::shared_ptr<const U> _dictionary;
+  std::shared_ptr<const Dictionary> _dictionary;
 
  private:
   template <typename ZsIteratorType>
   class Iterator : public BaseColumnIterator<Iterator<ZsIteratorType>, ColumnIteratorValue<T>> {
    public:
-    explicit Iterator(const U& dictionary, const ValueID null_value_id, const ZsIteratorType attribute_it,
+    explicit Iterator(const Dictionary& dictionary, const ValueID null_value_id, const ZsIteratorType attribute_it,
                       ChunkOffset chunk_offset)
         : _dictionary{dictionary},
           _null_value_id{null_value_id},
@@ -77,7 +77,7 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
 
       if (is_null) return ColumnIteratorValue<T>{T{}, true, _chunk_offset};
 
-      if constexpr (std::is_same<FixedStringVector, U>::value) {
+      if constexpr (std::is_same<Dictionary, FixedStringVector>::value) {
         return ColumnIteratorValue<T>{_dictionary.get_string_at(value_id), false, _chunk_offset};
       } else {
         return ColumnIteratorValue<T>{_dictionary[value_id], false, _chunk_offset};
@@ -85,7 +85,7 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
     }
 
    private:
-    const U& _dictionary;
+    const Dictionary& _dictionary;
     const ValueID _null_value_id;
     ZsIteratorType _attribute_it;
     ChunkOffset _chunk_offset;
@@ -95,7 +95,7 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
   class PointAccessIterator
       : public BasePointAccessColumnIterator<PointAccessIterator<ZsDecoderType>, ColumnIteratorValue<T>> {
    public:
-    PointAccessIterator(const U& dictionary, const ValueID null_value_id, ZsDecoderType& attribute_decoder,
+    PointAccessIterator(const Dictionary& dictionary, const ValueID null_value_id, ZsDecoderType& attribute_decoder,
                         ChunkOffsetsIterator chunk_offsets_it)
         : BasePointAccessColumnIterator<PointAccessIterator<ZsDecoderType>, ColumnIteratorValue<T>>{chunk_offsets_it},
           _dictionary{dictionary},
@@ -113,7 +113,7 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
 
       if (is_null) return ColumnIteratorValue<T>{T{}, true, chunk_offsets.into_referencing};
 
-      if constexpr (std::is_same<FixedStringVector, U>::value) {
+      if constexpr (std::is_same<Dictionary, FixedStringVector>::value) {
         return ColumnIteratorValue<T>{_dictionary.get_string_at(value_id), false, chunk_offsets.into_referencing};
       } else {
         return ColumnIteratorValue<T>{_dictionary[value_id], false, chunk_offsets.into_referencing};
@@ -121,7 +121,7 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
     }
 
    private:
-    const U& _dictionary;
+    const Dictionary& _dictionary;
     const ValueID _null_value_id;
     ZsDecoderType& _attribute_decoder;
   };

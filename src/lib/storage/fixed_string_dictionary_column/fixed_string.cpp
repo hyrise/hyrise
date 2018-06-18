@@ -47,19 +47,10 @@ size_t FixedString::size() const {
 
 size_t FixedString::maximum_length() const { return _maximum_length; }
 
-std::string FixedString::string() const {
-  const auto string_value = std::string(_mem, _maximum_length);
-  const auto pos = string_value.find('\0');
-
-  if (pos == std::string::npos) {
-    return string_value;
-  } else {
-    return string_value.substr(0, pos);
-  }
-}
+std::string FixedString::string() const { return std::string(_mem, strnlen(_mem, _maximum_length)); }
 
 bool FixedString::operator<(const FixedString& other) const {
-  const auto smallest_length = size() < other.size() ? size() : other.size();
+  const auto smallest_length = std::min(size(), other.size());
   const auto result = memcmp(_mem, other._mem, smallest_length);
   if (result == 0) return size() < other.size();
   return result < 0;

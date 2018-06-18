@@ -268,7 +268,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseDictionaryCol
   _export_value(context->ofstream, static_cast<const AttributeVectorWidth>(attribute_vector_width));
 
   if (base_column.encoding_type() == EncodingType::FixedStringDictionary) {
-    const auto& column = static_cast<const FixedStringColumn<std::string>&>(base_column);
+    const auto& column = static_cast<const FixedStringDictionaryColumn<std::string>&>(base_column);
 
     // Write the dictionary size and dictionary
     _export_value(context->ofstream, static_cast<ValueID>(column.dictionary()->size()));
