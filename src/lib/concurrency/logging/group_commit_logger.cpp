@@ -21,9 +21,9 @@
  */
 
 #include "group_commit_logger.hpp"
-#include "binary_recovery.hpp"
-#include "logger.hpp"
-#include "types.hpp"
+
+#include <boost/serialization/variant.hpp>
+#include <boost/variant/apply_visitor.hpp>
 
 #include <fcntl.h>
 #include <math.h>
@@ -37,8 +37,9 @@
 
 #include <iostream>
 
-#include <boost/serialization/variant.hpp>
-#include <boost/variant/apply_visitor.hpp>
+#include "binary_recovery.hpp"
+#include "logger.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -85,12 +86,12 @@ void GroupCommitLogger::commit(const TransactionID transaction_id, std::function
 class value_visitor : public boost::static_visitor<bool> {
  public:
   value_visitor(std::vector<char>& entry, size_t& cursor, size_t number_of_values)
-      : _entry_vector(entry), _cursor(cursor){};
+      : _entry_vector(entry), _cursor(cursor) {}
 
   template <typename T>
   bool operator()(T v) {
     _entry_vector.resize(_entry_vector.size() + sizeof(T));
-    *(T*)&_entry_vector[_cursor] = v;
+    *reinterpret_cast<T*>(&_entry_vector[_cursor]) = v;
     _cursor += sizeof(T);
 
     // return that value has content
@@ -201,7 +202,7 @@ void GroupCommitLogger::_write_to_buffer(std::vector<char>& entry) {
 }
 
 void GroupCommitLogger::_write_buffer_to_logfile() {
-  //TODO: perhaps second buffer, then buffer has not to be locked
+  // TODO: perhaps second buffer, then buffer has not to be locked
   _file_mutex.lock();
   _buffer_mutex.lock();
 
@@ -239,7 +240,7 @@ void GroupCommitLogger::recover() { BinaryRecovery::getInstance().recover(); }
 
 GroupCommitLogger::GroupCommitLogger()
     : AbstractLogger(), _buffer_capacity(LOG_BUFFER_CAPACITY), _buffer_position(0u), _has_unflushed_buffer(false) {
-  _buffer = (char*)malloc(_buffer_capacity);
+  _buffer = reinterpret_cast<char*>(malloc(_buffer_capacity));
   memset(_buffer, 0, _buffer_capacity);
 
   std::fstream last_log_number_file(Logger::directory + Logger::last_log_filename, std::ios::in);
@@ -257,7 +258,7 @@ GroupCommitLogger::GroupCommitLogger()
   // TODO: thread should be joined at the end of the program
   std::thread t1(&GroupCommitLogger::_flush_to_disk_after_timeout, this);
   t1.detach();
-};
+}
 
 GroupCommitLogger::~GroupCommitLogger() {
   _log_file.close();

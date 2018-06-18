@@ -1,12 +1,13 @@
 #include "logger.hpp"
-#include "abstract_logger.hpp"
-#include "group_commit_logger.hpp"
-#include "initial_logger.hpp"
 
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sstream>
+
+#include "abstract_logger.hpp"
+#include "group_commit_logger.hpp"
+#include "initial_logger.hpp"
 
 namespace opossum {
 

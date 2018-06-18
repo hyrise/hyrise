@@ -1,13 +1,13 @@
 #include "initial_logger.hpp"
-#include "logger.hpp"
-#include "text_recovery.hpp"
-
-#include "all_type_variant.hpp"
 
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sstream>
+
+#include "all_type_variant.hpp"
+#include "logger.hpp"
+#include "text_recovery.hpp"
 
 namespace opossum {
 
@@ -34,7 +34,7 @@ void InitialLogger::flush() { fsync(_file_descriptor); }
 
 void InitialLogger::_write_to_logfile(const std::stringstream& ss) {
   _file_mutex.lock();
-  write(_file_descriptor, (void*)ss.str().c_str(), ss.str().length());
+  write(_file_descriptor, reinterpret_cast<const void*>(ss.str().c_str()), ss.str().length());
   _file_mutex.unlock();
 }
 
@@ -53,6 +53,6 @@ InitialLogger::InitialLogger() : AbstractLogger() {
   _file_descriptor = open(path.c_str(), oflags, mode);
 
   DebugAssert(_file_descriptor != -1, "Logfile could not be opened or created: " + path);
-};
+}
 
 }  // namespace opossum

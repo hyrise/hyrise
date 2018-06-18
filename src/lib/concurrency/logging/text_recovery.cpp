@@ -1,14 +1,14 @@
 #include "text_recovery.hpp"
 
+#include <fstream>
+#include <sstream>
+
 #include "../../operators/insert.hpp"
 #include "../../storage/storage_manager.hpp"
 #include "../../storage/table.hpp"
 #include "../transaction_manager.hpp"
 #include "logger.hpp"
 #include "types.hpp"
-
-#include <fstream>
-#include <sstream>
 
 namespace opossum {
 
@@ -18,10 +18,10 @@ class LoggedItem {
  public:
   LoggedItem(LogType type, TransactionID& transaction_id, std::string& table_name, RowID& row_id,
              std::vector<AllTypeVariant>& values)
-      : type(type), transaction_id(transaction_id), table_name(table_name), row_id(row_id), values(values){};
+      : type(type), transaction_id(transaction_id), table_name(table_name), row_id(row_id), values(values) {}
 
   LoggedItem(LogType type, TransactionID& transaction_id, std::string& table_name, RowID& row_id)
-      : type(type), transaction_id(transaction_id), table_name(table_name), row_id(row_id){};
+      : type(type), transaction_id(transaction_id), table_name(table_name), row_id(row_id) {}
 
   LogType type;
   TransactionID transaction_id;
@@ -77,7 +77,6 @@ void TextRecovery::recover() {
       // TODO: delete elements in transactions vector
 
     } else {  // 'v' or 'i'
-
       // transaction_id_end  rowID_end
       //     |  rowID_position  |
       //     v        v         v

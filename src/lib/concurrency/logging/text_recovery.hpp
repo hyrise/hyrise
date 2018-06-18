@@ -14,7 +14,7 @@ class TextRecovery {
   void recover();
 
  private:
-  TextRecovery(){};
+  TextRecovery(){}
 };
 
 }  // namespace opossum

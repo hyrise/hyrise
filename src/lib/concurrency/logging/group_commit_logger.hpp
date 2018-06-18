@@ -62,7 +62,7 @@ class GroupCommitLogger : public AbstractLogger {
 
   template <typename T>
   void _write_value(char*& cursor, const T& value) {
-    *(T*)cursor = value;
+    *reinterpret_cast<T*>(cursor) = value;
     cursor += sizeof(T);
   }
 

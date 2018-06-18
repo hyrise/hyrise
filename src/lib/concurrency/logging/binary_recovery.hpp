@@ -1,8 +1,8 @@
 #pragma once
 
-#include "types.hpp"
-
 #include <fstream>
+
+#include "types.hpp"
 
 namespace opossum {
 
@@ -16,9 +16,7 @@ class BinaryRecovery {
   void recover();
 
  private:
-  BinaryRecovery(){};
-
-  // bool _is_empty(std::ifstream& file);
+  BinaryRecovery(){}
 };
 
 }  // namespace opossum

@@ -34,7 +34,7 @@ class AbstractLogger {
   friend class Logger;
   friend class InitialLogger;
   friend class GroupCommitLogger;
-  AbstractLogger(){};
+  AbstractLogger(){}
 };
 
 }  // namespace opossum
