@@ -1,11 +1,11 @@
 #include "logger.hpp"
 #include "abstract_logger.hpp"
-#include "initial_logger.hpp"
 #include "group_commit_logger.hpp"
+#include "initial_logger.hpp"
 
 #include <fcntl.h>
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <sstream>
 
 namespace opossum {
@@ -16,9 +16,7 @@ AbstractLogger& Logger::getInstance() {
   return instance;
 }
 
-void Logger::recover(){
-  getInstance().recover();
-}
+void Logger::recover() { getInstance().recover(); }
 
 const std::string Logger::directory = "/Users/Dimitri/transaction_logs/";
 const std::string Logger::filename = "hyrise-log";

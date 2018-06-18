@@ -1,35 +1,27 @@
 #include "binary_recovery.hpp"
 
-#include "logger.hpp"
-#include "types.hpp"
+#include "../../operators/insert.hpp"
 #include "../../storage/storage_manager.hpp"
 #include "../../storage/table.hpp"
-#include "../../operators/insert.hpp"
 #include "../transaction_manager.hpp"
+#include "logger.hpp"
+#include "types.hpp"
 
 #include <fstream>
 #include <sstream>
 
 namespace opossum {
 
-enum class LogType {Value, Invalidation};
+enum class LogType { Value, Invalidation };
 
 class LoggedItem {
  public:
-  LoggedItem(LogType type, TransactionID &transaction_id, std::string &table_name, RowID &row_id, std::vector<AllTypeVariant> &values)
-  : type(type)
-  , transaction_id(transaction_id)
-  , table_name(table_name)
-  , row_id(row_id)
-  , values(values) {
-  };
+  LoggedItem(LogType type, TransactionID& transaction_id, std::string& table_name, RowID& row_id,
+             std::vector<AllTypeVariant>& values)
+      : type(type), transaction_id(transaction_id), table_name(table_name), row_id(row_id), values(values){};
 
-  LoggedItem(LogType type, TransactionID &transaction_id, std::string &table_name, RowID &row_id)
-  : type(type)
-  , transaction_id(transaction_id)
-  , table_name(table_name)
-  , row_id(row_id){
-  };
+  LoggedItem(LogType type, TransactionID& transaction_id, std::string& table_name, RowID& row_id)
+      : type(type), transaction_id(transaction_id), table_name(table_name), row_id(row_id){};
 
   LogType type;
   TransactionID transaction_id;
@@ -43,16 +35,15 @@ BinaryRecovery& BinaryRecovery::getInstance() {
   return instance;
 }
 
-
-  // ((int32_t,     Int,        "int"))    \
+// ((int32_t,     Int,        "int"))    \
   // ((int64_t,     Long,       "long"))   \
   // ((float,       Float,      "float"))  \
   // ((double,      Double,     "double")) \
   // ((std::string, String,     "string"))
 
-AllTypeVariant _read(std::ifstream& file, DataType data_type){
+AllTypeVariant _read(std::ifstream& file, DataType data_type) {
   AllTypeVariant value;
-  switch (data_type){
+  switch (data_type) {
     case DataType::Int: {
       int32_t v;
       file.read(reinterpret_cast<char*>(&v), sizeof(int32_t));
@@ -99,22 +90,24 @@ void BinaryRecovery::recover() {
   TransactionID last_transaction_id{0};
 
   // for every logfile: read and redo logged entries
-  for (auto i = 1u; i < log_number; ++i){
+  for (auto i = 1u; i < log_number; ++i) {
     // TODO: check if file exists
     std::ifstream log_file{Logger::directory + Logger::filename + std::to_string(i), std::ios::binary};
 
     std::vector<LoggedItem> transactions;
 
-    while(true) {
+    while (true) {
       char log_type;
       log_file.read(&log_type, sizeof(char));
 
-      if (log_file.eof()){ break; }
+      if (log_file.eof()) {
+        break;
+      }
 
       TransactionID transaction_id;
       log_file.read(reinterpret_cast<char*>(&transaction_id), sizeof(TransactionID));
 
-      if (log_type == 't'){   // commit 
+      if (log_type == 't') {  // commit
         /*
         *     Commit Entries:
         *       - log entry type ('t') : sizeof(char)
@@ -122,9 +115,8 @@ void BinaryRecovery::recover() {
         */
 
         // TODO refactor: same as text file recovery
-        for (auto &transaction : transactions) {
-          if (transaction.transaction_id != transaction_id)
-            continue;
+        for (auto& transaction : transactions) {
+          if (transaction.transaction_id != transaction_id) continue;
 
           auto table = StorageManager::get().get_table(transaction.table_name);
           auto chunk = table->get_chunk(transaction.row_id.chunk_id);
@@ -133,8 +125,10 @@ void BinaryRecovery::recover() {
             chunk->append(*transaction.values);
 
             auto mvcc_columns = chunk->mvcc_columns();
-            DebugAssert(mvcc_columns->begin_cids.size() - 1 == transaction.row_id.chunk_offset, "recovery rowID " + std::to_string(mvcc_columns->begin_cids.size() - 1) + " != logged rowID " + std::to_string(transaction.row_id.chunk_offset));
-            mvcc_columns->begin_cids[mvcc_columns->begin_cids.size() - 1] = transaction_id;          
+            DebugAssert(mvcc_columns->begin_cids.size() - 1 == transaction.row_id.chunk_offset,
+                        "recovery rowID " + std::to_string(mvcc_columns->begin_cids.size() - 1) + " != logged rowID " +
+                            std::to_string(transaction.row_id.chunk_offset));
+            mvcc_columns->begin_cids[mvcc_columns->begin_cids.size() - 1] = transaction_id;
           } else if (transaction.type == LogType::Invalidation) {
             auto mvcc_columns = chunk->mvcc_columns();
             mvcc_columns->end_cids[transaction.row_id.chunk_offset] = transaction_id;
@@ -143,12 +137,11 @@ void BinaryRecovery::recover() {
           }
         }
 
-        last_transaction_id = std::max(transaction_id, last_transaction_id); 
+        last_transaction_id = std::max(transaction_id, last_transaction_id);
 
         // TODO: delete elements in transactions vector
 
-      }
-      else { // 'v' or 'i'
+      } else {  // 'v' or 'i'
         DebugAssert(log_type == 'v' || log_type == 'i', "recovery: first token of new entry is neither c, v nor i");
         /*     Invalidation and begin of value entries:
         *       - log entry type ('v') : sizeof(char)
@@ -156,7 +149,6 @@ void BinaryRecovery::recover() {
         *       - table_name           : table_name.size() + 1, terminated with \0
         *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset)
         */
-
 
         std::string table_name;
         std::getline(log_file, table_name, '\0');
@@ -169,11 +161,10 @@ void BinaryRecovery::recover() {
 
         RowID row_id(chunk_id, chunk_offset);
 
-        if (log_type == 'i'){
+        if (log_type == 'i') {
           transactions.push_back(LoggedItem(LogType::Invalidation, transaction_id, table_name, row_id));
           continue;
-        }
-        else {
+        } else {
           /*  Remainder of value entries:
            *       - NULL bitmap          : ceil(values.size() / 8.0)
            *       - value                : length(value)
@@ -189,7 +180,7 @@ void BinaryRecovery::recover() {
 
           // TODO use bitmap
           std::vector<AllTypeVariant> values;
-          for (auto &data_type : data_types) {
+          for (auto& data_type : data_types) {
             values.push_back(_read(log_file, data_type));
           }
 
@@ -204,7 +195,6 @@ void BinaryRecovery::recover() {
     ++last_transaction_id;
     TransactionManager::_reset_to_id(last_transaction_id);
   }
-
 }
 
 }  // namespace opossum

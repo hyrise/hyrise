@@ -1,35 +1,27 @@
 #include "text_recovery.hpp"
 
-#include "logger.hpp"
-#include "types.hpp"
+#include "../../operators/insert.hpp"
 #include "../../storage/storage_manager.hpp"
 #include "../../storage/table.hpp"
-#include "../../operators/insert.hpp"
 #include "../transaction_manager.hpp"
+#include "logger.hpp"
+#include "types.hpp"
 
 #include <fstream>
 #include <sstream>
 
 namespace opossum {
 
-enum class LogType {Value, Invalidation};
+enum class LogType { Value, Invalidation };
 
 class LoggedItem {
  public:
-  LoggedItem(LogType type, TransactionID &transaction_id, std::string &table_name, RowID &row_id, std::vector<AllTypeVariant> &values)
-  : type(type)
-  , transaction_id(transaction_id)
-  , table_name(table_name)
-  , row_id(row_id)
-  , values(values) {
-  };
+  LoggedItem(LogType type, TransactionID& transaction_id, std::string& table_name, RowID& row_id,
+             std::vector<AllTypeVariant>& values)
+      : type(type), transaction_id(transaction_id), table_name(table_name), row_id(row_id), values(values){};
 
-  LoggedItem(LogType type, TransactionID &transaction_id, std::string &table_name, RowID &row_id)
-  : type(type)
-  , transaction_id(transaction_id)
-  , table_name(table_name)
-  , row_id(row_id){
-  };
+  LoggedItem(LogType type, TransactionID& transaction_id, std::string& table_name, RowID& row_id)
+      : type(type), transaction_id(transaction_id), table_name(table_name), row_id(row_id){};
 
   LogType type;
   TransactionID transaction_id;
@@ -51,19 +43,17 @@ void TextRecovery::recover() {
   TransactionID last_transaction_id{0};
 
   std::string line;
-  while (std::getline(log_file, line))
-  {
+  while (std::getline(log_file, line)) {
     char log_type = line[1];
 
     // commit
-    if (log_type == 't'){
+    if (log_type == 't') {
       TransactionID transaction_id = std::stoull(line.substr(3, line.length() - 4));
 
       // perform transactions
       // TODO: perform in right order
-      for (auto &transaction : transactions) {
-        if (transaction.transaction_id != transaction_id)
-          continue;
+      for (auto& transaction : transactions) {
+        if (transaction.transaction_id != transaction_id) continue;
 
         auto table = StorageManager::get().get_table(transaction.table_name);
         auto chunk = table->get_chunk(transaction.row_id.chunk_id);
@@ -72,15 +62,17 @@ void TextRecovery::recover() {
           chunk->append(*transaction.values);
 
           auto mvcc_columns = chunk->mvcc_columns();
-          DebugAssert(mvcc_columns->begin_cids.size() - 1 == transaction.row_id.chunk_offset, "recovery rowID " + std::to_string(mvcc_columns->begin_cids.size() - 1) + " != logged rowID " + std::to_string(transaction.row_id.chunk_offset));
-          mvcc_columns->begin_cids[mvcc_columns->begin_cids.size() - 1] = transaction_id;          
+          DebugAssert(mvcc_columns->begin_cids.size() - 1 == transaction.row_id.chunk_offset,
+                      "recovery rowID " + std::to_string(mvcc_columns->begin_cids.size() - 1) + " != logged rowID " +
+                          std::to_string(transaction.row_id.chunk_offset));
+          mvcc_columns->begin_cids[mvcc_columns->begin_cids.size() - 1] = transaction_id;
         } else if (transaction.type == LogType::Invalidation) {
           auto mvcc_columns = chunk->mvcc_columns();
           mvcc_columns->end_cids[transaction.row_id.chunk_offset] = transaction_id;
         }
       }
 
-      last_transaction_id = std::max(transaction_id, last_transaction_id);      
+      last_transaction_id = std::max(transaction_id, last_transaction_id);
 
       // TODO: delete elements in transactions vector
 
@@ -90,7 +82,7 @@ void TextRecovery::recover() {
       //     |  rowID_position  |
       //     v        v         v
       // (v,12,table1,RowID(0,25),(25,LAND_O,9001,asdf))
-      // (i,86,TABLE2,RowID(....))                  
+      // (i,86,TABLE2,RowID(....))
 
       auto transaction_id_end = line.find(',', 3) - 1;
       TransactionID transaction_id = std::stoull(line.substr(3, transaction_id_end - 2));
@@ -99,7 +91,7 @@ void TextRecovery::recover() {
       auto rowID_end = line.find(")", rowID_position);
       // ...,RowID(x,y)...  ->   x,y
       auto rowID_substring = line.substr(rowID_position + 6, rowID_end - rowID_position - 6);
-      std::istringstream rowID_stream(rowID_substring); 
+      std::istringstream rowID_stream(rowID_substring);
       ChunkID chunk_id;
       rowID_stream >> chunk_id;
       rowID_stream.ignore();  // ignore ','
@@ -109,7 +101,7 @@ void TextRecovery::recover() {
 
       std::string table_name = line.substr(transaction_id_end + 2, rowID_position - transaction_id_end - 3);
 
-      if (log_type == 'i'){
+      if (log_type == 'i') {
         transactions.push_back(LoggedItem(LogType::Invalidation, transaction_id, table_name, row_id));
         continue;
       }
@@ -123,14 +115,14 @@ void TextRecovery::recover() {
       // (v,12,table1,RowID(0,25),(25,LAND_O,9001,asdf)) -> 25,LAND_O,9001,asdf
       auto value_string = line.substr(rowID_end + 3, line.length() - rowID_end - 5);
       size_t position;
-      for (auto &data_type : data_types){
+      for (auto& data_type : data_types) {
         position = value_string.find(',');
-        if (position !=  std::string::npos)
+        if (position != std::string::npos)
           values.push_back(value_string.substr(0, position));
         else
           values.push_back(value_string);
         value_string.erase(0, position + 1);
-        (void) data_type; // TODO REMOVE THIS SHIT
+        (void)data_type;  // TODO REMOVE THIS SHIT
       }
 
       transactions.push_back(LoggedItem(LogType::Value, transaction_id, table_name, row_id, values));

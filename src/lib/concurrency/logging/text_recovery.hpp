@@ -5,7 +5,7 @@
 namespace opossum {
 
 class TextRecovery {
- public:   
+ public:
   TextRecovery(const TextRecovery&) = delete;
   TextRecovery& operator=(const TextRecovery&) = delete;
 

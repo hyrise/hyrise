@@ -57,7 +57,7 @@ class TransactionManager : private Noncopyable {
    */
   std::shared_ptr<TransactionContext> new_transaction_context();
 
-private:
+ private:
   friend class TextRecovery;
   friend class BinaryRecovery;
   static void _reset_to_id(TransactionID transaction_id);

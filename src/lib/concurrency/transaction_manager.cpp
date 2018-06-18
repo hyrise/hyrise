@@ -13,9 +13,7 @@ TransactionManager& TransactionManager::get() {
   return instance;
 }
 
-void TransactionManager::reset() {
-  _reset(INITIAL_TRANSACTION_ID, INITIAL_COMMIT_ID);
-}
+void TransactionManager::reset() { _reset(INITIAL_TRANSACTION_ID, INITIAL_COMMIT_ID); }
 
 /**
  * Used by the recovery, which replays transactions from a logfile. 

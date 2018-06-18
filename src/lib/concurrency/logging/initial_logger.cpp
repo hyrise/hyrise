@@ -5,33 +5,32 @@
 #include "all_type_variant.hpp"
 
 #include <fcntl.h>
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <sstream>
 
 namespace opossum {
 
-void InitialLogger::commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback){
+void InitialLogger::commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) {
   std::stringstream ss;
   ss << "(t," << transaction_id << ")\n";
   _write_to_logfile(ss);
 }
 
-void InitialLogger::value(const TransactionID transaction_id, const std::string table_name, const RowID row_id, const std::vector<AllTypeVariant> values){
+void InitialLogger::value(const TransactionID transaction_id, const std::string table_name, const RowID row_id,
+                          const std::vector<AllTypeVariant> values) {
   // std::stringstream ss;
   // ss << "(v," << transaction_id << "," << table_name << "," << row_id << "," << values.str() << ")\n";
   // _write_to_logfile(ss);
 }
 
-void InitialLogger::invalidate(const TransactionID transaction_id, const std::string table_name, const RowID row_id){
+void InitialLogger::invalidate(const TransactionID transaction_id, const std::string table_name, const RowID row_id) {
   std::stringstream ss;
   ss << "(i," << transaction_id << "," << table_name << "," << row_id << ")\n";
   _write_to_logfile(ss);
 }
 
-void InitialLogger::flush() {
-  fsync(_file_descriptor);
-}
+void InitialLogger::flush() { fsync(_file_descriptor); }
 
 void InitialLogger::_write_to_logfile(const std::stringstream& ss) {
   _file_mutex.lock();
@@ -39,11 +38,9 @@ void InitialLogger::_write_to_logfile(const std::stringstream& ss) {
   _file_mutex.unlock();
 }
 
-void InitialLogger::recover() {
-  TextRecovery::getInstance().recover();
-}
+void InitialLogger::recover() { TextRecovery::getInstance().recover(); }
 
-InitialLogger::InitialLogger() : AbstractLogger(){
+InitialLogger::InitialLogger() : AbstractLogger() {
   std::string path = Logger::directory + Logger::filename;
 
   // TODO: what if directory does not exists?

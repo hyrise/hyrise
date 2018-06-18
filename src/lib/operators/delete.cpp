@@ -51,7 +51,6 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
       }
 
       Logger::getInstance().invalidate(_transaction_id, _table_name, row_id);
-
     }
   }
 

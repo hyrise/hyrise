@@ -1,20 +1,45 @@
+/*
+ *  Logger that gathers multiple log entries in a buffer before flushing them to disk.
+ * 
+ *     Commit Entries:
+ *       - log entry type ('t') : sizeof(char)
+ *       - transaction_id       : sizeof(TransactionID)
+ * 
+ *     Value Entries:
+ *       - log entry type ('v') : sizeof(char)
+ *       - transaction_id       : sizeof(transaction_id_t)
+ *       - table_name           : table_name.size() + 1, terminated with \0
+ *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset)
+ *       - NULL bitmap          : ceil(values.size() / 8.0)
+ *       - value                : length(value)
+ *       - any optional values
+ * 
+ *     Invalidation Entries:
+ *       - log entry type ('i') : sizeof(char)
+ *       - transaction_id       : sizeof(transaction_id_t)
+ *       - table_name           : table_name.size() + 1, terminated with \0
+ *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset) 
+ *
+ */
+
 #pragma once
 
-#include "abstract_logger.hpp"
 #include <fstream>
+#include "abstract_logger.hpp"
 
 #include "types.hpp"
 
 namespace opossum {
 
-class GroupCommitLogger : public AbstractLogger{
- public:  
+class GroupCommitLogger : public AbstractLogger {
+ public:
   GroupCommitLogger(const GroupCommitLogger&) = delete;
   GroupCommitLogger& operator=(const GroupCommitLogger&) = delete;
 
   void commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) override;
 
-  void value(const TransactionID transaction_id, const std::string table_name, const RowID row_id, const std::vector<AllTypeVariant> values) override;
+  void value(const TransactionID transaction_id, const std::string table_name, const RowID row_id,
+             const std::vector<AllTypeVariant> values) override;
 
   void invalidate(const TransactionID transaction_id, const std::string table_name, const RowID row_id) override;
 
@@ -27,22 +52,22 @@ class GroupCommitLogger : public AbstractLogger{
   GroupCommitLogger();
 
  private:
-  void _put_into_entry(char*& entry_cursor, const char &type, const TransactionID &transaction_id, const std::string &table_name, const RowID &row_id);
-  void _put_into_entry(char*& entry_cursor, const char &type, const TransactionID &transaction_id);
-  
+  void _put_into_entry(char*& entry_cursor, const char& type, const TransactionID& transaction_id,
+                       const std::string& table_name, const RowID& row_id);
+  void _put_into_entry(char*& entry_cursor, const char& type, const TransactionID& transaction_id);
 
   void _flush_to_disk_after_timeout();
   void _write_buffer_to_logfile();
-  void _write_to_buffer(std::vector<char> &entry);
+  void _write_to_buffer(std::vector<char>& entry);
 
   template <typename T>
-  void _write_value(char* &cursor, const T &value) {
+  void _write_value(char*& cursor, const T& value) {
     *(T*)cursor = value;
     cursor += sizeof(T);
   }
 
   ~GroupCommitLogger();
-  
+
   char* _buffer;
   size_t _buffer_capacity;
   size_t _buffer_position;

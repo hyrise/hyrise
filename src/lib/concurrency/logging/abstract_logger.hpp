@@ -1,7 +1,7 @@
 #pragma once
 
-#include "types.hpp"
 #include "all_type_variant.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -10,13 +10,14 @@ namespace opossum {
 */
 
 class AbstractLogger {
- public:  
+ public:
   AbstractLogger(const AbstractLogger&) = delete;
   AbstractLogger& operator=(const AbstractLogger&) = delete;
 
   virtual void commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) = 0;
 
-  virtual void value(const TransactionID transaction_id, const std::string table_name, const RowID row_id, const std::vector<AllTypeVariant> values) = 0;
+  virtual void value(const TransactionID transaction_id, const std::string table_name, const RowID row_id,
+                     const std::vector<AllTypeVariant> values) = 0;
 
   virtual void invalidate(const TransactionID transaction_id, const std::string table_name, const RowID row_id) = 0;
 

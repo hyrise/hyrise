@@ -7,7 +7,7 @@
 namespace opossum {
 
 class Logger {
- public:  
+ public:
   Logger(const Logger&) = delete;
   Logger& operator=(const Logger&) = delete;
 
