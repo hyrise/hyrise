@@ -23,11 +23,7 @@ class AbstractLogger {
 
   virtual ~AbstractLogger() = default;
 
- private:
-  friend class Logger;
-  friend class InitialLogger;
-  friend class GroupCommitLogger;
-  friend class NoLogger;
+protected:
   AbstractLogger(){}
 };
 
