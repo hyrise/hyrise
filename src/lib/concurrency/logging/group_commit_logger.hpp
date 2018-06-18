@@ -24,10 +24,12 @@
 
 #pragma once
 
-#include <fstream>
 #include "abstract_logger.hpp"
 
+#include <fstream>
+
 #include "types.hpp"
+#include "../../utils/pausable_loop_thread.hpp"
 
 namespace opossum {
 
@@ -56,7 +58,6 @@ class GroupCommitLogger : public AbstractLogger {
                        const std::string& table_name, const RowID& row_id);
   void _put_into_entry(char*& entry_cursor, const char& type, const TransactionID& transaction_id);
 
-  void _flush_to_disk_after_timeout();
   void _write_buffer_to_logfile();
   void _write_to_buffer(std::vector<char>& entry);
 
@@ -73,12 +74,14 @@ class GroupCommitLogger : public AbstractLogger {
   size_t _buffer_position;
   bool _has_unflushed_buffer; 
   std::mutex _buffer_mutex;
-  
+
   std::mutex _file_mutex;
 
   std::vector<std::pair<std::function<void(TransactionID)>, TransactionID>> _commit_callbacks;
 
   std::fstream _log_file;
+
+  std::unique_ptr<PausableLoopThread> _flush_thread;
 };
 
 }  // namespace opossum

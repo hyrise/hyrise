@@ -222,14 +222,6 @@ void GroupCommitLogger::_write_buffer_to_logfile() {
   _buffer_mutex.unlock();
 }
 
-void GroupCommitLogger::_flush_to_disk_after_timeout() {
-  // TODO: while loop should be exited on program termination
-  while (true) {
-    std::this_thread::sleep_for(LOG_INTERVAL);
-    flush();
-  }
-}
-
 void GroupCommitLogger::flush() {
   if (_has_unflushed_buffer) {
     _write_buffer_to_logfile();
@@ -255,9 +247,9 @@ GroupCommitLogger::GroupCommitLogger()
   last_log_number_file << std::to_string(log_number);
   last_log_number_file.close();
 
-  // TODO: thread should be joined at the end of the program
-  std::thread t1(&GroupCommitLogger::_flush_to_disk_after_timeout, this);
-  t1.detach();
+  _flush_thread = std::make_unique<PausableLoopThread>(
+    LOG_INTERVAL, [this](size_t) { GroupCommitLogger::flush(); });
+  _flush_thread->resume();
 }
 
 GroupCommitLogger::~GroupCommitLogger() {
