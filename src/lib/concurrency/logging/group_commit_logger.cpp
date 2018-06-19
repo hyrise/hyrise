@@ -271,13 +271,18 @@ GroupCommitLogger::GroupCommitLogger()
 
   _file_mutex.lock();
 
-  auto log_number = _get_new_log_number();
+  auto log_number = Logger::_get_latest_log_number() + 1;
 
-  _log_file.open(Logger::directory + Logger::filename + std::to_string(log_number), std::ios::out | std::ios::binary);
+  std::string path = Logger::directory + Logger::filename + std::to_string(log_number);
+  _log_file.open(path, std::ios::out | std::ios::binary);
 
-  _set_last_log_number(log_number);
-
+  if (_log_file.is_open()) {
+    Logger::_set_latest_log_number(log_number);
+  }
+  
   _file_mutex.unlock();
+
+  DebugAssert(_log_file.is_open(), "Logfile could not be opened or created: " + path);
 
   _flush_thread = std::make_unique<LoopThread>(LOG_INTERVAL, [this]() { GroupCommitLogger::flush(); });
 }

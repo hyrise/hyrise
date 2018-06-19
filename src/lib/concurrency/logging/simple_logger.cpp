@@ -71,7 +71,7 @@ void SimpleLogger::recover() { TextRecovery::getInstance().recover(); }
 SimpleLogger::SimpleLogger() : AbstractLogger() {
   _file_mutex.lock();
 
-  auto log_number = _get_new_log_number();
+  auto log_number = Logger::_get_latest_log_number() + 1;
 
   std::string path = Logger::directory + Logger::filename + std::to_string(log_number);
 
@@ -82,7 +82,7 @@ SimpleLogger::SimpleLogger() : AbstractLogger() {
   _file_descriptor = open(path.c_str(), oflags, mode);
 
   if (_file_descriptor != -1) {
-    _set_last_log_number(log_number);
+    Logger::_set_latest_log_number(log_number);
   }
 
   _file_mutex.unlock();

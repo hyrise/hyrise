@@ -34,6 +34,11 @@ class Logger {
 
   static AbstractLogger& getInstance();
 
+  // functions to receive and set log file numbers
+  // when creating a new log file the corresponding number has to be set
+  static u_int32_t _get_latest_log_number();
+  static void _set_latest_log_number(u_int32_t log_number);
+
   // linter wants these to be char[], but then we loose operator+ of strings
   static const std::string directory;
   static const std::string filename;
