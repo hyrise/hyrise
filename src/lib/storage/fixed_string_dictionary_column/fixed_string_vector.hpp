@@ -25,10 +25,9 @@ class FixedStringVector {
   template <class Iter>
   FixedStringVector(Iter first, Iter last, size_t string_length, size_t amount_values) : _string_length(string_length) {
     // If string_length equals 0 we would not have any elements in the vector. Hence, we would have to deal with null pointers.
-    // In order to avoid this, we append a null terminator to the vector.
+    // In order to avoid this, we insert a null terminator to the vector by using resize.
     if (_string_length == 0) {
       _chars.resize(1u);
-      _chars.push_back('\0');
     } else {
       _chars.reserve(_string_length * amount_values);
       _iterator_push_back(first, last);
