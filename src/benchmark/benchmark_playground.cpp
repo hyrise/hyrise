@@ -18,7 +18,7 @@ class BenchmarkPlaygroundFixture : public BenchmarkBasicFixture {
     _vec.resize(1'000'000);
     std::generate(_vec.begin(), _vec.end(), []() {
       static ValueT v = 0;
-      v = ++v % 1'000;
+      v = ++v % 4;
       return v;
     });
   }
@@ -40,14 +40,14 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_Reference)(benchmark::Stat
     std::vector<size_t> result;
     auto size = _vec.size();
     for (size_t i = 0; i < size; ++i) {
-      if (_vec[i] == 999) {
+      if (_vec[i] == 2) {
         result.push_back(i);
       }
     }
   }
 }
 
-BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_NewApproach)(benchmark::State& state) {
+BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_PreAllocate)(benchmark::State& state) {
   clear_cache();
 
   // warm up
@@ -57,10 +57,11 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_NewApproach)(benchmark::St
 
   while (state.KeepRunning()) {
     std::vector<size_t> result;
-    result.reserve(1000);
+    // pre-allocate result vector
+    result.reserve(250'000);
     auto size = _vec.size();
     for (size_t i = 0; i < size; ++i) {
-      if (_vec[i] == 999) {
+      if (_vec[i] == 2) {
         result.push_back(i);
       }
     }
