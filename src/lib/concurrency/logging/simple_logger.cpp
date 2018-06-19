@@ -1,3 +1,19 @@
+/*  
+ *  The SimpleLogger naively logs entries in a text file.
+ * 
+ *  
+ *  The log entries have following format:
+ * 
+ *     Commit Entries:
+ *      (t,<TransactionID>)\n
+ * 
+ *     Value Entries:
+ *      (v,<TransactionID>,<table_name.size()>,<table_name>,<RowID>,(<value1.size()>,<value1>,<value2.size()>,...))\n
+ * 
+ *     Invalidation Entries:
+ *      (i,<TransactionID>,<table_name.size()>,<table_name>,<RowID>)\n
+ */
+
 #include "simple_logger.hpp"
 
 #include <fcntl.h>
@@ -20,22 +36,25 @@ void SimpleLogger::commit(const TransactionID transaction_id, std::function<void
 
 void SimpleLogger::value(const TransactionID transaction_id, const std::string table_name, const RowID row_id,
                           const std::vector<AllTypeVariant> values) {
-  std::stringstream row_values;
-  row_values << "(";
-  row_values << values[0];
-  for (auto value = ++values.begin(); value != values.end(); ++value){
-    row_values << "," << (*value);
-  }
-  row_values << ")";
-
   std::stringstream ss;
-  ss << "(v," << transaction_id << "," << table_name << "," << row_id << "," << row_values.str() << ")\n";
+  ss << "(v," << transaction_id << "," << table_name.size() << "," << table_name << "," << row_id << ",(";
+  
+  std::stringstream value_ss;
+  value_ss << values[0];
+  ss << value_ss.str().size() << "," << value_ss.str();
+  for (auto value = ++values.begin(); value != values.end(); ++value){
+    value_ss.str("");
+    value_ss << (*value);
+    ss << "," << value_ss.str().size() << "," << value_ss.str();
+  }
+
+  ss << "))\n";
   _write_to_logfile(ss);
 }
 
 void SimpleLogger::invalidate(const TransactionID transaction_id, const std::string table_name, const RowID row_id) {
   std::stringstream ss;
-  ss << "(i," << transaction_id << "," << table_name << "," << row_id << ")\n";
+  ss << "(i," << transaction_id << "," << table_name.size() << "," << table_name << "," << row_id << ")\n";
   _write_to_logfile(ss);
 }
 

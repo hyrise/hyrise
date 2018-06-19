@@ -6,6 +6,9 @@
 
 namespace opossum {
 
+/*
+ *  Logger that is implemented in a naive way and writes entries into a text file.
+ */
 class SimpleLogger : public AbstractLogger {
  public:
   SimpleLogger(const SimpleLogger&) = delete;
