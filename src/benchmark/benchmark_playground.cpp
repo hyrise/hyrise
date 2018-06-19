@@ -3,8 +3,6 @@
 #include "benchmark/benchmark.h"
 
 #include "benchmark_basic_fixture.hpp"
-#include "operators/sort.hpp"
-#include "operators/table_wrapper.hpp"
 
 namespace opossum {
 
