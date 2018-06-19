@@ -1,7 +1,6 @@
 #include <memory>
 
 #include "benchmark/benchmark.h"
-
 #include "benchmark_basic_fixture.hpp"
 
 namespace opossum {
