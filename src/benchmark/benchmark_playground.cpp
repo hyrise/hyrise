@@ -38,10 +38,12 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_Reference)(benchmark::Stat
 
   while (state.KeepRunning()) {
     std::vector<size_t> result;
+    benchmark::DoNotOptimize(result.data());
     auto size = _vec.size();
     for (size_t i = 0; i < size; ++i) {
       if (_vec[i] == 2) {
         result.push_back(i);
+        benchmark::ClobberMemory(); // Force that record to be written to memory
       }
     }
   }
@@ -59,10 +61,12 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_PreAllocate)(benchmark::St
     std::vector<size_t> result;
     // pre-allocate result vector
     result.reserve(250'000);
+    benchmark::DoNotOptimize(result.data());
     auto size = _vec.size();
     for (size_t i = 0; i < size; ++i) {
       if (_vec[i] == 2) {
         result.push_back(i);
+        benchmark::ClobberMemory(); // Force that record to be written to memory
       }
     }
   }
