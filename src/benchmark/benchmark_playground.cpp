@@ -43,7 +43,7 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_Reference)(benchmark::Stat
     for (size_t i = 0; i < size; ++i) {
       if (_vec[i] == 2) {
         result.push_back(i);
-        benchmark::ClobberMemory(); // Force that record to be written to memory
+        benchmark::ClobberMemory();  // Force that record to be written to memory
       }
     }
   }
@@ -66,7 +66,7 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_PreAllocate)(benchmark::St
     for (size_t i = 0; i < size; ++i) {
       if (_vec[i] == 2) {
         result.push_back(i);
-        benchmark::ClobberMemory(); // Force that record to be written to memory
+        benchmark::ClobberMemory();  // Force that record to be written to memory
       }
     }
   }
