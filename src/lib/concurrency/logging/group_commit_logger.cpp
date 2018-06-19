@@ -266,17 +266,15 @@ GroupCommitLogger::GroupCommitLogger()
   _buffer = reinterpret_cast<char*>(malloc(_buffer_capacity));
   memset(_buffer, 0, _buffer_capacity);
 
-  std::fstream last_log_number_file(Logger::directory + Logger::last_log_filename, std::ios::in);
-  uint log_number;
-  last_log_number_file >> log_number;
-  last_log_number_file.close();
-  ++log_number;
+  _file_mutex.lock();
+
+  auto log_number = _get_new_log_number();
 
   _log_file.open(Logger::directory + Logger::filename + std::to_string(log_number), std::ios::out | std::ios::binary);
 
-  last_log_number_file.open(Logger::directory + Logger::last_log_filename, std::ios::out | std::ofstream::trunc);
-  last_log_number_file << std::to_string(log_number);
-  last_log_number_file.close();
+  _set_last_log_number(log_number);
+
+  _file_mutex.unlock();
 
   _flush_thread = std::make_unique<LoopThread>(LOG_INTERVAL, [this]() { GroupCommitLogger::flush(); });
 }

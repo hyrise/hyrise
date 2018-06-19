@@ -25,6 +25,12 @@ class AbstractLogger {
 
 protected:
   AbstractLogger(){}
+
+  // functions to receive and set log file numbers
+  // received log number has to be set after file creation
+  u_int32_t _get_new_log_number();
+  void _set_last_log_number(u_int32_t log_number);
+
 };
 
 }  // namespace opossum
