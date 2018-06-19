@@ -10,6 +10,7 @@ class AbstractLogger {
   AbstractLogger(const AbstractLogger&) = delete;
   AbstractLogger& operator=(const AbstractLogger&) = delete;
 
+  // the implementation needs to call callback(transaction_id)
   virtual void commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) = 0;
 
   virtual void value(const TransactionID transaction_id, const std::string table_name, const RowID row_id,
