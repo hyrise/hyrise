@@ -1,7 +1,3 @@
-/*
- *  Logger that gathers multiple log entries in a buffer before flushing them to disk.
- */
-
 #pragma once
 
 #include "abstract_logger.hpp"
@@ -13,6 +9,9 @@
 
 namespace opossum {
 
+/*
+ *  Logger that gathers multiple log entries in a buffer before flushing them to disk.
+ */
 class GroupCommitLogger : public AbstractLogger {
  public:
   GroupCommitLogger(const GroupCommitLogger&) = delete;
