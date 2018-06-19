@@ -54,9 +54,14 @@ class GroupCommitLogger : public AbstractLogger {
   GroupCommitLogger();
 
  private:
-  void _put_into_entry(std::vector<char>& entry, size_t& entry_cursor, const char& type, const TransactionID& transaction_id,
-                       const std::string& table_name, const RowID& row_id);
-  void _put_into_entry(std::vector<char>& entry, size_t& entry_cursor, const char& type, const TransactionID& transaction_id);
+  void _put_into_entry(std::vector<char>& entry, size_t& entry_cursor, const char& type,
+                       const TransactionID& transaction_id, const std::string& table_name, const RowID& row_id);
+  void _put_into_entry(std::vector<char>& entry, const char& type, const TransactionID& transaction_id);
+  void _put_into_entry(std::vector<char>& entry, size_t& entry_cursor, const char& type,
+                       const TransactionID& transaction_id);
+  void _put_into_entry(std::vector<char>& entry, const char& type,
+                       const TransactionID& transaction_id, const std::string& table_name, const RowID& row_id);
+  
 
   void _write_buffer_to_logfile();
   void _write_to_buffer(std::vector<char>& entry);

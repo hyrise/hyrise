@@ -69,6 +69,12 @@ void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, size_t& entry_
   _write_value<TransactionID>(entry, entry_cursor, transaction_id);
 }
 
+void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, const char& type, 
+                                        const TransactionID& transaction_id) {
+  size_t cursor{0};
+  _put_into_entry(entry, cursor, type, transaction_id);
+}
+
 void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, size_t& entry_cursor, const char& type,
                                         const TransactionID& transaction_id, const std::string& table_name,
                                         const RowID& row_id) {
@@ -78,12 +84,17 @@ void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, size_t& entry_
   _write_value<ChunkOffset>(entry, entry_cursor, row_id.chunk_offset);
 }
 
+void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, const char& type, const TransactionID& transaction_id,
+                                        const std::string& table_name, const RowID& row_id) {
+  size_t cursor{0};
+  _put_into_entry(entry, cursor, type, transaction_id, table_name, row_id);
+}
+
 void GroupCommitLogger::commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) {
   constexpr auto entry_length = sizeof(char) + sizeof(TransactionID);
   std::vector<char> entry(entry_length);
-  size_t cursor = 0;
 
-  _put_into_entry(entry, cursor, 't', transaction_id);
+  _put_into_entry(entry, 't', transaction_id);
 
   _commit_callbacks.emplace_back(std::make_pair(callback, transaction_id));
 
@@ -135,6 +146,8 @@ bool ValueVisitor::operator()(NullValue v) {
 
 void GroupCommitLogger::value(const TransactionID transaction_id, const std::string table_name, const RowID row_id,
                               const std::vector<AllTypeVariant> values) {
+  // This is the entry length up to the ChunkOffset,
+  // the entry then gets resized for the null value bitmap and each value
   auto entry_length =
       sizeof(char) + sizeof(TransactionID) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset);
 
@@ -155,7 +168,7 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
   for (auto& value : values) {
     auto has_content = boost::apply_visitor(visitor, value);
 
-    // Set corresponding bit in bitmap to 1 if the value was a NullValue
+    // Set corresponding bit in bitmap to 1 if the value is a NullValue
     if (!has_content) {
       entry[null_bitmap_pos] |= 1u << bit_pos;
     }
@@ -176,9 +189,8 @@ void GroupCommitLogger::invalidate(const TransactionID transaction_id, const std
   const auto entry_length =
       sizeof(char) + sizeof(TransactionID) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset);
   std::vector<char> entry(entry_length);
-  size_t cursor = 0;
 
-  _put_into_entry(entry, cursor, 'i', transaction_id, table_name, row_id);
+  _put_into_entry(entry, 'i', transaction_id, table_name, row_id);
 
   _write_to_buffer(entry);
 }
