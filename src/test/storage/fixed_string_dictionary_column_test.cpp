@@ -137,9 +137,10 @@ TEST_F(StorageFixedStringDictionaryColumnTest, MemoryUsageEstimation) {
    * WARNING: Since it's hard to assert what constitutes a correct "estimation", this just tests basic sanity of the
    * memory usage estimations
    */
-
-  const auto empty_memory_usage =
-      encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str)->estimate_memory_usage();
+  const auto compressed_column_empty = 
+      encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
+  const auto dictionary_column_empty = std::dynamic_pointer_cast<FixedStringDictionaryColumn<std::string>>(compressed_column_empty);
+  const auto empty_memory_usage = dictionary_column_empty->estimate_memory_usage();
 
   vc_str->append("A");
   vc_str->append("B");
