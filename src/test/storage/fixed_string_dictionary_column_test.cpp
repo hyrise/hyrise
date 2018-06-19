@@ -151,8 +151,9 @@ TEST_F(StorageFixedStringDictionaryColumnTest, MemoryUsageEstimation) {
   static constexpr auto size_of_attribute = 1u;
   static constexpr auto size_of_dictionary = 3u;
 
+  // We have to substract 1 since the empty FixedStringColumn actually contains one null terminator
   EXPECT_EQ(dictionary_column->estimate_memory_usage(),
-            empty_memory_usage + 3 * size_of_attribute + size_of_dictionary);
+            empty_memory_usage - 1 + 3 * size_of_attribute + size_of_dictionary);
 }
 
 }  // namespace opossum
