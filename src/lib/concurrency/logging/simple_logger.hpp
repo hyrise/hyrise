@@ -6,10 +6,10 @@
 
 namespace opossum {
 
-class InitialLogger : public AbstractLogger {
+class SimpleLogger : public AbstractLogger {
  public:
-  InitialLogger(const InitialLogger&) = delete;
-  InitialLogger& operator=(const InitialLogger&) = delete;
+  SimpleLogger(const SimpleLogger&) = delete;
+  SimpleLogger& operator=(const SimpleLogger&) = delete;
 
   void commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) override;
 
@@ -24,7 +24,7 @@ class InitialLogger : public AbstractLogger {
 
  private:
   friend class Logger;
-  InitialLogger();
+  SimpleLogger();
 
  private:
   void _write_to_logfile(const std::stringstream& ss);

@@ -15,8 +15,8 @@ set(
     concurrency/logging/binary_recovery.cpp
     concurrency/logging/group_commit_logger.cpp
     concurrency/logging/group_commit_logger.hpp
-    concurrency/logging/initial_logger.cpp
-    concurrency/logging/initial_logger.hpp
+    concurrency/logging/simple_logger.cpp
+    concurrency/logging/simple_logger.hpp
     concurrency/logging/no_logger.hpp
     concurrency/logging/logger.cpp
     concurrency/logging/logger.hpp
