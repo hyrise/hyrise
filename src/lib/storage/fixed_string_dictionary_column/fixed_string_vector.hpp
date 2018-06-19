@@ -25,11 +25,11 @@ class FixedStringVector {
   template <class Iter>
   FixedStringVector(Iter first, Iter last, size_t string_length, size_t amount_values) : _string_length(string_length) {
     if (_string_length == 0) {
-        _chars.push_back('\0');
+      _chars.push_back('\0');
     } else {
-    _chars.reserve(_string_length * amount_values);
-    _iterator_push_back(first, last);
-}
+      _chars.reserve(_string_length * amount_values);
+      _iterator_push_back(first, last);
+    }
   }
 
   // Add a string to the end of the vector
