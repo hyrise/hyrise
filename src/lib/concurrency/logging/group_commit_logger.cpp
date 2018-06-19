@@ -1,6 +1,12 @@
 /*
- *  TODO: use mmap ?
+ *  The GroupCommitLogger gathers log entries in its buffer and flushes them to disk in a binary format.
+ *    1.  every LOG_INTERVAL
+ *    2.  when buffer hits half its capacity
  * 
+ * 
+ *  The log entries have following format:
+ *         
+ *         Value                : Number of Bytes                         : Description
  * 
  *     Commit Entries:
  *       - log entry type ('t') : sizeof(char)
@@ -8,19 +14,26 @@
  * 
  *     Value Entries:
  *       - log entry type ('v') : sizeof(char)
- *       - transaction_id       : sizeof(transaction_id_t)
- *       - table_name           : table_name.size() + 1, terminated with \0
+ *       - transaction_id       : sizeof(TransactionID)
+ *       - table_name           : table_name.size() + 1                   : string terminated with \0
  *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset)
- *       - NULL bitmap          : ceil(values.size() / 8.0)
+ *       - NULL bitmap          : ceil(values.size() / 8.0)               : Bitmap indicating NullValues with 1
  *       - value                : length(value)
  *       - any optional values
  * 
  *     Invalidation Entries:
  *       - log entry type ('i') : sizeof(char)
- *       - transaction_id       : sizeof(transaction_id_t)
- *       - table_name           : table_name.size() + 1, terminated with \0
+ *       - transaction_id       : sizeof(TransactionID)
+ *       - table_name           : table_name.size() + 1                   : string terminated with \0
  *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset) 
  *
+ * 
+ *  Possible improvements:
+ *    1.  For each log entry a vector<char> is allocated to created that entry and then copy it into the buffer.
+ *        Maybe allocate a big memory block once.
+ *    2.  The entry vector gets resized for each value. Maybe .reserve() beforehand or calculate the number of bytes for
+ *        all values by iterating over them before putting them into the entry.
+ *        Then the vector needs to be resized just once.
  */
 
 #include "group_commit_logger.hpp"
@@ -54,27 +67,34 @@ constexpr size_t LOG_BUFFER_CAPACITY = 16384;
 constexpr auto LOG_INTERVAL = std::chrono::seconds(5);
 
 template <>
-void GroupCommitLogger::_write_value<std::string>(std::vector<char>& vector, size_t& cursor, const std::string& value) {
-  value.copy(&vector[cursor], value.size());
+void GroupCommitLogger::_write_value<std::string>(std::vector<char>& entry, size_t& cursor, const std::string& value) {
+  // Assume entry is already large enough to fit the new value
+  DebugAssert(cursor + value.size() <= entry.size(),
+              "logger: value does not fit into vector, call resize() beforehand");
+  
+  value.copy(&entry[cursor], value.size());
 
   // Assume that the next byte is NULL so the string gets terminated
-  DebugAssert(vector[cursor + value.size()] == '\0', "Logger: Byte is not NULL initiated");
+  DebugAssert(entry[cursor + value.size()] == '\0', "Logger: Byte is not NULL initiated");
 
   cursor += value.size() + 1;
 }
 
+// Writes the parameter into entry at position of entry_cursor
 void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, size_t& entry_cursor, const char& type,
                                         const TransactionID& transaction_id) {
   _write_value<char>(entry, entry_cursor, type);
   _write_value<TransactionID>(entry, entry_cursor, transaction_id);
 }
 
+// Writes the parameter into entry at the beginning of entry
 void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, const char& type, 
                                         const TransactionID& transaction_id) {
   size_t cursor{0};
   _put_into_entry(entry, cursor, type, transaction_id);
 }
 
+// Writes the parameter into entry at position of entry_cursor
 void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, size_t& entry_cursor, const char& type,
                                         const TransactionID& transaction_id, const std::string& table_name,
                                         const RowID& row_id) {
@@ -84,6 +104,7 @@ void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, size_t& entry_
   _write_value<ChunkOffset>(entry, entry_cursor, row_id.chunk_offset);
 }
 
+// Writes the parameter into entry at the beginning of entry
 void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, const char& type, const TransactionID& transaction_id,
                                         const std::string& table_name, const RowID& row_id) {
   size_t cursor{0};
@@ -111,28 +132,27 @@ void GroupCommitLogger::commit(const TransactionID transaction_id, std::function
 // resize the vector and write the values in the second pass.
 class ValueVisitor : public boost::static_visitor<bool> {
  public:
-  ValueVisitor(std::vector<char>& entry, size_t& cursor)
-  : _entry_vector(entry), _cursor(cursor) {}
+  ValueVisitor(std::vector<char>& entry, size_t& cursor) : _entry(entry), _cursor(cursor) {}
 
   template <typename T>
   bool operator()(T v) {
-    _entry_vector.resize(_entry_vector.size() + sizeof(T));
-    *reinterpret_cast<T*>(&_entry_vector[_cursor]) = v;
+    _entry.resize(_entry.size() + sizeof(T));
+    *reinterpret_cast<T*>(&_entry[_cursor]) = v;
     _cursor += sizeof(T);
     return true;
   }
 
-  std::vector<char>& _entry_vector;
+  std::vector<char>& _entry;
   size_t& _cursor;
 };
 
 template <>
 bool ValueVisitor::operator()(std::string v) {
-  _entry_vector.resize(_entry_vector.size() + v.size() + 1);
-  v.copy(&_entry_vector[_cursor], v.size());
+  _entry.resize(_entry.size() + v.size() + 1);
+  v.copy(&_entry[_cursor], v.size());
 
   // Assume that the next byte is NULL so the string gets terminated
-  DebugAssert(_entry_vector[_cursor + v.size()] == '\0', "Logger: Byte is not NULL initiated");
+  DebugAssert(_entry[_cursor + v.size()] == '\0', "Logger: Byte is not NULL initiated");
 
   _cursor += v.size() + 1;
 
@@ -146,13 +166,13 @@ bool ValueVisitor::operator()(NullValue v) {
 
 void GroupCommitLogger::value(const TransactionID transaction_id, const std::string table_name, const RowID row_id,
                               const std::vector<AllTypeVariant> values) {
-  // This is the entry length up to the ChunkOffset,
-  // the entry then gets resized for the null value bitmap and each value
+  // This is the entry length up to the ChunkOffset.
+  // The entry then gets resized for the null value bitmap and each value
   auto entry_length =
       sizeof(char) + sizeof(TransactionID) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset);
 
   std::vector<char> entry(entry_length);
-  size_t cursor = 0;
+  size_t cursor{0};
   
   _put_into_entry(entry, cursor, 'v', transaction_id, table_name, row_id);
 

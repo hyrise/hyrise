@@ -1,25 +1,5 @@
 /*
  *  Logger that gathers multiple log entries in a buffer before flushing them to disk.
- * 
- *     Commit Entries:
- *       - log entry type ('t') : sizeof(char)
- *       - transaction_id       : sizeof(TransactionID)
- * 
- *     Value Entries:
- *       - log entry type ('v') : sizeof(char)
- *       - transaction_id       : sizeof(transaction_id_t)
- *       - table_name           : table_name.size() + 1, terminated with \0
- *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset)
- *       - NULL bitmap          : ceil(values.size() / 8.0)
- *       - value                : length(value)
- *       - any optional values
- * 
- *     Invalidation Entries:
- *       - log entry type ('i') : sizeof(char)
- *       - transaction_id       : sizeof(transaction_id_t)
- *       - table_name           : table_name.size() + 1, terminated with \0
- *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset) 
- *
  */
 
 #pragma once
@@ -62,13 +42,13 @@ class GroupCommitLogger : public AbstractLogger {
   void _put_into_entry(std::vector<char>& entry, const char& type,
                        const TransactionID& transaction_id, const std::string& table_name, const RowID& row_id);
   
-
   void _write_buffer_to_logfile();
   void _write_to_buffer(std::vector<char>& entry);
 
   template <typename T>
-  void _write_value(std::vector<char>& vector, size_t& cursor, const T& value) {
-    DebugAssert(cursor + sizeof(T) <= vector.size(), 
+  void _write_value(std::vector<char>& entry, size_t& cursor, const T& value) {
+    // Assume entry is already large enough to fit the new value
+    DebugAssert(cursor + sizeof(T) <= entry.size(), 
                 "logger: value does not fit into vector, call resize() beforehand");
     *reinterpret_cast<T*>(&vector[cursor]) = value;
     cursor += sizeof(T);
