@@ -1,7 +1,8 @@
 /*
- *  The GroupCommitLogger gathers log entries in its buffer and flushes them to disk in a binary format.
+ *  The GroupCommitLogger gathers log entries in its buffer and flushes them to disk in a binary format:
  *    1.  every LOG_INTERVAL
  *    2.  when buffer hits half its capacity
+ *  Both are represented by magic numbers, which are not tested or evaluated yet.
  * 
  * 
  *  The log entries have following format:
@@ -34,6 +35,8 @@
  *    2.  The entry vector gets resized for each value. Maybe .reserve() beforehand or calculate the number of bytes for
  *        all values by iterating over them before putting them into the entry.
  *        Then the vector needs to be resized just once.
+ *    3.  While writing to disk the buffer is locked with a mutex. A second buffer could be introduced, so log calls can
+ *        be processed in the second buffer while writing the first one to disk.
  */
 
 #include "group_commit_logger.hpp"
@@ -60,7 +63,7 @@
 namespace opossum {
 
 // Magic number: buffer size. Buffer is flushed to disk if half of its capacity is exceeded.
-// Therefore this should not be too small, since any log entry needs to fit into half the buffer.
+// Therefore this should not be too small, since any log entry needs to fit into half of the buffer.
 constexpr size_t LOG_BUFFER_CAPACITY = 16384;
 
 // Magic number: time interval that triggers a flush to disk.
@@ -129,7 +132,7 @@ void GroupCommitLogger::commit(const TransactionID transaction_id, std::function
 // The current implementation resizes the entry for every value.
 // It might improve performance to iterate twice over all values: 
 // Acumulate the bytes needed for all values in the first pass,
-// resize the vector and write the values in the second pass.
+// then resize the vector and finally write the values in the second pass.
 class ValueVisitor : public boost::static_visitor<bool> {
  public:
   ValueVisitor(std::vector<char>& entry, size_t& cursor) : _entry(entry), _cursor(cursor) {}
