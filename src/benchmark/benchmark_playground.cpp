@@ -31,11 +31,6 @@ class BenchmarkPlaygroundFixture : public BenchmarkBasicFixture {
 BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_Reference)(benchmark::State& state) {
   clear_cache();
 
-  // warm up
-  for (const auto& element : _vec) {
-    benchmark::DoNotOptimize(element);
-  }
-
   while (state.KeepRunning()) {
     std::vector<size_t> result;
     benchmark::DoNotOptimize(result.data());
@@ -51,11 +46,6 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_Reference)(benchmark::Stat
 
 BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_PreAllocate)(benchmark::State& state) {
   clear_cache();
-
-  // warm up
-  for (const auto& element : _vec) {
-    benchmark::DoNotOptimize(element);
-  }
 
   while (state.KeepRunning()) {
     std::vector<size_t> result;
