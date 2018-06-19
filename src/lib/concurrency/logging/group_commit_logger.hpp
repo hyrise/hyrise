@@ -50,7 +50,7 @@ class GroupCommitLogger : public AbstractLogger {
     // Assume entry is already large enough to fit the new value
     DebugAssert(cursor + sizeof(T) <= entry.size(), 
                 "logger: value does not fit into vector, call resize() beforehand");
-    *reinterpret_cast<T*>(&vector[cursor]) = value;
+    *reinterpret_cast<T*>(&entry[cursor]) = value;
     cursor += sizeof(T);
   }
 
