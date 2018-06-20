@@ -272,7 +272,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
       size_t next_segment_id = 0;
       const auto chunk = table->get_chunk(chunk_id);
       for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-        if (column_id == _column_segment_offsets[next_segment_id]) {
+        if (next_segment_id < _column_segment_offsets.size() && column_id == _column_segment_offsets[next_segment_id]) {
           next_segment_id++;
           current_pos_list = nullptr;
         }
