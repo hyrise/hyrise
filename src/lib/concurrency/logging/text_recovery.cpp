@@ -35,6 +35,15 @@ TextRecovery& TextRecovery::getInstance() {
   return instance;
 }
 
+// returns substring until delimiter is found and sets begin to begin of next token: the position after delimiter
+std::string TextRecovery::_get_substr_and_incr_begin(const std::string& line, size_t& begin, const char delimiter) {
+  auto end = line.find(delimiter, begin) - 1;
+  DebugAssert(end >= begin, "Recovery: Missing token in logfile");
+  auto token = line.substr(begin, end - begin + 1);
+  begin = end + 2;
+  return token;
+}
+
 void TextRecovery::recover() {
   TransactionID last_transaction_id{0};
   
@@ -93,20 +102,14 @@ void TextRecovery::recover() {
       // (i,<TransactionID>,<table_name.size()>,<table_name>,<RowID>)
       // (v,<TransactionID>,<table_name.size()>,<table_name>,<RowID>,(<value1.size()>,<value1>,<value2.size()>,...))
 
-      size_t transaction_begin = 3;
-      auto transaction_id_end = line.find(',', transaction_begin) - 1;
-      DebugAssert(transaction_id_end >= transaction_begin, "Recovery: There is no TransactionID in logfile");
-      TransactionID transaction_id = std::stoul(
-        line.substr(transaction_begin, transaction_id_end - transaction_begin + 1));
 
-      size_t table_name_size_begin = transaction_id_end + 2;
-      auto table_name_size_end = line.find(',', table_name_size_begin) - 1;
-      DebugAssert(table_name_size_end >= table_name_size_begin, "Recovery: There is no table_name:size() in logfile");
-      size_t table_name_size = std::stoul(
-        line.substr(table_name_size_begin, table_name_size_end - table_name_size_begin + 1));
+      // size_t transaction_id_begin = 3;
+      size_t next_token_begin = 3;
+      TransactionID transaction_id = std::stoul(_get_substr_and_incr_begin(line, next_token_begin, ','));
 
-      size_t table_name_begin = table_name_size_end + 2;
-      size_t table_name_end = table_name_begin + table_name_size - 1;
+      size_t table_name_size = std::stoul(_get_substr_and_incr_begin(line, next_token_begin, ','));
+
+      size_t table_name_end = next_token_begin + table_name_size - 1;
       // while table_name contains \n
       while (line.length() <= table_name_end) {
         std::string temp_line;
@@ -114,21 +117,15 @@ void TextRecovery::recover() {
         DebugAssert(!log_file.eof(), "Recovery: End of file reached unexpectedly");
         line += "\n" + temp_line;
       }
-      std::string table_name = line.substr(table_name_begin, table_name_end - table_name_begin + 1);
+      std::string table_name = line.substr(next_token_begin, table_name_end - next_token_begin + 1);
+      
+      next_token_begin = table_name_end + 2;
 
       // <RowID> = RowID(<chunk_id>,<chunk_offset>)
       // "RowID(".length() = 6
-      size_t chunk_id_begin = table_name_end + 2 + 6;
-      size_t chunk_id_end = line.find(",", chunk_id_begin) - 1;
-      DebugAssert(chunk_id_end >= chunk_id_begin, "Recovery: There is no chunk_id in logfile");
-      ChunkID chunk_id(std::stoul(line.substr(chunk_id_begin, chunk_id_end - chunk_id_begin + 1)));
-
-      size_t chunk_offset_begin = chunk_id_end + 2;
-      size_t chunk_offset_end = line.find(")", chunk_offset_begin) - 1;
-      DebugAssert(chunk_offset_end >= chunk_offset_begin, "Recovery: There is no chunk_offset in logfile");
-      ChunkOffset chunk_offset(std::stoul(
-        line.substr(chunk_offset_begin, chunk_offset_end - chunk_offset_begin + 1)));
-
+      next_token_begin += 6;
+      ChunkID chunk_id(std::stoul(_get_substr_and_incr_begin(line, next_token_begin, ',')));
+      ChunkOffset chunk_offset(std::stoul(_get_substr_and_incr_begin(line, next_token_begin, ')')));
       RowID row_id{chunk_id, chunk_offset};
 
       // if invalidation
@@ -142,7 +139,12 @@ void TextRecovery::recover() {
       std::vector<AllTypeVariant> values;
 
       // "chunk_offset_end),(value_size_begin"
-      size_t value_size_begin = chunk_offset_end + 4;
+      // size_t value_size_begin = chunk_offset_end + 4;
+      size_t value_size_begin = next_token_begin + 2;
+      DebugAssert(line[value_size_begin - 2] == ',', 
+        "Recovery: Expected ',' but got '" + line[value_size_begin - 2] + "' instead")
+      DebugAssert(line[value_size_begin - 1] == '(', 
+        "Recovery: Expected '(' but got '" + line[value_size_begin - 1] + "' instead")
       
       // while still values in line
       while (line[value_size_begin - 1] != ')') {

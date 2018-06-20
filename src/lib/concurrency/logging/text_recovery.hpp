@@ -15,6 +15,8 @@ class TextRecovery {
 
  private:
   TextRecovery(){}
+
+  std::string _get_substr_and_incr_begin(const std::string &line, size_t& begin, const char delimiter);
 };
 
 }  // namespace opossum
