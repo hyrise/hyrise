@@ -121,6 +121,7 @@ node {
       stage ("Cleanup after fail") {
         script {
           githubNotify context: 'CI Pipeline', status: 'FAILURE'
+          slackSend "Build Failed - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
         }
       }
       throw error
