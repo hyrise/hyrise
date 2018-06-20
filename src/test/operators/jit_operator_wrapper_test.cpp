@@ -127,7 +127,7 @@ TEST_F(JitOperatorWrapperTest, JitOperatorsSpecializedWithMultipleInliningOfSame
   // First the compute function call with the object "expression" is inlined,
   // then the two function calls with the two time referenced object "column_expression" are inlined.
 
-  // Specialize SQL query: SELECT a+a FROM src/test/tables/10_ints.tbl
+  // Specialize SQL query: SELECT a+a FROM src/test/tables/10_ints.tbl;
 
   // read column a into jit tuple at index 0
   auto read_operator = std::make_shared<JitReadTuples>();
@@ -140,7 +140,7 @@ TEST_F(JitOperatorWrapperTest, JitOperatorsSpecializedWithMultipleInliningOfSame
   auto expression = std::make_shared<JitExpression>(column_expression, add_type, column_expression, result_tuple_index);
   auto compute_operator = std::make_shared<JitCompute>(expression);
 
-  // copy value from index 1 from to output table for non-jit operators
+  // copy computed value from jit tuple at index 1 to output table for non-jit operators
   auto write_operator = std::make_shared<JitWriteTuples>();
   write_operator->add_output_column("a+a", expression->result());
 
