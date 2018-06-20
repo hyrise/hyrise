@@ -25,12 +25,8 @@ using TimePoint = std::chrono::high_resolution_clock::time_point;
 using NamedQuery = std::pair<std::string, std::string>;
 using NamedQueries = std::vector<NamedQuery>;
 
-<<<<<<< HEAD
 using EncodingMapping = std::map<std::string, ColumnEncodingSpec>;
 using TableColumnEncodingMapping = std::unordered_map<std::string, EncodingMapping>;
-=======
-using TableColumnEncodingMapping = std::unordered_map<std::string, std::map<std::string, ColumnEncodingSpec>>;
->>>>>>> origin/master
 
 /**
  * @return std::cout if `verbose` is true, otherwise returns a discarding stream
