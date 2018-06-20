@@ -31,6 +31,8 @@ class BenchmarkRunner {
 
   static nlohmann::json create_context(const BenchmarkConfig& config);
 
+  static void encode_table(const std::string& table_name, std::shared_ptr<Table> table, const BenchmarkConfig& config);
+
  private:
   // Run benchmark in BenchmarkMode::PermutedQuerySets mode
   void _benchmark_permuted_query_sets();

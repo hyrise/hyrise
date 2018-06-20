@@ -64,7 +64,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
   /*
    * Add remaining values to table, if any.
    */
-  if (value_vectors[0].size() > 0) {
+  if (!value_vectors[0].empty()) {
     ChunkColumns columns;
     for (size_t j = 0; j < _num_columns; j++) {
       columns.push_back(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j])));
@@ -73,7 +73,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
   }
 
   if (encoding_type.has_value()) {
-    ChunkEncoder::encode_all_chunks(table, {encoding_type.value()});
+    ChunkEncoder::encode_all_chunks(table, encoding_type.value());
   }
 
   return table;
