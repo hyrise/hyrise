@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
 
     // Display usage and quit
     if (cli_parse_result.count("help")) {
-      std::cout << cli_options.help({}) << std::endl;
+      std::cout << opossum::CLIConfigParser::detailed_help(cli_options) << std::endl;
       return 0;
     }
 
@@ -96,19 +96,18 @@ int main(int argc, char* argv[]) {
     queries.emplace_back("TPC-H " + std::to_string(query_id), opossum::tpch_queries.at(query_id));
   }
 
-  config->out << "- Generating TPCH Tables with scale_factor=" << scale_factor << "..." << std::endl;
+  config->out << "- Generating TPCH Tables with scale_factor=" << scale_factor << " ..." << std::endl;
 
-  opossum::ColumnEncodingSpec encoding_spec{config->encoding_type};
   const auto tables = opossum::TpchDbGenerator(scale_factor, config->chunk_size).generate();
 
-  for (auto& table : tables) {
-    if (config->encoding_type != opossum::EncodingType::Unencoded) {
-      opossum::ChunkEncoder::encode_all_chunks(table.second, encoding_spec);
-    }
+  for (auto& tpch_table : tables) {
+    const auto& table_name = opossum::tpch_table_names.at(tpch_table.first);
+    auto& table = tpch_table.second;
 
-    opossum::StorageManager::get().add_table(opossum::tpch_table_names.at(table.first), table.second);
+    opossum::BenchmarkRunner::encode_table(table_name, table, *config);
+    opossum::StorageManager::get().add_table(table_name, table);
   }
-  config->out << "- Done." << std::endl;
+  config->out << "- ... done." << std::endl;
 
   auto context = opossum::BenchmarkRunner::create_context(*config);
 

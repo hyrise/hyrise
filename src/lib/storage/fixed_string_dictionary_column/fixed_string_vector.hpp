@@ -24,8 +24,14 @@ class FixedStringVector {
   // Create a FixedStringVector of FixedStrings with given values by iterating over other container
   template <class Iter>
   FixedStringVector(Iter first, Iter last, size_t string_length, size_t amount_values) : _string_length(string_length) {
-    _chars.reserve(_string_length * amount_values);
-    _iterator_push_back(first, last);
+    // If string_length equals 0 we would not have any elements in the vector. Hence, we would have to deal with null
+    // pointers. In order to avoid this, we insert a null terminator to the vector by using resize.
+    if (_string_length == 0) {
+      _chars.resize(1u);
+    } else {
+      _chars.reserve(_string_length * amount_values);
+      _iterator_push_back(first, last);
+    }
   }
 
   // Add a string to the end of the vector

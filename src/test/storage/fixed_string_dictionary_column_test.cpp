@@ -137,9 +137,10 @@ TEST_F(StorageFixedStringDictionaryColumnTest, MemoryUsageEstimation) {
    * WARNING: Since it's hard to assert what constitutes a correct "estimation", this just tests basic sanity of the
    * memory usage estimations
    */
-
-  const auto empty_memory_usage =
-      encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str)->estimate_memory_usage();
+  const auto empty_compressed_column = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
+  const auto empty_dictionary_column =
+      std::dynamic_pointer_cast<FixedStringDictionaryColumn<std::string>>(empty_compressed_column);
+  const auto empty_memory_usage = empty_dictionary_column->estimate_memory_usage();
 
   vc_str->append("A");
   vc_str->append("B");
@@ -150,8 +151,9 @@ TEST_F(StorageFixedStringDictionaryColumnTest, MemoryUsageEstimation) {
   static constexpr auto size_of_attribute = 1u;
   static constexpr auto size_of_dictionary = 3u;
 
+  // We have to substract 1 since the empty FixedStringColumn actually contains one null terminator
   EXPECT_EQ(dictionary_column->estimate_memory_usage(),
-            empty_memory_usage + 3 * size_of_attribute + size_of_dictionary);
+            empty_memory_usage - 1u + 3 * size_of_attribute + size_of_dictionary);
 }
 
 }  // namespace opossum

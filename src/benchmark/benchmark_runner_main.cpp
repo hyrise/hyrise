@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
 
     // Display usage and quit
     if (cli_parse_result.count("help")) {
-      std::cout << cli_options.help({}) << std::endl;
+      std::cout << opossum::CLIConfigParser::detailed_help(cli_options) << std::endl;
       return 0;
     }
 

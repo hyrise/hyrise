@@ -22,13 +22,13 @@ void FixedStringVector::push_back(const std::string& string) {
 FixedStringIterator FixedStringVector::begin() noexcept { return FixedStringIterator(_string_length, _chars, 0); }
 
 FixedStringIterator FixedStringVector::end() noexcept {
-  return FixedStringIterator(_string_length, _chars, _chars.size());
+  return FixedStringIterator(_string_length, _chars, _string_length == 0 ? 0 : _chars.size());
 }
 
 FixedStringIterator FixedStringVector::begin() const noexcept { return FixedStringIterator(_string_length, _chars, 0); }
 
 FixedStringIterator FixedStringVector::end() const noexcept {
-  return FixedStringIterator(_string_length, _chars, _chars.size());
+  return FixedStringIterator(_string_length, _chars, _string_length == 0 ? 0 : _chars.size());
 }
 
 FixedStringIterator FixedStringVector::cbegin() const noexcept {
@@ -36,7 +36,7 @@ FixedStringIterator FixedStringVector::cbegin() const noexcept {
 }
 
 FixedStringIterator FixedStringVector::cend() const noexcept {
-  return FixedStringIterator(_string_length, _chars, _chars.size());
+  return FixedStringIterator(_string_length, _chars, _string_length == 0 ? 0 : _chars.size());
 }
 
 typedef boost::reverse_iterator<FixedStringIterator> reverse_iterator;
