@@ -132,7 +132,7 @@ TEST_F(JitOperatorWrapperTest, JitOperatorsSpecializedWithMultipleInliningOfSame
   // compute a+a
   auto column_expression = std::make_shared<JitExpression>(tuple_value);
   auto add_type = ExpressionType::Addition;
-  size_t result_tuple_index = 1;  // of jit runtime context
+  auto result_tuple_index = read_operator->add_temporary_value();  // of jit runtime context
   auto expression = std::make_shared<JitExpression>(column_expression, add_type, column_expression, result_tuple_index);
   auto compute_operator = std::make_shared<JitCompute>(expression);
 
