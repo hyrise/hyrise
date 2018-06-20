@@ -25,11 +25,12 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
  protected:
   void SetUp() override {
     _encoding_type = GetParam();
+
     auto int_int_7 = load_table("src/test/tables/int_int_shuffled.tbl", 7);
     auto int_int_5 = load_table("src/test/tables/int_int_shuffled_2.tbl", 5);
 
     ChunkEncoder::encode_chunks(int_int_7, {ChunkID{0}, ChunkID{1}}, {_encoding_type});
-    // partly compresed table
+    // partly compressed table
     ChunkEncoder::encode_chunks(int_int_5, {ChunkID{0}, ChunkID{1}}, {_encoding_type});
 
     _int_int_compressed = std::make_shared<TableWrapper>(std::move(int_int_7));
@@ -203,7 +204,7 @@ auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
 };
 
 INSTANTIATE_TEST_CASE_P(EncodingTypes, OperatorsTableScanTest,
-                        ::testing::Values(EncodingType::Dictionary, EncodingType::RunLength,
+                        ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
                                           EncodingType::FrameOfReference),
                         formatter);
 

@@ -25,8 +25,12 @@ using TimePoint = std::chrono::high_resolution_clock::time_point;
 using NamedQuery = std::pair<std::string, std::string>;
 using NamedQueries = std::vector<NamedQuery>;
 
+<<<<<<< HEAD
 using EncodingMapping = std::map<std::string, ColumnEncodingSpec>;
 using TableColumnEncodingMapping = std::unordered_map<std::string, EncodingMapping>;
+=======
+using TableColumnEncodingMapping = std::unordered_map<std::string, std::map<std::string, ColumnEncodingSpec>>;
+>>>>>>> origin/master
 
 /**
  * @return std::cout if `verbose` is true, otherwise returns a discarding stream
@@ -64,6 +68,7 @@ struct BenchmarkState {
 // View EncodingConfig::description to see format of encoding JSON
 struct EncodingConfig {
   EncodingConfig();
+<<<<<<< HEAD
   EncodingConfig(ColumnEncodingSpec default_encoding_spec, EncodingMapping type_encoding_mapping,
                  TableColumnEncodingMapping encoding_mapping);
   explicit EncodingConfig(ColumnEncodingSpec default_encoding_spec);
@@ -71,6 +76,13 @@ struct EncodingConfig {
   const ColumnEncodingSpec default_encoding_spec;
   const EncodingMapping type_encoding_mapping;
   const TableColumnEncodingMapping custom_encoding_mapping;
+=======
+  EncodingConfig(ColumnEncodingSpec default_encoding_spec, TableColumnEncodingMapping encoding_mapping);
+  explicit EncodingConfig(ColumnEncodingSpec default_encoding_spec);
+
+  const ColumnEncodingSpec default_encoding_spec;
+  const TableColumnEncodingMapping encoding_mapping;
+>>>>>>> origin/master
 
   static ColumnEncodingSpec encoding_spec_from_strings(const std::string& encoding_str,
                                                        const std::string& compression_str);

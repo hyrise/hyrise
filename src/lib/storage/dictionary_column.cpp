@@ -68,6 +68,11 @@ CompressedVectorType DictionaryColumn<T>::compressed_vector_type() const {
 }
 
 template <typename T>
+EncodingType DictionaryColumn<T>::encoding_type() const {
+  return EncodingType::Dictionary;
+}
+
+template <typename T>
 ValueID DictionaryColumn<T>::lower_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 

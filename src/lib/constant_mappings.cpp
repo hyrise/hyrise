@@ -161,6 +161,7 @@ const boost::bimap<DataType, std::string> data_type_to_string =
 const boost::bimap<EncodingType, std::string> encoding_type_to_string = make_bimap<EncodingType, std::string>({
     {EncodingType::Dictionary, "Dictionary"},
     {EncodingType::RunLength, "RunLength"},
+    {EncodingType::FixedStringDictionary, "FixedStringDictionary"},
     {EncodingType::FrameOfReference, "FrameOfReference"},
     {EncodingType::Unencoded, "Unencoded"},
 });

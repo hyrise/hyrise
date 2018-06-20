@@ -18,6 +18,7 @@ set(
     cost_model/cost_feature_proxy_test.cpp
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
+    lib/fixed_string_test.cpp
     logical_query_plan/aggregate_node_test.cpp
     logical_query_plan/create_view_node_test.cpp
     logical_query_plan/drop_view_node_test.cpp
@@ -115,6 +116,7 @@ set(
     storage/chunk_test.cpp
     storage/composite_group_key_index_test.cpp
     storage/dictionary_column_test.cpp
+    storage/fixed_string_dictionary_column_test.cpp
     storage/encoding_test.hpp
     storage/encoded_column_test.cpp
     storage/group_key_index_test.cpp
@@ -132,6 +134,7 @@ set(
     storage/variable_length_key_base_test.cpp
     storage/variable_length_key_store_test.cpp
     storage/variable_length_key_test.cpp
+    storage/fixed_string_vector_test.cpp
     tasks/chunk_compression_task_test.cpp
     tasks/operator_task_test.cpp
     testing_assert.cpp
