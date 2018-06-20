@@ -354,32 +354,40 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
 void BenchmarkRunner::encode_table(const std::string& table_name, std::shared_ptr<Table> table,
                                    const BenchmarkConfig& config) {
   const auto& encoding_config = config.encoding_config;
-  const auto& mapping = encoding_config.encoding_mapping;
+  const auto& type_mapping = encoding_config.type_encoding_mapping;
+  const auto& custom_mapping = encoding_config.custom_encoding_mapping;
 
-  const auto& column_mapping_it = mapping.find(table_name);
-  if (column_mapping_it != mapping.end()) {
-    // The table has some custom encodings
-    ChunkEncodingSpec chunk_spec;
-    const auto& column_mapping = column_mapping_it->second;
+  const auto& column_mapping_it = custom_mapping.find(table_name);
+  const auto table_has_custom_encoding = column_mapping_it != custom_mapping.end();
 
-    for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+  ChunkEncodingSpec chunk_spec;
+
+  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+    if (table_has_custom_encoding) {
       const auto& column_name = table->column_name(column_id);
+      const auto& column_mapping = column_mapping_it->second;
       const auto& column_encoding = column_mapping.find(column_name);
-
       if (column_encoding != column_mapping.end()) {
         // The column has a custom encoding
-        config.out << "- Custom encoding for " << column_mapping_it->first << "[" + column_name + "]" << std::endl;
+        config.out << "- Custom encoding for " << table_name << "[" + column_name + "]" << std::endl;
         chunk_spec.push_back(column_encoding->second);
-      } else {
-        chunk_spec.push_back(encoding_config.default_encoding_spec);
+        continue;
       }
     }
 
-    return ChunkEncoder::encode_all_chunks(table, chunk_spec);
+    const auto& column_type_str = data_type_to_string.left.find(table->column_data_type(column_id))->second;
+    const auto& type_encoding = type_mapping.find(column_type_str);
+    if (type_encoding != type_mapping.end()) {
+      // The column type has a specific encoding
+      chunk_spec.push_back(type_encoding->second);
+      continue;
+    }
+
+    // No custom or type encoding were specified, use default
+    chunk_spec.push_back(encoding_config.default_encoding_spec);
   }
 
-  // No table-specific encoding, so use the default
-  return ChunkEncoder::encode_all_chunks(table, encoding_config.default_encoding_spec);
+  return ChunkEncoder::encode_all_chunks(table, chunk_spec);
 }
 
 }  // namespace opossum
