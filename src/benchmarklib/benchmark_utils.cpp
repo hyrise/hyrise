@@ -148,9 +148,7 @@ BenchmarkConfig CLIConfigParser::parse_basic_options_json_config(const nlohmann:
     encoding_config = std::make_unique<EncodingConfig>(parse_encoding_config(encoding_type_str));
     out << "- Encoding is custom from " << encoding_type_str << "" << std::endl;
 
-    if (!compression_type_str.empty()) {
-      out << "- Specified compression type and an encoding file. The compression will be ignored." << std::endl;
-    }
+    Assert(compression_type_str.empty(), "Specified both compression type and an encoding file. Invalid combination.");
   } else {
     encoding_config = std::make_unique<EncodingConfig>(
         EncodingConfig::encoding_spec_from_strings(encoding_type_str, compression_type_str));
@@ -213,7 +211,7 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
   Assert(encoding_config_json.count("default"), "Config must contain default encoding.");
   const auto default_spec = encoding_spec_from_json(encoding_config_json["default"]);
 
-  EncodingMapping encoding_mapping;
+  TableColumnEncodingMapping encoding_mapping;
   const auto has_custom_encoding = encoding_config_json.find("custom") != encoding_config_json.end();
 
   if (has_custom_encoding) {
@@ -239,11 +237,15 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
   return EncodingConfig{default_spec, std::move(encoding_mapping)};
 }
 
+std::string CLIConfigParser::detailed_help(const cxxopts::Options& options) {
+  return options.help() + BenchmarkConfig::description + EncodingConfig::description;
+}
+
 EncodingConfig::EncodingConfig() : EncodingConfig{ColumnEncodingSpec{EncodingType::Dictionary}} {}
 
 EncodingConfig::EncodingConfig(ColumnEncodingSpec default_encoding_spec) : EncodingConfig{default_encoding_spec, {}} {}
 
-EncodingConfig::EncodingConfig(ColumnEncodingSpec default_encoding_spec, EncodingMapping encoding_mapping)
+EncodingConfig::EncodingConfig(ColumnEncodingSpec default_encoding_spec, TableColumnEncodingMapping encoding_mapping)
     : default_encoding_spec{default_encoding_spec}, encoding_mapping{std::move(encoding_mapping)} {}
 
 ColumnEncodingSpec EncodingConfig::encoding_spec_from_strings(const std::string& encoding_str,
@@ -295,4 +297,70 @@ nlohmann::json EncodingConfig::to_json() const {
 
   return json;
 }
+
+// This is intentionally limited to 80 chars per line, as cxxopts does this too and it looks bad otherwise.
+const char* BenchmarkConfig::description = R"(
+============================
+Benchmark Configuration JSON
+============================
+All options can also be provided as a JSON config file. This must be the only
+argument passed in. The options are identical to and behave like the CLI options.
+Example:
+{
+  "verbose": true,
+  "scheduler": true,
+  "chunk_size": 10000,
+  "time": 5
+}
+
+The JSON config can also include benchmark-specific options (e.g. TPCH's scale
+option). They will be parsed like the
+CLI options.
+
+{
+  "verbose": true,
+  "scale": 0.01
+}
+)";
+
+// This is intentionally limited to 80 chars per line, as cxxopts does this too and it looks bad otherwise.
+const char* EncodingConfig::description = R"(
+======================
+Encoding Configuration
+======================
+The encoding config represents the column encodings specified for a benchmark.
+If encoding (and vector compression) were specified via command line args,
+this will contain no custom encoding mapping but only the column default.
+This will lead to each column in each chunk to be encoded/compressed by this
+default. If a JSON config was provided, a column specific
+encoding/compression can be chosen (same in each chunk). The JSON config must
+look like this:
+
+All encoding/compression types can be viewed with the `help` command or seen
+in constant_mappings.cpp.
+The encoding is always required, the compression is optional.
+
+{
+  "default": {
+    "encoding": <ENCODING_TYPE_STRING>,               // required
+    "compression": <VECTOR_COMPRESSION_TYPE_STRING>,  // optional
+  },
+  "custom": {
+    <TABLE_NAME>: {
+      <COLUMN_NAME>: {
+        "encoding": <ENCODING_TYPE_STRING>,
+        "compression": <VECTOR_COMPRESSION_TYPE_STRING>
+      },
+      <COLUMN_NAME>: {
+        "encoding": <ENCODING_TYPE_STRING>
+      }
+    },
+    <TABLE_NAME>: {
+      <COLUMN_NAME>: {
+        "encoding": <ENCODING_TYPE_STRING>,
+        "compression": <VECTOR_COMPRESSION_TYPE_STRING>
+      }
+    }
+  }
+})";
 }  // namespace opossum

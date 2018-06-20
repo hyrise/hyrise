@@ -25,7 +25,7 @@ using TimePoint = std::chrono::high_resolution_clock::time_point;
 using NamedQuery = std::pair<std::string, std::string>;
 using NamedQueries = std::vector<NamedQuery>;
 
-using EncodingMapping = std::unordered_map<std::string, std::map<std::string, ColumnEncodingSpec>>;
+using TableColumnEncodingMapping = std::unordered_map<std::string, std::map<std::string, ColumnEncodingSpec>>;
 
 /**
  * @return std::cout if `verbose` is true, otherwise returns a discarding stream
@@ -60,47 +60,14 @@ struct BenchmarkState {
   Duration max_duration;
 };
 
-/**
- * Represents the column encodings specified for a benchmark. If encoding (and vector compression) were specified via
- * command line args, this will contain no custom encoding mapping but only the column default. This will lead to each
- * column in each chunk to be encoded/compressed by this default. If a JSON config was provided, a column specific
- * encoding/compression can be chosen (same in each chunk). The JSON config must look like this:
- *
- * All encoding/compression types can be viewed with the `help` command or seen in constant_mappings.cpp.
- * The encoding is always required, the compression is optional.
- *
- * {
- *   "default": {
- *     "encoding": <ENCODING_TYPE_STRING>,               // required
- *     "compression": <VECTOR_COMPRESSION_TYPE_STRING>,  // optional
- *   },
- *
- *   "custom": {
- *     <TABLE_NAME>: {
- *       <COLUMN_NAME>: {
- *         "encoding": <ENCODING_TYPE_STRING>,
- *         "compression": <VECTOR_COMPRESSION_TYPE_STRING>
- *       },
- *       <COLUMN_NAME>: {
- *         "encoding": <ENCODING_TYPE_STRING>
- *       }
- *     },
- *     <TABLE_NAME>: {
- *       <COLUMN_NAME>: {
- *         "encoding": <ENCODING_TYPE_STRING>,
- *         "compression": <VECTOR_COMPRESSION_TYPE_STRING>
- *       }
- *     }
- *   }
- * }
- */
+// View EncodingConfig::description to see format of encoding JSON
 struct EncodingConfig {
   EncodingConfig();
-  EncodingConfig(ColumnEncodingSpec default_encoding_spec, EncodingMapping encoding_mapping);
+  EncodingConfig(ColumnEncodingSpec default_encoding_spec, TableColumnEncodingMapping encoding_mapping);
   explicit EncodingConfig(ColumnEncodingSpec default_encoding_spec);
 
   const ColumnEncodingSpec default_encoding_spec;
-  const EncodingMapping encoding_mapping;
+  const TableColumnEncodingMapping encoding_mapping;
 
   static ColumnEncodingSpec encoding_spec_from_strings(const std::string& encoding_str,
                                                        const std::string& compression_str);
@@ -108,26 +75,11 @@ struct EncodingConfig {
   static std::optional<VectorCompressionType> compression_string_to_type(const std::string& compression_str);
 
   nlohmann::json to_json() const;
+
+  static const char* description;
 };
 
-/**
- * Represents the configurable options for a benchmark run. This can be provided via command line args (see `help`
- * command or look at the basic_cli_options in benchmark_runner.cpp). This can also be provided as a JSON config file.
- * The options are indentical to and behave like the CLI options. Example:
- * {
- *   "verbose": true,
- *   "scheduler": true,
- *   "chunk_size": 10000,
- *   "time": 5
- * }
- *
- * The JSON config can also include benchmark-specific options (e.g. TPCH's scale option). They will be parsed like the
- * CLI options.
- * {
- *   "verbose": true,
- *   "scale": 0.01
- * }
- */
+// View BenchmarkConfig::description to see format of the JSON-version
 struct BenchmarkConfig {
   BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool verbose, const ChunkOffset chunk_size,
                   const EncodingConfig encoding_config, const size_t max_num_query_runs, const Duration& max_duration,
@@ -148,6 +100,8 @@ struct BenchmarkConfig {
   const bool enable_visualization = false;
   std::ostream& out;
 
+  static const char* description;
+
  private:
   BenchmarkConfig() : out(std::cout) {}
 };
@@ -165,6 +119,8 @@ class CLIConfigParser {
   static BenchmarkConfig parse_basic_cli_options(const cxxopts::ParseResult& parse_result);
 
   static EncodingConfig parse_encoding_config(const std::string& encoding_file_str);
+
+  static std::string detailed_help(const cxxopts::Options& options);
 };
 
 }  // namespace opossum
