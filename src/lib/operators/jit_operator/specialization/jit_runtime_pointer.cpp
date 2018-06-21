@@ -13,7 +13,7 @@ uint64_t dereference_flexible_width_int_pointer(const uint64_t address, const un
     case 64:
       return *reinterpret_cast<uint64_t*>(address);
     default:
-      throw std::runtime_error("Int pointer with bit width " + std::to_string(integer_bit_width) + " not supported.");
+      Fail("Integer pointer with bit width " + std::to_string(integer_bit_width) + " not supported.");
   }
 }
 
