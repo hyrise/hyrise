@@ -51,13 +51,9 @@ node {
           sh "./clang-debug/hyriseTest clang-debug/run-shuffled --gtest_repeat=5 --gtest_shuffle"
         }
       }, clangDebugSanitizers: {
-        stage("clang-debug:sanitizers (master only)") {
-          if (env.BRANCH_NAME == 'master') {
-            sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-            sh "LSAN_OPTIONS=suppressions=.lsan-ignore.txt ASAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-debug-sanitizers/hyriseTest clang-debug-sanitizers"
-          } else {
-            echo 'only on master'
-          }
+        stage("clang-debug:sanitizers") {
+          sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+          sh "LSAN_OPTIONS=suppressions=.lsan-ignore.txt ASAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-debug-sanitizers/hyriseTest clang-debug-sanitizers"
         }
       }, gccRelease: {
         stage("gcc-release") {
@@ -125,6 +121,9 @@ node {
       stage ("Cleanup after fail") {
         script {
           githubNotify context: 'CI Pipeline', status: 'FAILURE'
+          if (env.BRANCH_NAME == 'master') {
+            slackSend ":rotating_light: ALARM! Build on Master failed! - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>) :rotating_light:"
+          }
         }
       }
       throw error

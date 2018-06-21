@@ -233,10 +233,9 @@ template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseDictionaryColumn& base_column,
                                                          std::shared_ptr<ColumnVisitableContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
-  const auto& column = static_cast<const DictionaryColumn<T>&>(base_column);
 
   const auto is_fixed_size_byte_aligned = [&]() {
-    switch (column.compressed_vector_type()) {
+    switch (base_column.compressed_vector_type()) {
       case CompressedVectorType::FixedSize4ByteAligned:
       case CompressedVectorType::FixedSize2ByteAligned:
       case CompressedVectorType::FixedSize1ByteAligned:
@@ -253,7 +252,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseDictionaryCol
   _export_value(context->ofstream, BinaryColumnType::dictionary_column);
 
   const auto attribute_vector_width = [&]() {
-    switch (column.compressed_vector_type()) {
+    switch (base_column.compressed_vector_type()) {
       case CompressedVectorType::FixedSize4ByteAligned:
         return 4u;
       case CompressedVectorType::FixedSize2ByteAligned:
@@ -268,12 +267,22 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseDictionaryCol
   // Write attribute vector width
   _export_value(context->ofstream, static_cast<const AttributeVectorWidth>(attribute_vector_width));
 
-  // Write the dictionary size and dictionary
-  _export_value(context->ofstream, static_cast<ValueID>(column.dictionary()->size()));
-  _export_values(context->ofstream, *column.dictionary());
+  if (base_column.encoding_type() == EncodingType::FixedStringDictionary) {
+    const auto& column = static_cast<const FixedStringDictionaryColumn<std::string>&>(base_column);
+
+    // Write the dictionary size and dictionary
+    _export_value(context->ofstream, static_cast<ValueID>(column.dictionary()->size()));
+    _export_values(context->ofstream, *column.dictionary());
+  } else {
+    const auto& column = static_cast<const DictionaryColumn<T>&>(base_column);
+
+    // Write the dictionary size and dictionary
+    _export_value(context->ofstream, static_cast<ValueID>(column.dictionary()->size()));
+    _export_values(context->ofstream, *column.dictionary());
+  }
 
   // Write attribute vector
-  _export_attribute_vector(context->ofstream, column.compressed_vector_type(), *column.attribute_vector());
+  _export_attribute_vector(context->ofstream, base_column.compressed_vector_type(), *base_column.attribute_vector());
 }
 
 template <typename T>
