@@ -498,7 +498,7 @@ std::map<std::string, std::shared_ptr<Table>> TpccTableGenerator::generate_all_t
  * a) generate a TPC-C table by table name (e.g. ITEM, WAREHOUSE), and
  * b) have all available table names browsable for the Console auto completion.
  */
-TpccTableGeneratorFunctions TpccTableGenerator::tpcc_table_generator_functions() {
+TpccTableGeneratorFunctions TpccTableGenerator::table_generator_functions() {
   TpccTableGeneratorFunctions generators{
       {"ITEM", []() { return TpccTableGenerator().generate_items_table(); }},
       {"WAREHOUSE", []() { return TpccTableGenerator().generate_warehouse_table(); }},
@@ -519,8 +519,8 @@ TpccTableGeneratorFunctions TpccTableGenerator::tpcc_table_generator_functions()
   return generators;
 }
 
-std::shared_ptr<Table> TpccTableGenerator::generate_tpcc_table(const std::string& table_name) {
-  auto generators = TpccTableGenerator::tpcc_table_generator_functions();
+std::shared_ptr<Table> TpccTableGenerator::generate_table(const std::string& table_name) {
+  auto generators = TpccTableGenerator::table_generator_functions();
   if (generators.find(table_name) == generators.end()) {
     return nullptr;
   }

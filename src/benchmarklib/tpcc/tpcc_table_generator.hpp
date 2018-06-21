@@ -52,9 +52,9 @@ class TpccTableGenerator : public opossum::AbstractBenchmarkTableGenerator {
 
   std::map<std::string, std::shared_ptr<Table>> generate_all_tables() override;
 
-  static TpccTableGeneratorFunctions tpcc_table_generator_functions();
+  static TpccTableGeneratorFunctions table_generator_functions();
 
-  static std::shared_ptr<Table> generate_tpcc_table(const std::string& table_name);
+  std::shared_ptr<Table> generate_table(const std::string& table_name);
 
   void encode_table(const std::string& table_name, std::shared_ptr<Table> table);
 
