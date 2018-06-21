@@ -104,11 +104,12 @@ Compares two AggregateKeys, but considers two NULL values to be equal. This is s
 */
 struct NullEqualTo {
   bool operator()(const AggregateKey& left, const AggregateKey& right) const {
-    return std::equal(left.begin(), left.end(), right.begin(), right.end(), [](auto left_subkey, auto right_subkey) {
-      // for the purpose of aggregation, two NULLs are in the same group
-      if (variant_is_null(left_subkey) && variant_is_null(right_subkey)) return true;
-      return left_subkey == right_subkey;
-    });
+    return std::equal(left.second.begin(), left.second.end(), right.second.begin(), right.second.end(),
+                      [](auto left_subkey, auto right_subkey) {
+                        // for the purpose of aggregation, two NULLs are in the same group
+                        if (variant_is_null(left_subkey) && variant_is_null(right_subkey)) return true;
+                        return left_subkey == right_subkey;
+                      });
   }
 };
 
@@ -382,9 +383,10 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
           ChunkOffset chunk_offset{0};
           iterable.for_each([&](const auto& value) {
             if (value.is_null()) {
-              (*hash_keys)[chunk_offset].emplace_back(NULL_VALUE);
+              (*hash_keys)[chunk_offset].second.emplace_back(NULL_VALUE);
             } else {
-              (*hash_keys)[chunk_offset].emplace_back(value.value());
+              boost::hash_combine((*hash_keys)[chunk_offset].first, value.value());
+              (*hash_keys)[chunk_offset].second.emplace_back(value.value());
             }
 
             ++chunk_offset;
@@ -561,8 +563,8 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
     auto context =
         std::static_pointer_cast<AggregateContext<DistinctColumnType, DistinctAggregateType>>(_contexts_per_column[0]);
     for (auto& map : *context->results) {
-      for (size_t group_column_index = 0; group_column_index < map.first.size(); ++group_column_index) {
-        _groupby_columns[group_column_index]->append(map.first[group_column_index]);
+      for (size_t group_column_index = 0; group_column_index < map.first.second.size(); ++group_column_index) {
+        _groupby_columns[group_column_index]->append(map.first.second[group_column_index]);
       }
     }
   }
@@ -747,8 +749,8 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
   // write all group keys into the respective columns
   if (column_index == 0) {
     for (auto& map : *context->results) {
-      for (size_t group_column_index = 0; group_column_index < map.first.size(); ++group_column_index) {
-        _groupby_columns[group_column_index]->append(map.first[group_column_index]);
+      for (size_t group_column_index = 0; group_column_index < map.first.second.size(); ++group_column_index) {
+        _groupby_columns[group_column_index]->append(map.first.second[group_column_index]);
       }
     }
   }
