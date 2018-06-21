@@ -7,6 +7,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
+#include "storage/table.hpp"
 #include "utils/filesystem.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -328,6 +329,43 @@ nlohmann::json EncodingConfig::to_json() const {
   }
 
   return json;
+}
+
+void BenchmarkTableEncoder::encode(const std::string& table_name, std::shared_ptr<Table> table,
+                                   const EncodingConfig& config) {
+  const auto& type_mapping = config.type_encoding_mapping;
+  const auto& custom_mapping = config.custom_encoding_mapping;
+
+  const auto& column_mapping_it = custom_mapping.find(table_name);
+  const auto table_has_custom_encoding = column_mapping_it != custom_mapping.end();
+
+  ChunkEncodingSpec chunk_spec;
+
+  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+    if (table_has_custom_encoding) {
+      const auto& column_name = table->column_name(column_id);
+      const auto& column_mapping = column_mapping_it->second;
+      const auto& column_encoding = column_mapping.find(column_name);
+      if (column_encoding != column_mapping.end()) {
+        // The column has a custom encoding
+        chunk_spec.push_back(column_encoding->second);
+        continue;
+      }
+    }
+
+    const auto& column_type_str = data_type_to_string.left.find(table->column_data_type(column_id))->second;
+    const auto& type_encoding = type_mapping.find(column_type_str);
+    if (type_encoding != type_mapping.end()) {
+      // The column type has a specific encoding
+      chunk_spec.push_back(type_encoding->second);
+      continue;
+    }
+
+    // No custom or type encoding were specified, use default
+    chunk_spec.push_back(config.default_encoding_spec);
+  }
+
+  return ChunkEncoder::encode_all_chunks(table, chunk_spec);
 }
 
 // This is intentionally limited to 80 chars per line, as cxxopts does this too and it looks bad otherwise.

@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "SQLParser.h"
+#include "benchmark_utils.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "operators/get_table.hpp"
@@ -383,21 +384,21 @@ int Console::generate_tpcc(const std::string& tablename) {
   if (tablename.empty() || "ALL" == tablename) {
     out("Generating TPCC tables (this might take a while) ...\n");
     auto tables = opossum::TpccTableGenerator().generate_all_tables();
-    for (auto& pair : tables) {
-      StorageManager::get().add_table(pair.first, pair.second);
+    for (auto& [table_name, table] : tables) {
+      StorageManager::get().add_table(table_name, table);
     }
-    return Console::ReturnCode::Ok;
+    return ReturnCode::Ok;
   }
 
   out("Generating TPCC table: \"" + tablename + "\" ...\n");
   auto table = opossum::TpccTableGenerator::generate_tpcc_table(tablename);
   if (table == nullptr) {
     out("Error: No TPCC table named \"" + tablename + "\" available.\n");
-    return Console::ReturnCode::Error;
+    return ReturnCode::Error;
   }
 
   opossum::StorageManager::get().add_table(tablename, table);
-  return Console::ReturnCode::Ok;
+  return ReturnCode::Ok;
 }
 
 int Console::load_table(const std::string& args) {
