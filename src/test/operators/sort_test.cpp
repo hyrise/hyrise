@@ -26,10 +26,10 @@ class OperatorsSortTest : public BaseTest, public ::testing::WithParamInterface<
     _table_wrapper_null = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 2));
 
     auto table = load_table("src/test/tables/int_float.tbl", 2);
-    ChunkEncoder::encode_all_chunks(table, {_encoding_type});
+    ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
     auto table_dict = load_table("src/test/tables/int_float_with_null.tbl", 2);
-    ChunkEncoder::encode_all_chunks(table_dict, {_encoding_type});
+    ChunkEncoder::encode_all_chunks(table_dict, _encoding_type);
 
     _table_wrapper_dict = std::make_shared<TableWrapper>(std::move(table));
     _table_wrapper_dict->execute();

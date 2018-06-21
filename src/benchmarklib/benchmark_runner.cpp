@@ -187,8 +187,6 @@ BenchmarkRunner BenchmarkRunner::create(const BenchmarkConfig& config, const std
   const auto tables = _read_table_folder(table_path);
   Assert(!tables.empty(), "No tables found in '" + table_path + "'");
 
-  ColumnEncodingSpec encoding_spec{config.encoding_type};
-
   for (const auto& table_path_str : tables) {
     const auto table_name = filesystem::path{table_path_str}.stem().string();
 
@@ -199,12 +197,9 @@ BenchmarkRunner BenchmarkRunner::create(const BenchmarkConfig& config, const std
       table = CsvParser{}.parse(table_path_str);
     }
 
-    if (config.encoding_type != EncodingType::Unencoded) {
-      ChunkEncoder::encode_all_chunks(table, encoding_spec);
-    }
-
-    StorageManager::get().add_table(table_name, table);
     config.out << "- Adding table '" << table_name << "'" << std::endl;
+    encode_table(table_name, table, config);
+    StorageManager::get().add_table(table_name, table);
   }
 
   const auto queries = _read_query_folder(query_path);
@@ -281,7 +276,7 @@ NamedQueries BenchmarkRunner::_parse_query_file(const std::string& query_path) {
     query_id++;
   }
 
-  // More convinient names if there is only one query per file
+  // More convenient names if there is only one query per file
   if (queries.size() == 1) {
     auto& query_name = queries[0].first;
     query_name.erase(query_name.end() - 2, query_name.end());  // -2 because .0 at end of name
@@ -293,14 +288,23 @@ NamedQueries BenchmarkRunner::_parse_query_file(const std::string& query_path) {
 cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& benchmark_name) {
   cxxopts::Options cli_options{benchmark_name};
 
-  // Make sure all current encodings are shown
+  // Make sure all current encoding types are shown
   std::vector<std::string> encoding_strings;
-  encoding_strings.reserve(encoding_type_to_string.size());
-  for (const auto& encoding : encoding_type_to_string) {
-    encoding_strings.emplace_back(boost::algorithm::to_lower_copy(encoding.second));
+  encoding_strings.reserve(encoding_type_to_string.right.size());
+  for (const auto& encoding : encoding_type_to_string.right) {
+    encoding_strings.emplace_back(encoding.first);
   }
 
   const auto encoding_strings_option = boost::algorithm::join(encoding_strings, ", ");
+
+  // Make sure all current compression types are shown
+  std::vector<std::string> compression_strings;
+  compression_strings.reserve(vector_compression_type_to_string.right.size());
+  for (const auto& vector_compression : vector_compression_type_to_string.right) {
+    compression_strings.emplace_back(vector_compression.first);
+  }
+
+  const auto compression_strings_option = boost::algorithm::join(compression_strings, ", ");
 
   // If you add a new option here, make sure to edit CLIConfigParser::basic_cli_options_to_json() so it contains the
   // newest options. Sadly, there is no way to to get all option keys to do this automatically.
@@ -311,9 +315,10 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("r,runs", "Maximum number of runs of a single query(set)", cxxopts::value<size_t>()->default_value("1000")) // NOLINT
     ("c,chunk_size", "ChunkSize, default is 2^32-1", cxxopts::value<ChunkOffset>()->default_value(std::to_string(Chunk::MAX_SIZE))) // NOLINT
     ("t,time", "Maximum seconds that a query(set) is run", cxxopts::value<size_t>()->default_value("5")) // NOLINT
-    ("o,output", "File to output results to, don't specify for stdout", cxxopts::value<std::string>())
+    ("o,output", "File to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value("")) // NOLINT
     ("m,mode", "IndividualQueries or PermutedQuerySets, default is IndividualQueries", cxxopts::value<std::string>()->default_value("IndividualQueries")) // NOLINT
-    ("e,encoding", "Specify Chunk encoding. Options: " + encoding_strings_option + " (default: dictionary)", cxxopts::value<std::string>()->default_value("dictionary"))  // NOLINT
+    ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see below). String options: " + encoding_strings_option, cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT
+    ("compression", "Specify vector compression as a string. Options: " + compression_strings_option, cxxopts::value<std::string>()->default_value(""))  // NOLINT
     ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("mvcc", "Enable MVCC", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("visualize", "Create a visualization image of one LQP and PQP for each query", cxxopts::value<bool>()->default_value("false")); // NOLINT
@@ -329,14 +334,11 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   std::stringstream timestamp_stream;
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
-  auto encoding_string = encoding_type_to_string.at(config.encoding_type);
-  boost::algorithm::to_lower(encoding_string);
-
   return nlohmann::json{
       {"date", timestamp_stream.str()},
       {"chunk_size", config.chunk_size},
       {"build_type", IS_DEBUG ? "debug" : "release"},
-      {"encoding", encoding_string},
+      {"encoding", config.encoding_config.to_json()},
       {"benchmark_mode",
        config.benchmark_mode == BenchmarkMode::IndividualQueries ? "IndividualQueries" : "PermutedQuerySets"},
       {"max_runs", config.max_num_query_runs},
@@ -347,6 +349,37 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"using_scheduler", config.enable_scheduler},
       {"verbose", config.verbose},
       {"GIT-HASH", GIT_HEAD_SHA1 + std::string(GIT_IS_DIRTY ? "-dirty" : "")}};
+}
+
+void BenchmarkRunner::encode_table(const std::string& table_name, std::shared_ptr<Table> table,
+                                   const BenchmarkConfig& config) {
+  const auto& encoding_config = config.encoding_config;
+  const auto& mapping = encoding_config.encoding_mapping;
+
+  const auto& column_mapping_it = mapping.find(table_name);
+  if (column_mapping_it != mapping.end()) {
+    // The table has some custom encodings
+    ChunkEncodingSpec chunk_spec;
+    const auto& column_mapping = column_mapping_it->second;
+
+    for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+      const auto& column_name = table->column_name(column_id);
+      const auto& column_encoding = column_mapping.find(column_name);
+
+      if (column_encoding != column_mapping.end()) {
+        // The column has a custom encoding
+        config.out << "- Custom encoding for " << column_mapping_it->first << "[" + column_name + "]" << std::endl;
+        chunk_spec.push_back(column_encoding->second);
+      } else {
+        chunk_spec.push_back(encoding_config.default_encoding_spec);
+      }
+    }
+
+    return ChunkEncoder::encode_all_chunks(table, chunk_spec);
+  }
+
+  // No table-specific encoding, so use the default
+  return ChunkEncoder::encode_all_chunks(table, encoding_config.default_encoding_spec);
 }
 
 }  // namespace opossum
