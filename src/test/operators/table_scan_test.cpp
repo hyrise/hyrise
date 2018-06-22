@@ -131,7 +131,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     const auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
 
     if (references_dict_column) {
-      ChunkEncoder::encode_all_chunks(table, {_encoding_type});
+      ChunkEncoder::encode_all_chunks(table, _encoding_type);
     }
 
     auto pos_list_a = std::make_shared<PosList>(
@@ -410,7 +410,7 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedIntValueColumnWithFloatColumnWith
 
 TEST_P(OperatorsTableScanTest, ScanOnIntCompressedColumnWithFloatColumnWithNullValues) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
-  ChunkEncoder::encode_all_chunks(table, {_encoding_type});
+  ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
@@ -425,7 +425,7 @@ TEST_P(OperatorsTableScanTest, ScanOnIntCompressedColumnWithFloatColumnWithNullV
 
 TEST_P(OperatorsTableScanTest, ScanOnReferencedIntCompressedColumnWithFloatColumnWithNullValues) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
-  ChunkEncoder::encode_all_chunks(table, {_encoding_type});
+  ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();
@@ -514,7 +514,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueColumn) {
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedColumn) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
-  ChunkEncoder::encode_all_chunks(table, {_encoding_type});
+  ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
@@ -565,7 +565,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueColumn) {
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedCompressedColumn) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
-  ChunkEncoder::encode_all_chunks(table, {_encoding_type});
+  ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
   table_wrapper->execute();

@@ -81,6 +81,13 @@ class ChunkEncoder {
                                 const std::vector<ChunkEncodingSpec>& encoding_specs);
 
   /**
+   * @brief Encodes an entire table
+   *
+   * The encoding is specified per column and is the same for each chunk.
+   */
+  static void encode_all_chunks(const std::shared_ptr<Table>& table, const ChunkEncodingSpec& chunk_encoding_spec);
+
+  /**
    * @brief Encodes an entire table using a single column-encoding spec
    */
   static void encode_all_chunks(const std::shared_ptr<Table>& table,
