@@ -1,0 +1,17 @@
+global start
+
+probe process(@1).provider("hyrise").mark("query_start")
+{
+    start[$arg3, user_string($arg1)] = gettimeofday_us()
+}
+
+probe process(@1).provider("hyrise").mark("query_end")
+{
+    end = gettimeofday_us()
+    printf("============================\n"
+           "Query: %s\n"
+           "Tasks spawned: %i\n"
+           "Execution time: %iμs\n"
+           "============================\n", user_string($arg1), $arg2, end - start[$arg3, user_string($arg1)]);
+    delete start[$arg3, user_string($arg1)]
+}

@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <sys/sdt.h>
 #include <vector>
 
 #include "abstract_scheduler.hpp"
@@ -50,8 +51,8 @@ void AbstractTask::set_done_callback(const std::function<void()>& done_callback)
 }
 
 void AbstractTask::schedule(NodeID preferred_node_id, SchedulePriority priority) {
+  DTRACE_PROBE1(hyrise, job_scheduled, this);
   _mark_as_scheduled();
-
   if (CurrentScheduler::is_set()) {
     CurrentScheduler::get()->schedule(shared_from_this(), preferred_node_id, priority);
   } else {
@@ -84,6 +85,7 @@ void AbstractTask::_join_without_replacement_worker() {
 }
 
 void AbstractTask::execute() {
+  DTRACE_PROBE3(hyrise, job_start, _id, _description, this);
   DebugAssert(!(_started.exchange(true)), "Possible bug: Trying to execute the same task twice");
   DebugAssert(is_ready(), "Task must not be executed before its dependencies are done");
 
@@ -100,6 +102,7 @@ void AbstractTask::execute() {
     _done = true;
   }
   _done_condition_variable.notify_all();
+  DTRACE_PROBE2(hyrise, job_end, _id, this);
 }
 
 void AbstractTask::_mark_as_scheduled() {
