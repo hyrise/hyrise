@@ -17,12 +17,16 @@ namespace opossum {
  * * The optimizer is not your friend. If you do a bunch of calculations and
  *   don't actually use the result, it will optimize your code out and you will
  *   benchmark only noise.
+ * * benchmark::DoNotOptimize(<expression>); marks <expression> as "globally
+ *   aliased", meaning that the compiler has to assume that any operation that
+ *   *could* access this memory location will do so.
+ *   However, despite the name, this will not prevent the compiler from
+ *   optimizing this expression itself!
  * * benchmark::ClobberMemory(); can be used to force calculations to be written
- *   to memory.
- * * benchmark::DoNotOptimize(<expression>); can be used to prevent <expression>
- *   from being optimized out. However, this does not stop the optimizer from
- *   optimizing the expression itself!
- *
+ *   to memory. It acts as a memory barrier. In combination with DoNotOptimize(e),
+ *   this function effectively declares that it could touch any part of memory,
+ *   in particular globally aliased memory.
+ * * More information on that: https://stackoverflow.com/questions/40122141/
  */
 
 using ValueT = int32_t;
@@ -57,6 +61,7 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_Reference)(benchmark::Stat
 
   while (state.KeepRunning()) {
     std::vector<size_t> result;
+    benchmark::DoNotOptimize(result.data());  // Do not optimize out the vector
     const auto size = _vec.size();
     for (size_t i = 0; i < size; ++i) {
       if (_vec[i] == 2) {
@@ -64,7 +69,6 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_Reference)(benchmark::Stat
         benchmark::ClobberMemory();  // Force that record to be written to memory
       }
     }
-    benchmark::DoNotOptimize(result.data());  // Do not optimize out the vector
   }
 }
 
@@ -76,6 +80,7 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_PreAllocate)(benchmark::St
 
   while (state.KeepRunning()) {
     std::vector<size_t> result;
+    benchmark::DoNotOptimize(result.data());  // Do not optimize out the vector
     // pre-allocate result vector
     result.reserve(250'000);
     const auto size = _vec.size();
@@ -85,7 +90,6 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_PreAllocate)(benchmark::St
         benchmark::ClobberMemory();  // Force that record to be written to memory
       }
     }
-    benchmark::DoNotOptimize(result.data());  // Do not optimize out the vector
   }
 }
 
