@@ -84,6 +84,11 @@ class RandomCache : public AbstractCache<Key, Value> {
   void _evict() {
     _map.erase(_list[0].first);
     _list.erase(_list.cbegin());
+
+    for (auto it = _map.cbegin(); it != _map.cend();) {
+      _map[it->first] = it->second - 1;
+      ++it;
+    }
   }
 };
 
