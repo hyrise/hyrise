@@ -357,13 +357,11 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   */
   _keys_per_chunk = std::vector<std::shared_ptr<std::vector<AggregateKey>>>(input_table->chunk_count());
 
-  // std::vector<std::shared_ptr<AbstractTask>> jobs;
-  // jobs.reserve(input_table->chunk_count());
-
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
     _keys_per_chunk[chunk_id] = std::make_shared<std::vector<AggregateKey>>(input_table->get_chunk(chunk_id)->size());
   }
 
+  // TODO(anyone): enable scheduler to iterate multiple groupby columns in parallel
   for (const auto column_id : _groupby_column_ids) {
     auto data_type = input_table->column_data_type(column_id);
 
@@ -382,6 +380,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
 
           ChunkOffset chunk_offset{0};
           iterable.for_each([&](const auto& value) {
+            // TODO(marcel): make sure that null values have a unique id
             auto inserted = id_map.try_emplace(value.value(), id_counter);
             if (inserted.second) ++id_counter;
 
@@ -399,42 +398,6 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
       }
     });
   }
-
-  // for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-  //   // jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id, this]() {
-  //   auto chunk_in = input_table->get_chunk(chunk_id);
-
-  //   auto hash_keys = std::make_shared<std::vector<AggregateKey>>(chunk_in->size());
-
-  //   // Partition by group columns
-  //   for (const auto column_id : _groupby_column_ids) {
-  //     auto base_column = chunk_in->get_column(column_id);
-
-  //     resolve_data_and_column_type(*base_column, [&](auto type, auto& typed_column) {
-  //       using ColumnDataType = typename decltype(type)::type;
-
-  //       auto iterable = create_iterable_from_column<ColumnDataType>(typed_column);
-
-  //       ChunkOffset chunk_offset{0};
-  //       iterable.for_each([&](const auto& value) {
-  //         if (value.is_null()) {
-  //           (*hash_keys)[chunk_offset].second.emplace_back(NULL_VALUE);
-  //         } else {
-  //           boost::hash_combine((*hash_keys)[chunk_offset].first, value.value());
-  //           (*hash_keys)[chunk_offset].second.emplace_back(value.value());
-  //         }
-
-  //         ++chunk_offset;
-  //       });
-  //     });
-  //   }
-
-  //   _keys_per_chunk[chunk_id] = hash_keys;
-  // }));
-  // jobs.back()->schedule();
-  // }
-
-  // CurrentScheduler::wait_for_tasks(jobs);
 
   /*
   AGGREGATION PHASE
