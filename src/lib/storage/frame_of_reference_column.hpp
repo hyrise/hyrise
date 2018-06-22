@@ -10,6 +10,7 @@
 #include <memory>
 
 #include "base_encoded_column.hpp"
+#include "storage/vector_compression/base_compressed_vector.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -77,6 +78,7 @@ class FrameOfReferenceColumn : public BaseEncodedColumn {
   const pmr_vector<T> _block_minima;
   const pmr_vector<bool> _null_values;
   const std::unique_ptr<const BaseCompressedVector> _offset_values;
+  std::unique_ptr<BaseVectorDecompressor> _decoder;
 };
 
 }  // namespace opossum

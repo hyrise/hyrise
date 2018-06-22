@@ -79,8 +79,7 @@ std::string QueryResponseBuilder::build_command_complete_message(hsql::Statement
 }
 
 std::string QueryResponseBuilder::build_execution_info_message(std::shared_ptr<SQLPipeline> sql_pipeline) {
-  return "Compilation time (µs): " + std::to_string(sql_pipeline->compile_time_microseconds().count()) +
-         "\nExecution time (µs): " + std::to_string(sql_pipeline->execution_time_microseconds().count());
+  return sql_pipeline->metrics().to_string();
 }
 
 boost::future<uint64_t> QueryResponseBuilder::send_query_response(send_row_t send_row, const Table& table) {

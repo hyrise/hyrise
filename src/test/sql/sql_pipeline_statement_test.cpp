@@ -335,10 +335,10 @@ TEST_F(SQLPipelineStatementTest, GetQueryPlanTwice) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
 
   sql_pipeline.get_query_plan();
-  auto duration = sql_pipeline.compile_time_microseconds();
+  auto duration = sql_pipeline.metrics()->compile_time_micros;
 
   const auto& plan = sql_pipeline.get_query_plan();
-  auto duration2 = sql_pipeline.compile_time_microseconds();
+  auto duration2 = sql_pipeline.metrics()->compile_time_micros;
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
@@ -425,10 +425,10 @@ TEST_F(SQLPipelineStatementTest, GetResultTableTwice) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
 
   sql_pipeline.get_result_table();
-  auto duration = sql_pipeline.execution_time_microseconds();
+  auto duration = sql_pipeline.metrics()->execution_time_micros;
 
   const auto& table = sql_pipeline.get_result_table();
-  auto duration2 = sql_pipeline.execution_time_microseconds();
+  auto duration2 = sql_pipeline.metrics()->execution_time_micros;
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
@@ -485,14 +485,21 @@ TEST_F(SQLPipelineStatementTest, GetResultTableNoMVCC) {
 TEST_F(SQLPipelineStatementTest, GetTimes) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline_statement();
 
-  EXPECT_THROW(sql_pipeline.compile_time_microseconds(), std::exception);
-  EXPECT_THROW(sql_pipeline.execution_time_microseconds(), std::exception);
+  const auto& metrics = sql_pipeline.metrics();
+  const auto zero_duration = std::chrono::microseconds::zero();
+
+  EXPECT_EQ(metrics->translate_time_micros, zero_duration);
+  EXPECT_EQ(metrics->optimize_time_micros, zero_duration);
+  EXPECT_EQ(metrics->compile_time_micros, zero_duration);
+  EXPECT_EQ(metrics->execution_time_micros, zero_duration);
 
   // Run to get times
   sql_pipeline.get_result_table();
 
-  EXPECT_GT(sql_pipeline.compile_time_microseconds().count(), 0);
-  EXPECT_GT(sql_pipeline.execution_time_microseconds().count(), 0);
+  EXPECT_GT(metrics->translate_time_micros, zero_duration);
+  EXPECT_GT(metrics->optimize_time_micros, zero_duration);
+  EXPECT_GT(metrics->compile_time_micros, zero_duration);
+  EXPECT_GT(metrics->execution_time_micros, zero_duration);
 }
 
 TEST_F(SQLPipelineStatementTest, ParseErrorDebugMessage) {

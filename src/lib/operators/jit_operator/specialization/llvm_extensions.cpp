@@ -104,6 +104,8 @@ llvm::Constant* ConstantFoldInstruction(llvm::Instruction* inst, llvm::ArrayRef<
   return llvm::ConstantFoldInstOperands(inst, operands, data_layout, target_library_info);
 }
 
+// Undefined Behavior Sanitizer disabled for alignment to prevent false positive through reinterpret_cast.
+__attribute__((no_sanitize("alignment")))
 llvm::Constant* ResolveConditionRec(llvm::Value* value, SpecializationContext& context,
                                     std::unordered_set<llvm::Value*>& failed) {
   // If resolving the value failed already we fail early here
