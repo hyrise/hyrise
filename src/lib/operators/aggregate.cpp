@@ -357,9 +357,16 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   */
   _keys_per_chunk = std::vector<std::shared_ptr<std::vector<AggregateKey>>>(input_table->chunk_count());
 
+  auto int_default_vector = std::vector<int>(_groupby_column_ids.size());
+  std::cout << "1" << std::endl;
+  auto alltypevariant_default_vector = std::vector<AllTypeVariant>(_groupby_column_ids.size());
+  std::cout << "2" << std::endl;
+
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-    _keys_per_chunk[chunk_id] = std::make_shared<std::vector<AggregateKey>>(input_table->get_chunk(chunk_id)->size());
+    _keys_per_chunk[chunk_id] = std::make_shared<std::vector<AggregateKey>>(
+        input_table->get_chunk(chunk_id)->size(), std::make_pair(int_default_vector, alltypevariant_default_vector));
   }
+  std::cout << "3" << std::endl;
 
   // TODO(anyone): enable scheduler to iterate multiple groupby columns in parallel
   for (const auto column_id : _groupby_column_ids) {
@@ -384,12 +391,18 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
             auto inserted = id_map.try_emplace(value.value(), id_counter);
             if (inserted.second) ++id_counter;
 
-            (*_keys_per_chunk[chunk_id])[chunk_offset].first.emplace_back(inserted.first->second);
+            std::cout << "4" << std::endl;
+            (*_keys_per_chunk[chunk_id])[chunk_offset].first[column_id] = inserted.first->second;
+            std::cout << "5" << std::endl;
 
             if (value.is_null()) {
-              (*_keys_per_chunk[chunk_id])[chunk_offset].second.emplace_back(NULL_VALUE);
+              std::cout << "6" << std::endl;
+              (*_keys_per_chunk[chunk_id])[chunk_offset].second[column_id] = NULL_VALUE;
+              std::cout << "6.5" << std::endl;
             } else {
-              (*_keys_per_chunk[chunk_id])[chunk_offset].second.emplace_back(value.value());
+              std::cout << "7" << std::endl;
+              (*_keys_per_chunk[chunk_id])[chunk_offset].second[column_id] = value.value();
+              std::cout << "8" << std::endl;
             }
 
             ++chunk_offset;
