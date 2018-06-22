@@ -104,12 +104,7 @@ Compares two AggregateKeys, but considers two NULL values to be equal. This is s
 */
 struct NullEqualTo {
   bool operator()(const AggregateKey& left, const AggregateKey& right) const {
-    return std::equal(left.second.begin(), left.second.end(), right.second.begin(), right.second.end(),
-                      [](auto left_subkey, auto right_subkey) {
-                        // for the purpose of aggregation, two NULLs are in the same group
-                        if (variant_is_null(left_subkey) && variant_is_null(right_subkey)) return true;
-                        return left_subkey == right_subkey;
-                      });
+    return std::equal(left.first.begin(), left.first.end(), right.first.begin(), right.first.end());
   }
 };
 
@@ -387,20 +382,14 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
 
           ChunkOffset chunk_offset{0};
           iterable.for_each([&](const auto& value) {
-            std::cout << value.value() << std::endl;
             auto inserted = id_map.try_emplace(value.value(), id_counter);
-            if (inserted.second) {
-              std::cout << "inserted " << value.value() << " with id: " << id_counter << std::endl;
-              ++id_counter;
-            } else {
-              std::cout << "didn't inserted " << value.value() << " existing id: " << inserted.first->second
-                        << std::endl;
-            }
+            if (inserted.second) ++id_counter;
+
+            (*_keys_per_chunk[chunk_id])[chunk_offset].first.emplace_back(inserted.first->second);
 
             if (value.is_null()) {
               (*_keys_per_chunk[chunk_id])[chunk_offset].second.emplace_back(NULL_VALUE);
             } else {
-              boost::hash_combine((*_keys_per_chunk[chunk_id])[chunk_offset].first, value.value());
               (*_keys_per_chunk[chunk_id])[chunk_offset].second.emplace_back(value.value());
             }
 
