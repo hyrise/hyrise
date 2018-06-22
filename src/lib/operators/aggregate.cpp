@@ -362,44 +362,90 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   */
   _keys_per_chunk = std::vector<std::shared_ptr<std::vector<AggregateKey>>>(input_table->chunk_count());
 
-  std::vector<std::shared_ptr<AbstractTask>> jobs;
-  jobs.reserve(input_table->chunk_count());
+  // std::vector<std::shared_ptr<AbstractTask>> jobs;
+  // jobs.reserve(input_table->chunk_count());
 
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-    jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id, this]() {
-      auto chunk_in = input_table->get_chunk(chunk_id);
+    _keys_per_chunk[chunk_id] = std::make_shared<std::vector<AggregateKey>>(input_table->get_chunk(chunk_id)->size());
+  }
 
-      auto hash_keys = std::make_shared<std::vector<AggregateKey>>(chunk_in->size());
+  for (const auto column_id : _groupby_column_ids) {
+    auto data_type = input_table->column_data_type(column_id);
 
-      // Partition by group columns
-      for (const auto column_id : _groupby_column_ids) {
+    resolve_data_type(data_type, [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
+
+      auto id_map = std::unordered_map<ColumnDataType, int>();
+      int id_counter = 0;
+
+      for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
+        auto chunk_in = input_table->get_chunk(chunk_id);
         auto base_column = chunk_in->get_column(column_id);
 
-        resolve_data_and_column_type(*base_column, [&](auto type, auto& typed_column) {
-          using ColumnDataType = typename decltype(type)::type;
-
+        resolve_column_type<ColumnDataType>(*base_column, [&](auto& typed_column) {
           auto iterable = create_iterable_from_column<ColumnDataType>(typed_column);
 
           ChunkOffset chunk_offset{0};
           iterable.for_each([&](const auto& value) {
-            if (value.is_null()) {
-              (*hash_keys)[chunk_offset].second.emplace_back(NULL_VALUE);
+            std::cout << value.value() << std::endl;
+            auto inserted = id_map.try_emplace(value.value(), id_counter);
+            if (inserted.second) {
+              std::cout << "inserted " << value.value() << " with id: " << id_counter << std::endl;
+              ++id_counter;
             } else {
-              boost::hash_combine((*hash_keys)[chunk_offset].first, value.value());
-              (*hash_keys)[chunk_offset].second.emplace_back(value.value());
+              std::cout << "didn't inserted " << value.value() << " existing id: " << inserted.first->second
+                        << std::endl;
+            }
+
+            if (value.is_null()) {
+              (*_keys_per_chunk[chunk_id])[chunk_offset].second.emplace_back(NULL_VALUE);
+            } else {
+              boost::hash_combine((*_keys_per_chunk[chunk_id])[chunk_offset].first, value.value());
+              (*_keys_per_chunk[chunk_id])[chunk_offset].second.emplace_back(value.value());
             }
 
             ++chunk_offset;
           });
         });
       }
-
-      _keys_per_chunk[chunk_id] = hash_keys;
-    }));
-    jobs.back()->schedule();
+    });
   }
 
-  CurrentScheduler::wait_for_tasks(jobs);
+  // for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
+  //   // jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id, this]() {
+  //   auto chunk_in = input_table->get_chunk(chunk_id);
+
+  //   auto hash_keys = std::make_shared<std::vector<AggregateKey>>(chunk_in->size());
+
+  //   // Partition by group columns
+  //   for (const auto column_id : _groupby_column_ids) {
+  //     auto base_column = chunk_in->get_column(column_id);
+
+  //     resolve_data_and_column_type(*base_column, [&](auto type, auto& typed_column) {
+  //       using ColumnDataType = typename decltype(type)::type;
+
+  //       auto iterable = create_iterable_from_column<ColumnDataType>(typed_column);
+
+  //       ChunkOffset chunk_offset{0};
+  //       iterable.for_each([&](const auto& value) {
+  //         if (value.is_null()) {
+  //           (*hash_keys)[chunk_offset].second.emplace_back(NULL_VALUE);
+  //         } else {
+  //           boost::hash_combine((*hash_keys)[chunk_offset].first, value.value());
+  //           (*hash_keys)[chunk_offset].second.emplace_back(value.value());
+  //         }
+
+  //         ++chunk_offset;
+  //       });
+  //     });
+  //   }
+
+  //   _keys_per_chunk[chunk_id] = hash_keys;
+  // }));
+  // jobs.back()->schedule();
+  // }
+
+  // CurrentScheduler::wait_for_tasks(jobs);
 
   /*
   AGGREGATION PHASE
@@ -590,7 +636,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   _output->append_chunk(_output_columns);
 
   return _output;
-}
+}  // namespace opossum
 
 /*
 The following template functions write the aggregated values for the different aggregate functions.
