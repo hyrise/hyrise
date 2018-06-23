@@ -50,6 +50,7 @@ TEST_P(TPCHTest, TPCHQueryTest) {
   SCOPED_TRACE("TPC-H " + std::to_string(query_idx));
 
   const auto sqlite_result_table = _sqlite_wrapper->execute_query(query);
+  ASSERT_TRUE(sqlite_result_table);
 
   auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline();
 
@@ -59,7 +60,8 @@ TEST_P(TPCHTest, TPCHQueryTest) {
     FAIL();
   }
 
-  const auto& result_table = sql_pipeline.get_result_table();
+  const auto result_table = sql_pipeline.get_result_table();
+  ASSERT_TRUE(result_table);
 
   EXPECT_TABLE_EQ(result_table, sqlite_result_table, OrderSensitivity::No, TypeCmpMode::Lenient,
                   FloatComparisonMode::RelativeDifference);

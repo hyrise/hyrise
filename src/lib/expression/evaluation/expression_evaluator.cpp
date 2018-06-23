@@ -149,12 +149,9 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_expression_to
 
     case ExpressionType::Exists:
       return evaluate_exists_expression<R>(static_cast<const ExistsExpression&>(expression));
-//
-//    case ExpressionType::Extract:
-//      return evaluate_extract_expression<R>(static_cast<const ExtractExpression&>(expression));
 
-//    case ExpressionType::List:
-//      return evaluate_array<R>(static_cast<const ListExpression&>(expression));
+    case ExpressionType::Extract:
+      return evaluate_extract_expression<R>(static_cast<const ExtractExpression&>(expression));
 
     case ExpressionType::Mock:
       Fail("Can't handle External/ValuePlaceholders/Mocks since they don't have a value.");
@@ -219,17 +216,17 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_like_ex
 
   const auto invert_results = expression.predicate_condition == PredicateCondition::NotLike;
 
-  const auto result_size = _result_size(*left_results, *right_results);
+  const auto result_size = _result_size(left_results->size(), right_results->size());
   std::vector<int32_t> result_values(result_size, 0);
 
-  if (left_results->size() == right_results->size()) {
+  if (left_results->is_literal() == right_results->is_literal()) {
     // E.g., `a LIKE b` - A new matcher for each row and a different value as well
     for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
       LikeMatcher{right_results->values[row_idx]}.resolve(invert_results, [&](const auto& matcher) {
         result_values[row_idx] = matcher(left_results->values[row_idx]);
       });
     }
-  } else if (left_results->size() > right_results->size()) {
+  } else if (!left_results->is_literal() && right_results->is_literal()) {
     // E.g., `a LIKE '%hello%'` -- A single matcher for all rows
     LikeMatcher like_matcher{right_results->values.front()};
 
@@ -340,7 +337,7 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_in_expr
         using ValueDataType = typename std::decay_t<decltype(left_view)>::Type;
 
         if constexpr (Equals::supports<int32_t, ValueDataType, SelectDataType>::value) {
-          const auto output_row_count = std::max(left_view.size(), select_result_columns.size());
+          const auto output_row_count = _result_size(left_view.size(), select_result_columns.size());
 
           result_values.resize(output_row_count, 0);
           // TODO(moritz) The InExpression doesn't in all cases need to return a nullable
@@ -409,7 +406,7 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_case_expressi
     using ThenResultType = typename std::decay_t<decltype(then_view)>::Type;
     using ElseResultType = typename std::decay_t<decltype(else_view)>::Type;
 
-    const auto result_size = std::max({when_view.size(), then_view.size(), else_view.size()});
+    const auto result_size = _result_size(when_view.size(), then_view.size(), else_view.size());
     std::vector<R> values(result_size);
     std::vector<bool> nulls(result_size);
 
@@ -473,69 +470,42 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_function_expr
   }
 }
 
-//template<>
-//ExpressionResult<std::string> ExpressionEvaluator::evaluate_extract_expression<std::string>(const ExtractExpression& extract_expression) {
-//  const auto from_result = evaluate_expression<std::string>(*extract_expression.from());
-//
-//  switch (extract_expression.datetime_component) {
-//    case DatetimeComponent::Year: return evaluate_extract_substr<0, 4>(from_result);
-//    case DatetimeComponent::Month: return evaluate_extract_substr<5, 2>(from_result);
-//    case DatetimeComponent::Day: return evaluate_extract_substr<8, 2>(from_result);
-//
-//    case DatetimeComponent::Hour:
-//    case DatetimeComponent::Minute:
-//    case DatetimeComponent::Second:
-//      Fail("Hour, Minute and Second not available in String Datetimes");
-//  }
-//}
+template<>
+std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::evaluate_extract_expression<std::string>(const ExtractExpression& extract_expression) {
+  const auto from_result = evaluate_expression_to_result<std::string>(*extract_expression.from());
 
-//template<typename R>
-//ExpressionResult<R> ExpressionEvaluator::evaluate_extract_expression(const ExtractExpression& extract_expression) {
-//  Fail("Only Strings (YYYY-MM-DD) supported for Dates right now");
-//}
-//
-//template<size_t offset, size_t count>
-//ExpressionResult<std::string> ExpressionEvaluator::evaluate_extract_substr(const ExpressionResult<std::string>& from_result) {
-//  if (is_null(from_result)) {
-//    return NullValue{};
-//
-//  } else if (is_value(from_result)) {
-//    const auto& date = boost::get<std::string>(from_result);
-//    DebugAssert(date.size() == 10, "String Date format required to be strictly YYYY-MM-DD");
-//    return date.substr(offset, count);
-//
-//  } else if (is_non_nullable_values(from_result)) {
-//    const auto& from_values = boost::get<NonNullableValues<std::string>>(from_result);
-//
-//    auto result_values = NonNullableValues<std::string>(_output_row_count);
-//
-//    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-//      const auto& date = from_values[chunk_offset];
-//      DebugAssert(date.size() == 10, "String Date format required to be strictly YYYY-MM-DD");
-//      result_values[chunk_offset] = date.substr(offset, count);
-//    }
-//
-//    return result_values;
-//
-//  } else if (is_nullable_values(from_result)) {
-//    const auto& from_values_and_nulls = boost::get<NullableValues<std::string>>(from_result);
-//    const auto& from_values = from_values_and_nulls.first;
-//    const auto& from_nulls = from_values_and_nulls.second;
-//
-//    auto result_values = std::vector<std::string>(_output_row_count);
-//
-//    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-//      const auto& date = from_values[chunk_offset];
-//      DebugAssert(date.size() == 10, "String Date format required to be strictly YYYY-MM-DD");
-//      result_values[chunk_offset] = date.substr(offset, count);
-//    }
-//
-//    return std::make_pair(result_values, from_nulls);
-//
-//  } else {
-//    Fail("Can't EXTRACT from this Expression");
-//  }
-//}
+  switch (extract_expression.datetime_component) {
+    case DatetimeComponent::Year: return evaluate_extract_substr<0, 4>(*from_result);
+    case DatetimeComponent::Month: return evaluate_extract_substr<5, 2>(*from_result);
+    case DatetimeComponent::Day: return evaluate_extract_substr<8, 2>(*from_result);
+
+    case DatetimeComponent::Hour: case DatetimeComponent::Minute: case DatetimeComponent::Second:
+      Fail("Hour, Minute and Second not available in String Datetimes");
+  }
+}
+
+template<typename R>
+std::shared_ptr<ExpressionResult<R>>  ExpressionEvaluator::evaluate_extract_expression(const ExtractExpression& extract_expression) {
+  Fail("Only Strings (YYYY-MM-DD) supported for Dates right now");
+}
+
+template<size_t offset, size_t count>
+std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::evaluate_extract_substr(const ExpressionResult<std::string>& from_result) {
+  std::shared_ptr<ExpressionResult<std::string>> result;
+
+  std::vector<std::string> values(from_result.size());
+
+  from_result.as_view([&](const auto& from_view) {
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < from_view.size(); ++chunk_offset) {
+      if (!from_view.null(chunk_offset)) {
+        DebugAssert(from_view.value(chunk_offset).size() == 10u, "Invalid DatetimeString '"s + from_view.value(chunk_offset) + "'");
+        values[chunk_offset] = from_view.value(chunk_offset).substr(offset, count);
+      }
+    }
+  });
+
+  return std::make_shared<ExpressionResult<std::string>>(std::move(values), from_result.nulls);
+}
 
 std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::evaluate_select_expression(
 const PQPSelectExpression &expression) {
@@ -654,7 +624,7 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_binary_with_d
     using RightDataType = typename std::decay_t<decltype(right)>::Type;
 
     if constexpr (Functor::template supports<R, LeftDataType, RightDataType>::value) {
-      const auto result_size = _result_size(left, right);
+      const auto result_size = _result_size(left.size(), right.size());
       auto nulls = _evaluate_default_null_logic(left.nulls, right.nulls);
 
       std::vector<R> values(result_size);
@@ -691,7 +661,7 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_binary_with_c
     using RightDataType = typename std::decay_t<decltype(right)>::Type;
 
     if constexpr (Functor::template supports<R, LeftDataType, RightDataType>::value) {
-      const auto result_row_count = _result_size(left, right);
+      const auto result_row_count = _result_size(left.size(), right.size());
 
       std::vector<bool> nulls(result_row_count);
       std::vector<R> values(result_row_count);
@@ -768,15 +738,17 @@ void ExpressionEvaluator::resolve_to_expression_result(const AbstractExpression 
   }
 }
 
-template<typename ... Args>
-ChunkOffset ExpressionEvaluator::_result_size(Args &... args) {
-  if (args.)
+template<typename ... RowCounts>
+ChunkOffset ExpressionEvaluator::_result_size(const RowCounts ... row_counts) {
+  // If any operand is empty (that's the case IFF it is an empty column) the result of the expression has no rows
+  if (((row_counts == 0) || ...)) return 0;
 
+  return std::max({row_counts...});
 }
 
 std::vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const std::vector<bool>& left,
                                                                            const std::vector<bool>& right) const {
-  const auto result_size = _result_size(left, right);
+  const auto result_size = _result_size(left.size(), right.size());
 
   if (result_size == 0) return {};
 
@@ -828,7 +800,7 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_su
   const auto starts = evaluate_expression_to_result<int32_t>(*arguments[1]);
   const auto lengths = evaluate_expression_to_result<int32_t>(*arguments[2]);
 
-  const auto row_count = std::max({strings->size(), starts->size(), lengths->size()});
+  const auto row_count = _result_size(strings->size(), starts->size(), lengths->size());
 
   std::vector<std::string> result_values(row_count);
   std::vector<bool> result_nulls(row_count);
@@ -847,8 +819,8 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_su
     auto start = starts->value(chunk_offset);
 
     /**
-     * Hyrise SUBSTR follows SQLite semantics for negative indices. SUBSTRS lives in this weird space.
-     * Note that different DBMS behave differently when it comes to negative indices.
+     * Hyrise SUBSTR follows SQLite semantics for negative indices. SUBSTR lives in this weird "space" illustrted below
+     * Note that other DBMS behave differently when it comes to negative indices.
      *
      * START -8 -7 -6 -5 -4 -3 -2 -1 || 0  || 1 2 3 4 5 6  7  8
      * CHAR  // // // H  e  l  l  o  || // || H e l l o // // //
@@ -888,7 +860,6 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_co
   std::vector<std::shared_ptr<ExpressionResult<std::string>>> argument_results;
   argument_results.reserve(arguments.size());
 
-  auto result_size = size_t{0};
   auto result_is_nullable = false;
 
   // I - Compute the arguments
@@ -902,8 +873,13 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_co
     const auto argument_result = evaluate_expression_to_result<std::string>(*argument);
     argument_results.emplace_back(argument_result);
 
-    result_size = std::max(result_size, argument_result->size());
     result_is_nullable |= argument_result->is_nullable();
+  }
+
+  // II - Compute the number of output rows
+  auto result_size = argument_results.empty() ? size_t{0} : argument_results.front()->size();
+  for (auto argument_idx = size_t{1}; argument_idx < argument_results.size(); ++argument_idx) {
+    result_size = _result_size(result_size, argument_results[argument_idx]->size());
   }
 
   // II - Concatenate the values

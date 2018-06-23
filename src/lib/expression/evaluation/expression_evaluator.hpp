@@ -67,13 +67,13 @@ class ExpressionEvaluator final {
   template<typename R>
   std::shared_ptr<ExpressionResult<R>> evaluate_function_expression(const FunctionExpression& expression);
 
-//
-//  template<typename R>
-//  ExpressionResult<R> evaluate_extract_expression(const ExtractExpression& extract_expression);
-//
-//  template<size_t offset, size_t count>
-//  ExpressionResult<std::string> evaluate_extract_substr(const ExpressionResult<std::string>& from_result);
-//
+
+  template<typename R>
+  std::shared_ptr<ExpressionResult<R>> evaluate_extract_expression(const ExtractExpression& extract_expression);
+
+  template<size_t offset, size_t count>
+  std::shared_ptr<ExpressionResult<std::string>> evaluate_extract_substr(const ExpressionResult<std::string>& from_result);
+
   template<typename R>
   std::shared_ptr<ExpressionResult<R>> evaluate_exists_expression(const ExistsExpression& exists_expression);
 
@@ -86,7 +86,7 @@ class ExpressionEvaluator final {
                                                  const AbstractExpression& right_expression);
 
   template<typename Functor>
-  void resolve_to_expression_result_view(const AbstractExpression &left_expression, const Functor &fn);
+  void resolve_to_expression_result_view(const AbstractExpression &expression, const Functor &fn);
 
   template<typename Functor>
   void resolve_to_expression_result_views(const AbstractExpression &left_expression,
@@ -102,15 +102,10 @@ class ExpressionEvaluator final {
 
  private:
   /**
-   * @defgroup Compute the number of rows that any kind expression produces, given its resolved operands
-   *
-   * @tparam A, B, C   The expression operands as ExpressionResults
-   *
-   * @{
+   * Compute the number of rows that any kind expression produces, given the number of rows in its parameters
    */
-  template<typename ... Args>
-  static ChunkOffset _result_size(Args &... args);
-  /** @} */
+  template<typename ... RowCounts>
+  static ChunkOffset _result_size(const RowCounts ... row_counts);
 
   std::vector<bool> _evaluate_default_null_logic(const std::vector<bool>& left, const std::vector<bool>& right) const;
 
