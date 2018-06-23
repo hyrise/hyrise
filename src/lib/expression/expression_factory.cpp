@@ -49,7 +49,7 @@ unary<AggregateFunction::Avg, AggregateExpression> avg;
 unary<AggregateFunction::Count, AggregateExpression> count;
 unary<AggregateFunction::CountDistinct, AggregateExpression> count_distinct;
 binary<ArithmeticOperator::Multiplication, ArithmeticExpression> mul;
-binary<ArithmeticOperator::Division, ArithmeticExpression> division;
+binary<ArithmeticOperator::Division, ArithmeticExpression> div_;
 binary<ArithmeticOperator::Addition, ArithmeticExpression> add;
 binary<ArithmeticOperator::Subtraction, ArithmeticExpression> sub;
 binary<PredicateCondition::Like, BinaryPredicateExpression> like;

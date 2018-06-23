@@ -478,7 +478,7 @@ TEST_F(SQLTranslatorTest, GroupByOnly) {
   const auto actual_lqp = compile_query("SELECT * FROM int_float GROUP BY b + 3, a / b, b");
 
   const auto b_plus_3 = add(int_float_b, 3);
-  const auto a_divided_by_b = division(int_float_a, int_float_b);
+  const auto a_divided_by_b = div_(int_float_a, int_float_b);
   const auto group_by_expressions = expression_vector(b_plus_3, a_divided_by_b, int_float_b);
 
   // clang-format off

@@ -1,10 +1,13 @@
 #include "abstract_expression.hpp"
 
 #include <queue>
+#include <string>
 
 #include "boost/functional/hash.hpp"
 #include "utils/assert.hpp"
 #include "expression_utils.hpp"
+
+using namespace std::string_literals;
 
 namespace opossum {
 
@@ -42,6 +45,20 @@ bool AbstractExpression::_shallow_equals(const AbstractExpression& expression) c
 
 size_t AbstractExpression::_on_hash() const {
   return 0;
+}
+
+uint32_t AbstractExpression::_precedence() const {
+  return 0;
+}
+
+std::string AbstractExpression::_argument_as_column_name(const AbstractExpression& argument) const {
+  // TODO(anybody) Using >= to make divisions ("(2/3)/4") and logical operations ("(a AND (b OR c))") unambiguous -
+  //               Sadly this makes cases where the parentheses could be avoided look ugly ("(2+3)+4")
+  if (argument._precedence() >= _precedence()) {
+    return "("s + argument.as_column_name() + ")";
+  } else {
+    return argument.as_column_name();
+  }
 }
 
 }  // namespace opoosum

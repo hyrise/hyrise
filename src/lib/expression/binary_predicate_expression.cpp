@@ -33,9 +33,9 @@ std::shared_ptr<AbstractExpression> BinaryPredicateExpression::deep_copy() const
 std::string BinaryPredicateExpression::as_column_name() const {
   std::stringstream stream;
 
-  stream << left_operand()->as_column_name() << " ";
+  stream << _argument_as_column_name(*left_operand()) << " ";
   stream << predicate_condition_to_string.left.at(predicate_condition) << " ";
-  stream << right_operand()->as_column_name();
+  stream << _argument_as_column_name(*right_operand());
 
   return stream.str();
 }

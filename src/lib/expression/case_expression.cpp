@@ -26,7 +26,7 @@ const std::shared_ptr<AbstractExpression>& CaseExpression::else_() const {
 std::string CaseExpression::as_column_name() const {
   std::stringstream stream;
 
-  stream << "CASE " << when()->as_column_name() << " THEN " << then()->as_column_name() << " ELSE " << else_()->as_column_name();
+  stream << "CASE WHEN " << when()->as_column_name() << " THEN " << then()->as_column_name() << " ELSE " << else_()->as_column_name() << " END";
 
   return stream.str();
 }

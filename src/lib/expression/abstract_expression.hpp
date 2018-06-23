@@ -40,6 +40,21 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
  protected:
   virtual bool _shallow_equals(const AbstractExpression& expression) const;
   virtual size_t _on_hash() const;
+
+  /**
+   * Used internally in _argument_as_column_name() to put parentheses around expression arguments if they have a lower
+   * precedence than the expression itself.
+   * Lower precedence indicates tighter binding, compare https://en.cppreference.com/w/cpp/language/operator_precedence
+   *
+   * @return  0 by default
+   */
+  virtual uint32_t _precedence() const;
+
+  /**
+   * @return    argument.as_column_name(), enclosed by parentheses if the argument precedence is lower than
+   *            this->_precedence()
+   */
+  std::string _argument_as_column_name(const AbstractExpression& argument) const;
 };
 
 // Wrapper around expression->hash(), to enable hash based containers containing std::shared_ptr<AbstractExpression>

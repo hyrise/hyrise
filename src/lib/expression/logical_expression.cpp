@@ -50,4 +50,8 @@ size_t LogicalExpression::_on_hash() const {
   return boost::hash_value(static_cast<size_t>(logical_operator));
 }
 
+uint32_t LogicalExpression::_precedence() const {
+  return 6;
+}
+
 }  // namespace opossum

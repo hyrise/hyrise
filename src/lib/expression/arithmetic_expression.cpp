@@ -43,7 +43,7 @@ DataType ArithmeticExpression::data_type() const {
 std::string ArithmeticExpression::as_column_name() const {
   std::stringstream stream;
 
-  stream << left_operand()->as_column_name() << " " << arithmetic_operator << " " << right_operand()->as_column_name();
+  stream << _argument_as_column_name(*left_operand()) << " " << arithmetic_operator << " " << _argument_as_column_name(*right_operand());
 
   return stream.str();
 }
@@ -61,6 +61,20 @@ bool ArithmeticExpression::_shallow_equals(const AbstractExpression& expression)
 
 size_t ArithmeticExpression::_on_hash() const {
   return boost::hash_value(static_cast<size_t>(arithmetic_operator));
+}
+
+uint32_t ArithmeticExpression::_precedence() const {
+  switch(arithmetic_operator) {
+    case ArithmeticOperator::Power:
+      return 4;
+    case ArithmeticOperator::Addition:
+    case ArithmeticOperator::Subtraction:
+      return 3;
+    case ArithmeticOperator::Multiplication:
+    case ArithmeticOperator::Division:
+    case ArithmeticOperator::Modulo:
+      return 2;
+  }
 }
 
 }  // namespace opossum

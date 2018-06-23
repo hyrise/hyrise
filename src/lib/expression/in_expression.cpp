@@ -5,7 +5,9 @@
 namespace opossum {
 
 InExpression::InExpression(const std::shared_ptr<AbstractExpression>& value, const std::shared_ptr<AbstractExpression>& set):
-  AbstractPredicateExpression(PredicateCondition::In, {value, set}) {}
+  AbstractPredicateExpression(PredicateCondition::In, {value, set}) {
+  Assert(set->type == ExpressionType::List || set->type == ExpressionType::Select, "Can only apply IN to List and Select");
+}
 
 const std::shared_ptr<AbstractExpression>& InExpression::value() const {
   return arguments[0];
@@ -21,7 +23,7 @@ std::shared_ptr<AbstractExpression> InExpression::deep_copy() const {
 
 std::string InExpression::as_column_name() const {
   std::stringstream stream;
-  stream << value()->as_column_name() << " IN " << set()->as_column_name();
+  stream << _argument_as_column_name(*value()) << " IN " << set()->as_column_name();
   return stream.str();
 }
 

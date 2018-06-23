@@ -90,7 +90,7 @@ extern unary<AggregateFunction::Min, AggregateExpression> min;
 extern unary<AggregateFunction::Avg, AggregateExpression> avg;
 extern unary<AggregateFunction::Count, AggregateExpression> count;
 extern unary<AggregateFunction::CountDistinct, AggregateExpression> count_distinct;
-extern binary<ArithmeticOperator::Division, ArithmeticExpression> division;
+extern binary<ArithmeticOperator::Division, ArithmeticExpression> div_;
 extern binary<ArithmeticOperator::Multiplication, ArithmeticExpression> mul;
 extern binary<ArithmeticOperator::Addition, ArithmeticExpression> add;
 extern binary<ArithmeticOperator::Subtraction, ArithmeticExpression> sub;

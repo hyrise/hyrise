@@ -24,9 +24,9 @@ std::string IsNullExpression::as_column_name() const {
   std::stringstream stream;
 
   if (predicate_condition == PredicateCondition::IsNull) {
-    stream << operand()->as_column_name() << " IS NULL";
+    stream << _argument_as_column_name(*operand()) << " IS NULL";
   } else {
-    stream << operand()->as_column_name() << " IS NOT NULL";
+    stream << _argument_as_column_name(*operand()) << " IS NOT NULL";
   }
 
   return stream.str();

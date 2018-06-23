@@ -18,6 +18,8 @@ std::shared_ptr<AbstractExpression> LQPColumnExpression::deep_copy() const {
 }
 
 std::string LQPColumnExpression::as_column_name() const {
+  Assert(column_reference.original_node(), "Node referenced by LQPColumnReference has expired");
+
   if (column_reference.original_node()->type == LQPNodeType::StoredTable) {
     const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(column_reference.original_node());
     const auto table = StorageManager::get().get_table(stored_table_node->table_name);

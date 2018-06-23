@@ -32,7 +32,7 @@ std::shared_ptr<AbstractExpression> BetweenExpression::deep_copy() const {
 
 std::string BetweenExpression::as_column_name() const {
   std::stringstream stream;
-  stream << value() << " BETWEEN " << lower_bound() << " AND " << upper_bound();
+  stream << _argument_as_column_name(*value()) << " BETWEEN " << _argument_as_column_name(*lower_bound()) << " AND " << _argument_as_column_name(*upper_bound());
   return stream.str();
 };
 
