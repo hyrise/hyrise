@@ -295,18 +295,15 @@ TEST_F(SQLTranslatorTest, WhereWithLogical) {
   const auto b_plus_a = add(int_float_b, int_float_a);
 
   // clang-format off
+  const auto predicate = or_(greater_than_equals(5, add(int_float_b, int_float_a)),
+                             and_(greater_than(int_float_a, 2), greater_than(int_float_b, 2)));
+
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(int_float_a),
-    UnionNode::make(UnionMode::Positions,
-      ProjectionNode::make(expression_vector(int_float_a, int_float_b), // get rid of "b+a" for the Union
-        PredicateNode::make(greater_than_equals(5, b_plus_a),
-          ProjectionNode::make(expression_vector(b_plus_a, int_float_a, int_float_b), // compute "b+a"
-            stored_table_node_int_float))),
-      PredicateNode::make(greater_than(int_float_a, 2),
-        PredicateNode::make(greater_than(int_float_b, 2),
-           stored_table_node_int_float))
-    )
-  );
+    PredicateNode::make(not_equals(predicate, 0),
+      ProjectionNode::make(expression_vector(predicate, int_float_a, int_float_b),
+        stored_table_node_int_float
+  )));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -817,16 +814,16 @@ TEST_F(SQLTranslatorTest, JoinInnerComplexLogicalPredicate) {
   const auto a_minus_5 = sub(int_float_a, 5);
 
   const auto join_cross = JoinNode::make(JoinMode::Cross, stored_table_node_int_float, stored_table_node_int_float);
+  const auto join_predicate = or_(equals(mul(int_float_a, 3), sub(int_float_a, 5)), greater_than(int_float_a, 20));
 
   const auto expected_lqp =
-  UnionNode::make(UnionMode::Positions,
-    ProjectionNode::make(expression_vector(int_float_a, int_float_b, int_float_a, int_float_b),
-      PredicateNode::make(equals(a_times_3, a_minus_5),
-        ProjectionNode::make(expression_vector(a_times_3, a_minus_5, int_float_a, int_float_b, int_float_a, int_float_b),
-          join_cross))),
-    PredicateNode::make(greater_than(int_float_a, 20),
-      join_cross)
-  );
+  ProjectionNode::make(expression_vector(int_float_a, int_float_b, int_float_a, int_float_b),
+    PredicateNode::make(not_equals(join_predicate, 0),
+      ProjectionNode::make(expression_vector(join_predicate, int_float_a, int_float_b, int_float_a, int_float_b),
+        JoinNode::make(JoinMode::Cross,
+          stored_table_node_int_float,
+          stored_table_node_int_float
+  ))));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
