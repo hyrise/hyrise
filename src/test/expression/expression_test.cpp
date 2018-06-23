@@ -46,7 +46,7 @@ TEST_F(ExpressionTest, DeepEquals) {
 }
 
 TEST_F(ExpressionTest, AsColumnNameParentheses) {
-  /** Test that parentheses are placed correctly in nested expressions */
+  /** Test that parentheses are placed correctly when generating column names of nested expressions */
 
   EXPECT_EQ(add(5, 3)->as_column_name(), "5 + 3");
   EXPECT_EQ(add(5, mul(2, 3))->as_column_name(), "5 + 2 * 3");
@@ -59,14 +59,13 @@ TEST_F(ExpressionTest, AsColumnNameParentheses) {
   EXPECT_EQ(and_(1, greater_than(add(2, 3), 4))->as_column_name(), "1 AND 2 + 3 > 4");
   EXPECT_EQ(and_(1, or_(greater_than(add(2, 3), 4), 0))->as_column_name(), "1 AND (2 + 3 > 4 OR 0)");
   EXPECT_EQ(or_(1, and_(greater_than(add(2, 3), 4), 0))->as_column_name(), "1 OR (2 + 3 > 4 AND 0)");
-  EXPECT_EQ(and_(1, and_(1, or_(0, 1)))->as_column_name(), "1 AND 1 AND (0 OR 1)");
   EXPECT_EQ(is_null(1)->as_column_name(), "1 IS NULL");
   EXPECT_EQ(is_null(and_(1, 1))->as_column_name(), "(1 AND 1) IS NULL");
-  EXPECT_EQ(is_null(sum(a))->as_column_name(), "SUM(a) IS NULL");
+  EXPECT_EQ(is_null(sum(add(a, 2)))->as_column_name(), "SUM(a + 2) IS NULL");
   EXPECT_EQ(less_than(a, b)->as_column_name(), "a < b");
   EXPECT_EQ(less_than(add(a, 5), b)->as_column_name(), "a + 5 < b");
   EXPECT_EQ(between(a, 2, 3)->as_column_name(), "a BETWEEN 2 AND 3");
-  EXPECT_EQ(and_(greater_than_equals(b, 5), between(a, 2, 3))->as_column_name(), "b > 5 AND a BETWEEN 2 AND 3");
+  EXPECT_EQ(and_(greater_than_equals(b, 5), between(a, 2, 3))->as_column_name(), "b >= 5 AND a BETWEEN 2 AND 3");
   EXPECT_EQ(not_equals(between(a, 2, 3), 0)->as_column_name(), "(a BETWEEN 2 AND 3) != 0");
 
   EXPECT_EQ(mul(less_than(add(a, 5), b), 3)->as_column_name(), "(a + 5 < b) * 3");
@@ -77,6 +76,7 @@ TEST_F(ExpressionTest, AsColumnNameParentheses) {
   EXPECT_EQ(add(add(2, 5), add(1, 3))->as_column_name(), "(2 + 5) + (1 + 3)");
   EXPECT_EQ(mul(mul(2, 5), mul(1, 3))->as_column_name(), "(2 * 5) * (1 * 3)");
   EXPECT_EQ(and_(and_(1, 0), and_(0, 1))->as_column_name(), "(1 AND 0) AND (0 AND 1)");
+  EXPECT_EQ(and_(1, and_(1, or_(0, 1)))->as_column_name(), "1 AND (1 AND (0 OR 1))");
 }
 
 }  // namespace opossum

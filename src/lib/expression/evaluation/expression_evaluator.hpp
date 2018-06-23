@@ -101,10 +101,18 @@ class ExpressionEvaluator final {
 
 
  private:
-  template<typename A, typename B>
-  static ChunkOffset _result_size(const A& a, const B& b);
+  /**
+   * @defgroup Compute the number of rows that any kind expression produces, given its resolved operands
+   *
+   * @tparam A, B, C   The expression operands as ExpressionResults
+   *
+   * @{
+   */
+  template<typename ... Args>
+  static ChunkOffset _result_size(Args &... args);
+  /** @} */
 
-  static std::vector<bool> _evaluate_default_null_logic(const std::vector<bool>& left, const std::vector<bool>& right);
+  std::vector<bool> _evaluate_default_null_logic(const std::vector<bool>& left, const std::vector<bool>& right) const;
 
   void _ensure_column_materialization(const ColumnID column_id);
 

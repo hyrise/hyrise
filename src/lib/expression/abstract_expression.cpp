@@ -51,7 +51,7 @@ uint32_t AbstractExpression::_precedence() const {
   return 0;
 }
 
-std::string AbstractExpression::_argument_as_column_name(const AbstractExpression& argument) const {
+std::string AbstractExpression::_enclose_argument_as_column_name(const AbstractExpression& argument) const {
   // TODO(anybody) Using >= to make divisions ("(2/3)/4") and logical operations ("(a AND (b OR c))") unambiguous -
   //               Sadly this makes cases where the parentheses could be avoided look ugly ("(2+3)+4")
   if (argument._precedence() >= _precedence()) {

@@ -107,20 +107,19 @@ class ExpressionResult : public BaseExpressionResult {
 
   ExpressionResult(std::vector<T> values, std::vector<bool> nulls = {false}):
     values(std::move(values)), nulls(std::move(nulls)) {
-    Assert(!this->values.empty() && !this->nulls.empty(), "Can't handle empty ExpressionResult");
   }
 
-  bool is_nullable_series() const { return size() > 1; }
+  bool is_nullable_series() const { return size() != 1; }
   bool is_literal() const { return size() == 1; }
   bool is_nullable() const { return nulls.size() > 1 || nulls.front(); }
 
   const T& value(const size_t idx) const {
-    DebugAssert(values.size() == 1 || idx < values.size(), "Invalid ExpressionResult state");
+    DebugAssert(values.size() == 1 || idx < values.size(), "Invalid ExpressionResult access");
     return values[std::min(idx, values.size() - 1)];
   }
 
   bool null(const size_t idx) const {
-    DebugAssert(nulls.size() == 1 || idx < nulls.size(), "Invalid ExpressionResult state");
+    DebugAssert(nulls.size() == 1 || idx < nulls.size(), "Invalid ExpressionResult access");
     return nulls[std::min(idx, nulls.size() - 1)];
   }
 

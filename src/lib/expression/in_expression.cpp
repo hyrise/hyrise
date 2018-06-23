@@ -23,7 +23,7 @@ std::shared_ptr<AbstractExpression> InExpression::deep_copy() const {
 
 std::string InExpression::as_column_name() const {
   std::stringstream stream;
-  stream << _argument_as_column_name(*value()) << " IN " << set()->as_column_name();
+  stream << _enclose_argument_as_column_name(*value()) << " IN " << set()->as_column_name();
   return stream.str();
 }
 

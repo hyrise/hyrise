@@ -15,6 +15,9 @@ enum class ExpressionType {
   Aggregate, Arithmetic, Case, Column, Exists, Extract, Function, List, Logical, Mock, Parameter, Predicate, Select, Value
 };
 
+/**
+ * Expressions
+ */
 class AbstractExpression : public std::enable_shared_from_this<AbstractExpression> {
  public:
   explicit AbstractExpression(const ExpressionType type, const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
@@ -42,7 +45,7 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   virtual size_t _on_hash() const;
 
   /**
-   * Used internally in _argument_as_column_name() to put parentheses around expression arguments if they have a lower
+   * Used internally in _enclose_argument_as_column_name() to put parentheses around expression arguments if they have a lower
    * precedence than the expression itself.
    * Lower precedence indicates tighter binding, compare https://en.cppreference.com/w/cpp/language/operator_precedence
    *
@@ -54,7 +57,7 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
    * @return    argument.as_column_name(), enclosed by parentheses if the argument precedence is lower than
    *            this->_precedence()
    */
-  std::string _argument_as_column_name(const AbstractExpression& argument) const;
+  std::string _enclose_argument_as_column_name(const AbstractExpression& argument) const;
 };
 
 // Wrapper around expression->hash(), to enable hash based containers containing std::shared_ptr<AbstractExpression>

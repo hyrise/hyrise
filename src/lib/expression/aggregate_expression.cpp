@@ -38,12 +38,12 @@ std::string AggregateExpression::as_column_name() const {
 
   if (aggregate_function == AggregateFunction::CountDistinct) {
     Assert(argument(), "COUNT(DISTINCT ...) requires a argument");
-    stream << "COUNT(DISTINCT " << _argument_as_column_name(*argument()) << ")";
+    stream << "COUNT(DISTINCT " << argument()->as_column_name() << ")";
   } else if (aggregate_function == AggregateFunction::Count && !argument()) {
     stream << "COUNT(*)";
   } else {
     stream << aggregate_function_to_string.left.at(aggregate_function) << "(";
-    if (argument()) stream << _argument_as_column_name(*argument());
+    if (argument()) stream << argument()->as_column_name();
     stream << ")";
   }
 

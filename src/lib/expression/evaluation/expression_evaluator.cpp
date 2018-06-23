@@ -46,8 +46,7 @@ _table(table), _chunk(_table->get_chunk(chunk_id))
 }
 
 template<typename R>
-std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_expression_to_result(
-const AbstractExpression &expression) {
+std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_expression_to_result(const AbstractExpression &expression) {
   switch (expression.type) {
     case ExpressionType::Arithmetic:
       return evaluate_arithmetic_expression<R>(static_cast<const ArithmeticExpression&>(expression));
@@ -769,16 +768,17 @@ void ExpressionEvaluator::resolve_to_expression_result(const AbstractExpression 
   }
 }
 
-template<typename A, typename B>
-ChunkOffset ExpressionEvaluator::_result_size(const A& a, const B& b) {
-  return std::max(a.size(), b.size());
+template<typename ... Args>
+ChunkOffset ExpressionEvaluator::_result_size(Args &... args) {
+  if (args.)
+
 }
 
 std::vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const std::vector<bool>& left,
-                                                                           const std::vector<bool>& right) {
-  DebugAssert(left.size() >= 1 && right.size() >= 1, "ExpressionEvaluator requires at least one row");
-
+                                                                           const std::vector<bool>& right) const {
   const auto result_size = _result_size(left, right);
+
+  if (result_size == 0) return {};
 
   if (left.size() == right.size()) {
     std::vector<bool> nulls(result_size);
@@ -786,11 +786,11 @@ std::vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const std::v
       return l || r; });
     return nulls;
   } else if (left.size() > right.size()) {
-    DebugAssert(right.size() == 1, "Operand should have either the same row as the other or 1, to represent a literal");
+    DebugAssert(right.size() == 1, "Operand should have either the same row count as the other or 1 (to represent a literal)");
     if (right.front()) return std::vector<bool>({true});
     else return left;
   } else {
-    DebugAssert(left.size() == 1, "Operand should have either the same row as the other or 1, to represent a literal");
+    DebugAssert(left.size() == 1, "Operand should have either the same row count as the other or 1 (to represent a literal)");
     if (left.front()) return std::vector<bool>({true});
     else return right;
   }

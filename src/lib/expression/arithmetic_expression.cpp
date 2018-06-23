@@ -43,7 +43,7 @@ DataType ArithmeticExpression::data_type() const {
 std::string ArithmeticExpression::as_column_name() const {
   std::stringstream stream;
 
-  stream << _argument_as_column_name(*left_operand()) << " " << arithmetic_operator << " " << _argument_as_column_name(*right_operand());
+  stream << _enclose_argument_as_column_name(*left_operand()) << " " << arithmetic_operator << " " << _enclose_argument_as_column_name(*right_operand());
 
   return stream.str();
 }

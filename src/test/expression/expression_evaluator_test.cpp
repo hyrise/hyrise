@@ -34,9 +34,8 @@ namespace opossum {
 class ExpressionEvaluatorTest : public ::testing::Test {
  public:
   void SetUp() override {
+    // Load table_a
     table_a = load_table("src/test/tables/expression_evaluator/input_a.tbl");
-    chunk_a = table_a->get_chunk(ChunkID{0});
-
     a = PQPColumnExpression::from_table(*table_a, "a");
     b = PQPColumnExpression::from_table(*table_a, "b");
     c = PQPColumnExpression::from_table(*table_a, "c");
@@ -54,14 +53,16 @@ class ExpressionEvaluatorTest : public ::testing::Test {
     a_lt_b = std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, a, b);
     a_lt_c = std::make_shared<BinaryPredicateExpression>(PredicateCondition::LessThan, a, c);
 
+    // Load table_b
     table_b = load_table("src/test/tables/expression_evaluator/input_b.tbl");
     x = PQPColumnExpression::from_table(*table_b, "x");
 
+    // Load table_bools
     table_bools = load_table("src/test/tables/expression_evaluator/input_bools.tbl");
-    chunk_bools = table_bools->get_chunk(ChunkID{0});
     bool_a = PQPColumnExpression::from_table(*table_bools, "a");
     bool_b = PQPColumnExpression::from_table(*table_bools, "b");
     bool_c = PQPColumnExpression::from_table(*table_bools, "c");
+
   }
 
   /**
@@ -127,10 +128,10 @@ class ExpressionEvaluatorTest : public ::testing::Test {
     return false;
   }
 
-  std::shared_ptr<Table> table_a, table_b, table_bools;
-  std::shared_ptr<Chunk> chunk_a, chunk_bools;
+  std::shared_ptr<Table> table_empty, table_a, table_b, table_bools;
 
   std::shared_ptr<PQPColumnExpression> a, b, c, d, e, f, s1, s2, s3, dates, x, bool_a, bool_b, bool_c;
+  std::shared_ptr<PQPColumnExpression> empty_a, empty_b;
   std::shared_ptr<ArithmeticExpression> a_plus_b;
   std::shared_ptr<ArithmeticExpression> a_plus_c;
   std::shared_ptr<BinaryPredicateExpression> a_lt_b;
@@ -450,6 +451,30 @@ TEST_F(ExpressionEvaluatorTest, Exists) {
 
   const auto exists_expression = std::make_shared<ExistsExpression>(pqp_select_expression);
   EXPECT_TRUE(test_expression<int32_t>(table_a, *exists_expression,  {0, 0, 1, 1}));
+}
+
+TEST_F(ExpressionEvaluatorTest, EmptyChunk) {
+  // Create table_empty
+  TableColumnDefinitions empty_table_columns;
+  empty_table_columns.emplace_back("a", DataType::Int, false);
+  empty_table_columns.emplace_back("b", DataType::Float, true);
+  const auto table_empty = std::make_shared<Table>(empty_table_columns, TableType::Data);
+
+  ChunkColumns columns;
+  columns.emplace_back(std::make_shared<ValueColumn<int32_t>>(pmr_concurrent_vector<int32_t>{}));
+  columns.emplace_back(std::make_shared<ValueColumn<float>>(pmr_concurrent_vector<float>{}, pmr_concurrent_vector<bool>{}));
+  table_empty->append_chunk(columns);
+
+  empty_a = PQPColumnExpression::from_table(*table_empty, "a");
+  empty_b = PQPColumnExpression::from_table(*table_empty, "b");
+
+  /** Test that the ExpressionEvaluator can work on empty chunks */
+  EXPECT_TRUE(test_expression<int32_t>(table_empty, *add(empty_a, empty_b),  {}));
+  EXPECT_TRUE(test_expression<int32_t>(table_empty, *add(empty_a, 5),  {}));
+  EXPECT_TRUE(test_expression<int32_t>(table_empty, *greater_than_equals(empty_a, empty_b),  {}));
+  EXPECT_TRUE(test_expression<int32_t>(table_empty, *greater_than_equals(5, empty_b),  {}));
+  EXPECT_TRUE(test_expression<float>(table_empty, *case_(greater_than_equals(2, empty_b), 2, empty_b),  {}));
+  EXPECT_TRUE(test_expression<int32_t>(table_empty, *and_(greater_than_equals(2, empty_b), equals(2, empty_a)),  {}));
 }
 
 //TEST_F(ExpressionEvaluatorTest, Extract) {
