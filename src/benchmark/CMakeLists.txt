@@ -26,6 +26,20 @@ target_link_libraries(
     benchmark
 )
 
+add_executable(
+    hyriseExpressionPresentationBenchmark
+
+    benchmark_main.cpp
+    expression_presentation_benchmarks.cpp
+)
+
+target_link_libraries(
+    hyriseExpressionPresentationBenchmark
+    hyrise
+    hyriseBenchmarkLib
+    benchmark
+)
+
 # Configure hyriseBenchmarkTPCH
 add_executable(hyriseBenchmarkTPCH tpch_benchmark.cpp)
 target_link_libraries(
