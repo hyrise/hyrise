@@ -22,7 +22,8 @@ using TpccTableGeneratorFunctions = std::unordered_map<std::string, std::functio
 class TpccTableGenerator : public opossum::AbstractBenchmarkTableGenerator {
   // following TPC-C v5.11.0
  public:
-  explicit TpccTableGenerator(const ChunkOffset chunk_size = 1'000'000, const size_t warehouse_size = 1);
+  explicit TpccTableGenerator(const ChunkOffset chunk_size = 1'000'000, const size_t warehouse_size = 1,
+    const bool encode_chunk = true);
 
   virtual ~TpccTableGenerator() = default;
 
@@ -50,12 +51,13 @@ class TpccTableGenerator : public opossum::AbstractBenchmarkTableGenerator {
 
   std::map<std::string, std::shared_ptr<Table>> generate_all_tables();
 
-  static TpccTableGeneratorFunctions tpcc_table_generator_functions();
+  static TpccTableGeneratorFunctions table_generator_functions();
 
-  static std::shared_ptr<Table> generate_tpcc_table(const std::string& tablename);
+  std::shared_ptr<Table> generate_table(const std::string& tablename);
 
   const size_t _warehouse_size;
   const time_t _current_date = std::time(0);
+  const bool _encode_chunks;
 
  protected:
   template <typename T>
