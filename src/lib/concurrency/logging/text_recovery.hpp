@@ -1,10 +1,11 @@
 #pragma once
 
+#include "abstract_recovery.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-class TextRecovery {
+class TextRecovery : public AbstractRecovery{
  public:
   TextRecovery(const TextRecovery&) = delete;
   TextRecovery& operator=(const TextRecovery&) = delete;

@@ -12,24 +12,6 @@
 
 namespace opossum {
 
-enum class LogType { Value, Invalidation };
-
-class LoggedItem {
- public:
-  LoggedItem(LogType type, TransactionID& transaction_id, std::string& table_name, RowID& row_id,
-             std::vector<AllTypeVariant>& values)
-      : type(type), transaction_id(transaction_id), table_name(table_name), row_id(row_id), values(values) {}
-
-  LoggedItem(LogType type, TransactionID& transaction_id, std::string& table_name, RowID& row_id)
-      : type(type), transaction_id(transaction_id), table_name(table_name), row_id(row_id) {}
-
-  LogType type;
-  TransactionID transaction_id;
-  std::string table_name;
-  RowID row_id;
-  std::optional<std::vector<AllTypeVariant>> values;
-};
-
 TextRecovery& TextRecovery::getInstance() {
   static TextRecovery instance;
   return instance;
@@ -64,32 +46,7 @@ void TextRecovery::recover() {
       if (log_type == 't') {
         // line = "(t,<TransactionID>)"
         TransactionID transaction_id = std::stoul(line.substr(3, line.length() - 4));
-
-        // perform transactions
-        for (auto& transaction : transactions) {
-          if (transaction.transaction_id != transaction_id) continue;
-
-          auto table = StorageManager::get().get_table(transaction.table_name);
-          auto chunk = table->get_chunk(transaction.row_id.chunk_id);
-
-          if (transaction.type == LogType::Value) {
-            chunk->append(*transaction.values);
-
-            auto mvcc_columns = chunk->mvcc_columns();
-            DebugAssert(mvcc_columns->begin_cids.size() - 1 == transaction.row_id.chunk_offset,
-                        "recovery rowID " + std::to_string(mvcc_columns->begin_cids.size() - 1) + " != logged rowID " +
-                            std::to_string(transaction.row_id.chunk_offset));
-            mvcc_columns->begin_cids[mvcc_columns->begin_cids.size() - 1] = transaction_id;
-          } else if (transaction.type == LogType::Invalidation) {
-            auto mvcc_columns = chunk->mvcc_columns();
-            mvcc_columns->end_cids[transaction.row_id.chunk_offset] = transaction_id;
-          }
-        }
-
-        last_transaction_id = std::max(transaction_id, last_transaction_id);
-
-        // TODO: delete elements in transactions vector
-
+        _redo_transactions(transaction_id, transactions);
         continue;
       } 
       
