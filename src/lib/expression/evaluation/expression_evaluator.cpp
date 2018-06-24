@@ -171,8 +171,8 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_expression_to
     case ExpressionType::Extract:
       return evaluate_extract_expression<R>(static_cast<const ExtractExpression&>(expression));
 
-    case ExpressionType::Mock:
-      Fail("Can't handle External/ValuePlaceholders/Mocks since they don't have a value.");
+    case ExpressionType::Negate:
+      return evaluate_negate_expression<R>(static_cast<const NegateExpression&>(expression));
 
     case ExpressionType::Aggregate:
       Fail("ExpressionEvaluator doesn't support Aggregates, use the Aggregate Operator to compute them");
@@ -523,6 +523,34 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::evaluate_ext
   });
 
   return std::make_shared<ExpressionResult<std::string>>(std::move(values), from_result.nulls);
+}
+
+template<typename R>
+std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_negate_expression(const NegateExpression& negate_expression) {
+  std::vector<R> values;
+  std::vector<bool> nulls;
+
+  resolve_to_expression_result(*negate_expression.argument(), [&](const auto& argument_result) {
+    using ArgumentType = typename std::decay_t<decltype(argument_result)>::Type;
+
+    // clang-format off
+    if constexpr (!std::is_same_v<ArgumentType, std::string> && std::is_same_v<R, ArgumentType>) {
+      values.resize(argument_result.size());
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < argument_result.size(); ++chunk_offset) {
+        values[chunk_offset] = -argument_result.values[chunk_offset];
+      }
+      nulls = argument_result.nulls;
+    } else {
+      Fail("Can't negate a Strings, can't negate an argument to a different type");
+    }
+    // clang-format on
+  });
+
+  if (nulls.empty()) {
+    return std::make_shared<ExpressionResult<R>>(std::move(values));
+  } else {
+    return std::make_shared<ExpressionResult<R>>(std::move(values), std::move(nulls));
+  }
 }
 
 std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::evaluate_select_expression(

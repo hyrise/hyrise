@@ -21,7 +21,7 @@ LQPSelectExpression::LQPSelectExpression(const std::shared_ptr<AbstractLQPNode>&
 std::shared_ptr<AbstractExpression> LQPSelectExpression::deep_copy() const {
   const auto lqp_copy = lqp->deep_copy();
 
-  std::vector<std::pair<ParameterID, std::shared_ptr<AbstractExpression>>> copied_parameters;
+  Parameters copied_parameters;
   copied_parameters.reserve(parameters.size());
 
   for (const auto& referenced_external_expression : parameters) {

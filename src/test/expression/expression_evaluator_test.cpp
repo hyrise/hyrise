@@ -297,6 +297,17 @@ TEST_F(ExpressionEvaluatorTest, IsNullSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_empty, *is_not_null(empty_a), {}));
 }
 
+TEST_F(ExpressionEvaluatorTest, NegateLiteral) {
+  EXPECT_TRUE(test_expression<double>(*negate(2.5), {-2.5}));
+  EXPECT_TRUE(test_expression<int32_t>(*negate(int32_t{-3}), {int32_t{3}}));
+}
+
+TEST_F(ExpressionEvaluatorTest, NegateSeries) {
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *negate(a), {-1, -2, -3, -4}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *negate(c), {-33, std::nullopt, -34, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *negate(negate(c)), {33, std::nullopt, 34, std::nullopt}));
+}
+
 TEST_F(ExpressionEvaluatorTest, LikeLiteral) {
   EXPECT_TRUE(test_expression<int32_t>(*like("hello", "hello"), {1}));
   EXPECT_TRUE(test_expression<int32_t>(*like("hello", "Hello"), {0}));

@@ -63,6 +63,8 @@ set(
     expression/lqp_column_expression.hpp
     expression/lqp_select_expression.cpp
     expression/lqp_select_expression.hpp
+    expression/negate_expression.cpp
+    expression/negate_expression.hpp
     expression/parameter_expression.cpp
     expression/parameter_expression.hpp
     expression/pqp_column_expression.cpp

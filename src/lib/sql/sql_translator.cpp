@@ -22,6 +22,7 @@
 #include "expression/logical_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/lqp_select_expression.hpp"
+#include "expression/negate_expression.hpp"
 #include "expression/is_null_expression.hpp"
 #include "expression/in_expression.hpp"
 #include "expression/exists_expression.hpp"
@@ -948,6 +949,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
 
       auto expression = sql_identifier_context->resolve_identifier_relaxed(identifier);
       if (!expression && _external_sql_identifier_context_proxy) {
+        // Try to resolve the identifier in the outer queries
         expression = _external_sql_identifier_context_proxy->resolve_identifier_relaxed(identifier);
       }
       Assert(expression, "Couldn't resolve identifier '" + identifier.as_string() + "' or it is ambiguous");
@@ -1065,6 +1067,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(const hs
 
       // Translate all other expression types
       switch (expr.opType) {
+        case hsql::kOpUnaryMinus: return std::make_shared<NegateExpression>(left);
         case hsql::kOpCase: return _translate_hsql_case(expr, sql_identifier_context);
         case hsql::kOpOr: return std::make_shared<LogicalExpression>(LogicalOperator::Or, left, right);
         case hsql::kOpAnd: return std::make_shared<LogicalExpression>(LogicalOperator::And, left, right);

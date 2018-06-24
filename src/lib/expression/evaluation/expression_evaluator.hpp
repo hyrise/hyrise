@@ -22,6 +22,7 @@ class Chunk;
 class ExistsExpression;
 class ExtractExpression;
 class FunctionExpression;
+class NegateExpression;
 class InExpression;
 class IsNullExpression;
 class PQPSelectExpression;
@@ -67,9 +68,11 @@ class ExpressionEvaluator final {
   template<typename R>
   std::shared_ptr<ExpressionResult<R>> evaluate_function_expression(const FunctionExpression& expression);
 
-
   template<typename R>
   std::shared_ptr<ExpressionResult<R>> evaluate_extract_expression(const ExtractExpression& extract_expression);
+  
+  template<typename R>
+  std::shared_ptr<ExpressionResult<R>> evaluate_negate_expression(const NegateExpression& negate_expression);
 
   template<size_t offset, size_t count>
   std::shared_ptr<ExpressionResult<std::string>> evaluate_extract_substr(const ExpressionResult<std::string>& from_result);

@@ -1044,6 +1044,19 @@ TEST_F(SQLTranslatorTest, ExistsCorelated) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, Negate) {
+  const auto actual_lqp = compile_query("SELECT -a FROM int_float");
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(negate(int_float_a)),
+    stored_table_node_int_float
+  );
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, ShowTables) {
   const auto actual_lqp = compile_query("SHOW TABLES");
   const auto expected_lqp = ShowTablesNode::make();

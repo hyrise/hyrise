@@ -4,6 +4,10 @@
 
 namespace opossum {
 
+/**
+ * Base class for PQPColumnExpression (using a ColumnID to reference a column) and LQPColumnExpression (using an
+ * LQPColumnReference to reference a column)
+ */
 class AbstractColumnExpression : public AbstractExpression {
  public:
   AbstractColumnExpression();

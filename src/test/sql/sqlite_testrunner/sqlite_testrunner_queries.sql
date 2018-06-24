@@ -4,6 +4,7 @@ SELECT * FROM mixed_null;
 
 -- No FROM clause
 SELECT 1;
+SELECT -1;
 SELECT (1 + 3.0) * 13.0 as some_arithmetics;
 SELECT 22 / 5;
 
@@ -27,6 +28,7 @@ SELECT * FROM mixed_null WHERE NOT (b IN (12, 13, 14));
 
 -- Projection
 SELECT a FROM mixed;
+SELECT -b as neg_b FROM mixed;
 SELECT b + b FROM mixed;
 SELECT b + c FROM mixed;
 SELECT (b * c) / b + (c * c) / b - b / b as x FROM mixed;

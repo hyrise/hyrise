@@ -12,7 +12,7 @@
 namespace opossum {
 
 enum class ExpressionType {
-  Aggregate, Arithmetic, Case, Column, Exists, Extract, Function, List, Logical, Mock, Parameter, Predicate, Select, Value
+  Aggregate, Arithmetic, Case, Column, Exists, Extract, Function, Negate, List, Logical, Parameter, Predicate, Select, Value
 };
 
 /**
@@ -21,24 +21,37 @@ enum class ExpressionType {
  * Expressions in Hyrise are everything down from Literals and Columns, over Arithmetics (a + b, ...),
  * Logicals (a AND b), up to Lists (`('a', 'b')`) and Subselects. Check out the classes derived from AbstractExpression
  * for all available types.
- * 
- * Expressions are evaluated (typically for all rows of a Chunk) using the ExpressionEvaluator. 
+ *
+ * Expressions are evaluated (typically for all rows of a Chunk) using the ExpressionEvaluator.
  */
 class AbstractExpression : public std::enable_shared_from_this<AbstractExpression> {
  public:
   explicit AbstractExpression(const ExpressionType type, const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
   virtual ~AbstractExpression() = default;
 
-  bool deep_equals(const AbstractExpression& expression) const;
+  /**
+   * Recursively check for Expression equality.
+   * @pre Both expressions need to reference the same LQP
+   */
+  bool deep_equals(const AbstractExpression& other) const;
 
   virtual bool requires_calculation() const;
-    
+
   virtual std::shared_ptr<AbstractExpression> deep_copy() const = 0;
 
+  /**
+   * @return a human readable string representing the Expression that can be used as a column name
+   */
   virtual std::string as_column_name() const = 0;
 
+  /**
+   * @return the DataType of the result of the expression
+   */
   virtual DataType data_type() const = 0;
 
+  /**
+   * @return whether the result of the Expression MAY contain a NULL
+   */
   virtual bool is_nullable() const;
 
   size_t hash() const;
@@ -47,7 +60,14 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
   std::vector<std::shared_ptr<AbstractExpression>> arguments;
 
  protected:
+  /**
+   * Override to check for equality without checking the arguments
+   */
   virtual bool _shallow_equals(const AbstractExpression& expression) const;
+
+  /**
+   * Override to hash data fields in derived types
+   */
   virtual size_t _on_hash() const;
 
   /**

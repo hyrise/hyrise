@@ -12,6 +12,7 @@
 #include "binary_predicate_expression.hpp"
 #include "is_null_expression.hpp"
 #include "function_expression.hpp"
+#include "negate_expression.hpp"
 #include "lqp_select_expression.hpp"
 #include "case_expression.hpp"
 #include "in_expression.hpp"
@@ -182,6 +183,11 @@ std::shared_ptr<ParameterExpression> parameter(const ParameterID parameter_id, c
 }
 
 std::shared_ptr<AggregateExpression> count_star();
+
+template<typename Argument>
+std::shared_ptr<NegateExpression> negate(const Argument& argument) {
+  return std::make_shared<NegateExpression>(to_expression(argument));
+}
 
 }  // namespace expression_factory
 
