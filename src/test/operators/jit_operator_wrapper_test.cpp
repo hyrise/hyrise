@@ -1,6 +1,8 @@
 #include <gmock/gmock.h>
 
 #include "../base_test.hpp"
+#include "operators/jit_operator/operators/jit_compute.cpp"
+#include "operators/jit_operator/operators/jit_expression.hpp"
 #include "operators/jit_operator/operators/jit_filter.hpp"
 #include "operators/jit_operator/operators/jit_read_tuples.hpp"
 #include "operators/jit_operator/operators/jit_write_tuples.hpp"
@@ -118,6 +120,39 @@ TEST_F(JitOperatorWrapperTest, CallsJitOperatorHooks) {
   jit_operator_wrapper.add_jit_operator(source);
   jit_operator_wrapper.add_jit_operator(sink);
   jit_operator_wrapper.execute();
+}
+
+TEST_F(JitOperatorWrapperTest, JitOperatorsSpecializedWithMultipleInliningOfSameFunction) {
+  // During query specialization, the function calls of JitExpression::compute are inlined with two different objects:
+  // First the compute function call with the object "expression" is inlined,
+  // then the two function calls with the two time referenced object "column_expression" are inlined.
+
+  // Specialize SQL query: SELECT a+a FROM src/test/tables/10_ints.tbl;
+
+  // read column a into jit tuple at index 0
+  auto read_operator = std::make_shared<JitReadTuples>();
+  auto tuple_value = read_operator->add_input_column(DataType::Int, false, ColumnID(0));
+
+  // compute a+a and write result to jit tuple at index 1
+  auto column_expression = std::make_shared<JitExpression>(tuple_value);
+  auto add_type = ExpressionType::Addition;
+  auto result_tuple_index = read_operator->add_temporary_value();  // of jit runtime context
+  auto expression = std::make_shared<JitExpression>(column_expression, add_type, column_expression, result_tuple_index);
+  auto compute_operator = std::make_shared<JitCompute>(expression);
+
+  // copy computed value from jit tuple at index 1 to output table for non-jit operators
+  auto write_operator = std::make_shared<JitWriteTuples>();
+  write_operator->add_output_column("a+a", expression->result());
+
+  JitOperatorWrapper jit_operator_wrapper(_int_table_wrapper, JitExecutionMode::Compile);
+  jit_operator_wrapper.add_jit_operator(read_operator);
+  jit_operator_wrapper.add_jit_operator(compute_operator);
+  jit_operator_wrapper.add_jit_operator(write_operator);
+
+  ASSERT_NO_THROW(jit_operator_wrapper.execute());
+
+  auto result = jit_operator_wrapper.get_output();
+  ASSERT_EQ(result->get_value<int>(ColumnID(0), 1), 48);
 }
 
 }  // namespace opossum
