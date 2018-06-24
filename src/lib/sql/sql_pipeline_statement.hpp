@@ -14,6 +14,16 @@ namespace opossum {
 
 using PreparedStatementCache = SQLQueryCache<SQLQueryPlan>;
 
+// Holds relevant information about the execution of an SQLPipelineStatement.
+struct SQLPipelineStatementMetrics {
+  std::chrono::microseconds translate_time_micros{};
+  std::chrono::microseconds optimize_time_micros{};
+  std::chrono::microseconds compile_time_micros{};
+  std::chrono::microseconds execution_time_micros{};
+
+  bool query_plan_cache_hit = false;
+};
+
 /**
  * This is the unified interface to handle SQL queries and related operations.
  * This should rarely be used directly - use SQLPipeline instead, as it creates the correct SQLPipelineStatement(s).
@@ -62,10 +72,7 @@ class SQLPipelineStatement : public Noncopyable {
   // This can be a nullptr if no transaction management is wanted.
   const std::shared_ptr<TransactionContext>& transaction_context() const;
 
-  std::chrono::microseconds compile_time_microseconds() const;
-  std::chrono::microseconds execution_time_microseconds() const;
-
-  bool query_plan_cache_hit() const;
+  const std::shared_ptr<SQLPipelineStatementMetrics>& metrics() const;
 
  private:
   const std::string _sql_string;
@@ -91,11 +98,8 @@ class SQLPipelineStatement : public Noncopyable {
   std::shared_ptr<const Table> _result_table;
   // Assume there is an output table. Only change if nullptr is returned from execution.
   bool _query_has_output = true;
-  bool _query_plan_cache_hit = false;
 
-  // Execution times
-  std::chrono::microseconds _compile_time_micros;
-  std::chrono::microseconds _execution_time_micros;
+  std::shared_ptr<SQLPipelineStatementMetrics> _metrics;
 
   std::shared_ptr<PreparedStatementCache> _prepared_statements;
   std::unordered_map<ValuePlaceholderID, ParameterID> _parameter_ids;

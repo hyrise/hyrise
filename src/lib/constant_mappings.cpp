@@ -92,12 +92,14 @@ const boost::bimap<PredicateCondition, std::string> predicate_condition_to_strin
 //};
 
 const std::unordered_map<OrderByMode, std::string> order_by_mode_to_string = {
-    {OrderByMode::Ascending, "Ascending"}, {OrderByMode::Descending, "Descending"},
+    {OrderByMode::Ascending, "Ascending"},
+    {OrderByMode::Descending, "Descending"},
 };
 
 
 const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mode = {
-    {hsql::kOrderAsc, OrderByMode::Ascending}, {hsql::kOrderDesc, OrderByMode::Descending},
+    {hsql::kOrderAsc, OrderByMode::Ascending},
+    {hsql::kOrderDesc, OrderByMode::Descending},
 };
 
 //const std::unordered_map<ExpressionType, std::string> expression_type_to_operator_string = {
@@ -137,22 +139,24 @@ make_bimap<FunctionType, std::string>({
 });
 
 const boost::bimap<DataType, std::string> data_type_to_string =
-    hana::fold(data_type_enum_string_pairs, boost::bimap<DataType, std::string>{},
-               [](auto map, auto pair) {
-                 map.insert({hana::first(pair), std::string{hana::second(pair)}});
-                 return map;
-               });
+    hana::fold(data_type_enum_string_pairs, boost::bimap<DataType, std::string>{}, [](auto map, auto pair) {
+      map.insert({hana::first(pair), std::string{hana::second(pair)}});
+      return map;
+    });
 
-const std::unordered_map<EncodingType, std::string> encoding_type_to_string = {
+const boost::bimap<EncodingType, std::string> encoding_type_to_string = make_bimap<EncodingType, std::string>({
     {EncodingType::Dictionary, "Dictionary"},
     {EncodingType::RunLength, "RunLength"},
+    {EncodingType::FixedStringDictionary, "FixedStringDictionary"},
     {EncodingType::FrameOfReference, "FrameOfReference"},
-};
+    {EncodingType::Unencoded, "Unencoded"},
+});
 
-const std::unordered_map<VectorCompressionType, std::string> vector_compression_type_to_string = {
-    {VectorCompressionType::FixedSizeByteAligned, "Fixed-size byte-aligned"},
-    {VectorCompressionType::SimdBp128, "SIMD-BP128"},
-};
+const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string =
+    make_bimap<VectorCompressionType, std::string>({
+        {VectorCompressionType::FixedSizeByteAligned, "Fixed-size byte-aligned"},
+        {VectorCompressionType::SimdBp128, "SIMD-BP128"},
+    });
 
 const boost::bimap<TableType, std::string> table_type_to_string =
     make_bimap<TableType, std::string>({{TableType::Data, "Data"}, {TableType::References, "References"}});

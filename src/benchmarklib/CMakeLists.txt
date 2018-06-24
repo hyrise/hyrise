@@ -21,9 +21,18 @@ set(
 
     table_generator.cpp
     table_generator.hpp
+
+    benchmark_runner.cpp
+    benchmark_runner.hpp
+    benchmark_utils.cpp
+    benchmark_utils.hpp
 )
 
 
 # Configure the regular opossum library used for tests/server/playground...
 add_library(hyriseBenchmarkLib STATIC ${SOURCES})
-target_link_libraries(hyriseBenchmarkLib hyrise tpch_dbgen)
+
+# Add this magic dependency to run the git_watcher on build
+add_dependencies(hyriseBenchmarkLib AlwaysCheckGit)
+
+target_link_libraries(hyriseBenchmarkLib hyrise tpch_dbgen ${FILESYSTEM_LIBRARY})

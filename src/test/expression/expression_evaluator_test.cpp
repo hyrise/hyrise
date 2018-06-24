@@ -213,6 +213,52 @@ TEST_F(ExpressionEvaluatorTest, ArithmeticsSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_empty, *add(empty_a, empty_b), {}));
 }
 
+TEST_F(ExpressionEvaluatorTest, PredicatesLiterals) {
+  EXPECT_TRUE(test_expression<int32_t>(*greater_than(5, 3.3), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*greater_than(5, 5.0), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*greater_than(5.1, 5.0), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*greater_than(null(), 5.0), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*greater_than(5.0, null()), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*greater_than(null(), null()), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*greater_than_equals(5.3, 3), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*greater_than_equals(5.3, 5.3), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*greater_than_equals(5.3, 5.4f), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*greater_than_equals(5.5f, 5.4), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*less_than(5.2f, 5.4), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*less_than(5.5f, 5.4), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*less_than(5.4, 5.4), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*less_than_equals(5.3, 5.4), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*less_than_equals(5.4, 5.4), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*less_than_equals(5.5, 5.4), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*equals(5.5f, 5.5f), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*equals(5.5f, 5.7f), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*not_equals(5.5f, 5), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*not_equals(5.5f, 5.5f), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*between(3, 3.0, 5.0), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*between(3, 3.1, 5.0), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*between(5.0f, 3.1, 5), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*between(5.1f, 3.1, 5), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*between(5.1f, 3.1, null()), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*between(5.1f, null(), 5), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*between(null(), 3.1, 5), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*between(null(), null(), null()), {std::nullopt}));
+}
+
+TEST_F(ExpressionEvaluatorTest, PredicatesSeries) {
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *greater_than(b, a), {1, 1, 1, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *greater_than(b, null()), {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *greater_than(c, a), {1, std::nullopt, 1, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *greater_than_equals(b, mul(a, 2)), {1, 0, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *equals(b, mul(a, 2)), {1, 0, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *not_equals(b, mul(a, 2)), {0, 1, 1, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *less_than(b, mul(a, 2)), {0, 1, 1, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *less_than_equals(b, mul(a, 2)), {1, 1, 1, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *less_than_equals(c, f), {1, std::nullopt, 0, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *between(b, a, c), {1, std::nullopt, 1, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *between(e, a, f), {1, 0, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *between(3.3, a, b), {0, 0, 1, 0}));
+}
+
 TEST_F(ExpressionEvaluatorTest, CaseLiterals) {
   EXPECT_TRUE(test_expression<int32_t>(*case_(1, 2, 1), {2}));
   EXPECT_TRUE(test_expression<int32_t>(*case_(1, NullValue{}, 1), {std::nullopt}));

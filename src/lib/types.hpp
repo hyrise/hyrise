@@ -70,11 +70,11 @@ class pmr_concurrent_vector : public tbb::concurrent_vector<T> {
   pmr_concurrent_vector(size_t n, PolymorphicAllocator<T> alloc = {})  // NOLINT
       : pmr_concurrent_vector(n, T{}, alloc) {}
   pmr_concurrent_vector(size_t n, T val, PolymorphicAllocator<T> alloc = {})  // NOLINT
-      : tbb::concurrent_vector<T>(n, val),
-        _alloc(alloc) {}
+      : tbb::concurrent_vector<T>(n, val), _alloc(alloc) {}
   pmr_concurrent_vector(tbb::concurrent_vector<T> other, PolymorphicAllocator<T> alloc = {})  // NOLINT
-      : tbb::concurrent_vector<T>(other),
-        _alloc(alloc) {}
+      : tbb::concurrent_vector<T>(other), _alloc(alloc) {}
+  pmr_concurrent_vector(std::vector<T>& values, PolymorphicAllocator<T> alloc = {})  // NOLINT
+      : tbb::concurrent_vector<T>(values.begin(), values.end()), _alloc(alloc) {}
 
   template<class I>
   pmr_concurrent_vector(I first, I last, PolymorphicAllocator<T> alloc = {})
@@ -202,7 +202,6 @@ enum class PredicateCondition {
 
 bool is_unary_predicate_condition(const PredicateCondition predicate_condition);
 bool is_binary_predicate_condition(const PredicateCondition predicate_condition);
-bool is_lexicographical_predicate_condition(const PredicateCondition predicate_condition);
 bool is_ternary_predicate_condition(const PredicateCondition predicate_condition);
 
 PredicateCondition flip_predicate_condition(const PredicateCondition predicate_condition);

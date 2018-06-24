@@ -1,5 +1,5 @@
 [![Build Status](https://ares.epic.hpi.uni-potsdam.de/jenkins/buildStatus/icon?job=Hyrise/hyrise/master)](https://ares.epic.hpi.uni-potsdam.de/jenkins/blue/organizations/jenkins/Hyrise%2Fhyrise/activity)
-[![Coverage Status](https://hyrise-coverage-badge.herokuapp.com/coverage_badge.svg)](https://ares.epic.hpi.uni-potsdam.de/jenkins/job/Hyrise/job/hyrise/job/master/lastStableBuild/RCov_Report/)
+[![Coverage Status](https://hyrise-coverage-badge.herokuapp.com/coverage_badge.svg)](https://ares.epic.hpi.uni-potsdam.de/jenkins/job/Hyrise/job/hyrise/job/master/lastStableBuild/RCov_20Report/)
 
 # Welcome to Hyrise
 
@@ -100,6 +100,7 @@ Contact: firstname.lastname@hpi.de
 -	Moritz   Eyssen
 -	Martin   Fischer
 -	Pedro    Flemming
+-	Johannes Frohnhofen
 -	Sven     Ihde
 -	Michael  Janke
 -	Max      Jendruk

@@ -13,6 +13,7 @@
 #include <queue>
 
 #include "llvm_extensions.hpp"
+#include "jit_runtime_pointer.hpp"
 
 namespace opossum {
 
@@ -151,9 +152,15 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context) 
     auto function_has_opossum_namespace = boost::starts_with(function.getName().str(), "_ZNK7opossum") ||
                                           boost::starts_with(function.getName().str(), "_ZN7opossum");
 
+    // A note about "__clang_call_terminate":
+    // __clang_call_terminate is generated / used internally by clang to call the std::terminate function when expection
+    // handling fails. For some unknown reason this function cannot be resolved in the Hyrise binary when jit-compiling
+    // bitcode that uses the function. The function is, however, present in the bitcode repository.
+    // We thus always inline this function from the repository.
+
     // All function that are not in the opossum:: namespace are not considered for inlining. Instead, a function
     // declaration (without a function body) is created.
-    if (!function_has_opossum_namespace) {
+    if (!function_has_opossum_namespace && function_name != "__clang_call_terminate") {
       context.llvm_value_map[&function] = _create_function_declaration(context, function, function.getName());
       call_sites.pop();
       continue;
@@ -169,7 +176,7 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context) 
     auto first_argument_cannot_be_resolved = first_argument->get()->getType()->isPointerTy() &&
                                              !GetRuntimePointerForValue(first_argument->get(), context)->is_valid();
 
-    if (first_argument_cannot_be_resolved) {
+    if (first_argument_cannot_be_resolved && function_name != "__clang_call_terminate") {
       call_sites.pop();
       continue;
     }
@@ -203,12 +210,16 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context) 
 
     // Instruct LLVM to perform the function inlining and push all new call sites to the working queue
     llvm::InlineFunctionInfo info;
-    // TODO(Fabian) check 2nd last argument value nullptr for llvm::Function *ForwardVarArgsTo
     if (InlineFunction(call_site, info, nullptr, false, nullptr, context)) {
       for (const auto& new_call_site : info.InlinedCallSites) {
         call_sites.push(new_call_site);
       }
     }
+
+    // clear runtime_value_map to allow multiple inlining of same function
+    auto runtime_this = context.runtime_value_map[context.root_function->arg_begin()];
+    context.runtime_value_map.clear();
+    context.runtime_value_map[context.root_function->arg_begin()] = runtime_this;
 
     call_sites.pop();
   }
@@ -230,9 +241,7 @@ void JitCodeSpecializer::_perform_load_substitution(SpecializationContext& conte
     // constant.
     const auto address = runtime_pointer->address();
     if (inst.getType()->isIntegerTy()) {
-      const auto bit_width = inst.getType()->getIntegerBitWidth();
-      const auto mask = bit_width == 64 ? 0xffffffffffffffff : (static_cast<uint64_t>(1) << bit_width) - 1;
-      const auto value = *reinterpret_cast<uint64_t*>(address) & mask;
+      const auto value = dereference_flexible_width_int_pointer(address, inst.getType()->getIntegerBitWidth());
       inst.replaceAllUsesWith(llvm::ConstantInt::get(inst.getType(), value));
     } else if (inst.getType()->isFloatTy()) {
       const auto value = *reinterpret_cast<float*>(address);

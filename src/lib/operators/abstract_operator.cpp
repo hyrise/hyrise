@@ -22,6 +22,8 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
 OperatorType AbstractOperator::type() const { return _type; }
 
 void AbstractOperator::execute() {
+  DebugAssert(!_input_left || _input_left->get_output(), "Left input has not yet been executed");
+  DebugAssert(!_input_right || _input_right->get_output(), "Right input has not yet been executed");
   DebugAssert(!_output, "Operator has already been executed");
 
   Timer performance_timer;

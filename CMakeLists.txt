@@ -108,7 +108,6 @@ if(${CI_BUILD})
     endif()
 endif()
 
-
 # Include sub-CMakeLists.txt
 add_subdirectory(third_party/ EXCLUDE_FROM_ALL)
 add_subdirectory(src)

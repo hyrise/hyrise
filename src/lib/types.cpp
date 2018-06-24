@@ -17,15 +17,6 @@ bool is_binary_predicate_condition(const PredicateCondition predicate_condition)
   predicate_condition == PredicateCondition::Like;
 }
 
-bool is_lexicographical_predicate_condition(const PredicateCondition predicate_condition) {
-  return predicate_condition == PredicateCondition::Equals ||
-  predicate_condition == PredicateCondition::NotEquals ||
-  predicate_condition == PredicateCondition::LessThan ||
-  predicate_condition == PredicateCondition::LessThanEquals ||
-  predicate_condition == PredicateCondition::GreaterThan ||
-  predicate_condition == PredicateCondition::GreaterThanEquals;
-}
-
 bool is_ternary_predicate_condition(const PredicateCondition predicate_condition) {
   return predicate_condition == PredicateCondition::Between;
 }

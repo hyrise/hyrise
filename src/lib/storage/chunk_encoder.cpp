@@ -96,6 +96,18 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
 }
 
 void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
+                                     const ChunkEncodingSpec& chunk_encoding_spec) {
+  Assert(chunk_encoding_spec.size() == table->column_count(),
+         "Number of encoding specs must match table’s column count.");
+  const auto column_types = table->column_data_types();
+
+  for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    auto chunk = table->get_chunk(chunk_id);
+    encode_chunk(chunk, column_types, chunk_encoding_spec);
+  }
+}
+
+void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
                                      const ColumnEncodingSpec& column_encoding_spec) {
   const auto column_types = table->column_data_types();
 

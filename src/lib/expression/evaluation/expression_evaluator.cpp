@@ -47,6 +47,10 @@ _table(table), _chunk(_table->get_chunk(chunk_id))
 
 template<typename R>
 std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_expression_to_result(const AbstractExpression &expression) {
+  /**
+   * Delegate the evaluation to dedicated evaluate_*() functions for each expression type.
+   */
+
   switch (expression.type) {
     case ExpressionType::Arithmetic:
       return evaluate_arithmetic_expression<R>(static_cast<const ArithmeticExpression&>(expression));
@@ -57,22 +61,36 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_expression_to
     case ExpressionType::Predicate: {
       const auto& predicate_expression = static_cast<const AbstractPredicateExpression&>(expression);
 
-      if (is_lexicographical_predicate_condition(predicate_expression.predicate_condition)) {
-        return evaluate_binary_predicate_expression<R>(static_cast<const BinaryPredicateExpression&>(expression));
+      switch (predicate_expression.predicate_condition) {
+        case PredicateCondition::Equals: case PredicateCondition::LessThanEquals:
+        case PredicateCondition::GreaterThanEquals: case PredicateCondition::GreaterThan:
+        case PredicateCondition::NotEquals: case PredicateCondition::LessThan:
+          return evaluate_binary_predicate_expression<R>(static_cast<const BinaryPredicateExpression&>(expression));
 
-      } else if (predicate_expression.predicate_condition == PredicateCondition::In) {
-        return evaluate_in_expression<R>(static_cast<const InExpression&>(expression));
+        case PredicateCondition::Between: {
+          // `a BETWEEN b AND c` is evaluated by transforming it to `a >= b AND a <= c` instead of evaluating it with a
+          // dedicated algorithm. This is because three expression data types (from three arguments) generate many type
+          // combinations and thus lengthen compile time and increase binary size notably.
 
-      } else if (predicate_expression.predicate_condition == PredicateCondition::IsNull ||
-                 predicate_expression.predicate_condition == PredicateCondition::IsNotNull) {
-        return evaluate_is_null_expression<R>(static_cast<const IsNullExpression&>(expression));
+          const auto& between_expression = static_cast<const BetweenExpression&>(expression);
+          const auto gte_expression = greater_than_equals(between_expression.value(), between_expression.lower_bound());
+          const auto lte_expression = less_than_equals(between_expression.value(), between_expression.upper_bound());
 
-      } else if (predicate_expression.predicate_condition == PredicateCondition::Like ||
-                 predicate_expression.predicate_condition == PredicateCondition::NotLike) {
-        return evaluate_like_expression<R>(static_cast<const BinaryPredicateExpression&>(expression));
+          const auto gte_lte_expression = and_(gte_expression, lte_expression);
 
-      } else {
-        Fail("Unsupported Predicate Expression");
+          return evaluate_expression_to_result<R>(*gte_lte_expression);
+        }
+
+        case PredicateCondition::In:
+          return evaluate_in_expression<R>(static_cast<const InExpression&>(expression));
+
+        case PredicateCondition::Like:
+        case PredicateCondition::NotLike:
+          return evaluate_like_expression<R>(static_cast<const BinaryPredicateExpression&>(expression));
+
+        case PredicateCondition::IsNull:
+        case PredicateCondition::IsNotNull:
+          return evaluate_is_null_expression<R>(static_cast<const IsNullExpression&>(expression));
       }
     }
 
@@ -189,7 +207,7 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_binary_
 
   // clang-format off
   switch (expression.predicate_condition) {
-    case PredicateCondition::Equals:            return evaluate_binary_with_default_null_logic<int32_t, Equals>(left, right);
+    case PredicateCondition::Equals:            return evaluate_binary_with_default_null_logic<int32_t, Equals>(left, right);  // NOLINT
     case PredicateCondition::NotEquals:         return evaluate_binary_with_default_null_logic<int32_t, NotEquals>(left, right);  // NOLINT
     case PredicateCondition::LessThan:          return evaluate_binary_with_default_null_logic<int32_t, LessThan>(left, right);  // NOLINT
     case PredicateCondition::LessThanEquals:    return evaluate_binary_with_default_null_logic<int32_t, LessThanEquals>(left, right);  // NOLINT
@@ -628,11 +646,11 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_binary_with_d
       auto nulls = _evaluate_default_null_logic(left.nulls, right.nulls);
 
       std::vector<R> values(result_size);
-      if (left.size() == right.size()) {
+      if (left.is_literal() == right.is_literal()) {
         for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
           Functor{}(values[row_idx], left.values[row_idx], right.values[row_idx]);
         }
-      } else if (left.size() > right.size()) {
+      } else if (right.is_literal()) {
         for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
           Functor{}(values[row_idx], left.values[row_idx], right.values.front());
         }

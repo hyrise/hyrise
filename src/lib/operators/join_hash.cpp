@@ -293,54 +293,24 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     radix_output.partition_offsets.resize(num_partitions + 1);
 
     // use histograms to calculate partition offsets
-    for (ChunkID chunk_id{0}; chunk_id < offsets.size(); ++chunk_id) {
-      size_t local_sum = 0;
-      auto& histogram = static_cast<std::vector<size_t>&>(*histograms[chunk_id]);
-
-      for (size_t partition_id = 0; partition_id < num_partitions; ++partition_id) {
-        // update local prefix sum
-        local_sum += histogram[partition_id];
-        // update output partition offsets
-        radix_output.partition_offsets[partition_id] += histogram[partition_id];
-        // save offsets
-        histogram[partition_id] = local_sum;
+    size_t offset = 0;
+    std::vector<std::vector<size_t>> output_offsets_by_chunk(offsets.size(), std::vector<size_t>(num_partitions));
+    for (size_t partition_id = 0; partition_id < num_partitions; ++partition_id) {
+      radix_output.partition_offsets[partition_id] = offset;
+      for (ChunkID chunk_id{0}; chunk_id < offsets.size(); ++chunk_id) {
+        output_offsets_by_chunk[chunk_id][partition_id] = offset;
+        offset += (*histograms[chunk_id])[partition_id];
       }
     }
-
-    /*
-    At this point, partition_offsets only contains the size of each partition.
-    We now calculate the offsets by adding up the sizes previous partitions.
-    */
-    size_t offset = 0;
-    for (size_t partition_id = 0; partition_id < num_partitions + 1; ++partition_id) {
-      size_t next_offset = offset + radix_output.partition_offsets[partition_id];
-      radix_output.partition_offsets[partition_id] = offset;
-      offset = next_offset;
-    }
+    radix_output.partition_offsets[num_partitions] = offset;
 
     std::vector<std::shared_ptr<AbstractTask>> jobs;
     jobs.reserve(offsets.size());
 
     for (ChunkID chunk_id{0}; chunk_id < offsets.size(); ++chunk_id) {
-      jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id] {
-        // calculate output offsets for each partition
-        auto output_offsets = std::vector<size_t>(num_partitions, 0);
-
-        // add up the output offsets for chunks before this one
-        for (ChunkID i{0}; i < chunk_id; ++i) {
-          const auto& histogram = *histograms[i];
-          for (size_t j = 0; j < num_partitions; ++j) {
-            output_offsets[j] += histogram[j];
-          }
-        }
-        for (auto i = chunk_id; i < offsets.size(); ++i) {
-          const auto& histogram = *histograms[i];
-          for (size_t j = 1; j < num_partitions; ++j) {
-            output_offsets[j] += histogram[j - 1];
-          }
-        }
-
+      jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
         size_t input_offset = offsets[chunk_id];
+        auto& output_offsets = output_offsets_by_chunk[chunk_id];
 
         size_t input_size = 0;
         if (chunk_id < offsets.size() - 1) {
@@ -696,10 +666,12 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     }
 
     for (size_t partition_id = 0; partition_id < left_pos_lists.size(); ++partition_id) {
-      auto& left = left_pos_lists[partition_id];
-      auto& right = right_pos_lists[partition_id];
+      // moving the values into a shared pos list saves us some work in write_output_columns. We know that
+      // left_pos_lists and right_pos_lists will not be used again.
+      auto left = std::make_shared<PosList>(std::move(left_pos_lists[partition_id]));
+      auto right = std::make_shared<PosList>(std::move(right_pos_lists[partition_id]));
 
-      if (left.empty() && right.empty()) {
+      if (left->empty() && right->empty()) {
         continue;
       }
 
@@ -757,8 +729,12 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   }
 
   static void write_output_columns(ChunkColumns& output_columns, const std::shared_ptr<const Table> input_table,
-                                   const PosListsByColumn& input_pos_list_ptrs_sptrs_by_column, PosList& pos_list) {
+                                   const PosListsByColumn& input_pos_list_ptrs_sptrs_by_column,
+                                   std::shared_ptr<PosList> pos_list) {
     std::map<std::shared_ptr<PosLists>, std::shared_ptr<PosList>> output_pos_list_cache;
+
+    // We might use this later, but want to have it outside of the for loop
+    std::shared_ptr<Table> dummy_table;
 
     // Add columns from input table to output chunk
     for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
@@ -770,9 +746,9 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           auto iter = output_pos_list_cache.find(input_table_pos_lists);
           if (iter == output_pos_list_cache.end()) {
             // Get the row ids that are referenced
-            auto new_pos_list = std::make_shared<PosList>(pos_list.size());
+            auto new_pos_list = std::make_shared<PosList>(pos_list->size());
             auto new_pos_list_iter = new_pos_list->begin();
-            for (const auto& row : pos_list) {
+            for (const auto& row : *pos_list) {
               if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
                 *new_pos_list_iter = row;
               } else {
@@ -794,13 +770,11 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceColumn that
           // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceColumn ref
           // it.
-          const auto dummy_table = Table::create_dummy_table(input_table->column_definitions());
-          output_columns.push_back(
-              std::make_shared<ReferenceColumn>(dummy_table, column_id, std::make_shared<PosList>(pos_list)));
+          if (!dummy_table) dummy_table = Table::create_dummy_table(input_table->column_definitions());
+          output_columns.push_back(std::make_shared<ReferenceColumn>(dummy_table, column_id, pos_list));
         }
       } else {
-        output_columns.push_back(
-            std::make_shared<ReferenceColumn>(input_table, column_id, std::make_shared<PosList>(pos_list)));
+        output_columns.push_back(std::make_shared<ReferenceColumn>(input_table, column_id, pos_list));
       }
     }
   }

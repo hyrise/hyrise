@@ -19,6 +19,7 @@ set(
     expression/expression_utils_test.cpp
     expression/expression_evaluator_test.cpp
     logical_query_plan/alias_node_test.cpp
+    lib/fixed_string_test.cpp
     logical_query_plan/aggregate_node_test.cpp
     logical_query_plan/create_view_node_test.cpp
     logical_query_plan/delete_node_test.cpp
@@ -117,6 +118,7 @@ set(
     storage/chunk_test.cpp
     storage/composite_group_key_index_test.cpp
     storage/dictionary_column_test.cpp
+    storage/fixed_string_dictionary_column_test.cpp
     storage/encoding_test.hpp
     storage/encoded_column_test.cpp
     storage/group_key_index_test.cpp
@@ -134,6 +136,7 @@ set(
     storage/variable_length_key_base_test.cpp
     storage/variable_length_key_store_test.cpp
     storage/variable_length_key_test.cpp
+    storage/fixed_string_vector_test.cpp
     tasks/chunk_compression_task_test.cpp
     tasks/operator_task_test.cpp
     testing_assert.cpp
@@ -192,9 +195,11 @@ if (${ENABLE_JIT_SUPPORT})
         ${RESOLVE_CONDITION_TEST_MODULE}
         operators/jit_operator_wrapper_test.cpp
         operators/jit_operator/jit_aware_lqp_translator_test.cpp
+        operators/jit_operator/jit_hashmap_value_test.cpp
         operators/jit_operator/jit_operations_test.cpp
         operators/jit_operator/jit_tuple_value_test.cpp
         operators/jit_operator/jit_variant_vector_test.cpp
+        operators/jit_operator/operators/jit_aggregate_test.cpp
         operators/jit_operator/operators/jit_compute_test.cpp
         operators/jit_operator/operators/jit_expression_test.cpp
         operators/jit_operator/operators/jit_filter_test.cpp
