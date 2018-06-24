@@ -18,10 +18,14 @@ class LoggedItem {
  public:
   LoggedItem(LogType type, TransactionID& transaction_id, std::string& table_name, RowID& row_id,
              std::vector<AllTypeVariant>& values)
-      : type(type), transaction_id(transaction_id), table_name(table_name), row_id(row_id), values(values) {}
+  : type(type), transaction_id(transaction_id), table_name(table_name), row_id(row_id), values(values) {
+    DebugAssert(type == LogType::Value, "called value LogItem with wrong type");
+  }
 
   LoggedItem(LogType type, TransactionID& transaction_id, std::string& table_name, RowID& row_id)
-      : type(type), transaction_id(transaction_id), table_name(table_name), row_id(row_id) {}
+      : type(type), transaction_id(transaction_id), table_name(table_name), row_id(row_id) {
+    DebugAssert(type == LogType::Invalidation, "called invalidation LogItem with wrong type");
+  }
 
   LogType type;
   TransactionID transaction_id;
@@ -35,12 +39,13 @@ BinaryRecovery& BinaryRecovery::getInstance() {
   return instance;
 }
 
-// ((int32_t,     Int,        "int"))    \
-  // ((int64_t,     Long,       "long"))   \
-  // ((float,       Float,      "float"))  \
-  // ((double,      Double,     "double")) \
-  // ((std::string, String,     "string"))
 
+// read datatype from file
+// ((int32_t,     Int,        "int"))
+// ((int64_t,     Long,       "long"))
+// ((float,       Float,      "float"))
+// ((double,      Double,     "double"))
+// ((std::string, String,     "string"))
 AllTypeVariant _read(std::ifstream& file, DataType data_type) {
   AllTypeVariant value;
   switch (data_type) {
@@ -81,22 +86,50 @@ AllTypeVariant _read(std::ifstream& file, DataType data_type) {
   return value;
 }
 
-void BinaryRecovery::recover() {
-  std::fstream last_log_number_file(Logger::directory + Logger::last_log_filename, std::ios::in);
-  uint log_number;
-  last_log_number_file >> log_number;
-  last_log_number_file.close();
+void _redo_transactions(const TransactionID transaction_id, std::vector<LoggedItem>& transactions) {
+  for (auto& transaction : transactions) {
+    if (transaction.transaction_id != transaction_id) continue;
 
+    auto table = StorageManager::get().get_table(transaction.table_name);
+    auto chunk = table->get_chunk(transaction.row_id.chunk_id);
+
+    if (transaction.type == LogType::Value) {
+      chunk->append(*transaction.values);
+
+      auto mvcc_columns = chunk->mvcc_columns();
+      DebugAssert(mvcc_columns->begin_cids.size() - 1 == transaction.row_id.chunk_offset,
+                  "recovery rowID " + std::to_string(mvcc_columns->begin_cids.size() - 1) + " != logged rowID " +
+                      std::to_string(transaction.row_id.chunk_offset));
+      mvcc_columns->begin_cids[mvcc_columns->begin_cids.size() - 1] = transaction_id;
+    } else {
+      DebugAssert(transaction.type == LogType::Invalidation, "recovery: transaction type not implemented yet");
+      auto mvcc_columns = chunk->mvcc_columns();
+      mvcc_columns->end_cids[transaction.row_id.chunk_offset] = transaction_id;
+    }
+  }
+
+  transactions.erase(std::remove_if(transactions.begin(), transactions.end(), 
+    [transaction_id](LoggedItem x){ return x.transaction_id == transaction_id; }),  transactions.end());
+}
+
+void BinaryRecovery::recover() {
   TransactionID last_transaction_id{0};
+  
+  auto log_number = Logger::_get_latest_log_number();
 
   // for every logfile: read and redo logged entries
   for (auto i = 1u; i < log_number; ++i) {
-    // TODO: check if file exists
     std::ifstream log_file{Logger::directory + Logger::filename + std::to_string(i), std::ios::binary};
+    DebugAssert(log_file.is_open(), "Recovery: could not open logfile " + 
+      Logger::directory + Logger::filename + std::to_string(i));
 
     std::vector<LoggedItem> transactions;
 
     while (true) {
+      // Begin of all Entries:
+      //   - log entry type       : sizeof(char)
+      //   - transaction_id       : sizeof(TransactionID)
+
       char log_type;
       log_file.read(&log_type, sizeof(char));
 
@@ -107,89 +140,73 @@ void BinaryRecovery::recover() {
       TransactionID transaction_id;
       log_file.read(reinterpret_cast<char*>(&transaction_id), sizeof(TransactionID));
 
-      if (log_type == 't') {  // commit
-        /*
-        *     Commit Entries:
-        *       - log entry type ('t') : sizeof(char)
-        *       - transaction_id       : sizeof(TransactionID)
-        */
-
-        // TODO refactor: same as text file recovery
-        for (auto& transaction : transactions) {
-          if (transaction.transaction_id != transaction_id) continue;
-
-          auto table = StorageManager::get().get_table(transaction.table_name);
-          auto chunk = table->get_chunk(transaction.row_id.chunk_id);
-
-          if (transaction.type == LogType::Value) {
-            chunk->append(*transaction.values);
-
-            auto mvcc_columns = chunk->mvcc_columns();
-            DebugAssert(mvcc_columns->begin_cids.size() - 1 == transaction.row_id.chunk_offset,
-                        "recovery rowID " + std::to_string(mvcc_columns->begin_cids.size() - 1) + " != logged rowID " +
-                            std::to_string(transaction.row_id.chunk_offset));
-            mvcc_columns->begin_cids[mvcc_columns->begin_cids.size() - 1] = transaction_id;
-          } else if (transaction.type == LogType::Invalidation) {
-            auto mvcc_columns = chunk->mvcc_columns();
-            mvcc_columns->end_cids[transaction.row_id.chunk_offset] = transaction_id;
-          } else {
-            DebugAssert(false, "recovery: transaction type not implemented yet");
-          }
-        }
-
+      // if commit entry
+      if (log_type == 't') {
+        _redo_transactions(transaction_id, transactions);
         last_transaction_id = std::max(transaction_id, last_transaction_id);
+        continue;
+      } 
 
-        // TODO: delete elements in transactions vector
+      // else invalidation or value
+      DebugAssert(log_type == 'v' || log_type == 'i', "recovery: first token of new entry is neither t, v nor i");
+      
+      // Invalidation and begin of value entries:
+      //   - log entry type ('v') : sizeof(char)
+      //   - transaction_id       : sizeof(transaction_id_t)
+      //   - table_name           : table_name.size() + 1, terminated with \0
+      //   - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset)
 
-      } else {  // 'v' or 'i'
-        DebugAssert(log_type == 'v' || log_type == 'i', "recovery: first token of new entry is neither c, v nor i");
-        /*     Invalidation and begin of value entries:
-        *       - log entry type ('v') : sizeof(char)
-        *       - transaction_id       : sizeof(transaction_id_t)
-        *       - table_name           : table_name.size() + 1, terminated with \0
-        *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset)
-        */
+      std::string table_name;
+      std::getline(log_file, table_name, '\0');
 
-        std::string table_name;
-        std::getline(log_file, table_name, '\0');
+      ChunkID chunk_id;
+      log_file.read(reinterpret_cast<char*>(&chunk_id), sizeof(ChunkID));
 
-        ChunkID chunk_id;
-        log_file.read(reinterpret_cast<char*>(&chunk_id), sizeof(ChunkID));
+      ChunkOffset chunk_offset;
+      log_file.read(reinterpret_cast<char*>(&chunk_offset), sizeof(ChunkOffset));
 
-        ChunkOffset chunk_offset;
-        log_file.read(reinterpret_cast<char*>(&chunk_offset), sizeof(ChunkOffset));
+      RowID row_id(chunk_id, chunk_offset);
 
-        RowID row_id(chunk_id, chunk_offset);
-
-        if (log_type == 'i') {
-          transactions.push_back(LoggedItem(LogType::Invalidation, transaction_id, table_name, row_id));
-          continue;
-        } else {
-          /*  Remainder of value entries:
-           *       - NULL bitmap          : ceil(values.size() / 8.0)
-           *       - value                : length(value)
-           *       - any optional values
-           */
-
-          auto table = StorageManager::get().get_table(table_name);
-          auto data_types = table->column_data_types();
-
-          auto null_bitmap_number_of_bytes = ceil(data_types.size() / 8.0);
-          std::vector<char> null_bitmap(null_bitmap_number_of_bytes);
-          log_file.read(&null_bitmap[0], null_bitmap_number_of_bytes);
-
-          // TODO use bitmap
-          std::vector<AllTypeVariant> values;
-          for (auto& data_type : data_types) {
-            values.push_back(_read(log_file, data_type));
-          }
-
-          transactions.push_back(LoggedItem(LogType::Value, transaction_id, table_name, row_id, values));
-          continue;
-        }
+      // if invalidation entry
+      if (log_type == 'i') {
+        transactions.push_back(LoggedItem(LogType::Invalidation, transaction_id, table_name, row_id));
+        continue;
       }
-    }
-  }
+
+      // else value entry
+
+      // Remainder of value entries:
+      //   - NULL bitmap          : ceil(values.size() / 8.0)
+      //   - value                : length(value)
+      //   - any optional values
+
+      auto table = StorageManager::get().get_table(table_name);
+      auto data_types = table->column_data_types();
+
+      uint16_t null_bitmap_number_of_bytes = ceil(data_types.size() / 8.0); //  supports 2^16 * 8 > 500,000 values
+      std::vector<char> null_bitmap(null_bitmap_number_of_bytes);
+      log_file.read(&null_bitmap[0], null_bitmap_number_of_bytes);
+
+      std::vector<AllTypeVariant> values;
+      uint16_t bitmap_index = 0;
+      uint8_t bit_pos = 0;
+      for (auto& data_type : data_types) {
+        if ((null_bitmap[bitmap_index] << bit_pos) & 0b10000000) {
+          values.emplace_back(NullValue());
+        } else {
+          values.push_back(_read(log_file, data_type));
+        }
+
+        bit_pos = (bit_pos + 1) % 8;
+        if (bit_pos == 0) { 
+          ++bitmap_index;
+        };
+      }
+
+      transactions.push_back(LoggedItem(LogType::Value, transaction_id, table_name, row_id, values));
+
+    }  // while not end of file
+  }  // for every logfile
 
   if (last_transaction_id > 0) {
     ++last_transaction_id;
