@@ -13,9 +13,7 @@
 namespace opossum {
 
 LQPSelectExpression::LQPSelectExpression(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                         const std::vector<std::shared_ptr<AbstractExpression>>& parameter_expressions,
-                                         const std::vector<ParameterID>& parameter_ids):
-  AbstractSelectExpression()
+                                         const Parameters& parameters):
  lqp(lqp), parameters(parameters) {
 
 }

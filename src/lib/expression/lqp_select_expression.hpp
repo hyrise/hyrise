@@ -12,16 +12,17 @@ class ExternalExpression;
 
 class LQPSelectExpression : public AbstractSelectExpression {
  public:
+  using Parameters = std::vector<std::pair<ParameterID, std::shared_ptr<AbstractExpression>>>;
+
   explicit LQPSelectExpression(const std::shared_ptr<AbstractLQPNode>& lqp,
-                      const std::vector<std::shared_ptr<AbstractExpression>>& parameter_expressions,
-                      const std::vector<ParameterID>& parameter_ids);
+                      const Parameters& parameters = {});
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
   DataType data_type() const override;
 
   const std::shared_ptr<AbstractLQPNode> lqp;
-  const std::vector<ParameterID> parameter_ids;
+  const Parameters parameters;
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;

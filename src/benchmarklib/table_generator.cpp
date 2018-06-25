@@ -24,41 +24,56 @@
 
 namespace opossum {
 
-std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
+std::shared_ptr<Table> TableGenerator::generate_table(const ChunkOffset chunk_size,
+                                                      const std::optional<float>& null_value_ratio,
                                                       std::optional<EncodingType> encoding_type) {
   std::vector<tbb::concurrent_vector<int>> value_vectors;
-  auto vector_size = std::min(static_cast<size_t>(chunk_size), _num_rows);
+  std::vector<tbb::concurrent_vector<bool>> null_vectors;
+
+  auto value_vector_size = std::min(static_cast<size_t>(chunk_size), num_rows);
   /*
    * Generate table layout with enumerated column names (i.e., "col_1", "col_2", ...)
    * Create a vector for each column.
    */
   TableColumnDefinitions column_definitions;
-  for (size_t i = 0; i < _num_columns; i++) {
+  for (size_t i = 0; i < num_columns; i++) {
     auto column_name = std::string(1, static_cast<char>(static_cast<int>('a') + i));
-    column_definitions.emplace_back(column_name, DataType::Int);
-    value_vectors.emplace_back(tbb::concurrent_vector<int>(vector_size));
+    column_definitions.emplace_back(column_name, DataType::Int, null_value_ratio.has_value());
+    value_vectors.emplace_back(value_vector_size);
+
+    if (null_value_ratio) null_vectors.emplace_back(value_vector_size);
   }
+
   const auto table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size);
   std::default_random_engine engine;
-  std::uniform_int_distribution<int> dist(0, _max_different_value);
-  for (size_t i = 0; i < _num_rows; i++) {
+  std::uniform_int_distribution<int> dist(0, max_different_value);
+  std::uniform_real_distribution<float> null_value_dist(0.0f, 1.0f);
+
+  for (size_t i = 0; i < num_rows; i++) {
     /*
      * Add vectors to chunk when full, and add chunk to table.
      * Reset vectors and chunk.
      */
-    if (i % vector_size == 0 && i > 0) {
+    if (i % value_vector_size == 0 && i > 0) {
       ChunkColumns columns;
-      for (size_t j = 0; j < _num_columns; j++) {
-        columns.push_back(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j])));
-        value_vectors[j] = tbb::concurrent_vector<int>(vector_size);
+      for (size_t j = 0; j < num_columns; j++) {
+        if (null_value_ratio) {
+          columns.push_back(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j]), std::move(null_vectors[j])));
+          null_vectors[j] = tbb::concurrent_vector<bool>(value_vector_size);
+        } else {
+          columns.push_back(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j])));
+        }
+
+        value_vectors[j] = tbb::concurrent_vector<int>(value_vector_size);
       }
       table->append_chunk(columns);
     }
     /*
      * Set random value for every column.
      */
-    for (size_t j = 0; j < _num_columns; j++) {
-      value_vectors[j][i % vector_size] = dist(engine);
+    for (size_t j = 0; j < num_columns; j++) {
+      value_vectors[j][i % value_vector_size] = dist(engine);
+      if (null_value_ratio) null_vectors[j][i % value_vector_size] = null_value_dist(engine) < *null_value_ratio;
     }
   }
   /*
@@ -66,8 +81,12 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
    */
   if (!value_vectors[0].empty()) {
     ChunkColumns columns;
-    for (size_t j = 0; j < _num_columns; j++) {
-      columns.push_back(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j])));
+    for (size_t j = 0; j < num_columns; j++) {
+      if (null_value_ratio) {
+        columns.push_back(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j]), std::move(null_vectors[j])));
+      } else {
+        columns.push_back(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j])));
+      }
     }
     table->append_chunk(columns);
   }
