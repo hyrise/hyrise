@@ -487,6 +487,7 @@ if (${ENABLE_JIT_SUPPORT})
         operators/jit_operator/specialization/jit_code_specializer.hpp
         operators/jit_operator/specialization/jit_repository.cpp
         operators/jit_operator/specialization/jit_repository.hpp
+        operators/jit_operator/specialization/jit_runtime_pointer.cpp
         operators/jit_operator/specialization/jit_runtime_pointer.hpp
         operators/jit_operator/specialization/llvm/CloneFunction.cpp
         operators/jit_operator/specialization/llvm/InlineFunction.cpp
