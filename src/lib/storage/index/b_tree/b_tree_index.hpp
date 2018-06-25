@@ -4,6 +4,7 @@
 #include "all_type_variant.hpp"
 #include "storage/index/base_index.hpp"
 #include "storage/base_column.hpp"
+#include "b_tree_index_impl.hpp"
 
 namespace opossum {
 
@@ -24,7 +25,7 @@ class BTreeIndex : public BaseIndex {
   virtual std::vector<std::shared_ptr<const BaseColumn>> _get_index_columns() const override;
 
   std::shared_ptr<const BaseColumn> _index_column;
-  std::shared_ptr<BaseIndex> _impl;
+  std::shared_ptr<BaseBTreeIndexImpl> _impl;
 };
 
 } // namespace opossum

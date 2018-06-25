@@ -9,33 +9,32 @@
 namespace opossum {
 
 template <typename DataType>
-BTreeIndex<DataType>::BTreeIndexImpl(const std::vector<std::shared_ptr<const BaseColumn>> index_columns)
-    : BaseBTreeIndex{index_columns} {
-  _bulk_insert(_index_column);
+BTreeIndexImpl<DataType>::BTreeIndexImpl(std::shared_ptr<const BaseColumn> index_column) {
+  _bulk_insert(index_column);
 }
 
 template <typename DataType>
-BTreeIndex::Iterator BTreeIndexImpl<DataType>::_lower_bound(const std::vector<AllTypeVariant>& values) const {
+BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::lower_bound(const std::vector<AllTypeVariant>& values) const {
   return lower_bound(type_cast<DataType>(values[0]));
 }
 
 template <typename DataType>
-BTreeIndex::Iterator BTreeIndexImpl<DataType>::_upper_bound(const std::vector<AllTypeVariant>& values) const {
+BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::upper_bound(const std::vector<AllTypeVariant>& values) const {
   return upper_bound(type_cast<DataType>(values[0]));
 }
 
 template <typename DataType>
-BTreeIndex::Iterator BTreeIndexImpl<DataType>::_cbegin() const {
+BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::cbegin() const {
   return _chunk_offsets.begin();
 }
 
 template <typename DataType>
-BTreeIndex::Iterator BTreeIndexImpl<DataType>::_cend() const {
+BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::cend() const {
   return _chunk_offsets.end();
 }
 
 template <typename DataType>
-BTreeIndex::Iterator BTreeIndexImpl<DataType>::lower_bound(DataType value) const {
+BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::lower_bound(DataType value) const {
   auto result = _btree.lower_bound(value);
   if (result == _btree.end()) {
     return _chunk_offsets.end();
@@ -45,7 +44,7 @@ BTreeIndex::Iterator BTreeIndexImpl<DataType>::lower_bound(DataType value) const
 }
 
 template <typename DataType>
-BTreeIndex::Iterator BTreeIndexImpl<DataType>::upper_bound(DataType value) const {
+BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::upper_bound(DataType value) const {
   auto result = _btree.upper_bound(value);
   if (result == _btree.end()) {
     return _chunk_offsets.end();
@@ -92,6 +91,6 @@ void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const BaseColu
   }
 }
 
-EXPLICITLY_INSTANTIATE_DATA_TYPES(BTreeIndex);
+EXPLICITLY_INSTANTIATE_DATA_TYPES(BTreeIndexImpl);
 
 } // namespace opossum

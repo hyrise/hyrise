@@ -1,21 +1,32 @@
 #pragma once
 
-#include "base_b_tree_index.hpp"
 #include "types.hpp"
+#include "all_type_variant.hpp"
+#include "storage/base_column.hpp"
 
 #include "btree_map.h"
 
 namespace opossum {
+
+
+class BaseBTreeIndexImpl {
+ public:
+  using Iterator = std::vector<ChunkOffset>::const_iterator;
+  virtual Iterator lower_bound(const std::vector<AllTypeVariant>&) const = 0;
+  virtual Iterator upper_bound(const std::vector<AllTypeVariant>&) const = 0;
+  virtual Iterator cbegin() const = 0;
+  virtual Iterator cend() const = 0;
+};
 
 /**
 * Implementation: https://code.google.com/archive/p/cpp-btree/
 * Note: does not support null values right now.
 */
 template <typename DataType>
-class BTreeIndexImpl : public BaseIndex {
+class BTreeIndexImpl : public BaseBTreeIndexImpl {
  public:
   BTreeIndexImpl() = delete;
-  explicit BTreeIndexImpl(const std::vector<std::shared_ptr<const BaseColumn>> index_columns);
+  explicit BTreeIndexImpl(std::shared_ptr<const BaseColumn> index_column);
 
   BTreeIndexImpl(const BTreeIndexImpl&) = delete;
   BTreeIndexImpl& operator=(const BTreeIndexImpl&) = delete;
@@ -28,11 +39,12 @@ class BTreeIndexImpl : public BaseIndex {
   Iterator lower_bound(DataType value) const;
   Iterator upper_bound(DataType value) const;
 
-protected:
-  virtual Iterator _lower_bound(const std::vector<AllTypeVariant>&) const;
-  virtual Iterator _upper_bound(const std::vector<AllTypeVariant>&) const;
-  virtual Iterator _cbegin() const;
-  virtual Iterator _cend() const;
+  virtual Iterator lower_bound(const std::vector<AllTypeVariant>&) const;
+  virtual Iterator upper_bound(const std::vector<AllTypeVariant>&) const;
+  virtual Iterator cbegin() const;
+  virtual Iterator cend() const;
+
+ protected:
   void _bulk_insert(const std::shared_ptr<const BaseColumn>);
 
   btree::btree_map<DataType, size_t> _btree;
