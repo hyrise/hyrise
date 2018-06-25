@@ -24,7 +24,7 @@ class TpccTableGenerator : public opossum::AbstractBenchmarkTableGenerator {
   // following TPC-C v5.11.0
  public:
   explicit TpccTableGenerator(const ChunkOffset chunk_size = 1'000'000, const size_t warehouse_size = 1,
-                              std::optional<EncodingConfig> encoding_config = EncodingConfig{});
+                              EncodingConfig encoding_config = EncodingConfig{});
 
   virtual ~TpccTableGenerator() = default;
 
@@ -58,7 +58,7 @@ class TpccTableGenerator : public opossum::AbstractBenchmarkTableGenerator {
 
   const size_t _warehouse_size;
   const time_t _current_date = std::time(0);
-  const std::optional<EncodingConfig> _encoding_config;
+  const EncodingConfig _encoding_config;
 
  protected:
   void encode_table(const std::string& table_name, std::shared_ptr<Table> table);

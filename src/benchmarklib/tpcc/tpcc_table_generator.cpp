@@ -22,10 +22,10 @@
 namespace opossum {
 
 TpccTableGenerator::TpccTableGenerator(const ChunkOffset chunk_size, const size_t warehouse_size,
-                                       std::optional<EncodingConfig> encoding_config)
+                                       EncodingConfig encoding_config)
     : AbstractBenchmarkTableGenerator(chunk_size),
       _warehouse_size(warehouse_size),
-      _encoding_config(encoding_config),
+      _encoding_config(std::move(encoding_config)),
       _random_gen(TpccRandomGenerator()) {}
 
 std::shared_ptr<Table> TpccTableGenerator::generate_items_table() {
@@ -528,9 +528,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_table(const std::string& tab
 }
 
 void TpccTableGenerator::encode_table(const std::string& table_name, std::shared_ptr<Table> table) {
-  if (_encoding_config) {
-    BenchmarkTableEncoder::encode(table_name, table, *_encoding_config);
-  }
+  BenchmarkTableEncoder::encode(table_name, table, _encoding_config);
 }
 
 }  // namespace opossum

@@ -68,6 +68,8 @@ struct EncodingConfig {
                  TableColumnEncodingMapping encoding_mapping);
   explicit EncodingConfig(ColumnEncodingSpec default_encoding_spec);
 
+  static EncodingConfig unencoded();
+
   const ColumnEncodingSpec default_encoding_spec;
   const EncodingMapping type_encoding_mapping;
   const TableColumnEncodingMapping custom_encoding_mapping;

@@ -270,6 +270,8 @@ EncodingConfig::EncodingConfig(ColumnEncodingSpec default_encoding_spec, Encodin
       type_encoding_mapping{std::move(type_encoding_mapping)},
       custom_encoding_mapping{std::move(encoding_mapping)} {}
 
+EncodingConfig EncodingConfig::unencoded() { return EncodingConfig{ColumnEncodingSpec{EncodingType::Unencoded}}; }
+
 ColumnEncodingSpec EncodingConfig::encoding_spec_from_strings(const std::string& encoding_str,
                                                               const std::string& compression_str) {
   const auto encoding = EncodingConfig::encoding_string_to_type(encoding_str);
