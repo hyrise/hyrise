@@ -114,7 +114,7 @@ void BinaryRecovery::recover() {
 
       // if invalidation entry
       if (log_type == 'i') {
-        transactions.push_back(LoggedItem(LogType::Invalidation, transaction_id, table_name, row_id));
+        transactions.emplace_back(LoggedItem(LogType::Invalidation, transaction_id, table_name, row_id));
         continue;
       }
 
@@ -125,8 +125,7 @@ void BinaryRecovery::recover() {
       //   - value                : length(value)
       //   - any optional values
 
-      auto table = StorageManager::get().get_table(table_name);
-      auto data_types = table->column_data_types();
+      auto data_types = StorageManager::get().get_table(table_name)->column_data_types();
 
       uint16_t null_bitmap_number_of_bytes = ceil(data_types.size() / 8.0); //  supports 2^16 * 8 > 500,000 values
       std::vector<char> null_bitmap(null_bitmap_number_of_bytes);
@@ -139,7 +138,7 @@ void BinaryRecovery::recover() {
         if ((null_bitmap[bitmap_index] << bit_pos) & 0b10000000) {
           values.emplace_back(NullValue());
         } else {
-          values.push_back(_read(log_file, data_type));
+          values.emplace_back(_read(log_file, data_type));
         }
 
         bit_pos = (bit_pos + 1) % 8;
@@ -148,7 +147,7 @@ void BinaryRecovery::recover() {
         };
       }
 
-      transactions.push_back(LoggedItem(LogType::Value, transaction_id, table_name, row_id, values));
+      transactions.emplace_back(LoggedItem(LogType::Value, transaction_id, table_name, row_id, values));
 
     }  // while not end of file
   }  // for every logfile
