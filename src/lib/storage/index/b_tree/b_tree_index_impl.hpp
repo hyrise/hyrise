@@ -1,10 +1,10 @@
 #pragma once
 
+#include <btree_map.h>
+
 #include "types.hpp"
 #include "all_type_variant.hpp"
 #include "storage/base_column.hpp"
-
-#include "btree_map.h"
 
 namespace opossum {
 
@@ -39,10 +39,10 @@ class BTreeIndexImpl : public BaseBTreeIndexImpl {
   Iterator lower_bound(DataType value) const;
   Iterator upper_bound(DataType value) const;
 
-  virtual Iterator lower_bound(const std::vector<AllTypeVariant>&) const;
-  virtual Iterator upper_bound(const std::vector<AllTypeVariant>&) const;
-  virtual Iterator cbegin() const;
-  virtual Iterator cend() const;
+  Iterator lower_bound(const std::vector<AllTypeVariant>&) const override;
+  Iterator upper_bound(const std::vector<AllTypeVariant>&) const override;
+  Iterator cbegin() const override;
+  Iterator cend() const override;
 
  protected:
   void _bulk_insert(const std::shared_ptr<const BaseColumn>);
@@ -51,4 +51,4 @@ class BTreeIndexImpl : public BaseBTreeIndexImpl {
   std::vector<ChunkOffset> _chunk_offsets;
 };
 
-} // namespace opossum
+}  // namespace opossum

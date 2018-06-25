@@ -29,4 +29,4 @@ namespace opossum {
 
   std::vector<std::shared_ptr<const BaseColumn>> BTreeIndex::_get_index_columns() const { return {_index_column}; }
 
-} // namespace opossum
+}  // namespace opossum

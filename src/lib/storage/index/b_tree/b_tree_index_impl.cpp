@@ -93,4 +93,4 @@ void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const BaseColu
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(BTreeIndexImpl);
 
-} // namespace opossum
+}  // namespace opossum
