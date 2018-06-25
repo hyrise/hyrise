@@ -344,9 +344,9 @@ void BenchmarkTableEncoder::encode(const std::string& table_name, std::shared_pt
   for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
     if (table_has_custom_encoding) {
       const auto& column_name = table->column_name(column_id);
-      const auto& column_mapping = column_mapping_it->second;
-      const auto& column_encoding = column_mapping.find(column_name);
-      if (column_encoding != column_mapping.end()) {
+      const auto& encoding_by_column_name = column_mapping_it->second;
+      const auto& column_encoding = encoding_by_column_name.find(column_name);
+      if (column_encoding != encoding_by_column_name.end()) {
         // The column has a custom encoding
         chunk_spec.push_back(column_encoding->second);
         continue;
@@ -354,10 +354,10 @@ void BenchmarkTableEncoder::encode(const std::string& table_name, std::shared_pt
     }
 
     const auto& column_type_str = data_type_to_string.left.find(table->column_data_type(column_id))->second;
-    const auto& type_encoding = type_mapping.find(column_type_str);
-    if (type_encoding != type_mapping.end()) {
+    const auto& encoding_by_data_type = type_mapping.find(column_type_str);
+    if (encoding_by_data_type != type_mapping.end()) {
       // The column type has a specific encoding
-      chunk_spec.push_back(type_encoding->second);
+      chunk_spec.push_back(encoding_by_data_type->second);
       continue;
     }
 

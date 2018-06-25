@@ -56,13 +56,13 @@ class TpccTableGenerator : public opossum::AbstractBenchmarkTableGenerator {
 
   std::shared_ptr<Table> generate_table(const std::string& table_name);
 
-  void encode_table(const std::string& table_name, std::shared_ptr<Table> table);
-
   const size_t _warehouse_size;
   const time_t _current_date = std::time(0);
   const std::optional<EncodingConfig> _encoding_config;
 
  protected:
+  void encode_table(const std::string& table_name, std::shared_ptr<Table> table);
+
   template <typename T>
   std::vector<T> generate_inner_order_line_column(std::vector<size_t> indices, order_line_counts_type order_line_counts,
                                                   const std::function<T(std::vector<size_t>)>& generator_function);
