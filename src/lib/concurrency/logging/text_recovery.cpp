@@ -18,12 +18,36 @@ TextRecovery& TextRecovery::getInstance() {
 }
 
 // returns substring until delimiter is found and sets begin to begin of next token: the position after delimiter
-std::string TextRecovery::_get_substr_and_incr_begin(const std::string& line, size_t& begin, const char delimiter) {
+std::string TextRecovery::_get_substr_and_incr_begin(const std::string line, size_t& begin, const char delimiter) {
   auto end = line.find(delimiter, begin) - 1;
   DebugAssert(end >= begin, "Recovery: Missing token in logfile");
   auto token = line.substr(begin, end - begin + 1);
   begin = end + 2;
   return token;
+}
+
+// returns string value between begin and end, 
+// and sets begin to begin of the next token, assuming there is a delimiter inbetween
+std::string TextRecovery::_get_string_value_and_incr_begin(std::string& line, size_t& begin, const size_t end,
+  std::ifstream& log_file) {
+  // There might be a \n in every string, therefore the line could end in every string value
+  // while string contains \n
+  while (line.length() <= end) {
+    std::string temp_line;
+    std::getline(log_file, temp_line);
+    DebugAssert(!log_file.eof(), "Recovery: End of file reached unexpectedly");
+    line += "\n" + temp_line;
+  }
+  auto token = line.substr(begin, end - begin + 1);
+  begin = end + 2;
+  return token;
+}
+
+std::string TextRecovery::_get_next_value_with_preceding_size_and_incr_begin(std::string& line, size_t& begin, 
+  const char delimiter, std::ifstream& log_file) {
+  size_t size = std::stoul(_get_substr_and_incr_begin(line, begin, delimiter));
+  size_t end = begin + size - 1;
+  return _get_string_value_and_incr_begin(line, begin, end, log_file);
 }
 
 void TextRecovery::recover() {
@@ -42,41 +66,27 @@ void TextRecovery::recover() {
       char log_type = line[1];
       DebugAssert(log_type == 't' || log_type == 'i' || log_type == 'v', "Recovery: invalid log type token");
 
-      // if commit
+      // if commit entry
       if (log_type == 't') {
         // line = "(t,<TransactionID>)"
         TransactionID transaction_id = std::stoul(line.substr(3, line.length() - 4));
         _redo_transactions(transaction_id, transactions);
+        last_transaction_id = std::max(transaction_id, last_transaction_id);
         continue;
       } 
       
       // else: value or invalidation entry
-
-      // There might be a \n in every string, therefore the line could end in every string value
-      //                                    
+                                    
       //        transaction_id_end    table_name_size_end      rowID_end
       //                  v                   v                    v
       // (i,<TransactionID>,<table_name.size()>,<table_name>,<RowID>)
       // (v,<TransactionID>,<table_name.size()>,<table_name>,<RowID>,(<value1.size()>,<value1>,<value2.size()>,...))
 
-
-      // size_t transaction_id_begin = 3;
       size_t next_token_begin = 3;
       TransactionID transaction_id = std::stoul(_get_substr_and_incr_begin(line, next_token_begin, ','));
 
-      size_t table_name_size = std::stoul(_get_substr_and_incr_begin(line, next_token_begin, ','));
-
-      size_t table_name_end = next_token_begin + table_name_size - 1;
-      // while table_name contains \n
-      while (line.length() <= table_name_end) {
-        std::string temp_line;
-        std::getline(log_file, temp_line);
-        DebugAssert(!log_file.eof(), "Recovery: End of file reached unexpectedly");
-        line += "\n" + temp_line;
-      }
-      std::string table_name = line.substr(next_token_begin, table_name_end - next_token_begin + 1);
-      
-      next_token_begin = table_name_end + 2;
+      std::string table_name = _get_next_value_with_preceding_size_and_incr_begin(
+        line, next_token_begin, ',', log_file);
 
       // <RowID> = RowID(<chunk_id>,<chunk_offset>)
       // "RowID(".length() = 6
@@ -90,38 +100,23 @@ void TextRecovery::recover() {
         transactions.push_back(LoggedItem(LogType::Invalidation, transaction_id, table_name, row_id));
         continue;
       }
+
       // else: value entry
-
       // (<value1.size()>,<value1>,<value2.size()>,...)
-      std::vector<AllTypeVariant> values;
 
-      // "chunk_offset_end),(value_size_begin"
-      // size_t value_size_begin = chunk_offset_end + 4;
-      size_t value_size_begin = next_token_begin + 2;
-      DebugAssert(line[value_size_begin - 2] == ',', 
-        "Recovery: Expected ',' but got '" + line[value_size_begin - 2] + "' instead")
-      DebugAssert(line[value_size_begin - 1] == '(', 
-        "Recovery: Expected '(' but got '" + line[value_size_begin - 1] + "' instead")
+      // adding two braces of "chunk_offset_end),(value_size_begin"
+      next_token_begin += 2;
+
+      DebugAssert(line[next_token_begin - 2] == ',', 
+        "Recovery: Expected ',' but got '" + line[next_token_begin - 2] + "' instead")
+      DebugAssert(line[next_token_begin - 1] == '(', 
+        "Recovery: Expected '(' but got '" + line[next_token_begin - 1] + "' instead")
       
+      std::vector<AllTypeVariant> values;
       // while still values in line
-      while (line[value_size_begin - 1] != ')') {
-        size_t value_size_end = line.find(",", value_size_begin) - 1;
-        DebugAssert(value_size_end >= value_size_begin, "Recovery: There is no value_size in logfile");
-        size_t value_size = std::stoul(line.substr(value_size_begin, value_size_end - value_size_begin + 1));
-
-        size_t value_begin = value_size_end + 2;
-        size_t value_end = value_begin + value_size - 1;
-        // while value contains \n
-        while (line.length() <= value_end) {
-          std::string temp_line;
-          std::getline(log_file, temp_line);
-          DebugAssert(!log_file.eof(), "Recovery: End of file reached unexpectedly");
-          line += "\n" + temp_line;
-        }
-
-        values.push_back(line.substr(value_begin, value_size));
-        value_size_begin = value_end + 2;
-        DebugAssert(line.length() >= value_size_begin, "Recovery: line ended before ')'");
+      while (line[next_token_begin - 1] != ')') {
+        values.push_back(_get_next_value_with_preceding_size_and_incr_begin(line, next_token_begin, ',', log_file));
+        DebugAssert(line.length() >= next_token_begin, "Recovery: line ended before ')'");
       }
 
       transactions.push_back(LoggedItem(LogType::Value, transaction_id, table_name, row_id, values));
@@ -129,10 +124,7 @@ void TextRecovery::recover() {
     }  // while there is a line end
   }  // for every logfile end
 
-  if (last_transaction_id > 0) {
-    ++last_transaction_id;
-    TransactionManager::_reset_to_id(last_transaction_id);
-  }
+  _update_transaction_id(last_transaction_id);
 }
 
 }  // namespace opossum

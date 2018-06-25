@@ -38,6 +38,8 @@ class AbstractRecovery {
   };
 
   void _redo_transactions(const TransactionID& transaction_id, std::vector<LoggedItem>& transactions);
+
+  void _update_transaction_id(const TransactionID highest_committed_id);
 };
 
 }  // namespace opossum

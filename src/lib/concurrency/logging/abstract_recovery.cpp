@@ -33,4 +33,10 @@ void AbstractRecovery::_redo_transactions(const TransactionID& transaction_id, s
     [&transaction_id](LoggedItem x){ return x.transaction_id == transaction_id; }),  transactions.end());
 }
 
+void AbstractRecovery::_update_transaction_id(const TransactionID highest_committed_id) {
+  if (highest_committed_id > 0) {
+    TransactionManager::_reset_to_id(highest_committed_id + 1);
+  }
+}
+
 }  // namespace opossum

@@ -17,11 +17,6 @@ BinaryRecovery& BinaryRecovery::getInstance() {
 }
 
 // read datatype from file
-// ((int32_t,     Int,        "int"))
-// ((int64_t,     Long,       "long"))
-// ((float,       Float,      "float"))
-// ((double,      Double,     "double"))
-// ((std::string, String,     "string"))
 AllTypeVariant _read(std::ifstream& file, DataType data_type) {
   AllTypeVariant value;
   switch (data_type) {
@@ -158,10 +153,7 @@ void BinaryRecovery::recover() {
     }  // while not end of file
   }  // for every logfile
 
-  if (last_transaction_id > 0) {
-    ++last_transaction_id;
-    TransactionManager::_reset_to_id(last_transaction_id);
-  }
+  _update_transaction_id(last_transaction_id);
 }
 
 }  // namespace opossum
