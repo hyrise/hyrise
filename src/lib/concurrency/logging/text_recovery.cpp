@@ -17,13 +17,17 @@ TextRecovery& TextRecovery::getInstance() {
   return instance;
 }
 
+std::string TextRecovery::_get_substr_and_incr_begin(const std::string line, size_t& begin, const size_t end) {
+  auto token = line.substr(begin, end - begin + 1);
+  begin = end + 2;
+  return token;
+}
+
 // returns substring until delimiter is found and sets begin to begin of next token: the position after delimiter
 std::string TextRecovery::_get_substr_and_incr_begin(const std::string line, size_t& begin, const char delimiter) {
   auto end = line.find(delimiter, begin) - 1;
   DebugAssert(end >= begin, "Recovery: Missing token in logfile");
-  auto token = line.substr(begin, end - begin + 1);
-  begin = end + 2;
-  return token;
+  return _get_substr_and_incr_begin(line, begin, end);
 }
 
 // returns string value between begin and end, 
@@ -38,9 +42,7 @@ std::string TextRecovery::_get_string_value_and_incr_begin(std::string& line, si
     DebugAssert(!log_file.eof(), "Recovery: End of file reached unexpectedly");
     line += "\n" + temp_line;
   }
-  auto token = line.substr(begin, end - begin + 1);
-  begin = end + 2;
-  return token;
+  return _get_substr_and_incr_begin(line, begin, end);
 }
 
 std::string TextRecovery::_get_next_value_with_preceding_size_and_incr_begin(std::string& line, size_t& begin, 
@@ -77,8 +79,8 @@ void TextRecovery::recover() {
       
       // else: value or invalidation entry
                                     
-      //        transaction_id_end    table_name_size_end      rowID_end
-      //                  v                   v                    v
+      // next_token_begin
+      //    v
       // (i,<TransactionID>,<table_name.size()>,<table_name>,<RowID>)
       // (v,<TransactionID>,<table_name.size()>,<table_name>,<RowID>,(<value1.size()>,<value1>,<value2.size()>,...))
 
@@ -97,7 +99,7 @@ void TextRecovery::recover() {
 
       // if invalidation
       if (log_type == 'i') {
-        transactions.push_back(LoggedItem(LogType::Invalidation, transaction_id, table_name, row_id));
+        transactions.emplace_back(LoggedItem(LogType::Invalidation, transaction_id, table_name, row_id));
         continue;
       }
 
@@ -115,11 +117,11 @@ void TextRecovery::recover() {
       std::vector<AllTypeVariant> values;
       // while still values in line
       while (line[next_token_begin - 1] != ')') {
-        values.push_back(_get_next_value_with_preceding_size_and_incr_begin(line, next_token_begin, ',', log_file));
+        values.emplace_back(_get_next_value_with_preceding_size_and_incr_begin(line, next_token_begin, ',', log_file));
         DebugAssert(line.length() >= next_token_begin, "Recovery: line ended before ')'");
       }
 
-      transactions.push_back(LoggedItem(LogType::Value, transaction_id, table_name, row_id, values));
+      transactions.emplace_back(LoggedItem(LogType::Value, transaction_id, table_name, row_id, values));
 
     }  // while there is a line end
   }  // for every logfile end
