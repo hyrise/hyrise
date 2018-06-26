@@ -1,10 +1,19 @@
+// This script analyzes query execution times
+
 global start
 
+probe begin
+{
+    printf("Probing binary %s\n", @1)
+}
+
+// Store start point
 probe process(@1).provider("hyrise").mark("query_start")
 {
     start[$arg3, user_string($arg1)] = gettimeofday_us()
 }
 
+// Query has finished
 probe process(@1).provider("hyrise").mark("query_end")
 {
     end = gettimeofday_us()
