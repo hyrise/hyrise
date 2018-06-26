@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import json
 import sys
 from beautifultable import BeautifulTable
