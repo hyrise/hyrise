@@ -1,6 +1,6 @@
 #pragma once
 
-#pragma clang diagnostic ignored "-Werror"
+#pragma clang diagnostic ignored "-Wall"
 #include <btree_map.h>
 #pragma clang diagnostic pop
 
