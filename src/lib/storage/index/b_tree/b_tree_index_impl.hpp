@@ -5,6 +5,7 @@
   #include <btree_map.h>
   #pragma clang diagnostic pop
 #elif __GNUC__
+  #pragma GCC system_header
   #include <btree_map.h>
 #endif
 
