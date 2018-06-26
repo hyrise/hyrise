@@ -86,7 +86,7 @@ TEST_F(GetRuntimePointerForValueTest, RuntimePointersAreInvalidWithoutInitialAdd
 
 TEST_F(GetRuntimePointerForValueTest, BitcodePointerInstructionsAreProperlySimulated) {
   // Create a set of valid pointers that the function can work on
-  int64_t some_values[10];
+  int64_t some_values[100];
   int64_t* some_pointer_1 = &some_values[0];
   int64_t** some_pointer_2 = &some_pointer_1;
   int64_t*** some_pointer_3 = &some_pointer_2;
