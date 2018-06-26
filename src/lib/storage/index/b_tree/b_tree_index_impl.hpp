@@ -1,6 +1,8 @@
 #pragma once
 
+#pragma clang diagnostic ignored "-Werror"
 #include <btree_map.h>
+#pragma clang diagnostic pop
 
 #include "types.hpp"
 #include "all_type_variant.hpp"
