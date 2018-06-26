@@ -45,7 +45,11 @@ TEST_F(ExpressionTest, DeepEquals) {
   EXPECT_FALSE(case_a->deep_equals(*case_c));
 }
 
-TEST_F(ExpressionTest, AsColumnNameParentheses) {
+TEST_F(ExpressionTest, AsColumnName) {
+
+}
+
+TEST_F(ExpressionTest, AsColumnNameNested) {
   /** Test that parentheses are placed correctly when generating column names of nested expressions */
 
   EXPECT_EQ(add(5, 3)->as_column_name(), "5 + 3");

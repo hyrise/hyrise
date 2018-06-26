@@ -6,14 +6,14 @@
 
 namespace opossum {
 
-ExistsExpression::ExistsExpression(const std::shared_ptr<AbstractSelectExpression>& select):
+ExistsExpression::ExistsExpression(const std::shared_ptr<AbstractExpression>& select):
   AbstractExpression(ExpressionType::Exists, {select}) {
-
+  Assert(select->type == ExpressionType::Select, "EXISTS needs SelectExpression as argument");
 }
 
-std::shared_ptr<AbstractSelectExpression> ExistsExpression::select() const {
+std::shared_ptr<AbstractExpression> ExistsExpression::select() const {
   Assert(arguments[0]->type == ExpressionType::Select, "Expected to contain SelectExpression");
-  return std::static_pointer_cast<AbstractSelectExpression>(arguments[0]);
+  return arguments[0];
 }
 
 std::string ExistsExpression::as_column_name() const {
@@ -25,7 +25,7 @@ std::string ExistsExpression::as_column_name() const {
 }
 
 std::shared_ptr<AbstractExpression> ExistsExpression::deep_copy() const {
-  return std::make_shared<ExistsExpression>(std::dynamic_pointer_cast<AbstractSelectExpression>(select()->deep_copy()));
+  return std::make_shared<ExistsExpression>(select()->deep_copy());
 }
 
 DataType ExistsExpression::data_type() const {

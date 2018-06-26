@@ -17,7 +17,7 @@ class AbstractExpression;
  * Translates an LQP (Logical Query Plan), represented by its root node, into an Operator tree for the execution
  * engine, which in return is represented by its root Operator.
  */
-class LQPTranslator final {
+class LQPTranslator {
  public:
   std::shared_ptr<AbstractOperator> translate_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 

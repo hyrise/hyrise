@@ -1,6 +1,5 @@
 #pragma once
 
-#include "abstract_select_expression.hpp"
 #include "all_type_variant.hpp"
 #include "expression/parameter_expression.hpp"
 
@@ -8,7 +7,7 @@ namespace opossum {
 
 class AbstractOperator;
 
-class PQPSelectExpression : public AbstractSelectExpression {
+class PQPSelectExpression : public AbstractExpression {
  public:
   using Parameters = std::vector<std::pair<ParameterID, ColumnID>>;
 

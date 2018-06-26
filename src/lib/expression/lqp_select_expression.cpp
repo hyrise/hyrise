@@ -13,25 +13,25 @@
 namespace opossum {
 
 LQPSelectExpression::LQPSelectExpression(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                         const Parameters& parameters):
- lqp(lqp), parameters(parameters) {
+                                         const std::vector<ParameterID>& parameter_ids,
+                                         const std::vector<std::shared_ptr<AbstractExpression>>& parameter_expressions):
+ AbstractExpression(ExpressionType::Select, parameter_expressions), lqp(lqp), parameter_ids(parameter_ids) {
+  Assert(parameter_ids.size() == parameter_expressions.size(), "Need exactly as many ParameterIDs as parameter Expressions");
+}
 
+size_t LQPSelectExpression::parameter_count() const {
+  return parameter_ids.size();
+}
+
+std::shared_ptr<AbstractExpression> LQPSelectExpression::parameter_expression(const size_t parameter_idx) const {
+  Assert(parameter_idx < parameter_count(), "Parameter index out of range");
+  return arguments[parameter_idx];
 }
 
 std::shared_ptr<AbstractExpression> LQPSelectExpression::deep_copy() const {
   const auto lqp_copy = lqp->deep_copy();
 
-  Parameters copied_parameters;
-  copied_parameters.reserve(parameters.size());
-
-  for (const auto& referenced_external_expression : parameters) {
-    copied_parameters.emplace_back(
-      referenced_external_expression.first,
-      referenced_external_expression.second->deep_copy()
-    );
-  }
-
-  return std::make_shared<LQPSelectExpression>(lqp_copy, copied_parameters);
+  return std::make_shared<LQPSelectExpression>(lqp_copy, parameter_ids, expressions_copy(arguments));
 }
 
 std::string LQPSelectExpression::as_column_name() const {

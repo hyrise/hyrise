@@ -19,8 +19,6 @@ set(
     constant_mappings.hpp
     expression/abstract_column_expression.cpp
     expression/abstract_column_expression.hpp
-    expression/abstract_select_expression.cpp
-    expression/abstract_select_expression.hpp
     expression/abstract_expression.cpp
     expression/abstract_expression.hpp
     expression/abstract_predicate_expression.cpp
@@ -533,8 +531,6 @@ if (${ENABLE_JIT_SUPPORT})
     include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
     set(JIT_EMBEDDED_SOURCES
         # Files listed here will be embedded into the binary as LLVM-IR
-        abstract_expression.cpp
-        abstract_expression.hpp
         operators/jit_operator/jit_types.cpp
         operators/jit_operator/jit_types.hpp
         operators/jit_operator/jit_operations.cpp

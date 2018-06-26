@@ -115,11 +115,11 @@ std::shared_ptr<LQPSelectExpression> select(const std::shared_ptr<AbstractLQPNod
     // Corelated subselect
     return std::make_shared<LQPSelectExpression>(
     lqp,
-    std::vector<std::pair<ParameterID, std::shared_ptr<AbstractExpression>>>{{std::make_pair(
-    parameter_id_expression_pairs.first, to_expression(parameter_id_expression_pairs.second))...}});
+    std::vector<ParameterID>{{parameter_id_expression_pairs.first...}},
+    std::vector<std::shared_ptr<AbstractExpression>>{{to_expression(parameter_id_expression_pairs.second)...}});
   } else {
-    // Not corelated
-    return std::make_shared<LQPSelectExpression>(lqp);
+    // Not correlated
+    return std::make_shared<LQPSelectExpression>(lqp, std::vector<ParameterID>{}, std::vector<std::shared_ptr<AbstractExpression>>{});
   }
 }
 
@@ -167,7 +167,7 @@ std::shared_ptr<InExpression> in(const V& v, const S& s) {
   return std::make_shared<InExpression>(to_expression(v), to_expression(s));
 }
 
-std::shared_ptr<ExistsExpression> exists(const std::shared_ptr<AbstractSelectExpression>& select_expression);
+std::shared_ptr<ExistsExpression> exists(const std::shared_ptr<AbstractExpression>& select_expression);
 
 template<typename F>
 std::shared_ptr<ExtractExpression> extract(const DatetimeComponent datetime_component, const F& from) {

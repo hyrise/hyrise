@@ -511,10 +511,11 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
         const auto sub_select_pqp = LQPTranslator{}.translate_node(lqp_select_expression->lqp);
 
         auto sub_select_parameters = PQPSelectExpression::Parameters{};
-        sub_select_parameters.reserve(lqp_select_expression->parameters.size());
+        sub_select_parameters.reserve(lqp_select_expression->parameter_count());
 
-        for (const auto& lqp_parameter : lqp_select_expression->parameters) {
-          sub_select_parameters.emplace_back(lqp_parameter.first, node->get_column_id(*lqp_parameter.second));
+        for (auto parameter_idx = size_t{0}; parameter_idx < lqp_select_expression->parameter_count(); ++parameter_idx) {
+          const auto parameter_column_id = node->get_column_id(*lqp_select_expression->parameter_expression(parameter_idx));
+          sub_select_parameters.emplace_back(lqp_select_expression->parameter_ids[parameter_idx], parameter_column_id);
         }
 
         // Only specify a type for the SubSelect if it has exactly one column. Otherwise the DataType of the Expression

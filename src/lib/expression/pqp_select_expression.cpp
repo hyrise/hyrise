@@ -12,13 +12,13 @@ PQPSelectExpression::PQPSelectExpression(const std::shared_ptr<AbstractOperator>
                                          const DataType data_type,
                                          const bool nullable,
                                          const std::vector<std::pair<ParameterID, ColumnID>>& parameters):
-  pqp(pqp), parameters(parameters), _data_type_info(std::in_place, data_type, nullable) {
+AbstractExpression(ExpressionType::Select, {}), pqp(pqp), parameters(parameters), _data_type_info(std::in_place, data_type, nullable) {
 
 }
 
 PQPSelectExpression::PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp,
                     const Parameters& parameters):
-  pqp(pqp), parameters(parameters) {
+AbstractExpression(ExpressionType::Select, {}), pqp(pqp), parameters(parameters) {
 
 }
 

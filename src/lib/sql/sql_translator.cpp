@@ -1150,14 +1150,18 @@ std::shared_ptr<LQPSelectExpression> SQLTranslator::_translate_hsql_sub_select(c
 
   auto sub_select_translator = SQLTranslator{_use_mvcc, sql_identifier_proxy, _parameter_id_allocator};
   const auto sub_select_lqp = sub_select_translator.translate_select_statement(select);
-  auto parameters = LQPSelectExpression::Parameters{};
-  parameters.reserve(sql_identifier_proxy->accessed_expressions().size());
+  const auto parameter_count = sql_identifier_proxy->accessed_expressions().size();
+  auto parameter_ids = std::vector<ParameterID>{};
+  parameter_ids.reserve(parameter_count);
+  auto parameter_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+  parameter_expressions.reserve(parameter_count);
 
   for (const auto& expression_and_parameter_id : sql_identifier_proxy->accessed_expressions()) {
-    parameters.emplace_back(expression_and_parameter_id.second, expression_and_parameter_id.first);
+    parameter_ids.emplace_back(expression_and_parameter_id.second);
+    parameter_expressions.emplace_back(expression_and_parameter_id.first);
   }
 
-  return std::make_shared<LQPSelectExpression>(sub_select_lqp, parameters);
+  return std::make_shared<LQPSelectExpression>(sub_select_lqp, parameter_ids, parameter_expressions);
 }
 
 std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_case(const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context) const {

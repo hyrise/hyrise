@@ -2,27 +2,28 @@
 
 #include <utility>
 
-#include "abstract_select_expression.hpp"
+#include "abstract_expression.hpp"
 #include "parameter_expression.hpp"
 
 namespace opossum {
 
 class AbstractLQPNode;
-class ExternalExpression;
 
-class LQPSelectExpression : public AbstractSelectExpression {
+class LQPSelectExpression : public AbstractExpression {
  public:
-  using Parameters = std::vector<std::pair<ParameterID, std::shared_ptr<AbstractExpression>>>;
-
-  explicit LQPSelectExpression(const std::shared_ptr<AbstractLQPNode>& lqp,
-                      const Parameters& parameters = {});
+  LQPSelectExpression(const std::shared_ptr<AbstractLQPNode>& lqp,
+                      const std::vector<ParameterID>& parameter_ids,
+                      const std::vector<std::shared_ptr<AbstractExpression>>& parameter_expressions);
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
   DataType data_type() const override;
 
+  size_t parameter_count() const;
+  std::shared_ptr<AbstractExpression> parameter_expression(const size_t parameter_idx) const;
+
   const std::shared_ptr<AbstractLQPNode> lqp;
-  const Parameters parameters;
+  const std::vector<ParameterID> parameter_ids;
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
