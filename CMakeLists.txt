@@ -72,6 +72,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebI
         check_ipo_supported()
         set_target_properties(PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
         add_definitions(-DWITH_LTO)
+        message(STATUS "Building with Link-Time Optimization")
     endif()
 endif()
 
