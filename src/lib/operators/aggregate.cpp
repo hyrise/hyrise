@@ -357,52 +357,43 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   */
   _keys_per_chunk = std::vector<std::shared_ptr<std::vector<AggregateKey>>>(input_table->chunk_count());
 
-  auto int_default_vector = std::vector<int>(_groupby_column_ids.size());
-  std::cout << "1" << std::endl;
-  auto alltypevariant_default_vector = std::vector<AllTypeVariant>(_groupby_column_ids.size());
-  std::cout << "2" << std::endl;
+  auto int_default_vector = std::vector<unsigned int>(_groupby_column_ids.size());
+  auto alltypevariant_default_vector = std::vector<AllTypeVariant>(_groupby_column_ids.size(), NULL_VALUE);
 
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
     _keys_per_chunk[chunk_id] = std::make_shared<std::vector<AggregateKey>>(
         input_table->get_chunk(chunk_id)->size(), std::make_pair(int_default_vector, alltypevariant_default_vector));
   }
-  std::cout << "3" << std::endl;
 
   // TODO(anyone): enable scheduler to iterate multiple groupby columns in parallel
-  for (const auto column_id : _groupby_column_ids) {
-    auto data_type = input_table->column_data_type(column_id);
+  for (size_t group_column_index = 0; group_column_index < _groupby_column_ids.size(); ++group_column_index) {
+    const auto column_id = _groupby_column_ids.at(group_column_index);
+    const auto data_type = input_table->column_data_type(column_id);
 
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
 
-      auto id_map = std::unordered_map<ColumnDataType, int>();
-      int id_counter = 0;
+      auto id_map = std::unordered_map<ColumnDataType, unsigned int>();
+      unsigned int id_counter = 0;
 
       for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-        auto chunk_in = input_table->get_chunk(chunk_id);
-        auto base_column = chunk_in->get_column(column_id);
+        const auto chunk_in = input_table->get_chunk(chunk_id);
+        const auto base_column = chunk_in->get_column(column_id);
 
         resolve_column_type<ColumnDataType>(*base_column, [&](auto& typed_column) {
           auto iterable = create_iterable_from_column<ColumnDataType>(typed_column);
 
           ChunkOffset chunk_offset{0};
           iterable.for_each([&](const auto& value) {
-            // TODO(marcel): make sure that null values have a unique id
             auto inserted = id_map.try_emplace(value.value(), id_counter);
+            // store either the current id_counter or the existing ID of the value
+            (*_keys_per_chunk[chunk_id])[chunk_offset].first[group_column_index] = inserted.first->second;
+
+            // if the id_map didn't have the value as a key and a new element was inserted
             if (inserted.second) ++id_counter;
 
-            std::cout << "4" << std::endl;
-            (*_keys_per_chunk[chunk_id])[chunk_offset].first[column_id] = inserted.first->second;
-            std::cout << "5" << std::endl;
-
-            if (value.is_null()) {
-              std::cout << "6" << std::endl;
-              (*_keys_per_chunk[chunk_id])[chunk_offset].second[column_id] = NULL_VALUE;
-              std::cout << "6.5" << std::endl;
-            } else {
-              std::cout << "7" << std::endl;
-              (*_keys_per_chunk[chunk_id])[chunk_offset].second[column_id] = value.value();
-              std::cout << "8" << std::endl;
+            if (!value.is_null()) {
+              (*_keys_per_chunk[chunk_id])[chunk_offset].second[group_column_index] = value.value();
             }
 
             ++chunk_offset;

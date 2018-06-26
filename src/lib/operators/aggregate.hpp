@@ -61,7 +61,7 @@ struct AggregateResult {
 /*
 The key type that is used for the aggregation map.
 */
-using AggregateKey = std::pair<std::vector<int>, std::vector<AllTypeVariant>>;
+using AggregateKey = std::pair<std::vector<unsigned int>, std::vector<AllTypeVariant>>;
 
 using AggregateColumnDefinition = AggregateColumnDefinitionTemplate<ColumnID>;
 
