@@ -465,7 +465,7 @@ TEST_F(ExpressionEvaluatorTest, InListSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in(sub(mul(a, 2), 2), list(b, 6, null(), 0)),  {1, std::nullopt, 1, 1}));
 }
 
-TEST_F(ExpressionEvaluatorTest, InSelectUncorelated) {
+TEST_F(ExpressionEvaluatorTest, InSelectUncorrelated) {
   // PQP that returns the column "a"
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
   const auto pqp_a = std::make_shared<Projection>(table_wrapper_a, expression_vector(PQPColumnExpression::from_table(*table_a, "a")));
@@ -487,7 +487,7 @@ TEST_F(ExpressionEvaluatorTest, InSelectUncorelated) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in(c, select_b),  {1, std::nullopt, 1, std::nullopt}));
 }
 
-TEST_F(ExpressionEvaluatorTest, InSelectCorelated) {
+TEST_F(ExpressionEvaluatorTest, InSelectCorrelated) {
   // PQP that returns the column "b" multiplied with the current value in "a"
   //
   // row   list returned from select

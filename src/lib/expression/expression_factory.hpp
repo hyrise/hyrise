@@ -112,13 +112,13 @@ template<typename ... Args>
 std::shared_ptr<LQPSelectExpression> select(const std::shared_ptr<AbstractLQPNode>& lqp,
                                            Args &&... parameter_id_expression_pairs) {
   if constexpr (sizeof...(Args) > 0) {
-    // Corelated subselect
+    // Correlated subselect
     return std::make_shared<LQPSelectExpression>(
     lqp,
     std::vector<ParameterID>{{parameter_id_expression_pairs.first...}},
     std::vector<std::shared_ptr<AbstractExpression>>{{to_expression(parameter_id_expression_pairs.second)...}});
   } else {
-    // Not correlated
+    // Not corrcelated
     return std::make_shared<LQPSelectExpression>(lqp, std::vector<ParameterID>{}, std::vector<std::shared_ptr<AbstractExpression>>{});
   }
 }
@@ -128,14 +128,14 @@ std::shared_ptr<PQPSelectExpression> select(const std::shared_ptr<AbstractOperat
                                            const DataType data_type, const bool nullable,
                                            Args &&... parameter_id_column_id_pairs) {
   if constexpr (sizeof...(Args) > 0) {
-    // Corelated subselect
+    // Correlated subselect
     return std::make_shared<PQPSelectExpression>(
     pqp,
     data_type, nullable,
     std::vector<std::pair<ParameterID, ColumnID>>{{std::make_pair(
     parameter_id_column_id_pairs.first, parameter_id_column_id_pairs.second)...}});
   } else {
-    // Not corelated
+    // Not correlated
     return std::make_shared<PQPSelectExpression>(pqp, data_type, nullable);
   }
 }

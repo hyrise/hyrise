@@ -363,7 +363,7 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_in_expr
 
           for (auto chunk_offset = ChunkOffset{0}; chunk_offset < output_row_count; ++chunk_offset) {
             // If the SELECT returned just one list, always perform the IN check with that one list
-            // If the SELECT returned multiple lists, then the Select was corelated and we need to do the IN check
+            // If the SELECT returned multiple lists, then the Select was correlated and we need to do the IN check
             // against the list of the current row
             const auto &list = *select_result_columns[select_result_columns.size() == 1 ? 0 : chunk_offset];
 
@@ -555,7 +555,7 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_negate_expres
 
 std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::evaluate_select_expression(
 const PQPSelectExpression &expression) {
-  // If the SelectExpression is uncorelated, evaluating it once is sufficient
+  // If the SelectExpression is uncorrelated, evaluating it once is sufficient
   if (expression.parameters.empty()) {
     return {evaluate_select_expression_for_row(expression, ChunkOffset{0})};
   }

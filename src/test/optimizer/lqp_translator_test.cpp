@@ -254,7 +254,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBetween) {
   EXPECT_EQ(get_table_op->table_name(), "table_int_float");
 }
 
-//TEST_F(LQPTranslatorTest, SelectExpressionCorelated) {
+//TEST_F(LQPTranslatorTest, SelectExpressionCorrelated) {
 //  /**
 //   * Build LQP and translate to PQP
 //   *

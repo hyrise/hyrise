@@ -118,7 +118,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   void print(std::ostream& stream = std::cout) const;
 
   // Set all specified parameters within this Operator's expressions and its inputs
-  // Parameters can be ValuePlaceholders of prepared SQL statements, or external values in corelated subslects
+  // Parameters can be ValuePlaceholders of prepared SQL statements, or external values in correlated subslects
   void set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
 
  protected:

@@ -34,7 +34,7 @@ class SQLTranslator final {
   /**
    * @param use_mvcc                                Whether ValidateNodes should be compiled into the plan
    * @param external_sql_identifier_context_proxy   Set during recursive invocations to resolve external identifiers
-   *                                                in corelated subqueries
+   *                                                in correlated subqueries
    * @param parameter_id_counter                    Set during recursive invocations to allocate unique ParameterIDs
    *                                                for each encountered parameter
    */

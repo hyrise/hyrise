@@ -632,7 +632,7 @@ TEST_F(SQLTranslatorTest, InSelect) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, InCorelatedSelect) {
+TEST_F(SQLTranslatorTest, InCorrelatedSelect) {
   const auto actual_lqp = compile_query("SELECT * FROM int_float WHERE a IN (SELECT * FROM int_float2 WHERE int_float.b * int_float.a * int_float.a > b)");
 
   // clang-format off
@@ -880,7 +880,7 @@ TEST_F(SQLTranslatorTest, LimitLiteral) {
 
 // TODO(anybody) Disabled because SQLParser doesn't support Expressions in LIMIT clause
 TEST_F(SQLTranslatorTest, DISABLED_LimitExpression) {
-  // Uncommon: LIMIT to the result of an Expression (which has to be uncorelated
+  // Uncommon: LIMIT to the result of an Expression (which has to be uncorrelated
   const auto actual_lqp = compile_query("SELECT int_float.a AS x FROM int_float LIMIT 3 + (SELECT MIN(b) FROM int_float2);");
 
   // clang-format off
@@ -1026,7 +1026,7 @@ TEST_F(SQLTranslatorTest, NotExists) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, ExistsCorelated) {
+TEST_F(SQLTranslatorTest, ExistsCorrelated) {
   const auto actual_lqp = compile_query("SELECT EXISTS(SELECT * FROM int_float WHERE int_float.a > int_float2.b) FROM int_float2");
 
   // clang-format off

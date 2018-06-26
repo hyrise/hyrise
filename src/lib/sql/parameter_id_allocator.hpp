@@ -9,7 +9,7 @@
 namespace opossum {
 
 /**
- * Allocates ParameterIDs for ValuePlaceholders and corelated expressions during SQL translation
+ * Allocates ParameterIDs for ValuePlaceholders and correlated expressions during SQL translation
  */
 class ParameterIDAllocator {
  public:
