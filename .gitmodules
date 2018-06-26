@@ -16,3 +16,6 @@
 [submodule "third_party/libpqxx"]
 	path = third_party/libpqxx
 	url = https://github.com/jtv/libpqxx.git
+[submodule "third_party/cqf"]
+	path = third_party/cqf
+	url = git@github.com:splatlab/cqf.git

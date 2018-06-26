@@ -342,6 +342,8 @@ set(
     storage/index/group_key/variable_length_key_store.cpp
     storage/index/group_key/variable_length_key_store.hpp
     storage/index/index_info.hpp
+    storage/index/counting_quotient_filter/counting_quotient_filter.hpp
+    storage/index/counting_quotient_filter/counting_quotient_filter.cpp
     storage/materialize.hpp
     storage/mvcc_columns.cpp
     storage/mvcc_columns.hpp
