@@ -16,8 +16,6 @@ RUN apt-get update \
         gcc-7 \
         git \
         $(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ') \
-        libc++-dev \
-        libc++abi-dev \
         libclang-6.0-dev \
         libnuma-dev \
         libncurses5-dev \
