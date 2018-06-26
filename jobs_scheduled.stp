@@ -1,0 +1,9 @@
+probe process("./build/hyriseBenchmarkTPCH").provider("hyrise").mark("schedule_tasks")
+{
+    printf("Scheduled %i tasks\n", $arg1);
+}
+
+probe process("./build/hyriseBenchmarkTPCH").provider("hyrise").mark("schedule_tasks_and_wait")
+{
+    printf("Waiting for %i tasks to complete\n", $arg1);
+}
