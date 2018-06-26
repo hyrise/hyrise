@@ -26,8 +26,8 @@ using TestConfiguration = std::pair<const char*, bool>;
 
 class TPCHTest : public BaseTestWithParam<std::pair<const size_t, TestConfiguration>> {
  public:
-  static std::map<size_t, TestConfiguration> build_combinations() {
-    std::map<size_t, TestConfiguration> combinations;
+  static std::multimap<size_t, TestConfiguration> build_combinations() {
+    std::multimap<size_t, TestConfiguration> combinations;
     for (auto it = tpch_queries.cbegin(); it != tpch_queries.cend(); ++it) {
       combinations.emplace(it->first, TestConfiguration{it->second, false});
       if constexpr (HYRISE_JIT_SUPPORT) {
@@ -59,7 +59,7 @@ class TPCHTest : public BaseTestWithParam<std::pair<const size_t, TestConfigurat
 
 TEST_P(TPCHTest, TPCHQueryTest) {
   const auto [query_idx, test_configuration] = GetParam();  // NOLINT
-  const auto [query, use_jit] = test_configuration;  // NOLINT
+  const auto [query, use_jit] = test_configuration;         // NOLINT
 
   SCOPED_TRACE("TPC-H " + std::to_string(query_idx) + " " + (use_jit ? "with JIT" : "without JIT"));
 
