@@ -1,7 +1,7 @@
+#include <iostream>
 #include <limits>
 #include <string>
 #include <vector>
-#include <iostream>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
@@ -18,11 +18,11 @@ class StorageValueColumnTest : public BaseTest {
 };
 
 TEST_F(StorageValueColumnTest, GetSize) {
-    {
-        std::vector<int> tmp_vec{1, 2, 3};
-        tmp_vec.resize(1);
-        if(tmp_vec[1] == 123) std::cout << "#1" << std::endl;
-    }
+  {
+    std::vector<int> tmp_vec{1, 2, 3};
+    tmp_vec.resize(1);
+    if (tmp_vec[1] == 123) std::cout << "#1" << std::endl;
+  }
 
   EXPECT_EQ(vc_int.size(), 0u);
   EXPECT_EQ(vc_str.size(), 0u);
