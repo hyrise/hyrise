@@ -513,17 +513,3 @@ endif()
 add_library(hyrise STATIC ${SOURCES})
 target_link_libraries(hyrise ${LIBRARIES})
 target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR})
-
-# Link Time Optimization (LTO)
-# We don't care about LTO for things outside of the main hyrise lib too much,
-# because most indirections are withing that target
-if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-    if(NOT ${CMAKE_VERSION} VERSION_LESS "3.9.0")
-        cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
-        include(CheckIPOSupported)
-        check_ipo_supported()
-        set_target_properties(TARGET hyrise PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
-        add_definitions(-DWITH_LTO)
-        message(STATUS "Building with Link-Time Optimization")
-    endif()
-endif()
