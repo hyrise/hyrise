@@ -161,4 +161,6 @@ class JitDereferencedRuntimePointer : public JitKnownRuntimePointer {
   const std::shared_ptr<const JitKnownRuntimePointer> _base;
 };
 
+uint64_t dereference_flexible_width_int_pointer(const uint64_t address, const unsigned integer_bit_width);
+
 }  // namespace opossum
