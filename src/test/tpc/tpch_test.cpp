@@ -7,6 +7,7 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "operators/abstract_operator.hpp"
 #include "optimizer/optimizer.hpp"
@@ -21,7 +22,21 @@
 
 namespace opossum {
 
-class TPCHTest : public BaseTestWithParam<std::pair<const size_t, const char*>> {
+using TestConfiguration = std::pair<const char*, bool>;
+
+class TPCHTest : public BaseTestWithParam<std::pair<const size_t, TestConfiguration>> {
+ public:
+  static std::map<size_t, TestConfiguration> build_combinations() {
+    std::map<size_t, TestConfiguration> combinations;
+    for (auto it = tpch_queries.cbegin(); it != tpch_queries.cend(); ++it) {
+      combinations.emplace(it->first, TestConfiguration{it->second, false});
+      if constexpr (HYRISE_JIT_SUPPORT) {
+        combinations.emplace(it->first, TestConfiguration{it->second, true});
+      }
+    }
+    return combinations;
+  }
+
  protected:
   std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
 
@@ -43,23 +58,27 @@ class TPCHTest : public BaseTestWithParam<std::pair<const size_t, const char*>> 
 };
 
 TEST_P(TPCHTest, TPCHQueryTest) {
-  size_t query_idx;
-  const char* query;
-  std::tie(query_idx, query) = GetParam();
+  const auto [query_idx, test_configuration] = GetParam();  // NOLINT
+  const auto [query, use_jit] = test_configuration;  // NOLINT
 
-  SCOPED_TRACE("TPC-H " + std::to_string(query_idx));
+  SCOPED_TRACE("TPC-H " + std::to_string(query_idx) + " " + (use_jit ? "with JIT" : "without JIT"));
 
   const auto sqlite_result_table = _sqlite_wrapper->execute_query(query);
 
-  auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline();
+  std::shared_ptr<LQPTranslator> lqp_translator;
+  if (use_jit) {
+    lqp_translator = std::make_shared<JitAwareLQPTranslator>();
+  } else {
+    lqp_translator = std::make_shared<LQPTranslator>();
+  }
+
+  auto sql_pipeline = SQLPipelineBuilder{query}.with_lqp_translator(lqp_translator).disable_mvcc().create_pipeline();
   const auto& result_table = sql_pipeline.get_result_table();
 
   EXPECT_TABLE_EQ(result_table, sqlite_result_table, OrderSensitivity::No, TypeCmpMode::Lenient,
                   FloatComparisonMode::RelativeDifference);
 }
 
-// clang-format off
-INSTANTIATE_TEST_CASE_P(TPCHTestInstances, TPCHTest, ::testing::ValuesIn(tpch_queries), );  // NOLINT
-// clang-format on
+INSTANTIATE_TEST_CASE_P(TPCHTestInstances, TPCHTest, ::testing::ValuesIn(TPCHTest::build_combinations()), );  // NOLINT
 
 }  // namespace opossum

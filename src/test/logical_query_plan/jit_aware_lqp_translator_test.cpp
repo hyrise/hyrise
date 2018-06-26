@@ -1,11 +1,11 @@
 #include <gtest/gtest.h>
 
-#include "../../base_test.hpp"
+#include "../base_test.hpp"
+#include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
-#include "operators/jit_operator/jit_aware_lqp_translator.hpp"
 #include "operators/jit_operator/operators/jit_aggregate.hpp"
 #include "operators/jit_operator/operators/jit_compute.hpp"
 #include "operators/jit_operator/operators/jit_filter.hpp"

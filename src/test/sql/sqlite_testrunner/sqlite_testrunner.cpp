@@ -14,6 +14,8 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "logical_query_plan/jit_aware_lqp_translator.hpp"
+#include "logical_query_plan/lqp_translator.hpp"
 #include "operators/print.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -27,7 +29,9 @@
 
 namespace opossum {
 
-class SQLiteTestRunner : public BaseTestWithParam<std::string> {
+using TestConfiguration = std::pair<std::string, bool>;  // SQL Query, use_jit
+
+class SQLiteTestRunner : public BaseTestWithParam<TestConfiguration> {
  protected:
   void SetUp() override {
     StorageManager::get().reset();
@@ -67,9 +71,8 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
   std::unique_ptr<SQLiteWrapper> _sqlite;
 };
 
-std::vector<std::string> read_queries_from_file() {
+std::vector<TestConfiguration> build_combinations() {
   std::vector<std::string> queries;
-
   std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner_queries.sql");
   std::string query;
   while (std::getline(file, query)) {
@@ -79,14 +82,30 @@ std::vector<std::string> read_queries_from_file() {
     queries.emplace_back(std::move(query));
   }
 
-  return queries;
+  std::vector<TestConfiguration> tests;
+  for (const auto& query : queries) {
+    tests.push_back({query, false});
+    if constexpr (HYRISE_JIT_SUPPORT) {
+      tests.push_back({query, true});
+    }
+  }
+  return tests;
 }
 
 TEST_P(SQLiteTestRunner, CompareToSQLite) {
   std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner_queries.sql");
-  const std::string query = GetParam();
+  const auto& [query, use_jit] = GetParam();
 
-  auto sql_pipeline = SQLPipelineBuilder{query}.create_pipeline();
+  SCOPED_TRACE("TPC-H " + query + " " + (use_jit ? "with JIT" : "without JIT"));
+
+  std::shared_ptr<LQPTranslator> lqp_translator;
+  if (use_jit) {
+    lqp_translator = std::make_shared<JitAwareLQPTranslator>();
+  } else {
+    lqp_translator = std::make_shared<LQPTranslator>();
+  }
+
+  auto sql_pipeline = SQLPipelineBuilder{query}.with_lqp_translator(lqp_translator).create_pipeline();
   const auto& result_table = sql_pipeline.get_result_table();
 
   auto sqlite_result_table = _sqlite->execute_query(query);
@@ -110,12 +129,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
       << "Query failed: " << query;
 }
 
-auto formatter = [](const testing::TestParamInfo<std::string>) {
-  // stupid, but otherwise Wextra complains about the unused macro parameter
-  static int test = 1;
-  return std::to_string(test++);
-};
-INSTANTIATE_TEST_CASE_P(SQLiteTestRunnerInstances, SQLiteTestRunner, testing::ValuesIn(read_queries_from_file()),
-                        formatter);
+INSTANTIATE_TEST_CASE_P(SQLiteTestRunnerInstances, SQLiteTestRunner,
+                        testing::ValuesIn(build_combinations()), );  // NOLINT
 
 }  // namespace opossum

@@ -10,11 +10,11 @@
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "operators/jit_aggregate.hpp"
-#include "operators/jit_compute.hpp"
-#include "operators/jit_filter.hpp"
-#include "operators/jit_read_tuples.hpp"
-#include "operators/jit_write_tuples.hpp"
+#include "operators/jit_operator/operators/jit_aggregate.hpp"
+#include "operators/jit_operator/operators/jit_compute.hpp"
+#include "operators/jit_operator/operators/jit_filter.hpp"
+#include "operators/jit_operator/operators/jit_read_tuples.hpp"
+#include "operators/jit_operator/operators/jit_write_tuples.hpp"
 #include "storage/storage_manager.hpp"
 
 namespace opossum {
