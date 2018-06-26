@@ -1,5 +1,7 @@
 #include "jit_aware_lqp_translator.hpp"
 
+#if HYRISE_JIT_SUPPORT
+
 #include <boost/range/adaptors.hpp>
 #include <boost/range/combine.hpp>
 
@@ -20,9 +22,6 @@
 namespace opossum {
 
 JitAwareLQPTranslator::JitAwareLQPTranslator() : LQPTranslator() {
-#if !HYRISE_JIT_SUPPORT
-  Fail("Query translation with JIT operators requested, but jitting is not available");
-#endif
 }
 
 std::shared_ptr<AbstractOperator> JitAwareLQPTranslator::translate_node(
@@ -352,3 +351,5 @@ void JitAwareLQPTranslator::_visit(const std::shared_ptr<AbstractLQPNode>& node,
 }
 
 }  // namespace opossum
+
+#endif

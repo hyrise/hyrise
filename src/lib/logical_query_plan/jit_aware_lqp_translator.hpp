@@ -1,5 +1,16 @@
 #pragma once
 
+#if !HYRISE_JIT_SUPPORT
+#include "logical_query_plan/lqp_translator.hpp"
+namespace opossum {
+class JitAwareLQPTranslator final : public LQPTranslator {
+  JitAwareLQPTranslator() : LQPTranslator() {
+    Fail("Query translation with JIT operators requested, but jitting is not available");
+  }
+};
+}  // namespace opossum
+#else
+
 #include "logical_query_plan/lqp_translator.hpp"
 #include "operators/jit_operator/operators/jit_expression.hpp"
 #include "operators/jit_operator_wrapper.hpp"
@@ -86,3 +97,5 @@ class JitAwareLQPTranslator final : public LQPTranslator {
 };
 
 }  // namespace opossum
+
+#endif
