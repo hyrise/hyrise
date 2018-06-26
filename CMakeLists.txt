@@ -64,18 +64,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -march=native")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -march=native")
 
-# Link Time Optimization (LTO)
-if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-    if(NOT ${CMAKE_VERSION} VERSION_LESS "3.9.0")
-        cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
-        include(CheckIPOSupported)
-        check_ipo_supported()
-        set_target_properties(PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
-        add_definitions(-DWITH_LTO)
-        message(STATUS "Building with Link-Time Optimization")
-    endif()
-endif()
-
 # Require NCurses over Curses
 set(CURSES_NEED_NCURSES TRUE)
 
