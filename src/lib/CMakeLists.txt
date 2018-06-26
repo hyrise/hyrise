@@ -400,6 +400,8 @@ set(
     tasks/server/execute_server_query_task.hpp
     tasks/server/load_server_file_task.cpp
     tasks/server/load_server_file_task.hpp
+    tasks/server/recover_database_task.cpp
+    tasks/server/recover_database_task.hpp
     type_cast.hpp
     type_comparison.hpp
     types.hpp

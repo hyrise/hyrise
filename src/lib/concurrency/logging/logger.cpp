@@ -13,8 +13,8 @@
 namespace opossum {
 
 AbstractLogger& Logger::getInstance() {
-  static SimpleLogger instance;
-  // static GroupCommitLogger instance;
+  // static SimpleLogger instance;
+  static GroupCommitLogger instance;
   // static NoLogger instance;
   return instance;
 }

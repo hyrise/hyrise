@@ -19,6 +19,7 @@
 #include "tasks/server/execute_server_prepared_statement_task.hpp"
 #include "tasks/server/execute_server_query_task.hpp"
 #include "tasks/server/load_server_file_task.hpp"
+#include "tasks/server/recover_database_task.hpp"
 
 #include "client_connection.hpp"
 #include "query_response_builder.hpp"
@@ -182,6 +183,12 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_
            [=]() { return _connection->send_notice("Successfully loaded " + table_name); };
   };
 
+  auto recover_database = [=]() {
+    auto task = std::make_shared<RecoverDatabaseTask>();
+    return _task_runner->dispatch_server_task(task) >> then >>
+           [=]() { return _connection->send_notice("Successfully recovered database"); };
+  };
+
   auto execute_sql_pipeline = [=](std::shared_ptr<SQLPipeline> sql_pipeline) {
     auto task = std::make_shared<ExecuteServerQueryTask>(sql_pipeline);
     return _task_runner->dispatch_server_task(task) >> then >> [=]() { return sql_pipeline; };
@@ -194,6 +201,8 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_simple_
   return create_sql_pipeline() >> then >> [=](std::unique_ptr<CreatePipelineResult> result) {
     if (result->load_table.has_value()) {
       return load_table_file(result->load_table->first, result->load_table->second);
+    } else if (result->recover_database.has_value()) {
+      return recover_database();
     } else {
       return execute_sql_pipeline(result->sql_pipeline) >> then >>
              [=](std::shared_ptr<SQLPipeline> sql_pipeline) { return _send_simple_query_response(sql_pipeline); };

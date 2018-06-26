@@ -11,6 +11,7 @@ class SQLPipeline;
 struct CreatePipelineResult {
   std::shared_ptr<SQLPipeline> sql_pipeline;
   std::optional<std::pair<std::string, std::string>> load_table;
+  std::optional<bool> recover_database;
 };
 
 // This task is used to parse an SQL string from a client and wrap it in an SQLPipeline. It is a separate task and not
@@ -28,6 +29,7 @@ class CreatePipelineTask : public AbstractServerTask<std::unique_ptr<CreatePipel
   // have to get data into the DB by loading it from a file. If we cannot parse the incoming SQL string, we try to
   // interpret it as a LOAD <file-name> <table-name> command. If this doesn't work, we pass on the parse error.
   bool _is_load_table();
+  bool _is_recover_database();
 
   const std::string _sql;
   const bool _allow_load_table;
