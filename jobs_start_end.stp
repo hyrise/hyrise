@@ -22,7 +22,6 @@ probe process(@1).provider("hyrise").mark("job_scheduled")
     */
 
     // Get first 2 elements of call stack
-    printf("ad%s",$arg1 )
     callers = ucallers(1)
     str_tok = tokenize(callers, " ")
     // Need to run twice, since caller is second element in stack trace
