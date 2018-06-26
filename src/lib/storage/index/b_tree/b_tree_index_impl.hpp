@@ -1,8 +1,13 @@
 #pragma once
 
-#pragma clang diagnostic ignored "-Wall"
-#include <btree_map.h>
-#pragma clang diagnostic pop
+#ifdef __clang__
+  #pragma clang diagnostic ignored "-Wall"
+  #include <btree_map.h>
+  #pragma clang diagnostic pop
+#elif __GNUC__
+  #include <btree_map.h>
+#endif
+
 
 #include "types.hpp"
 #include "all_type_variant.hpp"
@@ -13,6 +18,11 @@ namespace opossum {
 
 class BaseBTreeIndexImpl {
  public:
+  BaseBTreeIndexImpl() = default;
+  BaseBTreeIndexImpl(BaseBTreeIndexImpl&&) = default;
+  BaseBTreeIndexImpl& operator=(BaseBTreeIndexImpl&&) = default;
+  virtual ~BaseBTreeIndexImpl() = default;
+
   using Iterator = std::vector<ChunkOffset>::const_iterator;
   virtual Iterator lower_bound(const std::vector<AllTypeVariant>&) const = 0;
   virtual Iterator upper_bound(const std::vector<AllTypeVariant>&) const = 0;
