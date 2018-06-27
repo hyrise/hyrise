@@ -1,8 +1,16 @@
 #pragma once
 
-#include <cqf.hpp>
+#ifdef __clang__
+  #pragma clang diagnostic ignored "-Wc99-extensions"
+  #include <gqf.h>
+  #pragma clang diagnostic pop
+#elif __GNUC__
+  #pragma GCC system_header
+  #include <gqf.h>
+#endif
+
 #include "types.hpp"
-#include "storage/index/base_filter.hpp"
+#include "storage/base_column.hpp"
 
 #include <cstdint>
 #include <vector>
@@ -19,21 +27,21 @@ Paper: A General-Purpose Counting Filter: Making Every Bit Count
 Repository: https://github.com/splatlab/cqf
 **/
 template <typename ElementType>
-class CountingQuotientFilter : public BaseFilter {
+class CountingQuotientFilter {
  public:
   CountingQuotientFilter(uint8_t quotient_bits, uint8_t remainder_bits);
   virtual ~CountingQuotientFilter();// = default;
   void insert(ElementType value, uint64_t count);
   void insert(ElementType value);
-  void populate(std::shared_ptr<const BaseColumn> column) override;
+  void populate(std::shared_ptr<const BaseColumn> column);
   uint64_t count(ElementType value) const;
-  uint64_t count_all_type(AllTypeVariant value) const final;
-  uint64_t memory_consumption() const final;
-  double load_factor() const final;
-  bool is_full() const final;
+  uint64_t count_all_type(AllTypeVariant value) const;
+  uint64_t memory_consumption() const;
+  double load_factor() const;
+  bool is_full() const;
 
  private:
-  std::optional<gqf::quotient_filter> _quotient_filter;
+  std::optional<quotient_filter> _quotient_filter;
   uint64_t _quotient_bits;
   uint64_t _remainder_bits;
   uint64_t _number_of_slots;

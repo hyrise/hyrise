@@ -56,6 +56,25 @@ target_compile_options(
     -O3 -Wno-sign-compare
 )
 
+add_library(
+    cqf
+    
+    cqf/src/gqf_file.c
+    cqf/src/gqf.c
+    cqf/src/hashutil.c
+    cqf/src/main.c
+    cqf/src/zipf.c
+)
+
+target_compile_options(
+    cqf
+    PRIVATE
+    -std=c++1z
+    -O3
+)
+
+
+
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     target_compile_options(sqlparser PRIVATE -Wno-unneeded-internal-declaration -Wno-format)
 endif()
@@ -63,7 +82,6 @@ endif()
 # Add Libraries with their own build setup
 add_subdirectory(tpch-dbgen)
 add_subdirectory(googletest)
-add_subdirectory(cqf)
 
 # Add PGASUS
 if(${NUMA_FOUND})
