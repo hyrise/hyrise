@@ -117,7 +117,7 @@ void AbstractTask::execute() {
       }
     } else {
       // No worker, so we just throw it right here and now.
-      throw std::current_exception();
+      std::rethrow_exception(std::current_exception());
     }
     return;
   }

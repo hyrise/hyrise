@@ -194,11 +194,11 @@ TEST_F(SchedulerTest, ExceptionInTaskWithScheduler) {
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   for (auto i = 0u; i < ProcessingUnit::MAX_WORKERS_PER_CORE + 5; ++i) {
-    auto job = std::make_shared<JobTask>([]() { throw std::runtime_error("Something went wrong!"); });
+    auto job = std::make_shared<JobTask>([]() { throw InvalidInputException("Invalid Input!"); });
     job->schedule();
     jobs.emplace_back(job);
   }
-  EXPECT_THROW(CurrentScheduler::wait_for_tasks(jobs), std::exception);
+  EXPECT_THROW(CurrentScheduler::wait_for_tasks(jobs), InvalidInputException);
 
   bool is_there_still_a_worker = false;
   jobs = {};
@@ -224,7 +224,7 @@ TEST_F(SchedulerTest, ExceptionInTaskWithoutScheduler) {
           jobs.emplace_back(job);
         }
       },
-      std::exception);
+      InvalidInputException);
 }
 
 TEST_F(SchedulerTest, ExceptionInDependentTaskWithScheduler) {
@@ -235,7 +235,7 @@ TEST_F(SchedulerTest, ExceptionInDependentTaskWithScheduler) {
   jobs.emplace_back(std::make_shared<JobTask>([&]() { step = 1; }));
   jobs.emplace_back(std::make_shared<JobTask>([&]() {
     step = 2;
-    throw std::InvalidInputException("Boom");
+    throw InvalidInputException("Boom");
   }));
   jobs.emplace_back(std::make_shared<JobTask>([&]() { step = 3; }));
   jobs[0]->set_as_predecessor_of(jobs[1]);
@@ -244,7 +244,7 @@ TEST_F(SchedulerTest, ExceptionInDependentTaskWithScheduler) {
   jobs[1]->schedule();
   jobs[0]->schedule();
 
-  EXPECT_THROW(CurrentScheduler::wait_for_tasks(jobs), std::exception);
+  EXPECT_THROW(CurrentScheduler::wait_for_tasks(jobs), InvalidInputException);
   EXPECT_EQ(step, 2);
 
   CurrentScheduler::get()->finish();
@@ -265,7 +265,7 @@ TEST_F(SchedulerTest, ExceptionInDependentTaskWithoutScheduler) {
   jobs[1]->set_as_predecessor_of(jobs[2]);
   jobs[2]->schedule();
   jobs[1]->schedule();
-  EXPECT_THROW(jobs[0]->schedule(), std::exception);
+  EXPECT_THROW(jobs[0]->schedule(), InvalidInputException);
   EXPECT_EQ(step, 2);
 }
 
