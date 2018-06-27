@@ -57,7 +57,7 @@ namespace opossum {
 
 #define AssertInput(expr, msg)                                                             \
   if (!static_cast<bool>(expr)) {                                                          \
-    throw InvalidInputException(std::string("Invalid input error: ") + msg);                        \
+    throw InvalidInputException(std::string("Invalid input error: ") + msg);               \
   }
 
 #if IS_DEBUG
