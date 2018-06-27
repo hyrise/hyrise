@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <utility>
 #include "SQLParser.h"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -19,9 +20,7 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
 
   hsql::SQLParser::parse(sql, &parse_result);
 
-  if (!parse_result.isValid()) {
-    throw InvalidInput(SQLPipelineStatement::create_parse_error_message(sql, parse_result));
-  }
+  AssertInput(parse_result.isValid(),SQLPipelineStatement::create_parse_error_message(sql, parse_result));
 
   DebugAssert(parse_result.size() > 0, "Cannot create empty SQLPipeline.");
   _sql_pipeline_statements.reserve(parse_result.size());

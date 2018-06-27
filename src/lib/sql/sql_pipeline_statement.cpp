@@ -54,9 +54,7 @@ const std::shared_ptr<hsql::SQLParserResult>& SQLPipelineStatement::get_parsed_s
 
   hsql::SQLParser::parse(_sql_string, _parsed_sql_statement.get());
 
-  if (!_parsed_sql_statement->isValid()) {
-    throw InvalidInput(SQLPipelineStatement::create_parse_error_message(_sql_string, *_parsed_sql_statement));
-  }
+  AssertInput(_parsed_sql_statement->isValid(),SQLPipelineStatement::create_parse_error_message(_sql_string, *_parsed_sql_statement));
 
   Assert(_parsed_sql_statement->size() == 1,
          "SQLPipelineStatement must hold exactly one statement. "
@@ -156,7 +154,7 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
     Assert(_prepared_statements, "Cannot execute statement without prepared statement cache.");
     const auto plan = _prepared_statements->try_get(execute_statement->name);
 
-    AssertInput(plan, std::string("Requested prepared statement does not exist!"));
+    AssertInput(plan, "Requested prepared statement does not exist!");
 
     assert_same_mvcc_mode(*plan);
 
@@ -168,9 +166,7 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
       }
     }
 
-    if (arguments.size() != plan->num_parameters()) {
-      throw InvalidInput("Number of arguments provided does not match expected number of arguments.");
-    }
+    AssertInput(arguments.size() == plan->num_parameters(), "Number of arguments provided does not match expected number of arguments.");
 
     _query_plan->append_plan(plan->recreate(arguments));
     done = std::chrono::high_resolution_clock::now();

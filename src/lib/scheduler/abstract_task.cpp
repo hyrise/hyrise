@@ -12,6 +12,7 @@
 #include "worker.hpp"
 
 #include "utils/assert.hpp"
+#include "utils/exception.hpp"
 
 namespace opossum {
 
@@ -102,7 +103,7 @@ void AbstractTask::execute() {
 
   try {
     _on_execute();
-  } catch (...) {
+  } catch (InvalidInputException &e) {
     if (_exception_callback) {
       // An exception callback was explicitly provided so we let the receiver handle the exception
       _exception_callback(std::current_exception());
@@ -116,7 +117,7 @@ void AbstractTask::execute() {
       }
     } else {
       // No worker, so we just throw it right here and now.
-      throw;
+      throw std::current_exception();
     }
     return;
   }

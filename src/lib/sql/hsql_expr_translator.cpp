@@ -65,7 +65,7 @@ std::shared_ptr<LQPExpression> HSQLExprTranslator::to_lqp_expression(
 
       const auto aggregate_function_iter = aggregate_function_to_string.right.find(name);
       AssertInput(aggregate_function_iter != aggregate_function_to_string.right.end(),
-                  std::string("No such aggregate function '") + name + "'");
+                  "No such aggregate function '" + name + "'");
 
       auto aggregate_function = aggregate_function_iter->second;
 
