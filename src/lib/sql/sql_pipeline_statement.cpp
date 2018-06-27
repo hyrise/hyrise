@@ -54,7 +54,8 @@ const std::shared_ptr<hsql::SQLParserResult>& SQLPipelineStatement::get_parsed_s
 
   hsql::SQLParser::parse(_sql_string, _parsed_sql_statement.get());
 
-  AssertInput(_parsed_sql_statement->isValid(),SQLPipelineStatement::create_parse_error_message(_sql_string, *_parsed_sql_statement));
+  AssertInput(_parsed_sql_statement->isValid(),
+    SQLPipelineStatement::create_parse_error_message(_sql_string, *_parsed_sql_statement));
 
   Assert(_parsed_sql_statement->size() == 1,
          "SQLPipelineStatement must hold exactly one statement. "
@@ -166,7 +167,8 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
       }
     }
 
-    AssertInput(arguments.size() == plan->num_parameters(), "Number of arguments provided does not match expected number of arguments.");
+    AssertInput(arguments.size() == plan->num_parameters(),
+      "Number of arguments provided does not match expected number of arguments.");
 
     _query_plan->append_plan(plan->recreate(arguments));
     done = std::chrono::high_resolution_clock::now();
