@@ -13,6 +13,7 @@
 #include "scheduler/processing_unit.hpp"
 #include "scheduler/topology.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/exception.hpp"
 
 namespace opossum {
 
@@ -218,7 +219,7 @@ TEST_F(SchedulerTest, ExceptionInTaskWithoutScheduler) {
       {
         std::vector<std::shared_ptr<AbstractTask>> jobs;
         for (auto i = 0u; i < 5; ++i) {
-          auto job = std::make_shared<JobTask>([]() { throw std::runtime_error("Something went wrong!"); });
+          auto job = std::make_shared<JobTask>([]() { throw InvalidInputException("Something went wrong!"); });
           job->schedule();
           jobs.emplace_back(job);
         }
@@ -234,7 +235,7 @@ TEST_F(SchedulerTest, ExceptionInDependentTaskWithScheduler) {
   jobs.emplace_back(std::make_shared<JobTask>([&]() { step = 1; }));
   jobs.emplace_back(std::make_shared<JobTask>([&]() {
     step = 2;
-    throw std::runtime_error("Boom");
+    throw std::InvalidInputException("Boom");
   }));
   jobs.emplace_back(std::make_shared<JobTask>([&]() { step = 3; }));
   jobs[0]->set_as_predecessor_of(jobs[1]);
@@ -257,7 +258,7 @@ TEST_F(SchedulerTest, ExceptionInDependentTaskWithoutScheduler) {
   jobs.emplace_back(std::make_shared<JobTask>([&]() { step = 1; }));
   jobs.emplace_back(std::make_shared<JobTask>([&]() {
     step = 2;
-    throw std::runtime_error("Boom");
+    throw InvalidInputException("Boom");
   }));
   jobs.emplace_back(std::make_shared<JobTask>([&]() { step = 3; }));
   jobs[0]->set_as_predecessor_of(jobs[1]);
