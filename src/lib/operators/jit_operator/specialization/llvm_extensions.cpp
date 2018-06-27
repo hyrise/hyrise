@@ -125,7 +125,6 @@ llvm::Constant* ResolveConditionRec(llvm::Value* value, SpecializationContext& c
       const auto address = runtime_pointer->address();
       const auto int_type = llvm::dyn_cast<llvm::IntegerType>(load->getType());
       const auto bit_width = int_type->getIntegerBitWidth();
-      std::cout << "address == " << address << ", " << "bit_width == " << bit_width << std::endl;
       const auto value = dereference_flexible_width_int_pointer(address, bit_width);
       return llvm::ConstantInt::get(int_type, value, int_type->getSignBit() > 0);
     }
