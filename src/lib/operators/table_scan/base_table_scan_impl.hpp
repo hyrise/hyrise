@@ -21,7 +21,7 @@ class BaseTableScanImpl {
 
   virtual ~BaseTableScanImpl() = default;
 
-  virtual PosList scan_chunk(ChunkID chunk_id) = 0;
+  virtual std::shared_ptr<PosList> scan_chunk(ChunkID chunk_id) = 0;
 
  protected:
   /**
