@@ -109,13 +109,15 @@ std::shared_ptr<BaseColumn> Projection::_create_column(boost::hana::basic_type<T
     auto values = _evaluate_expression<T>(expression, input_table_left, chunk_id);
 
     pmr_concurrent_vector<T> non_null_values;
-    non_null_values.reserve(values.size());
+    non_null_values.grow_to_at_least(values.size());
     pmr_concurrent_vector<bool> null_values;
-    null_values.reserve(values.size());
+    null_values.grow_to_at_least(values.size());
 
+    ChunkOffset offset{0};
     for (const auto value : values) {
-      non_null_values.push_back(value.second);
-      null_values.push_back(value.first);
+      non_null_values[offset] = value.second;
+      null_values[offset] = value.first;
+      offset++;
     }
 
     return std::make_shared<ValueColumn<T>>(std::move(non_null_values), std::move(null_values));

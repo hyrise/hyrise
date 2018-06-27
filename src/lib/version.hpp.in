@@ -1,6 +1,7 @@
 #pragma once
 
 namespace opossum {
+
 // We need this file to store the current GIT hash and make it available to our binaries.
 
 // The SHA1 for the HEAD of the repo.
@@ -10,4 +11,3 @@ namespace opossum {
 #define GIT_IS_DIRTY @GIT_IS_DIRTY@
 
 }  // namespace opossum
-

@@ -51,13 +51,9 @@ node {
           sh "./clang-debug/hyriseTest clang-debug/run-shuffled --gtest_repeat=5 --gtest_shuffle"
         }
       }, clangDebugSanitizers: {
-        stage("clang-debug:sanitizers (master only)") {
-          if (env.BRANCH_NAME == 'master') {
-            sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-            sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-debug-sanitizers/hyriseTest clang-debug-sanitizers"
-          } else {
-            echo 'only on master'
-          }
+        stage("clang-debug:sanitizers") {
+          sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+          sh "LSAN_OPTIONS=suppressions=.lsan-ignore.txt ASAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-debug-sanitizers/hyriseTest clang-debug-sanitizers"
         }
       }, gccRelease: {
         stage("gcc-release") {
@@ -72,7 +68,7 @@ node {
         stage("clang-release:sanitizers (master only)") {
           if (env.BRANCH_NAME == 'master') {
             sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-            sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers/hyriseTest clang-release-sanitizers"
+            sh "LSAN_OPTIONS=suppressions=.lsan-ignore.txt ASAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers/hyriseTest clang-release-sanitizers"
           } else {
             echo 'only on master'
           }
@@ -81,7 +77,7 @@ node {
         stage("clang-release:sanitizers w/o NUMA (master only)") {
           if (env.BRANCH_NAME == 'master') {
             sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-sanitizers-no-numa && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-            sh "LSAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers-no-numa/hyriseTest clang-release-sanitizers-no-numa"
+            sh "LSAN_OPTIONS=suppressions=.lsan-ignore.txt ASAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers-no-numa/hyriseTest clang-release-sanitizers-no-numa"
           } else {
             echo 'only on master'
           }
@@ -103,7 +99,7 @@ node {
           ])
           script {
             coverageChange = sh script: "./scripts/compare_coverage.sh", returnStdout: true
-            githubNotify context: 'Coverage', description: "$coverageChange", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_Report/index.html"
+            githubNotify context: 'Coverage', description: "$coverageChange", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_20Report/index.html"
             githubNotify context: 'Coverage Diff', description: "Click Details for diff", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/artifact/coverage_diff.html"
           }
         }
@@ -125,6 +121,9 @@ node {
       stage ("Cleanup after fail") {
         script {
           githubNotify context: 'CI Pipeline', status: 'FAILURE'
+          if (env.BRANCH_NAME == 'master') {
+            slackSend ":rotating_light: ALARM! Build on Master failed! - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>) :rotating_light:"
+          }
         }
       }
       throw error

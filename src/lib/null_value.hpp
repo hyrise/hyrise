@@ -23,13 +23,18 @@ struct NullValue {};
 inline bool operator==(const NullValue&, const NullValue&) { return false; }
 inline bool operator<(const NullValue&, const NullValue&) { return false; }
 
+inline size_t hash_value(const NullValue& null_value) {
+  // Aggregate wants all NULLs in one bucket
+  return 0;
+}
+
 // Streaming support
 
 #if !defined(BOOST_NO_IOSTREAM)
 
 BOOST_TEMPLATED_STREAM_TEMPLATE(E, T)
-inline BOOST_TEMPLATED_STREAM(ostream, E, T)& operator<<(BOOST_TEMPLATED_STREAM(ostream, E, T) & out,
-                                                         const opossum::NullValue&) {
+inline BOOST_TEMPLATED_STREAM(ostream, E, T) & operator<<(BOOST_TEMPLATED_STREAM(ostream, E, T) & out,
+                                                          const opossum::NullValue&) {
   out << "NULL";
   return out;
 }
@@ -39,7 +44,6 @@ inline BOOST_TEMPLATED_STREAM(ostream, E, T)& operator<<(BOOST_TEMPLATED_STREAM(
 }  // namespace opossum
 
 namespace boost {
-
 // Type traits specializations
 
 template <>

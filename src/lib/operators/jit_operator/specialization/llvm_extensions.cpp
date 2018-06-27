@@ -5,6 +5,8 @@
 
 #include <unordered_set>
 
+#include "jit_runtime_pointer.hpp"
+
 namespace opossum {
 
 const std::shared_ptr<const JitRuntimePointer>& GetRuntimePointerForValue(const llvm::Value* value,
@@ -123,8 +125,7 @@ llvm::Constant* ResolveConditionRec(llvm::Value* value, SpecializationContext& c
       const auto address = runtime_pointer->address();
       const auto int_type = llvm::dyn_cast<llvm::IntegerType>(load->getType());
       const auto bit_width = int_type->getIntegerBitWidth();
-      const auto mask = bit_width == 64 ? 0xffffffffffffffff : (static_cast<uint64_t>(1) << bit_width) - 1;
-      const auto value = *reinterpret_cast<uint64_t*>(address) & mask;
+      const auto value = dereference_flexible_width_int_pointer(address, bit_width);
       return llvm::ConstantInt::get(int_type, value, int_type->getSignBit() > 0);
     }
   } else if (auto inst = llvm::dyn_cast<llvm::Instruction>(value)) {

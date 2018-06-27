@@ -35,45 +35,58 @@
  */
 
 int main(int argc, char* argv[]) {
-  auto cli_options = opossum::BenchmarkRunner::get_default_cli_options("TPCH Benchmark");
+  auto cli_options = opossum::BenchmarkRunner::get_basic_cli_options("TPCH Benchmark");
 
   // clang-format off
   cli_options.add_options()
-      ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("0.001"))
-      ("queries", "Specify queries to run, default is all that are supported", cxxopts::value<std::vector<opossum::QueryID>>()); // NOLINT
+    ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("0.001"))
+    ("queries", "Specify queries to run, default is all that are supported", cxxopts::value<std::vector<opossum::QueryID>>()); // NOLINT
   // clang-format on
 
-  const auto cli_parse_result = cli_options.parse(argc, argv);
+  std::unique_ptr<opossum::BenchmarkConfig> config;
+  std::vector<opossum::QueryID> query_ids;
+  float scale_factor;
 
-  // Display usage and quit
-  if (cli_parse_result.count("help")) {
-    std::cout << cli_options.help({}) << std::endl;
-    return 0;
+  if (opossum::CLIConfigParser::cli_has_json_config(argc, argv)) {
+    // JSON config file was passed in
+    const auto json_config = opossum::CLIConfigParser::parse_json_config_file(argv[1]);
+    scale_factor = json_config.value("scale", 0.001f);
+    query_ids = json_config.value("queries", std::vector<opossum::QueryID>());
+
+    config = std::make_unique<opossum::BenchmarkConfig>(
+        opossum::CLIConfigParser::parse_basic_options_json_config(json_config));
+
+  } else {
+    // Parse regular command line args
+    const auto cli_parse_result = cli_options.parse(argc, argv);
+
+    // Display usage and quit
+    if (cli_parse_result.count("help")) {
+      std::cout << opossum::CLIConfigParser::detailed_help(cli_options) << std::endl;
+      return 0;
+    }
+
+    if (cli_parse_result.count("queries")) {
+      query_ids = cli_parse_result["queries"].as<std::vector<opossum::QueryID>>();
+    }
+
+    scale_factor = cli_parse_result["scale"].as<float>();
+
+    config =
+        std::make_unique<opossum::BenchmarkConfig>(opossum::CLIConfigParser::parse_basic_cli_options(cli_parse_result));
   }
 
-  const bool verbose = cli_parse_result["verbose"].as<bool>();
-  auto& out = opossum::get_out_stream(verbose);
-
-  const auto config = opossum::BenchmarkRunner::parse_default_cli_options(cli_parse_result, cli_options);
-
   // Build list of query ids to be benchmarked and display it
-  std::vector<opossum::QueryID> query_ids;
-  if (cli_parse_result.count("queries")) {
-    const auto cli_query_ids = cli_parse_result["queries"].as<std::vector<opossum::QueryID>>();
-    for (const auto cli_query_id : cli_query_ids) {
-      query_ids.emplace_back(cli_query_id);
-    }
-  } else {
+  if (query_ids.empty()) {
     std::transform(opossum::tpch_queries.begin(), opossum::tpch_queries.end(), std::back_inserter(query_ids),
                    [](auto& pair) { return pair.first; });
   }
-  out << "- Benchmarking Queries ";
-  for (const auto query_id : query_ids) {
-    out << (query_id) << " ";
-  }
-  out << std::endl;
 
-  const auto scale_factor = cli_parse_result["scale"].as<float>();
+  config->out << "- Benchmarking Queries: [ ";
+  for (const auto query_id : query_ids) {
+    config->out << (query_id) << ", ";
+  }
+  config->out << "]" << std::endl;
 
   // Set up TPCH benchmark
   opossum::NamedQueries queries;
@@ -83,25 +96,24 @@ int main(int argc, char* argv[]) {
     queries.emplace_back("TPC-H " + std::to_string(query_id), opossum::tpch_queries.at(query_id));
   }
 
-  config.out << "- Generating TPCH Tables with scale_factor=" << scale_factor << "..." << std::endl;
+  config->out << "- Generating TPCH Tables with scale_factor=" << scale_factor << " ..." << std::endl;
 
-  opossum::ColumnEncodingSpec encoding_spec{config.encoding_type};
-  const auto tables = opossum::TpchDbGenerator(scale_factor, config.chunk_size).generate();
+  const auto tables = opossum::TpchDbGenerator(scale_factor, config->chunk_size).generate();
 
-  for (auto& table : tables) {
-    if (config.encoding_type != opossum::EncodingType::Unencoded) {
-      opossum::ChunkEncoder::encode_all_chunks(table.second, encoding_spec);
-    }
+  for (auto& tpch_table : tables) {
+    const auto& table_name = opossum::tpch_table_names.at(tpch_table.first);
+    auto& table = tpch_table.second;
 
-    opossum::StorageManager::get().add_table(opossum::tpch_table_names.at(table.first), table.second);
+    opossum::BenchmarkRunner::encode_table(table_name, table, *config);
+    opossum::StorageManager::get().add_table(table_name, table);
   }
-  config.out << "- Done." << std::endl;
+  config->out << "- ... done." << std::endl;
 
-  auto context = opossum::BenchmarkRunner::create_context(config);
+  auto context = opossum::BenchmarkRunner::create_context(*config);
 
   // Add TPCH-specific information
   context.emplace("scale_factor", scale_factor);
 
   // Run the benchmark
-  opossum::BenchmarkRunner(config, queries, context).run();
+  opossum::BenchmarkRunner(*config, queries, context).run();
 }

@@ -18,7 +18,8 @@ DictionaryColumn<T>::DictionaryColumn(const std::shared_ptr<const pmr_vector<T>>
     : BaseDictionaryColumn(data_type_from_type<T>()),
       _dictionary{dictionary},
       _attribute_vector{attribute_vector},
-      _null_value_id{null_value_id} {}
+      _null_value_id{null_value_id},
+      _decoder{_attribute_vector->create_base_decoder()} {}
 
 template <typename T>
 const AllTypeVariant DictionaryColumn<T>::operator[](const ChunkOffset chunk_offset) const {
@@ -26,8 +27,7 @@ const AllTypeVariant DictionaryColumn<T>::operator[](const ChunkOffset chunk_off
 
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
-  auto decoder = _attribute_vector->create_base_decoder();
-  const auto value_id = decoder->get(chunk_offset);
+  const auto value_id = _decoder->get(chunk_offset);
 
   if (value_id == _null_value_id) {
     return NULL_VALUE;
@@ -65,6 +65,11 @@ size_t DictionaryColumn<T>::estimate_memory_usage() const {
 template <typename T>
 CompressedVectorType DictionaryColumn<T>::compressed_vector_type() const {
   return _attribute_vector->type();
+}
+
+template <typename T>
+EncodingType DictionaryColumn<T>::encoding_type() const {
+  return EncodingType::Dictionary;
 }
 
 template <typename T>

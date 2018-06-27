@@ -60,6 +60,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/ValueMap.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1629,9 +1630,11 @@ bool opossum::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
   Function::iterator FirstNewBlock;
 
   { // Scope to destroy VMap after cloning.
-    // TODO(Fabian) Check, if map is correctly copied
     ValueToValueMapTy VMap;
-    VMap.insert(Context.llvm_value_map.begin(), Context.llvm_value_map.end());
+    // key_value is const to ensure that values are copied and not moved during insert
+    for (const ValueToValueMapTy::value_type &key_value : Context.llvm_value_map) {
+      VMap.insert(key_value);
+    }
     // Keep a list of pair (dst, src) to emit byval initializations.
     SmallVector<std::pair<Value*, Value*>, 4> ByValInit;
 

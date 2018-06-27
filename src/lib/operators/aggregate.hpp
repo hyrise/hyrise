@@ -1,12 +1,13 @@
 #pragma once
 
+#include <boost/functional/hash.hpp>
 #include <functional>
 #include <limits>
-#include <map>
 #include <memory>
 #include <optional>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -134,3 +135,10 @@ class Aggregate : public AbstractReadOnlyOperator {
 };
 
 }  // namespace opossum
+
+namespace std {
+template <>
+struct hash<opossum::AggregateKey> {
+  size_t operator()(const opossum::AggregateKey& key) const { return boost::hash_range(key.begin(), key.end()); }
+};
+}  // namespace std

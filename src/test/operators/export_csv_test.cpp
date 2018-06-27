@@ -129,6 +129,46 @@ TEST_F(OperatorsExportCsvTest, DictionaryColumnFixedSizeByteAligned) {
                            "1,\"Hallo3\",3.55\n"));
 }
 
+TEST_F(OperatorsExportCsvTest, FixedStringDictionaryColumnFixedSizeByteAligned) {
+  const auto filename_string_table = test_data_path + "string.tbl";
+  const auto meta_filename_string_table = filename_string_table + CsvMeta::META_FILE_EXTENSION;
+
+  TableColumnDefinitions column_definitions;
+  column_definitions.emplace_back("a", DataType::String);
+
+  auto string_table = std::make_shared<Table>(column_definitions, TableType::Data, 4);
+  string_table->append({"a"});
+  string_table->append({"string"});
+  string_table->append({"xxx"});
+  string_table->append({"www"});
+  string_table->append({"yyy"});
+  string_table->append({"uuu"});
+  string_table->append({"ttt"});
+  string_table->append({"zzz"});
+
+  ChunkEncoder::encode_chunks(string_table, {ChunkID{0}}, EncodingType::FixedStringDictionary);
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(string_table));
+  table_wrapper->execute();
+  auto ex = std::make_shared<opossum::ExportCsv>(table_wrapper, filename_string_table);
+  ex->execute();
+
+  EXPECT_TRUE(file_exists(filename_string_table));
+  EXPECT_TRUE(file_exists(meta_filename_string_table));
+  EXPECT_TRUE(compare_file(filename_string_table,
+                           "\"a\"\n"
+                           "\"string\"\n"
+                           "\"xxx\"\n"
+                           "\"www\"\n"
+                           "\"yyy\"\n"
+                           "\"uuu\"\n"
+                           "\"ttt\"\n"
+                           "\"zzz\"\n"));
+
+  std::remove(filename_string_table.c_str());
+  std::remove(meta_filename_string_table.c_str());
+}
+
 TEST_F(OperatorsExportCsvTest, ReferenceColumn) {
   table->append({1, "abc", 1.1f});
   table->append({2, "asdf", 2.2f});

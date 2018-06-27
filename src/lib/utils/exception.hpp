@@ -19,4 +19,4 @@ class InvalidInputException : public std::runtime_error {
 };
 
 
-}
+}  // namespace opossum

@@ -1,4 +1,2 @@
-# Leaks in libtool-libtldl
-leak:lt__malloc
-leak:libltdl.so
-leak:libsqlite3.so
+# Ignore false positive in check whether a Jit pointer is valid
+interceptor_via_fun:opossum::JitKnownRuntimePointer::is_valid(*)

@@ -19,8 +19,6 @@ namespace opossum {
  * As with most operators, we do not guarantee a stable operation with regards to positions -
  * i.e., your sorting order might be disturbed.
  *
- * Note: JoinHash does not support null values at the moment
- *
  * Find more information in our Wiki: https://github.com/hyrise/hyrise/wiki/Radix-Partitioned-and-Hash-Based-Join
  */
 class JoinHash : public AbstractJoinOperator {

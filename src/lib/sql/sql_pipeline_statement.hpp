@@ -12,6 +12,16 @@
 
 namespace opossum {
 
+// Holds relevant information about the execution of an SQLPipelineStatement.
+struct SQLPipelineStatementMetrics {
+  std::chrono::microseconds translate_time_micros{};
+  std::chrono::microseconds optimize_time_micros{};
+  std::chrono::microseconds compile_time_micros{};
+  std::chrono::microseconds execution_time_micros{};
+
+  bool query_plan_cache_hit = false;
+};
+
 using PreparedStatementCache = std::shared_ptr<SQLQueryCache<SQLQueryPlan>>;
 
 /**
@@ -62,16 +72,7 @@ class SQLPipelineStatement : public Noncopyable {
   // This can be a nullptr if no transaction management is wanted.
   const std::shared_ptr<TransactionContext>& transaction_context() const;
 
-  // Return the duration of each step in the pipeline.
-  std::chrono::microseconds translate_time_microseconds() const;
-  std::chrono::microseconds optimize_time_microseconds() const;
-  std::chrono::microseconds compile_time_microseconds() const;
-  std::chrono::microseconds execution_time_microseconds() const;
-
-  // Formats all times into a pretty string
-  std::string get_time_string() const;
-
-  bool query_plan_cache_hit() const;
+  const std::shared_ptr<SQLPipelineStatementMetrics>& metrics() const;
 
   // Helper function to create a pretty print error message after an invalid SQL parse
   static std::string create_parse_error_message(const std::string& sql, const hsql::SQLParserResult& result);
@@ -100,16 +101,11 @@ class SQLPipelineStatement : public Noncopyable {
   std::shared_ptr<const Table> _result_table;
   // Assume there is an output table. Only change if nullptr is returned from execution.
   bool _query_has_output = true;
-  bool _query_plan_cache_hit = false;
 
-  // Execution times
-  std::chrono::microseconds _translate_time_micros{};
-  std::chrono::microseconds _optimize_time_micros{};
-  std::chrono::microseconds _compile_time_micros{};
-  std::chrono::microseconds _execution_time_micros{};
+  std::shared_ptr<SQLPipelineStatementMetrics> _metrics;
 
   PreparedStatementCache _prepared_statements;
-  // Number of placeholders in prepared statement; default 0 becasue we assume no prepared statement
+  // Number of placeholders in prepared statement; default 0 because we assume no prepared statement
   uint16_t _num_parameters = 0;
 };
 
