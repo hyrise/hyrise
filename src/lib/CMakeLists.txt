@@ -449,7 +449,6 @@ set(
     pthread
     sqlparser
     ${TBB_LIBRARY}
-    ${SYSTEMTAP_LIBRARY}
 )
 
 if (${ENABLE_JIT_SUPPORT})
