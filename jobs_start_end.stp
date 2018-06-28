@@ -72,9 +72,11 @@ probe end
     // Print histogram for every job caller
     foreach (caller in runtime_by_caller) {
         printf("\nJobs scheduled by: %s\n", caller)
+        println("NOTE: value = time in μs")
         print(@hist_log(runtime_by_caller[caller]))
     }
     println("\nOverall summary:\n")
+    println("NOTE: value = time in μs")
     print(@hist_log(runtimes))
     delete job_start
     delete job_caller
