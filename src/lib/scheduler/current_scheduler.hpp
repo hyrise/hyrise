@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include <sys/sdt.h>
+#include "utils/systemtap.hpp"
 #include <vector>
 
 #include "utils/assert.hpp"

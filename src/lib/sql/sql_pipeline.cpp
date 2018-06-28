@@ -6,8 +6,7 @@
 #include <utility>
 
 #include "SQLParser.h"
-#include <sys/sdt.h>
-
+#include "utils/systemtap.hpp"
 
 namespace opossum {
 

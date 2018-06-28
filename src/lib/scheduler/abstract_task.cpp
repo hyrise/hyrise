@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 #include <utility>
-#include <sys/sdt.h>
+#include "utils/systemtap.hpp"
 #include <vector>
 
 #include "abstract_scheduler.hpp"
