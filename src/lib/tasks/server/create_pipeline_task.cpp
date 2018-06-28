@@ -15,8 +15,6 @@ void CreatePipelineTask::_on_execute() {
     // Try LOAD file_name table_name
     if (_allow_load_table && _is_load_table()) {
       result->load_table = std::make_pair(_file_name, _table_name);
-    } else if (_is_recover_database()) {
-      result->recover_database = true;
     } else {
       // Setting the exception this way ensures that the details are preserved in the futures
       // Important: std::current_exception apparently does not work
@@ -44,17 +42,6 @@ bool CreatePipelineTask::_is_load_table() {
 
   // Remove semicolon if it is the last character
   if (_table_name.back() == ';') _table_name.resize(_table_name.length() - 1);
-
-  return true;
-}
-
-bool CreatePipelineTask::_is_recover_database() {
-  std::vector<std::string> words;
-  boost::split(words, _sql, boost::is_any_of(" "));
-
-  // We expect exactly "RECOVER DATABASE;"
-  if (words.size() != 2) return false;
-  if (words[0] != "RECOVER" || words[1] != "DATABASE;") return false;
 
   return true;
 }

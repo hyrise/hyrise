@@ -7,6 +7,7 @@
 #include "server_session.hpp"
 #include "task_runner.hpp"
 #include "then_operator.hpp"
+#include "concurrency/logging/logger.hpp"
 
 namespace opossum {
 
@@ -16,6 +17,7 @@ Server::Server(boost::asio::io_service& io_service, uint16_t port)
     : _io_service(io_service),
       _acceptor(io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
       _socket(io_service) {
+  Logger::getInstance().recover();
   accept_next_connection();
 }
 
