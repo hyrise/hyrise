@@ -123,11 +123,6 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   void _join_without_replacement_worker();
 
   /**
-   * Called when a dependency is initialized (by set_as_predecessor_of)
-   */
-  void _on_predecessor_added();
-
-  /**
    * Called by a dependency when it finished execution
    */
   void _on_predecessor_done();

@@ -101,7 +101,7 @@ void OperatorTask::_on_execute() {
     for (const auto& weak_predecessor : predecessors()) {
       const auto predecessor = std::dynamic_pointer_cast<OperatorTask>(weak_predecessor.lock());
       DebugAssert(predecessor != nullptr, "predecessor of OperatorTask is not an OperatorTask itself");
-      bool previous_operator_still_needed = false;
+      auto previous_operator_still_needed = false;
 
       for (const auto& successor : predecessor->successors()) {
         if (successor.get() != this && !successor->is_done()) {
