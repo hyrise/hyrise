@@ -21,24 +21,24 @@
 
 namespace opossum {
 
-void resolve_aggregate_column_name_rec(const std::shared_ptr<opossum::LQPExpression>& expression,
-                                       std::stringstream& stream, const bool brackets = true) {
+void column_name_for_aggregate_rec(const std::shared_ptr<opossum::LQPExpression>& expression, std::stringstream& stream,
+                                   const bool brackets = true) {
   if (expression->type() == ExpressionType::Column) {
     const auto& column_reference = expression->column_reference();
     stream << column_reference.original_node()->output_column_names()[column_reference.original_column_id()];
   } else {
     if (brackets) stream << "(";
     DebugAssert(expression->is_arithmetic_operator(), "Unsupported expression type");
-    resolve_aggregate_column_name_rec(expression->left_child(), stream);
+    column_name_for_aggregate_rec(expression->left_child(), stream);
     stream << " " << expression_type_to_operator_string.at(expression->type()) << " ";
-    resolve_aggregate_column_name_rec(expression->right_child(), stream);
+    column_name_for_aggregate_rec(expression->right_child(), stream);
     if (brackets) stream << ")";
   }
 }
 
-std::string resolve_aggregate_column_name(const std::shared_ptr<opossum::LQPExpression>& expression) {
+std::string column_name_for_aggregate(const std::shared_ptr<opossum::LQPExpression>& expression) {
   std::stringstream stream;
-  resolve_aggregate_column_name_rec(expression, stream, false);
+  column_name_for_aggregate_rec(expression, stream, false);
   return stream.str();
 }
 
@@ -141,7 +141,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_node_t
       // ... resolve the aggregate column name ...
       const std::string& aggregate_column_name = aggregate_expression->alias().value_or(
           aggregate_function_to_string.left.at(aggregate_expression->aggregate_function()) + "(" +
-          resolve_aggregate_column_name(function_arg) + ")");
+          column_name_for_aggregate(function_arg) + ")");
       // ... and add the aggregate expression to the JitAggregate operator.
       aggregate->add_aggregate_column(aggregate_column_name, expression->result(),
                                       aggregate_expression->aggregate_function());
