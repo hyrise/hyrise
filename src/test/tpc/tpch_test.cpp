@@ -67,7 +67,7 @@ TEST_P(TPCHTest, TPCHQueryTest) {
 
   std::shared_ptr<LQPTranslator> lqp_translator;
   if (use_jit) {
-    if constexpr(HYRISE_JIT_SUPPORT) {
+    if constexpr (HYRISE_JIT_SUPPORT) {
       lqp_translator = std::make_shared<JitAwareLQPTranslator>();
     }
   } else {
