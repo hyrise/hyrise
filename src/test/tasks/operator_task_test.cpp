@@ -30,7 +30,7 @@ class OperatorTaskTest : public BaseTest {
 
 TEST_F(OperatorTaskTest, BasicTasksFromOperatorTest) {
   auto gt = std::make_shared<GetTable>("table_a");
-  auto tasks = OperatorTask::make_tasks_from_operator(gt, true);
+  auto tasks = OperatorTask::make_tasks_from_operator(gt, CleanupTemporaries::Yes);
 
   auto result_task = tasks.back();
   result_task->schedule();
@@ -42,7 +42,7 @@ TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
   auto gt = std::make_shared<GetTable>("table_a");
   auto ts = std::make_shared<TableScan>(gt, ColumnID{0}, PredicateCondition::Equals, 1234);
 
-  auto tasks = OperatorTask::make_tasks_from_operator(ts, true);
+  auto tasks = OperatorTask::make_tasks_from_operator(ts, CleanupTemporaries::Yes);
   for (auto& task : tasks) {
     task->schedule();
     // We don't have to wait here, because we are running the task tests without a scheduler
@@ -61,7 +61,7 @@ TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
   auto join = std::make_shared<JoinHash>(gt_a, gt_b, JoinMode::Inner, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                          PredicateCondition::Equals);
 
-  auto tasks = OperatorTask::make_tasks_from_operator(join, true);
+  auto tasks = OperatorTask::make_tasks_from_operator(join, CleanupTemporaries::Yes);
   for (auto& task : tasks) {
     task->schedule();
     // We don't have to wait here, because we are running the task tests without a scheduler
@@ -82,7 +82,7 @@ TEST_F(OperatorTaskTest, MakeDiamondShape) {
   auto scan_c = std::make_shared<TableScan>(scan_a, ColumnID{1}, PredicateCondition::GreaterThan, 2000);
   auto union_positions = std::make_shared<UnionPositions>(scan_b, scan_c);
 
-  auto tasks = OperatorTask::make_tasks_from_operator(union_positions, true);
+  auto tasks = OperatorTask::make_tasks_from_operator(union_positions, CleanupTemporaries::Yes);
 
   ASSERT_EQ(tasks.size(), 5u);
   EXPECT_EQ(tasks[0]->get_operator(), gt_a);

@@ -36,7 +36,7 @@ SQLPipelineBuilder& SQLPipelineBuilder::with_transaction_context(
 SQLPipelineBuilder& SQLPipelineBuilder::disable_mvcc() { return with_mvcc(UseMvcc::No); }
 
 SQLPipelineBuilder& SQLPipelineBuilder::dont_cleanup_temporaries() {
-  _cleanup_temporaries = false;
+  _cleanup_temporaries = CleanupTemporaries::No;
   return *this;
 }
 

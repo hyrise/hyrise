@@ -556,7 +556,7 @@ int Console::visualize(const std::string& input) {
 
   } else {
     // Visualize the Physical Query Plan
-    SQLQueryPlan query_plan{false};
+    SQLQueryPlan query_plan{CleanupTemporaries::No};
 
     try {
       if (!no_execute) {

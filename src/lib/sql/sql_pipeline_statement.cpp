@@ -23,7 +23,7 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
                                            const std::shared_ptr<LQPTranslator>& lqp_translator,
                                            const std::shared_ptr<Optimizer>& optimizer,
                                            const PreparedStatementCache& prepared_statements,
-                                           const bool cleanup_temporaries)
+                                           const CleanupTemporaries cleanup_temporaries)
     : _sql_string(sql),
       _use_mvcc(use_mvcc),
       _auto_commit(_use_mvcc == UseMvcc::Yes && !transaction_context),

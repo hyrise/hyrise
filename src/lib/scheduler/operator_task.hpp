@@ -16,13 +16,13 @@ class AbstractOperator;
 class OperatorTask : public AbstractTask {
  public:
   // We don't like abbreviations, but "operator" is a keyword
-  explicit OperatorTask(std::shared_ptr<AbstractOperator> op, bool cleanup_temporaries);
+  explicit OperatorTask(std::shared_ptr<AbstractOperator> op, CleanupTemporaries cleanup_temporaries);
 
   /**
    * Create tasks recursively from result operator and set task dependencies automatically.
    */
-  static const std::vector<std::shared_ptr<OperatorTask>> make_tasks_from_operator(std::shared_ptr<AbstractOperator> op,
-                                                                                   bool cleanup_temporaries);
+  static const std::vector<std::shared_ptr<OperatorTask>> make_tasks_from_operator(
+      std::shared_ptr<AbstractOperator> op, CleanupTemporaries cleanup_temporaries);
 
   const std::shared_ptr<AbstractOperator>& get_operator() const;
 
@@ -38,10 +38,10 @@ class OperatorTask : public AbstractTask {
   static std::shared_ptr<OperatorTask> _add_tasks_from_operator(
       std::shared_ptr<AbstractOperator> op, std::vector<std::shared_ptr<OperatorTask>>& tasks,
       std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<OperatorTask>>& task_by_op,
-      bool cleanup_temporaries);
+      CleanupTemporaries cleanup_temporaries);
 
  private:
   std::shared_ptr<AbstractOperator> _op;
-  bool _cleanup_temporaries;
+  CleanupTemporaries _cleanup_temporaries;
 };
 }  // namespace opossum

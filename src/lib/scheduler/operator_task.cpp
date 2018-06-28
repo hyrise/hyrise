@@ -14,7 +14,7 @@
 #include "scheduler/worker.hpp"
 
 namespace opossum {
-OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op, bool cleanup_temporaries)
+OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op, CleanupTemporaries cleanup_temporaries)
     : _op(std::move(op)), _cleanup_temporaries(cleanup_temporaries) {}
 
 std::string OperatorTask::description() const {
@@ -22,7 +22,7 @@ std::string OperatorTask::description() const {
 }
 
 const std::vector<std::shared_ptr<OperatorTask>> OperatorTask::make_tasks_from_operator(
-    std::shared_ptr<AbstractOperator> op, bool cleanup_temporaries) {
+    std::shared_ptr<AbstractOperator> op, CleanupTemporaries cleanup_temporaries) {
   std::vector<std::shared_ptr<OperatorTask>> tasks;
   std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<OperatorTask>> task_by_op;
   OperatorTask::_add_tasks_from_operator(op, tasks, task_by_op, cleanup_temporaries);
@@ -32,7 +32,7 @@ const std::vector<std::shared_ptr<OperatorTask>> OperatorTask::make_tasks_from_o
 std::shared_ptr<OperatorTask> OperatorTask::_add_tasks_from_operator(
     std::shared_ptr<AbstractOperator> op, std::vector<std::shared_ptr<OperatorTask>>& tasks,
     std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<OperatorTask>>& task_by_op,
-    bool cleanup_temporaries) {
+    CleanupTemporaries cleanup_temporaries) {
   const auto task_by_op_it = task_by_op.find(op);
   if (task_by_op_it != task_by_op.end()) return task_by_op_it->second;
 
@@ -95,7 +95,9 @@ void OperatorTask::_on_execute() {
   }
 
   // Get rid of temporary tables that are not needed anymore
-  if (_cleanup_temporaries) {
+  // Because `clear_output` is only called by the successive OperatorTasks, we can be sure that no one cleans up the
+  // root (i.e., the final result)
+  if (_cleanup_temporaries == CleanupTemporaries::Yes) {
     for (const auto& weak_predecessor : predecessors()) {
       const auto predecessor = std::dynamic_pointer_cast<OperatorTask>(weak_predecessor.lock());
       DebugAssert(predecessor != nullptr, "predecessor of OperatorTask is not an OperatorTask itself");

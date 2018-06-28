@@ -69,7 +69,7 @@ class SQLPipelineBuilder final {
   std::shared_ptr<LQPTranslator> _lqp_translator;
   std::shared_ptr<Optimizer> _optimizer;
   PreparedStatementCache _prepared_statements;
-  bool _cleanup_temporaries{true};
+  CleanupTemporaries _cleanup_temporaries{true};
 };
 
 }  // namespace opossum

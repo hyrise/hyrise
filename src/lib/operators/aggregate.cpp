@@ -75,7 +75,6 @@ std::shared_ptr<AbstractOperator> Aggregate::_on_recreate(
 }
 
 void Aggregate::_on_cleanup() {
-  _output.reset();
   _contexts_per_column.clear();
   _keys_per_chunk.clear();
 }
@@ -590,10 +589,10 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   }
 
   // Write the output
-  _output = std::make_shared<Table>(_output_column_definitions, TableType::Data);
-  _output->append_chunk(_output_columns);
+  auto output = std::make_shared<Table>(_output_column_definitions, TableType::Data);
+  output->append_chunk(_output_columns);
 
-  return _output;
+  return output;
 }
 
 /*
