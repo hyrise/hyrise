@@ -1,6 +1,6 @@
-#if defined(__linux) || defined(__linux__) || defined(linux)
+#if  defined(__linux__)
 #include <sys/sdt.h>
-# elif defined(MAC_OSX)
+# elif defined(__APPLE__) || defined(__MACOS__)
 #define DTRACE_PROBE(provider,probe)
 #define DTRACE_PROBE1(provider,probe,parm1)
 #define DTRACE_PROBE2(provider,probe,parm1,parm2)
@@ -14,7 +14,6 @@
 #define DTRACE_PROBE10(provider,probe,parm1,parm2,parm3,parm4,parm5,parm6,parm7,parm8,parm9,parm10)
 #define DTRACE_PROBE11(provider,probe,parm1,parm2,parm3,parm4,parm5,parm6,parm7,parm8,parm9,parm10,parm11)
 #define DTRACE_PROBE12(provider,probe,parm1,parm2,parm3,parm4,parm5,parm6,parm7,parm8,parm9,parm10,parm11,parm12)
-
 #else
 #error No operating system defined
 #endif
