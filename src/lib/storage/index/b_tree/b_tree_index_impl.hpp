@@ -16,8 +16,10 @@
 
 namespace opossum {
 
+class BTreeIndexTest;
 
 class BaseBTreeIndexImpl {
+  friend BTreeIndexTest;
  public:
   BaseBTreeIndexImpl() = default;
   BaseBTreeIndexImpl(BaseBTreeIndexImpl&&) = default;
@@ -25,10 +27,14 @@ class BaseBTreeIndexImpl {
   virtual ~BaseBTreeIndexImpl() = default;
 
   using Iterator = std::vector<ChunkOffset>::const_iterator;
+  virtual uint64_t memory_consumption() const = 0;
   virtual Iterator lower_bound(const std::vector<AllTypeVariant>&) const = 0;
   virtual Iterator upper_bound(const std::vector<AllTypeVariant>&) const = 0;
   virtual Iterator cbegin() const = 0;
   virtual Iterator cend() const = 0;
+
+ protected:
+  std::vector<ChunkOffset> _chunk_offsets;
 };
 
 /**
@@ -37,6 +43,7 @@ class BaseBTreeIndexImpl {
 */
 template <typename DataType>
 class BTreeIndexImpl : public BaseBTreeIndexImpl {
+  friend BTreeIndexTest;
  public:
   BTreeIndexImpl() = delete;
   explicit BTreeIndexImpl(std::shared_ptr<const BaseColumn> index_column);
@@ -47,7 +54,7 @@ class BTreeIndexImpl : public BaseBTreeIndexImpl {
   BTreeIndexImpl(BTreeIndexImpl&&) = default;
   BTreeIndexImpl& operator=(BTreeIndexImpl&&) = default;
 
-  virtual uint64_t memory_consumption() const;
+  virtual uint64_t memory_consumption() const override;
 
   Iterator lower_bound(DataType value) const;
   Iterator upper_bound(DataType value) const;
@@ -61,7 +68,6 @@ class BTreeIndexImpl : public BaseBTreeIndexImpl {
   void _bulk_insert(const std::shared_ptr<const BaseColumn>);
 
   btree::btree_map<DataType, size_t> _btree;
-  std::vector<ChunkOffset> _chunk_offsets;
 };
 
 }  // namespace opossum

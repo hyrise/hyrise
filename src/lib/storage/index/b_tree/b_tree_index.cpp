@@ -11,6 +11,10 @@ namespace opossum {
     _impl = make_shared_by_data_type<BaseBTreeIndexImpl, BTreeIndexImpl>(_index_column->data_type(), _index_column);
   }
 
+  uint64_t BTreeIndex::memory_consumption() const {
+    return _impl->memory_consumption();
+  }
+
   BTreeIndex::Iterator BTreeIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
     return _impl->lower_bound(values);
   }

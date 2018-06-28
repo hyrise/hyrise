@@ -8,14 +8,18 @@
 
 namespace opossum {
 
+class BTreeIndexTest;
+
 class BTreeIndex : public BaseIndex {
+  friend BTreeIndexTest;
+
  public:
   using Iterator = std::vector<ChunkOffset>::const_iterator;
 
   BTreeIndex() = delete;
   explicit BTreeIndex(const std::vector<std::shared_ptr<const BaseColumn>> index_columns);
 
-  virtual uint64_t memory_consumption() const = 0;
+  virtual uint64_t memory_consumption() const;
 
  protected:
   Iterator _lower_bound(const std::vector<AllTypeVariant>&) const override;
