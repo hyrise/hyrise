@@ -21,8 +21,28 @@
 
 namespace opossum {
 
-JitAwareLQPTranslator::JitAwareLQPTranslator() : LQPTranslator() {
+void resolve_aggregate_column_name_rec(const std::shared_ptr<opossum::LQPExpression>& expression,
+                                       std::stringstream& stream, const bool brackets = true) {
+  if (expression->type() == ExpressionType::Column) {
+    const auto& column_reference = expression->column_reference();
+    stream << column_reference.original_node()->output_column_names()[column_reference.original_column_id()];
+  } else {
+    if (brackets) stream << "(";
+    DebugAssert(expression->is_arithmetic_operator(), "Unsupported expression type");
+    resolve_aggregate_column_name_rec(expression->left_child(), stream);
+    stream << " " << expression_type_to_operator_string.at(expression->type()) << " ";
+    resolve_aggregate_column_name_rec(expression->right_child(), stream);
+    if (brackets) stream << ")";
+  }
 }
+
+std::string resolve_aggregate_column_name(const std::shared_ptr<opossum::LQPExpression>& expression) {
+  std::stringstream stream;
+  resolve_aggregate_column_name_rec(expression, stream, false);
+  return stream.str();
+}
+
+JitAwareLQPTranslator::JitAwareLQPTranslator() : LQPTranslator() {}
 
 std::shared_ptr<AbstractOperator> JitAwareLQPTranslator::translate_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
@@ -111,15 +131,19 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_node_t
     for (const auto& aggregate_column : boost::combine(aggregate_column_names, aggregate_columns)) {
       const auto aggregate_expression = aggregate_column.get<1>();
       DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Expression is not a function.");
-      const auto expression = _try_translate_expression_to_jit_expression(
-          *aggregate_expression->aggregate_function_arguments()[0], *read_tuple, input_node);
+      const auto function_arg = aggregate_expression->aggregate_function_arguments()[0];
+      const auto expression = _try_translate_expression_to_jit_expression(*function_arg, *read_tuple, input_node);
       if (!expression) return nullptr;
       // Create a JitCompute operator for each aggregate expression on a computed value ...
       if (expression->expression_type() != ExpressionType::Column) {
         jit_operator->add_jit_operator(std::make_shared<JitCompute>(expression));
       }
+      // ... resolve the aggregate column name ...
+      const std::string& aggregate_column_name = aggregate_expression->alias().value_or(
+          aggregate_function_to_string.left.at(aggregate_expression->aggregate_function()) + "(" +
+          resolve_aggregate_column_name(function_arg) + ")");
       // ... and add the aggregate expression to the JitAggregate operator.
-      aggregate->add_aggregate_column(aggregate_column.get<0>(), expression->result(),
+      aggregate->add_aggregate_column(aggregate_column_name, expression->result(),
                                       aggregate_expression->aggregate_function());
     }
 

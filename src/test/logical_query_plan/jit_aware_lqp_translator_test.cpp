@@ -420,24 +420,24 @@ TEST_F(JitAwareLQPTranslatorTest, AggregateOperator) {
   const auto aggregate_columns = jit_aggregate->aggregate_columns();
   ASSERT_EQ(aggregate_columns.size(), 5u);
 
-  ASSERT_EQ(aggregate_columns[0].column_name, "COUNT(table_a.a)");
+  ASSERT_EQ(aggregate_columns[0].column_name, "COUNT(a)");
   ASSERT_EQ(aggregate_columns[0].function, AggregateFunction::Count);
   ASSERT_EQ(jit_read_tuples->find_input_column(aggregate_columns[0].tuple_value), ColumnID{0});
 
-  ASSERT_EQ(aggregate_columns[1].column_name, "SUM(table_a.b)");
+  ASSERT_EQ(aggregate_columns[1].column_name, "SUM(b)");
   ASSERT_EQ(aggregate_columns[1].function, AggregateFunction::Sum);
   ASSERT_EQ(jit_read_tuples->find_input_column(aggregate_columns[1].tuple_value), ColumnID{1});
 
-  ASSERT_EQ(aggregate_columns[2].column_name, "AVG(table_a.a + table_a.b)");
+  ASSERT_EQ(aggregate_columns[2].column_name, "AVG(a + b)");
   ASSERT_EQ(aggregate_columns[2].function, AggregateFunction::Avg);
   // This aggregate function should operates on the result of the previously computed expression
   ASSERT_EQ(aggregate_columns[2].tuple_value, expression->result());
 
-  ASSERT_EQ(aggregate_columns[3].column_name, "MIN(table_a.a)");
+  ASSERT_EQ(aggregate_columns[3].column_name, "MIN(a)");
   ASSERT_EQ(aggregate_columns[3].function, AggregateFunction::Min);
   ASSERT_EQ(jit_read_tuples->find_input_column(aggregate_columns[3].tuple_value), ColumnID{0});
 
-  ASSERT_EQ(aggregate_columns[4].column_name, "MAX(table_a.b)");
+  ASSERT_EQ(aggregate_columns[4].column_name, "MAX(b)");
   ASSERT_EQ(aggregate_columns[4].function, AggregateFunction::Max);
   ASSERT_EQ(jit_read_tuples->find_input_column(aggregate_columns[4].tuple_value), ColumnID{1});
 }
