@@ -83,7 +83,7 @@ void TextRecovery::recover() {
 
       // if commit entry
       if (log_type == 't') {
-        TransactionID transaction_id = std::stoul(line.substr(3, line.length() - 4));
+        TransactionID transaction_id = std::stoul(_get_substr_and_incr_begin(line, next_token_begin, ')'));
         _redo_transactions(transaction_id, transactions);
         last_transaction_id = std::max(transaction_id, last_transaction_id);
         continue;
@@ -96,7 +96,7 @@ void TextRecovery::recover() {
         DebugAssert(line[next_token_begin - 1] == ')', "Recovery: load table entry expected ')', but got " + 
           line[next_token_begin - 1] + " instead.");
 
-        const auto table = load_table(path, Chunk::MAX_SIZE);
+        auto table = load_table(path, Chunk::MAX_SIZE);
         StorageManager::get().add_table(table_name, table);
         continue;
       }
