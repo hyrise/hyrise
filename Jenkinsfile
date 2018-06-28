@@ -1,3 +1,5 @@
+import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
+
 node {
   stage ("Start") {
     script {
@@ -14,8 +16,9 @@ node {
     try {
       stage("Setup") {
         checkout scm
+        full_ci = sh("./scripts/current_branch_has_pull_request_label.py FullCI", returnStdout: true).result.trim() == 'true'
         sh "./install.sh"
-        sh "mkdir clang-debug && cd clang-debug && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 .. &\
+        sh "mkdir clang-debug && cd clang-debug && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_CLANG_TIDY=ON .. &\
         mkdir clang-debug-sanitizers && cd clang-debug-sanitizers && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_SANITIZATION=ON .. &\
         mkdir clang-release-sanitizers && cd clang-release-sanitizers && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_SANITIZATION=ON .. &\
         mkdir clang-release && cd clang-release && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 .. &\
@@ -26,8 +29,12 @@ node {
 
       parallel clangRelease: {
         stage("clang-release") {
-          sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "./clang-release/hyriseTest clang-release"
+          if (env.BRANCH_NAME == 'master' || full_ci) {
+            sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            sh "./clang-release/hyriseTest clang-release"
+          } else {
+            Utils.markStageSkippedForConditional("clangRelease")
+          }
         }
       }, clangDebugBuildOnly: {
         stage("clang-debug") {
@@ -47,66 +54,94 @@ node {
         }
       }, clangDebugRunShuffled: {
         stage("clang-debug:test-shuffle") {
-          sh "mkdir ./clang-debug/run-shuffled"
-          sh "./clang-debug/hyriseTest clang-debug/run-shuffled --gtest_repeat=5 --gtest_shuffle"
+          if (env.BRANCH_NAME == 'master' || full_ci) {
+            sh "mkdir ./clang-debug/run-shuffled"
+            sh "./clang-debug/hyriseTest clang-debug/run-shuffled --gtest_repeat=5 --gtest_shuffle"
+          } else {
+            Utils.markStageSkippedForConditional("clangDebugRunShuffled")
+        }
         }
       }, clangDebugSanitizers: {
         stage("clang-debug:sanitizers") {
-          sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "LSAN_OPTIONS=suppressions=.lsan-ignore.txt ASAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-debug-sanitizers/hyriseTest clang-debug-sanitizers"
+          if (env.BRANCH_NAME == 'master' || full_ci) {
+            sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            sh "LSAN_OPTIONS=suppressions=.lsan-ignore.txt ASAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-debug-sanitizers/hyriseTest clang-debug-sanitizers"
+          } else {
+            Utils.markStageSkippedForConditional("clangDebugSanitizers")
+          }
         }
       }, gccRelease: {
-        stage("gcc-release") {
-          sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "./gcc-release/hyriseTest gcc-release"
+        if (env.BRANCH_NAME == 'master' || full_ci) {
+          stage("gcc-release") {
+            sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            sh "./gcc-release/hyriseTest gcc-release"
+          }
+        } else {
+            Utils.markStageSkippedForConditional("gccRelease")
+        }
+      }, clangSystemTestDebug: {
+        stage("System Test") {
+            sh "./clang-debug/hyriseSystemTest"
         }
       }, clangSystemTestRelease: {
-        stage("System Test") {
-            sh "./clang-release/hyriseSystemTest"
-        }
+        if (env.BRANCH_NAME == 'master' || full_ci) {
+          stage("System Test") {
+              sh "./clang-release/hyriseSystemTest"
+          }
+        } else {
+            Utils.markStageSkippedForConditional("clangSystemTestRelease")
+          }
       }, clangReleaseSanitizers: {
-        stage("clang-release:sanitizers (master only)") {
-          if (env.BRANCH_NAME == 'master') {
+        stage("clang-release:sanitizers") {
+          if (env.BRANCH_NAME == 'master' || full_ci) {
             sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             sh "LSAN_OPTIONS=suppressions=.lsan-ignore.txt ASAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers/hyriseTest clang-release-sanitizers"
           } else {
-            echo 'only on master'
+            Utils.markStageSkippedForConditional("clangReleaseSanitizers")
           }
         }
       }, clangReleaseSanitizersNoNuma: {
-        stage("clang-release:sanitizers w/o NUMA (master only)") {
-          if (env.BRANCH_NAME == 'master') {
+        stage("clang-release:sanitizers w/o NUMA") {
+          if (env.BRANCH_NAME == 'master' || full_ci) {
             sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-sanitizers-no-numa && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
             sh "LSAN_OPTIONS=suppressions=.lsan-ignore.txt ASAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers-no-numa/hyriseTest clang-release-sanitizers-no-numa"
           } else {
-            echo 'only on master'
+            Utils.markStageSkippedForConditional("clangReleaseSanitizersNoNuma")
           }
         }
       }, gccDebugCoverage: {
         stage("gcc-debug-coverage") {
-          sh "export CCACHE_BASEDIR=`pwd`; ./scripts/coverage.sh --generate_badge=true --launcher=ccache"
-          archive 'coverage_badge.svg'
-          archive 'coverage_percent.txt'
-          archive 'coverage.xml'
-          archive 'coverage_diff.html'
-          publishHTML (target: [
-            allowMissing: false,
-            alwaysLinkToLastBuild: false,
-            keepAll: true,
-            reportDir: 'coverage',
-            reportFiles: 'index.html',
-            reportName: "RCov Report"
-          ])
-          script {
-            coverageChange = sh script: "./scripts/compare_coverage.sh", returnStdout: true
-            githubNotify context: 'Coverage', description: "$coverageChange", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_20Report/index.html"
-            githubNotify context: 'Coverage Diff', description: "Click Details for diff", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/artifact/coverage_diff.html"
+          if (env.BRANCH_NAME == 'master' || full_ci) {
+            sh "export CCACHE_BASEDIR=`pwd`; ./scripts/coverage.sh --generate_badge=true --launcher=ccache"
+            archive 'coverage_badge.svg'
+            archive 'coverage_percent.txt'
+            archive 'coverage.xml'
+            archive 'coverage_diff.html'
+            publishHTML (target: [
+              allowMissing: false,
+              alwaysLinkToLastBuild: false,
+              keepAll: true,
+              reportDir: 'coverage',
+              reportFiles: 'index.html',
+              reportName: "RCov Report"
+            ])
+            script {
+              coverageChange = sh script: "./scripts/compare_coverage.sh", returnStdout: true
+              githubNotify context: 'Coverage', description: "$coverageChange", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/RCov_20Report/index.html"
+              githubNotify context: 'Coverage Diff', description: "Click Details for diff", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/artifact/coverage_diff.html"
+            }
+          } else {
+            Utils.markStageSkippedForConditional("gccDebugCoverage")
           }
         }
-      }, memcheck: {
-        stage("valgrind-memcheck") {
-          sh "mkdir ./clang-release-memcheck"
-          sh "valgrind --tool=memcheck --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+      }, memcheckClangRelease: {
+        stage("valgrind-memcheck-release") {
+          if (env.BRANCH_NAME == 'master' || full_ci) {
+            sh "mkdir ./clang-release-memcheck"
+            sh "valgrind --tool=memcheck --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+          } else {
+            Utils.markStageSkippedForConditional("memcheckClangRelease")
+          }
         }
       }
 
@@ -114,6 +149,9 @@ node {
         // Clean up workspace.
         script {
           githubNotify context: 'CI Pipeline', status: 'SUCCESS'
+          if (env.BRANCH_NAME == 'master' || full_ci) {
+            githubNotify context: 'Full CI', status: 'SUCCESS'
+          }
         }
         step([$class: 'WsCleanup'])
       }
@@ -132,8 +170,5 @@ node {
       sh "ls -A1 | xargs rm -rf"
       deleteDir()
     }
-
   }
-
 }
-
