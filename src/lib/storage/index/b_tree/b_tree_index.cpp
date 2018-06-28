@@ -7,7 +7,7 @@ namespace opossum {
 
   BTreeIndex::BTreeIndex(const std::vector<std::shared_ptr<const BaseColumn>> index_columns)
       : BaseIndex{get_index_type_of<BTreeIndex>()}, _index_column(index_columns[0]) {
-    DebugAssert((index_columns.size() == 1), "BTreeIndex only works with a single column.");
+    Assert((index_columns.size() == 1), "BTreeIndex only works with a single column.");
     _impl = make_shared_by_data_type<BaseBTreeIndexImpl, BTreeIndexImpl>(_index_column->data_type(), _index_column);
   }
 
