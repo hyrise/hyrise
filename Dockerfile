@@ -24,6 +24,7 @@ RUN apt-get update \
         libsqlite3-dev \
         libtbb-dev \
         llvm \
+        llvm-6.0-tools \
         man \
         parallel \
         python2.7 \
