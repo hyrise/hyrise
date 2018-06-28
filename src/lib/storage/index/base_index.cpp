@@ -1,9 +1,28 @@
 #include "base_index.hpp"
 
+#include <limits>
 #include <memory>
 #include <vector>
 
+#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
+#include "storage/index/group_key/composite_group_key_index.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
+
 namespace opossum {
+
+size_t BaseIndex::estimate_memory_consumption(ColumnIndexType type, ChunkOffset row_count, ChunkOffset value_count,
+                                              uint32_t value_bytes) {
+  switch (type) {
+    case ColumnIndexType::GroupKey:
+      return GroupKeyIndex::estimate_memory_consumption(row_count, value_count, value_bytes);
+    case ColumnIndexType::CompositeGroupKey:
+      return CompositeGroupKeyIndex::estimate_memory_consumption(row_count, value_count, value_bytes);
+    case ColumnIndexType::AdaptiveRadixTree:
+      return AdaptiveRadixTreeIndex::estimate_memory_consumption(row_count, value_count, value_bytes);
+    default:
+      Fail("estimate_memory_consumption() is not implemented for the given index type");
+  }
+}
 
 BaseIndex::BaseIndex(const ColumnIndexType type) : _type{type} {}
 
@@ -35,6 +54,8 @@ BaseIndex::Iterator BaseIndex::upper_bound(const std::vector<AllTypeVariant>& va
 BaseIndex::Iterator BaseIndex::cbegin() const { return _cbegin(); }
 
 BaseIndex::Iterator BaseIndex::cend() const { return _cend(); }
+
+size_t BaseIndex::memory_consumption() const { return _memory_consumption(); }
 
 ColumnIndexType BaseIndex::type() const { return _type; }
 

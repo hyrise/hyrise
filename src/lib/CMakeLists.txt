@@ -410,6 +410,28 @@ set(
     tasks/server/execute_server_query_task.hpp
     tasks/server/load_server_file_task.cpp
     tasks/server/load_server_file_task.hpp
+    tuning/abstract_tuning_evaluator.hpp
+    tuning/abstract_tuning_selector.hpp
+    tuning/greedy_tuning_selector.cpp
+    tuning/greedy_tuning_selector.hpp
+    tuning/index/abstract_index_tuning_evaluator.cpp
+    tuning/index/abstract_index_tuning_evaluator.hpp
+    tuning/index/indexable_column_set.cpp
+    tuning/index/indexable_column_set.hpp
+    tuning/index/index_tuning_evaluator.cpp
+    tuning/index/index_tuning_evaluator.hpp
+    tuning/index/index_tuning_option.cpp
+    tuning/index/index_tuning_option.hpp
+    tuning/index/index_tuning_operation.cpp
+    tuning/index/index_tuning_operation.hpp
+    tuning/null_tuning_operation.cpp
+    tuning/null_tuning_operation.hpp
+    tuning/tuner.cpp
+    tuning/tuner.hpp
+    tuning/tuning_option.hpp
+    tuning/tuning_option.cpp
+    tuning/tuning_operation.hpp
+    tuning/tuning_operation.cpp
     type_cast.hpp
     type_comparison.hpp
     types.hpp

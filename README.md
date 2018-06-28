@@ -101,6 +101,7 @@ Contact: firstname.lastname@hpi.de
 -	Martin   Fischer
 -	Pedro    Flemming
 -	Johannes Frohnhofen
+-	Adrian   Holfter
 -	Sven     Ihde
 -	Michael  Janke
 -	Max      Jendruk
@@ -111,9 +112,11 @@ Contact: firstname.lastname@hpi.de
 -	Torben   Meyer
 -	Leander  Neiß
 -	David    Schumann
+-	Arthur   Silber
 -	Daniel   Stolpe
 -	Jonathan Striebel
 -	Nils     Thamm
 -	Carsten  Walther
+-	Lukas    Wenzel
 -	Fabian   Wiebe
 -	Tim      Zimmermann

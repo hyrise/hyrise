@@ -19,6 +19,11 @@
 
 namespace opossum {
 
+size_t CompositeGroupKeyIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffset value_count,
+                                                           uint32_t value_bytes) {
+  return ((row_count + value_count) * sizeof(ChunkOffset) + value_count * value_bytes);
+}
+
 CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const BaseColumn>>& indexed_columns)
     : BaseIndex{get_index_type_of<CompositeGroupKeyIndex>()} {
   DebugAssert(!indexed_columns.empty(), "CompositeGroupKeyIndex requires at least one column to be indexed.");
@@ -71,7 +76,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
 
   for (ChunkOffset chunk_offset = 0; chunk_offset < column_size; ++chunk_offset) {
     auto concatenated_key = VariableLengthKey(bytes_per_key);
-    for (const auto & [ byte_width, decompressor ] : attribute_vector_widths_and_decompressors) {
+    for (const auto& [byte_width, decompressor] : attribute_vector_widths_and_decompressors) {
       concatenated_key.shift_and_set(decompressor->get(chunk_offset), byte_width * CHAR_BIT);
     }
     keys[chunk_offset] = std::move(concatenated_key);
@@ -104,6 +109,13 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
 BaseIndex::Iterator CompositeGroupKeyIndex::_cbegin() const { return _position_list.cbegin(); }
 
 BaseIndex::Iterator CompositeGroupKeyIndex::_cend() const { return _position_list.cend(); }
+
+size_t CompositeGroupKeyIndex::_memory_consumption() const {
+  uintptr_t byte_count = _keys.size() * _keys.key_size();
+  byte_count += _key_offsets.size() * sizeof(ChunkOffset);
+  byte_count += _position_list.size() * sizeof(ChunkOffset);
+  return byte_count;
+}
 
 BaseIndex::Iterator CompositeGroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   auto composite_key = _create_composite_key(values, false);

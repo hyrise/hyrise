@@ -9,6 +9,8 @@
 #include "gtest/gtest.h"
 #include "operators/abstract_operator.hpp"
 #include "scheduler/current_scheduler.hpp"
+#include "sql/sql_query_cache.hpp"
+#include "sql/sql_query_plan.hpp"
 #include "storage/column_encoding_utils.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/numa_placement_manager.hpp"
@@ -72,6 +74,8 @@ class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>:
 
     StorageManager::reset();
     TransactionManager::reset();
+    SQLQueryCache<SQLQueryPlan>::get().clear();
+    SQLQueryCache<std::shared_ptr<AbstractLQPNode>>::get().clear();
   }
 };
 
