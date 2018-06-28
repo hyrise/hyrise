@@ -1,20 +1,20 @@
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
-// Cancel previous builds
-def jobname = env.JOB_NAME
-def buildnum = env.BUILD_NUMBER.toInteger()
-def job = Jenkins.instance.getItemByFullName(jobname)
- for (build in job.builds) {
-  if (!build.isBuilding()) { continue; }
-  if (buildnum == build.getNumber().toInteger()) { continue; } 
-  echo "Cancelling previous build " + build.getNumber().toString()
-  build.doStop();
-}
-
 node {
   stage ("Start") {
     script {
       githubNotify context: 'CI Pipeline', status: 'PENDING'
+
+      // Cancel previous builds
+      def jobname = env.JOB_NAME
+      def buildnum = env.BUILD_NUMBER.toInteger()
+      def job = Jenkins.instance.getItemByFullName(jobname)
+       for (build in job.builds) {
+        if (!build.isBuilding()) { continue; }
+        if (buildnum == build.getNumber().toInteger()) { continue; } 
+        echo "Cancelling previous build " + build.getNumber().toString()
+        build.doStop();
+      }
     }
   }
 
