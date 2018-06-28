@@ -7,7 +7,7 @@ def job = Jenkins.instance.getItemByFullName(jobname)
  for (build in job.builds) {
   if (!build.isBuilding()) { continue; }
   if (buildnum == build.getNumber().toInteger()) { continue; } 
-  echo "DO STOP"
+  echo "Cancelling previous build " + build.getNumber().toString()
   build.doStop();
 }
 
