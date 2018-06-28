@@ -6,9 +6,6 @@ def buildnum = env.BUILD_NUMBER.toInteger()
 def job = Jenkins.instance.getItemByFullName(jobname)
  for (build in job.builds) {
   if (!build.isBuilding()) { continue; }
-  echo "_____"
-  echo env.BUILD_NUMBER
-  echo build.getNumber()
   if (buildnum == build.getNumber().toInteger()) { continue; } 
   echo "DO STOP"
   build.doStop();
