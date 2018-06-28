@@ -20,6 +20,7 @@ class BTreeIndexTest;
 
 class BaseBTreeIndexImpl {
   friend BTreeIndexTest;
+
  public:
   BaseBTreeIndexImpl() = default;
   BaseBTreeIndexImpl(BaseBTreeIndexImpl&&) = default;
@@ -44,6 +45,7 @@ class BaseBTreeIndexImpl {
 template <typename DataType>
 class BTreeIndexImpl : public BaseBTreeIndexImpl {
   friend BTreeIndexTest;
+
  public:
   BTreeIndexImpl() = delete;
   explicit BTreeIndexImpl(std::shared_ptr<const BaseColumn> index_column);
@@ -54,7 +56,7 @@ class BTreeIndexImpl : public BaseBTreeIndexImpl {
   BTreeIndexImpl(BTreeIndexImpl&&) = default;
   BTreeIndexImpl& operator=(BTreeIndexImpl&&) = default;
 
-  virtual uint64_t memory_consumption() const override;
+  uint64_t memory_consumption() const override;
 
   Iterator lower_bound(DataType value) const;
   Iterator upper_bound(DataType value) const;
