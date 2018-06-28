@@ -17,7 +17,7 @@ node {
       stage("Setup") {
         checkout scm
         echo "-----"
-        echo ">>> " + sh(script: "./scripts/current_branch_has_pull_request_label.py FullCI", returnStdout: true) + "<<<"
+        echo ">>> " + sh(script: "./scripts/current_branch_has_pull_request_label.py FullCI", returnStdout: true)[0] == 't' + "<<<"
         echo "-----"
         full_ci = sh(script: "./scripts/current_branch_has_pull_request_label.py FullCI", returnStdout: true).trim() == "true"
         sh "./install.sh"
