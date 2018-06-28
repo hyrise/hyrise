@@ -357,7 +357,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   */
   _keys_per_chunk = std::vector<std::shared_ptr<std::vector<AggregateKey>>>(input_table->chunk_count());
 
-  auto int_default_vector = std::vector<unsigned int>(_groupby_column_ids.size());
+  auto int_default_vector = std::vector<uint64_t>(_groupby_column_ids.size());
   auto alltypevariant_default_vector = std::vector<AllTypeVariant>(_groupby_column_ids.size(), NULL_VALUE);
 
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
@@ -373,8 +373,8 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
 
-      auto id_map = std::unordered_map<ColumnDataType, unsigned int>();
-      unsigned int id_counter = 0;
+      auto id_map = std::unordered_map<ColumnDataType, uint64_t>();
+      uint64_t id_counter = 0;
 
       for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
         const auto chunk_in = input_table->get_chunk(chunk_id);
