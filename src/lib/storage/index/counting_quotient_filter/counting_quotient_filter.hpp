@@ -1,14 +1,7 @@
 #pragma once
 
-#ifdef __clang__
-  #pragma clang diagnostic ignored "-Wc99-extensions"
-  #include <gqf.h>
-  #pragma clang diagnostic pop
-#elif __GNUC__
-  #pragma GCC system_header
-  #include <gqf.h>
-#endif
 
+#include "gqf.h"
 #include "types.hpp"
 #include "storage/base_column.hpp"
 
@@ -36,7 +29,7 @@ class CountingQuotientFilter {
   void populate(std::shared_ptr<const BaseColumn> column);
   uint64_t count(ElementType value) const;
   uint64_t count_all_type(AllTypeVariant value) const;
-  uint64_t memory_consumption() const;
+  //uint64_t memory_consumption() const;
   double load_factor() const;
   bool is_full() const;
 

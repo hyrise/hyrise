@@ -94,10 +94,12 @@ void CountingQuotientFilter<ElementType>::populate(std::shared_ptr<const BaseCol
   });
 }
 
+/*
 template <typename ElementType>
 uint64_t CountingQuotientFilter<ElementType>::memory_consumption() const {
   return memory_consumption(_quotient_filter.value());
 }
+*/
 
 template <typename ElementType>
 double CountingQuotientFilter<ElementType>::load_factor() const {
