@@ -147,17 +147,15 @@ struct AggregateTraits {};
 // COUNT on all types
 template <typename ColumnType>
 struct AggregateTraits<ColumnType, AggregateFunction::Count> {
-  typedef ColumnType column_type;
-  typedef int64_t aggregate_type;
-  static constexpr DataType aggregate_data_type = DataType::Long;
+  using AggregateType = int64_t;
+  static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Long;
 };
 
 // COUNT(DISTINCT) on all types
 template <typename ColumnType>
 struct AggregateTraits<ColumnType, AggregateFunction::CountDistinct> {
-  typedef ColumnType column_type;
-  typedef int64_t aggregate_type;
-  static constexpr DataType aggregate_data_type = DataType::Long;
+  using AggregateType = int64_t;
+  static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Long;
 };
 
 // MIN/MAX on all types
@@ -165,9 +163,8 @@ template <typename ColumnType, AggregateFunction function>
 struct AggregateTraits<
     ColumnType, function,
     typename std::enable_if_t<function == AggregateFunction::Min || function == AggregateFunction::Max, void>> {
-  typedef ColumnType column_type;
-  typedef ColumnType aggregate_type;
-  static constexpr DataType aggregate_data_type = DataType::Null;
+  using AggregateType = ColumnType;
+  static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Null;
 };
 
 // AVG on arithmetic types
@@ -175,9 +172,8 @@ template <typename ColumnType, AggregateFunction function>
 struct AggregateTraits<
     ColumnType, function,
     typename std::enable_if_t<function == AggregateFunction::Avg && std::is_arithmetic<ColumnType>::value, void>> {
-  typedef ColumnType column_type;
-  typedef double aggregate_type;
-  static constexpr DataType aggregate_data_type = DataType::Double;
+  using AggregateType = double;
+  static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Double;
 };
 
 // SUM on integers
@@ -185,9 +181,8 @@ template <typename ColumnType, AggregateFunction function>
 struct AggregateTraits<
     ColumnType, function,
     typename std::enable_if_t<function == AggregateFunction::Sum && std::is_integral<ColumnType>::value, void>> {
-  typedef ColumnType column_type;
-  typedef int64_t aggregate_type;
-  static constexpr DataType aggregate_data_type = DataType::Long;
+  using AggregateType = int64_t;
+  static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Long;
 };
 
 // SUM on floating point numbers
@@ -195,9 +190,8 @@ template <typename ColumnType, AggregateFunction function>
 struct AggregateTraits<
     ColumnType, function,
     typename std::enable_if_t<function == AggregateFunction::Sum && std::is_floating_point<ColumnType>::value, void>> {
-  typedef ColumnType column_type;
-  typedef double aggregate_type;
-  static constexpr DataType aggregate_data_type = DataType::Double;
+  using AggregateType = double;
+  static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Double;
 };
 
 // invalid: AVG on non-arithmetic types
@@ -207,9 +201,8 @@ struct AggregateTraits<
     typename std::enable_if_t<!std::is_arithmetic<ColumnType>::value &&
                                   (function == AggregateFunction::Avg || function == AggregateFunction::Sum),
                               void>> {
-  typedef ColumnType column_type;
-  typedef ColumnType aggregate_type;
-  static constexpr DataType aggregate_data_type = DataType::Null;
+  using AggregateType = ColumnType;
+  static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Null;
 };
 
 /*
@@ -287,7 +280,7 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Co
 
 template <typename ColumnDataType, AggregateFunction function>
 void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const BaseColumn& base_column) {
-  using AggregateType = typename AggregateTraits<ColumnDataType, function>::aggregate_type;
+  using AggregateType = typename AggregateTraits<ColumnDataType, function>::AggregateType;
 
   auto aggregator = AggregateFunctionBuilder<ColumnDataType, AggregateType, function>().get_aggregate_function();
 
@@ -584,10 +577,10 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   }
 
   // Write the output
-  _output = std::make_shared<Table>(_output_column_definitions, TableType::Data);
-  _output->append_chunk(_output_columns);
+  auto output = std::make_shared<Table>(_output_column_definitions, TableType::Data);
+  output->append_chunk(_output_columns);
 
-  return _output;
+  return output;
 }
 
 /*
@@ -598,10 +591,10 @@ They are separate and templated to avoid compiler errors for invalid type/functi
 template <typename ColumnType, typename AggregateType, AggregateFunction func>
 typename std::enable_if<
     func == AggregateFunction::Min || func == AggregateFunction::Max || func == AggregateFunction::Sum, void>::type
-_write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
-                        std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>,
-                                                           std::hash<AggregateKey>, NullEqualTo>>
-                            results) {
+write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
+                       std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>,
+                                                          std::hash<AggregateKey>, NullEqualTo>>
+                           results) {
   DebugAssert(column->is_nullable(), "Aggregate: Output column needs to be nullable");
 
   auto& values = column->values();
@@ -620,7 +613,7 @@ _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
 
 // COUNT writes the aggregate counter
 template <typename ColumnType, typename AggregateType, AggregateFunction func>
-typename std::enable_if<func == AggregateFunction::Count, void>::type _write_aggregate_values(
+typename std::enable_if<func == AggregateFunction::Count, void>::type write_aggregate_values(
     std::shared_ptr<ValueColumn<AggregateType>> column,
     std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>,
                                        std::hash<AggregateKey>, NullEqualTo>>
@@ -636,7 +629,7 @@ typename std::enable_if<func == AggregateFunction::Count, void>::type _write_agg
 
 // COUNT(DISTINCT) writes the number of distinct values
 template <typename ColumnType, typename AggregateType, AggregateFunction func>
-typename std::enable_if<func == AggregateFunction::CountDistinct, void>::type _write_aggregate_values(
+typename std::enable_if<func == AggregateFunction::CountDistinct, void>::type write_aggregate_values(
     std::shared_ptr<ValueColumn<AggregateType>> column,
     std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>,
                                        std::hash<AggregateKey>, NullEqualTo>>
@@ -653,10 +646,10 @@ typename std::enable_if<func == AggregateFunction::CountDistinct, void>::type _w
 // AVG writes the calculated average from current aggregate and the aggregate counter
 template <typename ColumnType, typename AggregateType, AggregateFunction func>
 typename std::enable_if<func == AggregateFunction::Avg && std::is_arithmetic<AggregateType>::value, void>::type
-_write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
-                        std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>,
-                                                           std::hash<AggregateKey>, NullEqualTo>>
-                            results) {
+write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
+                       std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>,
+                                                          std::hash<AggregateKey>, NullEqualTo>>
+                           results) {
   DebugAssert(column->is_nullable(), "Aggregate: Output column needs to be nullable");
 
   auto& values = column->values();
@@ -676,9 +669,9 @@ _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
 // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
 template <typename ColumnType, typename AggregateType, AggregateFunction func>
 typename std::enable_if<func == AggregateFunction::Avg && !std::is_arithmetic<AggregateType>::value, void>::type
-_write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>>,
-                        std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>,
-                                                           std::hash<AggregateKey>, NullEqualTo>>) {
+write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>>,
+                       std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>,
+                                                          std::hash<AggregateKey>, NullEqualTo>>) {
   Fail("Invalid aggregate");
 }
 
@@ -710,8 +703,8 @@ void Aggregate::_write_aggregate_output(boost::hana::basic_type<ColumnType> type
 template <typename ColumnType, AggregateFunction function>
 void Aggregate::write_aggregate_output(ColumnID column_index) {
   // retrieve type information from the aggregation traits
-  typename AggregateTraits<ColumnType, function>::aggregate_type aggregate_type;
-  auto aggregate_data_type = AggregateTraits<ColumnType, function>::aggregate_data_type;
+  typename AggregateTraits<ColumnType, function>::AggregateType aggregate_type;
+  auto aggregate_data_type = AggregateTraits<ColumnType, function>::AGGREGATE_DATA_TYPE;
 
   const auto& aggregate = _aggregates[column_index];
 
@@ -736,10 +729,10 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
     }
   }
 
-  constexpr bool needs_null = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
-  _output_column_definitions.emplace_back(output_column_name, aggregate_data_type, needs_null);
+  constexpr bool NEEDS_NULL = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
+  _output_column_definitions.emplace_back(output_column_name, aggregate_data_type, NEEDS_NULL);
 
-  auto col = std::make_shared<ValueColumn<decltype(aggregate_type)>>(needs_null);
+  auto col = std::make_shared<ValueColumn<decltype(aggregate_type)>>(NEEDS_NULL);
 
   auto context = std::static_pointer_cast<AggregateContext<ColumnType, decltype(aggregate_type)>>(
       _contexts_per_column[column_index]);
@@ -755,7 +748,7 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
 
   // write aggregated values into the column
   if (!context->results->empty()) {
-    _write_aggregate_values<ColumnType, decltype(aggregate_type), function>(col, context->results);
+    write_aggregate_values<ColumnType, decltype(aggregate_type), function>(col, context->results);
   } else if (_groupby_columns.empty()) {
     // If we did not GROUP BY anything and we have no results, we need to add NULL for most aggregates and 0 for count
     col->values().push_back(decltype(aggregate_type){});
@@ -799,7 +792,7 @@ std::shared_ptr<ColumnVisitableContext> Aggregate::_create_aggregate_context(con
 template <typename ColumnDataType, AggregateFunction aggregate_function>
 std::shared_ptr<ColumnVisitableContext> Aggregate::_create_aggregate_context_impl() const {
   const auto context = std::make_shared<
-      AggregateContext<ColumnDataType, typename AggregateTraits<ColumnDataType, aggregate_function>::aggregate_type>>();
+      AggregateContext<ColumnDataType, typename AggregateTraits<ColumnDataType, aggregate_function>::AggregateType>>();
   context->results = std::make_shared<typename decltype(context->results)::element_type>();
   return context;
 }

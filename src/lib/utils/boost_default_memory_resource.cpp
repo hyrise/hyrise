@@ -9,7 +9,7 @@ namespace boost {
 namespace container {
 namespace pmr {
 
-class default_resource_impl : public memory_resource {
+class default_resource_impl : public memory_resource {  // NOLINT
  public:
   virtual void* do_allocate(std::size_t bytes, std::size_t alignment) { return std::malloc(bytes); }
 

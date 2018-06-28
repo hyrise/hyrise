@@ -12,7 +12,7 @@
 
 namespace {
 // Generating a table with 40,000 rows (see TableGenerator), a chunk size of 2,000 results in 20 chunks per table
-const auto CHUNK_SIZE = opossum::ChunkID{2000};
+constexpr auto CHUNK_SIZE = opossum::ChunkID{2000};
 }
 
 namespace opossum {
@@ -34,7 +34,7 @@ void BenchmarkBasicFixture::SetUp(::benchmark::State& state) {
 
 void BenchmarkBasicFixture::TearDown(::benchmark::State&) { opossum::StorageManager::get().reset(); }
 
-void BenchmarkBasicFixture::clear_cache() {
+void BenchmarkBasicFixture::_clear_cache() {
   std::vector<int> clear = std::vector<int>();
   clear.resize(500 * 1000 * 1000, 42);
   for (uint i = 0; i < clear.size(); i++) {

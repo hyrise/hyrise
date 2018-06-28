@@ -87,7 +87,7 @@ class Sort::SortImplMaterializeOutput {
         auto chunk_it = output_columns_by_chunk.begin();
         auto chunk_offset_out = 0u;
         for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
-          const auto[chunk_id, chunk_offset] = _row_id_value_vector->at(row_index).first;
+          const auto [chunk_id, chunk_offset] = _row_id_value_vector->at(row_index).first;
 
           const auto column = _table_in->get_chunk(chunk_id)->get_column(column_id);
 
@@ -121,6 +121,7 @@ class Sort::SortImplMaterializeOutput {
     return output;
   }
 
+ protected:
   const std::shared_ptr<const Table> _table_in;
   const size_t _output_chunk_size;
   const std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> _row_id_value_vector;
@@ -143,15 +144,16 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     _null_value_rows = std::make_shared<std::vector<RowIDValuePair>>();
   }
 
+ protected:
   std::shared_ptr<const Table> _on_execute() override {
     // 1. Prepare Sort: Creating rowid-value-Structure
     _materialize_sort_column();
 
     // 2. After we got our ValueRowID Map we sort the map by the value of the pair
     if (_order_by_mode == OrderByMode::Ascending || _order_by_mode == OrderByMode::AscendingNullsLast) {
-      sort_with_operator<std::less<>>();
+      _sort_with_operator<std::less<>>();
     } else {
-      sort_with_operator<std::greater<>>();
+      _sort_with_operator<std::greater<>>();
     }
 
     // 2b. Insert null rows if necessary
@@ -199,7 +201,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
   }
 
   template <typename Comparator>
-  void sort_with_operator() {
+  void _sort_with_operator() {
     Comparator comparator;
     std::stable_sort(_row_id_value_vector->begin(), _row_id_value_vector->end(),
                      [comparator](RowIDValuePair a, RowIDValuePair b) { return comparator(a.second, b.second); });

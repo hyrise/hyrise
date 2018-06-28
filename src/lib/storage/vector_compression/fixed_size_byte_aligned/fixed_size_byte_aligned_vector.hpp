@@ -35,18 +35,18 @@ class FixedSizeByteAlignedVector : public CompressedVector<FixedSizeByteAlignedV
   const pmr_vector<UnsignedIntType>& data() const { return _data; }
 
  public:
-  size_t _on_size() const { return _data.size(); }
-  size_t _on_data_size() const { return sizeof(UnsignedIntType) * _data.size(); }
+  size_t on_size() const { return _data.size(); }
+  size_t on_data_size() const { return sizeof(UnsignedIntType) * _data.size(); }
 
-  auto _on_create_base_decoder() const { return std::unique_ptr<BaseVectorDecompressor>{_on_create_decoder()}; }
+  auto on_create_base_decoder() const { return std::unique_ptr<BaseVectorDecompressor>{on_create_decoder()}; }
 
-  auto _on_create_decoder() const { return std::make_unique<FixedSizeByteAlignedDecompressor<UnsignedIntType>>(_data); }
+  auto on_create_decoder() const { return std::make_unique<FixedSizeByteAlignedDecompressor<UnsignedIntType>>(_data); }
 
-  auto _on_begin() const { return boost::make_transform_iterator(_data.cbegin(), cast_to_uint32); }
+  auto on_begin() const { return boost::make_transform_iterator(_data.cbegin(), cast_to_uint32); }
 
-  auto _on_end() const { return boost::make_transform_iterator(_data.cend(), cast_to_uint32); }
+  auto on_end() const { return boost::make_transform_iterator(_data.cend(), cast_to_uint32); }
 
-  std::unique_ptr<const BaseCompressedVector> _on_copy_using_allocator(
+  std::unique_ptr<const BaseCompressedVector> on_copy_using_allocator(
       const PolymorphicAllocator<size_t>& alloc) const {
     auto data_copy = pmr_vector<UnsignedIntType>{_data, alloc};
     return std::make_unique<FixedSizeByteAlignedVector<UnsignedIntType>>(std::move(data_copy));

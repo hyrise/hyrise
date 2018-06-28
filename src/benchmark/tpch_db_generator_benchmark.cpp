@@ -9,7 +9,7 @@ namespace opossum {
  * invocations of 'TpchDbGenerator(scale_factor, 1000).generate();' will profit from cached data in tpch-dbgen
  * @param state
  */
-static void BM_TpchDbGenerator(benchmark::State& state) {
+static void BM_TpchDbGenerator(benchmark::State& state) {  // NOLINT
   while (state.KeepRunning()) {
     TpchDbGenerator(0.5f, 1000).generate();
   }

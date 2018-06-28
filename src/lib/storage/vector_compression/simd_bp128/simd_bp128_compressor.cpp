@@ -14,9 +14,9 @@ namespace opossum {
 std::unique_ptr<const BaseCompressedVector> SimdBp128Compressor::encode(const pmr_vector<uint32_t>& vector,
                                                                         const PolymorphicAllocator<size_t>& alloc,
                                                                         const UncompressedVectorInfo& meta_info) {
-  init(vector.size(), alloc);
-  for (auto value : vector) append(value);
-  finish();
+  _init(vector.size(), alloc);
+  for (auto value : vector) _append(value);
+  _finish();
 
   return std::make_unique<SimdBp128Vector>(std::move(*_data), _size);
 }
@@ -25,13 +25,13 @@ std::unique_ptr<BaseVectorCompressor> SimdBp128Compressor::create_new() const {
   return std::make_unique<SimdBp128Compressor>();
 }
 
-void SimdBp128Compressor::init(size_t size, const PolymorphicAllocator<size_t>& alloc) {
-  constexpr auto max_bit_size = 32u;
+void SimdBp128Compressor::_init(size_t size, const PolymorphicAllocator<size_t>& alloc) {
+  constexpr auto MAX_BIT_SIZE = 32u;
 
   // Ceiling of integer devision
   const auto div_ceil = [](auto x, auto y) { return (x + y - 1u) / y; };
 
-  const auto num_blocks = div_ceil(size, Packing::block_size) * max_bit_size;
+  const auto num_blocks = div_ceil(size, Packing::block_size) * MAX_BIT_SIZE;
   const auto num_meta_blocks = div_ceil(size, Packing::meta_block_size);
   const auto data_size = num_blocks + num_meta_blocks;
 
@@ -42,17 +42,17 @@ void SimdBp128Compressor::init(size_t size, const PolymorphicAllocator<size_t>& 
   _size = size;
 }
 
-void SimdBp128Compressor::append(uint32_t value) {
+void SimdBp128Compressor::_append(uint32_t value) {
   _pending_meta_block[_meta_block_index++] = value;
 
-  if (meta_block_complete()) {
-    pack_meta_block();
+  if (_meta_block_complete()) {
+    _pack_meta_block();
   }
 }
 
-void SimdBp128Compressor::finish() {
+void SimdBp128Compressor::_finish() {
   if (_meta_block_index > 0u) {
-    pack_incomplete_meta_block();
+    _pack_incomplete_meta_block();
   }
 
   // Resize vector to actual size
@@ -60,30 +60,30 @@ void SimdBp128Compressor::finish() {
   _data->shrink_to_fit();
 }
 
-bool SimdBp128Compressor::meta_block_complete() { return (Packing::meta_block_size - _meta_block_index) <= 0u; }
+bool SimdBp128Compressor::_meta_block_complete() { return (Packing::meta_block_size - _meta_block_index) <= 0u; }
 
-void SimdBp128Compressor::pack_meta_block() {
-  const auto bits_needed = bits_needed_per_block();
-  write_meta_info(bits_needed);
-  pack_blocks(Packing::blocks_in_meta_block, bits_needed);
+void SimdBp128Compressor::_pack_meta_block() {
+  const auto bits_needed = _bits_needed_per_block();
+  _write_meta_info(bits_needed);
+  _pack_blocks(Packing::blocks_in_meta_block, bits_needed);
 
   _meta_block_index = 0u;
 }
 
-void SimdBp128Compressor::pack_incomplete_meta_block() {
+void SimdBp128Compressor::_pack_incomplete_meta_block() {
   // Fill remaining elements with zero
   std::fill(_pending_meta_block.begin() + _meta_block_index, _pending_meta_block.end(), 0u);
 
-  const auto bits_needed = bits_needed_per_block();
-  write_meta_info(bits_needed);
+  const auto bits_needed = _bits_needed_per_block();
+  _write_meta_info(bits_needed);
 
   // Returns ceiling of integer division
   const auto num_blocks_left = (_meta_block_index + Packing::block_size - 1) / Packing::block_size;
 
-  pack_blocks(num_blocks_left, bits_needed);
+  _pack_blocks(num_blocks_left, bits_needed);
 }
 
-auto SimdBp128Compressor::bits_needed_per_block() -> std::array<uint8_t, Packing::blocks_in_meta_block> {
+auto SimdBp128Compressor::_bits_needed_per_block() -> std::array<uint8_t, Packing::blocks_in_meta_block> {
   std::array<uint8_t, Packing::blocks_in_meta_block> bits_needed{};
 
   for (auto block_index = 0u; block_index < Packing::blocks_in_meta_block; ++block_index) {
@@ -102,12 +102,12 @@ auto SimdBp128Compressor::bits_needed_per_block() -> std::array<uint8_t, Packing
   return bits_needed;
 }
 
-void SimdBp128Compressor::write_meta_info(const std::array<uint8_t, Packing::blocks_in_meta_block>& bits_needed) {
+void SimdBp128Compressor::_write_meta_info(const std::array<uint8_t, Packing::blocks_in_meta_block>& bits_needed) {
   Packing::write_meta_info(bits_needed.data(), _data->data() + _data_index);
   ++_data_index;
 }
 
-void SimdBp128Compressor::pack_blocks(const uint8_t num_blocks,
+void SimdBp128Compressor::_pack_blocks(const uint8_t num_blocks,
                                       const std::array<uint8_t, Packing::blocks_in_meta_block>& bits_needed) {
   DebugAssert(num_blocks <= 16u, "num_blocks must be smaller than 16.");
 

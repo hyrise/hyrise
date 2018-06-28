@@ -118,7 +118,7 @@ class Chunk : private Noncopyable {
 
   template <typename Index>
   std::shared_ptr<BaseIndex> create_index(const std::vector<ColumnID>& column_ids) {
-    const auto columns = get_columns_for_ids(column_ids);
+    const auto columns = _get_columns_for_ids(column_ids);
     return create_index<Index>(columns);
   }
 
@@ -142,7 +142,7 @@ class Chunk : private Noncopyable {
   size_t estimate_memory_usage() const;
 
  private:
-  std::vector<std::shared_ptr<const BaseColumn>> get_columns_for_ids(const std::vector<ColumnID>& column_ids) const;
+  std::vector<std::shared_ptr<const BaseColumn>> _get_columns_for_ids(const std::vector<ColumnID>& column_ids) const;
 
  private:
   PolymorphicAllocator<Chunk> _alloc;

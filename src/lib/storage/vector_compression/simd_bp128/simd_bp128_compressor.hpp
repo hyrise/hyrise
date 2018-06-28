@@ -25,17 +25,17 @@ class SimdBp128Compressor : public BaseVectorCompressor {
  private:
   using Packing = SimdBp128Packing;
 
-  void init(size_t size, const PolymorphicAllocator<size_t>& alloc);
-  void append(uint32_t value);
-  void finish();
+  void _init(size_t size, const PolymorphicAllocator<size_t>& alloc);
+  void _append(uint32_t value);
+  void _finish();
 
-  bool meta_block_complete();
-  void pack_meta_block();
-  void pack_incomplete_meta_block();
+  bool _meta_block_complete();
+  void _pack_meta_block();
+  void _pack_incomplete_meta_block();
 
-  std::array<uint8_t, Packing::blocks_in_meta_block> bits_needed_per_block();
-  void write_meta_info(const std::array<uint8_t, Packing::blocks_in_meta_block>& bits_needed);
-  void pack_blocks(const uint8_t num_blocks, const std::array<uint8_t, Packing::blocks_in_meta_block>& bits_needed);
+  std::array<uint8_t, Packing::blocks_in_meta_block> _bits_needed_per_block();
+  void _write_meta_info(const std::array<uint8_t, Packing::blocks_in_meta_block>& bits_needed);
+  void _pack_blocks(const uint8_t num_blocks, const std::array<uint8_t, Packing::blocks_in_meta_block>& bits_needed);
 
  private:
   std::unique_ptr<pmr_vector<uint128_t>> _data;

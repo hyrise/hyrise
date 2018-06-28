@@ -10,6 +10,7 @@ RUN apt-get update \
         ccache \
         clang-6.0 \
         clang-format-6.0 \
+        clang-tidy-6.0 \
         cmake \
         curl \
         gcovr \

@@ -85,8 +85,19 @@ if (${ENABLE_NUMA_SUPPORT})
     include_directories(${PROJECT_BINARY_DIR}/third_party/pgasus/src)
 endif()
 
+set(ENABLE_CLANG_TIDY OFF CACHE BOOL "Run clang-tidy")
+if (ENABLE_CLANG_TIDY)
+    message(STATUS "clang-tidy enabled")
+    set(CMAKE_CXX_CLANG_TIDY "${CMAKE_SOURCE_DIR}/scripts/clang_tidy_wrapper.sh;${CMAKE_SOURCE_DIR}")
+
+    set_source_files_properties(${CMAKE_SOURCE_DIR}/src/lib/operators/jit_operator/specialization/llvm/CloneFunction.cpp ${CMAKE_SOURCE_DIR}/src/lib/operators/jit_operator/specialization/llvm/InlineFunction.cpp PROPERTIES CMAKE_CXX_CLANG_TIDY "")
+endif()
+
 add_subdirectory(benchmarklib)
 add_subdirectory(benchmark)
 add_subdirectory(bin)
 add_subdirectory(lib)
+
+set(CMAKE_CXX_CLANG_TIDY "")
+
 add_subdirectory(test)

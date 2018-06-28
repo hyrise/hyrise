@@ -59,14 +59,15 @@ class TpccTableGenerator : public opossum::AbstractBenchmarkTableGenerator {
 
  protected:
   template <typename T>
-  std::vector<T> generate_inner_order_line_column(std::vector<size_t> indices, order_line_counts_type order_line_counts,
-                                                  const std::function<T(std::vector<size_t>)>& generator_function);
+  std::vector<T> _generate_inner_order_line_column(std::vector<size_t> indices,
+                                                   order_line_counts_type order_line_counts,
+                                                   const std::function<T(std::vector<size_t>)>& generator_function);
 
   template <typename T>
-  void add_order_line_column(std::vector<ChunkColumns>& columns_by_chunk, TableColumnDefinitions& column_definitions,
-                             std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
-                             order_line_counts_type order_line_counts,
-                             const std::function<T(std::vector<size_t>)>& generator_function);
+  void _add_order_line_column(std::vector<ChunkColumns>& columns_by_chunk, TableColumnDefinitions& column_definitions,
+                              std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
+                              order_line_counts_type order_line_counts,
+                              const std::function<T(std::vector<size_t>)>& generator_function);
 
   TpccRandomGenerator _random_gen;
 };
