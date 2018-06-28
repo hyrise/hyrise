@@ -7,9 +7,10 @@ def job = Jenkins.instance.getItemByFullName(jobname)
  for (build in job.builds) {
   if (!build.isBuilding()) { continue; }
   echo "_____"
-  sys("export")
-  // echo build.getNumber().toInteger()
+  echo env.BUILD_NUMBER
+  echo build.getNumber()
   if (buildnum == build.getNumber().toInteger()) { continue; } 
+  echo "DO STOP"
   build.doStop();
 }
 
