@@ -4,8 +4,11 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 def jobname = env.JOB_NAME
 def buildnum = env.BUILD_NUMBER.toInteger()
 def job = Jenkins.instance.getItemByFullName(jobname)
-for (build in job.builds) {
+ for (build in job.builds) {
   if (!build.isBuilding()) { continue; }
+  echo "_____"
+  echo buildnum
+  echo build.getNumber().toInteger()
   if (buildnum == build.getNumber().toInteger()) { continue; } 
   build.doStop();
 }
