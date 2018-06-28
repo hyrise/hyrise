@@ -12,6 +12,9 @@
  * 
  *     Invalidation Entries:
  *      (i,<TransactionID>,<table_name.size()>,<table_name>,<RowID>)\n
+ * 
+ *     Load Table Entries:
+ *      (l,<path.size()>,<path>,<table_name.size()>,<table_name>)\n
  */
 
 #include "simple_logger.hpp"
@@ -34,7 +37,7 @@ void SimpleLogger::commit(const TransactionID transaction_id, std::function<void
   callback(transaction_id);
 }
 
-void SimpleLogger::value(const TransactionID transaction_id, const std::string table_name, const RowID row_id,
+void SimpleLogger::value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,
                           const std::vector<AllTypeVariant> values) {
   std::stringstream ss;
   ss << "(v," << transaction_id << "," << table_name.size() << "," << table_name << "," << row_id << ",(";
@@ -52,9 +55,15 @@ void SimpleLogger::value(const TransactionID transaction_id, const std::string t
   _write_to_logfile(ss);
 }
 
-void SimpleLogger::invalidate(const TransactionID transaction_id, const std::string table_name, const RowID row_id) {
+void SimpleLogger::invalidate(const TransactionID transaction_id, const std::string& table_name, const RowID row_id) {
   std::stringstream ss;
   ss << "(i," << transaction_id << "," << table_name.size() << "," << table_name << "," << row_id << ")\n";
+  _write_to_logfile(ss);
+}
+
+void SimpleLogger::load_table(const std::string& file_path, const std::string& table_name) {
+  std::stringstream ss;
+  ss << "(l," << file_path.size() << "," << file_path << "," << table_name.size() << "," << table_name << ")\n";
   _write_to_logfile(ss);
 }
 

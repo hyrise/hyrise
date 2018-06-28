@@ -20,10 +20,12 @@ class NoLogger : public AbstractLogger {
     callback(transaction_id);
   };
 
-  void value(const TransactionID transaction_id, const std::string table_name, const RowID row_id,
+  void value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,
              const std::vector<AllTypeVariant> values) override {};
 
-  void invalidate(const TransactionID transaction_id, const std::string table_name, const RowID row_id) override {};
+  void invalidate(const TransactionID transaction_id, const std::string& table_name, const RowID row_id) override {};
+
+  void load_table(const std::string& file_path, const std::string& table_name) override {};
 
   void flush() override {};
 

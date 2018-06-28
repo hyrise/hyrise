@@ -67,7 +67,8 @@ namespace opossum {
 constexpr size_t LOG_BUFFER_CAPACITY = 16384;
 
 // Magic number: time interval that triggers a flush to disk.
-constexpr auto LOG_INTERVAL = std::chrono::seconds(5);
+// constexpr auto LOG_INTERVAL = std::chrono::seconds(5);
+constexpr auto LOG_INTERVAL = std::chrono::milliseconds(1);
 
 template <>
 void GroupCommitLogger::_write_value<std::string>(std::vector<char>& entry, size_t& cursor, const std::string& value) {
@@ -167,7 +168,7 @@ bool ValueVisitor::operator()(NullValue v) {
   return false;
 }
 
-void GroupCommitLogger::value(const TransactionID transaction_id, const std::string table_name, const RowID row_id,
+void GroupCommitLogger::value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,
                               const std::vector<AllTypeVariant> values) {
   // This is the entry length up to the ChunkOffset.
   // The entry then gets resized for the null value bitmap and each value
@@ -207,7 +208,7 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
   _write_to_buffer(entry);
 }
 
-void GroupCommitLogger::invalidate(const TransactionID transaction_id, const std::string table_name,
+void GroupCommitLogger::invalidate(const TransactionID transaction_id, const std::string& table_name,
                                    const RowID row_id) {
   const auto entry_length =
       sizeof(char) + sizeof(TransactionID) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset);

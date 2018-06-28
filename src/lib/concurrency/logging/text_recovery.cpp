@@ -6,6 +6,9 @@
 #include "../../operators/insert.hpp"
 #include "../../storage/storage_manager.hpp"
 #include "../../storage/table.hpp"
+#include "../../storage/chunk.hpp"
+#include "../../storage/storage_manager.hpp"
+#include "../../utils/load_table.hpp"
 #include "../transaction_manager.hpp"
 #include "logger.hpp"
 #include "types.hpp"
@@ -65,26 +68,41 @@ void TextRecovery::recover() {
 
     std::string line;
     while (std::getline(log_file, line)) {
+      // next_token_begin
+      //    v
+      // (l,<path.size()>,<path>,<table_name.size(),<table_name>)
+      // (t,<TransactionID>)
+      // (i,<TransactionID>,<table_name.size()>,<table_name>,<RowID>)
+      // (v,<TransactionID>,<table_name.size()>,<table_name>,<RowID>,(<value1.size()>,<value1>,<value2.size()>,...))
+
+      // next_token_begin is set to the pos of the next token after each read
+      size_t next_token_begin = 3;
+
       char log_type = line[1];
-      DebugAssert(log_type == 't' || log_type == 'i' || log_type == 'v', "Recovery: invalid log type token");
+      DebugAssert(log_type == 't' || log_type == 'i' || log_type == 'v' || log_type == 'l', "Recovery: invalid log type token");
 
       // if commit entry
       if (log_type == 't') {
-        // line = "(t,<TransactionID>)"
         TransactionID transaction_id = std::stoul(line.substr(3, line.length() - 4));
         _redo_transactions(transaction_id, transactions);
         last_transaction_id = std::max(transaction_id, last_transaction_id);
         continue;
       } 
+
+      // if load table entry
+      if (log_type == 'l') {
+        std::string path = _get_next_value_with_preceding_size_and_incr_begin(line, next_token_begin, ',', log_file);
+        std::string table_name = _get_next_value_with_preceding_size_and_incr_begin(line, next_token_begin, ',', log_file);
+        DebugAssert(line[next_token_begin - 1] == ')', "Recovery: load table entry expected ')', but got " + 
+          line[next_token_begin - 1] + " instead.");
+
+        const auto table = load_table(path, Chunk::MAX_SIZE);
+        StorageManager::get().add_table(table_name, table);
+        continue;
+      }
       
       // else: value or invalidation entry
-                                    
-      // next_token_begin
-      //    v
-      // (i,<TransactionID>,<table_name.size()>,<table_name>,<RowID>)
-      // (v,<TransactionID>,<table_name.size()>,<table_name>,<RowID>,(<value1.size()>,<value1>,<value2.size()>,...))
-
-      size_t next_token_begin = 3;
+                                  
       TransactionID transaction_id = std::stoul(_get_substr_and_incr_begin(line, next_token_begin, ','));
 
       std::string table_name = _get_next_value_with_preceding_size_and_incr_begin(

@@ -459,6 +459,7 @@ int Console::load_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
+  Logger::getInstance().load_table(filepath, tablename);
   return ReturnCode::Ok;
 }
 
