@@ -21,8 +21,6 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
 
   hsql::SQLParserResult parse_result;
 
-  hsql::SQLParser::parse(sql, &parse_result);
-
   const auto start = std::chrono::high_resolution_clock::now();
   hsql::SQLParser::parse(sql, &parse_result);
 
