@@ -11,7 +11,6 @@
 #include "tasks/server/execute_server_prepared_statement_task.hpp"
 #include "tasks/server/execute_server_query_task.hpp"
 #include "tasks/server/load_server_file_task.hpp"
-#include "tasks/server/recover_database_task.hpp"
 
 namespace opossum {
 
@@ -25,7 +24,6 @@ class MockTaskRunner {
                boost::future<std::shared_ptr<const Table>>(std::shared_ptr<ExecuteServerPreparedStatementTask>));
   MOCK_METHOD1(dispatch_server_task, boost::future<void>(std::shared_ptr<ExecuteServerQueryTask>));
   MOCK_METHOD1(dispatch_server_task, boost::future<void>(std::shared_ptr<LoadServerFileTask>));
-  // MOCK_METHOD1(dispatch_server_task, boost::future<void>(std::shared_ptr<RecoverDatabaseTask>));
 };
 
 }  // namespace opossum
