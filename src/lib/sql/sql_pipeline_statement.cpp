@@ -22,7 +22,8 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
                                            const std::shared_ptr<TransactionContext>& transaction_context,
                                            const std::shared_ptr<LQPTranslator>& lqp_translator,
                                            const std::shared_ptr<Optimizer>& optimizer,
-                                           const PreparedStatementCache& prepared_statements)
+                                           const PreparedStatementCache& prepared_statements,
+                                           const CleanupTemporaries cleanup_temporaries)
     : _sql_string(sql),
       _use_mvcc(use_mvcc),
       _auto_commit(_use_mvcc == UseMvcc::Yes && !transaction_context),
@@ -31,7 +32,8 @@ SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_p
       _optimizer(optimizer),
       _parsed_sql_statement(std::move(parsed_sql)),
       _metrics(std::make_shared<SQLPipelineStatementMetrics>()),
-      _prepared_statements(prepared_statements) {
+      _prepared_statements(prepared_statements),
+      _cleanup_temporaries(cleanup_temporaries) {
   Assert(!_parsed_sql_statement || _parsed_sql_statement->size() == 1,
          "SQLPipelineStatement must hold exactly one SQL statement");
   DebugAssert(!_sql_string.empty(), "An SQLPipelineStatement should always contain a SQL statement string for caching");
@@ -129,7 +131,7 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
     _transaction_context = TransactionManager::get().new_transaction_context();
   }
 
-  _query_plan = std::make_shared<SQLQueryPlan>();
+  _query_plan = std::make_shared<SQLQueryPlan>(_cleanup_temporaries);
 
   // Stores when the actual compilation started/ended
   auto started = std::chrono::high_resolution_clock::now();
@@ -216,7 +218,7 @@ const std::vector<std::shared_ptr<OperatorTask>>& SQLPipelineStatement::get_task
               "Physical query plan creation returned no or more than one plan for a single statement.");
 
   const auto& root = query_plan->tree_roots().front();
-  _tasks = OperatorTask::make_tasks_from_operator(root);
+  _tasks = OperatorTask::make_tasks_from_operator(root, _cleanup_temporaries);
   return _tasks;
 }
 

@@ -18,7 +18,7 @@ class TransactionContext;
 // When caching a query (through prepared statements or automatically) its SQLQueryPlan object is cached.
 class SQLQueryPlan {
  public:
-  SQLQueryPlan();
+  explicit SQLQueryPlan(CleanupTemporaries cleanup_temporaries);
 
   // Add a new operator tree to the query plan by adding the root operator.
   void add_tree_by_root(std::shared_ptr<AbstractOperator> op);
@@ -46,6 +46,9 @@ class SQLQueryPlan {
   uint16_t num_parameters() const;
 
  protected:
+  // Should we delete temporary result tables once they are not needed anymore?
+  CleanupTemporaries _cleanup_temporaries;
+
   // Root nodes of all operator trees that this plan contains.
   std::vector<std::shared_ptr<AbstractOperator>> _roots;
 

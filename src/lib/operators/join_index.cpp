@@ -357,4 +357,14 @@ void JoinIndex::_write_output_columns(ChunkColumns& output_columns, const std::s
   }
 }
 
+void JoinIndex::_on_cleanup() {
+  _output_table.reset();
+  _left_in_table.reset();
+  _right_in_table.reset();
+  _pos_list_left.reset();
+  _pos_list_right.reset();
+  _left_matches.clear();
+  _right_matches.clear();
+}
+
 }  // namespace opossum

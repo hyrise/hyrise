@@ -45,7 +45,8 @@ class SQLPipelineStatement : public Noncopyable {
   SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                        const UseMvcc use_mvcc, const std::shared_ptr<TransactionContext>& transaction_context,
                        const std::shared_ptr<LQPTranslator>& lqp_translator,
-                       const std::shared_ptr<Optimizer>& optimizer, const PreparedStatementCache& prepared_statements);
+                       const std::shared_ptr<Optimizer>& optimizer, const PreparedStatementCache& prepared_statements,
+                       const CleanupTemporaries cleanup_temporaries);
 
   // Returns the raw SQL string.
   const std::string& get_sql_string();
@@ -107,6 +108,9 @@ class SQLPipelineStatement : public Noncopyable {
   PreparedStatementCache _prepared_statements;
   // Number of placeholders in prepared statement; default 0 because we assume no prepared statement
   uint16_t _num_parameters = 0;
+
+  // Delete temporary tables
+  const CleanupTemporaries _cleanup_temporaries;
 };
 
 }  // namespace opossum

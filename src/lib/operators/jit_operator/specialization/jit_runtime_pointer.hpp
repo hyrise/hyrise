@@ -71,7 +71,7 @@ class JitKnownRuntimePointer : public JitRuntimePointer {
   bool is_valid() const override {
     const auto ptr = reinterpret_cast<void*>(address());
     auto fd = open("/dev/random", O_WRONLY);
-    bool result = (write(fd, ptr, 8) == 8);
+    bool result = (write(fd, ptr, 1) == 1);
     close(fd);
     return result;
   }
