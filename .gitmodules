@@ -19,6 +19,3 @@
 [submodule "third_party/cpp-btree"]
 	path = third_party/cpp-btree
 	url = https://github.com/algorithm-ninja/cpp-btree
-[submodule "third_party/cqf"]
-	path = third_party/cqf
-	url = git@github.com:splatlab/cqf.git
