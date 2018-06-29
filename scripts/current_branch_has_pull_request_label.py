@@ -31,9 +31,10 @@ for pr in prs:
 	for label in pr_details['labels']:
 		if(label['name'] == sys.argv[1]):
 			print("true")
+			sys.exit(0)
 	else:
 		print("false")
-	
-	break
+		sys.exit(0)
+
 else:
 	print("No PR for current commit %s found" % (git_head_hash))
