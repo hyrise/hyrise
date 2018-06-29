@@ -115,6 +115,7 @@ set(
     storage/chunk_encoder_test.cpp
     storage/chunk_test.cpp
     storage/composite_group_key_index_test.cpp
+    storage/counting_quotient_filter_test.cpp
     storage/dictionary_column_test.cpp
     storage/fixed_string_dictionary_column_test.cpp
     storage/encoding_test.hpp
