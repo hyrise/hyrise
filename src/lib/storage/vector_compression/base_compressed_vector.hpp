@@ -100,9 +100,7 @@ class CompressedVector : public BaseCompressedVector {
 
   CompressedVectorType type() const final { return get_compressed_vector_type<Derived>(); }
 
-  std::unique_ptr<BaseVectorDecompressor> create_base_decoder() const final {
-    return _self().on_create_base_decoder();
-  }
+  std::unique_ptr<BaseVectorDecompressor> create_base_decoder() const final { return _self().on_create_base_decoder(); }
 
   std::unique_ptr<const BaseCompressedVector> copy_using_allocator(
       const PolymorphicAllocator<size_t>& alloc) const final {
