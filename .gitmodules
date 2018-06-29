@@ -16,3 +16,6 @@
 [submodule "third_party/libpqxx"]
 	path = third_party/libpqxx
 	url = https://github.com/jtv/libpqxx.git
+[submodule "third_party/cpp-btree"]
+	path = third_party/cpp-btree
+	url = https://github.com/algorithm-ninja/cpp-btree
