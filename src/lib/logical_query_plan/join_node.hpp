@@ -26,7 +26,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   explicit JoinNode(const JoinMode join_mode, const std::shared_ptr<AbstractExpression>& join_predicate);
 
   std::string description() const override;
-  const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const override;
+  const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
   std::shared_ptr<TableStatistics> derive_statistics_from(const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const override;
 
   const JoinMode join_mode;
@@ -37,7 +37,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   bool _shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const override;
 
  private:
-  mutable std::vector<std::shared_ptr<AbstractExpression>> _output_column_expressions;
+  mutable std::vector<std::shared_ptr<AbstractExpression>> _column_expressions;
 };
 
 }  // namespace opossum

@@ -41,9 +41,9 @@ const boost::variant<MockNode::ColumnDefinitions, std::shared_ptr<TableStatistic
   return _constructor_arguments;
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& MockNode::output_column_expressions() const {
-  if (!_output_column_expressions) {
-    _output_column_expressions.emplace();
+const std::vector<std::shared_ptr<AbstractExpression>>& MockNode::column_expressions() const {
+  if (!_column_expressions) {
+    _column_expressions.emplace();
 
     auto column_count = size_t{0};
     if (_constructor_arguments.type() == typeid(ColumnDefinitions)) {
@@ -54,11 +54,11 @@ const std::vector<std::shared_ptr<AbstractExpression>>& MockNode::output_column_
 
     for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
       const auto column_reference = LQPColumnReference(shared_from_this(), column_id);
-      _output_column_expressions->emplace_back(std::make_shared<LQPColumnExpression>(column_reference));
+      _column_expressions->emplace_back(std::make_shared<LQPColumnExpression>(column_reference));
     }
   }
 
-  return *_output_column_expressions;
+  return *_column_expressions;
 }
 
 std::string MockNode::description() const {

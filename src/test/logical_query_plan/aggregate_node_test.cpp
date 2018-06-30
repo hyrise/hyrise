@@ -35,11 +35,11 @@ class AggregateNodeTest : public ::testing::Test {
 };
 
 TEST_F(AggregateNodeTest, OutputColumnExpressions) {
-  ASSERT_EQ(_aggregate_node->output_column_expressions().size(), 4u);
-  EXPECT_TRUE(_aggregate_node->output_column_expressions().at(0)->deep_equals(*column(_a)));
-  EXPECT_TRUE(_aggregate_node->output_column_expressions().at(1)->deep_equals(*column(_c)));
-  EXPECT_TRUE(_aggregate_node->output_column_expressions().at(2)->deep_equals(*sum(add(_a, _b))));
-  EXPECT_TRUE(_aggregate_node->output_column_expressions().at(3)->deep_equals(*sum(add(_a, _c))));
+  ASSERT_EQ(_aggregate_node->column_expressions().size(), 4u);
+  EXPECT_TRUE(_aggregate_node->column_expressions().at(0)->deep_equals(*column(_a)));
+  EXPECT_TRUE(_aggregate_node->column_expressions().at(1)->deep_equals(*column(_c)));
+  EXPECT_TRUE(_aggregate_node->column_expressions().at(2)->deep_equals(*sum(add(_a, _b))));
+  EXPECT_TRUE(_aggregate_node->column_expressions().at(3)->deep_equals(*sum(add(_a, _c))));
 }
 
 TEST_F(AggregateNodeTest, Description) {

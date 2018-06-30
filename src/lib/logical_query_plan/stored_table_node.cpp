@@ -22,7 +22,7 @@ const std::vector<ChunkID>& StoredTableNode::excluded_chunk_ids() const { return
 
 std::string StoredTableNode::description() const { return "[StoredTable] Name: '" + table_name + "'"; }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::output_column_expressions() const {
+const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::column_expressions() const {
   // Need to initialize the expressions lazily because they will have a weak_ptr to this node and we can't obtain that
   // in the constructor
   if (!_expressions) {

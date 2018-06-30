@@ -17,7 +17,7 @@ class DummyTableNodeTest : public ::testing::Test {
 TEST_F(DummyTableNodeTest, Description) { EXPECT_EQ(_dummy_table_node->description(), "[DummyTable]"); }
 
 TEST_F(DummyTableNodeTest, OutputColumnExpressions) {
-  EXPECT_EQ(_dummy_table_node->output_column_expressions().size(), 0u);
+  EXPECT_EQ(_dummy_table_node->column_expressions().size(), 0u);
 }
 
 TEST_F(DummyTableNodeTest, Equals) {

@@ -38,7 +38,7 @@ std::string JoinNode::description() const {
   return stream.str();
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::output_column_expressions() const {
+const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::column_expressions() const {
   Assert(left_input() && right_input(), "Both inputs need to be set to determine a JoiNode's output expressions");
 
   /**
@@ -47,18 +47,18 @@ const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::output_column_
    * of feeble code.
    */
 
-  const auto& left_expressions = left_input()->output_column_expressions();
-  const auto& right_expressions = right_input()->output_column_expressions();
+  const auto& left_expressions = left_input()->column_expressions();
+  const auto& right_expressions = right_input()->column_expressions();
 
   const auto output_both_inputs = join_mode != JoinMode::Semi && join_mode != JoinMode::Anti;
 
-  _output_column_expressions.resize(left_expressions.size() + (output_both_inputs ? right_expressions.size() : 0));
+  _column_expressions.resize(left_expressions.size() + (output_both_inputs ? right_expressions.size() : 0));
 
-  auto right_begin = std::copy(left_expressions.begin(), left_expressions.end(), _output_column_expressions.begin());
+  auto right_begin = std::copy(left_expressions.begin(), left_expressions.end(), _column_expressions.begin());
 
   if (output_both_inputs) std::copy(right_expressions.begin(), right_expressions.end(), right_begin);
 
-  return _output_column_expressions;
+  return _column_expressions;
 }
 
 std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(

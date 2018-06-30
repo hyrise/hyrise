@@ -59,12 +59,12 @@ TEST_F(JoinNodeTest, DescriptionSemiJoin) { EXPECT_EQ(_semi_join_node->descripti
 TEST_F(JoinNodeTest, DescriptionAntiJoin) { EXPECT_EQ(_anti_join_node->description(), "[Join] Mode: Anti a = y"); }
 
 TEST_F(JoinNodeTest, OutputColumnExpressions) {
-  ASSERT_EQ(_join_node->output_column_expressions().size(), 5u);
-  EXPECT_TRUE(_join_node->output_column_expressions().at(0)->deep_equals(*column(_t_a_a)));
-  EXPECT_TRUE(_join_node->output_column_expressions().at(1)->deep_equals(*column(_t_a_b)));
-  EXPECT_TRUE(_join_node->output_column_expressions().at(2)->deep_equals(*column(_t_a_c)));
-  EXPECT_TRUE(_join_node->output_column_expressions().at(3)->deep_equals(*column(_t_b_x)));
-  EXPECT_TRUE(_join_node->output_column_expressions().at(4)->deep_equals(*column(_t_b_y)));
+  ASSERT_EQ(_join_node->column_expressions().size(), 5u);
+  EXPECT_TRUE(_join_node->column_expressions().at(0)->deep_equals(*column(_t_a_a)));
+  EXPECT_TRUE(_join_node->column_expressions().at(1)->deep_equals(*column(_t_a_b)));
+  EXPECT_TRUE(_join_node->column_expressions().at(2)->deep_equals(*column(_t_a_c)));
+  EXPECT_TRUE(_join_node->column_expressions().at(3)->deep_equals(*column(_t_b_x)));
+  EXPECT_TRUE(_join_node->column_expressions().at(4)->deep_equals(*column(_t_b_y)));
 }
 
 TEST_F(JoinNodeTest, Equals) {
@@ -92,17 +92,17 @@ TEST_F(JoinNodeTest, Copy) {
 }
 
 TEST_F(JoinNodeTest, OutputColumnReferencesSemiJoin) {
-  ASSERT_EQ(_semi_join_node->output_column_expressions().size(), 3u);
-  EXPECT_TRUE(_semi_join_node->output_column_expressions().at(0)->deep_equals(*column(_t_a_a)));
-  EXPECT_TRUE(_semi_join_node->output_column_expressions().at(1)->deep_equals(*column(_t_a_b)));
-  EXPECT_TRUE(_semi_join_node->output_column_expressions().at(2)->deep_equals(*column(_t_a_c)));
+  ASSERT_EQ(_semi_join_node->column_expressions().size(), 3u);
+  EXPECT_TRUE(_semi_join_node->column_expressions().at(0)->deep_equals(*column(_t_a_a)));
+  EXPECT_TRUE(_semi_join_node->column_expressions().at(1)->deep_equals(*column(_t_a_b)));
+  EXPECT_TRUE(_semi_join_node->column_expressions().at(2)->deep_equals(*column(_t_a_c)));
 }
 
 TEST_F(JoinNodeTest, OutputColumnReferencesAntiJoin) {
-  ASSERT_EQ(_anti_join_node->output_column_expressions().size(), 3u);
-  EXPECT_TRUE(_anti_join_node->output_column_expressions().at(0)->deep_equals(*column(_t_a_a)));
-  EXPECT_TRUE(_anti_join_node->output_column_expressions().at(1)->deep_equals(*column(_t_a_b)));
-  EXPECT_TRUE(_anti_join_node->output_column_expressions().at(2)->deep_equals(*column(_t_a_c)));
+  ASSERT_EQ(_anti_join_node->column_expressions().size(), 3u);
+  EXPECT_TRUE(_anti_join_node->column_expressions().at(0)->deep_equals(*column(_t_a_a)));
+  EXPECT_TRUE(_anti_join_node->column_expressions().at(1)->deep_equals(*column(_t_a_b)));
+  EXPECT_TRUE(_anti_join_node->column_expressions().at(2)->deep_equals(*column(_t_a_c)));
 }
 
 }  // namespace opossum

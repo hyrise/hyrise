@@ -55,7 +55,7 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
 
   // Visualize subselects
   if (const auto projection = std::dynamic_pointer_cast<ProjectionNode>(node)) {
-    for (const auto& column_expression : projection->output_column_expressions()) {
+    for (const auto& column_expression : projection->column_expressions()) {
       visit_expression(column_expression, [&](const auto& sub_expression) {
         const auto lqp_select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression);
         if (!lqp_select_expression) return true;

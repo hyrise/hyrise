@@ -32,7 +32,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   const ColumnDefinitions& column_definitions() const;
   const boost::variant<ColumnDefinitions, std::shared_ptr<TableStatistics>>& constructor_arguments() const;
 
-  const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const override;
+  const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
 
   std::string description() const override;
 
@@ -42,7 +42,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
  private:
   std::optional<std::string> _name;
-  mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _output_column_expressions;
+  mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _column_expressions;
 
   // Constructor args to keep around for deep_copy()
   boost::variant<ColumnDefinitions, std::shared_ptr<TableStatistics>> _constructor_arguments;

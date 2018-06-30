@@ -118,7 +118,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /**
    * @return The Expressions defining each Column that this node outputs
    */
-  virtual const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const;
+  virtual const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const;
 
   /**
    * @return The ColumnID of the @param expression, or std::nullopt if it can't be found
@@ -150,13 +150,14 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   // @}
 
   /**
-   * Prints this node and all its descendants formatted as a tree
+   * Prints this node and all its descendants (including all Subqueries) formatted as a tree
    */
   void print(std::ostream& out = std::cout) const;
 
   const LQPNodeType type;
 
  protected:
+  void _print_impl(std::ostream& out) const;
   virtual std::shared_ptr<AbstractLQPNode> _shallow_copy_impl(LQPNodeMapping & node_mapping) const = 0;
   virtual bool _shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const = 0;
 

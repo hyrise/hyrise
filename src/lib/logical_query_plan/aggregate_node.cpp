@@ -24,9 +24,9 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpressio
   }
 #endif
 
-  _output_column_expressions.reserve(group_by_expressions.size() + aggregate_expressions.size());
-  _output_column_expressions.insert(_output_column_expressions.end(), group_by_expressions.begin(), group_by_expressions.end());
-  _output_column_expressions.insert(_output_column_expressions.end(), aggregate_expressions.begin(), aggregate_expressions.end());
+  _column_expressions.reserve(group_by_expressions.size() + aggregate_expressions.size());
+  _column_expressions.insert(_column_expressions.end(), group_by_expressions.begin(), group_by_expressions.end());
+  _column_expressions.insert(_column_expressions.end(), aggregate_expressions.begin(), aggregate_expressions.end());
 }
 
 std::string AggregateNode::description() const {
@@ -38,8 +38,8 @@ std::string AggregateNode::description() const {
   return stream.str();
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::output_column_expressions() const {
-  return _output_column_expressions;
+const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::column_expressions() const {
+  return _column_expressions;
 }
 
 std::shared_ptr<AbstractLQPNode> AggregateNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {

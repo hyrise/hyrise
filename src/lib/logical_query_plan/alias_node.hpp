@@ -16,7 +16,7 @@ class AliasNode : public EnableMakeForLQPNode<AliasNode>, public AbstractLQPNode
   AliasNode(const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const std::vector<std::string>& aliases);
 
   std::string description() const override;
-  const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const override;
+  const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
 
   const std::vector<std::string> aliases;
 

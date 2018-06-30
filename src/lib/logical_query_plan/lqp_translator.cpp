@@ -139,14 +139,16 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
 
   Assert(predicate_node->predicate->type == ExpressionType::Predicate, "Only PredicateExpressions can be translated to Table/IndexScans");
 
-  if (const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node->predicate); binary_predicate_expression) {
+  const auto predicate = predicate_node->predicate;
+
+  if (const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate); binary_predicate_expression) {
     return _translate_binary_predicate(*input_node,
                                 input_operator,
                                 *binary_predicate_expression->left_operand(),
                                 binary_predicate_expression->predicate_condition,
                                 *binary_predicate_expression->right_operand());
 
-  } else if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(predicate_node->predicate); between_expression) {
+  } else if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(predicate); between_expression) {
     const auto lower_bound_op = _translate_binary_predicate(*input_node,
                                                      input_operator,
                                                      *between_expression->value(),
@@ -159,12 +161,12 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
                                                      *between_expression->upper_bound());
     return upper_bound_op;
 
-  } else if (const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(predicate_node->predicate); is_null_expression) {
+  } else if (const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(predicate); is_null_expression) {
     return _translate_unary_predicate(*input_node,
                                 input_operator,
                                 *is_null_expression->operand(), is_null_expression->predicate_condition);
 
-  } else if (const auto array_expression = std::dynamic_pointer_cast<ListExpression>(predicate_node->predicate); array_expression) {
+  } else if (const auto array_expression = std::dynamic_pointer_cast<ListExpression>(predicate); array_expression) {
     Fail("TableScan doesn't support IN yet");
   }
 
@@ -262,9 +264,9 @@ const std::shared_ptr<opossum::AbstractLQPNode> &node) const {
   const auto input_operator = translate_node(input_node);
 
   auto column_ids = std::vector<ColumnID>();
-  column_ids.reserve(alias_node->output_column_expressions().size());
+  column_ids.reserve(alias_node->column_expressions().size());
 
-  for (const auto& expression : alias_node->output_column_expressions()) {
+  for (const auto& expression : alias_node->column_expressions()) {
     column_ids.emplace_back(input_node->get_column_id(*expression));
   }
 
@@ -278,7 +280,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_projection_node(
   const auto input_operator = translate_node(input_node);
 
   return std::make_shared<Projection>(input_operator,
-                                      _translate_expressions(projection_node->output_column_expressions(), input_node));
+                                      _translate_expressions(projection_node->column_expressions(), input_node));
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
@@ -436,7 +438,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_update_node(
   const auto input_operator = translate_node(node->left_input());
   auto update_node = std::dynamic_pointer_cast<UpdateNode>(node);
 
-  auto new_value_exprs = _translate_expressions(update_node->column_expressions(), node);
+  auto new_value_exprs = _translate_expressions(update_node->update_column_expressions(), node);
 
   auto projection = std::make_shared<Projection>(input_operator, new_value_exprs);
   return std::make_shared<Update>(update_node->table_name(), input_operator, projection);
@@ -520,7 +522,7 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
 
         // Only specify a type for the SubSelect if it has exactly one column. Otherwise the DataType of the Expression
         // is undefined and obtaining it will result in a runtime error.
-        if (lqp_select_expression->lqp->output_column_expressions().size() == 1u) {
+        if (lqp_select_expression->lqp->column_expressions().size() == 1u) {
           const auto sub_select_data_type = lqp_select_expression->data_type();
           const auto sub_select_nullable = lqp_select_expression->is_nullable();
 
@@ -542,7 +544,7 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
       // Try to resolve the Expression to a column from the input node
       const auto column_id = node->find_column_id(*expression);
       if (column_id) {
-        const auto referenced_expression = node->output_column_expressions()[*column_id];
+        const auto referenced_expression = node->column_expressions()[*column_id];
         expression = std::make_shared<PQPColumnExpression>(*column_id,
                                                            referenced_expression->data_type(),
                                                            referenced_expression->is_nullable(),

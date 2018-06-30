@@ -17,8 +17,8 @@ std::string DummyTableNode::description() const {
   return "[DummyTable]";
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& DummyTableNode::output_column_expressions() const {
-  return _output_column_expressions;
+const std::vector<std::shared_ptr<AbstractExpression>>& DummyTableNode::column_expressions() const {
+  return _column_expressions;
 }
 
 std::shared_ptr<AbstractLQPNode> DummyTableNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {

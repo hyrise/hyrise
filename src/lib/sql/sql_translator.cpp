@@ -233,7 +233,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select_statement(const
    * Name, select and arrange the Columns as specified in the SELECT clause
    */
   // Only add a ProjectionNode if necessary
-  if (!expressions_equal(_current_lqp->output_column_expressions(), _inflated_select_list_expressions)) {
+  if (!expressions_equal(_current_lqp->column_expressions(), _inflated_select_list_expressions)) {
     _current_lqp = ProjectionNode::make(_inflated_select_list_expressions, _current_lqp);
   }
 
@@ -295,7 +295,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
     // Certain columns have been specified. In this case we create a new expression list
     // for the Projection, so that it contains as many columns as the target table.
 
-    Assert(insert.columns->size() == insert_data_node->output_column_expressions().size(), "INSERT: Target column count and number of input columns mismatch");
+    Assert(insert.columns->size() == insert_data_node->column_expressions().size(), "INSERT: Target column count and number of input columns mismatch");
 
     // pre-fill new projection list with NULLs
     std::vector<std::shared_ptr<AbstractExpression>> expressions(target_table->column_count(),
@@ -305,7 +305,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
     for (const auto& column_name : *insert.columns) {
       // retrieve correct ColumnID from the target table
       const auto target_column_id = target_table->column_id_by_name(column_name);
-      expressions[target_column_id] = insert_data_node->output_column_expressions()[source_column_id];
+      expressions[target_column_id] = insert_data_node->column_expressions()[source_column_id];
       ++source_column_id;
     }
 
@@ -313,7 +313,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
     insert_data_node = ProjectionNode::make(expressions, insert_data_node);
   }
 
-  Assert(insert_data_node->output_column_expressions().size() == target_table->column_count(), "INSERT: Column count mismatch");
+  Assert(insert_data_node->column_expressions().size() == target_table->column_count(), "INSERT: Column count mismatch");
   // DataType checking has to be done at runtime, as Query could still contains Placeholder with unspecified type
 
   return InsertNode::make(table_name, insert_data_node);
@@ -338,7 +338,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   auto selection_lqp = translation_state.lqp;
 
   // Take a copy intentionally, we're going to replace some of these later
-  auto update_expressions = selection_lqp->output_column_expressions();
+  auto update_expressions = selection_lqp->column_expressions();
 
   if (update.where) {
     const auto where_expression = _translate_hsql_expr(*update.where, translation_state.sql_identifier_context);
@@ -401,8 +401,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
         /**
          * Add all named columns from the view to the IdentifierContext
          */
-        for (auto column_id = ColumnID{0}; column_id < view->lqp->output_column_expressions().size(); ++column_id) {
-          const auto column_expression = view->lqp->output_column_expressions()[column_id];
+        for (auto column_id = ColumnID{0}; column_id < view->lqp->column_expressions().size(); ++column_id) {
+          const auto column_expression = view->lqp->column_expressions()[column_id];
 
           const auto column_name_iter = view->column_names.find(column_id);
           if (column_name_iter != view->column_names.end()) {
@@ -425,7 +425,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
       SQLTranslator sub_select_translator{_use_mvcc};
       lqp = sub_select_translator.translate_select_statement(*hsql_table_ref.select);
 
-      for (const auto& sub_select_expression : lqp->output_column_expressions()) {
+      for (const auto& sub_select_expression : lqp->column_expressions()) {
         const auto identifier = sub_select_translator.sql_identifier_context()->get_expression_identifier(sub_select_expression);
 
         // Make sure each column from the SubSelect has a name
@@ -445,21 +445,21 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
 
   // Rename columns as in "SELECT * FROM t AS x (y,z)"
   if (hsql_table_ref.alias && hsql_table_ref.alias->columns) {
-    const auto& output_column_expressions = lqp->output_column_expressions();
+    const auto& column_expressions = lqp->column_expressions();
 
-    Assert(hsql_table_ref.alias->columns->size() == output_column_expressions.size(),
+    Assert(hsql_table_ref.alias->columns->size() == column_expressions.size(),
            "Must specify a name for exactly each column");
 
     for (auto column_id = ColumnID{0}; column_id < hsql_table_ref.alias->columns->size(); ++column_id) {
-      sql_identifier_context->set_column_name(output_column_expressions[column_id], (*hsql_table_ref.alias->columns)[column_id]);
+      sql_identifier_context->set_column_name(column_expressions[column_id], (*hsql_table_ref.alias->columns)[column_id]);
     }
   }
 
-  for (const auto& expression : lqp->output_column_expressions()) {
+  for (const auto& expression : lqp->column_expressions()) {
     sql_identifier_context->set_table_name(expression, table_name);
   }
 
-  return {lqp, {{{table_name, lqp->output_column_expressions()},}}, {lqp->output_column_expressions()}, sql_identifier_context};
+  return {lqp, {{{table_name, lqp->column_expressions()},}}, {lqp->column_expressions()}, sql_identifier_context};
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_stored_table(const std::string& name, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context) {
@@ -644,7 +644,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_cross_product(const st
 
 void SQLTranslator::_translate_select_list_groupby_having(
 const hsql::SelectStatement &select) {
-  const auto& input_expressions = _current_lqp->output_column_expressions();
+  const auto& input_expressions = _current_lqp->column_expressions();
 
   auto pre_aggregate_expression_set = ExpressionUnorderedSet{input_expressions.begin(), input_expressions.end()};
   auto pre_aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{input_expressions.begin(), input_expressions.end()};
@@ -718,7 +718,7 @@ const hsql::SelectStatement &select) {
   }
 
   // Build pre_aggregate_projection, i.e. evaluate all Expression required for GROUP BY/Aggregates
-  if (pre_aggregate_expressions.size() != _current_lqp->output_column_expressions().size()) {
+  if (pre_aggregate_expressions.size() != _current_lqp->column_expressions().size()) {
     _current_lqp = ProjectionNode::make(pre_aggregate_expressions, _current_lqp);
   }
 
@@ -797,8 +797,8 @@ void SQLTranslator::_translate_order_by(const std::vector<hsql::OrderDescription
   _current_lqp = SortNode::make(expressions, order_by_modes, _current_lqp);
 
   // If any Expressions were added to perform the sorting, remove them again
-  if (input_lqp->output_column_expressions().size() != _current_lqp->output_column_expressions().size()) {
-    _current_lqp = ProjectionNode::make(input_lqp->output_column_expressions(), _current_lqp);
+  if (input_lqp->column_expressions().size() != _current_lqp->column_expressions().size()) {
+    _current_lqp = ProjectionNode::make(input_lqp->column_expressions(), _current_lqp);
   }
 }
 
@@ -828,15 +828,15 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::Cr
 
       if (create_statement.viewColumns) {
         // The CREATE VIEW statement has renamed the columns: CREATE VIEW myview (foo, bar) AS SELECT ...
-        Assert(create_statement.viewColumns->size() == lqp->output_column_expressions().size(),
+        Assert(create_statement.viewColumns->size() == lqp->column_expressions().size(),
                "Number of Columns in CREATE VIEW does not match SELECT statement");
 
         for (auto column_id = ColumnID{0}; column_id < create_statement.viewColumns->size(); ++column_id) {
           column_names.emplace(column_id, (*create_statement.viewColumns)[column_id]);
         }
       } else {
-        for (auto column_id = ColumnID{0}; column_id < lqp->output_column_expressions().size(); ++column_id) {
-          const auto identifier = _sql_identifier_context->get_expression_identifier(lqp->output_column_expressions()[column_id]);
+        for (auto column_id = ColumnID{0}; column_id < lqp->column_expressions().size(); ++column_id) {
+          const auto identifier = _sql_identifier_context->get_expression_identifier(lqp->column_expressions()[column_id]);
           if (identifier) {
             column_names.emplace(column_id, identifier->column_name);
           }
@@ -912,7 +912,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_prune_expressions(const std::shared_ptr<AbstractLQPNode>& node,
                                                             const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const {
-  if (expressions_equal(node->output_column_expressions(), expressions)) return node;
+  if (expressions_equal(node->column_expressions(), expressions)) return node;
   return ProjectionNode::make(expressions, node);
 }
 
@@ -930,8 +930,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expressions_if_unavailable(
   if (projection_expressions.empty()) return node;
 
   projection_expressions.insert(projection_expressions.end(),
-                                node->output_column_expressions().begin(),
-                                node->output_column_expressions().end());
+                                node->column_expressions().begin(),
+                                node->column_expressions().end());
 
   return ProjectionNode::make(projection_expressions, node);
 }

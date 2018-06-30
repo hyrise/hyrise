@@ -1,12 +1,16 @@
 #include "gtest/gtest.h"
 
+#include <regex>
+
 #include "expression/expression_factory.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
@@ -19,43 +23,50 @@ namespace opossum {
 class LogicalQueryPlanTest : public ::testing::Test {
  public:
   void SetUp() override {
-    table_int_int = load_table("src/test/tables/int_int.tbl");
+    StorageManager::get().add_table("int_int", load_table("src/test/tables/int_int.tbl"));
+    StorageManager::get().add_table("int_int_int", load_table("src/test/tables/int_int_int.tbl"));
 
-    StorageManager::get().add_table("int_int", table_int_int);
+    node_int_int = StoredTableNode::make("int_int");
+    a1 = node_int_int->get_column("a");
+    b1 = node_int_int->get_column("b");
+
+    node_int_int_int = StoredTableNode::make("int_int_int");
+    a2 = node_int_int->get_column("a");
+    b2 = node_int_int->get_column("b");
+    c2 = node_int_int->get_column("b");
   }
 
   void TearDown() override {
     StorageManager::reset();
   }
-
+  
   std::shared_ptr<Table> table_int_int;
+  std::shared_ptr<StoredTableNode> node_int_int, node_int_int_int;
+  LQPColumnReference a1, b1;
+  LQPColumnReference a2, b2, c2;
 };
 
 TEST_F(LogicalQueryPlanTest, CreateNodeMapping) {
-  const auto stored_table_node = StoredTableNode::make("int_int");
-
-  const auto projection_node = ProjectionNode::make(stored_table_node->output_column_expressions(),
-                                                    stored_table_node);
+  const auto projection_node = ProjectionNode::make(node_int_int->column_expressions(),
+                                                    node_int_int);
   const auto lqp = projection_node;
 
   const auto copied_lqp = lqp->deep_copy();
   const auto copied_projection_node = std::dynamic_pointer_cast<ProjectionNode>(copied_lqp);
-  const auto copied_stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(copied_lqp->left_input());
+  const auto copied_node_int_int = std::dynamic_pointer_cast<StoredTableNode>(copied_lqp->left_input());
 
   auto node_mapping = lqp_create_node_mapping(lqp, copied_lqp);
 
   EXPECT_EQ(node_mapping[projection_node], copied_projection_node);
-  EXPECT_EQ(node_mapping[stored_table_node], copied_stored_table_node);
+  EXPECT_EQ(node_mapping[node_int_int], copied_node_int_int);
 }
 
 TEST_F(LogicalQueryPlanTest, DeepCopyBasics) {
-  const auto stored_table_node = StoredTableNode::make("int_int");
+  const auto expression_a = std::make_shared<LQPColumnExpression>(LQPColumnReference{node_int_int, ColumnID{0}});
+  const auto expression_b = std::make_shared<LQPColumnExpression>(LQPColumnReference{node_int_int, ColumnID{1}});
 
-  const auto expression_a = std::make_shared<LQPColumnExpression>(LQPColumnReference{stored_table_node, ColumnID{0}});
-  const auto expression_b = std::make_shared<LQPColumnExpression>(LQPColumnReference{stored_table_node, ColumnID{1}});
-
-  const auto projection_node = ProjectionNode::make(stored_table_node->output_column_expressions(),
-                                                    stored_table_node);
+  const auto projection_node = ProjectionNode::make(node_int_int->column_expressions(),
+                                                    node_int_int);
   const auto lqp = projection_node;
 
   const auto copied_lqp = lqp->deep_copy();
@@ -63,18 +74,75 @@ TEST_F(LogicalQueryPlanTest, DeepCopyBasics) {
   EXPECT_LQP_EQ(copied_lqp, lqp);
 
   const auto copied_projection_node = std::dynamic_pointer_cast<ProjectionNode>(copied_lqp);
-  const auto copied_stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(copied_lqp->left_input());
+  const auto copied_node_int_int = std::dynamic_pointer_cast<StoredTableNode>(copied_lqp->left_input());
 
   // Nodes in copied LQP should have different pointers
   EXPECT_NE(projection_node, copied_projection_node);
-  EXPECT_NE(stored_table_node, copied_stored_table_node);
+  EXPECT_NE(node_int_int, copied_node_int_int);
 
   // Check that expressions in copied LQP point to StoredTableNode in their LQP, not into the original LQP
   const auto copied_expression_a = std::dynamic_pointer_cast<LQPColumnExpression>(copied_projection_node->expressions.at(0));
   const auto copied_expression_b = std::dynamic_pointer_cast<LQPColumnExpression>(copied_projection_node->expressions.at(1));
 
-  EXPECT_EQ(copied_expression_a->column_reference.original_node(), copied_stored_table_node);
-  EXPECT_EQ(copied_expression_b->column_reference.original_node(), copied_stored_table_node);
+  EXPECT_EQ(copied_expression_a->column_reference.original_node(), copied_node_int_int);
+  EXPECT_EQ(copied_expression_b->column_reference.original_node(), copied_node_int_int);
+}
+
+TEST_F(LogicalQueryPlanTest, PrintWithoutSubselects) {
+  // clang-format off
+  const auto lqp =
+  PredicateNode::make(greater_than(a1, 5),
+    JoinNode::make(JoinMode::Inner, equals(a1, a2),
+      UnionNode::make(UnionMode::Positions,
+        PredicateNode::make(equals(a1, 5), node_int_int),
+        PredicateNode::make(equals(a1, 6), node_int_int)
+      ),
+    node_int_int_int
+  ));
+  // clang-format on
+
+  std::stringstream stream;
+  lqp->print(stream);
+
+  EXPECT_EQ(stream.str(), R"([0] [Predicate] a > 5
+ \_[1] [Join] Mode: Inner a = a
+    \_[2] [UnionNode] Mode: UnionPositions
+    |  \_[3] [Predicate] a = 5
+    |  |  \_[4] [StoredTable] Name: 'int_int'
+    |  \_[5] [Predicate] a = 6
+    |     \_Recurring Node --> [4]
+    \_[6] [StoredTable] Name: 'int_int_int'
+)");
+}
+
+TEST_F(LogicalQueryPlanTest, PrintWithSubselects) {
+  // clang-format off
+  const auto subselect_b_lqp =
+  PredicateNode::make(equals(a2, 5), node_int_int_int);
+  const auto subselect_b = select(subselect_b_lqp);
+
+  const auto subselect_a_lqp =
+  PredicateNode::make(equals(a2, subselect_b), node_int_int_int);
+  const auto subselect_a = select(subselect_a_lqp);
+
+  const auto lqp =
+  PredicateNode::make(greater_than(a1, subselect_a), node_int_int);
+  // clang-format on
+
+  std::stringstream stream;
+  lqp->print(stream);
+
+  EXPECT_TRUE(std::regex_match(stream.str().c_str(), "[0] [Predicate] a > SUBSELECT (LQP, 0x[a-z0-9]+)\n"
+                                 " \\_[1] [StoredTable] Name: 'int_int'\n"
+                                 "-------- Subselects ---------\n"
+                                 "0x[a-z0-9]+: \n"
+                                 "[0] [Predicate] a = 5\n"
+                                 " \\_[1] [StoredTable] Name: 'int_int_int'\n"
+                                 "\n"
+                                 "0x[a-z0-9]+: \n"
+                                 "[0] [Predicate] a = SUBSELECT (LQP, 0x[a-z0-9]+)\n"
+                                 " \\_[1] [StoredTable] Name: 'int_int_int'"));
+
 }
 
 //TEST_F(LogicalQueryPlanTest, DeepCopySubSelects) {
@@ -130,7 +198,7 @@ TEST_F(LogicalQueryPlanTest, DeepCopyBasics) {
 //#include "logical_query_plan/predicate_node.hpp"
 //#include "logical_query_plan/projection_node.hpp"
 //#include "logical_query_plan/sort_node.hpp"
-//#include "logical_query_plan/stored_table_node.hpp"
+//#include "logical_query_plan/node_int_int.hpp"
 //#include "storage/storage_manager.hpp"
 //
 //namespace opossum {

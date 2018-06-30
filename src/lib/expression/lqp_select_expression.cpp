@@ -35,15 +35,14 @@ std::shared_ptr<AbstractExpression> LQPSelectExpression::deep_copy() const {
 }
 
 std::string LQPSelectExpression::as_column_name() const {
-//  std::stringstream stream;
-//  lqp->print(stream);
-//  return stream.str();
-  return "SUBSELECT";
+  std::stringstream stream;
+  stream << "SUBSELECT (LQP, " << lqp.get() << ")";
+  return stream.str();
 }
 
 DataType LQPSelectExpression::data_type() const {
-  Assert(lqp->output_column_expressions().size() == 1, "Can only determine the DataType of SelectExpressions that return exactly one column");
-  return lqp->output_column_expressions()[0]->data_type();
+  Assert(lqp->column_expressions().size() == 1, "Can only determine the DataType of SelectExpressions that return exactly one column");
+  return lqp->column_expressions()[0]->data_type();
 }
 
 bool LQPSelectExpression::_shallow_equals(const AbstractExpression& expression) const {

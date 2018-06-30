@@ -16,13 +16,13 @@ class AbstractExpression;
 class UpdateNode : public EnableMakeForLQPNode<UpdateNode>, public AbstractLQPNode {
  public:
   UpdateNode(const std::string& table_name,
-                      const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions);
+                      const std::vector<std::shared_ptr<AbstractExpression>>& update_column_expressions);
 
   std::string description() const override;
 
   const std::string& table_name() const;
 
-  const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const;
+  const std::vector<std::shared_ptr<AbstractExpression>>& update_column_expressions() const;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _shallow_copy_impl(LQPNodeMapping & node_mapping) const override;
@@ -30,7 +30,7 @@ class UpdateNode : public EnableMakeForLQPNode<UpdateNode>, public AbstractLQPNo
 
  private:
   const std::string _table_name;
-  const std::vector<std::shared_ptr<AbstractExpression>> _column_expressions;
+  const std::vector<std::shared_ptr<AbstractExpression>> _update_column_expressions;
 };
 
-}  // namespace opossum
+}  // namespace opossumF

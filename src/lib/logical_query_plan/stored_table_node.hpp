@@ -21,7 +21,7 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   const std::vector<ChunkID>& excluded_chunk_ids() const;
 
   std::string description() const override;
-  const std::vector<std::shared_ptr<AbstractExpression>>& output_column_expressions() const override;
+  const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
   std::shared_ptr<TableStatistics> derive_statistics_from(const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const override;
 
   const std::string table_name;

@@ -4,11 +4,72 @@
 #include <unordered_map>
 
 #include "expression/abstract_expression.hpp"
+#include "expression/expression_utils.hpp"
+#include "expression/lqp_select_expression.hpp"
 #include "utils/assert.hpp"
 #include "utils/print_directed_acyclic_graph.hpp"
 #include "lqp_utils.hpp"
+#include "predicate_node.hpp"
+#include "join_node.hpp"
+#include "update_node.hpp"
 
 using namespace std::string_literals;
+
+namespace {
+
+using namespace opossum; // NOLINT
+
+void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& lqps);
+
+/**
+ * Utility for AbstractLQPNode::print()
+ * Put all LQPs found in an @param expression into @param lqps
+ */
+void collect_lqps_from_expression(const std::shared_ptr<AbstractExpression>& expression, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& lqps) {
+  visit_expression(expression, [&](const auto& sub_expression) {
+    const auto lqp_select_expression = std::dynamic_pointer_cast<const LQPSelectExpression>(sub_expression);
+    if (!lqp_select_expression) return true;
+    lqps.emplace(lqp_select_expression->lqp);
+    collect_lqps_in_plan(*lqp_select_expression->lqp, lqps);
+    return true;
+  });
+};
+
+/**
+ * Utility for AbstractLQPNode::print()
+ * Put all LQPs found in expressions in plan @param lqp into @param lqps
+ */
+void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& lqps) {
+  for (const auto& expression : lqp.column_expressions()) {
+    collect_lqps_from_expression(expression, lqps);
+  }
+
+  // Some node types can "contain" more than just their column expressions. A virtual call to retrieve them wouldn't
+  // be justified just for printing, imo, so we have to manually look them up
+  switch (lqp.type) {
+    case LQPNodeType::Predicate:
+      collect_lqps_from_expression(static_cast<const PredicateNode&>(lqp).predicate, lqps);
+      break;
+
+    case LQPNodeType::Join:
+      collect_lqps_from_expression(static_cast<const JoinNode&>(lqp).join_predicate, lqps);
+      break;
+
+    case LQPNodeType::Update: {
+      const auto& update_node = static_cast<const UpdateNode&>(lqp);
+      for (const auto& update_expression : update_node.update_column_expressions()) {
+        collect_lqps_from_expression(update_expression, lqps);
+      }
+    } break;
+
+    default: break;
+  }
+
+  if (lqp.left_input()) collect_lqps_in_plan(*lqp.left_input(), lqps);
+  if (lqp.right_input()) collect_lqps_in_plan(*lqp.right_input(), lqps);
+};
+
+}  // namespace
 
 namespace opossum {
 
@@ -134,15 +195,15 @@ bool AbstractLQPNode::shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMa
   return _shallow_equals_impl(rhs, node_mapping);
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& AbstractLQPNode::output_column_expressions() const {
+const std::vector<std::shared_ptr<AbstractExpression>>& AbstractLQPNode::column_expressions() const {
   Assert(left_input() && !right_input(), "Can only forward input expressions, if there is only a left input");
-  return left_input()->output_column_expressions();
+  return left_input()->column_expressions();
 }
 
 std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression &expression) const {
-  const auto& output_column_expressions = this->output_column_expressions(); // Avoid redundant retrieval in loop below
-  for (auto column_id = ColumnID{0}; column_id < output_column_expressions.size(); ++column_id) {
-    if (output_column_expressions[column_id]->deep_equals(expression)) return column_id;
+  const auto& column_expressions = this->column_expressions(); // Avoid redundant retrieval in loop below
+  for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
+    if (column_expressions[column_id]->deep_equals(expression)) return column_id;
   }
   return std::nullopt;
 }
@@ -174,6 +235,25 @@ const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<Abstra
 }
 
 void AbstractLQPNode::print(std::ostream& out) const {
+  // Recursively collect all LQPs in LQPSelectExpressions (and any anywhere within those) in this LQP into a list and then print
+  // them
+  auto lqps = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
+  collect_lqps_in_plan(*this, lqps);
+
+  _print_impl(out);
+
+  if (lqps.empty()) return;
+
+  out << "-------- Subselects ---------" << std::endl;
+
+  for (const auto& lqp : lqps) {
+    out << lqp.get() << ": " << std::endl;
+    lqp->_print_impl(out);
+    out << std::endl;
+  }
+}
+
+void AbstractLQPNode::_print_impl(std::ostream& out) const {
   const auto get_inputs_fn = [](const auto& node) {
     std::vector<std::shared_ptr<const AbstractLQPNode>> inputs;
     if (node->left_input()) inputs.emplace_back(node->left_input());
@@ -183,7 +263,6 @@ void AbstractLQPNode::print(std::ostream& out) const {
   const auto node_print_fn = [](const auto& node, auto& stream) {
     stream << node->description();
   };
-
   print_directed_acyclic_graph<const AbstractLQPNode>(shared_from_this(), get_inputs_fn, node_print_fn, out);
 }
 
