@@ -12,11 +12,19 @@
 
 namespace opossum {
 
+// set default Implementation
+Logger::Implementation Logger::_implementation = Implementation::GroupCommit;
+
 AbstractLogger& Logger::getInstance() {
-  static SimpleLogger instance;
-  // static GroupCommitLogger instance;
-  // static NoLogger instance;
-  return instance;
+  switch (_implementation) {
+    case Implementation::No: { static NoLogger instance; return instance; }
+    case Implementation::Simple: { static SimpleLogger instance; return instance; }
+    case Implementation::GroupCommit: { static GroupCommitLogger instance; return instance; }
+  }
+}
+
+void Logger::set_implementation(const Logger::Implementation implementation) {
+  _implementation = implementation;
 }
 
 u_int32_t Logger::_get_latest_log_number() {

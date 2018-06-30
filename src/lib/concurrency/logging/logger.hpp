@@ -29,6 +29,9 @@ namespace opossum {
 
 class Logger {
  public:
+
+  enum class Implementation {No, Simple, GroupCommit};
+
   Logger(const Logger&) = delete;
   Logger& operator=(const Logger&) = delete;
 
@@ -39,10 +42,17 @@ class Logger {
   static u_int32_t _get_latest_log_number();
   static void _set_latest_log_number(u_int32_t log_number);
 
+  // used to set logging implementation on startup or in tests
+  static void set_implementation(const Implementation implementation);
+
   // linter wants these to be char[], but then we loose operator+ of strings
   static const std::string directory;
   static const std::string filename;
   static const std::string last_log_filename;
+
+private:
+  static Implementation _implementation;
+  static std::unique_ptr<AbstractLogger> _instance;
 };
 
 }  // namespace opossum

@@ -57,6 +57,8 @@ class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>:
     options.migration_interval = std::chrono::milliseconds(100);
     NUMAPlacementManager::get().set_options(options);
 #endif
+    // Turn logging off. Logging can be set in tests if needed.
+    Logger::set_implementation(Logger::Implementation::No);
   }
 
   ~BaseTestWithParam() {
