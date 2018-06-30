@@ -37,16 +37,16 @@ std::shared_ptr<AbstractExpression> ParameterExpression::deep_copy() const {
 
 std::string ParameterExpression::as_column_name() const {
   std::stringstream stream;
-  stream << "?" << std::to_string(parameter_id) << "?";
-
+  stream << "Parameter[";
   if (parameter_expression_type == ParameterExpressionType::External) {
-    stream << " '" <<  _referenced_expression_info->column_name << "'";
+    stream << "name=" <<  _referenced_expression_info->column_name << ";";
   }
+  stream << "id=" << std::to_string(parameter_id);
+
+  stream << "]";
 
   if (_value) {
     stream << "=" << *_value;
-  } else {
-    stream << "=<unassigned>";
   }
 
   return stream.str();

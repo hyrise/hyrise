@@ -132,17 +132,22 @@ TEST_F(LogicalQueryPlanTest, PrintWithSubselects) {
   std::stringstream stream;
   lqp->print(stream);
 
-  EXPECT_TRUE(std::regex_match(stream.str().c_str(), "[0] [Predicate] a > SUBSELECT (LQP, 0x[a-z0-9]+)\n"
-                                 " \\_[1] [StoredTable] Name: 'int_int'\n"
-                                 "-------- Subselects ---------\n"
-                                 "0x[a-z0-9]+: \n"
-                                 "[0] [Predicate] a = 5\n"
-                                 " \\_[1] [StoredTable] Name: 'int_int_int'\n"
-                                 "\n"
-                                 "0x[a-z0-9]+: \n"
-                                 "[0] [Predicate] a = SUBSELECT (LQP, 0x[a-z0-9]+)\n"
-                                 " \\_[1] [StoredTable] Name: 'int_int_int'"));
+  // Result is undeterministic, but should look something like (order and addresses may vary)
+  // [0] [Predicate] a > SUBSELECT (LQP, 0x4e2bda0)
+  //  \_[1] [StoredTable] Name: 'int_int'
+  // -------- Subselects ---------
+  // 0x4e2d160:
+  // [0] [Predicate] a = 5
+  //  \_[1] [StoredTable] Name: 'int_int_int'
 
+  // 0x4e2bda0:
+  // [0] [Predicate] a = SUBSELECT (LQP, 0x4e2d160)
+  //  \_[1] [StoredTable] Name: 'int_int_int'
+
+  EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] a \> SUBSELECT \(LQP, 0x[a-z0-9]+, Parameters: \))"}));
+  EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{"Subselects"}));
+  EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] a = SUBSELECT \(LQP, 0x[a-z0-9]+, Parameters: \))"}));
+  EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] a = 5)"}));
 }
 
 //TEST_F(LogicalQueryPlanTest, DeepCopySubSelects) {

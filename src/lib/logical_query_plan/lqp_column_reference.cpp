@@ -2,8 +2,11 @@
 
 #include "boost/functional/hash.hpp"
 
+#include "logical_query_plan/stored_table_node.hpp"
 #include "abstract_lqp_node.hpp"
 #include "utils/assert.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 
@@ -20,7 +23,13 @@ bool LQPColumnReference::operator==(const LQPColumnReference& rhs) const {
 }
 
 std::ostream& operator<<(std::ostream& os, const LQPColumnReference& column_reference) {
-  Fail("Hard");
+  const auto original_node = column_reference.original_node();
+  Assert(original_node, "OriginalNode has expired");
+
+  const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(column_reference.original_node());
+  const auto table = StorageManager::get().get_table(stored_table_node->table_name);
+  os << table->column_name(column_reference.original_column_id());
+
   return os;
 }
 }  // namespace opossum

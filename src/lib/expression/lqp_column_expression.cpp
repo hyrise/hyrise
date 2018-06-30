@@ -21,9 +21,9 @@ std::string LQPColumnExpression::as_column_name() const {
   Assert(column_reference.original_node(), "Node referenced by LQPColumnReference has expired");
 
   if (column_reference.original_node()->type == LQPNodeType::StoredTable) {
-    const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(column_reference.original_node());
-    const auto table = StorageManager::get().get_table(stored_table_node->table_name);
-    return table->column_name(column_reference.original_column_id());
+    std::stringstream stream;
+    stream << column_reference;
+    return stream.str();
 
   } else if (column_reference.original_node()->type == LQPNodeType::Mock) {
     const auto mock_node = std::static_pointer_cast<const MockNode>(column_reference.original_node());
@@ -31,7 +31,7 @@ std::string LQPColumnExpression::as_column_name() const {
     return mock_node->column_definitions()[column_reference.original_column_id()].second;
 
   } else {
-    Fail("Not yet implemented");
+    Fail("Only columns in StoredTableNodes and MockNodes (for tests) can be referenced in LQPColumnExpressions");
   }
 }
 
@@ -47,7 +47,7 @@ DataType LQPColumnExpression::data_type() const {
     return mock_node->column_definitions()[column_reference.original_column_id()].first;
 
   } else {
-    Fail("Not yet implemented");
+    Fail("Only columns in StoredTableNodes and MockNodes (for tests) can be referenced in LQPColumnExpressions");
   }
 }
 
@@ -61,7 +61,7 @@ bool LQPColumnExpression::is_nullable() const {
     return false; // MockNodes do not support NULLs
 
   } else {
-    Fail("Not yet implemented");
+    Fail("Only columns in StoredTableNodes and MockNodes (for tests) can be referenced in LQPColumnExpressions");
   }  
 }
 

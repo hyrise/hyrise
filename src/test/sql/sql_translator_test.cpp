@@ -5,6 +5,7 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_factory.hpp"
+#include "expression/expression_utils.hpp"
 #include "expression/case_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
@@ -368,6 +369,30 @@ TEST_F(SQLTranslatorTest, WhereExists) {
   ProjectionNode::make(expression_vector(int_float_a, int_float_b),
     PredicateNode::make(not_equals(exists(sub_select), 0),
       ProjectionNode::make(expression_vector(exists(sub_select), int_float_a, int_float_b),
+        stored_table_node_int_float
+  )));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, WhereWithCorrelatedSelect) {
+  const auto actual_lqp = compile_query("SELECT * FROM int_float WHERE a > (SELECT MIN(a + int_float.b) FROM int_float2);");
+
+  const auto parameter_b = parameter(ParameterID{0}, int_float_b);
+
+  // clang-format off
+  const auto sub_select_lqp =
+  AggregateNode::make(expression_vector(), expression_vector(min(add(int_float2_a, parameter_b))),
+    ProjectionNode::make(expression_vector(int_float2_a, int_float2_b, add(int_float2_a, parameter_b)),
+      stored_table_node_int_float2
+  ));
+  const auto sub_select = select(sub_select_lqp, std::make_pair(ParameterID{0}, int_float_b));
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(int_float_a, int_float_b),
+    PredicateNode::make(greater_than(int_float_a, sub_select),
+      ProjectionNode::make(expression_vector(sub_select, int_float_a, int_float_b),
         stored_table_node_int_float
   )));
   // clang-format on
@@ -920,6 +945,45 @@ TEST_F(SQLTranslatorTest, ValuePlaceholders) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, ParameterIDAllocationSimple) {
+  /**
+   * Test that ParameterIDs are correctly allocated to ValuePlaceholders and External Parameters
+   */
+  SQLTranslator sql_translator;
+
+  const auto actual_lqp = sql_translator.translate_sql("SELECT (SELECT (SELECT int_float2.a + int_float.b) FROM int_float2) FROM int_float").at(0);
+
+  actual_lqp->print();
+
+  // clang-format off
+  const auto parameter_int_float_b = parameter(ParameterID{1}, int_float_b);
+  const auto parameter_int_float2_a = parameter(ParameterID{0}, int_float2_a);
+
+  // "(SELECT int_float2.a + int_float.b)"
+  const auto expected_sub_sub_select_lqp =
+  ProjectionNode::make(expression_vector(add(parameter_int_float2_a, parameter_int_float_b)),
+     DummyTableNode::make()
+  );
+  const auto sub_sub_select = select(expected_sub_sub_select_lqp,
+                                     std::make_pair(ParameterID{0}, int_float2_a));
+
+
+  // "(SELECT (SELECT int_float2.a + int_float.b) FROM int_float2)"
+  const auto expected_sub_select_lqp =
+  ProjectionNode::make(expression_vector(sub_sub_select),
+    stored_table_node_int_float2
+  );
+  const auto expected_sub_select = select(expected_sub_select_lqp, std::make_pair(ParameterID{1}, int_float_b));
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(expected_sub_select),
+    stored_table_node_int_float
+  );
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
   /**
    * Test that ParameterIDs are correctly allocated to ValuePlaceholders and External Parameters
@@ -942,6 +1006,7 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
     AggregateNode::make(expression_vector(), expression_vector(min(int_float2_b)),
       stored_table_node_int_float2
   ));
+  const auto expected_sub_select_a = select(expected_sub_select_lqp_a, std::make_pair(ParameterID{2}, int_float_a));
 
   // "(SELECT int_float2.a + int_float.b)"
   const auto expected_sub_sub_select_lqp =
@@ -949,8 +1014,7 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
     DummyTableNode::make()
   );
   const auto sub_sub_select = select(expected_sub_sub_select_lqp,
-                                     std::make_pair(ParameterID{4}, int_float2_a),
-                                     std::make_pair(ParameterID{3}, int_float_b));
+                                     std::make_pair(ParameterID{4}, int_float2_a));
 
 
   // "(SELECT MAX(b) + int_float.b + (SELECT int_float2.a + int_float.b) FROM int_float2)"
@@ -959,12 +1023,12 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
     AggregateNode::make(expression_vector(), expression_vector(max(int_float2_b)),
       stored_table_node_int_float2
   ));
+  const auto expected_sub_select_b = select(expected_sub_select_lqp_b, std::make_pair(ParameterID{3}, int_float_b));
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(parameter(ParameterID{1}),
-                                         select(expected_sub_select_lqp_a, std::make_pair(ParameterID{2}, int_float_a)),
-                                         select(expected_sub_select_lqp_b, std::make_pair(ParameterID{3}, int_float_b))
-                       ),
+                                         expected_sub_select_a,
+                                         expected_sub_select_b),
     PredicateNode::make(greater_than(int_float_a, parameter(ParameterID{0})),
       stored_table_node_int_float
   ));
@@ -974,8 +1038,23 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
   EXPECT_EQ(sql_translator.value_placeholders().at(ValuePlaceholderID{0}), ParameterID{1});
   EXPECT_EQ(sql_translator.value_placeholders().at(ValuePlaceholderID{1}), ParameterID{0});
 
+  const auto actual_projection_node = std::dynamic_pointer_cast<ProjectionNode>(actual_lqp);
+  ASSERT_TRUE(actual_projection_node);
+
+  const auto actual_sub_select_a = std::dynamic_pointer_cast<LQPSelectExpression>(actual_projection_node->expressions.at(1));
+  ASSERT_TRUE(actual_sub_select_a);
+
+  const auto actual_sub_select_b = std::dynamic_pointer_cast<LQPSelectExpression>(actual_projection_node->expressions.at(2));
+  ASSERT_TRUE(actual_sub_select_b);
+
+//  const auto node_mapping =
+//
+//  EXPECT_TRUE(expression_equal_to_expression_in_different_lqp(*actual_sub_select_a, *expected_sub_select_a));
+//  EXPECT_TRUE(actual_sub_select_b->deep_equals(*expected_sub_select_b));
+
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
+
 
 TEST_F(SQLTranslatorTest, UseMvcc) {
   const auto lqp_a = SQLTranslator{UseMvcc::No}.translate_sql("SELECT * FROM int_float, int_float2 WHERE int_float.a = int_float2.b").at(0);

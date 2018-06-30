@@ -17,6 +17,7 @@ set(
     lib/all_type_variant_test.cpp
     expression/expression_test.cpp
     expression/expression_utils_test.cpp
+    expression/lqp_select_expression_test.cpp
     expression/expression_evaluator_test.cpp
     logical_query_plan/alias_node_test.cpp
     lib/fixed_string_test.cpp

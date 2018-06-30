@@ -91,7 +91,9 @@ std::shared_ptr<AbstractLQPNode> PredicateNode::_shallow_copy_impl(LQPNodeMappin
 
 bool PredicateNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const {
   const auto& predicate_node = static_cast<const PredicateNode&>(rhs);
-  return expression_equal_to_expression_in_different_lqp(*predicate, *predicate_node.predicate, node_mapping);
+  const auto equal = expression_equal_to_expression_in_different_lqp(*predicate, *predicate_node.predicate, node_mapping);
+
+  return equal;
 }
 
 }  // namespace opossum

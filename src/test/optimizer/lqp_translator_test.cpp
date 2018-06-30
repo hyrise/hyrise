@@ -253,6 +253,52 @@ TEST_F(LQPTranslatorTest, PredicateNodeBetween) {
   ASSERT_TRUE(get_table_op);
   EXPECT_EQ(get_table_op->table_name(), "table_int_float");
 }
+TEST_F(LQPTranslatorTest, SelectExpressionCorrelated) {
+  /**
+   * Build LQP and translate to PQP
+   *
+   * LQP resembles:
+   *   SELECT (SELECT MIN(a + int_float5.d + int_float5.a) FROM int_float), a FROM int_float5;
+   */
+  const auto parameter_a = parameter(ParameterID{0}, int_float5_a);
+  const auto parameter_d = parameter(ParameterID{1}, int_float5_d);
+
+  const auto a_plus_a_plus_d = add(int_float_a, add(parameter_a, parameter_d));
+
+  // clang-format off
+  const auto subselect_lqp =
+  AggregateNode::make(expression_vector(), expression_vector(min(a_plus_a_plus_d)),
+    ProjectionNode::make(expression_vector(a_plus_a_plus_d),
+      int_float_node
+  ));
+  const auto subselect = select(subselect_lqp, std::make_pair(ParameterID{0}, int_float5_a), std::make_pair(ParameterID{1}, int_float5_d));
+
+  const auto lqp =
+  ProjectionNode::make(expression_vector(subselect, int_float5_a), int_float5_node);
+  // clang-format on
+
+  const auto pqp = LQPTranslator{}.translate_node(lqp);
+
+  ASSERT_EQ(pqp->type(), OperatorType::Projection);
+  ASSERT_TRUE(pqp->input_left());
+  ASSERT_EQ(pqp->input_left()->type(), OperatorType::GetTable);
+
+  const auto projection = std::static_pointer_cast<const Projection>(pqp);
+  ASSERT_EQ(projection->expressions.size(), 2u);
+
+  const auto expression_a = std::dynamic_pointer_cast<PQPSelectExpression>(projection->expressions.at(0));
+  ASSERT_TRUE(expression_a);
+  ASSERT_EQ(expression_a->parameters.size(), 2u);
+  ASSERT_EQ(expression_a->parameters.at(0).first, ParameterID{0});
+  ASSERT_EQ(expression_a->parameters.at(0).second, ColumnID{0});
+  ASSERT_EQ(expression_a->parameters.at(1).first, ParameterID{1});
+  ASSERT_EQ(expression_a->parameters.at(1).second, ColumnID{1});
+
+  ASSERT_EQ(expression_a->pqp->type(), OperatorType::Aggregate);
+
+  const auto expression_b = std::dynamic_pointer_cast<PQPColumnExpression>(projection->expressions.at(1));
+  ASSERT_TRUE(expression_b);
+}
 
 //TEST_F(LQPTranslatorTest, SelectExpressionCorrelated) {
 //  /**

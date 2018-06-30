@@ -28,6 +28,11 @@ std::shared_ptr<AbstractExpression> LQPSelectExpression::parameter_expression(co
   return arguments[parameter_idx];
 }
 
+bool LQPSelectExpression::requires_calculation() const {
+  // Select expressions always need to be computed, no matter whether they have arguments or not
+  return true;
+}
+
 std::shared_ptr<AbstractExpression> LQPSelectExpression::deep_copy() const {
   const auto lqp_copy = lqp->deep_copy();
 
@@ -36,7 +41,8 @@ std::shared_ptr<AbstractExpression> LQPSelectExpression::deep_copy() const {
 
 std::string LQPSelectExpression::as_column_name() const {
   std::stringstream stream;
-  stream << "SUBSELECT (LQP, " << lqp.get() << ")";
+  stream << "SUBSELECT (LQP, " << lqp.get() << ", Parameters: " << expression_column_names(arguments) << ")";
+
   return stream.str();
 }
 
@@ -46,7 +52,11 @@ DataType LQPSelectExpression::data_type() const {
 }
 
 bool LQPSelectExpression::_shallow_equals(const AbstractExpression& expression) const {
-  return !lqp_find_subplan_mismatch(lqp, static_cast<const LQPSelectExpression&>(expression).lqp);
+  const auto& lqp_select_expression = static_cast<const LQPSelectExpression&>(expression);
+
+  const auto mismatch = lqp_find_subplan_mismatch(lqp, lqp_select_expression.lqp);
+
+  return !mismatch && parameter_ids == lqp_select_expression.parameter_ids;
 }
 
 size_t LQPSelectExpression::_on_hash() const {

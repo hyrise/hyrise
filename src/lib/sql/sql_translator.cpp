@@ -926,7 +926,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expressions_if_unavailable(
     projection_expressions.emplace_back(expression);
   }
 
-  // All requested expressions are available, no need to create a projection
+  // If all requested expressions are available, no need to create a projection
   if (projection_expressions.empty()) return node;
 
   projection_expressions.insert(projection_expressions.end(),
