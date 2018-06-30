@@ -10,6 +10,7 @@
 
 #include "constant_mappings.hpp"
 #include "utils/load_table.hpp"
+#include "storage/table.hpp"
 
 namespace opossum {
 
@@ -85,6 +86,59 @@ void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::st
     throw std::runtime_error("Failed to create table. SQL error: " + msg + "\n");
   }
 }
+
+//void SQLiteWrapper::create_table(const Table& table, const std::string& table_name) {
+//  char* err_msg;
+//
+//  std::vector<std::string> col_types;
+//
+//  for (const auto& column_definition : table.column_definitions()) {
+//    switch (column_definition.data_type) {
+//      case DataType::Int: col_types.push_back("INT"); break;
+//      case DataType::Float: case DataType::Double: col_types.push_back("REAL"); break;
+//      case DataType::String: col_types.push_back("TEXT"); break;
+//      case DataType::Null: Fail("SQLiteWrapper: column type NULL not supported."); break;
+//    }
+//  }
+//
+//  std::stringstream query;
+//  query << "CREATE TABLE " << table_name << "(";
+//  for (size_t i = 0; i < table.column_definitions().size(); i++) {
+//    query << table.column_definitions()[i].name << " " << col_types[i];
+//
+//    if ((i + 1) < table.column_definitions().size()) {
+//      query << ", ";
+//    }
+//  }
+//  query << ");";
+//
+//  for (auto row_idx = size_t{0}; row_idx < table.row_count(); ++row_idx) {
+//    query << "INSERT INTO " << table_name << " VALUES (";
+//    for (auto column_id = ColumnID{0}; column_id < table.column_count(); column_id++) {
+//      const auto value = table.get_value(column_id, row_idx);
+//
+//      if (col_types[column_id] == "TEXT" && !variant_is_null(value)) {
+//        query << "'" << value << "'";
+//      } else {
+//        query << value;
+//      }
+//
+//      if ((column_id + 1) < table.column_count()) {
+//        query << ", ";
+//      }
+//    }
+//    query << ");";
+//  }
+//
+//  int rc = sqlite3_exec(_db, query.str().c_str(), 0, 0, &err_msg);
+//
+//  if (rc != SQLITE_OK) {
+//    auto msg = std::string(err_msg);
+//    sqlite3_free(err_msg);
+//    sqlite3_close(_db);
+//    throw std::runtime_error("Failed to create table. SQL error: " + msg + "\n");
+//  }
+//}
 
 std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query) {
   sqlite3_stmt* result_row;

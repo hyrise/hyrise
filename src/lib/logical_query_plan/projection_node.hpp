@@ -13,6 +13,7 @@ class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public Abstr
 
   std::string description() const override;
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
+  std::vector<std::shared_ptr<AbstractExpression>> node_expressions() const override;
 
   std::vector<std::shared_ptr<AbstractExpression>> expressions;
 

@@ -26,6 +26,10 @@ std::string PredicateNode::description() const {
   return stream.str();
 }
 
+std::vector<std::shared_ptr<AbstractExpression>> PredicateNode::node_expressions() const {
+  return {predicate};
+}
+
 std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
 const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
   DebugAssert(left_input && !right_input, "PredicateNode need left_input and no right_input");

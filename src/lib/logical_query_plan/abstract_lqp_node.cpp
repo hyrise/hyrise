@@ -40,29 +40,8 @@ void collect_lqps_from_expression(const std::shared_ptr<AbstractExpression>& exp
  * Put all LQPs found in expressions in plan @param lqp into @param lqps
  */
 void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& lqps) {
-  for (const auto& expression : lqp.column_expressions()) {
+  for (const auto& expression : lqp.node_expressions()) {
     collect_lqps_from_expression(expression, lqps);
-  }
-
-  // Some node types can "contain" more than just their column expressions. A virtual call to retrieve them wouldn't
-  // be justified just for printing, imo, so we have to manually look them up
-  switch (lqp.type) {
-    case LQPNodeType::Predicate:
-      collect_lqps_from_expression(static_cast<const PredicateNode&>(lqp).predicate, lqps);
-      break;
-
-    case LQPNodeType::Join:
-      collect_lqps_from_expression(static_cast<const JoinNode&>(lqp).join_predicate, lqps);
-      break;
-
-    case LQPNodeType::Update: {
-      const auto& update_node = static_cast<const UpdateNode&>(lqp);
-      for (const auto& update_expression : update_node.update_column_expressions()) {
-        collect_lqps_from_expression(update_expression, lqps);
-      }
-    } break;
-
-    default: break;
   }
 
   if (lqp.left_input()) collect_lqps_in_plan(*lqp.left_input(), lqps);
@@ -198,6 +177,10 @@ bool AbstractLQPNode::shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMa
 const std::vector<std::shared_ptr<AbstractExpression>>& AbstractLQPNode::column_expressions() const {
   Assert(left_input() && !right_input(), "Can only forward input expressions, if there is only a left input");
   return left_input()->column_expressions();
+}
+
+std::vector<std::shared_ptr<AbstractExpression>> AbstractLQPNode::node_expressions() const {
+  return {};
 }
 
 std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression &expression) const {

@@ -31,6 +31,10 @@ std::string SortNode::description() const {
   return stream.str();
 }
 
+std::vector<std::shared_ptr<AbstractExpression>> SortNode::node_expressions() const {
+  return expressions;
+}
+
 std::shared_ptr<AbstractLQPNode> SortNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {
   return SortNode::make(expressions_copy_and_adapt_to_different_lqp(expressions, node_mapping), order_by_modes);
 }

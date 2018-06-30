@@ -12,6 +12,7 @@
 #include "delete_node.hpp"
 #include "drop_view_node.hpp"
 #include "dummy_table_node.hpp"
+#include "predicate_node.hpp"
 #include "expression/list_expression.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
@@ -30,7 +31,7 @@
 #include "operators/aggregate.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
-//#include "operators/index_scan.hpp"
+#include "operators/index_scan.hpp"
 #include "operators/insert.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_sort_merge.hpp"
@@ -139,123 +140,117 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
 
   Assert(predicate_node->predicate->type == ExpressionType::Predicate, "Only PredicateExpressions can be translated to Table/IndexScans");
 
-  const auto predicate = predicate_node->predicate;
+  switch (predicate_node->scan_type) {
+    case ScanType::TableScan: return _translate_predicate_node_to_table_scan(predicate_node, input_operator);
+    case ScanType::IndexScan: return _translate_predicate_node_to_index_scan(predicate_node, input_operator);
+  }
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_table_scan(const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const {
+  const auto predicate = node->predicate;
 
   if (const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate); binary_predicate_expression) {
-    return _translate_binary_predicate(*input_node,
-                                input_operator,
-                                *binary_predicate_expression->left_operand(),
-                                binary_predicate_expression->predicate_condition,
-                                *binary_predicate_expression->right_operand());
+    return _translate_binary_predicate_to_table_scan(*node,
+                                                     input_operator,
+                                                     *binary_predicate_expression->left_operand(),
+                                                     binary_predicate_expression->predicate_condition,
+                                                     *binary_predicate_expression->right_operand());
 
   } else if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(predicate); between_expression) {
-    const auto lower_bound_op = _translate_binary_predicate(*input_node,
-                                                     input_operator,
-                                                     *between_expression->value(),
-                                                     PredicateCondition::GreaterThanEquals,
-                                                     *between_expression->lower_bound());
-    const auto upper_bound_op = _translate_binary_predicate(*input_node,
-                                                     lower_bound_op,
-                                                     *between_expression->value(),
-                                                     PredicateCondition::LessThanEquals,
-                                                     *between_expression->upper_bound());
+    // TableScan doesn't support BETWEEN, so we create two scans for each bound
+    const auto lower_bound_op = _translate_binary_predicate_to_table_scan(*node,
+                                                                          input_operator,
+                                                                          *between_expression->value(),
+                                                                          PredicateCondition::GreaterThanEquals,
+                                                                          *between_expression->lower_bound());
+    const auto upper_bound_op = _translate_binary_predicate_to_table_scan(*node,
+                                                                          lower_bound_op,
+                                                                          *between_expression->value(),
+                                                                          PredicateCondition::LessThanEquals,
+                                                                          *between_expression->upper_bound());
     return upper_bound_op;
 
   } else if (const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(predicate); is_null_expression) {
-    return _translate_unary_predicate(*input_node,
-                                input_operator,
-                                *is_null_expression->operand(), is_null_expression->predicate_condition);
+    return _translate_unary_predicate_to_table_scan(*node,
+                                                    input_operator,
+                                                    *is_null_expression->operand(),
+                                                    is_null_expression->predicate_condition);
 
   } else if (const auto array_expression = std::dynamic_pointer_cast<ListExpression>(predicate); array_expression) {
     Fail("TableScan doesn't support IN yet");
   }
-
-  Fail("Unsupported predicate type");
-//  if (auto left_expression = predicate_node->predicate
-//
-//  const auto column_id = predicate_node->get_output_column_id(predicate_node->column_reference());
-//
-//  auto value = predicate_node->value();
-//  if (is_lqp_column_reference(value)) {
-//    value = predicate_node->get_output_column_id(boost::get<const LQPColumnReference>(value));
-//  }
-//
-//  if (predicate_node->scan_type() == ScanType::IndexScan) {
-//    return _translate_predicate_node_to_index_scan(predicate_node, value, column_id, input_operator);
-//  }
-//
-//  /**
-//   * The TableScan Operator doesn't support BETWEEN, so for `X BETWEEN a AND b` we create two TableScans: One for
-//   * `X >= a` and one for `X <= b`
-//   */
-//  if (predicate_node->predicate_condition() == PredicateCondition::Between) {
-//    DebugAssert(static_cast<bool>(predicate_node->value2()), "Predicate condition BETWEEN requires a second value");
-//    PerformanceWarning("TableScan executes BETWEEN as two separate scans");
-//
-//    auto table_scan_gt =
-//        std::make_shared<TableScan>(input_operator, column_id, PredicateCondition::GreaterThanEquals, value);
-//    return std::make_shared<TableScan>(table_scan_gt, column_id, PredicateCondition::LessThanEquals,
-//                                       *predicate_node->value2());
-//  }
-//
-//  return std::make_shared<TableScan>(input_operator, column_id, predicate_node->predicate_condition(), value);
+  Fail("TableScan doesn't support this predicate");
 }
 
-//std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_index_scan(
-//    const std::shared_ptr<PredicateNode>& predicate_node, const AllParameterVariant& value, const ColumnID column_id,
-//    const std::shared_ptr<AbstractOperator> input_operator) const {
-//  DebugAssert(
-//      is_variant(value),
-//      "We do not support IndexScan on two-column predicates. Fail! The optimizer should have dealt with the problem.");
-//
-//  // Currently, we will only use IndexScans if the predicate node directly follows a StoredTableNode.
-//  // Our IndexScan implementation does not work on reference columns yet.
-//  DebugAssert(predicate_node->left_input()->type() == LQPNodeType::StoredTable,
-//              "IndexScan must follow a StoredTableNode.");
-//
-//  const auto value_variant = boost::get<AllTypeVariant>(value);
-//
-//  // This is necessary because we currently support single column indexes only
-//  const std::vector<ColumnID> column_ids = {column_id};
-//  const std::vector<AllTypeVariant> right_values = {value_variant};
-//  std::vector<AllTypeVariant> right_values2 = {};
-//  if (predicate_node->value2()) right_values2.emplace_back(*predicate_node->value2());
-//
-//  auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(predicate_node->left_input());
-//  const auto table_name = stored_table_node->table_name();
-//  const auto table = StorageManager::get().get_table(table_name);
-//  std::vector<ChunkID> indexed_chunks;
-//
-//  for (ChunkID chunk_id{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
-//    const auto chunk = table->get_chunk(chunk_id);
-//    if (chunk->get_index(ColumnIndexType::GroupKey, column_ids)) {
-//      indexed_chunks.emplace_back(chunk_id);
-//    }
-//  }
-//
-//  // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
-//  // TableScan(s).
-//  auto index_scan = std::make_shared<IndexScan>(input_operator, ColumnIndexType::GroupKey, column_ids,
-//                                                predicate_node->predicate_condition(), right_values, right_values2);
-//
-//  // See explanation for BETWEEN handling in _translate_predicate_node above.
-//  std::shared_ptr<TableScan> table_scan;
-//  if (predicate_node->predicate_condition() == PredicateCondition::Between) {
-//    auto table_scan_gt =
-//        std::make_shared<TableScan>(input_operator, column_id, PredicateCondition::GreaterThanEquals, value);
-//    table_scan_gt->set_excluded_chunk_ids(indexed_chunks);
-//
-//    table_scan = std::make_shared<TableScan>(table_scan_gt, column_id, PredicateCondition::LessThanEquals,
-//                                             *predicate_node->value2());
-//  } else {
-//    table_scan = std::make_shared<TableScan>(input_operator, column_id, predicate_node->predicate_condition(), value);
-//  }
-//
-//  index_scan->set_included_chunk_ids(indexed_chunks);
-//  table_scan->set_excluded_chunk_ids(indexed_chunks);
-//
-//  return std::make_shared<UnionPositions>(index_scan, table_scan);
-//}
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_index_scan(
+    const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const {
+  auto column_id = ColumnID{0};
+  auto value_variant = AllTypeVariant{NullValue{}};
+  auto value2_variant = std::optional<AllTypeVariant>{};
+
+  // Currently, we will only use IndexScans if the predicate node directly follows a StoredTableNode.
+  // Our IndexScan implementation does not work on reference columns yet.
+  Assert(node->left_input()->type == LQPNodeType::StoredTable, "IndexScan must follow a StoredTableNode.");
+
+  const auto predicate = std::dynamic_pointer_cast<AbstractPredicateExpression>(node->predicate);
+  Assert(predicate, "Expected predicate");
+  Assert(!predicate->arguments.empty(), "Expected arguments");
+
+  column_id = node->left_input()->get_column_id(*predicate->arguments[0]);
+  if (predicate->arguments.size() > 1) {
+    const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(predicate->arguments[1]);
+    // This is necessary because we currently support single column indexes only
+    Assert(value_expression, "Expected value as second argument for IndexScan");
+    value_variant = value_expression->value;
+  }
+  if (predicate->arguments.size() > 2) {
+    const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(predicate->arguments[2]);
+    // This is necessary because we currently support single column indexes only
+    Assert(value_expression, "Expected value as third argument for IndexScan");
+    value2_variant = value_expression->value;
+  }
+
+  const std::vector<ColumnID> column_ids = {column_id};
+  const std::vector<AllTypeVariant> right_values = {value_variant};
+  std::vector<AllTypeVariant> right_values2 = {};
+  if (value2_variant) right_values2.emplace_back(*value2_variant);
+
+  auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
+  const auto table_name = stored_table_node->table_name;
+  const auto table = StorageManager::get().get_table(table_name);
+  std::vector<ChunkID> indexed_chunks;
+
+  for (ChunkID chunk_id{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
+    const auto chunk = table->get_chunk(chunk_id);
+    if (chunk->get_index(ColumnIndexType::GroupKey, column_ids)) {
+      indexed_chunks.emplace_back(chunk_id);
+    }
+  }
+
+  // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
+  // TableScan(s).
+  auto index_scan = std::make_shared<IndexScan>(input_operator, ColumnIndexType::GroupKey, column_ids,
+                                                predicate->predicate_condition, right_values, right_values2);
+
+  // See explanation for BETWEEN handling in _translate_predicate_node above.
+  std::shared_ptr<TableScan> table_scan;
+  if (predicate->predicate_condition == PredicateCondition::Between) {
+    Assert(value2_variant, "Need value2 for Between");
+    auto table_scan_gt =
+        std::make_shared<TableScan>(input_operator, column_id, PredicateCondition::GreaterThanEquals, value_variant);
+    table_scan_gt->set_excluded_chunk_ids(indexed_chunks);
+
+    table_scan = std::make_shared<TableScan>(table_scan_gt, column_id, PredicateCondition::LessThanEquals,
+                                             *value2_variant);
+  } else {
+    table_scan = std::make_shared<TableScan>(input_operator, column_id, predicate->predicate_condition, value_variant);
+  }
+
+  index_scan->set_included_chunk_ids(indexed_chunks);
+  table_scan->set_excluded_chunk_ids(indexed_chunks);
+
+  return std::make_shared<UnionPositions>(index_scan, table_scan);
+}
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alias_node(
 const std::shared_ptr<opossum::AbstractLQPNode> &node) const {
@@ -438,10 +433,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_update_node(
   const auto input_operator = translate_node(node->left_input());
   auto update_node = std::dynamic_pointer_cast<UpdateNode>(node);
 
-  auto new_value_exprs = _translate_expressions(update_node->update_column_expressions(), node);
+  auto new_value_exprs = _translate_expressions(update_node->update_column_expressions, node);
 
   auto projection = std::make_shared<Projection>(input_operator, new_value_exprs);
-  return std::make_shared<Update>(update_node->table_name(), input_operator, projection);
+  return std::make_shared<Update>(update_node->table_name, input_operator, projection);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
@@ -561,19 +556,20 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
   return pqp_expressions;
 }
 
-std::shared_ptr<AbstractOperator> LQPTranslator::_translate_binary_predicate(const AbstractLQPNode& input_node,
-                                                                      const std::shared_ptr<AbstractOperator>& input_operator,
-                                                                      const AbstractExpression& left_operand,
-                                                                      const PredicateCondition predicate_condition,
-                                                                      const AbstractExpression& right_operand) {
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_binary_predicate_to_table_scan(
+const AbstractLQPNode &input_node,
+const std::shared_ptr<AbstractOperator> &input_operator,
+const AbstractExpression &left_operand,
+const PredicateCondition predicate_condition,
+const AbstractExpression &right_operand) {
   // LeftOperand must be a column, if it isn't switch operands and flip condition (5 > a -> a < 5)
   if (!input_node.find_column_id(left_operand)) {
     Assert(input_node.find_column_id(right_operand), "One Predicate argument must be a column");
-    return _translate_binary_predicate(input_node,
-                                input_operator,
-                                right_operand,
-                                flip_predicate_condition(predicate_condition),
-                                left_operand);
+    return _translate_binary_predicate_to_table_scan(input_node,
+                                                     input_operator,
+                                                     right_operand,
+                                                     flip_predicate_condition(predicate_condition),
+                                                     left_operand);
   }
 
   const auto left_column_id = input_node.get_column_id(left_operand);
@@ -586,10 +582,11 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_binary_predicate(con
                                      right_parameter);
 }
 
-std::shared_ptr<AbstractOperator> LQPTranslator::_translate_unary_predicate(const AbstractLQPNode& input_node,
-                                                             const std::shared_ptr<AbstractOperator>& input_operator,
-                                                             const AbstractExpression& operand,
-                                                             const PredicateCondition predicate_condition) {
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_unary_predicate_to_table_scan(
+const AbstractLQPNode &input_node,
+const std::shared_ptr<AbstractOperator> &input_operator,
+const AbstractExpression &operand,
+const PredicateCondition predicate_condition) {
   const auto column_id = input_node.get_column_id(operand);
   return std::make_shared<TableScan>(input_operator, column_id, predicate_condition, AllParameterVariant{});
 }

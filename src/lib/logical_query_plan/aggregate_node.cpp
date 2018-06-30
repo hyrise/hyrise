@@ -42,6 +42,10 @@ const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::column_ex
   return _column_expressions;
 }
 
+std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::node_expressions() const {
+  return _column_expressions;
+}
+
 std::shared_ptr<AbstractLQPNode> AggregateNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {
   return std::make_shared<AggregateNode>(expressions_copy_and_adapt_to_different_lqp(group_by_expressions, node_mapping),
     expressions_copy_and_adapt_to_different_lqp(aggregate_expressions, node_mapping));

@@ -12,7 +12,7 @@ std::string PredicatePushdownRule::name() const { return "Predicate Pushdown Rul
 
 bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   if (node->type() != LQPNodeType::Predicate) {
-    return _apply_to_inputs(node);
+    return _apply_recursively(node);
   }
 
   const auto outputs = node->outputs();
@@ -36,7 +36,7 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
         join_node->join_mode() == JoinMode::Inner && _predicate_value_demotable(predicate_node, join_node);
 
     if (!demotable) {
-      return _apply_to_inputs(node);
+      return _apply_recursively(node);
     }
 
     node->remove_from_tree();

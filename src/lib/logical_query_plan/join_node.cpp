@@ -61,6 +61,14 @@ const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::column_express
   return _column_expressions;
 }
 
+std::vector<std::shared_ptr<AbstractExpression>> JoinNode::node_expressions() const {
+  if (join_predicate) {
+    return {join_predicate};
+  } else {
+    return {};
+  }
+}
+
 std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
 const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
   DebugAssert(left_input && right_input, "JoinNode need left_input and no right_input");

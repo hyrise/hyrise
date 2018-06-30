@@ -22,6 +22,10 @@ const std::vector<std::shared_ptr<AbstractExpression>>& ProjectionNode::column_e
   return expressions;
 }
 
+std::vector<std::shared_ptr<AbstractExpression>> ProjectionNode::node_expressions() const {
+  return expressions;
+}
+
 std::shared_ptr<AbstractLQPNode> ProjectionNode::_shallow_copy_impl(LQPNodeMapping& node_mapping) const {
   return make(expressions_copy_and_adapt_to_different_lqp(expressions, node_mapping));
 }

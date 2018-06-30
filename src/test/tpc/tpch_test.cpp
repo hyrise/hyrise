@@ -18,6 +18,7 @@
 #include "storage/storage_manager.hpp"
 
 #include "tpch/tpch_queries.hpp"
+#include "tpch/tpch_db_generator.hpp"
 
 namespace opossum {
 
@@ -35,7 +36,7 @@ class TPCHTest : public BaseTestWithParam<std::pair<const size_t, const char*>> 
     _sqlite_wrapper = std::make_shared<SQLiteWrapper>();
 
     for (const auto& tpch_table_name : tpch_table_names) {
-      const auto tpch_table_path = std::string("src/test/tables/tpch/sf-0.001/") + tpch_table_name + ".tbl";
+      const auto tpch_table_path = std::string("src/test/tables/tpch/sf-0.01/") + tpch_table_name + ".tbl";
       StorageManager::get().add_table(tpch_table_name, load_table(tpch_table_path, chunk_size));
       _sqlite_wrapper->create_table_from_tbl(tpch_table_path, tpch_table_name);
     }
@@ -58,7 +59,7 @@ TEST_P(TPCHTest, TPCHQueryTest) {
     std::cout << "Cannot print plan, needs to be executed first" << std::endl;
   }
 
-  if ( query_idx == 2) {
+  if (query_idx == 8 || query_idx == 19) {
     FAIL();
   }
 

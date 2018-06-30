@@ -44,7 +44,7 @@ bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
     }
   }
 
-  return _apply_to_inputs(node);
+  return _apply_recursively(node);
 }
 
 std::shared_ptr<PredicateNode> JoinDetectionRule::_find_predicate_for_cross_join(

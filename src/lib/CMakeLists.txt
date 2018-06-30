@@ -260,8 +260,8 @@ set(
 #    optimizer/strategy/chunk_pruning_rule.hpp
 #    optimizer/strategy/constant_calculation_rule.cpp
 #    optimizer/strategy/constant_calculation_rule.hpp
-#    optimizer/strategy/index_scan_rule.cpp
-#    optimizer/strategy/index_scan_rule.hpp
+    optimizer/strategy/index_scan_rule.cpp
+    optimizer/strategy/index_scan_rule.hpp
     optimizer/strategy/join_detection_rule.cpp
     optimizer/strategy/join_detection_rule.hpp
 #    optimizer/strategy/predicate_pushdown_rule.cpp

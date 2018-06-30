@@ -24,7 +24,7 @@ class UpdateNodeTest : public BaseTest {
 
 TEST_F(UpdateNodeTest, Description) { EXPECT_EQ(_update_node->description(), "[Update] Table: 'table_a'"); }
 
-TEST_F(UpdateNodeTest, TableName) { EXPECT_EQ(_update_node->table_name(), "table_a"); }
+TEST_F(UpdateNodeTest, TableName) { EXPECT_EQ(_update_node->table_name, "table_a"); }
 
 TEST_F(UpdateNodeTest, ShallowEquals) {
   EXPECT_TRUE(_update_node->shallow_equals(*_update_node));

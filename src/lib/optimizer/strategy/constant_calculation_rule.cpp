@@ -19,7 +19,7 @@ std::string ConstantCalculationRule::name() const { return "Constant Calculation
 
 bool ConstantCalculationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   if (node->type() != LQPNodeType::Projection) {
-    return _apply_to_inputs(node);
+    return _apply_recursively(node);
   }
 
   auto projection_node = std::static_pointer_cast<ProjectionNode>(node);
@@ -56,7 +56,7 @@ bool ConstantCalculationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
     }
   }
 
-  return _apply_to_inputs(node);
+  return _apply_recursively(node);
 }
 
 bool ConstantCalculationRule::_replace_expression_in_outputs(const std::shared_ptr<AbstractLQPNode>& node,

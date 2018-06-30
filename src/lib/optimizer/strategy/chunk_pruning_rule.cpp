@@ -20,7 +20,7 @@ std::string ChunkPruningRule::name() const { return "Chunk Pruning Rule"; }
 bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   // we only want to follow chains of predicates
   if (node->type() != LQPNodeType::Predicate) {
-    return _apply_to_inputs(node);
+    return _apply_recursively(node);
   }
   DebugAssert(node->input_count() == 1, "Predicate nodes should only have 1 input");
   // try to find a chain of predicate nodes that ends in a leaf
@@ -33,7 +33,7 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
     current_node = current_node->left_input();
     // Once a node has multiple outputs, we're not talking about a Predicate chain anymore
     if (current_node->type() == LQPNodeType::Predicate && current_node->output_count() > 1) {
-      return _apply_to_inputs(node);
+      return _apply_recursively(node);
     }
   }
 
@@ -43,7 +43,7 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
   }
 
   if (current_node->type() != LQPNodeType::StoredTable) {
-    return _apply_to_inputs(node);
+    return _apply_recursively(node);
   }
   auto stored_table = std::static_pointer_cast<StoredTableNode>(current_node);
   DebugAssert(stored_table->input_count() == 0, "Stored table nodes should not have inputs.");

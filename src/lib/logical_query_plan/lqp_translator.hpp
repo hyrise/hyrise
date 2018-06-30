@@ -12,6 +12,7 @@ namespace opossum {
 class AbstractOperator;
 class TransactionContext;
 class AbstractExpression;
+class PredicateNode;
 
 /**
  * Translates an LQP (Logical Query Plan), represented by its root node, into an Operator tree for the execution
@@ -27,9 +28,8 @@ class LQPTranslator {
 
   std::shared_ptr<AbstractOperator> _translate_stored_table_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_predicate_node(const std::shared_ptr<AbstractLQPNode>& node) const;
-//  std::shared_ptr<AbstractOperator> _translate_predicate_node_to_index_scan(
-//      const std::shared_ptr<PredicateNode>& node, const AllParameterVariant& value, const ColumnID column_id,
-//      const std::shared_ptr<AbstractOperator> input_operator) const;
+  std::shared_ptr<AbstractOperator> _translate_predicate_node_to_index_scan(const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const;
+  std::shared_ptr<AbstractOperator> _translate_predicate_node_to_table_scan(const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const;
   std::shared_ptr<AbstractOperator> _translate_alias_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_projection_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_sort_node(const std::shared_ptr<AbstractLQPNode>& node) const;
@@ -55,16 +55,16 @@ class LQPTranslator {
   std::shared_ptr<AbstractOperator> _translate_create_view_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_drop_view_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 
-  static std::shared_ptr<AbstractOperator> _translate_binary_predicate(const AbstractLQPNode& input_node,
-                                                                const std::shared_ptr<AbstractOperator>& input_operator,
-                                                                const AbstractExpression& left_operand,
-                                                                const PredicateCondition predicate_condition,
-                                                                const AbstractExpression& right_operand);
+  static std::shared_ptr<AbstractOperator> _translate_binary_predicate_to_table_scan(const AbstractLQPNode &input_node,
+                                                                                     const std::shared_ptr<AbstractOperator> &input_operator,
+                                                                                     const AbstractExpression &left_operand,
+                                                                                     const PredicateCondition predicate_condition,
+                                                                                     const AbstractExpression &right_operand);
 
-  static std::shared_ptr<AbstractOperator> _translate_unary_predicate(const AbstractLQPNode& input_node,
-                                                                const std::shared_ptr<AbstractOperator>& input_operator,
-                                                                const AbstractExpression& operand,
-                                                                const PredicateCondition predicate_condition);
+  static std::shared_ptr<AbstractOperator> _translate_unary_predicate_to_table_scan(const AbstractLQPNode &input_node,
+                                                                                    const std::shared_ptr<AbstractOperator> &input_operator,
+                                                                                    const AbstractExpression &operand,
+                                                                                    const PredicateCondition predicate_condition);
 
   static AllParameterVariant _translate_to_all_parameter_variant(const AbstractLQPNode& input_node, const AbstractExpression& expression);
 

@@ -47,7 +47,7 @@ bool IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
     }
   }
 
-  return _apply_to_inputs(node);
+  return _apply_recursively(node);
 }
 
 bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,

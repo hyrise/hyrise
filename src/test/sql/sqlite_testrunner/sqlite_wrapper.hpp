@@ -27,6 +27,14 @@ class SQLiteWrapper final {
   void create_table_from_tbl(const std::string& file, const std::string& table_name);
 
   /*
+   * Creates a table in the sqlite database from a given opossum Table
+   *
+   * @param table      The table to load into sqlite
+   * @param tablename  The desired table name
+   */
+  void create_table(const Table& table, const std::string& table_name);
+
+  /*
    * Executes a sql query in the sqlite database context.
    *
    * @param sql_query Query to be executed
