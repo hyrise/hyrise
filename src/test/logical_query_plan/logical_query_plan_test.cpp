@@ -133,7 +133,7 @@ TEST_F(LogicalQueryPlanTest, PrintWithSubselects) {
   lqp->print(stream);
 
   // Result is undeterministic, but should look something like (order and addresses may vary)
-  // [0] [Predicate] a > SUBSELECT (LQP, 0x4e2bda0)
+  // [0] [Predicate] a > SUBSELECT (LQP, 0x4e2bda0, Parameters: )
   //  \_[1] [StoredTable] Name: 'int_int'
   // -------- Subselects ---------
   // 0x4e2d160:
@@ -141,7 +141,7 @@ TEST_F(LogicalQueryPlanTest, PrintWithSubselects) {
   //  \_[1] [StoredTable] Name: 'int_int_int'
 
   // 0x4e2bda0:
-  // [0] [Predicate] a = SUBSELECT (LQP, 0x4e2d160)
+  // [0] [Predicate] a = SUBSELECT (LQP, 0x4e2d160, Parameters: )
   //  \_[1] [StoredTable] Name: 'int_int_int'
 
   EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] a \> SUBSELECT \(LQP, 0x[a-z0-9]+, Parameters: \))"}));
