@@ -49,45 +49,45 @@ template<typename R>
 std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_expression_to_result(const AbstractExpression &expression) {
   switch (expression.type) {
     case ExpressionType::Arithmetic:
-      return evaluate_arithmetic_expression<R>(static_cast<const ArithmeticExpression&>(expression));
+      return _evaluate_arithmetic_expression<R>(static_cast<const ArithmeticExpression &>(expression));
 
     case ExpressionType::Logical:
-      return evaluate_logical_expression<R>(static_cast<const LogicalExpression&>(expression));
+      return _evaluate_logical_expression<R>(static_cast<const LogicalExpression &>(expression));
 
     case ExpressionType::Predicate:
-      return evaluate_predicate_expression<R>(static_cast<const AbstractPredicateExpression&>(expression));
+      return _evaluate_predicate_expression<R>(static_cast<const AbstractPredicateExpression &>(expression));
 
     case ExpressionType::Select: {
       const auto* pqp_select_expression = dynamic_cast<const PQPSelectExpression*>(&expression);
       Assert(pqp_select_expression, "Can only evaluate PQPSelectExpression");
-      return evaluate_select_expression<R>(*pqp_select_expression);
+      return _evaluate_select_expression<R>(*pqp_select_expression);
     }
 
     case ExpressionType::Column: {
       const auto *pqp_column_expression = dynamic_cast<const PQPColumnExpression *>(&expression);
       Assert(pqp_column_expression, "Can only evaluate PQPColumnExpressions");
-      return evaluate_column_expression<R>(*pqp_column_expression);
+      return _evaluate_column_expression<R>(*pqp_column_expression);
     }
 
     // ValueExpression and ParameterExpression both need to unpack an AllTypeVariant, so one functions handles both
     case ExpressionType::Parameter:
     case ExpressionType::Value:
-      return evaluate_value_or_parameter_expression<R>(expression);
+      return _evaluate_value_or_parameter_expression<R>(expression);
 
     case ExpressionType::Function:
-      return evaluate_function_expression<R>(static_cast<const FunctionExpression&>(expression));
+      return _evaluate_function_expression<R>(static_cast<const FunctionExpression &>(expression));
 
     case ExpressionType::Case:
-      return evaluate_case_expression<R>(static_cast<const CaseExpression&>(expression));
+      return _evaluate_case_expression<R>(static_cast<const CaseExpression &>(expression));
 
     case ExpressionType::Exists:
-      return evaluate_exists_expression<R>(static_cast<const ExistsExpression&>(expression));
+      return _evaluate_exists_expression<R>(static_cast<const ExistsExpression &>(expression));
 
     case ExpressionType::Extract:
-      return evaluate_extract_expression<R>(static_cast<const ExtractExpression&>(expression));
+      return _evaluate_extract_expression<R>(static_cast<const ExtractExpression &>(expression));
 
     case ExpressionType::Negate:
-      return evaluate_negate_expression<R>(static_cast<const NegateExpression&>(expression));
+      return _evaluate_negate_expression<R>(static_cast<const NegateExpression &>(expression));
 
     case ExpressionType::Aggregate:
       Fail("ExpressionEvaluator doesn't support Aggregates, use the Aggregate Operator to compute them");
@@ -98,16 +98,19 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_expression_to
 }
 
 template<typename R>
-std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_arithmetic_expression(const ArithmeticExpression& expression) {
+std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_arithmetic_expression(
+const ArithmeticExpression &expression) {
   const auto& left = *expression.left_operand();
   const auto& right = *expression.right_operand();
 
   // clang-format off
   switch (expression.arithmetic_operator) {
-    case ArithmeticOperator::Addition:       return evaluate_binary_with_default_null_logic<R, Addition>(left, right);
-    case ArithmeticOperator::Subtraction:    return evaluate_binary_with_default_null_logic<R, Subtraction>(left, right);
-    case ArithmeticOperator::Multiplication: return evaluate_binary_with_default_null_logic<R, Multiplication>(left, right);
-    case ArithmeticOperator::Division:       return evaluate_binary_with_default_null_logic<R, Division>(left, right);
+    case ArithmeticOperator::Addition:       return _evaluate_binary_with_default_null_logic<R, Addition>(left, right);
+    case ArithmeticOperator::Subtraction:    return _evaluate_binary_with_default_null_logic<R, Subtraction>(left,
+                                                                                                             right);
+    case ArithmeticOperator::Multiplication: return _evaluate_binary_with_default_null_logic<R, Multiplication>(left,
+                                                                                                                right);
+    case ArithmeticOperator::Division:       return _evaluate_binary_with_default_null_logic<R, Division>(left, right);
 
     default:
       Fail("ArithmeticOperator evaluation not yet implemented");
@@ -115,18 +118,25 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_arithmetic_ex
   // clang-format on
 }
 template<>
-std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_binary_predicate_expression<int32_t>(const BinaryPredicateExpression& expression) {
+std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_binary_predicate_expression<int32_t>(
+const BinaryPredicateExpression &expression) {
   const auto& left = *expression.left_operand();
   const auto& right = *expression.right_operand();
 
   // clang-format off
   switch (expression.predicate_condition) {
-    case PredicateCondition::Equals:            return evaluate_binary_with_default_null_logic<int32_t, Equals>(left, right);  // NOLINT
-    case PredicateCondition::NotEquals:         return evaluate_binary_with_default_null_logic<int32_t, NotEquals>(left, right);  // NOLINT
-    case PredicateCondition::LessThan:          return evaluate_binary_with_default_null_logic<int32_t, LessThan>(left, right);  // NOLINT
-    case PredicateCondition::LessThanEquals:    return evaluate_binary_with_default_null_logic<int32_t, LessThanEquals>(left, right);  // NOLINT
-    case PredicateCondition::GreaterThan:       return evaluate_binary_with_default_null_logic<int32_t, GreaterThan>(left, right);  // NOLINT
-    case PredicateCondition::GreaterThanEquals: return evaluate_binary_with_default_null_logic<int32_t, GreaterThanEquals>(left, right);  // NOLINT
+    case PredicateCondition::Equals:            return _evaluate_binary_with_default_null_logic<int32_t, Equals>(left,
+                                                                                                                 right);  // NOLINT
+    case PredicateCondition::NotEquals:         return _evaluate_binary_with_default_null_logic<int32_t, NotEquals>(
+      left, right);  // NOLINT
+    case PredicateCondition::LessThan:          return _evaluate_binary_with_default_null_logic<int32_t, LessThan>(left,
+                                                                                                                   right);  // NOLINT
+    case PredicateCondition::LessThanEquals:    return _evaluate_binary_with_default_null_logic<int32_t, LessThanEquals>(
+      left, right);  // NOLINT
+    case PredicateCondition::GreaterThan:       return _evaluate_binary_with_default_null_logic<int32_t, GreaterThan>(
+      left, right);  // NOLINT
+    case PredicateCondition::GreaterThanEquals: return _evaluate_binary_with_default_null_logic<int32_t, GreaterThanEquals>(
+      left, right);  // NOLINT
 
     default:
       Fail("PredicateCondition should be handled in differen function");
@@ -135,12 +145,14 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_binary_
 }
 
 template<typename R>
-std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_binary_predicate_expression(const BinaryPredicateExpression& expression) {
+std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_binary_predicate_expression(
+const BinaryPredicateExpression &expression) {
   Fail("Can only evaluate predicates to int32_t (aka bool)");
 }
 
 template<>
-std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_like_expression<int32_t>(const BinaryPredicateExpression& expression) {
+std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_like_expression<int32_t>(
+const BinaryPredicateExpression &expression) {
   Assert(expression.predicate_condition == PredicateCondition::Like || expression.predicate_condition == PredicateCondition::NotLike, "Expected PredicateCondition Like or NotLike");
 
   const auto left_results = evaluate_expression_to_result<std::string>(*expression.left_operand());
@@ -189,15 +201,17 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_like_ex
 }
 
 template<typename R>
-std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_like_expression(const BinaryPredicateExpression& expression) {
+std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_like_expression(
+const BinaryPredicateExpression &expression) {
   Fail("Can only evaluate predicates to int32_t (aka bool)");
 }
 
 template<>
-std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_is_null_expression<int32_t>(const IsNullExpression& expression) {
+std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_is_null_expression<int32_t>(
+const IsNullExpression &expression) {
   std::vector<int32_t> result_values;
 
-  resolve_to_expression_result_view(*expression.operand(), [&](const auto& view) {
+  _resolve_to_expression_result_view(*expression.operand(), [&](const auto &view) {
     result_values.resize(view.size());
 
     if (expression.predicate_condition == PredicateCondition::IsNull) {
@@ -215,12 +229,14 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_is_null
 }
 
 template<typename T>
-std::shared_ptr<ExpressionResult<T>> ExpressionEvaluator::evaluate_is_null_expression(const IsNullExpression& expression) {
+std::shared_ptr<ExpressionResult<T>> ExpressionEvaluator::_evaluate_is_null_expression(
+const IsNullExpression &expression) {
   Fail("Can only evaluate predicates to int32_t (aka bool)");
 }
 
 template<>
-std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_in_expression<int32_t>(const InExpression& in_expression) {
+std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_in_expression<int32_t>(
+const InExpression &in_expression) {
   const auto& left_expression = *in_expression.value();
   const auto& right_expression = *in_expression.set();
 
@@ -266,13 +282,13 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_in_expr
     resolve_data_type(select_expression->data_type(), [&](const auto select_data_type_t) {
       using SelectDataType = typename decltype(select_data_type_t)::type;
 
-      const auto select_result_tables = evaluate_select_expression_to_tables(*select_expression);
+      const auto select_result_tables = _evaluate_select_expression_to_tables(*select_expression);
       const auto select_result_columns = _prune_tables_to_expression_results<SelectDataType>(select_result_tables);
 
       Assert(select_result_columns.size() == 1 || select_result_columns.size() == _output_row_count,
              "Unexpected number of lists returned from Select. Should be one, or one per row");
 
-      resolve_to_expression_result_view(left_expression, [&](const auto& left_view) {
+      _resolve_to_expression_result_view(left_expression, [&](const auto &left_view) {
         using ValueDataType = typename std::decay_t<decltype(left_view)>::Type;
 
         if constexpr (Equals::supports<int32_t, ValueDataType, SelectDataType>::value) {
@@ -299,7 +315,8 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_in_expr
               list_contains_null |= list.null(list_element_idx);
             }
 
-            result_nulls[chunk_offset] = (result_values[chunk_offset] == 0 && list_contains_null) || left_view.null(chunk_offset);
+            result_nulls[chunk_offset] =
+            (result_values[chunk_offset] == 0 && list_contains_null) || left_view.null(chunk_offset);
           }
 
 
@@ -324,17 +341,19 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_in_expr
 }
 
 template<typename R>
-std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_in_expression(const InExpression& expression) {
+std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_in_expression(const InExpression &expression) {
   Fail("InExpression supports only int32_t as result");
 }
 
 template<>
-std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_predicate_expression<int32_t>(const AbstractPredicateExpression& predicate_expression) {
+std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_predicate_expression<int32_t>(
+const AbstractPredicateExpression &predicate_expression) {
   switch (predicate_expression.predicate_condition) {
     case PredicateCondition::Equals: case PredicateCondition::LessThanEquals:
     case PredicateCondition::GreaterThanEquals: case PredicateCondition::GreaterThan:
     case PredicateCondition::NotEquals: case PredicateCondition::LessThan:
-      return evaluate_binary_predicate_expression<int32_t>(static_cast<const BinaryPredicateExpression&>(predicate_expression));
+      return _evaluate_binary_predicate_expression<int32_t>(
+      static_cast<const BinaryPredicateExpression &>(predicate_expression));
 
     case PredicateCondition::Between: {
       // `a BETWEEN b AND c` is evaluated by transforming it to `a >= b AND a <= c` instead of evaluating it with a
@@ -351,25 +370,27 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_predica
     }
 
     case PredicateCondition::In:
-      return evaluate_in_expression<int32_t>(static_cast<const InExpression&>(predicate_expression));
+      return _evaluate_in_expression<int32_t>(static_cast<const InExpression &>(predicate_expression));
 
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
-      return evaluate_like_expression<int32_t>(static_cast<const BinaryPredicateExpression&>(predicate_expression));
+      return _evaluate_like_expression<int32_t>(static_cast<const BinaryPredicateExpression &>(predicate_expression));
 
     case PredicateCondition::IsNull:
     case PredicateCondition::IsNotNull:
-      return evaluate_is_null_expression<int32_t>(static_cast<const IsNullExpression&>(predicate_expression));
+      return _evaluate_is_null_expression<int32_t>(static_cast<const IsNullExpression &>(predicate_expression));
   }
 }
 
 template<typename R>
-std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_predicate_expression(const AbstractPredicateExpression& expression) {
+std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_predicate_expression(
+const AbstractPredicateExpression &expression) {
   Fail("Can only evaluate predicates to int32_t (aka bool)");
 }
 
 template<typename R>
-std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_column_expression(const PQPColumnExpression& column_expression) {
+std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_column_expression(
+const PQPColumnExpression &column_expression) {
   Assert(_chunk, "Cannot access Columns in this Expression as it doesn't operate on a Table/Chunk");
 
   const auto &column = *_chunk->get_column(column_expression.column_id);
@@ -380,47 +401,52 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_column_expres
 }
 
 template<typename R>
-std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_case_expression(const CaseExpression& case_expression) {
+std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_case_expression(
+const CaseExpression &case_expression) {
   const auto when = evaluate_expression_to_result<int32_t>(*case_expression.when());
 
   std::shared_ptr<ExpressionResult<R>> result;
 
-  resolve_to_expression_results(*case_expression.then(), *case_expression.else_(), [&] (const auto& then_result, const auto& else_result) {
-    using ThenResultType = typename std::decay_t<decltype(then_result)>::Type;
-    using ElseResultType = typename std::decay_t<decltype(else_result)>::Type;
+  _resolve_to_expression_results(*case_expression.then(), *case_expression.else_(),
+                                 [&](const auto &then_result, const auto &else_result) {
+                                   using ThenResultType = typename std::decay_t<decltype(then_result)>::Type;
+                                   using ElseResultType = typename std::decay_t<decltype(else_result)>::Type;
 
-    const auto result_size = _result_size(when->size(), then_result.size(), else_result.size());
-    std::vector<R> values(result_size);
-    std::vector<bool> nulls(result_size);
+                                   const auto result_size = _result_size(when->size(), then_result.size(),
+                                                                         else_result.size());
+                                   std::vector<R> values(result_size);
+                                   std::vector<bool> nulls(result_size);
 
-    // clang-format off
-    if constexpr (Case::template supports<R, ThenResultType, ElseResultType>::value) {
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
-        if (when->value(chunk_offset) && !when->null(chunk_offset)) {
-          values[chunk_offset] = to_value<R>(then_result.value(chunk_offset));
-          nulls[chunk_offset] = then_result.null(chunk_offset);
-        } else {
-          values[chunk_offset] = to_value<R>(else_result.value(chunk_offset));
-          nulls[chunk_offset] = else_result.null(chunk_offset);
-        }
-      }
-    } else {
-      Fail("Illegal operands for CaseExpression");
-    }
-    // clang-format on
+                                   // clang-format off
+                                   if constexpr (Case::template supports<R, ThenResultType, ElseResultType>::value) {
+                                     for (auto chunk_offset = ChunkOffset{0};
+                                          chunk_offset < result_size; ++chunk_offset) {
+                                       if (when->value(chunk_offset) && !when->null(chunk_offset)) {
+                                         values[chunk_offset] = to_value<R>(then_result.value(chunk_offset));
+                                         nulls[chunk_offset] = then_result.null(chunk_offset);
+                                       } else {
+                                         values[chunk_offset] = to_value<R>(else_result.value(chunk_offset));
+                                         nulls[chunk_offset] = else_result.null(chunk_offset);
+                                       }
+                                     }
+                                   } else {
+                                     Fail("Illegal operands for CaseExpression");
+                                   }
+                                   // clang-format on
 
-    result = std::make_shared<ExpressionResult<R>>(std::move(values), std::move(nulls));
-  });
+                                   result = std::make_shared<ExpressionResult<R>>(std::move(values), std::move(nulls));
+                                 });
 
   return result;
 }
 
 template<>
-std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_exists_expression<int32_t>(const ExistsExpression& exists_expression) {
+std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_exists_expression<int32_t>(
+const ExistsExpression &exists_expression) {
   const auto select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(exists_expression.select());
   Assert(select_expression, "Expected PQPSelectExpression");
 
-  const auto select_result_tables = evaluate_select_expression_to_tables(*select_expression);
+  const auto select_result_tables = _evaluate_select_expression_to_tables(*select_expression);
 
   std::vector<int32_t> result_values(select_result_tables.size());
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
@@ -431,12 +457,14 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_exists_
 }
 
 template<typename R>
-std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_exists_expression(const ExistsExpression& exists_expression) {
+std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_exists_expression(
+const ExistsExpression &exists_expression) {
   Fail("Exists can only return int32_t");
 }
 
 template<typename R>
-std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_value_or_parameter_expression(const AbstractExpression& expression) {
+std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_value_or_parameter_expression(
+const AbstractExpression &expression) {
   AllTypeVariant value;
 
   if (expression.type == ExpressionType::Value) {
@@ -462,7 +490,8 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_value_or_para
 }
 
 template<typename R>
-std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_function_expression(const FunctionExpression& expression) {
+std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_function_expression(
+const FunctionExpression &expression) {
   switch (expression.function_type) {
     case FunctionType::Concatenate:
     case FunctionType::Substring:
@@ -480,13 +509,14 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_function_expr
 }
 
 template<>
-std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::evaluate_extract_expression<std::string>(const ExtractExpression& extract_expression) {
+std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_extract_expression<std::string>(
+const ExtractExpression &extract_expression) {
   const auto from_result = evaluate_expression_to_result<std::string>(*extract_expression.from());
 
   switch (extract_expression.datetime_component) {
-    case DatetimeComponent::Year: return evaluate_extract_substr<0, 4>(*from_result);
-    case DatetimeComponent::Month: return evaluate_extract_substr<5, 2>(*from_result);
-    case DatetimeComponent::Day: return evaluate_extract_substr<8, 2>(*from_result);
+    case DatetimeComponent::Year: return _evaluate_extract_substr<0, 4>(*from_result);
+    case DatetimeComponent::Month: return _evaluate_extract_substr<5, 2>(*from_result);
+    case DatetimeComponent::Day: return _evaluate_extract_substr<8, 2>(*from_result);
 
     case DatetimeComponent::Hour: case DatetimeComponent::Minute: case DatetimeComponent::Second:
       Fail("Hour, Minute and Second not available in String Datetimes");
@@ -494,12 +524,14 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::evaluate_ext
 }
 
 template<typename R>
-std::shared_ptr<ExpressionResult<R>>  ExpressionEvaluator::evaluate_extract_expression(const ExtractExpression& extract_expression) {
+std::shared_ptr<ExpressionResult<R>>  ExpressionEvaluator::_evaluate_extract_expression(
+const ExtractExpression &extract_expression) {
   Fail("Only Strings (YYYY-MM-DD) supported for Dates right now");
 }
 
 template<size_t offset, size_t count>
-std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::evaluate_extract_substr(const ExpressionResult<std::string>& from_result) {
+std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_extract_substr(
+const ExpressionResult<std::string> &from_result) {
   std::shared_ptr<ExpressionResult<std::string>> result;
 
   std::vector<std::string> values(from_result.size());
@@ -517,11 +549,12 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::evaluate_ext
 }
 
 template<typename R>
-std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_negate_expression(const NegateExpression& negate_expression) {
+std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_negate_expression(
+const NegateExpression &negate_expression) {
   std::vector<R> values;
   std::vector<bool> nulls;
 
-  resolve_to_expression_result(*negate_expression.argument(), [&](const auto& argument_result) {
+  _resolve_to_expression_result(*negate_expression.argument(), [&](const auto &argument_result) {
     using ArgumentType = typename std::decay_t<decltype(argument_result)>::Type;
 
     // clang-format off
@@ -545,8 +578,9 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_negate_expres
 }
 
 template<typename R>
-std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_select_expression(const PQPSelectExpression& select_expression) {
-  const auto select_result_tables = evaluate_select_expression_to_tables(select_expression);
+std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_select_expression(
+const PQPSelectExpression &select_expression) {
+  const auto select_result_tables = _evaluate_select_expression_to_tables(select_expression);
   const auto select_result_columns = _prune_tables_to_expression_results<R>(select_result_tables);
 
   std::vector<R> result_values(select_result_columns.size());
@@ -568,11 +602,11 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_select_expres
   }
 }
 
-std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::evaluate_select_expression_to_tables(
+std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_select_expression_to_tables(
 const PQPSelectExpression &expression) {
   // If the SelectExpression is uncorrelated, evaluating it once is sufficient
   if (expression.parameters.empty()) {
-    return {evaluate_select_expression_for_row(expression, ChunkOffset{0})};
+    return {_evaluate_select_expression_for_row(expression, ChunkOffset{0})};
   }
 
   // Make sure all Columns that are parameters are materialized
@@ -583,13 +617,14 @@ const PQPSelectExpression &expression) {
   std::vector<std::shared_ptr<const Table>> results(_output_row_count);
 
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < _output_row_count; ++chunk_offset) {
-    results[chunk_offset] = evaluate_select_expression_for_row(expression, chunk_offset);
+    results[chunk_offset] = _evaluate_select_expression_for_row(expression, chunk_offset);
   }
 
   return results;
 }
 
-std::shared_ptr<const Table> ExpressionEvaluator::evaluate_select_expression_for_row(const PQPSelectExpression& expression, const ChunkOffset chunk_offset) {
+std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_select_expression_for_row(
+const PQPSelectExpression &expression, const ChunkOffset chunk_offset) {
   Assert(expression.parameters.empty() || _chunk, "Sub-SELECT references external Columns but Expression doesn't operate on a Table/Chunk");
 
   std::unordered_map<ParameterID, AllTypeVariant> parameters;
@@ -628,7 +663,7 @@ std::shared_ptr<const Table> ExpressionEvaluator::evaluate_select_expression_for
 std::shared_ptr<BaseColumn> ExpressionEvaluator::evaluate_expression_to_column(const AbstractExpression& expression) {
   std::shared_ptr<BaseColumn> column;
 
-  resolve_to_expression_result_view(expression, [&](const auto &view) {
+  _resolve_to_expression_result_view(expression, [&](const auto &view) {
     using ColumnDataType = typename std::decay_t<decltype(view)>::Type;
 
     // clang-format off
@@ -658,29 +693,32 @@ std::shared_ptr<BaseColumn> ExpressionEvaluator::evaluate_expression_to_column(c
 }
 
 template<>
-std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_logical_expression<int32_t>(const LogicalExpression& expression) {
+std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_logical_expression<int32_t>(
+const LogicalExpression &expression) {
   const auto& left = *expression.left_operand();
   const auto& right = *expression.right_operand();
 
   // clang-format off
   switch (expression.logical_operator) {
-    case LogicalOperator::Or:  return evaluate_binary_with_custom_null_logic<int32_t, TernaryOr>(left, right);
-    case LogicalOperator::And: return evaluate_binary_with_custom_null_logic<int32_t, TernaryAnd>(left, right);
+    case LogicalOperator::Or:  return _evaluate_binary_with_custom_null_logic<int32_t, TernaryOr>(left, right);
+    case LogicalOperator::And: return _evaluate_binary_with_custom_null_logic<int32_t, TernaryAnd>(left, right);
   }
   // clang-format on
 }
 
 template<typename R>
-std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_logical_expression(const LogicalExpression& expression) {
+std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_logical_expression(
+const LogicalExpression &expression) {
   Fail("LogicalExpression can only output int32_t");
 }
 
 template<typename R, typename Functor>
-std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_binary_with_default_null_logic(const AbstractExpression& left_expression,
-                                                         const AbstractExpression& right_expression) {
+std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_binary_with_default_null_logic(
+const AbstractExpression &left_expression,
+const AbstractExpression &right_expression) {
   auto result = std::shared_ptr<ExpressionResult<R>>{};
 
-  resolve_to_expression_results(left_expression, right_expression, [&](const auto &left, const auto &right) {
+  _resolve_to_expression_results(left_expression, right_expression, [&](const auto &left, const auto &right) {
     using LeftDataType = typename std::decay_t<decltype(left)>::Type;
     using RightDataType = typename std::decay_t<decltype(right)>::Type;
 
@@ -714,11 +752,12 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_binary_with_d
 }
 
 template<typename R, typename Functor>
-std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_binary_with_custom_null_logic(const AbstractExpression& left_expression,
-                                                         const AbstractExpression& right_expression) {
+std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_binary_with_custom_null_logic(
+const AbstractExpression &left_expression,
+const AbstractExpression &right_expression) {
   auto result = std::shared_ptr<ExpressionResult<R>>{};
 
-  resolve_to_expression_result_views(left_expression, right_expression, [&](const auto &left, const auto &right) {
+  _resolve_to_expression_result_views(left_expression, right_expression, [&](const auto &left, const auto &right) {
     using LeftDataType = typename std::decay_t<decltype(left)>::Type;
     using RightDataType = typename std::decay_t<decltype(right)>::Type;
 
@@ -747,9 +786,9 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_binary_with_c
 }
 
 template<typename Functor>
-void ExpressionEvaluator::resolve_to_expression_result_view(const AbstractExpression &expression,
+void ExpressionEvaluator::_resolve_to_expression_result_view(const AbstractExpression &expression,
                                                              const Functor &fn) {
-  resolve_to_expression_result(expression, [&](const auto& result) {
+  _resolve_to_expression_result(expression, [&](const auto &result) {
     result.as_view([&](const auto &view) {
       fn(view);
     });
@@ -757,31 +796,32 @@ void ExpressionEvaluator::resolve_to_expression_result_view(const AbstractExpres
 }
 
 template<typename Functor>
-void ExpressionEvaluator::resolve_to_expression_result_views(const AbstractExpression &left_expression,
-                                                             const AbstractExpression &right_expression,
-                                                             const Functor &fn) {
-  resolve_to_expression_results(left_expression, right_expression, [&](const auto& left_result, const auto& right_result) {
-    left_result.as_view([&](const auto &left_view) {
-      right_result.as_view([&](const auto &right_view) {
-        fn(left_view, right_view);
-      });
-    });
-  });
+void ExpressionEvaluator::_resolve_to_expression_result_views(const AbstractExpression &left_expression,
+                                                              const AbstractExpression &right_expression,
+                                                              const Functor &fn) {
+  _resolve_to_expression_results(left_expression, right_expression,
+                                 [&](const auto &left_result, const auto &right_result) {
+                                   left_result.as_view([&](const auto &left_view) {
+                                     right_result.as_view([&](const auto &right_view) {
+                                       fn(left_view, right_view);
+                                     });
+                                   });
+                                 });
 }
 
 template<typename Functor>
-void ExpressionEvaluator::resolve_to_expression_results(const AbstractExpression &left_expression,
-                                                             const AbstractExpression &right_expression,
-                                                             const Functor &fn) {
-  resolve_to_expression_result(left_expression, [&](const auto &left_result) {
-    resolve_to_expression_result(right_expression, [&](const auto &right_result) {
+void ExpressionEvaluator::_resolve_to_expression_results(const AbstractExpression &left_expression,
+                                                         const AbstractExpression &right_expression,
+                                                         const Functor &fn) {
+  _resolve_to_expression_result(left_expression, [&](const auto &left_result) {
+    _resolve_to_expression_result(right_expression, [&](const auto &right_result) {
       fn(left_result, right_result);
     });
   });
 }
 
 template<typename Functor>
-void ExpressionEvaluator::resolve_to_expression_result(const AbstractExpression &expression, const Functor &fn) {
+void ExpressionEvaluator::_resolve_to_expression_result(const AbstractExpression &expression, const Functor &fn) {
   Assert(expression.type != ExpressionType::List, "Can't resolve ListExpression to ExpressionResult");
 
   if (expression.data_type() == DataType::Null) {
