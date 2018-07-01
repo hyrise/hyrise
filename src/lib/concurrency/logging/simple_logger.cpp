@@ -90,10 +90,6 @@ SimpleLogger::SimpleLogger() : AbstractLogger() {
 
   _file_descriptor = open(path.c_str(), oflags, mode);
 
-  if (_file_descriptor != -1) {
-    Logger::_set_latest_log_number(log_number);
-  }
-
   _file_mutex.unlock();
 
   DebugAssert(_file_descriptor != -1, "Logfile could not be opened or created: " + path);

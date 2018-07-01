@@ -17,6 +17,8 @@
  *    -  The constructor of NewLogger should be private and Logger declared as friend of NewLogger
  *    -  delete copy and copy-assign constructors
  *    -  NewLogger has to be instantiated in Logger::getInstance()
+ * 
+ *  A new logfile is created on each startup and numbered in ascending order (path = directory + filename + <number>)
  */
 
 #pragma once
@@ -37,10 +39,7 @@ class Logger {
 
   static AbstractLogger& getInstance();
 
-  // functions to receive and set log file numbers
-  // when creating a new log file the corresponding number has to be set
   static u_int32_t _get_latest_log_number();
-  static void _set_latest_log_number(u_int32_t log_number);
 
   // used to set logging implementation on startup or in tests
   static void set_implementation(const Implementation implementation);
