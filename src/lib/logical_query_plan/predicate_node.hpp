@@ -30,7 +30,7 @@ class PredicateNode : public EnableMakeForLQPNode<PredicateNode>, public Abstrac
 
   std::string description() const override;
   std::vector<std::shared_ptr<AbstractExpression>> node_expressions() const override;
-  std::shared_ptr<TableStatistics> derive_statistics_from(const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const override;
+  std::shared_ptr<TableStatistics> derive_statistics_from(const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input = nullptr) const override;
 
   const std::shared_ptr<AbstractExpression> predicate;
   ScanType scan_type{ScanType::TableScan};

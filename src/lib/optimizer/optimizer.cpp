@@ -8,7 +8,7 @@
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/join_detection_rule.hpp"
 #include "strategy/predicate_pushdown_rule.hpp"
-//#include "strategy/predicate_reordering_rule.hpp"
+#include "strategy/predicate_reordering_rule.hpp"
 
 namespace opossum {
 
@@ -17,7 +17,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   RuleBatch main_batch(RuleBatchExecutionPolicy::Iterative);
   main_batch.add_rule(std::make_shared<PredicatePushdownRule>());
-//  main_batch.add_rule(std::make_shared<PredicateReorderingRule>());
+  main_batch.add_rule(std::make_shared<PredicateReorderingRule>());
   main_batch.add_rule(std::make_shared<JoinDetectionRule>());
   optimizer->add_rule_batch(main_batch);
 
