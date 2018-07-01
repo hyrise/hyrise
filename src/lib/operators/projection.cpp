@@ -9,8 +9,10 @@
 #include <vector>
 
 #include "expression/expression_utils.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/value_expression.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -35,20 +37,22 @@ void Projection::_on_set_transaction_context(std::weak_ptr<TransactionContext> t
 
 std::shared_ptr<const Table> Projection::_on_execute() {
   /**
-   * Determine the TableColumnDefinitions and create the output table from them
+   * Determine the TableColumnDefinitions
    */
   TableColumnDefinitions column_definitions;
   for (const auto& expression : expressions) {
-    TableColumnDefinition column_definition;
-
-    column_definition.data_type = expression->data_type();
-    column_definition.name = expression->as_column_name();
-    column_definition.nullable = expression->is_nullable();
-
-    column_definitions.emplace_back(column_definition);
+    column_definitions.emplace_back(expression->as_column_name(), expression->data_type(), expression->is_nullable());
   }
 
-  auto output_table = std::make_shared<Table>(column_definitions, TableType::Data, input_table_left()->max_chunk_size());
+  /**
+   * Check if we should just forward columns from the input
+   */
+  const auto forward_columns = std::all_of(expressions.begin(), expressions.end(), [&](const auto& expression) {
+    return expression->type == ExpressionType::Column;
+  });
+
+  const auto output_table_type = forward_columns ? input_table_left()->type() : TableType::Data;
+  const auto output_table = std::make_shared<Table>(column_definitions, output_table_type, input_table_left()->max_chunk_size());
 
   /**
    * Perform the projection
@@ -58,9 +62,14 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     output_columns.reserve(expressions.size());
 
     ExpressionEvaluator evaluator(input_table_left(), chunk_id);
-
-    for (const auto& expression : expressions) {
-      output_columns.emplace_back(evaluator.evaluate_expression_to_column(*expression));
+    for (const auto &expression : expressions) {
+      if (forward_columns) {
+        const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression);
+        Assert(pqp_column_expression, "Expected PQPColumnExpression");
+        output_columns.emplace_back(input_table_left()->get_chunk(chunk_id)->get_mutable_column(pqp_column_expression->column_id));
+      } else {
+        output_columns.emplace_back(evaluator.evaluate_expression_to_column(*expression));
+      }
     }
 
     output_table->append_chunk(output_columns);

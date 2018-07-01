@@ -4,6 +4,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "expression/expression_factory.hpp"
 #include "operators/difference.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
@@ -19,6 +20,8 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"
+
+using namespace opossum::expression_factory;
 
 namespace opossum {
 
@@ -113,7 +116,7 @@ TEST_F(RecreationTest, RecreationLimit) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_int3_limit_1.tbl", 1);
 
   // build and execute limit
-  auto limit = std::make_shared<Limit>(_table_wrapper_d, 1);
+  auto limit = std::make_shared<Limit>(_table_wrapper_d, to_expression(int64_t{1}));
   limit->execute();
   EXPECT_TABLE_EQ_UNORDERED(limit->get_output(), expected_result);
 

@@ -44,7 +44,9 @@ const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<Abstra
 }
 
 std::shared_ptr<AbstractLQPNode> StoredTableNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {
-  return make(table_name);
+  const auto copy = make(table_name);
+  copy->set_excluded_chunk_ids(_excluded_chunk_ids);
+  return copy;
 }
 
 bool StoredTableNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const {

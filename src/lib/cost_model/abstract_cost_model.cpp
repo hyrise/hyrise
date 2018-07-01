@@ -26,7 +26,7 @@ Cost AbstractCostModel::estimate_lqp_node_cost(const std::shared_ptr<AbstractLQP
    * TODO(anybody) somehow ask the LQPTranslator about this instead of making assumptions.
    */
 
-  switch (node->type()) {
+  switch (node->type) {
     case LQPNodeType::Predicate:
       operator_type = OperatorType::TableScan;
       break;

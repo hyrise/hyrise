@@ -80,19 +80,19 @@ set(
     import_export/csv_parser.hpp
     import_export/csv_writer.cpp
     import_export/csv_writer.hpp
-#    cost_model/abstract_cost_feature_proxy.cpp
-#    cost_model/abstract_cost_feature_proxy.hpp
+    cost_model/abstract_cost_feature_proxy.cpp
+    cost_model/abstract_cost_feature_proxy.hpp
 #    cost_model/abstract_cost_model.cpp
 #    cost_model/abstract_cost_model.hpp
-#    cost_model/cost_feature.cpp
-#    cost_model/cost_feature.hpp
+    cost_model/cost_feature.cpp
+    cost_model/cost_feature.hpp
 #    cost_model/cost_feature_lqp_node_proxy.cpp
 #    cost_model/cost_feature_lqp_node_proxy.hpp
-#    cost_model/cost_feature_operator_proxy.cpp
-#    cost_model/cost_feature_operator_proxy.hpp
-#    cost_model/cost.hpp
-#    cost_model/cost_model_logical.cpp
-#    cost_model/cost_model_logical.hpp
+    cost_model/cost_feature_operator_proxy.cpp
+    cost_model/cost_feature_operator_proxy.hpp
+    cost_model/cost.hpp
+    cost_model/cost_model_logical.cpp
+    cost_model/cost_model_logical.hpp
     logical_query_plan/abstract_lqp_node.cpp
     logical_query_plan/abstract_lqp_node.hpp
     logical_query_plan/alias_node.cpp
@@ -246,15 +246,15 @@ set(
     statistics/chunk_statistics/chunk_statistics.hpp
     statistics/chunk_statistics/min_max_filter.hpp
     statistics/chunk_statistics/range_filter.hpp
-#    optimizer/join_ordering/join_edge.cpp
-#    optimizer/join_ordering/join_edge.hpp
-#    optimizer/join_ordering/join_graph_builder.cpp
-#    optimizer/join_ordering/join_graph_builder.hpp
-#    optimizer/join_ordering/join_graph.cpp
-#    optimizer/join_ordering/join_graph.hpp
-#    optimizer/join_ordering/join_plan_predicate.cpp
-#    optimizer/join_ordering/join_plan_predicate.hpp
-#    optimizer/join_ordering/join_vertex_set.hpp
+    #optimizer/join_ordering/join_edge.cpp
+    #optimizer/join_ordering/join_edge.hpp
+    #optimizer/join_ordering/join_graph_builder.cpp
+    #optimizer/join_ordering/join_graph_builder.hpp
+    #optimizer/join_ordering/join_graph.cpp
+    #optimizer/join_ordering/join_graph.hpp
+    #optimizer/join_ordering/join_plan_predicate.cpp
+    #optimizer/join_ordering/join_plan_predicate.hpp
+    #optimizer/join_ordering/join_vertex_set.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
@@ -324,14 +324,14 @@ set(
     statistics/generate_column_statistics.hpp
     statistics/table_statistics.cpp
     statistics/table_statistics.hpp
-#    sql/abstract_cache.hpp
+    sql/abstract_cache.hpp
     sql/create_sql_parser_error_message.cpp
     sql/create_sql_parser_error_message.hpp
-#    sql/gdfs_cache.hpp
-#    sql/gds_cache.hpp
-#    sql/lru_cache.hpp
-#    sql/lru_k_cache.hpp
-#    sql/random_cache.hpp
+    sql/gdfs_cache.hpp
+    sql/gds_cache.hpp
+    sql/lru_cache.hpp
+    sql/lru_k_cache.hpp
+    sql/random_cache.hpp
     sql/parameter_id_allocator.cpp
     sql/parameter_id_allocator.hpp
     sql/sql_pipeline_builder.cpp
