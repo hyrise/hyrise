@@ -140,7 +140,7 @@ class OperatorsAggregateTest : public BaseTest {
 
 TEST_F(OperatorsAggregateTest, OperatorName) {
   auto aggregate = std::make_shared<Aggregate>(
-      _table_wrapper_1_1, std::vector<AggregateColumnDefinition>{{ColumnID{1}, AggregateFunction::Max}},
+      _table_wrapper_1_1, std::vector<AggregateColumnDefinition>{{AggregateFunction::Max, ColumnID{1}, "MAX(b)"}},
       std::vector<ColumnID>{ColumnID{0}});
 
   EXPECT_EQ(aggregate->name(), "Aggregate");
@@ -148,239 +148,232 @@ TEST_F(OperatorsAggregateTest, OperatorName) {
 
 TEST_F(OperatorsAggregateTest, CannotSumStringColumns) {
   auto aggregate = std::make_shared<Aggregate>(
-      _table_wrapper_1_1_string, std::vector<AggregateColumnDefinition>{{ColumnID{0}, AggregateFunction::Sum}},
+      _table_wrapper_1_1_string, std::vector<AggregateColumnDefinition>{{AggregateFunction::Sum, ColumnID{0}}},
       std::vector<ColumnID>{ColumnID{0}});
   EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsAggregateTest, CannotAvgStringColumns) {
   auto aggregate = std::make_shared<Aggregate>(
-      _table_wrapper_1_1_string, std::vector<AggregateColumnDefinition>{{ColumnID{0}, AggregateFunction::Avg}},
+      _table_wrapper_1_1_string, std::vector<AggregateColumnDefinition>{{AggregateFunction::Avg, ColumnID{0}}},
       std::vector<ColumnID>{ColumnID{0}});
   EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsAggregateTest, CanCountStringColumns) {
-  this->test_output(_table_wrapper_1_1_string, {{ColumnID{0}, AggregateFunction::Count}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_string, {{AggregateFunction::Count, ColumnID{0}, "COUNT(a)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/count_str.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, SingleAggregateMax) {
-  this->test_output(_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1, {{AggregateFunction::Max, ColumnID{1}, "MAX(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/max.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, SingleAggregateMin) {
-  this->test_output(_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1, {{AggregateFunction::Min, ColumnID{1}, "MIN(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/min.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, SingleAggregateSum) {
-  this->test_output(_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Sum}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1, {{AggregateFunction::Sum, ColumnID{1}, "SUM(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, SingleAggregateAvg) {
-  this->test_output(_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Avg}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1, {{AggregateFunction::Avg, ColumnID{1}, "AVG(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/avg.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, SingleAggregateCount) {
-  this->test_output(_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Count}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1, {{AggregateFunction::Count, ColumnID{1}, "COUNT(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, SingleAggregateCountDistinct) {
-  this->test_output(_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::CountDistinct}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1, {{AggregateFunction::CountDistinct, ColumnID{1}}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_distinct.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, StringSingleAggregateMax) {
-  this->test_output(_table_wrapper_1_1_string, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_string, {{AggregateFunction::Max, ColumnID{1}, "MAX(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/max.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, StringSingleAggregateMin) {
-  this->test_output(_table_wrapper_1_1_string, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_string, {{AggregateFunction::Min, ColumnID{1}, "MIN(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/min.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, StringSingleAggregateStringMax) {
-  this->test_output(_table_wrapper_1_1_string, {{ColumnID{0}, AggregateFunction::Max}}, {},
+  this->test_output(_table_wrapper_1_1_string, {{AggregateFunction::Max, ColumnID{0}}}, {},
                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/max_str.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, StringSingleAggregateStringMin) {
-  this->test_output(_table_wrapper_1_1_string, {{ColumnID{0}, AggregateFunction::Min}}, {},
+  this->test_output(_table_wrapper_1_1_string, {{AggregateFunction::Min, ColumnID{0}}}, {},
                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/min_str.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, StringSingleAggregateSum) {
-  this->test_output(_table_wrapper_1_1_string, {{ColumnID{1}, AggregateFunction::Sum}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_string, {{AggregateFunction::Sum, ColumnID{1}, "SUM(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/sum.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, StringSingleAggregateAvg) {
-  this->test_output(_table_wrapper_1_1_string, {{ColumnID{1}, AggregateFunction::Avg}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_string, {{AggregateFunction::Avg, ColumnID{1}, "AVG(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/avg.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, StringSingleAggregateCount) {
-  this->test_output(_table_wrapper_1_1_string, {{ColumnID{1}, AggregateFunction::Count}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_string, {{AggregateFunction::Count, ColumnID{1}, "COUNT(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/count.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMax) {
-  this->test_output(_table_wrapper_1_1_dict, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_dict, {{AggregateFunction::Max, ColumnID{1}, "MAX(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/max.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMin) {
-  this->test_output(_table_wrapper_1_1_dict, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_dict, {{AggregateFunction::Min, ColumnID{1}, "MIN(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/min.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, DictionarySingleAggregateSum) {
-  this->test_output(_table_wrapper_1_1_dict, {{ColumnID{1}, AggregateFunction::Sum}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_dict, {{AggregateFunction::Sum, ColumnID{1}, "SUM(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, DictionarySingleAggregateAvg) {
-  this->test_output(_table_wrapper_1_1_dict, {{ColumnID{1}, AggregateFunction::Avg}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_dict, {{AggregateFunction::Avg, ColumnID{1}, "AVG(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/avg.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, DictionarySingleAggregateCount) {
-  this->test_output(_table_wrapper_1_1_dict, {{ColumnID{1}, AggregateFunction::Count}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_dict, {{AggregateFunction::Count, ColumnID{1}, "COUNT(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoAggregateAvgMax) {
-  this->test_output(_table_wrapper_1_2, {{ColumnID{1}, AggregateFunction::Max}, {ColumnID{2}, AggregateFunction::Avg}},
+  this->test_output(_table_wrapper_1_2, {{AggregateFunction::Max, ColumnID{1}, "MAX(b)"}, {AggregateFunction::Avg, ColumnID{2}, "Avg(c)"}},
                     {ColumnID{0}}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/max_avg.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoAggregateMinAvg) {
-  this->test_output(_table_wrapper_1_2, {{ColumnID{1}, AggregateFunction::Min}, {ColumnID{2}, AggregateFunction::Avg}},
+  this->test_output(_table_wrapper_1_2, {{AggregateFunction::Min, ColumnID{1}, "MIN(b)"}, {AggregateFunction::Avg, ColumnID{2}, "Avg(c)"}},
                     {ColumnID{0}}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/min_avg.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoAggregateMinMax) {
-  this->test_output(_table_wrapper_1_2, {{ColumnID{1}, AggregateFunction::Min}, {ColumnID{2}, AggregateFunction::Max}},
+  this->test_output(_table_wrapper_1_2, {{AggregateFunction::Min, ColumnID{1}, "MIN(b)"}, {AggregateFunction::Max, ColumnID{2}}},
                     {ColumnID{0}}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/min_max.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoAggregateAvgAvg) {
-  this->test_output(_table_wrapper_1_2, {{ColumnID{1}, AggregateFunction::Avg}, {ColumnID{2}, AggregateFunction::Avg}},
+  this->test_output(_table_wrapper_1_2, {{AggregateFunction::Avg, ColumnID{1}, "AVG(b)"}, {AggregateFunction::Avg, ColumnID{2}, "Avg(c)"}},
                     {ColumnID{0}}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/avg_avg.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoAggregateSumAvg) {
-  this->test_output(_table_wrapper_1_2, {{ColumnID{1}, AggregateFunction::Sum}, {ColumnID{2}, AggregateFunction::Avg}},
+  this->test_output(_table_wrapper_1_2, {{AggregateFunction::Sum, ColumnID{1}, "SUM(b)"}, {AggregateFunction::Avg, ColumnID{2}, "Avg(c)"}},
                     {ColumnID{0}}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg.tbl", 1);
 }
 
-TEST_F(OperatorsAggregateTest, TwoAggregateSumAvgAlias) {
-  this->test_output(_table_wrapper_1_2,
-                    {{ColumnID{1}, AggregateFunction::Sum, std::optional<std::string>("sum_b")},
-                     {ColumnID{2}, AggregateFunction::Avg}},
-                    {ColumnID{0}}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg_alias.tbl", 1);
-}
-
 TEST_F(OperatorsAggregateTest, TwoAggregateSumSum) {
-  this->test_output(_table_wrapper_1_2, {{ColumnID{1}, AggregateFunction::Sum}, {ColumnID{2}, AggregateFunction::Sum}},
+  this->test_output(_table_wrapper_1_2, {{AggregateFunction::Sum, ColumnID{1}, "SUM(b)"}, {AggregateFunction::Sum, ColumnID{2}, "SUM(c)"}},
                     {ColumnID{0}}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_sum.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoAggregateSumCount) {
   this->test_output(_table_wrapper_1_2,
-                    {{ColumnID{1}, AggregateFunction::Sum}, {ColumnID{2}, AggregateFunction::Count}}, {ColumnID{0}},
+                    {{AggregateFunction::Sum, ColumnID{1}, "SUM(b)"}, {AggregateFunction::Count, ColumnID{2}}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_count.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbyMax) {
-  this->test_output(_table_wrapper_2_1, {{ColumnID{2}, AggregateFunction::Max}}, {ColumnID{0}, ColumnID{1}},
+  this->test_output(_table_wrapper_2_1, {{AggregateFunction::Max, ColumnID{2}}}, {ColumnID{0}, ColumnID{1}},
                     "src/test/tables/aggregateoperator/groupby_int_2gb_1agg/max.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbyMin) {
-  this->test_output(_table_wrapper_2_1, {{ColumnID{2}, AggregateFunction::Min}}, {ColumnID{0}, ColumnID{1}},
+  this->test_output(_table_wrapper_2_1, {{AggregateFunction::Min, ColumnID{2}, "MIN(c)"}}, {ColumnID{0}, ColumnID{1}},
                     "src/test/tables/aggregateoperator/groupby_int_2gb_1agg/min.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbySum) {
-  this->test_output(_table_wrapper_2_1, {{ColumnID{2}, AggregateFunction::Sum}}, {ColumnID{0}, ColumnID{1}},
+  this->test_output(_table_wrapper_2_1, {{AggregateFunction::Sum, ColumnID{2}, "SUM(c)"}}, {ColumnID{0}, ColumnID{1}},
                     "src/test/tables/aggregateoperator/groupby_int_2gb_1agg/sum.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbyAvg) {
-  this->test_output(_table_wrapper_2_1, {{ColumnID{2}, AggregateFunction::Avg}}, {ColumnID{0}, ColumnID{1}},
+  this->test_output(_table_wrapper_2_1, {{AggregateFunction::Avg, ColumnID{2}, "Avg(c)"}}, {ColumnID{0}, ColumnID{1}},
                     "src/test/tables/aggregateoperator/groupby_int_2gb_1agg/avg.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbyCount) {
-  this->test_output(_table_wrapper_2_1, {{ColumnID{2}, AggregateFunction::Count}}, {ColumnID{0}, ColumnID{1}},
+  this->test_output(_table_wrapper_2_1, {{AggregateFunction::Count, ColumnID{2}}}, {ColumnID{0}, ColumnID{1}},
                     "src/test/tables/aggregateoperator/groupby_int_2gb_1agg/count.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateMaxAvg) {
-  this->test_output(_table_wrapper_2_2, {{ColumnID{2}, AggregateFunction::Max}, {ColumnID{3}, AggregateFunction::Avg}},
+  this->test_output(_table_wrapper_2_2, {{AggregateFunction::Max, ColumnID{2}}, {AggregateFunction::Avg, ColumnID{3}, "AVG(d)"}},
                     {ColumnID{0}, ColumnID{1}}, "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl",
                     1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateMinAvg) {
-  this->test_output(_table_wrapper_2_2, {{ColumnID{2}, AggregateFunction::Min}, {ColumnID{3}, AggregateFunction::Avg}},
+  this->test_output(_table_wrapper_2_2, {{AggregateFunction::Min, ColumnID{2}, "MIN(c)"}, {AggregateFunction::Avg, ColumnID{3}, "AVG(d)"}},
                     {ColumnID{0}, ColumnID{1}}, "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/min_avg.tbl",
                     1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateMinMax) {
-  this->test_output(_table_wrapper_2_2, {{ColumnID{2}, AggregateFunction::Min}, {ColumnID{3}, AggregateFunction::Max}},
+  this->test_output(_table_wrapper_2_2, {{AggregateFunction::Min, ColumnID{2}, "MIN(c)"}, {AggregateFunction::Max, ColumnID{3}}},
                     {ColumnID{0}, ColumnID{1}}, "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/min_max.tbl",
                     1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateSumAvg) {
-  this->test_output(_table_wrapper_2_2, {{ColumnID{2}, AggregateFunction::Sum}, {ColumnID{3}, AggregateFunction::Avg}},
+  this->test_output(_table_wrapper_2_2, {{AggregateFunction::Sum, ColumnID{2}, "SUM(c)"}, {AggregateFunction::Avg, ColumnID{3}, "AVG(d)"}},
                     {ColumnID{0}, ColumnID{1}}, "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/sum_avg.tbl",
                     1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateSumSum) {
-  this->test_output(_table_wrapper_2_2, {{ColumnID{2}, AggregateFunction::Sum}, {ColumnID{3}, AggregateFunction::Sum}},
+  this->test_output(_table_wrapper_2_2, {{AggregateFunction::Sum, ColumnID{2}, "SUM(c)"}, {AggregateFunction::Sum, ColumnID{3}}},
                     {ColumnID{0}, ColumnID{1}}, "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/sum_sum.tbl",
                     1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateSumCount) {
   this->test_output(
-      _table_wrapper_2_2, {{ColumnID{2}, AggregateFunction::Sum}, {ColumnID{3}, AggregateFunction::Count}},
+      _table_wrapper_2_2, {{AggregateFunction::Sum, ColumnID{2}, "SUM(c)"}, {AggregateFunction::Count, ColumnID{3}}},
       {ColumnID{0}, ColumnID{1}}, "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/sum_count.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, NoGroupbySingleAggregateMax) {
-  this->test_output(_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Max}}, {},
+  this->test_output(_table_wrapper_1_1, {{AggregateFunction::Max, ColumnID{1}, "MAX(b)"}}, {},
                     "src/test/tables/aggregateoperator/0gb_1agg/max.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, NoGroupbySingleAggregateMin) {
-  this->test_output(_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Min}}, {},
+  this->test_output(_table_wrapper_1_1, {{AggregateFunction::Min, ColumnID{1}, "MIN(b)"}}, {},
                     "src/test/tables/aggregateoperator/0gb_1agg/min.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, NoGroupbySingleAggregateSum) {
-  this->test_output(_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Sum}}, {},
+  this->test_output(_table_wrapper_1_1, {{AggregateFunction::Sum, ColumnID{1}, "SUM(b)"}}, {},
                     "src/test/tables/aggregateoperator/0gb_1agg/sum.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, NoGroupbySingleAggregateAvg) {
-  this->test_output(_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Avg}}, {},
+  this->test_output(_table_wrapper_1_1, {{AggregateFunction::Avg, ColumnID{1}, "AVG(b)"}}, {},
                     "src/test/tables/aggregateoperator/0gb_1agg/avg.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, NoGroupbySingleAggregateCount) {
-  this->test_output(_table_wrapper_1_1, {{ColumnID{1}, AggregateFunction::Count}}, {},
+  this->test_output(_table_wrapper_1_1, {{AggregateFunction::Count, ColumnID{1}, "COUNT(b)"}}, {},
                     "src/test/tables/aggregateoperator/0gb_1agg/count.tbl", 1);
 }
 
@@ -404,32 +397,32 @@ TEST_F(OperatorsAggregateTest, NoGroupbyAndNoAggregate) {
  * Tests for NULL values
  */
 TEST_F(OperatorsAggregateTest, CanCountStringColumnsWithNull) {
-  this->test_output(_table_wrapper_1_1_string_null, {{ColumnID{1}, AggregateFunction::Count}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_string_null, {{AggregateFunction::Count, ColumnID{1}, "COUNT(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/count_str_null.tbl", 1, false);
 }
 
 TEST_F(OperatorsAggregateTest, SingleAggregateMaxWithNull) {
-  this->test_output(_table_wrapper_1_1_null, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_null, {{AggregateFunction::Max, ColumnID{1}, "MAX(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/max_null.tbl", 1, false);
 }
 
 TEST_F(OperatorsAggregateTest, SingleAggregateMinWithNull) {
-  this->test_output(_table_wrapper_1_1_null, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_null, {{AggregateFunction::Min, ColumnID{1}, "MIN(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/min_null.tbl", 1, false);
 }
 
 TEST_F(OperatorsAggregateTest, SingleAggregateSumWithNull) {
-  this->test_output(_table_wrapper_1_1_null, {{ColumnID{1}, AggregateFunction::Sum}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_null, {{AggregateFunction::Sum, ColumnID{1}, "SUM(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum_null.tbl", 1, false);
 }
 
 TEST_F(OperatorsAggregateTest, SingleAggregateAvgWithNull) {
-  this->test_output(_table_wrapper_1_1_null, {{ColumnID{1}, AggregateFunction::Avg}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_null, {{AggregateFunction::Avg, ColumnID{1}, "AVG(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/avg_null.tbl", 1, false);
 }
 
 TEST_F(OperatorsAggregateTest, SingleAggregateCountWithNull) {
-  this->test_output(_table_wrapper_1_1_null, {{ColumnID{1}, AggregateFunction::Count}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_null, {{AggregateFunction::Count, ColumnID{1}, "COUNT(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_null.tbl", 1, false);
 }
 
@@ -439,37 +432,37 @@ TEST_F(OperatorsAggregateTest, OneGroupbyAndNoAggregateWithNull) {
 }
 
 TEST_F(OperatorsAggregateTest, OneGroupbyCountStar) {
-  this->test_output(_table_wrapper_1_1_null, {{std::nullopt, AggregateFunction::Count}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_null, {{AggregateFunction::Count, std::nullopt, "COUNT(*)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_0agg/count_star.tbl", 1, false);
 }
 
 TEST_F(OperatorsAggregateTest, TwoGroupbyCountStar) {
-  this->test_output(_table_wrapper_2_0_null, {{std::nullopt, AggregateFunction::Count}}, {ColumnID{0}, ColumnID{2}},
+  this->test_output(_table_wrapper_2_0_null, {{AggregateFunction::Count, std::nullopt, "COUNT(*)"}}, {ColumnID{0}, ColumnID{2}},
                     "src/test/tables/aggregateoperator/groupby_int_2gb_0agg/count_star.tbl", 1, false);
 }
 
 TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMaxWithNull) {
-  this->test_output(_table_wrapper_1_1_null_dict, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_null_dict, {{AggregateFunction::Max, ColumnID{1}, "MAX(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/max_null.tbl", 1, false);
 }
 
 TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMinWithNull) {
-  this->test_output(_table_wrapper_1_1_null_dict, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_null_dict, {{AggregateFunction::Min, ColumnID{1}, "MIN(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/min_null.tbl", 1, false);
 }
 
 TEST_F(OperatorsAggregateTest, DictionarySingleAggregateSumWithNull) {
-  this->test_output(_table_wrapper_1_1_null_dict, {{ColumnID{1}, AggregateFunction::Sum}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_null_dict, {{AggregateFunction::Sum, ColumnID{1}, "SUM(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/sum_null.tbl", 1, false);
 }
 
 TEST_F(OperatorsAggregateTest, DictionarySingleAggregateAvgWithNull) {
-  this->test_output(_table_wrapper_1_1_null_dict, {{ColumnID{1}, AggregateFunction::Avg}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_null_dict, {{AggregateFunction::Avg, ColumnID{1}, "AVG(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/avg_null.tbl", 1, false);
 }
 
 TEST_F(OperatorsAggregateTest, DictionarySingleAggregateCountWithNull) {
-  this->test_output(_table_wrapper_1_1_null_dict, {{ColumnID{1}, AggregateFunction::Count}}, {ColumnID{0}},
+  this->test_output(_table_wrapper_1_1_null_dict, {{AggregateFunction::Count, ColumnID{1}, "COUNT(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/count_null.tbl", 1, false);
 }
 
@@ -481,9 +474,9 @@ TEST_F(OperatorsAggregateTest, TwoAggregateEmptyTable) {
   auto filtered = std::make_shared<TableScan>(_table_wrapper_1_2, ColumnID{0}, PredicateCondition::LessThan, 0);
   filtered->execute();
   this->test_output(filtered,
-                    {{ColumnID{1}, AggregateFunction::Max},
-                     {ColumnID{2}, AggregateFunction::Count},
-                     {std::nullopt, AggregateFunction::Count}},
+                    {{AggregateFunction::Max, ColumnID{1}, "MAX(b)"},
+                     {AggregateFunction::Count, ColumnID{2}},
+                     {AggregateFunction::Count, std::nullopt, "COUNT(*)"}},
                     {}, "src/test/tables/aggregateoperator/0gb_3agg/max_count_count_empty.tbl", 1);
 }
 
@@ -491,9 +484,9 @@ TEST_F(OperatorsAggregateTest, TwoAggregateEmptyTableGrouped) {
   auto filtered = std::make_shared<TableScan>(_table_wrapper_1_2, ColumnID{0}, PredicateCondition::LessThan, 0);
   filtered->execute();
   this->test_output(filtered,
-                    {{ColumnID{1}, AggregateFunction::Max},
-                     {ColumnID{2}, AggregateFunction::Count},
-                     {std::nullopt, AggregateFunction::Count}},
+                    {{AggregateFunction::Max, ColumnID{1}, "MAX(b)"},
+                     {AggregateFunction::Count, ColumnID{2}},
+                     {AggregateFunction::Count, std::nullopt, "COUNT(*)"}},
                     {ColumnID{0}}, "src/test/tables/aggregateoperator/groupby_int_1gb_3agg/max_count_count_empty.tbl",
                     1);
 }
@@ -506,7 +499,7 @@ TEST_F(OperatorsAggregateTest, SingleAggregateMaxOnRef) {
   auto filtered = std::make_shared<TableScan>(_table_wrapper_1_1, ColumnID{0}, PredicateCondition::LessThan, "100");
   filtered->execute();
 
-  this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
+  this->test_output(filtered, {{AggregateFunction::Max, ColumnID{1}, "MAX(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/max_filtered.tbl", 1);
 }
 
@@ -514,7 +507,7 @@ TEST_F(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateMinAvgOnRef) {
   auto filtered = std::make_shared<TableScan>(_table_wrapper_2_2, ColumnID{0}, PredicateCondition::LessThan, "100");
   filtered->execute();
 
-  this->test_output(filtered, {{ColumnID{2}, AggregateFunction::Min}, {ColumnID{3}, AggregateFunction::Avg}},
+  this->test_output(filtered, {{AggregateFunction::Min, ColumnID{2}, "MIN(c)"}, {AggregateFunction::Avg, ColumnID{3}, "AVG(d)"}},
                     {ColumnID{0}, ColumnID{1}},
                     "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/min_avg_filtered.tbl", 1);
 }
@@ -523,7 +516,7 @@ TEST_F(OperatorsAggregateTest, TwoGroupbySumOnRef) {
   auto filtered = std::make_shared<TableScan>(_table_wrapper_2_1, ColumnID{0}, PredicateCondition::LessThan, "100");
   filtered->execute();
 
-  this->test_output(filtered, {{ColumnID{2}, AggregateFunction::Sum}}, {ColumnID{0}, ColumnID{1}},
+  this->test_output(filtered, {{AggregateFunction::Sum, ColumnID{2}, "SUM(c)"}}, {ColumnID{0}, ColumnID{1}},
                     "src/test/tables/aggregateoperator/groupby_int_2gb_1agg/sum_filtered.tbl", 1);
 }
 
@@ -531,7 +524,7 @@ TEST_F(OperatorsAggregateTest, TwoAggregateSumAvgOnRef) {
   auto filtered = std::make_shared<TableScan>(_table_wrapper_1_2, ColumnID{0}, PredicateCondition::LessThan, "100");
   filtered->execute();
 
-  this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Sum}, {ColumnID{2}, AggregateFunction::Avg}},
+  this->test_output(filtered, {{AggregateFunction::Sum, ColumnID{1}, "SUM(b)"}, {AggregateFunction::Avg, ColumnID{2}, "Avg(c)"}},
                     {ColumnID{0}}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg_filtered.tbl", 1);
 }
 
@@ -540,7 +533,7 @@ TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMinOnRef) {
       std::make_shared<TableScan>(_table_wrapper_1_1_dict, ColumnID{0}, PredicateCondition::LessThan, "100");
   filtered->execute();
 
-  this->test_output(filtered, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
+  this->test_output(filtered, {{AggregateFunction::Min, ColumnID{1}, "MIN(b)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/min_filtered.tbl", 1);
 }
 
@@ -558,7 +551,7 @@ TEST_F(OperatorsAggregateTest, OuterJoinThenAggregate) {
                                                ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::LessThan);
   join->execute();
 
-  this->test_output(join, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
+  this->test_output(join, {{AggregateFunction::Min, ColumnID{1}, "MIN(a)"}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/outer_join.tbl", 1, false);
 }
 

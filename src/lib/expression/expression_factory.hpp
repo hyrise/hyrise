@@ -62,7 +62,7 @@ std::shared_ptr<ValueExpression> null();
 template<auto t, typename E>
 struct unary final {
   template<typename A>
-  std::shared_ptr<E> operator()(const A &a) {
+  std::shared_ptr<E> operator()(const A &a) const {
     return std::make_shared<E>(t, to_expression(a));
   };
 };
@@ -70,7 +70,7 @@ struct unary final {
 template<auto t, typename E>
 struct binary final {
   template<typename A, typename B>
-  std::shared_ptr<E> operator()(const A &a, const B &b) {
+  std::shared_ptr<E> operator()(const A &a, const B &b) const {
     return std::make_shared<E>(t, to_expression(a), to_expression(b));
   };
 };
@@ -78,7 +78,7 @@ struct binary final {
 template<typename E>
 struct ternary final {
   template<typename A, typename B, typename C>
-  std::shared_ptr<E> operator()(const A& a, const B& b, const C& c) {
+  std::shared_ptr<E> operator()(const A& a, const B& b, const C& c) const {
     return std::make_shared<E>(to_expression(a), to_expression(b), to_expression(c));
   };
 };
