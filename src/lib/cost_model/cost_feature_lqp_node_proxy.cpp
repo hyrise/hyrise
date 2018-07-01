@@ -9,6 +9,7 @@
 #include "resolve_type.hpp"
 #include "statistics/column_statistics.hpp"
 #include "statistics/table_statistics.hpp"
+#include "operators/operator_predicate.hpp"
 
 namespace opossum {
 
@@ -35,13 +36,16 @@ CostFeatureVariant CostFeatureLQPNodeProxy::_extract_feature_impl(const CostFeat
     case CostFeature::RightDataType: {
       auto column_reference = LQPColumnReference{};
 
-      if (_node->type() == LQPNodeType::Join) {
+      if (_node->type == LQPNodeType::Join) {
         const auto join_node = std::static_pointer_cast<JoinNode>(_node);
-        const auto column_references = join_node->join_column_references();
-        Assert(column_references, "No columns referenced in this JoinMode");
+        const auto operator_predicate = OperatorPredicate::from_expression(*join_node->join_predicate, *join_node);
+        Assert(operator_predicate, "Expected Join predicate to be OperatorPredicate compatible");
 
-        column_reference =
-            cost_feature == CostFeature::LeftDataType ? column_references->first : column_references->second;
+        if (cost_feature == CostFeature::LeftDataType) {
+          return _node-
+        }
+
+        column_reference = cost_feature == CostFeature::LeftDataType ? column_references->first : column_references->second;
       } else if (_node->type() == LQPNodeType::Predicate) {
         const auto predicate_node = std::static_pointer_cast<PredicateNode>(_node);
         if (cost_feature == CostFeature::LeftDataType) {

@@ -182,7 +182,7 @@ void expression_set_parameters(const std::shared_ptr<AbstractExpression>& expres
       return false;
 
     } else {
-      
+
       return true;
     }
   });
@@ -211,7 +211,5 @@ void expressions_set_transaction_context(const std::vector<std::shared_ptr<Abstr
     expression_set_transaction_context(expression, transaction_context);
   }
 }
-
-
 
 }  // namespace opossum

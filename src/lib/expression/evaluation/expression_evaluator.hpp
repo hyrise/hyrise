@@ -14,6 +14,7 @@
 namespace opossum {
 
 class AbstractExpression;
+class AbstractPredicateExpression;
 class ArithmeticExpression;
 class BaseColumn;
 class BinaryPredicateExpression;
@@ -25,6 +26,7 @@ class FunctionExpression;
 class NegateExpression;
 class InExpression;
 class IsNullExpression;
+class PQPColumnExpression;
 class PQPSelectExpression;
 
 class ExpressionEvaluator final {
@@ -47,6 +49,9 @@ class ExpressionEvaluator final {
   std::shared_ptr<ExpressionResult<R>> evaluate_logical_expression(const LogicalExpression& expression);
 
   template<typename R>
+  std::shared_ptr<ExpressionResult<R>> evaluate_predicate_expression(const AbstractPredicateExpression& expression);
+
+  template<typename R>
   std::shared_ptr<ExpressionResult<R>> evaluate_binary_predicate_expression(const BinaryPredicateExpression& expression);
 
   template<typename R>
@@ -58,12 +63,21 @@ class ExpressionEvaluator final {
   template<typename R>
   std::shared_ptr<ExpressionResult<R>> evaluate_in_expression(const InExpression& in_expression);
 
-  std::vector<std::shared_ptr<const Table>> evaluate_select_expression(const PQPSelectExpression &expression);
+  template<typename R>
+  std::shared_ptr<ExpressionResult<R>> evaluate_select_expression(const PQPSelectExpression& select_expression);
+
+  std::vector<std::shared_ptr<const Table>> evaluate_select_expression_to_tables(const PQPSelectExpression &expression);
 
   std::shared_ptr<const Table> evaluate_select_expression_for_row(const PQPSelectExpression& expression, const ChunkOffset chunk_offset);
 
   template<typename R>
+  std::shared_ptr<ExpressionResult<R>> evaluate_column_expression(const PQPColumnExpression& column_expression);
+
+  template<typename R>
   std::shared_ptr<ExpressionResult<R>> evaluate_case_expression(const CaseExpression& case_expression);
+
+  template<typename R>
+  std::shared_ptr<ExpressionResult<R>> evaluate_value_or_parameter_expression(const AbstractExpression& expression);
 
   template<typename R>
   std::shared_ptr<ExpressionResult<R>> evaluate_function_expression(const FunctionExpression& expression);
