@@ -376,18 +376,16 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
   // All aggregate_pqp_expressions have to be AggregateExpressions and their argument() has to be a PQPColumnExpression
   std::vector<AggregateColumnDefinition> aggregate_column_definitions;
   aggregate_column_definitions.reserve(aggregate_pqp_expressions.size());
-  for (const auto& expression : aggregate_pqp_expressions) {
+  for (const auto& expression : aggregate_node->aggregate_expressions) {
     Assert(expression->type == ExpressionType::Aggregate, "Expression '" + expression->as_column_name() + "' used as AggregateExpression is not an AggregateExpression");
 
     const auto& aggregate_expression = std::static_pointer_cast<AggregateExpression>(expression);
 
+    // Always resolve the aggregate to a column, even if it is a Value. The Aggregate operator only takes columns as
+    // arguments
     if (aggregate_expression->argument()) {
-      Assert(aggregate_expression->argument()->type == ExpressionType::Column, "The argument of AggregateExpression '" + expression->as_column_name() + "' couldn't be resolved");
-
-      const auto column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(aggregate_expression->argument());
-      Assert(column_expression, "Only PQPColumnExpressions valid here.");
-
-      aggregate_column_definitions.emplace_back(aggregate_expression->aggregate_function, column_expression->column_id, expression->as_column_name());
+      const auto argument_column_id = node->left_input()->get_column_id(*aggregate_expression->argument());
+      aggregate_column_definitions.emplace_back(aggregate_expression->aggregate_function, argument_column_id, expression->as_column_name());
 
     } else {
       aggregate_column_definitions.emplace_back(aggregate_expression->aggregate_function, std::nullopt, expression->as_column_name());

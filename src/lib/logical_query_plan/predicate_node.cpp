@@ -12,6 +12,7 @@
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/parameter_expression.hpp"
 #include "expression/value_expression.hpp"
+#include "operators/operator_predicate.hpp"
 #include "statistics/table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

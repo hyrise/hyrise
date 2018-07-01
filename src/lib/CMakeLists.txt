@@ -193,6 +193,8 @@ set(
     operators/join_sort_merge/radix_cluster_sort.hpp
     operators/limit.cpp
     operators/limit.hpp
+    operators/operator_predicate.cpp
+    operators/operator_predicate.hpp
     operators/maintenance/create_view.cpp
     operators/maintenance/create_view.hpp
     operators/maintenance/drop_view.cpp
@@ -200,6 +202,7 @@ set(
     operators/maintenance/show_columns.cpp
     operators/maintenance/show_columns.hpp
     operators/maintenance/show_tables.cpp
+    operators/maintenance/show_tables.hpp
     operators/maintenance/show_tables.hpp
     operators/physical_query_plan.cpp
     operators/physical_query_plan.hpp
@@ -256,16 +259,16 @@ set(
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
     optimizer/strategy/abstract_rule.hpp
-#    optimizer/strategy/chunk_pruning_rule.cpp
-#    optimizer/strategy/chunk_pruning_rule.hpp
-#    optimizer/strategy/constant_calculation_rule.cpp
-#    optimizer/strategy/constant_calculation_rule.hpp
+    optimizer/strategy/chunk_pruning_rule.cpp
+    optimizer/strategy/chunk_pruning_rule.hpp
+    optimizer/strategy/constant_calculation_rule.cpp
+    optimizer/strategy/constant_calculation_rule.hpp
     optimizer/strategy/index_scan_rule.cpp
     optimizer/strategy/index_scan_rule.hpp
     optimizer/strategy/join_detection_rule.cpp
     optimizer/strategy/join_detection_rule.hpp
-#    optimizer/strategy/predicate_pushdown_rule.cpp
-#    optimizer/strategy/predicate_pushdown_rule.hpp
+    optimizer/strategy/predicate_pushdown_rule.cpp
+    optimizer/strategy/predicate_pushdown_rule.hpp
 #    optimizer/strategy/predicate_reordering_rule.cpp
 #    optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/strategy/rule_batch.cpp

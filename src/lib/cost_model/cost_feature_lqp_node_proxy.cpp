@@ -63,7 +63,7 @@ CostFeatureVariant CostFeatureLQPNodeProxy::_extract_feature_impl(const CostFeat
     }
 
     case CostFeature::PredicateCondition:
-      if (_node->type() == LQPNodeType::Join) {
+      if (_node->type == LQPNodeType::Join) {
         const auto predicate_condition = std::static_pointer_cast<JoinNode>(_node)->predicate_condition();
         Assert(predicate_condition, "No PredicateCondition in this JoinMode");
         return *predicate_condition;
