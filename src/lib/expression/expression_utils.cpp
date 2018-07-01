@@ -7,6 +7,7 @@
 #include "operators/abstract_operator.hpp"
 #include "logical_expression.hpp"
 #include "lqp_column_expression.hpp"
+#include "lqp_select_expression.hpp"
 #include "pqp_select_expression.hpp"
 
 namespace opossum {
@@ -168,15 +169,22 @@ const std::shared_ptr<AbstractExpression> &expression) {
 
 void expression_set_parameters(const std::shared_ptr<AbstractExpression>& expression, const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
   visit_expression(expression, [&](auto& sub_expression) {
-    if (sub_expression->type != ExpressionType::Parameter) return true;
+    if (sub_expression->type == ExpressionType::Parameter) {
+      auto parameter_expression = std::static_pointer_cast<ParameterExpression>(sub_expression);
+      const auto value_iter = parameters.find(parameter_expression->parameter_id);
+      if (value_iter != parameters.end()) {
+        parameter_expression->set_value(value_iter->second);
+      }
+      return false;
 
-    auto parameter_expression = std::static_pointer_cast<ParameterExpression>(sub_expression);
-    const auto value_iter = parameters.find(parameter_expression->parameter_id);
-    if (value_iter != parameters.end()) {
-      parameter_expression->set_value(value_iter->second);
+    } else if (const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression); pqp_select_expression) {
+      pqp_select_expression->pqp->set_parameters(parameters);
+      return false;
+
+    } else {
+      
+      return true;
     }
-
-    return false;
   });
 }
 
