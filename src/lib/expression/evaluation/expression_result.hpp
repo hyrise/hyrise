@@ -12,6 +12,9 @@
 
 namespace opossum {
 
+/**
+ * View that looks at an ExpressionResult knowing that is a series and may contains nulls
+ */
 template<typename T>
 class ExpressionResultNullableSeries {
  public:
@@ -41,6 +44,10 @@ class ExpressionResultNullableSeries {
   const std::vector<bool>& _nulls;
 };
 
+/**
+ * View that looks at an ExpressionResult knowing that is a series, but may not return nulls, so null() always returns
+ * false
+ */
 template<typename T>
 class ExpressionResultNonNullSeries {
  public:
@@ -66,6 +73,10 @@ class ExpressionResultNonNullSeries {
   const std::vector<T>& _values;
 };
 
+/**
+ * View that looks at an ExpressionResult knowing that is a literal, so always returns the first element in value() and
+ * null(), no matter which index is requested
+ */
 template<typename T>
 class ExpressionResultLiteral {
  public:

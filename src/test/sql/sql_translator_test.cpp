@@ -1148,36 +1148,6 @@ TEST_F(SQLTranslatorTest, ShowColumns) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-//TEST_F(SQLTranslatorTest, AggregateWithCountDistinct) {
-//  const auto query = "SELECT a, COUNT(DISTINCT b) AS s FROM table_a GROUP BY a;";
-//  const auto result_node = compile_query(query);
-//
-//  EXPECT_EQ(result_node->type(), LQPNodeType::Projection);
-//  EXPECT_FALSE(result_node->right_input());
-//
-//  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(result_node);
-//  EXPECT_NE(projection_node, nullptr);
-//  EXPECT_EQ(projection_node->column_expressions().size(), 2u);
-//  EXPECT_EQ(projection_node->output_column_names().size(), 2u);
-//  EXPECT_EQ(projection_node->output_column_names()[0], std::string("a"));
-//  EXPECT_EQ(projection_node->output_column_names()[1], std::string("s"));
-//
-//  const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(result_node->left_input());
-//  EXPECT_NE(aggregate_node, nullptr);
-//  EXPECT_NE(aggregate_node->left_input(), nullptr);
-//  EXPECT_EQ(aggregate_node->aggregate_expressions().size(), 1u);
-//  const std::vector<LQPColumnReference> groupby_columns(
-//      {LQPColumnReference{aggregate_node->left_input(), ColumnID{0}}});
-//  EXPECT_EQ(aggregate_node->groupby_column_references(), groupby_columns);
-//  EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->alias(), std::string("s"));
-//  EXPECT_EQ(aggregate_node->aggregate_expressions().at(0)->aggregate_function(), AggregateFunction::CountDistinct);
-//
-//  const auto stored_table_node = aggregate_node->left_input();
-//  EXPECT_EQ(stored_table_node->type(), LQPNodeType::StoredTable);
-//  EXPECT_FALSE(stored_table_node->left_input());
-//  EXPECT_FALSE(stored_table_node->right_input());
-//}
-//
 //class SQLTranslatorJoinTest : public ::testing::TestWithParam<JoinMode> {
 //  void SetUp() override { load_test_tables(); }
 //  void TearDown() override { StorageManager::reset(); }
@@ -1213,25 +1183,6 @@ TEST_F(SQLTranslatorTest, ShowColumns) {
 //INSTANTIATE_TEST_CASE_P(SQLTranslatorJoinTestInstanciation, SQLTranslatorJoinTest,
 //                        ::testing::Values(JoinMode::Left, JoinMode::Right, JoinMode::Outer), );  // NOLINT
 //
-//TEST_F(SQLTranslatorTest, SelectSelfJoin) {
-//  const auto query = "SELECT * FROM table_a AS t1 JOIN table_a AS t2 ON t1.a = t2.b;";
-//  auto result_node = compile_query(query);
-//
-//  const auto stored_table_node_t1 = StoredTableNode::make("table_a", "t1");
-//  const auto stored_table_node_t2 = StoredTableNode::make("table_a", "t2");
-//  const auto t1_a = stored_table_node_t1->get_column("a"s);
-//  const auto t2_b = stored_table_node_t2->get_column("b"s);
-//
-//  // clang-format off
-//  const auto projection_node =
-//  ProjectionNode::make_pass_through(
-//    JoinNode::make(JoinMode::Inner, LQPColumnReferencePair{t1_a, t2_b}, PredicateCondition::Equals,
-//      stored_table_node_t1,
-//      stored_table_node_t2));
-//  // clang-format on
-//
-//  EXPECT_LQP_EQ(projection_node, result_node);
-//}
 TEST_F(SQLTranslatorTest, InsertValues) {
   const auto actual_lqp = compile_query("INSERT INTO int_float VALUES (10, 12.5);");
 

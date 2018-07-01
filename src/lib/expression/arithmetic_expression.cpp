@@ -67,12 +67,9 @@ uint32_t ArithmeticExpression::_precedence() const {
   switch(arithmetic_operator) {
     case ArithmeticOperator::Power:
       return 4;
-    case ArithmeticOperator::Addition:
-    case ArithmeticOperator::Subtraction:
+    case ArithmeticOperator::Addition: case ArithmeticOperator::Subtraction:
       return 3;
-    case ArithmeticOperator::Multiplication:
-    case ArithmeticOperator::Division:
-    case ArithmeticOperator::Modulo:
+    case ArithmeticOperator::Multiplication: case ArithmeticOperator::Division: case ArithmeticOperator::Modulo:
       return 2;
   }
 }
