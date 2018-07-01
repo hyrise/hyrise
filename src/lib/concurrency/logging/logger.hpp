@@ -45,6 +45,8 @@ class Logger {
   // used to set logging implementation on startup or in tests
   static void set_implementation(const Implementation implementation);
 
+  static void delete_log_files();
+
   // linter wants these to be char[], but then we loose operator+ of strings
   static const std::string directory;
   static const std::string filename;

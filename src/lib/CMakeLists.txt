@@ -437,6 +437,8 @@ set(
     pthread
     sqlparser
     ${TBB_LIBRARY}
+    ${Boost_FILESYSTEM_LIBRARY}
+    ${Boost_SYSTEM_LIBRARY}
 )
 
 if (${ENABLE_JIT_SUPPORT})
