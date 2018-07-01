@@ -385,10 +385,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
     // arguments
     if (aggregate_expression->argument()) {
       const auto argument_column_id = node->left_input()->get_column_id(*aggregate_expression->argument());
-      aggregate_column_definitions.emplace_back(aggregate_expression->aggregate_function, argument_column_id, expression->as_column_name());
+      aggregate_column_definitions.emplace_back(argument_column_id, aggregate_expression->aggregate_function);
 
     } else {
-      aggregate_column_definitions.emplace_back(aggregate_expression->aggregate_function, std::nullopt, expression->as_column_name());
+      aggregate_column_definitions.emplace_back(std::nullopt, aggregate_expression->aggregate_function);
     }
   }
 

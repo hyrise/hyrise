@@ -640,7 +640,24 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
   }
 
   constexpr bool needs_null = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
-  _output_column_definitions.emplace_back(aggregate.column_name, aggregate_data_type, needs_null);
+
+  // Generate column name, TODO(anybody), actually, the AggregateExpression can do this, but the Aggregate operator
+  // doesn't use Expressions, yet
+  std::stringstream column_name;
+  if (aggregate.function == AggregateFunction::CountDistinct) {
+    column_name << "COUNT(DISTINCT ";
+  } else {
+    column_name << aggregate_function_to_string.left.at(aggregate.function) << "(";
+  }
+
+  if (aggregate.column) {
+    column_name << input_table_left()->column_name(*aggregate.column);
+  } else {
+    column_name << "*";
+  }
+  column_name << ")";
+
+  _output_column_definitions.emplace_back(column_name.str(), aggregate_data_type, needs_null);
 
   auto col = std::make_shared<ValueColumn<decltype(aggregate_type)>>(needs_null);
 
