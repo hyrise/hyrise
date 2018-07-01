@@ -853,13 +853,20 @@ int main(int argc, char** argv) {
     console.out("                                 Execute script if specified by SCRIPTFILE.\n");
   }
 
-  // Execute .sql script if specified
+  // Execute .sql script if specified, otherwise recover database from logfiles
   if (argc == 2) {
+    // Delete all logfiles because they will be conflicting with a fresh database
+    console.out("Deleting old logfiles.\n");
+    opossum::Logger::delete_log_files();
     return_code = console.execute_script(std::string(argv[1]));
     // Terminate Console if an error occured during script execution
     if (return_code == Return::Error) {
       return_code = Return::Quit;
     }
+  } else {
+    console.out("Running recovery.\n");
+    opossum::Logger::getInstance().recover();
+    console.out("Recovery done.\n\n");
   }
 
   // Display welcome message if Console started normally
@@ -876,10 +883,6 @@ int main(int argc, char** argv) {
     }
     console.out(" build.\n\n");
   }
-
-  console.out("Running recovery.\n");
-  opossum::Logger::getInstance().recover();
-  console.out("Recovery done.\n\n");
 
   // Set jmp_env to current program state in preparation for siglongjmp(2)
   // See comment on jmp_env for details
