@@ -146,6 +146,7 @@ set (
     SYSTEM_TEST_SOURCES
     ${SHARED_SOURCES}
     server/server_test_runner.cpp
+    server/server_recovery_test.cpp
     tpc/tpch_test.cpp
     tpc/tpch_db_generator_test.cpp
     gtest_main.cpp
@@ -161,6 +162,7 @@ set(
     ${FILESYSTEM_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
+    ${Boost_FILESYSTEM_LIBRARY}
 )
 
 # Build special sanitizer version of googletest
