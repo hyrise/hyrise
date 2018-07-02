@@ -47,22 +47,26 @@ class Logger {
   // Used to set logging implementation on startup or in tests
   static void set_implementation(const Implementation implementation);
 
+  // Used to set the folder of logfiles. Should only be called on startup
+  static void set_folder(const std::string folder);
+
   // Called while setting up a new database or in tests
   static void delete_log_files();
 
   // create_directories() is called in the constructor of AbstractLogger to ensure their existence.
   static void create_directories();
 
-  // linter wants these to be char[], but then we loose operator+ of strings
-  static const std::string data_path;
-  static const std::string log_path;
-  static const std::string filename;
+
 
 
   // TODO: private
   static u_int32_t _get_latest_log_number();
 private:
-  
+  static std::string data_path;
+  // linter wants these to be char[], but then we loose operator+ of strings
+  static std::string log_path;
+  static const std::string log_folder;
+  static const std::string filename;
 
   static Implementation _implementation;
   static std::unique_ptr<AbstractLogger> _instance;

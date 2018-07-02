@@ -27,12 +27,14 @@ class SimpleLogger : public AbstractLogger {
 
   void recover() override;
 
- private:
+ protected:
   friend class Logger;
   SimpleLogger();
+  void _reset() override;
 
  private:
   void _write_to_logfile(const std::stringstream& ss);
+  void _open_logfile_without_locking();
 
   int _file_descriptor;
   std::mutex _file_mutex;

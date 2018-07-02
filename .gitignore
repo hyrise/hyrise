@@ -2,6 +2,7 @@ obj/*
 .DS_STORE
 build/*
 build-*/*
+data/*
 *.make
 Makefile*
 coverage

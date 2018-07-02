@@ -34,6 +34,7 @@ class NoLogger : public AbstractLogger {
  private:
   friend class Logger;
   NoLogger() = default;
+  void _reset() override {};
 };
 
 }  // namespace opossum

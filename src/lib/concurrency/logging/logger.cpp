@@ -19,6 +19,11 @@ namespace opossum {
 // Logger::Implementation Logger::_implementation = Implementation::GroupCommit;
 Logger::Implementation Logger::_implementation = Implementation::Simple;
 
+std::string Logger::data_path = "./data/";
+std::string Logger::log_path = data_path + log_folder;
+const std::string Logger::log_folder = "logs/";
+const std::string Logger::filename = "hyrise-log";
+
 AbstractLogger& Logger::getInstance() {
   switch (_implementation) {
     case Implementation::No: { static NoLogger instance; return instance; }
@@ -29,6 +34,19 @@ AbstractLogger& Logger::getInstance() {
 
 void Logger::set_implementation(const Logger::Implementation implementation) {
   _implementation = implementation;
+}
+
+void Logger::set_folder(const std::string folder){
+  if (Logger::get_all_log_file_paths().size() > 0) {
+    std::cout << "WARNING: Resetting log folder. "
+      "Database may not recover as expected since there are currently logs in another directory" << std::endl;
+  }
+  DebugAssert(folder[folder.size() - 1] == '/', "Logger: expected '/' at end of path");
+  data_path = folder;
+  log_path = data_path + log_folder;
+
+  create_directories();
+  getInstance()._reset();
 }
 
 void Logger::delete_log_files() {
@@ -48,6 +66,7 @@ std::string Logger::get_new_log_path() {
 }
 
 std::vector<std::string> Logger::get_all_log_file_paths() {
+  DebugAssert(boost::filesystem::exists(log_path), "Logger: Log path does not exist.");
   std::vector<std::string> result;
   for (auto& path : boost::make_iterator_range(boost::filesystem::directory_iterator(log_path), {})) {
     auto pos = path.path().string().rfind(filename);
@@ -73,9 +92,5 @@ u_int32_t Logger::_get_latest_log_number() {
   }
   return max_number;
 }
-
-const std::string Logger::data_path = "./data/";
-const std::string Logger::log_path = data_path + "logs/";
-const std::string Logger::filename = "hyrise-log";
 
 }  // namespace opossum

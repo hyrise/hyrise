@@ -28,8 +28,12 @@ class AbstractLogger {
 
   virtual ~AbstractLogger() = default;
 
-protected:
+ protected:
   AbstractLogger();
+
+ protected:
+  friend class Logger;
+  virtual void _reset() = 0;
 };
 
 }  // namespace opossum

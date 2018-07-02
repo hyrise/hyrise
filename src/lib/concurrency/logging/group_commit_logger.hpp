@@ -30,9 +30,10 @@ class GroupCommitLogger : public AbstractLogger {
 
   void recover() override;
 
- private:
+ protected:
   friend class Logger;
   GroupCommitLogger();
+  void _reset() override;
 
  private:
   void _put_into_entry(std::vector<char>& entry, size_t& entry_cursor, const char& type,
@@ -44,7 +45,10 @@ class GroupCommitLogger : public AbstractLogger {
                        const TransactionID& transaction_id, const std::string& table_name, const RowID& row_id);
   
   void _write_buffer_to_logfile();
+  void _write_buffer_to_logfile_without_locking();
   void _write_to_buffer(std::vector<char>& entry);
+
+  void _open_logfile_without_locking();
 
   template <typename T>
   void _write_value(std::vector<char>& entry, size_t& cursor, const T& value) {

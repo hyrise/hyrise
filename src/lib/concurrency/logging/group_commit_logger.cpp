@@ -241,20 +241,10 @@ void GroupCommitLogger::_write_buffer_to_logfile() {
   _file_mutex.lock();
   _buffer_mutex.lock();
 
-  _log_file.write(_buffer, _buffer_position);
-  _log_file.sync();
-
-  _file_mutex.unlock();
-
-  _buffer_position = 0u;
-  _has_unflushed_buffer = false;
-
-  for (auto& callback_tuple : _commit_callbacks) {
-    callback_tuple.first(callback_tuple.second);
-  }
-  _commit_callbacks.clear();
+  _write_buffer_to_logfile_without_locking();
 
   _buffer_mutex.unlock();
+  _file_mutex.unlock();
 }
 
 void GroupCommitLogger::flush() {
@@ -265,19 +255,53 @@ void GroupCommitLogger::flush() {
 
 void GroupCommitLogger::recover() { BinaryRecovery::getInstance().recover(); }
 
+// Lock _file_mutex and _buffer_mutex beforehand and unlock them afterwards.
+// Lock is not inside this function to operate on the file beyond this methods scope.
+void GroupCommitLogger::_write_buffer_to_logfile_without_locking() {
+  _log_file.write(_buffer, _buffer_position);
+  _log_file.sync();
+
+  _buffer_position = 0u;
+  _has_unflushed_buffer = false;
+
+  for (auto& callback_tuple : _commit_callbacks) {
+    callback_tuple.first(callback_tuple.second);
+  }
+  _commit_callbacks.clear();
+}
+
+// Lock _file_mutex beforehand and unlock it afterwards.
+// Lock is not inside this function to operate on the file beyond this methods scope.
+void GroupCommitLogger::_open_logfile_without_locking() {
+  auto path = Logger::get_new_log_path();
+  _log_file.open(path, std::ios::out | std::ios::binary);
+  DebugAssert(_log_file.is_open(), "Logfile could not be opened or created: " + path);
+}
+
+void GroupCommitLogger::_reset() {
+  _file_mutex.lock();
+  _buffer_mutex.lock();
+
+  if (_has_unflushed_buffer) {
+    _write_buffer_to_logfile_without_locking();
+  }
+
+  _log_file.close();
+
+  _open_logfile_without_locking();
+
+  _buffer_mutex.unlock();
+  _file_mutex.unlock();
+}
+
 GroupCommitLogger::GroupCommitLogger()
     : AbstractLogger(), _buffer_capacity(LOG_BUFFER_CAPACITY), _buffer_position(0), _has_unflushed_buffer(false) {
   _buffer = reinterpret_cast<char*>(malloc(_buffer_capacity));
   memset(_buffer, 0, _buffer_capacity);
 
   _file_mutex.lock();
-
-  auto path = Logger::get_new_log_path();
-  _log_file.open(path, std::ios::out | std::ios::binary);
-  
+  _open_logfile_without_locking();
   _file_mutex.unlock();
-
-  DebugAssert(_log_file.is_open(), "Logfile could not be opened or created: " + path);
 
   _flush_thread = std::make_unique<LoopThread>(LOG_INTERVAL, [this]() { GroupCommitLogger::flush(); });
 }
