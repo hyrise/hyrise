@@ -382,10 +382,10 @@ std::vector<T> TpccTableGenerator::_generate_inner_order_line_column(
 
 template <typename T>
 void TpccTableGenerator::_add_order_line_column(std::vector<ChunkColumns>& columns_by_chunk,
-                                               TableColumnDefinitions& column_definitions, std::string name,
-                                               std::shared_ptr<std::vector<size_t>> cardinalities,
-                                               TpccTableGenerator::order_line_counts_type order_line_counts,
-                                               const std::function<T(std::vector<size_t>)>& generator_function) {
+                                                TableColumnDefinitions& column_definitions, std::string name,
+                                                std::shared_ptr<std::vector<size_t>> cardinalities,
+                                                TpccTableGenerator::order_line_counts_type order_line_counts,
+                                                const std::function<T(std::vector<size_t>)>& generator_function) {
   const std::function<std::vector<T>(std::vector<size_t>)> wrapped_generator_function =
       [&](std::vector<size_t> indices) {
         return _generate_inner_order_line_column(indices, order_line_counts, generator_function);
@@ -408,23 +408,23 @@ std::shared_ptr<Table> TpccTableGenerator::generate_order_line_table(
   TableColumnDefinitions column_definitions;
 
   _add_order_line_column<int>(columns_by_chunk, column_definitions, "OL_O_ID", cardinalities, order_line_counts,
-                             [&](std::vector<size_t> indices) { return indices[2]; });
+                              [&](std::vector<size_t> indices) { return indices[2]; });
   _add_order_line_column<int>(columns_by_chunk, column_definitions, "OL_D_ID", cardinalities, order_line_counts,
-                             [&](std::vector<size_t> indices) { return indices[1]; });
+                              [&](std::vector<size_t> indices) { return indices[1]; });
   _add_order_line_column<int>(columns_by_chunk, column_definitions, "OL_W_ID", cardinalities, order_line_counts,
-                             [&](std::vector<size_t> indices) { return indices[0]; });
+                              [&](std::vector<size_t> indices) { return indices[0]; });
   _add_order_line_column<int>(columns_by_chunk, column_definitions, "OL_NUMBER", cardinalities, order_line_counts,
-                             [&](std::vector<size_t> indices) { return indices[3]; });
+                              [&](std::vector<size_t> indices) { return indices[3]; });
   _add_order_line_column<int>(columns_by_chunk, column_definitions, "OL_I_ID", cardinalities, order_line_counts,
-                             [&](std::vector<size_t>) { return _random_gen.random_number(1, NUM_ITEMS); });
+                              [&](std::vector<size_t>) { return _random_gen.random_number(1, NUM_ITEMS); });
   _add_order_line_column<int>(columns_by_chunk, column_definitions, "OL_SUPPLY_W_ID", cardinalities, order_line_counts,
-                             [&](std::vector<size_t> indices) { return indices[0]; });
+                              [&](std::vector<size_t> indices) { return indices[0]; });
   // TODO(anybody) -1 should be null
   _add_order_line_column<int>(
       columns_by_chunk, column_definitions, "OL_DELIVERY_D", cardinalities, order_line_counts,
       [&](std::vector<size_t> indices) { return indices[2] <= NUM_ORDERS - NUM_NEW_ORDERS ? _current_date : -1; });
   _add_order_line_column<int>(columns_by_chunk, column_definitions, "OL_QUANTITY", cardinalities, order_line_counts,
-                             [&](std::vector<size_t>) { return 5; });
+                              [&](std::vector<size_t>) { return 5; });
 
   _add_order_line_column<float>(
       columns_by_chunk, column_definitions, "OL_AMOUNT", cardinalities, order_line_counts,
@@ -432,8 +432,8 @@ std::shared_ptr<Table> TpccTableGenerator::generate_order_line_table(
         return indices[2] <= NUM_ORDERS - NUM_NEW_ORDERS ? 0.f : _random_gen.random_number(1, 999999) / 100.f;
       });
   _add_order_line_column<std::string>(columns_by_chunk, column_definitions, "OL_DIST_INFO", cardinalities,
-                                     order_line_counts,
-                                     [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
+                                      order_line_counts,
+                                      [&](std::vector<size_t>) { return _random_gen.astring(24, 24); });
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, _chunk_size, UseMvcc::Yes);
   for (const auto& chunk_columns : columns_by_chunk) table->append_chunk(chunk_columns);
