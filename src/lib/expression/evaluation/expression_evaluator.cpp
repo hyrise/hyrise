@@ -411,20 +411,20 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_case_express
         std::vector<bool> nulls(result_size);
 
         // clang-format off
-     if constexpr (Case::template supports<R, ThenResultType, ElseResultType>::value) {
-       for (auto chunk_offset = ChunkOffset{0};
-            chunk_offset < result_size; ++chunk_offset) {
-         if (when->value(chunk_offset) && !when->null(chunk_offset)) {
-           values[chunk_offset] = to_value<R>(then_result.value(chunk_offset));
-           nulls[chunk_offset] = then_result.null(chunk_offset);
-         } else {
-           values[chunk_offset] = to_value<R>(else_result.value(chunk_offset));
-           nulls[chunk_offset] = else_result.null(chunk_offset);
-         }
-       }
-     } else {
-       Fail("Illegal operands for CaseExpression");
-     }
+        if constexpr (Case::template supports<R, ThenResultType, ElseResultType>::value) {
+          for (auto chunk_offset = ChunkOffset{0};
+               chunk_offset < result_size; ++chunk_offset) {
+            if (when->value(chunk_offset) && !when->null(chunk_offset)) {
+              values[chunk_offset] = to_value<R>(then_result.value(chunk_offset));
+              nulls[chunk_offset] = then_result.null(chunk_offset);
+            } else {
+              values[chunk_offset] = to_value<R>(else_result.value(chunk_offset));
+              nulls[chunk_offset] = else_result.null(chunk_offset);
+            }
+          }
+        } else {
+          Fail("Illegal operands for CaseExpression");
+        }
         // clang-format on
 
         result = std::make_shared<ExpressionResult<R>>(std::move(values), std::move(nulls));
