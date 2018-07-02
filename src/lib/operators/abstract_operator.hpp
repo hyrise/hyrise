@@ -77,7 +77,12 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   virtual void execute();
 
   // returns the result of the operator
+  // When using OperatorTasks, they automatically clear this once all successors are done. This reduces the number of
+  // temporary tables.
   std::shared_ptr<const Table> get_output() const;
+
+  // clears the output of this operator to free up space
+  void clear_output();
 
   virtual const std::string name() const = 0;
   virtual const std::string description(DescriptionMode description_mode = DescriptionMode::SingleLine) const;
@@ -152,8 +157,6 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::optional<std::weak_ptr<TransactionContext>> _transaction_context;
 
   BaseOperatorPerformanceData _base_performance_data;
-
-  std::weak_ptr<OperatorTask> _operator_task;
 };
 
 }  // namespace opossum
