@@ -32,14 +32,37 @@ void Logger::set_implementation(const Logger::Implementation implementation) {
 }
 
 void Logger::delete_log_files() {
-  boost::filesystem::remove_all(directory);
-  boost::filesystem::create_directory(directory);
+  boost::filesystem::remove_all(log_path);
+  create_directories();
+}
+
+void Logger::create_directories() {
+  boost::filesystem::create_directory(data_path);
+  boost::filesystem::create_directory(log_path);
+}
+
+std::string Logger::get_new_log_path() {
+  auto log_number = _get_latest_log_number() + 1;
+  std::string path = log_path + filename + std::to_string(log_number);
+  return path;
+}
+
+std::vector<std::string> Logger::get_all_log_file_paths() {
+  std::vector<std::string> result;
+  for (auto& path : boost::make_iterator_range(boost::filesystem::directory_iterator(log_path), {})) {
+    auto pos = path.path().string().rfind(filename);
+    if (pos == std::string::npos) {
+      continue;
+    }
+    result.push_back(path.path().string());
+  }
+  return result;
 }
 
 u_int32_t Logger::_get_latest_log_number() {
   u_int32_t max_number{0};
 
-  for (auto& path : boost::make_iterator_range(boost::filesystem::directory_iterator(directory), {})) {
+  for (auto& path : boost::make_iterator_range(boost::filesystem::directory_iterator(log_path), {})) {
     auto pos = path.path().string().rfind(filename);
     if (pos == std::string::npos) {
       continue;
@@ -51,8 +74,8 @@ u_int32_t Logger::_get_latest_log_number() {
   return max_number;
 }
 
-const std::string Logger::directory = "/Users/Dimitri/transaction_logs/";
+const std::string Logger::data_path = "./data/";
+const std::string Logger::log_path = data_path + "logs/";
 const std::string Logger::filename = "hyrise-log";
-const std::string Logger::last_log_filename = "last_log_number.txt";
 
 }  // namespace opossum

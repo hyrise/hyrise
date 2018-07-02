@@ -29,7 +29,7 @@ class AbstractLogger {
   virtual ~AbstractLogger() = default;
 
 protected:
-  AbstractLogger(){}
+  AbstractLogger();
 };
 
 }  // namespace opossum

@@ -272,9 +272,7 @@ GroupCommitLogger::GroupCommitLogger()
 
   _file_mutex.lock();
 
-  auto log_number = Logger::_get_latest_log_number() + 1;
-
-  std::string path = Logger::directory + Logger::filename + std::to_string(log_number);
+  auto path = Logger::get_new_log_path();
   _log_file.open(path, std::ios::out | std::ios::binary);
   
   _file_mutex.unlock();

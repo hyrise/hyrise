@@ -57,12 +57,9 @@ std::string TextRecovery::_get_next_value_with_preceding_size_and_incr_begin(std
 
 void TextRecovery::recover() {
   TransactionID last_transaction_id{0};
-  
-  auto log_number = Logger::_get_latest_log_number();
-  // for every logfile: read and redo logged entries
-  for (auto i = 1u; i < log_number; ++i) {
-    std::ifstream log_file(Logger::directory + Logger::filename + std::to_string(i));
-    DebugAssert(log_file.is_open(), "Recovery: could not open logfile " + std::to_string(i));
+  for (auto& path: Logger::get_all_log_file_paths()) {
+    std::ifstream log_file(path);
+    DebugAssert(log_file.is_open(), "Recovery: could not open logfile " + path);
 
     std::vector<LoggedItem> transactions;
 

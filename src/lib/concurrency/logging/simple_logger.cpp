@@ -80,9 +80,7 @@ void SimpleLogger::recover() { TextRecovery::getInstance().recover(); }
 SimpleLogger::SimpleLogger() : AbstractLogger() {
   _file_mutex.lock();
 
-  auto log_number = Logger::_get_latest_log_number() + 1;
-
-  std::string path = Logger::directory + Logger::filename + std::to_string(log_number);
+  auto path = Logger::get_new_log_path();
 
   // read and write rights needed, since default rights do not allow to reopen the file after restarting the db
   mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
