@@ -87,7 +87,7 @@ class Sort::SortImplMaterializeOutput {
         auto chunk_it = output_columns_by_chunk.begin();
         auto chunk_offset_out = 0u;
         for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
-          const auto [chunk_id, chunk_offset] = _row_id_value_vector->at(row_index).first;
+          const auto [chunk_id, chunk_offset] = _row_id_value_vector->at(row_index).first;  // NOLINT
 
           const auto column = _table_in->get_chunk(chunk_id)->get_column(column_id);
 
