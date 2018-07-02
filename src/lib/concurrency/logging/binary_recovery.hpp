@@ -2,6 +2,8 @@
 
 #include "abstract_recovery.hpp"
 
+#include <fstream>
+
 namespace opossum {
 
 class BinaryRecovery : public AbstractRecovery {
@@ -15,6 +17,15 @@ class BinaryRecovery : public AbstractRecovery {
 
  private:
   BinaryRecovery(){}
+
+  AllTypeVariant _read_AllTypeVariant(std::ifstream& file, DataType data_type);
+
+  template <typename T>
+  T _read(std::ifstream& file) {
+    T result;
+    file.read(reinterpret_cast<char*>(&result), sizeof(T));
+    return result;
+  }
 };
 
 }  // namespace opossum

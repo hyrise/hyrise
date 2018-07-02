@@ -16,37 +16,39 @@ BinaryRecovery& BinaryRecovery::getInstance() {
   return instance;
 }
 
+template <>
+std::string BinaryRecovery::_read(std::ifstream& file) {
+  std::string result;
+  std::getline(file, result, '\0');
+  return result;
+}
+
 // read datatype from file
-AllTypeVariant _read(std::ifstream& file, DataType data_type) {
+AllTypeVariant BinaryRecovery::_read_AllTypeVariant(std::ifstream& file, DataType data_type) {
   AllTypeVariant value;
   switch (data_type) {
     case DataType::Int: {
-      int32_t v;
-      file.read(reinterpret_cast<char*>(&v), sizeof(int32_t));
+      auto v = _read<int32_t>(file);
       value = v;
       break;
     }
     case DataType::Long: {
-      int64_t v;
-      file.read(reinterpret_cast<char*>(&v), sizeof(int64_t));
+      auto v = _read<int64_t>(file);
       value = v;
       break;
     }
     case DataType::Float: {
-      float v;
-      file.read(reinterpret_cast<char*>(&v), sizeof(float));
+      auto v = _read<float>(file);
       value = v;
       break;
     }
     case DataType::Double: {
-      double v;
-      file.read(reinterpret_cast<char*>(&v), sizeof(double));
+      auto v = _read<double>(file);
       value = v;
       break;
     }
     case DataType::String: {
-      std::string v;
-      std::getline(file, v, '\0');
+      auto v = _read<std::string>(file);
       value = v;
       break;
     }
@@ -82,18 +84,14 @@ void BinaryRecovery::recover() {
 
       // if load entry
       if (log_type == 'l') {
-        std::string table_path;
-        std::getline(log_file, table_path, '\0');
-
-        std::string table_name;
-        std::getline(log_file, table_name, '\0');
+        auto table_path = _read<std::string>(log_file);
+        auto table_name = _read<std::string>(log_file);
 
         _recover_table(table_path, table_name);
         continue;
       }
 
-      TransactionID transaction_id;
-      log_file.read(reinterpret_cast<char*>(&transaction_id), sizeof(TransactionID));
+      auto transaction_id = _read<TransactionID>(log_file);
 
       // if commit entry
       if (log_type == 't') {
@@ -111,14 +109,11 @@ void BinaryRecovery::recover() {
       //   - table_name           : table_name.size() + 1, terminated with \0
       //   - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset)
 
-      std::string table_name;
-      std::getline(log_file, table_name, '\0');
+      auto table_name = _read<std::string>(log_file);
 
-      ChunkID chunk_id;
-      log_file.read(reinterpret_cast<char*>(&chunk_id), sizeof(ChunkID));
+      auto chunk_id = _read<ChunkID>(log_file);
 
-      ChunkOffset chunk_offset;
-      log_file.read(reinterpret_cast<char*>(&chunk_offset), sizeof(ChunkOffset));
+      auto chunk_offset = _read<ChunkOffset>(log_file);
 
       RowID row_id(chunk_id, chunk_offset);
 
@@ -148,7 +143,7 @@ void BinaryRecovery::recover() {
         if ((null_bitmap[bitmap_index] << bit_pos) & 0b10000000) {
           values.emplace_back(NullValue());
         } else {
-          values.emplace_back(_read(log_file, data_type));
+          values.emplace_back(_read_AllTypeVariant(log_file, data_type));
         }
 
         bit_pos = (bit_pos + 1) % 8;
