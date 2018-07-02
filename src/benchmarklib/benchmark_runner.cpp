@@ -139,7 +139,9 @@ void BenchmarkRunner::_execute_query(const NamedQuery& named_query) {
   const auto& name = named_query.first;
   const auto& sql = named_query.second;
 
-  auto pipeline = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc).create_pipeline();
+  auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
+  if (_config.enable_visualization) pipeline_builder.dont_cleanup_temporaries();
+  auto pipeline = pipeline_builder.create_pipeline();
   // Execute the query, we don't care about the results
   pipeline.get_result_table();
 

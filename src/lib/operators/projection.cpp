@@ -136,7 +136,9 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     // For subselects, we need to execute the subquery in order to use the result table later
     if (column_expression->is_subselect() && !column_expression->has_subselect_table()) {
-      SQLQueryPlan query_plan;
+      // Because subqueries are still WIP, we do not clean up their temporary tables. Otherwise, we would have to
+      // somehow pass in cleanup_temporaries from the pipeline.
+      SQLQueryPlan query_plan{CleanupTemporaries::No};
       query_plan.add_tree_by_root(column_expression->subselect_operator());
 
       auto transaction_context = this->transaction_context();

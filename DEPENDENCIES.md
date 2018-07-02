@@ -15,6 +15,7 @@
 | libnuma-dev      | any              |    Linux |                            Yes (numa) |
 | libnuma1         | any              |    Linux |                            Yes (numa) |
 | llvm             | any              |    All   |                 Yes (code sanitizers) |
+| llvm-6.0-tools   | 6                |    Linux |                                    No |
 | parallel         | any              |    All   |                                   Yes |
 | pycobertura      | any              |    All   |                  Yes (coverage on CI) |
 | python           | >= 2.7 && < 3    |    All   |                         Yes (linting) |
@@ -32,3 +33,4 @@
 - libpqxx (https://github.com/jtv/libpqxx)
 - sql-parser (https://github.com/hyrise/sql-parser)
 - pgasus (https://github.com/kateyy/pgasus)
+- cpp-btree (https://github.com/algorithm-ninja/cpp-btree)
