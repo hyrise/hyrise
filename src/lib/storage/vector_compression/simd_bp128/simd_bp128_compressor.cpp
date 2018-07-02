@@ -108,7 +108,7 @@ void SimdBp128Compressor::_write_meta_info(const std::array<uint8_t, Packing::bl
 }
 
 void SimdBp128Compressor::_pack_blocks(const uint8_t num_blocks,
-                                      const std::array<uint8_t, Packing::blocks_in_meta_block>& bits_needed) {
+                                       const std::array<uint8_t, Packing::blocks_in_meta_block>& bits_needed) {
   DebugAssert(num_blocks <= 16u, "num_blocks must be smaller than 16.");
 
   auto in = _pending_meta_block.data();

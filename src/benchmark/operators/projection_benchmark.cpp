@@ -13,7 +13,7 @@
 namespace opossum {
 
 void benchmark_projection_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator> in,
-                              Projection::ColumnExpressions expressions) {
+                               Projection::ColumnExpressions expressions) {
   auto warm_up = std::make_shared<Projection>(in, expressions);
   warm_up->execute();
   while (state.KeepRunning()) {

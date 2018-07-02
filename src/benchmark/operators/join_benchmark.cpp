@@ -19,7 +19,7 @@ constexpr auto NUMBER_OF_CHUNKS = size_t{50};
 constexpr auto TABLE_SIZE_SMALL = size_t{1000};
 constexpr auto TABLE_SIZE_MEDIUM = size_t{100000};
 constexpr auto TABLE_SIZE_BIG = size_t{10000000};
-}
+}  // namespace
 
 namespace opossum {
 
