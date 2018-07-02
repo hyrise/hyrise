@@ -106,10 +106,8 @@ const ArithmeticExpression &expression) {
   // clang-format off
   switch (expression.arithmetic_operator) {
     case ArithmeticOperator::Addition:       return _evaluate_binary_with_default_null_logic<R, Addition>(left, right);
-    case ArithmeticOperator::Subtraction:    return _evaluate_binary_with_default_null_logic<R, Subtraction>(left,
-                                                                                                             right);
-    case ArithmeticOperator::Multiplication: return _evaluate_binary_with_default_null_logic<R, Multiplication>(left,
-                                                                                                                right);
+    case ArithmeticOperator::Subtraction:    return _evaluate_binary_with_default_null_logic<R, Subtraction>(left, right);  // NOLINT
+    case ArithmeticOperator::Multiplication: return _evaluate_binary_with_default_null_logic<R, Multiplication>(left, right);  // NOLINT
     case ArithmeticOperator::Division:       return _evaluate_binary_with_default_null_logic<R, Division>(left, right);
 
     default:
@@ -125,21 +123,15 @@ const BinaryPredicateExpression &expression) {
 
   // clang-format off
   switch (expression.predicate_condition) {
-    case PredicateCondition::Equals:            return _evaluate_binary_with_default_null_logic<int32_t, Equals>(left,
-                                                                                                                 right);  // NOLINT
-    case PredicateCondition::NotEquals:         return _evaluate_binary_with_default_null_logic<int32_t, NotEquals>(
-      left, right);  // NOLINT
-    case PredicateCondition::LessThan:          return _evaluate_binary_with_default_null_logic<int32_t, LessThan>(left,
-                                                                                                                   right);  // NOLINT
-    case PredicateCondition::LessThanEquals:    return _evaluate_binary_with_default_null_logic<int32_t, LessThanEquals>(
-      left, right);  // NOLINT
-    case PredicateCondition::GreaterThan:       return _evaluate_binary_with_default_null_logic<int32_t, GreaterThan>(
-      left, right);  // NOLINT
-    case PredicateCondition::GreaterThanEquals: return _evaluate_binary_with_default_null_logic<int32_t, GreaterThanEquals>(
-      left, right);  // NOLINT
+    case PredicateCondition::Equals:            return _evaluate_binary_with_default_null_logic<int32_t, Equals>(left, right);  // NOLINT
+    case PredicateCondition::NotEquals:         return _evaluate_binary_with_default_null_logic<int32_t, NotEquals>(left, right);  // NOLINT
+    case PredicateCondition::LessThan:          return _evaluate_binary_with_default_null_logic<int32_t, LessThan>(left, right);  // NOLINT
+    case PredicateCondition::LessThanEquals:    return _evaluate_binary_with_default_null_logic<int32_t, LessThanEquals>(left, right);  // NOLINT
+    case PredicateCondition::GreaterThan:       return _evaluate_binary_with_default_null_logic<int32_t, GreaterThan>(left, right);  // NOLINT
+    case PredicateCondition::GreaterThanEquals: return _evaluate_binary_with_default_null_logic<int32_t, GreaterThanEquals>(left, right);  // NOLINT
 
     default:
-      Fail("PredicateCondition should be handled in differen function");
+      Fail("PredicateCondition should be handled in different function");
   }
   // clang-format on
 }
@@ -408,34 +400,34 @@ const CaseExpression &case_expression) {
   std::shared_ptr<ExpressionResult<R>> result;
 
   _resolve_to_expression_results(*case_expression.then(), *case_expression.else_(),
-                                 [&](const auto &then_result, const auto &else_result) {
-                                   using ThenResultType = typename std::decay_t<decltype(then_result)>::Type;
-                                   using ElseResultType = typename std::decay_t<decltype(else_result)>::Type;
+    [&](const auto &then_result, const auto &else_result) {
+     using ThenResultType = typename std::decay_t<decltype(then_result)>::Type;
+     using ElseResultType = typename std::decay_t<decltype(else_result)>::Type;
 
-                                   const auto result_size = _result_size(when->size(), then_result.size(),
-                                                                         else_result.size());
-                                   std::vector<R> values(result_size);
-                                   std::vector<bool> nulls(result_size);
+     const auto result_size = _result_size(when->size(), then_result.size(),
+                                           else_result.size());
+     std::vector<R> values(result_size);
+     std::vector<bool> nulls(result_size);
 
-                                   // clang-format off
-                                   if constexpr (Case::template supports<R, ThenResultType, ElseResultType>::value) {
-                                     for (auto chunk_offset = ChunkOffset{0};
-                                          chunk_offset < result_size; ++chunk_offset) {
-                                       if (when->value(chunk_offset) && !when->null(chunk_offset)) {
-                                         values[chunk_offset] = to_value<R>(then_result.value(chunk_offset));
-                                         nulls[chunk_offset] = then_result.null(chunk_offset);
-                                       } else {
-                                         values[chunk_offset] = to_value<R>(else_result.value(chunk_offset));
-                                         nulls[chunk_offset] = else_result.null(chunk_offset);
-                                       }
-                                     }
-                                   } else {
-                                     Fail("Illegal operands for CaseExpression");
-                                   }
-                                   // clang-format on
+     // clang-format off
+     if constexpr (Case::template supports<R, ThenResultType, ElseResultType>::value) {
+       for (auto chunk_offset = ChunkOffset{0};
+            chunk_offset < result_size; ++chunk_offset) {
+         if (when->value(chunk_offset) && !when->null(chunk_offset)) {
+           values[chunk_offset] = to_value<R>(then_result.value(chunk_offset));
+           nulls[chunk_offset] = then_result.null(chunk_offset);
+         } else {
+           values[chunk_offset] = to_value<R>(else_result.value(chunk_offset));
+           nulls[chunk_offset] = else_result.null(chunk_offset);
+         }
+       }
+     } else {
+       Fail("Illegal operands for CaseExpression");
+     }
+     // clang-format on
 
-                                   result = std::make_shared<ExpressionResult<R>>(std::move(values), std::move(nulls));
-                                 });
+     result = std::make_shared<ExpressionResult<R>>(std::move(values), std::move(nulls));
+    });
 
   return result;
 }
@@ -800,13 +792,13 @@ void ExpressionEvaluator::_resolve_to_expression_result_views(const AbstractExpr
                                                               const AbstractExpression &right_expression,
                                                               const Functor &fn) {
   _resolve_to_expression_results(left_expression, right_expression,
-                                 [&](const auto &left_result, const auto &right_result) {
-                                   left_result.as_view([&](const auto &left_view) {
-                                     right_result.as_view([&](const auto &right_view) {
-                                       fn(left_view, right_view);
-                                     });
-                                   });
-                                 });
+   [&](const auto &left_result, const auto &right_result) {
+     left_result.as_view([&](const auto &left_view) {
+       right_result.as_view([&](const auto &right_view) {
+         fn(left_view, right_view);
+       });
+     });
+   });
 }
 
 template<typename Functor>
