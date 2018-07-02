@@ -4,16 +4,15 @@
 
 #include "boost/functional/hash.hpp"
 
-#include "utils/assert.hpp"
 #include "constant_mappings.hpp"
 #include "expression_utils.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
 FunctionExpression::FunctionExpression(const FunctionType function_type,
-                                         const std::vector<std::shared_ptr<AbstractExpression>>& arguments):
-AbstractExpression(ExpressionType::Function, arguments), function_type(function_type) {
-
+                                       const std::vector<std::shared_ptr<AbstractExpression>>& arguments)
+    : AbstractExpression(ExpressionType::Function, arguments), function_type(function_type) {
   switch (function_type) {
     case FunctionType::Substring:
       Assert(arguments.size() == 3, "Substring expects 3 parameters");
@@ -21,7 +20,8 @@ AbstractExpression(ExpressionType::Function, arguments), function_type(function_
     case FunctionType::Concatenate:
       Assert(arguments.size() >= 2, "Concatenate expects at least 2 parameters");
       for (const auto& argument : arguments) {
-        Assert(argument->data_type() == DataType::String || argument->data_type() == DataType::Null, "Concatenate takes only Strings and Nulls as arguments");
+        Assert(argument->data_type() == DataType::String || argument->data_type() == DataType::Null,
+               "Concatenate takes only Strings and Nulls as arguments");
       }
       break;
   }
@@ -50,19 +50,19 @@ std::string FunctionExpression::as_column_name() const {
 
 DataType FunctionExpression::data_type() const {
   switch (function_type) {
-    case FunctionType::Substring: return DataType::String;
-    case FunctionType::Concatenate: return DataType::String;
+    case FunctionType::Substring:
+      return DataType::String;
+    case FunctionType::Concatenate:
+      return DataType::String;
   }
 }
 
 bool FunctionExpression::_shallow_equals(const AbstractExpression& expression) const {
   const auto& function_expression = static_cast<const FunctionExpression&>(expression);
   return function_type == function_expression.function_type &&
-    expressions_equal(arguments, function_expression.arguments);
+         expressions_equal(arguments, function_expression.arguments);
 }
 
-size_t FunctionExpression::_on_hash() const {
-  return boost::hash_value(static_cast<size_t>(function_type));
-}
+size_t FunctionExpression::_on_hash() const { return boost::hash_value(static_cast<size_t>(function_type)); }
 
 }  // namespace opossum

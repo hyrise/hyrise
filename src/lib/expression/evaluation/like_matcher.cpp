@@ -6,9 +6,7 @@
 
 namespace opossum {
 
-LikeMatcher::LikeMatcher(const std::string& pattern) {
-  _pattern_variant = pattern_string_to_pattern_variant(pattern);
-}
+LikeMatcher::LikeMatcher(const std::string& pattern) { _pattern_variant = pattern_string_to_pattern_variant(pattern); }
 
 LikeMatcher::PatternTokens LikeMatcher::pattern_string_to_tokens(const std::string& pattern) {
   PatternTokens tokens;
@@ -24,7 +22,7 @@ LikeMatcher::PatternTokens LikeMatcher::pattern_string_to_tokens(const std::stri
     } else {
       const auto next_wildcard_position = pattern.find_first_of("_%", current_position);
       const auto token_length =
-      next_wildcard_position == std::string::npos ? std::string::npos : next_wildcard_position - current_position;
+          next_wildcard_position == std::string::npos ? std::string::npos : next_wildcard_position - current_position;
       tokens.emplace_back(pattern.substr(current_position, token_length));
       current_position = next_wildcard_position;
     }
@@ -93,19 +91,19 @@ std::string LikeMatcher::sql_like_to_regex(std::string sql_like) {
   // Do substitution of <backslash> with <backslash><backslash> FIRST, because otherwise it will also replace
   // backslashes introduced by the other substitutions
   constexpr auto replace_by = std::array<std::pair<const char*, const char*>, 14u>{{{"\\", "\\\\"},
-                                                                                   {".", "\\."},
-                                                                                   {"^", "\\^"},
-                                                                                   {"$", "\\$"},
-                                                                                   {"+", "\\+"},
-                                                                                   {"?", "\\?"},
-                                                                                   {"(", "\\("},
-                                                                                   {")", "\\)"},
-                                                                                   {"{", "\\{"},
-                                                                                   {"}", "\\}"},
-                                                                                   {"|", "\\|"},
-                                                                                   {"*", "\\*"},
-                                                                                   {"%", ".*"},
-                                                                                   {"_", "."}}};
+                                                                                    {".", "\\."},
+                                                                                    {"^", "\\^"},
+                                                                                    {"$", "\\$"},
+                                                                                    {"+", "\\+"},
+                                                                                    {"?", "\\?"},
+                                                                                    {"(", "\\("},
+                                                                                    {")", "\\)"},
+                                                                                    {"{", "\\{"},
+                                                                                    {"}", "\\}"},
+                                                                                    {"|", "\\|"},
+                                                                                    {"*", "\\*"},
+                                                                                    {"%", ".*"},
+                                                                                    {"_", "."}}};
 
   for (const auto& pair : replace_by) {
     boost::replace_all(sql_like, pair.first, pair.second);

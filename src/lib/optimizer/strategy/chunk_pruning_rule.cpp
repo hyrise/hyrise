@@ -8,10 +8,10 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "operators/operator_predicate.hpp"
 #include "statistics/chunk_statistics/chunk_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "operators/operator_predicate.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {

@@ -32,9 +32,7 @@ class PredicateNodeTest : public ::testing::Test {
   std::shared_ptr<PredicateNode> _predicate_node;
 };
 
-TEST_F(PredicateNodeTest, Descriptions) {
-  EXPECT_EQ(_predicate_node->description(), "[Predicate] i = 5");
-}
+TEST_F(PredicateNodeTest, Descriptions) { EXPECT_EQ(_predicate_node->description(), "[Predicate] i = 5"); }
 
 TEST_F(PredicateNodeTest, Equals) {
   EXPECT_TRUE(!lqp_find_subplan_mismatch(_predicate_node, _predicate_node));

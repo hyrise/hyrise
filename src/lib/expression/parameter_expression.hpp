@@ -4,8 +4,8 @@
 #include <string>
 
 #include "abstract_expression.hpp"
-#include "strong_typedef.hpp"
 #include "all_type_variant.hpp"
+#include "strong_typedef.hpp"
 
 // Uniquely identifies a parameter in
 STRONG_TYPEDEF(size_t, ParameterID);

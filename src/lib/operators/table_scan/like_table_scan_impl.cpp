@@ -1,6 +1,5 @@
 #include "like_table_scan_impl.hpp"
 
-
 #include <algorithm>
 #include <array>
 #include <map>
@@ -24,8 +23,7 @@ LikeTableScanImpl::LikeTableScanImpl(std::shared_ptr<const Table> in_table, cons
                                      const PredicateCondition predicate_condition, const std::string& pattern)
     : BaseSingleColumnTableScanImpl{in_table, left_column_id, predicate_condition},
       _matcher{pattern},
-      _invert_results(predicate_condition == PredicateCondition::NotLike) {
-}
+      _invert_results(predicate_condition == PredicateCondition::NotLike) {}
 
 void LikeTableScanImpl::handle_column(const BaseValueColumn& base_column,
                                       std::shared_ptr<ColumnVisitableContext> base_context) {
@@ -95,7 +93,6 @@ void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
     this->_unary_scan(dictionary_lookup, left_it, left_end, chunk_id, matches_out);
   });
 }
-
 
 template <typename Iterable>
 void LikeTableScanImpl::_scan_iterable(const Iterable& iterable, const ChunkID chunk_id, PosList& matches_out,

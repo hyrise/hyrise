@@ -1,7 +1,7 @@
 #pragma once
 
-#include <string>
 #include <regex>
+#include <string>
 #include <vector>
 
 #include "boost/variant.hpp"
@@ -58,7 +58,7 @@ class LikeMatcher {
    * general pattern.
    */
   using AllPatternVariant =
-  boost::variant<std::regex, StartsWithPattern, EndsWithPattern, ContainsPattern, MultipleContainsPattern>;
+      boost::variant<std::regex, StartsWithPattern, EndsWithPattern, ContainsPattern, MultipleContainsPattern>;
 
   static AllPatternVariant pattern_string_to_pattern_variant(const std::string& pattern);
 
@@ -66,8 +66,7 @@ class LikeMatcher {
    * The functor will be called with a concrete matcher
    */
   template <typename Functor>
-  void resolve(const bool invert_results,
-                                            const Functor& functor) const {
+  void resolve(const bool invert_results, const Functor& functor) const {
     if (_pattern_variant.type() == typeid(StartsWithPattern)) {
       const auto& prefix = boost::get<StartsWithPattern>(_pattern_variant).string;
       functor([&](const std::string& string) -> bool {

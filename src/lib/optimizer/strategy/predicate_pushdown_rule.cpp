@@ -3,8 +3,8 @@
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "operators/operator_predicate.hpp"
@@ -31,7 +31,8 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
   if (input->type == LQPNodeType::Join) {
     const auto join_node = std::dynamic_pointer_cast<JoinNode>(input);
 
-    if (join_node->join_mode != JoinMode::Inner && join_node->join_mode != JoinMode::Cross) return _apply_recursively(node);
+    if (join_node->join_mode != JoinMode::Inner && join_node->join_mode != JoinMode::Cross)
+      return _apply_recursively(node);
 
     const auto move_to_left = expression_evaluateable_on_lqp(predicate_node->predicate, *join_node->left_input());
     const auto move_to_right = expression_evaluateable_on_lqp(predicate_node->predicate, *join_node->right_input());

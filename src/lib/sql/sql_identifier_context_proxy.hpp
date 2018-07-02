@@ -15,8 +15,8 @@ class ParameterIDAllocator;
 class SQLIdentifierContextProxy final {
  public:
   SQLIdentifierContextProxy(const std::shared_ptr<SQLIdentifierContext>& wrapped_context,
-                                     const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
-                                     const std::shared_ptr<SQLIdentifierContextProxy>& outer_context_proxy = {});
+                            const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
+                            const std::shared_ptr<SQLIdentifierContextProxy>& outer_context_proxy = {});
 
   std::shared_ptr<AbstractExpression> resolve_identifier_relaxed(const SQLIdentifier& identifier);
 
@@ -30,6 +30,5 @@ class SQLIdentifierContextProxy final {
   // Previously accessed expressions that were already assigned a ParameterID
   ExpressionUnorderedMap<ParameterID> _accessed_expressions;
 };
-
 
 }  // namespace opossum

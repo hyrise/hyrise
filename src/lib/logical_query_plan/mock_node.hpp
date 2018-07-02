@@ -6,8 +6,8 @@
 #include "boost/variant.hpp"
 
 #include "abstract_lqp_node.hpp"
-#include "lqp_column_reference.hpp"
 #include "all_type_variant.hpp"
+#include "lqp_column_reference.hpp"
 
 namespace opossum {
 
@@ -37,8 +37,8 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   std::string description() const override;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _shallow_copy_impl(LQPNodeMapping & node_mapping) const override;
-  bool _shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const override;
+  std::shared_ptr<AbstractLQPNode> _shallow_copy_impl(LQPNodeMapping& node_mapping) const override;
+  bool _shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 
  private:
   std::optional<std::string> _name;

@@ -69,14 +69,14 @@ TableStatistics TableStatistics::estimate_predicate(const ColumnID column_id,
     predicated_row_count *= estimate.selectivity;
   } else {
     Fail("Reactivate");
-//    Assert(is_parameter(value), "AllParameterVariant type is not implemented in statistics component.");
-//    const auto value_placeholder = boost::get<ValuePlaceholder>(value);
-//
-//    const auto estimate = left_operand_column_statistics->estimate_predicate_with_value_placeholder(predicate_condition,
-//                                                                                                    value_placeholder);
-//
-//    predicated_column_statistics[column_id] = estimate.column_statistics;
-//    predicated_row_count *= estimate.selectivity;
+    //    Assert(is_parameter(value), "AllParameterVariant type is not implemented in statistics component.");
+    //    const auto value_placeholder = boost::get<ValuePlaceholder>(value);
+    //
+    //    const auto estimate = left_operand_column_statistics->estimate_predicate_with_value_placeholder(predicate_condition,
+    //                                                                                                    value_placeholder);
+    //
+    //    predicated_column_statistics[column_id] = estimate.column_statistics;
+    //    predicated_row_count *= estimate.selectivity;
   }
 
   return {TableType::References, predicated_row_count, predicated_column_statistics};
@@ -190,24 +190,24 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
     return null_value_no;
   };
 
-  auto adjust_null_value_ratio_for_outer_join = [&](
-      const std::vector<std::shared_ptr<const BaseColumnStatistics>>::iterator col_begin,
-      const std::vector<std::shared_ptr<const BaseColumnStatistics>>::iterator col_end, const float row_count,
-      const float null_value_no, const float new_row_count) {
-    if (null_value_no == 0) {
-      return;
-    }
-    // adjust null value ratios in columns from the right table
-    for (auto col_itr = col_begin; col_itr != col_end; ++col_itr) {
-      // columns need to be copied before changed, somebody else could use it
-      *col_itr = (*col_itr)->clone();
-      float column_null_value_no = (*col_itr)->null_value_ratio() * row_count;
-      float right_null_value_ratio = (column_null_value_no + null_value_no) / new_row_count;
+  auto adjust_null_value_ratio_for_outer_join =
+      [&](const std::vector<std::shared_ptr<const BaseColumnStatistics>>::iterator col_begin,
+          const std::vector<std::shared_ptr<const BaseColumnStatistics>>::iterator col_end, const float row_count,
+          const float null_value_no, const float new_row_count) {
+        if (null_value_no == 0) {
+          return;
+        }
+        // adjust null value ratios in columns from the right table
+        for (auto col_itr = col_begin; col_itr != col_end; ++col_itr) {
+          // columns need to be copied before changed, somebody else could use it
+          *col_itr = (*col_itr)->clone();
+          float column_null_value_no = (*col_itr)->null_value_ratio() * row_count;
+          float right_null_value_ratio = (column_null_value_no + null_value_no) / new_row_count;
 
-      // We just created these column statistics and are therefore qualified to modify them
-      std::const_pointer_cast<BaseColumnStatistics>(*col_itr)->set_null_value_ratio(right_null_value_ratio);
-    }
-  };
+          // We just created these column statistics and are therefore qualified to modify them
+          std::const_pointer_cast<BaseColumnStatistics>(*col_itr)->set_null_value_ratio(right_null_value_ratio);
+        }
+      };
 
   // calculate how many null values need to be added to columns from the left table for right/outer joins
   auto left_null_value_no = calculate_added_null_values_for_outer_join(

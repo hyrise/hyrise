@@ -41,7 +41,9 @@ TEST_F(SortNodeTest, Descriptions) {
   auto sort_b = SortNode::make(expression_vector(_a_i), std::vector<OrderByMode>{OrderByMode::Descending}, _table_node);
   EXPECT_EQ(sort_b->description(), "[Sort] i (Descending)");
 
-  auto sort_c = SortNode::make(expression_vector(_a_d, _a_f, _a_i), std::vector<OrderByMode>{OrderByMode::Descending, OrderByMode::Ascending, OrderByMode::Descending});
+  auto sort_c = SortNode::make(
+      expression_vector(_a_d, _a_f, _a_i),
+      std::vector<OrderByMode>{OrderByMode::Descending, OrderByMode::Ascending, OrderByMode::Descending});
   sort_c->set_left_input(_table_node);
   EXPECT_EQ(sort_c->description(), "[Sort] d (Descending), f (Ascending), i (Descending)");
 }
@@ -49,9 +51,13 @@ TEST_F(SortNodeTest, Descriptions) {
 TEST_F(SortNodeTest, Equals) {
   EXPECT_TRUE(!lqp_find_subplan_mismatch(_sort_node, _sort_node));
 
-  const auto sort_a = SortNode::make(expression_vector(_a_i), std::vector<OrderByMode>{OrderByMode::Descending}, _table_node);
-  const auto sort_b = SortNode::make(expression_vector(_a_d, _a_f, _a_i), std::vector<OrderByMode>{OrderByMode::Descending, OrderByMode::Ascending, OrderByMode::Descending});
-  const auto sort_c = SortNode::make(expression_vector(_a_i), std::vector<OrderByMode>{OrderByMode::Ascending}, _table_node);
+  const auto sort_a =
+      SortNode::make(expression_vector(_a_i), std::vector<OrderByMode>{OrderByMode::Descending}, _table_node);
+  const auto sort_b = SortNode::make(
+      expression_vector(_a_d, _a_f, _a_i),
+      std::vector<OrderByMode>{OrderByMode::Descending, OrderByMode::Ascending, OrderByMode::Descending});
+  const auto sort_c =
+      SortNode::make(expression_vector(_a_i), std::vector<OrderByMode>{OrderByMode::Ascending}, _table_node);
 
   EXPECT_TRUE(lqp_find_subplan_mismatch(_sort_node, sort_a).has_value());
   EXPECT_TRUE(lqp_find_subplan_mismatch(_sort_node, sort_b).has_value());
@@ -61,7 +67,9 @@ TEST_F(SortNodeTest, Equals) {
 TEST_F(SortNodeTest, Copy) {
   EXPECT_TRUE(!lqp_find_subplan_mismatch(_sort_node->deep_copy(), _sort_node));
 
-  const auto sort_b = SortNode::make(expression_vector(_a_d, _a_f, _a_i), std::vector<OrderByMode>{OrderByMode::Descending, OrderByMode::Ascending, OrderByMode::Descending}, _table_node);
+  const auto sort_b = SortNode::make(
+      expression_vector(_a_d, _a_f, _a_i),
+      std::vector<OrderByMode>{OrderByMode::Descending, OrderByMode::Ascending, OrderByMode::Descending}, _table_node);
   EXPECT_TRUE(!lqp_find_subplan_mismatch(sort_b->deep_copy(), sort_b));
 }
 

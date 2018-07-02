@@ -6,9 +6,8 @@
 
 namespace opossum {
 
-StoredTableNode::StoredTableNode(const std::string& table_name):
-  AbstractLQPNode(LQPNodeType::StoredTable), table_name(table_name) {
-}
+StoredTableNode::StoredTableNode(const std::string& table_name)
+    : AbstractLQPNode(LQPNodeType::StoredTable), table_name(table_name) {}
 
 LQPColumnReference StoredTableNode::get_column(const std::string& name) const {
   const auto table = StorageManager::get().get_table(table_name);
@@ -30,7 +29,8 @@ const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::column_
 
     _expressions.emplace(table->column_count());
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-      (*_expressions)[column_id] = std::make_shared<LQPColumnExpression>(LQPColumnReference{shared_from_this(), column_id});
+      (*_expressions)[column_id] =
+          std::make_shared<LQPColumnExpression>(LQPColumnReference{shared_from_this(), column_id});
     }
   }
 
@@ -38,18 +38,18 @@ const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::column_
 }
 
 std::shared_ptr<TableStatistics> StoredTableNode::derive_statistics_from(
-const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
+    const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
   DebugAssert(!left_input && !right_input, "StoredTableNode must be leaf");
   return StorageManager::get().get_table(table_name)->table_statistics();
 }
 
-std::shared_ptr<AbstractLQPNode> StoredTableNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {
+std::shared_ptr<AbstractLQPNode> StoredTableNode::_shallow_copy_impl(LQPNodeMapping& node_mapping) const {
   const auto copy = make(table_name);
   copy->set_excluded_chunk_ids(_excluded_chunk_ids);
   return copy;
 }
 
-bool StoredTableNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const {
+bool StoredTableNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& stored_table_node = static_cast<const StoredTableNode&>(rhs);
   return table_name == stored_table_node.table_name && _excluded_chunk_ids == stored_table_node._excluded_chunk_ids;
 }

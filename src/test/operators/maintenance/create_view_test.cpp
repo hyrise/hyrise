@@ -37,8 +37,7 @@ TEST_F(CreateViewTest, Recreate) {
   const auto view_lqp = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
   const auto view = std::make_shared<View>(view_lqp, std::unordered_map<ColumnID, std::string>{});
 
-  auto cv =
-      std::make_shared<CreateView>("view_name", view);
+  auto cv = std::make_shared<CreateView>("view_name", view);
 
   cv->execute();
   EXPECT_NE(cv->get_output(), nullptr);

@@ -4,22 +4,23 @@
 
 #include "boost/functional/hash.hpp"
 
-#include "utils/assert.hpp"
 #include "constant_mappings.hpp"
 #include "expression_utils.hpp"
 #include "operators/aggregate/aggregate_traits.hpp"
 #include "resolve_type.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
-AggregateExpression::AggregateExpression(const AggregateFunction aggregate_function):
-  AbstractExpression(ExpressionType::Aggregate, {}), aggregate_function(aggregate_function) {
-  Assert(aggregate_function == AggregateFunction::Count || aggregate_function == AggregateFunction::CountDistinct, "Only COUNT aggregates can have no arguments");
+AggregateExpression::AggregateExpression(const AggregateFunction aggregate_function)
+    : AbstractExpression(ExpressionType::Aggregate, {}), aggregate_function(aggregate_function) {
+  Assert(aggregate_function == AggregateFunction::Count || aggregate_function == AggregateFunction::CountDistinct,
+         "Only COUNT aggregates can have no arguments");
 }
 
 AggregateExpression::AggregateExpression(const AggregateFunction aggregate_function,
-                                         const std::shared_ptr<AbstractExpression>& argument):
-  AbstractExpression(ExpressionType::Aggregate, {argument}), aggregate_function(aggregate_function) {}
+                                         const std::shared_ptr<AbstractExpression>& argument)
+    : AbstractExpression(ExpressionType::Aggregate, {argument}), aggregate_function(aggregate_function) {}
 
 std::shared_ptr<AbstractExpression> AggregateExpression::argument() const {
   return arguments.empty() ? nullptr : arguments[0];
@@ -51,8 +52,10 @@ std::string AggregateExpression::as_column_name() const {
 }
 
 DataType AggregateExpression::data_type() const {
-  if (aggregate_function == AggregateFunction::Count) return AggregateTraits<NullValue, AggregateFunction::Count>::aggregate_data_type;
-  if (aggregate_function == AggregateFunction::CountDistinct) return AggregateTraits<NullValue, AggregateFunction::CountDistinct>::aggregate_data_type;
+  if (aggregate_function == AggregateFunction::Count)
+    return AggregateTraits<NullValue, AggregateFunction::Count>::aggregate_data_type;
+  if (aggregate_function == AggregateFunction::CountDistinct)
+    return AggregateTraits<NullValue, AggregateFunction::CountDistinct>::aggregate_data_type;
 
   Assert(arguments.size() == 1, "Expected this AggregateFunction to have one argument");
 
@@ -87,8 +90,6 @@ bool AggregateExpression::_shallow_equals(const AbstractExpression& expression) 
   return aggregate_function == static_cast<const AggregateExpression&>(expression).aggregate_function;
 }
 
-size_t AggregateExpression::_on_hash() const {
-  return boost::hash_value(static_cast<size_t>(aggregate_function));
-}
+size_t AggregateExpression::_on_hash() const { return boost::hash_value(static_cast<size_t>(aggregate_function)); }
 
 }  // namespace opossum

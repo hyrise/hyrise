@@ -22,8 +22,6 @@ TEST_F(DeleteNodeTest, Equals) {
   EXPECT_TRUE(lqp_find_subplan_mismatch(_delete_node, different_delete_node).has_value());
 }
 
-TEST_F(DeleteNodeTest, Copy) {
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_delete_node, _delete_node->deep_copy()));
-}
+TEST_F(DeleteNodeTest, Copy) { EXPECT_TRUE(!lqp_find_subplan_mismatch(_delete_node, _delete_node->deep_copy())); }
 
 }  // namespace opossum

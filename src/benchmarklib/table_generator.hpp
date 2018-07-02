@@ -14,7 +14,8 @@ class Table;
 enum class DataDistributionType { Uniform, NormalSkewed, Pareto };
 
 struct ColumnDataDistribution {
-  static ColumnDataDistribution make_uniform_config(double min, double max, const std::optional<float>& null_value_ratio = {}) {
+  static ColumnDataDistribution make_uniform_config(double min, double max,
+                                                    const std::optional<float>& null_value_ratio = {}) {
     ColumnDataDistribution c{};
     c.null_value_ratio = null_value_ratio;
     c.min_value = min;
@@ -23,7 +24,8 @@ struct ColumnDataDistribution {
     return c;
   }
 
-  static ColumnDataDistribution make_pareto_config(double pareto_scale = 1.0, double pareto_shape = 1.0, const std::optional<float>& null_value_ratio = {}) {
+  static ColumnDataDistribution make_pareto_config(double pareto_scale = 1.0, double pareto_shape = 1.0,
+                                                   const std::optional<float>& null_value_ratio = {}) {
     ColumnDataDistribution c{};
     c.null_value_ratio = null_value_ratio;
     c.pareto_scale = pareto_scale;
@@ -33,7 +35,8 @@ struct ColumnDataDistribution {
   }
 
   static ColumnDataDistribution make_skewed_normal_config(double skew_location = 0.0, double skew_scale = 1.0,
-                                                          double skew_shape = 0.0, const std::optional<float>& null_value_ratio = {}) {
+                                                          double skew_shape = 0.0,
+                                                          const std::optional<float>& null_value_ratio = {}) {
     ColumnDataDistribution c{};
     c.null_value_ratio = null_value_ratio;
     c.skew_location = skew_location;
@@ -62,8 +65,7 @@ struct ColumnDataDistribution {
 
 class TableGenerator {
  public:
-  std::shared_ptr<Table> generate_table(const ChunkOffset chunk_size,
-                                        const std::optional<float>& null_value_ratio = {},
+  std::shared_ptr<Table> generate_table(const ChunkOffset chunk_size, const std::optional<float>& null_value_ratio = {},
                                         std::optional<EncodingType> encoding_type = std::nullopt);
 
   // Note: numa_distribute_chunks=true only affects generated tables that use DictionaryCompression,

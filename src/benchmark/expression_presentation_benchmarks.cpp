@@ -3,21 +3,17 @@
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_db_generator.hpp"
 //#include "operators/jit_operator/jit_aware_lqp_translator.cpp"
-#include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 
 namespace opossum {
 
 class ExpressionPresentationFixture : public benchmark::Fixture {
  public:
-  void SetUp(benchmark::State &state) override {
-    TpchDbGenerator{0.1f}.generate_and_store();
-  }
+  void SetUp(benchmark::State& state) override { TpchDbGenerator{0.1f}.generate_and_store(); }
 
-  void TearDown(benchmark::State &state) override {
-    StorageManager::reset();
-  }
+  void TearDown(benchmark::State& state) override { StorageManager::reset(); }
 
   const std::string query_arithmetics = "SELECT l_extendedprice*(1.0-l_discount)*(1.0+l_tax) FROM lineitem";
 };

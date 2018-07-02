@@ -75,7 +75,7 @@ const char* const tpch_query_1 =
  *  1. Random values are hardcoded
  */
 const char* const tpch_query_2 =
-   R"(SELECT s_acctbal, s_name, n_name, p_partkey, p_mfgr, s_address, s_phone, s_comment
+    R"(SELECT s_acctbal, s_name, n_name, p_partkey, p_mfgr, s_address, s_phone, s_comment
        FROM "part", partsupp, supplier, nation, region
        WHERE p_partkey = ps_partkey AND s_suppkey = ps_suppkey AND p_size = 15 AND p_type like '%BRASS' AND
        s_nationkey = n_nationkey AND n_regionkey = r_regionkey AND r_name = 'EUROPE' AND
@@ -138,7 +138,7 @@ const char* const tpch_query_3 =
  *    b. pre-calculate date operation
  */
 const char* const tpch_query_4 =
-  R"(SELECT o_orderpriority, count(*) as order_count FROM orders WHERE o_orderdate >= '1996-07-01' AND
+    R"(SELECT o_orderpriority, count(*) as order_count FROM orders WHERE o_orderdate >= '1996-07-01' AND
     o_orderdate < '1996-10-01' AND exists (
     SELECT *FROM lineitem WHERE l_orderkey = o_orderkey AND l_commitdate < l_receiptdate)
     GROUP BY o_orderpriority ORDER BY o_orderpriority;)";
@@ -333,7 +333,7 @@ const char* const tpch_query_7 =
  *    a. Use full date instead
  */
 const char* const tpch_query_8 =
-   R"(SELECT o_year, SUM(case when nation = 'BRAZIL' then volume else 0 end) / SUM(volume) as mkt_share
+    R"(SELECT o_year, SUM(case when nation = 'BRAZIL' then volume else 0 end) / SUM(volume) as mkt_share
      FROM (SELECT o_orderdate as o_year, l_extendedprice * (1-l_discount) as volume,
      n2.n_name as nation FROM "part", supplier, lineitem, orders, customer, nation n1, nation n2, region
      WHERE p_partkey = l_partkey AND s_suppkey = l_suppkey AND l_orderkey = o_orderkey AND
@@ -604,7 +604,7 @@ const char* const tpch_query_14 =
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
  */
- const char* const tpch_query_15 =
+const char* const tpch_query_15 =
     R"(create view revenue (supplier_no, total_revenue) as SELECT l_suppkey,
       SUM(l_extendedprice * (1.0 - l_discount)) FROM lineitem WHERE l_shipdate >= '1995-02-13'
       AND l_shipdate < '1995-05-13' GROUP BY l_suppkey;
@@ -639,7 +639,7 @@ const char* const tpch_query_14 =
  *  1. Random values are hardcoded
 
  */
- const char* const tpch_query_16 =
+const char* const tpch_query_16 =
     R"(SELECT p_brand, p_type, p_size, count(distinct ps_suppkey) as supplier_cnt
       FROM partsupp, "part" WHERE p_partkey = ps_partkey AND p_brand <> 'Brand#45'
       AND p_type not like 'MEDIUM POLISHED%' AND p_size in (49, 14, 23, 45, 19, 3, 36, 9)
@@ -667,7 +667,7 @@ const char* const tpch_query_14 =
  *  1. Random values are hardcoded
 
  */
- const char* const tpch_query_17 =
+const char* const tpch_query_17 =
     R"(SELECT SUM(l_extendedprice) / 7.0 as avg_yearly FROM lineitem, "part" WHERE p_partkey = l_partkey
       AND p_brand = 'Brand#23' AND p_container = 'MED BOX' AND l_quantity < (SELECT 0.2 * avg(l_quantity)
       FROM lineitem WHERE l_partkey = p_partkey);)";
@@ -695,7 +695,7 @@ const char* const tpch_query_14 =
  *  1. Random values are hardcoded
 
  */
- const char* const tpch_query_18 =
+const char* const tpch_query_18 =
     R"(SELECT c_name, c_custkey, o_orderkey, o_orderdate, o_totalprice, SUM(l_quantity)
       FROM customer, orders, lineitem WHERE o_orderkey in (SELECT l_orderkey FROM lineitem
       GROUP BY l_orderkey having SUM(l_quantity) > 300) AND c_custkey = o_custkey AND o_orderkey = l_orderkey
@@ -742,7 +742,7 @@ const char* const tpch_query_14 =
  *  2. implicit type conversions for arithmetic operations are not supported
  *    a. changed 1 to 1.0 explicitly
  */
- const char* const tpch_query_19 =
+const char* const tpch_query_19 =
     R"(SELECT SUM(l_extendedprice * (1.0 - l_discount) ) as revenue FROM lineitem, "part" WHERE (p_partkey = l_partkey
       AND p_brand = 'Brand#12' AND p_container in ( 'SM CASE', 'SM BOX', 'SM PACK', 'SM PKG') AND
       l_quantity >= 1 AND l_quantity <= 1 + 10 AND p_size between 1 AND 5 AND l_shipmode
@@ -791,7 +791,7 @@ const char* const tpch_query_14 =
  *    b. pre-calculate date operation
 
  */
- const char* const tpch_query_20 =
+const char* const tpch_query_20 =
     R"(SELECT s_name, s_address FROM supplier, nation WHERE s_suppkey in (SELECT ps_suppkey FROM partsupp
       WHERE ps_partkey in (SELECT p_partkey FROM "part" WHERE p_name like 'forest%') AND ps_availqty >
       (SELECT 0.5 * SUM(l_quantity) FROM lineitem WHERE l_partkey = ps_partkey AND l_suppkey = ps_suppkey AND
@@ -836,7 +836,7 @@ const char* const tpch_query_14 =
  *    b. pre-calculate date operation
 
  */
- const char* const tpch_query_21 =
+const char* const tpch_query_21 =
     R"(SELECT s_name, count(*) as numwait FROM supplier, lineitem l1, orders, nation WHERE s_suppkey = l1.l_suppkey
       AND o_orderkey = l1.l_orderkey AND o_orderstatus = 'F' AND l1.l_receiptdate > l1.l_commitdate AND exists
       (SELECT * FROM lineitem l2 WHERE l2.l_orderkey = l1.l_orderkey AND l2.l_suppkey <> l1.l_suppkey) AND not exists
@@ -887,7 +887,7 @@ const char* const tpch_query_14 =
  * Changes:
  *  1. Renamed SUBSTRING to SUBSTR
  */
- const char* const tpch_query_22 =
+const char* const tpch_query_22 =
     R"(SELECT CNTRYCODE, COUNT(*) AS NUMCUST, SUM(c_acctbal) AS TOTACCTBAL
        FROM (SELECT SUBSTR(c_phone,1,2) AS CNTRYCODE, c_acctbal
        FROM customer WHERE SUBSTR(c_phone,1,2) IN ('13', '31', '23', '29', '30', '18', '17') AND
@@ -902,28 +902,10 @@ const char* const tpch_query_14 =
 namespace opossum {
 
 const std::map<size_t, const char*> tpch_queries = {
-    {1, tpch_query_1},
-    {2, tpch_query_2},
-    {3, tpch_query_3},
-    {4, tpch_query_4},
-    {5, tpch_query_5},
-    {6, tpch_query_6},
-    {7, tpch_query_7},
-    {8, tpch_query_8},
-    {9, tpch_query_9},
-    {10, tpch_query_10},
-    {11, tpch_query_11},
-    {12, tpch_query_12},
-    {13, tpch_query_13},
-    {14, tpch_query_14},
-    {15, tpch_query_15},
-    {16, tpch_query_16},
-    {17, tpch_query_17},
-    {18, tpch_query_18},
-    {19, tpch_query_19},
-    {20, tpch_query_20},
-    {21, tpch_query_21},
-    {22, tpch_query_22}
-};
+    {1, tpch_query_1},   {2, tpch_query_2},   {3, tpch_query_3},   {4, tpch_query_4},   {5, tpch_query_5},
+    {6, tpch_query_6},   {7, tpch_query_7},   {8, tpch_query_8},   {9, tpch_query_9},   {10, tpch_query_10},
+    {11, tpch_query_11}, {12, tpch_query_12}, {13, tpch_query_13}, {14, tpch_query_14}, {15, tpch_query_15},
+    {16, tpch_query_16}, {17, tpch_query_17}, {18, tpch_query_18}, {19, tpch_query_19}, {20, tpch_query_20},
+    {21, tpch_query_21}, {22, tpch_query_22}};
 
 }  // namespace opossum

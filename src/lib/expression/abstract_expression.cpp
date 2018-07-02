@@ -4,24 +4,22 @@
 #include <string>
 
 #include "boost/functional/hash.hpp"
-#include "utils/assert.hpp"
 #include "expression_utils.hpp"
+#include "utils/assert.hpp"
 
 using namespace std::string_literals;
 
 namespace opossum {
 
-AbstractExpression::AbstractExpression(const ExpressionType type, const std::vector<std::shared_ptr<AbstractExpression>>& arguments):
-  type(type), arguments(arguments) {
+AbstractExpression::AbstractExpression(const ExpressionType type,
+                                       const std::vector<std::shared_ptr<AbstractExpression>>& arguments)
+    : type(type), arguments(arguments) {}
 
-}
-
-bool AbstractExpression::requires_calculation() const {
-  return !arguments.empty();
-}
+bool AbstractExpression::requires_calculation() const { return !arguments.empty(); }
 
 bool AbstractExpression::is_nullable() const {
-  return !std::all_of(arguments.begin(), arguments.end(), [](const auto& expression) { return !expression->is_nullable(); });
+  return !std::all_of(arguments.begin(), arguments.end(),
+                      [](const auto& expression) { return !expression->is_nullable(); });
 }
 
 bool AbstractExpression::deep_equals(const AbstractExpression& other) const {
@@ -39,17 +37,11 @@ size_t AbstractExpression::hash() const {
   return hash;
 }
 
-bool AbstractExpression::_shallow_equals(const AbstractExpression& expression) const {
-  return true;
-}
+bool AbstractExpression::_shallow_equals(const AbstractExpression& expression) const { return true; }
 
-size_t AbstractExpression::_on_hash() const {
-  return 0;
-}
+size_t AbstractExpression::_on_hash() const { return 0; }
 
-uint32_t AbstractExpression::_precedence() const {
-  return 0;
-}
+uint32_t AbstractExpression::_precedence() const { return 0; }
 
 std::string AbstractExpression::_enclose_argument_as_column_name(const AbstractExpression& argument) const {
   // TODO(anybody) Using >= to make divisions ("(2/3)/4") and logical operations ("(a AND (b OR c))") unambiguous -
@@ -61,4 +53,4 @@ std::string AbstractExpression::_enclose_argument_as_column_name(const AbstractE
   }
 }
 
-}  // namespace opoosum
+}  // namespace opossum

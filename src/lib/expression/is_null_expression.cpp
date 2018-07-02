@@ -6,15 +6,14 @@
 
 namespace opossum {
 
-IsNullExpression::IsNullExpression(const PredicateCondition predicate_condition, const std::shared_ptr<AbstractExpression>& operand):
-  AbstractPredicateExpression(predicate_condition, {operand}) {
+IsNullExpression::IsNullExpression(const PredicateCondition predicate_condition,
+                                   const std::shared_ptr<AbstractExpression>& operand)
+    : AbstractPredicateExpression(predicate_condition, {operand}) {
   Assert(predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull,
-  "IsNullExpression only supports PredicateCondition::IsNull and PredicateCondition::IsNotNull")
+         "IsNullExpression only supports PredicateCondition::IsNull and PredicateCondition::IsNotNull")
 }
 
-const std::shared_ptr<AbstractExpression>& IsNullExpression::operand() const {
-  return arguments[0];
-}
+const std::shared_ptr<AbstractExpression>& IsNullExpression::operand() const { return arguments[0]; }
 
 std::shared_ptr<AbstractExpression> IsNullExpression::deep_copy() const {
   return std::make_shared<IsNullExpression>(predicate_condition, operand()->deep_copy());

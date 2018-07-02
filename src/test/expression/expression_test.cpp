@@ -3,15 +3,15 @@
 #include "expression/case_expression.hpp"
 #include "expression/expression_factory.hpp"
 #include "expression/expression_utils.hpp"
-#include "logical_query_plan/mock_node.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
-#include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
-#include "utils/load_table.hpp"
+#include "logical_query_plan/mock_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/load_table.hpp"
 
-using namespace std::string_literals;  // NOLINT
+using namespace std::string_literals;         // NOLINT
 using namespace opossum::expression_factory;  // NOLINT
 
 namespace opossum {
@@ -30,9 +30,7 @@ class ExpressionTest : public ::testing::Test {
     case_c = case_(equals(a, 123), b, case_(equals(a, 1234), a, null()));
   }
 
-  void TearDown() {
-    StorageManager::reset();
-  }
+  void TearDown() { StorageManager::reset(); }
 
   LQPColumnReference a, b;
   std::shared_ptr<AbstractExpression> case_a, case_b, case_c;
@@ -48,9 +46,7 @@ TEST_F(ExpressionTest, DeepEquals) {
   EXPECT_FALSE(case_a->deep_equals(*case_c));
 }
 
-TEST_F(ExpressionTest, AsColumnName) {
-
-}
+TEST_F(ExpressionTest, AsColumnName) {}
 
 TEST_F(ExpressionTest, AsColumnNameNested) {
   /** Test that parentheses are placed correctly when generating column names of nested expressions */
@@ -59,7 +55,7 @@ TEST_F(ExpressionTest, AsColumnNameNested) {
   EXPECT_EQ(add(5, mul(2, 3))->as_column_name(), "5 + 2 * 3");
   EXPECT_EQ(mul(5, add(2, 3))->as_column_name(), "5 * (2 + 3)");
   EXPECT_EQ(div_(5, mul(2, 3))->as_column_name(), "5 / (2 * 3)");
-  EXPECT_EQ(case_(greater_than(3,2), mul(2, 3), 2)->as_column_name(), "CASE WHEN 3 > 2 THEN 2 * 3 ELSE 2 END");
+  EXPECT_EQ(case_(greater_than(3, 2), mul(2, 3), 2)->as_column_name(), "CASE WHEN 3 > 2 THEN 2 * 3 ELSE 2 END");
   EXPECT_EQ(case_(1, mul(2, 3), div_(5, mul(2, 3)))->as_column_name(), "CASE WHEN 1 THEN 2 * 3 ELSE 5 / (2 * 3) END");
   EXPECT_EQ(list(1, sum(a))->as_column_name(), "(1, SUM(a))");
   EXPECT_EQ(and_(1, 1)->as_column_name(), "1 AND 1");
@@ -85,6 +81,5 @@ TEST_F(ExpressionTest, AsColumnNameNested) {
   EXPECT_EQ(and_(and_(1, 0), and_(0, 1))->as_column_name(), "(1 AND 0) AND (0 AND 1)");
   EXPECT_EQ(and_(1, and_(1, or_(0, 1)))->as_column_name(), "1 AND (1 AND (0 OR 1))");
 }
-
 
 }  // namespace opossum

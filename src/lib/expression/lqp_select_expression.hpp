@@ -11,8 +11,7 @@ class AbstractLQPNode;
 
 class LQPSelectExpression : public AbstractExpression {
  public:
-  LQPSelectExpression(const std::shared_ptr<AbstractLQPNode>& lqp,
-                      const std::vector<ParameterID>& parameter_ids,
+  LQPSelectExpression(const std::shared_ptr<AbstractLQPNode>& lqp, const std::vector<ParameterID>& parameter_ids,
                       const std::vector<std::shared_ptr<AbstractExpression>>& parameter_expressions);
 
   bool requires_calculation() const override;

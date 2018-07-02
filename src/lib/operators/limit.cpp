@@ -13,14 +13,13 @@
 
 namespace opossum {
 
-Limit::Limit(const std::shared_ptr<const AbstractOperator> in, const std::shared_ptr<AbstractExpression>& row_count_expression)
+Limit::Limit(const std::shared_ptr<const AbstractOperator> in,
+             const std::shared_ptr<AbstractExpression>& row_count_expression)
     : AbstractReadOnlyOperator(OperatorType::Limit, in), _row_count_expression(row_count_expression) {}
 
 const std::string Limit::name() const { return "Limit"; }
 
-std::shared_ptr<AbstractExpression> Limit::row_count_expression() const {
-  return _row_count_expression;
-}
+std::shared_ptr<AbstractExpression> Limit::row_count_expression() const { return _row_count_expression; }
 
 std::shared_ptr<AbstractOperator> Limit::_on_recreate(
     const std::shared_ptr<AbstractOperator>& recreated_input_left,
@@ -34,8 +33,8 @@ std::shared_ptr<const Table> Limit::_on_execute() {
   /**
    * Evaluate the _row_count_expression to determine the actual number of rows to "Limit" the output to
    */
-  const auto num_rows_expression_result = ExpressionEvaluator{}.evaluate_expression_to_result<int64_t>(
-  *_row_count_expression);
+  const auto num_rows_expression_result =
+      ExpressionEvaluator{}.evaluate_expression_to_result<int64_t>(*_row_count_expression);
   Assert(num_rows_expression_result->size() == 1, "Expected exactly one row for Limit");
   Assert(!num_rows_expression_result->null(0), "Expected non-null for Limit");
 

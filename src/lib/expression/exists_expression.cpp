@@ -6,8 +6,8 @@
 
 namespace opossum {
 
-ExistsExpression::ExistsExpression(const std::shared_ptr<AbstractExpression>& select):
-  AbstractExpression(ExpressionType::Exists, {select}) {
+ExistsExpression::ExistsExpression(const std::shared_ptr<AbstractExpression>& select)
+    : AbstractExpression(ExpressionType::Exists, {select}) {
   Assert(select->type == ExpressionType::Select, "EXISTS needs SelectExpression as argument");
 }
 
@@ -29,11 +29,9 @@ std::shared_ptr<AbstractExpression> ExistsExpression::deep_copy() const {
 }
 
 DataType ExistsExpression::data_type() const {
-  return DataType::Int; // Bool, but we don't have that :(
+  return DataType::Int;  // Bool, but we don't have that :(
 }
 
-bool ExistsExpression::is_nullable() const {
-  return false;
-}
+bool ExistsExpression::is_nullable() const { return false; }
 
 }  // namespace opossum

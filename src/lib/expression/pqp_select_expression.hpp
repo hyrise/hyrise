@@ -12,14 +12,11 @@ class PQPSelectExpression : public AbstractExpression {
   using Parameters = std::vector<std::pair<ParameterID, ColumnID>>;
 
   // Constructor for single-column PQPSelectExpressions as used in `a IN (SELECT ...)` or `SELECT (SELECT ...)`
-  PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp,
-                      const DataType data_type,
-                      const bool nullable,
+  PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp, const DataType data_type, const bool nullable,
                       const Parameters& parameters = {});
 
   // Constructor for (potentially) multi-column PQPSelectExpressions as used in `EXISTS(SELECT ...)`
-  PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp,
-                      const Parameters& parameters = {});
+  PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp, const Parameters& parameters = {});
 
   bool requires_calculation() const override;
   std::shared_ptr<AbstractExpression> deep_copy() const override;

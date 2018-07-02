@@ -3,15 +3,15 @@
 #include "expression/case_expression.hpp"
 #include "expression/expression_factory.hpp"
 #include "expression/expression_utils.hpp"
-#include "logical_query_plan/mock_node.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
-#include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
-#include "utils/load_table.hpp"
+#include "logical_query_plan/mock_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/load_table.hpp"
 
-using namespace std::string_literals;  // NOLINT
+using namespace std::string_literals;         // NOLINT
 using namespace opossum::expression_factory;  // NOLINT
 
 namespace opossum {
@@ -30,9 +30,7 @@ class LQPSelectExpressionTest : public ::testing::Test {
     case_c = case_(equals(a, 123), b, case_(equals(a, 1234), a, null()));
   }
 
-  void TearDown() {
-    StorageManager::reset();
-  }
+  void TearDown() { StorageManager::reset(); }
 
   LQPColumnReference a, b;
   std::shared_ptr<AbstractExpression> case_a, case_b, case_c;

@@ -18,7 +18,8 @@ namespace opossum {
 class AggregateNodeTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    _mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
+    _mock_node = MockNode::make(
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
 
     _a = {_mock_node, ColumnID{0}};
     _b = {_mock_node, ColumnID{1}};
@@ -26,7 +27,8 @@ class AggregateNodeTest : public ::testing::Test {
 
     // SELECT a, c, SUM(a+b), SUM(a+c) AS some_sum [...] GROUP BY a, c
     // Columns are ordered as specified in the SELECT list
-    _aggregate_node = AggregateNode::make(expression_vector(_a, _c), expression_vector(sum(add(_a, _b)), sum(add(_a, _c))), _mock_node);
+    _aggregate_node = AggregateNode::make(expression_vector(_a, _c),
+                                          expression_vector(sum(add(_a, _b)), sum(add(_a, _c))), _mock_node);
   }
 
   std::shared_ptr<MockNode> _mock_node;
@@ -49,17 +51,22 @@ TEST_F(AggregateNodeTest, Description) {
 }
 
 TEST_F(AggregateNodeTest, Equals) {
-  const auto same_aggregate_node = AggregateNode::make(expression_vector(_a, _c), expression_vector(sum(add(_a, _b)), sum(add(_a, _c))), _mock_node);
+  const auto same_aggregate_node =
+      AggregateNode::make(expression_vector(_a, _c), expression_vector(sum(add(_a, _b)), sum(add(_a, _c))), _mock_node);
 
   EXPECT_TRUE(!lqp_find_subplan_mismatch(_aggregate_node, same_aggregate_node));
   EXPECT_TRUE(!lqp_find_subplan_mismatch(same_aggregate_node, _aggregate_node));
   EXPECT_TRUE(!lqp_find_subplan_mismatch(_aggregate_node, _aggregate_node));
 
   // Build slightly different aggregate nodes
-  const auto different_aggregate_node_a = AggregateNode::make(expression_vector(_a), expression_vector(sum(add(_a, _b)), sum(add(_a, _c))), _mock_node);
-  const auto different_aggregate_node_b = AggregateNode::make(expression_vector(_a, _c), expression_vector(sum(add(_a, 2)), sum(add(_a, _c))), _mock_node);
-  const auto different_aggregate_node_c = AggregateNode::make(expression_vector(_a, _c), expression_vector(sum(add(_a, _b)), sum(add(_a, _c)), min(_a)), _mock_node);
-  const auto different_aggregate_node_d = AggregateNode::make(expression_vector(_a, _a), expression_vector(sum(add(_a, _b)), sum(add(_a, _c))), _mock_node);
+  const auto different_aggregate_node_a =
+      AggregateNode::make(expression_vector(_a), expression_vector(sum(add(_a, _b)), sum(add(_a, _c))), _mock_node);
+  const auto different_aggregate_node_b =
+      AggregateNode::make(expression_vector(_a, _c), expression_vector(sum(add(_a, 2)), sum(add(_a, _c))), _mock_node);
+  const auto different_aggregate_node_c = AggregateNode::make(
+      expression_vector(_a, _c), expression_vector(sum(add(_a, _b)), sum(add(_a, _c)), min(_a)), _mock_node);
+  const auto different_aggregate_node_d =
+      AggregateNode::make(expression_vector(_a, _a), expression_vector(sum(add(_a, _b)), sum(add(_a, _c))), _mock_node);
 
   EXPECT_TRUE(lqp_find_subplan_mismatch(_aggregate_node, different_aggregate_node_a).has_value());
   EXPECT_TRUE(lqp_find_subplan_mismatch(_aggregate_node, different_aggregate_node_b).has_value());
@@ -68,7 +75,8 @@ TEST_F(AggregateNodeTest, Equals) {
 }
 
 TEST_F(AggregateNodeTest, Copy) {
-  const auto same_aggregate_node = AggregateNode::make(expression_vector(_a, _c), expression_vector(sum(add(_a, _b)), sum(add(_a, _c))), _mock_node);
+  const auto same_aggregate_node =
+      AggregateNode::make(expression_vector(_a, _c), expression_vector(sum(add(_a, _b)), sum(add(_a, _c))), _mock_node);
   EXPECT_TRUE(!lqp_find_subplan_mismatch(_aggregate_node->deep_copy(), same_aggregate_node));
 }
 

@@ -10,8 +10,7 @@ namespace opossum {
  */
 class AliasOperator : public AbstractReadOnlyOperator {
  public:
-  AliasOperator(const std::shared_ptr<const AbstractOperator>& input,
-                const std::vector<ColumnID>& column_ids,
+  AliasOperator(const std::shared_ptr<const AbstractOperator>& input, const std::vector<ColumnID>& column_ids,
                 const std::vector<std::string>& aliases);
 
   const std::string name() const override;
@@ -19,8 +18,8 @@ class AliasOperator : public AbstractReadOnlyOperator {
 
  protected:
   std::shared_ptr<AbstractOperator> _on_recreate(
-    const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+      const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
 
   std::shared_ptr<const Table> _on_execute() override;
 

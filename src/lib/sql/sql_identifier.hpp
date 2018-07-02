@@ -1,13 +1,13 @@
 #pragma once
 
-#include <string>
 #include <optional>
+#include <string>
 
 namespace opossum {
 
 struct SQLIdentifier final {
   SQLIdentifier(const std::string& column_name, const std::optional<std::string>& table_name =
-  std::nullopt);  // NOLINT - Implicit conversion is intended
+                                                    std::nullopt);  // NOLINT - Implicit conversion is intended
 
   bool operator==(const SQLIdentifier& rhs) const;
 
@@ -21,7 +21,7 @@ struct SQLIdentifier final {
 
 namespace std {
 
-template<>
+template <>
 struct hash<opossum::SQLIdentifier> {
   size_t operator()(const opossum::SQLIdentifier& sql_identifier) const;
 };

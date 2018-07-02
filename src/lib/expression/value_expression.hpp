@@ -13,7 +13,7 @@ class ValueExpression : public AbstractExpression {
   std::string as_column_name() const override;
   DataType data_type() const override;
   bool is_nullable() const override;
-  
+
   AllTypeVariant value;
 
  protected:

@@ -9,24 +9,23 @@
 #include <utility>
 #include <vector>
 
-#include "expression/binary_predicate_expression.hpp"
-#include "expression/lqp_column_expression.hpp"
-#include "expression/expression_utils.hpp"
 #include "constant_mappings.hpp"
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/expression_utils.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "statistics/table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-JoinNode::JoinNode(const JoinMode join_mode):
-AbstractLQPNode(LQPNodeType::Join), join_mode(join_mode) {
+JoinNode::JoinNode(const JoinMode join_mode) : AbstractLQPNode(LQPNodeType::Join), join_mode(join_mode) {
   Assert(join_mode == JoinMode::Cross, "Only Cross Joins can be constructed without predicate");
 }
 
-JoinNode::JoinNode(const JoinMode join_mode, const std::shared_ptr<AbstractExpression>& join_predicate):
-AbstractLQPNode(LQPNodeType::Join), join_mode(join_mode), join_predicate(join_predicate) {
-  Assert(join_mode != JoinMode::Cross , "Cross Joins take no predicate");
+JoinNode::JoinNode(const JoinMode join_mode, const std::shared_ptr<AbstractExpression>& join_predicate)
+    : AbstractLQPNode(LQPNodeType::Join), join_mode(join_mode), join_predicate(join_predicate) {
+  Assert(join_mode != JoinMode::Cross, "Cross Joins take no predicate");
 }
 
 std::string JoinNode::description() const {
@@ -70,10 +69,11 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::node_expressions() co
 }
 
 std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
-const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
+    const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
   DebugAssert(left_input && right_input, "JoinNode need left_input and no right_input");
 
-  const auto cross_join_statistics = std::make_shared<TableStatistics>(left_input->get_statistics()->estimate_cross_join(*right_input->get_statistics()));
+  const auto cross_join_statistics = std::make_shared<TableStatistics>(
+      left_input->get_statistics()->estimate_cross_join(*right_input->get_statistics()));
 
   if (join_mode == JoinMode::Cross) {
     return cross_join_statistics;
@@ -93,16 +93,14 @@ const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<Abstra
 
     const auto predicate_condition = binary_predicate->predicate_condition;
 
-    ColumnIDPair join_colum_ids{left_input->get_column_id(*left_column),
-                                right_input->get_column_id(*right_column)};
-
+    ColumnIDPair join_colum_ids{left_input->get_column_id(*left_column), right_input->get_column_id(*right_column)};
 
     return std::make_shared<TableStatistics>(left_input->get_statistics()->estimate_predicated_join(
-    *right_input->get_statistics(), join_mode, join_colum_ids, predicate_condition));
+        *right_input->get_statistics(), join_mode, join_colum_ids, predicate_condition));
   }
 }
 
-std::shared_ptr<AbstractLQPNode> JoinNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {
+std::shared_ptr<AbstractLQPNode> JoinNode::_shallow_copy_impl(LQPNodeMapping& node_mapping) const {
   if (join_predicate) {
     return JoinNode::make(join_mode, expression_copy_and_adapt_to_different_lqp(*join_predicate, node_mapping));
   } else {
@@ -110,7 +108,7 @@ std::shared_ptr<AbstractLQPNode> JoinNode::_shallow_copy_impl(LQPNodeMapping & n
   }
 }
 
-bool JoinNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const {
+bool JoinNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& join_node = static_cast<const JoinNode&>(rhs);
 
   if ((join_predicate == nullptr) != (join_node.join_predicate == nullptr)) return false;

@@ -9,6 +9,7 @@
 
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_factory.hpp"
+#include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/strategy/index_scan_rule.hpp"
@@ -22,7 +23,6 @@
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/assert.hpp"
-#include "logical_query_plan/mock_node.hpp"
 
 using namespace opossum::expression_factory;  // NOLINT
 
@@ -36,7 +36,7 @@ class IndexScanRuleTest : public StrategyBaseTest {
     ChunkEncoder::encode_all_chunks(StorageManager::get().get_table("a"));
 
     rule = std::make_shared<IndexScanRule>();
-    
+
     stored_table_node = StoredTableNode::make("a");
     a = stored_table_node->get_column("a");
     b = stored_table_node->get_column("b");
@@ -75,7 +75,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
   auto statistics_mock = generate_mock_statistics();
   stored_table_node->set_statistics(statistics_mock);
 
-  auto predicate_node_0 =  PredicateNode::make(greater_than(a, 10));
+  auto predicate_node_0 = PredicateNode::make(greater_than(a, 10));
   predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
@@ -89,8 +89,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithMultiColumnIndex) {
   auto statistics_mock = generate_mock_statistics();
   stored_table_node->set_statistics(statistics_mock);
 
-  auto predicate_node_0 =
-      PredicateNode::make(greater_than(c, 10));
+  auto predicate_node_0 = PredicateNode::make(greater_than(c, 10));
   predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
@@ -161,7 +160,7 @@ TEST_F(IndexScanRuleTest, IndexScanOnlyOnOutputOfStoredTableNode) {
   auto predicate_node_0 = PredicateNode::make(greater_than(c, 19'900));
   predicate_node_0->set_left_input(stored_table_node);
 
-  auto predicate_node_1 =  PredicateNode::make(less_than(b, 15));
+  auto predicate_node_1 = PredicateNode::make(less_than(b, 15));
   predicate_node_1->set_left_input(predicate_node_0);
 
   auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_1);

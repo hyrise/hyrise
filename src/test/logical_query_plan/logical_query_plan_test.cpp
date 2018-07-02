@@ -5,16 +5,16 @@
 #include "expression/expression_factory.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
-#include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/union_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/mock_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "logical_query_plan/mock_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "storage/storage_manager.hpp"
-#include "utils/load_table.hpp"
 #include "testing_assert.hpp"
+#include "utils/load_table.hpp"
 
 using namespace opossum::expression_factory;
 
@@ -36,10 +36,8 @@ class LogicalQueryPlanTest : public ::testing::Test {
     c2 = node_int_int->get_column("b");
   }
 
-  void TearDown() override {
-    StorageManager::reset();
-  }
-  
+  void TearDown() override { StorageManager::reset(); }
+
   std::shared_ptr<Table> table_int_int;
   std::shared_ptr<StoredTableNode> node_int_int, node_int_int_int;
   LQPColumnReference a1, b1;
@@ -47,8 +45,7 @@ class LogicalQueryPlanTest : public ::testing::Test {
 };
 
 TEST_F(LogicalQueryPlanTest, CreateNodeMapping) {
-  const auto projection_node = ProjectionNode::make(node_int_int->column_expressions(),
-                                                    node_int_int);
+  const auto projection_node = ProjectionNode::make(node_int_int->column_expressions(), node_int_int);
   const auto lqp = projection_node;
 
   const auto copied_lqp = lqp->deep_copy();
@@ -65,8 +62,7 @@ TEST_F(LogicalQueryPlanTest, DeepCopyBasics) {
   const auto expression_a = std::make_shared<LQPColumnExpression>(LQPColumnReference{node_int_int, ColumnID{0}});
   const auto expression_b = std::make_shared<LQPColumnExpression>(LQPColumnReference{node_int_int, ColumnID{1}});
 
-  const auto projection_node = ProjectionNode::make(node_int_int->column_expressions(),
-                                                    node_int_int);
+  const auto projection_node = ProjectionNode::make(node_int_int->column_expressions(), node_int_int);
   const auto lqp = projection_node;
 
   const auto copied_lqp = lqp->deep_copy();
@@ -81,8 +77,10 @@ TEST_F(LogicalQueryPlanTest, DeepCopyBasics) {
   EXPECT_NE(node_int_int, copied_node_int_int);
 
   // Check that expressions in copied LQP point to StoredTableNode in their LQP, not into the original LQP
-  const auto copied_expression_a = std::dynamic_pointer_cast<LQPColumnExpression>(copied_projection_node->expressions.at(0));
-  const auto copied_expression_b = std::dynamic_pointer_cast<LQPColumnExpression>(copied_projection_node->expressions.at(1));
+  const auto copied_expression_a =
+      std::dynamic_pointer_cast<LQPColumnExpression>(copied_projection_node->expressions.at(0));
+  const auto copied_expression_b =
+      std::dynamic_pointer_cast<LQPColumnExpression>(copied_projection_node->expressions.at(1));
 
   EXPECT_EQ(copied_expression_a->column_reference.original_node(), copied_node_int_int);
   EXPECT_EQ(copied_expression_b->column_reference.original_node(), copied_node_int_int);
@@ -144,9 +142,11 @@ TEST_F(LogicalQueryPlanTest, PrintWithSubselects) {
   // [0] [Predicate] a = SUBSELECT (LQP, 0x4e2d160, Parameters: )
   //  \_[1] [StoredTable] Name: 'int_int_int'
 
-  EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] a \> SUBSELECT \(LQP, 0x[a-z0-9]+, Parameters: \))"}));
+  EXPECT_TRUE(std::regex_search(
+      stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] a \> SUBSELECT \(LQP, 0x[a-z0-9]+, Parameters: \))"}));
   EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{"Subselects"}));
-  EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] a = SUBSELECT \(LQP, 0x[a-z0-9]+, Parameters: \))"}));
+  EXPECT_TRUE(std::regex_search(stream.str().c_str(),
+                                std::regex{R"(\[0\] \[Predicate\] a = SUBSELECT \(LQP, 0x[a-z0-9]+, Parameters: \))"}));
   EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] a = 5)"}));
 }
 
@@ -178,14 +178,12 @@ TEST_F(LogicalQueryPlanTest, PrintWithSubselects) {
 //  const auto lqp_a = ProjectionNode::make(expression_vector(select(lqp_b, a, b)), mock_node_a);
 //  // clang-format on
 
-
 //  const auto copied_lqp_a = lqp_a->deep_copy();
 
 //  EXPECT_LQP_EQ(lqp_a, copied_lqp_a);
 //}
 
 }  // namespace opossum
-
 
 //#include <array>
 //#include <memory>

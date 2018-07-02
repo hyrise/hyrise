@@ -44,8 +44,8 @@ TEST_F(OperatorsUnionAllTest, UnionOfValueReferenceTables) {
   const auto a = PQPColumnExpression::from_table(*_table_wrapper_a->get_output(), "a");
   const auto b = PQPColumnExpression::from_table(*_table_wrapper_a->get_output(), "b");
 
-  auto projection = std::make_shared<Projection>(
-      _table_wrapper_a, std::vector<std::shared_ptr<AbstractExpression>>{{a, b}});
+  auto projection =
+      std::make_shared<Projection>(_table_wrapper_a, std::vector<std::shared_ptr<AbstractExpression>>{{a, b}});
   projection->execute();
 
   auto union_all = std::make_shared<UnionAll>(projection, _table_wrapper_b);

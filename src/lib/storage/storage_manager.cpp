@@ -58,8 +58,7 @@ std::vector<std::string> StorageManager::table_names() const {
   return table_names;
 }
 
-void StorageManager::add_view(const std::string& name,
-                              const std::shared_ptr<View>& view) {
+void StorageManager::add_view(const std::string& name, const std::shared_ptr<View>& view) {
   Assert(_tables.find(name) == _tables.end(),
          "Cannot add view " + name + " - a table with the same name already exists");
   Assert(_views.find(name) == _views.end(), "A view with the name " + name + " already exists");

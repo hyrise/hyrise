@@ -131,12 +131,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /**
    * @return The ColumnID of the @param expression, or std::nullopt if it can't be found
    */
-  std::optional<ColumnID> find_column_id(const AbstractExpression &expression) const;
+  std::optional<ColumnID> find_column_id(const AbstractExpression& expression) const;
 
   /**
    * @return The ColumnID of the @param expression. Assert()s that it can be found
    */
-  ColumnID get_column_id(const AbstractExpression &expression) const;
+  ColumnID get_column_id(const AbstractExpression& expression) const;
 
   // @{
   /**
@@ -153,8 +153,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   void set_statistics(const std::shared_ptr<TableStatistics>& statistics);
   const std::shared_ptr<TableStatistics> get_statistics();
   virtual std::shared_ptr<TableStatistics> derive_statistics_from(
-  const std::shared_ptr<AbstractLQPNode>& left_input,
-  const std::shared_ptr<AbstractLQPNode>& right_input = nullptr) const;
+      const std::shared_ptr<AbstractLQPNode>& left_input,
+      const std::shared_ptr<AbstractLQPNode>& right_input = nullptr) const;
   // @}
 
   /**
@@ -166,12 +166,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 
  protected:
   void _print_impl(std::ostream& out) const;
-  virtual std::shared_ptr<AbstractLQPNode> _shallow_copy_impl(LQPNodeMapping & node_mapping) const = 0;
-  virtual bool _shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const = 0;
+  virtual std::shared_ptr<AbstractLQPNode> _shallow_copy_impl(LQPNodeMapping& node_mapping) const = 0;
+  virtual bool _shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const = 0;
 
  private:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(LQPNodeMapping & node_mapping) const;
-  std::shared_ptr<AbstractLQPNode> _shallow_copy(LQPNodeMapping & node_mapping) const;
+  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(LQPNodeMapping& node_mapping) const;
+  std::shared_ptr<AbstractLQPNode> _shallow_copy(LQPNodeMapping& node_mapping) const;
 
   /**
    * @{

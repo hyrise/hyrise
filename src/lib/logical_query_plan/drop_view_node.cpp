@@ -14,18 +14,16 @@ namespace opossum {
 DropViewNode::DropViewNode(const std::string& view_name)
     : AbstractLQPNode(LQPNodeType::DropView), _view_name(view_name) {}
 
-std::string DropViewNode::description() const {
-  return "[Drop] View: '"s + _view_name + "'";
-}
+std::string DropViewNode::description() const { return "[Drop] View: '"s + _view_name + "'"; }
 
 const std::string& DropViewNode::view_name() const { return _view_name; }
 
-std::shared_ptr<AbstractLQPNode> DropViewNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {
+std::shared_ptr<AbstractLQPNode> DropViewNode::_shallow_copy_impl(LQPNodeMapping& node_mapping) const {
   return DropViewNode::make(_view_name);
 }
 
-bool DropViewNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const {
-  return static_cast<const DropViewNode&>(rhs)._view_name ==_view_name;
+bool DropViewNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+  return static_cast<const DropViewNode&>(rhs)._view_name == _view_name;
 }
 
 }  // namespace opossum

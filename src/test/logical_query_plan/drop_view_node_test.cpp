@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 
-#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/drop_view_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 
 namespace opossum {
@@ -13,9 +13,7 @@ class DropViewNodeTest : public ::testing::Test {
   std::shared_ptr<DropViewNode> _drop_view_node;
 };
 
-TEST_F(DropViewNodeTest, Description) {
-  EXPECT_EQ(_drop_view_node->description(), "[Drop] View: 'some_view'");
-}
+TEST_F(DropViewNodeTest, Description) { EXPECT_EQ(_drop_view_node->description(), "[Drop] View: 'some_view'"); }
 
 TEST_F(DropViewNodeTest, Equals) {
   EXPECT_TRUE(!lqp_find_subplan_mismatch(_drop_view_node, _drop_view_node));

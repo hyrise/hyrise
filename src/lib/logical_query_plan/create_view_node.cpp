@@ -21,15 +21,14 @@ std::string CreateViewNode::description() const {
   return "[CreateView] Name: '" + _view_name + "' (\n" + stream.str() + ")";
 }
 
-std::shared_ptr<AbstractLQPNode> CreateViewNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {
+std::shared_ptr<AbstractLQPNode> CreateViewNode::_shallow_copy_impl(LQPNodeMapping& node_mapping) const {
   return std::make_shared<CreateViewNode>(_view_name, _view->deep_copy());
 }
 
-bool CreateViewNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const {
+bool CreateViewNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto create_view_node_rhs = static_cast<const CreateViewNode&>(rhs);
 
-  return _view_name == create_view_node_rhs._view_name &&
-         _view->deep_equals(*create_view_node_rhs._view);
+  return _view_name == create_view_node_rhs._view_name && _view->deep_equals(*create_view_node_rhs._view);
 }
 
 }  // namespace opossum

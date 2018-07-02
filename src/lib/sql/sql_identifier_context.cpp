@@ -1,13 +1,14 @@
 #include "sql_identifier_context.hpp"
 
-#include "utils/assert.hpp"
 #include "sql_identifier_context_proxy.hpp"
+#include "utils/assert.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-void SQLIdentifierContext::set_column_name(const std::shared_ptr<AbstractExpression>& expression, const std::string& column_name) {
+void SQLIdentifierContext::set_column_name(const std::shared_ptr<AbstractExpression>& expression,
+                                           const std::string& column_name) {
   auto& entry = _find_or_create_expression_entry(expression);
   if (entry.identifier) {
     entry.identifier->column_name = column_name;
@@ -16,14 +17,16 @@ void SQLIdentifierContext::set_column_name(const std::shared_ptr<AbstractExpress
   }
 }
 
-void SQLIdentifierContext::set_table_name(const std::shared_ptr<AbstractExpression>& expression, const std::string& table_name) {
+void SQLIdentifierContext::set_table_name(const std::shared_ptr<AbstractExpression>& expression,
+                                          const std::string& table_name) {
   auto& entry = _find_or_create_expression_entry(expression);
   if (!entry.identifier) entry.identifier.emplace(expression->as_column_name());
 
   entry.identifier->table_name = table_name;
 }
 
-std::shared_ptr<AbstractExpression> SQLIdentifierContext::resolve_identifier_relaxed(const SQLIdentifier& identifier) const {
+std::shared_ptr<AbstractExpression> SQLIdentifierContext::resolve_identifier_relaxed(
+    const SQLIdentifier& identifier) const {
   std::vector<std::shared_ptr<AbstractExpression>> matching_expressions;
   for (const auto& entry : _entries) {
     if (!entry.identifier) continue;
@@ -40,24 +43,28 @@ std::shared_ptr<AbstractExpression> SQLIdentifierContext::resolve_identifier_rel
     }
   }
 
-  if (matching_expressions.size() != 1) return nullptr; // Identifier is ambiguous/not existing
+  if (matching_expressions.size() != 1) return nullptr;  // Identifier is ambiguous/not existing
 
   return matching_expressions[0];
 }
 
-std::shared_ptr<AbstractExpression> SQLIdentifierContext::resolve_identifier_strict(const SQLIdentifier& identifier) const {
+std::shared_ptr<AbstractExpression> SQLIdentifierContext::resolve_identifier_strict(
+    const SQLIdentifier& identifier) const {
   const auto expression = resolve_identifier_relaxed(identifier);
   Assert(expression, "Couldn't resolve identifier "s + identifier.as_string());
   return expression;
 }
 
-const std::optional<SQLIdentifier> SQLIdentifierContext::get_expression_identifier(const std::shared_ptr<AbstractExpression>& expression) const {
-  auto entry_iter = std::find_if(_entries.begin(), _entries.end(), [&](const auto& entry) { return entry.expression->deep_equals(*expression); });
+const std::optional<SQLIdentifier> SQLIdentifierContext::get_expression_identifier(
+    const std::shared_ptr<AbstractExpression>& expression) const {
+  auto entry_iter = std::find_if(_entries.begin(), _entries.end(),
+                                 [&](const auto& entry) { return entry.expression->deep_equals(*expression); });
   if (entry_iter == _entries.end()) return std::nullopt;
   return entry_iter->identifier;
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> SQLIdentifierContext::resolve_table_name(const std::string& table_name) const {
+std::vector<std::shared_ptr<AbstractExpression>> SQLIdentifierContext::resolve_table_name(
+    const std::string& table_name) const {
   std::vector<std::shared_ptr<AbstractExpression>> expressions;
   for (const auto& entry : _entries) {
     if (entry.identifier && entry.identifier->table_name == table_name) expressions.emplace_back(entry.expression);
@@ -69,8 +76,10 @@ void SQLIdentifierContext::append(SQLIdentifierContext&& rhs) {
   _entries.insert(_entries.end(), rhs._entries.begin(), rhs._entries.end());
 }
 
-SQLIdentifierContextEntry& SQLIdentifierContext::_find_or_create_expression_entry(const std::shared_ptr<AbstractExpression>& expression) {
-  auto entry_iter = std::find_if(_entries.begin(), _entries.end(), [&](const auto& entry) { return entry.expression->deep_equals(*expression); });
+SQLIdentifierContextEntry& SQLIdentifierContext::_find_or_create_expression_entry(
+    const std::shared_ptr<AbstractExpression>& expression) {
+  auto entry_iter = std::find_if(_entries.begin(), _entries.end(),
+                                 [&](const auto& entry) { return entry.expression->deep_equals(*expression); });
 
   // If there is no entry for this Expression, just add one
   if (entry_iter == _entries.end()) {

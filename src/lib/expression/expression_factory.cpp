@@ -2,7 +2,7 @@
 
 namespace opossum {
 
-namespace expression_factory  {
+namespace expression_factory {
 
 std::shared_ptr<AbstractExpression> to_expression(const std::shared_ptr<AbstractExpression>& expression) {
   return expression;
@@ -16,13 +16,9 @@ std::shared_ptr<ValueExpression> to_expression(const AllTypeVariant& value) {
   return std::make_shared<ValueExpression>(value);
 }
 
-std::shared_ptr<ValueExpression> value(const AllTypeVariant& value) {
-  return std::make_shared<ValueExpression>(value);
-}
+std::shared_ptr<ValueExpression> value(const AllTypeVariant& value) { return std::make_shared<ValueExpression>(value); }
 
-std::shared_ptr<ValueExpression> null() {
-  return std::make_shared<ValueExpression>(NullValue{});
-}
+std::shared_ptr<ValueExpression> null() { return std::make_shared<ValueExpression>(NullValue{}); }
 
 std::shared_ptr<ParameterExpression> parameter(const ParameterID parameter_id) {
   return std::make_shared<ParameterExpression>(parameter_id);

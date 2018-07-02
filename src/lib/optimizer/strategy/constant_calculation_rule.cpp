@@ -8,11 +8,10 @@
 
 #include "constant_mappings.hpp"
 #include "expression/abstract_expression.hpp"
+#include "expression/abstract_predicate_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/value_expression.hpp"
-#include "expression/abstract_predicate_expression.hpp"
-#include "expression/abstract_predicate_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -43,14 +42,14 @@ void ConstantCalculationRule::_prune_expression(std::shared_ptr<AbstractExpressi
   if (expression->arguments.empty()) return;
 
   // Only prune a whitelisted selection of ExpressionTypes, because we can't, e.g., prune List of literals.
-  if (expression->type != ExpressionType::Predicate &&
-      expression->type != ExpressionType::Arithmetic &&
+  if (expression->type != ExpressionType::Predicate && expression->type != ExpressionType::Arithmetic &&
       expression->type != ExpressionType::Logical) {
     return;
   }
 
-  const auto all_arguments_are_values = std::all_of(expression->arguments.begin(), expression->arguments.end(),
-                                                    [&](const auto& argument) { return argument->type == ExpressionType::Value; });
+  const auto all_arguments_are_values =
+      std::all_of(expression->arguments.begin(), expression->arguments.end(),
+                  [&](const auto& argument) { return argument->type == ExpressionType::Value; });
 
   if (!all_arguments_are_values) return;
 

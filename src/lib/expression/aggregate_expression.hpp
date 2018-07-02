@@ -4,9 +4,7 @@
 
 namespace opossum {
 
-enum class AggregateFunction {
-  Min, Max, Sum, Avg, Count, CountDistinct
-};
+enum class AggregateFunction { Min, Max, Sum, Avg, Count, CountDistinct };
 
 class AggregateExpression : public AbstractExpression {
  public:
@@ -26,4 +24,4 @@ class AggregateExpression : public AbstractExpression {
   size_t _on_hash() const override;
 };
 
-} // namespace opossum
+}  // namespace opossum

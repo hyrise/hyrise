@@ -13,7 +13,8 @@ namespace opossum {
 class UnionNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    _mock_node1 = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
+    _mock_node1 = MockNode::make(
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
     _mock_node2 = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "u"}, {DataType::Int, "v"}}, "t_b");
     _mock_node3 = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}}, "t_v");
 
@@ -45,12 +46,8 @@ TEST_F(UnionNodeTest, OutputColumnExpressions) {
   EXPECT_TRUE(_union_node->column_expressions().at(2)->deep_equals(*_mock_node1->column_expressions().at(2)));
 }
 
-TEST_F(UnionNodeTest, Equals) {
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_union_node, _union_node));
-}
+TEST_F(UnionNodeTest, Equals) { EXPECT_TRUE(!lqp_find_subplan_mismatch(_union_node, _union_node)); }
 
-TEST_F(UnionNodeTest, Copy) {
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_union_node->deep_copy(), _union_node));
-}
+TEST_F(UnionNodeTest, Copy) { EXPECT_TRUE(!lqp_find_subplan_mismatch(_union_node->deep_copy(), _union_node)); }
 
 }  // namespace opossum

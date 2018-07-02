@@ -9,11 +9,11 @@
 #include "sql/Expr.h"
 #include "sql/SelectStatement.h"
 
+#include "expression/abstract_expression.hpp"
+#include "expression/aggregate_expression.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
-#include "expression/abstract_expression.hpp"
-#include "expression/aggregate_expression.hpp"
 
 namespace opossum {
 
@@ -96,7 +96,6 @@ const std::unordered_map<OrderByMode, std::string> order_by_mode_to_string = {
     {OrderByMode::Descending, "Descending"},
 };
 
-
 const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mode = {
     {hsql::kOrderAsc, OrderByMode::Ascending},
     {hsql::kOrderDesc, OrderByMode::Descending},
@@ -115,9 +114,8 @@ const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mo
 //};
 
 const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
-    {JoinMode::Cross, "Cross"},     {JoinMode::Inner, "Inner"}, {JoinMode::Left, "Left"},
-    {JoinMode::Outer, "Outer"}, {JoinMode::Right, "Right"}, {JoinMode::Semi, "Semi"},
-    {JoinMode::Anti, "Anti"},
+    {JoinMode::Cross, "Cross"}, {JoinMode::Inner, "Inner"}, {JoinMode::Left, "Left"}, {JoinMode::Outer, "Outer"},
+    {JoinMode::Right, "Right"}, {JoinMode::Semi, "Semi"},   {JoinMode::Anti, "Anti"},
 };
 
 const std::unordered_map<UnionMode, std::string> union_mode_to_string = {{UnionMode::Positions, "UnionPositions"}};
@@ -133,10 +131,7 @@ const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string 
     });
 
 const boost::bimap<FunctionType, std::string> function_type_to_string =
-make_bimap<FunctionType, std::string>({
-                                       {FunctionType::Substring, "SUBSTR"},
-                                       {FunctionType::Concatenate, "CONCAT"}
-});
+    make_bimap<FunctionType, std::string>({{FunctionType::Substring, "SUBSTR"}, {FunctionType::Concatenate, "CONCAT"}});
 
 const boost::bimap<DataType, std::string> data_type_to_string =
     hana::fold(data_type_enum_string_pairs, boost::bimap<DataType, std::string>{}, [](auto map, auto pair) {

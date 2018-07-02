@@ -6,8 +6,8 @@
 #include "base_test.hpp"
 
 #include "expression/expression_factory.hpp"
-#include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 
 using namespace opossum::expression_factory;  // NOLINT
@@ -41,8 +41,6 @@ TEST_F(UpdateNodeTest, Equals) {
   EXPECT_TRUE(lqp_find_subplan_mismatch(_update_node, other_update_node_c).has_value());
 }
 
-TEST_F(UpdateNodeTest, Copy) {
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_update_node->deep_copy(), _update_node));
-}
+TEST_F(UpdateNodeTest, Copy) { EXPECT_TRUE(!lqp_find_subplan_mismatch(_update_node->deep_copy(), _update_node)); }
 
 }  // namespace opossum

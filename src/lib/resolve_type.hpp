@@ -195,7 +195,7 @@ using ConstOutIfConstIn = std::conditional_t<std::is_const<In>::value, const Out
 template <typename ColumnDataType, typename BaseColumnType, typename Functor>
 // BaseColumnType allows column to be const and non-const
 std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnType>>::value>
-    /*void*/ resolve_column_type(BaseColumnType& column, const Functor& func) {
+/*void*/ resolve_column_type(BaseColumnType& column, const Functor& func) {
   using ValueColumnPtr = ConstOutIfConstIn<BaseColumnType, ValueColumn<ColumnDataType>>*;
   using ReferenceColumnPtr = ConstOutIfConstIn<BaseColumnType, ReferenceColumn>*;
   using EncodedColumnPtr = ConstOutIfConstIn<BaseColumnType, BaseEncodedColumn>*;
@@ -236,7 +236,7 @@ std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnType>>::
  */
 template <typename Functor, typename BaseColumnType>  // BaseColumnType allows column to be const and non-const
 std::enable_if_t<std::is_same<BaseColumn, std::remove_const_t<BaseColumnType>>::value>
-    /*void*/ resolve_data_and_column_type(BaseColumnType& column, const Functor& func) {
+/*void*/ resolve_data_and_column_type(BaseColumnType& column, const Functor& func) {
   resolve_data_type(column.data_type(), [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
 
@@ -251,15 +251,14 @@ template <typename T>
 constexpr DataType data_type_from_type() {
   static_assert(hana::contains(data_types, hana::type_c<T>), "Type not a valid column type.");
 
-  return hana::fold_left(data_type_pairs, DataType{},
-                         [](auto data_type, auto type_tuple) {
-                           // check whether T is one of the column types
-                           if (hana::type_c<T> == hana::second(type_tuple)) {
-                             return hana::first(type_tuple);
-                           }
+  return hana::fold_left(data_type_pairs, DataType{}, [](auto data_type, auto type_tuple) {
+    // check whether T is one of the column types
+    if (hana::type_c<T> == hana::second(type_tuple)) {
+      return hana::first(type_tuple);
+    }
 
-                           return data_type;
-                         });
+    return data_type;
+  });
 }
 
 /**
@@ -268,8 +267,7 @@ constexpr DataType data_type_from_type() {
  * Note: DataType and AllTypeVariant are defined in a way such that
  *       the indices in DataType and AllTypeVariant match.
  */
-inline DataType
-data_type_from_all_type_variant(const AllTypeVariant& all_type_variant) {
+inline DataType data_type_from_all_type_variant(const AllTypeVariant& all_type_variant) {
   return static_cast<DataType>(all_type_variant.which());
 }
 

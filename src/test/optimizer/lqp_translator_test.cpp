@@ -8,8 +8,8 @@
 
 #include "expression/aggregate_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
-#include "expression/expression_utils.hpp"
 #include "expression/expression_factory.hpp"
+#include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_select_expression.hpp"
@@ -32,9 +32,9 @@
 #include "operators/limit.hpp"
 //#include "operators/maintenance/show_columns.hpp"
 //#include "operators/maintenance/show_tables.hpp"
+#include "operators/product.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
-#include "operators/product.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/union_positions.hpp"
 #include "storage/chunk_encoder.hpp"
@@ -82,9 +82,7 @@ class LQPTranslatorTest : public ::testing::Test {
     int_float5_d = int_float5_node->get_column("d");
   }
 
-  void TearDown() override {
-    StorageManager::reset();
-  }
+  void TearDown() override { StorageManager::reset(); }
 
   const std::vector<ChunkID> get_included_chunk_ids(const std::shared_ptr<const IndexScan>& index_scan) {
     return index_scan->_included_chunk_ids;
@@ -96,7 +94,8 @@ class LQPTranslatorTest : public ::testing::Test {
 
   std::shared_ptr<Table> table_int_float, table_int_float2, table_int_float5, table_alias_name, table_int_string;
   std::shared_ptr<StoredTableNode> int_float_node, int_string_node, int_float2_node, int_float5_node;
-  LQPColumnReference int_float_a, int_float_b, int_string_a, int_string_b, int_float2_a, int_float2_b, int_float5_a, int_float5_d;
+  LQPColumnReference int_float_a, int_float_b, int_string_a, int_string_b, int_float2_a, int_float2_b, int_float5_a,
+      int_float5_d;
   std::shared_ptr<AbstractExpression> int_float_a_expression, int_float_b_expression;
 };
 
@@ -124,7 +123,8 @@ TEST_F(LQPTranslatorTest, ArithmeticExpression) {
    * LQP resembles:
    *   SELECT a + b FROM table_int_float;
    */
-  const auto a_plus_b_lqp = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, int_float_a_expression, int_float_b_expression);
+  const auto a_plus_b_lqp = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, int_float_a_expression,
+                                                                   int_float_b_expression);
   const auto projection_expressions = std::vector<std::shared_ptr<AbstractExpression>>({a_plus_b_lqp});
   const auto projection_node = ProjectionNode::make(projection_expressions, int_float_node);
   const auto pqp = LQPTranslator{}.translate_node(projection_node);
@@ -309,7 +309,8 @@ TEST_F(LQPTranslatorTest, Sort) {
    *   SELECT a, b FROM int_float ORDER BY a, a + b DESC, b ASC
    */
 
-  const auto order_by_modes = std::vector<OrderByMode>({OrderByMode::Ascending, OrderByMode::Descending, OrderByMode::AscendingNullsLast});
+  const auto order_by_modes =
+      std::vector<OrderByMode>({OrderByMode::Ascending, OrderByMode::Descending, OrderByMode::AscendingNullsLast});
 
   // clang-format off
   const auto lqp =

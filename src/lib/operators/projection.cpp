@@ -8,15 +8,16 @@
 #include <utility>
 #include <vector>
 
+#include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_column_expression.hpp"
-#include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/value_expression.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-Projection::Projection(const std::shared_ptr<const AbstractOperator>& in, const std::vector<std::shared_ptr<AbstractExpression>>& expressions)
+Projection::Projection(const std::shared_ptr<const AbstractOperator>& in,
+                       const std::vector<std::shared_ptr<AbstractExpression>>& expressions)
     : AbstractReadOnlyOperator(OperatorType::Projection, in), expressions(expressions) {}
 
 const std::string Projection::name() const { return "Projection"; }
@@ -52,7 +53,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   });
 
   const auto output_table_type = forward_columns ? input_table_left()->type() : TableType::Data;
-  const auto output_table = std::make_shared<Table>(column_definitions, output_table_type, input_table_left()->max_chunk_size());
+  const auto output_table =
+      std::make_shared<Table>(column_definitions, output_table_type, input_table_left()->max_chunk_size());
 
   /**
    * Perform the projection
@@ -62,11 +64,12 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     output_columns.reserve(expressions.size());
 
     ExpressionEvaluator evaluator(input_table_left(), chunk_id);
-    for (const auto &expression : expressions) {
+    for (const auto& expression : expressions) {
       if (forward_columns) {
         const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression);
         Assert(pqp_column_expression, "Expected PQPColumnExpression");
-        output_columns.emplace_back(input_table_left()->get_chunk(chunk_id)->get_mutable_column(pqp_column_expression->column_id));
+        output_columns.emplace_back(
+            input_table_left()->get_chunk(chunk_id)->get_mutable_column(pqp_column_expression->column_id));
       } else {
         output_columns.emplace_back(evaluator.evaluate_expression_to_column(*expression));
       }

@@ -6,8 +6,8 @@
 #include <vector>
 
 #include "all_parameter_variant.hpp"
-#include "expression/parameter_expression.hpp"
 #include "base_operator_performance_data.hpp"
+#include "expression/parameter_expression.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -145,7 +145,8 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::shared_ptr<AbstractOperator> _recreate_impl(
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& recreated_ops) const;
 
-  virtual std::shared_ptr<AbstractOperator> _on_recreate(const std::shared_ptr<AbstractOperator>& recreated_input_left,
+  virtual std::shared_ptr<AbstractOperator> _on_recreate(
+      const std::shared_ptr<AbstractOperator>& recreated_input_left,
       const std::shared_ptr<AbstractOperator>& recreated_input_right) const = 0;
 
   const OperatorType _type;

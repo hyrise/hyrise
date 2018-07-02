@@ -6,18 +6,18 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_select_expression.hpp"
-#include "utils/assert.hpp"
-#include "utils/print_directed_acyclic_graph.hpp"
+#include "join_node.hpp"
 #include "lqp_utils.hpp"
 #include "predicate_node.hpp"
-#include "join_node.hpp"
 #include "update_node.hpp"
+#include "utils/assert.hpp"
+#include "utils/print_directed_acyclic_graph.hpp"
 
 using namespace std::string_literals;
 
 namespace {
 
-using namespace opossum; // NOLINT
+using namespace opossum;  // NOLINT
 
 void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& lqps);
 
@@ -25,7 +25,8 @@ void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::sh
  * Utility for AbstractLQPNode::print()
  * Put all LQPs found in an @param expression into @param lqps
  */
-void collect_lqps_from_expression(const std::shared_ptr<AbstractExpression>& expression, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& lqps) {
+void collect_lqps_from_expression(const std::shared_ptr<AbstractExpression>& expression,
+                                  std::unordered_set<std::shared_ptr<AbstractLQPNode>>& lqps) {
   visit_expression(expression, [&](const auto& sub_expression) {
     const auto lqp_select_expression = std::dynamic_pointer_cast<const LQPSelectExpression>(sub_expression);
     if (!lqp_select_expression) return true;
@@ -179,19 +180,17 @@ const std::vector<std::shared_ptr<AbstractExpression>>& AbstractLQPNode::column_
   return left_input()->column_expressions();
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> AbstractLQPNode::node_expressions() const {
-  return {};
-}
+std::vector<std::shared_ptr<AbstractExpression>> AbstractLQPNode::node_expressions() const { return {}; }
 
-std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression &expression) const {
-  const auto& column_expressions = this->column_expressions(); // Avoid redundant retrieval in loop below
+std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression& expression) const {
+  const auto& column_expressions = this->column_expressions();  // Avoid redundant retrieval in loop below
   for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
     if (column_expressions[column_id]->deep_equals(expression)) return column_id;
   }
   return std::nullopt;
 }
 
-ColumnID AbstractLQPNode::get_column_id(const AbstractExpression &expression) const {
+ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) const {
   const auto column_id = find_column_id(expression);
   Assert(column_id, "This node has no column '"s + expression.as_column_name() + "'");
   return *column_id;
@@ -208,7 +207,7 @@ const std::shared_ptr<TableStatistics> AbstractLQPNode::get_statistics() {
 }
 
 std::shared_ptr<TableStatistics> AbstractLQPNode::derive_statistics_from(
-const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
+    const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
   DebugAssert(left_input,
               "Default implementation of derive_statistics_from() requires a left input, override in concrete node "
               "implementation for different behavior");
@@ -243,13 +242,11 @@ void AbstractLQPNode::_print_impl(std::ostream& out) const {
     if (node->right_input()) inputs.emplace_back(node->right_input());
     return inputs;
   };
-  const auto node_print_fn = [](const auto& node, auto& stream) {
-    stream << node->description();
-  };
+  const auto node_print_fn = [](const auto& node, auto& stream) { stream << node->description(); };
   print_directed_acyclic_graph<const AbstractLQPNode>(shared_from_this(), get_inputs_fn, node_print_fn, out);
 }
 
-std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy_impl(LQPNodeMapping & node_mapping) const {
+std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy_impl(LQPNodeMapping& node_mapping) const {
   std::shared_ptr<AbstractLQPNode> copied_left_input, copied_right_input;
 
   if (left_input()) copied_left_input = left_input()->_deep_copy_impl(node_mapping);
@@ -262,7 +259,7 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy_impl(LQPNodeMapping
   return copy;
 }
 
-std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_shallow_copy(LQPNodeMapping & node_mapping) const {
+std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_shallow_copy(LQPNodeMapping& node_mapping) const {
   const auto node_mapping_iter = node_mapping.find(shared_from_this());
 
   // Handle diamond shapes in the LQP; don't copy nodes twice

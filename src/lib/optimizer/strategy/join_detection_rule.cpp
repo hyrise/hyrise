@@ -9,8 +9,8 @@
 
 #include "expression/binary_predicate_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "types.hpp"
@@ -73,8 +73,7 @@ std::shared_ptr<PredicateNode> JoinDetectionRule::_find_predicate_for_cross_join
      *
      * Detecting Join Conditions across other node types may be possible by applying 'Predicate Pushdown' first.
      */
-    if (node->type != LQPNodeType::Join &&
-        node->type != LQPNodeType::Predicate &&
+    if (node->type != LQPNodeType::Join && node->type != LQPNodeType::Predicate &&
         node->type != LQPNodeType::Projection) {
       return nullptr;
     }

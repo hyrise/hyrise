@@ -8,9 +8,9 @@
 #include <utility>
 #include <vector>
 
+#include "aggregate/aggregate_traits.hpp"
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
-#include "aggregate/aggregate_traits.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"

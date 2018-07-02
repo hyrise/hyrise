@@ -34,7 +34,7 @@ std::ostream& operator<<(std::ostream& os, const LQPColumnReference& column_refe
 
 namespace std {
 
-template<>
+template <>
 struct hash<opossum::LQPColumnReference> {
   size_t operator()(const opossum::LQPColumnReference& column_reference) const;
 };

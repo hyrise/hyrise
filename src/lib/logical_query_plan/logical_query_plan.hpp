@@ -12,7 +12,8 @@ namespace opossum {
  */
 class LogicalQueryPlan {
  public:
-  LogicalQueryPlan(const std::shared_ptr<AbstractLQPNode>& root_node, const std::unordered_map<ValuePlaceholderID, ParameterID>& value_placeholders);
+  LogicalQueryPlan(const std::shared_ptr<AbstractLQPNode>& root_node,
+                   const std::unordered_map<ValuePlaceholderID, ParameterID>& value_placeholders);
 
   std::shared_ptr<AbstractLQPNode> root_node;
   std::unordered_map<ValuePlaceholderID, ParameterID> value_placeholders;

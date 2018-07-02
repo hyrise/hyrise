@@ -6,10 +6,10 @@
 #include <string>
 
 #include "constant_mappings.hpp"
-#include "expression/expression_utils.hpp"
 #include "expression/between_expression.hpp"
-#include "expression/lqp_column_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
+#include "expression/expression_utils.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "expression/parameter_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "operators/operator_predicate.hpp"
@@ -19,7 +19,8 @@
 
 namespace opossum {
 
-PredicateNode::PredicateNode(const std::shared_ptr<AbstractExpression>& predicate): AbstractLQPNode(LQPNodeType::Predicate), predicate(predicate) {}
+PredicateNode::PredicateNode(const std::shared_ptr<AbstractExpression>& predicate)
+    : AbstractLQPNode(LQPNodeType::Predicate), predicate(predicate) {}
 
 std::string PredicateNode::description() const {
   std::stringstream stream;
@@ -27,12 +28,10 @@ std::string PredicateNode::description() const {
   return stream.str();
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> PredicateNode::node_expressions() const {
-  return {predicate};
-}
+std::vector<std::shared_ptr<AbstractExpression>> PredicateNode::node_expressions() const { return {predicate}; }
 
 std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
-const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
+    const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
   DebugAssert(left_input && !right_input, "PredicateNode need left_input and no right_input");
 
   /**
@@ -70,7 +69,8 @@ const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<Abstra
     value = value_value_expression->value;
   } else if (value_column_expression) {
     value = value_column_expression->column_reference;
-  } else if (value_parameter_expression && value_parameter_expression->parameter_expression_type == ParameterExpressionType::ValuePlaceholder) {
+  } else if (value_parameter_expression &&
+             value_parameter_expression->parameter_expression_type == ParameterExpressionType::ValuePlaceholder) {
     value = value_parameter_expression->parameter_id;
   } else {
     return left_input->get_statistics();
@@ -87,16 +87,17 @@ const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<Abstra
   }
 
   return std::make_shared<TableStatistics>(left_input->get_statistics()->estimate_predicate(
-  column_id, predicate_expression->predicate_condition, value, value2));
+      column_id, predicate_expression->predicate_condition, value, value2));
 }
 
-std::shared_ptr<AbstractLQPNode> PredicateNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {
+std::shared_ptr<AbstractLQPNode> PredicateNode::_shallow_copy_impl(LQPNodeMapping& node_mapping) const {
   return std::make_shared<PredicateNode>(expression_copy_and_adapt_to_different_lqp(*predicate, node_mapping));
 }
 
-bool PredicateNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const {
+bool PredicateNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& predicate_node = static_cast<const PredicateNode&>(rhs);
-  const auto equal = expression_equal_to_expression_in_different_lqp(*predicate, *predicate_node.predicate, node_mapping);
+  const auto equal =
+      expression_equal_to_expression_in_different_lqp(*predicate, *predicate_node.predicate, node_mapping);
 
   return equal;
 }

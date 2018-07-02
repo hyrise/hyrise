@@ -92,7 +92,8 @@ TEST_F(PredicatePushdownRuleTest, SimpleBothSideJoinPushdownTest) {
 }
 
 TEST_F(PredicatePushdownRuleTest, SimpleSortPushdownTest) {
-  auto sort_node = std::make_shared<SortNode>(expression_vector(_a_a), std::vector<OrderByMode >{OrderByMode::Ascending});
+  auto sort_node =
+      std::make_shared<SortNode>(expression_vector(_a_a), std::vector<OrderByMode>{OrderByMode::Ascending});
   sort_node->set_left_input(_table_a);
 
   auto predicate_node = std::make_shared<PredicateNode>(greater_than(_a_a, _a_b));
@@ -106,10 +107,8 @@ TEST_F(PredicatePushdownRuleTest, SimpleSortPushdownTest) {
 }
 
 TEST_F(PredicatePushdownRuleTest, ComplexBlockingPredicatesPushdownTest) {
-  auto join_node_ab =
-      std::make_shared<JoinNode>(JoinMode::Inner, equals(_a_a, _b_a));
-  auto join_node_bc =
-      std::make_shared<JoinNode>(JoinMode::Inner, equals(_b_a, _c_a));
+  auto join_node_ab = std::make_shared<JoinNode>(JoinMode::Inner, equals(_a_a, _b_a));
+  auto join_node_bc = std::make_shared<JoinNode>(JoinMode::Inner, equals(_b_a, _c_a));
 
   join_node_bc->set_left_input(_table_b);
   join_node_bc->set_right_input(_table_c);

@@ -5,9 +5,9 @@
 #include "boost/variant.hpp"
 #include "boost/variant/apply_visitor.hpp"
 
+#include "null_value.hpp"
 #include "storage/column_iterables/column_iterator_values.hpp"
 #include "storage/create_iterable_from_column.hpp"
-#include "null_value.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -15,13 +15,13 @@ namespace opossum {
 /**
  * View that looks at an ExpressionResult knowing that is a series and may contains nulls
  */
-template<typename T>
+template <typename T>
 class ExpressionResultNullableSeries {
  public:
   using Type = T;
 
-  ExpressionResultNullableSeries(const std::vector<T>& values, const std::vector<bool>& nulls):
-  _values(values), _nulls(nulls) {}
+  ExpressionResultNullableSeries(const std::vector<T>& values, const std::vector<bool>& nulls)
+      : _values(values), _nulls(nulls) {}
 
   bool is_series() const { return true; }
   bool is_literal() const { return false; }
@@ -48,13 +48,12 @@ class ExpressionResultNullableSeries {
  * View that looks at an ExpressionResult knowing that is a series, but may not return nulls, so null() always returns
  * false
  */
-template<typename T>
+template <typename T>
 class ExpressionResultNonNullSeries {
  public:
   using Type = T;
 
-  explicit ExpressionResultNonNullSeries(const std::vector<T>& values):
-    _values(values){}
+  explicit ExpressionResultNonNullSeries(const std::vector<T>& values) : _values(values) {}
 
   bool is_series() const { return true; }
   bool is_literal() const { return false; }
@@ -67,7 +66,7 @@ class ExpressionResultNonNullSeries {
     return _values[idx];
   }
 
-  bool null(const size_t idx) const { return false;  }
+  bool null(const size_t idx) const { return false; }
 
  private:
   const std::vector<T>& _values;
@@ -77,13 +76,12 @@ class ExpressionResultNonNullSeries {
  * View that looks at an ExpressionResult knowing that is a literal, so always returns the first element in value() and
  * null(), no matter which index is requested
  */
-template<typename T>
+template <typename T>
 class ExpressionResultLiteral {
  public:
   using Type = T;
 
-  ExpressionResultLiteral(const T& value, const bool null):
-  _value(value), _null(null) {}
+  ExpressionResultLiteral(const T& value, const bool null) : _value(value), _null(null) {}
 
   bool is_series() const { return false; }
   bool is_literal() const { return true; }
@@ -104,7 +102,7 @@ class BaseExpressionResult {
   virtual ~BaseExpressionResult() = default;
 };
 
-template<typename T>
+template <typename T>
 class ExpressionResult : public BaseExpressionResult {
  public:
   using Type = T;
@@ -116,9 +114,8 @@ class ExpressionResult : public BaseExpressionResult {
 
   ExpressionResult() = default;
 
-  ExpressionResult(std::vector<T> values, std::vector<bool> nulls = {false}):
-    values(std::move(values)), nulls(std::move(nulls)) {
-  }
+  ExpressionResult(std::vector<T> values, std::vector<bool> nulls = {false})
+      : values(std::move(values)), nulls(std::move(nulls)) {}
 
   bool is_nullable_series() const { return size() != 1; }
   bool is_literal() const { return size() == 1; }
@@ -138,7 +135,7 @@ class ExpressionResult : public BaseExpressionResult {
    * Resolve ExpressionResult<T> to ExpressionResultNullableSeries<T>, ExpressionResultNonNullSeries<T> or
    * ExpressionResultLiteral<T>
    */
-  template<typename Functor>
+  template <typename Functor>
   void as_view(const Functor& fn) const {
     if (size() == 1 || (nulls.size() == 1 && nulls.front())) {
       fn(ExpressionResultLiteral(values.front(), nulls.front()));
@@ -154,6 +151,5 @@ class ExpressionResult : public BaseExpressionResult {
   std::vector<T> values;
   std::vector<bool> nulls;
 };
-
 
 }  // namespace opossum

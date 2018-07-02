@@ -44,7 +44,6 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
 
   using BaseSingleColumnTableScanImpl::handle_column;
 
-
  private:
   /**
    * Scan the iterable (using the optional mapped_chunk_offsets) with _pattern_variant and fill the matches_out with
@@ -65,6 +64,5 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
   // For NOT LIKE support
   const bool _invert_results;
 };
-
 
 }  // namespace opossum

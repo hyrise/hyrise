@@ -1,15 +1,14 @@
 #include "lqp_utils.hpp"
 
-#include "utils/assert.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "utils/assert.hpp"
 
 namespace {
 
 using namespace opossum;  // NOLINT
 
-void lqp_create_node_mapping_impl(LQPNodeMapping & mapping,
-const std::shared_ptr<AbstractLQPNode>& lhs, const std::shared_ptr<AbstractLQPNode>& rhs
-) {
+void lqp_create_node_mapping_impl(LQPNodeMapping& mapping, const std::shared_ptr<AbstractLQPNode>& lhs,
+                                  const std::shared_ptr<AbstractLQPNode>& rhs) {
   if (!lhs && !rhs) return;
 
   Assert(lhs && rhs, "LQPs aren't equally structured, can't create mapping");
@@ -25,8 +24,8 @@ const std::shared_ptr<AbstractLQPNode>& lhs, const std::shared_ptr<AbstractLQPNo
   lqp_create_node_mapping_impl(mapping, lhs->right_input(), rhs->right_input());
 }
 
-std::optional<LQPMismatch>
-lqp_find_structure_mismatch(const std::shared_ptr<const AbstractLQPNode>& lhs, const std::shared_ptr<const AbstractLQPNode>& rhs) {
+std::optional<LQPMismatch> lqp_find_structure_mismatch(const std::shared_ptr<const AbstractLQPNode>& lhs,
+                                                       const std::shared_ptr<const AbstractLQPNode>& rhs) {
   if (!lhs && !rhs) return std::nullopt;
   if (!(lhs && rhs) || lhs->type != rhs->type) return LQPMismatch(lhs, rhs);
 
@@ -36,8 +35,9 @@ lqp_find_structure_mismatch(const std::shared_ptr<const AbstractLQPNode>& lhs, c
   return lqp_find_structure_mismatch(lhs->right_input(), rhs->right_input());
 }
 
-std::optional<LQPMismatch>
-lqp_find_subplan_mismatch_impl(const LQPNodeMapping& node_mapping, const std::shared_ptr<const AbstractLQPNode>& lhs, const std::shared_ptr<const AbstractLQPNode>& rhs) {
+std::optional<LQPMismatch> lqp_find_subplan_mismatch_impl(const LQPNodeMapping& node_mapping,
+                                                          const std::shared_ptr<const AbstractLQPNode>& lhs,
+                                                          const std::shared_ptr<const AbstractLQPNode>& rhs) {
   if (!lhs && !rhs) return std::nullopt;
   if (!lhs->shallow_equals(*rhs, node_mapping)) return LQPMismatch(lhs, rhs);
 
@@ -51,16 +51,15 @@ lqp_find_subplan_mismatch_impl(const LQPNodeMapping& node_mapping, const std::sh
 
 namespace opossum {
 
-LQPNodeMapping lqp_create_node_mapping(
-const std::shared_ptr<AbstractLQPNode>& lhs, const std::shared_ptr<AbstractLQPNode>& rhs
-) {
+LQPNodeMapping lqp_create_node_mapping(const std::shared_ptr<AbstractLQPNode>& lhs,
+                                       const std::shared_ptr<AbstractLQPNode>& rhs) {
   LQPNodeMapping mapping;
   lqp_create_node_mapping_impl(mapping, lhs, rhs);
   return mapping;
 }
 
-std::optional<LQPMismatch>
-lqp_find_subplan_mismatch(const std::shared_ptr<AbstractLQPNode>& lhs, const std::shared_ptr<AbstractLQPNode>& rhs) {
+std::optional<LQPMismatch> lqp_find_subplan_mismatch(const std::shared_ptr<AbstractLQPNode>& lhs,
+                                                     const std::shared_ptr<AbstractLQPNode>& rhs) {
   // Check for type/structural mismatched
   auto mismatch = lqp_find_structure_mismatch(lhs, rhs);
   if (mismatch) return mismatch;

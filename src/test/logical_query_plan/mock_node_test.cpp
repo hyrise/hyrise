@@ -22,7 +22,8 @@ class MockNodeTest : public ::testing::Test {
     _statistics = std::make_shared<TableStatistics>(generate_table_statistics(*table));
 
     _mock_node_a = MockNode::make(_statistics);
-    _mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "mock_name");
+    _mock_node_b =
+        MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "mock_name");
   }
 
   std::shared_ptr<MockNode> _mock_node_a;
@@ -54,13 +55,12 @@ TEST_F(MockNodeTest, Equals) {
   EXPECT_ANY_THROW(lqp_find_subplan_mismatch(_mock_node_a, other_mock_node_a));
 
   //
-  const auto same_mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "mock_name");
+  const auto same_mock_node_b =
+      MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "mock_name");
   EXPECT_TRUE(!lqp_find_subplan_mismatch(_mock_node_b, _mock_node_b));
   EXPECT_TRUE(!lqp_find_subplan_mismatch(_mock_node_b, same_mock_node_b));
 }
 
-TEST_F(MockNodeTest, Copy) {
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_mock_node_b, _mock_node_b->deep_copy()));
-}
+TEST_F(MockNodeTest, Copy) { EXPECT_TRUE(!lqp_find_subplan_mismatch(_mock_node_b, _mock_node_b->deep_copy())); }
 
 }  // namespace opossum

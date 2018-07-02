@@ -9,8 +9,9 @@ using namespace std::string_literals;
 
 namespace opossum {
 
-AliasOperator::AliasOperator(const std::shared_ptr<const AbstractOperator>& input, const std::vector<ColumnID>& column_ids, const std::vector<std::string>& aliases):
-  AbstractReadOnlyOperator(OperatorType::Alias, input, nullptr), _column_ids(column_ids), _aliases(aliases) {
+AliasOperator::AliasOperator(const std::shared_ptr<const AbstractOperator>& input,
+                             const std::vector<ColumnID>& column_ids, const std::vector<std::string>& aliases)
+    : AbstractReadOnlyOperator(OperatorType::Alias, input, nullptr), _column_ids(column_ids), _aliases(aliases) {
   Assert(_column_ids.size() == _aliases.size(), "Expected as many aliases as columns");
 }
 
@@ -25,8 +26,8 @@ const std::string AliasOperator::description(DescriptionMode description_mode) c
 }
 
 std::shared_ptr<AbstractOperator> AliasOperator::_on_recreate(
-const std::shared_ptr<AbstractOperator>& recreated_input_left,
-const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+    const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
   return std::make_shared<AliasOperator>(recreated_input_left, _column_ids, _aliases);
 }
 
@@ -40,13 +41,16 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
   for (auto column_id = ColumnID{0}; column_id < input_table_left()->column_count(); ++column_id) {
     const auto& input_column_definition = input_table_left()->column_definitions()[column_id];
 
-    output_column_definitions.emplace_back(_aliases[column_id], input_column_definition.data_type, input_column_definition.nullable);
+    output_column_definitions.emplace_back(_aliases[column_id], input_column_definition.data_type,
+                                           input_column_definition.nullable);
   }
 
   /**
    * Generate the output table, forwarding columns from the input chunks and ordering them according to _column_ids
    */
-  const auto output_table = std::make_shared<Table>(output_column_definitions, input_table_left()->type(), input_table_left()->max_chunk_size(), input_table_left()->has_mvcc());
+  const auto output_table =
+      std::make_shared<Table>(output_column_definitions, input_table_left()->type(),
+                              input_table_left()->max_chunk_size(), input_table_left()->has_mvcc());
 
   for (auto chunk_id = ChunkID{0}; chunk_id < input_table_left()->chunk_count(); ++chunk_id) {
     const auto input_chunk = input_table_left()->get_chunk(chunk_id);

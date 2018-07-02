@@ -13,8 +13,7 @@ using namespace std::string_literals;
 namespace opossum {
 
 MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& name)
-    : AbstractLQPNode(LQPNodeType::Mock), _name(name), _constructor_arguments(column_definitions) {
-}
+    : AbstractLQPNode(LQPNodeType::Mock), _name(name), _constructor_arguments(column_definitions) {}
 
 MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics)
     : AbstractLQPNode(LQPNodeType::Mock), _constructor_arguments(statistics) {
@@ -61,11 +60,9 @@ const std::vector<std::shared_ptr<AbstractExpression>>& MockNode::column_express
   return *_column_expressions;
 }
 
-std::string MockNode::description() const {
-  return "[MockNode '"s + _name.value_or("Unnamed") + "']";
-}
+std::string MockNode::description() const { return "[MockNode '"s + _name.value_or("Unnamed") + "']"; }
 
-std::shared_ptr<AbstractLQPNode> MockNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {
+std::shared_ptr<AbstractLQPNode> MockNode::_shallow_copy_impl(LQPNodeMapping& node_mapping) const {
   if (_constructor_arguments.type() == typeid(std::shared_ptr<TableStatistics>)) {
     return MockNode::make(boost::get<std::shared_ptr<TableStatistics>>(_constructor_arguments));
   } else {
@@ -73,13 +70,14 @@ std::shared_ptr<AbstractLQPNode> MockNode::_shallow_copy_impl(LQPNodeMapping & n
   }
 }
 
-bool  MockNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const {
+bool MockNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& mock_node = static_cast<const MockNode&>(rhs);
 
   if (_constructor_arguments.which() != mock_node._constructor_arguments.which()) return false;
 
   if (_constructor_arguments.type() == typeid(ColumnDefinitions)) {
-    return boost::get<ColumnDefinitions>(_constructor_arguments) == boost::get<ColumnDefinitions>(mock_node._constructor_arguments);
+    return boost::get<ColumnDefinitions>(_constructor_arguments) ==
+           boost::get<ColumnDefinitions>(mock_node._constructor_arguments);
   } else {
     Fail("Comparison of statistics not implemented, because this is painful");
   }

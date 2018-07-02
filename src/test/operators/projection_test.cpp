@@ -60,32 +60,38 @@ TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTable) {
   const auto projection = std::make_shared<opossum::Projection>(table_wrapper_a, expression_vector(a_b, a_a));
   projection->execute();
 
-  EXPECT_EQ(table_wrapper_a->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{1}), projection->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{0}));
-  EXPECT_EQ(table_wrapper_a->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{0}), projection->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{1}));
+  EXPECT_EQ(table_wrapper_a->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{1}),
+            projection->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{0}));
+  EXPECT_EQ(table_wrapper_a->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{0}),
+            projection->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{1}));
 }
 
 TEST_F(OperatorsProjectionTest, ForwardsIfPossibleReferenceTable) {
   // See ForwardsIfPossibleDataTable
 
-  const auto table_scan = std::make_shared<TableScan>(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
+  const auto table_scan =
+      std::make_shared<TableScan>(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
   table_scan->execute();
   const auto projection = std::make_shared<opossum::Projection>(table_scan, expression_vector(a_b, a_a));
   projection->execute();
 
-  EXPECT_EQ(table_scan->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{1}), projection->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{0}));
-  EXPECT_EQ(table_scan->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{0}), projection->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{1}));
+  EXPECT_EQ(table_scan->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{1}),
+            projection->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{0}));
+  EXPECT_EQ(table_scan->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{0}),
+            projection->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{1}));
 }
 
 TEST_F(OperatorsProjectionTest, SetParameters) {
-  const auto table_scan_a = std::make_shared<TableScan>(table_wrapper_b, ColumnID{1}, PredicateCondition::GreaterThan, ParameterID{5});
+  const auto table_scan_a =
+      std::make_shared<TableScan>(table_wrapper_b, ColumnID{1}, PredicateCondition::GreaterThan, ParameterID{5});
   const auto projection_a = std::make_shared<Projection>(table_scan_a, expression_vector(b_a));
-  const auto select_expression = std::make_shared<PQPSelectExpression>(table_scan_a, DataType::Int, false, PQPSelectExpression::Parameters{});
-  const auto projection_b = std::make_shared<Projection>(table_wrapper_a, expression_vector(parameter(ParameterID{2}), select_expression));
+  const auto select_expression =
+      std::make_shared<PQPSelectExpression>(table_scan_a, DataType::Int, false, PQPSelectExpression::Parameters{});
+  const auto projection_b =
+      std::make_shared<Projection>(table_wrapper_a, expression_vector(parameter(ParameterID{2}), select_expression));
 
-  const auto parameters = std::unordered_map<ParameterID, AllTypeVariant>{
-    {ParameterID{5}, AllTypeVariant{12}},
-    {ParameterID{2}, AllTypeVariant{13}}
-  };
+  const auto parameters = std::unordered_map<ParameterID, AllTypeVariant>{{ParameterID{5}, AllTypeVariant{12}},
+                                                                          {ParameterID{2}, AllTypeVariant{13}}};
   projection_b->set_parameters(parameters);
 
   EXPECT_EQ(table_scan_a->right_parameter(), AllParameterVariant{12});

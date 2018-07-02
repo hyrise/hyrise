@@ -17,8 +17,8 @@
 #include "sql/sqlite_testrunner/sqlite_wrapper.hpp"
 #include "storage/storage_manager.hpp"
 
-#include "tpch/tpch_queries.hpp"
 #include "tpch/tpch_db_generator.hpp"
+#include "tpch/tpch_queries.hpp"
 
 namespace opossum {
 

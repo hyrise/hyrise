@@ -1,12 +1,12 @@
 #pragma once
 
 #include <memory>
-#include <unordered_map>
 #include <optional>
+#include <unordered_map>
 #include <vector>
 
-#include "sql_identifier.hpp"
 #include "expression/abstract_expression.hpp"
+#include "sql_identifier.hpp"
 
 namespace opossum {
 
@@ -30,7 +30,8 @@ class SQLIdentifierContext final {
 
   std::shared_ptr<AbstractExpression> resolve_identifier_relaxed(const SQLIdentifier& identifier) const;
   std::shared_ptr<AbstractExpression> resolve_identifier_strict(const SQLIdentifier& identifier) const;
-  const std::optional<SQLIdentifier> get_expression_identifier(const std::shared_ptr<AbstractExpression>& expression) const;
+  const std::optional<SQLIdentifier> get_expression_identifier(
+      const std::shared_ptr<AbstractExpression>& expression) const;
 
   std::vector<std::shared_ptr<AbstractExpression>> resolve_table_name(const std::string& table_name) const;
 
@@ -42,4 +43,4 @@ class SQLIdentifierContext final {
   std::vector<SQLIdentifierContextEntry> _entries;
 };
 
-}  // namespace
+}  // namespace opossum

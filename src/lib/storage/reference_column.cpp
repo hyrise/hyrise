@@ -17,7 +17,7 @@ ReferenceColumn::ReferenceColumn(const std::shared_ptr<const Table> referenced_t
       _referenced_column_id(referenced_column_id),
       _pos_list(pos) {
   Assert(_referenced_column_id < _referenced_table->column_count(), "ColumnID out of range")
-  DebugAssert(referenced_table->type() == TableType::Data, "Referenced table must be Data Table");
+      DebugAssert(referenced_table->type() == TableType::Data, "Referenced table must be Data Table");
 }
 
 const AllTypeVariant ReferenceColumn::operator[](const ChunkOffset chunk_offset) const {

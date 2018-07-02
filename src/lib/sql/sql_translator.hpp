@@ -8,7 +8,6 @@
 #include "SQLParser.h"
 
 #include "all_parameter_variant.hpp"
-#include "sql_identifier_context.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/parameter_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -38,17 +37,18 @@ class SQLTranslator final {
    * @param parameter_id_counter                    Set during recursive invocations to allocate unique ParameterIDs
    *                                                for each encountered parameter
    */
-  explicit SQLTranslator(const UseMvcc use_mvcc = UseMvcc::No,
-                         const std::shared_ptr<SQLIdentifierContextProxy>& external_sql_identifier_context_proxy = {},
-                         const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator = std::make_shared<ParameterIDAllocator>());
+  explicit SQLTranslator(
+      const UseMvcc use_mvcc = UseMvcc::No,
+      const std::shared_ptr<SQLIdentifierContextProxy>& external_sql_identifier_context_proxy = {},
+      const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator = std::make_shared<ParameterIDAllocator>());
 
   const std::unordered_map<ValuePlaceholderID, ParameterID>& value_placeholders() const;
   std::shared_ptr<SQLIdentifierContext> sql_identifier_context() const;
 
   std::vector<std::shared_ptr<AbstractLQPNode>> translate_sql(const std::string& sql);
-  std::vector<std::shared_ptr<AbstractLQPNode>> translate_parser_result(const hsql::SQLParserResult &result);
-  std::shared_ptr<AbstractLQPNode> translate_statement(const hsql::SQLStatement &statement);
-  std::shared_ptr<AbstractLQPNode> translate_select_statement(const hsql::SelectStatement &select);
+  std::vector<std::shared_ptr<AbstractLQPNode>> translate_parser_result(const hsql::SQLParserResult& result);
+  std::shared_ptr<AbstractLQPNode> translate_statement(const hsql::SQLStatement& statement);
+  std::shared_ptr<AbstractLQPNode> translate_select_statement(const hsql::SelectStatement& select);
 
   /**
    * Translate an hsql::Expr
@@ -62,10 +62,11 @@ class SQLTranslator final {
   // from input tables
   struct TableSourceState final {
     TableSourceState() = default;
-    TableSourceState(const std::shared_ptr<AbstractLQPNode>& lqp,
-                     const std::unordered_map<std::string, std::vector<std::shared_ptr<AbstractExpression>>>& elements_by_table_name,
-                     const std::vector<std::shared_ptr<AbstractExpression>>& elements_in_order,
-    const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context);
+    TableSourceState(
+        const std::shared_ptr<AbstractLQPNode>& lqp,
+        const std::unordered_map<std::string, std::vector<std::shared_ptr<AbstractExpression>>>& elements_by_table_name,
+        const std::vector<std::shared_ptr<AbstractExpression>>& elements_in_order,
+        const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context);
 
     void append(TableSourceState&& rhs);
 
@@ -86,14 +87,15 @@ class SQLTranslator final {
     std::optional<std::string> table_name;
   };
 
-  TableSourceState _translate_table_ref(const hsql::TableRef &hsql_table_ref);
-  TableSourceState _translate_table_origin(const hsql::TableRef &hsql_table_ref);
-  std::shared_ptr<AbstractLQPNode> _translate_stored_table(const std::string& name, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context);
-  TableSourceState _translate_predicated_join(const hsql::JoinDefinition &join);
+  TableSourceState _translate_table_ref(const hsql::TableRef& hsql_table_ref);
+  TableSourceState _translate_table_origin(const hsql::TableRef& hsql_table_ref);
+  std::shared_ptr<AbstractLQPNode> _translate_stored_table(
+      const std::string& name, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context);
+  TableSourceState _translate_predicated_join(const hsql::JoinDefinition& join);
   TableSourceState _translate_natural_join(const hsql::JoinDefinition& join);
   TableSourceState _translate_cross_product(const std::vector<hsql::TableRef*>& tables);
 
-  void _translate_select_list_groupby_having(const hsql::SelectStatement &select);
+  void _translate_select_list_groupby_having(const hsql::SelectStatement& select);
 
   void _translate_order_by(const std::vector<hsql::OrderDescription*>& order_list);
   void _translate_limit(const hsql::LimitDescription& limit);
@@ -107,22 +109,26 @@ class SQLTranslator final {
   std::shared_ptr<AbstractLQPNode> _translate_drop(const hsql::DropStatement& update_statement);
 
   std::shared_ptr<AbstractLQPNode> _translate_predicate_expression(
-  const std::shared_ptr<AbstractExpression> &expression, std::shared_ptr<AbstractLQPNode> current_node) const;
+      const std::shared_ptr<AbstractExpression>& expression, std::shared_ptr<AbstractLQPNode> current_node) const;
 
   std::shared_ptr<AbstractLQPNode> _translate_show(const hsql::ShowStatement& show_statement);
 
   std::shared_ptr<AbstractLQPNode> _validate_if_active(const std::shared_ptr<AbstractLQPNode>& input_node);
 
-  std::shared_ptr<AbstractLQPNode> _prune_expressions(const std::shared_ptr<AbstractLQPNode>& node,
-                                                      const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const;
+  std::shared_ptr<AbstractLQPNode> _prune_expressions(
+      const std::shared_ptr<AbstractLQPNode>& node,
+      const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const;
 
-  std::shared_ptr<AbstractLQPNode> _add_expressions_if_unavailable(const std::shared_ptr<AbstractLQPNode>& node,
-                                                                  const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const;
+  std::shared_ptr<AbstractLQPNode> _add_expressions_if_unavailable(
+      const std::shared_ptr<AbstractLQPNode>& node,
+      const std::vector<std::shared_ptr<AbstractExpression>>& expressions) const;
 
-
-  std::shared_ptr<AbstractExpression> _translate_hsql_expr(const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context) const;
-  std::shared_ptr<LQPSelectExpression> _translate_hsql_sub_select(const hsql::SelectStatement& select, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context) const;
-  std::shared_ptr<AbstractExpression> _translate_hsql_case(const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context) const;
+  std::shared_ptr<AbstractExpression> _translate_hsql_expr(
+      const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context) const;
+  std::shared_ptr<LQPSelectExpression> _translate_hsql_sub_select(
+      const hsql::SelectStatement& select, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context) const;
+  std::shared_ptr<AbstractExpression> _translate_hsql_case(
+      const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierContext>& sql_identifier_context) const;
 
  private:
   const UseMvcc _use_mvcc;

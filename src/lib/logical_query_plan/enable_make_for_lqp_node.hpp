@@ -1,9 +1,9 @@
 #pragma once
 
-#include <type_traits>
 #include <memory>
-#include <utility>
 #include <tuple>
+#include <type_traits>
+#include <utility>
 
 namespace opossum {
 

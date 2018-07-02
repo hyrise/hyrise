@@ -6,14 +6,14 @@ namespace opossum {
 
 // For a possible list of functions, see https://www.w3schools.com/sql/sql_ref_sqlserver.asp
 enum class FunctionType {
-  Substring,    // SUBSTR()
-  Concatenate   // CONCAT()
+  Substring,   // SUBSTR()
+  Concatenate  // CONCAT()
 };
 
 class FunctionExpression : public AbstractExpression {
  public:
   FunctionExpression(const FunctionType function_type,
-                      const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
+                     const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
 
   bool requires_calculation() const override;
   std::shared_ptr<AbstractExpression> deep_copy() const override;
@@ -27,4 +27,4 @@ class FunctionExpression : public AbstractExpression {
   size_t _on_hash() const override;
 };
 
-} // namespace opossum
+}  // namespace opossum

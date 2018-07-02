@@ -2,8 +2,8 @@
 
 #include "operators/alias_operator.hpp"
 #include "operators/table_wrapper.hpp"
-#include "utils/load_table.hpp"
 #include "testing_assert.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 

@@ -2,11 +2,11 @@
 
 #include "boost/functional/hash.hpp"
 
-#include "logical_query_plan/stored_table_node.hpp"
 #include "abstract_lqp_node.hpp"
-#include "utils/assert.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -43,4 +43,3 @@ size_t hash<opossum::LQPColumnReference>::operator()(const opossum::LQPColumnRef
 };
 
 }  // namespace std
-

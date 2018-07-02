@@ -19,7 +19,8 @@ namespace opossum {
 class JoinNodeTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    _mock_node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
+    _mock_node_a = MockNode::make(
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
     _mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Float, "y"}}, "t_b");
 
     _t_a_a = {_mock_node_a, ColumnID{0}};
@@ -34,7 +35,7 @@ class JoinNodeTest : public ::testing::Test {
 
     _inner_join_node = JoinNode::make(JoinMode::Inner, equals(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     _semi_join_node = JoinNode::make(JoinMode::Semi, equals(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
-    _anti_join_node =  JoinNode::make(JoinMode::Anti, equals(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
+    _anti_join_node = JoinNode::make(JoinMode::Anti, equals(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
   }
 
   std::shared_ptr<MockNode> _mock_node_a;

@@ -6,20 +6,15 @@
 
 namespace opossum {
 
-enum class ArithmeticOperator {
-  Addition,
-  Subtraction,
-  Multiplication,
-  Division,
-  Modulo,
-  Power
-};
+enum class ArithmeticOperator { Addition, Subtraction, Multiplication, Division, Modulo, Power };
 
 std::ostream& operator<<(std::ostream& stream, const ArithmeticOperator arithmetic_operator);
 
 class ArithmeticExpression : public AbstractExpression {
  public:
-  ArithmeticExpression(const ArithmeticOperator arithmetic_operator, const std::shared_ptr<AbstractExpression>& left_operand, const std::shared_ptr<AbstractExpression>& right_operand);
+  ArithmeticExpression(const ArithmeticOperator arithmetic_operator,
+                       const std::shared_ptr<AbstractExpression>& left_operand,
+                       const std::shared_ptr<AbstractExpression>& right_operand);
 
   const std::shared_ptr<AbstractExpression>& left_operand() const;
   const std::shared_ptr<AbstractExpression>& right_operand() const;

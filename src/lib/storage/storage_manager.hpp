@@ -36,8 +36,7 @@ class StorageManager : private Noncopyable {
   std::vector<std::string> table_names() const;
 
   // adds a view to the storage manager
-  void add_view(const std::string& name,
-                const std::shared_ptr<View>& view);
+  void add_view(const std::string& name, const std::shared_ptr<View>& view);
 
   // removes the view from the storage manger
   void drop_view(const std::string& name);

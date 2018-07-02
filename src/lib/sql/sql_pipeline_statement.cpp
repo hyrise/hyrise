@@ -7,6 +7,7 @@
 
 #include "SQLParser.h"
 #include "concurrency/transaction_manager.hpp"
+#include "create_sql_parser_error_message.hpp"
 #include "expression/value_expression.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/current_scheduler.hpp"
@@ -14,7 +15,6 @@
 #include "sql/sql_query_plan.hpp"
 #include "sql/sql_translator.hpp"
 #include "utils/assert.hpp"
-#include "create_sql_parser_error_message.hpp"
 
 namespace opossum {
 
@@ -178,11 +178,13 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
     // Get list of arguments from EXECUTE statement.
     std::unordered_map<ParameterID, AllTypeVariant> parameters;
     if (execute_statement->parameters) {
-      for (auto value_placeholder_id = ValuePlaceholderID{0}; value_placeholder_id < execute_statement->parameters->size(); ++value_placeholder_id) {
+      for (auto value_placeholder_id = ValuePlaceholderID{0};
+           value_placeholder_id < execute_statement->parameters->size(); ++value_placeholder_id) {
         const auto parameter_id_iter = _parameter_ids.find(value_placeholder_id);
         Assert(parameter_id_iter != _parameter_ids.end(), "Invalid number of parameters in EXECUTE");
 
-        const auto parameter = SQLTranslator::translate_hsql_expr(*(*execute_statement->parameters)[value_placeholder_id]);
+        const auto parameter =
+            SQLTranslator::translate_hsql_expr(*(*execute_statement->parameters)[value_placeholder_id]);
         Assert(parameter->type == ExpressionType::Value, "Illegal parameter in EXECUTE, only values accepted");
 
         parameters.emplace(parameter_id_iter->second, std::static_pointer_cast<ValueExpression>(parameter)->value);

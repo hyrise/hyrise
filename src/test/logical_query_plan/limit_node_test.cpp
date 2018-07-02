@@ -5,8 +5,8 @@
 #include "base_test.hpp"
 
 #include "expression/expression_factory.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/limit_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 
 using namespace opossum::expression_factory;
 
@@ -27,8 +27,6 @@ TEST_F(LimitNodeTest, Equals) {
   EXPECT_TRUE(lqp_find_subplan_mismatch(LimitNode::make(value(11)), _limit_node).has_value());
 }
 
-TEST_F(LimitNodeTest, Copy) {
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_limit_node->deep_copy(), _limit_node));
-}
+TEST_F(LimitNodeTest, Copy) { EXPECT_TRUE(!lqp_find_subplan_mismatch(_limit_node->deep_copy(), _limit_node)); }
 
 }  // namespace opossum

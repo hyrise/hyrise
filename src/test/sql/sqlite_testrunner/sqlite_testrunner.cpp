@@ -59,8 +59,8 @@ class SQLiteTestRunner : public BaseTestWithParam<std::string> {
       StorageManager::get().add_table(table_name, std::move(table));
     }
 
-//    opossum::CurrentScheduler::set(
-//        std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology()));
+    //    opossum::CurrentScheduler::set(
+    //        std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology()));
 
     SQLQueryCache<SQLQueryPlan>::get().clear();
   }
@@ -89,14 +89,16 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
 
   const auto prepared_statement_cache = std::make_shared<PreparedStatementCache>();
 
-  auto sql_pipeline = SQLPipelineBuilder{query}.with_prepared_statement_cache(prepared_statement_cache).create_pipeline();
+  auto sql_pipeline =
+      SQLPipelineBuilder{query}.with_prepared_statement_cache(prepared_statement_cache).create_pipeline();
 
   const auto& result_table = sql_pipeline.get_result_table();
 
   auto sqlite_result_table = _sqlite->execute_query(query);
 
   // The problem is that we can only infer columns from sqlite if they have at least one row.
-  ASSERT_TRUE(result_table && result_table->row_count() > 0 && sqlite_result_table && sqlite_result_table->row_count() > 0)
+  ASSERT_TRUE(result_table && result_table->row_count() > 0 && sqlite_result_table &&
+              sqlite_result_table->row_count() > 0)
       << "The SQLiteTestRunner cannot handle queries without results";
 
   auto order_sensitivity = OrderSensitivity::No;

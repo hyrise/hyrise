@@ -16,20 +16,21 @@ UnionNode::UnionNode(const UnionMode union_mode) : AbstractLQPNode(LQPNodeType::
 std::string UnionNode::description() const { return "[UnionNode] Mode: " + union_mode_to_string.at(union_mode); }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& UnionNode::column_expressions() const {
-  Assert(expressions_equal(left_input()->column_expressions(), right_input()->column_expressions()), "Input Expressions must match");
+  Assert(expressions_equal(left_input()->column_expressions(), right_input()->column_expressions()),
+         "Input Expressions must match");
   return left_input()->column_expressions();
 }
 
 std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
-const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
+    const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
   Fail("Statistics for UNION not yet implemented");
 }
 
-std::shared_ptr<AbstractLQPNode> UnionNode::_shallow_copy_impl(LQPNodeMapping & node_mapping) const {
+std::shared_ptr<AbstractLQPNode> UnionNode::_shallow_copy_impl(LQPNodeMapping& node_mapping) const {
   return UnionNode::make(union_mode);
 }
 
-bool UnionNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping & node_mapping) const {
+bool UnionNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& union_node = static_cast<const UnionNode&>(rhs);
   return union_mode == union_node.union_mode;
 }

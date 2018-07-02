@@ -2,8 +2,8 @@
 
 #include "abstract_column_expression.hpp"
 
-#include "types.hpp"
 #include "storage/table.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -11,9 +11,7 @@ class PQPColumnExpression : public AbstractColumnExpression {
  public:
   static std::shared_ptr<PQPColumnExpression> from_table(const Table& table, const std::string& column_name);
 
-  PQPColumnExpression(const ColumnID column_id,
-                      const DataType data_type,
-                      const bool nullable,
+  PQPColumnExpression(const ColumnID column_id, const DataType data_type, const bool nullable,
                       const std::string& column_name);
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
@@ -32,6 +30,5 @@ class PQPColumnExpression : public AbstractColumnExpression {
   const bool _nullable;
   const std::string _column_name;
 };
-
 
 }  // namespace opossum

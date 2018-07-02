@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
-#include "utils/load_table.hpp"
 #include "storage/table.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 

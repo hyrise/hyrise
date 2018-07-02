@@ -8,18 +8,18 @@
 #include "abstract_lqp_node.hpp"
 #include "aggregate_node.hpp"
 //#include "constant_mappings.hpp"
+#include "alias_node.hpp"
 #include "create_view_node.hpp"
 #include "delete_node.hpp"
 #include "drop_view_node.hpp"
 #include "dummy_table_node.hpp"
-#include "predicate_node.hpp"
-#include "expression/list_expression.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
-#include "expression/binary_predicate_expression.hpp"
 #include "expression/between_expression.hpp"
-#include "expression/is_null_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/is_null_expression.hpp"
+#include "expression/list_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/lqp_select_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -29,6 +29,7 @@
 #include "join_node.hpp"
 #include "limit_node.hpp"
 #include "operators/aggregate.hpp"
+#include "operators/alias_operator.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
 #include "operators/index_scan.hpp"
@@ -41,7 +42,6 @@
 #include "operators/maintenance/show_columns.hpp"
 #include "operators/maintenance/show_tables.hpp"
 #include "operators/product.hpp"
-#include "operators/alias_operator.hpp"
 #include "operators/projection.hpp"
 #include "operators/sort.hpp"
 #include "operators/table_scan.hpp"
@@ -49,7 +49,6 @@
 #include "operators/union_positions.hpp"
 #include "operators/update.hpp"
 #include "operators/validate.hpp"
-#include "alias_node.hpp"
 #include "predicate_node.hpp"
 #include "projection_node.hpp"
 #include "show_columns_node.hpp"
@@ -94,7 +93,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
-LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
+    LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
   switch (type) {
     // clang-format off
     case LQPNodeType::Alias:        return _translate_alias_node(node);
@@ -117,7 +116,7 @@ LQPNodeType type, const std::shared_ptr<AbstractLQPNode>& node) const {
     case LQPNodeType::ShowColumns: return _translate_show_columns_node(node);
     case LQPNodeType::CreateView:  return _translate_create_view_node(node);
     case LQPNodeType::DropView:    return _translate_drop_view_node(node);
-    // clang-format on
+      // clang-format on
 
     default:
       Fail("Unknown node type encountered.");
@@ -138,42 +137,41 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
   const auto input_operator = translate_node(input_node);
   const auto predicate_node = std::static_pointer_cast<PredicateNode>(node);
 
-  Assert(predicate_node->predicate->type == ExpressionType::Predicate, "Only PredicateExpressions can be translated to Table/IndexScans");
+  Assert(predicate_node->predicate->type == ExpressionType::Predicate,
+         "Only PredicateExpressions can be translated to Table/IndexScans");
 
   switch (predicate_node->scan_type) {
-    case ScanType::TableScan: return _translate_predicate_node_to_table_scan(predicate_node, input_operator);
-    case ScanType::IndexScan: return _translate_predicate_node_to_index_scan(predicate_node, input_operator);
+    case ScanType::TableScan:
+      return _translate_predicate_node_to_table_scan(predicate_node, input_operator);
+    case ScanType::IndexScan:
+      return _translate_predicate_node_to_index_scan(predicate_node, input_operator);
   }
 }
 
-std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_table_scan(const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const {
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_table_scan(
+    const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const {
   const auto predicate = node->predicate;
 
-  if (const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate); binary_predicate_expression) {
-    return _translate_binary_predicate_to_table_scan(*node,
-                                                     input_operator,
-                                                     *binary_predicate_expression->left_operand(),
-                                                     binary_predicate_expression->predicate_condition,
-                                                     *binary_predicate_expression->right_operand());
+  if (const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
+      binary_predicate_expression) {
+    return _translate_binary_predicate_to_table_scan(
+        *node, input_operator, *binary_predicate_expression->left_operand(),
+        binary_predicate_expression->predicate_condition, *binary_predicate_expression->right_operand());
 
-  } else if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(predicate); between_expression) {
+  } else if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(predicate);
+             between_expression) {
     // TableScan doesn't support BETWEEN, so we create two scans for each bound
-    const auto lower_bound_op = _translate_binary_predicate_to_table_scan(*node,
-                                                                          input_operator,
-                                                                          *between_expression->value(),
-                                                                          PredicateCondition::GreaterThanEquals,
-                                                                          *between_expression->lower_bound());
-    const auto upper_bound_op = _translate_binary_predicate_to_table_scan(*node,
-                                                                          lower_bound_op,
-                                                                          *between_expression->value(),
-                                                                          PredicateCondition::LessThanEquals,
-                                                                          *between_expression->upper_bound());
+    const auto lower_bound_op = _translate_binary_predicate_to_table_scan(
+        *node, input_operator, *between_expression->value(), PredicateCondition::GreaterThanEquals,
+        *between_expression->lower_bound());
+    const auto upper_bound_op = _translate_binary_predicate_to_table_scan(
+        *node, lower_bound_op, *between_expression->value(), PredicateCondition::LessThanEquals,
+        *between_expression->upper_bound());
     return upper_bound_op;
 
-  } else if (const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(predicate); is_null_expression) {
-    return _translate_unary_predicate_to_table_scan(*node,
-                                                    input_operator,
-                                                    *is_null_expression->operand(),
+  } else if (const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(predicate);
+             is_null_expression) {
+    return _translate_unary_predicate_to_table_scan(*node, input_operator, *is_null_expression->operand(),
                                                     is_null_expression->predicate_condition);
 
   } else if (const auto array_expression = std::dynamic_pointer_cast<ListExpression>(predicate); array_expression) {
@@ -240,8 +238,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
         std::make_shared<TableScan>(input_operator, column_id, PredicateCondition::GreaterThanEquals, value_variant);
     table_scan_gt->set_excluded_chunk_ids(indexed_chunks);
 
-    table_scan = std::make_shared<TableScan>(table_scan_gt, column_id, PredicateCondition::LessThanEquals,
-                                             *value2_variant);
+    table_scan =
+        std::make_shared<TableScan>(table_scan_gt, column_id, PredicateCondition::LessThanEquals, *value2_variant);
   } else {
     table_scan = std::make_shared<TableScan>(input_operator, column_id, predicate->predicate_condition, value_variant);
   }
@@ -253,7 +251,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alias_node(
-const std::shared_ptr<opossum::AbstractLQPNode> &node) const {
+    const std::shared_ptr<opossum::AbstractLQPNode>& node) const {
   const auto alias_node = std::dynamic_pointer_cast<AliasNode>(node);
   const auto input_node = alias_node->left_input();
   const auto input_operator = translate_node(input_node);
@@ -298,11 +296,11 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
   auto pqp_expression_iter = pqp_expressions.rbegin();
   auto order_by_mode_iter = sort_node->order_by_modes.rbegin();
 
-  for (; pqp_expression_iter != pqp_expressions.rend();
-       ++pqp_expression_iter, ++order_by_mode_iter) {
+  for (; pqp_expression_iter != pqp_expressions.rend(); ++pqp_expression_iter, ++order_by_mode_iter) {
     const auto& pqp_expression = *pqp_expression_iter;
     const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(pqp_expression);
-    Assert(pqp_column_expression, "Sort Expression '"s + pqp_expression->as_column_name() + "' must be available as column, LQP is invalid");
+    Assert(pqp_column_expression,
+           "Sort Expression '"s + pqp_expression->as_column_name() + "' must be available as column, LQP is invalid");
 
     current_pqp = std::make_shared<Sort>(current_pqp, pqp_column_expression->column_id, *order_by_mode_iter);
   }
@@ -330,8 +328,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
    */
   Assert(join_node->join_predicate->type == ExpressionType::Predicate,
          "Join condition must be a simple Predicate for now. ("s + join_node->join_predicate->as_column_name() + ")");
-  const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_node->join_predicate);
-  Assert(binary_predicate_expression, "Expected binary predicate for Join ("s + join_node->join_predicate->as_column_name() + ")");
+  const auto binary_predicate_expression =
+      std::dynamic_pointer_cast<BinaryPredicateExpression>(join_node->join_predicate);
+  Assert(binary_predicate_expression,
+         "Expected binary predicate for Join ("s + join_node->join_predicate->as_column_name() + ")");
 
   const auto left_operand = binary_predicate_expression->left_operand();
   const auto right_operand = binary_predicate_expression->right_operand();
@@ -369,15 +369,19 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
 
   const auto input_operator = translate_node(node->left_input());
 
-  const auto aggregate_pqp_expressions = _translate_expressions(aggregate_node->aggregate_expressions, node->left_input());
-  const auto group_by_pqp_expressions = _translate_expressions(aggregate_node->group_by_expressions, node->left_input());
+  const auto aggregate_pqp_expressions =
+      _translate_expressions(aggregate_node->aggregate_expressions, node->left_input());
+  const auto group_by_pqp_expressions =
+      _translate_expressions(aggregate_node->group_by_expressions, node->left_input());
 
   // Create AggregateColumnDefinitions from AggregateExpressions
   // All aggregate_pqp_expressions have to be AggregateExpressions and their argument() has to be a PQPColumnExpression
   std::vector<AggregateColumnDefinition> aggregate_column_definitions;
   aggregate_column_definitions.reserve(aggregate_pqp_expressions.size());
   for (const auto& expression : aggregate_node->aggregate_expressions) {
-    Assert(expression->type == ExpressionType::Aggregate, "Expression '" + expression->as_column_name() + "' used as AggregateExpression is not an AggregateExpression");
+    Assert(
+        expression->type == ExpressionType::Aggregate,
+        "Expression '" + expression->as_column_name() + "' used as AggregateExpression is not an AggregateExpression");
 
     const auto& aggregate_expression = std::static_pointer_cast<AggregateExpression>(expression);
 
@@ -409,7 +413,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_limit_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto input_operator = translate_node(node->left_input());
   auto limit_node = std::dynamic_pointer_cast<LimitNode>(node);
-  return std::make_shared<Limit>(input_operator, _translate_expressions({limit_node->num_rows_expression}, node->left_input()).front());
+  return std::make_shared<Limit>(input_operator,
+                                 _translate_expressions({limit_node->num_rows_expression}, node->left_input()).front());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_insert_node(
@@ -497,7 +502,7 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
      * LQPColumnExpressions remain in the pqp_expression and it is a valid PQP expression.
      */
 
-    visit_expression(pqp_expression, [&](auto & expression) {
+    visit_expression(pqp_expression, [&](auto& expression) {
       // Resolve SubSelectExpression
       if (expression->type == ExpressionType::Select) {
         const auto lqp_select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(expression);
@@ -508,8 +513,10 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
         auto sub_select_parameters = PQPSelectExpression::Parameters{};
         sub_select_parameters.reserve(lqp_select_expression->parameter_count());
 
-        for (auto parameter_idx = size_t{0}; parameter_idx < lqp_select_expression->parameter_count(); ++parameter_idx) {
-          const auto parameter_column_id = node->get_column_id(*lqp_select_expression->parameter_expression(parameter_idx));
+        for (auto parameter_idx = size_t{0}; parameter_idx < lqp_select_expression->parameter_count();
+             ++parameter_idx) {
+          const auto parameter_column_id =
+              node->get_column_id(*lqp_select_expression->parameter_expression(parameter_idx));
           sub_select_parameters.emplace_back(lqp_select_expression->parameter_ids[parameter_idx], parameter_column_id);
         }
 
@@ -519,17 +526,10 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
           const auto sub_select_data_type = lqp_select_expression->data_type();
           const auto sub_select_nullable = lqp_select_expression->is_nullable();
 
-          expression = std::make_shared<PQPSelectExpression>(
-          sub_select_pqp,
-          sub_select_data_type,
-          sub_select_nullable,
-          sub_select_parameters
-          );
+          expression = std::make_shared<PQPSelectExpression>(sub_select_pqp, sub_select_data_type, sub_select_nullable,
+                                                             sub_select_parameters);
         } else {
-          expression = std::make_shared<PQPSelectExpression>(
-          sub_select_pqp,
-          sub_select_parameters
-          );
+          expression = std::make_shared<PQPSelectExpression>(sub_select_pqp, sub_select_parameters);
         }
         return false;
       }
@@ -538,8 +538,7 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
       const auto column_id = node->find_column_id(*expression);
       if (column_id) {
         const auto referenced_expression = node->column_expressions()[*column_id];
-        expression = std::make_shared<PQPColumnExpression>(*column_id,
-                                                           referenced_expression->data_type(),
+        expression = std::make_shared<PQPColumnExpression>(*column_id, referenced_expression->data_type(),
                                                            referenced_expression->is_nullable(),
                                                            referenced_expression->as_column_name());
         return false;
@@ -555,42 +554,32 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_binary_predicate_to_table_scan(
-const AbstractLQPNode &input_node,
-const std::shared_ptr<AbstractOperator> &input_operator,
-const AbstractExpression &left_operand,
-const PredicateCondition predicate_condition,
-const AbstractExpression &right_operand) {
+    const AbstractLQPNode& input_node, const std::shared_ptr<AbstractOperator>& input_operator,
+    const AbstractExpression& left_operand, const PredicateCondition predicate_condition,
+    const AbstractExpression& right_operand) {
   // LeftOperand must be a column, if it isn't switch operands and flip condition (5 > a -> a < 5)
   if (!input_node.find_column_id(left_operand)) {
     Assert(input_node.find_column_id(right_operand), "One Predicate argument must be a column");
-    return _translate_binary_predicate_to_table_scan(input_node,
-                                                     input_operator,
-                                                     right_operand,
-                                                     flip_predicate_condition(predicate_condition),
-                                                     left_operand);
+    return _translate_binary_predicate_to_table_scan(input_node, input_operator, right_operand,
+                                                     flip_predicate_condition(predicate_condition), left_operand);
   }
 
   const auto left_column_id = input_node.get_column_id(left_operand);
 
   auto right_parameter = _translate_to_all_parameter_variant(input_node, right_operand);
 
-  return std::make_shared<TableScan>(input_operator,
-                                     left_column_id,
-                                     predicate_condition,
-                                     right_parameter);
+  return std::make_shared<TableScan>(input_operator, left_column_id, predicate_condition, right_parameter);
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_unary_predicate_to_table_scan(
-const AbstractLQPNode &input_node,
-const std::shared_ptr<AbstractOperator> &input_operator,
-const AbstractExpression &operand,
-const PredicateCondition predicate_condition) {
+    const AbstractLQPNode& input_node, const std::shared_ptr<AbstractOperator>& input_operator,
+    const AbstractExpression& operand, const PredicateCondition predicate_condition) {
   const auto column_id = input_node.get_column_id(operand);
   return std::make_shared<TableScan>(input_operator, column_id, predicate_condition, AllParameterVariant{});
 }
 
-
-AllParameterVariant LQPTranslator::_translate_to_all_parameter_variant(const AbstractLQPNode& input_node, const AbstractExpression& expression) {
+AllParameterVariant LQPTranslator::_translate_to_all_parameter_variant(const AbstractLQPNode& input_node,
+                                                                       const AbstractExpression& expression) {
   auto parameter = AllParameterVariant{};
 
   // Except for Value and ValuePlaceholders every expression is resolved to a column
@@ -600,7 +589,7 @@ AllParameterVariant LQPTranslator::_translate_to_all_parameter_variant(const Abs
   } else if (expression.type == ExpressionType::Parameter) {
     const auto& parameter_expression = static_cast<const ParameterExpression&>(expression);
     parameter = parameter_expression.parameter_id;
-  }  else {
+  } else {
     parameter = input_node.get_column_id(expression);
   }
 

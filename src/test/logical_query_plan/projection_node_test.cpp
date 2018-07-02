@@ -20,7 +20,8 @@ namespace opossum {
 class ProjectionNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    _mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
+    _mock_node = MockNode::make(
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
 
     _a = _mock_node->get_column("a");
     _b = _mock_node->get_column("b");
@@ -42,7 +43,8 @@ TEST_F(ProjectionNodeTest, Description) {
 TEST_F(ProjectionNodeTest, Equals) {
   EXPECT_TRUE(!lqp_find_subplan_mismatch(_projection_node, _projection_node));
 
-  const auto different_projection_node_a = ProjectionNode::make(expression_vector(_a, _c, _b, add(_b, _c), add(_a, _c)), _mock_node);
+  const auto different_projection_node_a =
+      ProjectionNode::make(expression_vector(_a, _c, _b, add(_b, _c), add(_a, _c)), _mock_node);
   const auto different_projection_node_b = ProjectionNode::make(expression_vector(_c, _a, _b, add(_b, _c)), _mock_node);
   EXPECT_TRUE(lqp_find_subplan_mismatch(_projection_node, different_projection_node_a).has_value());
   EXPECT_TRUE(lqp_find_subplan_mismatch(_projection_node, different_projection_node_b).has_value());

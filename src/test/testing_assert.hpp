@@ -129,18 +129,23 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
 //  if (!opossum::check_lqp_tie(output, input_side, input)) FAIL();
 //
 
-#define EXPECT_LQP_EQ(lhs, rhs)                                  \
-  {                                                              \
-    const auto mismatch = lqp_find_subplan_mismatch(lhs, rhs); \
-    if (mismatch) {                                              \
-      std::cout << "Differing subtrees" << std::endl;            \
-      std::cout << "-------------- Actual LQP --------------" << std::endl;            \
-      if (mismatch->first) mismatch->first->print(); else std::cout << "NULL" << std::endl;          \
-      std::cout << std::endl;                                    \
-      std::cout << "------------- Expected LQP -------------" << std::endl;  \
-      if (mismatch->second) mismatch->second->print(); else std::cout << "NULL" << std::endl;          \
-      std::cout << "-------------..............-------------" << std::endl;            \
-      GTEST_FAIL();                                              \
-    }                                                            \
+#define EXPECT_LQP_EQ(lhs, rhs)                                             \
+  {                                                                         \
+    const auto mismatch = lqp_find_subplan_mismatch(lhs, rhs);              \
+    if (mismatch) {                                                         \
+      std::cout << "Differing subtrees" << std::endl;                       \
+      std::cout << "-------------- Actual LQP --------------" << std::endl; \
+      if (mismatch->first)                                                  \
+        mismatch->first->print();                                           \
+      else                                                                  \
+        std::cout << "NULL" << std::endl;                                   \
+      std::cout << std::endl;                                               \
+      std::cout << "------------- Expected LQP -------------" << std::endl; \
+      if (mismatch->second)                                                 \
+        mismatch->second->print();                                          \
+      else                                                                  \
+        std::cout << "NULL" << std::endl;                                   \
+      std::cout << "-------------..............-------------" << std::endl; \
+      GTEST_FAIL();                                                         \
+    }                                                                       \
   }
-

@@ -1,27 +1,27 @@
 #include "expression_utils.hpp"
 
 #include <algorithm>
-#include <sstream>
 #include <queue>
+#include <sstream>
 
-#include "operators/abstract_operator.hpp"
 #include "logical_expression.hpp"
 #include "lqp_column_expression.hpp"
 #include "lqp_select_expression.hpp"
+#include "operators/abstract_operator.hpp"
 #include "pqp_select_expression.hpp"
 
 namespace opossum {
 
 bool expressions_equal(const std::vector<std::shared_ptr<AbstractExpression>>& expressions_a,
                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions_b) {
-  return std::equal(expressions_a.begin(), expressions_a.end(), expressions_b.begin(), expressions_b.end(),
-                    [&] (const auto& expression_a, const auto& expression_b) { return expression_a->deep_equals(*expression_b);});
+  return std::equal(
+      expressions_a.begin(), expressions_a.end(), expressions_b.begin(), expressions_b.end(),
+      [&](const auto& expression_a, const auto& expression_b) { return expression_a->deep_equals(*expression_b); });
 }
 
 bool expressions_equal_to_expressions_in_different_lqp(
-const std::vector<std::shared_ptr<AbstractExpression>> &expressions_left,
-const std::vector<std::shared_ptr<AbstractExpression>> &expressions_right,
-const LQPNodeMapping& node_mapping) {
+    const std::vector<std::shared_ptr<AbstractExpression>>& expressions_left,
+    const std::vector<std::shared_ptr<AbstractExpression>>& expressions_right, const LQPNodeMapping& node_mapping) {
   if (expressions_left.size() != expressions_right.size()) return false;
 
   for (auto expression_idx = size_t{0}; expression_idx < expressions_left.size(); ++expression_idx) {
@@ -48,7 +48,7 @@ bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& e
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> expressions_copy(
-const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
+    const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
   std::vector<std::shared_ptr<AbstractExpression>> copied_expressions;
   copied_expressions.reserve(expressions.size());
   for (const auto& expression : expressions) {
@@ -58,8 +58,7 @@ const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> expressions_copy_and_adapt_to_different_lqp(
-const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
-const LQPNodeMapping& node_mapping) {
+    const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const LQPNodeMapping& node_mapping) {
   std::vector<std::shared_ptr<AbstractExpression>> copied_expressions;
   copied_expressions.reserve(expressions.size());
 
@@ -70,19 +69,15 @@ const LQPNodeMapping& node_mapping) {
   return copied_expressions;
 }
 
-std::shared_ptr<AbstractExpression> expression_copy_and_adapt_to_different_lqp(
-const AbstractExpression& expression,
-const LQPNodeMapping& node_mapping) {
-
+std::shared_ptr<AbstractExpression> expression_copy_and_adapt_to_different_lqp(const AbstractExpression& expression,
+                                                                               const LQPNodeMapping& node_mapping) {
   auto copied_expression = expression.deep_copy();
   expression_adapt_to_different_lqp(copied_expression, node_mapping);
   return copied_expression;
 }
 
-void expression_adapt_to_different_lqp(
-  std::shared_ptr<AbstractExpression>& expression,
-  const LQPNodeMapping& node_mapping){
-
+void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expression,
+                                       const LQPNodeMapping& node_mapping) {
   visit_expression(expression, [&](auto& expression_ptr) {
     if (expression_ptr->type != ExpressionType::Column) return true;
 
@@ -95,19 +90,20 @@ void expression_adapt_to_different_lqp(
   });
 }
 
-std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(
-const LQPColumnExpression& lqp_column_expression,
-const LQPNodeMapping& node_mapping) {
+std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQPColumnExpression& lqp_column_expression,
+                                                                       const LQPNodeMapping& node_mapping) {
   const auto node = lqp_column_expression.column_reference.original_node();
   const auto node_mapping_iter = node_mapping.find(node);
-  Assert(node_mapping_iter != node_mapping.end(), "Couldn't find referenced node (" + node->description() + ") in NodeMapping");
+  Assert(node_mapping_iter != node_mapping.end(),
+         "Couldn't find referenced node (" + node->description() + ") in NodeMapping");
 
-  LQPColumnReference adapted_column_reference{node_mapping_iter->second, lqp_column_expression.column_reference.original_column_id()};
+  LQPColumnReference adapted_column_reference{node_mapping_iter->second,
+                                              lqp_column_expression.column_reference.original_column_id()};
 
   return std::make_shared<LQPColumnExpression>(adapted_column_reference);
 }
 
-std::string expression_column_names(const std::vector<std::shared_ptr<AbstractExpression>> &expressions) {
+std::string expression_column_names(const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
   std::stringstream stream;
   for (auto expression_idx = size_t{0}; expression_idx < expressions.size(); ++expression_idx) {
     stream << expressions[expression_idx]->as_column_name();
@@ -152,7 +148,7 @@ bool expression_evaluateable_on_lqp(const std::shared_ptr<AbstractExpression>& e
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> expression_flatten_conjunction(
-const std::shared_ptr<AbstractExpression> &expression) {
+    const std::shared_ptr<AbstractExpression>& expression) {
   std::vector<std::shared_ptr<AbstractExpression>> flattened_expressions;
 
   visit_expression(expression, [&](const auto& sub_expression) {
@@ -167,7 +163,8 @@ const std::shared_ptr<AbstractExpression> &expression) {
   return flattened_expressions;
 }
 
-void expression_set_parameters(const std::shared_ptr<AbstractExpression>& expression, const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+void expression_set_parameters(const std::shared_ptr<AbstractExpression>& expression,
+                               const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
   visit_expression(expression, [&](auto& sub_expression) {
     if (sub_expression->type == ExpressionType::Parameter) {
       auto parameter_expression = std::static_pointer_cast<ParameterExpression>(sub_expression);
@@ -177,36 +174,39 @@ void expression_set_parameters(const std::shared_ptr<AbstractExpression>& expres
       }
       return false;
 
-    } else if (const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression); pqp_select_expression) {
+    } else if (const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression);
+               pqp_select_expression) {
       pqp_select_expression->pqp->set_parameters(parameters);
       return false;
 
     } else {
-
       return true;
     }
   });
 }
 
-void expressions_set_parameters(const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+void expressions_set_parameters(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
+                                const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
   for (const auto& expression : expressions) {
     expression_set_parameters(expression, parameters);
   }
 }
 
-void expression_set_transaction_context(const std::shared_ptr<AbstractExpression>& expression, std::weak_ptr<TransactionContext> transaction_context) {
+void expression_set_transaction_context(const std::shared_ptr<AbstractExpression>& expression,
+                                        std::weak_ptr<TransactionContext> transaction_context) {
   visit_expression(expression, [&](auto& sub_expression) {
     if (sub_expression->type != ExpressionType::Select) return true;
 
     const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression);
     Assert(pqp_select_expression, "Expected a PQPSelectExpression here")
-    pqp_select_expression->pqp->set_transaction_context_recursively(transaction_context);
+        pqp_select_expression->pqp->set_transaction_context_recursively(transaction_context);
 
     return false;
   });
 }
 
-void expressions_set_transaction_context(const std::vector<std::shared_ptr<AbstractExpression>>& expressions, std::weak_ptr<TransactionContext> transaction_context) {
+void expressions_set_transaction_context(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
+                                         std::weak_ptr<TransactionContext> transaction_context) {
   for (const auto& expression : expressions) {
     expression_set_transaction_context(expression, transaction_context);
   }

@@ -15,7 +15,8 @@ AbstractJoinOperator::AbstractJoinOperator(const OperatorType type, const std::s
       _mode(mode),
       _column_ids(column_ids),
       _predicate_condition(predicate_condition) {
-  DebugAssert(mode != JoinMode::Cross, "Specified JoinMode not supported by an AbstractJoin, use Product etc. instead.");
+  DebugAssert(mode != JoinMode::Cross,
+              "Specified JoinMode not supported by an AbstractJoin, use Product etc. instead.");
 }
 
 JoinMode AbstractJoinOperator::mode() const { return _mode; }

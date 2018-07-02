@@ -2,9 +2,9 @@
 
 #include <optional>
 
-#include "types.hpp"
-#include "all_type_variant.hpp"
 #include "all_parameter_variant.hpp"
+#include "all_type_variant.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -18,11 +18,11 @@ struct OperatorPredicate {
    * Try to build an OperatorPredicate from an @param expression executed on @param node.
    * @return std::nullopt if that fails (e.g. the expression is a more complex expression)
    */
-  static std::optional<OperatorPredicate> from_expression(const AbstractExpression& expression, const AbstractLQPNode& node);
+  static std::optional<OperatorPredicate> from_expression(const AbstractExpression& expression,
+                                                          const AbstractLQPNode& node);
 
   OperatorPredicate() = default;
-  OperatorPredicate(const ColumnID column_id,
-                    const PredicateCondition predicate_condition,
+  OperatorPredicate(const ColumnID column_id, const PredicateCondition predicate_condition,
                     const AllParameterVariant& value = NullValue{},
                     const std::optional<AllParameterVariant>& value2 = {});
 

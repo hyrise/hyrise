@@ -2,7 +2,6 @@
 
 #include "expression/expression_factory.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
 #include "logical_query_plan/delete_node.hpp"
@@ -12,6 +11,7 @@
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -79,12 +79,13 @@ class LQPFindSubplanMismatchTest : public ::testing::Test {
     query_nodes.predicate_node_b = PredicateNode::make(between(query_nodes.table_a_a, 42, 45));
     query_nodes.union_node = UnionNode::make(UnionMode::Positions);
     query_nodes.limit_node = LimitNode::make(to_expression(10));
-    query_nodes.join_node =
-        JoinNode::make(JoinMode::Inner, equals(query_nodes.table_a_a, query_nodes.table_c_b));
+    query_nodes.join_node = JoinNode::make(JoinMode::Inner, equals(query_nodes.table_a_a, query_nodes.table_c_b));
 
-    query_nodes.aggregate_node = AggregateNode::make(expression_vector(query_nodes.table_c_b), expression_vector(sum(query_nodes.table_c_a)));
+    query_nodes.aggregate_node =
+        AggregateNode::make(expression_vector(query_nodes.table_c_b), expression_vector(sum(query_nodes.table_c_a)));
 
-    query_nodes.sort_node = SortNode::make(expression_vector(query_nodes.table_c_b), std::vector<OrderByMode>{OrderByMode::Ascending});
+    query_nodes.sort_node =
+        SortNode::make(expression_vector(query_nodes.table_c_b), std::vector<OrderByMode>{OrderByMode::Ascending});
     query_nodes.projection_node = ProjectionNode::make(expression_vector(query_nodes.table_a_a));
   }
 
@@ -123,8 +124,7 @@ TEST_F(LQPFindSubplanMismatchTest, EqualsTest) {
 }
 
 TEST_F(LQPFindSubplanMismatchTest, SubplanMismatch) {
-  _query_nodes_rhs.predicate_node_b =
-      PredicateNode::make(between(_query_nodes_rhs.table_a_a, 42, 46));
+  _query_nodes_rhs.predicate_node_b = PredicateNode::make(between(_query_nodes_rhs.table_a_a, 42, 46));
 
   _build_query_lqps();
 
@@ -135,8 +135,7 @@ TEST_F(LQPFindSubplanMismatchTest, SubplanMismatch) {
 }
 
 TEST_F(LQPFindSubplanMismatchTest, AdditionalNode) {
-  const auto additional_predicate_node =
-      PredicateNode::make(between(_query_nodes_rhs.table_a_a, 42, 45));
+  const auto additional_predicate_node = PredicateNode::make(between(_query_nodes_rhs.table_a_a, 42, 45));
 
   _build_query_lqps();
 

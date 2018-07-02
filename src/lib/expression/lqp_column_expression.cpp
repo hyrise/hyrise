@@ -2,16 +2,16 @@
 
 #include "boost/functional/hash.hpp"
 
-#include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-LQPColumnExpression::LQPColumnExpression(const LQPColumnReference& column_reference):
-  column_reference(column_reference) {}
+LQPColumnExpression::LQPColumnExpression(const LQPColumnReference& column_reference)
+    : column_reference(column_reference) {}
 
 std::shared_ptr<AbstractExpression> LQPColumnExpression::deep_copy() const {
   return std::make_shared<LQPColumnExpression>(column_reference);
@@ -58,11 +58,11 @@ bool LQPColumnExpression::is_nullable() const {
     return table->column_is_nullable(column_reference.original_column_id());
 
   } else if (column_reference.original_node()->type == LQPNodeType::Mock) {
-    return false; // MockNodes do not support NULLs
+    return false;  // MockNodes do not support NULLs
 
   } else {
     Fail("Only columns in StoredTableNodes and MockNodes (for tests) can be referenced in LQPColumnExpressions");
-  }  
+  }
 }
 
 bool LQPColumnExpression::_shallow_equals(const AbstractExpression& expression) const {
@@ -71,8 +71,6 @@ bool LQPColumnExpression::_shallow_equals(const AbstractExpression& expression) 
   return column_reference == lqp_column_expression->column_reference;
 }
 
-size_t LQPColumnExpression::_on_hash() const {
-  return std::hash<LQPColumnReference>{}(column_reference);
-}
+size_t LQPColumnExpression::_on_hash() const { return std::hash<LQPColumnReference>{}(column_reference); }
 
 }  // namespace opossum

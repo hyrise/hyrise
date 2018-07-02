@@ -11,11 +11,11 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "operators/operator_predicate.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
-#include "operators/operator_predicate.hpp"
 
 namespace opossum {
 
@@ -68,7 +68,8 @@ bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,
   const auto row_count_table = predicate_node->left_input()->derive_statistics_from(nullptr, nullptr)->row_count();
   if (row_count_table < INDEX_SCAN_ROW_COUNT_THRESHOLD) return false;
 
-  const auto row_count_predicate = predicate_node->derive_statistics_from(predicate_node->left_input(), nullptr)->row_count();
+  const auto row_count_predicate =
+      predicate_node->derive_statistics_from(predicate_node->left_input(), nullptr)->row_count();
   const float selectivity = row_count_predicate / row_count_table;
 
   if (selectivity > INDEX_SCAN_SELECTIVITY_THRESHOLD) return false;

@@ -6,10 +6,10 @@
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "operators/operator_predicate.hpp"
 #include "resolve_type.hpp"
 #include "statistics/column_statistics.hpp"
 #include "statistics/table_statistics.hpp"
-#include "operators/operator_predicate.hpp"
 
 namespace opossum {
 
@@ -42,10 +42,11 @@ CostFeatureVariant CostFeatureLQPNodeProxy::_extract_feature_impl(const CostFeat
         Assert(operator_predicate, "Expected Join predicate to be OperatorPredicate compatible");
 
         if (cost_feature == CostFeature::LeftDataType) {
-          return _node-
+          return _node -
         }
 
-        column_reference = cost_feature == CostFeature::LeftDataType ? column_references->first : column_references->second;
+        column_reference =
+            cost_feature == CostFeature::LeftDataType ? column_references->first : column_references->second;
       } else if (_node->type() == LQPNodeType::Predicate) {
         const auto predicate_node = std::static_pointer_cast<PredicateNode>(_node);
         if (cost_feature == CostFeature::LeftDataType) {

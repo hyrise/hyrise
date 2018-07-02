@@ -2,30 +2,30 @@
 
 #include <optional>
 
-#include "expression/list_expression.hpp"
-#include "expression/case_expression.hpp"
-#include "expression/extract_expression.hpp"
-#include "expression/exists_expression.hpp"
-#include "expression/evaluation/expression_evaluator.hpp"
-#include "expression/evaluation/expression_result.hpp"
-#include "expression/expression_factory.hpp"
-#include "expression/expression_utils.hpp"
-#include "expression/function_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
+#include "expression/case_expression.hpp"
+#include "expression/evaluation/expression_evaluator.hpp"
+#include "expression/evaluation/expression_result.hpp"
+#include "expression/exists_expression.hpp"
+#include "expression/expression_factory.hpp"
+#include "expression/expression_utils.hpp"
+#include "expression/extract_expression.hpp"
+#include "expression/function_expression.hpp"
 #include "expression/in_expression.hpp"
+#include "expression/list_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_select_expression.hpp"
 #include "expression/value_expression.hpp"
-#include "storage/storage_manager.hpp"
-#include "storage/table.hpp"
+#include "operators/aggregate.hpp"
 #include "operators/get_table.hpp"
 #include "operators/projection.hpp"
-#include "operators/aggregate.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "utils/load_table.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
 #include "testing_assert.hpp"
+#include "utils/load_table.hpp"
 
 using namespace opossum::expression_factory;
 
@@ -73,7 +73,8 @@ class ExpressionEvaluatorTest : public ::testing::Test {
 
     ChunkColumns columns;
     columns.emplace_back(std::make_shared<ValueColumn<int32_t>>(pmr_concurrent_vector<int32_t>{}));
-    columns.emplace_back(std::make_shared<ValueColumn<float>>(pmr_concurrent_vector<float>{}, pmr_concurrent_vector<bool>{}));
+    columns.emplace_back(
+        std::make_shared<ValueColumn<float>>(pmr_concurrent_vector<float>{}, pmr_concurrent_vector<bool>{}));
     columns.emplace_back(std::make_shared<ValueColumn<std::string>>(pmr_concurrent_vector<std::string>{}));
     table_empty->append_chunk(columns);
 
@@ -86,11 +87,11 @@ class ExpressionEvaluatorTest : public ::testing::Test {
    * Turn an ExpressionResult<T> into a canonical form "std::vector<std::optional<T>>" to make the writing of tests
    * easier.
    */
-  template<typename T>
-  std::vector<std::optional<T>> normalize_expression_result(const ExpressionResult<T> &result) {
+  template <typename T>
+  std::vector<std::optional<T>> normalize_expression_result(const ExpressionResult<T>& result) {
     std::vector<std::optional<T>> normalized(result.size());
 
-    result.as_view([&](const auto &resolved) {
+    result.as_view([&](const auto& resolved) {
       for (auto idx = size_t{0}; idx < result.size(); ++idx) {
         if (!resolved.null(idx)) normalized[idx] = resolved.value(idx);
       }
@@ -99,7 +100,7 @@ class ExpressionEvaluatorTest : public ::testing::Test {
     return normalized;
   }
 
-  template<typename R>
+  template <typename R>
   void print(const std::vector<std::optional<R>>& values_or_nulls) {
     for (const auto& value_or_null : values_or_nulls) {
       if (value_or_null) {
@@ -110,9 +111,8 @@ class ExpressionEvaluatorTest : public ::testing::Test {
     }
   }
 
-  template<typename R>
-  bool test_expression(const std::shared_ptr<Table>& table,
-                       const AbstractExpression& expression,
+  template <typename R>
+  bool test_expression(const std::shared_ptr<Table>& table, const AbstractExpression& expression,
                        const std::vector<std::optional<R>>& expected) {
     const auto actual_result = ExpressionEvaluator{table, ChunkID{0}}.evaluate_expression_to_result<R>(expression);
     const auto actual_normalized = normalize_expression_result(*actual_result);
@@ -128,9 +128,8 @@ class ExpressionEvaluatorTest : public ::testing::Test {
     return false;
   }
 
-  template<typename R>
-  bool test_expression(const AbstractExpression& expression,
-                       const std::vector<std::optional<R>>& expected) {
+  template <typename R>
+  bool test_expression(const AbstractExpression& expression, const std::vector<std::optional<R>>& expected) {
     const auto actual_result = ExpressionEvaluator{}.evaluate_expression_to_result<R>(expression);
     const auto actual_normalized = normalize_expression_result(*actual_result);
     if (actual_normalized == expected) return true;
@@ -208,8 +207,10 @@ TEST_F(ExpressionEvaluatorTest, ArithmeticsLiterals) {
 TEST_F(ExpressionEvaluatorTest, ArithmeticsSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *mul(a, b), {2, 6, 12, 20}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *add(a, add(b, c)), {36, std::nullopt, 41, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *add(a, NullValue{}), {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *add(a, add(b, NullValue{})), {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *add(a, NullValue{}),
+                                       {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *add(a, add(b, NullValue{})),
+                                       {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_empty, *add(empty_a, empty_b), {}));
 }
 
@@ -246,7 +247,8 @@ TEST_F(ExpressionEvaluatorTest, PredicatesLiterals) {
 
 TEST_F(ExpressionEvaluatorTest, PredicatesSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *greater_than(b, a), {1, 1, 1, 1}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *greater_than(b, null()), {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *greater_than(b, null()),
+                                       {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *greater_than(c, a), {1, std::nullopt, 1, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *greater_than_equals(b, mul(a, 2)), {1, 0, 0, 0}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *equals(b, mul(a, 2)), {1, 0, 0, 0}));
@@ -375,16 +377,20 @@ TEST_F(ExpressionEvaluatorTest, ConcatLiterals) {
   EXPECT_TRUE(test_expression<std::string>(*concat(null(), "world"), {std::nullopt}));
   EXPECT_TRUE(test_expression<std::string>(*concat("hello ", "world"), {"hello world"}));
   EXPECT_TRUE(test_expression<std::string>(*concat("hello", " ", "world"), {"hello world"}));
-  EXPECT_TRUE(test_expression<std::string>(*concat("hello", " ", "world", " are you, ", "okay?"), {"hello world are you, okay?"}));
+  EXPECT_TRUE(test_expression<std::string>(*concat("hello", " ", "world", " are you, ", "okay?"),
+                                           {"hello world are you, okay?"}));
   EXPECT_TRUE(test_expression<std::string>(*concat("hello", " ", null(), " are you, ", "okay?"), {std::nullopt}));
 }
 
 TEST_F(ExpressionEvaluatorTest, ConcatSeries) {
   EXPECT_TRUE(test_expression<std::string>(table_a, *concat(s1, s2), {"ab", "HelloWorld", "whatup", "SameSame"}));
-  EXPECT_TRUE(test_expression<std::string>(table_a, *concat("yo", s1, s2), {"yoab", "yoHelloWorld", "yowhatup", "yoSameSame"}));
-  EXPECT_TRUE(test_expression<std::string>(table_a, *concat(concat("a", "b", "c"), s1, s2), {"abcab", "abcHelloWorld", "abcwhatup", "abcSameSame"}));
+  EXPECT_TRUE(
+      test_expression<std::string>(table_a, *concat("yo", s1, s2), {"yoab", "yoHelloWorld", "yowhatup", "yoSameSame"}));
+  EXPECT_TRUE(test_expression<std::string>(table_a, *concat(concat("a", "b", "c"), s1, s2),
+                                           {"abcab", "abcHelloWorld", "abcwhatup", "abcSameSame"}));
   EXPECT_TRUE(test_expression<std::string>(table_a, *concat("nope", s1, null()), {std::nullopt}));
-  EXPECT_TRUE(test_expression<std::string>(table_a, *concat(s1, s2, s3), {std::nullopt, "HelloWorldabcd", "whatupxyzlol", std::nullopt}));
+  EXPECT_TRUE(test_expression<std::string>(table_a, *concat(s1, s2, s3),
+                                           {std::nullopt, "HelloWorldabcd", "whatupxyzlol", std::nullopt}));
   EXPECT_TRUE(test_expression<std::string>(table_empty, *concat(empty_s, "hello"), {}));
 }
 
@@ -399,7 +405,6 @@ TEST_F(ExpressionEvaluatorTest, Parameter) {
 
   expression_set_parameters(a_plus_5_times_b, {{b_id, 4}});
   EXPECT_TRUE(test_expression<int32_t>(*a_plus_5_times_b, {68}));
-
 }
 
 //TEST_F(ExpressionEvaluatorTest, ArithmeticExpressionWithNull) {
@@ -460,31 +465,34 @@ TEST_F(ExpressionEvaluatorTest, InListLiterals) {
 }
 
 TEST_F(ExpressionEvaluatorTest, InListSeries) {
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(a, list(1.0, 3.0)),  {1, 0, 1, 0}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(a, list(null(), 1.0, 3.0)),  {1, std::nullopt, 1, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(sub(mul(a, 2), 2), list(b, 6, null(), 0)),  {1, std::nullopt, 1, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(a, list(1.0, 3.0)), {1, 0, 1, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(a, list(null(), 1.0, 3.0)), {1, std::nullopt, 1, std::nullopt}));
+  EXPECT_TRUE(
+      test_expression<int32_t>(table_a, *in(sub(mul(a, 2), 2), list(b, 6, null(), 0)), {1, std::nullopt, 1, 1}));
 }
 
 TEST_F(ExpressionEvaluatorTest, InSelectUncorrelated) {
   // PQP that returns the column "a"
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
-  const auto pqp_a = std::make_shared<Projection>(table_wrapper_a, expression_vector(PQPColumnExpression::from_table(*table_a, "a")));
+  const auto pqp_a =
+      std::make_shared<Projection>(table_wrapper_a, expression_vector(PQPColumnExpression::from_table(*table_a, "a")));
   const auto select_a = select(pqp_a, DataType::Int, false);
 
   // PQP that returns the column "c"
   const auto table_wrapper_b = std::make_shared<TableWrapper>(table_a);
-  const auto pqp_b = std::make_shared<Projection>(table_wrapper_b, expression_vector(PQPColumnExpression::from_table(*table_a, "c")));
+  const auto pqp_b =
+      std::make_shared<Projection>(table_wrapper_b, expression_vector(PQPColumnExpression::from_table(*table_a, "c")));
   const auto select_b = select(pqp_b, DataType::Int, true);
 
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(6, select_a),  {0}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(a, select_a),  {1, 1, 1, 1}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(add(a, 2), select_a),  {1, 1, 0, 0}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(b, select_a),  {1, 1, 1, 0}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34, select_b),  {1}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34.0, select_b),  {1}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34.5, select_b),  {std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in("hello", select_b),  {0}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(c, select_b),  {1, std::nullopt, 1, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(6, select_a), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(a, select_a), {1, 1, 1, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(add(a, 2), select_a), {1, 1, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(b, select_a), {1, 1, 1, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34, select_b), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34.0, select_b), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34.5, select_b), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in("hello", select_b), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(c, select_b), {1, std::nullopt, 1, std::nullopt}));
 }
 
 TEST_F(ExpressionEvaluatorTest, InSelectCorrelated) {
@@ -500,11 +508,12 @@ TEST_F(ExpressionEvaluatorTest, InSelectCorrelated) {
   const auto pqp_a = std::make_shared<Projection>(table_wrapper_a, expression_vector(mul_a));
   const auto select_a = select(pqp_a, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
 
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(4, select_a),  {1, 1, 0, 1}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(6, select_a),  {0, 1, 1, 0}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(16, select_a),  {0, 0, 0, 1}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(b, select_a),  {1, 0, 0, 0}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(null(), select_a),  {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(4, select_a), {1, 1, 0, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(6, select_a), {0, 1, 1, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(16, select_a), {0, 0, 0, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(b, select_a), {1, 0, 0, 0}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(null(), select_a),
+                                       {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
 
   // PQP that returns the column "c" added to the current value in "a"
   //
@@ -518,12 +527,14 @@ TEST_F(ExpressionEvaluatorTest, InSelectCorrelated) {
   const auto pqp_b = std::make_shared<Projection>(table_wrapper_b, expression_vector(add_b));
   const auto select_b = select(pqp_b, DataType::Int, true, std::make_pair(ParameterID{0}, ColumnID{0}));
 
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34, select_b),  {1, std::nullopt, std::nullopt, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(35, select_b),  {1, 1, std::nullopt, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(null(), select_b),  {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(36, select_b),  {std::nullopt, 1, 1, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(36.0, select_b),  {std::nullopt, 1, 1, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(36.3, select_b),  {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(34, select_b), {1, std::nullopt, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(35, select_b), {1, 1, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(null(), select_b),
+                                       {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(36, select_b), {std::nullopt, 1, 1, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in(36.0, select_b), {std::nullopt, 1, 1, std::nullopt}));
+  EXPECT_TRUE(
+      test_expression<int32_t>(table_a, *in(36.3, select_b), {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
 }
 
 TEST_F(ExpressionEvaluatorTest, Exists) {
@@ -537,12 +548,15 @@ TEST_F(ExpressionEvaluatorTest, Exists) {
    */
   const auto table_wrapper = std::make_shared<TableWrapper>(table_b);
   const auto parameter_a = parameter(ParameterID{0});
-  const auto a_plus_x_projection = std::make_shared<Projection>(table_wrapper, expression_vector(add(parameter_a, x), x));
-  const auto a_plus_x_eq_13_scan = std::make_shared<TableScan>(a_plus_x_projection, ColumnID{0}, PredicateCondition::Equals, 13);
-  const auto pqp_select_expression = select(a_plus_x_eq_13_scan, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
+  const auto a_plus_x_projection =
+      std::make_shared<Projection>(table_wrapper, expression_vector(add(parameter_a, x), x));
+  const auto a_plus_x_eq_13_scan =
+      std::make_shared<TableScan>(a_plus_x_projection, ColumnID{0}, PredicateCondition::Equals, 13);
+  const auto pqp_select_expression =
+      select(a_plus_x_eq_13_scan, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
 
   const auto exists_expression = std::make_shared<ExistsExpression>(pqp_select_expression);
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *exists_expression,  {0, 0, 1, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *exists_expression, {0, 0, 1, 1}));
 }
 
 TEST_F(ExpressionEvaluatorTest, ExtractLiterals) {
@@ -555,12 +569,17 @@ TEST_F(ExpressionEvaluatorTest, ExtractLiterals) {
 }
 
 TEST_F(ExpressionEvaluatorTest, ExtractSeries) {
-  EXPECT_TRUE(test_expression<std::string>(table_a, *extract(DatetimeComponent::Year, dates), {"2017", "2014", "2011", "2010"}));
-  EXPECT_TRUE(test_expression<std::string>(table_a, *extract(DatetimeComponent::Month, dates), {"12", "08", "09", "01"}));
+  EXPECT_TRUE(test_expression<std::string>(table_a, *extract(DatetimeComponent::Year, dates),
+                                           {"2017", "2014", "2011", "2010"}));
+  EXPECT_TRUE(
+      test_expression<std::string>(table_a, *extract(DatetimeComponent::Month, dates), {"12", "08", "09", "01"}));
   EXPECT_TRUE(test_expression<std::string>(table_a, *extract(DatetimeComponent::Day, dates), {"06", "05", "03", "02"}));
-  EXPECT_TRUE(test_expression<std::string>(table_a, *extract(DatetimeComponent::Year, dates2), {"2017", "2014", std::nullopt, std::nullopt}));
-  EXPECT_TRUE(test_expression<std::string>(table_a, *extract(DatetimeComponent::Month, dates2), {"12", "08", std::nullopt, std::nullopt}));
-  EXPECT_TRUE(test_expression<std::string>(table_a, *extract(DatetimeComponent::Day, dates2), {"06", "05", std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<std::string>(table_a, *extract(DatetimeComponent::Year, dates2),
+                                           {"2017", "2014", std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<std::string>(table_a, *extract(DatetimeComponent::Month, dates2),
+                                           {"12", "08", std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<std::string>(table_a, *extract(DatetimeComponent::Day, dates2),
+                                           {"06", "05", std::nullopt, std::nullopt}));
   EXPECT_TRUE(test_expression<std::string>(table_empty, *extract(DatetimeComponent::Day, empty_s), {}));
 }
 

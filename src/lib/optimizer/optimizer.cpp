@@ -3,8 +3,8 @@
 #include <memory>
 
 #include "logical_query_plan/logical_plan_root_node.hpp"
-#include "strategy/constant_calculation_rule.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
+#include "strategy/constant_calculation_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/join_detection_rule.hpp"
 #include "strategy/predicate_pushdown_rule.hpp"

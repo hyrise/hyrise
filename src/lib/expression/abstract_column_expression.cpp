@@ -2,6 +2,6 @@
 
 namespace opossum {
 
-AbstractColumnExpression::AbstractColumnExpression(): AbstractExpression(ExpressionType::Column, {}) {}
+AbstractColumnExpression::AbstractColumnExpression() : AbstractExpression(ExpressionType::Column, {}) {}
 
 }  // namespace opossum

@@ -9,19 +9,17 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "utils/assert.hpp"
 
-
 namespace opossum {
 
 LQPSelectExpression::LQPSelectExpression(const std::shared_ptr<AbstractLQPNode>& lqp,
                                          const std::vector<ParameterID>& parameter_ids,
-                                         const std::vector<std::shared_ptr<AbstractExpression>>& parameter_expressions):
- AbstractExpression(ExpressionType::Select, parameter_expressions), lqp(lqp), parameter_ids(parameter_ids) {
-  Assert(parameter_ids.size() == parameter_expressions.size(), "Need exactly as many ParameterIDs as parameter Expressions");
+                                         const std::vector<std::shared_ptr<AbstractExpression>>& parameter_expressions)
+    : AbstractExpression(ExpressionType::Select, parameter_expressions), lqp(lqp), parameter_ids(parameter_ids) {
+  Assert(parameter_ids.size() == parameter_expressions.size(),
+         "Need exactly as many ParameterIDs as parameter Expressions");
 }
 
-size_t LQPSelectExpression::parameter_count() const {
-  return parameter_ids.size();
-}
+size_t LQPSelectExpression::parameter_count() const { return parameter_ids.size(); }
 
 std::shared_ptr<AbstractExpression> LQPSelectExpression::parameter_expression(const size_t parameter_idx) const {
   Assert(parameter_idx < parameter_count(), "Parameter index out of range");
@@ -47,7 +45,8 @@ std::string LQPSelectExpression::as_column_name() const {
 }
 
 DataType LQPSelectExpression::data_type() const {
-  Assert(lqp->column_expressions().size() == 1, "Can only determine the DataType of SelectExpressions that return exactly one column");
+  Assert(lqp->column_expressions().size() == 1,
+         "Can only determine the DataType of SelectExpressions that return exactly one column");
   return lqp->column_expressions()[0]->data_type();
 }
 

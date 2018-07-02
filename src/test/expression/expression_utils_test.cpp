@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 
-#include "expression/expression_utils.hpp"
 #include "expression/expression_factory.hpp"
+#include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 
@@ -12,7 +12,8 @@ namespace opossum {
 class ExpressionUtilsTest : public ::testing::Test {
  public:
   void SetUp() override {
-    node_a = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}});
+    node_a =
+        MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}});
     a_a = LQPColumnReference{node_a, ColumnID{0}};
     a_b = LQPColumnReference{node_a, ColumnID{1}};
     a_c = LQPColumnReference{node_a, ColumnID{2}};

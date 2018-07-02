@@ -5,12 +5,16 @@
 
 namespace opossum {
 
-SQLIdentifierContextProxy::SQLIdentifierContextProxy(const std::shared_ptr<SQLIdentifierContext>& wrapped_context,
-                                                     const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
-                                                     const std::shared_ptr<SQLIdentifierContextProxy>& outer_context_proxy):
-  _wrapped_context(wrapped_context), _parameter_id_allocator(parameter_id_allocator), _outer_context_proxy(outer_context_proxy) {}
+SQLIdentifierContextProxy::SQLIdentifierContextProxy(
+    const std::shared_ptr<SQLIdentifierContext>& wrapped_context,
+    const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
+    const std::shared_ptr<SQLIdentifierContextProxy>& outer_context_proxy)
+    : _wrapped_context(wrapped_context),
+      _parameter_id_allocator(parameter_id_allocator),
+      _outer_context_proxy(outer_context_proxy) {}
 
-std::shared_ptr<AbstractExpression> SQLIdentifierContextProxy::resolve_identifier_relaxed(const SQLIdentifier& identifier) {
+std::shared_ptr<AbstractExpression> SQLIdentifierContextProxy::resolve_identifier_relaxed(
+    const SQLIdentifier& identifier) {
   auto expression = _wrapped_context->resolve_identifier_relaxed(identifier);
   if (expression) {
     const auto expression_iter = _accessed_expressions.find(expression);

@@ -2,8 +2,8 @@
 
 #include "types.hpp"
 
-#include "table_generator.hpp"
 #include "operators/print.hpp"
+#include "table_generator.hpp"
 
 using namespace opossum;  // NOLINT
 

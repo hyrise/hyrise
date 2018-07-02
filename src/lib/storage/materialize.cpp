@@ -15,13 +15,12 @@ std::shared_ptr<BaseColumn> materialize_as_value_column(const BaseColumn& base_c
     materialize_values(column, values);
 
     // If the column is a ValueColumn, check if materializing the nulls is necessary
-    if
-      constexpr(std::is_base_of_v<BaseValueColumn, ColumnType>) {
-        if (!column.is_nullable()) {
-          value_column = std::make_shared<ValueColumn<DataType>>(std::move(values));
-          return;
-        }
+    if constexpr (std::is_base_of_v<BaseValueColumn, ColumnType>) {
+      if (!column.is_nullable()) {
+        value_column = std::make_shared<ValueColumn<DataType>>(std::move(values));
+        return;
       }
+    }
 
     pmr_concurrent_vector<bool> nulls(column.size());
     nulls.reserve(column.size());

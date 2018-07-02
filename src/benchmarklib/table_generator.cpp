@@ -58,7 +58,8 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkOffset chunk_si
       ChunkColumns columns;
       for (size_t j = 0; j < num_columns; j++) {
         if (null_value_ratio) {
-          columns.push_back(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j]), std::move(null_vectors[j])));
+          columns.push_back(
+              std::make_shared<ValueColumn<int>>(std::move(value_vectors[j]), std::move(null_vectors[j])));
           null_vectors[j] = tbb::concurrent_vector<bool>(value_vector_size);
         } else {
           columns.push_back(std::make_shared<ValueColumn<int>>(std::move(value_vectors[j])));

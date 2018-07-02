@@ -92,9 +92,7 @@ class ColumnIterable {
    */
   template <typename Container>
   void materialize_values(Container& container) const {
-    for_each([&](const auto& value) {
-      container.push_back(value.value());
-    });
+    for_each([&](const auto& value) { container.push_back(value.value()); });
   }
 
   /**
