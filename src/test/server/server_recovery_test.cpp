@@ -1,6 +1,8 @@
 #include <pqxx/pqxx>
 
 #include <thread>
+#include <exception>
+#include <boost/filesystem.hpp>
 
 #include "base_test.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -13,6 +15,8 @@ namespace opossum {
 
 class ServerRecoveryTest : public BaseTestWithParam<Logger::Implementation> {
  protected:
+  
+  const char _folder[12] = "./tmp_test/";
 
   void start_server() {
     StorageManager::get().reset();
@@ -20,9 +24,6 @@ class ServerRecoveryTest : public BaseTestWithParam<Logger::Implementation> {
 
     // just to be sure, since it is essential for these tests
     EXPECT_FALSE(StorageManager::get().has_table("a_table"));
-
-    // _table_a = load_table("src/test/tables/int_float.tbl", 2);
-    // StorageManager::get().add_table("table_a", _table_a);
 
     // Set scheduler so that the server can execute the tasks on separate threads.
     CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_numa_topology()));
@@ -58,7 +59,9 @@ class ServerRecoveryTest : public BaseTestWithParam<Logger::Implementation> {
   }
 
   void SetUp() override {
-    start_server();
+    // Create directory since we delete it in TearDown() and Logger doesn't expect his current directory to be deleted.
+    opossum::Logger::create_directories();
+    opossum::Logger::set_folder(_folder);
   }
 
   void shutdown_server() {
@@ -72,6 +75,7 @@ class ServerRecoveryTest : public BaseTestWithParam<Logger::Implementation> {
   void TearDown() override {
     shutdown_server();
     Logger::delete_log_files();
+    boost::filesystem::remove_all(_folder);
   }
 
   void restart_server() {
@@ -82,8 +86,6 @@ class ServerRecoveryTest : public BaseTestWithParam<Logger::Implementation> {
   std::unique_ptr<boost::asio::io_service> _io_service;
   std::unique_ptr<std::thread> _server_thread;
   std::string _connection_string;
-
-  // std::shared_ptr<Table> _table_a;
 };
 
 // TEST_F(ServerRecoveryTest, TestSimpleSelect) {
@@ -120,9 +122,12 @@ class ServerRecoveryTest : public BaseTestWithParam<Logger::Implementation> {
 
 TEST_P(ServerRecoveryTest, TestSimpleInsert) {
   Logger::set_implementation(GetParam());
+  start_server();
 
   pqxx::connection connection{_connection_string};
   pqxx::nontransaction transaction{connection};
+
+  EXPECT_THROW(transaction.exec("SELECT * FROM a_table;"), std::exception);
 
   auto a_table = load_table("src/test/tables/int_float.tbl", 2);
 
@@ -132,25 +137,15 @@ TEST_P(ServerRecoveryTest, TestSimpleInsert) {
 
   transaction.exec("INSERT INTO a_table VALUES (1, 1.0);");
   transaction.exec("INSERT INTO a_table VALUES (994, 994.0);");
+  transaction.exec("DELETE FROM a_table WHERE a = 123");
+  transaction.exec("UPDATE a_table SET a = 7, b = 7.2 WHERE a = 1234");
 
-  // // const auto expected_num_rows = _table_a->row_count() + 1;
-  // transaction.exec("INSERT INTO int_float_table VALUES (1, 1.0);");
-  // transaction.exec("INSERT INTO int_float_table VALUES (994, 994.0);");
-  // const auto result = transaction.exec("SELECT * FROM int_float_table;");
-  // EXPECT_EQ(result.size(), 4u);
-
-  shutdown_server();
-
-  start_server();
+  restart_server();
   
   pqxx::connection connection2{_connection_string};
   pqxx::nontransaction transaction2{connection2};
   const auto result2 = transaction2.exec("SELECT * FROM a_table;");
-  EXPECT_EQ(result2.size(), a_table->row_count() + 2);
-
-  // clean logs
-
-  EXPECT_EQ(true, true);
+  EXPECT_EQ(result2.size(), a_table->row_count() + 1);
 }
 
 // TEST_F(ServerRecoveryTest, TestPreparedStatement) {
@@ -168,16 +163,6 @@ TEST_P(ServerRecoveryTest, TestSimpleInsert) {
 //   const auto result2 = transaction.exec_prepared(prepared_name, param);
 //   EXPECT_EQ(result2.size(), 2u);
 // }
-
-// const JoinDetectionTestParam test_queries[] = {{__LINE__, "SELECT * FROM a, b WHERE a.a = b.a", 1},
-//                                                {__LINE__, "SELECT * FROM a, b, c WHERE a.a = c.a", 1},
-//                                                {__LINE__, "SELECT * FROM a, b, c WHERE b.a = c.a", 1}};
-
-// auto formatter = [](const testing::TestParamInfo<struct JoinDetectionTestParam> info) {
-//   return std::to_string(info.param.line);
-// };
-// INSTANTIATE_TEST_CASE_P(test_queries, JoinDetectionRuleTest, ::testing::ValuesIn(test_queries), formatter);
-
 
 Logger::Implementation logging_implementations[] = {
   Logger::Implementation::Simple, 
