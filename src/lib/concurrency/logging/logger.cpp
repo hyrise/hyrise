@@ -7,6 +7,7 @@
 #include <sstream>
 #include <boost/filesystem.hpp>
 #include <boost/range.hpp>
+#include <boost/range/algorithm/reverse.hpp>
 
 #include "abstract_logger.hpp"
 #include "group_commit_logger.hpp"
@@ -75,7 +76,13 @@ std::vector<std::string> Logger::get_all_log_file_paths() {
     }
     result.push_back(path.path().string());
   }
-  return result;
+
+  if (result.size() > 0) {
+    auto pos = result[0].rfind(filename) + filename.length();
+    std::sort(result.begin(), result.end(), [&pos](std::string a, std::string b){ 
+      return std::stoul(a.substr(pos)) < std::stoul(b.substr(pos)); });
+  }
+  return (result);
 }
 
 u_int32_t Logger::_get_latest_log_number() {
