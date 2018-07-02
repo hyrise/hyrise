@@ -126,6 +126,18 @@ void GroupCommitLogger::commit(const TransactionID transaction_id, std::function
   _write_to_buffer(entry);
 }
 
+void GroupCommitLogger::load_table(const std::string& file_path, const std::string& table_name) {
+  const auto entry_length = sizeof(char) + (file_path.size() + 1) + (table_name.size() + 1);
+  std::vector<char> entry(entry_length);
+  size_t cursor{0};
+
+  _write_value(entry, cursor, 'l');
+  _write_value(entry, cursor, file_path);
+  _write_value(entry, cursor, table_name);
+
+  _write_to_buffer(entry);
+}
+
 // ValueVisitor is used to write multiple AllTypeVariants into an entry successively.
 // Returns boolean to indicate if something has been written into entry.
 // Therefore the visitation returns false if the AllTypeVariant is a NullValue. 

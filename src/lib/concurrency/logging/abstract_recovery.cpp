@@ -1,5 +1,6 @@
 #include "abstract_recovery.hpp"
 
+#include "utils/load_table.hpp"
 #include "../../storage/storage_manager.hpp"
 #include "../../storage/table.hpp"
 #include "../transaction_manager.hpp"
@@ -37,6 +38,11 @@ void AbstractRecovery::_update_transaction_id(const TransactionID highest_commit
   if (highest_committed_id > 0) {
     TransactionManager::_reset_to_id(highest_committed_id + 1);
   }
+}
+
+void AbstractRecovery::_recover_table(const std::string& path, const std::string& table_name) {
+  auto table = load_table(path, Chunk::MAX_SIZE);
+  StorageManager::get().add_table(table_name, table);
 }
 
 }  // namespace opossum

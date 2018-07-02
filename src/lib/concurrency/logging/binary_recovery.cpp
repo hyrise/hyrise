@@ -59,9 +59,9 @@ AllTypeVariant _read(std::ifstream& file, DataType data_type) {
 
 void BinaryRecovery::recover() {
   TransactionID last_transaction_id{0};
-  for (auto& path: Logger::get_all_log_file_paths()) {
-    std::ifstream log_file(path);
-    DebugAssert(log_file.is_open(), "Recovery: could not open logfile " + path);
+  for (auto& log_path: Logger::get_all_log_file_paths()) {
+    std::ifstream log_file(log_path);
+    DebugAssert(log_file.is_open(), "Recovery: could not open logfile " + log_path);
 
     std::vector<LoggedItem> transactions;
 
@@ -75,6 +75,21 @@ void BinaryRecovery::recover() {
 
       if (log_file.eof()) {
         break;
+      }
+
+      DebugAssert(log_type == 't' || log_type == 'i' || log_type == 'v' || log_type == 'l',
+        "Recovery: invalid log type token");
+
+      // if load entry
+      if (log_type == 'l') {
+        std::string table_path;
+        std::getline(log_file, table_path, '\0');
+
+        std::string table_name;
+        std::getline(log_file, table_name, '\0');
+
+        _recover_table(table_path, table_name);
+        continue;
       }
 
       TransactionID transaction_id;

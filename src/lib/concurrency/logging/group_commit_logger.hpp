@@ -24,7 +24,7 @@ class GroupCommitLogger : public AbstractLogger {
 
   void invalidate(const TransactionID transaction_id, const std::string& table_name, const RowID row_id) override;
 
-  void load_table(const std::string& file_path, const std::string& table_name) override {};
+  void load_table(const std::string& file_path, const std::string& table_name) override;
 
   void flush() override;
 

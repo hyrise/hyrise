@@ -76,7 +76,8 @@ void TextRecovery::recover() {
       size_t next_token_begin = 3;
 
       char log_type = line[1];
-      DebugAssert(log_type == 't' || log_type == 'i' || log_type == 'v' || log_type == 'l', "Recovery: invalid log type token");
+      DebugAssert(log_type == 't' || log_type == 'i' || log_type == 'v' || log_type == 'l',
+        "Recovery: invalid log type token");
 
       // if commit entry
       if (log_type == 't') {
@@ -93,8 +94,7 @@ void TextRecovery::recover() {
         DebugAssert(line[next_token_begin - 1] == ')', "Recovery: load table entry expected ')', but got " + 
           line[next_token_begin - 1] + " instead.");
 
-        auto table = load_table(path, Chunk::MAX_SIZE);
-        StorageManager::get().add_table(table_name, table);
+        _recover_table(path, table_name);
         continue;
       }
       

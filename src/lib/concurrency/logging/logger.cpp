@@ -16,12 +16,12 @@
 namespace opossum {
 
 // set default Implementation
-// Logger::Implementation Logger::_implementation = Implementation::GroupCommit;
-Logger::Implementation Logger::_implementation = Implementation::Simple;
+Logger::Implementation Logger::_implementation = Implementation::GroupCommit;
+// Logger::Implementation Logger::_implementation = Implementation::Simple;
 
 std::string Logger::data_path = "./data/";
-std::string Logger::log_path = data_path + log_folder;
 const std::string Logger::log_folder = "logs/";
+std::string Logger::log_path = data_path + log_folder;
 const std::string Logger::filename = "hyrise-log";
 
 AbstractLogger& Logger::getInstance() {
