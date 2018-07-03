@@ -87,8 +87,8 @@ void GroupCommitLogger::_write_value<std::string>(std::vector<char>& entry, size
 // Writes the parameter into entry at position of entry_cursor
 void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, size_t& entry_cursor, const char& type,
                                         const TransactionID& transaction_id) {
-  _write_value<char>(entry, entry_cursor, type);
-  _write_value<TransactionID>(entry, entry_cursor, transaction_id);
+  _write_value(entry, entry_cursor, type);
+  _write_value(entry, entry_cursor, transaction_id);
 }
 
 // Writes the parameter into entry at the beginning of entry
@@ -103,9 +103,9 @@ void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, size_t& entry_
                                         const TransactionID& transaction_id, const std::string& table_name,
                                         const RowID& row_id) {
   _put_into_entry(entry, entry_cursor, type, transaction_id);
-  _write_value<std::string>(entry, entry_cursor, table_name);
-  _write_value<ChunkID>(entry, entry_cursor, row_id.chunk_id);
-  _write_value<ChunkOffset>(entry, entry_cursor, row_id.chunk_offset);
+  _write_value(entry, entry_cursor, table_name);
+  _write_value(entry, entry_cursor, row_id.chunk_id);
+  _write_value(entry, entry_cursor, row_id.chunk_offset);
 }
 
 // Writes the parameter into entry at the beginning of entry
