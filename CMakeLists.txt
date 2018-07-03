@@ -79,7 +79,6 @@ endif()
 set(CURSES_NEED_NCURSES TRUE)
 
 # Dependencies
-find_package(SYSTEMTAP REQUIRED)
 find_package(FS REQUIRED)
 find_package(Numa)
 find_package(LLVM 6.0.0 CONFIG)
