@@ -81,9 +81,6 @@ CheckOptions:
   - key: readability-identifier-naming.TemplateUsingCase
     value: lower_case
 
-  - key: readability-identifier-naming.TemplateUsingPrefix
-    value: 'u_'
-
   - key: readability-identifier-naming.TypeTemplateParameterCase
     value: CamelCase
 
@@ -92,9 +89,6 @@ CheckOptions:
 
   - key: readability-identifier-naming.UnionCase
     value: CamelCase
-
-  - key: readability-identifier-naming.UnionPrefix
-    value: 'U'
 
   - key: readability-identifier-naming.UsingCase
     value: lower_case
