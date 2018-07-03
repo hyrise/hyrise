@@ -99,7 +99,7 @@ endif()
 
 # Link Time Optimization (LTO)
 cmake_policy(SET CMP0069 NEW)
-option(ENABLE_LTO "Set to ON to build Hyrise with enabled coverage checking. Default: OFF" OFF)
+option(ENABLE_LTO "Set to ON to build Hyrise with enabled Link Time Optimization (LTO). Default: OFF" OFF)
 if (${ENABLE_LTO})
     if(NOT ${CMAKE_VERSION} VERSION_LESS "3.9.0")
         cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
