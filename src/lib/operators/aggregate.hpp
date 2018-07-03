@@ -62,7 +62,7 @@ struct AggregateResult {
 /*
 The key type that is used for the aggregation map.
 */
-using AggregateKey = std::pair<std::vector<uint64_t>, std::vector<AllTypeVariant>>;
+using AggregateKey = std::vector<uint64_t>;
 
 using AggregateColumnDefinition = AggregateColumnDefinitionTemplate<ColumnID>;
 
@@ -143,8 +143,6 @@ class Aggregate : public AbstractReadOnlyOperator {
 namespace std {
 template <>
 struct hash<opossum::AggregateKey> {
-  size_t operator()(const opossum::AggregateKey& key) const {
-    return boost::hash_range(key.first.begin(), key.first.end());
-  }
+  size_t operator()(const opossum::AggregateKey& key) const { return boost::hash_range(key.begin(), key.end()); }
 };
 }  // namespace std

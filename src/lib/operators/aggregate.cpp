@@ -107,9 +107,9 @@ struct GroupByContext : ColumnVisitableContext {
 /*
 Compares two AggregateKeys, but considers two NULL values to be equal. This is so that they form a single group.
 */
-struct NullEqualTo {
+struct EqualTo {
   bool operator()(const AggregateKey& left, const AggregateKey& right) const {
-    return std::equal(left.first.begin(), left.first.end(), right.first.begin(), right.first.end());
+    return std::equal(left.begin(), left.end(), right.begin(), right.end());
   }
 };
 
@@ -132,8 +132,8 @@ struct AggregateContext : ColumnVisitableContext {
   }
 
   std::shared_ptr<GroupByContext> groupby_context;
-  std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>, std::hash<AggregateKey>,
-                                     NullEqualTo>>
+  std::shared_ptr<
+      std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>, std::hash<AggregateKey>, EqualTo>>
       results;
 };
 
@@ -365,12 +365,9 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   */
   _keys_per_chunk = std::vector<std::shared_ptr<std::vector<AggregateKey>>>(input_table->chunk_count());
 
-  auto int_default_vector = std::vector<uint64_t>(_groupby_column_ids.size());
-  auto alltypevariant_default_vector = std::vector<AllTypeVariant>(_groupby_column_ids.size(), NULL_VALUE);
-
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
     _keys_per_chunk[chunk_id] = std::make_shared<std::vector<AggregateKey>>(
-        input_table->get_chunk(chunk_id)->size(), std::make_pair(int_default_vector, alltypevariant_default_vector));
+        input_table->get_chunk(chunk_id)->size(), std::vector<uint64_t>(_groupby_column_ids.size()));
   }
 
   // TODO(anyone): enable scheduler to iterate multiple groupby columns in parallel
@@ -393,16 +390,14 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
 
           ChunkOffset chunk_offset{0};
           iterable.for_each([&](const auto& value) {
+            // TODO(marcel): null value
+
             auto inserted = id_map.try_emplace(value.value(), id_counter);
             // store either the current id_counter or the existing ID of the value
-            (*_keys_per_chunk[chunk_id])[chunk_offset].first[group_column_index] = inserted.first->second;
+            (*_keys_per_chunk[chunk_id])[chunk_offset][group_column_index] = inserted.first->second;
 
             // if the id_map didn't have the value as a key and a new element was inserted
             if (inserted.second) ++id_counter;
-
-            if (!value.is_null()) {
-              (*_keys_per_chunk[chunk_id])[chunk_offset].second[group_column_index] = value.value();
-            }
 
             ++chunk_offset;
           });
@@ -427,7 +422,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
     auto context = std::make_shared<AggregateContext<DistinctColumnType, DistinctAggregateType>>();
     context->results =
         std::make_shared<std::unordered_map<AggregateKey, AggregateResult<DistinctAggregateType, DistinctColumnType>,
-                                            std::hash<AggregateKey>, NullEqualTo>>();
+                                            std::hash<AggregateKey>, EqualTo>>();
 
     _contexts_per_column.push_back(context);
   }
@@ -444,7 +439,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
       auto context = std::make_shared<AggregateContext<CountColumnType, CountAggregateType>>();
       context->results =
           std::make_shared<std::unordered_map<AggregateKey, AggregateResult<CountAggregateType, CountColumnType>,
-                                              std::hash<AggregateKey>, NullEqualTo>>();
+                                              std::hash<AggregateKey>, EqualTo>>();
       _contexts_per_column[column_id] = context;
       continue;
     }
@@ -612,7 +607,7 @@ typename std::enable_if<
     func == AggregateFunction::Min || func == AggregateFunction::Max || func == AggregateFunction::Sum, void>::type
 _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
                         std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>,
-                                                           std::hash<AggregateKey>, NullEqualTo>>
+                                                           std::hash<AggregateKey>, EqualTo>>
                             results) {
   DebugAssert(column->is_nullable(), "Aggregate: Output column needs to be nullable");
 
@@ -634,8 +629,8 @@ _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
 template <typename ColumnType, typename AggregateType, AggregateFunction func>
 typename std::enable_if<func == AggregateFunction::Count, void>::type _write_aggregate_values(
     std::shared_ptr<ValueColumn<AggregateType>> column,
-    std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>,
-                                       std::hash<AggregateKey>, NullEqualTo>>
+    std::shared_ptr<
+        std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>, std::hash<AggregateKey>, EqualTo>>
         results) {
   DebugAssert(!column->is_nullable(), "Aggregate: Output column for COUNT shouldn't be nullable");
 
@@ -650,8 +645,8 @@ typename std::enable_if<func == AggregateFunction::Count, void>::type _write_agg
 template <typename ColumnType, typename AggregateType, AggregateFunction func>
 typename std::enable_if<func == AggregateFunction::CountDistinct, void>::type _write_aggregate_values(
     std::shared_ptr<ValueColumn<AggregateType>> column,
-    std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>,
-                                       std::hash<AggregateKey>, NullEqualTo>>
+    std::shared_ptr<
+        std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>, std::hash<AggregateKey>, EqualTo>>
         results) {
   DebugAssert(!column->is_nullable(), "Aggregate: Output column for COUNT shouldn't be nullable");
 
@@ -667,7 +662,7 @@ template <typename ColumnType, typename AggregateType, AggregateFunction func>
 typename std::enable_if<func == AggregateFunction::Avg && std::is_arithmetic<AggregateType>::value, void>::type
 _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
                         std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>,
-                                                           std::hash<AggregateKey>, NullEqualTo>>
+                                                           std::hash<AggregateKey>, EqualTo>>
                             results) {
   DebugAssert(column->is_nullable(), "Aggregate: Output column needs to be nullable");
 
@@ -690,7 +685,7 @@ template <typename ColumnType, typename AggregateType, AggregateFunction func>
 typename std::enable_if<func == AggregateFunction::Avg && !std::is_arithmetic<AggregateType>::value, void>::type
 _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>>,
                         std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>,
-                                                           std::hash<AggregateKey>, NullEqualTo>>) {
+                                                           std::hash<AggregateKey>, EqualTo>>) {
   Fail("Invalid aggregate");
 }
 
