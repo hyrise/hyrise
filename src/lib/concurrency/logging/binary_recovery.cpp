@@ -28,28 +28,23 @@ AllTypeVariant BinaryRecovery::_read_AllTypeVariant(std::ifstream& file, DataTyp
   AllTypeVariant value;
   switch (data_type) {
     case DataType::Int: {
-      auto v = _read<int32_t>(file);
-      value = v;
+      return AllTypeVariant{_read<int32_t>(file)};
       break;
     }
     case DataType::Long: {
-      auto v = _read<int64_t>(file);
-      value = v;
+      return AllTypeVariant{_read<int64_t>(file)};
       break;
     }
     case DataType::Float: {
-      auto v = _read<float>(file);
-      value = v;
+      return AllTypeVariant{_read<float>(file)};
       break;
     }
     case DataType::Double: {
-      auto v = _read<double>(file);
-      value = v;
+      return AllTypeVariant{_read<double>(file)};
       break;
     }
     case DataType::String: {
-      auto v = _read<std::string>(file);
-      value = v;
+      return AllTypeVariant{_read<std::string>(file)};
       break;
     }
     default:
@@ -101,7 +96,7 @@ void BinaryRecovery::recover() {
       } 
 
       // else invalidation or value
-      DebugAssert(log_type == 'v' || log_type == 'i', "recovery: first token of new entry is neither t, v nor i");
+      DebugAssert(log_type == 'v' || log_type == 'i', "Recovery: First token of new entry is not handled properly.");
       
       // Invalidation and begin of value entries:
       //   - log entry type ('v') : sizeof(char)
