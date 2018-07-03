@@ -19,8 +19,8 @@ namespace opossum {
 AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<const BaseColumn>>& index_columns)
     : BaseIndex{get_index_type_of<AdaptiveRadixTreeIndex>()},
       _index_column(std::dynamic_pointer_cast<const BaseDictionaryColumn>(index_columns.front())) {
-  DebugAssert(static_cast<bool>(_index_column), "AdaptiveRadixTree only works with dictionary columns for now");
-  DebugAssert((index_columns.size() == 1), "AdaptiveRadixTree only works with a single column");
+  Assert(static_cast<bool>(_index_column), "AdaptiveRadixTree only works with dictionary columns for now");
+  Assert((index_columns.size() == 1), "AdaptiveRadixTree only works with a single column");
 
   // For each value ID in the attribute vector, create a pair consisting of a BinaryComparable of
   // this value ID and its ChunkOffset (needed for bulk-inserting).

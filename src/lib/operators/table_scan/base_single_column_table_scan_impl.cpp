@@ -18,12 +18,12 @@ BaseSingleColumnTableScanImpl::BaseSingleColumnTableScanImpl(std::shared_ptr<con
                                                              const PredicateCondition predicate_condition)
     : BaseTableScanImpl{in_table, left_column_id, predicate_condition} {}
 
-PosList BaseSingleColumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
+std::shared_ptr<PosList> BaseSingleColumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
   const auto chunk = _in_table->get_chunk(chunk_id);
   const auto left_column = chunk->get_column(_left_column_id);
 
-  auto matches_out = PosList{};
-  auto context = std::make_shared<Context>(chunk_id, matches_out);
+  auto matches_out = std::make_shared<PosList>();
+  auto context = std::make_shared<Context>(chunk_id, *matches_out);
 
   left_column->visit(*this, context);
 
