@@ -74,6 +74,11 @@ std::shared_ptr<AbstractOperator> Aggregate::_on_recreate(
   return std::make_shared<Aggregate>(recreated_input_left, _aggregates, _groupby_column_ids);
 }
 
+void Aggregate::_on_cleanup() {
+  _contexts_per_column.clear();
+  _keys_per_chunk.clear();
+}
+
 /*
 Visitor context for the partitioning/grouping visitor
 */
@@ -584,10 +589,10 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   }
 
   // Write the output
-  _output = std::make_shared<Table>(_output_column_definitions, TableType::Data);
-  _output->append_chunk(_output_columns);
+  auto output = std::make_shared<Table>(_output_column_definitions, TableType::Data);
+  output->append_chunk(_output_columns);
 
-  return _output;
+  return output;
 }
 
 /*

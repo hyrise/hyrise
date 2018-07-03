@@ -60,6 +60,35 @@ class GetRuntimePointerForValueTest : public BaseTest {
     ASSERT_EQ(known_runtime_pointer->address(), expected_address);
   }
 
+  __attribute__((no_sanitize_address)) void bitcode_pointer_test() {
+    // We need this method so that we can set the no-sanitize attribute on it. We don't want the sanitizer to run here
+    // because the pointers do not point to actual memory
+
+    // Create a set of valid pointers that the function can work on
+    int64_t some_value;
+    int64_t* some_pointer_1 = &some_value;
+    int64_t** some_pointer_2 = &some_pointer_1;
+    int64_t*** some_pointer_3 = &some_pointer_2;
+
+    // Initialize the first function argument of the foo function to the above pointer
+    _context.runtime_value_map[_value_0] = std::make_shared<JitConstantRuntimePointer>(some_pointer_3);
+
+    // Compare simulated and actual pointer values
+    assert_address_eq(GetRuntimePointerForValue(_value_0, _context), reinterpret_cast<uint64_t>(some_pointer_3));
+    assert_address_eq(GetRuntimePointerForValue(_value_1, _context),
+                      reinterpret_cast<uint64_t>(some_pointer_3) + 1 * sizeof(int64_t));
+    assert_address_eq(GetRuntimePointerForValue(_value_2, _context), reinterpret_cast<uint64_t>(some_pointer_2));
+    assert_address_eq(GetRuntimePointerForValue(_value_3, _context), reinterpret_cast<uint64_t>(some_pointer_3));
+    assert_address_eq(GetRuntimePointerForValue(_value_4, _context),
+                      reinterpret_cast<uint64_t>(some_pointer_3) + 2 * sizeof(int32_t));
+    assert_address_eq(GetRuntimePointerForValue(_value_5, _context),
+                      reinterpret_cast<uint64_t>(some_pointer_3) + (2 + 3) * sizeof(int32_t));
+    assert_address_eq(GetRuntimePointerForValue(_value_6, _context),
+                      reinterpret_cast<uint64_t>(some_pointer_2) + 4 * sizeof(int64_t));
+    assert_address_eq(GetRuntimePointerForValue(_value_7, _context), reinterpret_cast<uint64_t>(some_pointer_1));
+  }
+
+
   std::shared_ptr<llvm::LLVMContext> _llvm_context;
   SpecializationContext _context;
   llvm::Value* _value_0;
@@ -72,6 +101,10 @@ class GetRuntimePointerForValueTest : public BaseTest {
   llvm::Value* _value_7;
 };
 
+TEST_F(GetRuntimePointerForValueTest, BitcodePointerInstructionsAreProperlySimulated) {
+  bitcode_pointer_test();
+}
+
 TEST_F(GetRuntimePointerForValueTest, RuntimePointersAreInvalidWithoutInitialAddress) {
   //
   ASSERT_FALSE(GetRuntimePointerForValue(_value_0, _context)->is_valid());
@@ -82,31 +115,6 @@ TEST_F(GetRuntimePointerForValueTest, RuntimePointersAreInvalidWithoutInitialAdd
   ASSERT_FALSE(GetRuntimePointerForValue(_value_5, _context)->is_valid());
   ASSERT_FALSE(GetRuntimePointerForValue(_value_6, _context)->is_valid());
   ASSERT_FALSE(GetRuntimePointerForValue(_value_7, _context)->is_valid());
-}
-
-TEST_F(GetRuntimePointerForValueTest, BitcodePointerInstructionsAreProperlySimulated) {
-  // Create a set of valid pointers that the function can work on
-  int64_t some_value;
-  int64_t* some_pointer_1 = &some_value;
-  int64_t** some_pointer_2 = &some_pointer_1;
-  int64_t*** some_pointer_3 = &some_pointer_2;
-
-  // Initialize the first function argument of the foo function to the above pointer
-  _context.runtime_value_map[_value_0] = std::make_shared<JitConstantRuntimePointer>(some_pointer_3);
-
-  // Compare simulated and actual pointer values
-  assert_address_eq(GetRuntimePointerForValue(_value_0, _context), reinterpret_cast<uint64_t>(some_pointer_3));
-  assert_address_eq(GetRuntimePointerForValue(_value_1, _context),
-                    reinterpret_cast<uint64_t>(some_pointer_3) + 1 * sizeof(int64_t));
-  assert_address_eq(GetRuntimePointerForValue(_value_2, _context), reinterpret_cast<uint64_t>(some_pointer_2));
-  assert_address_eq(GetRuntimePointerForValue(_value_3, _context), reinterpret_cast<uint64_t>(some_pointer_3));
-  assert_address_eq(GetRuntimePointerForValue(_value_4, _context),
-                    reinterpret_cast<uint64_t>(some_pointer_3) + 2 * sizeof(int32_t));
-  assert_address_eq(GetRuntimePointerForValue(_value_5, _context),
-                    reinterpret_cast<uint64_t>(some_pointer_3) + (2 + 3) * sizeof(int32_t));
-  assert_address_eq(GetRuntimePointerForValue(_value_6, _context),
-                    reinterpret_cast<uint64_t>(some_pointer_2) + 4 * sizeof(int64_t));
-  assert_address_eq(GetRuntimePointerForValue(_value_7, _context), reinterpret_cast<uint64_t>(some_pointer_1));
 }
 
 }  // namespace opossum
