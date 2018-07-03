@@ -93,7 +93,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
     auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
       const auto chunk_guard = _in_table->get_chunk_with_access_counting(chunk_id);
       // The actual scan happens in the sub classes of BaseTableScanImpl
-      const auto matches_out = std::make_shared<PosList>(_impl->scan_chunk(chunk_id));
+      const auto matches_out = _impl->scan_chunk(chunk_id);
       if (matches_out->empty()) return;
 
       // The ChunkAccessCounter is reused to track accesses of the output chunk. Accesses of derived chunks are counted

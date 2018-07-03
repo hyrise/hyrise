@@ -7,6 +7,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
+#include "storage/table.hpp"
 #include "utils/filesystem.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -211,7 +212,24 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
   Assert(encoding_config_json.count("default"), "Config must contain default encoding.");
   const auto default_spec = encoding_spec_from_json(encoding_config_json["default"]);
 
-  TableColumnEncodingMapping encoding_mapping;
+  EncodingMapping type_encoding_mapping;
+  const auto has_type_encoding = encoding_config_json.find("type") != encoding_config_json.end();
+  if (has_type_encoding) {
+    const auto type_encoding = encoding_config_json["type"];
+    Assert(type_encoding.is_object(), "The type encoding needs to be specified as a json object.");
+
+    for (const auto& type : nlohmann::json::iterator_wrapper(type_encoding)) {
+      const auto type_str = boost::to_lower_copy(type.key());
+      Assert(data_type_to_string.right.find(type_str) != data_type_to_string.right.end(),
+             "Unknown data type for encoding: " + type_str);
+
+      const auto& encoding_info = type.value();
+      Assert(encoding_info.is_object(), "The type encoding info needs to be specified as a json object.");
+      type_encoding_mapping[type_str] = encoding_spec_from_json(encoding_info);
+    }
+  }
+
+  TableColumnEncodingMapping custom_encoding_mapping;
   const auto has_custom_encoding = encoding_config_json.find("custom") != encoding_config_json.end();
 
   if (has_custom_encoding) {
@@ -223,18 +241,18 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
       const auto& columns = table.value();
 
       Assert(columns.is_object(), "The custom column encoding needs to be specified as a json object.");
-      encoding_mapping.emplace(table_name, std::map<std::string, ColumnEncodingSpec>());
+      custom_encoding_mapping.emplace(table_name, std::map<std::string, ColumnEncodingSpec>());
 
       for (const auto& column : nlohmann::json::iterator_wrapper(columns)) {
         const auto& column_name = column.key();
         const auto& encoding_info = column.value();
-        Assert(encoding_info.is_object(), "The encoding info needs to be specified as a json object.");
-        encoding_mapping[table_name][column_name] = encoding_spec_from_json(encoding_info);
+        Assert(encoding_info.is_object(), "The custom encoding info needs to be specified as a json object.");
+        custom_encoding_mapping[table_name][column_name] = encoding_spec_from_json(encoding_info);
       }
     }
   }
 
-  return EncodingConfig{default_spec, std::move(encoding_mapping)};
+  return EncodingConfig{default_spec, std::move(type_encoding_mapping), std::move(custom_encoding_mapping)};
 }
 
 std::string CLIConfigParser::detailed_help(const cxxopts::Options& options) {
@@ -243,10 +261,16 @@ std::string CLIConfigParser::detailed_help(const cxxopts::Options& options) {
 
 EncodingConfig::EncodingConfig() : EncodingConfig{ColumnEncodingSpec{EncodingType::Dictionary}} {}
 
-EncodingConfig::EncodingConfig(ColumnEncodingSpec default_encoding_spec) : EncodingConfig{default_encoding_spec, {}} {}
+EncodingConfig::EncodingConfig(ColumnEncodingSpec default_encoding_spec)
+    : EncodingConfig{default_encoding_spec, {}, {}} {}
 
-EncodingConfig::EncodingConfig(ColumnEncodingSpec default_encoding_spec, TableColumnEncodingMapping encoding_mapping)
-    : default_encoding_spec{default_encoding_spec}, encoding_mapping{std::move(encoding_mapping)} {}
+EncodingConfig::EncodingConfig(ColumnEncodingSpec default_encoding_spec, EncodingMapping type_encoding_mapping,
+                               TableColumnEncodingMapping encoding_mapping)
+    : default_encoding_spec{default_encoding_spec},
+      type_encoding_mapping{std::move(type_encoding_mapping)},
+      custom_encoding_mapping{std::move(encoding_mapping)} {}
+
+EncodingConfig EncodingConfig::unencoded() { return EncodingConfig{ColumnEncodingSpec{EncodingType::Unencoded}}; }
 
 ColumnEncodingSpec EncodingConfig::encoding_spec_from_strings(const std::string& encoding_str,
                                                               const std::string& compression_str) {
@@ -284,8 +308,17 @@ nlohmann::json EncodingConfig::to_json() const {
   nlohmann::json json{};
   json["default"] = encoding_spec_to_string_map(default_encoding_spec);
 
+  nlohmann::json type_mapping{};
+  for (const auto& [type, spec] : type_encoding_mapping) {
+    type_mapping[type] = encoding_spec_to_string_map(spec);
+  }
+
+  if (!type_mapping.empty()) {
+    json["type"] = type_mapping;
+  }
+
   nlohmann::json table_mapping{};
-  for (const auto& [table, column_config] : encoding_mapping) {
+  for (const auto& [table, column_config] : custom_encoding_mapping) {
     nlohmann::json column_mapping{};
     for (const auto& [column, spec] : column_config) {
       column_mapping[column] = encoding_spec_to_string_map(spec);
@@ -293,9 +326,48 @@ nlohmann::json EncodingConfig::to_json() const {
     table_mapping[table] = column_mapping;
   }
 
-  json["custom"] = table_mapping;
+  if (!table_mapping.empty()) {
+    json["custom"] = table_mapping;
+  }
 
   return json;
+}
+
+void BenchmarkTableEncoder::encode(const std::string& table_name, std::shared_ptr<Table> table,
+                                   const EncodingConfig& config) {
+  const auto& type_mapping = config.type_encoding_mapping;
+  const auto& custom_mapping = config.custom_encoding_mapping;
+
+  const auto& column_mapping_it = custom_mapping.find(table_name);
+  const auto table_has_custom_encoding = column_mapping_it != custom_mapping.end();
+
+  ChunkEncodingSpec chunk_spec;
+
+  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+    if (table_has_custom_encoding) {
+      const auto& column_name = table->column_name(column_id);
+      const auto& encoding_by_column_name = column_mapping_it->second;
+      const auto& column_encoding = encoding_by_column_name.find(column_name);
+      if (column_encoding != encoding_by_column_name.end()) {
+        // The column has a custom encoding
+        chunk_spec.push_back(column_encoding->second);
+        continue;
+      }
+    }
+
+    const auto& column_type_str = data_type_to_string.left.find(table->column_data_type(column_id))->second;
+    const auto& encoding_by_data_type = type_mapping.find(column_type_str);
+    if (encoding_by_data_type != type_mapping.end()) {
+      // The column type has a specific encoding
+      chunk_spec.push_back(encoding_by_data_type->second);
+      continue;
+    }
+
+    // No custom or type encoding were specified, use default
+    chunk_spec.push_back(config.default_encoding_spec);
+  }
+
+  return ChunkEncoder::encode_all_chunks(table, chunk_spec);
 }
 
 // This is intentionally limited to 80 chars per line, as cxxopts does this too and it looks bad otherwise.
@@ -332,7 +404,7 @@ The encoding config represents the column encodings specified for a benchmark.
 If encoding (and vector compression) were specified via command line args,
 this will contain no custom encoding mapping but only the column default.
 This will lead to each column in each chunk to be encoded/compressed by this
-default. If a JSON config was provided, a column specific
+default. If a JSON config was provided, a column- and/or type-specific
 encoding/compression can be chosen (same in each chunk). The JSON config must
 look like this:
 
@@ -345,6 +417,17 @@ The encoding is always required, the compression is optional.
     "encoding": <ENCODING_TYPE_STRING>,               // required
     "compression": <VECTOR_COMPRESSION_TYPE_STRING>,  // optional
   },
+
+  "type": {
+    <DATA_TYPE>: {
+      "encoding": <ENCODING_TYPE_STRING>,
+      "compression": <VECTOR_COMPRESSION_TYPE_STRING>
+    },
+    <DATA_TYPE>: {
+      "encoding": <ENCODING_TYPE_STRING>
+    }
+  },
+
   "custom": {
     <TABLE_NAME>: {
       <COLUMN_NAME>: {

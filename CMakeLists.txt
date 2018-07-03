@@ -64,17 +64,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -march=native")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -march=native")
 
-# Link Time Optimization (LTO)
-if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-    if(NOT ${CMAKE_VERSION} VERSION_LESS "3.9.0")
-        cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
-        include(CheckIPOSupported)
-        check_ipo_supported()
-        set_target_properties(PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
-        add_definitions(-DWITH_LTO)
-    endif()
-endif()
-
 # Require NCurses over Curses
 set(CURSES_NEED_NCURSES TRUE)
 
@@ -108,9 +97,33 @@ if(${CI_BUILD})
     endif()
 endif()
 
+# Link Time Optimization (LTO)
+cmake_policy(SET CMP0069 NEW)
+option(ENABLE_LTO "Set to ON to build Hyrise with enabled Link Time Optimization (LTO). Default: OFF" OFF)
+if (${ENABLE_LTO})
+    if(NOT ${CMAKE_VERSION} VERSION_LESS "3.9.0")
+        cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
+        include(CheckIPOSupported)
+        check_ipo_supported(RESULT ipo_supported OUTPUT ipo_output)
+        if(ipo_supported)
+            set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+            add_definitions(-DWITH_LTO)
+            message(STATUS "Building with Link-Time Optimization")
+        else()
+            message(WARNING "LTO not supported: ${ipo_output}")
+        endif()
+    endif()
+endif()
+
 # Include sub-CMakeLists.txt
 add_subdirectory(third_party/ EXCLUDE_FROM_ALL)
+
+# Some third-party libs don't support LTO (if enabled above):
+foreach(no_lto_target gtest gtest_main gmock gmock_main hpinuma_s hpinuma hpinuma_base_s hpinuma_base hpinuma_util_tool hpinuma_msource hpinuma_msource_s)
+    set_property(TARGET ${no_lto_target} PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
+endforeach(no_lto_target)
 add_subdirectory(src)
+
 
 # Useful for printing all c++ files in a directory:
 # find . -type f -name "*.cpp" -o -name "*.hpp" | cut -c 3- | sort

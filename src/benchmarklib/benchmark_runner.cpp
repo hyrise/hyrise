@@ -139,7 +139,9 @@ void BenchmarkRunner::_execute_query(const NamedQuery& named_query) {
   const auto& name = named_query.first;
   const auto& sql = named_query.second;
 
-  auto pipeline = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc).create_pipeline();
+  auto pipeline_builder = SQLPipelineBuilder{sql}.with_mvcc(_config.use_mvcc);
+  if (_config.enable_visualization) pipeline_builder.dont_cleanup_temporaries();
+  auto pipeline = pipeline_builder.create_pipeline();
   // Execute the query, we don't care about the results
   pipeline.get_result_table();
 
@@ -198,7 +200,7 @@ BenchmarkRunner BenchmarkRunner::create(const BenchmarkConfig& config, const std
     }
 
     config.out << "- Adding table '" << table_name << "'" << std::endl;
-    encode_table(table_name, table, config);
+    BenchmarkTableEncoder::encode(table_name, table, config.encoding_config);
     StorageManager::get().add_table(table_name, table);
   }
 
@@ -349,37 +351,6 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"using_scheduler", config.enable_scheduler},
       {"verbose", config.verbose},
       {"GIT-HASH", GIT_HEAD_SHA1 + std::string(GIT_IS_DIRTY ? "-dirty" : "")}};
-}
-
-void BenchmarkRunner::encode_table(const std::string& table_name, std::shared_ptr<Table> table,
-                                   const BenchmarkConfig& config) {
-  const auto& encoding_config = config.encoding_config;
-  const auto& mapping = encoding_config.encoding_mapping;
-
-  const auto& column_mapping_it = mapping.find(table_name);
-  if (column_mapping_it != mapping.end()) {
-    // The table has some custom encodings
-    ChunkEncodingSpec chunk_spec;
-    const auto& column_mapping = column_mapping_it->second;
-
-    for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-      const auto& column_name = table->column_name(column_id);
-      const auto& column_encoding = column_mapping.find(column_name);
-
-      if (column_encoding != column_mapping.end()) {
-        // The column has a custom encoding
-        config.out << "- Custom encoding for " << column_mapping_it->first << "[" + column_name + "]" << std::endl;
-        chunk_spec.push_back(column_encoding->second);
-      } else {
-        chunk_spec.push_back(encoding_config.default_encoding_spec);
-      }
-    }
-
-    return ChunkEncoder::encode_all_chunks(table, chunk_spec);
-  }
-
-  // No table-specific encoding, so use the default
-  return ChunkEncoder::encode_all_chunks(table, encoding_config.default_encoding_spec);
 }
 
 }  // namespace opossum

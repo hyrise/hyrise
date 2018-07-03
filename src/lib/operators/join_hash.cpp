@@ -532,20 +532,20 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     */
     TableColumnDefinitions output_column_definitions;
 
-    auto _right_in_table = _right->get_output();
-    auto _left_in_table = _left->get_output();
+    auto right_in_table = _right->get_output();
+    auto left_in_table = _left->get_output();
 
     if (_inputs_swapped) {
       // Semi/Anti joins are always swapped but do not need the outer relation
       if (_mode == JoinMode::Semi || _mode == JoinMode::Anti) {
-        output_column_definitions = _right_in_table->column_definitions();
+        output_column_definitions = right_in_table->column_definitions();
       } else {
         output_column_definitions =
-            concatenated(_right_in_table->column_definitions(), _left_in_table->column_definitions());
+            concatenated(right_in_table->column_definitions(), left_in_table->column_definitions());
       }
     } else {
       output_column_definitions =
-          concatenated(_left_in_table->column_definitions(), _right_in_table->column_definitions());
+          concatenated(left_in_table->column_definitions(), right_in_table->column_definitions());
     }
 
     _output_table = std::make_shared<Table>(output_column_definitions, TableType::References);
@@ -559,8 +559,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     // Pre-partitioning
     // Save chunk offsets into the input relation
-    size_t left_chunk_count = _left_in_table->chunk_count();
-    size_t right_chunk_count = _right_in_table->chunk_count();
+    size_t left_chunk_count = left_in_table->chunk_count();
+    size_t right_chunk_count = right_in_table->chunk_count();
 
     auto left_chunk_offsets = std::make_shared<std::vector<size_t>>();
     auto right_chunk_offsets = std::make_shared<std::vector<size_t>>();
@@ -571,13 +571,13 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     size_t offset_left = 0;
     for (ChunkID i{0}; i < left_chunk_count; ++i) {
       left_chunk_offsets->operator[](i) = offset_left;
-      offset_left += _left_in_table->get_chunk(i)->size();
+      offset_left += left_in_table->get_chunk(i)->size();
     }
 
     size_t offset_right = 0;
     for (ChunkID i{0}; i < right_chunk_count; ++i) {
       right_chunk_offsets->operator[](i) = offset_right;
-      offset_right += _right_in_table->get_chunk(i)->size();
+      offset_right += right_in_table->get_chunk(i)->size();
     }
 
     Timer performance_timer;
@@ -592,10 +592,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     This helps choosing a scheduler node for the radix phase (see below).
     */
     // Scheduler note: parallelize this at some point. Currently, the amount of jobs would be too high
-    auto materialized_left = _materialize_input<LeftType>(_left_in_table, _column_ids.first, histograms_left);
+    auto materialized_left = _materialize_input<LeftType>(left_in_table, _column_ids.first, histograms_left);
     // 'keep_nulls' makes sure that the relation on the right materializes NULL values when executing an OUTER join.
     auto materialized_right =
-        _materialize_input<RightType>(_right_in_table, _column_ids.second, histograms_right, keep_nulls);
+        _materialize_input<RightType>(right_in_table, _column_ids.second, histograms_right, keep_nulls);
 
     // Radix Partitioning phase
     /*
@@ -656,13 +656,13 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     PosListsByColumn right_pos_lists_by_column;
 
     // left_pos_lists_by_column will only be needed if left is a reference table and being output
-    if (_left_in_table->type() == TableType::References && !only_output_right_input) {
-      left_pos_lists_by_column = setup_pos_lists_by_column(_left_in_table);
+    if (left_in_table->type() == TableType::References && !only_output_right_input) {
+      left_pos_lists_by_column = setup_pos_lists_by_column(left_in_table);
     }
 
     // right_pos_lists_by_column will only be needed if right is a reference table
-    if (_right_in_table->type() == TableType::References) {
-      right_pos_lists_by_column = setup_pos_lists_by_column(_right_in_table);
+    if (right_in_table->type() == TableType::References) {
+      right_pos_lists_by_column = setup_pos_lists_by_column(right_in_table);
     }
 
     for (size_t partition_id = 0; partition_id < left_pos_lists.size(); ++partition_id) {
@@ -679,15 +679,15 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
       // we need to swap back the inputs, so that the order of the output columns is not harmed
       if (_inputs_swapped) {
-        write_output_columns(output_columns, _right_in_table, right_pos_lists_by_column, right);
+        write_output_columns(output_columns, right_in_table, right_pos_lists_by_column, right);
 
         // Semi/Anti joins are always swapped but do not need the outer relation
         if (!only_output_right_input) {
-          write_output_columns(output_columns, _left_in_table, left_pos_lists_by_column, left);
+          write_output_columns(output_columns, left_in_table, left_pos_lists_by_column, left);
         }
       } else {
-        write_output_columns(output_columns, _left_in_table, left_pos_lists_by_column, left);
-        write_output_columns(output_columns, _right_in_table, right_pos_lists_by_column, right);
+        write_output_columns(output_columns, left_in_table, left_pos_lists_by_column, left);
+        write_output_columns(output_columns, right_in_table, right_pos_lists_by_column, right);
       }
 
       _output_table->append_chunk(output_columns);

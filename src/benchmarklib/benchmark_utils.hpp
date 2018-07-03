@@ -25,7 +25,8 @@ using TimePoint = std::chrono::high_resolution_clock::time_point;
 using NamedQuery = std::pair<std::string, std::string>;
 using NamedQueries = std::vector<NamedQuery>;
 
-using TableColumnEncodingMapping = std::unordered_map<std::string, std::map<std::string, ColumnEncodingSpec>>;
+using EncodingMapping = std::map<std::string, ColumnEncodingSpec>;
+using TableColumnEncodingMapping = std::unordered_map<std::string, EncodingMapping>;
 
 /**
  * @return std::cout if `verbose` is true, otherwise returns a discarding stream
@@ -63,11 +64,15 @@ struct BenchmarkState {
 // View EncodingConfig::description to see format of encoding JSON
 struct EncodingConfig {
   EncodingConfig();
-  EncodingConfig(ColumnEncodingSpec default_encoding_spec, TableColumnEncodingMapping encoding_mapping);
+  EncodingConfig(ColumnEncodingSpec default_encoding_spec, EncodingMapping type_encoding_mapping,
+                 TableColumnEncodingMapping encoding_mapping);
   explicit EncodingConfig(ColumnEncodingSpec default_encoding_spec);
 
+  static EncodingConfig unencoded();
+
   const ColumnEncodingSpec default_encoding_spec;
-  const TableColumnEncodingMapping encoding_mapping;
+  const EncodingMapping type_encoding_mapping;
+  const TableColumnEncodingMapping custom_encoding_mapping;
 
   static ColumnEncodingSpec encoding_spec_from_strings(const std::string& encoding_str,
                                                        const std::string& compression_str);
@@ -77,6 +82,11 @@ struct EncodingConfig {
   nlohmann::json to_json() const;
 
   static const char* description;
+};
+
+class BenchmarkTableEncoder {
+ public:
+  static void encode(const std::string& table_name, std::shared_ptr<Table> table, const EncodingConfig& config);
 };
 
 // View BenchmarkConfig::description to see format of the JSON-version

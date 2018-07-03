@@ -71,7 +71,7 @@ class JitKnownRuntimePointer : public JitRuntimePointer {
   bool is_valid() const override {
     const auto ptr = reinterpret_cast<void*>(address());
     auto fd = open("/dev/random", O_WRONLY);
-    bool result = (write(fd, ptr, 8) == 8);
+    bool result = (write(fd, ptr, 1) == 1);
     close(fd);
     return result;
   }
@@ -160,5 +160,7 @@ class JitDereferencedRuntimePointer : public JitKnownRuntimePointer {
   // the pointer that is being dereferenced
   const std::shared_ptr<const JitKnownRuntimePointer> _base;
 };
+
+uint64_t dereference_flexible_width_int_pointer(const uint64_t address, const unsigned integer_bit_width);
 
 }  // namespace opossum
