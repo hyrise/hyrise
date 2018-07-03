@@ -298,38 +298,41 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const
   auto& results = *context.results;
   auto& hash_keys = _keys_per_chunk[chunk_id];
 
-  resolve_column_type<ColumnDataType>(base_column, [&results, &hash_keys, aggregator](const auto& typed_column) {
-    auto iterable = create_iterable_from_column<ColumnDataType>(typed_column);
+  resolve_column_type<ColumnDataType>(
+      base_column, [&results, &hash_keys, chunk_id, aggregator](const auto& typed_column) {
+        auto iterable = create_iterable_from_column<ColumnDataType>(typed_column);
 
-    ChunkOffset chunk_offset{0};
+        ChunkOffset chunk_offset{0};
 
-    // Now that all relevant types have been resolved, we can iterate over the column and build the aggregations.
-    iterable.for_each([&, aggregator](const auto& value) {
-      if (value.is_null()) {
-        /**
+        // Now that all relevant types have been resolved, we can iterate over the column and build the aggregations.
+        iterable.for_each([&, chunk_id, aggregator](const auto& value) {
+          if (value.is_null()) {
+            /**
          * If the value is NULL, the current aggregate value does not change.
          * However, if we do not have a result entry for the current hash key, i.e., group value,
          * we need to insert an empty AggregateResult into the results.
          * Hence, the try_emplace with no constructing arguments.
          */
-        results.try_emplace((*hash_keys)[chunk_offset]);
-      } else {
-        // If we have a value, use the aggregator lambda to update the current aggregate value for this group
-        results[(*hash_keys)[chunk_offset]].current_aggregate =
-            aggregator(value.value(), results[(*hash_keys)[chunk_offset]].current_aggregate);
+            results.try_emplace((*hash_keys)[chunk_offset]);
+          } else {
+            // If we have a value, use the aggregator lambda to update the current aggregate value for this group
+            results[(*hash_keys)[chunk_offset]].current_aggregate =
+                aggregator(value.value(), results[(*hash_keys)[chunk_offset]].current_aggregate);
 
-        // increase value counter
-        ++results[(*hash_keys)[chunk_offset]].aggregate_count;
+            // increase value counter
+            ++results[(*hash_keys)[chunk_offset]].aggregate_count;
 
-        if (function == AggregateFunction::CountDistinct) {
-          // for the case of CountDistinct, insert this value into the set to keep track of distinct values
-          results[(*hash_keys)[chunk_offset]].distinct_values.insert(value.value());
-        }
-      }
+            if (function == AggregateFunction::CountDistinct) {
+              // for the case of CountDistinct, insert this value into the set to keep track of distinct values
+              results[(*hash_keys)[chunk_offset]].distinct_values.insert(value.value());
+            }
+          }
+          // TODO(marcel) : don't update if exists
+          results[(*hash_keys)[chunk_offset]].row_id = RowID(chunk_id, chunk_offset);
 
-      ++chunk_offset;
-    });
-  });
+          ++chunk_offset;
+        });
+      });
 }
 
 std::shared_ptr<const Table> Aggregate::_on_execute() {
@@ -453,7 +456,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
     auto chunk_in = input_table->get_chunk(chunk_id);
 
-    auto hash_keys = _keys_per_chunk[chunk_id];
+    auto& hash_keys = _keys_per_chunk[chunk_id];
 
     if (_aggregates.empty()) {
       /**
@@ -480,11 +483,9 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
       auto context = std::static_pointer_cast<AggregateContext<DistinctColumnType, DistinctAggregateType>>(
           _contexts_per_column[0]);
       auto& results = *context->results;
-      for (auto& chunk : _keys_per_chunk) {
-        for (auto& keys : *chunk) {
-          // insert dummy value to make sure we have the key in our map
-          results[keys] = AggregateResult<DistinctAggregateType, DistinctColumnType>();
-        }
+
+      for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_in->size(); chunk_offset++) {
+        results[(*hash_keys)[chunk_offset]].row_id = RowID(chunk_id, chunk_offset);
       }
     } else {
       ColumnID column_index{0};
@@ -503,8 +504,9 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
           auto& results = *context->results;
 
           // count occurrences for each group key
-          for (const auto& hash_key : *hash_keys) {
-            ++results[hash_key].aggregate_count;
+          for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_in->size(); chunk_offset++) {
+            results[(*hash_keys)[chunk_offset]].row_id = RowID(chunk_id, chunk_offset);
+            ++results[(*hash_keys)[chunk_offset]].aggregate_count;
           }
 
           ++column_index;
@@ -569,11 +571,12 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   if (_aggregates.empty()) {
     auto context =
         std::static_pointer_cast<AggregateContext<DistinctColumnType, DistinctAggregateType>>(_contexts_per_column[0]);
+    auto pos_list = PosList();
+    pos_list.reserve(context->results->size());
     for (auto& map : *context->results) {
-      for (size_t group_column_index = 0; group_column_index < map.first.second.size(); ++group_column_index) {
-        _groupby_columns[group_column_index]->append(map.first.second[group_column_index]);
-      }
+      pos_list.push_back(map.second.row_id);
     }
+    _write_groupby_output(pos_list);
   }
 
   /*
@@ -691,6 +694,20 @@ _write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>>,
   Fail("Invalid aggregate");
 }
 
+void Aggregate::_write_groupby_output(PosList& pos_list) {
+  auto input_table = input_table_left();
+
+  for (size_t group_column_index = 0; group_column_index < _groupby_column_ids.size(); ++group_column_index) {
+    auto base_columns = std::vector<std::shared_ptr<const BaseColumn>>();
+    for (const auto& chunk : input_table->chunks()) {
+      base_columns.push_back(chunk->get_column(_groupby_column_ids[group_column_index]));
+    }
+    for (const auto row_id : pos_list) {
+      _groupby_columns[group_column_index]->append((*base_columns[row_id.chunk_id])[row_id.chunk_offset]);
+    }
+  }
+}
+
 template <typename ColumnType>
 void Aggregate::_write_aggregate_output(boost::hana::basic_type<ColumnType> type, ColumnID column_index,
                                         AggregateFunction function) {
@@ -755,11 +772,12 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
 
   // write all group keys into the respective columns
   if (column_index == 0) {
+    auto pos_list = PosList();
+    pos_list.reserve(context->results->size());
     for (auto& map : *context->results) {
-      for (size_t group_column_index = 0; group_column_index < map.first.second.size(); ++group_column_index) {
-        _groupby_columns[group_column_index]->append(map.first.second[group_column_index]);
-      }
+      pos_list.push_back(map.second.row_id);
     }
+    _write_groupby_output(pos_list);
   }
 
   // write aggregated values into the column
