@@ -3,8 +3,8 @@
 #include <memory>
 #include <string>
 #include <utility>
-#include "utils/systemtap.hpp"
 #include <vector>
+#include "utils/systemtap.hpp"
 
 #include "abstract_scheduler.hpp"
 #include "current_scheduler.hpp"

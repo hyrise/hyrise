@@ -1,8 +1,8 @@
 #pragma once
 
 #include <memory>
-#include "utils/systemtap.hpp"
 #include <vector>
+#include "utils/systemtap.hpp"
 
 #include "utils/assert.hpp"
 #include "worker.hpp"
