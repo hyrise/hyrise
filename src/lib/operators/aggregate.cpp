@@ -74,6 +74,11 @@ std::shared_ptr<AbstractOperator> Aggregate::_on_recreate(
   return std::make_shared<Aggregate>(recreated_input_left, _aggregates, _groupby_column_ids);
 }
 
+void Aggregate::_on_cleanup() {
+  _contexts_per_column.clear();
+  _keys_per_chunk.clear();
+}
+
 /*
 Visitor context for the partitioning/grouping visitor
 */

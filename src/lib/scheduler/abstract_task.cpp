@@ -18,7 +18,7 @@ TaskID AbstractTask::id() const { return _id; }
 
 NodeID AbstractTask::node_id() const { return _node_id; }
 
-bool AbstractTask::is_ready() const { return _predecessor_counter == 0; }
+bool AbstractTask::is_ready() const { return _pending_predecessors == 0; }
 
 bool AbstractTask::is_done() const { return _done; }
 
@@ -33,9 +33,12 @@ void AbstractTask::set_id(TaskID id) { _id = id; }
 void AbstractTask::set_as_predecessor_of(std::shared_ptr<AbstractTask> successor) {
   DebugAssert((!_is_scheduled), "Possible race: Don't set dependencies after the Task was scheduled");
 
-  successor->_on_predecessor_added();
+  successor->_pending_predecessors++;
   _successors.emplace_back(successor);
+  successor->_predecessors.emplace_back(shared_from_this());
 }
+
+const std::vector<std::weak_ptr<AbstractTask>>& AbstractTask::predecessors() const { return _predecessors; }
 
 const std::vector<std::shared_ptr<AbstractTask>>& AbstractTask::successors() const { return _successors; }
 
@@ -108,10 +111,8 @@ void AbstractTask::_mark_as_scheduled() {
   DebugAssert((!already_scheduled), "Task was already scheduled!");
 }
 
-void AbstractTask::_on_predecessor_added() { _predecessor_counter++; }
-
 void AbstractTask::_on_predecessor_done() {
-  auto new_predecessor_count = --_predecessor_counter;  // atomically decrement
+  auto new_predecessor_count = --_pending_predecessors;  // atomically decrement
   if (new_predecessor_count == 0) {
     if (CurrentScheduler::is_set()) {
       auto worker = Worker::get_this_thread_worker();

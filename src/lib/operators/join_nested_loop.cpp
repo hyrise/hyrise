@@ -262,4 +262,13 @@ void JoinNestedLoop::_write_output_chunks(ChunkColumns& columns, const std::shar
   }
 }
 
+void JoinNestedLoop::_on_cleanup() {
+  _output_table.reset();
+  _left_in_table.reset();
+  _right_in_table.reset();
+  _pos_list_left.reset();
+  _pos_list_right.reset();
+  _right_matches.clear();
+}
+
 }  // namespace opossum

@@ -13,6 +13,7 @@
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "storage/index/b_tree/b_tree_index.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 
@@ -87,8 +88,9 @@ class OperatorsIndexScanTest : public BaseTest {
   ColumnIndexType _index_type;
 };
 
-typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex, CompositeGroupKeyIndex /* add further indices */>
-    DerivedIndices;
+typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex, CompositeGroupKeyIndex,
+  BTreeIndex /* add further indices */> DerivedIndices;
+
 TYPED_TEST_CASE(OperatorsIndexScanTest, DerivedIndices);
 
 TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {

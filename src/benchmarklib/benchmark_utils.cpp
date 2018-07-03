@@ -7,6 +7,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
+#include "storage/table.hpp"
 #include "utils/filesystem.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -269,6 +270,8 @@ EncodingConfig::EncodingConfig(ColumnEncodingSpec default_encoding_spec, Encodin
       type_encoding_mapping{std::move(type_encoding_mapping)},
       custom_encoding_mapping{std::move(encoding_mapping)} {}
 
+EncodingConfig EncodingConfig::unencoded() { return EncodingConfig{ColumnEncodingSpec{EncodingType::Unencoded}}; }
+
 ColumnEncodingSpec EncodingConfig::encoding_spec_from_strings(const std::string& encoding_str,
                                                               const std::string& compression_str) {
   const auto encoding = EncodingConfig::encoding_string_to_type(encoding_str);
@@ -330,6 +333,43 @@ nlohmann::json EncodingConfig::to_json() const {
   return json;
 }
 
+void BenchmarkTableEncoder::encode(const std::string& table_name, std::shared_ptr<Table> table,
+                                   const EncodingConfig& config) {
+  const auto& type_mapping = config.type_encoding_mapping;
+  const auto& custom_mapping = config.custom_encoding_mapping;
+
+  const auto& column_mapping_it = custom_mapping.find(table_name);
+  const auto table_has_custom_encoding = column_mapping_it != custom_mapping.end();
+
+  ChunkEncodingSpec chunk_spec;
+
+  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+    if (table_has_custom_encoding) {
+      const auto& column_name = table->column_name(column_id);
+      const auto& encoding_by_column_name = column_mapping_it->second;
+      const auto& column_encoding = encoding_by_column_name.find(column_name);
+      if (column_encoding != encoding_by_column_name.end()) {
+        // The column has a custom encoding
+        chunk_spec.push_back(column_encoding->second);
+        continue;
+      }
+    }
+
+    const auto& column_type_str = data_type_to_string.left.find(table->column_data_type(column_id))->second;
+    const auto& encoding_by_data_type = type_mapping.find(column_type_str);
+    if (encoding_by_data_type != type_mapping.end()) {
+      // The column type has a specific encoding
+      chunk_spec.push_back(encoding_by_data_type->second);
+      continue;
+    }
+
+    // No custom or type encoding were specified, use default
+    chunk_spec.push_back(config.default_encoding_spec);
+  }
+
+  return ChunkEncoder::encode_all_chunks(table, chunk_spec);
+}
+
 // This is intentionally limited to 80 chars per line, as cxxopts does this too and it looks bad otherwise.
 const char* BenchmarkConfig::description = R"(
 ============================
@@ -379,11 +419,11 @@ The encoding is always required, the compression is optional.
   },
 
   "type": {
-    <DATA_TPYE>: {
+    <DATA_TYPE>: {
       "encoding": <ENCODING_TYPE_STRING>,
       "compression": <VECTOR_COMPRESSION_TYPE_STRING>
     },
-    <DATA_TPYE>: {
+    <DATA_TYPE>: {
       "encoding": <ENCODING_TYPE_STRING>
     }
   },
