@@ -40,7 +40,8 @@ using ChunkColumns = pmr_vector<std::shared_ptr<BaseColumn>>;
  */
 class Chunk : private Noncopyable {
  public:
-  static const ChunkOffset MAX_SIZE;
+  // The last chunk offset is reserved for NULL as used in ReferenceColumns.
+  constexpr ChunkOffset MAX_SIZE = std::numeric_limits<ChunkOffset>::max() - 1;
 
   Chunk(const ChunkColumns& columns, std::shared_ptr<MvccColumns> mvcc_columns = nullptr,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,

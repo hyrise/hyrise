@@ -17,9 +17,6 @@
 
 namespace opossum {
 
-// The last chunk offset is reserved for NULL as used in ReferenceColumns.
-constexpr ChunkOffset Chunk::MAX_SIZE = std::numeric_limits<ChunkOffset>::max() - 1;
-
 Chunk::Chunk(const ChunkColumns& columns, std::shared_ptr<MvccColumns> mvcc_columns,
              const std::optional<PolymorphicAllocator<Chunk>>& alloc,
              const std::shared_ptr<ChunkAccessCounter> access_counter)
