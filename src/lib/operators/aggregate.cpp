@@ -306,15 +306,12 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const
 
         // Now that all relevant types have been resolved, we can iterate over the column and build the aggregations.
         iterable.for_each([&, chunk_id, aggregator](const auto& value) {
-          if (value.is_null()) {
-            /**
-         * If the value is NULL, the current aggregate value does not change.
-         * However, if we do not have a result entry for the current hash key, i.e., group value,
-         * we need to insert an empty AggregateResult into the results.
-         * Hence, the try_emplace with no constructing arguments.
-         */
-            results.try_emplace((*hash_keys)[chunk_offset]);
-          } else {
+          results[(*hash_keys)[chunk_offset]].row_id = RowID(chunk_id, chunk_offset);
+
+          /**
+          * If the value is NULL, the current aggregate value does not change.
+          */
+          if (!value.is_null()) {
             // If we have a value, use the aggregator lambda to update the current aggregate value for this group
             results[(*hash_keys)[chunk_offset]].current_aggregate =
                 aggregator(value.value(), results[(*hash_keys)[chunk_offset]].current_aggregate);
@@ -327,8 +324,6 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const
               results[(*hash_keys)[chunk_offset]].distinct_values.insert(value.value());
             }
           }
-          // TODO(marcel) : don't update if exists
-          results[(*hash_keys)[chunk_offset]].row_id = RowID(chunk_id, chunk_offset);
 
           ++chunk_offset;
         });
@@ -379,7 +374,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
       using ColumnDataType = typename decltype(type)::type;
 
       auto id_map = std::unordered_map<ColumnDataType, uint64_t>();
-      uint64_t id_counter = 0;
+      uint64_t id_counter = 1u;
 
       for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
         const auto chunk_in = input_table->get_chunk(chunk_id);
@@ -390,14 +385,17 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
 
           ChunkOffset chunk_offset{0};
           iterable.for_each([&](const auto& value) {
-            // TODO(marcel): null value
+            if (value.is_null()) {
+              // 0 is the ID for NULL values
+              (*_keys_per_chunk[chunk_id])[chunk_offset][group_column_index] = 0u;
+            } else {
+              auto inserted = id_map.try_emplace(value.value(), id_counter);
+              // store either the current id_counter or the existing ID of the value
+              (*_keys_per_chunk[chunk_id])[chunk_offset][group_column_index] = inserted.first->second;
 
-            auto inserted = id_map.try_emplace(value.value(), id_counter);
-            // store either the current id_counter or the existing ID of the value
-            (*_keys_per_chunk[chunk_id])[chunk_offset][group_column_index] = inserted.first->second;
-
-            // if the id_map didn't have the value as a key and a new element was inserted
-            if (inserted.second) ++id_counter;
+              // if the id_map didn't have the value as a key and a new element was inserted
+              if (inserted.second) ++id_counter;
+            }
 
             ++chunk_offset;
           });
