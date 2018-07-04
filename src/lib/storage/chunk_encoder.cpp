@@ -27,7 +27,7 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
     const auto spec = chunk_encoding_spec[column_id];
 
     if (spec.encoding_type == EncodingType::Unencoded) {
-      column_statistics.push_back(nullptr);
+      column_statistics.push_back(std::make_shared<ChunkColumnStatistics>());
       continue;
     }
     const auto data_type = data_types[column_id];
