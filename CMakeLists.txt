@@ -120,7 +120,9 @@ add_subdirectory(third_party/ EXCLUDE_FROM_ALL)
 
 # Some third-party libs don't support LTO (if enabled above):
 foreach(no_lto_target gtest gtest_main gmock gmock_main hpinuma_s hpinuma hpinuma_base_s hpinuma_base hpinuma_util_tool hpinuma_msource hpinuma_msource_s)
-    set_property(TARGET ${no_lto_target} PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
+    if(TARGET no_lto_target)
+        set_property(TARGET ${no_lto_target} PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
+    endif()
 endforeach(no_lto_target)
 add_subdirectory(src)
 
