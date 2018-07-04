@@ -49,38 +49,17 @@ $path_to_compiler'llvm-profdata' merge -o ./default.profdata ./default.profraw
 # run LLVM’s code coverage tool
 $path_to_compiler'llvm-cov' show -format=html -instr-profile ./default.profdata build-coverage/hyriseTest -output-dir=./coverage ./src/lib/
 
-# rm default.profdata default.profraw
-
 echo Coverage Information is in ./coverage/index.html
 
 # Continuing only if diff output is needed with Linux/gcc
-if [[ "$unamestr" == 'Linux' ]] && [ "true" == "$generate_badge" ]; then
-  mkdir -p build-coverage-gcc
-  cd build-coverage-gcc
-  cmake -DCMAKE_CXX_COMPILER_LAUNCHER=$launcher -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DENABLE_COVERAGE=ON ..
+if [ "true" == "$generate_badge" ]; then
 
-  make hyriseTest -j $((cores / 2))
-  cd -
-
-  rm -fr coverage; mkdir coverage
-  ./build-coverage-gcc/hyriseTest build-coverage --gtest_filter=-SQLiteTestRunnerInstances/*
-
-  excludes='(?:.*/)?(?:third_party|src/test|src/benchmark).*'
-
-  # call gcovr twice b/c of https://github.com/gcovr/gcovr/issues/112
-  gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude=$excludes --exclude-unreachable-branches -k
-
-  # generate HTML
-  gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -s -p --exclude=$excludes --exclude-unreachable-branches -k -g --html --html-details -o coverage/index.html > coverage_output.txt
-  cat coverage_output.txt
-
-  # generate XML for pycobertura
-  gcovr -r `pwd` --gcov-executable="gcov -s `pwd` -x" -p --exclude=$excludes --exclude-unreachable-branches -g --xml > coverage.xml
-  curl -g -o coverage_master.xml https://ares.epic.hpi.uni-potsdam.de/jenkins/job/Hyrise/job/hyrise/job/master/lastStableBuild/artifact/coverage.xml
-  pycobertura diff coverage_master.xml coverage.xml --format html --output coverage_diff.html || true
+  $path_to_compiler'llvm-cov' export -summary-only -instr-profile ./default.profdata build-coverage/hyriseTest ./src/lib/ > coverage.json
 
   # coverage badge generation
-  coverage_percent=$(cat coverage_output.txt | grep lines: | sed -e 's/lines: //; s/% .*$//')
+  total_lines=$(sed 's/.*totals":{"lines":{"count":\([0-9]*\).*/\1/' coverage.json)
+  lines_covered=$(sed 's/.*totals":{"lines":{"count":[0-9]*,"covered":\([0-9]*\).*/\1/' coverage.json)
+  coverage_percent=$(echo "scale=2 ; $lines_covered * 100 / $total_lines" | bc)
   echo $coverage_percent > coverage_percent.txt
   if (( $(bc <<< "$coverage_percent >= 90") ))
   then
@@ -96,6 +75,7 @@ if [[ "$unamestr" == 'Linux' ]] && [ "true" == "$generate_badge" ]; then
   url="https://img.shields.io/badge/Coverage-$coverage_percent%25-$color.svg"
   curl -g -o coverage_badge.svg $url
 
-  rm coverage_output.txt
+  rm coverage.json
 fi
 
+rm default.profdata default.profraw

@@ -82,20 +82,18 @@ node {
             echo 'only on master'
           }
         }
-      }, gccDebugCoverage: {
-        stage("gcc-debug-coverage") {
+      }, clangDebugCoverage: {
+        stage("clang-debug-coverage") {
           sh "export CCACHE_BASEDIR=`pwd`; ./scripts/coverage.sh --generate_badge=true --launcher=ccache"
           archive 'coverage_badge.svg'
           archive 'coverage_percent.txt'
-          archive 'coverage.xml'
-          archive 'coverage_diff.html'
           publishHTML (target: [
             allowMissing: false,
             alwaysLinkToLastBuild: false,
             keepAll: true,
             reportDir: 'coverage',
             reportFiles: 'index.html',
-            reportName: "RCov Report"
+            reportName: "Llvm-cov Report"
           ])
           script {
             coverageChange = sh script: "./scripts/compare_coverage.sh", returnStdout: true
