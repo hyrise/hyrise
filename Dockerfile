@@ -34,8 +34,7 @@ RUN apt-get update \
         libpq-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
-    && ln -sf /usr/bin/llvm-symbolizer-3.8 /usr/bin/llvm-symbolizer \
-    && pip install pycobertura
+    && ln -sf /usr/bin/llvm-symbolizer-3.8 /usr/bin/llvm-symbolizer
 
 ENV OPOSSUM_HEADLESS_SETUP=true
 
