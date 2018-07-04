@@ -138,7 +138,8 @@ std::vector<std::shared_ptr<HashTable<HashedType>>> build(const RadixContainer<L
       continue;
     }
 
-    jobs.emplace_back(std::make_shared<JobTask>([&, partition_left_begin, partition_left_end, current_partition_id, partition_size]() {
+    jobs.emplace_back(std::make_shared<JobTask>([&, partition_left_begin, partition_left_end, current_partition_id,
+                                                 partition_size]() {
       auto& partition_left = static_cast<Partition<LeftType>&>(*radix_container.elements);
 
       auto hashtable = std::make_shared<HashTable<HashedType>>(partition_size);
