@@ -30,7 +30,8 @@ class BaseTableScanImpl {
    */
 
   template <typename UnaryFunctor, typename LeftIterator>
-  void _unary_scan(const UnaryFunctor& func, LeftIterator left_it, LeftIterator left_end, const ChunkID chunk_id,
+  // noinline reduces compile time drastically
+  void __attribute__((noinline)) _unary_scan(const UnaryFunctor& func, LeftIterator left_it, LeftIterator left_end, const ChunkID chunk_id,
                    PosList& matches_out) {
     for (; left_it != left_end; ++left_it) {
       const auto left = *left_it;
@@ -44,7 +45,7 @@ class BaseTableScanImpl {
   }
 
   template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
-  void _binary_scan(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end, RightIterator right_it,
+  void __attribute__((noinline)) _binary_scan(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end, RightIterator right_it,
                     const ChunkID chunk_id, PosList& matches_out) {
     for (; left_it != left_end; ++left_it, ++right_it) {
       const auto left = *left_it;
