@@ -157,7 +157,7 @@ dump_seeds(int tbl)
 #ifdef RNG_TEST
 			printf("%d(%ld):\t%ld\n", i, Seed[i].nCalls, Seed[i].value);
 #else
-			printf("%d:\t%ld\n", i, Seed[i].value);
+			printf("%d:\t%lld\n", i, Seed[i].value);
 #endif
 	return;
 }

@@ -34,7 +34,7 @@ struct AggregateColumnDefinitionTemplate {
                                     const std::optional<std::string>& alias = std::nullopt)
       : column(column), function(function), alias(alias) {}
 
-  std::optional<ColumnReferenceType> column;
+  std::optional<ColumnReferenceType> column{std::nullopt};
   AggregateFunction function;
   std::optional<std::string> alias;
 };
