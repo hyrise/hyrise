@@ -25,7 +25,9 @@ using TimePoint = std::chrono::high_resolution_clock::time_point;
 using NamedQuery = std::pair<std::string, std::string>;
 using NamedQueries = std::vector<NamedQuery>;
 
-using DataTypeEncodingMapping = std::map<DataType, ColumnEncodingSpec>;
+using DataTypeEncodingMapping = std::unordered_map<DataType, ColumnEncodingSpec>;
+
+// Map<TABLE_NAME, Map<COLUMN_NAME, ColumnEncoding>>
 using TableColumnEncodingMapping = std::unordered_map<std::string, std::map<std::string, ColumnEncodingSpec>>;
 
 /**

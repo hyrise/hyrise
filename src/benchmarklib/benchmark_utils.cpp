@@ -312,7 +312,7 @@ nlohmann::json EncodingConfig::to_json() const {
 
   nlohmann::json type_mapping{};
   for (const auto& [type, spec] : type_encoding_mapping) {
-    const auto& type_str = data_type_to_string.left.find(type)->second;
+    const auto& type_str = data_type_to_string.left.at(type)->second;
     type_mapping[type_str] = encoding_spec_to_string_map(spec);
   }
 
