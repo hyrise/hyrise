@@ -28,7 +28,7 @@ using NamedQueries = std::vector<NamedQuery>;
 using DataTypeEncodingMapping = std::unordered_map<DataType, ColumnEncodingSpec>;
 
 // Map<TABLE_NAME, Map<COLUMN_NAME, ColumnEncoding>>
-using TableColumnEncodingMapping = std::unordered_map<std::string, std::map<std::string, ColumnEncodingSpec>>;
+using TableColumnEncodingMapping = std::unordered_map<std::string, std::unorderedmap<std::string, ColumnEncodingSpec>>;
 
 /**
  * @return std::cout if `verbose` is true, otherwise returns a discarding stream
