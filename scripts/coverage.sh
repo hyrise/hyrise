@@ -55,6 +55,16 @@ echo Coverage Information is in ./coverage/index.html
 
 # Continuing only if diff output is needed with Linux/gcc
 if [[ "$unamestr" == 'Linux' ]] && [ "true" == "$generate_badge" ]; then
+  mkdir -p build-coverage-gcc
+  cd build-coverage-gcc
+  cmake -DCMAKE_CXX_COMPILER_LAUNCHER=$launcher -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DENABLE_COVERAGE=ON ..
+
+  make hyriseTest -j $((cores / 2))
+  cd -
+
+  rm -fr coverage; mkdir coverage
+  ./build-coverage-gcc/hyriseTest build-coverage --gtest_filter=-SQLiteTestRunnerInstances/*
+
   excludes='(?:.*/)?(?:third_party|src/test|src/benchmark).*'
 
   # call gcovr twice b/c of https://github.com/gcovr/gcovr/issues/112
