@@ -7,7 +7,7 @@
 namespace opossum {
 
 BENCHMARK_DEFINE_F(BenchmarkBasicFixture, BM_GenerateTableStatistics_TPCH)(benchmark::State& state) {
-  clear_cache();
+  _clear_cache();
 
   const auto tables = TpchDbGenerator{state.range(0) / 1000.0f}.generate();
 

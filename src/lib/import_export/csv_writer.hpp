@@ -27,7 +27,7 @@ class CsvWriter {
   void end_line();
 
  protected:
-  std::string escape(const std::string& string);
+  std::string _escape(const std::string& string);
 
   void _write_value(const AllTypeVariant& value);
   void _write_string_value(const std::string& value);
