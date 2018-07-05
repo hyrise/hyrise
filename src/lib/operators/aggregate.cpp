@@ -358,44 +358,54 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
         input_table->get_chunk(chunk_id)->size(), std::vector<uint64_t>(_groupby_column_ids.size()));
   }
 
-  // TODO(anyone): enable scheduler to iterate multiple groupby columns in parallel
+  std::vector<std::shared_ptr<AbstractTask>> jobs;
+  jobs.reserve(_groupby_column_ids.size());
+
   for (size_t group_column_index = 0; group_column_index < _groupby_column_ids.size(); ++group_column_index) {
-    const auto column_id = _groupby_column_ids.at(group_column_index);
-    const auto data_type = input_table->column_data_type(column_id);
+    jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, this]() {
+      const auto column_id = _groupby_column_ids.at(group_column_index);
+      const auto data_type = input_table->column_data_type(column_id);
 
-    resolve_data_type(data_type, [&](auto type) {
-      using ColumnDataType = typename decltype(type)::type;
+      resolve_data_type(data_type, [&](auto type) {
+        using ColumnDataType = typename decltype(type)::type;
 
-      auto id_map = std::unordered_map<ColumnDataType, uint64_t>();
-      uint64_t id_counter = 1u;
+        /*
+        Calculate a unique ID for each value in the groupby column (similar to dictionary encoding). 
+        The ID 0 is reserved for NULL values. The combined IDs build an AggregateKey for each row.
+        */
+        auto id_map = std::unordered_map<ColumnDataType, uint64_t>();
+        uint64_t id_counter = 1u;
 
-      for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-        const auto chunk_in = input_table->get_chunk(chunk_id);
-        const auto base_column = chunk_in->get_column(column_id);
+        for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
+          const auto chunk_in = input_table->get_chunk(chunk_id);
+          const auto base_column = chunk_in->get_column(column_id);
 
-        resolve_column_type<ColumnDataType>(*base_column, [&](auto& typed_column) {
-          auto iterable = create_iterable_from_column<ColumnDataType>(typed_column);
+          resolve_column_type<ColumnDataType>(*base_column, [&](auto& typed_column) {
+            auto iterable = create_iterable_from_column<ColumnDataType>(typed_column);
 
-          ChunkOffset chunk_offset{0};
-          iterable.for_each([&](const auto& value) {
-            if (value.is_null()) {
-              // 0 is the ID for NULL values
-              (*_keys_per_chunk[chunk_id])[chunk_offset][group_column_index] = 0u;
-            } else {
-              auto inserted = id_map.try_emplace(value.value(), id_counter);
-              // store either the current id_counter or the existing ID of the value
-              (*_keys_per_chunk[chunk_id])[chunk_offset][group_column_index] = inserted.first->second;
+            ChunkOffset chunk_offset{0};
+            iterable.for_each([&](const auto& value) {
+              if (value.is_null()) {
+                (*_keys_per_chunk[chunk_id])[chunk_offset][group_column_index] = 0u;
+              } else {
+                auto inserted = id_map.try_emplace(value.value(), id_counter);
+                // store either the current id_counter or the existing ID of the value
+                (*_keys_per_chunk[chunk_id])[chunk_offset][group_column_index] = inserted.first->second;
 
-              // if the id_map didn't have the value as a key and a new element was inserted
-              if (inserted.second) ++id_counter;
-            }
+                // if the id_map didn't have the value as a key and a new element was inserted
+                if (inserted.second) ++id_counter;
+              }
 
-            ++chunk_offset;
+              ++chunk_offset;
+            });
           });
-        });
-      }
-    });
+        }
+      });
+    }));
+    jobs.back()->schedule();
   }
+
+  CurrentScheduler::wait_for_tasks(jobs);
 
   /*
   AGGREGATION PHASE
