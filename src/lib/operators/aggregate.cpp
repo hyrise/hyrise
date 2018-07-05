@@ -370,7 +370,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
         using ColumnDataType = typename decltype(type)::type;
 
         /*
-        Calculate a unique ID for each value in the groupby column (similar to dictionary encoding). 
+        Store unique IDs for equal values in the groupby column (similar to dictionary encoding). 
         The ID 0 is reserved for NULL values. The combined IDs build an AggregateKey for each row.
         */
         auto id_map = std::unordered_map<ColumnDataType, uint64_t>();
