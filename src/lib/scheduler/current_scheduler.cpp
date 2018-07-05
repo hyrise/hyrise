@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-std::shared_ptr<AbstractScheduler> CurrentScheduler::_instance;
+std::shared_ptr<AbstractScheduler> CurrentScheduler::_instance;  // NOLINT
 
 const std::shared_ptr<AbstractScheduler>& CurrentScheduler::get() { return _instance; }
 

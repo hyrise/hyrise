@@ -40,7 +40,8 @@ using ChunkColumns = pmr_vector<std::shared_ptr<BaseColumn>>;
  */
 class Chunk : private Noncopyable {
  public:
-  static const ChunkOffset MAX_SIZE;
+  // The last chunk offset is reserved for NULL as used in ReferenceColumns.
+  static constexpr ChunkOffset MAX_SIZE = std::numeric_limits<ChunkOffset>::max() - 1;
 
   Chunk(const ChunkColumns& columns, std::shared_ptr<MvccColumns> mvcc_columns = nullptr,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
@@ -118,7 +119,7 @@ class Chunk : private Noncopyable {
 
   template <typename Index>
   std::shared_ptr<BaseIndex> create_index(const std::vector<ColumnID>& column_ids) {
-    const auto columns = get_columns_for_ids(column_ids);
+    const auto columns = _get_columns_for_ids(column_ids);
     return create_index<Index>(columns);
   }
 
@@ -142,7 +143,7 @@ class Chunk : private Noncopyable {
   size_t estimate_memory_usage() const;
 
  private:
-  std::vector<std::shared_ptr<const BaseColumn>> get_columns_for_ids(const std::vector<ColumnID>& column_ids) const;
+  std::vector<std::shared_ptr<const BaseColumn>> _get_columns_for_ids(const std::vector<ColumnID>& column_ids) const;
 
  private:
   PolymorphicAllocator<Chunk> _alloc;

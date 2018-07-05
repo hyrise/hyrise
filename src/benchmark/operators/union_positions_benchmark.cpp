@@ -47,7 +47,7 @@ std::shared_ptr<opossum::PosList> generate_pos_list(float referenced_table_chunk
 
 namespace opossum {
 
-std::shared_ptr<Table> create_reference_table(std::shared_ptr<Table> _referenced_table, size_t num_rows,
+std::shared_ptr<Table> create_reference_table(std::shared_ptr<Table> referenced_table, size_t num_rows,
                                               size_t num_columns) {
   const auto num_rows_per_chunk = num_rows / GENERATED_TABLE_NUM_CHUNKS;
 
@@ -68,7 +68,7 @@ std::shared_ptr<Table> create_reference_table(std::shared_ptr<Table> _referenced
        * we're creating. So when creating TWO referencing tables, there should be a fair amount of overlap.
        */
       auto pos_list = generate_pos_list(num_rows * 0.2f, num_rows_per_chunk);
-      columns.push_back(std::make_shared<ReferenceColumn>(_referenced_table, column_idx, pos_list));
+      columns.push_back(std::make_shared<ReferenceColumn>(referenced_table, column_idx, pos_list));
     }
     table->append_chunk(columns);
 
@@ -78,7 +78,7 @@ std::shared_ptr<Table> create_reference_table(std::shared_ptr<Table> _referenced
   return table;
 }
 
-void BM_UnionPositions(::benchmark::State& state) {
+void BM_UnionPositions(::benchmark::State& state) {  // NOLINT
   const auto num_rows = 500000;
   const auto num_columns = 5;
 
@@ -91,20 +91,20 @@ void BM_UnionPositions(::benchmark::State& state) {
   for (auto column_idx = 0; column_idx < num_columns; ++column_idx) {
     column_definitions.emplace_back("c" + std::to_string(column_idx), DataType::Int);
   }
-  auto _referenced_table = std::make_shared<Table>(column_definitions, TableType::Data);
+  auto referenced_table = std::make_shared<Table>(column_definitions, TableType::Data);
 
   /**
    * Create the referencing tables, the ones we're actually going to perform the benchmark on
    */
-  auto _table_wrapper_left =
-      std::make_shared<TableWrapper>(create_reference_table(_referenced_table, num_rows, num_columns));
-  _table_wrapper_left->execute();
-  auto _table_wrapper_right =
-      std::make_shared<TableWrapper>(create_reference_table(_referenced_table, num_rows, num_columns));
-  _table_wrapper_right->execute();
+  auto table_wrapper_left =
+      std::make_shared<TableWrapper>(create_reference_table(referenced_table, num_rows, num_columns));
+  table_wrapper_left->execute();
+  auto table_wrapper_right =
+      std::make_shared<TableWrapper>(create_reference_table(referenced_table, num_rows, num_columns));
+  table_wrapper_right->execute();
 
   while (state.KeepRunning()) {
-    auto set_union = std::make_shared<UnionPositions>(_table_wrapper_left, _table_wrapper_right);
+    auto set_union = std::make_shared<UnionPositions>(table_wrapper_left, table_wrapper_right);
     set_union->execute();
   }
 }
@@ -114,7 +114,7 @@ BENCHMARK(BM_UnionPositions);
  * Measure what sorting and merging two pos lists would cost - that's the core of the UnionPositions implementation and sets
  * a performance base line for what UnionPositions could achieve in an overhead-free implementation.
  */
-void BM_UnionPositionsBaseLine(::benchmark::State& state) {
+void BM_UnionPositionsBaseLine(::benchmark::State& state) {  // NOLINT
   auto num_table_rows = 500000;
 
   auto pos_list_left = generate_pos_list(num_table_rows * 0.2f, num_table_rows);

@@ -28,7 +28,6 @@ class Difference : public AbstractReadOnlyOperator {
       const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
 
  private:
-  void initialize_chunk(const size_t chunk_id);
-  void append_string_representation(std::ostream& row_string_buffer, const AllTypeVariant value);
+  void _append_string_representation(std::ostream& row_string_buffer, const AllTypeVariant value);
 };
 }  // namespace opossum
