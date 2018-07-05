@@ -77,7 +77,7 @@ void JoinNestedLoop::_create_table_structure() {
   _output_table = std::make_shared<Table>(output_column_definitions, TableType::References);
 }
 
-void _process_match(RowID left_row_id, RowID right_row_id, JoinNestedLoop::JoinParams& params) {
+void JoinNestedLoop::_process_match(RowID left_row_id, RowID right_row_id, JoinNestedLoop::JoinParams& params) {
   params.pos_list_left.emplace_back(left_row_id);
   params.pos_list_right.emplace_back(right_row_id);
 
