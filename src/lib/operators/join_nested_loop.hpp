@@ -45,14 +45,16 @@ class JoinNestedLoop : public AbstractJoinOperator {
   // compiler would try to put the entire join for all types into a single, monolithic function. For -O3 on clang, this
   // reduces the compile time from twelve minutes to less than three.
 
-  static void __attribute__((noinline)) _join_two_untyped_columns(std::shared_ptr<const BaseColumn>& column_left,
-                                        std::shared_ptr<const BaseColumn>& column_right, const ChunkID chunk_id_left,
-                                        const ChunkID chunk_id_right, JoinParams& params);
+  static void __attribute__((noinline))
+  _join_two_untyped_columns(std::shared_ptr<const BaseColumn>& column_left,
+                            std::shared_ptr<const BaseColumn>& column_right, const ChunkID chunk_id_left,
+                            const ChunkID chunk_id_right, JoinParams& params);
 
   template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
-  static void __attribute__((noinline)) _join_two_typed_columns(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
-                                      RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
-                                      const ChunkID chunk_id_right, JoinParams& params);
+  static void __attribute__((noinline))
+  _join_two_typed_columns(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
+                          RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
+                          const ChunkID chunk_id_right, JoinParams& params);
 
   static void _process_match(RowID left_row_id, RowID right_row_id, JoinParams& params);
 
