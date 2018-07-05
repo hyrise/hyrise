@@ -74,6 +74,14 @@ const T ValueColumn<T>::get(const ChunkOffset chunk_offset) const {
   return _values.at(chunk_offset);
 }
 
+// template <typename T>
+// const T ValueColumn<T>::get_t(const ChunkOffset chunk_offset) const {
+//   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
+
+//   Assert(!is_nullable() || !(*_null_values)[chunk_offset], "Can’t return value of column type because it is null.");
+//   return _values[chunk_offset];
+// }
+
 template <typename T>
 void ValueColumn<T>::append(const AllTypeVariant& val) {
   bool is_null = variant_is_null(val);
