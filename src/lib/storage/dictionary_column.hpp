@@ -34,11 +34,7 @@ class DictionaryColumn : public BaseDictionaryColumn, public BaseColumnT<T> {
 
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
 
-  const T get_t(const ChunkOffset chunk_offset) const {
-    const auto value_id = _decoder->get(chunk_offset);
-
-    return (*_dictionary)[value_id];
-  }
+  const std::pair<bool, T> get_t(const ChunkOffset chunk_offset) const final;
 
   size_t size() const final;
 

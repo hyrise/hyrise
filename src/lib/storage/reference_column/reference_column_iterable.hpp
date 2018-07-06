@@ -5,6 +5,8 @@
 #include <utility>
 #include <vector>
 
+#include "resolve_type.hpp"
+#include "storage/base_column_t.hpp"
 #include "storage/column_iterables.hpp"
 #include "storage/reference_column.hpp"
 
@@ -44,7 +46,23 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
           _cached_chunk_id{INVALID_CHUNK_ID},
           _cached_column{nullptr},
           _begin_pos_list_it{begin_pos_list_it},
-          _pos_list_it{pos_list_it} {}
+          _pos_list_it{pos_list_it} {
+      for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+        auto chunk = table->get_chunk(chunk_id);
+        auto base_column = chunk->get_column(column_id);
+
+        resolve_column_type<T>(*base_column, [&](auto& typed_column) {
+          using ColumnType = typename std::decay<decltype(typed_column)>::type;
+
+          if constexpr (std::is_same<ColumnType, ReferenceColumn>::value) {
+            std::cout << "ref col :(" << std::endl;
+
+          } else {
+            _base_columns_t.push_back(&typed_column);
+          }
+        });
+      }
+    }
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -60,17 +78,24 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
       const auto chunk_id = _pos_list_it->chunk_id;
       const auto& chunk_offset = _pos_list_it->chunk_offset;
 
-      if (chunk_id != _cached_chunk_id) {
-        _cached_chunk_id = chunk_id;
-        const auto chunk = _table->get_chunk(chunk_id);
-        _cached_column = chunk->get_column(_column_id);
-      }
+      const auto chunk_offset_into_ref_column =
+          static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
+
+      const auto value_pair = _base_columns_t[chunk_id]->get_t(chunk_offset);
+
+      return ColumnIteratorValue<T>{value_pair.second, value_pair.first, chunk_offset_into_ref_column};
+
+      // if (chunk_id != _cached_chunk_id) {
+      //   _cached_chunk_id = chunk_id;
+      //   const auto chunk = _table->get_chunk(chunk_id);
+      //   _cached_column = chunk->get_column(_column_id);
+      // }
 
       /**
        * This is just a temporary solution to supporting encoded column type.
        * It’s very slow and is going to be replaced very soon!
        */
-      return _value_from_any_column(*_cached_column, chunk_offset);
+      // return _value_from_any_column(*_cached_column, chunk_offset);
     }
 
    private:
@@ -96,6 +121,8 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
 
     const PosListIterator _begin_pos_list_it;
     PosListIterator _pos_list_it;
+
+    std::vector<const BaseColumnT<T>*> _base_columns_t;
   };
 };
 

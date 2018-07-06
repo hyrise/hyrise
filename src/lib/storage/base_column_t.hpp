@@ -11,6 +11,6 @@ template <typename T>
 class BaseColumnT {
  public:
   // returns the value at a given position
-  virtual const T get_t(const ChunkOffset chunk_offset) const = 0;
+  virtual const std::pair<bool, T> get_t(const ChunkOffset chunk_offset) const = 0;
 };
 }  // namespace opossum

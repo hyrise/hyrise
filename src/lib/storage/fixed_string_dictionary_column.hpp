@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 
+#include "base_column_t.hpp"
 #include "base_dictionary_column.hpp"
 #include "fixed_string_dictionary_column/fixed_string_vector.hpp"
 #include "types.hpp"
@@ -19,7 +20,7 @@ class BaseCompressedVector;
  * Uses vector compression schemes for its attribute vector.
  */
 template <typename T>
-class FixedStringDictionaryColumn : public BaseDictionaryColumn {
+class FixedStringDictionaryColumn : public BaseDictionaryColumn, public BaseColumnT<T> {
  public:
   explicit FixedStringDictionaryColumn(const std::shared_ptr<const FixedStringVector>& dictionary,
                                        const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
@@ -37,6 +38,8 @@ class FixedStringDictionaryColumn : public BaseDictionaryColumn {
    */
 
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
+
+  const std::pair<bool, T> get_t(const ChunkOffset chunk_offset) const final;
 
   size_t size() const final;
 

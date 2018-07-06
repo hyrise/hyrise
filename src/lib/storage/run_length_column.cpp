@@ -48,6 +48,18 @@ const AllTypeVariant RunLengthColumn<T>::operator[](const ChunkOffset chunk_offs
 }
 
 template <typename T>
+const std::pair<bool, T> RunLengthColumn<T>::get_t(const ChunkOffset chunk_offset) const {
+  const auto end_position_it = std::lower_bound(_end_positions->cbegin(), _end_positions->cend(), chunk_offset);
+  const auto index = std::distance(_end_positions->cbegin(), end_position_it);
+
+  const auto is_null = (*_null_values)[index];
+  if (is_null) return std::make_pair(true, T{});
+
+  const auto value = (*_values)[index];
+  return std::make_pair(false, value);
+}
+
+template <typename T>
 size_t RunLengthColumn<T>::size() const {
   if (_end_positions->size() == 0u) return 0u;
   return _end_positions->back() + 1u;

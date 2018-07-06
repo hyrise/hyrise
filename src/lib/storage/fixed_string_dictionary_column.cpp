@@ -37,6 +37,17 @@ const AllTypeVariant FixedStringDictionaryColumn<T>::operator[](const ChunkOffse
 }
 
 template <typename T>
+const std::pair<bool, T> FixedStringDictionaryColumn<T>::get_t(const ChunkOffset chunk_offset) const {
+  const auto value_id = _decoder->get(chunk_offset);
+
+  if (value_id == _null_value_id) {
+    return std::make_pair(true, T{});
+  }
+
+  return std::make_pair(false, _dictionary->get_string_at(value_id));
+}
+
+template <typename T>
 std::shared_ptr<const pmr_vector<std::string>> FixedStringDictionaryColumn<T>::dictionary() const {
   return _dictionary->dictionary();
 }

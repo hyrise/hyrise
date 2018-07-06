@@ -3,6 +3,7 @@
 
 #include <memory>
 
+#include "base_column_t.hpp"
 #include "base_encoded_column.hpp"
 #include "types.hpp"
 
@@ -26,7 +27,7 @@ class BaseCompressedVector;
  * additional boolean vector.
  */
 template <typename T>
-class RunLengthColumn : public BaseEncodedColumn {
+class RunLengthColumn : public BaseEncodedColumn, public BaseColumnT<T> {
  public:
   explicit RunLengthColumn(const std::shared_ptr<const pmr_vector<T>>& values,
                            const std::shared_ptr<const pmr_vector<bool>>& null_values,
@@ -42,6 +43,8 @@ class RunLengthColumn : public BaseEncodedColumn {
    */
 
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
+
+  const std::pair<bool, T> get_t(const ChunkOffset chunk_offset) const final;
 
   size_t size() const final;
 

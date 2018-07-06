@@ -62,6 +62,15 @@ const AllTypeVariant ValueColumn<T>::operator[](const ChunkOffset chunk_offset) 
 }
 
 template <typename T>
+const std::pair<bool, T> ValueColumn<T>::get_t(const ChunkOffset chunk_offset) const {
+  if (is_nullable() && (*_null_values)[chunk_offset]) {
+    return std::make_pair(true, T{});
+  }
+
+  return std::make_pair(false, _values[chunk_offset]);
+}
+
+template <typename T>
 bool ValueColumn<T>::is_null(const ChunkOffset chunk_offset) const {
   return is_nullable() && (*_null_values)[chunk_offset];
 }

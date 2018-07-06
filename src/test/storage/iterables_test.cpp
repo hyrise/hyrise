@@ -242,17 +242,19 @@ TEST_F(IterablesTest, ReferenceColumnIteratorWithIterators2) {
     resolve_column_type<int>(*base_column, [&](auto& typed_column) {
       using ColumnType = typename std::decay<decltype(typed_column)>::type;
 
-      if constexpr (std::is_same<ColumnType, ValueColumn<int>>::value ||
-                    std::is_same<ColumnType, DictionaryColumn<int>>::value) {
-        vec.push_back(&typed_column);
-      } else {
+      // if constexpr (std::is_same<ColumnType, ValueColumn<int>>::value ||
+      // std::is_same<ColumnType, DictionaryColumn<int>>::value) {
+      if constexpr (std::is_same<ColumnType, ReferenceColumn>::value) {
         std::cout << "not val col" << std::endl;
+
+      } else {
+        vec.push_back(&typed_column);
       }
     });
   }
 
   for (const auto& row_id : pos_list2) {
-    std::cout << vec[row_id.chunk_id]->get_t(row_id.chunk_offset);
+    std::cout << vec[row_id.chunk_id]->get_t(row_id.chunk_offset).second << std::endl;
   }
 
   auto iterable = ReferenceColumnIterable<int>{*reference_column};

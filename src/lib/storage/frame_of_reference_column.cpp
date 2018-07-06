@@ -50,6 +50,19 @@ const AllTypeVariant FrameOfReferenceColumn<T, U>::operator[](const ChunkOffset 
 }
 
 template <typename T, typename U>
+const std::pair<bool, T> FrameOfReferenceColumn<T, U>::get_t(const ChunkOffset chunk_offset) const {
+  if (_null_values[chunk_offset]) {
+    return std::make_pair(true, T{});
+  }
+
+  const auto minimum = _block_minima[chunk_offset / block_size];
+
+  const auto value = static_cast<T>(_decoder->get(chunk_offset)) + minimum;
+
+  return std::make_pair(false, value);
+}
+
+template <typename T, typename U>
 size_t FrameOfReferenceColumn<T, U>::size() const {
   return _offset_values->size();
 }
