@@ -36,27 +36,21 @@ std::shared_ptr<const pmr_vector<ChunkOffset>> RunLengthColumn<T>::end_positions
 template <typename T>
 const AllTypeVariant RunLengthColumn<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
-
-  const auto end_position_it = std::lower_bound(_end_positions->cbegin(), _end_positions->cend(), chunk_offset);
-  const auto index = std::distance(_end_positions->cbegin(), end_position_it);
-
-  const auto is_null = (*_null_values)[index];
-  if (is_null) return NULL_VALUE;
-
-  const auto value = (*_values)[index];
-  return AllTypeVariant{value};
+  const auto typed_value = get_typed_value(chunk_offset);
+  if (typed_value.second) return NULL_VALUE;
+  return typed_value.first;
 }
 
 template <typename T>
-const std::pair<bool, T> RunLengthColumn<T>::get_t(const ChunkOffset chunk_offset) const {
+const std::pair<T, bool> RunLengthColumn<T>::get_typed_value(const ChunkOffset chunk_offset) const {
   const auto end_position_it = std::lower_bound(_end_positions->cbegin(), _end_positions->cend(), chunk_offset);
   const auto index = std::distance(_end_positions->cbegin(), end_position_it);
 
   const auto is_null = (*_null_values)[index];
-  if (is_null) return std::make_pair(true, T{});
+  if (is_null) return std::make_pair(T{}, true);
 
   const auto value = (*_values)[index];
-  return std::make_pair(false, value);
+  return std::make_pair(value, false);
 }
 
 template <typename T>

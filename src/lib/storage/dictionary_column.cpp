@@ -24,27 +24,20 @@ DictionaryColumn<T>::DictionaryColumn(const std::shared_ptr<const pmr_vector<T>>
 template <typename T>
 const AllTypeVariant DictionaryColumn<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
-
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
-  const auto value_id = _decoder->get(chunk_offset);
-
-  if (value_id == _null_value_id) {
-    return NULL_VALUE;
-  }
-
-  return (*_dictionary)[value_id];
+  const auto typed_value = get_typed_value(chunk_offset);
+  if (typed_value.second) return NULL_VALUE;
+  return typed_value.first;
 }
 
 template <typename T>
-const std::pair<bool, T> DictionaryColumn<T>::get_t(const ChunkOffset chunk_offset) const {
+const std::pair<T, bool> DictionaryColumn<T>::get_typed_value(const ChunkOffset chunk_offset) const {
   const auto value_id = _decoder->get(chunk_offset);
-
   if (value_id == _null_value_id) {
-    return std::make_pair(true, T{});
+    return std::make_pair(T{}, true);
   }
-
-  return std::make_pair(false, (*_dictionary)[value_id]);
+  return std::make_pair((*_dictionary)[value_id], false);
 }
 
 template <typename T>

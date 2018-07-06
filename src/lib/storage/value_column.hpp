@@ -30,7 +30,7 @@ class ValueColumn : public BaseValueColumn, public BaseColumnT<T> {
   // Use values() and null_values() to get the vectors and check the content yourself.
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
 
-  const std::pair<bool, T> get_t(const ChunkOffset chunk_offset) const final;
+  const std::pair<T, bool> get_typed_value(const ChunkOffset chunk_offset) const final;
 
   // Returns whether a value is NULL
   bool is_null(const ChunkOffset chunk_offset) const;

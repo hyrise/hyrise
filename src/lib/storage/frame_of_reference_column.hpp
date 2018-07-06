@@ -57,7 +57,7 @@ class FrameOfReferenceColumn : public BaseEncodedColumn, public BaseColumnT<T> {
 
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
 
-  const std::pair<bool, T> get_t(const ChunkOffset chunk_offset) const final;
+  const std::pair<T, bool> get_typed_value(const ChunkOffset chunk_offset) const final;
 
   size_t size() const final;
 

@@ -223,48 +223,6 @@ TEST_F(IterablesTest, ReferenceColumnIteratorWithIterators) {
   EXPECT_EQ(sum, 24'825u);
 }
 
-TEST_F(IterablesTest, ReferenceColumnIteratorWithIterators2) {
-  auto pos_list =
-      PosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u}, RowID{ChunkID{0u}, 2u}};
-
-  auto reference_column =
-      std::make_unique<ReferenceColumn>(table, ColumnID{0u}, std::make_shared<PosList>(std::move(pos_list)));
-
-  auto vec = std::vector<const BaseColumnT<int>*>();
-
-  auto pos_list2 = PosList{RowID{ChunkID{1u}, 2u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 2u},
-                           RowID{ChunkID{0u}, 0u}, RowID{ChunkID{1u}, 0u}, RowID{ChunkID{1u}, 1u}};
-
-  for (auto chunk_id = ChunkID{0}; chunk_id < table_two_chunks->chunk_count(); ++chunk_id) {
-    auto chunk = table_two_chunks->get_chunk(chunk_id);
-    auto base_column = chunk->get_column(ColumnID{0});
-
-    resolve_column_type<int>(*base_column, [&](auto& typed_column) {
-      using ColumnType = typename std::decay<decltype(typed_column)>::type;
-
-      // if constexpr (std::is_same<ColumnType, ValueColumn<int>>::value ||
-      // std::is_same<ColumnType, DictionaryColumn<int>>::value) {
-      if constexpr (std::is_same<ColumnType, ReferenceColumn>::value) {
-        std::cout << "not val col" << std::endl;
-
-      } else {
-        vec.push_back(&typed_column);
-      }
-    });
-  }
-
-  for (const auto& row_id : pos_list2) {
-    std::cout << vec[row_id.chunk_id]->get_t(row_id.chunk_offset).second << std::endl;
-  }
-
-  auto iterable = ReferenceColumnIterable<int>{*reference_column};
-
-  auto sum = uint32_t{0};
-  iterable.with_iterators(SumUpWithIterator{sum});
-
-  EXPECT_EQ(sum, 24'825u);
-}  // namespace opossum
-
 TEST_F(IterablesTest, ConstantValueIteratorWithIterators) {
   auto iterable = ConstantValueIterable<int>{2u};
 

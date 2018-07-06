@@ -53,21 +53,18 @@ const AllTypeVariant ValueColumn<T>::operator[](const ChunkOffset chunk_offset) 
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
   PerformanceWarning("operator[] used");
 
-  // Column supports null values and value is null
-  if (is_nullable() && _null_values->at(chunk_offset)) {
-    return NULL_VALUE;
-  }
-
-  return _values.at(chunk_offset);
+  const auto typed_value = get_typed_value(chunk_offset);
+  if (typed_value.second) return NULL_VALUE;
+  return typed_value.first;
 }
 
 template <typename T>
-const std::pair<bool, T> ValueColumn<T>::get_t(const ChunkOffset chunk_offset) const {
+const std::pair<T, bool> ValueColumn<T>::get_typed_value(const ChunkOffset chunk_offset) const {
+  // Column supports null values and value is null
   if (is_nullable() && (*_null_values)[chunk_offset]) {
-    return std::make_pair(true, T{});
+    return std::make_pair(T{}, true);
   }
-
-  return std::make_pair(false, _values[chunk_offset]);
+  return std::make_pair(_values[chunk_offset], false);
 }
 
 template <typename T>
@@ -82,14 +79,6 @@ const T ValueColumn<T>::get(const ChunkOffset chunk_offset) const {
   Assert(!is_nullable() || !(*_null_values).at(chunk_offset), "Can’t return value of column type because it is null.");
   return _values.at(chunk_offset);
 }
-
-// template <typename T>
-// const T ValueColumn<T>::get_t(const ChunkOffset chunk_offset) const {
-//   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
-
-//   Assert(!is_nullable() || !(*_null_values)[chunk_offset], "Can’t return value of column type because it is null.");
-//   return _values[chunk_offset];
-// }
 
 template <typename T>
 void ValueColumn<T>::append(const AllTypeVariant& val) {
