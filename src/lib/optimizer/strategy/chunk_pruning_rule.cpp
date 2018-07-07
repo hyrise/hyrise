@@ -8,7 +8,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "operators/operator_predicate.hpp"
+#include "operators/operator_scan_predicate.hpp"
 #include "statistics/chunk_statistics/chunk_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -80,19 +80,22 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
 
 std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     const std::vector<std::shared_ptr<ChunkStatistics>>& statistics, std::shared_ptr<PredicateNode> predicate_node) {
-  const auto operator_predicate = OperatorPredicate::from_expression(*predicate_node->predicate, *predicate_node);
-  if (!operator_predicate) return {};
+  const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate_node->predicate, *predicate_node);
+  if (!operator_predicates) return {};
 
-  if (!is_variant(operator_predicate->value)) {
-    return std::set<ChunkID>();
-  }
-  auto& value = boost::get<AllTypeVariant>(operator_predicate->value);
-  auto condition = operator_predicate->predicate_condition;
   std::set<ChunkID> result;
-  for (size_t chunk_id = 0; chunk_id < statistics.size(); ++chunk_id) {
-    // statistics[chunk_id] can be a shared_ptr initialized with a nullptr
-    if (statistics[chunk_id] && statistics[chunk_id]->can_prune(operator_predicate->column_id, value, condition)) {
-      result.insert(ChunkID(chunk_id));
+
+  for (const auto& operator_predicate : *operator_predicates) {
+    if (!is_variant(operator_predicate.value)) {
+      return std::set<ChunkID>();
+    }
+    auto &value = boost::get<AllTypeVariant>(operator_predicate.value);
+    auto condition = operator_predicate.predicate_condition;
+    for (size_t chunk_id = 0; chunk_id < statistics.size(); ++chunk_id) {
+      // statistics[chunk_id] can be a shared_ptr initialized with a nullptr
+      if (statistics[chunk_id] && statistics[chunk_id]->can_prune(operator_predicate.column_id, value, condition)) {
+        result.insert(ChunkID(chunk_id));
+      }
     }
   }
   return result;

@@ -193,8 +193,10 @@ set(
     operators/join_sort_merge/radix_cluster_sort.hpp
     operators/limit.cpp
     operators/limit.hpp
-    operators/operator_predicate.cpp
-    operators/operator_predicate.hpp
+    operators/operator_scan_predicate.cpp
+    operators/operator_scan_predicate.hpp
+    operators/operator_join_predicate.cpp
+    operators/operator_join_predicate.hpp
     operators/maintenance/create_view.cpp
     operators/maintenance/create_view.hpp
     operators/maintenance/drop_view.cpp

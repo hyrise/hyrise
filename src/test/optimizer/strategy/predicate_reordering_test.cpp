@@ -33,7 +33,8 @@ namespace opossum {
 class PredicateReorderingTest : public StrategyBaseTest {
  protected:
   void SetUp() override {
-    StorageManager::get().add_table("a", load_table("src/test/tables/int_int_int.tbl", Chunk::MAX_SIZE));
+    const auto table = load_table("src/test/tables/int_int_int.tbl", Chunk::MAX_SIZE);
+    StorageManager::get().add_table("a", table);
     _rule = std::make_shared<PredicateReorderingRule>();
 
     std::vector<std::shared_ptr<const BaseColumnStatistics>> column_statistics(
@@ -44,7 +45,7 @@ class PredicateReorderingTest : public StrategyBaseTest {
     auto table_statistics = std::make_shared<TableStatistics>(TableType::Data, 100, column_statistics);
 
     node = StoredTableNode::make("a");
-    node->set_statistics(table_statistics);
+    table->set_table_statistics(table_statistics);
 
     a = LQPColumnReference{node, ColumnID{0}};
     b = LQPColumnReference{node, ColumnID{1}};

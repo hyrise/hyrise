@@ -14,6 +14,7 @@
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "statistics/table_statistics.hpp"
+#include "operators/operator_join_predicate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -79,24 +80,15 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
     return cross_join_statistics;
 
   } else {
-    // If the JoinPredicate is a not simple `<column_a> <predicate_condition> <column_b>` predicate, then we have to
-    // fall back to a selectivity of 1 (== CrossJoin) atm, because computing statistics for complex join predicates is
-    // not implemented
-    if (join_predicate->type != ExpressionType::Predicate) return cross_join_statistics;
+    Assert(join_predicate, "Expected join predicate");
 
-    const auto binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicate);
-    if (!binary_predicate) return cross_join_statistics;
+    const auto operator_join_predicate = OperatorJoinPredicate::from_expression(*join_predicate, *left_input, *right_input);
 
-    const auto left_column = std::dynamic_pointer_cast<LQPColumnExpression>(binary_predicate->left_operand());
-    const auto right_column = std::dynamic_pointer_cast<LQPColumnExpression>(binary_predicate->right_operand());
-    if (!left_column || !right_column) return cross_join_statistics;
-
-    const auto predicate_condition = binary_predicate->predicate_condition;
-
-    ColumnIDPair join_colum_ids{left_input->get_column_id(*left_column), right_input->get_column_id(*right_column)};
+    // TODO(anybody) (Complex) predicate we can't build statistics for
+    if (!operator_join_predicate) return cross_join_statistics;
 
     return std::make_shared<TableStatistics>(left_input->get_statistics()->estimate_predicated_join(
-        *right_input->get_statistics(), join_mode, join_colum_ids, predicate_condition));
+        *right_input->get_statistics(), join_mode, operator_join_predicate->column_ids, operator_join_predicate->predicate_condition));
   }
 }
 

@@ -62,7 +62,8 @@ set(
     operators/join_test.hpp
     operators/limit_test.cpp
     operators/physical_query_plan_test.cpp
-    operators/operator_predicate_test.cpp
+    operators/operator_join_predicate_test.cpp
+    operators/operator_scan_predicate_test.cpp
     operators/maintenance/create_view_test.cpp
     operators/maintenance/drop_view_test.cpp
     operators/maintenance/show_columns_test.cpp

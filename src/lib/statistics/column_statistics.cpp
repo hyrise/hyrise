@@ -439,7 +439,11 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_equals_with_val
     new_distinct_count = 0.f;
   }
   auto column_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>(0.0f, new_distinct_count, value, value);
-  return {non_null_value_ratio() * new_distinct_count / distinct_count(), column_statistics};
+  if (distinct_count() == 0.0f) {
+    return {0.0f, column_statistics};    
+  } else {
+    return {non_null_value_ratio() * new_distinct_count / distinct_count(), column_statistics};
+  }
 }
 
 template <typename ColumnDataType>
@@ -450,7 +454,11 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_not_equals_with
     return {non_null_value_ratio(), without_null_values()};
   }
   auto column_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>(0.0f, distinct_count() - 1, _min, _max);
-  return {non_null_value_ratio() * (1 - 1.f / distinct_count()), column_statistics};
+  if (distinct_count() == 0.0f) {
+    return {0.0f, column_statistics};
+  } else {
+    return {non_null_value_ratio() * (1 - 1.f / distinct_count()), column_statistics};
+  }
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(ColumnStatistics);

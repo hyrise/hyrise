@@ -6,7 +6,7 @@
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
-#include "operators/operator_predicate.hpp"
+#include "operators/operator_scan_predicate.hpp"
 #include "resolve_type.hpp"
 #include "statistics/column_statistics.hpp"
 #include "statistics/table_statistics.hpp"

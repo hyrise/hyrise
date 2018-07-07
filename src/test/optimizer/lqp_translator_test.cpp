@@ -514,6 +514,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->input_left());
   ASSERT_TRUE(index_scan_op);
   EXPECT_EQ(get_included_chunk_ids(index_scan_op), index_chunk_ids);
+  EXPECT_EQ(index_scan_op->input_left()->type(), OperatorType::GetTable);
 
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->input_right());
   ASSERT_TRUE(table_scan_op);

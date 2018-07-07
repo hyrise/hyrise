@@ -11,7 +11,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "operators/operator_predicate.hpp"
+#include "operators/operator_scan_predicate.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -57,13 +57,16 @@ bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,
 
   if (index_info.type != ColumnIndexType::GroupKey) return false;
 
-  const auto operator_predicate = OperatorPredicate::from_expression(*predicate_node->predicate, *predicate_node);
-  if (!operator_predicate) return false;
+  const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate_node->predicate, *predicate_node);
+  if (!operator_predicates) return false;
+  if (operator_predicates->size() != 1) return false;
+
+  const auto& operator_predicate = (*operator_predicates)[0];
 
   // Currently, we do not support two-column predicates
-  if (is_column_id(operator_predicate->value)) return false;
+  if (is_column_id(operator_predicate.value)) return false;
 
-  if (index_info.column_ids[0] != operator_predicate->column_id) return false;
+  if (index_info.column_ids[0] != operator_predicate.column_id) return false;
 
   const auto row_count_table = predicate_node->left_input()->derive_statistics_from(nullptr, nullptr)->row_count();
   if (row_count_table < INDEX_SCAN_ROW_COUNT_THRESHOLD) return false;
