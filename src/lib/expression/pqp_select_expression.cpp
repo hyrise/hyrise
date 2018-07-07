@@ -19,11 +19,6 @@ PQPSelectExpression::PQPSelectExpression(const std::shared_ptr<AbstractOperator>
 PQPSelectExpression::PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp, const Parameters& parameters)
     : AbstractExpression(ExpressionType::Select, {}), pqp(pqp), parameters(parameters) {}
 
-bool PQPSelectExpression::requires_calculation() const {
-  // Select expressions always need to be computed, no matter whether they have arguments or not
-  return true;
-}
-
 std::shared_ptr<AbstractExpression> PQPSelectExpression::deep_copy() const {
   if (_data_type_info) {
     return std::make_shared<PQPSelectExpression>(pqp->recreate(), _data_type_info->data_type, _data_type_info->nullable,

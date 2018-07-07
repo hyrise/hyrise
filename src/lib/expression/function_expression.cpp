@@ -27,11 +27,6 @@ FunctionExpression::FunctionExpression(const FunctionType function_type,
   }
 }
 
-bool FunctionExpression::requires_calculation() const {
-  // Functions always need to be computed, no matter whether they have arguments or not
-  return true;
-}
-
 std::shared_ptr<AbstractExpression> FunctionExpression::deep_copy() const {
   return std::make_shared<FunctionExpression>(function_type, expressions_copy(arguments));
 }

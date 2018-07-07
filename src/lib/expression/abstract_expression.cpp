@@ -15,7 +15,7 @@ AbstractExpression::AbstractExpression(const ExpressionType type,
                                        const std::vector<std::shared_ptr<AbstractExpression>>& arguments)
     : type(type), arguments(arguments) {}
 
-bool AbstractExpression::requires_calculation() const { return !arguments.empty(); }
+bool AbstractExpression::requires_calculation() const { return true; }
 
 bool AbstractExpression::is_nullable() const {
   return !std::all_of(arguments.begin(), arguments.end(),

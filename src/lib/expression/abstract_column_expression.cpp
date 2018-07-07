@@ -4,4 +4,8 @@ namespace opossum {
 
 AbstractColumnExpression::AbstractColumnExpression() : AbstractExpression(ExpressionType::Column, {}) {}
 
+bool AbstractColumnExpression::requires_calculation() const {
+  return false;
+}
+
 }  // namespace opossum

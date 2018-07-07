@@ -90,10 +90,12 @@ extern unary<AggregateFunction::Min, AggregateExpression> min;
 extern unary<AggregateFunction::Avg, AggregateExpression> avg;
 extern unary<AggregateFunction::Count, AggregateExpression> count;
 extern unary<AggregateFunction::CountDistinct, AggregateExpression> count_distinct;
+
 extern binary<ArithmeticOperator::Division, ArithmeticExpression> div_;
 extern binary<ArithmeticOperator::Multiplication, ArithmeticExpression> mul;
 extern binary<ArithmeticOperator::Addition, ArithmeticExpression> add;
 extern binary<ArithmeticOperator::Subtraction, ArithmeticExpression> sub;
+extern binary<ArithmeticOperator::Modulo, ArithmeticExpression> mod;
 extern binary<PredicateCondition::Like, BinaryPredicateExpression> like;
 extern binary<PredicateCondition::NotLike, BinaryPredicateExpression> not_like;
 extern binary<PredicateCondition::Equals, BinaryPredicateExpression> equals;
@@ -104,6 +106,7 @@ extern binary<PredicateCondition::GreaterThanEquals, BinaryPredicateExpression> 
 extern binary<PredicateCondition::GreaterThan, BinaryPredicateExpression> greater_than;
 extern binary<LogicalOperator::And, LogicalExpression> and_;
 extern binary<LogicalOperator::Or, LogicalExpression> or_;
+
 extern ternary<BetweenExpression> between;
 extern ternary<CaseExpression> case_;
 

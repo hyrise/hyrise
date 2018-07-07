@@ -22,6 +22,8 @@ class LikeMatcher {
    */
   static std::string sql_like_to_regex(std::string sql_like);
 
+  explicit LikeMatcher(const std::string& pattern);
+
   enum class Wildcard { SingleChar /* '_' */, AnyChars /* '%' */ };
   using PatternToken = boost::variant<std::string, Wildcard>;  // Keep type order, users rely on which()
   using PatternTokens = std::vector<PatternToken>;
@@ -63,7 +65,11 @@ class LikeMatcher {
   static AllPatternVariant pattern_string_to_pattern_variant(const std::string& pattern);
 
   /**
-   * The functor will be called with a concrete matcher
+   * The functor will be called with a concrete matcher.
+   * Usage example:
+   *    LikeMatcher{"%hello%"}.resolve(false, [](const auto& matcher) {
+   *        std::cout << matcher("He said hello!") << std::endl;
+   *    }
    */
   template <typename Functor>
   void resolve(const bool invert_results, const Functor& functor) const {
@@ -109,8 +115,6 @@ class LikeMatcher {
       Fail("Pattern not implemented. Probably a bug.");
     }
   }
-
-  explicit LikeMatcher(const std::string& pattern);
 
  private:
   AllPatternVariant _pattern_variant;

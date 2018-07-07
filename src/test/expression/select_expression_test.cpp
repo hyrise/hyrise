@@ -21,30 +21,38 @@ namespace opossum {
 class ExpressionTest : public ::testing::Test {
  public:
   void SetUp() {
-    table_int_float = load_table("src/test/tables/int_float.tbl");
-    table_int_float_with_null = load_table("src/test/tables/int_float_with_null.tbl");
-    StorageManager::get().add_table("int_float", table_int_float);
-    StorageManager::get().add_table("int_float_with_null", table_int_float_with_null);
+    table = load_table("src/test/tables/int_float.tbl");
+    StorageManager::get().add_table("int_float", table);
 
-    int_float_node = StoredTableNode::make("int_float");
-    a = {int_float_node, ColumnID{0}};
-    b = {int_float_node, ColumnID{1}};
+    int_float_node_a = StoredTableNode::make("int_float");
+    a = {int_float_node_a, ColumnID{0}};
+    b = {int_float_node_a, ColumnID{1}};
 
-    int_float_node_nullable = StoredTableNode::make("int_float_with_null");
-    a_nullable = {int_float_node_nullable, ColumnID{0}};
-    b_nullable = {int_float_node_nullable, ColumnID{1}};
+    // clang-format off
+    const auto lqp_a =
+    ProjectionNode::make(expression_vector(parameter(ParameterID{0}, a), add(1, 2)),
+                         PredicateNode::make(greater_than(parameter(ParameterID{0}, a), 5),
+                                             int_float_node_a));
+    const auto lqp_b =
+    ProjectionNode::make(expression_vector(parameter(ParameterID{0}, a), add(1, 2)),
+                         PredicateNode::make(greater_than(parameter(ParameterID{0}, a), 5),
+                                             int_float_node_a));
+    const auto lqp_c =
+    ProjectionNode::make(expression_vector(parameter(ParameterID{4}), add(1, 2)),
+                         PredicateNode::make(greater_than(parameter(ParameterID{0}, a), 5),
+                                             int_float_node_a));
+    // clang-format on
   }
 
   void TearDown() { StorageManager::reset(); }
 
   LQPColumnReference a, b;
-  LQPColumnReference a_nullable, b_nullable;
-  std::shared_ptr<StoredTableNode> int_float_node, int_float_node_nullable;
+  std::shared_ptr<StoredTableNode> int_float_node_a;
   std::shared_ptr<AbstractLQPNode> lqp_a, lqp_b, lqp_c;
-  std::shared_ptr<Table> table_int_float, table_int_float_with_null;
+  std::shared_ptr<Table> table;
 };
 
-TEST_F(ExpressionTest, Equals) {
+TEST_F(ExpressionTest, DeepEquals) {
   EXPECT_TRUE(mul(2, 3)->deep_equals(*mul(2, 3)));
   EXPECT_FALSE(mul(2, 3)->deep_equals(*mul(3, 2)));
   EXPECT_FALSE(mul(2.0, 3)->deep_equals(*mul(2, 3)));
@@ -66,14 +74,6 @@ TEST_F(ExpressionTest, Equals) {
   EXPECT_TRUE(extract(DatetimeComponent::Day, "1999-07-30")->deep_equals(*extract(DatetimeComponent::Month, "1999-07-30")));
   EXPECT_TRUE(negate(6)->deep_equals(*negate(6)));
   EXPECT_FALSE(negate(6)->deep_equals(*negate(6.5)));
-}
-
-TEST_F(ExpressionTest, DeepEquals) {
-  const auto expr_a_a = sub(mul(add(1, 5), add(13.3, 14.4)), mod(12, 5.5));
-  const auto expr_a_b = sub(mul(add(1, 5), add(13.3, 14.4)), mod(12, 5.5));
-  const auto expr_b = sub(mul(add(1, 5), add(13.3, 14.4)), mod(12, null()));
-  EXPECT_TRUE(expr_a_a->deep_equals(*expr_a_b));
-  EXPECT_FALSE(expr_a_a->deep_equals(*expr_a_b));
 
   const auto case_a = case_(equals(add(a, 5), b), add(5, b), a);
   const auto case_b = case_(a, 1, 3);
@@ -85,12 +85,39 @@ TEST_F(ExpressionTest, DeepEquals) {
   EXPECT_FALSE(case_a->deep_equals(*case_c));
 }
 
+TEST_F(ExpressionTest, DeepEqualsLQPSelect) {
+  const auto select_a = select(lqp_a, std::make_pair(ParameterID{0}, a));
+  const auto select_b = select(lqp_b, std::make_pair(ParameterID{0}, a));
+  const auto select_c = select(lqp_c, std::make_pair(ParameterID{0}, a));
+
+  EXPECT_TRUE(select_a->deep_equals(*select_b));
+  EXPECT_FALSE(select_a->deep_equals(*select_c));
+
+  EXPECT_TRUE(exists(select_a)->deep_equals(*exists(select_a)));
+  EXPECT_FALSE(exists(select_a)->deep_equals(*exists(select_c)));
+}
+
+TEST_F(ExpressionTest, DeepEqualsPQPSelect) {
+  const auto pqp_a = std::make_shared<GetTable>("int_float");
+  const auto select_a = std::make_shared<PQPSelectExpression>(pqp_a);
+
+  // Can't compare PQP Select expressions
+  EXPECT_ANY_THROW(select_a->deep_equals(*select_a));
+}
+
 TEST_F(ExpressionTest, DeepCopy) {
   const auto expr_a = sub(mul(add(1, 5), add(13.3, 14.4)), mod(12, 5.5));
   EXPECT_TRUE(expr_a->deep_equals(*expr_a->deep_copy()));
 
   const auto expr_b = and_(greater_than_equals(15, 12), or_(greater_than(5, 3), less_than(3, 5)));
   EXPECT_TRUE(expr_b->deep_equals(*expr_b->deep_copy()));
+
+  const auto select_a = select(lqp_a, std::make_pair(ParameterID{0}, a));
+
+  EXPECT_TRUE(select_a->deep_equals(*select_a->deep_copy()));
+
+  // Make sure a new LQP is created on deep_copy()
+  EXPECT_NE(std::dynamic_pointer_cast<LQPSelectExpression>(select_a->deep_copy())->lqp, select_a->lqp);
 }
 
 TEST_F(ExpressionTest, RequiresCalculation) {
@@ -106,10 +133,10 @@ TEST_F(ExpressionTest, RequiresCalculation) {
   EXPECT_FALSE(parameter(ParameterID{5})->requires_calculation());
   EXPECT_FALSE(parameter(ParameterID{5}, a)->requires_calculation());
   EXPECT_FALSE(column(a)->requires_calculation());
-  EXPECT_FALSE(PQPColumnExpression::from_table(*table_int_float, "a")->requires_calculation());
+  EXPECT_FALSE(PQPColumnExpression::from_table(*table, "a")->requires_calculation());
   EXPECT_FALSE(value(5)->requires_calculation());
 
-  const auto lqp_select_expression = select(int_float_node);
+  const auto lqp_select_expression = select(int_float_node_a);
 
   EXPECT_TRUE(lqp_select_expression->requires_calculation());
   EXPECT_TRUE(exists(lqp_select_expression)->requires_calculation());
@@ -121,41 +148,14 @@ TEST_F(ExpressionTest, RequiresCalculation) {
   EXPECT_TRUE(pqp_select_expression->requires_calculation());
 }
 
-TEST_F(ExpressionTest, AsColumnName) {
-  EXPECT_EQ(sub(5, 3)->as_column_name(), "5 - 3");
-  EXPECT_EQ(add(5, 3)->as_column_name(), "5 + 3");
-  EXPECT_EQ(mul(5, 3)->as_column_name(), "5 * 3");
-  EXPECT_EQ(mod(5, 3)->as_column_name(), "5 % 3");
-  EXPECT_EQ(div_(5, 3)->as_column_name(), "5 / 3");
-  EXPECT_EQ(less_than(5, 3)->as_column_name(), "5 < 3");
-  EXPECT_EQ(less_than_equals(5, 3)->as_column_name(), "5 <= 3");
-  EXPECT_EQ(greater_than_equals(5, 3)->as_column_name(), "5 >= 3");
-  EXPECT_EQ(greater_than(5, 3)->as_column_name(), "5 > 3");
-  EXPECT_EQ(equals(5, 3)->as_column_name(), "5 = 3");
-  EXPECT_EQ(not_equals(5, 3)->as_column_name(), "5 != 3");
-  EXPECT_EQ(between(5, 3, 4)->as_column_name(), "5 BETWEEN 3 AND 4");
-  EXPECT_EQ(case_(1, 3, case_(0, 2, 1))->as_column_name(), "CASE WHEN 1 THEN 3 ELSE CASE WHEN 0 THEN 2 ELSE 1 END END");
-  EXPECT_EQ(extract(DatetimeComponent::Month, "1993-03-04")->as_column_name(), "EXTRACT(MONTH FROM \"1993-03-04\")");
-  EXPECT_EQ(substr("Hello", 1, 2)->as_column_name(), "SUBSTR(\"Hello\", 1, 2)");
-  EXPECT_EQ(concat("Hello", "World")->as_column_name(), "CONCAT(\"Hello\", \"World\")");
-  EXPECT_EQ(and_(1, 0)->as_column_name(), "1 AND 0");
-  EXPECT_EQ(or_(1, 0)->as_column_name(), "1 OR 0");
-  EXPECT_EQ(is_null(1)->as_column_name(), "1 IS NULL");
-  EXPECT_EQ(is_not_null(1)->as_column_name(), "1 IS NOT NULL");
-  EXPECT_EQ(list(1)->as_column_name(), "(1)");
-  EXPECT_EQ(list(1)->as_column_name(), "(1)");
-  EXPECT_EQ(negate(3)->as_column_name(), "-(3)");
-  EXPECT_EQ(value(3.25)->as_column_name(), "3.25");
-  EXPECT_EQ(null()->as_column_name(), "NULL");
-  EXPECT_EQ(parameter(ParameterID{0})->as_column_name(), "Parameter[id=0]");
-  EXPECT_EQ(parameter(ParameterID{0}, a)->as_column_name(), "Parameter[name=a;id=0]");
-}
+TEST_F(ExpressionTest, AsColumnName) {}
 
 TEST_F(ExpressionTest, AsColumnNameNested) {
   /**
    * Test that parentheses are placed correctly when generating column names of nested expressions
    */
 
+  EXPECT_EQ(add(5, 3)->as_column_name(), "5 + 3");
   EXPECT_EQ(add(5, mul(2, 3))->as_column_name(), "5 + 2 * 3");
   EXPECT_EQ(mul(5, add(2, 3))->as_column_name(), "5 * (2 + 3)");
   EXPECT_EQ(div_(5, mul(2, 3))->as_column_name(), "5 / (2 * 3)");
@@ -184,56 +184,6 @@ TEST_F(ExpressionTest, AsColumnNameNested) {
   EXPECT_EQ(mul(mul(2, 5), mul(1, 3))->as_column_name(), "(2 * 5) * (1 * 3)");
   EXPECT_EQ(and_(and_(1, 0), and_(0, 1))->as_column_name(), "(1 AND 0) AND (0 AND 1)");
   EXPECT_EQ(and_(1, and_(1, or_(0, 1)))->as_column_name(), "1 AND (1 AND (0 OR 1))");
-}
-
-TEST_F(ExpressionTest, DataType) {
-  EXPECT_EQ(add(int32_t{1}, int32_t{2})->data_type(), DataType::Int);
-  EXPECT_EQ(add(int32_t{1}, int64_t{2})->data_type(), DataType::Long);
-  EXPECT_EQ(add(int64_t{1}, int32_t{2})->data_type(), DataType::Long);
-  EXPECT_EQ(add(float{1.3}, int32_t{2})->data_type(), DataType::Float);
-  EXPECT_EQ(add(float{1.3}, int64_t{2})->data_type(), DataType::Double);
-  EXPECT_EQ(add(float{1.3}, float{2})->data_type(), DataType::Float);
-  EXPECT_EQ(add(double{1.3}, float{2})->data_type(), DataType::Double);
-  EXPECT_EQ(add(double{1.3}, double{2})->data_type(), DataType::Double);
-  EXPECT_EQ(add(int32_t{1}, double{2})->data_type(), DataType::Double);
-  EXPECT_EQ(negate(float{2})->data_type(), DataType::Float);
-  EXPECT_EQ(negate(double{2})->data_type(), DataType::Double);
-  EXPECT_EQ(value(double{2})->data_type(), DataType::Double);
-  EXPECT_EQ(value("Hello")->data_type(), DataType::String);
-  EXPECT_EQ(null()->data_type(), DataType::Null);
-  
-  EXPECT_EQ(less_than(1, 2)->data_type(), DataType::Int);
-  EXPECT_EQ(less_than(1.5, 2)->data_type(), DataType::Int);
-  EXPECT_EQ(between(1.5, 2, 3)->data_type(), DataType::Int);
-  EXPECT_EQ(and_(1, 1)->data_type(), DataType::Int);
-  EXPECT_EQ(or_(1, 1)->data_type(), DataType::Int);
-  EXPECT_EQ(is_null(5)->data_type(), DataType::Int);  
-  
-  EXPECT_EQ(case_(1, int32_t{1}, int32_t{1})->data_type(), DataType::Int);
-  EXPECT_EQ(case_(1, double(2.3), int32_t{1})->data_type(), DataType::Double);
-  EXPECT_EQ(substr("Hello", 1, 2)->data_type(), DataType::String);
-  EXPECT_EQ(concat("Hello", "World")->data_type(), DataType::String);
-  EXPECT_EQ(concat("Hello", "World")->data_type(), DataType::String);
-}
-
-TEST_F(ExpressionTest, IsNullable) {
-  EXPECT_FALSE(add(1, 2)->is_nullable());
-  EXPECT_FALSE(between(1, 2, 3)->is_nullable());
-  EXPECT_TRUE(between(1, null(), 3)->is_nullable());
-  EXPECT_FALSE(list(1, 2)->is_nullable());
-  EXPECT_TRUE(list(1, null())->is_nullable());
-  EXPECT_FALSE(and_(1, 1)->is_nullable());
-  EXPECT_FALSE(case_(1, 1, 2)->is_nullable());
-  EXPECT_TRUE(case_(null(), 1, 2)->is_nullable());
-  EXPECT_TRUE(case_(1, 1, null())->is_nullable());
-  EXPECT_TRUE(add(greater_than(2, null()), 1)->is_nullable());
-  EXPECT_TRUE(and_(greater_than(2, null()), 1)->is_nullable());
-  EXPECT_FALSE(column(a)->is_nullable());
-  EXPECT_TRUE(column(a_nullable)->is_nullable());
-
-  // Division by zero could be nullable, thus division and modulo are always nullable
-  EXPECT_TRUE(div_(1, 2)->is_nullable());
-  EXPECT_TRUE(mod(1, 2)->is_nullable());
 }
 
 }  // namespace opossum

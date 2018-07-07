@@ -15,7 +15,6 @@ class FunctionExpression : public AbstractExpression {
   FunctionExpression(const FunctionType function_type,
                      const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
 
-  bool requires_calculation() const override;
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
   DataType data_type() const override;

@@ -8,7 +8,16 @@ using namespace std::string_literals;
 
 namespace opossum {
 
-class LikeMatcherTest : public ::testing::Test {};
+class LikeMatcherTest : public ::testing::Test {
+ public:
+  bool match(const std::string& value, const std::string& pattern) const {
+    auto result = false;
+    LikeMatcher{pattern}.resolve(false, [&](const auto& matcher) {
+      result = matcher(value);
+    });
+    return result;
+  }
+};
 
 TEST_F(LikeMatcherTest, PatternToTokens) {
   const auto tokens_a = LikeMatcher::pattern_string_to_tokens("");
@@ -26,6 +35,25 @@ TEST_F(LikeMatcherTest, PatternToTokens) {
   EXPECT_EQ(tokens_b.at(6), LikeMatcher::PatternToken(LikeMatcher::Wildcard::SingleChar));
   EXPECT_EQ(tokens_b.at(7), LikeMatcher::PatternToken("Hello"s));
   EXPECT_EQ(tokens_b.at(8), LikeMatcher::PatternToken(LikeMatcher::Wildcard::AnyChars));
+}
+
+TEST_F(LikeMatcherTest, Matching) {
+  EXPECT_TRUE(match("Hello", "Hello"));
+  EXPECT_TRUE(match("Hello", "Hello%"));
+  EXPECT_TRUE(match("Hello", "%H%%"));
+  EXPECT_TRUE(match("Hello", "%H%ello%"));
+  EXPECT_TRUE(match("Hello", "%H%ello%"));
+  EXPECT_TRUE(match("Hello World", "%_%"));
+  EXPECT_TRUE(match("Hello World", "%_World"));
+  EXPECT_TRUE(match("Hello World!! (Nice day)", "H%(%day)"));
+  EXPECT_TRUE(match("Smiley: ^-^", "%^_^%"));
+  EXPECT_TRUE(match("Questionmark: ?", "%_?%"));
+}
+
+TEST_F(LikeMatcherTest, NotMatching) {
+  EXPECT_FALSE(match("hello", "Hello"));
+  EXPECT_FALSE(match("Hello", "Hello_"));
+  EXPECT_FALSE(match("Hello", "He_o"));
 }
 
 }  // namespace opossum

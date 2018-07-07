@@ -199,19 +199,29 @@ TEST_F(ExpressionEvaluatorTest, TernaryAndSeries) {
 TEST_F(ExpressionEvaluatorTest, ArithmeticsLiterals) {
   EXPECT_TRUE(test_expression<int32_t>(*mul(5, 3), {15}));
   EXPECT_TRUE(test_expression<int32_t>(*mul(5, NullValue{}), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*add(5, 6), {11}));
+  EXPECT_TRUE(test_expression<float>(*add(5, 6), {11.0}));
   EXPECT_TRUE(test_expression<int32_t>(*sub(15, 12), {3}));
   EXPECT_TRUE(test_expression<float>(*div_(10.0, 4.0), {2.5f}));
+  EXPECT_TRUE(test_expression<float>(*div_(10.0, 0), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*div_(10, 0), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*sub(NullValue{}, NullValue{}), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*mod(5, 3), {2}));
+  EXPECT_TRUE(test_expression<float>(*mod(23.25, 3), {2.25}));
+  EXPECT_TRUE(test_expression<float>(*mod(23.25, 0), {std::nullopt}));
+  EXPECT_TRUE(test_expression<float>(*mod(5, 0), {std::nullopt}));
 }
 
 TEST_F(ExpressionEvaluatorTest, ArithmeticsSeries) {
+  // clang-format off
   EXPECT_TRUE(test_expression<int32_t>(table_a, *mul(a, b), {2, 6, 12, 20}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *mod(b, a), {0, 1, 1, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *mod(a, c), {1, std::nullopt, 3, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *add(a, add(b, c)), {36, std::nullopt, 41, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *add(a, NullValue{}),
-                                       {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *add(a, add(b, NullValue{})),
-                                       {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *add(a, NullValue{}), {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));  // NOLINT
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *add(a, add(b, NullValue{})), {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));  // NOLINT
   EXPECT_TRUE(test_expression<int32_t>(table_empty, *add(empty_a, empty_b), {}));
+  // clang-format on
 }
 
 TEST_F(ExpressionEvaluatorTest, PredicatesLiterals) {

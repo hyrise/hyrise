@@ -10,18 +10,28 @@ namespace opossum {
 ValueExpression::ValueExpression(const AllTypeVariant& value)
     : AbstractExpression(ExpressionType::Value, {}), value(value) {}
 
+bool ValueExpression::requires_calculation() const {
+  return false;
+}
+
 std::shared_ptr<AbstractExpression> ValueExpression::deep_copy() const {
   return std::make_shared<ValueExpression>(value);
 }
 
 std::string ValueExpression::as_column_name() const {
   std::stringstream stream;
-  stream << value;
 
-  if (value.type() == typeid(int64_t))
+  if (value.type() == typeid(std::string)) {
+    stream << "\"" << value << "\"";
+  } else {
+    stream << value;
+  }
+
+  if (value.type() == typeid(int64_t)) {
     stream << "l";
-  else if (value.type() == typeid(float))
+  } else if (value.type() == typeid(float)) {
     stream << "f";
+  }
 
   return stream.str();
 }

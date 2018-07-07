@@ -13,11 +13,6 @@ class ListExpression : public AbstractExpression {
   DataType data_type() const override;
   bool is_nullable() const override;
 
-  /**
-   * @return  The common DataType of the elements of the Array, or std::nullopt if none such exists
-   */
-  std::optional<DataType> common_element_data_type() const;
-
   const std::vector<std::shared_ptr<AbstractExpression>>& elements() const;
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;

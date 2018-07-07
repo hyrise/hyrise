@@ -107,10 +107,10 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_arithmetic_e
     case ArithmeticOperator::Addition:       return _evaluate_binary_with_default_null_logic<R, Addition>(left, right);
     case ArithmeticOperator::Subtraction:    return _evaluate_binary_with_default_null_logic<R, Subtraction>(left, right);  // NOLINT
     case ArithmeticOperator::Multiplication: return _evaluate_binary_with_default_null_logic<R, Multiplication>(left, right);  // NOLINT
-    case ArithmeticOperator::Division:       return _evaluate_binary_with_default_null_logic<R, Division>(left, right);
 
-    default:
-      Fail("ArithmeticOperator evaluation not yet implemented");
+    // Division and Modulo need to catch division by zero
+    case ArithmeticOperator::Division:       return _evaluate_binary_with_custom_null_logic<R, Division>(left, right);
+    case ArithmeticOperator::Modulo:         return _evaluate_binary_with_custom_null_logic<R, Modulo>(left, right);
   }
   // clang-format on
 }

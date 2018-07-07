@@ -11,6 +11,8 @@ namespace opossum {
 class AbstractColumnExpression : public AbstractExpression {
  public:
   AbstractColumnExpression();
+
+  bool requires_calculation() const override;
 };
 
 }  // namespace opossum

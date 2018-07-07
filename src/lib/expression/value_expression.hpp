@@ -9,6 +9,7 @@ class ValueExpression : public AbstractExpression {
  public:
   explicit ValueExpression(const AllTypeVariant& value);
 
+  bool requires_calculation() const override;
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
   DataType data_type() const override;

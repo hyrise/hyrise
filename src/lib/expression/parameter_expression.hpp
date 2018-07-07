@@ -44,6 +44,7 @@ class ParameterExpression : public AbstractExpression {
   ParameterExpression(const ParameterID parameter_id, const AbstractExpression& referenced_expression);
   ParameterExpression(const ParameterID parameter_id, const ReferencedExpressionInfo& referenced_expression_info);
 
+  bool requires_calculation() const override;
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
   DataType data_type() const override;

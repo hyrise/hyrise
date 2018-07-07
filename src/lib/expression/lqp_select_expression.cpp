@@ -26,11 +26,6 @@ std::shared_ptr<AbstractExpression> LQPSelectExpression::parameter_expression(co
   return arguments[parameter_idx];
 }
 
-bool LQPSelectExpression::requires_calculation() const {
-  // Select expressions always need to be computed, no matter whether they have arguments or not
-  return true;
-}
-
 std::shared_ptr<AbstractExpression> LQPSelectExpression::deep_copy() const {
   const auto lqp_copy = lqp->deep_copy();
 

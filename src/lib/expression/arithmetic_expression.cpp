@@ -9,24 +9,11 @@ namespace opossum {
 
 std::ostream& operator<<(std::ostream& stream, const ArithmeticOperator arithmetic_operator) {
   switch (arithmetic_operator) {
-    case ArithmeticOperator::Addition:
-      stream << "+";
-      break;
-    case ArithmeticOperator::Subtraction:
-      stream << "-";
-      break;
-    case ArithmeticOperator::Multiplication:
-      stream << "*";
-      break;
-    case ArithmeticOperator::Division:
-      stream << "/";
-      break;
-    case ArithmeticOperator::Modulo:
-      stream << "%";
-      break;
-    case ArithmeticOperator::Power:
-      stream << "^";
-      break;
+    case ArithmeticOperator::Addition:        stream << "+"; break;
+    case ArithmeticOperator::Subtraction:     stream << "-"; break;
+    case ArithmeticOperator::Multiplication:  stream << "*"; break;
+    case ArithmeticOperator::Division:        stream << "/"; break;
+    case ArithmeticOperator::Modulo:          stream << "%"; break;
   }
   return stream;
 }
@@ -60,8 +47,9 @@ std::string ArithmeticExpression::as_column_name() const {
 }
 
 bool ArithmeticExpression::is_nullable() const {
+  // We return NULL for divisions/modulo by 0
   return AbstractExpression::is_nullable() || arithmetic_operator == ArithmeticOperator::Division ||
-         arithmetic_operator == ArithmeticOperator::Modulo || arithmetic_operator == ArithmeticOperator::Power;
+         arithmetic_operator == ArithmeticOperator::Modulo;
 }
 
 bool ArithmeticExpression::_shallow_equals(const AbstractExpression& expression) const {
@@ -72,8 +60,6 @@ size_t ArithmeticExpression::_on_hash() const { return boost::hash_value(static_
 
 uint32_t ArithmeticExpression::_precedence() const {
   switch (arithmetic_operator) {
-    case ArithmeticOperator::Power:
-      return 4;
     case ArithmeticOperator::Addition:
     case ArithmeticOperator::Subtraction:
       return 3;

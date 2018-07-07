@@ -150,10 +150,36 @@ TEST_F(SQLTranslatorTest, SelectStarSelectsOnlyFromColumns) {
 }
 
 TEST_F(SQLTranslatorTest, SimpleArithmeticExpression) {
-  const auto actual_lqp = compile_query("SELECT a * b FROM int_float;");
+  const auto actual_lqp_a = compile_query("SELECT a * b FROM int_float;");
+  const auto actual_lqp_b = compile_query("SELECT a / b FROM int_float;");
+  const auto actual_lqp_c = compile_query("SELECT a + b FROM int_float;");
+  const auto actual_lqp_d = compile_query("SELECT a - b FROM int_float;");
+  const auto actual_lqp_e = compile_query("SELECT a % b FROM int_float;");
 
+  // clang-format off
+  const auto expected_lqp_a = ProjectionNode::make(expression_vector(mul(int_float_a, int_float_b)), stored_table_node_int_float);  // NOLINT
+  const auto expected_lqp_b = ProjectionNode::make(expression_vector(div_(int_float_a, int_float_b)), stored_table_node_int_float);  // NOLINT
+  const auto expected_lqp_c = ProjectionNode::make(expression_vector(add(int_float_a, int_float_b)), stored_table_node_int_float);  // NOLINT
+  const auto expected_lqp_d = ProjectionNode::make(expression_vector(sub(int_float_a, int_float_b)), stored_table_node_int_float);  // NOLINT
+  const auto expected_lqp_e = ProjectionNode::make(expression_vector(mod(int_float_a, int_float_b)), stored_table_node_int_float);  // NOLINT
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp_a, expected_lqp_a);
+  EXPECT_LQP_EQ(actual_lqp_b, expected_lqp_b);
+  EXPECT_LQP_EQ(actual_lqp_c, expected_lqp_c);
+  EXPECT_LQP_EQ(actual_lqp_d, expected_lqp_d);
+  EXPECT_LQP_EQ(actual_lqp_e, expected_lqp_e);
+}
+
+TEST_F(SQLTranslatorTest, NestedArithmeticExpression) {
+  // With parentheses: `(a*b) + ((a/b) % 5))`
+  const auto actual_lqp = compile_query("SELECT a * b + a / b % 5 FROM int_float;");
+
+  // clang-format off
   const auto expected_lqp =
-      ProjectionNode::make(expression_vector(mul(int_float_a, int_float_b)), stored_table_node_int_float);
+  ProjectionNode::make(expression_vector(add(mul(int_float_a, int_float_b), mod(div_(int_float_a, int_float_b), 5))),
+    stored_table_node_int_float);
+  // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }

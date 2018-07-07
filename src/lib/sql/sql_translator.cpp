@@ -64,7 +64,7 @@ using namespace opossum;  // NOLINT
 const std::unordered_map<hsql::OperatorType, ArithmeticOperator> hsql_arithmetic_operators = {
     {hsql::kOpPlus, ArithmeticOperator::Addition},           {hsql::kOpMinus, ArithmeticOperator::Subtraction},
     {hsql::kOpAsterisk, ArithmeticOperator::Multiplication}, {hsql::kOpSlash, ArithmeticOperator::Division},
-    {hsql::kOpPercentage, ArithmeticOperator::Modulo},       {hsql::kOpCaret, ArithmeticOperator::Power},
+    {hsql::kOpPercentage, ArithmeticOperator::Modulo},
 };
 
 const std::unordered_map<hsql::OperatorType, LogicalOperator> hsql_logical_operators = {

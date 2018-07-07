@@ -18,7 +18,6 @@ class PQPSelectExpression : public AbstractExpression {
   // Constructor for (potentially) multi-column PQPSelectExpressions as used in `EXISTS(SELECT ...)`
   PQPSelectExpression(const std::shared_ptr<AbstractOperator>& pqp, const Parameters& parameters = {});
 
-  bool requires_calculation() const override;
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
   DataType data_type() const override;
