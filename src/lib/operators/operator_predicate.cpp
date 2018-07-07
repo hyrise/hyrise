@@ -49,7 +49,7 @@ std::optional<OperatorPredicate> OperatorPredicate::from_expression(const Abstra
 }
 
 OperatorPredicate::OperatorPredicate(const ColumnID column_id, const PredicateCondition predicate_condition,
-                                     const AllParameterVariant& value, const std::optional<AllParameterVariant>& value2)
+                                     const AllParameterVariant& value, const std::optional<AllTypeVariant>& value2)
     : column_id(column_id), predicate_condition(predicate_condition), value(value), value2(value2) {}
 
 }  // namespace opossum

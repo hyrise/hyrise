@@ -196,14 +196,8 @@ ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) co
   return *column_id;
 }
 
-void AbstractLQPNode::set_statistics(const std::shared_ptr<TableStatistics>& statistics) { _statistics = statistics; }
-
 const std::shared_ptr<TableStatistics> AbstractLQPNode::get_statistics() {
-  if (!_statistics) {
-    _statistics = derive_statistics_from(left_input(), right_input());
-  }
-
-  return _statistics;
+  return derive_statistics_from(left_input(), right_input());
 }
 
 std::shared_ptr<TableStatistics> AbstractLQPNode::derive_statistics_from(

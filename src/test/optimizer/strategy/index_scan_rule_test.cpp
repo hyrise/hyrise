@@ -59,7 +59,7 @@ class IndexScanRuleTest : public StrategyBaseTest {
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {
   auto statistics_mock = generate_mock_statistics();
-  stored_table_node->set_statistics(statistics_mock);
+  table->set_table_statistics(statistics_mock);
 
   auto predicate_node_0 = PredicateNode::make(greater_than(a, 10));
   predicate_node_0->set_left_input(stored_table_node);
@@ -73,7 +73,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
   table->create_index<GroupKeyIndex>({ColumnID{2}});
 
   auto statistics_mock = generate_mock_statistics();
-  stored_table_node->set_statistics(statistics_mock);
+  table->set_table_statistics(statistics_mock);
 
   auto predicate_node_0 = PredicateNode::make(greater_than(a, 10));
   predicate_node_0->set_left_input(stored_table_node);
@@ -87,7 +87,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithMultiColumnIndex) {
   table->create_index<CompositeGroupKeyIndex>({ColumnID{2}, ColumnID{1}});
 
   auto statistics_mock = generate_mock_statistics();
-  stored_table_node->set_statistics(statistics_mock);
+  table->set_table_statistics(statistics_mock);
 
   auto predicate_node_0 = PredicateNode::make(greater_than(c, 10));
   predicate_node_0->set_left_input(stored_table_node);
@@ -99,7 +99,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithMultiColumnIndex) {
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
   auto statistics_mock = generate_mock_statistics();
-  stored_table_node->set_statistics(statistics_mock);
+  table->set_table_statistics(statistics_mock);
 
   auto predicate_node_0 = PredicateNode::make(greater_than(c, b));
   predicate_node_0->set_left_input(stored_table_node);

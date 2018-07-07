@@ -54,6 +54,7 @@ TEST_P(TPCHTest, TPCHQueryTest) {
   auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline();
 
   if (!sql_pipeline.requires_execution()) {
+    sql_pipeline.get_unoptimized_logical_plans().at(0)->print();
     sql_pipeline.get_optimized_logical_plans().at(0)->print();
   } else {
     std::cout << "Cannot print plan, needs to be executed first" << std::endl;

@@ -39,55 +39,19 @@ std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
    * fall back to a selectivity of 1 atm, because computing statistics for complex predicates is
    * not implemented
    */
+  std::cout << "Predicate: " << predicate->as_column_name() << std::endl;
+  std::cout << "Columns: " << expression_column_names(left_input->column_expressions()) << std::endl;
 
-  if (predicate->type != ExpressionType::Predicate) return left_input->get_statistics();
+  left_input->print();
 
-  const auto predicate_expression = std::dynamic_pointer_cast<AbstractPredicateExpression>(predicate);
-  if (!predicate_expression) return left_input->get_statistics();
-
-  const auto binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
-  const auto between_predicate = std::dynamic_pointer_cast<BetweenExpression>(predicate);
-  if (!binary_predicate && !between_predicate) return left_input->get_statistics();
-
-  /**
-   * Check whether the left operand is a Column
-   */
-  const auto left_column = std::dynamic_pointer_cast<LQPColumnExpression>(predicate->arguments[0]);
-  if (!left_column) return left_input->get_statistics();
-  const auto column_id = left_input->get_column_id(*left_column);
-
-  /**
-   * Check whether the "value" operand is a Column or a Value or a ValuePlaceholder
-   */
-  AllParameterVariant value;
-
-  const auto value_value_expression = std::dynamic_pointer_cast<ValueExpression>(predicate->arguments[1]);
-  const auto value_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(predicate->arguments[1]);
-  const auto value_parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(predicate->arguments[1]);
-
-  if (value_value_expression) {
-    value = value_value_expression->value;
-  } else if (value_column_expression) {
-    value = value_column_expression->column_reference;
-  } else if (value_parameter_expression &&
-             value_parameter_expression->parameter_expression_type == ParameterExpressionType::ValuePlaceholder) {
-    value = value_parameter_expression->parameter_id;
-  } else {
-    return left_input->get_statistics();
-  }
-
-  /**
-   * Check whether the "value2" operand is a Value
-   */
-  std::optional<AllTypeVariant> value2;
-
-  if (between_predicate) {
-    const auto value2_value_expression = std::dynamic_pointer_cast<ValueExpression>(predicate->arguments[2]);
-    if (value2_value_expression) value2 = value2_value_expression->value;
-  }
+  const auto operator_predicate = OperatorPredicate::from_expression(*predicate, *left_input);
+  if (!operator_predicate) return left_input->get_statistics();
 
   return std::make_shared<TableStatistics>(left_input->get_statistics()->estimate_predicate(
-      column_id, predicate_expression->predicate_condition, value, value2));
+      operator_predicate->column_id,
+      operator_predicate->predicate_condition,
+      operator_predicate->value,
+      operator_predicate->value2));
 }
 
 std::shared_ptr<AbstractLQPNode> PredicateNode::_shallow_copy_impl(LQPNodeMapping& node_mapping) const {

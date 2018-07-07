@@ -24,12 +24,12 @@ struct OperatorPredicate {
   OperatorPredicate() = default;
   OperatorPredicate(const ColumnID column_id, const PredicateCondition predicate_condition,
                     const AllParameterVariant& value = NullValue{},
-                    const std::optional<AllParameterVariant>& value2 = {});
+                    const std::optional<AllTypeVariant>& value2 = {});
 
   ColumnID column_id{INVALID_COLUMN_ID};
   PredicateCondition predicate_condition{PredicateCondition::Equals};
   AllParameterVariant value;
-  std::optional<AllParameterVariant> value2;
+  std::optional<AllTypeVariant> value2;
 };
 
 }  // namespace opossum

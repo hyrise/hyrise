@@ -17,7 +17,6 @@ MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optio
 
 MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics)
     : AbstractLQPNode(LQPNodeType::Mock), _constructor_arguments(statistics) {
-  set_statistics(statistics);
 }
 
 LQPColumnReference MockNode::get_column(const std::string& name) const {
@@ -61,6 +60,13 @@ const std::vector<std::shared_ptr<AbstractExpression>>& MockNode::column_express
 }
 
 std::string MockNode::description() const { return "[MockNode '"s + _name.value_or("Unnamed") + "']"; }
+
+std::shared_ptr<TableStatistics>  MockNode::derive_statistics_from(
+const std::shared_ptr<AbstractLQPNode>& left_input,
+const std::shared_ptr<AbstractLQPNode>& right_input) const {
+  Assert(_constructor_arguments.type() == typeid(std::shared_ptr<TableStatistics>), "Can only return statistics from statistics mock node");
+  return boost::get<std::shared_ptr<TableStatistics>>(_constructor_arguments);
+}
 
 std::shared_ptr<AbstractLQPNode> MockNode::_shallow_copy_impl(LQPNodeMapping& node_mapping) const {
   if (_constructor_arguments.type() == typeid(std::shared_ptr<TableStatistics>)) {

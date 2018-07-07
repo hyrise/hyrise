@@ -70,7 +70,7 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::node_expressions() co
 
 std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
-  DebugAssert(left_input && right_input, "JoinNode need left_input and no right_input");
+  DebugAssert(left_input && right_input, "JoinNode needs left_input and right_input");
 
   const auto cross_join_statistics = std::make_shared<TableStatistics>(
       left_input->get_statistics()->estimate_cross_join(*right_input->get_statistics()));

@@ -36,6 +36,10 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   std::string description() const override;
 
+  std::shared_ptr<TableStatistics> derive_statistics_from(
+  const std::shared_ptr<AbstractLQPNode>& left_input,
+  const std::shared_ptr<AbstractLQPNode>& right_input = nullptr) const override;
+
  protected:
   std::shared_ptr<AbstractLQPNode> _shallow_copy_impl(LQPNodeMapping& node_mapping) const override;
   bool _shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;

@@ -73,7 +73,7 @@ TEST_F(ExpressionTest, DeepEquals) {
   const auto expr_a_b = sub(mul(add(1, 5), add(13.3, 14.4)), mod(12, 5.5));
   const auto expr_b = sub(mul(add(1, 5), add(13.3, 14.4)), mod(12, null()));
   EXPECT_TRUE(expr_a_a->deep_equals(*expr_a_b));
-  EXPECT_FALSE(expr_a_a->deep_equals(*expr_a_b));
+  EXPECT_FALSE(expr_a_a->deep_equals(*expr_b));
 
   const auto case_a = case_(equals(add(a, 5), b), add(5, b), a);
   const auto case_b = case_(a, 1, 3);

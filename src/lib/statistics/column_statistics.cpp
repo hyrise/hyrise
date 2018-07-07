@@ -9,6 +9,15 @@
 namespace opossum {
 
 template <typename ColumnDataType>
+ColumnStatistics<ColumnDataType> ColumnStatistics<ColumnDataType>::dummy() {
+  if constexpr (std::is_same_v<ColumnDataType, std::string>) {
+    return ColumnStatistics{1.0f, 0.0f, {}, {}};
+  } else {
+    return ColumnStatistics{1.0f, 0.0f, {0}, {0}};
+  }
+}
+
+template <typename ColumnDataType>
 ColumnStatistics<ColumnDataType>::ColumnStatistics(const float null_value_ratio, const float distinct_count,
                                                    const ColumnDataType min, const ColumnDataType max)
     : BaseColumnStatistics(data_type_from_type<ColumnDataType>(), null_value_ratio, distinct_count),
@@ -111,7 +120,7 @@ FilterByValueEstimate ColumnStatistics<std::string>::estimate_predicate_with_val
 
 template <typename ColumnDataType>
 FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_value_placeholder(
-    const PredicateCondition predicate_condition, const ValuePlaceholder& value,
+    const PredicateCondition predicate_condition,
     const std::optional<AllTypeVariant>& value2) const {
   switch (predicate_condition) {
     // Simply assume the value will be in (_min, _max) and pick _min as the representative
