@@ -31,7 +31,7 @@ if [[ "$unamestr" == 'Darwin' ]]; then
    path_to_compiler='/usr/local/opt/llvm/bin/'
 fi
 
-cmake -DCMAKE_CXX_COMPILER_LAUNCHER=$launcher -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER="${path_to_compiler}clang" -DCMAKE_CXX_COMPILER="${path_to_compiler}clang++" -DENABLE_COVERAGE=ON ..
+cmake -DCMAKE_CXX_COMPILER_LAUNCHER=$launcher -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${path_to_compiler}clang -DCMAKE_CXX_COMPILER=${path_to_compiler}clang++ -DENABLE_COVERAGE=ON ..
 
 cores=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
 make hyriseTest -j $((cores / 2))
@@ -39,22 +39,19 @@ cd -
 
 rm -fr coverage; mkdir coverage
 ./build-coverage/hyriseTest build-coverage --gtest_filter=-SQLiteTestRunnerInstances/*
-
-# LLVM has its own way of dealing with coverage...
-# https://llvm.org/docs/CoverageMappingFormat.html
   
 # merge the profile data using the llvm-profdata tool:
-"${path_to_compiler}llvm-profdata" merge -o ./default.profdata ./default.profraw
+${path_to_compiler}llvm-profdata merge -o ./default.profdata ./default.profraw
 
 # run LLVM’s code coverage tool
-"${path_to_compiler}llvm-cov" show -format=html -instr-profile ./default.profdata build-coverage/hyriseTest -output-dir=./coverage ./src/lib/
+${path_to_compiler}llvm-cov show -format=html -instr-profile ./default.profdata build-coverage/hyriseTest -output-dir=./coverage ./src/lib/
 
 echo Coverage Information is in ./coverage/index.html
 
 # Continuing only if diff output is needed with Linux/gcc
 if [ "true" == "$generate_badge" ]; then
 
-  "${path_to_compiler}llvm-cov" export -summary-only -instr-profile ./default.profdata build-coverage/hyriseTest ./src/lib/ > coverage.json
+  ${path_to_compiler}llvm-cov export -summary-only -instr-profile ./default.profdata build-coverage/hyriseTest ./src/lib/ > coverage.json
 
   # coverage badge generation
   total_lines=$(sed 's/.*totals":{"lines":{"count":\([0-9]*\).*/\1/' coverage.json)
