@@ -19,8 +19,8 @@ namespace opossum {
 AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<const BaseColumn>>& index_columns)
     : BaseIndex{get_index_type_of<AdaptiveRadixTreeIndex>()},
       _index_column(std::dynamic_pointer_cast<const BaseDictionaryColumn>(index_columns.front())) {
-  DebugAssert(static_cast<bool>(_index_column), "AdaptiveRadixTree only works with dictionary columns for now");
-  DebugAssert((index_columns.size() == 1), "AdaptiveRadixTree only works with a single column");
+  Assert(static_cast<bool>(_index_column), "AdaptiveRadixTree only works with dictionary columns for now");
+  Assert((index_columns.size() == 1), "AdaptiveRadixTree only works with a single column");
 
   // For each value ID in the attribute vector, create a pair consisting of a BinaryComparable of
   // this value ID and its ChunkOffset (needed for bulk-inserting).
@@ -40,20 +40,20 @@ AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr
 
 BaseIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   assert(values.size() == 1);
-  ValueID valueID = _index_column->lower_bound(values[0]);
-  if (valueID == INVALID_VALUE_ID) {
+  ValueID value_id = _index_column->lower_bound(values[0]);
+  if (value_id == INVALID_VALUE_ID) {
     return _chunk_offsets.end();
   }
-  return _root->lower_bound(BinaryComparable(valueID), 0);
+  return _root->lower_bound(BinaryComparable(value_id), 0);
 }
 
 BaseIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
   assert(values.size() == 1);
-  ValueID valueID = _index_column->upper_bound(values[0]);
-  if (valueID == INVALID_VALUE_ID) {
+  ValueID value_id = _index_column->upper_bound(values[0]);
+  if (value_id == INVALID_VALUE_ID) {
     return _chunk_offsets.end();
   } else {
-    return _root->lower_bound(BinaryComparable(valueID), 0);
+    return _root->lower_bound(BinaryComparable(value_id), 0);
   }
 }
 

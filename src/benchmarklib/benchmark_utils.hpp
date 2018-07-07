@@ -68,6 +68,8 @@ struct EncodingConfig {
                  TableColumnEncodingMapping encoding_mapping);
   explicit EncodingConfig(ColumnEncodingSpec default_encoding_spec);
 
+  static EncodingConfig unencoded();
+
   const ColumnEncodingSpec default_encoding_spec;
   const EncodingMapping type_encoding_mapping;
   const TableColumnEncodingMapping custom_encoding_mapping;
@@ -80,6 +82,11 @@ struct EncodingConfig {
   nlohmann::json to_json() const;
 
   static const char* description;
+};
+
+class BenchmarkTableEncoder {
+ public:
+  static void encode(const std::string& table_name, std::shared_ptr<Table> table, const EncodingConfig& config);
 };
 
 // View BenchmarkConfig::description to see format of the JSON-version

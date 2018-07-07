@@ -59,6 +59,11 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   void set_as_predecessor_of(std::shared_ptr<AbstractTask> successor);
 
   /**
+   * @return the predecessors of this Task
+   */
+  const std::vector<std::weak_ptr<AbstractTask>>& predecessors() const;
+
+  /**
    * @return the successors of this Task
    */
   const std::vector<std::shared_ptr<AbstractTask>>& successors() const;
@@ -118,11 +123,6 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   void _join_without_replacement_worker();
 
   /**
-   * Called when a dependency is initialized (by set_as_predecessor_of)
-   */
-  void _on_predecessor_added();
-
-  /**
    * Called by a dependency when it finished execution
    */
   void _on_predecessor_done();
@@ -133,7 +133,8 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   std::function<void()> _done_callback;
 
   // For dependencies
-  std::atomic_uint _predecessor_counter{0};
+  std::atomic_uint _pending_predecessors{0};
+  std::vector<std::weak_ptr<AbstractTask>> _predecessors;
   std::vector<std::shared_ptr<AbstractTask>> _successors;
 
   // For making sure a task gets only scheduled and enqueued once, respectively

@@ -87,22 +87,22 @@ boost::future<uint64_t> QueryResponseBuilder::send_query_response(send_row_t sen
   // its string representation. However, because of the asynchronous send_row call, we have to
   // use this two-level recursion instead of two nested for-loops
 
-  return send_query_response_chunks(send_row, table, ChunkID{0}) >> then >> [&]() { return table.row_count(); };
+  return _send_query_response_chunks(send_row, table, ChunkID{0}) >> then >> [&]() { return table.row_count(); };
 }
 
-boost::future<void> QueryResponseBuilder::send_query_response_chunks(send_row_t send_row, const Table& table,
-                                                                     ChunkID current_chunk_id) {
+boost::future<void> QueryResponseBuilder::_send_query_response_chunks(send_row_t send_row, const Table& table,
+                                                                      ChunkID current_chunk_id) {
   if (current_chunk_id == table.chunk_count()) return boost::make_ready_future();
 
   const auto& chunk = table.get_chunk(current_chunk_id);
 
-  return send_query_response_rows(send_row, *chunk, ChunkOffset{0}) >> then >>
-         std::bind(QueryResponseBuilder::send_query_response_chunks, send_row, std::ref(table),
+  return _send_query_response_rows(send_row, *chunk, ChunkOffset{0}) >> then >>
+         std::bind(QueryResponseBuilder::_send_query_response_chunks, send_row, std::ref(table),
                    ChunkID{current_chunk_id + 1});
 }
 
-boost::future<void> QueryResponseBuilder::send_query_response_rows(send_row_t send_row, const Chunk& chunk,
-                                                                   ChunkOffset current_chunk_offset) {
+boost::future<void> QueryResponseBuilder::_send_query_response_rows(send_row_t send_row, const Chunk& chunk,
+                                                                    ChunkOffset current_chunk_offset) {
   if (current_chunk_offset == chunk.size()) return boost::make_ready_future();
 
   std::vector<std::string> row_strings(chunk.column_count());
@@ -112,7 +112,7 @@ boost::future<void> QueryResponseBuilder::send_query_response_rows(send_row_t se
     row_strings[column_id] = type_cast<std::string>((*column)[current_chunk_offset]);
   }
 
-  return send_row(row_strings) >> then >> std::bind(QueryResponseBuilder::send_query_response_rows, send_row,
+  return send_row(row_strings) >> then >> std::bind(QueryResponseBuilder::_send_query_response_rows, send_row,
                                                     std::ref(chunk), ChunkOffset{current_chunk_offset + 1});
 }
 

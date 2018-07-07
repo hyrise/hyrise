@@ -34,7 +34,7 @@ struct AggregateColumnDefinitionTemplate {
                                     const std::optional<std::string>& alias = std::nullopt)
       : column(column), function(function), alias(alias) {}
 
-  std::optional<ColumnReferenceType> column;
+  std::optional<ColumnReferenceType> column{std::nullopt};
   AggregateFunction function;
   std::optional<std::string> alias;
 };
@@ -98,6 +98,8 @@ class Aggregate : public AbstractReadOnlyOperator {
       const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
       const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
 
+  void _on_cleanup() override;
+
   template <typename ColumnType>
   static void _create_aggregate_context(boost::hana::basic_type<ColumnType> type,
                                         std::shared_ptr<ColumnVisitableContext>& aggregate_context,
@@ -125,7 +127,6 @@ class Aggregate : public AbstractReadOnlyOperator {
   const std::vector<AggregateColumnDefinition> _aggregates;
   const std::vector<ColumnID> _groupby_column_ids;
 
-  std::shared_ptr<Table> _output;
   TableColumnDefinitions _output_column_definitions;
   ChunkColumns _output_columns;
 
