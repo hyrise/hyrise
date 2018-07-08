@@ -8,6 +8,7 @@
 #include "logical_query_plan/union_node.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/operator_scan_predicate.hpp"
+#include "operators/operator_join_predicate.hpp"
 #include "operators/product.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/union_positions.hpp"
@@ -33,20 +34,18 @@ Cost AbstractCostModel::estimate_lqp_node_cost(const std::shared_ptr<AbstractLQP
       break;
 
     case LQPNodeType::Join: {
-//      const auto join_node = std::static_pointer_cast<JoinNode>(node);
-//      const auto operator_predicates = OperatorScanPredicate::from_expression(*join_node->join_predicate, *join_node);
-//      Assert(operator_predicates, "Expected Join predicate to be OperatorScanPredicate compatible");
-//      Assert(operator_predicates->size() == 1, "Expected Join predicate to be OperatorScanPredicate compatible");
+      const auto join_node = std::static_pointer_cast<JoinNode>(node);
+      const auto operator_predicate = OperatorJoinPredicate::from_expression(*join_node->join_predicate, *join_node->left_input(), *join_node->right_input());
+      Assert(operator_predicate, "Expected Join predicate to be OperatorScanPredicate compatible");
 
-//      if (join_node->join_mode == JoinMode::Cross) {
-//        operator_type = OperatorType::Product;
-//      } else if (join_node->join_mode == JoinMode::Inner &&
-//                 operator_predicate->predicate_condition == PredicateCondition::Equals) {
-//        operator_type = OperatorType::JoinHash;
-//      } else {
-//        operator_type = OperatorType::JoinSortMerge;
-//      }
-      return 0.0f;
+      if (join_node->join_mode == JoinMode::Cross) {
+        operator_type = OperatorType::Product;
+      } else if (join_node->join_mode == JoinMode::Inner &&
+                 operator_predicate->predicate_condition == PredicateCondition::Equals) {
+        operator_type = OperatorType::JoinHash;
+      } else {
+        operator_type = OperatorType::JoinSortMerge;
+      }
     } break;
 
     case LQPNodeType::Union: {

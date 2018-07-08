@@ -16,6 +16,7 @@ namespace opossum {
 template <typename ColumnDataType>
 class ColumnStatistics : public BaseColumnStatistics {
  public:
+  // To be used for columns for which ColumnStatistics can't be computed
   static ColumnStatistics dummy();
 
   ColumnStatistics(const float null_value_ratio, const float distinct_count, const ColumnDataType min,

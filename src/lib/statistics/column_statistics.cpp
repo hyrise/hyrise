@@ -11,9 +11,9 @@ namespace opossum {
 template <typename ColumnDataType>
 ColumnStatistics<ColumnDataType> ColumnStatistics<ColumnDataType>::dummy() {
   if constexpr (std::is_same_v<ColumnDataType, std::string>) {
-    return ColumnStatistics{1.0f, 0.0f, {}, {}};
+    return ColumnStatistics{1.0f, 1.0f, {}, {}};
   } else {
-    return ColumnStatistics{1.0f, 0.0f, {0}, {0}};
+    return ColumnStatistics{1.0f, 1.0f, {0}, {0}};
   }
 }
 

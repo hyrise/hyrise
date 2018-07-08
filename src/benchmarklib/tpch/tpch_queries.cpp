@@ -603,6 +603,8 @@ const char* const tpch_query_14 =
  *  2. dates are not supported
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
+ *  3. implicit type conversions for arithmetic operations are not supported
+ *    a. changed 1 to 1.0 explicitly
  */
 const char* const tpch_query_15 =
     R"(create view revenue (supplier_no, total_revenue) as SELECT l_suppkey,

@@ -12,6 +12,7 @@ set(
     ${SHARED_SOURCES}
     concurrency/commit_context_test.cpp
     concurrency/transaction_context_test.cpp
+    cost_model/cost_feature_proxy_test.cpp
     import_export/csv_meta_test.cpp
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
@@ -84,9 +85,6 @@ set(
     statistics/column_statistics_test.cpp
     statistics/table_statistics_join_test.cpp
     statistics/table_statistics_test.cpp
-#    optimizer/join_ordering/join_graph_builder_test.cpp
-#    optimizer/join_ordering/join_graph_test.cpp
-#    optimizer/join_ordering/join_plan_predicate_test.cpp
     optimizer/lqp_translator_test.cpp
     optimizer/optimizer_test.cpp
     optimizer/strategy/chunk_pruning_test.cpp

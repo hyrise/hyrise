@@ -86,8 +86,8 @@ set(
     cost_model/abstract_cost_model.hpp
     cost_model/cost_feature.cpp
     cost_model/cost_feature.hpp
-    #cost_model/cost_feature_lqp_node_proxy.cpp
-    #cost_model/cost_feature_lqp_node_proxy.hpp
+    cost_model/cost_feature_lqp_node_proxy.cpp
+    cost_model/cost_feature_lqp_node_proxy.hpp
     cost_model/cost_feature_operator_proxy.cpp
     cost_model/cost_feature_operator_proxy.hpp
     cost_model/cost.hpp

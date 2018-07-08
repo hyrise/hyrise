@@ -21,7 +21,7 @@ class LQPSelectExpression : public AbstractExpression {
   size_t parameter_count() const;
   std::shared_ptr<AbstractExpression> parameter_expression(const size_t parameter_idx) const;
 
-  const std::shared_ptr<AbstractLQPNode> lqp;
+  std::shared_ptr<AbstractLQPNode> lqp;
   const std::vector<ParameterID> parameter_ids;
 
  protected:
