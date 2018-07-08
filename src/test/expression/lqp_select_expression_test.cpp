@@ -98,13 +98,15 @@ TEST_F(LQPSelectExpressionTest, DeepCopy) {
   const auto select_a_copy = std::dynamic_pointer_cast<LQPSelectExpression>(select_a->deep_copy());
   EXPECT_TRUE(select_a->deep_equals(*select_a_copy));
 
-  // Check LQP and parameters were actually duplicated
+  // Check LQP was actually duplicated
   EXPECT_NE(select_a->lqp, select_a_copy->lqp);
-  EXPECT_NE(select_a->arguments[0], select_a_copy->arguments[0]);
 
   const auto select_c_copy = std::dynamic_pointer_cast<LQPSelectExpression>(select_c->deep_copy());
   EXPECT_TRUE(select_c->deep_equals(*select_c_copy));
+
+  // Check LQP and parameters were actually duplicated
   EXPECT_NE(select_c->lqp, select_c_copy->lqp);
+  EXPECT_NE(select_c->arguments[0], select_c_copy->arguments[0]);
 }
 
 TEST_F(LQPSelectExpressionTest, RequiresCalculation) {
