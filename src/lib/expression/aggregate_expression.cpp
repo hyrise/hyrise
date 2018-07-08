@@ -38,7 +38,7 @@ std::string AggregateExpression::as_column_name() const {
   std::stringstream stream;
 
   if (aggregate_function == AggregateFunction::CountDistinct) {
-    Assert(argument(), "COUNT(DISTINCT ...) requires a argument");
+    Assert(argument(), "COUNT(DISTINCT ...) requires an argument");
     stream << "COUNT(DISTINCT " << argument()->as_column_name() << ")";
   } else if (aggregate_function == AggregateFunction::Count && !argument()) {
     stream << "COUNT(*)";
@@ -52,12 +52,15 @@ std::string AggregateExpression::as_column_name() const {
 }
 
 DataType AggregateExpression::data_type() const {
-  if (aggregate_function == AggregateFunction::Count)
+  if (aggregate_function == AggregateFunction::Count) {
     return AggregateTraits<NullValue, AggregateFunction::Count>::aggregate_data_type;
-  if (aggregate_function == AggregateFunction::CountDistinct)
-    return AggregateTraits<NullValue, AggregateFunction::CountDistinct>::aggregate_data_type;
+  }
 
   Assert(arguments.size() == 1, "Expected this AggregateFunction to have one argument");
+
+  if (aggregate_function == AggregateFunction::CountDistinct) {
+    return AggregateTraits<NullValue, AggregateFunction::CountDistinct>::aggregate_data_type;
+  }
 
   const auto argument_data_type = arguments[0]->data_type();
   auto aggregate_data_type = DataType::Null;

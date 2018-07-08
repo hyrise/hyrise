@@ -25,15 +25,7 @@ std::shared_ptr<AbstractExpression> ListExpression::deep_copy() const {
 }
 
 std::string ListExpression::as_column_name() const {
-  std::stringstream stream;
-  stream << "(";
-  for (auto element_idx = size_t{0}; element_idx < elements().size(); ++element_idx) {
-    stream << elements()[element_idx]->as_column_name();
-    if (element_idx + 1 < elements().size()) stream << ", ";
-  }
-
-  stream << ")";
-  return stream.str();
+  return std::string{"("} + expression_column_names(arguments) + ")";
 }
 
 }  // namespace opossum

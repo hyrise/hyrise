@@ -139,6 +139,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> AbstractLQPNode::outputs() const {
 
 void AbstractLQPNode::remove_output(const std::shared_ptr<AbstractLQPNode>& output) {
   const auto input_side = get_input_side(output);
+  // set_input() will untie the nodes
   output->set_input(input_side, nullptr);
 }
 

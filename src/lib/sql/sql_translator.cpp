@@ -853,7 +853,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::Cr
         }
       }
 
-      return std::make_shared<CreateViewNode>(create_statement.tableName, std::make_shared<View>(lqp, column_names));
+      return CreateViewNode::make(create_statement.tableName, std::make_shared<View>(lqp, column_names));
     }
     default:
       Fail("hsql::CreateType is not supported.");

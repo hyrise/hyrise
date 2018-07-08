@@ -72,7 +72,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   size_t input_count() const;
 
   /**
-   * @pre this has has @param output as an output
+   * @pre this has @param output as an output
    * @return whether this is the left or right input in the specified output.
    */
   LQPInputSide get_input_side(const std::shared_ptr<AbstractLQPNode>& output) const;

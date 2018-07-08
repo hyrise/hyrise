@@ -1324,7 +1324,7 @@ TEST_F(SQLTranslatorTest, CreateView) {
 
   const auto view = std::make_shared<View>(view_lqp, view_columns);
 
-  const auto lqp = std::make_shared<CreateViewNode>("my_first_view", view);
+  const auto lqp = CreateViewNode::make("my_first_view", view);
 
   EXPECT_LQP_EQ(lqp, result_node);
 }
@@ -1343,7 +1343,7 @@ TEST_F(SQLTranslatorTest, CreateAliasView) {
 
   const auto view = std::make_shared<View>(view_lqp, view_columns);
 
-  const auto expected_lqp = std::make_shared<CreateViewNode>("my_second_view", view);
+  const auto expected_lqp = CreateViewNode::make("my_second_view", view);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }

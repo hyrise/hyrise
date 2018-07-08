@@ -16,7 +16,7 @@ enum class ParameterExpressionType { ValuePlaceholder, External };
 
 /**
  * Represents a value placeholder (SELECT a + ? ...) or an external value in a correlated sub select
- * (e.g. `extern.x` in `SELECT (SELECT MIN(a) WHERE a > extern.x) FROM extern.x`).
+ * (e.g. `extern.x` in `SELECT (SELECT MIN(a) WHERE a > extern.x) FROM extern`).
  *
  * If it is a value placeholder no type info/nullable info/column name is available.
  *

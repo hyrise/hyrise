@@ -105,19 +105,20 @@ std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQP
 
 std::string expression_column_names(const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
   std::stringstream stream;
-  for (auto expression_idx = size_t{0}; expression_idx < expressions.size(); ++expression_idx) {
-    stream << expressions[expression_idx]->as_column_name();
-    if (expression_idx + 1 < expressions.size()) {
-      stream << ", ";
-    }
+
+  if (!expressions.empty()) stream << expressions.front()->as_column_name();
+  for (auto expression_idx = size_t{1}; expression_idx < expressions.size(); ++expression_idx) {
+    stream << ", " << expressions[expression_idx]->as_column_name();
   }
+
   return stream.str();
 }
 
 DataType expression_common_type(const DataType lhs, const DataType rhs) {
-  Assert(lhs != DataType::Null || rhs != DataType::Int, "Can't deduce common type if both sides are NULL");
+  Assert(lhs != DataType::Null || rhs != DataType::Null, "Can't deduce common type if both sides are NULL");
   Assert((lhs == DataType::String) == (rhs == DataType::String), "Strings only compatible with strings");
 
+  // Long+NULL -> Long; NULL+Long -> Long; NULL+NULL -> NULL
   if (lhs == DataType::Null) return rhs;
   if (rhs == DataType::Null) return lhs;
 
