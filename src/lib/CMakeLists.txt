@@ -40,6 +40,7 @@ set(
     expression/evaluation/expression_evaluator.cpp
     expression/evaluation/expression_evaluator.hpp
     expression/evaluation/expression_result.hpp
+    expression/evaluation/expression_result_views.hpp
     expression/evaluation/expression_functors.hpp
     expression/evaluation/like_matcher.cpp
     expression/evaluation/like_matcher.hpp
