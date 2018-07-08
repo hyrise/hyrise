@@ -17,6 +17,7 @@ class LQPSelectExpression : public AbstractExpression {
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
   DataType data_type() const override;
+  bool is_nullable() const override;
 
   size_t parameter_count() const;
   std::shared_ptr<AbstractExpression> parameter_expression(const size_t parameter_idx) const;

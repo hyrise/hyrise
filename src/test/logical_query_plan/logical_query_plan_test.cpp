@@ -143,10 +143,10 @@ TEST_F(LogicalQueryPlanTest, PrintWithSubselects) {
   //  \_[1] [StoredTable] Name: 'int_int_int'
 
   EXPECT_TRUE(std::regex_search(
-      stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] a \> SUBSELECT \(LQP, 0x[a-z0-9]+, Parameters: \))"}));
+      stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] a \> SUBSELECT \(LQP, 0x[a-z0-9]+\))"}));
   EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{"Subselects"}));
   EXPECT_TRUE(std::regex_search(stream.str().c_str(),
-                                std::regex{R"(\[0\] \[Predicate\] a = SUBSELECT \(LQP, 0x[a-z0-9]+, Parameters: \))"}));
+                                std::regex{R"(\[0\] \[Predicate\] a = SUBSELECT \(LQP, 0x[a-z0-9]+\))"}));
   EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] a = 5)"}));
 }
 

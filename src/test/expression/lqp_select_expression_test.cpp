@@ -1,5 +1,7 @@
 #include "gtest/gtest.h"
 
+#include <regex>
+
 #include "expression/case_expression.hpp"
 #include "expression/expression_factory.hpp"
 #include "expression/expression_utils.hpp"
@@ -25,41 +27,45 @@ class LQPSelectExpressionTest : public ::testing::Test {
     a = {int_float_node_a, ColumnID{0}};
     b = {int_float_node_a, ColumnID{1}};
 
-    case_a = case_(equals(add(a, 5), b), add(5, b), a);
-    case_b = case_(a, 1, 3);
-    case_c = case_(equals(a, 123), b, case_(equals(a, 1234), a, null()));
+    // clang-format off
+    lqp_a =
+    AggregateNode::make(expression_vector(), expression_vector(max(add(a, parameter(ParameterID{0})))),
+      ProjectionNode::make(expression_vector(add(a, parameter(ParameterID{0}))),
+        int_float_node_a
+    ));
+
+    parameter_c = parameter(ParameterID{0}, a);
+    lqp_c =
+    AggregateNode::make(expression_vector(), expression_vector(max(add(a, parameter_c))),
+      ProjectionNode::make(expression_vector(add(a, parameter_c)),
+        int_float_node_a
+    ));
+    // clang-format on
+
+    select_a = select(lqp_a);
+    select_c = select(lqp_c, std::make_pair(ParameterID{0}, a));
   }
 
   void TearDown() { StorageManager::reset(); }
 
-  LQPColumnReference a, b;
-  std::shared_ptr<AbstractExpression> case_a, case_b, case_c;
   std::shared_ptr<StoredTableNode> int_float_node_a;
+  std::shared_ptr<AbstractLQPNode> lqp_a, lqp_c;
+  std::shared_ptr<ParameterExpression> parameter_c;
+  std::shared_ptr<LQPSelectExpression> select_a, select_c;
+  LQPColumnReference a, b;
 };
 
-TEST_F(LQPSelectExpressionTest, Equals) {
-  // clang-format off
-  const auto lqp_a =
-  AggregateNode::make(expression_vector(), expression_vector(max(add(a, parameter(ParameterID{0})))),
-    ProjectionNode::make(expression_vector(add(a, parameter(ParameterID{0}))),
-      int_float_node_a
-  ));
-  const auto select_a = select(lqp_a);
+TEST_F(LQPSelectExpressionTest, DeepEquals) {
+  /**
+   * Test that when comparing select expressions, the underlying LQPs get compared and so does the Parameter signature
+   */
 
+  // clang-format off
   const auto lqp_b =
   AggregateNode::make(expression_vector(), expression_vector(max(add(a, parameter(ParameterID{0})))),
     ProjectionNode::make(expression_vector(add(a, parameter(ParameterID{0}))),
       int_float_node_a
   ));
-  const auto select_b = select(lqp_b);
-
-  const auto parameter_c = parameter(ParameterID{0}, a);
-  const auto lqp_c =
-  AggregateNode::make(expression_vector(), expression_vector(max(add(a, parameter_c))),
-    ProjectionNode::make(expression_vector(add(a, parameter_c)),
-      int_float_node_a
-  ));
-  const auto select_c = select(lqp_c, std::make_pair(ParameterID{0}, a));
 
   const auto int_float_node_b = StoredTableNode::make("int_float");
   const auto a2 = int_float_node_b->get_column("a");
@@ -69,7 +75,6 @@ TEST_F(LQPSelectExpressionTest, Equals) {
     ProjectionNode::make(expression_vector(add(a, parameter_d)),
       int_float_node_a
   ));
-  const auto select_d = select(lqp_d, std::make_pair(ParameterID{0}, a));
 
   const auto parameter_e = parameter(ParameterID{0}, b);
   const auto lqp_e =
@@ -77,13 +82,67 @@ TEST_F(LQPSelectExpressionTest, Equals) {
     ProjectionNode::make(expression_vector(add(a, parameter_d)),
       int_float_node_a
   ));
-  const auto select_e = select(lqp_e, std::make_pair(ParameterID{0}, b));
   // clang-format on
+
+  const auto select_b = select(lqp_b);
+  const auto select_d = select(lqp_d, std::make_pair(ParameterID{0}, a));
+  const auto select_e = select(lqp_e, std::make_pair(ParameterID{0}, b));
 
   EXPECT_TRUE(select_a->deep_equals(*select_b));
   EXPECT_FALSE(select_a->deep_equals(*select_c));
   EXPECT_TRUE(select_c->deep_equals(*select_d));
   EXPECT_FALSE(select_c->deep_equals(*select_e));
+}
+
+TEST_F(LQPSelectExpressionTest, DeepCopy) {
+  const auto select_a_copy = std::dynamic_pointer_cast<LQPSelectExpression>(select_a->deep_copy());
+  EXPECT_TRUE(select_a->deep_equals(*select_a_copy));
+
+  // Check LQP and parameters were actually duplicated
+  EXPECT_NE(select_a->lqp, select_a_copy->lqp);
+  EXPECT_NE(select_a->arguments[0], select_a_copy->arguments[0]);
+
+  const auto select_c_copy = std::dynamic_pointer_cast<LQPSelectExpression>(select_c->deep_copy());
+  EXPECT_TRUE(select_c->deep_equals(*select_c_copy));
+  EXPECT_NE(select_c->lqp, select_c_copy->lqp);
+}
+
+TEST_F(LQPSelectExpressionTest, RequiresCalculation) {
+  EXPECT_TRUE(select_a->requires_calculation());
+  EXPECT_TRUE(select_c->requires_calculation());
+}
+
+TEST_F(LQPSelectExpressionTest, DataType) {
+  // Can't determine the DataType of this Select, since it depends on a parameter
+  EXPECT_ANY_THROW(select_a->data_type());
+
+  EXPECT_EQ(select_c->data_type(), DataType::Int);
+}
+
+TEST_F(LQPSelectExpressionTest, IsNullable) {
+  // Can't determine the nullability of this Select, since it depends on a parameter
+  EXPECT_ANY_THROW(select_a->is_nullable());
+
+  EXPECT_FALSE(select_c->is_nullable());
+
+  // clang-format off
+  const auto lqp_c =
+  AggregateNode::make(expression_vector(), expression_vector(max(add(a, null()))),
+    ProjectionNode::make(expression_vector(add(a, null())),
+      int_float_node_a
+  ));
+  // clang-format off
+
+  EXPECT_TRUE(select(lqp_c)->is_nullable());
+}
+
+TEST_F(LQPSelectExpressionTest, AsColumnName) {
+  EXPECT_TRUE(std::regex_search(select_a->as_column_name(), std::regex{"SUBSELECT \\(LQP, 0x[0-9a-f]+\\)"}));
+  EXPECT_TRUE(std::regex_search(select_c->as_column_name(), std::regex{"SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)"}));
+
+  // Test IN and EXISTS here as well, since they need subselects to function
+  EXPECT_TRUE(std::regex_search(exists(select_c)->as_column_name(), std::regex{"EXISTS\\(SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)\\)"}));
+  EXPECT_TRUE(std::regex_search(in(5, select_c)->as_column_name(), std::regex{"5 IN SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)"}));
 }
 
 }  // namespace opossum

@@ -42,7 +42,7 @@ bool PQPSelectExpression::is_nullable() const {
 
 std::string PQPSelectExpression::as_column_name() const {
   std::stringstream stream;
-  stream << "SUBSELECT (LQP, " << pqp.get() << ")";
+  stream << "SUBSELECT (PQP, " << pqp.get() << ")";
   return stream.str();
 }
 

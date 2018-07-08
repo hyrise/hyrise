@@ -18,6 +18,11 @@ using namespace opossum::expression_factory;  // NOLINT
 
 namespace opossum {
 
+/**
+ * Tests for most expression types, excluding Selects, since they have no complex behaviour that would warrant their own
+ * test file.
+ */
+
 class ExpressionTest : public ::testing::Test {
  public:
   void SetUp() {
