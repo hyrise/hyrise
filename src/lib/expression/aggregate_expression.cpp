@@ -14,7 +14,7 @@ namespace opossum {
 
 AggregateExpression::AggregateExpression(const AggregateFunction aggregate_function)
     : AbstractExpression(ExpressionType::Aggregate, {}), aggregate_function(aggregate_function) {
-  Assert(aggregate_function == AggregateFunction::Count || aggregate_function == AggregateFunction::CountDistinct,
+  Assert(aggregate_function == AggregateFunction::Count,
          "Only COUNT aggregates can have no arguments");
 }
 
