@@ -53,7 +53,7 @@ std::shared_ptr<ChunkColumnStatistics> ChunkColumnStatistics::build_statistics(
         const auto& dictionary = *typed_column.dictionary();
         statistics = build_statistics_from_dictionary(dictionary);
     } else {
-      // if we have a generic encoded column we create the dictionary ourselves
+      // if we have a generic column we create the dictionary ourselves
       auto iterable = create_iterable_from_column<DataTypeT>(typed_column);
       std::unordered_set<DataTypeT> values;
       iterable.for_each([&](const auto& value) {
