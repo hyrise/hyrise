@@ -7,6 +7,9 @@ namespace opossum {
 
 class AbstractOperator;
 
+/**
+ * Each ParameterID is assigned a ColumnID that contains the values for this parameter.
+ */
 class PQPSelectExpression : public AbstractExpression {
  public:
   using Parameters = std::vector<std::pair<ParameterID, ColumnID>>;

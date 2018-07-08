@@ -10,6 +10,9 @@ enum class DatetimeComponent { Year, Month, Day, Hour, Minute, Second };
 
 std::ostream& operator<<(std::ostream& stream, const DatetimeComponent datetime_component);
 
+/**
+ * SQL's EXTRACT()
+ */
 class ExtractExpression : public AbstractExpression {
  public:
   ExtractExpression(const DatetimeComponent datetime_component, const std::shared_ptr<AbstractExpression>& from);

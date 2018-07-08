@@ -5,6 +5,9 @@
 
 namespace opossum {
 
+/**
+ * PredicateExpressions are those using a PredicateCondition.
+ */
 class AbstractPredicateExpression : public AbstractExpression {
  public:
   AbstractPredicateExpression(const PredicateCondition predicate_condition,

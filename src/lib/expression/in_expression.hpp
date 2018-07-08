@@ -4,6 +4,9 @@
 
 namespace opossum {
 
+/**
+ * SQL's IN
+ */
 class InExpression : public AbstractPredicateExpression {
  public:
   InExpression(const std::shared_ptr<AbstractExpression>& value, const std::shared_ptr<AbstractExpression>& set);

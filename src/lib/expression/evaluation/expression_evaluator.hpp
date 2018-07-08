@@ -29,7 +29,12 @@ class IsNullExpression;
 class PQPColumnExpression;
 class PQPSelectExpression;
 
-
+/**
+ * Computes a result (i.e., a Column or an ExpressionResult<R>) from an Expression.
+ * Operates either
+ *      - ...on a Chunk, thus returning a value for each row in it
+ *      - ...without a Chunk, thus returning a single value (and failing if Columns are encountered in the Expression)
+ */
 class ExpressionEvaluator final {
  public:
   // For Expressions that do not reference any columns (e.g. in the LIMIT clause)

@@ -4,6 +4,9 @@
 
 namespace opossum {
 
+/**
+ * Unary minus
+ */
 class NegateExpression : public AbstractExpression {
  public:
   NegateExpression(const std::shared_ptr<AbstractExpression>& argument);

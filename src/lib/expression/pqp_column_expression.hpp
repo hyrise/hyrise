@@ -7,6 +7,9 @@
 
 namespace opossum {
 
+/**
+ * Wraps a ColumnID and its associated data_type/nullability/column_name
+ */
 class PQPColumnExpression : public AbstractColumnExpression {
  public:
   static std::shared_ptr<PQPColumnExpression> from_table(const Table& table, const std::string& column_name);

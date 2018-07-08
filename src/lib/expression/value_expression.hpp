@@ -5,6 +5,9 @@
 
 namespace opossum {
 
+/**
+ * Wraps an AllTypeVariant
+ */
 class ValueExpression : public AbstractExpression {
  public:
   explicit ValueExpression(const AllTypeVariant& value);

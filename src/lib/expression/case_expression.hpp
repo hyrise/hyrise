@@ -10,6 +10,10 @@
 
 namespace opossum {
 
+/**
+ * Named after SQL's CASE.
+ * To build a Case with more then one WHEN clause, nest additional CaseExpressions into the else_ branch.
+ */
 class CaseExpression : public AbstractExpression {
  public:
   CaseExpression(const std::shared_ptr<AbstractExpression>& when, const std::shared_ptr<AbstractExpression>& then,

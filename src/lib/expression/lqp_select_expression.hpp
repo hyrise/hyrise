@@ -9,6 +9,14 @@ namespace opossum {
 
 class AbstractLQPNode;
 
+/**
+ * Parameters are passed in as two vectors (`parameter_ids` and `parameter_expressions` that need to have the same
+ * length.
+ * Each parameter_expression is assigned the ParameterID at the same index in parameter_ids.
+ *
+ * Within the wrapped LQP, the parameter_expressions will be referenced using these ParameterIDs
+ * This avoids pointers from the wrapped LQP into the outer LQP (which would be a nightmare to maintain in deep_copy())
+ */
 class LQPSelectExpression : public AbstractExpression {
  public:
   LQPSelectExpression(const std::shared_ptr<AbstractLQPNode>& lqp, const std::vector<ParameterID>& parameter_ids,

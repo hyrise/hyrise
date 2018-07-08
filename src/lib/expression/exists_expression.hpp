@@ -4,6 +4,9 @@
 
 namespace opossum {
 
+/**
+ * SQL's EXISTS()
+ */
 class ExistsExpression : public AbstractExpression {
  public:
   explicit ExistsExpression(const std::shared_ptr<AbstractExpression>& select);

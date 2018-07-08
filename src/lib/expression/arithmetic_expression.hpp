@@ -10,6 +10,9 @@ enum class ArithmeticOperator { Addition, Subtraction, Multiplication, Division,
 
 std::ostream& operator<<(std::ostream& stream, const ArithmeticOperator arithmetic_operator);
 
+/**
+ * E.g. `2+3`, `5*3*4`
+ */
 class ArithmeticExpression : public AbstractExpression {
  public:
   ArithmeticExpression(const ArithmeticOperator arithmetic_operator,

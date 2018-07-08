@@ -6,6 +6,9 @@
 
 namespace opossum {
 
+/**
+ * SQL's list used as the right operand of IN
+ */
 class ListExpression : public AbstractExpression {
  public:
   explicit ListExpression(const std::vector<std::shared_ptr<AbstractExpression>>& elements);
