@@ -671,7 +671,7 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
     if (aggregate_expression_set.emplace(aggregate_expression).second) {
       aggregate_expressions.emplace_back(aggregate_expression);
       for (const auto& argument : aggregate_expression->arguments) {
-        if (argument->requires_calculation()) {
+        if (argument->requires_computation()) {
           if (pre_aggregate_expression_set.emplace(argument).second) {
             pre_aggregate_expressions.emplace_back(argument);
           }
@@ -933,7 +933,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expressions_if_unavailable(
 
   for (const auto& expression : expressions) {
     // The required expression is already available or doesn't need to be computed (e.g. when it is a literal)
-    if (!expression->requires_calculation() || node->find_column_id(*expression)) continue;
+    if (!expression->requires_computation() || node->find_column_id(*expression)) continue;
     projection_expressions.emplace_back(expression);
   }
 

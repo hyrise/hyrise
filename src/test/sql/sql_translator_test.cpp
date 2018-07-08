@@ -429,7 +429,7 @@ TEST_F(SQLTranslatorTest, WhereWithCorrelatedSelect) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, WhereNotPredicate) {
+TEST_F(SQLTranslatorTest, WhereSimpleNotPredicate) {
   const auto actual_lqp_a = compile_query("SELECT * FROM int_float WHERE NOT (a = b);");
   const auto actual_lqp_b = compile_query("SELECT * FROM int_float WHERE NOT (a != b);");
   const auto actual_lqp_c = compile_query("SELECT * FROM int_float WHERE NOT (a > b);");

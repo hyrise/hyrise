@@ -61,7 +61,7 @@ const std::string TableScan::description(DescriptionMode description_mode) const
 }
 
 void TableScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
-  if (!is_parameter(_right_parameter)) return;
+  if (!is_parameter_id(_right_parameter)) return;
 
   const auto value_iter = parameters.find(boost::get<ParameterID>(_right_parameter));
   if (value_iter == parameters.end()) return;

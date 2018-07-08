@@ -58,13 +58,13 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_expression_to
 
     case ExpressionType::Select: {
       const auto* pqp_select_expression = dynamic_cast<const PQPSelectExpression*>(&expression);
-      Assert(pqp_select_expression, "Can only evaluate PQPSelectExpression");
+      Assert(pqp_select_expression, "Can only evaluate PQPSelectExpression, LQPSelectExpressions need to be translated first");
       return _evaluate_select_expression<R>(*pqp_select_expression);
     }
 
     case ExpressionType::Column: {
       const auto* pqp_column_expression = dynamic_cast<const PQPColumnExpression*>(&expression);
-      Assert(pqp_column_expression, "Can only evaluate PQPColumnExpressions");
+      Assert(pqp_column_expression, "Can only evaluate PQPColumnExpressions, LQPSelectExpressions need to be translated first");
       return _evaluate_column_expression<R>(*pqp_column_expression);
     }
 
@@ -144,6 +144,11 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_binary_predi
 template <>
 std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_like_expression<int32_t>(
     const BinaryPredicateExpression& expression) {
+  /**
+   * NOTE: This code path is NOT taken for LIKEs in predicates. That is `SELECT * FROM t WHERE a LIKE '%Hello%'` is
+   *        handled in the TableScan. This code path is for `SELECT a LIKE 'bla' FROM ...` and alike
+   */
+
   Assert(expression.predicate_condition == PredicateCondition::Like ||
              expression.predicate_condition == PredicateCondition::NotLike,
          "Expected PredicateCondition Like or NotLike");
@@ -279,7 +284,8 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_in_exp
       const auto select_result_columns = _prune_tables_to_expression_results<SelectDataType>(select_result_tables);
 
       Assert(select_result_columns.size() == 1 || select_result_columns.size() == _output_row_count,
-             "Unexpected number of lists returned from Select. Should be one, or one per row");
+             "Unexpected number of lists returned from Select. "
+             "Should be one (if the Select is uncorrelated), or one per row (if it is)");
 
       _resolve_to_expression_result_view(left_expression, [&](const auto& left_view) {
         using ValueDataType = typename std::decay_t<decltype(left_view)>::Type;
@@ -402,33 +408,33 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_case_express
   std::shared_ptr<ExpressionResult<R>> result;
 
   _resolve_to_expression_results(
-      *case_expression.then(), *case_expression.else_(), [&](const auto& then_result, const auto& else_result) {
-        using ThenResultType = typename std::decay_t<decltype(then_result)>::Type;
-        using ElseResultType = typename std::decay_t<decltype(else_result)>::Type;
+    *case_expression.then(), *case_expression.else_(), [&](const auto& then_result, const auto& else_result) {
+      using ThenResultType = typename std::decay_t<decltype(then_result)>::Type;
+      using ElseResultType = typename std::decay_t<decltype(else_result)>::Type;
 
-        const auto result_size = _result_size(when->size(), then_result.size(), else_result.size());
-        std::vector<R> values(result_size);
-        std::vector<bool> nulls(result_size);
+      const auto result_size = _result_size(when->size(), then_result.size(), else_result.size());
+      std::vector<R> values(result_size);
+      std::vector<bool> nulls(result_size);
 
-        // clang-format off
-        if constexpr (Case::template supports<R, ThenResultType, ElseResultType>::value) {
-          for (auto chunk_offset = ChunkOffset{0};
-               chunk_offset < result_size; ++chunk_offset) {
-            if (when->value(chunk_offset) && !when->null(chunk_offset)) {
-              values[chunk_offset] = to_value<R>(then_result.value(chunk_offset));
-              nulls[chunk_offset] = then_result.null(chunk_offset);
-            } else {
-              values[chunk_offset] = to_value<R>(else_result.value(chunk_offset));
-              nulls[chunk_offset] = else_result.null(chunk_offset);
-            }
+      // clang-format off
+      if constexpr (Case::template supports<R, ThenResultType, ElseResultType>::value) {
+        for (auto chunk_offset = ChunkOffset{0};
+             chunk_offset < result_size; ++chunk_offset) {
+          if (when->value(chunk_offset) && !when->null(chunk_offset)) {
+            values[chunk_offset] = to_value<R>(then_result.value(chunk_offset));
+            nulls[chunk_offset] = then_result.null(chunk_offset);
+          } else {
+            values[chunk_offset] = to_value<R>(else_result.value(chunk_offset));
+            nulls[chunk_offset] = else_result.null(chunk_offset);
           }
-        } else {
-          Fail("Illegal operands for CaseExpression");
         }
-        // clang-format on
+      } else {
+        Fail("Illegal operands for CaseExpression");
+      }
+      // clang-format on
 
-        result = std::make_shared<ExpressionResult<R>>(std::move(values), std::move(nulls));
-      });
+      result = std::make_shared<ExpressionResult<R>>(std::move(values), std::move(nulls));
+    });
 
   return result;
 }
@@ -560,6 +566,7 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_negate_expre
     if constexpr (!std::is_same_v<ArgumentType, std::string> && std::is_same_v<R, ArgumentType>) {
       values.resize(argument_result.size());
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < argument_result.size(); ++chunk_offset) {
+        // NOTE: Actual negation happens in this line
         values[chunk_offset] = -argument_result.values[chunk_offset];
       }
       nulls = argument_result.nulls;
@@ -580,13 +587,15 @@ template <typename R>
 std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_select_expression(
     const PQPSelectExpression& select_expression) {
   const auto select_result_tables = _evaluate_select_expression_to_tables(select_expression);
+
+  // The single columns returned from invoking the SelectExpression on each row. So: one column per row.
   const auto select_result_columns = _prune_tables_to_expression_results<R>(select_result_tables);
 
   std::vector<R> result_values(select_result_columns.size());
 
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_columns.size(); ++chunk_offset) {
     Assert(select_result_columns[chunk_offset]->size() == 1,
-           "Expected precisely one to be returned from SelectExpression");
+           "Expected precisely one row to be returned from SelectExpression");
     result_values[chunk_offset] = select_result_columns[chunk_offset]->value(0);
   }
 
@@ -893,7 +902,7 @@ void ExpressionEvaluator::_ensure_column_materialization(const ColumnID column_i
 
 std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_substring(
     const std::vector<std::shared_ptr<AbstractExpression>>& arguments) {
-  Assert(arguments.size() == 3, "SUBSTR expects three arguments");
+  DebugAssert(arguments.size() == 3, "SUBSTR expects three arguments");
 
   const auto strings = evaluate_expression_to_result<std::string>(*arguments[0]);
   const auto starts = evaluate_expression_to_result<int32_t>(*arguments[1]);
@@ -909,7 +918,7 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_su
         strings->null(chunk_offset) || starts->null(chunk_offset) || lengths->null(chunk_offset);
 
     const auto& string = strings->value(chunk_offset);
-    Assert(string.size() < std::numeric_limits<int32_t>::max(),
+    DebugAssert(string.size() < std::numeric_limits<int32_t>::max(),
            "String is too long to be handled by SUBSTR. Switch to int64_t in the SUBSTR implementation if you really "
            "need to.");
 
@@ -921,7 +930,7 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_su
     auto start = starts->value(chunk_offset);
 
     /**
-     * Hyrise SUBSTR follows SQLite semantics for negative indices. SUBSTR lives in this weird "space" illustrted below
+     * Hyrise SUBSTR follows SQLite semantics for negative indices. SUBSTR lives in this weird "space" illustrated below
      * Note that other DBMS behave differently when it comes to negative indices.
      *
      * START -8 -7 -6 -5 -4 -3 -2 -1 || 0  || 1 2 3 4 5 6  7  8
@@ -965,7 +974,7 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_co
 
   auto result_is_nullable = false;
 
-  // I - Compute the arguments
+  // 1 - Compute the arguments
   for (const auto& argument : arguments) {
     // CONCAT with a NULL literal argument -> result is NULL
     if (argument->data_type() == DataType::Null) {
@@ -979,13 +988,13 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_co
     result_is_nullable |= argument_result->is_nullable();
   }
 
-  // II - Compute the number of output rows
+  // 2 - Compute the number of output rows
   auto result_size = argument_results.empty() ? size_t{0} : argument_results.front()->size();
   for (auto argument_idx = size_t{1}; argument_idx < argument_results.size(); ++argument_idx) {
     result_size = _result_size(result_size, argument_results[argument_idx]->size());
   }
 
-  // II - Concatenate the values
+  // 3 - Concatenate the values
   std::vector<std::string> result_values(result_size);
   for (const auto& argument_result : argument_results) {
     argument_result->as_view([&](const auto& argument_view) {
@@ -996,7 +1005,7 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_co
     });
   }
 
-  // III - Optionally concatenate the nulls and return
+  // 4 - Optionally concatenate the nulls (i.e. one argument is null -> result is null) and return
   if (result_is_nullable) {
     std::vector<bool> result_nulls(result_size, false);
     for (const auto& argument_result : argument_results) {
@@ -1016,6 +1025,13 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_co
 template <typename R>
 std::vector<std::shared_ptr<ExpressionResult<R>>> ExpressionEvaluator::_prune_tables_to_expression_results(
     const std::vector<std::shared_ptr<const Table>>& tables) {
+
+  /**
+   * Makes sure each Table in @param tables has only a single column. Materialize this single column into
+   * an ExpressionResult and return the vector of resulting ExpressionResults.
+   */
+
+
   std::vector<std::shared_ptr<ExpressionResult<R>>> results(tables.size());
 
   for (auto table_idx = size_t{0}; table_idx < tables.size(); ++table_idx) {

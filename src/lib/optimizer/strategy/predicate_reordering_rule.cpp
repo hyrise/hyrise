@@ -17,7 +17,7 @@ namespace opossum {
 
 std::string PredicateReorderingRule::name() const { return "Predicate Reordering Rule"; }
 
-bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
+bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   auto reordered = false;
 
   if (node->type == LQPNodeType::Predicate) {
@@ -42,13 +42,13 @@ bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
      */
     if (predicate_nodes.size() > 1) {
       reordered = _reorder_predicates(predicate_nodes);
-      reordered |= _apply_recursively(predicate_nodes.back());
+      reordered |= _apply_to_inputs(predicate_nodes.back());
     } else {
       // No chain was found, continue with the current nodes inputren.
-      reordered = _apply_recursively(node);
+      reordered = _apply_to_inputs(node);
     }
   } else {
-    reordered = _apply_recursively(node);
+    reordered = _apply_to_inputs(node);
   }
 
   return reordered;

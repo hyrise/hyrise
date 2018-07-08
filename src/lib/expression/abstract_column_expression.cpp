@@ -4,7 +4,7 @@ namespace opossum {
 
 AbstractColumnExpression::AbstractColumnExpression() : AbstractExpression(ExpressionType::Column, {}) {}
 
-bool AbstractColumnExpression::requires_calculation() const {
+bool AbstractColumnExpression::requires_computation() const {
   return false;
 }
 

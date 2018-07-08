@@ -12,7 +12,7 @@ class AbstractColumnExpression : public AbstractExpression {
  public:
   AbstractColumnExpression();
 
-  bool requires_calculation() const override;
+  bool requires_computation() const override;
 };
 
 }  // namespace opossum

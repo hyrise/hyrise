@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-bool AbstractRule::_apply_recursively(std::shared_ptr<AbstractLQPNode> node) {
+bool AbstractRule::_apply_to_inputs(std::shared_ptr<AbstractLQPNode> node) const {
   auto inputs_changed = false;
 
   // Apply this rule recursively
@@ -18,18 +18,6 @@ bool AbstractRule::_apply_recursively(std::shared_ptr<AbstractLQPNode> node) {
   }
   if (node->right_input()) {
     inputs_changed |= apply_to(node->right_input());
-  }
-
-  // Apply the rule to all Subqueries in
-  for (const auto& expression : node->node_expressions()) {
-    visit_expression(expression, [&](const auto& sub_expression) {
-      const auto lqp_select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression);
-      if (!lqp_select_expression) return true;
-
-      inputs_changed |= apply_to(lqp_select_expression->lqp);
-
-      return false;
-    });
   }
 
   return inputs_changed;

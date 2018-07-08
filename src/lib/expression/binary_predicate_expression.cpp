@@ -17,11 +17,6 @@ const std::shared_ptr<AbstractExpression>& BinaryPredicateExpression::left_opera
 
 const std::shared_ptr<AbstractExpression>& BinaryPredicateExpression::right_operand() const { return arguments[1]; }
 
-std::shared_ptr<BinaryPredicateExpression> BinaryPredicateExpression::flipped() const {
-  const auto flipped_predicate_condition = flip_predicate_condition(predicate_condition);
-  return std::make_shared<BinaryPredicateExpression>(flipped_predicate_condition, right_operand(), left_operand());
-}
-
 std::shared_ptr<AbstractExpression> BinaryPredicateExpression::deep_copy() const {
   return std::make_shared<BinaryPredicateExpression>(predicate_condition, left_operand()->deep_copy(),
                                                      right_operand()->deep_copy());

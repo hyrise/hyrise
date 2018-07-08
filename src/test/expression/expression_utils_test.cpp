@@ -34,4 +34,17 @@ TEST_F(ExpressionUtilsTest, ExpressionFlattenConjunction) {
   EXPECT_TRUE(flattened_expressions.at(2)->deep_equals(*less_than(a_b, 6)));
 }
 
+TEST_F(ExpressionUtilsTest, ExpressionCommonType) {
+  EXPECT_EQ(expression_common_type(DataType::Int, DataType::Int), DataType::Int);
+  EXPECT_EQ(expression_common_type(DataType::Int, DataType::Float), DataType::Float);
+  EXPECT_EQ(expression_common_type(DataType::Int, DataType::Null), DataType::Int);
+  EXPECT_EQ(expression_common_type(DataType::Float, DataType::Float), DataType::Float);
+  EXPECT_EQ(expression_common_type(DataType::Null, DataType::Float), DataType::Float);
+  EXPECT_EQ(expression_common_type(DataType::Double, DataType::Int), DataType::Double);
+  EXPECT_EQ(expression_common_type(DataType::Double, DataType::Double), DataType::Double);
+  EXPECT_EQ(expression_common_type(DataType::Float, DataType::Double), DataType::Double);
+  EXPECT_EQ(expression_common_type(DataType::Long, DataType::Long), DataType::Long);
+  EXPECT_EQ(expression_common_type(DataType::String, DataType::String), DataType::String);
+}
+
 }  // namespace opossum

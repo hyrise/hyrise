@@ -14,7 +14,6 @@ class ListExpression : public AbstractExpression {
   explicit ListExpression(const std::vector<std::shared_ptr<AbstractExpression>>& elements);
 
   DataType data_type() const override;
-  bool is_nullable() const override;
 
   const std::vector<std::shared_ptr<AbstractExpression>>& elements() const;
 

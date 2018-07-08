@@ -7,7 +7,7 @@
 
 namespace opossum {
 std::string to_string(const AllParameterVariant& x) {
-  if (is_parameter(x)) {
+  if (is_parameter_id(x)) {
     return std::string("Placeholder #") + std::to_string(boost::get<ParameterID>(x));
   } else if (is_column_id(x)) {
     return std::string("Col #") + std::to_string(boost::get<ColumnID>(x));

@@ -13,8 +13,8 @@ namespace opossum {
 
 std::string PredicatePushdownRule::name() const { return "Predicate Pushdown Rule"; }
 
-bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
-  if (node->type != LQPNodeType::Predicate) return _apply_recursively(node);
+bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+  if (node->type != LQPNodeType::Predicate) return _apply_to_inputs(node);
 
   // Only predicates with exactly one output are currently supported.
   const auto outputs = node->outputs();
@@ -32,12 +32,12 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
     const auto join_node = std::dynamic_pointer_cast<JoinNode>(input);
 
     if (join_node->join_mode != JoinMode::Inner && join_node->join_mode != JoinMode::Cross)
-      return _apply_recursively(node);
+      return _apply_to_inputs(node);
 
     const auto move_to_left = expression_evaluateable_on_lqp(predicate_node->predicate, *join_node->left_input());
     const auto move_to_right = expression_evaluateable_on_lqp(predicate_node->predicate, *join_node->right_input());
 
-    if (!move_to_left && !move_to_right) return _apply_recursively(node);
+    if (!move_to_left && !move_to_right) return _apply_to_inputs(node);
 
     lqp_remove_node(node);
 

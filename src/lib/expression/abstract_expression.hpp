@@ -49,7 +49,11 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
    */
   bool deep_equals(const AbstractExpression& other) const;
 
-  virtual bool requires_calculation() const;
+  /**
+   * Certain expression types (Parameters, Literals, and Columns) don't require computation and therefore don't require
+   * temporary columns with their result in them
+   */
+  virtual bool requires_computation() const;
 
   virtual std::shared_ptr<AbstractExpression> deep_copy() const = 0;
 
@@ -75,12 +79,14 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
 
  protected:
   /**
-   * Override to check for equality without checking the arguments
+   * Override to check for equality without checking the arguments. No override needed if derived expression has no
+   * data members.
    */
   virtual bool _shallow_equals(const AbstractExpression& expression) const;
 
   /**
-   * Override to hash data fields in derived types
+   * Override to hash data fields in derived types. No override needed if derived expression has no
+   * data members.
    */
   virtual size_t _on_hash() const;
 

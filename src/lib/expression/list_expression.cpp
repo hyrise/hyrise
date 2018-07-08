@@ -14,10 +14,6 @@ DataType ListExpression::data_type() const {
   Fail("An ListExpression doesn't have a single type, each of its elements might have a different type");
 }
 
-bool ListExpression::is_nullable() const {
-  return std::any_of(elements().begin(), elements().end(), [&](const auto& value) { return value->is_nullable(); });
-}
-
 const std::vector<std::shared_ptr<AbstractExpression>>& ListExpression::elements() const { return arguments; }
 
 std::shared_ptr<AbstractExpression> ListExpression::deep_copy() const {

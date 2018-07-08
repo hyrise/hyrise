@@ -7,7 +7,10 @@
 #include "all_type_variant.hpp"
 #include "strong_typedef.hpp"
 
-// Uniquely identifies a parameter in
+/**
+ * Used to identify a Parameter within a (Sub)Select. This can be either a parameter of a Prepared SELECT statement
+ * `SELECT * FROM t WHERE a > ?` or a correlated parameter in a Subselect.
+ */
 STRONG_TYPEDEF(size_t, ParameterID);
 
 namespace opossum {
@@ -44,7 +47,7 @@ class ParameterExpression : public AbstractExpression {
   ParameterExpression(const ParameterID parameter_id, const AbstractExpression& referenced_expression);
   ParameterExpression(const ParameterID parameter_id, const ReferencedExpressionInfo& referenced_expression_info);
 
-  bool requires_calculation() const override;
+  bool requires_computation() const override;
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
   DataType data_type() const override;

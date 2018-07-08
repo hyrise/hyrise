@@ -15,11 +15,11 @@ AbstractExpression::AbstractExpression(const ExpressionType type,
                                        const std::vector<std::shared_ptr<AbstractExpression>>& arguments)
     : type(type), arguments(arguments) {}
 
-bool AbstractExpression::requires_calculation() const { return true; }
+bool AbstractExpression::requires_computation() const { return true; }
 
 bool AbstractExpression::is_nullable() const {
-  return !std::all_of(arguments.begin(), arguments.end(),
-                      [](const auto& expression) { return !expression->is_nullable(); });
+  return std::any_of(arguments.begin(), arguments.end(),
+                      [](const auto& expression) { return expression->is_nullable(); });
 }
 
 bool AbstractExpression::deep_equals(const AbstractExpression& other) const {

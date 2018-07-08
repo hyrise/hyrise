@@ -78,8 +78,8 @@ TEST_F(PQPSelectExpressionTest, DeepCopy) {
 }
 
 TEST_F(PQPSelectExpressionTest, RequiresCalculation) {
-  EXPECT_TRUE(select_single_value_one_parameter->requires_calculation());
-  EXPECT_TRUE(select_table->requires_calculation());
+  EXPECT_TRUE(select_single_value_one_parameter->requires_computation());
+  EXPECT_TRUE(select_table->requires_computation());
 }
 
 TEST_F(PQPSelectExpressionTest, DataType) {

@@ -20,7 +20,7 @@ namespace opossum {
 
 std::string JoinDetectionRule::name() const { return "Join Detection Rule"; }
 
-bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
+bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   if (node->type == LQPNodeType::Join) {
     // ... "potential"_cross_join_node until this if below
     auto cross_join_node = std::dynamic_pointer_cast<JoinNode>(node);
@@ -44,11 +44,11 @@ bool JoinDetectionRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
     }
   }
 
-  return _apply_recursively(node);
+  return _apply_to_inputs(node);
 }
 
 std::shared_ptr<PredicateNode> JoinDetectionRule::_find_predicate_for_cross_join(
-    const std::shared_ptr<JoinNode>& cross_join) {
+    const std::shared_ptr<JoinNode>& cross_join) const {
   Assert(cross_join->left_input() && cross_join->right_input(), "Cross Join must have two inputs");
 
   // Go up in LQP to find corresponding PredicateNode

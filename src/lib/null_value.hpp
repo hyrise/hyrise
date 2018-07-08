@@ -9,6 +9,7 @@
 #include "boost/type_traits/is_empty.hpp"
 #include "boost/type_traits/is_pod.hpp"
 #include "boost/type_traits/is_stateless.hpp"
+#include "boost/functional/hash.hpp"
 
 namespace opossum {
 

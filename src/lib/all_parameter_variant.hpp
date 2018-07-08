@@ -45,8 +45,8 @@ inline bool is_lqp_column_reference(const AllParameterVariant& variant) {
   return (variant.type() == typeid(LQPColumnReference));
 }
 
-// Function to check if AllParameterVariant is a placeholder
-inline bool is_parameter(const AllParameterVariant& variant) { return (variant.type() == typeid(ParameterID)); }
+// Function to check if AllParameterVariant is a ParameterID
+inline bool is_parameter_id(const AllParameterVariant& variant) { return (variant.type() == typeid(ParameterID)); }
 
 std::string to_string(const AllParameterVariant& x);
 

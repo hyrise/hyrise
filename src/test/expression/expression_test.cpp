@@ -99,31 +99,31 @@ TEST_F(ExpressionTest, DeepCopy) {
 }
 
 TEST_F(ExpressionTest, RequiresCalculation) {
-  EXPECT_TRUE(sum(a)->requires_calculation());
-  EXPECT_TRUE(between(a, 1, 5)->requires_calculation());
-  EXPECT_TRUE(greater_than(a, b)->requires_calculation());
-  EXPECT_TRUE(case_(1, a, b)->requires_calculation());
-  EXPECT_TRUE(substr("Hello", 1, 2)->requires_calculation());
-  EXPECT_TRUE(in(1, list(1, 2, 3))->requires_calculation());
-  EXPECT_TRUE(is_null(null())->requires_calculation());
-  EXPECT_TRUE(and_(1, 0)->requires_calculation());
-  EXPECT_TRUE(negate(5)->requires_calculation());
-  EXPECT_FALSE(parameter(ParameterID{5})->requires_calculation());
-  EXPECT_FALSE(parameter(ParameterID{5}, a)->requires_calculation());
-  EXPECT_FALSE(column(a)->requires_calculation());
-  EXPECT_FALSE(PQPColumnExpression::from_table(*table_int_float, "a")->requires_calculation());
-  EXPECT_FALSE(value(5)->requires_calculation());
+  EXPECT_TRUE(sum(a)->requires_computation());
+  EXPECT_TRUE(between(a, 1, 5)->requires_computation());
+  EXPECT_TRUE(greater_than(a, b)->requires_computation());
+  EXPECT_TRUE(case_(1, a, b)->requires_computation());
+  EXPECT_TRUE(substr("Hello", 1, 2)->requires_computation());
+  EXPECT_TRUE(in(1, list(1, 2, 3))->requires_computation());
+  EXPECT_TRUE(is_null(null())->requires_computation());
+  EXPECT_TRUE(and_(1, 0)->requires_computation());
+  EXPECT_TRUE(negate(5)->requires_computation());
+  EXPECT_FALSE(parameter(ParameterID{5})->requires_computation());
+  EXPECT_FALSE(parameter(ParameterID{5}, a)->requires_computation());
+  EXPECT_FALSE(column(a)->requires_computation());
+  EXPECT_FALSE(PQPColumnExpression::from_table(*table_int_float, "a")->requires_computation());
+  EXPECT_FALSE(value(5)->requires_computation());
 
   const auto lqp_select_expression = select(int_float_node);
 
-  EXPECT_TRUE(lqp_select_expression->requires_calculation());
-  EXPECT_TRUE(exists(lqp_select_expression)->requires_calculation());
-  EXPECT_TRUE(in(5, lqp_select_expression)->requires_calculation());
+  EXPECT_TRUE(lqp_select_expression->requires_computation());
+  EXPECT_TRUE(exists(lqp_select_expression)->requires_computation());
+  EXPECT_TRUE(in(5, lqp_select_expression)->requires_computation());
 
   const auto get_table = std::make_shared<GetTable>("int_float");
   const auto pqp_select_expression = std::make_shared<PQPSelectExpression>(get_table);
 
-  EXPECT_TRUE(pqp_select_expression->requires_calculation());
+  EXPECT_TRUE(pqp_select_expression->requires_computation());
 }
 
 TEST_F(ExpressionTest, AsColumnName) {

@@ -110,8 +110,8 @@ TEST_F(LQPSelectExpressionTest, DeepCopy) {
 }
 
 TEST_F(LQPSelectExpressionTest, RequiresCalculation) {
-  EXPECT_TRUE(select_a->requires_calculation());
-  EXPECT_TRUE(select_c->requires_calculation());
+  EXPECT_TRUE(select_a->requires_computation());
+  EXPECT_TRUE(select_c->requires_computation());
 }
 
 TEST_F(LQPSelectExpressionTest, DataType) {

@@ -144,6 +144,8 @@ UPDATE id_int_int_int_100 SET a = a + 1 WHERE id > 10; SELECT * FROM id_int_int_
 
 -- INSERT
 INSERT INTO id_int_int_int_100 VALUES (100, 1, 2, 3); SELECT * FROM id_int_int_int_100;
+INSERT INTO mixed_null VALUES ('Hello', NULL, 3.3, 'World'); SELECT * FROM id_int_int_int_100;
+INSERT INTO mixed_null VALUES ('Hello', NULL, 3.3, NULL); SELECT * FROM id_int_int_int_100;
 INSERT INTO id_int_int_int_100 (id, a, b, c) VALUES (100, 1, 2, 3); SELECT * FROM id_int_int_int_100;
 INSERT INTO id_int_int_int_100 (id, c, b, a) VALUES (100, 3, 2, 1); SELECT * FROM id_int_int_int_100;
 INSERT INTO id_int_int_int_100 VALUES (100, 1, 2, 3); INSERT INTO id_int_int_int_100 VALUES (101, 3, 2, 1); INSERT INTO id_int_int_int_100 VALUES (102, 42, 77992, 1000000); SELECT * FROM id_int_int_int_100;

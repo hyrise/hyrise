@@ -22,7 +22,7 @@ class AbstractRule {
    * The optimizer will pass the immutable LogicalPlanRootNode to this function.
    * @return whether the rule changed the LQP, used to stop the optimizers iteration
    */
-  virtual bool apply_to(const std::shared_ptr<AbstractLQPNode>& root) = 0;
+  virtual bool apply_to(const std::shared_ptr<AbstractLQPNode>& root) const = 0;
 
  protected:
   /**
@@ -31,7 +31,7 @@ class AbstractRule {
    * IMPORTANT: Takes a copy of the node ptr because applying this rule to inputs of this node might remove this node
    * from the tree, which might result in this node being deleted if we don't take a copy of the shared_ptr here.
    */
-  bool _apply_recursively(std::shared_ptr<AbstractLQPNode> node);
+  bool _apply_to_inputs(std::shared_ptr<AbstractLQPNode> node) const;
 };
 
 }  // namespace opossum

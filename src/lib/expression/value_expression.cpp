@@ -10,7 +10,7 @@ namespace opossum {
 ValueExpression::ValueExpression(const AllTypeVariant& value)
     : AbstractExpression(ExpressionType::Value, {}), value(value) {}
 
-bool ValueExpression::requires_calculation() const {
+bool ValueExpression::requires_computation() const {
   return false;
 }
 
