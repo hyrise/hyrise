@@ -60,7 +60,7 @@ TEST_P(TPCHTest, TPCHQueryTest) {
     std::cout << "Cannot print plan, needs to be executed first" << std::endl;
   }
 
-  if (query_idx == 2 ||query_idx == 7 || query_idx == 8 || query_idx == 19) {
+  if (query_idx == 2 || query_idx == 8 || query_idx == 19) {
     FAIL();
   }
 
