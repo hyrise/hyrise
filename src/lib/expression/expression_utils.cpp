@@ -47,7 +47,7 @@ bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& e
   return copied_expression_left->deep_equals(expression_right);
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> expressions_copy(
+std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
   std::vector<std::shared_ptr<AbstractExpression>> copied_expressions;
   copied_expressions.reserve(expressions.size());

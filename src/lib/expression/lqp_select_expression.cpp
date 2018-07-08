@@ -29,7 +29,7 @@ std::shared_ptr<AbstractExpression> LQPSelectExpression::parameter_expression(co
 std::shared_ptr<AbstractExpression> LQPSelectExpression::deep_copy() const {
   const auto lqp_copy = lqp->deep_copy();
 
-  return std::make_shared<LQPSelectExpression>(lqp_copy, parameter_ids, expressions_copy(arguments));
+  return std::make_shared<LQPSelectExpression>(lqp_copy, parameter_ids, expressions_deep_copy(arguments));
 }
 
 std::string LQPSelectExpression::as_column_name() const {

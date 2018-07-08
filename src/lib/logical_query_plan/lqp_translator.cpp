@@ -464,7 +464,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_dummy_table_node(
 std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expressions(
     const std::vector<std::shared_ptr<AbstractExpression>>& lqp_expressions,
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  auto pqp_expressions = expressions_copy(lqp_expressions);
+  auto pqp_expressions = expressions_deep_copy(lqp_expressions);
 
   for (auto& pqp_expression : pqp_expressions) {
     /**

@@ -16,6 +16,9 @@ class AbstractLQPNode;
 class LQPColumnExpression;
 class TransactionContext;
 
+/**
+ * Utility to check whether two vectors of Expressions are equal according to AbstractExpression::deep_equals()
+ */
 bool expressions_equal(const std::vector<std::shared_ptr<AbstractExpression>>& expressions_a,
                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions_b);
 
@@ -33,12 +36,23 @@ bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& e
                                                      const AbstractExpression& expression_right,
                                                      const LQPNodeMapping& node_mapping);
 
-std::vector<std::shared_ptr<AbstractExpression>> expressions_copy(
+/**
+ * Utility to AbstractExpression::deep_copy() a vector of expressions
+ */
+std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
+/**
+ * Utility to AbstractExpression::deep_copy() a vector of expressions while adjusting column references in
+ * LQPColumnExpressions according to the node_mapping
+ */
 std::vector<std::shared_ptr<AbstractExpression>> expressions_copy_and_adapt_to_different_lqp(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const LQPNodeMapping& node_mapping);
 
+/**
+ * Utility to AbstractExpression::deep_copy() a single expression while adjusting column references in
+ * LQPColumnExpressions according to the node_mapping
+ */
 std::shared_ptr<AbstractExpression> expression_copy_and_adapt_to_different_lqp(const AbstractExpression& expression,
                                                                                const LQPNodeMapping& node_mapping);
 
@@ -51,6 +65,9 @@ void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expr
 std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQPColumnExpression& lqp_column_expression,
                                                                        const LQPNodeMapping& node_mapping);
 
+/**
+ * Create a comma separated string with the AbstractExpression::as_column_name() of each expression
+ */
 std::string expression_column_names(const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
 /**

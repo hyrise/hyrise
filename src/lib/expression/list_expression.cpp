@@ -21,7 +21,7 @@ bool ListExpression::is_nullable() const {
 const std::vector<std::shared_ptr<AbstractExpression>>& ListExpression::elements() const { return arguments; }
 
 std::shared_ptr<AbstractExpression> ListExpression::deep_copy() const {
-  return std::make_shared<ListExpression>(expressions_copy(arguments));
+  return std::make_shared<ListExpression>(expressions_deep_copy(arguments));
 }
 
 std::string ListExpression::as_column_name() const {

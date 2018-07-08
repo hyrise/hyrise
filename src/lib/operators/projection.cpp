@@ -25,7 +25,7 @@ const std::string Projection::name() const { return "Projection"; }
 std::shared_ptr<AbstractOperator> Projection::_on_recreate(
     const std::shared_ptr<AbstractOperator>& recreated_input_left,
     const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<Projection>(recreated_input_left, expressions_copy(expressions));
+  return std::make_shared<Projection>(recreated_input_left, expressions_deep_copy(expressions));
 }
 
 void Projection::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
