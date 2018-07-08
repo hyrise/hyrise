@@ -553,21 +553,4 @@ TEST_F(ExpressionEvaluatorTest, ExtractSeries) {
   EXPECT_TRUE(test_expression<std::string>(table_empty, *extract(DatetimeComponent::Day, empty_s), {}));
 }
 
-//TEST_F(ExpressionEvaluatorTest, PQPSelectExpression) {
-//  const auto table_wrapper_b = std::make_shared<TableWrapper>(table_b);
-//  const auto external_b = std::make_shared<ValuePlaceholderExpression>(ValuePlaceholder{0});
-//  const auto b_plus_x = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, external_b, x);
-//  const auto inner_expressions = std::vector<std::shared_ptr<AbstractExpression>>({b_plus_x, x});
-//  const auto inner_projection = std::make_shared<Projection>(table_wrapper_b, inner_expressions);
-//  const auto table_scan = std::make_shared<TableScan>(inner_projection, ColumnID{0}, PredicateCondition::Equals, 12);
-//  const auto aggregates = std::vector<AggregateColumnDefinition>({{AggregateFunction::Sum, ColumnID{1}, "SUM(b)"}});
-//  const auto aggregate = std::make_shared<Aggregate>(table_scan, aggregates, std::vector<ColumnID>{});
-//
-//  const auto parameters = std::vector<ColumnID>({ColumnID{1}});
-//  const auto pqp_select_expression = std::make_shared<PQPSelectExpression>(aggregate, DataType::Int, true, parameters);
-//
-//  const auto expected_result = std::vector<int64_t>({20, 9, 24, 7});
-//  EXPECT_EQ(boost::get<std::vector<int64_t>>(evaluator->evaluate_expression<int64_t>(*pqp_select_expression)), expected_result);
-//}
-
 }  // namespace opossum
