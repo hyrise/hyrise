@@ -60,7 +60,11 @@ struct STLComparisonFunctorWrapper {
   template <typename R, typename A, typename B>
   struct supports {
     static constexpr bool value =
-        std::is_same_v<int32_t, R> && (std::is_same_v<std::string, A> == std::is_same_v<std::string, B>);
+        std::is_same_v<int32_t, R> &&
+        // LeftIsString -> RightIsNullOrString
+        // RightIsString -> LeftIsNullOrString
+        (!std::is_same_v<std::string, A> || (std::is_same_v<NullValue, B> || std::is_same_v<std::string, B>)) &&
+        (!std::is_same_v<std::string, B> || (std::is_same_v<NullValue, A> || std::is_same_v<std::string, A>));
   };
 
   template <typename R, typename A, typename B>

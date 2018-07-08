@@ -231,6 +231,9 @@ TEST_F(ExpressionEvaluatorTest, PredicatesLiterals) {
   EXPECT_TRUE(test_expression<int32_t>(*greater_than(null(), 5.0), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*greater_than(5.0, null()), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*greater_than(null(), null()), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*greater_than("Hello", "Wello"), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*greater_than("Wello", "Hello"), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*greater_than("Wello", null()), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*greater_than_equals(5.3, 3), {1}));
   EXPECT_TRUE(test_expression<int32_t>(*greater_than_equals(5.3, 5.3), {1}));
   EXPECT_TRUE(test_expression<int32_t>(*greater_than_equals(5.3, 5.4f), {0}));
@@ -243,6 +246,9 @@ TEST_F(ExpressionEvaluatorTest, PredicatesLiterals) {
   EXPECT_TRUE(test_expression<int32_t>(*less_than_equals(5.5, 5.4), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*equals(5.5f, 5.5f), {1}));
   EXPECT_TRUE(test_expression<int32_t>(*equals(5.5f, 5.7f), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*equals("Hello", "Hello"), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*equals("Hello", "hello"), {0}));
+  EXPECT_TRUE(test_expression<int32_t>(*equals("Hello", null()), {std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(*not_equals(5.5f, 5), {1}));
   EXPECT_TRUE(test_expression<int32_t>(*not_equals(5.5f, 5.5f), {0}));
   EXPECT_TRUE(test_expression<int32_t>(*between(3, 3.0, 5.0), {1}));
@@ -257,6 +263,7 @@ TEST_F(ExpressionEvaluatorTest, PredicatesLiterals) {
 
 TEST_F(ExpressionEvaluatorTest, PredicatesSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *greater_than(b, a), {1, 1, 1, 1}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *greater_than(s1, s2), {0, 0, 1, 0}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *greater_than(b, null()),
                                        {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *greater_than(c, a), {1, std::nullopt, 1, std::nullopt}));
@@ -416,53 +423,6 @@ TEST_F(ExpressionEvaluatorTest, Parameter) {
   expression_set_parameters(a_plus_5_times_b, {{b_id, 4}});
   EXPECT_TRUE(test_expression<int32_t>(*a_plus_5_times_b, {68}));
 }
-
-//TEST_F(ExpressionEvaluatorTest, ArithmeticExpressionWithNull) {
-//  const auto actual_result = boost::get<NullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*a_plus_c));
-//  const auto& actual_values = actual_result.first;
-//  const auto& actual_nulls = actual_result.second;
-//
-//  ASSERT_EQ(actual_values.size(), 4u);
-//  EXPECT_EQ(actual_values.at(0), 34);
-//  EXPECT_EQ(actual_values.at(2), 37);
-//
-//  std::vector<bool> expected_nulls = {false, true, false, true};
-//  EXPECT_EQ(actual_nulls, expected_nulls);
-//}
-//
-//TEST_F(ExpressionEvaluatorTest, GreaterThanWithStrings) {
-//  const auto actual_values = boost::get<NonNullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*s1_gt_s2));
-//
-//  std::vector<int32_t> expected_values = {0, 0, 1, 0};
-//  EXPECT_EQ(actual_values, expected_values);
-//}
-//
-//TEST_F(ExpressionEvaluatorTest, LessThanWithStrings) {
-//  const auto actual_values = boost::get<NonNullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*s1_lt_s2));
-//
-//  std::vector<int32_t> expected_values = {1, 1, 0, 0};
-//  EXPECT_EQ(actual_values, expected_values);
-//}
-//
-//TEST_F(ExpressionEvaluatorTest, LessThan) {
-//  const auto actual_values = boost::get<NonNullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*a_lt_b));
-//
-//  std::vector<int32_t> expected_values = {1, 1, 1, 1};
-//  EXPECT_EQ(actual_values, expected_values);
-//}
-//
-//TEST_F(ExpressionEvaluatorTest, LessThanWithNulls) {
-//  const auto actual_result = boost::get<NullableValues<int32_t>>(evaluator->evaluate_expression<int32_t>(*a_lt_c));
-//  const auto& actual_values = actual_result.first;
-//  const auto& actual_nulls = actual_result.second;
-//
-//  ASSERT_EQ(actual_values.size(), 4u);
-//  EXPECT_TRUE(actual_values.at(0));
-//  EXPECT_TRUE(actual_values.at(2));
-//
-//  std::vector<bool> expected_nulls = {false, true, false, true};
-//  EXPECT_EQ(actual_nulls, expected_nulls);
-//}
 
 TEST_F(ExpressionEvaluatorTest, InListLiterals) {
   EXPECT_TRUE(test_expression<int32_t>(*in(null(), list()), {0}));
