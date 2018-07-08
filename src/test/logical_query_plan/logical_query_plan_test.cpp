@@ -206,84 +206,84 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphStructure) {
   ASSERT_LQP_TIE(_nodes[4], LQPInputSide::Right, _nodes[7]);
 }
 
-//TEST_F(LogicalQueryPlanTest, ComplexGraphRemoveFromTree) {
-//  _nodes[2]->remove_from_tree();
-//
-//  EXPECT_TRUE(_nodes[2]->outputs().empty());
-//  EXPECT_EQ(_nodes[2]->left_input(), nullptr);
-//  EXPECT_EQ(_nodes[2]->right_input(), nullptr);
-//
-//  // Make sure _node[1], _node[3] and _node[4] are the only outputs _nodes[5] has
-//  EXPECT_EQ(_nodes[5]->outputs().size(), 3u);
-//  ASSERT_LQP_TIE(_nodes[1], LQPInputSide::Left, _nodes[5]);
-//  ASSERT_LQP_TIE(_nodes[3], LQPInputSide::Left, _nodes[5]);
-//  ASSERT_LQP_TIE(_nodes[4], LQPInputSide::Left, _nodes[5]);
-//
-//  ASSERT_LQP_TIE(_nodes[1], LQPInputSide::Right, _nodes[3]);
-//}
-//
-//TEST_F(LogicalQueryPlanTest, ComplexGraphRemoveFromTreeLeaf) {
-//  _nodes[6]->remove_from_tree();
-//  _nodes[7]->remove_from_tree();
-//
-//  EXPECT_TRUE(_nodes[6]->outputs().empty());
-//  EXPECT_TRUE(_nodes[7]->outputs().empty());
-//  EXPECT_EQ(_nodes[6]->left_input(), nullptr);
-//  EXPECT_EQ(_nodes[6]->right_input(), nullptr);
-//  EXPECT_EQ(_nodes[7]->left_input(), nullptr);
-//  EXPECT_EQ(_nodes[7]->right_input(), nullptr);
-//  EXPECT_EQ(_nodes[5]->left_input(), nullptr);
-//  EXPECT_EQ(_nodes[3]->right_input(), nullptr);
-//  EXPECT_EQ(_nodes[4]->right_input(), nullptr);
-//}
-//
-//TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWith) {
-//  auto new_node = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
-//
-//  _nodes[5]->replace_with(new_node);
-//
-//  // Make sure _nodes[5] is untied from the LQP
-//  EXPECT_TRUE(_nodes[5]->outputs().empty());
-//  EXPECT_EQ(_nodes[5]->left_input(), nullptr);
-//  EXPECT_EQ(_nodes[5]->right_input(), nullptr);
-//
-//  // Make sure new_node is the only output of _nodes[6]
-//  EXPECT_EQ(_nodes[6]->outputs().size(), 1u);
-//  ASSERT_LQP_TIE(new_node, LQPInputSide::Left, _nodes[6]);
-//
-//  // Make sure new_node, _nodes[3] and _nodes[4] are the only outputs of _nodes[7]
-//  EXPECT_EQ(_nodes[7]->outputs().size(), 3u);
-//  ASSERT_LQP_TIE(_nodes[3], LQPInputSide::Right, _nodes[7]);
-//  ASSERT_LQP_TIE(_nodes[4], LQPInputSide::Right, _nodes[7]);
-//  ASSERT_LQP_TIE(new_node, LQPInputSide::Right, _nodes[7]);
-//
-//  // Make sure _nodes[5] former outputs point to new_node.
-//  ASSERT_LQP_TIE(_nodes[2], LQPInputSide::Left, new_node);
-//  ASSERT_LQP_TIE(_nodes[3], LQPInputSide::Left, new_node);
-//  ASSERT_LQP_TIE(_nodes[4], LQPInputSide::Left, new_node);
-//}
-//
-//TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWithLeaf) {
-//  auto new_node_a = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
-//  auto new_node_b = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
-//
-//  _nodes[6]->replace_with(new_node_a);
-//  _nodes[7]->replace_with(new_node_b);
-//
-//  // Make sure _nodes[6] is untied from the LQP
-//  EXPECT_TRUE(_nodes[6]->outputs().empty());
-//  EXPECT_EQ(_nodes[6]->left_input(), nullptr);
-//  EXPECT_EQ(_nodes[6]->right_input(), nullptr);
-//
-//  // Make sure _nodes[7] is untied from the LQP
-//  EXPECT_TRUE(_nodes[7]->outputs().empty());
-//  EXPECT_EQ(_nodes[7]->left_input(), nullptr);
-//  EXPECT_EQ(_nodes[7]->right_input(), nullptr);
-//
-//  ASSERT_LQP_TIE(_nodes[5], LQPInputSide::Left, new_node_a);
-//  ASSERT_LQP_TIE(_nodes[3], LQPInputSide::Right, new_node_b);
-//  ASSERT_LQP_TIE(_nodes[4], LQPInputSide::Right, new_node_b);
-//}
+TEST_F(LogicalQueryPlanTest, ComplexGraphRemoveFromTree) {
+  lqp_remove_node(_nodes[2]);
+
+  EXPECT_TRUE(_nodes[2]->outputs().empty());
+  EXPECT_EQ(_nodes[2]->left_input(), nullptr);
+  EXPECT_EQ(_nodes[2]->right_input(), nullptr);
+
+  // Make sure _node[1], _node[3] and _node[4] are the only outputs _nodes[5] has
+  EXPECT_EQ(_nodes[5]->outputs().size(), 3u);
+  ASSERT_LQP_TIE(_nodes[1], LQPInputSide::Left, _nodes[5]);
+  ASSERT_LQP_TIE(_nodes[3], LQPInputSide::Left, _nodes[5]);
+  ASSERT_LQP_TIE(_nodes[4], LQPInputSide::Left, _nodes[5]);
+
+  ASSERT_LQP_TIE(_nodes[1], LQPInputSide::Right, _nodes[3]);
+}
+
+TEST_F(LogicalQueryPlanTest, ComplexGraphRemoveFromTreeLeaf) {
+  lqp_remove_node(_nodes[6]);
+  lqp_remove_node(_nodes[7]);
+
+  EXPECT_TRUE(_nodes[6]->outputs().empty());
+  EXPECT_TRUE(_nodes[7]->outputs().empty());
+  EXPECT_EQ(_nodes[6]->left_input(), nullptr);
+  EXPECT_EQ(_nodes[6]->right_input(), nullptr);
+  EXPECT_EQ(_nodes[7]->left_input(), nullptr);
+  EXPECT_EQ(_nodes[7]->right_input(), nullptr);
+  EXPECT_EQ(_nodes[5]->left_input(), nullptr);
+  EXPECT_EQ(_nodes[3]->right_input(), nullptr);
+  EXPECT_EQ(_nodes[4]->right_input(), nullptr);
+}
+
+TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWith) {
+  auto new_node = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
+
+  lqp_replace_node(_nodes[5], new_node);
+
+  // Make sure _nodes[5] is untied from the LQP
+  EXPECT_TRUE(_nodes[5]->outputs().empty());
+  EXPECT_EQ(_nodes[5]->left_input(), nullptr);
+  EXPECT_EQ(_nodes[5]->right_input(), nullptr);
+
+  // Make sure new_node is the only output of _nodes[6]
+  EXPECT_EQ(_nodes[6]->outputs().size(), 1u);
+  ASSERT_LQP_TIE(new_node, LQPInputSide::Left, _nodes[6]);
+
+  // Make sure new_node, _nodes[3] and _nodes[4] are the only outputs of _nodes[7]
+  EXPECT_EQ(_nodes[7]->outputs().size(), 3u);
+  ASSERT_LQP_TIE(_nodes[3], LQPInputSide::Right, _nodes[7]);
+  ASSERT_LQP_TIE(_nodes[4], LQPInputSide::Right, _nodes[7]);
+  ASSERT_LQP_TIE(new_node, LQPInputSide::Right, _nodes[7]);
+
+  // Make sure _nodes[5] former outputs point to new_node.
+  ASSERT_LQP_TIE(_nodes[2], LQPInputSide::Left, new_node);
+  ASSERT_LQP_TIE(_nodes[3], LQPInputSide::Left, new_node);
+  ASSERT_LQP_TIE(_nodes[4], LQPInputSide::Left, new_node);
+}
+
+TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWithLeaf) {
+  auto new_node_a = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
+  auto new_node_b = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
+
+  lqp_replace_node(_nodes[6], new_node_a);
+  lqp_replace_node(_nodes[7], new_node_b);
+
+  // Make sure _nodes[6] is untied from the LQP
+  EXPECT_TRUE(_nodes[6]->outputs().empty());
+  EXPECT_EQ(_nodes[6]->left_input(), nullptr);
+  EXPECT_EQ(_nodes[6]->right_input(), nullptr);
+
+  // Make sure _nodes[7] is untied from the LQP
+  EXPECT_TRUE(_nodes[7]->outputs().empty());
+  EXPECT_EQ(_nodes[7]->left_input(), nullptr);
+  EXPECT_EQ(_nodes[7]->right_input(), nullptr);
+
+  ASSERT_LQP_TIE(_nodes[5], LQPInputSide::Left, new_node_a);
+  ASSERT_LQP_TIE(_nodes[3], LQPInputSide::Right, new_node_b);
+  ASSERT_LQP_TIE(_nodes[4], LQPInputSide::Right, new_node_b);
+}
 
 TEST_F(LogicalQueryPlanTest, CreateNodeMapping) {
   const auto projection_node = ProjectionNode::make(node_int_int->column_expressions(), node_int_int);
