@@ -135,21 +135,19 @@ node {
             Utils.markStageSkippedForConditional("clangReleaseSanitizersNoNuma")
           }
         }
-      }, gccDebugCoverage: {
-        stage("gcc-debug-coverage") {
+      }, clangDebugCoverage: {
+        stage("clang-debug-coverage") {
           if (env.BRANCH_NAME == 'master' || full_ci) {
             sh "export CCACHE_BASEDIR=`pwd`; ./scripts/coverage.sh --generate_badge=true --launcher=ccache"
             archive 'coverage_badge.svg'
             archive 'coverage_percent.txt'
-            archive 'coverage.xml'
-            archive 'coverage_diff.html'
             publishHTML (target: [
               allowMissing: false,
               alwaysLinkToLastBuild: false,
               keepAll: true,
               reportDir: 'coverage',
               reportFiles: 'index.html',
-              reportName: "RCov Report"
+              reportName: "Llvm-cov Report"
             ])
             script {
               coverageChange = sh script: "./scripts/compare_coverage.sh", returnStdout: true
@@ -157,7 +155,7 @@ node {
               githubNotify context: 'Coverage Diff', description: "Click Details for diff", status: 'SUCCESS', targetUrl: "${env.BUILD_URL}/artifact/coverage_diff.html"
             }
           } else {
-            Utils.markStageSkippedForConditional("gccDebugCoverage")
+            Utils.markStageSkippedForConditional("clangDebugCoverage")
           }
         }
       }, memcheckClangRelease: {
