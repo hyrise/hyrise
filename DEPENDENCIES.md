@@ -6,6 +6,7 @@
 | boost            | >= 1.65.0        |    All   |                                    No |
 | clang            | 6                |    All   |                 Yes, if gcc installed |
 | clang-format     | 6.0 / 2018-01-11 |    All   |                      Yes (formatting) |
+| clang-tidy       | 6.0 / 2018-01-11 |    All   |                         Yes (linting) |
 | cmake            | 3.5 (deprecated) |    All   |                                    No |
 | cmake            | 3.9              |    All   |                                    No |
 | gcc              | 7.2              |    All   | Yes, if clang installed, not for OS X |
@@ -17,7 +18,6 @@
 | llvm             | any              |    All   |                 Yes (code sanitizers) |
 | llvm-6.0-tools   | 6                |    Linux |                                    No |
 | parallel         | any              |    All   |                                   Yes |
-| pycobertura      | any              |    All   |                  Yes (coverage on CI) |
 | python           | >= 2.7 && < 3    |    All   |                         Yes (linting) |
 | readline         | >= 7             |    All   |                                    No |
 | sqlite3          | >= 3             |    All   |                                    No |

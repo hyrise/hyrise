@@ -17,9 +17,6 @@
 
 namespace opossum {
 
-// The last chunk offset is reserved for NULL as used in ReferenceColumns.
-const ChunkOffset Chunk::MAX_SIZE = std::numeric_limits<ChunkOffset>::max() - 1;
-
 Chunk::Chunk(const ChunkColumns& columns, std::shared_ptr<MvccColumns> mvcc_columns,
              const std::optional<PolymorphicAllocator<Chunk>>& alloc,
              const std::shared_ptr<ChunkAccessCounter> access_counter)
@@ -35,10 +32,9 @@ Chunk::Chunk(const ChunkColumns& columns, std::shared_ptr<MvccColumns> mvcc_colu
   if (alloc) _alloc = *alloc;
 }
 
-bool Chunk::is_mutable() const {
-  return std::all_of(_columns.begin(), _columns.end(),
-                     [](const auto& column) { return std::dynamic_pointer_cast<BaseValueColumn>(column) != nullptr; });
-}
+bool Chunk::is_mutable() const { return _is_mutable; }
+
+void Chunk::mark_immutable() { _is_mutable = false; }
 
 void Chunk::replace_column(size_t column_id, std::shared_ptr<BaseColumn> column) {
   std::atomic_store(&_columns.at(column_id), column);
@@ -63,6 +59,7 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
 }
 
 std::shared_ptr<BaseColumn> Chunk::get_mutable_column(ColumnID column_id) const {
+  Assert(is_mutable(), "Cannot get mutable column from immutable chunk.");
   return std::atomic_load(&_columns.at(column_id));
 }
 
@@ -104,7 +101,7 @@ std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(
 }
 
 std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(const std::vector<ColumnID> column_ids) const {
-  auto columns = get_columns_for_ids(column_ids);
+  auto columns = _get_columns_for_ids(column_ids);
   return get_indices(columns);
 }
 
@@ -119,7 +116,7 @@ std::shared_ptr<BaseIndex> Chunk::get_index(const ColumnIndexType index_type,
 
 std::shared_ptr<BaseIndex> Chunk::get_index(const ColumnIndexType index_type,
                                             const std::vector<ColumnID> column_ids) const {
-  auto columns = get_columns_for_ids(column_ids);
+  auto columns = _get_columns_for_ids(column_ids);
   return get_index(index_type, columns);
 }
 
@@ -185,7 +182,7 @@ size_t Chunk::estimate_memory_usage() const {
   return bytes;
 }
 
-std::vector<std::shared_ptr<const BaseColumn>> Chunk::get_columns_for_ids(
+std::vector<std::shared_ptr<const BaseColumn>> Chunk::_get_columns_for_ids(
     const std::vector<ColumnID>& column_ids) const {
   DebugAssert(([&]() {
                 for (auto column_id : column_ids)
@@ -204,6 +201,7 @@ std::vector<std::shared_ptr<const BaseColumn>> Chunk::get_columns_for_ids(
 std::shared_ptr<ChunkStatistics> Chunk::statistics() const { return _statistics; }
 
 void Chunk::set_statistics(std::shared_ptr<ChunkStatistics> chunk_statistics) {
+  Assert(!is_mutable(), "Cannot set statistics on mutable chunks.");
   DebugAssert(chunk_statistics->statistics().size() == column_count(),
               "ChunkStatistics must have same column amount as Chunk");
   _statistics = chunk_statistics;
