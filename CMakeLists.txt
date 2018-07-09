@@ -43,7 +43,7 @@ endif()
 option(ENABLE_SANITIZATION "Set to ON to build Hyrise with ASAN and UBSAN enabled. Default: OFF" OFF)
 if (${ENABLE_SANITIZATION})
     # add_compile_options() wants list, CMAKE_EXE_LINKER_FLAGS a string. There are probably cleverer ways than
-    # duplicating the flags, but this is prbly the simplest solution.
+    # duplicating the flags, but this is probably the simplest solution.
     add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer)
     set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer")
 endif()
@@ -120,7 +120,9 @@ add_subdirectory(third_party/ EXCLUDE_FROM_ALL)
 
 # Some third-party libs don't support LTO (if enabled above):
 foreach(no_lto_target gtest gtest_main gmock gmock_main hpinuma_s hpinuma hpinuma_base_s hpinuma_base hpinuma_util_tool hpinuma_msource hpinuma_msource_s)
-    set_property(TARGET ${no_lto_target} PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
+    if(TARGET no_lto_target)
+        set_property(TARGET ${no_lto_target} PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
+    endif()
 endforeach(no_lto_target)
 add_subdirectory(src)
 
