@@ -13,10 +13,12 @@ namespace opossum {
 
 using opossum::then_operator::then;
 
-Server::Server(boost::asio::io_service& io_service, uint16_t port)
+Server::Server(boost::asio::io_service& io_service, uint16_t port, 
+  const std::string& log_folder, const Logger::Implementation logging_implementation)
     : _io_service(io_service),
       _acceptor(io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
       _socket(io_service) {
+  Logger::setup(log_folder, logging_implementation);
   Logger::getInstance().recover();
   accept_next_connection();
 }

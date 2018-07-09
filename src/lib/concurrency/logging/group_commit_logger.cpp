@@ -270,6 +270,7 @@ void GroupCommitLogger::recover() { BinaryRecovery::getInstance().recover(); }
 // Lock _file_mutex and _buffer_mutex beforehand and unlock them afterwards.
 // Lock is not inside this function to operate on the file beyond this methods scope.
 void GroupCommitLogger::_write_buffer_to_logfile_without_locking() {
+  DebugAssert(_log_file.is_open(), "Logger: Log file not open.");
   _log_file.write(_buffer, _buffer_position);
   _log_file.sync();
 
@@ -285,22 +286,18 @@ void GroupCommitLogger::_write_buffer_to_logfile_without_locking() {
 // Lock _file_mutex beforehand and unlock it afterwards.
 // Lock is not inside this function to operate on the file beyond this methods scope.
 void GroupCommitLogger::_open_logfile_without_locking() {
+  DebugAssert(!_log_file.is_open(), "Logger: Log file not closed before opening another one.");
   auto path = Logger::get_new_log_path();
   _log_file.open(path, std::ios::out | std::ios::binary);
   DebugAssert(_log_file.is_open(), "Logfile could not be opened or created: " + path);
 }
 
-void GroupCommitLogger::_reset() {
+void GroupCommitLogger::_shut_down() {
   _file_mutex.lock();
   _buffer_mutex.lock();
 
-  if (_has_unflushed_buffer) {
-    _write_buffer_to_logfile_without_locking();
-  }
-
+  flush();
   _log_file.close();
-
-  _open_logfile_without_locking();
 
   _buffer_mutex.unlock();
   _file_mutex.unlock();
@@ -316,11 +313,6 @@ GroupCommitLogger::GroupCommitLogger()
   _file_mutex.unlock();
 
   _flush_thread = std::make_unique<LoopThread>(LOG_INTERVAL, [this]() { GroupCommitLogger::flush(); });
-}
-
-GroupCommitLogger::~GroupCommitLogger() {
-  _log_file.close();
-  free(_buffer);
 }
 
 }  // namespace opossum

@@ -2,9 +2,11 @@
 
 #include <thread>
 
-#include "base_test.hpp"
+// #include "base_test.hpp"
+#include "../base_test.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
+#include "concurrency/logging/logger.hpp"
 
 #include "server/server.hpp"
 
@@ -27,7 +29,7 @@ class ServerTestRunner : public BaseTest {
     std::condition_variable cv{};
 
     auto server_runner = [&](boost::asio::io_service& io_service) {
-      Server server{io_service, /* port = */ 0};  // run on port 0 so the server can pick a free one
+      Server server{io_service, /* port = */ 0, test_data_path, Logger::Implementation::No};  // run on port 0 so the server can pick a free one
 
       {
         std::unique_lock<std::mutex> lock{mutex};

@@ -12,6 +12,8 @@ namespace filesystem = std::experimental::filesystem;
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
+std::string opossum::test_data_path; 
+
 void create_test_data_directory(std::optional<std::string>& prefix) {
   Assert(!filesystem::exists(opossum::test_data_path),
          "Cannot create directory for test data: \"" + opossum::test_data_path + "\" already exists.");
@@ -28,6 +30,13 @@ void remove_test_data_directory() {
   if (filesystem::exists(opossum::test_data_path)) {
     filesystem::remove_all(opossum::test_data_path);
   }
+}
+
+// Setup a gracefull termination of the test program.
+// Logger implementations should not be changed during runtime. This is enforced by design, but they are changed during
+// tests. Therefore this function needs to be called before program termination.
+void shutdown_logger() {
+  opossum::Logger::_shutdown_after_all_tests();
 }
 
 int main(int argc, char** argv) {
@@ -49,6 +58,8 @@ int main(int argc, char** argv) {
   create_test_data_directory(prefix);
 
   int ret = RUN_ALL_TESTS();
+  
+  shutdown_logger();
 
   remove_test_data_directory();
 

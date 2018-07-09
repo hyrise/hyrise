@@ -27,12 +27,14 @@ class SimpleLogger : public AbstractLogger {
 
   void recover() override;
 
- protected:
-  friend class Logger;
-  SimpleLogger();
-  void _reset() override;
-
  private:
+  friend class Logger;
+
+  SimpleLogger();
+
+  // Called by tests before switching to another implementation.
+  void _shut_down() override;
+
   void _write_to_logfile(const std::stringstream& ss);
   void _open_logfile_without_locking();
 

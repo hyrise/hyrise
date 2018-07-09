@@ -27,6 +27,8 @@
 
 #include "types.hpp"
 
+void shutdown_logger();
+
 namespace opossum {
 
 class Logger {
@@ -44,24 +46,36 @@ class Logger {
 
   static std::vector<std::string> get_all_log_file_paths();
 
-  // Used to set logging implementation on startup or in tests
-  static void set_implementation(const Implementation implementation);
+  static void setup(std::string folder, const Implementation implementation);
 
-  // Used to set the folder of logfiles. Should only be called on startup
-  static void set_folder(const std::string folder);
-
-  // Called while setting up a new database or in tests
+  // Called while setting up a new database in console or in tests
+  // Current logging implementation has to be shut_down beforehand or not instantiated yet.
   static void delete_log_files();
-
-  // create_directories() is called in the constructor of AbstractLogger to ensure their existence.
-  static void create_directories();
-
-
 
 
   // TODO: private
   static u_int32_t _get_latest_log_number();
-private:
+
+  static const Implementation default_implementation;
+  static const std::string default_data_path;
+
+ private:   
+  template <typename> friend class BaseTestWithParam;
+  friend class ServerRecoveryTest;
+  friend void ::shutdown_logger();
+
+  static void _create_directories();
+
+  // Used to set logging implementation on startup or in tests.
+  // Current logging implementation has to be shut_down beforehand or not instantiated yet.
+  static void _set_implementation(const Implementation implementation);
+  
+  static void _reconstruct();
+
+  static void _shutdown_after_all_tests();
+
+
+  
   static std::string data_path;
   // linter wants these to be char[], but then we loose operator+ of strings
   static std::string log_path;
@@ -69,7 +83,6 @@ private:
   static const std::string filename;
 
   static Implementation _implementation;
-  static std::unique_ptr<AbstractLogger> _instance;
 };
 
 }  // namespace opossum

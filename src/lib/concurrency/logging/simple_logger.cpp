@@ -71,6 +71,7 @@ void SimpleLogger::flush() { fsync(_file_descriptor); }
 
 void SimpleLogger::_write_to_logfile(const std::stringstream& ss) {
   _file_mutex.lock();
+  DebugAssert(_file_descriptor != -1, "Logger: Logfile not open");
   write(_file_descriptor, reinterpret_cast<const void*>(ss.str().c_str()), ss.str().length());
   _file_mutex.unlock();
 }
@@ -88,15 +89,14 @@ void SimpleLogger::_open_logfile_without_locking() {
 
   _file_descriptor = open(path.c_str(), oflags, mode);
 
-  DebugAssert(_file_descriptor != -1, "Logfile could not be opened or created: " + path);
+  DebugAssert(_file_descriptor != -1, "Logger: Logfile could not be opened or created: " + path);
 }
 
-void SimpleLogger::_reset() {
+// This function should only be called in tests.
+void SimpleLogger::_shut_down() {
   _file_mutex.lock();
-
   flush();
-  _open_logfile_without_locking();
-
+  _file_descriptor = -1;
   _file_mutex.unlock();
 }
 

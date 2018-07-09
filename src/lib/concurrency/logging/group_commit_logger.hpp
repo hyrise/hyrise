@@ -30,12 +30,14 @@ class GroupCommitLogger : public AbstractLogger {
 
   void recover() override;
 
- protected:
-  friend class Logger;
-  GroupCommitLogger();
-  void _reset() override;
-
  private:
+  friend class Logger;
+
+  GroupCommitLogger();
+  
+  // Called by tests before switching to another implementation.
+  void _shut_down() override;
+
   void _put_into_entry(std::vector<char>& entry, size_t& entry_cursor, const char& type,
                        const TransactionID& transaction_id, const std::string& table_name, const RowID& row_id);
   void _put_into_entry(std::vector<char>& entry, const char& type, const TransactionID& transaction_id);
@@ -58,8 +60,6 @@ class GroupCommitLogger : public AbstractLogger {
     *reinterpret_cast<T*>(&entry[cursor]) = value;
     cursor += sizeof(T);
   }
-
-  ~GroupCommitLogger();
 
   char* _buffer;
   const size_t _buffer_capacity;

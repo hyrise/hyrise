@@ -4,8 +4,4 @@
 
 namespace opossum {
 
-AbstractLogger::AbstractLogger() {
-  Logger::create_directories();
-}
-
 }  // namespace opossum

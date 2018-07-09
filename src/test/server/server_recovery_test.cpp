@@ -16,9 +16,15 @@ namespace opossum {
 class ServerRecoveryTest : public BaseTestWithParam<Logger::Implementation> {
  protected:
   
-  const char _folder[12] = "./tmp_test/";
+  static constexpr char _folder[6] = "data/";
 
-  void start_server() {
+  // static void SetUpTestCase() {
+  //   // need to be sure, that no Logger has open filehandle before changing directory.
+  //   ASSERT_EQ(Logger::get_implementation(), Logger::Implementation::No);
+  //   Logger::setup(_folder, Logger::Implementation::No);
+  // }
+
+  void start_server(Logger::Implementation implementation) {
     StorageManager::get().reset();
     SQLQueryCache<SQLQueryPlan>::get().clear();
 
@@ -33,7 +39,7 @@ class ServerRecoveryTest : public BaseTestWithParam<Logger::Implementation> {
     std::condition_variable cv{};
 
     auto server_runner = [&](boost::asio::io_service& io_service) {
-      Server server{io_service, /* port = */ 0};  // run on port 0 so the server can pick a free one
+      Server server{io_service, /* port = */ 0, test_data_path + _folder, implementation};  // run on port 0 so the server can pick a free one
 
       {
         std::unique_lock<std::mutex> lock{mutex};
@@ -56,13 +62,12 @@ class ServerRecoveryTest : public BaseTestWithParam<Logger::Implementation> {
 
     // Get randomly assigned port number for client connection
     _connection_string = "hostaddr=127.0.0.1 port=" + std::to_string(server_port);
+
+    Logger::_reconstruct();
   }
 
-  void SetUp() override {
-    // Create directory since we delete it in TearDown() and Logger doesn't expect his current directory to be deleted.
-    opossum::Logger::create_directories();
-    opossum::Logger::set_folder(_folder);
-  }
+  // void SetUp() override {
+  // }
 
   void shutdown_server() {
     // Give the server time to shut down gracefully before force-closing the socket it's working on
@@ -74,14 +79,22 @@ class ServerRecoveryTest : public BaseTestWithParam<Logger::Implementation> {
 
   void TearDown() override {
     shutdown_server();
+    Logger::_set_implementation(Logger::Implementation::No);
     Logger::delete_log_files();
-    boost::filesystem::remove_all(_folder);
   }
 
-  void restart_server() {
+  void restart_server(Logger::Implementation implementation) {
     shutdown_server();
-    start_server();
+    // set NoLogger since the server expects NoLogger on startup
+    Logger::_set_implementation(Logger::Implementation::No);
+    start_server(implementation);
   }
+
+  // void set_implementation(Logger::Implementation implementation) {
+  //   Logger::_set_implementation(implementation);
+  //   // instance has to be started again, since they get shut down on each TearDown
+  //   // Logger::getInstance()._start();
+  // }
 
   std::unique_ptr<boost::asio::io_service> _io_service;
   std::unique_ptr<std::thread> _server_thread;
@@ -121,8 +134,9 @@ class ServerRecoveryTest : public BaseTestWithParam<Logger::Implementation> {
 // }
 
 TEST_P(ServerRecoveryTest, TestSimpleInsert) {
-  Logger::set_implementation(GetParam());
-  start_server();
+  // set_implementation(GetParam());
+  
+  start_server(GetParam());
 
   pqxx::connection connection{_connection_string};
   pqxx::nontransaction transaction{connection};
@@ -140,11 +154,18 @@ TEST_P(ServerRecoveryTest, TestSimpleInsert) {
   transaction.exec("DELETE FROM a_table WHERE a = 123");
   transaction.exec("UPDATE a_table SET a = 7, b = 7.2 WHERE a = 1234");
 
-  restart_server();
+  std::cout << "aaa" << std::endl;
+
+  restart_server(GetParam());
+
+  std::cout << "bbb" << std::endl;
   
   pqxx::connection connection2{_connection_string};
+  std::cout << "ccc" << std::endl;
   pqxx::nontransaction transaction2{connection2};
+  std::cout << "ddd" << std::endl;
   const auto result2 = transaction2.exec("SELECT * FROM a_table;");
+  std::cout << "eee" << std::endl;
   EXPECT_EQ(result2.size(), a_table->row_count() + 1);
 }
 

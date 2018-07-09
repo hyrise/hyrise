@@ -853,6 +853,8 @@ int main(int argc, char** argv) {
     console.out("                                 Execute script if specified by SCRIPTFILE.\n");
   }
 
+  opossum::Logger::setup(opossum::Logger::default_data_path, opossum::Logger::default_implementation);
+
   // Execute .sql script if specified, otherwise recover database from logfiles
   if (argc == 2) {
     // Delete all logfiles because they will be conflicting with a fresh database

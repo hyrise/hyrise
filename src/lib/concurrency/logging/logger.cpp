@@ -17,10 +17,14 @@
 namespace opossum {
 
 // set default Implementation
-Logger::Implementation Logger::_implementation = Implementation::GroupCommit;
-// Logger::Implementation Logger::_implementation = Implementation::Simple;
+const Logger::Implementation Logger::default_implementation = Implementation::GroupCommit;
 
-std::string Logger::data_path = "./data/";
+// Logging is initially set to NoLogger for setup
+Logger::Implementation Logger::_implementation = Implementation::No;
+
+const std::string Logger::default_data_path = "./data/";
+
+std::string Logger::data_path = default_data_path;
 const std::string Logger::log_folder = "logs/";
 std::string Logger::log_path = data_path + log_folder;
 const std::string Logger::filename = "hyrise-log";
@@ -33,29 +37,53 @@ AbstractLogger& Logger::getInstance() {
   }
 }
 
-void Logger::set_implementation(const Logger::Implementation implementation) {
+// This function should only be called by tests
+void Logger::_shutdown_after_all_tests() {
+  for (auto impl : {Implementation::Simple, Implementation::GroupCommit}) {
+    _implementation = impl;
+    _reconstruct();
+  }
+}
+
+// This function should only be called by tests
+void Logger::_set_implementation(const Logger::Implementation implementation) {
+  getInstance()._shut_down();
+  switch (_implementation) {
+    case Implementation::No: { break; }
+    case Implementation::Simple: { static_cast<SimpleLogger&>(getInstance()).~SimpleLogger(); break; }
+    case Implementation::GroupCommit: { static_cast<GroupCommitLogger&>(getInstance()).~GroupCommitLogger(); break; }
+  }
   _implementation = implementation;
 }
 
-void Logger::set_folder(const std::string folder){
-  if (Logger::get_all_log_file_paths().size() > 0) {
-    std::cout << "WARNING: Resetting log folder. "
-      "Database may not recover as expected since there are currently logs in another directory" << std::endl;
+// This function should only be called by tests
+void Logger::_reconstruct() {
+  switch (_implementation) {
+    case Implementation::No: { break; }
+    case Implementation::Simple: { new(&getInstance()) SimpleLogger(); break; }
+    case Implementation::GroupCommit: { new(&getInstance()) GroupCommitLogger(); break; }
   }
+}
+
+void Logger::setup(std::string folder, const Implementation implementation) {
+  DebugAssert(_implementation == Implementation::No, "Logger: changing folder but may have open file handle.");
+  DebugAssert(folder.length() > 0, "Logger: empty string is no folder");
   DebugAssert(folder[folder.size() - 1] == '/', "Logger: expected '/' at end of path");
+  
   data_path = folder;
   log_path = data_path + log_folder;
 
-  create_directories();
-  getInstance()._reset();
+  _create_directories();
+
+  _set_implementation(implementation);
 }
 
 void Logger::delete_log_files() {
   boost::filesystem::remove_all(log_path);
-  create_directories();
+  _create_directories();
 }
 
-void Logger::create_directories() {
+void Logger::_create_directories() {
   boost::filesystem::create_directory(data_path);
   boost::filesystem::create_directory(log_path);
 }

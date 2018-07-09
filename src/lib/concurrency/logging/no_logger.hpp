@@ -31,10 +31,10 @@ class NoLogger : public AbstractLogger {
 
   void recover() override {};
 
- private:
+ protected:
   friend class Logger;
   NoLogger() = default;
-  void _reset() override {};
+  void _shut_down() override {};
 };
 
 }  // namespace opossum

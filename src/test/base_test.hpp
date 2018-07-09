@@ -25,7 +25,7 @@ namespace opossum {
 class AbstractLQPNode;
 class Table;
 
-static std::string test_data_path;  // NOLINT
+extern std::string test_data_path;  // NOLINT
 
 template <typename ParamType>
 class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>::value, ::testing::Test,
@@ -59,7 +59,7 @@ class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>:
     NUMAPlacementManager::get().set_options(options);
 #endif
     // Turn logging off. Logging can be set in tests if needed.
-    Logger::set_implementation(Logger::Implementation::No);
+    Logger::_set_implementation(Logger::Implementation::No);
   }
 
   ~BaseTestWithParam() {
