@@ -216,7 +216,10 @@ FilterByColumnComparisonEstimate ColumnStatistics<ColumnDataType>::estimate_pred
    *  = 29 / 40 = 72.5 % // NOLINT
    */
 
-  Assert(_data_type == abstract_right_column_statistics.data_type(), "Cannot compare columns of different type");
+  // Cannot compare columns of different type
+  if (_data_type != abstract_right_column_statistics.data_type()) {
+    return {1.0f, without_null_values(), abstract_right_column_statistics.without_null_values()};
+  }
 
   const auto& right_column_statistics =
       static_cast<const ColumnStatistics<ColumnDataType>&>(abstract_right_column_statistics);
