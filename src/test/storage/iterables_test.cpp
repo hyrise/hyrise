@@ -8,7 +8,6 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "resolve_type.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/column_iterables/constant_value_iterable.hpp"
 #include "storage/dictionary_column.hpp"
@@ -68,16 +67,11 @@ class IterablesTest : public BaseTest {
     table = load_table("src/test/tables/int_float6.tbl", Chunk::MAX_SIZE);
     table_with_null = load_table("src/test/tables/int_float_with_null.tbl", Chunk::MAX_SIZE);
     table_strings = load_table("src/test/tables/string.tbl", Chunk::MAX_SIZE);
-    table_two_chunks = load_table("src/test/tables/int_int3.tbl", 5);
-    // encode one of the two chunks with dictionary compression
-    ChunkEncoder::encode_chunk(table_two_chunks->get_chunk(ChunkID{0}), {DataType::Int, DataType::Int},
-                               {{EncodingType::Dictionary}, {EncodingType::Dictionary}});
   }
 
   std::shared_ptr<Table> table;
   std::shared_ptr<Table> table_with_null;
   std::shared_ptr<Table> table_strings;
-  std::shared_ptr<Table> table_two_chunks;
 };
 
 TEST_F(IterablesTest, ValueColumnIteratorWithIterators) {

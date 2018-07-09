@@ -68,7 +68,6 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
       const auto chunk_offset_into_ref_column =
           static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
 
-      // _insert_referenced_column(chunk_id);
       const auto typed_value = _columns[chunk_id]->get_typed_value(chunk_offset);
 
       return ColumnIteratorValue<T>{typed_value.first, typed_value.second, chunk_offset_into_ref_column};
@@ -81,7 +80,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
         resolve_column_type<T>(*column, [&](auto& typed_column) {
           using ColumnType = typename std::decay<decltype(typed_column)>::type;
           if constexpr (std::is_same<ColumnType, ReferenceColumn>::value) {
-            std::cout << "ref col :(" << std::endl;
+            Fail("ReferenceColumn cannot reference another ReferenceColumn");
           } else {
             _columns[chunk_id] = &typed_column;
           }
