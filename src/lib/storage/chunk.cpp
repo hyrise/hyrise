@@ -32,10 +32,9 @@ Chunk::Chunk(const ChunkColumns& columns, std::shared_ptr<MvccColumns> mvcc_colu
   if (alloc) _alloc = *alloc;
 }
 
-bool Chunk::is_mutable() const {
-  return std::all_of(_columns.begin(), _columns.end(),
-                     [](const auto& column) { return std::dynamic_pointer_cast<BaseValueColumn>(column) != nullptr; });
-}
+bool Chunk::is_mutable() const { return _is_mutable; }
+
+void Chunk::mark_immutable() { _is_mutable = false; }
 
 void Chunk::replace_column(size_t column_id, std::shared_ptr<BaseColumn> column) {
   std::atomic_store(&_columns.at(column_id), column);
@@ -60,6 +59,7 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
 }
 
 std::shared_ptr<BaseColumn> Chunk::get_mutable_column(ColumnID column_id) const {
+  Assert(is_mutable(), "Cannot get mutable column from immutable chunk.");
   return std::atomic_load(&_columns.at(column_id));
 }
 
@@ -201,6 +201,7 @@ std::vector<std::shared_ptr<const BaseColumn>> Chunk::_get_columns_for_ids(
 std::shared_ptr<ChunkStatistics> Chunk::statistics() const { return _statistics; }
 
 void Chunk::set_statistics(std::shared_ptr<ChunkStatistics> chunk_statistics) {
+  Assert(!is_mutable(), "Cannot set statistics on mutable chunks.");
   DebugAssert(chunk_statistics->statistics().size() == column_count(),
               "ChunkStatistics must have same column amount as Chunk");
   _statistics = chunk_statistics;
