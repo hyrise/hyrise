@@ -243,7 +243,7 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
       const auto& columns = table.value();
 
       Assert(columns.is_object(), "The custom column encoding needs to be specified as a json object.");
-      custom_encoding_mapping.emplace(table_name, std::map<std::string, ColumnEncodingSpec>());
+      custom_encoding_mapping.emplace(table_name, std::unordered_map<std::string, ColumnEncodingSpec>());
 
       for (const auto& column : nlohmann::json::iterator_wrapper(columns)) {
         const auto& column_name = column.key();
