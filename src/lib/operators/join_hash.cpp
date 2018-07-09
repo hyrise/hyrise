@@ -129,16 +129,18 @@ std::vector<std::shared_ptr<HashTable<HashedType>>> build(const RadixContainer<L
 
   for (size_t current_partition_id = 0; current_partition_id < (radix_container.partition_offsets.size() - 1);
        ++current_partition_id) {
-    jobs.emplace_back(std::make_shared<JobTask>([&, current_partition_id]() {
-      auto& partition_left = static_cast<Partition<LeftType>&>(*radix_container.elements);
-      const auto& partition_left_begin = radix_container.partition_offsets[current_partition_id];
-      const auto& partition_left_end = radix_container.partition_offsets[current_partition_id + 1];
-      const auto partition_size = partition_left_end - partition_left_begin;
+    const auto partition_left_begin = radix_container.partition_offsets[current_partition_id];
+    const auto partition_left_end = radix_container.partition_offsets[current_partition_id + 1];
+    const auto partition_size = partition_left_end - partition_left_begin;
 
-      // Prune empty partitions, so that we don't have too many empty hash tables
-      if (partition_size == 0) {
-        return;
-      }
+    // Prune empty partitions, so that we don't have too many empty hash tables
+    if (partition_size == 0) {
+      continue;
+    }
+
+    jobs.emplace_back(std::make_shared<JobTask>([&, partition_left_begin, partition_left_end, current_partition_id,
+                                                 partition_size]() {
+      auto& partition_left = static_cast<Partition<LeftType>&>(*radix_container.elements);
 
       auto hashtable = std::make_shared<HashTable<HashedType>>(partition_size);
 
@@ -375,17 +377,17 @@ void probe(const RadixContainer<RightType>& radix_container,
 
   for (size_t current_partition_id = 0; current_partition_id < (radix_container.partition_offsets.size() - 1);
        ++current_partition_id) {
-    jobs.emplace_back(std::make_shared<JobTask>([&, current_partition_id]() {
+    const auto partition_begin = radix_container.partition_offsets[current_partition_id];
+    const auto partition_end = radix_container.partition_offsets[current_partition_id + 1];
+
+    // Skip empty partitions to avoid empty output chunks
+    if (partition_begin == partition_end) {
+      continue;
+    }
+
+    jobs.emplace_back(std::make_shared<JobTask>([&, partition_begin, partition_end, current_partition_id]() {
       // Get information from work queue
       auto& partition = static_cast<Partition<RightType>&>(*radix_container.elements);
-      const auto& partition_begin = radix_container.partition_offsets[current_partition_id];
-      const auto& partition_end = radix_container.partition_offsets[current_partition_id + 1];
-
-      // Skip empty partitions to avoid empty output chunks
-      if ((partition_end - partition_begin) == 0) {
-        return;
-      }
-
       PosList pos_list_left_local;
       PosList pos_list_right_local;
 
@@ -454,16 +456,17 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
 
   for (size_t current_partition_id = 0; current_partition_id < (radix_container.partition_offsets.size() - 1);
        ++current_partition_id) {
-    jobs.emplace_back(std::make_shared<JobTask>([&, current_partition_id]() {
+    const auto partition_begin = radix_container.partition_offsets[current_partition_id];
+    const auto partition_end = radix_container.partition_offsets[current_partition_id + 1];
+
+    // Skip empty partitions to avoid empty output chunks
+    if (partition_begin == partition_end) {
+      continue;
+    }
+
+    jobs.emplace_back(std::make_shared<JobTask>([&, partition_begin, partition_end, current_partition_id]() {
       // Get information from work queue
       auto& partition = static_cast<Partition<RightType>&>(*radix_container.elements);
-      const auto& partition_begin = radix_container.partition_offsets[current_partition_id];
-      const auto& partition_end = radix_container.partition_offsets[current_partition_id + 1];
-
-      // Skip empty partitions to avoid empty output chunks
-      if ((partition_end - partition_begin) == 0) {
-        return;
-      }
 
       PosList pos_list_local;
 
