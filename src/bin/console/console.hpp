@@ -106,20 +106,20 @@ class Console {
   int _eval_sql(const std::string& sql);
 
   // Command functions, registered to be called from the Console
-  int exit(const std::string& args);
-  int help(const std::string& args);
-  int generate_tpcc(const std::string& args);
-  int load_table(const std::string& args);
-  int exec_script(const std::string& args);
-  int print_table(const std::string& args);
-  int visualize(const std::string& input);
-  int change_runtime_setting(const std::string& args);
+  int _exit(const std::string& args);
+  int _help(const std::string& args);
+  int _generate_tpcc(const std::string& args);
+  int _load_table(const std::string& args);
+  int _exec_script(const std::string& args);
+  int _print_table(const std::string& args);
+  int _visualize(const std::string& input);
+  int _change_runtime_setting(const std::string& args);
 
-  int begin_transaction(const std::string& input);
-  int rollback_transaction(const std::string& input);
-  int commit_transaction(const std::string& input);
-  int print_transaction_info(const std::string& input);
-  int print_current_working_directory(const std::string& args);
+  int _begin_transaction(const std::string& input);
+  int _rollback_transaction(const std::string& input);
+  int _commit_transaction(const std::string& input);
+  int _print_transaction_info(const std::string& input);
+  int _print_current_working_directory(const std::string& args);
 
   // Creates the pipelines and returns whether is was successful (true) or not (false)
   bool _initialize_pipeline(const std::string& sql);
@@ -130,9 +130,9 @@ class Console {
   bool _handle_rollback();
 
   // GNU readline interface to our commands
-  static char** command_completion(const char* text, int start, int end);
-  static char* command_generator(const char* text, int state);
-  static char* command_generator_tpcc(const char* text, int state);
+  static char** _command_completion(const char* text, int start, int end);
+  static char* _command_generator(const char* text, int state);
+  static char* _command_generator_tpcc(const char* text, int state);
 
   std::string _prompt;
   std::string _multiline_input;

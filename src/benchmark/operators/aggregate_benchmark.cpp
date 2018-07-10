@@ -10,7 +10,7 @@
 namespace opossum {
 
 BENCHMARK_F(BenchmarkBasicFixture, BM_Aggregate)(benchmark::State& state) {
-  clear_cache();
+  _clear_cache();
 
   std::vector<AggregateColumnDefinition> aggregates = {{ColumnID{1} /* "b" */, AggregateFunction::Min}};
 

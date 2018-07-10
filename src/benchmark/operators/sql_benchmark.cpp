@@ -31,7 +31,7 @@ class SQLBenchmark : public BenchmarkBasicFixture {
   }
 
   // Run a benchmark that compiles the given SQL query.
-  void BM_CompileQuery(benchmark::State& st, const std::string& query) {
+  void BM_CompileQuery(benchmark::State& st, const std::string& query) {  // NOLINT
     while (st.KeepRunning()) {
       SQLParserResult result;
       SQLParser::parseSQLString(query, &result);
@@ -41,7 +41,7 @@ class SQLBenchmark : public BenchmarkBasicFixture {
   }
 
   // Run a benchmark that only parses the given SQL query.
-  void BM_ParseQuery(benchmark::State& st, const std::string& query) {
+  void BM_ParseQuery(benchmark::State& st, const std::string& query) {  // NOLINT
     while (st.KeepRunning()) {
       SQLParserResult result;
       SQLParser::parseSQLString(query, &result);
@@ -49,7 +49,7 @@ class SQLBenchmark : public BenchmarkBasicFixture {
   }
 
   // Run a benchmark that only plans the given SQL query.
-  void BM_PlanQuery(benchmark::State& st, const std::string& query) {
+  void BM_PlanQuery(benchmark::State& st, const std::string& query) {  // NOLINT
     SQLParserResult result;
     SQLParser::parseSQLString(query, &result);
     while (st.KeepRunning()) {
@@ -59,7 +59,7 @@ class SQLBenchmark : public BenchmarkBasicFixture {
   }
 
   // Run a benchmark that plans the query operator with the given query with enabled query plan caching.
-  void BM_QueryPlanCache(benchmark::State& st, const std::string& query) {
+  void BM_QueryPlanCache(benchmark::State& st, const std::string& query) {  // NOLINT
     // Enable query plan cache.
     SQLQueryCache<SQLQueryPlan>::get().clear();
     SQLQueryCache<SQLQueryPlan>::get().resize(16);
@@ -70,7 +70,7 @@ class SQLBenchmark : public BenchmarkBasicFixture {
     }
   }
 
-  const std::string Query =
+  const std::string query =
       R"(SELECT customer.c_custkey, customer.c_name, COUNT(orderitems.o_orderkey)
         FROM customer
         JOIN (SELECT * FROM
@@ -81,9 +81,9 @@ class SQLBenchmark : public BenchmarkBasicFixture {
         HAVING COUNT(orderitems.o_orderkey) >= 100;)";
 };
 
-BENCHMARK_F(SQLBenchmark, BM_CompileQuery)(benchmark::State& st) { BM_CompileQuery(st, Query); }
-BENCHMARK_F(SQLBenchmark, BM_ParseQuery)(benchmark::State& st) { BM_ParseQuery(st, Query); }
-BENCHMARK_F(SQLBenchmark, BM_PlanQuery)(benchmark::State& st) { BM_PlanQuery(st, Query); }
-BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQuery)(benchmark::State& st) { BM_QueryPlanCache(st, Query); }
+BENCHMARK_F(SQLBenchmark, BM_CompileQuery)(benchmark::State& st) { BM_CompileQuery(st, query); }
+BENCHMARK_F(SQLBenchmark, BM_ParseQuery)(benchmark::State& st) { BM_ParseQuery(st, query); }
+BENCHMARK_F(SQLBenchmark, BM_PlanQuery)(benchmark::State& st) { BM_PlanQuery(st, query); }
+BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQuery)(benchmark::State& st) { BM_QueryPlanCache(st, query); }
 
 }  // namespace opossum

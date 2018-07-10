@@ -27,16 +27,16 @@ class SimdBp128Vector : public CompressedVector<SimdBp128Vector> {
 
   const pmr_vector<uint128_t>& data() const;
 
-  size_t _on_size() const;
-  size_t _on_data_size() const;
+  size_t on_size() const;
+  size_t on_data_size() const;
 
-  std::unique_ptr<BaseVectorDecompressor> _on_create_base_decoder() const;
-  std::unique_ptr<SimdBp128Decompressor> _on_create_decoder() const;
+  std::unique_ptr<BaseVectorDecompressor> on_create_base_decoder() const;
+  std::unique_ptr<SimdBp128Decompressor> on_create_decoder() const;
 
-  SimdBp128Iterator _on_begin() const;
-  SimdBp128Iterator _on_end() const;
+  SimdBp128Iterator on_begin() const;
+  SimdBp128Iterator on_end() const;
 
-  std::unique_ptr<const BaseCompressedVector> _on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const;
+  std::unique_ptr<const BaseCompressedVector> on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const;
 
  private:
   friend class SimdBp128Decompressor;

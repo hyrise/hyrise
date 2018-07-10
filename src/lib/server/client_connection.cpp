@@ -17,7 +17,7 @@ ClientConnection::ClientConnection(boost::asio::ip::tcp::socket socket) : _socke
 }
 
 boost::future<uint32_t> ClientConnection::receive_startup_packet_header() {
-  static const uint32_t STARTUP_HEADER_LENGTH = 8u;
+  constexpr uint32_t STARTUP_HEADER_LENGTH = 8u;
 
   return _receive_bytes_async(STARTUP_HEADER_LENGTH) >> then >> PostgresWireHandler::handle_startup_package;
 }
@@ -30,7 +30,7 @@ boost::future<void> ClientConnection::receive_startup_packet_body(uint32_t size)
 }
 
 boost::future<RequestHeader> ClientConnection::receive_packet_header() {
-  static const uint32_t HEADER_LENGTH = 5u;
+  constexpr uint32_t HEADER_LENGTH = 5u;
 
   return _receive_bytes_async(HEADER_LENGTH) >> then >> PostgresWireHandler::handle_header;
 }
