@@ -15,7 +15,9 @@ template <typename T>
 DictionaryColumn<T>::DictionaryColumn(const std::shared_ptr<const pmr_vector<T>>& dictionary,
                                       const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
                                       const ValueID null_value_id)
-    : BaseDictionaryColumn(data_type_from_type<T>()),
+    : BaseColumn(data_type_from_type<T>()),
+      BaseDictionaryColumn(data_type_from_type<T>()),
+      BaseColumnT<T>(data_type_from_type<T>()),
       _dictionary{dictionary},
       _attribute_vector{attribute_vector},
       _null_value_id{null_value_id},

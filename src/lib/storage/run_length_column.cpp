@@ -13,7 +13,9 @@ template <typename T>
 RunLengthColumn<T>::RunLengthColumn(const std::shared_ptr<const pmr_vector<T>>& values,
                                     const std::shared_ptr<const pmr_vector<bool>>& null_values,
                                     const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions)
-    : BaseEncodedColumn(data_type_from_type<T>()),
+    : BaseColumn(data_type_from_type<T>()),
+      BaseEncodedColumn(data_type_from_type<T>()),
+      BaseColumnT<T>(data_type_from_type<T>()),
       _values{values},
       _null_values{null_values},
       _end_positions{end_positions} {}
