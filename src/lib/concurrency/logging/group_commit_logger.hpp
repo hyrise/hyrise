@@ -38,10 +38,10 @@ class GroupCommitLogger : public AbstractLogger {
   // Called by tests before switching to another implementation.
   void _shut_down() override;
 
-  void _put_into_entry(std::vector<char>& entry, size_t& entry_cursor, const char& type,
+  void _put_into_entry(std::vector<char>& entry, uint32_t& entry_cursor, const char& type,
                        const TransactionID& transaction_id, const std::string& table_name, const RowID& row_id);
   void _put_into_entry(std::vector<char>& entry, const char& type, const TransactionID& transaction_id);
-  void _put_into_entry(std::vector<char>& entry, size_t& entry_cursor, const char& type,
+  void _put_into_entry(std::vector<char>& entry, uint32_t& entry_cursor, const char& type,
                        const TransactionID& transaction_id);
   void _put_into_entry(std::vector<char>& entry, const char& type,
                        const TransactionID& transaction_id, const std::string& table_name, const RowID& row_id);
@@ -52,7 +52,7 @@ class GroupCommitLogger : public AbstractLogger {
   void _open_logfile();
 
   template <typename T>
-  void _write_value(std::vector<char>& entry, size_t& cursor, const T& value) {
+  void _write_value(std::vector<char>& entry, uint32_t& cursor, const T& value) {
     // Assume entry is already large enough to fit the new value
     DebugAssert(cursor + sizeof(T) <= entry.size(), 
                 "logger: value does not fit into vector, call resize() beforehand");

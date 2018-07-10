@@ -28,6 +28,10 @@
  *       - table_name           : table_name.size() + 1                   : string terminated with \0
  *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset) 
  *
+ *     Load Table Entries:
+ *       - log entry type ('l') : sizeof(char)
+ *       - file_path            : file_path.size() + 1                    : string terminated with \0
+ *       - table_name           : table_name.size() + 1                   : string terminated with \0
  * 
  *  Possible improvements:
  *    1.  For each log entry a vector<char> is allocated to created that entry and then copy it into the buffer.
@@ -64,13 +68,13 @@ namespace opossum {
 
 // Magic number: buffer size. Buffer is flushed to disk if half of its capacity is exceeded.
 // Therefore this should not be too small, since any log entry needs to fit into half of the buffer.
-constexpr size_t LOG_BUFFER_CAPACITY = 16384;
+constexpr uint32_t LOG_BUFFER_CAPACITY = 16384;
 
 // Magic number: time interval that triggers a flush to disk.
 constexpr auto LOG_INTERVAL = std::chrono::milliseconds(1);
 
 template <>
-void GroupCommitLogger::_write_value<std::string>(std::vector<char>& entry, size_t& cursor, const std::string& value) {
+void GroupCommitLogger::_write_value<std::string>(std::vector<char>& entry, uint32_t& cursor, const std::string& value) {
   // Assume entry is already large enough to fit the new value
   DebugAssert(cursor + value.size() <= entry.size(),
               "logger: value does not fit into vector, call resize() beforehand");
@@ -84,7 +88,7 @@ void GroupCommitLogger::_write_value<std::string>(std::vector<char>& entry, size
 }
 
 // Writes the parameter into entry at position of entry_cursor
-void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, size_t& entry_cursor, const char& type,
+void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, uint32_t& entry_cursor, const char& type,
                                         const TransactionID& transaction_id) {
   _write_value(entry, entry_cursor, type);
   _write_value(entry, entry_cursor, transaction_id);
@@ -93,12 +97,12 @@ void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, size_t& entry_
 // Writes the parameter into entry at the beginning of entry
 void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, const char& type, 
                                         const TransactionID& transaction_id) {
-  size_t cursor{0};
+  uint32_t cursor{0};
   _put_into_entry(entry, cursor, type, transaction_id);
 }
 
 // Writes the parameter into entry at position of entry_cursor
-void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, size_t& entry_cursor, const char& type,
+void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, uint32_t& entry_cursor, const char& type,
                                         const TransactionID& transaction_id, const std::string& table_name,
                                         const RowID& row_id) {
   _put_into_entry(entry, entry_cursor, type, transaction_id);
@@ -110,7 +114,7 @@ void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, size_t& entry_
 // Writes the parameter into entry at the beginning of entry
 void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, const char& type, const TransactionID& transaction_id,
                                         const std::string& table_name, const RowID& row_id) {
-  size_t cursor{0};
+  uint32_t cursor{0};
   _put_into_entry(entry, cursor, type, transaction_id, table_name, row_id);
 }
 
@@ -128,7 +132,7 @@ void GroupCommitLogger::commit(const TransactionID transaction_id, std::function
 void GroupCommitLogger::load_table(const std::string& file_path, const std::string& table_name) {
   const auto entry_length = sizeof(char) + (file_path.size() + 1) + (table_name.size() + 1);
   std::vector<char> entry(entry_length);
-  size_t cursor{0};
+  uint32_t cursor{0};
 
   _write_value(entry, cursor, 'l');
   _write_value(entry, cursor, file_path);
@@ -147,7 +151,7 @@ void GroupCommitLogger::load_table(const std::string& file_path, const std::stri
 // then resize the vector and finally write the values in the second pass.
 class ValueVisitor : public boost::static_visitor<bool> {
  public:
-  ValueVisitor(std::vector<char>& entry, size_t& cursor) : _entry(entry), _cursor(cursor) {}
+  ValueVisitor(std::vector<char>& entry, uint32_t& cursor) : _entry(entry), _cursor(cursor) {}
 
   template <typename T>
   bool operator()(T v) {
@@ -158,7 +162,7 @@ class ValueVisitor : public boost::static_visitor<bool> {
   }
 
   std::vector<char>& _entry;
-  size_t& _cursor;
+  uint32_t& _cursor;
 };
 
 template <>
@@ -187,7 +191,7 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
     sizeof(char) + sizeof(TransactionID) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset);
 
   std::vector<char> entry(entry_length);
-  size_t cursor{0};
+  uint32_t cursor{0};
   
   _put_into_entry(entry, cursor, 'v', transaction_id, table_name, row_id);
 
