@@ -53,40 +53,40 @@ std::string AggregateExpression::as_column_name() const {
 
 DataType AggregateExpression::data_type() const {
   if (aggregate_function == AggregateFunction::Count) {
-    return AggregateTraits<NullValue, AggregateFunction::Count>::aggregate_data_type;
+    return AggregateTraits<NullValue, AggregateFunction::Count>::AGGREGATE_DATA_TYPE;
   }
 
   Assert(arguments.size() == 1, "Expected this AggregateFunction to have one argument");
 
   if (aggregate_function == AggregateFunction::CountDistinct) {
-    return AggregateTraits<NullValue, AggregateFunction::CountDistinct>::aggregate_data_type;
+    return AggregateTraits<NullValue, AggregateFunction::CountDistinct>::AGGREGATE_DATA_TYPE;
   }
 
   const auto argument_data_type = arguments[0]->data_type();
-  auto aggregate_data_type = DataType::Null;
+  auto AGGREGATE_DATA_TYPE = DataType::Null;
 
   resolve_data_type(argument_data_type, [&](const auto data_type_t) {
     using AggregateDataType = typename decltype(data_type_t)::type;
     switch (aggregate_function) {
       case AggregateFunction::Min:
-        aggregate_data_type = AggregateTraits<AggregateDataType, AggregateFunction::Min>::aggregate_data_type;
+        AGGREGATE_DATA_TYPE = AggregateTraits<AggregateDataType, AggregateFunction::Min>::AGGREGATE_DATA_TYPE;
         break;
       case AggregateFunction::Max:
-        aggregate_data_type = AggregateTraits<AggregateDataType, AggregateFunction::Max>::aggregate_data_type;
+        AGGREGATE_DATA_TYPE = AggregateTraits<AggregateDataType, AggregateFunction::Max>::AGGREGATE_DATA_TYPE;
         break;
       case AggregateFunction::Avg:
-        aggregate_data_type = AggregateTraits<AggregateDataType, AggregateFunction::Avg>::aggregate_data_type;
+        AGGREGATE_DATA_TYPE = AggregateTraits<AggregateDataType, AggregateFunction::Avg>::AGGREGATE_DATA_TYPE;
         break;
       case AggregateFunction::Count:
       case AggregateFunction::CountDistinct:
         break;  // These are handled above
       case AggregateFunction::Sum:
-        aggregate_data_type = AggregateTraits<AggregateDataType, AggregateFunction::Sum>::aggregate_data_type;
+        AGGREGATE_DATA_TYPE = AggregateTraits<AggregateDataType, AggregateFunction::Sum>::AGGREGATE_DATA_TYPE;
         break;
     }
   });
 
-  return aggregate_data_type;
+  return AGGREGATE_DATA_TYPE;
 }
 
 bool AggregateExpression::_shallow_equals(const AbstractExpression& expression) const {

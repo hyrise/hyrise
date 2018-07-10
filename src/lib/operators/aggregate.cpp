@@ -211,7 +211,7 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Co
 
 template <typename ColumnDataType, AggregateFunction function>
 void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const BaseColumn& base_column) {
-  using AggregateType = typename AggregateTraits<ColumnDataType, function>::aggregate_type ;
+  using AggregateType = typename AggregateTraits<ColumnDataType, function>::AggregateType ;
 
   auto aggregator = AggregateFunctionBuilder<ColumnDataType, AggregateType, function>().get_aggregate_function();
 
@@ -634,14 +634,14 @@ void Aggregate::_write_aggregate_output(boost::hana::basic_type<ColumnType> type
 template <typename ColumnType, AggregateFunction function>
 void Aggregate::write_aggregate_output(ColumnID column_index) {
   // retrieve type information from the aggregation traits
-  typename AggregateTraits<ColumnType, function>::aggregate_type aggregate_type;
-  auto aggregate_data_type = AggregateTraits<ColumnType, function>::aggregate_data_type;
+  typename AggregateTraits<ColumnType, function>::AggregateType aggregate_type;
+  auto AGGREGATE_DATA_TYPE = AggregateTraits<ColumnType, function>::AGGREGATE_DATA_TYPE;
 
   const auto& aggregate = _aggregates[column_index];
 
-  if (aggregate_data_type == DataType::Null) {
+  if (AGGREGATE_DATA_TYPE == DataType::Null) {
     // if not specified, it’s the input column’s type
-    aggregate_data_type = input_table_left()->column_data_type(*aggregate.column);
+    AGGREGATE_DATA_TYPE = input_table_left()->column_data_type(*aggregate.column);
   }
 
   // Generate column name, TODO(anybody), actually, the AggregateExpression can do this, but the Aggregate operator
@@ -661,7 +661,7 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
   column_name << ")";
 
   constexpr bool NEEDS_NULL = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
-  _output_column_definitions.emplace_back(column_name.str(), aggregate_data_type, NEEDS_NULL);
+  _output_column_definitions.emplace_back(column_name.str(), AGGREGATE_DATA_TYPE, NEEDS_NULL);
 
   auto col = std::make_shared<ValueColumn<decltype(aggregate_type)>>(NEEDS_NULL);
 
@@ -723,7 +723,7 @@ std::shared_ptr<ColumnVisitableContext> Aggregate::_create_aggregate_context(con
 template <typename ColumnDataType, AggregateFunction aggregate_function>
 std::shared_ptr<ColumnVisitableContext> Aggregate::_create_aggregate_context_impl() const {
   const auto context = std::make_shared<
-      AggregateContext<ColumnDataType, typename AggregateTraits<ColumnDataType, aggregate_function>::aggregate_type>>();
+      AggregateContext<ColumnDataType, typename AggregateTraits<ColumnDataType, aggregate_function>::AggregateType>>();
   context->results = std::make_shared<typename decltype(context->results)::element_type>();
   return context;
 }

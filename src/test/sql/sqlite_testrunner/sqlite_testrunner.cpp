@@ -84,7 +84,6 @@ std::vector<std::string> read_queries_from_file() {
 }
 
 TEST_P(SQLiteTestRunner, CompareToSQLite) {
-  std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner_queries.sql");
   const std::string query = GetParam();
 
   const auto prepared_statement_cache = std::make_shared<PreparedStatementCache>();
