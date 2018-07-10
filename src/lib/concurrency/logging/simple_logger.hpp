@@ -36,7 +36,7 @@ class SimpleLogger : public AbstractLogger {
   void _shut_down() override;
 
   void _write_to_logfile(const std::stringstream& ss);
-  void _open_logfile_without_locking();
+  void _open_logfile();
 
   int _file_descriptor;
   std::mutex _file_mutex;

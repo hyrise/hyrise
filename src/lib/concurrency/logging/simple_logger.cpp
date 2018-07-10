@@ -78,9 +78,9 @@ void SimpleLogger::_write_to_logfile(const std::stringstream& ss) {
 
 void SimpleLogger::recover() { TextRecovery::getInstance().recover(); }
 
-// Lock _file_mutex beforehand and unlock it afterwards.
-// Lock is not inside this function to operate on the _filedescriptor beyond this methods scope.
-void SimpleLogger::_open_logfile_without_locking() {
+void SimpleLogger::_open_logfile() {
+  _file_mutex.lock();
+
   auto path = Logger::get_new_log_path();
 
   // read and write rights needed, since default rights do not allow to reopen the file after restarting the db
@@ -90,6 +90,8 @@ void SimpleLogger::_open_logfile_without_locking() {
   _file_descriptor = open(path.c_str(), oflags, mode);
 
   DebugAssert(_file_descriptor != -1, "Logger: Logfile could not be opened or created: " + path);
+
+  _file_mutex.unlock();
 }
 
 // This function should only be called in tests.
@@ -101,9 +103,7 @@ void SimpleLogger::_shut_down() {
 }
 
 SimpleLogger::SimpleLogger() : AbstractLogger() {
-  _file_mutex.lock();
-  _open_logfile_without_locking();
-  _file_mutex.unlock();
+  _open_logfile();
 }
 
 }  // namespace opossum

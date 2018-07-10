@@ -285,6 +285,7 @@ void GroupCommitLogger::_open_logfile() {
   _file_mutex.unlock();
 }
 
+// This function should only be called in tests.
 void GroupCommitLogger::_shut_down() {
   _file_mutex.lock();
   _buffer_mutex.lock();
