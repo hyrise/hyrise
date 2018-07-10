@@ -74,7 +74,8 @@ constexpr uint32_t LOG_BUFFER_CAPACITY = 16384;
 constexpr auto LOG_INTERVAL = std::chrono::milliseconds(1);
 
 template <>
-void GroupCommitLogger::_write_value<std::string>(std::vector<char>& entry, uint32_t& cursor, const std::string& value) {
+void GroupCommitLogger::_write_value<std::string>(
+  std::vector<char>& entry, uint32_t& cursor, const std::string& value) {
   // Assume entry is already large enough to fit the new value
   DebugAssert(cursor + value.size() <= entry.size(),
               "logger: value does not fit into vector, call resize() beforehand");
@@ -89,14 +90,14 @@ void GroupCommitLogger::_write_value<std::string>(std::vector<char>& entry, uint
 
 // Writes the parameter into entry at position of entry_cursor
 void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, uint32_t& entry_cursor, const char& type,
-                                        const TransactionID& transaction_id) {
+                                        const TransactionID& transaction_id) const {
   _write_value(entry, entry_cursor, type);
   _write_value(entry, entry_cursor, transaction_id);
 }
 
 // Writes the parameter into entry at the beginning of entry
 void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, const char& type, 
-                                        const TransactionID& transaction_id) {
+                                        const TransactionID& transaction_id) const {
   uint32_t cursor{0};
   _put_into_entry(entry, cursor, type, transaction_id);
 }
@@ -104,7 +105,7 @@ void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, const char& ty
 // Writes the parameter into entry at position of entry_cursor
 void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, uint32_t& entry_cursor, const char& type,
                                         const TransactionID& transaction_id, const std::string& table_name,
-                                        const RowID& row_id) {
+                                        const RowID& row_id) const {
   _put_into_entry(entry, entry_cursor, type, transaction_id);
   _write_value(entry, entry_cursor, table_name);
   _write_value(entry, entry_cursor, row_id.chunk_id);
@@ -113,7 +114,7 @@ void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, uint32_t& entr
 
 // Writes the parameter into entry at the beginning of entry
 void GroupCommitLogger::_put_into_entry(std::vector<char>& entry, const char& type, const TransactionID& transaction_id,
-                                        const std::string& table_name, const RowID& row_id) {
+                                        const std::string& table_name, const RowID& row_id) const {
   uint32_t cursor{0};
   _put_into_entry(entry, cursor, type, transaction_id, table_name, row_id);
 }
@@ -156,8 +157,7 @@ class ValueVisitor : public boost::static_visitor<bool> {
   template <typename T>
   bool operator()(T v) {
     _entry.resize(_entry.size() + sizeof(T));
-    *reinterpret_cast<T*>(&_entry[_cursor]) = v;
-    _cursor += sizeof(T);
+    GroupCommitLogger::_write_value(_entry, _cursor, v);
     return true;
   }
 
@@ -168,13 +168,7 @@ class ValueVisitor : public boost::static_visitor<bool> {
 template <>
 bool ValueVisitor::operator()(std::string v) {
   _entry.resize(_entry.size() + v.size() + 1);
-  v.copy(&_entry[_cursor], v.size());
-
-  // Assume that the next byte is NULL so the string gets terminated
-  DebugAssert(_entry[_cursor + v.size()] == '\0', "Logger: Byte is not NULL initiated");
-
-  _cursor += v.size() + 1;
-
+  GroupCommitLogger::_write_value(_entry, _cursor, v);
   return true;
 }
 

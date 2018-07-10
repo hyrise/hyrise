@@ -32,6 +32,7 @@ class GroupCommitLogger : public AbstractLogger {
 
  private:
   friend class Logger;
+  friend class ValueVisitor;
 
   GroupCommitLogger();
   
@@ -39,12 +40,12 @@ class GroupCommitLogger : public AbstractLogger {
   void _shut_down() override;
 
   void _put_into_entry(std::vector<char>& entry, uint32_t& entry_cursor, const char& type,
-                       const TransactionID& transaction_id, const std::string& table_name, const RowID& row_id);
-  void _put_into_entry(std::vector<char>& entry, const char& type, const TransactionID& transaction_id);
+                       const TransactionID& transaction_id, const std::string& table_name, const RowID& row_id) const;
+  void _put_into_entry(std::vector<char>& entry, const char& type, const TransactionID& transaction_id) const;
   void _put_into_entry(std::vector<char>& entry, uint32_t& entry_cursor, const char& type,
-                       const TransactionID& transaction_id);
+                       const TransactionID& transaction_id) const;
   void _put_into_entry(std::vector<char>& entry, const char& type,
-                       const TransactionID& transaction_id, const std::string& table_name, const RowID& row_id);
+                       const TransactionID& transaction_id, const std::string& table_name, const RowID& row_id) const;
   
   void _write_buffer_to_logfile();
   void _write_to_buffer(std::vector<char>& entry);
@@ -52,7 +53,7 @@ class GroupCommitLogger : public AbstractLogger {
   void _open_logfile();
 
   template <typename T>
-  void _write_value(std::vector<char>& entry, uint32_t& cursor, const T& value) {
+  static void _write_value(std::vector<char>& entry, uint32_t& cursor, const T& value) {
     // Assume entry is already large enough to fit the new value
     DebugAssert(cursor + sizeof(T) <= entry.size(), 
                 "logger: value does not fit into vector, call resize() beforehand");
@@ -61,7 +62,7 @@ class GroupCommitLogger : public AbstractLogger {
   }
 
   char* _buffer;
-  const uint32_t _buffer_capacity;  // uint32_t: Max buffer Capacity ~ 4GB
+  const uint32_t _buffer_capacity;  // uint32_t: Max buffer capacity ~ 4GB
   uint32_t _buffer_position;
   bool _has_unflushed_buffer; 
   std::mutex _buffer_mutex;
