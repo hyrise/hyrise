@@ -3,6 +3,7 @@
 #include "abstract_logger.hpp"
 
 #include <fstream>
+#include <mutex>
 
 #include "types.hpp"
 #include "../../utils/loop_thread.hpp"
