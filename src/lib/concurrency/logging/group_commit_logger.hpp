@@ -9,6 +9,8 @@
 
 namespace opossum {
 
+class LogEntry;
+
 /*
  *  Logger that gathers multiple log entries in a buffer before flushing them to disk.
  */
@@ -32,34 +34,16 @@ class GroupCommitLogger : public AbstractLogger {
 
  private:
   friend class Logger;
-  friend class ValueVisitor;
 
   GroupCommitLogger();
   
   // Called by tests before switching to another implementation.
   void _shut_down() override;
 
-  void _put_into_entry(std::vector<char>& entry, uint32_t& entry_cursor, const char& type,
-                       const TransactionID& transaction_id, const std::string& table_name, const RowID& row_id) const;
-  void _put_into_entry(std::vector<char>& entry, const char& type, const TransactionID& transaction_id) const;
-  void _put_into_entry(std::vector<char>& entry, uint32_t& entry_cursor, const char& type,
-                       const TransactionID& transaction_id) const;
-  void _put_into_entry(std::vector<char>& entry, const char& type,
-                       const TransactionID& transaction_id, const std::string& table_name, const RowID& row_id) const;
-  
   void _write_buffer_to_logfile();
   void _write_to_buffer(std::vector<char>& entry);
 
   void _open_logfile();
-
-  template <typename T>
-  static void _write_value(std::vector<char>& entry, uint32_t& cursor, const T& value) {
-    // Assume entry is already large enough to fit the new value
-    DebugAssert(cursor + sizeof(T) <= entry.size(), 
-                "logger: value does not fit into vector, call resize() beforehand");
-    *reinterpret_cast<T*>(&entry[cursor]) = value;
-    cursor += sizeof(T);
-  }
 
   char* _buffer;
   const uint32_t _buffer_capacity;  // uint32_t: Max buffer capacity ~ 4GB
