@@ -67,7 +67,6 @@ namespace opossum {
 constexpr size_t LOG_BUFFER_CAPACITY = 16384;
 
 // Magic number: time interval that triggers a flush to disk.
-// constexpr auto LOG_INTERVAL = std::chrono::seconds(5);
 constexpr auto LOG_INTERVAL = std::chrono::milliseconds(1);
 
 template <>
@@ -139,9 +138,9 @@ void GroupCommitLogger::load_table(const std::string& file_path, const std::stri
 }
 
 // ValueVisitor is used to write multiple AllTypeVariants into an entry successively.
-// Returns boolean to indicate if something has been written into entry.
+// It returns a boolean to indicate if something has been written into entry.
 // Therefore the visitation returns false if the AllTypeVariant is a NullValue. 
-// This is used to set the corresponding bit in the null_value_bitmap.
+// This boolean then is used to set the corresponding bit in the null_value_bitmap.
 // The current implementation resizes the entry for every value.
 // It might improve performance to iterate twice over all values: 
 // Acumulate the bytes needed for all values in the first pass,
@@ -185,7 +184,7 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
   // This is the entry length up to the ChunkOffset.
   // The entry then gets resized for the null value bitmap and each value
   auto entry_length =
-      sizeof(char) + sizeof(TransactionID) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset);
+    sizeof(char) + sizeof(TransactionID) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset);
 
   std::vector<char> entry(entry_length);
   size_t cursor{0};
@@ -209,7 +208,7 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
       entry[null_bitmap_pos] |= 1u << bit_pos;
     }
 
-    // increase bit_pos for next value and increase null_bitmap_pos every eigth values 
+    // Increase bit_pos for next value and increase null_bitmap_pos every eigth values to adress the next byte
     if (bit_pos == 7) {
       ++null_bitmap_pos;
       DebugAssert(entry[null_bitmap_pos] == '\0', "Logger: memory is not NULL");
@@ -250,10 +249,20 @@ void GroupCommitLogger::_write_to_buffer(std::vector<char>& entry) {
 }
 
 void GroupCommitLogger::_write_buffer_to_logfile() {
+  DebugAssert(_log_file.is_open(), "Logger: Log file not open.");
   _file_mutex.lock();
   _buffer_mutex.lock();
 
-  _write_buffer_to_logfile_without_locking();
+  _log_file.write(_buffer, _buffer_position);
+  _log_file.sync();
+
+  _buffer_position = 0u;
+  _has_unflushed_buffer = false;
+
+  for (auto& callback_tuple : _commit_callbacks) {
+    callback_tuple.first(callback_tuple.second);
+  }
+  _commit_callbacks.clear();
 
   _buffer_mutex.unlock();
   _file_mutex.unlock();
@@ -267,29 +276,15 @@ void GroupCommitLogger::flush() {
 
 void GroupCommitLogger::recover() { BinaryRecovery::getInstance().recover(); }
 
-// Lock _file_mutex and _buffer_mutex beforehand and unlock them afterwards.
-// Lock is not inside this function to operate on the file beyond this methods scope.
-void GroupCommitLogger::_write_buffer_to_logfile_without_locking() {
-  DebugAssert(_log_file.is_open(), "Logger: Log file not open.");
-  _log_file.write(_buffer, _buffer_position);
-  _log_file.sync();
-
-  _buffer_position = 0u;
-  _has_unflushed_buffer = false;
-
-  for (auto& callback_tuple : _commit_callbacks) {
-    callback_tuple.first(callback_tuple.second);
-  }
-  _commit_callbacks.clear();
-}
-
-// Lock _file_mutex beforehand and unlock it afterwards.
-// Lock is not inside this function to operate on the file beyond this methods scope.
-void GroupCommitLogger::_open_logfile_without_locking() {
+void GroupCommitLogger::_open_logfile() {
   DebugAssert(!_log_file.is_open(), "Logger: Log file not closed before opening another one.");
+  _file_mutex.lock();
+
   auto path = Logger::get_new_log_path();
   _log_file.open(path, std::ios::out | std::ios::binary);
-  DebugAssert(_log_file.is_open(), "Logfile could not be opened or created: " + path);
+  DebugAssert(_log_file.is_open(), "Logger: Logfile could not be opened or created: " + path);
+
+  _file_mutex.unlock();
 }
 
 void GroupCommitLogger::_shut_down() {
@@ -308,10 +303,8 @@ GroupCommitLogger::GroupCommitLogger()
   _buffer = reinterpret_cast<char*>(malloc(_buffer_capacity));
   memset(_buffer, 0, _buffer_capacity);
 
-  _file_mutex.lock();
-  _open_logfile_without_locking();
-  _file_mutex.unlock();
-
+  _open_logfile();
+  
   _flush_thread = std::make_unique<LoopThread>(LOG_INTERVAL, [this]() { GroupCommitLogger::flush(); });
 }
 

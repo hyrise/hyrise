@@ -47,10 +47,9 @@ class GroupCommitLogger : public AbstractLogger {
                        const TransactionID& transaction_id, const std::string& table_name, const RowID& row_id);
   
   void _write_buffer_to_logfile();
-  void _write_buffer_to_logfile_without_locking();
   void _write_to_buffer(std::vector<char>& entry);
 
-  void _open_logfile_without_locking();
+  void _open_logfile();
 
   template <typename T>
   void _write_value(std::vector<char>& entry, size_t& cursor, const T& value) {
@@ -62,15 +61,14 @@ class GroupCommitLogger : public AbstractLogger {
   }
 
   char* _buffer;
-  const size_t _buffer_capacity;
-  size_t _buffer_position;
+  const uint32_t _buffer_capacity;  // uint32_t: Max buffer Capacity ~ 4GB
+  uint32_t _buffer_position;
   bool _has_unflushed_buffer; 
   std::mutex _buffer_mutex;
 
-  std::mutex _file_mutex;
-
   std::vector<std::pair<std::function<void(TransactionID)>, TransactionID>> _commit_callbacks;
 
+  std::mutex _file_mutex;
   std::fstream _log_file;
 
   std::unique_ptr<LoopThread> _flush_thread;
