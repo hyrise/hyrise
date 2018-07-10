@@ -50,6 +50,8 @@ class Chunk : private Noncopyable {
   // returns whether new rows can be appended to this Chunk
   bool is_mutable() const;
 
+  void mark_immutable();
+
   // Atomically replaces the current column at column_id with the passed column
   void replace_column(size_t column_id, std::shared_ptr<BaseColumn> column);
 
@@ -152,6 +154,7 @@ class Chunk : private Noncopyable {
   std::shared_ptr<ChunkAccessCounter> _access_counter;
   pmr_vector<std::shared_ptr<BaseIndex>> _indices;
   std::shared_ptr<ChunkStatistics> _statistics;
+  bool _is_mutable = true;
 };
 
 }  // namespace opossum
