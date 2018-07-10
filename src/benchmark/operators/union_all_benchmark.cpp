@@ -9,7 +9,7 @@
 namespace opossum {
 
 BENCHMARK_F(BenchmarkBasicFixture, BM_UnionAll)(benchmark::State& state) {
-  clear_cache();
+  _clear_cache();
   auto warm_up = std::make_shared<UnionAll>(_table_wrapper_a, _table_wrapper_b);
   warm_up->execute();
   while (state.KeepRunning()) {

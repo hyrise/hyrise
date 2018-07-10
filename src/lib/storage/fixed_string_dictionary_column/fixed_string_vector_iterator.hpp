@@ -21,20 +21,22 @@ class FixedStringIterator
   FixedStringIterator& operator=(const FixedStringIterator& other);
 
  private:
-  using facade = boost::iterator_facade<FixedStringIterator, FixedString, std::random_access_iterator_tag, FixedString>;
+  using Facade = boost::iterator_facade<FixedStringIterator, FixedString, std::random_access_iterator_tag, FixedString>;
   friend class boost::iterator_core_access;
 
-  bool equal(FixedStringIterator const& other) const;
+  // We have a couple of NOLINTs here becaues the facade expects these method names:
 
-  typename facade::difference_type distance_to(FixedStringIterator const& other) const;
+  bool equal(FixedStringIterator const& other) const;  // NOLINT
 
-  void advance(typename facade::difference_type n);
+  typename Facade::difference_type distance_to(FixedStringIterator const& other) const;  // NOLINT
 
-  void increment();
+  void advance(typename Facade::difference_type n);  // NOLINT
 
-  void decrement();
+  void increment();  // NOLINT
 
-  FixedString dereference() const;
+  void decrement();  // NOLINT
+
+  FixedString dereference() const;  // NOLINT
 
   const size_t _string_length;
   const pmr_vector<char>& _chars;

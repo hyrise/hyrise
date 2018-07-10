@@ -27,7 +27,7 @@ class ColumnComparisonTableScanImpl : public BaseTableScanImpl {
   ColumnComparisonTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
                                 const PredicateCondition& predicate_condition, const ColumnID right_column_id);
 
-  PosList scan_chunk(ChunkID chunk_id) override;
+  std::shared_ptr<PosList> scan_chunk(ChunkID chunk_id) override;
 
  private:
   const ColumnID _right_column_id;

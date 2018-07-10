@@ -51,7 +51,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
         // Previously we called a virtual method of the BaseColumn interface here.
         // It was replaced with a call to the subscript operator as that is equally slow.
         const auto value = (*base_column)[chunk_offset];
-        append_string_representation(string_row_vector[chunk_offset], value);
+        _append_string_representation(string_row_vector[chunk_offset], value);
       }
     }
 
@@ -109,7 +109,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
         // Previously a virtual method of the BaseColumn interface was called here.
         // It was replaced with a call to the subscript operator as that is equally slow.
         const auto value = (*base_column)[chunk_offset];
-        append_string_representation(row_string_buffer, value);
+        _append_string_representation(row_string_buffer, value);
       }
       const auto row_string = row_string_buffer.str();
 
@@ -135,7 +135,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
   return output;
 }
 
-void Difference::append_string_representation(std::ostream& row_string_buffer, const AllTypeVariant value) {
+void Difference::_append_string_representation(std::ostream& row_string_buffer, const AllTypeVariant value) {
   const auto string_value = type_cast<std::string>(value);
   const auto length = static_cast<uint32_t>(string_value.length());
 

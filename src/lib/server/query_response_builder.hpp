@@ -20,10 +20,10 @@ class QueryResponseBuilder {
   static boost::future<uint64_t> send_query_response(send_row_t send_row, const Table& table);
 
  protected:
-  static boost::future<void> send_query_response_chunks(send_row_t send_row, const Table& table,
-                                                        ChunkID current_chunk_id);
-  static boost::future<void> send_query_response_rows(send_row_t send_row, const Chunk& chunk,
-                                                      ChunkOffset current_chunk_offset);
+  static boost::future<void> _send_query_response_chunks(send_row_t send_row, const Table& table,
+                                                         ChunkID current_chunk_id);
+  static boost::future<void> _send_query_response_rows(send_row_t send_row, const Chunk& chunk,
+                                                       ChunkOffset current_chunk_offset);
 };
 
 }  // namespace opossum

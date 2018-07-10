@@ -8,6 +8,9 @@
 
 namespace opossum {
 
+SQLQueryPlan::SQLQueryPlan(CleanupTemporaries cleanup_temporaries)
+    : _cleanup_temporaries(cleanup_temporaries) {}
+
 void SQLQueryPlan::add_tree_by_root(std::shared_ptr<AbstractOperator> op) { _roots.push_back(op); }
 
 void SQLQueryPlan::append_plan(const SQLQueryPlan& other_plan) {
@@ -19,7 +22,7 @@ std::vector<std::shared_ptr<OperatorTask>> SQLQueryPlan::create_tasks() const {
 
   for (const auto& root : _roots) {
     std::vector<std::shared_ptr<OperatorTask>> sub_list;
-    sub_list = OperatorTask::make_tasks_from_operator(root);
+    sub_list = OperatorTask::make_tasks_from_operator(root, _cleanup_temporaries);
     tasks.insert(tasks.end(), sub_list.begin(), sub_list.end());
   }
 
@@ -29,7 +32,7 @@ std::vector<std::shared_ptr<OperatorTask>> SQLQueryPlan::create_tasks() const {
 const std::vector<std::shared_ptr<AbstractOperator>>& SQLQueryPlan::tree_roots() const { return _roots; }
 
 SQLQueryPlan SQLQueryPlan::recreate() const {
-  SQLQueryPlan new_plan;
+  SQLQueryPlan new_plan{_cleanup_temporaries};
 
   for (const auto& root : _roots) {
     DebugAssert(root.get() != nullptr, "Root operator in plan should not be null.");

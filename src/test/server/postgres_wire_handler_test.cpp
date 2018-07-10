@@ -20,7 +20,7 @@ TEST_F(PostgresWireHandlerTest, HandleQueryPacketEmpty) {
 }
 
 TEST_F(PostgresWireHandlerTest, HandleQueryPacket) {
-  ByteBuffer buffer = {'Q', 'u', 'e', 'r', 'y'};
+  ByteBuffer buffer = {'Q', 'u', 'e', 'r', 'y', '\0'};
   _input_packet.data = buffer;
   _input_packet.offset = _input_packet.data.cbegin();
 

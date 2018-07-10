@@ -663,7 +663,7 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_select_expression_fo
   auto row_pqp = expression.pqp->recreate();
   row_pqp->set_parameters(parameters);
 
-  SQLQueryPlan query_plan;
+  SQLQueryPlan query_plan{CleanupTemporaries::Yes};
   query_plan.add_tree_by_root(row_pqp);
   const auto tasks = query_plan.create_tasks();
   CurrentScheduler::schedule_and_wait_for_tasks(tasks);

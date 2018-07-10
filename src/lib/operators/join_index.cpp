@@ -128,14 +128,14 @@ void JoinIndex::_perform_join() {
             using RightType = typename decltype(right_type)::type;
 
             // make sure that we do not compile invalid versions of these lambdas
-            constexpr auto left_is_string_column = (std::is_same<LeftType, std::string>{});
-            constexpr auto right_is_string_column = (std::is_same<RightType, std::string>{});
+            constexpr auto LEFT_IS_STRING_COLUMN = (std::is_same<LeftType, std::string>{});
+            constexpr auto RIGHT_IS_STRING_COLUMN = (std::is_same<RightType, std::string>{});
 
-            constexpr auto neither_is_string_column = !left_is_string_column && !right_is_string_column;
-            constexpr auto both_are_string_columns = left_is_string_column && right_is_string_column;
+            constexpr auto NEITHER_IS_STRING_COLUMN = !LEFT_IS_STRING_COLUMN && !RIGHT_IS_STRING_COLUMN;
+            constexpr auto BOTH_ARE_STRING_COLUMNS = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
 
             // clang-format off
-            if constexpr (neither_is_string_column || both_are_string_columns) {
+            if constexpr (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMNS) {
               auto iterable_right = create_iterable_from_column<RightType>(typed_right_column);
 
               iterable_left.with_iterators([&](auto left_it, auto left_end) {
@@ -355,6 +355,16 @@ void JoinIndex::_write_output_columns(ChunkColumns& output_columns, const std::s
 
     output_columns.push_back(column);
   }
+}
+
+void JoinIndex::_on_cleanup() {
+  _output_table.reset();
+  _left_in_table.reset();
+  _right_in_table.reset();
+  _pos_list_left.reset();
+  _pos_list_right.reset();
+  _left_matches.clear();
+  _right_matches.clear();
 }
 
 }  // namespace opossum

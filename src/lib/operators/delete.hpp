@@ -42,5 +42,6 @@ class Delete : public AbstractReadWriteOperator {
   std::shared_ptr<Table> _table;
   TransactionID _transaction_id;
   std::vector<std::shared_ptr<const PosList>> _pos_lists;
+  uint64_t _num_rows_deleted;
 };
 }  // namespace opossum

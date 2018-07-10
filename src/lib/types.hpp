@@ -134,7 +134,7 @@ using CommitID = uint32_t;
 using TransactionID = uint32_t;
 
 using StringLength = uint16_t;     // The length of column value strings must fit in this type.
-using ColumnNameLength = uint16_t;  // The length of column names must fit in this type.
+using ColumnNameLength = uint8_t;  // The length of column names must fit in this type.
 using AttributeVectorWidth = uint8_t;
 
 using PosList = pmr_vector<RowID>;
@@ -217,6 +217,7 @@ enum class TableType { References, Data };
 enum class DescriptionMode { SingleLine, MultiLine };
 
 enum class UseMvcc : bool { Yes = true, No = false };
+enum class CleanupTemporaries : bool { Yes = true, No = false };
 
 class Noncopyable {
  protected:
