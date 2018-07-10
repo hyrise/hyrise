@@ -454,6 +454,7 @@ set(
     LIBRARIES
     pthread
     sqlparser
+    cqf
     ${TBB_LIBRARY}
 )
 

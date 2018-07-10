@@ -14,10 +14,8 @@ namespace opossum {
 
 template <typename ElementType>
 CountingQuotientFilter<ElementType>::CountingQuotientFilter(uint8_t quotient_bits, uint8_t remainder_bits) {
-  DebugAssert(remainder_bits == 2 || remainder_bits == 4 || remainder_bits == 8 || remainder_bits == 16
-              || remainder_bits == 32, "Only the remainder sizes 2, 4, 8, 16, and 32 are supported");
-  DebugAssert(quotient_bits > 0, "quotient size can not be zero.");
-  DebugAssert(quotient_bits + remainder_bits <= 64, "The hash length can not exceed 64 bits.");
+  Assert(quotient_bits > 0, "quotient size can not be zero.");
+  Assert(quotient_bits + remainder_bits <= 64, "The hash length can not exceed 64 bits.");
 
   _quotient_bits = quotient_bits;
   _remainder_bits = remainder_bits;

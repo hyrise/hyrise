@@ -25,22 +25,24 @@ class CountingQuotientFilterTest : public BaseTest {
     value_counts["charlie"] = 3;
     value_counts["inbox"] = 1;
     column = std::make_shared<ValueColumn<std::string>>();
-    for (auto key : value_counts) {
-      for (int i = 0; i < values_counts[key]; i++) {
-        column.append(key);
+    for (auto value_count : value_counts) {
+      for (uint i = 0; i < value_count.second; i++) {
+        column->append(value_count.first);
       }
     }
-    cqf = std::make_shared<CountingQuotientFilter<std::string>>(3, 8);
+    cqf = std::make_shared<CountingQuotientFilter<std::string>>(4, 8);
     cqf->populate(column);
   }
 
   std::shared_ptr<CountingQuotientFilter<std::string>> cqf;
-  std::shared_ptr<ValueColumn<std::string>>
-  std::map<std::string, uint>> value_counts;
+  std::shared_ptr<ValueColumn<std::string>> column;
+  std::map<std::string, uint> value_counts;
 };
 
-TEST_F(CountingQuotientFilter, Probes) {
-
+TEST_F(CountingQuotientFilterTest, Probes) {
+  for (auto value_count : value_counts) {
+      EXPECT_TRUE(cqf->count(value_count.first) >= value_count.second);
+  }
 }
 
 }  // namespace opossum

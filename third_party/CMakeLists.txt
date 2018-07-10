@@ -58,19 +58,25 @@ target_compile_options(
 
 add_library(
     cqf
-    
+
     cqf/src/gqf_file.c
     cqf/src/gqf.c
     cqf/src/hashutil.c
-    cqf/src/main.c
     cqf/src/zipf.c
 )
 
 target_compile_options(
     cqf
     PRIVATE
-    -std=c++1z
     -O3
+)
+
+target_include_directories(
+    cqf
+
+    PUBLIC
+    cqf/include
+    cqf
 )
 
 
