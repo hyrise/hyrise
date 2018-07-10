@@ -1,7 +1,7 @@
 #pragma once
 
-#include "types.hpp"
 #include "storage/base_column.hpp"
+#include "types.hpp"
 
 namespace opossum {
 

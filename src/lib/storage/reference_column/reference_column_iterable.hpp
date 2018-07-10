@@ -79,14 +79,14 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
         auto base_column_t = std::dynamic_pointer_cast<const BaseColumnT<T>>(column);
         DebugAssert(base_column_t, "Cannot cast to BaseColumnT<T>");
         _columns[chunk_id] = base_column_t;
-//        resolve_column_type<T>(*column, [&](auto& typed_column) {
-//          using ColumnType = typename std::decay<decltype(typed_column)>::type;
-//          if constexpr (std::is_same<ColumnType, ReferenceColumn>::value) {
-//            Fail("ReferenceColumn cannot reference another ReferenceColumn");
-//          } else {
-//            _columns[chunk_id] = &typed_column;
-//          }
-//        });
+        //        resolve_column_type<T>(*column, [&](auto& typed_column) {
+        //          using ColumnType = typename std::decay<decltype(typed_column)>::type;
+        //          if constexpr (std::is_same<ColumnType, ReferenceColumn>::value) {
+        //            Fail("ReferenceColumn cannot reference another ReferenceColumn");
+        //          } else {
+        //            _columns[chunk_id] = &typed_column;
+        //          }
+        //        });
       }
     }
 

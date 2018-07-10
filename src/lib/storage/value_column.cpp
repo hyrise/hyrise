@@ -17,42 +17,43 @@ namespace opossum {
 
 template <typename T>
 ValueColumn<T>::ValueColumn(bool nullable)
-  : BaseColumn(data_type_from_type<T>()),
-    BaseValueColumn(data_type_from_type<T>()),
-    BaseColumnT<T>(data_type_from_type<T>())
-{
+    : BaseColumn(data_type_from_type<T>()),
+      BaseValueColumn(data_type_from_type<T>()),
+      BaseColumnT<T>(data_type_from_type<T>()) {
   if (nullable) _null_values = pmr_concurrent_vector<bool>();
 }
 
 template <typename T>
 ValueColumn<T>::ValueColumn(const PolymorphicAllocator<T>& alloc, bool nullable)
-  : BaseColumn(data_type_from_type<T>()),
-    BaseValueColumn(data_type_from_type<T>()),
-    BaseColumnT<T>(data_type_from_type<T>()),
+    : BaseColumn(data_type_from_type<T>()),
+      BaseValueColumn(data_type_from_type<T>()),
+      BaseColumnT<T>(data_type_from_type<T>()),
       _values(alloc) {
   if (nullable) _null_values = pmr_concurrent_vector<bool>(alloc);
 }
 
 template <typename T>
 ValueColumn<T>::ValueColumn(pmr_concurrent_vector<T>&& values, const PolymorphicAllocator<T>& alloc)
-  : BaseColumn(data_type_from_type<T>()),
-    BaseValueColumn(data_type_from_type<T>()),
-    BaseColumnT<T>(data_type_from_type<T>()), _values(std::move(values), alloc) {}
+    : BaseColumn(data_type_from_type<T>()),
+      BaseValueColumn(data_type_from_type<T>()),
+      BaseColumnT<T>(data_type_from_type<T>()),
+      _values(std::move(values), alloc) {}
 
 template <typename T>
 ValueColumn<T>::ValueColumn(pmr_concurrent_vector<T>&& values, pmr_concurrent_vector<bool>&& null_values,
                             const PolymorphicAllocator<T>& alloc)
-  : BaseColumn(data_type_from_type<T>()),
-    BaseValueColumn(data_type_from_type<T>()),
-    BaseColumnT<T>(data_type_from_type<T>()),
+    : BaseColumn(data_type_from_type<T>()),
+      BaseValueColumn(data_type_from_type<T>()),
+      BaseColumnT<T>(data_type_from_type<T>()),
       _values(std::move(values), alloc),
       _null_values({std::move(null_values), alloc}) {}
 
 template <typename T>
 ValueColumn<T>::ValueColumn(std::vector<T>& values, const PolymorphicAllocator<T>& alloc)
-  : BaseColumn(data_type_from_type<T>()),
-    BaseValueColumn(data_type_from_type<T>()),
-    BaseColumnT<T>(data_type_from_type<T>()), _values(values, alloc) {}
+    : BaseColumn(data_type_from_type<T>()),
+      BaseValueColumn(data_type_from_type<T>()),
+      BaseColumnT<T>(data_type_from_type<T>()),
+      _values(values, alloc) {}
 
 template <typename T>
 ValueColumn<T>::ValueColumn(std::vector<T>& values, std::vector<bool>& null_values,
