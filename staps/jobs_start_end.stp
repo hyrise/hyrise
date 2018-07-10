@@ -78,8 +78,4 @@ probe end
     println("\nOverall summary:\n")
     println("NOTE: value = time in μs")
     print(@hist_log(runtimes))
-    delete job_start
-    delete job_caller
-    delete runtimes
-    delete runtime_by_caller
 }
