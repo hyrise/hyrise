@@ -62,14 +62,14 @@ void JoinNestedLoop::_create_table_structure() {
 
   // Preparing output table by adding columns from left table
   for (ColumnID column_id{0}; column_id < _left_in_table->column_count(); ++column_id) {
-    auto nullable = (left_may_produce_null || _left_in_table->column_is_nullable(column_id));
+    const auto nullable = (left_may_produce_null || _left_in_table->column_is_nullable(column_id));
     output_column_definitions.emplace_back(_left_in_table->column_name(column_id),
                                            _left_in_table->column_data_type(column_id), nullable);
   }
 
   // Preparing output table by adding columns from right table
   for (ColumnID column_id{0}; column_id < _right_in_table->column_count(); ++column_id) {
-    auto nullable = (right_may_produce_null || _right_in_table->column_is_nullable(column_id));
+    const auto nullable = (right_may_produce_null || _right_in_table->column_is_nullable(column_id));
     output_column_definitions.emplace_back(_right_in_table->column_name(column_id),
                                            _right_in_table->column_data_type(column_id), nullable);
   }
@@ -112,8 +112,8 @@ void JoinNestedLoop::_join_two_typed_columns(const BinaryFunctor& func, LeftIter
   }
 }
 
-void JoinNestedLoop::_join_two_untyped_columns(std::shared_ptr<const BaseColumn>& column_left,
-                                               std::shared_ptr<const BaseColumn>& column_right,
+void JoinNestedLoop::_join_two_untyped_columns(const std::shared_ptr<const BaseColumn>& column_left,
+                                               const std::shared_ptr<const BaseColumn>& column_right,
                                                const ChunkID chunk_id_left, const ChunkID chunk_id_right,
                                                JoinNestedLoop::JoinParams& params) {
   resolve_data_and_column_type(*column_left, [&](auto left_type, auto& typed_left_column) {
@@ -182,10 +182,10 @@ void JoinNestedLoop::_perform_join() {
 
     // Scan all chunks for right input
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
-      auto column_right = right_table->get_chunk(chunk_id_right)->get_column(right_column_id);
+      const auto column_right = right_table->get_chunk(chunk_id_right)->get_column(right_column_id);
       _right_matches[chunk_id_right].resize(column_right->size());
 
-      auto track_right_matches = (_mode == JoinMode::Outer);
+      const auto track_right_matches = (_mode == JoinMode::Outer);
       JoinParams params{*_pos_list_left, *_pos_list_right,    left_matches, _right_matches[chunk_id_right],
                         _is_outer_join,  track_right_matches, _mode,        _predicate_condition};
       _join_two_untyped_columns(column_left, column_right, chunk_id_left, chunk_id_right, params);
@@ -206,7 +206,7 @@ void JoinNestedLoop::_perform_join() {
   // Unmatched rows on the left side are already added in the main loop above
   if (_mode == JoinMode::Outer) {
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
-      auto column_right = right_table->get_chunk(chunk_id_right)->get_column(right_column_id);
+      const auto column_right = right_table->get_chunk(chunk_id_right)->get_column(right_column_id);
 
       resolve_data_and_column_type(*column_right, [&](auto right_type, auto& typed_right_column) {
         using RightType = typename decltype(right_type)::type;

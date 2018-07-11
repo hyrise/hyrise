@@ -29,9 +29,9 @@ class JoinNestedLoop : public AbstractJoinOperator {
     PosList& pos_list_right;
     std::vector<bool>& left_matches;
     std::vector<bool>& right_matches;
-    bool track_left_matches;
-    bool track_right_matches;
-    JoinMode mode;
+    const bool track_left_matches;
+    const bool track_right_matches;
+    const JoinMode mode;
     const PredicateCondition predicate_condition;
   };
 
@@ -46,8 +46,8 @@ class JoinNestedLoop : public AbstractJoinOperator {
   // reduces the compile time from twelve minutes to less than three.
 
   static void __attribute__((noinline))
-  _join_two_untyped_columns(std::shared_ptr<const BaseColumn>& column_left,
-                            std::shared_ptr<const BaseColumn>& column_right, const ChunkID chunk_id_left,
+  _join_two_untyped_columns(const std::shared_ptr<const BaseColumn>& column_left,
+                            const std::shared_ptr<const BaseColumn>& column_right, const ChunkID chunk_id_left,
                             const ChunkID chunk_id_right, JoinParams& params);
 
   template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>

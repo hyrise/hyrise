@@ -100,7 +100,7 @@ void JoinIndex::_perform_join() {
   // Scan all chunks for right input
   for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < _right_in_table->chunk_count(); ++chunk_id_right) {
     const auto chunk_right = _right_in_table->get_chunk(chunk_id_right);
-    auto column_right = chunk_right->get_column(_right_column_id);
+    const auto column_right = chunk_right->get_column(_right_column_id);
     const auto indices = chunk_right->get_indices(std::vector<ColumnID>{_right_column_id});
     if (track_right_matches) _right_matches[chunk_id_right].resize(chunk_right->size());
 
@@ -115,7 +115,7 @@ void JoinIndex::_perform_join() {
     // Scan all chunks from left input
     if (index != nullptr) {
       for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
-        auto chunk_column_left = _left_in_table->get_chunk(chunk_id_left)->get_column(_left_column_id);
+        const auto chunk_column_left = _left_in_table->get_chunk(chunk_id_left)->get_column(_left_column_id);
 
         resolve_data_and_column_type(*chunk_column_left, [&](auto left_type, auto& typed_left_column) {
           using LeftType = typename decltype(left_type)::type;
@@ -130,9 +130,9 @@ void JoinIndex::_perform_join() {
       }
     } else {
       // Fall back to NestedLoopJoin
-      auto chunk_column_right = _right_in_table->get_chunk(chunk_id_right)->get_column(_right_column_id);
+      const auto chunk_column_right = _right_in_table->get_chunk(chunk_id_right)->get_column(_right_column_id);
       for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
-        auto chunk_column_left = _left_in_table->get_chunk(chunk_id_left)->get_column(_left_column_id);
+        const auto chunk_column_left = _left_in_table->get_chunk(chunk_id_left)->get_column(_left_column_id);
         JoinNestedLoop::JoinParams params{*_pos_list_left,
                                           *_pos_list_right,
                                           _left_matches[chunk_id_left],
@@ -276,7 +276,7 @@ void JoinIndex::_join_two_columns_nested_loop(const BinaryFunctor& func, LeftIte
 void JoinIndex::_append_matches(const BaseIndex::Iterator& range_begin, const BaseIndex::Iterator& range_end,
                                 const ChunkOffset chunk_offset_left, const ChunkID chunk_id_left,
                                 const ChunkID chunk_id_right) {
-  auto num_right_matches = std::distance(range_begin, range_end);
+  const auto num_right_matches = std::distance(range_begin, range_end);
 
   if (num_right_matches == 0) {
     return;
