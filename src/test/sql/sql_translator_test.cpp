@@ -27,7 +27,7 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
-#include "utils/exception.hpp"
+#include "utils/invalid_input_exception.hpp"
 
 using namespace std::string_literals;  // NOLINT
 

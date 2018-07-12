@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "exception.hpp"
+#include "invalid_input_exception.hpp"
 
 /**
  * This file provides better assertions than the std cassert/assert.h - DebugAssert(condition, msg) and Fail(msg) can be
