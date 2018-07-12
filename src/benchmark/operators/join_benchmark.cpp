@@ -5,6 +5,7 @@
 #include "operators/join_index.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
+#include "operators/join_mpsm.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
@@ -114,5 +115,9 @@ BENCHMARK_TEMPLATE(BM_Join_Big, JoinHash);
 BENCHMARK_TEMPLATE(BM_Join_Small, JoinSortMerge);
 BENCHMARK_TEMPLATE(BM_Join_Skewed, JoinSortMerge);
 BENCHMARK_TEMPLATE(BM_Join_Big, JoinSortMerge);
+
+BENCHMARK_TEMPLATE(BM_Join_Small, JoinMPSM);
+BENCHMARK_TEMPLATE(BM_Join_Skewed, JoinMPSM);
+BENCHMARK_TEMPLATE(BM_Join_Big, JoinMPSM);
 
 }  // namespace opossum
