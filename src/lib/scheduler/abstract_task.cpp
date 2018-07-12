@@ -1,6 +1,5 @@
 #include "abstract_task.hpp"
 
-#include <exception>
 #include <memory>
 #include <string>
 #include <utility>
@@ -12,7 +11,6 @@
 #include "worker.hpp"
 
 #include "utils/assert.hpp"
-#include "utils/exception.hpp"
 
 namespace opossum {
 
@@ -45,14 +43,7 @@ void AbstractTask::set_node_id(NodeID node_id) { _node_id = node_id; }
 
 bool AbstractTask::try_mark_as_enqueued() { return !_is_enqueued.exchange(true); }
 
-void AbstractTask::set_exception_callback(const std::function<void(const std::exception_ptr)>& exception_callback) {
-  DebugAssert((!_is_scheduled), "Possible race: Don't set callback after the Task was scheduled");
-
-  _exception_callback = exception_callback;
-}
-
 void AbstractTask::set_done_callback(const std::function<void()>& done_callback) {
-  Assert((!_exception_callback), "An exception callback needs to be provided to avoid endless waiting");
   DebugAssert((!_is_scheduled), "Possible race: Don't set callback after the Task was scheduled");
 
   _done_callback = done_callback;
@@ -90,37 +81,13 @@ void AbstractTask::join() {
 void AbstractTask::_join_without_replacement_worker() {
   std::unique_lock<std::mutex> lock(_done_mutex);
   _done_condition_variable.wait(lock, [&]() { return _done; });
-
-  // An exception was thrown in the task. We caught it there so that the worker does not crash. This might be an
-  // exception from a predecessor task. If you get an exception here, a good idea is to disable the scheduler so
-  // that it throws immediately. Also, you could use gcc with "catch throw"
-  if (_exception) std::rethrow_exception(_exception);
 }
 
 void AbstractTask::execute() {
   DebugAssert(!(_started.exchange(true)), "Possible bug: Trying to execute the same task twice");
   DebugAssert(is_ready(), "Task must not be executed before its dependencies are done");
 
-  try {
-    _on_execute();
-  } catch (InvalidInputException &e) {
-    if (_exception_callback) {
-      // An exception callback was explicitly provided so we let the receiver handle the exception
-      _exception_callback(std::current_exception());
-    } else if (CurrentScheduler::is_set() && Worker::get_this_thread_worker()) {
-      // We don't want the worker to die because of an exception. Instead, whoever created the task should deal with it
-      _exception = std::current_exception();
-
-      _mark_as_done();
-      for (auto& successor : _successors) {
-        successor->_on_exception_in_predecessor(_exception);
-      }
-    } else {
-      // No worker, so we just throw it right here and now.
-      std::rethrow_exception(std::current_exception());
-    }
-    return;
-  }
+  _on_execute();
 
   for (auto& successor : _successors) {
     successor->_on_predecessor_done();
@@ -128,10 +95,6 @@ void AbstractTask::execute() {
 
   if (_done_callback) _done_callback();
 
-  _mark_as_done();
-}
-
-void AbstractTask::_mark_as_done() {
   {
     std::unique_lock<std::mutex> lock(_done_mutex);
     _done = true;
@@ -143,20 +106,6 @@ void AbstractTask::_mark_as_scheduled() {
   [[gnu::unused]] auto already_scheduled = _is_scheduled.exchange(true);
 
   DebugAssert((!already_scheduled), "Task was already scheduled!");
-}
-
-void AbstractTask::_on_exception_in_predecessor(const std::exception_ptr exception) {
-  _exception = exception;
-  _mark_as_done();
-  for (auto& successor : _successors) {
-    successor->_on_exception_in_predecessor(exception);
-  }
-
-  if (CurrentScheduler::is_set()) {
-    // update number of tasks executed so that Scheduler::finish finds the correct number of executed threads
-    auto worker = Worker::get_this_thread_worker();
-    worker->processing_unit().lock()->on_worker_finished_task();
-  }
 }
 
 void AbstractTask::_on_predecessor_added() { _predecessor_counter++; }
