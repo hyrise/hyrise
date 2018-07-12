@@ -344,8 +344,8 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   _keys_per_chunk = std::vector<std::shared_ptr<std::vector<AggregateKey>>>(input_table->chunk_count());
 
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-    _keys_per_chunk[chunk_id] = std::make_shared<std::vector<AggregateKey>>(
-        input_table->get_chunk(chunk_id)->size(), std::vector<uint64_t>(_groupby_column_ids.size()));
+    _keys_per_chunk[chunk_id] = std::make_shared<std::vector<AggregateKey>>(input_table->get_chunk(chunk_id)->size(),
+                                                                            AggregateKey(_groupby_column_ids.size()));
   }
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
