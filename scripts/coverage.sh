@@ -51,12 +51,11 @@ echo Coverage Information is in ./coverage/index.html
 # Continuing only if diff output is needed with Linux/gcc
 if [ "true" == "$generate_badge" ]; then
 
-  ${path_to_compiler}llvm-cov export -summary-only -instr-profile ./default.profdata build-coverage/hyriseTest ./src/lib/ > coverage.json
+  ${path_to_compiler}llvm-cov report -instr-profile ./default.profdata build-coverage/hyriseTest ./src/lib/ > coverage.txt
 
   # coverage badge generation
-  total_lines=$(sed 's/.*totals":{"lines":{"count":\([0-9]*\).*/\1/' coverage.json)
-  lines_covered=$(sed 's/.*totals":{"lines":{"count":[0-9]*,"covered":\([0-9]*\).*/\1/' coverage.json)
-  coverage_percent=$(echo "scale=2 ; $lines_covered * 100 / $total_lines" | bc)
+  coverage_percent=$(tail -c 7 coverage.txt)
+  coverage_percent=${coverage_percent:0:5}
   echo $coverage_percent > coverage_percent.txt
   if (( $(bc <<< "$coverage_percent >= 90") ))
   then
@@ -72,7 +71,7 @@ if [ "true" == "$generate_badge" ]; then
   url="https://img.shields.io/badge/Coverage-$coverage_percent%25-$color.svg"
   curl -g -o coverage_badge.svg $url
 
-  rm coverage.json
+  rm coverage.txt
 fi
 
 rm default.profdata default.profraw
