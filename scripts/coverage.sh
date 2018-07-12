@@ -55,6 +55,7 @@ if [ "true" == "$generate_badge" ]; then
 
   # coverage badge generation
   coverage_percent=$(tail -c 7 coverage.txt)
+  # cut off percentage sign and new line byte
   coverage_percent=${coverage_percent:0:5}
   echo $coverage_percent > coverage_percent.txt
   if (( $(bc <<< "$coverage_percent >= 90") ))
