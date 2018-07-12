@@ -228,6 +228,8 @@ class RadixClusterSortNUMA {
 
     CurrentScheduler::wait_for_tasks(cluster_jobs);
 
+    DebugAssert(output_table._chunk_columns.size() == _cluster_count, "Error in clustering: Number of output chunk columns does not match the number of clusters.")
+
     return output_table;
   }
 
@@ -245,6 +247,7 @@ class RadixClusterSortNUMA {
     std::vector<std::shared_ptr<AbstractTask>> cluster_jobs;
 
     for (NodeID node_id{0}; node_id < _cluster_count; node_id++) {
+      DebugAssert(node_id < input_chunks->size(), "Node ID out of range. Node ID: " + std::to_string(node_id) + " Cluster count: " + std::to_string(_cluster_count));
       auto job = std::make_shared<JobTask>([&output, &input_chunks, node_id, radix_bitmask, this]() {
         (*output)[node_id] = _cluster((*input_chunks)[node_id],
                                       [=](const T& value) { return get_radix<T>(value, radix_bitmask); }, node_id);
