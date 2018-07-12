@@ -70,8 +70,7 @@ template <typename T>
 class ColumnMaterializerNUMA {
  public:
   explicit ColumnMaterializerNUMA(std::shared_ptr<Topology> topology, bool materialize_null)
-      : _topology(topology),
-        _materialize_null{materialize_null} {}
+      : _topology(topology), _materialize_null{materialize_null} {}
 
  public:
   /**
