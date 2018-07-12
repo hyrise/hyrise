@@ -144,6 +144,13 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context) 
         call_sites.pop();
         continue;
       }
+    } else {
+      // Under Macos the inlining of direct function calls fails as the called function is seen as an external function,
+      // which cannot be resolved by the llvm function inliner.
+      auto function_name = call_site.getCalledFunction()->getName().str();
+      if (auto repo_func = _repository.get_function(function_name)) {
+        call_site.setCalledFunction(repo_func);
+      }
     }
 
     auto& function = *call_site.getCalledFunction();
@@ -210,6 +217,8 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context) 
 
     // Instruct LLVM to perform the function inlining and push all new call sites to the working queue
     llvm::InlineFunctionInfo info;
+    // ToDo(anyone) Not all direct function calls can be successfully inlined.
+    // See issue #933 (https://github.com/hyrise/hyrise/issues/976)
     if (InlineFunction(call_site, info, nullptr, false, nullptr, context)) {
       for (const auto& new_call_site : info.InlinedCallSites) {
         call_sites.push(new_call_site);
