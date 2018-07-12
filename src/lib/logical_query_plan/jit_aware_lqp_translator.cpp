@@ -26,9 +26,12 @@ void column_name_for_aggregate_rec(const std::shared_ptr<opossum::LQPExpression>
   if (expression->type() == ExpressionType::Column) {
     const auto& column_reference = expression->column_reference();
     stream << column_reference.original_node()->output_column_names()[column_reference.original_column_id()];
+  } else if (expression->type() == ExpressionType::Literal) {
+    stream << expression->value();
   } else {
     if (brackets) stream << "(";
-    DebugAssert(expression->is_arithmetic_operator(), "Unsupported expression type");
+    DebugAssert(expression->is_arithmetic_operator(),
+                "Unsupported expression type: " + expression_type_to_string.at(expression->type()));
     column_name_for_aggregate_rec(expression->left_child(), stream);
     stream << " " << expression_type_to_operator_string.at(expression->type()) << " ";
     column_name_for_aggregate_rec(expression->right_child(), stream);
