@@ -35,6 +35,8 @@ set(
     expression/binary_predicate_expression.hpp
     expression/case_expression.cpp
     expression/case_expression.hpp
+    expression/cast_expression.cpp
+    expression/cast_expression.hpp
     expression/exists_expression.cpp
     expression/exists_expression.hpp
     expression/evaluation/expression_evaluator.cpp

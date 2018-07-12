@@ -14,6 +14,7 @@ namespace opossum {
 enum class ExpressionType {
   Aggregate,
   Arithmetic,
+  Cast,
   Case,
   Column,
   Exists,

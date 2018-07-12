@@ -41,56 +41,6 @@ const boost::bimap<PredicateCondition, std::string> predicate_condition_to_strin
         {PredicateCondition::IsNotNull, "IS NOT NULL"},
     });
 
-//const std::unordered_map<PredicateCondition, ExpressionType> predicate_condition_to_expression_type = {
-//    {PredicateCondition::Equals, ExpressionType::Equals},
-//    {PredicateCondition::NotEquals, ExpressionType::NotEquals},
-//    {PredicateCondition::LessThan, ExpressionType::LessThan},
-//    {PredicateCondition::LessThanEquals, ExpressionType::LessThanEquals},
-//    {PredicateCondition::GreaterThan, ExpressionType::GreaterThan},
-//    {PredicateCondition::GreaterThanEquals, ExpressionType::GreaterThanEquals},
-//    {PredicateCondition::Between, ExpressionType::Between},
-//    {PredicateCondition::Like, ExpressionType::Like},
-//    {PredicateCondition::NotLike, ExpressionType::NotLike},
-//    {PredicateCondition::IsNull, ExpressionType::IsNull},
-//    {PredicateCondition::IsNotNull, ExpressionType::IsNotNull}};
-
-//const std::unordered_map<ExpressionType, std::string> expression_type_to_string = {
-//    {ExpressionType::Literal, "Literal"},
-//    {ExpressionType::Star, "Star"},
-//    {ExpressionType::Placeholder, "Parameter"},
-//    {ExpressionType::Column, "Column"},
-//    {ExpressionType::Function, "Function"},
-//    {ExpressionType::Subselect, "Subselect"},
-//    /*Arithmetic operators*/
-//    {ExpressionType::Addition, "Addition"},
-//    {ExpressionType::Subtraction, "Subtraction"},
-//    {ExpressionType::Multiplication, "Multiplication"},
-//    {ExpressionType::Division, "Division"},
-//    {ExpressionType::Modulo, "Modulo"},
-//    {ExpressionType::Power, "Power"},
-//    /*Logical operators*/
-//    {ExpressionType::Equals, "Equals"},
-//    {ExpressionType::NotEquals, "NotEquals"},
-//    {ExpressionType::LessThan, "LessThan"},
-//    {ExpressionType::LessThanEquals, "LessThanEquals"},
-//    {ExpressionType::GreaterThan, "GreaterThan"},
-//    {ExpressionType::GreaterThanEquals, "GreaterThanEquals"},
-//    {ExpressionType::Like, "Like"},
-//    {ExpressionType::NotLike, "NotLike"},
-//    {ExpressionType::And, "And"},
-//    {ExpressionType::Or, "Or"},
-//    {ExpressionType::Between, "Between"},
-//    {ExpressionType::Not, "Not"},
-//    /*Set operators*/
-//    {ExpressionType::In, "In"},
-//    {ExpressionType::Exists, "Exists"},
-//    /*Other*/
-//    {ExpressionType::IsNull, "IsNull"},
-//    {ExpressionType::IsNotNull, "IsNotNull"},
-//    {ExpressionType::Case, "Case"},
-//    {ExpressionType::Hint, "Hint"},
-//};
-
 const std::unordered_map<OrderByMode, std::string> order_by_mode_to_string = {
     {OrderByMode::Ascending, "Ascending"},
     {OrderByMode::Descending, "Descending"},
@@ -100,18 +50,6 @@ const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mo
     {hsql::kOrderAsc, OrderByMode::Ascending},
     {hsql::kOrderDesc, OrderByMode::Descending},
 };
-
-//const std::unordered_map<ExpressionType, std::string> expression_type_to_operator_string = {
-//    {ExpressionType::Addition, "+"},       {ExpressionType::Subtraction, "-"},
-//    {ExpressionType::Multiplication, "*"}, {ExpressionType::Division, "/"},
-//    {ExpressionType::Modulo, "%"},         {ExpressionType::Power, "^"},
-//    {ExpressionType::Equals, "="},         {ExpressionType::NotEquals, "!="},
-//    {ExpressionType::LessThan, "<"},       {ExpressionType::LessThanEquals, "<="},
-//    {ExpressionType::GreaterThan, ">"},    {ExpressionType::GreaterThanEquals, ">="},
-//    {ExpressionType::Like, "LIKE"},        {ExpressionType::NotLike, "NOT LIKE"},
-//    {ExpressionType::And, "AND"},          {ExpressionType::Or, "OR"},
-//    {ExpressionType::Between, "BETWEEN"},  {ExpressionType::Not, "NOT"},
-//};
 
 const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
     {JoinMode::Cross, "Cross"}, {JoinMode::Inner, "Inner"}, {JoinMode::Left, "Left"}, {JoinMode::Outer, "Outer"},

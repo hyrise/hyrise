@@ -19,6 +19,7 @@ class ArithmeticExpression;
 class BaseColumn;
 class BinaryPredicateExpression;
 class CaseExpression;
+class CastExpression;
 class Chunk;
 class ExistsExpression;
 class ExtractExpression;
@@ -85,6 +86,9 @@ class ExpressionEvaluator final {
 
   template <typename R>
   std::shared_ptr<ExpressionResult<R>> _evaluate_case_expression(const CaseExpression& case_expression);
+
+  template <typename R>
+  std::shared_ptr<ExpressionResult<R>> _evaluate_cast_expression(const CastExpression& cast_expression);
 
   template <typename R>
   std::shared_ptr<ExpressionResult<R>> _evaluate_value_or_parameter_expression(const AbstractExpression& expression);

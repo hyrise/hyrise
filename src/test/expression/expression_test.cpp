@@ -71,6 +71,8 @@ TEST_F(ExpressionTest, Equals) {
   EXPECT_TRUE(extract(DatetimeComponent::Day, "1999-07-30")->deep_equals(*extract(DatetimeComponent::Month, "1999-07-30")));
   EXPECT_TRUE(negate(6)->deep_equals(*negate(6)));
   EXPECT_FALSE(negate(6)->deep_equals(*negate(6.5)));
+  EXPECT_TRUE(cast(6.5, DataType::Int)->deep_equals(*cast(6.5, DataType::Int)));
+  EXPECT_FALSE(cast(6.5, DataType::Int)->deep_equals(*cast(6.5, DataType::Float)));
 }
 
 TEST_F(ExpressionTest, DeepEquals) {
@@ -113,6 +115,8 @@ TEST_F(ExpressionTest, RequiresCalculation) {
   EXPECT_FALSE(column(a)->requires_computation());
   EXPECT_FALSE(PQPColumnExpression::from_table(*table_int_float, "a")->requires_computation());
   EXPECT_FALSE(value(5)->requires_computation());
+  EXPECT_TRUE(cast(5, DataType::Int)->requires_computation());
+  EXPECT_TRUE(cast(5.5, DataType::Int)->requires_computation());
 
   const auto lqp_select_expression = select(int_float_node);
 
@@ -152,6 +156,7 @@ TEST_F(ExpressionTest, AsColumnName) {
   EXPECT_EQ(negate(3)->as_column_name(), "-(3)");
   EXPECT_EQ(value(3.25)->as_column_name(), "3.25");
   EXPECT_EQ(null()->as_column_name(), "NULL");
+  EXPECT_EQ(cast("36", DataType::Float)->as_column_name(), "CAST(\"36\" AS float)");
   EXPECT_EQ(parameter(ParameterID{0})->as_column_name(), "Parameter[id=0]");
   EXPECT_EQ(parameter(ParameterID{0}, a)->as_column_name(), "Parameter[name=a;id=0]");
 }
@@ -206,7 +211,9 @@ TEST_F(ExpressionTest, DataType) {
   EXPECT_EQ(value(double{2})->data_type(), DataType::Double);
   EXPECT_EQ(value("Hello")->data_type(), DataType::String);
   EXPECT_EQ(null()->data_type(), DataType::Null);
-  
+  EXPECT_EQ(cast(36.5, DataType::Int)->data_type(), DataType::Int);
+  EXPECT_EQ(cast(null(), DataType::Float)->data_type(), DataType::Float);
+
   EXPECT_EQ(less_than(1, 2)->data_type(), DataType::Int);
   EXPECT_EQ(less_than(1.5, 2)->data_type(), DataType::Int);
   EXPECT_EQ(between(1.5, 2, 3)->data_type(), DataType::Int);
@@ -235,6 +242,8 @@ TEST_F(ExpressionTest, IsNullable) {
   EXPECT_TRUE(and_(greater_than(2, null()), 1)->is_nullable());
   EXPECT_FALSE(column(a)->is_nullable());
   EXPECT_TRUE(column(a_nullable)->is_nullable());
+  EXPECT_FALSE(cast(12, DataType::String)->is_nullable());
+  EXPECT_TRUE(cast(null(), DataType::String)->is_nullable());
 
   // Division by zero could be nullable, thus division and modulo are always nullable
   EXPECT_TRUE(div_(1, 2)->is_nullable());

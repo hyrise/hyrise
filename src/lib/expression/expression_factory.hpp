@@ -8,6 +8,7 @@
 #include "between_expression.hpp"
 #include "binary_predicate_expression.hpp"
 #include "case_expression.hpp"
+#include "cast_expression.hpp"
 #include "exists_expression.hpp"
 #include "extract_expression.hpp"
 #include "function_expression.hpp"
@@ -186,6 +187,11 @@ std::shared_ptr<AggregateExpression> count_star();
 template <typename Argument>
 std::shared_ptr<NegateExpression> negate(const Argument& argument) {
   return std::make_shared<NegateExpression>(to_expression(argument));
+}
+
+template <typename Argument>
+std::shared_ptr<CastExpression> cast(const Argument& argument, const DataType data_type) {
+  return std::make_shared<CastExpression>(to_expression(argument), data_type);
 }
 
 }  // namespace expression_factory

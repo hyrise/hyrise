@@ -11,6 +11,7 @@
 #include "expression/arithmetic_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/case_expression.hpp"
+#include "expression/cast_expression.hpp"
 #include "expression/exists_expression.hpp"
 #include "expression/expression_factory.hpp"
 #include "expression/extract_expression.hpp"
@@ -78,6 +79,9 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::evaluate_expression_to
 
     case ExpressionType::Case:
       return _evaluate_case_expression<R>(static_cast<const CaseExpression&>(expression));
+
+    case ExpressionType::Cast:
+      return _evaluate_cast_expression<R>(static_cast<const CastExpression&>(expression));
 
     case ExpressionType::Exists:
       return _evaluate_exists_expression<R>(static_cast<const ExistsExpression&>(expression));
@@ -437,6 +441,62 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_case_express
     });
 
   return result;
+}
+
+template <typename R>
+std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_cast_expression(const CastExpression& cast_expression) {
+  /**
+   * Implements SQL's CAST with the following semantics
+   *    Float/Double -> Int/Long:           Value gets floor()ed
+   *    String -> Int/Long/Float/Double:    Conversion is attempted, on error zero is returned
+   *                                        in accordance with SQLite. (" 5hallo" AS INT) -> 5
+   *    NULL -> Any type                    A nulled value of the requested type is returned.
+   */
+
+  auto values = std::vector<R>{};
+  auto nulls = std::vector<bool>{};
+
+  _resolve_to_expression_result(*cast_expression.argument(), [&](const auto& argument_result) {
+    using ArgumentDataType = typename std::decay_t<decltype(argument_result)>::Type;
+
+    const auto result_size = _result_size(argument_result.size());
+
+    values.resize(result_size);
+
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
+      const auto& argument_value = argument_result.value(chunk_offset);
+
+      if constexpr (std::is_same_v<R, NullValue> || std::is_same_v<ArgumentDataType, NullValue>) {
+        // Something to Null cast. Do nothing, this is handled by the nulls vector
+      } else if constexpr (std::is_same_v<R, std::string>) {
+        if constexpr(std::is_same_v<ArgumentDataType, std::string>) {
+          // String to String "cast"
+          values[chunk_offset] = argument_value;
+        } else {
+          // Numeric/NULL to String cast
+          values[chunk_offset] = std::to_string(argument_value);
+        }
+      } else {
+        if constexpr(std::is_same_v<ArgumentDataType, std::string>) {
+          // String to Numeric cast. Uses sto{l/d}
+          if constexpr(std::is_same_v<R, int32_t> || std::is_same_v<R, int64_t>) {
+            values[chunk_offset] = std::stol(argument_value);
+          } else if constexpr(std::is_same_v<R, float> || std::is_same_v<R, double>) {
+            values[chunk_offset] = std::stod(argument_value);
+          } else {
+            Fail("Casting string to numeric argument type not implemented");
+          }
+        } else {
+          // Numeric to Numeric cast
+          values[chunk_offset] = static_cast<R>(argument_value);
+        }
+      }
+    }
+
+    nulls = argument_result.nulls;
+  });
+
+  return std::make_shared<ExpressionResult<R>>(std::move(values), std::move(nulls));
 }
 
 template <>
