@@ -54,7 +54,6 @@ void AbstractTask::set_done_callback(const std::function<void()>& done_callback)
 }
 
 void AbstractTask::schedule(NodeID preferred_node_id, SchedulePriority priority) {
-  DTRACE_PROBE1(hyrise, job_scheduled, this);
   _mark_as_scheduled();
   if (CurrentScheduler::is_set()) {
     CurrentScheduler::get()->schedule(shared_from_this(), preferred_node_id, priority);
