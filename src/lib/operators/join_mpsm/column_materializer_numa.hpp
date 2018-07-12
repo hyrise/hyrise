@@ -7,6 +7,7 @@
 #include "resolve_type.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
+#include "scheduler/topology.hpp"
 #include "storage/create_iterable_from_column.hpp"
 #if HYRISE_NUMA_SUPPORT
 #include "storage/numa_placement_manager.hpp"
@@ -68,7 +69,9 @@ using MaterializedNUMAPartitionList = std::vector<MaterializedNUMAPartition<T>>;
 template <typename T>
 class ColumnMaterializerNUMA {
  public:
-  explicit ColumnMaterializerNUMA(bool materialize_null) : _materialize_null{materialize_null} {}
+  explicit ColumnMaterializerNUMA(std::shared_ptr<Topology> topology, bool materialize_null)
+      : _topology(topology),
+        _materialize_null{materialize_null} {}
 
  public:
   /**
@@ -79,14 +82,9 @@ class ColumnMaterializerNUMA {
   std::pair<std::unique_ptr<MaterializedNUMAPartitionList<T>>, std::unique_ptr<PosList>> materialize(
       std::shared_ptr<const Table> input, ColumnID column_id) {
     auto output = std::make_unique<MaterializedNUMAPartitionList<T>>();
-// ensure we have enough lists to represent the NUMA Nodes
-#if HYRISE_NUMA_SUPPORT
-    const auto topology = NUMAPlacementManager::get().topology();
-    const auto node_count = topology->nodes().size();
+    // ensure we have enough lists to represent the NUMA Nodes
+    const auto node_count = _topology->nodes().size();
     output->reserve(node_count);
-#else
-    const auto node_count = 1;
-#endif
 
     for (NodeID node_id{0}; node_id < node_count; node_id++) {
       // The vectors only contain pointers so the higher bound estimate won't really hurt us here
@@ -198,6 +196,7 @@ class ColumnMaterializerNUMA {
   }
 
  private:
+  std::shared_ptr<Topology> _topology;
   bool _materialize_null;
 };
 

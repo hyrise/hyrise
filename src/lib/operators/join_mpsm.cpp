@@ -13,6 +13,7 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
+#include "scheduler/topology.hpp"
 #include "storage/column_visitable.hpp"
 #include "storage/dictionary_column.hpp"
 
@@ -85,6 +86,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
         _right_column_id{right_column_id},
         _op{op},
         _mode{mode} {
+    _topology = _get_or_create_numa_topology();
     _cluster_count = _determine_number_of_clusters();
     _output_pos_lists_left.resize(_cluster_count);
     _output_pos_lists_right.resize(_cluster_count);
@@ -110,6 +112,10 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
   const PredicateCondition _op;
   const JoinMode _mode;
+
+  // Topology containing information about availbalbe NUMA nodes/cores,
+  // or a fake NUMA topology in case of non-NUMA systems.
+  std::shared_ptr<Topology> _topology;
 
   // the cluster count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
   ClusterID _cluster_count;
@@ -172,17 +178,25 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   };
 
   /**
+  * On a NUMA system the NUMAPlacementManager gives us the topology.
+  * On a non-NUMA system, we create a fake topology for development purposes.
+  **/
+  std::shared_ptr<Topology> _get_or_create_numa_topology() {
+#if HYRISE_NUMA_SUPPORT
+    return NUMAPlacementManager::get().topology();
+#else
+    return Topology::create_fake_numa_topology(2, 1);
+#endif
+  }
+
+  /**
   * Determines the number of clusters to be used for the join.
   * The number of clusters must be a power of two, i.e. 1, 2, 4, 8, 16...
   **/
   ClusterID _determine_number_of_clusters() {
-// Get the next lower power of two of the bigger chunk number
-#if HYRISE_NUMA_SUPPORT
-    const size_t numa_nodes = NUMAPlacementManager::get().topology()->nodes().size();
+    // Get the next lower power of two of the bigger chunk number
+    const size_t numa_nodes = _topology->nodes().size();
     return static_cast<ClusterID>(std::pow(2, std::floor(std::log2(numa_nodes))));
-#else
-    return ClusterID{2};
-#endif
   }
 
   /**
@@ -495,7 +509,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
     bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
     auto radix_clusterer =
         RadixClusterSortNUMA<T>(_mpsm_join.input_table_left(), _mpsm_join.input_table_right(), _mpsm_join._column_ids,
-                                include_null_left, include_null_right, _cluster_count);
+                                include_null_left, include_null_right, _topology, _cluster_count);
     // Sort and cluster the input tables
     auto sort_output = radix_clusterer.execute();
     _sorted_left_table = std::move(sort_output.clusters_left);
