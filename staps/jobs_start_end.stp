@@ -32,7 +32,7 @@ probe process(@1).provider("hyrise").mark("job_start")
     str_tok = tokenize("", " ")
     // Fetch symbol from casted address
     caller = usymname(strtol(str_tok, 16))
-    job_caller[$arg1] = caller
+    job_caller[$arg3] = caller
 
     job_start[$arg3] = gettimeofday_us()
     description = user_string($arg2)
