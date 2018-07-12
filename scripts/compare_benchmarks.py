@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import json
 import sys
 from beautifultable import BeautifulTable
@@ -36,7 +38,7 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
 	diff = float(new['items_per_second']) / float(old['items_per_second']) - 1
 	average_diff_sum += diff
 	diff_formatted = format_diff(diff)
-	table.append_row([old['name'], old['items_per_second'], new['items_per_second'], diff_formatted])
+	table.append_row([old['name'], str(old['items_per_second']), str(new['items_per_second']), diff_formatted])
 
 table.append_row(['average', '', '', format_diff(average_diff_sum / len(old_data['benchmarks']))])
 

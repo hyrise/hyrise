@@ -10,6 +10,7 @@ RUN apt-get update \
         ccache \
         clang-6.0 \
         clang-format-6.0 \
+        clang-tidy-6.0 \
         cmake \
         curl \
         gcovr \
@@ -24,6 +25,7 @@ RUN apt-get update \
         libsqlite3-dev \
         libtbb-dev \
         llvm \
+        llvm-6.0-tools \
         man \
         parallel \
         python2.7 \
@@ -33,8 +35,7 @@ RUN apt-get update \
         libpq-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
-    && ln -sf /usr/bin/llvm-symbolizer-3.8 /usr/bin/llvm-symbolizer \
-    && pip install pycobertura
+    && ln -sf /usr/bin/llvm-symbolizer-3.8 /usr/bin/llvm-symbolizer
 
 ENV OPOSSUM_HEADLESS_SETUP=true
 

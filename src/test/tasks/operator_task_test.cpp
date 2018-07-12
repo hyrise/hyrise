@@ -30,7 +30,7 @@ class OperatorTaskTest : public BaseTest {
 
 TEST_F(OperatorTaskTest, BasicTasksFromOperatorTest) {
   auto gt = std::make_shared<GetTable>("table_a");
-  auto tasks = OperatorTask::make_tasks_from_operator(gt);
+  auto tasks = OperatorTask::make_tasks_from_operator(gt, CleanupTemporaries::Yes);
 
   auto result_task = tasks.back();
   result_task->schedule();
@@ -42,13 +42,17 @@ TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
   auto gt = std::make_shared<GetTable>("table_a");
   auto ts = std::make_shared<TableScan>(gt, ColumnID{0}, PredicateCondition::Equals, 1234);
 
-  auto tasks = OperatorTask::make_tasks_from_operator(ts);
+  auto tasks = OperatorTask::make_tasks_from_operator(ts, CleanupTemporaries::Yes);
   for (auto& task : tasks) {
     task->schedule();
+    // We don't have to wait here, because we are running the task tests without a scheduler
   }
 
   auto expected_result = load_table("src/test/tables/int_float_filtered.tbl", 2);
   EXPECT_TABLE_EQ_UNORDERED(expected_result, tasks.back()->get_operator()->get_output());
+
+  // Check that everything was properly cleaned up
+  EXPECT_EQ(gt->get_output(), nullptr);
 }
 
 TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
@@ -57,14 +61,20 @@ TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
   auto join = std::make_shared<JoinHash>(gt_a, gt_b, JoinMode::Inner, ColumnIDPair(ColumnID{0}, ColumnID{0}),
                                          PredicateCondition::Equals);
 
-  auto tasks = OperatorTask::make_tasks_from_operator(join);
+  auto tasks = OperatorTask::make_tasks_from_operator(join, CleanupTemporaries::Yes);
   for (auto& task : tasks) {
     task->schedule();
+    // We don't have to wait here, because we are running the task tests without a scheduler
   }
 
   auto expected_result = load_table("src/test/tables/joinoperators/int_inner_join.tbl", 2);
   EXPECT_TABLE_EQ_UNORDERED(expected_result, tasks.back()->get_operator()->get_output());
+
+  // Check that everything was properly cleaned up
+  EXPECT_EQ(gt_a->get_output(), nullptr);
+  EXPECT_EQ(gt_b->get_output(), nullptr);
 }
+
 TEST_F(OperatorTaskTest, MakeDiamondShape) {
   auto gt_a = std::make_shared<GetTable>("table_a");
   auto scan_a = std::make_shared<TableScan>(gt_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
@@ -72,7 +82,7 @@ TEST_F(OperatorTaskTest, MakeDiamondShape) {
   auto scan_c = std::make_shared<TableScan>(scan_a, ColumnID{1}, PredicateCondition::GreaterThan, 2000);
   auto union_positions = std::make_shared<UnionPositions>(scan_b, scan_c);
 
-  auto tasks = OperatorTask::make_tasks_from_operator(union_positions);
+  auto tasks = OperatorTask::make_tasks_from_operator(union_positions, CleanupTemporaries::Yes);
 
   ASSERT_EQ(tasks.size(), 5u);
   EXPECT_EQ(tasks[0]->get_operator(), gt_a);
@@ -95,5 +105,16 @@ TEST_F(OperatorTaskTest, MakeDiamondShape) {
 
   std::vector<std::shared_ptr<AbstractTask>> expected_successors_4{};
   EXPECT_EQ(tasks[4]->successors(), expected_successors_4);
+
+  for (auto& task : tasks) {
+    task->schedule();
+    // We don't have to wait here, because we are running the task tests without a scheduler
+  }
+
+  // Check that everything was properly cleaned up
+  EXPECT_EQ(gt_a->get_output(), nullptr);
+  EXPECT_EQ(scan_a->get_output(), nullptr);
+  EXPECT_EQ(scan_b->get_output(), nullptr);
+  EXPECT_EQ(scan_c->get_output(), nullptr);
 }
 }  // namespace opossum

@@ -26,22 +26,23 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
   for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
     const auto spec = chunk_encoding_spec[column_id];
 
-    if (spec.encoding_type == EncodingType::Unencoded) {
-      column_statistics.push_back(nullptr);
-      continue;
-    }
     const auto data_type = data_types[column_id];
     const auto base_column = chunk->get_column(column_id);
     const auto value_column = std::dynamic_pointer_cast<const BaseValueColumn>(base_column);
 
     Assert(value_column != nullptr, "All columns of the chunk need to be of type ValueColumn<T>");
 
-    auto encoded_column = encode_column(spec.encoding_type, data_type, value_column, spec.vector_compression_type);
-    chunk->replace_column(column_id, encoded_column);
-
-    column_statistics.push_back(ChunkColumnStatistics::build_statistics(data_type, encoded_column));
+    if (spec.encoding_type == EncodingType::Unencoded) {
+      // No need to encode, but we still want to have statistics for the now immutable value column
+      column_statistics.push_back(ChunkColumnStatistics::build_statistics(data_type, value_column));
+    } else {
+      auto encoded_column = encode_column(spec.encoding_type, data_type, value_column, spec.vector_compression_type);
+      chunk->replace_column(column_id, encoded_column);
+      column_statistics.push_back(ChunkColumnStatistics::build_statistics(data_type, encoded_column));
+    }
   }
 
+  chunk->mark_immutable();
   chunk->set_statistics(std::make_shared<ChunkStatistics>(column_statistics));
 
   if (chunk->has_mvcc_columns()) {
