@@ -32,7 +32,7 @@ class NUMAPlacementTest : public BaseTest {
     const auto table = create_table(_chunk_count, 1000);
     StorageManager::get().add_table("table", table);
 
-    _node_count = NUMAPlacementManager::get().topology()->nodes().size();
+    _node_count = Topology::current().nodes().size();
   }
 
   // Returns a vector that contains the counts of chunks per node.
