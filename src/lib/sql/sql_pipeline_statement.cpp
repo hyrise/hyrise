@@ -54,15 +54,11 @@ const std::shared_ptr<hsql::SQLParserResult>& SQLPipelineStatement::get_parsed_s
   DebugAssert(!_sql_string.empty(), "Cannot parse empty SQL string");
 
   _parsed_sql_statement = std::make_shared<hsql::SQLParserResult>();
-  try {
-    hsql::SQLParser::parse(_sql_string, _parsed_sql_statement.get());
-  } catch (const std::exception& exception) {
-    throw std::runtime_error("Error while parsing SQL query:\n  " + std::string(exception.what()));
-  }
 
-  if (!_parsed_sql_statement->isValid()) {
-    throw std::runtime_error(SQLPipelineStatement::create_parse_error_message(_sql_string, *_parsed_sql_statement));
-  }
+  hsql::SQLParser::parse(_sql_string, _parsed_sql_statement.get());
+
+  AssertInput(_parsed_sql_statement->isValid(),
+    SQLPipelineStatement::create_parse_error_message(_sql_string, *_parsed_sql_statement));
 
   Assert(_parsed_sql_statement->size() == 1,
          "SQLPipelineStatement must hold exactly one statement. "
@@ -162,7 +158,8 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
     Assert(_prepared_statements, "Cannot execute statement without prepared statement cache.");
     const auto plan = _prepared_statements->try_get(execute_statement->name);
 
-    Assert(plan, "Requested prepared statement does not exist!");
+    AssertInput(plan, "Requested prepared statement does not exist!");
+
     assert_same_mvcc_mode(*plan);
 
     // Get list of arguments from EXECUTE statement.
@@ -173,8 +170,8 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
       }
     }
 
-    Assert(arguments.size() == plan->num_parameters(),
-           "Number of arguments provided does not match expected number of arguments.");
+    AssertInput(arguments.size() == plan->num_parameters(),
+      "Number of arguments provided does not match expected number of arguments.");
 
     _query_plan->append_plan(plan->recreate(arguments));
     done = std::chrono::high_resolution_clock::now();
