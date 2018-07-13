@@ -85,19 +85,19 @@ class ColumnMaterializerNUMA {
     const auto node_count = _topology->nodes().size();
     output->reserve(node_count);
 
-    for (NodeID node_id{0}; node_id < node_count; node_id++) {
+    for (auto node_id = NodeID{0}; node_id < node_count; node_id++) {
       // The vectors only contain pointers so the higher bound estimate won't really hurt us here
       // Also we shrink this in the end
       output->emplace_back(MaterializedNUMAPartition<T>{node_id, input->chunk_count()});
     }
     auto null_rows = std::make_unique<PosList>();
 
-    std::vector<std::shared_ptr<AbstractTask>> jobs;
-    for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); ++chunk_id) {
+    auto jobs = std::vector<std::shared_ptr<AbstractTask>>();
+    for (auto chunk_id = ChunkID{0}; chunk_id < input->chunk_count(); ++chunk_id) {
       // This allocator is used to ensure that materialized chunks are colocated with the original chunks
-      MaterializedValueAllocator<T> alloc{input->get_chunk(chunk_id)->get_allocator()};
+      auto alloc = MaterializedValueAllocator<T>{input->get_chunk(chunk_id)->get_allocator()};
 
-      NodeID numa_node_id{0};  // default NUMA Node, everything is on the same node for non numa systems
+      auto numa_node_id = NodeID{0};  // default NUMA Node, everything is on the same node for non numa systems
 
       // Find out whether we actually are on a NUMA System, if so, remember the numa node
       auto numa_res = dynamic_cast<NUMAMemoryResource*>(alloc.resource());
@@ -130,7 +130,7 @@ class ColumnMaterializerNUMA {
                                                              ChunkID chunk_id, std::shared_ptr<const Table> input,
                                                              ColumnID column_id, NodeID numa_node_id) {
     // This allocator ensures that materialized values are colocated with the actual values.
-    MaterializedValueAllocator<T> alloc{input->get_chunk(chunk_id)->get_allocator()};
+    auto alloc = MaterializedValueAllocator<T>{input->get_chunk(chunk_id)->get_allocator()};
 
     const auto column = input->get_chunk(chunk_id)->get_column(column_id);
 
