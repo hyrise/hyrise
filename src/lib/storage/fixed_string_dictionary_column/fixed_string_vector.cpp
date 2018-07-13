@@ -39,10 +39,10 @@ FixedStringIterator FixedStringVector::cend() const noexcept {
   return FixedStringIterator(_string_length, _chars, _string_length == 0 ? 0 : _chars.size());
 }
 
-typedef boost::reverse_iterator<FixedStringIterator> reverse_iterator;
-reverse_iterator FixedStringVector::rbegin() noexcept { return reverse_iterator(end()); }
+using ReverseIterator = boost::reverse_iterator<FixedStringIterator>;
+ReverseIterator FixedStringVector::rbegin() noexcept { return ReverseIterator(end()); }
 
-reverse_iterator FixedStringVector::rend() noexcept { return reverse_iterator(begin()); }
+ReverseIterator FixedStringVector::rend() noexcept { return ReverseIterator(begin()); }
 
 FixedString FixedStringVector::operator[](const size_t value_id) {
   PerformanceWarning("operator[] used");

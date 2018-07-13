@@ -326,6 +326,10 @@ set(
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp
+    storage/index/b_tree/b_tree_index.cpp
+    storage/index/b_tree/b_tree_index.hpp
+    storage/index/b_tree/b_tree_index_impl.cpp
+    storage/index/b_tree/b_tree_index_impl.hpp
     storage/index/base_index.cpp
     storage/index/base_index.hpp
     storage/index/column_index_type.hpp

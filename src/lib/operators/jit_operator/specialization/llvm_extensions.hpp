@@ -11,6 +11,8 @@ namespace opossum {
 
 // Data necessary to specialize the current module. This data is kept in a separate structure outside the
 // JitCodeSpecializer so it can be passed to the modified LLVM functions.
+
+// About NOLINT: These function names map to corresponding LLVM names and are exempt from the Hyrise naming policy
 struct SpecializationContext {
   std::string root_function_name;
   std::shared_ptr<llvm::Module> module;
@@ -23,19 +25,20 @@ struct SpecializationContext {
 
 // Inlines a function call
 // This method extends the corresponding function in the LLVM framework
-bool InlineFunction(llvm::CallSite CS, llvm::InlineFunctionInfo& IFI, llvm::AAResults* CalleeAAR, bool InsertLifetime,
-                    llvm::Function* ForwardVarArgsTo, SpecializationContext& Context);
+bool InlineFunction(llvm::CallSite CS, llvm::InlineFunctionInfo& IFI, llvm::AAResults* CalleeAAR,  // NOLINT
+                    bool InsertLifetime, llvm::Function* ForwardVarArgsTo, SpecializationContext& Context);
 
 // Clones a function body into a new empty function while pruning switch and branch instructions
 // This method extends the corresponding function in the LLVM framework
-void CloneAndPruneFunctionInto(llvm::Function* NewFunc, const llvm::Function* OldFunc, llvm::ValueToValueMapTy& VMap,
-                               bool ModuleLevelChanges, llvm::SmallVectorImpl<llvm::ReturnInst*>& Returns,
-                               const char* NameSuffix, llvm::ClonedCodeInfo* CodeInfo, llvm::Instruction* TheCall,
+void CloneAndPruneFunctionInto(llvm::Function* NewFunc, const llvm::Function* OldFunc,  // NOLINT
+                               llvm::ValueToValueMapTy& VMap, bool ModuleLevelChanges,
+                               llvm::SmallVectorImpl<llvm::ReturnInst*>& Returns, const char* NameSuffix,
+                               llvm::ClonedCodeInfo* CodeInfo, llvm::Instruction* TheCall,
                                SpecializationContext& Context);
 
 // Clones a function body into a new empty function while pruning switch and branch instructions
 // This method extends the corresponding function in the LLVM framework
-void CloneAndPruneIntoFromInst(llvm::Function* NewFunc, const llvm::Function* OldFunc,
+void CloneAndPruneIntoFromInst(llvm::Function* NewFunc, const llvm::Function* OldFunc,  // NOLINT
                                const llvm::Instruction* StartingInst, llvm::ValueToValueMapTy& VMap,
                                bool ModuleLevelChanges, llvm::SmallVectorImpl<llvm::ReturnInst*>& Returns,
                                const char* NameSuffix, llvm::ClonedCodeInfo* CodeInfo, SpecializationContext& Context);
@@ -46,7 +49,7 @@ void CloneAndPruneIntoFromInst(llvm::Function* NewFunc, const llvm::Function* Ol
 // operations (e.g., Load, GetElementPtr, Bitcast instructions) until an already known value (i.e., one that is present
 // in the map) is encountered or a value can no longer be resolved further (e.g., because the operation relies on a
 // non-constant operand).
-const std::shared_ptr<const JitRuntimePointer>& GetRuntimePointerForValue(const llvm::Value* value,
+const std::shared_ptr<const JitRuntimePointer>& GetRuntimePointerForValue(const llvm::Value* value,  // NOLINT
                                                                           SpecializationContext& context);
 
 // Tries to determine the runtime value for a given condition variable of a switch or branch instruction.

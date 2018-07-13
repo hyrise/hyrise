@@ -48,6 +48,11 @@ class SQLPipelineBuilder final {
    */
   SQLPipelineBuilder& disable_mvcc();
 
+  /*
+   * Keep temporary tables in the middle of the query plan for visualization and debugging
+   */
+  SQLPipelineBuilder& dont_cleanup_temporaries();
+
   SQLPipeline create_pipeline() const;
 
   /**
@@ -64,6 +69,7 @@ class SQLPipelineBuilder final {
   std::shared_ptr<LQPTranslator> _lqp_translator;
   std::shared_ptr<Optimizer> _optimizer;
   PreparedStatementCache _prepared_statements;
+  CleanupTemporaries _cleanup_temporaries{true};
 };
 
 }  // namespace opossum

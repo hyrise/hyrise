@@ -14,7 +14,7 @@ class BenchmarkBasicFixture : public benchmark::Fixture {
   void TearDown(::benchmark::State&) override;
 
  protected:
-  void clear_cache();
+  void _clear_cache();
 
  protected:
   std::shared_ptr<TableWrapper> _table_wrapper_a;
