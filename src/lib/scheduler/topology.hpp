@@ -29,15 +29,14 @@ struct TopologyNode final {
  */
 class Topology final {
  public:
+  static Topology& current();
+
   /**
    * @param max_num_workers A values of zero indicates no limit
    * @param workers_per_node
    */
-  static std::shared_ptr<Topology> create_fake_numa_topology(uint32_t max_num_workers = 0,
-                                                             uint32_t workers_per_node = 1);
-  static std::shared_ptr<Topology> create_numa_topology(uint32_t max_num_cores = 0);
-
-  Topology(std::vector<TopologyNode>&& nodes, size_t num_cpus) : _nodes(std::move(nodes)), _num_cpus(num_cpus) {}
+  void create_fake_numa_topology(uint32_t max_num_workers = 0, uint32_t workers_per_node = 1);
+  void create_numa_topology(uint32_t max_num_cores = 0);
 
   const std::vector<TopologyNode>& nodes();
 
@@ -46,6 +45,8 @@ class Topology final {
   void print(std::ostream& stream = std::cout) const;
 
  private:
+  Topology();
+
   std::vector<TopologyNode> _nodes;
   size_t _num_cpus;
 };
