@@ -10,7 +10,7 @@ namespace opossum {
 
 /*
  * Hyrise specific exception used to handle errors related to wrong user input.
- * The console will catch this exception and (try to) rollback related transactions.
+ * The console will catch this exception when parsing a sql string.
  * Also thrown by the macro AssertInput(expr, msg) to easily check user input related constraints.
  */
 class InvalidInputException : public std::runtime_error {
