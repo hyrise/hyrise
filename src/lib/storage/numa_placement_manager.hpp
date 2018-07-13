@@ -8,7 +8,6 @@
 #include <memory>
 #include <vector>
 
-#include "scheduler/topology.hpp"
 #include "utils/numa_memory_resource.hpp"
 #include "utils/pausable_loop_thread.hpp"
 
@@ -65,7 +64,6 @@ class NUMAPlacementManager {
   boost::container::pmr::memory_resource* get_next_memory_resource();
   boost::container::pmr::memory_resource* get_memory_resource(int node_id);
 
-  const std::shared_ptr<Topology>& topology() const;
   const Options& options() const;
 
   void resume();
@@ -77,10 +75,9 @@ class NUMAPlacementManager {
   NUMAPlacementManager(NUMAPlacementManager&&) = delete;
 
  protected:
-  explicit NUMAPlacementManager(const std::shared_ptr<Topology> topology = Topology::create_numa_topology());
+  explicit NUMAPlacementManager();
 
   Options _options;
-  std::shared_ptr<Topology> _topology;
   int _current_node_id;
 
   std::vector<NUMAMemoryResource> _memory_resources;
