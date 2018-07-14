@@ -21,7 +21,9 @@ class ExpressionResultNullableSeries {
   using Type = T;
 
   ExpressionResultNullableSeries(const std::vector<T>& values, const std::vector<bool>& nulls)
-  : _values(values), _nulls(nulls) {}
+  : _values(values), _nulls(nulls) {
+    DebugAssert(values.size() == nulls.size(), "Need as many values as nulls");
+  }
 
   bool is_series() const { return true; }
   bool is_literal() const { return false; }
@@ -35,7 +37,7 @@ class ExpressionResultNullableSeries {
   size_t size() const { return _values.size(); }
 
   bool is_null(const size_t idx) const {
-    DebugAssert(idx < _values.size(), "Index out of range");
+    DebugAssert(idx < _nulls.size(), "Index out of range");
     return _nulls[idx];
   }
 

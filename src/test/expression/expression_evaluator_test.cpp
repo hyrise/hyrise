@@ -93,7 +93,7 @@ class ExpressionEvaluatorTest : public ::testing::Test {
 
     result.as_view([&](const auto& resolved) {
       for (auto idx = size_t{0}; idx < result.size(); ++idx) {
-        if (!resolved.null(idx)) normalized[idx] = resolved.value(idx);
+        if (!resolved.is_null(idx)) normalized[idx] = resolved.value(idx);
       }
     });
 
@@ -194,6 +194,15 @@ TEST_F(ExpressionEvaluatorTest, TernaryAndSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_bools, *and_(bool_a, bool_c), {0, 0, 0, 0, 0, 0, 0, 1, std::nullopt, 0, 1, std::nullopt}));  // NOLINT
   EXPECT_TRUE(test_expression<int32_t>(table_empty, *and_(less_than(1, empty_a), less_than(1, empty_a)), {}));
   // clang-format on
+}
+
+TEST_F(ExpressionEvaluatorTest, ValueLiterals) {
+  EXPECT_TRUE(test_expression<int32_t>(*value(5), {5}));
+  EXPECT_TRUE(test_expression<float>(*value(5.0f), {5.0f}));
+  EXPECT_TRUE(test_expression<int32_t>(*value(NullValue{}), {std::nullopt}));
+  EXPECT_TRUE(test_expression<float>(*value(NullValue{}), {std::nullopt}));
+  EXPECT_TRUE(test_expression<std::string>(*value("Hello"), {"Hello"}));
+  EXPECT_TRUE(test_expression<std::string>(*value(NullValue{}), {std::nullopt}));
 }
 
 TEST_F(ExpressionEvaluatorTest, ArithmeticsLiterals) {

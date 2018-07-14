@@ -22,9 +22,9 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator>& in,
 
 const std::string Projection::name() const { return "Projection"; }
 
-std::shared_ptr<AbstractOperator> Projection::_on_recreate(
+std::shared_ptr<AbstractOperator> Projection::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<Projection>(copied_input_left, expressions_deep_copy(expressions));
 }
 

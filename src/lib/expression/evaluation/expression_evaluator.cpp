@@ -90,7 +90,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
       return _evaluate_extract_expression<Result>(static_cast<const ExtractExpression&>(expression));
 
     case ExpressionType::UnaryMinus:
-      return _evaluate_negate_expression<Result>(static_cast<const UnaryMinusExpression&>(expression));
+      return _evaluate_unary_minus_expression<Result>(static_cast<const UnaryMinusExpression&>(expression));
 
     case ExpressionType::Aggregate:
       Fail("ExpressionEvaluator doesn't support Aggregates, use the Aggregate Operator to compute them");
@@ -622,12 +622,12 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_ex
 }
 
 template <typename Result>
-std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_negate_expression(
-    const UnaryMinusExpression& negate_expression) {
+std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_unary_minus_expression(
+    const UnaryMinusExpression& unary_minus_expression) {
   std::vector<Result> values;
   std::vector<bool> nulls;
 
-  _resolve_to_expression_result(*negate_expression.argument(), [&](const auto& argument_result) {
+  _resolve_to_expression_result(*unary_minus_expression.argument(), [&](const auto& argument_result) {
     using ArgumentType = typename std::decay_t<decltype(argument_result)>::Type;
 
     // clang-format off
@@ -644,11 +644,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_negate_
     // clang-format on
   });
 
-  if (nulls.empty()) {
-    return std::make_shared<ExpressionResult<Result>>(std::move(values));
-  } else {
-    return std::make_shared<ExpressionResult<Result>>(std::move(values), std::move(nulls));
-  }
+  return std::make_shared<ExpressionResult<Result>>(std::move(values), std::move(nulls));
 }
 
 template <typename Result>
@@ -727,8 +723,8 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_select_expression_fo
     });
   }
 
-  // TODO(moritz) recreate() shouldn't be necessary for every row if we could re-execute PQPs...
-  auto row_pqp = expression.pqp->recreate();
+  // TODO(moritz) deep_copy() shouldn't be necessary for every row if we could re-execute PQPs...
+  auto row_pqp = expression.pqp->deep_copy();
   row_pqp->set_parameters(parameters);
 
   SQLQueryPlan query_plan{CleanupTemporaries::Yes};
@@ -928,28 +924,27 @@ ChunkOffset ExpressionEvaluator::_result_size(const RowCounts... row_counts) {
 
 std::vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const std::vector<bool>& left,
                                                                     const std::vector<bool>& right) const {
-  const auto result_size = _result_size(left.size(), right.size());
-
-  if (result_size == 0) return {};
 
   if (left.size() == right.size()) {
-    std::vector<bool> nulls(result_size);
+    std::vector<bool> nulls(left.size());
     std::transform(left.begin(), left.end(), right.begin(), nulls.begin(), [](auto l, auto r) { return l || r; });
     return nulls;
   } else if (left.size() > right.size()) {
-    DebugAssert(right.size() == 1,
-                "Operand should have either the same row count as the other or 1 (to represent a literal)");
-    if (right.front())
+    DebugAssert(right.size() <= 1,
+                "Operand should have either the same row count as the other, 1 row (to represent a literal), or no rows (to represent a non-nullable operand)");
+    if (!right.empty() && right.front()) {
       return std::vector<bool>({true});
-    else
+    } else {
       return left;
+    }
   } else {
-    DebugAssert(left.size() == 1,
-                "Operand should have either the same row count as the other or 1 (to represent a literal)");
-    if (left.front())
+    DebugAssert(left.size() <= 1,
+                "Operand should have either the same row count as the other, 1 row (to represent a literal), or no rows (to represent a non-nullable operand)");
+    if (!left.empty() && left.front()) {
       return std::vector<bool>({true});
-    else
+    } else {
       return right;
+    }
   }
 }
 

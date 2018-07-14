@@ -39,9 +39,9 @@ class ImportBinary : public AbstractReadOnlyOperator {
    */
   std::shared_ptr<const Table> _on_execute() final;
 
-  std::shared_ptr<AbstractOperator> _on_recreate(
+  std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
 
   // Returns the name of the operator
   const std::string name() const final;

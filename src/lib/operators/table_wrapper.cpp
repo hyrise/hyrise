@@ -11,9 +11,9 @@ TableWrapper::TableWrapper(const std::shared_ptr<const Table> table)
 
 const std::string TableWrapper::name() const { return "TableWrapper"; }
 
-std::shared_ptr<AbstractOperator> TableWrapper::_on_recreate(
+std::shared_ptr<AbstractOperator> TableWrapper::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<TableWrapper>(_table);
 }
 

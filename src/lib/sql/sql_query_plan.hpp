@@ -33,7 +33,7 @@ class SQLQueryPlan {
   const std::vector<std::shared_ptr<AbstractOperator>>& tree_roots() const;
 
   // Recreates the query plan with a new and equivalent set of operator trees.
-  SQLQueryPlan recreate() const;
+  SQLQueryPlan deep_copy() const;
 
   // Calls set_transaction_context_recursively on all roots.
   void set_transaction_context(std::shared_ptr<TransactionContext> context);

@@ -14,6 +14,13 @@
 #include "strategy/predicate_pushdown_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
 
+/**
+ * IMPORTANT NOTICE ON ONLY OPTIMIZING SUB-SELECT LQPS ONCE
+ *
+ * Multiple Expressions in different nodes might reference the same LQP. When optimizing starting from just one of the
+ * enclosing LQPSelectExpressions, the Optimizer might break ot
+ */
+
 namespace {
 
 using namespace opossum;  // NOLINT
@@ -21,6 +28,7 @@ using namespace opossum;  // NOLINT
 // All SelectExpressions referencing the same LQP
 using SelectExpressionsByLQP = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<LQPSelectExpression>>>>;
 
+// See comment at the top of file for the purpose of this.
 void collect_select_expressions_by_lqp(SelectExpressionsByLQP& select_expressions_by_lqp,
                                        const std::shared_ptr<AbstractLQPNode>& node,
                                        std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
@@ -130,6 +138,8 @@ bool Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<Abst
     for (const auto& select_expression : lqp_and_select_expressions.second) {
       select_expression->lqp = root_node->left_input();
     }
+
+    // Explicitly untie the root node, otherwise the LQP is left with an expired output weak_ptr
     root_node->set_left_input(nullptr);
   }
 

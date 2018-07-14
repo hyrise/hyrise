@@ -26,9 +26,9 @@ class Print : public AbstractReadOnlyOperator {
   std::vector<uint16_t> _column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table> t) const;
   std::string _truncate_cell(const AllTypeVariant& cell, uint16_t max_width) const;
   std::shared_ptr<const Table> _on_execute() override;
-  std::shared_ptr<AbstractOperator> _on_recreate(
+  std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
 
   // stream to print the result
   std::ostream& _out;

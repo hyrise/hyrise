@@ -33,6 +33,8 @@ class BaseExpressionResult {
  *
  * Examples:
  *      {values: [1, 2, 3, 4]; nulls: []} --> Series [1, 2, 3, 4]
+ *      {values: [1, 2, 3, 4]; nulls: [false]} --> Series [1, 2, 3, 4]
+ *      {values: [1, 2, 3, 4]; nulls: [true]} --> Literal [NULL]
  *      {values: [1, 2, 3, 4]; nulls: [true, false, true, false]} --> Series [NULL, 2, NULL, 4]
  *      {values: [1]; nulls: []} --> Literal [1]
  *      {values: [1]; nulls: [true]} --> Literal [NULL]
@@ -49,24 +51,24 @@ class ExpressionResult : public BaseExpressionResult {
 
   ExpressionResult() = default;
 
-  ExpressionResult(std::vector<T> values, std::vector<bool> nulls = {false})
-  : values(std::move(values)), nulls(std::move(nulls)) {}
+  ExpressionResult(std::vector<T> values, std::vector<bool> nulls = {})
+  : values(std::move(values)), nulls(std::move(nulls)) {
+    DebugAssert(nulls.empty() || nulls.size() == values.size(), "Need as many nulls as values or no nulls at all");
+  }
 
   bool is_nullable_series() const { return size() != 1; }
   bool is_literal() const { return size() == 1; }
-  bool is_nullable() const { return nulls.size() > 1 || nulls.front(); }
+  bool is_nullable() const { return !nulls.empty(); }
 
   const T& value(const size_t idx) const {
-    DebugAssert(values.size() == 1 || idx < values.size(), "Invalid ExpressionResult access");
+    DebugAssert(size() == 1 || idx < size(), "Invalid ExpressionResult access");
     return values[std::min(idx, values.size() - 1)];
   }
 
   bool is_null(const size_t idx) const {
+    DebugAssert(size() == 1 || idx < size(), "Null idx out of bounds");
     if (nulls.empty()) return false;
-    if (nulls.size() == 1) return nulls.front();
-
-    DebugAssert(idx < nulls.size(), "Null idx out of bounds");
-    return nulls[idx];
+    return nulls[std::min(idx, nulls.size() - 1)];
   }
 
   /**
@@ -77,9 +79,11 @@ class ExpressionResult : public BaseExpressionResult {
    */
   template <typename Functor>
   void as_view(const Functor& fn) const {
-    if (size() == 1 || (nulls.size() == 1 && nulls.front())) {
-      fn(ExpressionResultLiteral(values.front(), nulls.front()));
-    } else if (nulls.size() == 1 && !nulls.front()) {
+    if (size() == 1) {
+      fn(ExpressionResultLiteral(values.front(), is_nullable() && nulls.front()));
+    } else if (nulls.size() == 1 && nulls.front()) {
+      fn(ExpressionResultLiteral(T{}, true));
+    } else if (!is_nullable()) {
       fn(ExpressionResultNonNullSeries(values));
     } else {
       fn(ExpressionResultNullableSeries(values, nulls));

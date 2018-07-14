@@ -162,7 +162,7 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
     DebugAssert(!plan.tree_roots().empty(), "QueryPlan retrieved from cache is empty.");
     assert_same_mvcc_mode(plan);
 
-    _query_plan->append_plan(plan.recreate());
+    _query_plan->append_plan(plan.deep_copy());
     _metrics->query_plan_cache_hit = true;
     done = std::chrono::high_resolution_clock::now();
   } else if (const auto* execute_statement = dynamic_cast<const hsql::ExecuteStatement*>(statement)) {
@@ -175,7 +175,7 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
     assert_same_mvcc_mode(*plan);
 
     // We don't want to set the parameters of the "prototype" plan in the cache
-    plan = plan->recreate();
+    plan = plan->deep_copy();
 
     // Get list of arguments from EXECUTE statement.
     std::unordered_map<ParameterID, AllTypeVariant> parameters;

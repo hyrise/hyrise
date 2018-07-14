@@ -35,9 +35,9 @@ class ExportBinary : public AbstractReadOnlyOperator {
   const std::string name() const final;
 
  protected:
-  std::shared_ptr<AbstractOperator> _on_recreate(
+  std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
 
  private:
   // Path of the binary file

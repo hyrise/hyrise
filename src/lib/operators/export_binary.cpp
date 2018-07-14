@@ -132,9 +132,9 @@ std::shared_ptr<const Table> ExportBinary::_on_execute() {
   return _input_left->get_output();
 }
 
-std::shared_ptr<AbstractOperator> ExportBinary::_on_recreate(
+std::shared_ptr<AbstractOperator> ExportBinary::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<ExportBinary>(copied_input_left, _filename);
 }
 

@@ -63,9 +63,9 @@ const std::string Aggregate::description(DescriptionMode description_mode) const
   return desc.str();
 }
 
-std::shared_ptr<AbstractOperator> Aggregate::_on_recreate(
+std::shared_ptr<AbstractOperator> Aggregate::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<Aggregate>(copied_input_left, _aggregates, _groupby_column_ids);
 }
 

@@ -45,7 +45,8 @@ std::string AbstractExpression::_enclose_argument_as_column_name(const AbstractE
   // TODO(anybody) Using >= to make divisions ("(2/3)/4") and logical operations ("(a AND (b OR c))") unambiguous -
   //               Sadly this makes cases where the parentheses could be avoided look ugly ("(2+3)+4")
 
-  if (static_cast<std::underlying_type_t<ExpressionPrecedence>>(argument._precedence()) >= static_cast<std::underlying_type_t<ExpressionPrecedence>>(_precedence())) {
+  if (static_cast<std::underlying_type_t<ExpressionPrecedence>>(argument._precedence()) >=
+      static_cast<std::underlying_type_t<ExpressionPrecedence>>(_precedence())) {
     return "("s + argument.as_column_name() + ")";
   } else {
     return argument.as_column_name();

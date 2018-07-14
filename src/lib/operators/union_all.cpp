@@ -43,9 +43,9 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
 
   return output;
 }
-std::shared_ptr<AbstractOperator> UnionAll::_on_recreate(
+std::shared_ptr<AbstractOperator> UnionAll::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<UnionAll>(copied_input_left, recreated_input_right);
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<UnionAll>(copied_input_left, copied_input_right);
 }
 }  // namespace opossum

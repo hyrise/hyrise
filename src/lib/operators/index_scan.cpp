@@ -54,9 +54,9 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   return _out_table;
 }
 
-std::shared_ptr<AbstractOperator> IndexScan::_on_recreate(
+std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<IndexScan>(copied_input_left, _index_type, _left_column_ids, _predicate_condition,
                                      _right_values, _right_values2);
 }

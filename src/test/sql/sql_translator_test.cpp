@@ -1178,7 +1178,7 @@ TEST_F(SQLTranslatorTest, ExistsCorrelated) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, Negate) {
+TEST_F(SQLTranslatorTest, UnaryMinus) {
   const auto actual_lqp = compile_query("SELECT -a FROM int_float");
 
   // clang-format off

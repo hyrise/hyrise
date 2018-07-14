@@ -99,9 +99,9 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   void set_transaction_context_recursively(std::weak_ptr<TransactionContext> transaction_context);
 
   // Returns a new instance of the same operator with the same configuration.
-  // Recursively recreates the input operators.
+  // Recursively copies the input operators.
   // An operator needs to implement this method in order to be cacheable.
-  std::shared_ptr<AbstractOperator> recreate() const;
+  std::shared_ptr<AbstractOperator> deep_copy() const;
 
   // Get the input operators.
   std::shared_ptr<const AbstractOperator> input_left() const;
@@ -146,13 +146,13 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   void _print_impl(std::ostream& out, std::vector<bool>& levels,
                    std::unordered_map<const AbstractOperator*, size_t>& id_by_operator, size_t& id_counter) const;
 
-  // Looks itself up in @param recreated_ops to support diamond shapes in PQPs, if not found calls _on_recreate()
-  std::shared_ptr<AbstractOperator> _recreate_impl(
-      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& recreated_ops) const;
+  // Looks itself up in @param copied_ops to support diamond shapes in PQPs, if not found calls _on_deep_copy()
+  std::shared_ptr<AbstractOperator> _deep_copy_impl(
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const;
 
-  virtual std::shared_ptr<AbstractOperator> _on_recreate(
+  virtual std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const = 0;
+      const std::shared_ptr<AbstractOperator>& copied_input_right) const = 0;
 
   const OperatorType _type;
 

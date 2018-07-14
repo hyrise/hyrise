@@ -164,7 +164,7 @@ enum class SchedulePriority {
 };
 
 // Part of AllParameterVariant to reference parameters that will be replaced later.
-// When stored in an operator, the operator's recreate method can contain functionality
+// When stored in an operator, the operator's deep_cop method can contain functionality
 // that will replace a ValuePlaceholder with an explicit value from a given list of arguments
 
 class ValuePlaceholder {

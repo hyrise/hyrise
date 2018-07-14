@@ -21,9 +21,9 @@ const std::string Limit::name() const { return "Limit"; }
 
 std::shared_ptr<AbstractExpression> Limit::row_count_expression() const { return _row_count_expression; }
 
-std::shared_ptr<AbstractOperator> Limit::_on_recreate(
+std::shared_ptr<AbstractOperator> Limit::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<Limit>(copied_input_left, _row_count_expression->deep_copy());
 }
 

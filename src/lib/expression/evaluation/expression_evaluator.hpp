@@ -100,7 +100,7 @@ class ExpressionEvaluator final {
   std::shared_ptr<ExpressionResult<Result>> _evaluate_extract_expression(const ExtractExpression& extract_expression);
 
   template <typename Result>
-  std::shared_ptr<ExpressionResult<Result>> _evaluate_negate_expression(const UnaryMinusExpression& negate_expression);
+  std::shared_ptr<ExpressionResult<Result>> _evaluate_unary_minus_expression(const UnaryMinusExpression& unary_minus_expression);
 
   template <size_t offset, size_t count>
   std::shared_ptr<ExpressionResult<std::string>> _evaluate_extract_substr(
@@ -139,8 +139,12 @@ class ExpressionEvaluator final {
 
   /**
    * "Default null logic" means: if one of the arguments of an operation is NULL, the result is NULL
+   *
+   * Either operand can be either empty (the operand is not nullable), contain one element (the operand is a literal
+   * with null info) or can have n rows (the operand is a nullable series)
    */
-  std::vector<bool> _evaluate_default_null_logic(const std::vector<bool>& left, const std::vector<bool>& right) const;
+  std::vector<bool> _evaluate_default_null_logic(const std::vector<bool>& left,
+                                                 const std::vector<bool>& right) const;
 
   void _materialize_column_if_not_yet_materialized(const ColumnID column_id);
 

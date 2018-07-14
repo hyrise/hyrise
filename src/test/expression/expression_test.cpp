@@ -68,7 +68,7 @@ TEST_F(ExpressionTest, Equals) {
   EXPECT_TRUE(parameter(ParameterID{4})->deep_equals(*parameter(ParameterID{4})));
   EXPECT_FALSE(parameter(ParameterID{4})->deep_equals(*parameter(ParameterID{5})));
   EXPECT_TRUE(extract(DatetimeComponent::Month, "1999-07-30")->deep_equals(*extract(DatetimeComponent::Month, "1999-07-30")));
-  EXPECT_TRUE(extract(DatetimeComponent::Day, "1999-07-30")->deep_equals(*extract(DatetimeComponent::Month, "1999-07-30")));
+  EXPECT_FALSE(extract(DatetimeComponent::Day, "1999-07-30")->deep_equals(*extract(DatetimeComponent::Month, "1999-07-30")));
   EXPECT_TRUE(unary_minus(6)->deep_equals(*unary_minus(6)));
   EXPECT_FALSE(unary_minus(6)->deep_equals(*unary_minus(6.5)));
   EXPECT_TRUE(cast(6.5, DataType::Int)->deep_equals(*cast(6.5, DataType::Int)));

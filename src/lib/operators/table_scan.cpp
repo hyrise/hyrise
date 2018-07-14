@@ -69,9 +69,9 @@ void TableScan::_on_set_parameters(const std::unordered_map<ParameterID, AllType
   _right_parameter = value_iter->second;
 }
 
-std::shared_ptr<AbstractOperator> TableScan::_on_recreate(
+std::shared_ptr<AbstractOperator> TableScan::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<TableScan>(copied_input_left, _left_column_id, _predicate_condition, _right_parameter);
 }
 

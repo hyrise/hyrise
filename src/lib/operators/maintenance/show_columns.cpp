@@ -21,9 +21,9 @@ ShowColumns::ShowColumns(const std::string& table_name)
 
 const std::string ShowColumns::name() const { return "ShowColumns"; }
 
-std::shared_ptr<AbstractOperator> ShowColumns::_on_recreate(
+std::shared_ptr<AbstractOperator> ShowColumns::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<ShowColumns>(_table_name);
 }
 

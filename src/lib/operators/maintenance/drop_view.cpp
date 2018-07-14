@@ -14,9 +14,9 @@ DropView::DropView(const std::string& view_name)
 
 const std::string DropView::name() const { return "DropView"; }
 
-std::shared_ptr<AbstractOperator> DropView::_on_recreate(
+std::shared_ptr<AbstractOperator> DropView::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<DropView>(_view_name);
 }
 

@@ -25,9 +25,9 @@ OrderByMode Sort::order_by_mode() const { return _order_by_mode; }
 
 const std::string Sort::name() const { return "Sort"; }
 
-std::shared_ptr<AbstractOperator> Sort::_on_recreate(
+std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<Sort>(copied_input_left, _column_id, _order_by_mode, _output_chunk_size);
 }
 

@@ -17,6 +17,7 @@ set(
     lib/all_parameter_variant_test.cpp
     lib/all_type_variant_test.cpp
     expression/expression_test.cpp
+    expression/expression_result_test.cpp
     expression/expression_utils_test.cpp
     expression/like_matcher_test.cpp
     expression/lqp_select_expression_test.cpp
@@ -73,7 +74,7 @@ set(
     operators/print_test.cpp
     operators/product_test.cpp
     operators/projection_test.cpp
-    operators/recreation_test.cpp
+    operators/operator_deep_copy_test.cpp
     operators/sort_test.cpp
     operators/table_scan_like_test.cpp
     operators/table_scan_test.cpp

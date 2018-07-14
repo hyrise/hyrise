@@ -18,9 +18,9 @@ ShowTables::ShowTables() : AbstractReadOnlyOperator(OperatorType::ShowTables) {}
 
 const std::string ShowTables::name() const { return "ShowTables"; }
 
-std::shared_ptr<AbstractOperator> ShowTables::_on_recreate(
+std::shared_ptr<AbstractOperator> ShowTables::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<ShowTables>();
 }
 

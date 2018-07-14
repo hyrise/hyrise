@@ -34,14 +34,14 @@ TEST_F(DropViewTest, OperatorName) {
   EXPECT_EQ(dv->name(), "DropView");
 }
 
-TEST_F(DropViewTest, Recreate) {
+TEST_F(DropViewTest, DeepCopy) {
   auto dv = std::make_shared<DropView>("view_name");
 
   dv->execute();
   EXPECT_NE(dv->get_output(), nullptr);
 
-  const auto recreated = dv->recreate();
-  EXPECT_EQ(recreated->get_output(), nullptr);
+  const auto copy = dv->deep_copy();
+  EXPECT_EQ(copy->get_output(), nullptr);
 }
 
 TEST_F(DropViewTest, CanDropViews) {

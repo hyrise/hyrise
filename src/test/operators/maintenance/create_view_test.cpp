@@ -33,7 +33,7 @@ TEST_F(CreateViewTest, OperatorName) {
   EXPECT_EQ(cv->name(), "CreateView");
 }
 
-TEST_F(CreateViewTest, Recreate) {
+TEST_F(CreateViewTest, DeepCopy) {
   const auto view_lqp = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
   const auto view = std::make_shared<View>(view_lqp, std::unordered_map<ColumnID, std::string>{});
 
@@ -42,8 +42,8 @@ TEST_F(CreateViewTest, Recreate) {
   cv->execute();
   EXPECT_NE(cv->get_output(), nullptr);
 
-  const auto recreated = cv->recreate();
-  EXPECT_EQ(recreated->get_output(), nullptr);
+  const auto copy = cv->deep_copy();
+  EXPECT_EQ(copy->get_output(), nullptr);
 }
 
 TEST_F(CreateViewTest, CanCreateViews) {

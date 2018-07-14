@@ -233,7 +233,7 @@ TEST_F(OperatorsInsertTest, InsertNullIntoNonNull) {
   context->rollback();
 }
 
-TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
+TEST_F(OperatorsInsertTest, DISABLED_InsertSingleNullFromDummyProjection) {
   auto t_name = "test1";
 
   auto t = load_table("src/test/tables/float_with_null.tbl", 4u);

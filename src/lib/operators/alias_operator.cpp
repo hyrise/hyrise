@@ -25,9 +25,9 @@ const std::string AliasOperator::description(DescriptionMode description_mode) c
   return stream.str();
 }
 
-std::shared_ptr<AbstractOperator> AliasOperator::_on_recreate(
+std::shared_ptr<AbstractOperator> AliasOperator::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<AliasOperator>(copied_input_left, _column_ids, _aliases);
 }
 
