@@ -17,7 +17,7 @@ Topology& Topology::current() {
   return instance;
 }
 
-Topology::Topology() { create_default_topology(); }
+Topology::Topology() { init_default_topology(); }
 
 void TopologyNode::print(std::ostream& stream) const {
   stream << "Number of Node CPUs: " << cpus.size() << ", CPUIDs: [";
@@ -30,21 +30,21 @@ void TopologyNode::print(std::ostream& stream) const {
   stream << "]";
 }
 
-void Topology::create_default_topology() {
+void Topology::init_default_topology() {
 #if !HYRISE_NUMA_SUPPORT
-  create_nonnuma_topology();
+  init_non_numa_topology();
 #else
-  create_numa_topology();
+  init_numa_topology();
 #endif
 }
 
-void Topology::create_numa_topology(uint32_t max_num_cores) {
+void Topology::init_numa_topology(uint32_t max_num_cores) {
 #if !HYRISE_NUMA_SUPPORT
-  create_fake_numa_topology(max_num_cores);
+  init_fake_numa_topology(max_num_cores);
 #else
 
   if (numa_available() < 0) {
-    return create_fake_numa_topology(max_num_cores);
+    return init_fake_numa_topology(max_num_cores);
   }
 
   _nodes.clear();
@@ -80,7 +80,7 @@ void Topology::create_numa_topology(uint32_t max_num_cores) {
 #endif
 }
 
-void Topology::create_nonnuma_topology(uint32_t max_num_cores) {
+void Topology::init_non_numa_topology(uint32_t max_num_cores) {
   _nodes.clear();
   _num_cpus = 0;
 
@@ -104,7 +104,7 @@ void Topology::create_nonnuma_topology(uint32_t max_num_cores) {
   _nodes.emplace_back(std::move(node));
 }
 
-void Topology::create_fake_numa_topology(uint32_t max_num_workers, uint32_t workers_per_node) {
+void Topology::init_fake_numa_topology(uint32_t max_num_workers, uint32_t workers_per_node) {
   _nodes.clear();
   _num_cpus = 0;
 

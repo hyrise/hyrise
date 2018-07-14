@@ -31,10 +31,10 @@ class Topology final {
  public:
   static Topology& current();
 
-  void create_default_topology();
-  void create_numa_topology(uint32_t max_num_cores = 0);
-  void create_nonnuma_topology(uint32_t max_num_cores = 0);
-  void create_fake_numa_topology(uint32_t max_num_workers = 0, uint32_t workers_per_node = 1);
+  void init_default_topology();
+  void init_numa_topology(uint32_t max_num_cores = 0);
+  void init_non_numa_topology(uint32_t max_num_cores = 0);
+  void init_fake_numa_topology(uint32_t max_num_workers = 0, uint32_t workers_per_node = 1);
 
   const std::vector<TopologyNode>& nodes();
 

@@ -72,7 +72,7 @@ TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneWithSchedulerTest) {
   const auto& tmpl = pipeline_statement.get_query_plan();
 
   // Get a copy and schedule all tasks.
-  Topology::current().create_fake_numa_topology(8, 4);
+  Topology::current().init_fake_numa_topology(8, 4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
 
   auto cloned_tasks = tmpl->recreate().create_tasks();
