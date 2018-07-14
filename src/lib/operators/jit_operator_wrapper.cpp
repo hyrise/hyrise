@@ -83,9 +83,9 @@ std::shared_ptr<const Table> JitOperatorWrapper::_on_execute() {
 }
 
 std::shared_ptr<AbstractOperator> JitOperatorWrapper::_on_recreate(
-    const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<JitOperatorWrapper>(recreated_input_left, _execution_mode, _jit_operators);
+  return std::make_shared<JitOperatorWrapper>(copied_input_left, _execution_mode, _jit_operators);
 }
 
 }  // namespace opossum

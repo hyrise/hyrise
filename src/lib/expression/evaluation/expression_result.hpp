@@ -61,9 +61,12 @@ class ExpressionResult : public BaseExpressionResult {
     return values[std::min(idx, values.size() - 1)];
   }
 
-  bool null(const size_t idx) const {
-    DebugAssert(nulls.size() == 1 || idx < nulls.size(), "Invalid ExpressionResult access");
-    return nulls[std::min(idx, nulls.size() - 1)];
+  bool is_null(const size_t idx) const {
+    if (nulls.empty()) return false;
+    if (nulls.size() == 1) return nulls.front();
+
+    DebugAssert(idx < nulls.size(), "Null idx out of bounds");
+    return nulls[idx];
   }
 
   /**

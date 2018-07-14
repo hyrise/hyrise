@@ -53,9 +53,9 @@ class TPCHTest : public BaseTestWithParam<std::pair<const size_t, const char*>> 
     {16, "0.001"},
     {17, "0.001"},
     {18, "0.01"},
-    {19, "0.01"},
+    {19, "0.001"},
     {20, "0.01"},
-    {21, "0.001"},
+    {21, "0.01"},
     {22, "0.001"}
   };  
 };
@@ -90,9 +90,9 @@ TEST_P(TPCHTest, TPCHQueryTest) {
     std::cout << "Cannot print plan, needs to be executed first" << std::endl;
   }
 
-//  if (query_idx == 2 || query_idx == 8 || query_idx == 19) {
-//    FAIL();
-//  }
+  if (query_idx == 17) {
+    FAIL();
+  }
 
   const auto result_table = sql_pipeline.get_result_table();
 

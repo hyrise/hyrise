@@ -58,7 +58,7 @@ void ConstantCalculationRule::_prune_expression(std::shared_ptr<AbstractExpressi
     const auto result = ExpressionEvaluator{}.evaluate_expression_to_result<ExpressionDataType>(*expression);
     Assert(result->is_literal(), "Expected Literal");
 
-    if (result->null(0)) {
+    if (result->is_null(0)) {
       expression = std::make_shared<ValueExpression>(NullValue{});
     } else {
       expression = std::make_shared<ValueExpression>(result->value(0));

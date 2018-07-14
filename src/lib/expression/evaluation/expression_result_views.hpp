@@ -34,7 +34,7 @@ class ExpressionResultNullableSeries {
 
   size_t size() const { return _values.size(); }
 
-  bool null(const size_t idx) const {
+  bool is_null(const size_t idx) const {
     DebugAssert(idx < _values.size(), "Index out of range");
     return _nulls[idx];
   }
@@ -66,7 +66,7 @@ class ExpressionResultNonNullSeries {
     return _values[idx];
   }
 
-  bool null(const size_t idx) const { return false; }
+  bool is_null(const size_t idx) const { return false; }
 
  private:
   const std::vector<T>& _values;
@@ -90,7 +90,7 @@ class ExpressionResultLiteral {
   size_t size() const { return 1u; }
 
   const T& value(const size_t = 0) const { return _value; }
-  bool null(const size_t = 0) const { return _null; }
+  bool is_null(const size_t = 0) const { return _null; }
 
  private:
   T _value;

@@ -161,12 +161,12 @@ std::shared_ptr<AbstractOperator> AbstractOperator::_recreate_impl(
   const auto recreated_ops_iter = recreated_ops.find(this);
   if (recreated_ops_iter != recreated_ops.end()) return recreated_ops_iter->second;
 
-  const auto recreated_input_left =
+  const auto copied_input_left =
       input_left() ? input_left()->_recreate_impl(recreated_ops) : std::shared_ptr<AbstractOperator>{};
   const auto recreated_input_right =
       input_right() ? input_right()->_recreate_impl(recreated_ops) : std::shared_ptr<AbstractOperator>{};
 
-  const auto recreated_op = _on_recreate(recreated_input_left, recreated_input_right);
+  const auto recreated_op = _on_recreate(copied_input_left, recreated_input_right);
   if (_transaction_context) recreated_op->set_transaction_context(*_transaction_context);
 
   recreated_ops.emplace(this, recreated_op);

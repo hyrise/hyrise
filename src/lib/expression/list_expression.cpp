@@ -24,4 +24,6 @@ std::string ListExpression::as_column_name() const {
   return std::string{"("} + expression_column_names(arguments) + ")";
 }
 
+bool ListExpression::_shallow_equals(const AbstractExpression& expression) const { return true; }
+
 }  // namespace opossum

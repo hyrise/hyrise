@@ -18,7 +18,7 @@ class ValueExpression : public AbstractExpression {
   DataType data_type() const override;
   bool is_nullable() const override;
 
-  AllTypeVariant value;
+  const AllTypeVariant value;
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;

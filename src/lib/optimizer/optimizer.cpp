@@ -56,7 +56,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   auto optimizer = std::make_shared<Optimizer>(10);
 
   RuleBatch main_batch(RuleBatchExecutionPolicy::Iterative);
-  main_batch.add_rule(std::make_shared<PredicatePushdownRule>());
+ main_batch.add_rule(std::make_shared<PredicatePushdownRule>());
   main_batch.add_rule(std::make_shared<PredicateReorderingRule>());
   main_batch.add_rule(std::make_shared<JoinDetectionRule>());
   optimizer->add_rule_batch(main_batch);
@@ -130,6 +130,7 @@ bool Optimizer::_apply_rule(const AbstractRule& rule, const std::shared_ptr<Abst
     for (const auto& select_expression : lqp_and_select_expressions.second) {
       select_expression->lqp = root_node->left_input();
     }
+    root_node->set_left_input(nullptr);
   }
 
   return lqp_changed;

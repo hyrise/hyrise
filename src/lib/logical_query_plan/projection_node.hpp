@@ -16,8 +16,7 @@ class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public Abstr
   std::vector<std::shared_ptr<AbstractExpression>> node_expressions() const override;
   std::shared_ptr<TableStatistics> derive_statistics_from(const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const override;
 
-
-  std::vector<std::shared_ptr<AbstractExpression>> expressions;
+  const std::vector<std::shared_ptr<AbstractExpression>> expressions;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _shallow_copy_impl(LQPNodeMapping& node_mapping) const override;

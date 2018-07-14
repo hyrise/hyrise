@@ -26,9 +26,9 @@ const std::string AliasOperator::description(DescriptionMode description_mode) c
 }
 
 std::shared_ptr<AbstractOperator> AliasOperator::_on_recreate(
-    const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<AliasOperator>(recreated_input_left, _column_ids, _aliases);
+  return std::make_shared<AliasOperator>(copied_input_left, _column_ids, _aliases);
 }
 
 std::shared_ptr<const Table> AliasOperator::_on_execute() {

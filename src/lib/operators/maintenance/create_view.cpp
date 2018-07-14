@@ -16,7 +16,7 @@ CreateView::CreateView(const std::string& view_name, const std::shared_ptr<View>
 const std::string CreateView::name() const { return "CreateView"; }
 
 std::shared_ptr<AbstractOperator> CreateView::_on_recreate(
-    const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
   return std::make_shared<CreateView>(_view_name, _view->deep_copy());
 }

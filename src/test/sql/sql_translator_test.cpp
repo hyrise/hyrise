@@ -1183,7 +1183,7 @@ TEST_F(SQLTranslatorTest, Negate) {
 
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(negate(int_float_a)),
+  ProjectionNode::make(expression_vector(unary_minus(int_float_a)),
     stored_table_node_int_float
   );
   // clang-format on

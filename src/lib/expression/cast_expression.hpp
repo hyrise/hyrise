@@ -8,6 +8,8 @@ namespace opossum {
 
 /**
  * SQL's CAST
+ * NOT a FunctionExpression since we currently have no way for taking as an enum such as DataType as a function
+ * argument
  */
 class CastExpression : public AbstractExpression {
  public:

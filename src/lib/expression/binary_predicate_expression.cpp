@@ -38,4 +38,8 @@ bool BinaryPredicateExpression::_shallow_equals(const AbstractExpression& expres
   return predicate_condition == binary_predicate_expression->predicate_condition;
 }
 
+ExpressionPrecedence BinaryPredicateExpression::_precedence() const {
+  return ExpressionPrecedence::BinaryTernaryPredicate;
+}
+
 }  // namespace opossum

@@ -18,6 +18,9 @@ class BetweenExpression : public AbstractPredicateExpression {
 
   std::shared_ptr<AbstractExpression> deep_copy() const override;
   std::string as_column_name() const override;
+
+ protected:
+  ExpressionPrecedence _precedence() const override;
 };
 
 }  // namespace opossum

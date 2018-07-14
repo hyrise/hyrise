@@ -90,7 +90,7 @@ class UnionPositions : public AbstractReadOnlyOperator {
   std::shared_ptr<const Table> _on_execute() override;
 
   std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& copied_input_left,
       const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
 
   /**

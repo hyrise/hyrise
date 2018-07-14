@@ -64,9 +64,9 @@ const std::string Aggregate::description(DescriptionMode description_mode) const
 }
 
 std::shared_ptr<AbstractOperator> Aggregate::_on_recreate(
-    const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<Aggregate>(recreated_input_left, _aggregates, _groupby_column_ids);
+  return std::make_shared<Aggregate>(copied_input_left, _aggregates, _groupby_column_ids);
 }
 
 void Aggregate::_on_cleanup() {
@@ -646,22 +646,28 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
 
   // Generate column name, TODO(anybody), actually, the AggregateExpression can do this, but the Aggregate operator
   // doesn't use Expressions, yet
-  std::stringstream column_name;
+  std::stringstream column_name_stream;
   if (aggregate.function == AggregateFunction::CountDistinct) {
-    column_name << "COUNT(DISTINCT ";
+    column_name_stream << "COUNT(DISTINCT ";
   } else {
-    column_name << aggregate_function_to_string.left.at(aggregate.function) << "(";
+    column_name_stream << aggregate_function_to_string.left.at(aggregate.function) << "(";
   }
 
   if (aggregate.column) {
-    column_name << input_table_left()->column_name(*aggregate.column);
+    column_name_stream << input_table_left()->column_name(*aggregate.column);
   } else {
-    column_name << "*";
+    column_name_stream << "*";
   }
-  column_name << ")";
+  column_name_stream << ")";
+
+  // TODO(anybody) Until #962 is resolved, we need to limit the length of a column name
+  auto column_name = column_name_stream.str();
+  if (column_name.size() > std::numeric_limits<ColumnNameLength>::max()) {
+    column_name = column_name.substr(0, std::numeric_limits<ColumnNameLength>::max() - 3) + "...";
+  }
 
   constexpr bool NEEDS_NULL = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
-  _output_column_definitions.emplace_back(column_name.str(), AGGREGATE_DATA_TYPE, NEEDS_NULL);
+  _output_column_definitions.emplace_back(column_name_stream.str(), AGGREGATE_DATA_TYPE, NEEDS_NULL);
 
   auto col = std::make_shared<ValueColumn<decltype(aggregate_type)>>(NEEDS_NULL);
 

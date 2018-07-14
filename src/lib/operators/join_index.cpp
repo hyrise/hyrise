@@ -34,9 +34,9 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator> left,
 const std::string JoinIndex::name() const { return "JoinIndex"; }
 
 std::shared_ptr<AbstractOperator> JoinIndex::_on_recreate(
-    const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<JoinIndex>(recreated_input_left, recreated_input_right, _mode, _column_ids,
+  return std::make_shared<JoinIndex>(copied_input_left, recreated_input_right, _mode, _column_ids,
                                      _predicate_condition);
 }
 

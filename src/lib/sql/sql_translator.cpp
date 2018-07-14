@@ -27,7 +27,7 @@
 #include "expression/logical_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/lqp_select_expression.hpp"
-#include "expression/negate_expression.hpp"
+#include "expression/unary_minus_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -1117,7 +1117,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       // Translate all other expression types
       switch (expr.opType) {
         case hsql::kOpUnaryMinus:
-          return std::make_shared<NegateExpression>(left);
+          return std::make_shared<UnaryMinusExpression>(left);
         case hsql::kOpCase:
           return _translate_hsql_case(expr, sql_identifier_context);
         case hsql::kOpOr:

@@ -27,12 +27,12 @@ class ArithmeticExpression : public AbstractExpression {
   DataType data_type() const override;
   bool is_nullable() const override;
 
-  ArithmeticOperator arithmetic_operator;
+  const ArithmeticOperator arithmetic_operator;
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
   size_t _on_hash() const override;
-  uint32_t _precedence() const override;
+  ExpressionPrecedence _precedence() const override;
 };
 
 }  // namespace opossum

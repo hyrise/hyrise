@@ -34,7 +34,7 @@ class Sort : public AbstractReadOnlyOperator {
   std::shared_ptr<const Table> _on_execute() override;
   void _on_cleanup() override;
   std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& copied_input_left,
       const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
 
   // The operator is separated in three different classes. SortImpl is the common templated implementation of the

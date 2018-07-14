@@ -15,12 +15,11 @@ class AbstractPredicateExpression : public AbstractExpression {
 
   DataType data_type() const override;
 
-  PredicateCondition predicate_condition;
+  const PredicateCondition predicate_condition;
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
   size_t _on_hash() const override;
-  uint32_t _precedence() const override;
 };
 
 }  // namespace opossum

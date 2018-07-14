@@ -69,7 +69,7 @@ std::shared_ptr<PredicateNode> JoinDetectionRule::_find_predicate_for_cross_join
     /**
      * TODO(anyone)
      * Right now we only support traversing past nodes that do not change the column order and to be 100% safe
-     * we make this explicit by only traversing past Joins and Predicates
+     * we make this explicit by only traversing past Joins, Projection and Predicates
      *
      * Detecting Join Conditions across other node types may be possible by applying 'Predicate Pushdown' first.
      */
@@ -79,7 +79,6 @@ std::shared_ptr<PredicateNode> JoinDetectionRule::_find_predicate_for_cross_join
 
     if (node->type == LQPNodeType::Predicate) {
       const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
-
       const auto binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node->predicate);
 
       if (!binary_predicate) continue;

@@ -890,12 +890,24 @@ const char* const tpch_query_21 =
  *  1. Renamed SUBSTRING to SUBSTR
  */
 const char* const tpch_query_22 =
-    R"(SELECT CNTRYCODE, COUNT(*) AS NUMCUST, SUM(c_acctbal) AS TOTACCTBAL
-       FROM (SELECT SUBSTR(c_phone,1,2) AS CNTRYCODE, c_acctbal
-       FROM customer WHERE SUBSTR(c_phone,1,2) IN ('13', '31', '23', '29', '30', '18', '17') AND
-       c_acctbal > (SELECT AVG(c_acctbal) FROM customer WHERE c_acctbal > 0.00 AND
-       SUBSTR(c_phone,1,2) IN ('13', '31', '23', '29', '30', '18', '17')) AND
-       NOT EXISTS ( SELECT * FROM orders WHERE o_custkey = c_custkey)) AS CUSTSALE
+    R"(SELECT
+         CNTRYCODE, COUNT(*) AS NUMCUST, SUM(c_acctbal) AS TOTACCTBAL
+       FROM
+         (SELECT
+            SUBSTR(c_phone,1,2) AS CNTRYCODE, c_acctbal
+          FROM
+            customer
+          WHERE
+            SUBSTR(c_phone,1,2) IN ('13', '31', '23', '29', '30', '18', '17') AND
+            c_acctbal > (SELECT
+                           AVG(c_acctbal)
+                         FROM
+                           customer
+                         WHERE
+                          c_acctbal > 0.00 AND
+                          SUBSTR(c_phone,1,2) IN ('13', '31', '23', '29', '30', '18', '17')) AND
+            NOT EXISTS ( SELECT * FROM orders WHERE o_custkey = c_custkey)
+        ) AS CUSTSALE
        GROUP BY CNTRYCODE
        ORDER BY CNTRYCODE;)";
 

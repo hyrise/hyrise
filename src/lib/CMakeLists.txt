@@ -27,6 +27,7 @@ set(
     expression/aggregate_expression.hpp
     expression/arithmetic_expression.cpp
     expression/arithmetic_expression.hpp
+    expression/expression_precedence.hpp
     expression/list_expression.cpp
     expression/list_expression.hpp
     expression/between_expression.cpp
@@ -64,8 +65,8 @@ set(
     expression/lqp_column_expression.hpp
     expression/lqp_select_expression.cpp
     expression/lqp_select_expression.hpp
-    expression/negate_expression.cpp
-    expression/negate_expression.hpp
+    expression/unary_minus_expression.cpp
+    expression/unary_minus_expression.hpp
     expression/parameter_expression.cpp
     expression/parameter_expression.hpp
     expression/pqp_column_expression.cpp
@@ -125,8 +126,6 @@ set(
     logical_query_plan/lqp_translator.hpp
     logical_query_plan/lqp_utils.cpp
     logical_query_plan/lqp_utils.hpp
-    logical_query_plan/logical_query_plan.cpp
-    logical_query_plan/logical_query_plan.hpp
     logical_query_plan/mock_node.cpp
     logical_query_plan/mock_node.hpp
     logical_query_plan/predicate_node.cpp

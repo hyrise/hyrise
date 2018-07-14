@@ -21,9 +21,9 @@ Print::Print(const std::shared_ptr<const AbstractOperator> in, std::ostream& out
 const std::string Print::name() const { return "Print"; }
 
 std::shared_ptr<AbstractOperator> Print::_on_recreate(
-    const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<Print>(recreated_input_left, _out);
+  return std::make_shared<Print>(copied_input_left, _out);
 }
 
 void Print::print(std::shared_ptr<const Table> table, uint32_t flags, std::ostream& out) {

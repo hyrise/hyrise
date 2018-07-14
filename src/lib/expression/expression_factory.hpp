@@ -18,7 +18,7 @@
 #include "logical_expression.hpp"
 #include "lqp_column_expression.hpp"
 #include "lqp_select_expression.hpp"
-#include "negate_expression.hpp"
+#include "unary_minus_expression.hpp"
 #include "parameter_expression.hpp"
 #include "pqp_select_expression.hpp"
 #include "value_expression.hpp"
@@ -185,8 +185,8 @@ std::shared_ptr<ParameterExpression> parameter(const ParameterID parameter_id, c
 std::shared_ptr<AggregateExpression> count_star();
 
 template <typename Argument>
-std::shared_ptr<NegateExpression> negate(const Argument& argument) {
-  return std::make_shared<NegateExpression>(to_expression(argument));
+std::shared_ptr<UnaryMinusExpression> unary_minus(const Argument& argument) {
+  return std::make_shared<UnaryMinusExpression>(to_expression(argument));
 }
 
 template <typename Argument>

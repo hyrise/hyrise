@@ -23,9 +23,9 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator>& in,
 const std::string Projection::name() const { return "Projection"; }
 
 std::shared_ptr<AbstractOperator> Projection::_on_recreate(
-    const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<Projection>(recreated_input_left, expressions_deep_copy(expressions));
+  return std::make_shared<Projection>(copied_input_left, expressions_deep_copy(expressions));
 }
 
 void Projection::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
@@ -42,7 +42,13 @@ std::shared_ptr<const Table> Projection::_on_execute() {
    */
   TableColumnDefinitions column_definitions;
   for (const auto& expression : expressions) {
-    column_definitions.emplace_back(expression->as_column_name(), expression->data_type(), expression->is_nullable());
+    // TODO(anybody) Until #962 is resolved, we need to limit the length of a column name
+    auto column_name = expression->as_column_name();
+    if (column_name.size() > std::numeric_limits<ColumnNameLength>::max()) {
+      column_name = column_name.substr(0, std::numeric_limits<ColumnNameLength>::max() - 3) + "...";
+    }
+
+    column_definitions.emplace_back(column_name, expression->data_type(), expression->is_nullable());
   }
 
   /**

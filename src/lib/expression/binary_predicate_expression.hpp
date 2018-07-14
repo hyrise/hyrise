@@ -20,6 +20,7 @@ class BinaryPredicateExpression : public AbstractPredicateExpression {
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
+  ExpressionPrecedence _precedence() const override;
 };
 
 }  // namespace opossum

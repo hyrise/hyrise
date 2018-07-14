@@ -36,7 +36,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
 
  protected:
   std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& copied_input_left,
       const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
 
  private:

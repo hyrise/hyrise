@@ -22,12 +22,12 @@ class LogicalExpression : public AbstractExpression {
   std::string as_column_name() const override;
   DataType data_type() const override;
 
-  LogicalOperator logical_operator;
+  const LogicalOperator logical_operator;
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
   size_t _on_hash() const override;
-  uint32_t _precedence() const override;
+  ExpressionPrecedence _precedence() const override;
 };
 
 }  // namespace opossum

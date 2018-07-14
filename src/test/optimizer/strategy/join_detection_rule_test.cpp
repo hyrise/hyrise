@@ -201,6 +201,42 @@ TEST_F(JoinDetectionRuleTest, NoPredicate) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(JoinDetectionRuleTest, Nop) {
+  /**
+   * Test that
+   *
+   *   Projection
+   *     (a.a)
+   *       |
+   *     Cross
+   *    /     \
+   *   a       b
+   *
+   * is not manipulated
+   */
+  // clang-format off
+  const auto input_lqp =
+  ProjectionNode::make(expression_vector(_a_a),
+    JoinNode::make(JoinMode::Cross,
+      _table_node_a,
+      _table_node_b
+  ));
+  // clang-format on
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(_a_a),
+    JoinNode::make(JoinMode::Cross,
+      _table_node_a,
+      _table_node_b
+  ));
+  // clang-format on
+
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(JoinDetectionRuleTest, NoMatchingPredicate) {
   /**
    * Test that

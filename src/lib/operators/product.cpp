@@ -105,8 +105,8 @@ void Product::_add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID 
   output->append_chunk(output_columns);
 }
 std::shared_ptr<AbstractOperator> Product::_on_recreate(
-    const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<Product>(recreated_input_left, recreated_input_right);
+  return std::make_shared<Product>(copied_input_left, recreated_input_right);
 }
 }  // namespace opossum

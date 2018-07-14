@@ -12,6 +12,8 @@ std::ostream& operator<<(std::ostream& stream, const DatetimeComponent datetime_
 
 /**
  * SQL's EXTRACT()
+ * NOT a FunctionExpression since we currently have no way for taking as an enum such as DatetimeComponent as a function
+ * argument
  */
 class ExtractExpression : public AbstractExpression {
  public:
@@ -23,7 +25,10 @@ class ExtractExpression : public AbstractExpression {
 
   std::shared_ptr<AbstractExpression> from() const;
 
-  DatetimeComponent datetime_component;
+  const DatetimeComponent datetime_component;
+
+ protected:
+  bool _shallow_equals(const AbstractExpression& expression) const override;
 };
 
 }  // namespace opossum

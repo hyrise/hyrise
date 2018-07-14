@@ -18,9 +18,7 @@ std::shared_ptr<AbstractExpression> ExistsExpression::select() const {
 
 std::string ExistsExpression::as_column_name() const {
   std::stringstream stream;
-
   stream << "EXISTS(" << select()->as_column_name() << ")";
-
   return stream.str();
 }
 
@@ -33,5 +31,7 @@ DataType ExistsExpression::data_type() const {
 }
 
 bool ExistsExpression::is_nullable() const { return false; }
+
+bool ExistsExpression::_shallow_equals(const AbstractExpression& expression) const { return true; }
 
 }  // namespace opossum

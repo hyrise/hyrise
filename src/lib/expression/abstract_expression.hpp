@@ -8,6 +8,7 @@
 #include "all_type_variant.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "types.hpp"
+#include "expression_precedence.hpp"
 
 namespace opossum {
 
@@ -20,12 +21,12 @@ enum class ExpressionType {
   Exists,
   Extract,
   Function,
-  Negate,
   List,
   Logical,
   Parameter,
   Predicate,
   Select,
+  UnaryMinus,
   Value
 };
 
@@ -83,7 +84,7 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
    * Override to check for equality without checking the arguments. No override needed if derived expression has no
    * data members.
    */
-  virtual bool _shallow_equals(const AbstractExpression& expression) const;
+  virtual bool _shallow_equals(const AbstractExpression& expression) const = 0;
 
   /**
    * Override to hash data fields in derived types. No override needed if derived expression has no
@@ -98,7 +99,7 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
    *
    * @return  0 by default
    */
-  virtual uint32_t _precedence() const;
+  virtual ExpressionPrecedence _precedence() const;
 
   /**
    * @return    argument.as_column_name(), enclosed by parentheses if the argument precedence is lower than

@@ -22,9 +22,9 @@ Difference::Difference(const std::shared_ptr<const AbstractOperator> left_in,
 const std::string Difference::name() const { return "Difference"; }
 
 std::shared_ptr<AbstractOperator> Difference::_on_recreate(
-    const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<Difference>(recreated_input_left, recreated_input_right);
+  return std::make_shared<Difference>(copied_input_left, recreated_input_right);
 }
 
 std::shared_ptr<const Table> Difference::_on_execute() {

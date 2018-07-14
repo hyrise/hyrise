@@ -22,9 +22,9 @@ const std::string Limit::name() const { return "Limit"; }
 std::shared_ptr<AbstractExpression> Limit::row_count_expression() const { return _row_count_expression; }
 
 std::shared_ptr<AbstractOperator> Limit::_on_recreate(
-    const std::shared_ptr<AbstractOperator>& recreated_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
     const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<Limit>(recreated_input_left, _row_count_expression->deep_copy());
+  return std::make_shared<Limit>(copied_input_left, _row_count_expression->deep_copy());
 }
 
 std::shared_ptr<const Table> Limit::_on_execute() {
@@ -36,7 +36,7 @@ std::shared_ptr<const Table> Limit::_on_execute() {
   const auto num_rows_expression_result =
       ExpressionEvaluator{}.evaluate_expression_to_result<int64_t>(*_row_count_expression);
   Assert(num_rows_expression_result->size() == 1, "Expected exactly one row for Limit");
-  Assert(!num_rows_expression_result->null(0), "Expected non-null for Limit");
+  Assert(!num_rows_expression_result->is_null(0), "Expected non-null for Limit");
 
   const auto signed_num_rows = num_rows_expression_result->value(0);
   Assert(signed_num_rows >= 0, "Can't Limit to a negative number of Rows");

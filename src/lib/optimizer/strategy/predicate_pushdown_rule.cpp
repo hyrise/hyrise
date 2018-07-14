@@ -18,7 +18,7 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
 
   // Only predicates with exactly one output are currently supported.
   const auto outputs = node->outputs();
-  if (outputs.empty() || outputs.size() > 1) return false;
+  if (outputs.empty() || outputs.size() > 1) return _apply_to_inputs(node);
 
   // Find a join node
   const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);

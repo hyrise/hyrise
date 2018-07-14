@@ -17,7 +17,7 @@ class LQPColumnExpression : public AbstractColumnExpression {
   DataType data_type() const override;
   bool is_nullable() const override;
 
-  LQPColumnReference column_reference;
+  const LQPColumnReference column_reference;
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;

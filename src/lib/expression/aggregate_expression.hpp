@@ -20,7 +20,7 @@ class AggregateExpression : public AbstractExpression {
   std::string as_column_name() const override;
   DataType data_type() const override;
 
-  AggregateFunction aggregate_function;
+  const AggregateFunction aggregate_function;
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;

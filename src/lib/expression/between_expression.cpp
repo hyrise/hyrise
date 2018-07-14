@@ -30,4 +30,8 @@ std::string BetweenExpression::as_column_name() const {
   return stream.str();
 };
 
+ExpressionPrecedence BetweenExpression::_precedence() const {
+  return ExpressionPrecedence::BinaryTernaryPredicate;
+}
+
 }  // namespace opossum

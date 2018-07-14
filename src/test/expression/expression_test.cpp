@@ -69,8 +69,8 @@ TEST_F(ExpressionTest, Equals) {
   EXPECT_FALSE(parameter(ParameterID{4})->deep_equals(*parameter(ParameterID{5})));
   EXPECT_TRUE(extract(DatetimeComponent::Month, "1999-07-30")->deep_equals(*extract(DatetimeComponent::Month, "1999-07-30")));
   EXPECT_TRUE(extract(DatetimeComponent::Day, "1999-07-30")->deep_equals(*extract(DatetimeComponent::Month, "1999-07-30")));
-  EXPECT_TRUE(negate(6)->deep_equals(*negate(6)));
-  EXPECT_FALSE(negate(6)->deep_equals(*negate(6.5)));
+  EXPECT_TRUE(unary_minus(6)->deep_equals(*unary_minus(6)));
+  EXPECT_FALSE(unary_minus(6)->deep_equals(*unary_minus(6.5)));
   EXPECT_TRUE(cast(6.5, DataType::Int)->deep_equals(*cast(6.5, DataType::Int)));
   EXPECT_FALSE(cast(6.5, DataType::Int)->deep_equals(*cast(6.5, DataType::Float)));
 }
@@ -109,7 +109,7 @@ TEST_F(ExpressionTest, RequiresCalculation) {
   EXPECT_TRUE(in(1, list(1, 2, 3))->requires_computation());
   EXPECT_TRUE(is_null(null())->requires_computation());
   EXPECT_TRUE(and_(1, 0)->requires_computation());
-  EXPECT_TRUE(negate(5)->requires_computation());
+  EXPECT_TRUE(unary_minus(5)->requires_computation());
   EXPECT_FALSE(parameter(ParameterID{5})->requires_computation());
   EXPECT_FALSE(parameter(ParameterID{5}, a)->requires_computation());
   EXPECT_FALSE(column(a)->requires_computation());
@@ -153,7 +153,7 @@ TEST_F(ExpressionTest, AsColumnName) {
   EXPECT_EQ(is_not_null(1)->as_column_name(), "1 IS NOT NULL");
   EXPECT_EQ(list(1)->as_column_name(), "(1)");
   EXPECT_EQ(list(1)->as_column_name(), "(1)");
-  EXPECT_EQ(negate(3)->as_column_name(), "-(3)");
+  EXPECT_EQ(unary_minus(3)->as_column_name(), "-(3)");
   EXPECT_EQ(value(3.25)->as_column_name(), "3.25");
   EXPECT_EQ(null()->as_column_name(), "NULL");
   EXPECT_EQ(cast("36", DataType::Float)->as_column_name(), "CAST(\"36\" AS float)");
@@ -206,8 +206,8 @@ TEST_F(ExpressionTest, DataType) {
   EXPECT_EQ(add(double{1.3}, float{2})->data_type(), DataType::Double);
   EXPECT_EQ(add(double{1.3}, double{2})->data_type(), DataType::Double);
   EXPECT_EQ(add(int32_t{1}, double{2})->data_type(), DataType::Double);
-  EXPECT_EQ(negate(float{2})->data_type(), DataType::Float);
-  EXPECT_EQ(negate(double{2})->data_type(), DataType::Double);
+  EXPECT_EQ(unary_minus(float{2})->data_type(), DataType::Float);
+  EXPECT_EQ(unary_minus(double{2})->data_type(), DataType::Double);
   EXPECT_EQ(value(double{2})->data_type(), DataType::Double);
   EXPECT_EQ(value("Hello")->data_type(), DataType::String);
   EXPECT_EQ(null()->data_type(), DataType::Null);

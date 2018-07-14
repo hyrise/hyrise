@@ -58,15 +58,15 @@ bool ArithmeticExpression::_shallow_equals(const AbstractExpression& expression)
 
 size_t ArithmeticExpression::_on_hash() const { return boost::hash_value(static_cast<size_t>(arithmetic_operator)); }
 
-uint32_t ArithmeticExpression::_precedence() const {
+ExpressionPrecedence ArithmeticExpression::_precedence() const {
   switch (arithmetic_operator) {
     case ArithmeticOperator::Addition:
     case ArithmeticOperator::Subtraction:
-      return 3;
+      return ExpressionPrecedence::AdditionSubtraction;
     case ArithmeticOperator::Multiplication:
     case ArithmeticOperator::Division:
     case ArithmeticOperator::Modulo:
-      return 2;
+      return ExpressionPrecedence::MultiplicationDivision;
   }
 }
 

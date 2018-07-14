@@ -151,7 +151,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& recreated_ops) const;
 
   virtual std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::shared_ptr<AbstractOperator>& recreated_input_left,
+      const std::shared_ptr<AbstractOperator>& copied_input_left,
       const std::shared_ptr<AbstractOperator>& recreated_input_right) const = 0;
 
   const OperatorType _type;
