@@ -19,9 +19,9 @@ class BaseExpressionResult {
 };
 
 /**
- * The typed result of an Expression.
- * Wraps a vector of `values` and a vector of `nulls` that are filled differently, depending on the ExpressionResult
- * being a Series (think: a Column; a value for each row), a Literal, nullable or non-nullable.
+ * The typed result of a (Sub)Expression.
+ * Wraps a vector of `values` and a vector of `nulls` that are filled differently, with the possible combinations best
+ * explained by the examples below
  *
  * values
  *      Contains a value for each row if the result is a Series
@@ -30,6 +30,7 @@ class BaseExpressionResult {
  * nulls
  *      Is empty if the ExpressionResult is non-nullable
  *      Contains a bool for each element of `values` if the ExpressionResult is nullable
+ *      Contains a single element that the determines whether all elements are either null or not
  *
  * Examples:
  *      {values: [1, 2, 3, 4]; nulls: []} --> Series [1, 2, 3, 4]
@@ -38,6 +39,9 @@ class BaseExpressionResult {
  *      {values: [1, 2, 3, 4]; nulls: [true, false, true, false]} --> Series [NULL, 2, NULL, 4]
  *      {values: [1]; nulls: []} --> Literal [1]
  *      {values: [1]; nulls: [true]} --> Literal [NULL]
+ *
+ * Often the ExpressionEvaluator will compute nulls and values independently, which is why states with redundant
+ * information, such as `{values: [1, 2, 3, 4]; nulls: [true]}` or `{values: [1, 2, 3, 4]; nulls: [false]}`, are legal.
  */
 template <typename T>
 class ExpressionResult : public BaseExpressionResult {
