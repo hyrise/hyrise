@@ -36,19 +36,19 @@ TEST_F(StoredTableNodeTest, GetColumn) {
 }
 
 TEST_F(StoredTableNodeTest, Equals) {
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_stored_table_node, _stored_table_node));
+  EXPECT_EQ(*_stored_table_node, *_stored_table_node);
 
   const auto different_node_a = StoredTableNode::make("t_b");
   different_node_a->set_excluded_chunk_ids({ChunkID{2}});
 
   const auto different_node_b = StoredTableNode::make("t_a");
 
-  EXPECT_TRUE(lqp_find_subplan_mismatch(_stored_table_node, different_node_a).has_value());
-  EXPECT_TRUE(lqp_find_subplan_mismatch(_stored_table_node, different_node_b).has_value());
+  EXPECT_NE(*_stored_table_node, *different_node_a);
+  EXPECT_NE(*_stored_table_node, *different_node_b);
 }
 
 TEST_F(StoredTableNodeTest, Copy) {
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_stored_table_node->deep_copy(), _stored_table_node));
+  EXPECT_EQ(*_stored_table_node->deep_copy(), *_stored_table_node);
 }
 
 }  // namespace opossum

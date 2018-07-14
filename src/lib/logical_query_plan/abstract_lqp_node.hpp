@@ -161,6 +161,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   void print(std::ostream& out = std::cout) const;
 
+  /**
+   * Perform a deep equality check
+   */
+  bool operator==(const AbstractLQPNode& rhs) const;
+  bool operator!=(const AbstractLQPNode& rhs) const;
+
   const LQPNodeType type;
 
  protected:

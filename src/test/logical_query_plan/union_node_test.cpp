@@ -41,9 +41,9 @@ TEST_F(UnionNodeTest, StatisticsNotImplemented) {
 }
 
 TEST_F(UnionNodeTest, OutputColumnExpressions) {
-  EXPECT_TRUE(_union_node->column_expressions().at(0)->deep_equals(*_mock_node1->column_expressions().at(0)));
-  EXPECT_TRUE(_union_node->column_expressions().at(1)->deep_equals(*_mock_node1->column_expressions().at(1)));
-  EXPECT_TRUE(_union_node->column_expressions().at(2)->deep_equals(*_mock_node1->column_expressions().at(2)));
+  EXPECT_EQ(*_union_node->column_expressions().at(0), *_mock_node1->column_expressions().at(0));
+  EXPECT_EQ(*_union_node->column_expressions().at(1), *_mock_node1->column_expressions().at(1));
+  EXPECT_EQ(*_union_node->column_expressions().at(2), *_mock_node1->column_expressions().at(2));
 }
 
 TEST_F(UnionNodeTest, Equals) { EXPECT_TRUE(!lqp_find_subplan_mismatch(_union_node, _union_node)); }

@@ -30,15 +30,15 @@ TEST_F(UpdateNodeTest, Description) { EXPECT_EQ(_update_node->description(), "[U
 TEST_F(UpdateNodeTest, TableName) { EXPECT_EQ(_update_node->table_name, "table_a"); }
 
 TEST_F(UpdateNodeTest, Equals) {
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_update_node, _update_node));
+  EXPECT_EQ(*_update_node, *_update_node);
 
   const auto other_update_node_a = UpdateNode::make("table_a", expression_vector(6), _mock_node);
   const auto other_update_node_b = UpdateNode::make("table_b", expression_vector(), _mock_node);
   const auto other_update_node_c = UpdateNode::make("table_a", expression_vector(5), _mock_node);
 
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_update_node, other_update_node_a));
-  EXPECT_TRUE(lqp_find_subplan_mismatch(_update_node, other_update_node_b).has_value());
-  EXPECT_TRUE(lqp_find_subplan_mismatch(_update_node, other_update_node_c).has_value());
+  EXPECT_EQ(*_update_node, *other_update_node_a);
+  EXPECT_NE(*_update_node, *other_update_node_b);
+  EXPECT_NE(*_update_node, *other_update_node_c);
 }
 
 TEST_F(UpdateNodeTest, Copy) { EXPECT_TRUE(!lqp_find_subplan_mismatch(_update_node->deep_copy(), _update_node)); }

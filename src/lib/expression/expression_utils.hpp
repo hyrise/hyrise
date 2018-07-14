@@ -17,7 +17,7 @@ class LQPColumnExpression;
 class TransactionContext;
 
 /**
- * Utility to check whether two vectors of Expressions are equal according to AbstractExpression::deep_equals()
+ * Utility to check whether two vectors of Expressions are equal according to AbstractExpression::operator==()
  */
 bool expressions_equal(const std::vector<std::shared_ptr<AbstractExpression>>& expressions_a,
                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions_b);

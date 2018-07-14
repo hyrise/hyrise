@@ -49,7 +49,8 @@ class AbstractExpression : public std::enable_shared_from_this<AbstractExpressio
    * Recursively check for Expression equality.
    * @pre Both expressions need to reference the same LQP
    */
-  bool deep_equals(const AbstractExpression& other) const;
+  bool operator==(const AbstractExpression& other) const;
+  bool operator!=(const AbstractExpression& other) const;
 
   /**
    * Certain expression types (Parameters, Literals, and Columns) don't require computation and therefore don't require
@@ -113,12 +114,12 @@ struct ExpressionSharedPtrHash final {
   size_t operator()(const std::shared_ptr<AbstractExpression>& expression) const { return expression->hash(); }
 };
 
-// Wrapper around expression->deep_equals(), to enable hash based containers containing
+// Wrapper around AbstractExpression::operator==(), to enable hash based containers containing
 // std::shared_ptr<AbstractExpression>
 struct ExpressionSharedPtrEqual final {
   size_t operator()(const std::shared_ptr<AbstractExpression>& expression_a,
                     const std::shared_ptr<AbstractExpression>& expression_b) const {
-    return expression_a->deep_equals(*expression_b);
+    return *expression_a == *expression_b;
   }
 };
 

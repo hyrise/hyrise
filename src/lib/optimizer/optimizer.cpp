@@ -56,7 +56,7 @@ void collect_select_expressions_by_lqp(SelectExpressionsByLQP& select_expression
       if (!lqp_select_expression) return true;
 
       for (auto& lqp_and_select_expressions : select_expressions_by_lqp) {
-        if (!lqp_find_subplan_mismatch(lqp_and_select_expressions.first, lqp_select_expression->lqp)) {
+        if (*lqp_and_select_expressions.first == *lqp_select_expression->lqp) {
           lqp_and_select_expressions.second.emplace_back(lqp_select_expression);
           return false;
         }

@@ -562,7 +562,7 @@ TEST_F(LQPTranslatorTest, ProjectionNode) {
   const auto projection_op = std::dynamic_pointer_cast<Projection>(op);
   ASSERT_TRUE(projection_op);
   EXPECT_EQ(projection_op->expressions.size(), 1u);
-  EXPECT_TRUE(projection_op->expressions[0]->deep_equals(*PQPColumnExpression::from_table(*table_int_float, "a")));
+  EXPECT_EQ(*projection_op->expressions[0], *PQPColumnExpression::from_table(*table_int_float, "a"));
 }
 
 TEST_F(LQPTranslatorTest, JoinNode) {
@@ -690,7 +690,7 @@ TEST_F(LQPTranslatorTest, LimitNode) {
   const auto op = LQPTranslator{}.translate_node(limit_node);
   const auto limit_op = std::dynamic_pointer_cast<Limit>(op);
   ASSERT_TRUE(limit_op);
-  EXPECT_TRUE(limit_op->row_count_expression()->deep_equals(*value(2)));
+  EXPECT_EQ(*limit_op->row_count_expression(), *value(2));
 }
 
 TEST_F(LQPTranslatorTest, DiamondShapeSimple) {

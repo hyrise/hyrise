@@ -16,7 +16,7 @@ bool expressions_equal(const std::vector<std::shared_ptr<AbstractExpression>>& e
                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions_b) {
   return std::equal(
       expressions_a.begin(), expressions_a.end(), expressions_b.begin(), expressions_b.end(),
-      [&](const auto& expression_a, const auto& expression_b) { return expression_a->deep_equals(*expression_b); });
+      [&](const auto& expression_a, const auto& expression_b) { return *expression_a == *expression_b; });
 }
 
 bool expressions_equal_to_expressions_in_different_lqp(
@@ -44,7 +44,7 @@ bool expression_equal_to_expression_in_different_lqp(const AbstractExpression& e
 
   auto copied_expression_left = expression_left.deep_copy();
   expression_adapt_to_different_lqp(copied_expression_left, node_mapping);
-  return copied_expression_left->deep_equals(expression_right);
+  return *copied_expression_left == expression_right;
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(

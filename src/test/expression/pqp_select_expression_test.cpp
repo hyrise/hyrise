@@ -54,9 +54,13 @@ class PQPSelectExpressionTest : public ::testing::Test {
 };
 
 TEST_F(PQPSelectExpressionTest, DeepEquals) {
+  // Consume the result of an equality check to avoid "equality comparison result unused [-Werror,-Wunused-comparison]"
+  // errors
+  const auto dummy = [](const auto v) {};
+
   // Can't compare PQPSelectExpressions (since we can't compare PQPs)
-  EXPECT_ANY_THROW(select_single_value_one_parameter->deep_equals(*select_single_value_one_parameter));  
-  EXPECT_ANY_THROW(select_table->deep_equals(*select_table));
+  EXPECT_ANY_THROW(dummy(*select_single_value_one_parameter == *select_single_value_one_parameter));
+  EXPECT_ANY_THROW(dummy(*select_table == *select_table));
 }
 
 TEST_F(PQPSelectExpressionTest, DeepCopy) {

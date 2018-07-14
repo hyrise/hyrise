@@ -136,18 +136,13 @@ TEST_F(SQLIdentifierContextTest, ResolveOuterExpression) {
   EXPECT_EQ(context.resolve_identifier_relaxed({"b"}), expression_b);
   EXPECT_EQ(context.resolve_identifier_relaxed({"b", "T1"}), expression_b);
 
-  EXPECT_TRUE(intermediate_context_proxy->resolve_identifier_relaxed({"b", "Intermediate"})
-                  ->deep_equals(*parameter(ParameterID{0}, intermediate_expression_b)));
-  EXPECT_TRUE(intermediate_context_proxy->resolve_identifier_relaxed({"intermediate_a"})
-                  ->deep_equals(*parameter(ParameterID{1}, intermediate_expression_a)));
-  EXPECT_TRUE(intermediate_context_proxy->resolve_identifier_relaxed({"b"})->deep_equals(
-      *parameter(ParameterID{0}, intermediate_expression_b)));
+  EXPECT_EQ(*intermediate_context_proxy->resolve_identifier_relaxed({"b", "Intermediate"}), *parameter(ParameterID{0}, intermediate_expression_b));
+  EXPECT_EQ(*intermediate_context_proxy->resolve_identifier_relaxed({"intermediate_a"}), *parameter(ParameterID{1}, intermediate_expression_a));
+  EXPECT_EQ(*intermediate_context_proxy->resolve_identifier_relaxed({"b"}), *parameter(ParameterID{0}, intermediate_expression_b));
   EXPECT_EQ(intermediate_context_proxy->resolve_identifier_relaxed({"intermediate_a", "Intermediate"}), nullptr);
 
-  EXPECT_TRUE(intermediate_context_proxy->resolve_identifier_relaxed({"outermost_a"})
-                  ->deep_equals(*parameter(ParameterID{2}, outermost_expression_a)));
-  EXPECT_TRUE(intermediate_context_proxy->resolve_identifier_relaxed({"b", "Outermost"})
-                  ->deep_equals(*parameter(ParameterID{3}, outermost_expression_b)));
+  EXPECT_EQ(*intermediate_context_proxy->resolve_identifier_relaxed({"outermost_a"}), *parameter(ParameterID{2}, outermost_expression_a));
+  EXPECT_EQ(*intermediate_context_proxy->resolve_identifier_relaxed({"b", "Outermost"}), *parameter(ParameterID{3}, outermost_expression_b));
 
   /**
    * Test whether the proxies tracked accesses to their contexts correctly

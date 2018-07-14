@@ -38,10 +38,10 @@ class AggregateNodeTest : public ::testing::Test {
 
 TEST_F(AggregateNodeTest, OutputColumnExpressions) {
   ASSERT_EQ(_aggregate_node->column_expressions().size(), 4u);
-  EXPECT_TRUE(_aggregate_node->column_expressions().at(0)->deep_equals(*column(_a)));
-  EXPECT_TRUE(_aggregate_node->column_expressions().at(1)->deep_equals(*column(_c)));
-  EXPECT_TRUE(_aggregate_node->column_expressions().at(2)->deep_equals(*sum(add(_a, _b))));
-  EXPECT_TRUE(_aggregate_node->column_expressions().at(3)->deep_equals(*sum(add(_a, _c))));
+  EXPECT_EQ(*_aggregate_node->column_expressions().at(0), *column(_a));
+  EXPECT_EQ(*_aggregate_node->column_expressions().at(1), *column(_c));
+  EXPECT_EQ(*_aggregate_node->column_expressions().at(2), *sum(add(_a, _b)));
+  EXPECT_EQ(*_aggregate_node->column_expressions().at(3), *sum(add(_a, _c)));
 }
 
 TEST_F(AggregateNodeTest, Description) {
@@ -54,9 +54,9 @@ TEST_F(AggregateNodeTest, Equals) {
   const auto same_aggregate_node =
       AggregateNode::make(expression_vector(_a, _c), expression_vector(sum(add(_a, _b)), sum(add(_a, _c))), _mock_node);
 
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_aggregate_node, same_aggregate_node));
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(same_aggregate_node, _aggregate_node));
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_aggregate_node, _aggregate_node));
+  EXPECT_EQ(*_aggregate_node, *same_aggregate_node);
+  EXPECT_EQ(*same_aggregate_node, *_aggregate_node);
+  EXPECT_EQ(*_aggregate_node, *_aggregate_node);
 
   // Build slightly different aggregate nodes
   const auto different_aggregate_node_a =
@@ -68,16 +68,16 @@ TEST_F(AggregateNodeTest, Equals) {
   const auto different_aggregate_node_d =
       AggregateNode::make(expression_vector(_a, _a), expression_vector(sum(add(_a, _b)), sum(add(_a, _c))), _mock_node);
 
-  EXPECT_TRUE(lqp_find_subplan_mismatch(_aggregate_node, different_aggregate_node_a).has_value());
-  EXPECT_TRUE(lqp_find_subplan_mismatch(_aggregate_node, different_aggregate_node_b).has_value());
-  EXPECT_TRUE(lqp_find_subplan_mismatch(_aggregate_node, different_aggregate_node_c).has_value());
-  EXPECT_TRUE(lqp_find_subplan_mismatch(_aggregate_node, different_aggregate_node_d).has_value());
+  EXPECT_NE(*_aggregate_node, *different_aggregate_node_a);
+  EXPECT_NE(*_aggregate_node, *different_aggregate_node_b);
+  EXPECT_NE(*_aggregate_node, *different_aggregate_node_c);
+  EXPECT_NE(*_aggregate_node, *different_aggregate_node_d);
 }
 
 TEST_F(AggregateNodeTest, Copy) {
   const auto same_aggregate_node =
       AggregateNode::make(expression_vector(_a, _c), expression_vector(sum(add(_a, _b)), sum(add(_a, _c))), _mock_node);
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_aggregate_node->deep_copy(), same_aggregate_node));
+  EXPECT_EQ(*_aggregate_node->deep_copy(), *same_aggregate_node);
 }
 
 }  // namespace opossum

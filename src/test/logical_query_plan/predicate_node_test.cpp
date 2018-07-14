@@ -35,21 +35,21 @@ class PredicateNodeTest : public ::testing::Test {
 TEST_F(PredicateNodeTest, Descriptions) { EXPECT_EQ(_predicate_node->description(), "[Predicate] i = 5"); }
 
 TEST_F(PredicateNodeTest, Equals) {
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_predicate_node, _predicate_node));
+  EXPECT_EQ(*_predicate_node, *_predicate_node);
 
   const auto other_predicate_node_a = PredicateNode::make(equals(_i, 5), _table_node);
   const auto other_predicate_node_b = PredicateNode::make(equals(_f, 5), _table_node);
   const auto other_predicate_node_c = PredicateNode::make(not_equals(_i, 5), _table_node);
   const auto other_predicate_node_d = PredicateNode::make(equals(_i, 6), _table_node);
 
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(other_predicate_node_a, _predicate_node));
-  EXPECT_TRUE(lqp_find_subplan_mismatch(other_predicate_node_b, _predicate_node).has_value());
-  EXPECT_TRUE(lqp_find_subplan_mismatch(other_predicate_node_c, _predicate_node).has_value());
-  EXPECT_TRUE(lqp_find_subplan_mismatch(other_predicate_node_d, _predicate_node).has_value());
+  EXPECT_EQ(*other_predicate_node_a, *_predicate_node);
+  EXPECT_NE(*other_predicate_node_b, *_predicate_node);
+  EXPECT_NE(*other_predicate_node_c, *_predicate_node);
+  EXPECT_NE(*other_predicate_node_d, *_predicate_node);
 }
 
 TEST_F(PredicateNodeTest, Copy) {
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_predicate_node->deep_copy(), _predicate_node));
+  EXPECT_EQ(*_predicate_node->deep_copy(), *_predicate_node);
 }
 
 }  // namespace opossum

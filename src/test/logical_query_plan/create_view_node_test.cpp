@@ -28,7 +28,7 @@ TEST_F(CreateViewNodeTest, Description) {
 }
 
 TEST_F(CreateViewNodeTest, Equals) {
-  EXPECT_FALSE(lqp_find_subplan_mismatch(_create_view_node, _create_view_node));
+  EXPECT_EQ(*_create_view_node, *_create_view_node);
 
   const auto same_create_view_node = CreateViewNode::make("some_view", _view);
   const auto different_create_view_node_a = CreateViewNode::make("some_view2", _view);
@@ -38,8 +38,8 @@ TEST_F(CreateViewNodeTest, Equals) {
       std::make_shared<View>(different_view_node, std::unordered_map<ColumnID, std::string>{{ColumnID{0}, {"b"}}});
   const auto different_create_view_node_b = CreateViewNode::make("some_view", different_view);
 
-  EXPECT_TRUE(lqp_find_subplan_mismatch(different_create_view_node_a, _create_view_node).has_value());
-  EXPECT_TRUE(lqp_find_subplan_mismatch(different_create_view_node_b, _create_view_node).has_value());
+  EXPECT_NE(*different_create_view_node_a, *_create_view_node);
+  EXPECT_NE(*different_create_view_node_b, *_create_view_node);
 }
 
 TEST_F(CreateViewNodeTest, Copy) {
@@ -48,7 +48,7 @@ TEST_F(CreateViewNodeTest, Copy) {
       std::make_shared<View>(_view_node, std::unordered_map<ColumnID, std::string>{{ColumnID{0}, {"a"}}});
   const auto same_create_view_node = CreateViewNode::make("some_view", _view);
 
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(same_create_view_node, _create_view_node->deep_copy()));
+  EXPECT_EQ(*same_create_view_node, *_create_view_node->deep_copy());
 }
 
 }  // namespace opossum

@@ -22,10 +22,14 @@ bool AbstractExpression::is_nullable() const {
                       [](const auto& expression) { return expression->is_nullable(); });
 }
 
-bool AbstractExpression::deep_equals(const AbstractExpression& other) const {
+bool AbstractExpression::operator==(const AbstractExpression& other) const {
   if (type != other.type) return false;
   if (!expressions_equal(arguments, other.arguments)) return false;
   return _shallow_equals(other);
+}
+
+bool AbstractExpression::operator!=(const AbstractExpression& other) const {
+  return !operator==(other);
 }
 
 size_t AbstractExpression::hash() const {

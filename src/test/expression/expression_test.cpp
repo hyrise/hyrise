@@ -50,54 +50,54 @@ class ExpressionTest : public ::testing::Test {
 };
 
 TEST_F(ExpressionTest, Equals) {
-  EXPECT_TRUE(mul(2, 3)->deep_equals(*mul(2, 3)));
-  EXPECT_FALSE(mul(2, 3)->deep_equals(*mul(3, 2)));
-  EXPECT_FALSE(mul(2.0, 3)->deep_equals(*mul(2, 3)));
-  EXPECT_TRUE(sum(a)->deep_equals(*sum(a)));
-  EXPECT_FALSE(sum(a)->deep_equals(*sum(b)));
-  EXPECT_TRUE(and_(1, a)->deep_equals(*and_(1, a)));
-  EXPECT_TRUE(value(5)->deep_equals(*value(5)));
-  EXPECT_FALSE(value(5.0)->deep_equals(*value(5)));
-  EXPECT_FALSE(value(5.3)->deep_equals(*value(5)));
-  EXPECT_TRUE(between(1, a, 3)->deep_equals(*between(1, a, 3)));
-  EXPECT_TRUE(greater_than(1, a)->deep_equals(*greater_than(1, a)));
-  EXPECT_FALSE(greater_than(1, a)->deep_equals(*less_than(a, 1)));
-  EXPECT_TRUE(is_null(a)->deep_equals(*is_null(a)));
-  EXPECT_FALSE(is_null(a)->deep_equals(*is_null(b)));
-  EXPECT_TRUE(is_not_null(a)->deep_equals(*is_not_null(a)));
-  EXPECT_TRUE(parameter(ParameterID{4})->deep_equals(*parameter(ParameterID{4})));
-  EXPECT_FALSE(parameter(ParameterID{4})->deep_equals(*parameter(ParameterID{5})));
-  EXPECT_TRUE(extract(DatetimeComponent::Month, "1999-07-30")->deep_equals(*extract(DatetimeComponent::Month, "1999-07-30")));
-  EXPECT_FALSE(extract(DatetimeComponent::Day, "1999-07-30")->deep_equals(*extract(DatetimeComponent::Month, "1999-07-30")));
-  EXPECT_TRUE(unary_minus(6)->deep_equals(*unary_minus(6)));
-  EXPECT_FALSE(unary_minus(6)->deep_equals(*unary_minus(6.5)));
-  EXPECT_TRUE(cast(6.5, DataType::Int)->deep_equals(*cast(6.5, DataType::Int)));
-  EXPECT_FALSE(cast(6.5, DataType::Int)->deep_equals(*cast(6.5, DataType::Float)));
+  EXPECT_EQ(*mul(2, 3), *mul(2, 3));
+  EXPECT_NE(*mul(2, 3), *mul(3, 2));
+  EXPECT_NE(*mul(2.0, 3), *mul(2, 3));
+  EXPECT_EQ(*sum(a), *sum(a));
+  EXPECT_NE(*sum(a), *sum(b));
+  EXPECT_EQ(*and_(1, a), *and_(1, a));
+  EXPECT_EQ(*value(5), *value(5));
+  EXPECT_NE(*value(5.0), *value(5));
+  EXPECT_NE(*value(5.3), *value(5));
+  EXPECT_EQ(*between(1, a, 3), *between(1, a, 3));
+  EXPECT_EQ(*greater_than(1, a), *greater_than(1, a));
+  EXPECT_NE(*greater_than(1, a), *less_than(a, 1));
+  EXPECT_EQ(*is_null(a), *is_null(a));
+  EXPECT_NE(*is_null(a), *is_null(b));
+  EXPECT_EQ(*is_not_null(a), *is_not_null(a));
+  EXPECT_EQ(*parameter(ParameterID{4}), *parameter(ParameterID{4}));
+  EXPECT_NE(*parameter(ParameterID{4}), *parameter(ParameterID{5}));
+  EXPECT_EQ(*extract(DatetimeComponent::Month, "1999-07-30"), *extract(DatetimeComponent::Month, "1999-07-30"));
+  EXPECT_NE(*extract(DatetimeComponent::Day, "1999-07-30"), *extract(DatetimeComponent::Month, "1999-07-30"));
+  EXPECT_EQ(*unary_minus(6), *unary_minus(6));
+  EXPECT_NE(*unary_minus(6), *unary_minus(6.5));
+  EXPECT_EQ(*cast(6.5, DataType::Int), *cast(6.5, DataType::Int));
+  EXPECT_NE(*cast(6.5, DataType::Int), *cast(6.5, DataType::Float));
 }
 
 TEST_F(ExpressionTest, DeepEquals) {
   const auto expr_a_a = sub(mul(add(1, 5), add(13.3, 14.4)), mod(12, 5.5));
   const auto expr_a_b = sub(mul(add(1, 5), add(13.3, 14.4)), mod(12, 5.5));
   const auto expr_b = sub(mul(add(1, 5), add(13.3, 14.4)), mod(12, null()));
-  EXPECT_TRUE(expr_a_a->deep_equals(*expr_a_b));
-  EXPECT_FALSE(expr_a_a->deep_equals(*expr_b));
+  EXPECT_EQ(*expr_a_a, *expr_a_b);
+  EXPECT_NE(*expr_a_a, *expr_b);
 
   const auto case_a = case_(equals(add(a, 5), b), add(5, b), a);
   const auto case_b = case_(a, 1, 3);
   const auto case_c = case_(equals(a, 123), b, case_(equals(a, 1234), a, null()));
 
-  EXPECT_TRUE(case_a->deep_equals(*case_a));
-  EXPECT_TRUE(case_c->deep_equals(*case_c));
-  EXPECT_FALSE(case_a->deep_equals(*case_b));
-  EXPECT_FALSE(case_a->deep_equals(*case_c));
+  EXPECT_EQ(*case_a, *case_a);
+  EXPECT_EQ(*case_c, *case_c);
+  EXPECT_NE(*case_a, *case_b);
+  EXPECT_NE(*case_a, *case_c);
 }
 
 TEST_F(ExpressionTest, DeepCopy) {
   const auto expr_a = sub(mul(add(1, 5), add(13.3, 14.4)), mod(12, 5.5));
-  EXPECT_TRUE(expr_a->deep_equals(*expr_a->deep_copy()));
+  EXPECT_EQ(*expr_a, *expr_a->deep_copy());
 
   const auto expr_b = and_(greater_than_equals(15, 12), or_(greater_than(5, 3), less_than(3, 5)));
-  EXPECT_TRUE(expr_b->deep_equals(*expr_b->deep_copy()));
+  EXPECT_EQ(*expr_b, *expr_b->deep_copy());
 }
 
 TEST_F(ExpressionTest, RequiresCalculation) {

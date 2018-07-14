@@ -61,49 +61,49 @@ TEST_F(JoinNodeTest, DescriptionAntiJoin) { EXPECT_EQ(_anti_join_node->descripti
 
 TEST_F(JoinNodeTest, OutputColumnExpressions) {
   ASSERT_EQ(_join_node->column_expressions().size(), 5u);
-  EXPECT_TRUE(_join_node->column_expressions().at(0)->deep_equals(*column(_t_a_a)));
-  EXPECT_TRUE(_join_node->column_expressions().at(1)->deep_equals(*column(_t_a_b)));
-  EXPECT_TRUE(_join_node->column_expressions().at(2)->deep_equals(*column(_t_a_c)));
-  EXPECT_TRUE(_join_node->column_expressions().at(3)->deep_equals(*column(_t_b_x)));
-  EXPECT_TRUE(_join_node->column_expressions().at(4)->deep_equals(*column(_t_b_y)));
+  EXPECT_EQ(*_join_node->column_expressions().at(0), *column(_t_a_a));
+  EXPECT_EQ(*_join_node->column_expressions().at(1), *column(_t_a_b));
+  EXPECT_EQ(*_join_node->column_expressions().at(2), *column(_t_a_c));
+  EXPECT_EQ(*_join_node->column_expressions().at(3), *column(_t_b_x));
+  EXPECT_EQ(*_join_node->column_expressions().at(4), *column(_t_b_y));
 }
 
 TEST_F(JoinNodeTest, Equals) {
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_join_node, _join_node));
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_inner_join_node, _inner_join_node));
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_semi_join_node, _semi_join_node));
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_anti_join_node, _anti_join_node));
+  EXPECT_EQ(*_join_node, *_join_node);
+  EXPECT_EQ(*_inner_join_node, *_inner_join_node);
+  EXPECT_EQ(*_semi_join_node, *_semi_join_node);
+  EXPECT_EQ(*_anti_join_node, *_anti_join_node);
 
   const auto other_join_node_a = JoinNode::make(JoinMode::Inner, equals(_t_a_a, _t_b_x), _mock_node_a, _mock_node_b);
   const auto other_join_node_b = JoinNode::make(JoinMode::Inner, not_like(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
   const auto other_join_node_c = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
   const auto other_join_node_d = JoinNode::make(JoinMode::Inner, equals(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
 
-  EXPECT_TRUE(lqp_find_subplan_mismatch(other_join_node_a, _inner_join_node).has_value());
-  EXPECT_TRUE(lqp_find_subplan_mismatch(other_join_node_b, _inner_join_node).has_value());
-  EXPECT_TRUE(lqp_find_subplan_mismatch(other_join_node_c, _inner_join_node).has_value());
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(other_join_node_d, _inner_join_node));
+  EXPECT_NE(*other_join_node_a, *_inner_join_node);
+  EXPECT_NE(*other_join_node_b, *_inner_join_node);
+  EXPECT_NE(*other_join_node_c, *_inner_join_node);
+  EXPECT_EQ(*other_join_node_d, *_inner_join_node);
 }
 
 TEST_F(JoinNodeTest, Copy) {
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_join_node, _join_node->deep_copy()));
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_inner_join_node, _inner_join_node->deep_copy()));
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_semi_join_node, _semi_join_node->deep_copy()));
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_anti_join_node, _anti_join_node->deep_copy()));
+  EXPECT_EQ(*_join_node, *_join_node->deep_copy());
+  EXPECT_EQ(*_inner_join_node, *_inner_join_node->deep_copy());
+  EXPECT_EQ(*_semi_join_node, *_semi_join_node->deep_copy());
+  EXPECT_EQ(*_anti_join_node, *_anti_join_node->deep_copy());
 }
 
 TEST_F(JoinNodeTest, OutputColumnReferencesSemiJoin) {
   ASSERT_EQ(_semi_join_node->column_expressions().size(), 3u);
-  EXPECT_TRUE(_semi_join_node->column_expressions().at(0)->deep_equals(*column(_t_a_a)));
-  EXPECT_TRUE(_semi_join_node->column_expressions().at(1)->deep_equals(*column(_t_a_b)));
-  EXPECT_TRUE(_semi_join_node->column_expressions().at(2)->deep_equals(*column(_t_a_c)));
+  EXPECT_EQ(*_semi_join_node->column_expressions().at(0), *column(_t_a_a));
+  EXPECT_EQ(*_semi_join_node->column_expressions().at(1), *column(_t_a_b));
+  EXPECT_EQ(*_semi_join_node->column_expressions().at(2), *column(_t_a_c));
 }
 
 TEST_F(JoinNodeTest, OutputColumnReferencesAntiJoin) {
   ASSERT_EQ(_anti_join_node->column_expressions().size(), 3u);
-  EXPECT_TRUE(_anti_join_node->column_expressions().at(0)->deep_equals(*column(_t_a_a)));
-  EXPECT_TRUE(_anti_join_node->column_expressions().at(1)->deep_equals(*column(_t_a_b)));
-  EXPECT_TRUE(_anti_join_node->column_expressions().at(2)->deep_equals(*column(_t_a_c)));
+  EXPECT_EQ(*_anti_join_node->column_expressions().at(0), *column(_t_a_a));
+  EXPECT_EQ(*_anti_join_node->column_expressions().at(1), *column(_t_a_b));
+  EXPECT_EQ(*_anti_join_node->column_expressions().at(2), *column(_t_a_c));
 }
 
 }  // namespace opossum

@@ -186,7 +186,7 @@ std::vector<std::shared_ptr<AbstractExpression>> AbstractLQPNode::node_expressio
 std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression& expression) const {
   const auto& column_expressions = this->column_expressions();  // Avoid redundant retrieval in loop below
   for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); ++column_id) {
-    if (column_expressions[column_id]->deep_equals(expression)) return column_id;
+    if (*column_expressions[column_id] == expression) return column_id;
   }
   return std::nullopt;
 }
@@ -228,6 +228,17 @@ void AbstractLQPNode::print(std::ostream& out) const {
     lqp->_print_impl(out);
     out << std::endl;
   }
+}
+
+bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
+  // lqp_find_subplan_mismatch() takes mutable pointers, but won't manipulate, promised.
+  const auto mutable_this = std::const_pointer_cast<AbstractLQPNode>(shared_from_this());
+  const auto mutable_rhs = std::const_pointer_cast<AbstractLQPNode>(rhs.shared_from_this());
+  return !lqp_find_subplan_mismatch(mutable_this, mutable_rhs);
+}
+
+bool AbstractLQPNode::operator!=(const AbstractLQPNode& rhs) const {
+  return !operator==(rhs);
 }
 
 void AbstractLQPNode::_print_impl(std::ostream& out) const {
