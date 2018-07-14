@@ -31,12 +31,10 @@ class Topology final {
  public:
   static Topology& current();
 
-  /**
-   * @param max_num_workers A values of zero indicates no limit
-   * @param workers_per_node
-   */
-  void create_fake_numa_topology(uint32_t max_num_workers = 0, uint32_t workers_per_node = 1);
+  void create_default_topology();
   void create_numa_topology(uint32_t max_num_cores = 0);
+  void create_nonnuma_topology(uint32_t max_num_cores = 0);
+  void create_fake_numa_topology(uint32_t max_num_workers = 0, uint32_t workers_per_node = 1);
 
   const std::vector<TopologyNode>& nodes();
 
