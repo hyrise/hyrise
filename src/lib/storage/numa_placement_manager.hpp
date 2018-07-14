@@ -75,7 +75,7 @@ class NUMAPlacementManager {
   NUMAPlacementManager(NUMAPlacementManager&&) = delete;
 
  protected:
-  explicit NUMAPlacementManager();
+  NUMAPlacementManager();
 
   Options _options;
   int _current_node_id;

@@ -81,7 +81,7 @@ class UidAllocator;
  */
 class NodeQueueScheduler : public AbstractScheduler {
  public:
-  explicit NodeQueueScheduler();
+  NodeQueueScheduler();
   ~NodeQueueScheduler();
 
   /**
