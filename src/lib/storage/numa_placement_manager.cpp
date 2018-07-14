@@ -61,7 +61,8 @@ boost::container::pmr::memory_resource* NUMAPlacementManager::get_next_memory_re
 }
 
 boost::container::pmr::memory_resource* NUMAPlacementManager::get_memory_resource(int node_id) {
-  DebugAssert(node_id >= 0 && node_id < static_cast<int>(Topology::current().nodes().size()), "node_id is out of bounds");
+  DebugAssert(node_id >= 0 && node_id < static_cast<int>(Topology::current().nodes().size()),
+              "node_id is out of bounds");
   return &_memory_resources[static_cast<size_t>(node_id)];
 }
 

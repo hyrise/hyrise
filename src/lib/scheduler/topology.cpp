@@ -17,9 +17,7 @@ Topology& Topology::current() {
   return instance;
 }
 
-Topology::Topology() {
-  create_numa_topology();
-}
+Topology::Topology() { create_numa_topology(); }
 
 void TopologyNode::print(std::ostream& stream) const {
   stream << "Number of Node CPUs: " << cpus.size() << ", CPUIDs: [";
