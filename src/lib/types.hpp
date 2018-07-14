@@ -163,27 +163,6 @@ enum class SchedulePriority {
   High = 0          // Schedule task at the beginning of the queue
 };
 
-// Part of AllParameterVariant to reference parameters that will be replaced later.
-// When stored in an operator, the operator's deep_cop method can contain functionality
-// that will replace a ValuePlaceholder with an explicit value from a given list of arguments
-
-class ValuePlaceholder {
- public:
-  explicit ValuePlaceholder(const uint16_t index) : _index(index) {}
-
-  uint16_t index() const { return _index; }
-
-  friend std::ostream& operator<<(std::ostream& o, const ValuePlaceholder& placeholder) {
-    o << "?" << placeholder.index();
-    return o;
-  }
-
-  bool operator==(const ValuePlaceholder& other) const { return _index == other._index; }
-
- private:
-  uint16_t _index;
-};
-
 enum class PredicateCondition {
   Equals,
   NotEquals,
