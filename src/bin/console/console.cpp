@@ -604,8 +604,7 @@ int Console::_change_runtime_setting(const std::string& input) {
 
   if (property == "scheduler") {
     if (value == "on") {
-      opossum::CurrentScheduler::set(
-          std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology()));
+      opossum::CurrentScheduler::set(std::make_shared<opossum::NodeQueueScheduler>());
       out("Scheduler turned on\n");
     } else if (value == "off") {
       opossum::CurrentScheduler::set(nullptr);

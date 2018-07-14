@@ -20,7 +20,7 @@ class ServerTestRunner : public BaseTest {
     StorageManager::get().add_table("table_a", _table_a);
 
     // Set scheduler so that the server can execute the tasks on separate threads.
-    CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_numa_topology()));
+    CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
 
     uint16_t server_port = 0;
     std::mutex mutex{};
