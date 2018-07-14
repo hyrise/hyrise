@@ -33,12 +33,12 @@ void NodeQueueScheduler::begin() {
   _processing_units.reserve(Topology::current().num_cpus());
   _queues.reserve(Topology::current().nodes().size());
 
-  for (NodeID q{0}; q < Topology::current().nodes().size(); q++) {
-    auto queue = std::make_shared<TaskQueue>(q);
+  for (auto node_id = NodeID{0}; node_id < Topology::current().nodes().size(); node_id++) {
+    auto queue = std::make_shared<TaskQueue>(node_id);
 
     _queues.emplace_back(queue);
 
-    auto& topology_node = Topology::current().nodes()[q];
+    auto& topology_node = Topology::current().nodes()[node_id];
 
     for (auto& topology_cpu : topology_node.cpus) {
       _processing_units.emplace_back(
