@@ -19,14 +19,6 @@ Topology& Topology::current() {
 
 Topology::Topology() { create_default_topology(); }
 
-void Topology::create_default_topology() {
-#if !HYRISE_NUMA_SUPPORT
-  create_nonnuma_topology();
-#else
-  create_numa_topology();
-#endif
-}
-
 void TopologyNode::print(std::ostream& stream) const {
   stream << "Number of Node CPUs: " << cpus.size() << ", CPUIDs: [";
   for (size_t cpu_idx = 0; cpu_idx < cpus.size(); ++cpu_idx) {
@@ -36,6 +28,14 @@ void TopologyNode::print(std::ostream& stream) const {
     }
   }
   stream << "]";
+}
+
+void Topology::create_default_topology() {
+#if !HYRISE_NUMA_SUPPORT
+  create_nonnuma_topology();
+#else
+  create_numa_topology();
+#endif
 }
 
 void Topology::create_numa_topology(uint32_t max_num_cores) {
