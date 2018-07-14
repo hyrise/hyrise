@@ -35,10 +35,10 @@ NUMAPlacementManager::NUMAPlacementManager() : _current_node_id(0) {
   // memory sources with it. This means that the destructors of those tables would fail.
   Assert(StorageManager::get().table_names().size() == 0, "NUMAPlacementManager must be created before any table");
 
-  for (size_t i = 0; i < Topology::current().nodes().size(); i++) {
+  for (auto node_id = size_t{0}; node_id < Topology::current().nodes().size(); node_id++) {
     char msource_name[26];
-    std::snprintf(msource_name, sizeof(msource_name), "numa_%03lu", i);
-    _memory_resources.push_back(NUMAMemoryResource(i, std::string(msource_name)));
+    std::snprintf(msource_name, sizeof(msource_name), "numa_%03lu", node_id);
+    _memory_resources.push_back(NUMAMemoryResource(node_id, std::string(msource_name)));
   }
 
   _collector_thread = std::make_unique<PausableLoopThread>(_options.counter_history_interval,

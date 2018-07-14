@@ -39,9 +39,9 @@ void Topology::create_fake_numa_topology(uint32_t max_num_workers, uint32_t work
   /**
    * Leave one thread free so hopefully the system won't freeze - but if we only have one thread, use that one.
    */
-  auto num_workers = std::max<size_t>(1, max_num_threads - 1);
+  auto num_workers = std::max<uint32_t>(1, max_num_threads - 1);
   if (max_num_workers != 0) {
-    num_workers = std::min<size_t>(num_workers, max_num_workers);
+    num_workers = std::min<uint32_t>(num_workers, max_num_workers);
   }
 
   auto num_nodes = num_workers / workers_per_node;
@@ -51,10 +51,10 @@ void Topology::create_fake_numa_topology(uint32_t max_num_workers, uint32_t work
 
   CpuID cpu_id{0};
 
-  for (auto node_id = size_t{0}; node_id < num_nodes; node_id++) {
+  for (auto node_id = uint32_t{0}; node_id < num_nodes; node_id++) {
     std::vector<TopologyCpu> cpus;
 
-    for (auto worker_id = size_t{0}; worker_id < workers_per_node && cpu_id < num_workers; worker_id++) {
+    for (auto worker_id = uint32_t{0}; worker_id < workers_per_node && cpu_id < num_workers; worker_id++) {
       cpus.emplace_back(TopologyCpu(cpu_id));
       cpu_id++;
     }
