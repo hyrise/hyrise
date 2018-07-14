@@ -257,55 +257,87 @@ std::shared_ptr<AbstractExpression> SQLTranslator::translate_hsql_expr(const hsq
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::InsertStatement& insert) {
   const auto table_name = std::string{insert.tableName};
-  auto target_table = StorageManager::get().get_table(table_name);
-  auto target_table_node = std::make_shared<StoredTableNode>(table_name);
-
-  // Plan that generates the data to insert
+  const auto target_table = StorageManager::get().get_table(table_name);
   auto insert_data_node = std::shared_ptr<AbstractLQPNode>{};
+  auto column_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+  auto insert_data_projection_required = false;
 
-  // Check for `INSERT ... INTO newtable FROM oldtable WHERE condition` query
+  /**
+   * 1. Create the expressions/LQP producing the data to insert.
+   */
   if (insert.type == hsql::kInsertSelect) {
+    // `INSERT ... INTO newtable FROM oldtable WHERE condition`
     Assert(insert.select, "INSERT INTO ... SELECT ...: No SELECT statement given");
-
     insert_data_node = translate_select_statement(*insert.select);
+    column_expressions = insert_data_node->column_expressions();
+
   } else {
+    // `INSERT INTO table_name [(column1, column2, column3, ...)] VALUES (value1, value2, value3, ...);`
     Assert(insert.values, "INSERT INTO ... VALUES: No values given");
 
-    std::vector<std::shared_ptr<AbstractExpression>> expressions;
-    expressions.reserve(insert.values->size());
+    column_expressions.reserve(insert.values->size());
     for (const auto* value : *insert.values) {
-      expressions.emplace_back(_translate_hsql_expr(*value, _sql_identifier_context));
+      column_expressions.emplace_back(_translate_hsql_expr(*value, _sql_identifier_context));
     }
 
-    insert_data_node = ProjectionNode::make(expressions, DummyTableNode::make());
+    insert_data_node = DummyTableNode::make();
+    insert_data_projection_required = true;
   }
 
+  /**
+   * 2. Rearrange the columns of the data to insert to match the target table
+   *    E.g., `SELECT INTO table (c, a) VALUES (1, 2)` becomes `SELECT INTO table (a, b, c) VALUES (2, NULL, 1)
+   */
   if (insert.columns) {
-    // Certain columns have been specified. In this case we create a new expression list
-    // for the Projection, so that it contains as many columns as the target table.
+    // `INSERT INTO table_name (column1, column2, column3, ...) ...;`
+    // Create a Projection that matches the specified columns with the columns of `table_name`
 
-    Assert(insert.columns->size() == insert_data_node->column_expressions().size(),
+    Assert(insert.columns->size() == column_expressions.size(),
            "INSERT: Target column count and number of input columns mismatch");
 
-    // pre-fill new projection list with NULLs
-    std::vector<std::shared_ptr<AbstractExpression>> expressions(target_table->column_count(),
-                                                                 std::make_shared<ValueExpression>(NullValue{}));
-
-    ColumnID source_column_id{0};
+    auto expressions = std::vector<std::shared_ptr<AbstractExpression>>(target_table->column_count(), null());
+    auto source_column_id = ColumnID{0};
     for (const auto& column_name : *insert.columns) {
       // retrieve correct ColumnID from the target table
       const auto target_column_id = target_table->column_id_by_name(column_name);
-      expressions[target_column_id] = insert_data_node->column_expressions()[source_column_id];
+      expressions[target_column_id] = column_expressions[source_column_id];
       ++source_column_id;
     }
+    column_expressions = expressions;
 
-    // create projection and add to the node chain
-    insert_data_node = ProjectionNode::make(expressions, insert_data_node);
+    insert_data_projection_required = true;
+  }
+
+  /**
+   * 3. When inserting NULL literals (or not inserting into all columns), wrap NULLs in
+   *    `CAST(NULL AS <column_data_type>), since a temporary table with the data to insert will be created and NULL is
+   *    an invalid column data type in Hyrise.
+   */
+  for (auto column_id = ColumnID{0}; column_id < target_table->column_count(); ++column_id) {
+    // Turn `expression` into `CAST(expression AS <column_data_type>)`, if expression is a NULL literal
+    auto expression = column_expressions[column_id];
+    if (const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(expression); value_expression) {
+      if (variant_is_null(value_expression->value)) {
+        column_expressions[column_id] = cast(null(), target_table->column_data_type(column_id));
+        insert_data_projection_required = true;
+      }
+    }
+  }
+
+  /**
+   * 4. Project the data to insert if required, i.e. when column order needed to be arranged or NULLs were wrapped in
+   *    `CAST(NULL as <data_type>)`
+   */
+  if (insert_data_projection_required) {
+    insert_data_node = ProjectionNode::make(column_expressions, insert_data_node);
   }
 
   Assert(insert_data_node->column_expressions().size() == target_table->column_count(),
          "INSERT: Column count mismatch");
-  // DataType checking has to be done at runtime, as Query could still contains Placeholder with unspecified type
+
+  /**
+   * NOTE: DataType checking has to be done at runtime, as Query could still contain Placeholder with unspecified type
+   */
 
   return InsertNode::make(table_name, insert_data_node);
 }

@@ -473,16 +473,22 @@ std::shared_ptr<ExpressionResult<R>> ExpressionEvaluator::_evaluate_cast_express
           // String to String "cast"
           values[chunk_offset] = argument_value;
         } else {
-          // Numeric/NULL to String cast
-          values[chunk_offset] = std::to_string(argument_value);
+          // Numeric to String cast. Uses std::stringstream instead of sto{l/f/ll}() since the latter puts trailing
+          // zeros on floats, e.g., 5.5 -> "5.50000"
+          std::ostringstream stream;
+          stream << argument_value;
+          values[chunk_offset] = stream.str();
         }
       } else {
         if constexpr(std::is_same_v<ArgumentDataType, std::string>) {
-          // String to Numeric cast. Uses sto{l/d}
+          char * end;
+
+          // String to Numeric cast. Uses strto{l,f} because the behaviour of this function matches the expected
+          // behaviour, i.e. returning zero on conversion error.
           if constexpr(std::is_same_v<R, int32_t> || std::is_same_v<R, int64_t>) {
-            values[chunk_offset] = std::stol(argument_value);
+            values[chunk_offset] = std::strtol(argument_value.c_str(), &end, 10);
           } else if constexpr(std::is_same_v<R, float> || std::is_same_v<R, double>) {
-            values[chunk_offset] = std::stod(argument_value);
+            values[chunk_offset] = std::strtof(argument_value.c_str(), &end);
           } else {
             Fail("Casting string to numeric argument type not implemented");
           }
