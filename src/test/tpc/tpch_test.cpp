@@ -85,12 +85,6 @@ TEST_P(TPCHTest, TPCHQueryTest) {
   const auto sqlite_result_table = _sqlite_wrapper->execute_query(query);
   auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline();
 
-  if (!sql_pipeline.requires_execution()) {
-    sql_pipeline.get_unoptimized_logical_plans().at(0)->print();
-    sql_pipeline.get_optimized_logical_plans().at(0)->print();
-  } else {
-    std::cout << "Cannot print plan, needs to be executed first" << std::endl;
-  }
   const auto result_table = sql_pipeline.get_result_table();
 
   // EXPECT_TABLE_EQ would crash if one table is a nullptr

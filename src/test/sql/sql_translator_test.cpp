@@ -1004,8 +1004,6 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocationSimple) {
       sql_translator.translate_sql("SELECT (SELECT (SELECT int_float2.a + int_float.b) FROM int_float2) FROM int_float")
           .at(0);
 
-  actual_lqp->print();
-
   // clang-format off
   const auto parameter_int_float_b = parameter_(ParameterID{1}, int_float_b);
   const auto parameter_int_float2_a = parameter_(ParameterID{0}, int_float2_a);
