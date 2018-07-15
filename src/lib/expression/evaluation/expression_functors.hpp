@@ -26,7 +26,7 @@ template <typename T> T to_value(const NullValue& v) { return T{}; }
 /**
  * SQL's OR which has a ternary NULL logic, e.g., `TRUE OR NULL -> TRUE`
  */
-struct TernaryOr {
+struct TernaryOrEvaluator {
   template <typename Result, typename ArgA, typename ArgB>
   struct supports {
     static constexpr bool value = is_logical_operand<Result> && is_logical_operand<ArgA> && is_logical_operand<ArgB>;
@@ -45,7 +45,7 @@ struct TernaryOr {
 /**
  * SQL's AND which has a ternary NULL logic, e.g., `FALSE AND NULL -> FALSE`
  */
-struct TernaryAnd {
+struct TernaryAndEvaluator {
   template <typename Result, typename ArgA, typename ArgB>
   struct supports {
     static constexpr bool value = is_logical_operand<Result> && is_logical_operand<ArgA> && is_logical_operand<ArgB>;
@@ -91,13 +91,17 @@ struct STLComparisonFunctorWrapper {
   };
 };
 
-using Equals = STLComparisonFunctorWrapper<std::equal_to>;
-using NotEquals = STLComparisonFunctorWrapper<std::not_equal_to>;
-using GreaterThan = STLComparisonFunctorWrapper<std::greater>;
-using GreaterThanEquals = STLComparisonFunctorWrapper<std::greater_equal>;
-using LessThan = STLComparisonFunctorWrapper<std::less>;
-using LessThanEquals = STLComparisonFunctorWrapper<std::less_equal>;
+using EqualsEvaluator = STLComparisonFunctorWrapper<std::equal_to>;
+using NotEqualsEvaluator = STLComparisonFunctorWrapper<std::not_equal_to>;
+using GreaterThanEvaluator = STLComparisonFunctorWrapper<std::greater>;
+using GreaterThanEqualsEvaluator = STLComparisonFunctorWrapper<std::greater_equal>;
+using LessThanEvaluator = STLComparisonFunctorWrapper<std::less>;
+using LessThanEqualsEvaluator = STLComparisonFunctorWrapper<std::less_equal>;
 
+/**
+ * See STLComparisonFunctorWrappe, but for arithmetic functors (+, -, *)
+ * @tparam Functor
+ */
 template <template <typename T> typename Functor>
 struct STLArithmeticFunctorWrapper {
   template <typename Result, typename ArgA, typename ArgB>
@@ -116,13 +120,13 @@ struct STLArithmeticFunctorWrapper {
   };
 };
 
-using Addition = STLArithmeticFunctorWrapper<std::plus>;
-using Subtraction = STLArithmeticFunctorWrapper<std::minus>;
-using Multiplication = STLArithmeticFunctorWrapper<std::multiplies>;
+using AdditionEvaluator = STLArithmeticFunctorWrapper<std::plus>;
+using SubtractionEvaluator = STLArithmeticFunctorWrapper<std::minus>;
+using MultiplicationEvaluator = STLArithmeticFunctorWrapper<std::multiplies>;
 
 // Modulo selects between the operator `%` for integrals and fmod() for floats. Custom NULL logic returns NULL if the
 // divisor is NULL
-struct Modulo {
+struct ModuloEvaluator {
   template <typename Result, typename ArgA, typename ArgB>
   struct supports {
     static constexpr bool value =
@@ -152,7 +156,7 @@ struct Modulo {
 };
 
 // Custom NULL logic returns NULL if the divisor is NULL
-struct Division {
+struct DivisionEvaluator {
   template <typename Result, typename ArgA, typename ArgB>
   struct supports {
     static constexpr bool value =
@@ -176,7 +180,7 @@ struct Division {
   };
 };
 
-struct Case {
+struct CaseEvaluator {
   template <typename Result, typename ArgA, typename ArgB>
   struct supports {
     static constexpr bool value = (std::is_same_v<std::string, ArgA> == std::is_same_v<std::string, ArgB>)&&(

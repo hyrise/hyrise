@@ -108,13 +108,13 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_arithme
 
   // clang-format off
   switch (expression.arithmetic_operator) {
-    case ArithmeticOperator::Addition:       return _evaluate_binary_with_default_null_logic<Result, Addition>(left, right);
-    case ArithmeticOperator::Subtraction:    return _evaluate_binary_with_default_null_logic<Result, Subtraction>(left, right);  // NOLINT
-    case ArithmeticOperator::Multiplication: return _evaluate_binary_with_default_null_logic<Result, Multiplication>(left, right);  // NOLINT
+    case ArithmeticOperator::Addition:       return _evaluate_binary_with_default_null_logic<Result, AdditionEvaluator>(left, right);
+    case ArithmeticOperator::Subtraction:    return _evaluate_binary_with_default_null_logic<Result, SubtractionEvaluator>(left, right);  // NOLINT
+    case ArithmeticOperator::Multiplication: return _evaluate_binary_with_default_null_logic<Result, MultiplicationEvaluator>(left, right);  // NOLINT
 
     // Division and Modulo need to catch division by zero
-    case ArithmeticOperator::Division:       return _evaluate_binary_with_custom_null_logic<Result, Division>(left, right);
-    case ArithmeticOperator::Modulo:         return _evaluate_binary_with_custom_null_logic<Result, Modulo>(left, right);
+    case ArithmeticOperator::Division:       return _evaluate_binary_with_custom_null_logic<Result, DivisionEvaluator>(left, right);
+    case ArithmeticOperator::Modulo:         return _evaluate_binary_with_custom_null_logic<Result, ModuloEvaluator>(left, right);
   }
   // clang-format on
 }
@@ -126,12 +126,12 @@ std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator
 
   // clang-format off
   switch (expression.predicate_condition) {
-    case PredicateCondition::Equals:            return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, Equals>(left, right);  // NOLINT
-    case PredicateCondition::NotEquals:         return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, NotEquals>(left, right);  // NOLINT
-    case PredicateCondition::LessThan:          return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, LessThan>(left, right);  // NOLINT
-    case PredicateCondition::LessThanEquals:    return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, LessThanEquals>(left, right);  // NOLINT
-    case PredicateCondition::GreaterThan:       return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, GreaterThan>(left, right);  // NOLINT
-    case PredicateCondition::GreaterThanEquals: return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, GreaterThanEquals>(left, right);  // NOLINT
+    case PredicateCondition::Equals:            return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, EqualsEvaluator>(left, right);  // NOLINT
+    case PredicateCondition::NotEquals:         return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, NotEqualsEvaluator>(left, right);  // NOLINT
+    case PredicateCondition::LessThan:          return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, LessThanEvaluator>(left, right);  // NOLINT
+    case PredicateCondition::LessThanEquals:    return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, LessThanEqualsEvaluator>(left, right);  // NOLINT
+    case PredicateCondition::GreaterThan:       return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, GreaterThanEvaluator>(left, right);  // NOLINT
+    case PredicateCondition::GreaterThanEquals: return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, GreaterThanEqualsEvaluator>(left, right);  // NOLINT
 
     default:
       Fail("PredicateCondition should be handled in different function");
@@ -294,7 +294,7 @@ std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator
       _resolve_to_expression_result_view(left_expression, [&](const auto& left_view) {
         using ValueDataType = typename std::decay_t<decltype(left_view)>::Type;
 
-        if constexpr (Equals::supports<ExpressionEvaluator::Bool, ValueDataType, SelectDataType>::value) {
+        if constexpr (EqualsEvaluator::supports<ExpressionEvaluator::Bool, ValueDataType, SelectDataType>::value) {
           const auto result_size = _result_size(left_view.size(), select_result_columns.size());
 
           result_values.resize(result_size, 0);
@@ -312,7 +312,7 @@ std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator
             for (auto list_element_idx = ChunkOffset{0}; list_element_idx < list.size(); ++list_element_idx) {
               // `a IN (x,y,z)` is supposed to have the same semantics as `a = x OR a = y OR a = z`, so we use `Equals`
               // here as well.
-              Equals{}(result_values[chunk_offset], list.value(list_element_idx), left_view.value(chunk_offset));
+              EqualsEvaluator{}(result_values[chunk_offset], list.value(list_element_idx), left_view.value(chunk_offset));
               if (result_values[chunk_offset]) break;
 
               list_contains_null |= list.is_null(list_element_idx);
@@ -423,7 +423,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_case_ex
       std::vector<bool> nulls(result_size);
 
       // clang-format off
-      if constexpr (Case::template supports<Result, ThenResultType, ElseResultType>::value) {
+      if constexpr (CaseEvaluator::template supports<Result, ThenResultType, ElseResultType>::value) {
         for (auto chunk_offset = ChunkOffset{0};
              chunk_offset < result_size; ++chunk_offset) {
           if (when->value(chunk_offset) && !when->is_null(chunk_offset)) {
@@ -775,8 +775,8 @@ std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator
 
   // clang-format off
   switch (expression.logical_operator) {
-    case LogicalOperator::Or:  return _evaluate_binary_with_custom_null_logic<ExpressionEvaluator::Bool, TernaryOr>(left, right);
-    case LogicalOperator::And: return _evaluate_binary_with_custom_null_logic<ExpressionEvaluator::Bool, TernaryAnd>(left, right);
+    case LogicalOperator::Or:  return _evaluate_binary_with_custom_null_logic<ExpressionEvaluator::Bool, TernaryOrEvaluator>(left, right);
+    case LogicalOperator::And: return _evaluate_binary_with_custom_null_logic<ExpressionEvaluator::Bool, TernaryAndEvaluator>(left, right);
   }
   // clang-format on
 }

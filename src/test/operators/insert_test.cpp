@@ -233,7 +233,7 @@ TEST_F(OperatorsInsertTest, InsertNullIntoNonNull) {
   context->rollback();
 }
 
-TEST_F(OperatorsInsertTest, DISABLED_InsertSingleNullFromDummyProjection) {
+TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
   auto t_name = "test1";
 
   auto t = load_table("src/test/tables/float_with_null.tbl", 4u);
@@ -243,7 +243,7 @@ TEST_F(OperatorsInsertTest, DISABLED_InsertSingleNullFromDummyProjection) {
   dummy_wrapper->execute();
 
   // 0 + NULL to create an int-NULL
-  auto projection = std::make_shared<Projection>(dummy_wrapper, expression_vector(add_(0, null_())));
+  auto projection = std::make_shared<Projection>(dummy_wrapper, expression_vector(add_(0.0f, null_())));
   projection->execute();
 
   auto ins = std::make_shared<Insert>(t_name, projection);
