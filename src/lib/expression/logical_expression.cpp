@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include "boost/functional/hash.hpp"
+#include "expression/evaluation/expression_evaluator.hpp"
 
 namespace opossum {
 
@@ -40,8 +41,7 @@ std::string LogicalExpression::as_column_name() const {
 }
 
 DataType LogicalExpression::data_type() const {
-  // Should be Bool, but we don't have that.
-  return DataType::Int;
+  return ExpressionEvaluator::DataTypeBool;
 }
 
 bool LogicalExpression::_shallow_equals(const AbstractExpression& expression) const {

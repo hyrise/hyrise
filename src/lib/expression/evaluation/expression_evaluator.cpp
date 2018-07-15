@@ -119,19 +119,19 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_arithme
   // clang-format on
 }
 template <>
-std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_binary_predicate_expression<int32_t>(
+std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator::_evaluate_binary_predicate_expression<ExpressionEvaluator::Bool>(
     const BinaryPredicateExpression& expression) {
   const auto& left = *expression.left_operand();
   const auto& right = *expression.right_operand();
 
   // clang-format off
   switch (expression.predicate_condition) {
-    case PredicateCondition::Equals:            return _evaluate_binary_with_default_null_logic<int32_t, Equals>(left, right);  // NOLINT
-    case PredicateCondition::NotEquals:         return _evaluate_binary_with_default_null_logic<int32_t, NotEquals>(left, right);  // NOLINT
-    case PredicateCondition::LessThan:          return _evaluate_binary_with_default_null_logic<int32_t, LessThan>(left, right);  // NOLINT
-    case PredicateCondition::LessThanEquals:    return _evaluate_binary_with_default_null_logic<int32_t, LessThanEquals>(left, right);  // NOLINT
-    case PredicateCondition::GreaterThan:       return _evaluate_binary_with_default_null_logic<int32_t, GreaterThan>(left, right);  // NOLINT
-    case PredicateCondition::GreaterThanEquals: return _evaluate_binary_with_default_null_logic<int32_t, GreaterThanEquals>(left, right);  // NOLINT
+    case PredicateCondition::Equals:            return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, Equals>(left, right);  // NOLINT
+    case PredicateCondition::NotEquals:         return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, NotEquals>(left, right);  // NOLINT
+    case PredicateCondition::LessThan:          return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, LessThan>(left, right);  // NOLINT
+    case PredicateCondition::LessThanEquals:    return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, LessThanEquals>(left, right);  // NOLINT
+    case PredicateCondition::GreaterThan:       return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, GreaterThan>(left, right);  // NOLINT
+    case PredicateCondition::GreaterThanEquals: return _evaluate_binary_with_default_null_logic<ExpressionEvaluator::Bool, GreaterThanEquals>(left, right);  // NOLINT
 
     default:
       Fail("PredicateCondition should be handled in different function");
@@ -142,11 +142,11 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_binary
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_predicate_expression(
     const BinaryPredicateExpression& expression) {
-  Fail("Can only evaluate predicates to int32_t (aka bool)");
+  Fail("Can only evaluate predicates to bool");
 }
 
 template <>
-std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_like_expression<int32_t>(
+std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator::_evaluate_like_expression<ExpressionEvaluator::Bool>(
     const BinaryPredicateExpression& expression) {
   /**
    * NOTE: This code path is NOT taken for LIKEs in predicates. That is `SELECT * FROM t WHERE a LIKE '%Hello%'` is
@@ -163,7 +163,7 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_like_e
   const auto invert_results = expression.predicate_condition == PredicateCondition::NotLike;
 
   const auto result_size = _result_size(left_results->size(), right_results->size());
-  auto result_values = std::vector<int32_t>(result_size, 0);
+  auto result_values = std::vector<ExpressionEvaluator::Bool>(result_size, 0);
 
   /**
    * Three different kinds of LIKE are considered for performance reasons and avoid redundant creation of the
@@ -198,19 +198,19 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_like_e
 
   auto result_nulls = _evaluate_default_null_logic(left_results->nulls, right_results->nulls);
 
-  return std::make_shared<ExpressionResult<int32_t>>(std::move(result_values), std::move(result_nulls));
+  return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values), std::move(result_nulls));
 }
 
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_like_expression(
     const BinaryPredicateExpression& expression) {
-  Fail("Can only evaluate predicates to int32_t (aka bool)");
+  Fail("Can only evaluate predicates to bool");
 }
 
 template <>
-std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_is_null_expression<int32_t>(
+std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator::_evaluate_is_null_expression<ExpressionEvaluator::Bool>(
     const IsNullExpression& expression) {
-  std::vector<int32_t> result_values;
+  std::vector<ExpressionEvaluator::Bool> result_values;
 
   _resolve_to_expression_result_view(*expression.operand(), [&](const auto& view) {
     result_values.resize(view.size());
@@ -226,22 +226,22 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_is_nul
     }
   });
 
-  return std::make_shared<ExpressionResult<int32_t>>(std::move(result_values));
+  return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values));
 }
 
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_is_null_expression(
     const IsNullExpression& expression) {
-  Fail("Can only evaluate predicates to int32_t (aka bool)");
+  Fail("Can only evaluate predicates to bool");
 }
 
 template <>
-std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_in_expression<int32_t>(
+std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(
     const InExpression& in_expression) {
   const auto& left_expression = *in_expression.value();
   const auto& right_expression = *in_expression.set();
 
-  std::vector<int32_t> result_values;
+  std::vector<ExpressionEvaluator::Bool> result_values;
   std::vector<bool> result_nulls;
 
   if (right_expression.type == ExpressionType::List) {
@@ -265,7 +265,7 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_in_exp
 
     if (type_compatible_elements.empty()) {
       // `5 IN ()` is FALSE as is `NULL IN ()`
-      return std::make_shared<ExpressionResult<int32_t>>(std::vector<int32_t>{0});
+      return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::vector<ExpressionEvaluator::Bool>{0});
     }
 
     std::shared_ptr<AbstractExpression> predicate_disjunction =
@@ -275,7 +275,7 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_in_exp
       predicate_disjunction = or_(predicate_disjunction, equals_element);
     }
 
-    return evaluate_expression_to_result<int32_t>(*predicate_disjunction);
+    return evaluate_expression_to_result<ExpressionEvaluator::Bool>(*predicate_disjunction);
 
   } else if (right_expression.type == ExpressionType::Select) {
     const auto* select_expression = dynamic_cast<const PQPSelectExpression*>(&right_expression);
@@ -294,7 +294,7 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_in_exp
       _resolve_to_expression_result_view(left_expression, [&](const auto& left_view) {
         using ValueDataType = typename std::decay_t<decltype(left_view)>::Type;
 
-        if constexpr (Equals::supports<int32_t, ValueDataType, SelectDataType>::value) {
+        if constexpr (Equals::supports<ExpressionEvaluator::Bool, ValueDataType, SelectDataType>::value) {
           const auto result_size = _result_size(left_view.size(), select_result_columns.size());
 
           result_values.resize(result_size, 0);
@@ -334,16 +334,16 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_in_exp
     Fail("Unsupported ExpressionType used in InExpression");
   }
 
-  return std::make_shared<ExpressionResult<int32_t>>(std::move(result_values), std::move(result_nulls));
+  return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values), std::move(result_nulls));
 }
 
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_in_expression(const InExpression& expression) {
-  Fail("InExpression supports only int32_t as result");
+  Fail("InExpression supports only bool as result");
 }
 
 template <>
-std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_predicate_expression<int32_t>(
+std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
     const AbstractPredicateExpression& predicate_expression) {
 
   /**
@@ -358,7 +358,7 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_predic
     case PredicateCondition::GreaterThan:
     case PredicateCondition::NotEquals:
     case PredicateCondition::LessThan:
-      return _evaluate_binary_predicate_expression<int32_t>(
+      return _evaluate_binary_predicate_expression<ExpressionEvaluator::Bool>(
           static_cast<const BinaryPredicateExpression&>(predicate_expression));
 
     case PredicateCondition::Between: {
@@ -372,26 +372,26 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_predic
 
       const auto gte_lte_expression = and_(gte_expression, lte_expression);
 
-      return evaluate_expression_to_result<int32_t>(*gte_lte_expression);
+      return evaluate_expression_to_result<ExpressionEvaluator::Bool>(*gte_lte_expression);
     }
 
     case PredicateCondition::In:
-      return _evaluate_in_expression<int32_t>(static_cast<const InExpression&>(predicate_expression));
+      return _evaluate_in_expression<ExpressionEvaluator::Bool>(static_cast<const InExpression&>(predicate_expression));
 
     case PredicateCondition::Like:
     case PredicateCondition::NotLike:
-      return _evaluate_like_expression<int32_t>(static_cast<const BinaryPredicateExpression&>(predicate_expression));
+      return _evaluate_like_expression<ExpressionEvaluator::Bool>(static_cast<const BinaryPredicateExpression&>(predicate_expression));
 
     case PredicateCondition::IsNull:
     case PredicateCondition::IsNotNull:
-      return _evaluate_is_null_expression<int32_t>(static_cast<const IsNullExpression&>(predicate_expression));
+      return _evaluate_is_null_expression<ExpressionEvaluator::Bool>(static_cast<const IsNullExpression&>(predicate_expression));
   }
 }
 
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_predicate_expression(
     const AbstractPredicateExpression& expression) {
-  Fail("Can only evaluate predicates to int32_t (aka bool)");
+  Fail("Can only evaluate predicates to bool");
 }
 
 template <typename Result>
@@ -409,7 +409,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_column_
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_case_expression(
     const CaseExpression& case_expression) {
-  const auto when = evaluate_expression_to_result<int32_t>(*case_expression.when());
+  const auto when = evaluate_expression_to_result<ExpressionEvaluator::Bool>(*case_expression.when());
 
   std::shared_ptr<ExpressionResult<Result>> result;
 
@@ -508,25 +508,25 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
 }
 
 template <>
-std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_exists_expression<int32_t>(
+std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator::_evaluate_exists_expression<ExpressionEvaluator::Bool>(
     const ExistsExpression& exists_expression) {
   const auto select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(exists_expression.select());
   Assert(select_expression, "Expected PQPSelectExpression");
 
   const auto select_result_tables = _evaluate_select_expression_to_tables(*select_expression);
 
-  std::vector<int32_t> result_values(select_result_tables.size());
+  std::vector<ExpressionEvaluator::Bool> result_values(select_result_tables.size());
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < select_result_tables.size(); ++chunk_offset) {
     result_values[chunk_offset] = select_result_tables[chunk_offset]->row_count() > 0;
   }
 
-  return std::make_shared<ExpressionResult<int32_t>>(std::move(result_values));
+  return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values));
 }
 
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_exists_expression(
     const ExistsExpression& exists_expression) {
-  Fail("Exists can only return int32_t");
+  Fail("Exists can only return bool");
 }
 
 template <typename Result>
@@ -768,15 +768,15 @@ std::shared_ptr<BaseColumn> ExpressionEvaluator::evaluate_expression_to_column(c
 }
 
 template <>
-std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_logical_expression<int32_t>(
+std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>> ExpressionEvaluator::_evaluate_logical_expression<ExpressionEvaluator::Bool>(
     const LogicalExpression& expression) {
   const auto& left = *expression.left_operand();
   const auto& right = *expression.right_operand();
 
   // clang-format off
   switch (expression.logical_operator) {
-    case LogicalOperator::Or:  return _evaluate_binary_with_custom_null_logic<int32_t, TernaryOr>(left, right);
-    case LogicalOperator::And: return _evaluate_binary_with_custom_null_logic<int32_t, TernaryAnd>(left, right);
+    case LogicalOperator::Or:  return _evaluate_binary_with_custom_null_logic<ExpressionEvaluator::Bool, TernaryOr>(left, right);
+    case LogicalOperator::And: return _evaluate_binary_with_custom_null_logic<ExpressionEvaluator::Bool, TernaryAnd>(left, right);
   }
   // clang-format on
 }
@@ -784,7 +784,7 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_logica
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_logical_expression(
     const LogicalExpression& expression) {
-  Fail("LogicalExpression can only output int32_t");
+  Fail("LogicalExpression can only output bool");
 }
 
 template <typename Result, typename Functor>

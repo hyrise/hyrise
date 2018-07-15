@@ -38,6 +38,11 @@ class PQPSelectExpression;
  */
 class ExpressionEvaluator final {
  public:
+  // Hyrise doesn't have a bool column type, so we use int32_t. If at any point we get bool column types, just replace
+  // all the occurences of Bool and DataTypeBool.
+  using Bool = int32_t;
+  static constexpr auto DataTypeBool = DataType::Int;
+
   // For Expressions that do not reference any columns (e.g. in the LIMIT clause)
   ExpressionEvaluator() = default;
 

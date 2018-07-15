@@ -2,6 +2,10 @@
 
 #include "expression_result.hpp"
 
+/**
+ * ExpressionEvaluator internal functor objects.
+ */
+
 namespace opossum {
 
 /**
@@ -10,14 +14,12 @@ namespace opossum {
 template <typename T>
 constexpr bool is_logical_operand = std::is_same_v<int32_t, T> || std::is_same_v<NullValue, T>;
 
-/**
- * @{
- * @param value
- * @return
- */
+
+// Turn a bool into itself and a NULL into false
 bool to_bool(const bool value) { return value; }
 bool to_bool(const NullValue& value) { return false; }
 
+// Cast a value/NULL into another type
 template <typename T, typename V> T to_value(const V& v) { return v; }
 template <typename T> T to_value(const NullValue& v) { return T{}; }
 

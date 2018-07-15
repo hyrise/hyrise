@@ -1,8 +1,9 @@
 #include "exists_expression.hpp"
 
-#include "lqp_select_expression.hpp"
-
 #include <sstream>
+
+#include "lqp_select_expression.hpp"
+#include "expression/evaluation/expression_evaluator.hpp"
 
 namespace opossum {
 
@@ -27,7 +28,7 @@ std::shared_ptr<AbstractExpression> ExistsExpression::deep_copy() const {
 }
 
 DataType ExistsExpression::data_type() const {
-  return DataType::Int;  // Bool, but we don't have that :(
+  return ExpressionEvaluator::DataTypeBool;
 }
 
 bool ExistsExpression::is_nullable() const { return false; }

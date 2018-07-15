@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include "boost/functional/hash.hpp"
+#include "expression/evaluation/expression_evaluator.hpp"
 
 namespace opossum {
 
@@ -11,8 +12,7 @@ AbstractPredicateExpression::AbstractPredicateExpression(
     : AbstractExpression(ExpressionType::Predicate, arguments), predicate_condition(predicate_condition) {}
 
 DataType AbstractPredicateExpression::data_type() const {
-  // Should be Bool, but we don't have that.
-  return DataType::Int;
+  return ExpressionEvaluator::DataTypeBool;
 }
 
 bool AbstractPredicateExpression::_shallow_equals(const AbstractExpression& expression) const {
