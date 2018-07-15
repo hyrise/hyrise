@@ -79,7 +79,8 @@ class ExpressionResult : public BaseExpressionResult {
    * Resolve ExpressionResult<T> to ExpressionResultNullableSeries<T>, ExpressionResultNonNullSeries<T> or
    * ExpressionResultLiteral<T>
    *
-   * Once resolved, a View doesn't need to do bounds checking when queried for value() or null(), thus reducing overhead
+   * Once resolved, a View doesn't need to do bounds checking when queried for value() or is_null(), thus reducing
+   * overhead
    */
   template <typename Functor>
   void as_view(const Functor& fn) const {

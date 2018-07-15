@@ -47,8 +47,8 @@ std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_ex
   if (predicate_condition == PredicateCondition::Between) {
     Assert(predicate->arguments.size() == 3, "Expect ternary PredicateExpression to have three arguments");
 
-    auto lower_bound_predicates = from_expression(*greater_than_equals(predicate->arguments[0], predicate->arguments[1]), node);
-    auto upper_bound_predicates = from_expression(*less_than_equals(predicate->arguments[0], predicate->arguments[2]), node);
+    auto lower_bound_predicates = from_expression(*greater_than_equals_(predicate->arguments[0], predicate->arguments[1]), node);
+    auto upper_bound_predicates = from_expression(*less_than_equals_(predicate->arguments[0], predicate->arguments[2]), node);
 
     if (!lower_bound_predicates || !upper_bound_predicates) return std::nullopt;
 

@@ -295,7 +295,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
     Assert(insert.columns->size() == column_expressions.size(),
            "INSERT: Target column count and number of input columns mismatch");
 
-    auto expressions = std::vector<std::shared_ptr<AbstractExpression>>(target_table->column_count(), null());
+    auto expressions = std::vector<std::shared_ptr<AbstractExpression>>(target_table->column_count(), null_());
     auto source_column_id = ColumnID{0};
     for (const auto& column_name : *insert.columns) {
       // retrieve correct ColumnID from the target table
@@ -318,7 +318,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
     auto expression = column_expressions[column_id];
     if (const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(expression); value_expression) {
       if (variant_is_null(value_expression->value)) {
-        column_expressions[column_id] = cast(null(), target_table->column_data_type(column_id));
+        column_expressions[column_id] = cast(null_(), target_table->column_data_type(column_id));
         insert_data_projection_required = true;
       }
     }
@@ -919,7 +919,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
 
       if (predicate_expression->predicate_condition == PredicateCondition::In) {
         current_node = _add_expressions_if_unavailable(current_node, {expression});
-        return PredicateNode::make(not_equals(expression, 0), current_node);
+        return PredicateNode::make(not_equals_(expression, 0), current_node);
       } else {
         current_node = _add_expressions_if_unavailable(current_node, expression->arguments);
         return PredicateNode::make(expression, current_node);
@@ -936,14 +936,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
         }
         case LogicalOperator::Or: {
           current_node = _add_expressions_if_unavailable(current_node, {expression});
-          return PredicateNode::make(not_equals(expression, 0), current_node);
+          return PredicateNode::make(not_equals_(expression, 0), current_node);
         }
       }
     }
 
     case ExpressionType::Exists: {
       current_node = _add_expressions_if_unavailable(current_node, {expression});
-      return PredicateNode::make(not_equals(expression, 0), current_node);
+      return PredicateNode::make(not_equals_(expression, 0), current_node);
     }
 
     default:
@@ -1146,7 +1146,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         }
 
         case hsql::kOpIsNull:
-          return is_null(left);
+          return is_null_(left);
 
         case hsql::kOpNot: {
           // If the argument is a predicate, just inverse it (e.g. NOT (a > b) becomes b <= a)
@@ -1166,7 +1166,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           /**
            * "NOT <some_expression>" becomes "<some_expression> == 0"
            */
-          return equals(left, 0);
+          return equals_(left, 0);
         }
 
         case hsql::kOpExists:

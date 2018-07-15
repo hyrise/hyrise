@@ -26,9 +26,9 @@ class OptimizerTest : public ::testing::Test {
     y = node_b->get_column("y");
 
     select_lqp_a = LimitNode::make(to_expression(1), node_b);
-    select_a = select(select_lqp_a);
-    select_lqp_b = LimitNode::make(to_expression(1), PredicateNode::make(greater_than(x, y), node_b));
-    select_b = select(select_lqp_b);
+    select_a = select_(select_lqp_a);
+    select_lqp_b = LimitNode::make(to_expression(1), PredicateNode::make(greater_than_(x, y), node_b));
+    select_b = select_(select_lqp_b);
   }
 
   std::shared_ptr<MockNode> node_a, node_b;
@@ -100,8 +100,8 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
 
   // clang-format off
   const auto lqp =
-  ProjectionNode::make(expression_vector(add(b, select_a)),
-    PredicateNode::make(greater_than(a, select_b),
+  ProjectionNode::make(expression_vector(add_(b, select_a)),
+    PredicateNode::make(greater_than_(a, select_b),
       node_a
   ));
   // clang-format on
@@ -134,9 +134,9 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   // clang-format off
   /** Initialise an LQP that contains the same select expression twice */
   auto lqp = std::static_pointer_cast<AbstractLQPNode>(
-  PredicateNode::make(greater_than(add(b, select_a), 2),
-    ProjectionNode::make(expression_vector(add(b, select_a)),
-      PredicateNode::make(greater_than(a, select_b),
+  PredicateNode::make(greater_than_(add_(b, select_a), 2),
+    ProjectionNode::make(expression_vector(add_(b, select_a)),
+      PredicateNode::make(greater_than_(a, select_b),
         node_a
   ))));
   // clang-format on

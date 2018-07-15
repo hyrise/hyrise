@@ -48,7 +48,7 @@ TEST_F(OperatorsProjectionTest, OperatorName) {
 }
 
 TEST_F(OperatorsProjectionTest, ExecutedOnAllChunks) {
-  const auto projection = std::make_shared<opossum::Projection>(table_wrapper_a, expression_vector(add(a_a, a_b)));
+  const auto projection = std::make_shared<opossum::Projection>(table_wrapper_a, expression_vector(add_(a_a, a_b)));
   projection->execute();
   EXPECT_TABLE_EQ_UNORDERED(projection->get_output(), load_table("src/test/tables/projection/int_float_add.tbl"));
 }

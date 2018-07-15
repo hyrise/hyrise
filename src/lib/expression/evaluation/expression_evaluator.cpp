@@ -269,9 +269,9 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_in_exp
     }
 
     std::shared_ptr<AbstractExpression> predicate_disjunction =
-        equals(in_expression.value(), type_compatible_elements.front());
+        equals_(in_expression.value(), type_compatible_elements.front());
     for (auto element_idx = size_t{1}; element_idx < type_compatible_elements.size(); ++element_idx) {
-      const auto equals_element = equals(in_expression.value(), type_compatible_elements[element_idx]);
+      const auto equals_element = equals_(in_expression.value(), type_compatible_elements[element_idx]);
       predicate_disjunction = or_(predicate_disjunction, equals_element);
     }
 
@@ -367,8 +367,8 @@ std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::_evaluate_predic
       // combinations and thus lengthen compile time and increase binary size notably.
 
       const auto& between_expression = static_cast<const BetweenExpression&>(predicate_expression);
-      const auto gte_expression = greater_than_equals(between_expression.value(), between_expression.lower_bound());
-      const auto lte_expression = less_than_equals(between_expression.value(), between_expression.upper_bound());
+      const auto gte_expression = greater_than_equals_(between_expression.value(), between_expression.lower_bound());
+      const auto lte_expression = less_than_equals_(between_expression.value(), between_expression.upper_bound());
 
       const auto gte_lte_expression = and_(gte_expression, lte_expression);
 

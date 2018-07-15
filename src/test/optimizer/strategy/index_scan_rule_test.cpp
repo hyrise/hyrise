@@ -61,7 +61,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {
   auto statistics_mock = generate_mock_statistics();
   table->set_table_statistics(statistics_mock);
 
-  auto predicate_node_0 = PredicateNode::make(greater_than(a, 10));
+  auto predicate_node_0 = PredicateNode::make(greater_than_(a, 10));
   predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
@@ -75,7 +75,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
   auto statistics_mock = generate_mock_statistics();
   table->set_table_statistics(statistics_mock);
 
-  auto predicate_node_0 = PredicateNode::make(greater_than(a, 10));
+  auto predicate_node_0 = PredicateNode::make(greater_than_(a, 10));
   predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
@@ -89,7 +89,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithMultiColumnIndex) {
   auto statistics_mock = generate_mock_statistics();
   table->set_table_statistics(statistics_mock);
 
-  auto predicate_node_0 = PredicateNode::make(greater_than(c, 10));
+  auto predicate_node_0 = PredicateNode::make(greater_than_(c, 10));
   predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
@@ -101,7 +101,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
   auto statistics_mock = generate_mock_statistics();
   table->set_table_statistics(statistics_mock);
 
-  auto predicate_node_0 = PredicateNode::make(greater_than(c, b));
+  auto predicate_node_0 = PredicateNode::make(greater_than_(c, b));
   predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
@@ -115,7 +115,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
   auto statistics_mock = generate_mock_statistics(80'000);
   table->set_table_statistics(statistics_mock);
 
-  auto predicate_node_0 = PredicateNode::make(greater_than(c, 10));
+  auto predicate_node_0 = PredicateNode::make(greater_than_(c, 10));
   predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
@@ -129,7 +129,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanIfNotGroupKey) {
   auto statistics_mock = generate_mock_statistics(1'000'000);
   table->set_table_statistics(statistics_mock);
 
-  auto predicate_node_0 = PredicateNode::make(greater_than(c, 10));
+  auto predicate_node_0 = PredicateNode::make(greater_than_(c, 10));
   predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
@@ -143,7 +143,7 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
   auto statistics_mock = generate_mock_statistics(1'000'000);
   table->set_table_statistics(statistics_mock);
 
-  auto predicate_node_0 = PredicateNode::make(greater_than(c, 19'900));
+  auto predicate_node_0 = PredicateNode::make(greater_than_(c, 19'900));
   predicate_node_0->set_left_input(stored_table_node);
 
   EXPECT_EQ(predicate_node_0->scan_type, ScanType::TableScan);
@@ -157,10 +157,10 @@ TEST_F(IndexScanRuleTest, IndexScanOnlyOnOutputOfStoredTableNode) {
   auto statistics_mock = generate_mock_statistics(1'000'000);
   table->set_table_statistics(statistics_mock);
 
-  auto predicate_node_0 = PredicateNode::make(greater_than(c, 19'900));
+  auto predicate_node_0 = PredicateNode::make(greater_than_(c, 19'900));
   predicate_node_0->set_left_input(stored_table_node);
 
-  auto predicate_node_1 = PredicateNode::make(less_than(b, 15));
+  auto predicate_node_1 = PredicateNode::make(less_than_(b, 15));
   predicate_node_1->set_left_input(predicate_node_0);
 
   auto reordered = StrategyBaseTest::apply_rule(rule, predicate_node_1);

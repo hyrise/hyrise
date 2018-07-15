@@ -28,7 +28,7 @@ class ProjectionNodeTest : public BaseTest {
     _c = _mock_node->get_column("c");
 
     // SELECT c, a, b AS alias_for_b, b+c AS some_addition, a+c [...]
-    _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b, add(_b, _c), add(_a, _c)), _mock_node);
+    _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b, add_(_b, _c), add_(_a, _c)), _mock_node);
   }
 
   std::shared_ptr<MockNode> _mock_node;
@@ -44,8 +44,8 @@ TEST_F(ProjectionNodeTest, Equals) {
   EXPECT_EQ(*_projection_node, *_projection_node);
 
   const auto different_projection_node_a =
-      ProjectionNode::make(expression_vector(_a, _c, _b, add(_b, _c), add(_a, _c)), _mock_node);
-  const auto different_projection_node_b = ProjectionNode::make(expression_vector(_c, _a, _b, add(_b, _c)), _mock_node);
+      ProjectionNode::make(expression_vector(_a, _c, _b, add_(_b, _c), add_(_a, _c)), _mock_node);
+  const auto different_projection_node_b = ProjectionNode::make(expression_vector(_c, _a, _b, add_(_b, _c)), _mock_node);
   EXPECT_NE(*_projection_node, *different_projection_node_a);
   EXPECT_NE(*_projection_node, *different_projection_node_b);
 }

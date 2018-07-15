@@ -28,7 +28,7 @@ class AggregateNodeTest : public ::testing::Test {
     // SELECT a, c, SUM(a+b), SUM(a+c) AS some_sum [...] GROUP BY a, c
     // Columns are ordered as specified in the SELECT list
     _aggregate_node = AggregateNode::make(expression_vector(_a, _c),
-                                          expression_vector(sum(add(_a, _b)), sum(add(_a, _c))), _mock_node);
+                                          expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), _mock_node);
   }
 
   std::shared_ptr<MockNode> _mock_node;
@@ -40,8 +40,8 @@ TEST_F(AggregateNodeTest, OutputColumnExpressions) {
   ASSERT_EQ(_aggregate_node->column_expressions().size(), 4u);
   EXPECT_EQ(*_aggregate_node->column_expressions().at(0), *column(_a));
   EXPECT_EQ(*_aggregate_node->column_expressions().at(1), *column(_c));
-  EXPECT_EQ(*_aggregate_node->column_expressions().at(2), *sum(add(_a, _b)));
-  EXPECT_EQ(*_aggregate_node->column_expressions().at(3), *sum(add(_a, _c)));
+  EXPECT_EQ(*_aggregate_node->column_expressions().at(2), *sum_(add_(_a, _b)));
+  EXPECT_EQ(*_aggregate_node->column_expressions().at(3), *sum_(add_(_a, _c)));
 }
 
 TEST_F(AggregateNodeTest, Description) {
@@ -52,7 +52,7 @@ TEST_F(AggregateNodeTest, Description) {
 
 TEST_F(AggregateNodeTest, Equals) {
   const auto same_aggregate_node =
-      AggregateNode::make(expression_vector(_a, _c), expression_vector(sum(add(_a, _b)), sum(add(_a, _c))), _mock_node);
+      AggregateNode::make(expression_vector(_a, _c), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), _mock_node);
 
   EXPECT_EQ(*_aggregate_node, *same_aggregate_node);
   EXPECT_EQ(*same_aggregate_node, *_aggregate_node);
@@ -60,13 +60,13 @@ TEST_F(AggregateNodeTest, Equals) {
 
   // Build slightly different aggregate nodes
   const auto different_aggregate_node_a =
-      AggregateNode::make(expression_vector(_a), expression_vector(sum(add(_a, _b)), sum(add(_a, _c))), _mock_node);
+      AggregateNode::make(expression_vector(_a), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), _mock_node);
   const auto different_aggregate_node_b =
-      AggregateNode::make(expression_vector(_a, _c), expression_vector(sum(add(_a, 2)), sum(add(_a, _c))), _mock_node);
+      AggregateNode::make(expression_vector(_a, _c), expression_vector(sum_(add_(_a, 2)), sum_(add_(_a, _c))), _mock_node);
   const auto different_aggregate_node_c = AggregateNode::make(
-      expression_vector(_a, _c), expression_vector(sum(add(_a, _b)), sum(add(_a, _c)), min(_a)), _mock_node);
+      expression_vector(_a, _c), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c)), min_(_a)), _mock_node);
   const auto different_aggregate_node_d =
-      AggregateNode::make(expression_vector(_a, _a), expression_vector(sum(add(_a, _b)), sum(add(_a, _c))), _mock_node);
+      AggregateNode::make(expression_vector(_a, _a), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), _mock_node);
 
   EXPECT_NE(*_aggregate_node, *different_aggregate_node_a);
   EXPECT_NE(*_aggregate_node, *different_aggregate_node_b);
@@ -76,7 +76,7 @@ TEST_F(AggregateNodeTest, Equals) {
 
 TEST_F(AggregateNodeTest, Copy) {
   const auto same_aggregate_node =
-      AggregateNode::make(expression_vector(_a, _c), expression_vector(sum(add(_a, _b)), sum(add(_a, _c))), _mock_node);
+      AggregateNode::make(expression_vector(_a, _c), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), _mock_node);
   EXPECT_EQ(*_aggregate_node->deep_copy(), *same_aggregate_node);
 }
 

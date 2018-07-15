@@ -7,7 +7,7 @@ namespace opossum {
 
 /**
  * ExpressionResultViews is a Concept used internally in the ExpressionEvaluator to allow the compiler to throw
- * away, e.g., calls to null(), if the ExpressionResult is non-nullable and to omit bounds checks in release builds.
+ * away, e.g., calls to is_null(), if the ExpressionResult is non-nullable and to omit bounds checks in release builds.
  *
  * An ExpressionResult is turned into an ExpressionResultView by calling ExpressionResult::as_view()
  */
@@ -47,7 +47,7 @@ class ExpressionResultNullableSeries {
 };
 
 /**
- * View that looks at an ExpressionResult knowing that is a series, but may not return nulls, so null() always returns
+ * View that looks at an ExpressionResult knowing that is a series, but may not return nulls, so is_null() always returns
  * false
  */
 template <typename T>
@@ -76,7 +76,7 @@ class ExpressionResultNonNullSeries {
 
 /**
  * View that looks at an ExpressionResult knowing that is a literal, so always returns the first element in value() and
- * null(), no matter which index is requested
+ * is_null(), no matter which index is requested
  */
 template <typename T>
 class ExpressionResultLiteral {

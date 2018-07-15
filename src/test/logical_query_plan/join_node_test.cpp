@@ -33,9 +33,9 @@ class JoinNodeTest : public ::testing::Test {
     _join_node->set_left_input(_mock_node_a);
     _join_node->set_right_input(_mock_node_b);
 
-    _inner_join_node = JoinNode::make(JoinMode::Inner, equals(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
-    _semi_join_node = JoinNode::make(JoinMode::Semi, equals(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
-    _anti_join_node = JoinNode::make(JoinMode::Anti, equals(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
+    _inner_join_node = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
+    _semi_join_node = JoinNode::make(JoinMode::Semi, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
+    _anti_join_node = JoinNode::make(JoinMode::Anti, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
   }
 
   std::shared_ptr<MockNode> _mock_node_a;
@@ -74,10 +74,10 @@ TEST_F(JoinNodeTest, Equals) {
   EXPECT_EQ(*_semi_join_node, *_semi_join_node);
   EXPECT_EQ(*_anti_join_node, *_anti_join_node);
 
-  const auto other_join_node_a = JoinNode::make(JoinMode::Inner, equals(_t_a_a, _t_b_x), _mock_node_a, _mock_node_b);
-  const auto other_join_node_b = JoinNode::make(JoinMode::Inner, not_like(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
+  const auto other_join_node_a = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_x), _mock_node_a, _mock_node_b);
+  const auto other_join_node_b = JoinNode::make(JoinMode::Inner, not_like_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
   const auto other_join_node_c = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
-  const auto other_join_node_d = JoinNode::make(JoinMode::Inner, equals(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
+  const auto other_join_node_d = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
 
   EXPECT_NE(*other_join_node_a, *_inner_join_node);
   EXPECT_NE(*other_join_node_b, *_inner_join_node);

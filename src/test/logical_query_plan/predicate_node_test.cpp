@@ -22,7 +22,7 @@ class PredicateNodeTest : public ::testing::Test {
     _i = {_table_node, ColumnID{0}};
     _f = {_table_node, ColumnID{1}};
 
-    _predicate_node = PredicateNode::make(equals(_i, 5), _table_node);
+    _predicate_node = PredicateNode::make(equals_(_i, 5), _table_node);
   }
 
   void TearDown() override { StorageManager::reset(); }
@@ -37,10 +37,10 @@ TEST_F(PredicateNodeTest, Descriptions) { EXPECT_EQ(_predicate_node->description
 TEST_F(PredicateNodeTest, Equals) {
   EXPECT_EQ(*_predicate_node, *_predicate_node);
 
-  const auto other_predicate_node_a = PredicateNode::make(equals(_i, 5), _table_node);
-  const auto other_predicate_node_b = PredicateNode::make(equals(_f, 5), _table_node);
-  const auto other_predicate_node_c = PredicateNode::make(not_equals(_i, 5), _table_node);
-  const auto other_predicate_node_d = PredicateNode::make(equals(_i, 6), _table_node);
+  const auto other_predicate_node_a = PredicateNode::make(equals_(_i, 5), _table_node);
+  const auto other_predicate_node_b = PredicateNode::make(equals_(_f, 5), _table_node);
+  const auto other_predicate_node_c = PredicateNode::make(not_equals_(_i, 5), _table_node);
+  const auto other_predicate_node_d = PredicateNode::make(equals_(_i, 6), _table_node);
 
   EXPECT_EQ(*other_predicate_node_a, *_predicate_node);
   EXPECT_NE(*other_predicate_node_b, *_predicate_node);

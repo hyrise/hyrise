@@ -38,11 +38,11 @@ class CostFeatureProxyTest : public ::testing::Test {
       auto nation = StoredTableNode::make("nation");
 
       auto join = JoinNode::make(JoinMode::Inner,
-                                 equals(customer->get_column("c_nationkey"s),
+                                 equals_(customer->get_column("c_nationkey"s),
                                                                          nation->get_column("n_nationkey"s)),
                                  customer,
                                  nation);
-      auto predicate = PredicateNode::make(not_equals(nation->get_column("n_name"s),
+      auto predicate = PredicateNode::make(not_equals_(nation->get_column("n_name"s),
                                            "ALGERIA"),
                                            join);
 

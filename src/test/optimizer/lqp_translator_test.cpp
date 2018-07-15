@@ -159,7 +159,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeSimpleBinary) {
    * LQP resembles:
    *   SELECT * FROM int_float WHERE 5 > b;
    */
-  const auto predicate_node = PredicateNode::make(greater_than(5, int_float_b), int_float_node);
+  const auto predicate_node = PredicateNode::make(greater_than_(5, int_float_b), int_float_node);
   const auto pqp = LQPTranslator{}.translate_node(predicate_node);
 
   /**
@@ -183,7 +183,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeLike) {
    * LQP resembles:
    *   SELECT * FROM int_string WHERE b LIKE 'hello%';
    */
-  const auto lqp = PredicateNode::make(like(int_string_b, "hello%"), int_string_node);
+  const auto lqp = PredicateNode::make(like_(int_string_b, "hello%"), int_string_node);
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 
   /**
@@ -207,7 +207,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeUnary) {
    * LQP resembles:
    *   SELECT * FROM int_float WHERE b IS NOT NULL;
    */
-  const auto predicate_node = PredicateNode::make(is_not_null(int_float_b), int_float_node);
+  const auto predicate_node = PredicateNode::make(is_not_null_(int_float_b), int_float_node);
   const auto pqp = LQPTranslator{}.translate_node(predicate_node);
 
   /**
@@ -264,15 +264,16 @@ TEST_F(LQPTranslatorTest, SelectExpressionCorrelated) {
   const auto parameter_a = parameter(ParameterID{0}, int_float5_a);
   const auto parameter_d = parameter(ParameterID{1}, int_float5_d);
 
-  const auto a_plus_a_plus_d = add(int_float_a, add(parameter_a, parameter_d));
+  const auto a_plus_a_plus_d = add_(int_float_a, add_(parameter_a, parameter_d));
 
   // clang-format off
   const auto subselect_lqp =
-  AggregateNode::make(expression_vector(), expression_vector(min(a_plus_a_plus_d)),
+  AggregateNode::make(expression_vector(), expression_vector(min_(a_plus_a_plus_d)),
     ProjectionNode::make(expression_vector(a_plus_a_plus_d),
       int_float_node
   ));
-  const auto subselect = select(subselect_lqp, std::make_pair(ParameterID{0}, int_float5_a), std::make_pair(ParameterID{1}, int_float5_d));
+  const auto subselect = select_(subselect_lqp, std::make_pair(ParameterID{0}, int_float5_a),
+                                 std::make_pair(ParameterID{1}, int_float5_d));
 
   const auto lqp =
   ProjectionNode::make(expression_vector(subselect, int_float5_a), int_float5_node);
@@ -315,8 +316,8 @@ TEST_F(LQPTranslatorTest, Sort) {
   // clang-format off
   const auto lqp =
   ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-    SortNode::make(expression_vector(int_float_a, add(int_float_a, int_float_b), int_float_b), order_by_modes,
-      ProjectionNode::make(expression_vector(add(int_float_a, int_float_b), int_float_a, int_float_b),
+    SortNode::make(expression_vector(int_float_a, add_(int_float_a, int_float_b), int_float_b), order_by_modes,
+      ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b),
         int_float_node
   )));
   // clang-format on
@@ -359,7 +360,7 @@ TEST_F(LQPTranslatorTest, JoinNonEqui) {
    */
   // clang-format off
   const auto lqp =
-  JoinNode::make(JoinMode::Inner, less_than(int_float_a, int_float2_b),
+  JoinNode::make(JoinMode::Inner, less_than_(int_float_a, int_float2_b),
     int_float2_node, int_float_node
   );
   // clang-format on
@@ -390,7 +391,7 @@ TEST_F(LQPTranslatorTest, LimitLiteral) {
    * LQP resembles:
    *   SELECT * FROM int_float LIMIT 1337
    */
-  const auto lqp = LimitNode::make(value(static_cast<int64_t>(1337)), int_float_node);
+  const auto lqp = LimitNode::make(value_(static_cast<int64_t>(1337)), int_float_node);
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 
   /**
@@ -412,7 +413,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeUnaryScan) {
    * Build LQP and translate to PQP
    */
   auto predicate_node =
-      PredicateNode::make(equals(int_float_b, 42), int_float_node);
+      PredicateNode::make(equals_(int_float_b, 42), int_float_node);
   const auto op = LQPTranslator{}.translate_node(predicate_node);
 
   /**
@@ -460,7 +461,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
   table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
 
-  auto predicate_node = PredicateNode::make(equals(stored_table_node->get_column("b"), 42));
+  auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_column("b"), 42));
   predicate_node->set_left_input(stored_table_node);
   predicate_node->scan_type = ScanType::IndexScan;
   const auto op = LQPTranslator{}.translate_node(predicate_node);
@@ -539,9 +540,9 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
   table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
 
-  auto predicate_node = PredicateNode::make(equals(stored_table_node->get_column("b"), 42));
+  auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_column("b"), 42));
   predicate_node->set_left_input(stored_table_node);
-  auto predicate_node2 = PredicateNode::make(less_than(stored_table_node->get_column("a"), 42));
+  auto predicate_node2 = PredicateNode::make(less_than_(stored_table_node->get_column("a"), 42));
   predicate_node2->set_left_input(predicate_node);
 
   // The optimizer should not set this ScanType in this situation
@@ -569,7 +570,7 @@ TEST_F(LQPTranslatorTest, JoinNode) {
   /**
    * Build LQP and translate to PQP
    */
-  auto join_node = JoinNode::make(JoinMode::Outer, equals(int_float_b, int_float2_a), int_float_node, int_float2_node);
+  auto join_node = JoinNode::make(JoinMode::Outer, equals_(int_float_b, int_float2_a), int_float_node, int_float2_node);
   const auto op = LQPTranslator{}.translate_node(join_node);
 
   /**
@@ -618,8 +619,8 @@ TEST_F(LQPTranslatorTest, AggregateNodeSimple) {
    */
   // clang-format off
   const auto lqp =
-  AggregateNode::make(expression_vector(int_float_a), expression_vector(sum(add(int_float_b, int_float_a))),
-    ProjectionNode::make(expression_vector(int_float_b, int_float_a, add(int_float_b, int_float_a)),
+  AggregateNode::make(expression_vector(int_float_a), expression_vector(sum_(add_(int_float_b, int_float_a))),
+    ProjectionNode::make(expression_vector(int_float_b, int_float_a, add_(int_float_b, int_float_a)),
       int_float_node));
   // clang-format on
   const auto op = LQPTranslator{}.translate_node(lqp);
@@ -642,11 +643,11 @@ TEST_F(LQPTranslatorTest, MultipleNodesHierarchy) {
   /**
    * Build LQP and translate to PQP
    */
-  auto predicate_node_left = PredicateNode::make(equals(int_float_a, 42), int_float_node);
-  auto predicate_node_right = PredicateNode::make(greater_than(int_float2_b, 30.0), int_float2_node);
+  auto predicate_node_left = PredicateNode::make(equals_(int_float_a, 42), int_float_node);
+  auto predicate_node_right = PredicateNode::make(greater_than_(int_float2_b, 30.0), int_float2_node);
 
   auto join_node =
-      JoinNode::make(JoinMode::Inner, equals(int_float_a, int_float2_a));
+      JoinNode::make(JoinMode::Inner, equals_(int_float_a, int_float2_a));
   join_node->set_left_input(predicate_node_left);
   join_node->set_right_input(predicate_node_right);
 
@@ -681,7 +682,7 @@ TEST_F(LQPTranslatorTest, LimitNode) {
    */
   const auto stored_table_node = StoredTableNode::make("table_int_float");
 
-  auto limit_node = LimitNode::make(value(2));
+  auto limit_node = LimitNode::make(value_(2));
   limit_node->set_left_input(stored_table_node);
 
   /**
@@ -690,7 +691,7 @@ TEST_F(LQPTranslatorTest, LimitNode) {
   const auto op = LQPTranslator{}.translate_node(limit_node);
   const auto limit_op = std::dynamic_pointer_cast<Limit>(op);
   ASSERT_TRUE(limit_op);
-  EXPECT_EQ(*limit_op->row_count_expression(), *value(2));
+  EXPECT_EQ(*limit_op->row_count_expression(), *value_(2));
 }
 
 TEST_F(LQPTranslatorTest, DiamondShapeSimple) {
@@ -718,9 +719,9 @@ TEST_F(LQPTranslatorTest, DiamondShapeSimple) {
    * which is still semantically correct, but would mean predicate_c gets executed twice
    */
 
-  auto predicate_node_a = PredicateNode::make(equals(int_float2_a, 3));
-  auto predicate_node_b = PredicateNode::make(equals(int_float2_a, 4));
-  auto predicate_node_c = PredicateNode::make(equals(int_float2_b, 5));
+  auto predicate_node_a = PredicateNode::make(equals_(int_float2_a, 3));
+  auto predicate_node_b = PredicateNode::make(equals_(int_float2_a, 4));
+  auto predicate_node_c = PredicateNode::make(equals_(int_float2_b, 5));
   auto union_node = UnionNode::make(UnionMode::Positions);
   const auto& lqp = union_node;
 

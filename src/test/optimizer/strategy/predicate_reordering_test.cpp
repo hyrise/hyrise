@@ -60,12 +60,12 @@ class PredicateReorderingTest : public StrategyBaseTest {
 TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
   // clang-format off
   const auto input_lqp =
-  PredicateNode::make(greater_than(a, 50),
-    PredicateNode::make(greater_than(a, 10),
+  PredicateNode::make(greater_than_(a, 50),
+    PredicateNode::make(greater_than_(a, 10),
       node));
   const auto expected_lqp =
-  PredicateNode::make(greater_than(a, 10),
-    PredicateNode::make(greater_than(a, 50),
+  PredicateNode::make(greater_than_(a, 10),
+    PredicateNode::make(greater_than_(a, 50),
       node));
   // clang-format on
 
@@ -76,14 +76,14 @@ TEST_F(PredicateReorderingTest, SimpleReorderingTest) {
 TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
   // clang-format off
   const auto input_lqp =
-  PredicateNode::make(greater_than(a, 99),
-    PredicateNode::make(greater_than(b, 55),
-      PredicateNode::make(greater_than(c, 100),
+  PredicateNode::make(greater_than_(a, 99),
+    PredicateNode::make(greater_than_(b, 55),
+      PredicateNode::make(greater_than_(c, 100),
         node)));
   const auto expected_lqp =
-  PredicateNode::make(greater_than(c, 100),
-    PredicateNode::make(greater_than(b, 55),
-      PredicateNode::make(greater_than(a, 99),
+  PredicateNode::make(greater_than_(c, 100),
+    PredicateNode::make(greater_than_(b, 55),
+      PredicateNode::make(greater_than_(a, 99),
         node)));
   // clang-format on
 
@@ -94,22 +94,22 @@ TEST_F(PredicateReorderingTest, MoreComplexReorderingTest) {
 TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
   // clang-format off
   const auto input_lqp =
-  PredicateNode::make(equals(a, 42),
-    PredicateNode::make(greater_than(b, 50),
-      PredicateNode::make(greater_than(b, 40),
+  PredicateNode::make(equals_(a, 42),
+    PredicateNode::make(greater_than_(b, 50),
+      PredicateNode::make(greater_than_(b, 40),
         ProjectionNode::make(expression_vector(a, b, c),
-          PredicateNode::make(greater_than_equals(a, 90),
-            PredicateNode::make(less_than(c, 500),
+          PredicateNode::make(greater_than_equals_(a, 90),
+            PredicateNode::make(less_than_(c, 500),
               node))))));
 
 
   const auto expected_optimized_lqp =
-  PredicateNode::make(greater_than(b, 40),
-    PredicateNode::make(greater_than(b, 50),
-      PredicateNode::make(equals(a, 42),
+  PredicateNode::make(greater_than_(b, 40),
+    PredicateNode::make(greater_than_(b, 50),
+      PredicateNode::make(equals_(a, 42),
         ProjectionNode::make(expression_vector(a, b, c),
-          PredicateNode::make(less_than(c, 500),
-            PredicateNode::make(greater_than_equals(a, 90),
+          PredicateNode::make(less_than_(c, 500),
+            PredicateNode::make(greater_than_equals_(a, 90),
               node))))));
   // clang-format on
 
@@ -125,10 +125,10 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
   // Setup first LQP
   // predicate_node_1 -> predicate_node_0 -> stored_table_node
-  auto predicate_node_0 = PredicateNode::make(less_than(LQPColumnReference{stored_table_node, ColumnID{0}}, 20));
+  auto predicate_node_0 = PredicateNode::make(less_than_(LQPColumnReference{stored_table_node, ColumnID{0}}, 20));
   predicate_node_0->set_left_input(stored_table_node);
 
-  auto predicate_node_1 = PredicateNode::make(less_than(LQPColumnReference{stored_table_node, ColumnID{0}}, 40));
+  auto predicate_node_1 = PredicateNode::make(less_than_(LQPColumnReference{stored_table_node, ColumnID{0}}, 40));
   predicate_node_1->set_left_input(predicate_node_0);
 
   predicate_node_1->get_statistics();
@@ -137,10 +137,10 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
   // Setup second LQP
   // predicate_node_3 -> predicate_node_2 -> stored_table_node
-  auto predicate_node_2 = PredicateNode::make(less_than(LQPColumnReference{stored_table_node, ColumnID{0}}, 40));
+  auto predicate_node_2 = PredicateNode::make(less_than_(LQPColumnReference{stored_table_node, ColumnID{0}}, 40));
   predicate_node_2->set_left_input(stored_table_node);
 
-  auto predicate_node_3 = PredicateNode::make(less_than(LQPColumnReference{stored_table_node, ColumnID{0}}, 20));
+  auto predicate_node_3 = PredicateNode::make(less_than_(LQPColumnReference{stored_table_node, ColumnID{0}}, 20));
   predicate_node_3->set_left_input(predicate_node_2);
 
   auto reordered_1 = StrategyBaseTest::apply_rule(_rule, predicate_node_3);
@@ -179,11 +179,11 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
   auto table_0 = MockNode::make(table_statistics);
   auto table_1 = MockNode::make(table_statistics);
   auto cross_node = JoinNode::make(JoinMode::Cross);
-  auto predicate_0 = PredicateNode::make(greater_than(LQPColumnReference{table_0, ColumnID{0}}, 80));
-  auto predicate_1 = PredicateNode::make(greater_than(LQPColumnReference{table_0, ColumnID{0}}, 60));
-  auto predicate_2 = PredicateNode::make(greater_than(LQPColumnReference{table_1, ColumnID{0}}, 90));
-  auto predicate_3 = PredicateNode::make(greater_than(LQPColumnReference{table_1, ColumnID{0}}, 50));
-  auto predicate_4 = PredicateNode::make(greater_than(LQPColumnReference{table_1, ColumnID{0}}, 30));
+  auto predicate_0 = PredicateNode::make(greater_than_(LQPColumnReference{table_0, ColumnID{0}}, 80));
+  auto predicate_1 = PredicateNode::make(greater_than_(LQPColumnReference{table_0, ColumnID{0}}, 60));
+  auto predicate_2 = PredicateNode::make(greater_than_(LQPColumnReference{table_1, ColumnID{0}}, 90));
+  auto predicate_3 = PredicateNode::make(greater_than_(LQPColumnReference{table_1, ColumnID{0}}, 50));
+  auto predicate_4 = PredicateNode::make(greater_than_(LQPColumnReference{table_1, ColumnID{0}}, 30));
 
   predicate_1->set_left_input(table_0);
   predicate_0->set_left_input(predicate_1);
@@ -229,8 +229,8 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
 
   auto table_node = MockNode::make(table_statistics);
   auto union_node = UnionNode::make(UnionMode::Positions);
-  auto predicate_a_node = PredicateNode::make(greater_than(LQPColumnReference{table_node, ColumnID{0}}, 90));
-  auto predicate_b_node = PredicateNode::make(greater_than(LQPColumnReference{table_node, ColumnID{0}}, 10));
+  auto predicate_a_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 90));
+  auto predicate_b_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, ColumnID{0}}, 10));
 
   union_node->set_left_input(predicate_a_node);
   union_node->set_right_input(predicate_b_node);

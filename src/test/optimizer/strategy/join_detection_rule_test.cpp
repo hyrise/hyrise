@@ -96,7 +96,7 @@ TEST_F(JoinDetectionRuleTest, SimpleDetectionTest) {
 
   // clang-format off
   const auto input_lqp =
-  PredicateNode::make(equals(_a_a, _b_a),
+  PredicateNode::make(equals_(_a_a, _b_a),
     JoinNode::make(JoinMode::Cross,
       _table_node_a,
       _table_node_b
@@ -105,7 +105,7 @@ TEST_F(JoinDetectionRuleTest, SimpleDetectionTest) {
 
   // clang-format off
   const auto expected_lqp =
-  JoinNode::make(JoinMode::Inner, equals(_a_a, _b_a),
+  JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
     _table_node_a,
     _table_node_b
   );
@@ -144,7 +144,7 @@ TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
   // clang-format off
   const auto input_lqp =
   ProjectionNode::make(expression_vector(_a_a),
-    PredicateNode::make(equals(_a_a, _b_a),
+    PredicateNode::make(equals_(_a_a, _b_a),
       JoinNode::make(JoinMode::Cross,
         _table_node_a,
         _table_node_b
@@ -154,7 +154,7 @@ TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
   // clang-format off
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(_a_a),
-    JoinNode::make(JoinMode::Inner, equals(_a_a, _b_a),
+    JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
       _table_node_a,
       _table_node_b
   ));
@@ -257,7 +257,7 @@ TEST_F(JoinDetectionRuleTest, NoMatchingPredicate) {
   // clang-format off
   const auto input_lqp =
   ProjectionNode::make(expression_vector(_a_a),
-    PredicateNode::make(equals(_a_a, _a_b),
+    PredicateNode::make(equals_(_a_a, _a_b),
       JoinNode::make(JoinMode::Cross,
         _table_node_a,
         _table_node_b
@@ -267,7 +267,7 @@ TEST_F(JoinDetectionRuleTest, NoMatchingPredicate) {
   // clang-format off
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(_a_a),
-    PredicateNode::make(equals(_a_a, _a_b),
+    PredicateNode::make(equals_(_a_a, _a_b),
       JoinNode::make(JoinMode::Cross,
         _table_node_a,
         _table_node_b
@@ -299,8 +299,8 @@ TEST_F(JoinDetectionRuleTest, NonCrossJoin) {
   // clang-format off
   const auto input_lqp =
   ProjectionNode::make(expression_vector(_a_a),
-    PredicateNode::make(equals(_a_a, _b_a),
-    JoinNode::make(JoinMode::Inner, equals(_a_b, _b_b),
+    PredicateNode::make(equals_(_a_a, _b_a),
+    JoinNode::make(JoinMode::Inner, equals_(_a_b, _b_b),
       _table_node_a,
       _table_node_b
   )));
@@ -309,8 +309,8 @@ TEST_F(JoinDetectionRuleTest, NonCrossJoin) {
   // clang-format off
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(_a_a),
-    PredicateNode::make(equals(_a_a, _b_a),
-    JoinNode::make(JoinMode::Inner, equals(_a_b, _b_b),
+    PredicateNode::make(equals_(_a_a, _b_a),
+    JoinNode::make(JoinMode::Inner, equals_(_a_b, _b_b),
       _table_node_a,
       _table_node_b
   )));
@@ -353,7 +353,7 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins) {
   // clang-format off
   const auto input_lqp =
   ProjectionNode::make(expression_vector(_a_a),
-    PredicateNode::make(equals(_a_a, _b_a),
+    PredicateNode::make(equals_(_a_a, _b_a),
     JoinNode::make(JoinMode::Cross,
       JoinNode::make(JoinMode::Cross,
         _table_node_a,
@@ -366,7 +366,7 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins) {
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(_a_a),
     JoinNode::make(JoinMode::Cross,
-      JoinNode::make(JoinMode::Inner, equals(_a_a, _b_a),
+      JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
         _table_node_a,
         _table_node_b),
     _table_node_c
@@ -402,7 +402,7 @@ TEST_F(JoinDetectionRuleTest, JoinInRightChild) {
    */
   const auto join_node1 = JoinNode::make(JoinMode::Cross);
   const auto join_node2 = JoinNode::make(JoinMode::Cross);
-  const auto predicate_node = PredicateNode::make(equals(_b_a, _c_b));
+  const auto predicate_node = PredicateNode::make(equals_(_b_a, _c_b));
 
   predicate_node->set_left_input(join_node1);
   join_node1->set_left_input(_table_node_a);
@@ -416,7 +416,7 @@ TEST_F(JoinDetectionRuleTest, JoinInRightChild) {
   const auto expected_lqp =
   JoinNode::make(JoinMode::Cross,
     _table_node_a,
-    JoinNode::make(JoinMode::Inner, equals(_b_a, _c_b),
+    JoinNode::make(JoinMode::Inner, equals_(_b_a, _c_b),
       _table_node_b,
       _table_node_c)
   );
@@ -462,7 +462,7 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins2) {
   join_node2->set_left_input(join_node1);
   join_node2->set_right_input(_table_node_c);
 
-  const auto predicate_node = PredicateNode::make(equals(_c_a, _a_a));
+  const auto predicate_node = PredicateNode::make(equals_(_c_a, _a_a));
   predicate_node->set_left_input(join_node2);
 
   const auto projection_node = ProjectionNode::make(expression_vector(_a_a));
@@ -473,7 +473,7 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins2) {
   // clang-format off
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(_a_a),
-    JoinNode::make(JoinMode::Inner, equals(_c_a, _a_a),
+    JoinNode::make(JoinMode::Inner, equals_(_c_a, _a_a),
       JoinNode::make(JoinMode::Cross,
         _table_node_a,
         _table_node_b),

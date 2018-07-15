@@ -75,14 +75,14 @@ class LQPFindSubplanMismatchTest : public ::testing::Test {
     query_nodes.table_c_a = LQPColumnReference{query_nodes.mock_node_b, ColumnID{0}};
     query_nodes.table_c_b = LQPColumnReference{query_nodes.mock_node_b, ColumnID{1}};
 
-    query_nodes.predicate_node_a = PredicateNode::make(less_than(query_nodes.table_a_a, 41));
+    query_nodes.predicate_node_a = PredicateNode::make(less_than_(query_nodes.table_a_a, 41));
     query_nodes.predicate_node_b = PredicateNode::make(between(query_nodes.table_a_a, 42, 45));
     query_nodes.union_node = UnionNode::make(UnionMode::Positions);
     query_nodes.limit_node = LimitNode::make(to_expression(10));
-    query_nodes.join_node = JoinNode::make(JoinMode::Inner, equals(query_nodes.table_a_a, query_nodes.table_c_b));
+    query_nodes.join_node = JoinNode::make(JoinMode::Inner, equals_(query_nodes.table_a_a, query_nodes.table_c_b));
 
     query_nodes.aggregate_node =
-        AggregateNode::make(expression_vector(query_nodes.table_c_b), expression_vector(sum(query_nodes.table_c_a)));
+        AggregateNode::make(expression_vector(query_nodes.table_c_b), expression_vector(sum_(query_nodes.table_c_a)));
 
     query_nodes.sort_node =
         SortNode::make(expression_vector(query_nodes.table_c_b), std::vector<OrderByMode>{OrderByMode::Ascending});

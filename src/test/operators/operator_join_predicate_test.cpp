@@ -29,13 +29,13 @@ class OperatorJoinPredicateTest : public ::testing::Test {
 };
 
 TEST_F(OperatorJoinPredicateTest, Conversion) {
-  const auto predicate_a = OperatorJoinPredicate::from_expression(*equals(a_a, b_b), *node_a, *node_b);
+  const auto predicate_a = OperatorJoinPredicate::from_expression(*equals_(a_a, b_b), *node_a, *node_b);
   ASSERT_TRUE(predicate_a);
   EXPECT_EQ(predicate_a->column_ids.first, ColumnID{0});
   EXPECT_EQ(predicate_a->column_ids.second, ColumnID{1});
   EXPECT_EQ(predicate_a->predicate_condition, PredicateCondition::Equals);
 
-  const auto predicate_b = OperatorJoinPredicate::from_expression(*less_than(b_a, a_b), *node_a, *node_b);
+  const auto predicate_b = OperatorJoinPredicate::from_expression(*less_than_(b_a, a_b), *node_a, *node_b);
   ASSERT_TRUE(predicate_b);
   EXPECT_EQ(predicate_b->column_ids.first, ColumnID{1});
   EXPECT_EQ(predicate_b->column_ids.second, ColumnID{0});
@@ -43,10 +43,10 @@ TEST_F(OperatorJoinPredicateTest, Conversion) {
 }
 
 TEST_F(OperatorJoinPredicateTest, ConversionImpossible) {
-  const auto predicate_a = OperatorJoinPredicate::from_expression(*equals(a_a, a_b), *node_a, *node_b);
+  const auto predicate_a = OperatorJoinPredicate::from_expression(*equals_(a_a, a_b), *node_a, *node_b);
   ASSERT_FALSE(predicate_a);
 
-  const auto predicate_b = OperatorJoinPredicate::from_expression(*less_than(add(b_a, 5), a_b), *node_a, *node_b);
+  const auto predicate_b = OperatorJoinPredicate::from_expression(*less_than_(add_(b_a, 5), a_b), *node_a, *node_b);
   ASSERT_FALSE(predicate_b);
 }
 

@@ -29,8 +29,8 @@ class PQPSelectExpressionTest : public ::testing::Test {
     // Build a Select returning a SINGLE NON-NULLABLE VALUE and taking ONE PARAMETER
     const auto parameter_a = parameter(ParameterID{2});
     const auto get_table_a = std::make_shared<GetTable>("int_float");
-    const auto projection_a = std::make_shared<Projection>(get_table_a, expression_vector(add(a_a, parameter_a)));
-    const auto limit_a = std::make_shared<Limit>(projection_a, value(1));
+    const auto projection_a = std::make_shared<Projection>(get_table_a, expression_vector(add_(a_a, parameter_a)));
+    const auto limit_a = std::make_shared<Limit>(projection_a, value_(1));
     pqp_single_value_one_parameter = limit_a;
     parameters_a = {std::make_pair(ParameterID{2}, ColumnID{3})};
     select_single_value_one_parameter = std::make_shared<PQPSelectExpression>(pqp_single_value_one_parameter, DataType::Int, false, parameters_a);

@@ -62,8 +62,8 @@ TEST_F(ConstantCalculationRuleTest, ResolveExpressionTest) {
   // clang-format off
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(a, b),
-    PredicateNode::make(equals(a, 1234),
-      ProjectionNode::make(expression_vector(add(1233, 1), a, b),
+    PredicateNode::make(equals_(a, 1234),
+      ProjectionNode::make(expression_vector(add_(1233, 1), a, b),
         stored_table_node
   )));
   // clang-format on
@@ -80,7 +80,7 @@ TEST_F(ConstantCalculationRuleTest, DoesntPruneList) {
   // clang-format off
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(a, b),
-    PredicateNode::make(not_equals(in(a, list(1, 2, 8, 4)), 0),
+    PredicateNode::make(not_equals_(in(a, list(1, 2, 8, 4)), 0),
       ProjectionNode::make(expression_vector(in(a, list(1, 2, 8, 4)), a, b),
         stored_table_node
   )));

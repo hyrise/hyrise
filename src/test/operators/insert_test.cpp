@@ -243,7 +243,7 @@ TEST_F(OperatorsInsertTest, DISABLED_InsertSingleNullFromDummyProjection) {
   dummy_wrapper->execute();
 
   // 0 + NULL to create an int-NULL
-  auto projection = std::make_shared<Projection>(dummy_wrapper, expression_vector(add(0, null())));
+  auto projection = std::make_shared<Projection>(dummy_wrapper, expression_vector(add_(0, null_())));
   projection->execute();
 
   auto ins = std::make_shared<Insert>(t_name, projection);

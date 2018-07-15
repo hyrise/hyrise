@@ -47,10 +47,10 @@ class LogicalQueryPlanTest : public ::testing::Test {
     _t_b_a = LQPColumnReference{_mock_node_b, ColumnID{0}};
     _t_b_b = LQPColumnReference{_mock_node_b, ColumnID{1}};
 
-    _predicate_node_a = PredicateNode::make(equals(_t_a_a, 42));
-    _predicate_node_b = PredicateNode::make(equals(_t_a_b, 1337));
+    _predicate_node_a = PredicateNode::make(equals_(_t_a_a, 42));
+    _predicate_node_b = PredicateNode::make(equals_(_t_a_b, 1337));
     _projection_node = ProjectionNode::make(expression_vector(_t_a_a, _t_a_b));
-    _join_node = JoinNode::make(JoinMode::Inner, equals(_t_a_a, _t_b_a));
+    _join_node = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_a));
 
     /**
      * Init complex graph.
@@ -71,7 +71,7 @@ class LogicalQueryPlanTest : public ::testing::Test {
     _nodes[7] = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "b"}}});
     _nodes[0] = JoinNode::make(JoinMode::Cross);
     _nodes[1] = JoinNode::make(JoinMode::Cross);
-    _nodes[2] = PredicateNode::make(equals(LQPColumnReference{_nodes[6], ColumnID{0}}, 42));
+    _nodes[2] = PredicateNode::make(equals_(LQPColumnReference{_nodes[6], ColumnID{0}}, 42));
     _nodes[3] = JoinNode::make(JoinMode::Cross);
     _nodes[4] = JoinNode::make(JoinMode::Cross);
     _nodes[5] = JoinNode::make(JoinMode::Cross);
@@ -330,11 +330,11 @@ TEST_F(LogicalQueryPlanTest, DeepCopyBasics) {
 TEST_F(LogicalQueryPlanTest, PrintWithoutSubselects) {
   // clang-format off
   const auto lqp =
-  PredicateNode::make(greater_than(a1, 5),
-    JoinNode::make(JoinMode::Inner, equals(a1, a2),
+  PredicateNode::make(greater_than_(a1, 5),
+    JoinNode::make(JoinMode::Inner, equals_(a1, a2),
       UnionNode::make(UnionMode::Positions,
-        PredicateNode::make(equals(a1, 5), node_int_int),
-        PredicateNode::make(equals(a1, 6), node_int_int)
+        PredicateNode::make(equals_(a1, 5), node_int_int),
+        PredicateNode::make(equals_(a1, 6), node_int_int)
       ),
     node_int_int_int
   ));
@@ -357,15 +357,15 @@ TEST_F(LogicalQueryPlanTest, PrintWithoutSubselects) {
 TEST_F(LogicalQueryPlanTest, PrintWithSubselects) {
   // clang-format off
   const auto subselect_b_lqp =
-  PredicateNode::make(equals(a2, 5), node_int_int_int);
-  const auto subselect_b = select(subselect_b_lqp);
+  PredicateNode::make(equals_(a2, 5), node_int_int_int);
+  const auto subselect_b = select_(subselect_b_lqp);
 
   const auto subselect_a_lqp =
-  PredicateNode::make(equals(a2, subselect_b), node_int_int_int);
-  const auto subselect_a = select(subselect_a_lqp);
+  PredicateNode::make(equals_(a2, subselect_b), node_int_int_int);
+  const auto subselect_a = select_(subselect_a_lqp);
 
   const auto lqp =
-  PredicateNode::make(greater_than(a1, subselect_a), node_int_int);
+  PredicateNode::make(greater_than_(a1, subselect_a), node_int_int);
   // clang-format on
 
   std::stringstream stream;
@@ -396,15 +396,15 @@ TEST_F(LogicalQueryPlanTest, DeepCopySubSelects) {
 
   // clang-format off
   const auto sub_select_lqp =
-  AggregateNode::make(expression_vector(), expression_vector(min(add(a2, parameter_a))),
-    ProjectionNode::make(expression_vector(a2, b2, add(a2, parameter_a)),
+  AggregateNode::make(expression_vector(), expression_vector(min_(add_(a2, parameter_a))),
+    ProjectionNode::make(expression_vector(a2, b2, add_(a2, parameter_a)),
       node_int_int_int
   ));
-  const auto sub_select = select(sub_select_lqp, std::make_pair(ParameterID{0}, b1));
+  const auto sub_select = select_(sub_select_lqp, std::make_pair(ParameterID{0}, b1));
 
   const auto lqp =
   ProjectionNode::make(expression_vector(a1, sub_select),
-    PredicateNode::make(greater_than(a1, sub_select),
+    PredicateNode::make(greater_than_(a1, sub_select),
       ProjectionNode::make(expression_vector(sub_select, a1, b1),
         node_int_int
   )));

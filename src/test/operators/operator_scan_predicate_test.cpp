@@ -23,7 +23,7 @@ class OperatorScanPredicateTest : public ::testing::Test {
 };
 
 TEST_F(OperatorScanPredicateTest, FromExpression) {
-  const auto operator_predicates_a = OperatorScanPredicate::from_expression(*greater_than(a, 5), *node);
+  const auto operator_predicates_a = OperatorScanPredicate::from_expression(*greater_than_(a, 5), *node);
   ASSERT_TRUE(operator_predicates_a);
   ASSERT_EQ(operator_predicates_a->size(), 1u);
   const auto& operator_predicate_a = operator_predicates_a->at(0);
@@ -31,7 +31,7 @@ TEST_F(OperatorScanPredicateTest, FromExpression) {
   EXPECT_EQ(operator_predicate_a.predicate_condition, PredicateCondition::GreaterThan);
   EXPECT_EQ(operator_predicate_a.value, AllParameterVariant{5});
 
-  const auto operator_predicates_b = OperatorScanPredicate::from_expression(*greater_than(a, b), *node);
+  const auto operator_predicates_b = OperatorScanPredicate::from_expression(*greater_than_(a, b), *node);
   ASSERT_TRUE(operator_predicates_b);
   ASSERT_EQ(operator_predicates_b->size(), 1u);
   const auto& operator_predicate_b = operator_predicates_b->at(0);
@@ -42,7 +42,7 @@ TEST_F(OperatorScanPredicateTest, FromExpression) {
 
 TEST_F(OperatorScanPredicateTest, FromExpressionColumnRight) {
   // `5 > a` becomes `a < 5`
-  const auto operator_predicates_a = OperatorScanPredicate::from_expression(*greater_than(5, a), *node);
+  const auto operator_predicates_a = OperatorScanPredicate::from_expression(*greater_than_(5, a), *node);
   ASSERT_TRUE(operator_predicates_a);
   ASSERT_EQ(operator_predicates_a->size(), 1u);
   const auto& operator_predicate_a = operator_predicates_a->at(0);
@@ -67,7 +67,7 @@ TEST_F(OperatorScanPredicateTest, FromExpressionColumnRight) {
 }
 
 TEST_F(OperatorScanPredicateTest, NotConvertible) {
-  const auto operator_predicate_a = OperatorScanPredicate::from_expression(*and_(0, greater_than(a, 5)), *node);
+  const auto operator_predicate_a = OperatorScanPredicate::from_expression(*and_(0, greater_than_(a, 5)), *node);
   EXPECT_FALSE(operator_predicate_a);
 }
 

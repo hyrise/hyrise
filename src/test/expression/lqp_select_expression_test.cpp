@@ -29,21 +29,21 @@ class LQPSelectExpressionTest : public ::testing::Test {
 
     // clang-format off
     lqp_a =
-    AggregateNode::make(expression_vector(), expression_vector(max(add(a, parameter(ParameterID{0})))),
-      ProjectionNode::make(expression_vector(add(a, parameter(ParameterID{0}))),
+    AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter(ParameterID{0})))),
+      ProjectionNode::make(expression_vector(add_(a, parameter(ParameterID{0}))),
         int_float_node_a
     ));
 
     parameter_c = parameter(ParameterID{0}, a);
     lqp_c =
-    AggregateNode::make(expression_vector(), expression_vector(max(add(a, parameter_c))),
-      ProjectionNode::make(expression_vector(add(a, parameter_c)),
+    AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_c))),
+      ProjectionNode::make(expression_vector(add_(a, parameter_c)),
         int_float_node_a
     ));
     // clang-format on
 
-    select_a = select(lqp_a);
-    select_c = select(lqp_c, std::make_pair(ParameterID{0}, a));
+    select_a = select_(lqp_a);
+    select_c = select_(lqp_c, std::make_pair(ParameterID{0}, a));
   }
 
   void TearDown() { StorageManager::reset(); }
@@ -62,8 +62,8 @@ TEST_F(LQPSelectExpressionTest, DeepEquals) {
 
   // clang-format off
   const auto lqp_b =
-  AggregateNode::make(expression_vector(), expression_vector(max(add(a, parameter(ParameterID{0})))),
-    ProjectionNode::make(expression_vector(add(a, parameter(ParameterID{0}))),
+  AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter(ParameterID{0})))),
+    ProjectionNode::make(expression_vector(add_(a, parameter(ParameterID{0}))),
       int_float_node_a
   ));
 
@@ -71,22 +71,22 @@ TEST_F(LQPSelectExpressionTest, DeepEquals) {
   const auto a2 = int_float_node_b->get_column("a");
   const auto parameter_d = parameter(ParameterID{0}, a2);
   const auto lqp_d =
-  AggregateNode::make(expression_vector(), expression_vector(max(add(a, parameter_d))),
-    ProjectionNode::make(expression_vector(add(a, parameter_d)),
+  AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_d))),
+    ProjectionNode::make(expression_vector(add_(a, parameter_d)),
       int_float_node_a
   ));
 
   const auto parameter_e = parameter(ParameterID{0}, b);
   const auto lqp_e =
-  AggregateNode::make(expression_vector(), expression_vector(max(add(a, parameter_d))),
-    ProjectionNode::make(expression_vector(add(a, parameter_d)),
+  AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_d))),
+    ProjectionNode::make(expression_vector(add_(a, parameter_d)),
       int_float_node_a
   ));
   // clang-format on
 
-  const auto select_b = select(lqp_b);
-  const auto select_d = select(lqp_d, std::make_pair(ParameterID{0}, a));
-  const auto select_e = select(lqp_e, std::make_pair(ParameterID{0}, b));
+  const auto select_b = select_(lqp_b);
+  const auto select_d = select_(lqp_d, std::make_pair(ParameterID{0}, a));
+  const auto select_e = select_(lqp_e, std::make_pair(ParameterID{0}, b));
 
   EXPECT_EQ(*select_a, *select_b);
   EXPECT_NE(*select_a, *select_c);
@@ -129,13 +129,13 @@ TEST_F(LQPSelectExpressionTest, IsNullable) {
 
   // clang-format off
   const auto lqp_c =
-  AggregateNode::make(expression_vector(), expression_vector(max(add(a, null()))),
-    ProjectionNode::make(expression_vector(add(a, null())),
+  AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, null_()))),
+    ProjectionNode::make(expression_vector(add_(a, null_())),
       int_float_node_a
   ));
   // clang-format off
 
-  EXPECT_TRUE(select(lqp_c)->is_nullable());
+  EXPECT_TRUE(select_(lqp_c)->is_nullable());
 }
 
 TEST_F(LQPSelectExpressionTest, AsColumnName) {

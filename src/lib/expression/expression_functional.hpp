@@ -62,8 +62,8 @@ std::shared_ptr<LQPColumnExpression> to_expression(const LQPColumnReference& col
 std::shared_ptr<ValueExpression> to_expression(const AllTypeVariant& value);
 /** @} */
 
-std::shared_ptr<ValueExpression> value(const AllTypeVariant& value);
-std::shared_ptr<ValueExpression> null();
+std::shared_ptr<ValueExpression> value_(const AllTypeVariant& value);
+std::shared_ptr<ValueExpression> null_();
 
 namespace detail {
 
@@ -103,28 +103,28 @@ struct ternary final {
 
 }
 
-inline detail::unary<PredicateCondition::IsNull, IsNullExpression> is_null;
-inline detail::unary<PredicateCondition::IsNotNull, IsNullExpression> is_not_null;
-inline detail::unary<AggregateFunction::Sum, AggregateExpression> sum;
-inline detail::unary<AggregateFunction::Max, AggregateExpression> max;
-inline detail::unary<AggregateFunction::Min, AggregateExpression> min;
-inline detail::unary<AggregateFunction::Avg, AggregateExpression> avg;
-inline detail::unary<AggregateFunction::Count, AggregateExpression> count;
-inline detail::unary<AggregateFunction::CountDistinct, AggregateExpression> count_distinct;
+inline detail::unary<PredicateCondition::IsNull, IsNullExpression> is_null_;
+inline detail::unary<PredicateCondition::IsNotNull, IsNullExpression> is_not_null_;
+inline detail::unary<AggregateFunction::Sum, AggregateExpression> sum_;
+inline detail::unary<AggregateFunction::Max, AggregateExpression> max_;
+inline detail::unary<AggregateFunction::Min, AggregateExpression> min_;
+inline detail::unary<AggregateFunction::Avg, AggregateExpression> avg_;
+inline detail::unary<AggregateFunction::Count, AggregateExpression> count_;
+inline detail::unary<AggregateFunction::CountDistinct, AggregateExpression> count_distinct_;
 
 inline detail::binary<ArithmeticOperator::Division, ArithmeticExpression> div_;
-inline detail::binary<ArithmeticOperator::Multiplication, ArithmeticExpression> mul;
-inline detail::binary<ArithmeticOperator::Addition, ArithmeticExpression> add;
-inline detail::binary<ArithmeticOperator::Subtraction, ArithmeticExpression> sub;
-inline detail::binary<ArithmeticOperator::Modulo, ArithmeticExpression> mod;
-inline detail::binary<PredicateCondition::Like, BinaryPredicateExpression> like;
-inline detail::binary<PredicateCondition::NotLike, BinaryPredicateExpression> not_like;
-inline detail::binary<PredicateCondition::Equals, BinaryPredicateExpression> equals;
-inline detail::binary<PredicateCondition::NotEquals, BinaryPredicateExpression> not_equals;
-inline detail::binary<PredicateCondition::LessThan, BinaryPredicateExpression> less_than;
-inline detail::binary<PredicateCondition::LessThanEquals, BinaryPredicateExpression> less_than_equals;
-inline detail::binary<PredicateCondition::GreaterThanEquals, BinaryPredicateExpression> greater_than_equals;
-inline detail::binary<PredicateCondition::GreaterThan, BinaryPredicateExpression> greater_than;
+inline detail::binary<ArithmeticOperator::Multiplication, ArithmeticExpression> mul_;
+inline detail::binary<ArithmeticOperator::Addition, ArithmeticExpression> add_;
+inline detail::binary<ArithmeticOperator::Subtraction, ArithmeticExpression> sub_;
+inline detail::binary<ArithmeticOperator::Modulo, ArithmeticExpression> mod_;
+inline detail::binary<PredicateCondition::Like, BinaryPredicateExpression> like_;
+inline detail::binary<PredicateCondition::NotLike, BinaryPredicateExpression> not_like_;
+inline detail::binary<PredicateCondition::Equals, BinaryPredicateExpression> equals_;
+inline detail::binary<PredicateCondition::NotEquals, BinaryPredicateExpression> not_equals_;
+inline detail::binary<PredicateCondition::LessThan, BinaryPredicateExpression> less_than_;
+inline detail::binary<PredicateCondition::LessThanEquals, BinaryPredicateExpression> less_than_equals_;
+inline detail::binary<PredicateCondition::GreaterThanEquals, BinaryPredicateExpression> greater_than_equals_;
+inline detail::binary<PredicateCondition::GreaterThan, BinaryPredicateExpression> greater_than_;
 inline detail::binary<LogicalOperator::And, LogicalExpression> and_;
 inline detail::binary<LogicalOperator::Or, LogicalExpression> or_;
 
@@ -132,23 +132,23 @@ inline detail::ternary<BetweenExpression> between;
 inline detail::ternary<CaseExpression> case_;
 
 template <typename... Args>
-std::shared_ptr<LQPSelectExpression> select(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                            Args&&... parameter_id_expression_pairs) {
+std::shared_ptr<LQPSelectExpression> select_(const std::shared_ptr<AbstractLQPNode> &lqp,
+                                             Args &&... parameter_id_expression_pairs) {
   if constexpr (sizeof...(Args) > 0) {
     // Correlated subselect
     return std::make_shared<LQPSelectExpression>(
         lqp, std::vector<ParameterID>{{parameter_id_expression_pairs.first...}},
         std::vector<std::shared_ptr<AbstractExpression>>{{to_expression(parameter_id_expression_pairs.second)...}});
   } else {
-    // Not corrcelated
+    // Not correlated
     return std::make_shared<LQPSelectExpression>(lqp, std::vector<ParameterID>{},
                                                  std::vector<std::shared_ptr<AbstractExpression>>{});
   }
 }
 
 template <typename... Args>
-std::shared_ptr<PQPSelectExpression> select(const std::shared_ptr<AbstractOperator>& pqp, const DataType data_type,
-                                            const bool nullable, Args&&... parameter_id_column_id_pairs) {
+std::shared_ptr<PQPSelectExpression> select_(const std::shared_ptr<AbstractOperator> &pqp, const DataType data_type,
+                                             const bool nullable, Args &&... parameter_id_column_id_pairs) {
   if constexpr (sizeof...(Args) > 0) {
     // Correlated subselect
     return std::make_shared<PQPSelectExpression>(
@@ -167,13 +167,13 @@ std::vector<std::shared_ptr<AbstractExpression>> expression_vector(Args&&... arg
 }
 
 template <typename String, typename Start, typename Length>
-std::shared_ptr<FunctionExpression> substr(const String& string, const Start& start, const Length& length) {
+std::shared_ptr<FunctionExpression> substr_(const String& string, const Start& start, const Length& length) {
   return std::make_shared<FunctionExpression>(
       FunctionType::Substring, expression_vector(to_expression(string), to_expression(start), to_expression(length)));
 }
 
 template <typename... Args>
-std::shared_ptr<FunctionExpression> concat(const Args... args) {
+std::shared_ptr<FunctionExpression> concat_(const Args... args) {
   return std::make_shared<FunctionExpression>(FunctionType::Concatenate, expression_vector(to_expression(args)...));
 }
 
