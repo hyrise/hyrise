@@ -95,7 +95,7 @@ JoinMode translate_join_mode(const hsql::JoinType join_type) {
   };
 
   auto it = join_type_to_mode.find(join_type);
-  DebugAssert(it != join_type_to_mode.end(), "Unable to handle join type.");
+  Assert(it != join_type_to_mode.end(), "Unknown to handle join type.");
   return it->second;
 }
 
@@ -174,7 +174,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_statement(const hsql::
     case hsql::kStmtDrop:
       return _translate_drop(static_cast<const hsql::DropStatement&>(statement));
     default:
-      Fail("SQL statement type not supported");
+      FailInput("SQL statement type not supported");
   }
 }
 
@@ -267,13 +267,13 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
    */
   if (insert.type == hsql::kInsertSelect) {
     // `INSERT ... INTO newtable FROM oldtable WHERE condition`
-    Assert(insert.select, "INSERT INTO ... SELECT ...: No SELECT statement given");
+    AssertInput(insert.select, "INSERT INTO ... SELECT ...: No SELECT statement given");
     insert_data_node = translate_select_statement(*insert.select);
     column_expressions = insert_data_node->column_expressions();
 
   } else {
     // `INSERT INTO table_name [(column1, column2, column3, ...)] VALUES (value1, value2, value3, ...);`
-    Assert(insert.values, "INSERT INTO ... VALUES: No values given");
+    AssertInput(insert.values, "INSERT INTO ... VALUES: No values given");
 
     column_expressions.reserve(insert.values->size());
     for (const auto* value : *insert.values) {
@@ -292,7 +292,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
     // `INSERT INTO table_name (column1, column2, column3, ...) ...;`
     // Create a Projection that matches the specified columns with the columns of `table_name`
 
-    Assert(insert.columns->size() == column_expressions.size(),
+    AssertInput(insert.columns->size() == column_expressions.size(),
            "INSERT: Target column count and number of input columns mismatch");
 
     auto expressions = std::vector<std::shared_ptr<AbstractExpression>>(target_table->column_count(), null_());
@@ -332,7 +332,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
     insert_data_node = ProjectionNode::make(column_expressions, insert_data_node);
   }
 
-  Assert(insert_data_node->column_expressions().size() == target_table->column_count(),
+  AssertInput(insert_data_node->column_expressions().size() == target_table->column_count(),
          "INSERT: Column count mismatch");
 
   /**
@@ -370,7 +370,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
 
   // The update operator wants ReferenceColumns on its left side
   // TODO(anyone): fix this
-  Assert(!std::dynamic_pointer_cast<StoredTableNode>(selection_lqp),
+  AssertInput(!std::dynamic_pointer_cast<StoredTableNode>(selection_lqp),
          "Unconditional updates are currently not supported");
 
   for (const auto* update_clause : *update.updates) {
@@ -402,7 +402,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_ref(const hsql::
       return _translate_cross_product(*hsql_table_ref.list);
 
     default:
-      Fail("Unexpect SQLParser TableRef in FROM");
+      Fail("Unexpected SQLParser TableRef in FROM");
   }
 }
 
@@ -438,13 +438,13 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
         Assert(_use_mvcc == UseMvcc::No || lqp_is_validated(view->lqp),
                "Can't use unvalidated View in validated Query");
       } else {
-        Fail(std::string("Did not find a table or view with name ") + hsql_table_ref.name);
+        FailInput(std::string("Did not find a table or view with name ") + hsql_table_ref.name);
       }
       table_name = hsql_table_ref.alias ? hsql_table_ref.alias->name : hsql_table_ref.name;
     } break;
 
     case hsql::kTableSelect: {
-      Assert(hsql_table_ref.alias && hsql_table_ref.alias->name, "Every SubSelect must have its own alias");
+      AssertInput(hsql_table_ref.alias && hsql_table_ref.alias->name, "Every SubSelect must have its own alias");
       table_name = hsql_table_ref.alias->name;
 
       SQLTranslator sub_select_translator{_use_mvcc};
@@ -473,7 +473,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
   if (hsql_table_ref.alias && hsql_table_ref.alias->columns) {
     const auto& column_expressions = lqp->column_expressions();
 
-    Assert(hsql_table_ref.alias->columns->size() == column_expressions.size(),
+    AssertInput(hsql_table_ref.alias->columns->size() == column_expressions.size(),
            "Must specify a name for exactly each column");
 
     for (auto column_id = ColumnID{0}; column_id < hsql_table_ref.alias->columns->size(); ++column_id) {
@@ -552,7 +552,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
     }
   }
 
-  Assert(join_mode == JoinMode::Inner || join_predicates.size(), "Multiple Predicates not supported in Outer Join");
+  AssertInput(join_mode == JoinMode::Inner || join_predicates.size(), "Multiple Predicates not supported in Outer Join");
 
   /**
    * Add local predicates - ignore local predicates on the preserving side of OUTER JOINs
@@ -776,7 +776,7 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
     const auto* hsql_expr = (*select.selectList)[select_list_idx];
 
     if (hsql_expr->type == hsql::kExprStar) {
-      Assert(_from_clause_result, "Can't SELECT with wildcards if since there are no FROM tables specified");
+      AssertInput(_from_clause_result, "Can't SELECT with wildcards since there are no FROM tables specified");
 
       if (hsql_expr->table) {
         if (is_aggregate) {
@@ -790,7 +790,7 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
         } else {
           // Select all columns from the FROM element with the specified name
           const auto from_element_iter = _from_clause_result->elements_by_table_name.find(hsql_expr->table);
-          Assert(from_element_iter != _from_clause_result->elements_by_table_name.end(),
+          AssertInput(from_element_iter != _from_clause_result->elements_by_table_name.end(),
                  std::string("No such element in FROM with table name '") + hsql_expr->table + "'");
 
           _inflated_select_list_expressions.insert(_inflated_select_list_expressions.end(),
@@ -856,7 +856,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::Show
     case hsql::ShowType::kShowColumns:
       return ShowColumnsNode::make(std::string(show_statement.name));
     default:
-      Fail("hsql::ShowType is not supported.");
+      FailInput("hsql::ShowType is not supported.");
   }
 }
 
@@ -869,7 +869,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::Cr
 
       if (create_statement.viewColumns) {
         // The CREATE VIEW statement has renamed the columns: CREATE VIEW myview (foo, bar) AS SELECT ...
-        Assert(create_statement.viewColumns->size() == lqp->column_expressions().size(),
+        AssertInput(create_statement.viewColumns->size() == lqp->column_expressions().size(),
                "Number of Columns in CREATE VIEW does not match SELECT statement");
 
         for (auto column_id = ColumnID{0}; column_id < create_statement.viewColumns->size(); ++column_id) {
@@ -888,7 +888,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::Cr
       return CreateViewNode::make(create_statement.tableName, std::make_shared<View>(lqp, column_names));
     }
     default:
-      Fail("hsql::CreateType is not supported.");
+      FailInput("hsql::CreateType is not supported.");
   }
 }
 
@@ -897,7 +897,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::Drop
     case hsql::DropType::kDropView:
       return DropViewNode::make(drop_statement.name);
     default:
-      Fail("hsql::DropType is not supported.");
+      FailInput("hsql::DropType is not supported.");
   }
 }
 
@@ -947,7 +947,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
     }
 
     default:
-      Fail("Cannot use this ExpressionType as predicate");
+      FailInput("Cannot use this ExpressionType as predicate");
   }
 }
 
@@ -995,7 +995,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         // Try to resolve the identifier in the outer queries
         expression = _external_sql_identifier_context_proxy->resolve_identifier_relaxed(identifier);
       }
-      Assert(expression, "Couldn't resolve identifier '" + identifier.as_string() + "' or it is ambiguous");
+      AssertInput(expression, "Couldn't resolve identifier '" + identifier.as_string() + "' or it is ambiguous");
 
       return expression;
     }
@@ -1004,7 +1004,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       return std::make_shared<ValueExpression>(expr.fval);
 
     case hsql::kExprLiteralString:
-      Assert(expr.name, "No value given for string literal");
+      AssertInput(expr.name, "No value given for string literal");
       return std::make_shared<ValueExpression>(name);
 
     case hsql::kExprLiteralInt:
@@ -1049,7 +1049,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           aggregate_function = AggregateFunction::CountDistinct;
         }
 
-        Assert(expr.exprList && expr.exprList->size() == 1, "Expected exactly one argument for this AggregateFunction");
+        AssertInput(expr.exprList && expr.exprList->size() == 1, "Expected exactly one argument for this AggregateFunction");
 
         switch (aggregate_function) {
           case AggregateFunction::Min:
@@ -1062,7 +1062,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           case AggregateFunction::Count:
           case AggregateFunction::CountDistinct:
             if (expr.exprList->front()->type == hsql::kExprStar) {
-              Assert(!expr.exprList->front()->name, "Illegal <t>.* in COUNT()");
+              AssertInput(!expr.exprList->front()->name, "Illegal <t>.* in COUNT()");
               return std::make_shared<AggregateExpression>(aggregate_function);
             } else {
               return std::make_shared<AggregateExpression>(
@@ -1086,7 +1086,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
         return std::make_shared<FunctionExpression>(function_iter->second, arguments);
       } else {
-        Fail("Couldn't resolve function '"s + name + "'");
+        FailInput("Couldn't resolve function '"s + name + "'");
       }
     }
 
@@ -1170,11 +1170,11 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         }
 
         case hsql::kOpExists:
-          Assert(expr.select, "Expected SELECT argument for EXISTS");
+          AssertInput(expr.select, "Expected SELECT argument for EXISTS");
           return std::make_shared<ExistsExpression>(_translate_hsql_sub_select(*expr.select, sql_identifier_context));
 
         default:
-          Fail("Not handling this OperatorType yet");
+          FailInput("Not handling this OperatorType yet");
       }
     }
 
@@ -1182,15 +1182,15 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       return _translate_hsql_sub_select(*expr.select, sql_identifier_context);
 
     case hsql::kExprArray:
-      Fail("Can't translate a standalone array, arrays only valid in IN expressions");
+      FailInput("Can't translate a standalone array, arrays only valid in IN expressions");
 
     case hsql::kExprHint:
     case hsql::kExprStar:
     case hsql::kExprArrayIndex:
-      Fail("Can't translate this hsql expression into a Hyrise expression");
+      FailInput("Can't translate this hsql expression into a Hyrise expression");
 
     default:
-      Fail("Nyie");
+      FailInput("Unknown expression type, can't translate expression");
   }
 }
 
@@ -1268,7 +1268,7 @@ SQLTranslator::TableSourceState::TableSourceState(
 void SQLTranslator::TableSourceState::append(TableSourceState&& rhs) {
   for (auto& table_name_and_elements : rhs.elements_by_table_name) {
     const auto unique = elements_by_table_name.count(table_name_and_elements.first) == 0;
-    Assert(unique, "Table Name '"s + table_name_and_elements.first + "' in FROM clause is not unique");
+    AssertInput(unique, "Table Name '"s + table_name_and_elements.first + "' in FROM clause is not unique");
   }
 
   // This should be ::merge, but that is not yet supported by clang.

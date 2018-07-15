@@ -48,6 +48,10 @@ namespace opossum {
 
 [[noreturn]] inline void Fail(const std::string& msg) { throw std::logic_error(msg); }
 
+[[noreturn]] inline void FailInput(const std::string& msg) {
+  throw InvalidInputException(std::string("Invalid input error: ") + msg);
+}
+
 }  // namespace opossum
 
 #define Assert(expr, msg)                                                                  \
