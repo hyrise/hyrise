@@ -18,9 +18,9 @@
 #include "logical_expression.hpp"
 #include "lqp_column_expression.hpp"
 #include "lqp_select_expression.hpp"
-#include "unary_minus_expression.hpp"
 #include "parameter_expression.hpp"
 #include "pqp_select_expression.hpp"
+#include "unary_minus_expression.hpp"
 #include "value_expression.hpp"
 
 /**
@@ -80,33 +80,33 @@ namespace detail {
  * @{
  */
 
-template<auto t, typename E>
+template <auto t, typename E>
 struct unary final {
-  template<typename A>
-  std::shared_ptr<E> operator()(const A &a) const {
+  template <typename A>
+  std::shared_ptr<E> operator()(const A& a) const {
     return std::make_shared<E>(t, to_expression(a));
   };
 };
 
-template<auto t, typename E>
+template <auto t, typename E>
 struct binary final {
-  template<typename A, typename B>
-  std::shared_ptr<E> operator()(const A &a, const B &b) const {
+  template <typename A, typename B>
+  std::shared_ptr<E> operator()(const A& a, const B& b) const {
     return std::make_shared<E>(t, to_expression(a), to_expression(b));
   };
 };
 
-template<typename E>
+template <typename E>
 struct ternary final {
-  template<typename A, typename B, typename C>
-  std::shared_ptr<E> operator()(const A &a, const B &b, const C &c) const {
+  template <typename A, typename B, typename C>
+  std::shared_ptr<E> operator()(const A& a, const B& b, const C& c) const {
     return std::make_shared<E>(to_expression(a), to_expression(b), to_expression(c));
   };
 };
 
 /** @} */
 
-}
+}  // namespace detail
 
 inline detail::unary<PredicateCondition::IsNull, IsNullExpression> is_null_;
 inline detail::unary<PredicateCondition::IsNotNull, IsNullExpression> is_not_null_;
@@ -137,8 +137,8 @@ inline detail::ternary<BetweenExpression> between;
 inline detail::ternary<CaseExpression> case_;
 
 template <typename... Args>
-std::shared_ptr<LQPSelectExpression> select_(const std::shared_ptr<AbstractLQPNode> &lqp,
-                                             Args &&... parameter_id_expression_pairs) {
+std::shared_ptr<LQPSelectExpression> select_(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                             Args&&... parameter_id_expression_pairs) {
   if constexpr (sizeof...(Args) > 0) {
     // Correlated subselect
     return std::make_shared<LQPSelectExpression>(
@@ -152,8 +152,8 @@ std::shared_ptr<LQPSelectExpression> select_(const std::shared_ptr<AbstractLQPNo
 }
 
 template <typename... Args>
-std::shared_ptr<PQPSelectExpression> select_(const std::shared_ptr<AbstractOperator> &pqp, const DataType data_type,
-                                             const bool nullable, Args &&... parameter_id_column_id_pairs) {
+std::shared_ptr<PQPSelectExpression> select_(const std::shared_ptr<AbstractOperator>& pqp, const DataType data_type,
+                                             const bool nullable, Args&&... parameter_id_column_id_pairs) {
   if constexpr (sizeof...(Args) > 0) {
     // Correlated subselect
     return std::make_shared<PQPSelectExpression>(
@@ -200,10 +200,11 @@ std::shared_ptr<ExtractExpression> extract_(const DatetimeComponent datetime_com
 }
 
 std::shared_ptr<ParameterExpression> parameter_(const ParameterID parameter_id);
-std::shared_ptr<LQPColumnExpression> column_(const LQPColumnReference &column_reference);
+std::shared_ptr<LQPColumnExpression> column_(const LQPColumnReference& column_reference);
 
 template <typename ReferencedExpression>
-std::shared_ptr<ParameterExpression> parameter_(const ParameterID parameter_id, const ReferencedExpression& referenced) {
+std::shared_ptr<ParameterExpression> parameter_(const ParameterID parameter_id,
+                                                const ReferencedExpression& referenced) {
   return std::make_shared<ParameterExpression>(parameter_id, *to_expression(referenced));
 }
 

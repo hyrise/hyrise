@@ -5,11 +5,11 @@
 #include "boost/detail/templated_streams.hpp"
 #endif  // BOOST_NO_IOSTREAM
 
+#include "boost/functional/hash.hpp"
 #include "boost/mpl/bool.hpp"
 #include "boost/type_traits/is_empty.hpp"
 #include "boost/type_traits/is_pod.hpp"
 #include "boost/type_traits/is_stateless.hpp"
-#include "boost/functional/hash.hpp"
 
 namespace opossum {
 

@@ -9,11 +9,21 @@ namespace opossum {
 
 std::ostream& operator<<(std::ostream& stream, const ArithmeticOperator arithmetic_operator) {
   switch (arithmetic_operator) {
-    case ArithmeticOperator::Addition:        stream << "+"; break;
-    case ArithmeticOperator::Subtraction:     stream << "-"; break;
-    case ArithmeticOperator::Multiplication:  stream << "*"; break;
-    case ArithmeticOperator::Division:        stream << "/"; break;
-    case ArithmeticOperator::Modulo:          stream << "%"; break;
+    case ArithmeticOperator::Addition:
+      stream << "+";
+      break;
+    case ArithmeticOperator::Subtraction:
+      stream << "-";
+      break;
+    case ArithmeticOperator::Multiplication:
+      stream << "*";
+      break;
+    case ArithmeticOperator::Division:
+      stream << "/";
+      break;
+    case ArithmeticOperator::Modulo:
+      stream << "%";
+      break;
   }
   return stream;
 }

@@ -163,7 +163,8 @@ TEST_F(ChunkPruningTest, ComparatorEdgeCasePruningTest_Equals) {
 TEST_F(ChunkPruningTest, RangeFilterTest) {
   auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
 
-  auto predicate_node = std::make_shared<PredicateNode>(equals_(LQPColumnReference(stored_table_node, ColumnID{0}), 50));
+  auto predicate_node =
+      std::make_shared<PredicateNode>(equals_(LQPColumnReference(stored_table_node, ColumnID{0}), 50));
   predicate_node->set_left_input(stored_table_node);
 
   auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);

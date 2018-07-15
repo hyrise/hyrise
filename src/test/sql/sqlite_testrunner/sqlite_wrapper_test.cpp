@@ -3,16 +3,14 @@
 #include "gtest/gtest.h"
 
 #include "sqlite_wrapper.hpp"
-#include "utils/load_table.hpp"
 #include "testing_assert.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
 class SQLiteWrapperTest : public ::testing::Test {
  public:
-  void SetUp() override {
-    sqlite_wrapper.emplace();
-  }
+  void SetUp() override { sqlite_wrapper.emplace(); }
 
   std::optional<SQLiteWrapper> sqlite_wrapper;
 };
@@ -24,7 +22,8 @@ TEST_F(SQLiteWrapperTest, CreateTable) {
 
   const auto actual_table = sqlite_wrapper->execute_query("SELECT * FROM t");
 
-  EXPECT_TABLE_EQ(actual_table, expected_table, OrderSensitivity::Yes, TypeCmpMode::Lenient, FloatComparisonMode::AbsoluteDifference);
+  EXPECT_TABLE_EQ(actual_table, expected_table, OrderSensitivity::Yes, TypeCmpMode::Lenient,
+                  FloatComparisonMode::AbsoluteDifference);
 }
 
 TEST_F(SQLiteWrapperTest, CreateTableWithNull) {
@@ -34,7 +33,8 @@ TEST_F(SQLiteWrapperTest, CreateTableWithNull) {
 
   const auto actual_mixed_types_null_100_table = sqlite_wrapper->execute_query("SELECT * FROM mixed_types_null_100");
 
-  EXPECT_TABLE_EQ(actual_mixed_types_null_100_table, expected_mixed_types_null_100_table, OrderSensitivity::Yes, TypeCmpMode::Lenient, FloatComparisonMode::AbsoluteDifference);
+  EXPECT_TABLE_EQ(actual_mixed_types_null_100_table, expected_mixed_types_null_100_table, OrderSensitivity::Yes,
+                  TypeCmpMode::Lenient, FloatComparisonMode::AbsoluteDifference);
 }
 
 }  // namespace opossum

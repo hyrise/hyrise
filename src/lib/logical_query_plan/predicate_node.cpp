@@ -47,9 +47,7 @@ std::shared_ptr<TableStatistics> PredicateNode::derive_statistics_from(
 
   for (const auto& operator_predicate : *operator_predicates) {
     output_statistics = std::make_shared<TableStatistics>(output_statistics->estimate_predicate(
-    operator_predicate.column_id,
-    operator_predicate.predicate_condition,
-    operator_predicate.value));
+        operator_predicate.column_id, operator_predicate.predicate_condition, operator_predicate.value));
   }
 
   return output_statistics;

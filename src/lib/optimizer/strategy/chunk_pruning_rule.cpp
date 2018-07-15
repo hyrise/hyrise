@@ -79,7 +79,8 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
 }
 
 std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
-    const std::vector<std::shared_ptr<ChunkStatistics>>& statistics, std::shared_ptr<PredicateNode> predicate_node) const {
+    const std::vector<std::shared_ptr<ChunkStatistics>>& statistics,
+    std::shared_ptr<PredicateNode> predicate_node) const {
   const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate_node->predicate, *predicate_node);
   if (!operator_predicates) return {};
 
@@ -89,7 +90,7 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     if (!is_variant(operator_predicate.value)) {
       return std::set<ChunkID>();
     }
-    auto &value = boost::get<AllTypeVariant>(operator_predicate.value);
+    auto& value = boost::get<AllTypeVariant>(operator_predicate.value);
     auto condition = operator_predicate.predicate_condition;
     for (size_t chunk_id = 0; chunk_id < statistics.size(); ++chunk_id) {
       // statistics[chunk_id] can be a shared_ptr initialized with a nullptr

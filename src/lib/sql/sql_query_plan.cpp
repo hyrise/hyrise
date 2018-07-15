@@ -8,8 +8,7 @@
 
 namespace opossum {
 
-SQLQueryPlan::SQLQueryPlan(CleanupTemporaries cleanup_temporaries)
-    : _cleanup_temporaries(cleanup_temporaries) {}
+SQLQueryPlan::SQLQueryPlan(CleanupTemporaries cleanup_temporaries) : _cleanup_temporaries(cleanup_temporaries) {}
 
 void SQLQueryPlan::add_tree_by_root(std::shared_ptr<AbstractOperator> op) { _roots.push_back(op); }
 

@@ -73,7 +73,8 @@ std::shared_ptr<PredicateNode> JoinDetectionRule::_find_predicate_for_cross_join
      *
      * Detecting Join Conditions across other node types may be possible by applying 'Predicate Pushdown' first.
      */
-    if (node->type != LQPNodeType::Join && node->type != LQPNodeType::Predicate && node->type != LQPNodeType::Projection) {
+    if (node->type != LQPNodeType::Join && node->type != LQPNodeType::Predicate &&
+        node->type != LQPNodeType::Projection) {
       return nullptr;
     }
 

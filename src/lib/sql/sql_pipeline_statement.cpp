@@ -58,8 +58,7 @@ const std::shared_ptr<hsql::SQLParserResult>& SQLPipelineStatement::get_parsed_s
 
   hsql::SQLParser::parse(_sql_string, _parsed_sql_statement.get());
 
-  AssertInput(_parsed_sql_statement->isValid(),
-    create_sql_parser_error_message(_sql_string, *_parsed_sql_statement));
+  AssertInput(_parsed_sql_statement->isValid(), create_sql_parser_error_message(_sql_string, *_parsed_sql_statement));
 
   Assert(_parsed_sql_statement->size() == 1,
          "SQLPipelineStatement must hold exactly one statement. "
@@ -191,7 +190,7 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
     }
 
     AssertInput(parameters.size() == plan->parameter_ids().size(),
-      "Number of arguments provided does not match expected number of arguments.");
+                "Number of arguments provided does not match expected number of arguments.");
 
     _query_plan->append_plan(*plan);
     _query_plan->tree_roots().front()->set_parameters(parameters);

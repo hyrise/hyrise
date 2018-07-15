@@ -197,7 +197,7 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Co
 
 template <typename ColumnDataType, AggregateFunction function>
 void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const BaseColumn& base_column) {
-  using AggregateType = typename AggregateTraits<ColumnDataType, function>::AggregateType ;
+  using AggregateType = typename AggregateTraits<ColumnDataType, function>::AggregateType;
 
   auto aggregator = AggregateFunctionBuilder<ColumnDataType, AggregateType, function>().get_aggregate_function();
 

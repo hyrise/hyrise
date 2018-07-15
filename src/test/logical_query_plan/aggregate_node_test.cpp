@@ -51,8 +51,8 @@ TEST_F(AggregateNodeTest, Description) {
 }
 
 TEST_F(AggregateNodeTest, Equals) {
-  const auto same_aggregate_node =
-      AggregateNode::make(expression_vector(_a, _c), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), _mock_node);
+  const auto same_aggregate_node = AggregateNode::make(
+      expression_vector(_a, _c), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), _mock_node);
 
   EXPECT_EQ(*_aggregate_node, *same_aggregate_node);
   EXPECT_EQ(*same_aggregate_node, *_aggregate_node);
@@ -61,12 +61,12 @@ TEST_F(AggregateNodeTest, Equals) {
   // Build slightly different aggregate nodes
   const auto different_aggregate_node_a =
       AggregateNode::make(expression_vector(_a), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), _mock_node);
-  const auto different_aggregate_node_b =
-      AggregateNode::make(expression_vector(_a, _c), expression_vector(sum_(add_(_a, 2)), sum_(add_(_a, _c))), _mock_node);
+  const auto different_aggregate_node_b = AggregateNode::make(
+      expression_vector(_a, _c), expression_vector(sum_(add_(_a, 2)), sum_(add_(_a, _c))), _mock_node);
   const auto different_aggregate_node_c = AggregateNode::make(
       expression_vector(_a, _c), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c)), min_(_a)), _mock_node);
-  const auto different_aggregate_node_d =
-      AggregateNode::make(expression_vector(_a, _a), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), _mock_node);
+  const auto different_aggregate_node_d = AggregateNode::make(
+      expression_vector(_a, _a), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), _mock_node);
 
   EXPECT_NE(*_aggregate_node, *different_aggregate_node_a);
   EXPECT_NE(*_aggregate_node, *different_aggregate_node_b);
@@ -75,8 +75,8 @@ TEST_F(AggregateNodeTest, Equals) {
 }
 
 TEST_F(AggregateNodeTest, Copy) {
-  const auto same_aggregate_node =
-      AggregateNode::make(expression_vector(_a, _c), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), _mock_node);
+  const auto same_aggregate_node = AggregateNode::make(
+      expression_vector(_a, _c), expression_vector(sum_(add_(_a, _b)), sum_(add_(_a, _c))), _mock_node);
   EXPECT_EQ(*_aggregate_node->deep_copy(), *same_aggregate_node);
 }
 

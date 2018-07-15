@@ -16,7 +16,7 @@
 #include "utils/load_table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
-using namespace std::string_literals;  // NOLINT
+using namespace std::string_literals;            // NOLINT
 
 namespace opossum {
 

@@ -6,14 +6,18 @@
 namespace opossum {
 
 std::optional<OperatorJoinPredicate> OperatorJoinPredicate::from_expression(const AbstractExpression& predicate,
-                                                            const AbstractLQPNode& left_input,
-                                                            const AbstractLQPNode& right_input) {
+                                                                            const AbstractLQPNode& left_input,
+                                                                            const AbstractLQPNode& right_input) {
   const auto* abstract_predicate_expression = dynamic_cast<const AbstractPredicateExpression*>(&predicate);
   if (!abstract_predicate_expression) return std::nullopt;
 
   switch (abstract_predicate_expression->predicate_condition) {
-    case PredicateCondition::Equals: case PredicateCondition::NotEquals: case PredicateCondition::LessThan:
-    case PredicateCondition::LessThanEquals: case PredicateCondition::GreaterThan: case PredicateCondition::GreaterThanEquals:
+    case PredicateCondition::Equals:
+    case PredicateCondition::NotEquals:
+    case PredicateCondition::LessThan:
+    case PredicateCondition::LessThanEquals:
+    case PredicateCondition::GreaterThan:
+    case PredicateCondition::GreaterThanEquals:
       break;
     default:
       return std::nullopt;
@@ -40,7 +44,8 @@ std::optional<OperatorJoinPredicate> OperatorJoinPredicate::from_expression(cons
   return std::nullopt;
 }
 
-OperatorJoinPredicate::OperatorJoinPredicate(const ColumnIDPair& column_ids, const PredicateCondition predicate_condition):
-  column_ids(column_ids), predicate_condition(predicate_condition) {}
+OperatorJoinPredicate::OperatorJoinPredicate(const ColumnIDPair& column_ids,
+                                             const PredicateCondition predicate_condition)
+    : column_ids(column_ids), predicate_condition(predicate_condition) {}
 
 }  // namespace opossum

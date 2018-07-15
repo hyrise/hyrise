@@ -25,8 +25,6 @@ TEST_F(DropViewNodeTest, Equals) {
   EXPECT_NE(*_drop_view_node, *different_drop_view_node);
 }
 
-TEST_F(DropViewNodeTest, Copy) {
-  EXPECT_EQ(*_drop_view_node->deep_copy(), *_drop_view_node);
-}
+TEST_F(DropViewNodeTest, Copy) { EXPECT_EQ(*_drop_view_node->deep_copy(), *_drop_view_node); }
 
 }  // namespace opossum

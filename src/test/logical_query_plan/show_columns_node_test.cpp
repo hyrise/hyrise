@@ -28,8 +28,6 @@ TEST_F(ShowColumnsNodeTest, Equals) {
   EXPECT_NE(*_show_columns_node, *other_show_columns_node);
 }
 
-TEST_F(ShowColumnsNodeTest, Copy) {
-  EXPECT_EQ(*_show_columns_node->deep_copy(), *_show_columns_node);
-}
+TEST_F(ShowColumnsNodeTest, Copy) { EXPECT_EQ(*_show_columns_node->deep_copy(), *_show_columns_node); }
 
 }  // namespace opossum

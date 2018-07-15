@@ -91,7 +91,6 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
 #define ASSERT_LQP_TIE(output, input_side, input) \
   if (!opossum::check_lqp_tie(output, input_side, input)) FAIL();
 
-
 #define EXPECT_LQP_EQ(lhs, rhs)                                             \
   {                                                                         \
     const auto mismatch = lqp_find_subplan_mismatch(lhs, rhs);              \

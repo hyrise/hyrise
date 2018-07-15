@@ -10,8 +10,6 @@ View::View(const std::shared_ptr<AbstractLQPNode>& lqp, const std::unordered_map
 
 std::shared_ptr<View> View::deep_copy() const { return std::make_shared<View>(lqp->deep_copy(), column_names); }
 
-bool View::deep_equals(const View& other) const {
-  return *lqp == *other.lqp && column_names == other.column_names;
-}
+bool View::deep_equals(const View& other) const { return *lqp == *other.lqp && column_names == other.column_names; }
 
 }  // namespace opossum

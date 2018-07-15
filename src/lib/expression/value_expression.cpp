@@ -10,9 +10,7 @@ namespace opossum {
 ValueExpression::ValueExpression(const AllTypeVariant& value)
     : AbstractExpression(ExpressionType::Value, {}), value(value) {}
 
-bool ValueExpression::requires_computation() const {
-  return false;
-}
+bool ValueExpression::requires_computation() const { return false; }
 
 std::shared_ptr<AbstractExpression> ValueExpression::deep_copy() const {
   return std::make_shared<ValueExpression>(value);

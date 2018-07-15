@@ -35,7 +35,7 @@
 #include "utils/load_table.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
-using namespace std::string_literals;         // NOLINT
+using namespace std::string_literals;            // NOLINT
 
 namespace {
 void load_test_tables() {
@@ -725,8 +725,10 @@ TEST_F(SQLTranslatorTest, InCorrelatedSelect) {
 TEST_F(SQLTranslatorTest, JoinSimple) {
   const auto actual_lqp_a = compile_query("SELECT * FROM int_float JOIN int_float2 ON int_float2.a > int_float.a");
   const auto actual_lqp_b = compile_query("SELECT * FROM int_float LEFT JOIN int_float2 ON int_float2.a > int_float.a");
-  const auto actual_lqp_c = compile_query("SELECT * FROM int_float RIGHT JOIN int_float2 ON int_float2.a > int_float.a");
-  const auto actual_lqp_d = compile_query("SELECT * FROM int_float FULL OUTER JOIN int_float2 ON int_float2.a > int_float.a");
+  const auto actual_lqp_c =
+      compile_query("SELECT * FROM int_float RIGHT JOIN int_float2 ON int_float2.a > int_float.a");
+  const auto actual_lqp_d =
+      compile_query("SELECT * FROM int_float FULL OUTER JOIN int_float2 ON int_float2.a > int_float.a");
 
   const auto a_gt_a = greater_than_(int_float2_a, int_float_a);
   const auto node_a = stored_table_node_int_float;

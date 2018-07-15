@@ -15,7 +15,6 @@
 #include "storage/storage_manager.hpp"
 #include "testing_assert.hpp"
 #include "utils/load_table.hpp"
-#include "testing_assert.hpp"
 
 using namespace opossum::expression_functional;
 
@@ -383,11 +382,11 @@ TEST_F(LogicalQueryPlanTest, PrintWithSubselects) {
   // [0] [Predicate] a = SUBSELECT (LQP, 0x4e2d160, Parameters: )
   //  \_[1] [StoredTable] Name: 'int_int_int'
 
-  EXPECT_TRUE(std::regex_search(
-      stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] a \> SUBSELECT \(LQP, 0x[a-z0-9]+\))"}));
-  EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{"Subselects"}));
   EXPECT_TRUE(std::regex_search(stream.str().c_str(),
-                                std::regex{R"(\[0\] \[Predicate\] a = SUBSELECT \(LQP, 0x[a-z0-9]+\))"}));
+                                std::regex{R"(\[0\] \[Predicate\] a \> SUBSELECT \(LQP, 0x[a-z0-9]+\))"}));
+  EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{"Subselects"}));
+  EXPECT_TRUE(
+      std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] a = SUBSELECT \(LQP, 0x[a-z0-9]+\))"}));
   EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] a = 5)"}));
 }
 
@@ -416,15 +415,16 @@ TEST_F(LogicalQueryPlanTest, DeepCopySubSelects) {
   const auto copied_projection_a = std::dynamic_pointer_cast<ProjectionNode>(copied_lqp);
   const auto copied_predicate_a = std::dynamic_pointer_cast<PredicateNode>(copied_lqp->left_input());
 
-  const auto copied_sub_select_a = std::dynamic_pointer_cast<LQPSelectExpression>(copied_lqp->column_expressions().at(1));
-  const auto copied_sub_select_b = std::dynamic_pointer_cast<LQPSelectExpression>(copied_predicate_a->predicate->arguments.at(1));
+  const auto copied_sub_select_a =
+      std::dynamic_pointer_cast<LQPSelectExpression>(copied_lqp->column_expressions().at(1));
+  const auto copied_sub_select_b =
+      std::dynamic_pointer_cast<LQPSelectExpression>(copied_predicate_a->predicate->arguments.at(1));
 
   // Check that LQPs and SelectExpressions were actually duplicated
   EXPECT_NE(copied_sub_select_a, sub_select);
   EXPECT_NE(copied_sub_select_a->lqp, sub_select->lqp);
   EXPECT_NE(copied_sub_select_b, sub_select);
   EXPECT_NE(copied_sub_select_b->lqp, sub_select->lqp);
-
 }
 
 }  // namespace opossum

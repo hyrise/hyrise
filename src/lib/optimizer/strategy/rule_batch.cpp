@@ -12,5 +12,4 @@ const std::vector<std::shared_ptr<AbstractRule>>& RuleBatch::rules() const { ret
 
 void RuleBatch::add_rule(const std::shared_ptr<AbstractRule>& rule) { _rules.emplace_back(rule); }
 
-
 }  // namespace opossum

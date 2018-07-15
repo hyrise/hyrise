@@ -395,7 +395,8 @@ TEST_F(ExpressionEvaluatorTest, SubstrSeries) {
   EXPECT_TRUE(test_expression<std::string>(table_a, *substr_(s3, 4, 1), {std::nullopt, "d", "l", std::nullopt}));
   EXPECT_TRUE(test_expression<std::string>(table_a, *substr_(s1, a, b), {"a", "ell", "at", "e"}));
   EXPECT_TRUE(test_expression<std::string>(table_a, *substr_(s3, 2, a), {std::nullopt, "bc", "yzl", std::nullopt}));
-  EXPECT_TRUE(test_expression<std::string>(table_a, *substr_("test", 2, c), {"est", std::nullopt, "est", std::nullopt}));
+  EXPECT_TRUE(
+      test_expression<std::string>(table_a, *substr_("test", 2, c), {"est", std::nullopt, "est", std::nullopt}));
   EXPECT_TRUE(test_expression<std::string>(table_empty, *substr_(empty_s, 1, empty_a), {}));
 }
 
@@ -410,8 +411,8 @@ TEST_F(ExpressionEvaluatorTest, ConcatLiterals) {
 
 TEST_F(ExpressionEvaluatorTest, ConcatSeries) {
   EXPECT_TRUE(test_expression<std::string>(table_a, *concat_(s1, s2), {"ab", "HelloWorld", "whatup", "SameSame"}));
-  EXPECT_TRUE(
-      test_expression<std::string>(table_a, *concat_("yo", s1, s2), {"yoab", "yoHelloWorld", "yowhatup", "yoSameSame"}));
+  EXPECT_TRUE(test_expression<std::string>(table_a, *concat_("yo", s1, s2),
+                                           {"yoab", "yoHelloWorld", "yowhatup", "yoSameSame"}));
   EXPECT_TRUE(test_expression<std::string>(table_a, *concat_(concat_("a", "b", "c"), s1, s2),
                                            {"abcab", "abcHelloWorld", "abcwhatup", "abcSameSame"}));
   EXPECT_TRUE(test_expression<std::string>(table_a, *concat_("nope", s1, null_()), {std::nullopt}));
@@ -512,8 +513,8 @@ TEST_F(ExpressionEvaluatorTest, InSelectCorrelated) {
                                        {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(36, select_b), {std::nullopt, 1, 1, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(36.0, select_b), {std::nullopt, 1, 1, std::nullopt}));
-  EXPECT_TRUE(
-      test_expression<int32_t>(table_a, *in_(36.3, select_b), {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(36.3, select_b),
+                                       {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
 }
 
 TEST_F(ExpressionEvaluatorTest, Exists) {
@@ -532,7 +533,7 @@ TEST_F(ExpressionEvaluatorTest, Exists) {
   const auto a_plus_x_eq_13_scan =
       std::make_shared<TableScan>(a_plus_x_projection, ColumnID{0}, PredicateCondition::Equals, 13);
   const auto pqp_select_expression =
-  select_(a_plus_x_eq_13_scan, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
+      select_(a_plus_x_eq_13_scan, DataType::Int, false, std::make_pair(ParameterID{0}, ColumnID{0}));
 
   const auto exists_expression = std::make_shared<ExistsExpression>(pqp_select_expression);
   EXPECT_TRUE(test_expression<int32_t>(table_a, *exists_expression, {0, 0, 1, 1}));
@@ -552,7 +553,8 @@ TEST_F(ExpressionEvaluatorTest, ExtractSeries) {
                                            {"2017", "2014", "2011", "2010"}));
   EXPECT_TRUE(
       test_expression<std::string>(table_a, *extract_(DatetimeComponent::Month, dates), {"12", "08", "09", "01"}));
-  EXPECT_TRUE(test_expression<std::string>(table_a, *extract_(DatetimeComponent::Day, dates), {"06", "05", "03", "02"}));
+  EXPECT_TRUE(
+      test_expression<std::string>(table_a, *extract_(DatetimeComponent::Day, dates), {"06", "05", "03", "02"}));
   EXPECT_TRUE(test_expression<std::string>(table_a, *extract_(DatetimeComponent::Year, dates2),
                                            {"2017", "2014", std::nullopt, std::nullopt}));
   EXPECT_TRUE(test_expression<std::string>(table_a, *extract_(DatetimeComponent::Month, dates2),
@@ -578,7 +580,8 @@ TEST_F(ExpressionEvaluatorTest, CastSeries) {
   EXPECT_TRUE(test_expression<float>(table_a, *cast(a, DataType::Float), {1.0f, 2.0f, 3.0f, 4.0f}));
   EXPECT_TRUE(test_expression<std::string>(table_a, *cast(a, DataType::String), {"1", "2", "3", "4"}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *cast(f, DataType::Int), {99, 2, 13, 15}));
-  EXPECT_TRUE(test_expression<std::string>(table_a, *cast(c, DataType::String), {"33", std::nullopt, "34", std::nullopt}));
+  EXPECT_TRUE(
+      test_expression<std::string>(table_a, *cast(c, DataType::String), {"33", std::nullopt, "34", std::nullopt}));
 }
 
 }  // namespace opossum

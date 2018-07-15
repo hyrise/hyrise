@@ -6,10 +6,8 @@
 
 namespace opossum {
 
-CastExpression::CastExpression(const std::shared_ptr<AbstractExpression>& argument, const DataType data_type):
-  AbstractExpression(ExpressionType::Cast, {argument}), _data_type(data_type) {
-
-}
+CastExpression::CastExpression(const std::shared_ptr<AbstractExpression>& argument, const DataType data_type)
+    : AbstractExpression(ExpressionType::Cast, {argument}), _data_type(data_type) {}
 
 std::shared_ptr<AbstractExpression> CastExpression::deep_copy() const {
   return std::make_shared<CastExpression>(argument()->deep_copy(), _data_type);
@@ -21,14 +19,9 @@ std::string CastExpression::as_column_name() const {
   return stream.str();
 }
 
-DataType CastExpression::data_type() const {
-  return _data_type;
-}
+DataType CastExpression::data_type() const { return _data_type; }
 
-std::shared_ptr<AbstractExpression> CastExpression::argument() const {
-  return arguments[0];
-}
-
+std::shared_ptr<AbstractExpression> CastExpression::argument() const { return arguments[0]; }
 
 bool CastExpression::_shallow_equals(const AbstractExpression& expression) const {
   const auto& other_cast_expression = static_cast<const CastExpression&>(expression);

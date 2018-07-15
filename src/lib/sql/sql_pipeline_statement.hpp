@@ -45,7 +45,8 @@ class SQLPipelineStatement : public Noncopyable {
   SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                        const UseMvcc use_mvcc, const std::shared_ptr<TransactionContext>& transaction_context,
                        const std::shared_ptr<LQPTranslator>& lqp_translator,
-                       const std::shared_ptr<Optimizer>& optimizer, const std::shared_ptr<PreparedStatementCache>& prepared_statements,
+                       const std::shared_ptr<Optimizer>& optimizer,
+                       const std::shared_ptr<PreparedStatementCache>& prepared_statements,
                        const CleanupTemporaries cleanup_temporaries);
 
   // Returns the raw SQL string.

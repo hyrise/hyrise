@@ -30,9 +30,7 @@ ParameterExpression::ParameterExpression(const ParameterID parameter_id,
       parameter_expression_type(ParameterExpressionType::External),
       _referenced_expression_info(referenced_expression_info) {}
 
-bool ParameterExpression::requires_computation() const {
-  return false;
-}
+bool ParameterExpression::requires_computation() const { return false; }
 
 std::shared_ptr<AbstractExpression> ParameterExpression::deep_copy() const {
   if (_referenced_expression_info) {

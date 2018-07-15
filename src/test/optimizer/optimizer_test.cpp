@@ -148,7 +148,8 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   lqp = lqp->deep_copy();
   auto predicate_node_a = std::dynamic_pointer_cast<PredicateNode>(lqp);
   ASSERT_TRUE(predicate_node_a);
-  auto select_a_a = std::dynamic_pointer_cast<LQPSelectExpression>(predicate_node_a->predicate->arguments.at(0)->arguments.at(1));
+  auto select_a_a =
+      std::dynamic_pointer_cast<LQPSelectExpression>(predicate_node_a->predicate->arguments.at(0)->arguments.at(1));
   ASSERT_TRUE(select_a_a);
   auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp->left_input());
   ASSERT_TRUE(projection_node);
@@ -195,7 +196,8 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
    */
   predicate_node_a = std::dynamic_pointer_cast<PredicateNode>(lqp);
   ASSERT_TRUE(predicate_node_a);
-  select_a_a = std::dynamic_pointer_cast<LQPSelectExpression>(predicate_node_a->predicate->arguments.at(0)->arguments.at(1));
+  select_a_a =
+      std::dynamic_pointer_cast<LQPSelectExpression>(predicate_node_a->predicate->arguments.at(0)->arguments.at(1));
   ASSERT_TRUE(select_a_a);
   projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp->left_input());
   ASSERT_TRUE(projection_node);

@@ -33,7 +33,8 @@ class LQPTranslator {
   std::shared_ptr<AbstractOperator> _translate_predicate_node_to_index_scan(
       const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const;
   std::shared_ptr<AbstractOperator> _translate_predicate_node_to_table_scan(
-      const OperatorScanPredicate& operator_scan_predicate, const std::shared_ptr<AbstractOperator>& input_operator) const;
+      const OperatorScanPredicate& operator_scan_predicate,
+      const std::shared_ptr<AbstractOperator>& input_operator) const;
   std::shared_ptr<AbstractOperator> _translate_alias_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_projection_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_sort_node(const std::shared_ptr<AbstractLQPNode>& node) const;

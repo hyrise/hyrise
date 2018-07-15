@@ -48,8 +48,6 @@ TEST_F(PredicateNodeTest, Equals) {
   EXPECT_NE(*other_predicate_node_d, *_predicate_node);
 }
 
-TEST_F(PredicateNodeTest, Copy) {
-  EXPECT_EQ(*_predicate_node->deep_copy(), *_predicate_node);
-}
+TEST_F(PredicateNodeTest, Copy) { EXPECT_EQ(*_predicate_node->deep_copy(), *_predicate_node); }
 
 }  // namespace opossum

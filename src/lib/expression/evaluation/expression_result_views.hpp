@@ -21,7 +21,7 @@ class ExpressionResultNullableSeries {
   using Type = T;
 
   ExpressionResultNullableSeries(const std::vector<T>& values, const std::vector<bool>& nulls)
-  : _values(values), _nulls(nulls) {
+      : _values(values), _nulls(nulls) {
     DebugAssert(values.size() == nulls.size(), "Need as many values as nulls");
   }
 

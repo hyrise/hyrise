@@ -40,9 +40,7 @@ std::string LogicalExpression::as_column_name() const {
   return stream.str();
 }
 
-DataType LogicalExpression::data_type() const {
-  return ExpressionEvaluator::DataTypeBool;
-}
+DataType LogicalExpression::data_type() const { return ExpressionEvaluator::DataTypeBool; }
 
 bool LogicalExpression::_shallow_equals(const AbstractExpression& expression) const {
   return logical_operator == static_cast<const LogicalExpression&>(expression).logical_operator;

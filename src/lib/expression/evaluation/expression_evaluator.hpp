@@ -62,7 +62,8 @@ class ExpressionEvaluator final {
   std::shared_ptr<ExpressionResult<Result>> _evaluate_logical_expression(const LogicalExpression& expression);
 
   template <typename Result>
-  std::shared_ptr<ExpressionResult<Result>> _evaluate_predicate_expression(const AbstractPredicateExpression& expression);
+  std::shared_ptr<ExpressionResult<Result>> _evaluate_predicate_expression(
+      const AbstractPredicateExpression& expression);
 
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> _evaluate_binary_predicate_expression(
@@ -96,7 +97,8 @@ class ExpressionEvaluator final {
   std::shared_ptr<ExpressionResult<Result>> _evaluate_cast_expression(const CastExpression& cast_expression);
 
   template <typename Result>
-  std::shared_ptr<ExpressionResult<Result>> _evaluate_value_or_parameter_expression(const AbstractExpression& expression);
+  std::shared_ptr<ExpressionResult<Result>> _evaluate_value_or_parameter_expression(
+      const AbstractExpression& expression);
 
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> _evaluate_function_expression(const FunctionExpression& expression);
@@ -105,7 +107,8 @@ class ExpressionEvaluator final {
   std::shared_ptr<ExpressionResult<Result>> _evaluate_extract_expression(const ExtractExpression& extract_expression);
 
   template <typename Result>
-  std::shared_ptr<ExpressionResult<Result>> _evaluate_unary_minus_expression(const UnaryMinusExpression& unary_minus_expression);
+  std::shared_ptr<ExpressionResult<Result>> _evaluate_unary_minus_expression(
+      const UnaryMinusExpression& unary_minus_expression);
 
   template <size_t offset, size_t count>
   std::shared_ptr<ExpressionResult<std::string>> _evaluate_extract_substr(
@@ -148,8 +151,7 @@ class ExpressionEvaluator final {
    * Either operand can be either empty (the operand is not nullable), contain one element (the operand is a literal
    * with null info) or can have n rows (the operand is a nullable series)
    */
-  std::vector<bool> _evaluate_default_null_logic(const std::vector<bool>& left,
-                                                 const std::vector<bool>& right) const;
+  std::vector<bool> _evaluate_default_null_logic(const std::vector<bool>& left, const std::vector<bool>& right) const;
 
   void _materialize_column_if_not_yet_materialized(const ColumnID column_id);
 

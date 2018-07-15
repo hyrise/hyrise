@@ -3,10 +3,10 @@
 #include <sstream>
 
 #include "expression/expression_utils.hpp"
-#include "utils/assert.hpp"
+#include "resolve_type.hpp"
 #include "statistics/column_statistics.hpp"
 #include "statistics/table_statistics.hpp"
-#include "resolve_type.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -27,9 +27,8 @@ const std::vector<std::shared_ptr<AbstractExpression>>& ProjectionNode::column_e
 
 std::vector<std::shared_ptr<AbstractExpression>> ProjectionNode::node_expressions() const { return expressions; }
 
-
 std::shared_ptr<TableStatistics> ProjectionNode::derive_statistics_from(
-const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
+    const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
   DebugAssert(left_input && !right_input, "ProjectionNode need left_input and no right_input");
 
   const auto input_statistics = left_input->get_statistics();
@@ -47,7 +46,8 @@ const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<Abstra
       // TODO(anybody) Statistics for expressions not yet supported
       resolve_data_type(expression->data_type(), [&](const auto data_type_t) {
         using ExpressionDataType = typename decltype(data_type_t)::type;
-        column_statistics.emplace_back(std::make_shared<ColumnStatistics<ExpressionDataType>>(ColumnStatistics<ExpressionDataType>::dummy()));
+        column_statistics.emplace_back(
+            std::make_shared<ColumnStatistics<ExpressionDataType>>(ColumnStatistics<ExpressionDataType>::dummy()));
       });
 
       table_type = TableType::Data;

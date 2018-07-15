@@ -1,13 +1,12 @@
-#include "gtest/gtest.h"
-#include "expression/evaluation/expression_result_views.hpp"
 #include "expression/evaluation/expression_result.hpp"
-
+#include "expression/evaluation/expression_result_views.hpp"
+#include "gtest/gtest.h"
 
 namespace opossum {
 
 class ExpressionResultTest : public ::testing::Test {
  public:
-  template<typename ExpectedViewType>
+  template <typename ExpectedViewType>
   bool check_view(std::vector<typename ExpectedViewType::Type> values, std::vector<bool> nulls) {
     auto match = false;
     ExpressionResult<typename ExpectedViewType::Type>(values, nulls).as_view([&](const auto& view) {
@@ -44,4 +43,4 @@ TEST_F(ExpressionResultTest, DataAccess) {
   EXPECT_EQ(ExpressionResult<int32_t>({3, 5}, {true, false}).value(1), 5);
 }
 
-}
+}  // namespace opossum

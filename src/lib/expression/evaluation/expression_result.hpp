@@ -5,11 +5,11 @@
 #include "boost/variant.hpp"
 #include "boost/variant/apply_visitor.hpp"
 
+#include "expression_result_views.hpp"
 #include "null_value.hpp"
 #include "storage/column_iterables/column_iterator_values.hpp"
 #include "storage/create_iterable_from_column.hpp"
 #include "utils/assert.hpp"
-#include "expression_result_views.hpp"
 
 namespace opossum {
 
@@ -56,7 +56,7 @@ class ExpressionResult : public BaseExpressionResult {
   ExpressionResult() = default;
 
   ExpressionResult(std::vector<T> values, std::vector<bool> nulls = {})
-  : values(std::move(values)), nulls(std::move(nulls)) {
+      : values(std::move(values)), nulls(std::move(nulls)) {
     DebugAssert(nulls.empty() || nulls.size() == values.size(), "Need as many nulls as values or no nulls at all");
   }
 

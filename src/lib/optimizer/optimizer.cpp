@@ -5,8 +5,8 @@
 
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_select_expression.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
 #include "strategy/constant_calculation_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
@@ -41,7 +41,8 @@ namespace {
 using namespace opossum;  // NOLINT
 
 // All SelectExpressions referencing the same LQP
-using SelectExpressionsByLQP = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<LQPSelectExpression>>>>;
+using SelectExpressionsByLQP =
+    std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, std::vector<std::shared_ptr<LQPSelectExpression>>>>;
 
 // See comment at the top of file for the purpose of this.
 void collect_select_expressions_by_lqp(SelectExpressionsByLQP& select_expressions_by_lqp,
@@ -79,7 +80,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   auto optimizer = std::make_shared<Optimizer>(10);
 
   RuleBatch main_batch(RuleBatchExecutionPolicy::Iterative);
- main_batch.add_rule(std::make_shared<PredicatePushdownRule>());
+  main_batch.add_rule(std::make_shared<PredicatePushdownRule>());
   main_batch.add_rule(std::make_shared<PredicateReorderingRule>());
   main_batch.add_rule(std::make_shared<JoinDetectionRule>());
   optimizer->add_rule_batch(main_batch);
@@ -127,7 +128,8 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<Abstr
   return optimized_node;
 }
 
-bool Optimizer::_apply_rule_batch(const RuleBatch& rule_batch, const std::shared_ptr<AbstractLQPNode>& root_node) const {
+bool Optimizer::_apply_rule_batch(const RuleBatch& rule_batch,
+                                  const std::shared_ptr<AbstractLQPNode>& root_node) const {
   auto lqp_changed = false;
 
   for (auto& rule : rule_batch.rules()) {

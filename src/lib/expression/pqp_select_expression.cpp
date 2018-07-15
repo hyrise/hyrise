@@ -21,8 +21,8 @@ PQPSelectExpression::PQPSelectExpression(const std::shared_ptr<AbstractOperator>
 
 std::shared_ptr<AbstractExpression> PQPSelectExpression::deep_copy() const {
   if (_data_type_info) {
-    return std::make_shared<PQPSelectExpression>(pqp->deep_copy(), _data_type_info->data_type, _data_type_info->nullable,
-                                                 parameters);
+    return std::make_shared<PQPSelectExpression>(pqp->deep_copy(), _data_type_info->data_type,
+                                                 _data_type_info->nullable, parameters);
   } else {
     return std::make_shared<PQPSelectExpression>(pqp->deep_copy(), parameters);
   }

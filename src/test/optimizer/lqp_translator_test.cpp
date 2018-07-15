@@ -412,8 +412,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeUnaryScan) {
   /**
    * Build LQP and translate to PQP
    */
-  auto predicate_node =
-      PredicateNode::make(equals_(int_float_b, 42), int_float_node);
+  auto predicate_node = PredicateNode::make(equals_(int_float_b, 42), int_float_node);
   const auto op = LQPTranslator{}.translate_node(predicate_node);
 
   /**
@@ -646,8 +645,7 @@ TEST_F(LQPTranslatorTest, MultipleNodesHierarchy) {
   auto predicate_node_left = PredicateNode::make(equals_(int_float_a, 42), int_float_node);
   auto predicate_node_right = PredicateNode::make(greater_than_(int_float2_b, 30.0), int_float2_node);
 
-  auto join_node =
-      JoinNode::make(JoinMode::Inner, equals_(int_float_a, int_float2_a));
+  auto join_node = JoinNode::make(JoinMode::Inner, equals_(int_float_a, int_float2_a));
   join_node->set_left_input(predicate_node_left);
   join_node->set_right_input(predicate_node_right);
 

@@ -16,7 +16,9 @@ std::shared_ptr<ValueExpression> to_expression(const AllTypeVariant& value) {
   return std::make_shared<ValueExpression>(value);
 }
 
-std::shared_ptr<ValueExpression> value_(const AllTypeVariant& value) { return std::make_shared<ValueExpression>(value); }
+std::shared_ptr<ValueExpression> value_(const AllTypeVariant& value) {
+  return std::make_shared<ValueExpression>(value);
+}
 
 std::shared_ptr<ValueExpression> null_() { return std::make_shared<ValueExpression>(NullValue{}); }
 
@@ -24,7 +26,7 @@ std::shared_ptr<ParameterExpression> parameter_(const ParameterID parameter_id) 
   return std::make_shared<ParameterExpression>(parameter_id);
 }
 
-std::shared_ptr<LQPColumnExpression> column_(const LQPColumnReference &column_reference) {
+std::shared_ptr<LQPColumnExpression> column_(const LQPColumnReference& column_reference) {
   return std::make_shared<LQPColumnExpression>(column_reference);
 }
 

@@ -120,8 +120,7 @@ FilterByValueEstimate ColumnStatistics<std::string>::estimate_predicate_with_val
 
 template <typename ColumnDataType>
 FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_value_placeholder(
-    const PredicateCondition predicate_condition,
-    const std::optional<AllTypeVariant>& value2) const {
+    const PredicateCondition predicate_condition, const std::optional<AllTypeVariant>& value2) const {
   switch (predicate_condition) {
     // Simply assume the value will be in (_min, _max) and pick _min as the representative
     case PredicateCondition::Equals:
@@ -443,7 +442,7 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_equals_with_val
   }
   auto column_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>(0.0f, new_distinct_count, value, value);
   if (distinct_count() == 0.0f) {
-    return {0.0f, column_statistics};    
+    return {0.0f, column_statistics};
   } else {
     return {non_null_value_ratio() * new_distinct_count / distinct_count(), column_statistics};
   }

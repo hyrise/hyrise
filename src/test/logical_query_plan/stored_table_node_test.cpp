@@ -47,8 +47,6 @@ TEST_F(StoredTableNodeTest, Equals) {
   EXPECT_NE(*_stored_table_node, *different_node_b);
 }
 
-TEST_F(StoredTableNodeTest, Copy) {
-  EXPECT_EQ(*_stored_table_node->deep_copy(), *_stored_table_node);
-}
+TEST_F(StoredTableNodeTest, Copy) { EXPECT_EQ(*_stored_table_node->deep_copy(), *_stored_table_node); }
 
 }  // namespace opossum

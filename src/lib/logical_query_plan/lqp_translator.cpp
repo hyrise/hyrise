@@ -136,9 +136,11 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
   const auto input_node = node->left_input();
   const auto input_operator = translate_node(input_node);
   const auto predicate_node = std::static_pointer_cast<PredicateNode>(node);
-  const auto operator_scan_predicates = OperatorScanPredicate::from_expression(*predicate_node->predicate, *predicate_node);
+  const auto operator_scan_predicates =
+      OperatorScanPredicate::from_expression(*predicate_node->predicate, *predicate_node);
 
-  Assert(operator_scan_predicates, "Couldn't translate to OperatorPredicate: "s + predicate_node->predicate->as_column_name());
+  Assert(operator_scan_predicates,
+         "Couldn't translate to OperatorPredicate: "s + predicate_node->predicate->as_column_name());
 
   auto output_operator = input_operator;
 
@@ -157,8 +159,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_table_scan(
-  const OperatorScanPredicate& operator_scan_predicate, const std::shared_ptr<AbstractOperator>& input_operator) const {
-
+    const OperatorScanPredicate& operator_scan_predicate,
+    const std::shared_ptr<AbstractOperator>& input_operator) const {
   Assert(operator_scan_predicate.predicate_condition != PredicateCondition::In, "TableScan doesn't support IN yet");
 
   const auto column_id = operator_scan_predicate.column_id;
@@ -168,8 +170,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_ta
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_index_scan(
-const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const {
-
+    const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const {
   /**
    * Not using OperatorScanPredicate, since the IndexScan still wants to do BETWEEN in one step and splitting it up
    * in two doesn't work as you can only do a single IndexScan per Table.
@@ -319,7 +320,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
    * Assert that the Join Predicate is simple, e.g. of the form <column_a> <predicate> <column_b>.
    * We do not require <column_a> to be in the left input though.
    */
-  const auto operator_join_predicate = OperatorJoinPredicate::from_expression(*join_node->join_predicate, *node->left_input(), *node->right_input());
+  const auto operator_join_predicate =
+      OperatorJoinPredicate::from_expression(*join_node->join_predicate, *node->left_input(), *node->right_input());
   Assert(operator_join_predicate, "Couldn't translate join predicate: "s + join_node->join_predicate->as_column_name());
 
   const auto predicate_condition = operator_join_predicate->predicate_condition;
@@ -522,6 +524,5 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
 
   return pqp_expressions;
 }
-
 
 }  // namespace opossum

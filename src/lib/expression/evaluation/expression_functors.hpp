@@ -14,14 +14,19 @@ namespace opossum {
 template <typename T>
 constexpr bool is_logical_operand = std::is_same_v<int32_t, T> || std::is_same_v<NullValue, T>;
 
-
 // Turn a bool into itself and a NULL into false
 bool to_bool(const bool value) { return value; }
 bool to_bool(const NullValue& value) { return false; }
 
 // Cast a value/NULL into another type
-template <typename T, typename V> T to_value(const V& v) { return v; }
-template <typename T> T to_value(const NullValue& v) { return T{}; }
+template <typename T, typename V>
+T to_value(const V& v) {
+  return v;
+}
+template <typename T>
+T to_value(const NullValue& v) {
+  return T{};
+}
 
 /**
  * SQL's OR which has a ternary NULL logic, e.g., `TRUE OR NULL -> TRUE`
@@ -77,7 +82,8 @@ struct STLComparisonFunctorWrapper {
         std::is_same_v<int32_t, Result> &&
         // LeftIsString -> RightIsNullOrString
         // RightIsString -> LeftIsNullOrString
-        (!std::is_same_v<std::string, ArgA> || (std::is_same_v<NullValue, ArgB> || std::is_same_v<std::string, ArgB>)) &&
+        (!std::is_same_v<std::string, ArgA> ||
+         (std::is_same_v<NullValue, ArgB> || std::is_same_v<std::string, ArgB>)) &&
         (!std::is_same_v<std::string, ArgB> || (std::is_same_v<NullValue, ArgA> || std::is_same_v<std::string, ArgA>));
   };
 
@@ -106,13 +112,14 @@ template <template <typename T> typename Functor>
 struct STLArithmeticFunctorWrapper {
   template <typename Result, typename ArgA, typename ArgB>
   struct supports {
-    static constexpr bool value =
-        !std::is_same_v<std::string, Result> && !std::is_same_v<std::string, ArgA> && !std::is_same_v<std::string, ArgB>;
+    static constexpr bool value = !std::is_same_v<std::string, Result> && !std::is_same_v<std::string, ArgA> &&
+                                  !std::is_same_v<std::string, ArgB>;
   };
 
   template <typename Result, typename ArgA, typename ArgB>
   void operator()(Result& result, const ArgA& a, const ArgB& b) {
-    if constexpr (std::is_same_v<NullValue, Result> || std::is_same_v<NullValue, ArgA> || std::is_same_v<NullValue, ArgB>) {
+    if constexpr (std::is_same_v<NullValue, Result> || std::is_same_v<NullValue, ArgA> ||
+                  std::is_same_v<NullValue, ArgB>) {
       result = Result{};
     } else {
       result = Functor<std::common_type_t<ArgA, ArgB>>{}(a, b);
@@ -129,8 +136,8 @@ using MultiplicationEvaluator = STLArithmeticFunctorWrapper<std::multiplies>;
 struct ModuloEvaluator {
   template <typename Result, typename ArgA, typename ArgB>
   struct supports {
-    static constexpr bool value =
-    !std::is_same_v<std::string, Result> && !std::is_same_v<std::string, ArgA> && !std::is_same_v<std::string, ArgB>;
+    static constexpr bool value = !std::is_same_v<std::string, Result> && !std::is_same_v<std::string, ArgA> &&
+                                  !std::is_same_v<std::string, ArgB>;
   };
 
   template <typename Result, typename ArgA, typename ArgB>
@@ -139,7 +146,8 @@ struct ModuloEvaluator {
     result_null = a_null || b_null;
     if (result_null) return;
 
-    if constexpr (std::is_same_v<NullValue, Result> || std::is_same_v<NullValue, ArgA> || std::is_same_v<NullValue, ArgB>) {
+    if constexpr (std::is_same_v<NullValue, Result> || std::is_same_v<NullValue, ArgA> ||
+                  std::is_same_v<NullValue, ArgB>) {
       result_value = Result{};
     } else {
       if (b_value == 0) {
@@ -159,8 +167,8 @@ struct ModuloEvaluator {
 struct DivisionEvaluator {
   template <typename Result, typename ArgA, typename ArgB>
   struct supports {
-    static constexpr bool value =
-    !std::is_same_v<std::string, Result> && !std::is_same_v<std::string, ArgA> && !std::is_same_v<std::string, ArgB>;
+    static constexpr bool value = !std::is_same_v<std::string, Result> && !std::is_same_v<std::string, ArgA> &&
+                                  !std::is_same_v<std::string, ArgB>;
   };
 
   template <typename Result, typename ArgA, typename ArgB>
@@ -168,7 +176,8 @@ struct DivisionEvaluator {
                   const bool b_null) {
     result_null = a_null || b_null;
 
-    if constexpr (std::is_same_v<NullValue, Result> || std::is_same_v<NullValue, ArgA> || std::is_same_v<NullValue, ArgB>) {
+    if constexpr (std::is_same_v<NullValue, Result> || std::is_same_v<NullValue, ArgA> ||
+                  std::is_same_v<NullValue, ArgB>) {
       result_value = Result{};
     } else {
       if (b_value == 0) {

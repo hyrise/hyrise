@@ -37,8 +37,8 @@
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
-#include "utils/invalid_input_exception.hpp"
 #include "utils/filesystem.hpp"
+#include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
 
 #define ANSI_COLOR_RED "\x1B[31m"

@@ -13,8 +13,8 @@
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
-#include "statistics/table_statistics.hpp"
 #include "operators/operator_join_predicate.hpp"
+#include "statistics/table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -82,13 +82,15 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
   } else {
     Assert(join_predicate, "Expected join predicate");
 
-    const auto operator_join_predicate = OperatorJoinPredicate::from_expression(*join_predicate, *left_input, *right_input);
+    const auto operator_join_predicate =
+        OperatorJoinPredicate::from_expression(*join_predicate, *left_input, *right_input);
 
     // TODO(anybody) (Complex) predicate we can't build statistics for
     if (!operator_join_predicate) return cross_join_statistics;
 
     return std::make_shared<TableStatistics>(left_input->get_statistics()->estimate_predicated_join(
-        *right_input->get_statistics(), join_mode, operator_join_predicate->column_ids, operator_join_predicate->predicate_condition));
+        *right_input->get_statistics(), join_mode, operator_join_predicate->column_ids,
+        operator_join_predicate->predicate_condition));
   }
 }
 

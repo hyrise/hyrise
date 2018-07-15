@@ -19,7 +19,7 @@ bool AbstractExpression::requires_computation() const { return true; }
 
 bool AbstractExpression::is_nullable() const {
   return std::any_of(arguments.begin(), arguments.end(),
-                      [](const auto& expression) { return expression->is_nullable(); });
+                     [](const auto& expression) { return expression->is_nullable(); });
 }
 
 bool AbstractExpression::operator==(const AbstractExpression& other) const {
@@ -28,9 +28,7 @@ bool AbstractExpression::operator==(const AbstractExpression& other) const {
   return _shallow_equals(other);
 }
 
-bool AbstractExpression::operator!=(const AbstractExpression& other) const {
-  return !operator==(other);
-}
+bool AbstractExpression::operator!=(const AbstractExpression& other) const { return !operator==(other); }
 
 size_t AbstractExpression::hash() const {
   auto hash = boost::hash_value(static_cast<ExpressionType>(type));

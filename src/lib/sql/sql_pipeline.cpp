@@ -32,7 +32,7 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
 
   AssertInput(parse_result.isValid(), create_sql_parser_error_message(sql, parse_result));
   DebugAssert(parse_result.size() > 0, "Cannot create empty SQLPipeline.");
-  
+
   _sql_pipeline_statements.reserve(parse_result.size());
 
   std::vector<std::shared_ptr<hsql::SQLParserResult>> parsed_statements;

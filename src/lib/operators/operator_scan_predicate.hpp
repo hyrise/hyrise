@@ -21,11 +21,11 @@ struct OperatorScanPredicate {
    * @return std::nullopt if that fails (e.g. the expression is a more complex expression)
    */
   static std::optional<std::vector<OperatorScanPredicate>> from_expression(const AbstractExpression& expression,
-                                                          const AbstractLQPNode& node);
+                                                                           const AbstractLQPNode& node);
 
   OperatorScanPredicate() = default;
   OperatorScanPredicate(const ColumnID column_id, const PredicateCondition predicate_condition,
-                    const AllParameterVariant& value = NullValue{});
+                        const AllParameterVariant& value = NullValue{});
 
   ColumnID column_id{INVALID_COLUMN_ID};
   PredicateCondition predicate_condition{PredicateCondition::Equals};

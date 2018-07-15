@@ -16,8 +16,7 @@ MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optio
     : AbstractLQPNode(LQPNodeType::Mock), _name(name), _constructor_arguments(column_definitions) {}
 
 MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics)
-    : AbstractLQPNode(LQPNodeType::Mock), _constructor_arguments(statistics) {
-}
+    : AbstractLQPNode(LQPNodeType::Mock), _constructor_arguments(statistics) {}
 
 LQPColumnReference MockNode::get_column(const std::string& name) const {
   const auto& column_definitions = this->column_definitions();
@@ -61,10 +60,10 @@ const std::vector<std::shared_ptr<AbstractExpression>>& MockNode::column_express
 
 std::string MockNode::description() const { return "[MockNode '"s + _name.value_or("Unnamed") + "']"; }
 
-std::shared_ptr<TableStatistics>  MockNode::derive_statistics_from(
-const std::shared_ptr<AbstractLQPNode>& left_input,
-const std::shared_ptr<AbstractLQPNode>& right_input) const {
-  Assert(_constructor_arguments.type() == typeid(std::shared_ptr<TableStatistics>), "Can only return statistics from statistics mock node");
+std::shared_ptr<TableStatistics> MockNode::derive_statistics_from(
+    const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
+  Assert(_constructor_arguments.type() == typeid(std::shared_ptr<TableStatistics>),
+         "Can only return statistics from statistics mock node");
   return boost::get<std::shared_ptr<TableStatistics>>(_constructor_arguments);
 }
 

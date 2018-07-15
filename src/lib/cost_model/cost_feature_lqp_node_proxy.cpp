@@ -7,8 +7,8 @@
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
-#include "operators/operator_scan_predicate.hpp"
 #include "operators/operator_join_predicate.hpp"
+#include "operators/operator_scan_predicate.hpp"
 #include "resolve_type.hpp"
 #include "statistics/column_statistics.hpp"
 #include "statistics/table_statistics.hpp"
@@ -36,8 +36,10 @@ CostFeatureVariant CostFeatureLQPNodeProxy::_extract_feature_impl(const CostFeat
 
     default:
       switch (_node->type) {
-        case LQPNodeType::Predicate: return _extract_feature_from_predicate_node(cost_feature);
-        case LQPNodeType::Join: return _extract_feature_from_join_node(cost_feature);
+        case LQPNodeType::Predicate:
+          return _extract_feature_from_predicate_node(cost_feature);
+        case LQPNodeType::Join:
+          return _extract_feature_from_join_node(cost_feature);
         default:
           Fail("CostFeature not defined for LQPNodeType");
       }
@@ -48,11 +50,13 @@ CostFeatureVariant CostFeatureLQPNodeProxy::_extract_feature_from_predicate_node
   const auto predicate_node = std::static_pointer_cast<PredicateNode>(_node);
 
   // PredicateCondition::Between can only be extracted with this little hack, OperatorScanPredicate will split it up
-  if (cost_feature == CostFeature::PredicateCondition && std::dynamic_pointer_cast<BetweenExpression>(predicate_node->predicate)) {
+  if (cost_feature == CostFeature::PredicateCondition &&
+      std::dynamic_pointer_cast<BetweenExpression>(predicate_node->predicate)) {
     return PredicateCondition::Between;
   }
 
-  const auto operator_predicates = OperatorScanPredicate::from_expression(*std::static_pointer_cast<PredicateNode>(_node)->predicate, *_node->left_input());
+  const auto operator_predicates = OperatorScanPredicate::from_expression(
+      *std::static_pointer_cast<PredicateNode>(_node)->predicate, *_node->left_input());
   Assert(operator_predicates, "Predicate too complex to extract a CostFeature from");
   const auto& operator_predicate = operator_predicates->at(0);
 
@@ -82,7 +86,8 @@ CostFeatureVariant CostFeatureLQPNodeProxy::_extract_feature_from_predicate_node
 CostFeatureVariant CostFeatureLQPNodeProxy::_extract_feature_from_join_node(const CostFeature cost_feature) const {
   const auto predicate_node = std::static_pointer_cast<PredicateNode>(_node);
 
-  const auto operator_predicate = OperatorJoinPredicate::from_expression(*std::static_pointer_cast<JoinNode>(_node)->join_predicate, *_node->left_input(), *_node->right_input());
+  const auto operator_predicate = OperatorJoinPredicate::from_expression(
+      *std::static_pointer_cast<JoinNode>(_node)->join_predicate, *_node->left_input(), *_node->right_input());
   Assert(operator_predicate, "Predicate too complex to extract a CostFeature from");
 
   switch (cost_feature) {
@@ -101,7 +106,6 @@ CostFeatureVariant CostFeatureLQPNodeProxy::_extract_feature_from_join_node(cons
     default:
       Fail("Unexpected CostFeature");
   }
-
 }
 
 }  // namespace opossum

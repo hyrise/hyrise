@@ -237,9 +237,7 @@ bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
   return !lqp_find_subplan_mismatch(mutable_this, mutable_rhs);
 }
 
-bool AbstractLQPNode::operator!=(const AbstractLQPNode& rhs) const {
-  return !operator==(rhs);
-}
+bool AbstractLQPNode::operator!=(const AbstractLQPNode& rhs) const { return !operator==(rhs); }
 
 void AbstractLQPNode::_print_impl(std::ostream& out) const {
   const auto get_inputs_fn = [](const auto& node) {

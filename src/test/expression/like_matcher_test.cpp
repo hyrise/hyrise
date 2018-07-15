@@ -12,9 +12,7 @@ class LikeMatcherTest : public ::testing::Test {
  public:
   bool match(const std::string& value, const std::string& pattern) const {
     auto result = false;
-    LikeMatcher{pattern}.resolve(false, [&](const auto& matcher) {
-      result = matcher(value);
-    });
+    LikeMatcher{pattern}.resolve(false, [&](const auto& matcher) { result = matcher(value); });
     return result;
   }
 };

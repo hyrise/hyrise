@@ -11,15 +11,11 @@ namespace opossum {
 class OperatorJoinPredicateTest : public ::testing::Test {
  public:
   void SetUp() override {
-    node_a = MockNode::make(
-    MockNode::ColumnDefinitions{{DataType::Int,    "a"},
-                                {DataType::Float,  "b"}});
+    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}});
     a_a = node_a->get_column("a");
     a_b = node_a->get_column("b");
 
-    node_b = MockNode::make(
-    MockNode::ColumnDefinitions{{DataType::Int,    "a"},
-                                {DataType::Float,  "b"}});
+    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}});
     b_a = node_b->get_column("a");
     b_b = node_b->get_column("b");
   }

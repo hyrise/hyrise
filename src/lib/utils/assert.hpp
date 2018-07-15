@@ -55,9 +55,9 @@ namespace opossum {
     opossum::Fail(std::string(__FILENAME__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg); \
   }
 
-#define AssertInput(expr, msg)                                                             \
-  if (!static_cast<bool>(expr)) {                                                          \
-    throw InvalidInputException(std::string("Invalid input error: ") + msg);               \
+#define AssertInput(expr, msg)                                               \
+  if (!static_cast<bool>(expr)) {                                            \
+    throw InvalidInputException(std::string("Invalid input error: ") + msg); \
   }
 
 #if IS_DEBUG

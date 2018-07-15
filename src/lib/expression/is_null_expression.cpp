@@ -31,8 +31,6 @@ std::string IsNullExpression::as_column_name() const {
   return stream.str();
 }
 
-ExpressionPrecedence IsNullExpression::_precedence() const {
-  return ExpressionPrecedence::UnaryPredicate;
-}
+ExpressionPrecedence IsNullExpression::_precedence() const { return ExpressionPrecedence::UnaryPredicate; }
 
 }  // namespace opossum

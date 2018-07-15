@@ -45,13 +45,12 @@ TEST_F(ProjectionNodeTest, Equals) {
 
   const auto different_projection_node_a =
       ProjectionNode::make(expression_vector(_a, _c, _b, add_(_b, _c), add_(_a, _c)), _mock_node);
-  const auto different_projection_node_b = ProjectionNode::make(expression_vector(_c, _a, _b, add_(_b, _c)), _mock_node);
+  const auto different_projection_node_b =
+      ProjectionNode::make(expression_vector(_c, _a, _b, add_(_b, _c)), _mock_node);
   EXPECT_NE(*_projection_node, *different_projection_node_a);
   EXPECT_NE(*_projection_node, *different_projection_node_b);
 }
 
-TEST_F(ProjectionNodeTest, Copy) {
-  EXPECT_EQ(*_projection_node->deep_copy(), *_projection_node);
-}
+TEST_F(ProjectionNodeTest, Copy) { EXPECT_EQ(*_projection_node->deep_copy(), *_projection_node); }
 
 }  // namespace opossum

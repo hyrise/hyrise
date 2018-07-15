@@ -84,10 +84,21 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
 
   for (const auto& column_definition : table.column_definitions()) {
     switch (column_definition.data_type) {
-      case DataType::Int: case DataType::Long: col_types.push_back("INT"); break;
-      case DataType::Float: case DataType::Double: col_types.push_back("REAL"); break;
-      case DataType::String: col_types.push_back("TEXT"); break;
-      case DataType::Null: case DataType::Bool: Fail("SQLiteWrapper: column type not supported."); break;
+      case DataType::Int:
+      case DataType::Long:
+        col_types.push_back("INT");
+        break;
+      case DataType::Float:
+      case DataType::Double:
+        col_types.push_back("REAL");
+        break;
+      case DataType::String:
+        col_types.push_back("TEXT");
+        break;
+      case DataType::Null:
+      case DataType::Bool:
+        Fail("SQLiteWrapper: column type not supported.");
+        break;
     }
   }
 
@@ -279,7 +290,7 @@ void SQLiteWrapper::_add_row(std::shared_ptr<Table> table, sqlite3_stmt* result_
 }
 
 void SQLiteWrapper::_exec_sql(const std::string& sql) const {
-  char * err_msg;
+  char* err_msg;
   auto rc = sqlite3_exec(_db, sql.c_str(), 0, 0, &err_msg);
 
   if (rc != SQLITE_OK) {

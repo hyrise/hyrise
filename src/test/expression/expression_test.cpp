@@ -1,9 +1,9 @@
 #include "gtest/gtest.h"
 
 #include "expression/case_expression.hpp"
-#include "expression/pqp_column_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -13,7 +13,7 @@
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
 
-using namespace std::string_literals;         // NOLINT
+using namespace std::string_literals;            // NOLINT
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
@@ -220,7 +220,7 @@ TEST_F(ExpressionTest, DataType) {
   EXPECT_EQ(and_(1, 1)->data_type(), DataType::Int);
   EXPECT_EQ(or_(1, 1)->data_type(), DataType::Int);
   EXPECT_EQ(is_null_(5)->data_type(), DataType::Int);
-  
+
   EXPECT_EQ(case_(1, int32_t{1}, int32_t{1})->data_type(), DataType::Int);
   EXPECT_EQ(case_(1, double(2.3), int32_t{1})->data_type(), DataType::Double);
   EXPECT_EQ(substr_("Hello", 1, 2)->data_type(), DataType::String);
