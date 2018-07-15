@@ -208,8 +208,6 @@ set(
     operators/maintenance/show_tables.cpp
     operators/maintenance/show_tables.hpp
     operators/maintenance/show_tables.hpp
-    operators/physical_query_plan.cpp
-    operators/physical_query_plan.hpp
     operators/print.cpp
     operators/print.hpp
     operators/product.cpp
