@@ -52,7 +52,7 @@ class JitAwareLQPTranslator final : public LQPTranslator {
       const std::shared_ptr<AbstractLQPNode>& input_node) const;
 
   std::shared_ptr<const JitExpression> _try_translate_expression_to_jit_expression(
-      const LQPExpression& lqp_expression, JitReadTuples& jit_source,
+      const AbstractExpression& lqp_expression, JitReadTuples& jit_source,
       const std::shared_ptr<AbstractLQPNode>& input_node) const;
 
   std::shared_ptr<const JitExpression> _try_translate_column_to_jit_expression(

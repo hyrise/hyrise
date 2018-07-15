@@ -250,15 +250,6 @@ set(
     statistics/chunk_statistics/chunk_statistics.hpp
     statistics/chunk_statistics/min_max_filter.hpp
     statistics/chunk_statistics/range_filter.hpp
-    #optimizer/join_ordering/join_edge.cpp
-    #optimizer/join_ordering/join_edge.hpp
-    #optimizer/join_ordering/join_graph_builder.cpp
-    #optimizer/join_ordering/join_graph_builder.hpp
-    #optimizer/join_ordering/join_graph.cpp
-    #optimizer/join_ordering/join_graph.hpp
-    #optimizer/join_ordering/join_plan_predicate.cpp
-    #optimizer/join_ordering/join_plan_predicate.hpp
-    #optimizer/join_ordering/join_vertex_set.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
@@ -303,21 +294,21 @@ set(
     scheduler/topology.hpp
     scheduler/worker.cpp
     scheduler/worker.hpp
-#    server/client_connection.cpp
-#    server/client_connection.hpp
-#    server/postgres_wire_handler.cpp
-#    server/postgres_wire_handler.hpp
-#    server/query_response_builder.cpp
-#    server/query_response_builder.hpp
-#    server/server.cpp
-#    server/server.hpp
-#    server/server_session.cpp
-#    server/server_session.hpp
-#    server/task_runner.hpp
-#    server/then_operator.hpp
+    server/client_connection.cpp
+    server/client_connection.hpp
+    server/postgres_wire_handler.cpp
+    server/postgres_wire_handler.hpp
+    server/query_response_builder.cpp
+    server/query_response_builder.hpp
+    server/server.cpp
+    server/server.hpp
+    server/server_session.cpp
+    server/server_session.hpp
+    server/task_runner.hpp
+    server/then_operator.hpp
     server/types.hpp
-#    server/use_boost_future.hpp
-#    server/use_boost_future_impl.hpp
+    server/use_boost_future.hpp
+    server/use_boost_future_impl.hpp
     statistics/base_column_statistics.cpp
     statistics/base_column_statistics.hpp
     statistics/column_statistics.cpp
@@ -486,17 +477,17 @@ set(
     tasks/chunk_migration_task.hpp
     tasks/migration_preparation_task.cpp
     tasks/migration_preparation_task.hpp
-#    tasks/server/abstract_server_task.hpp
-#    tasks/server/bind_server_prepared_statement_task.cpp
-#    tasks/server/bind_server_prepared_statement_task.hpp
-#    tasks/server/create_pipeline_task.cpp
-#    tasks/server/create_pipeline_task.hpp
-#    tasks/server/execute_server_prepared_statement_task.cpp
-#    tasks/server/execute_server_prepared_statement_task.hpp
-#    tasks/server/execute_server_query_task.cpp
-#    tasks/server/execute_server_query_task.hpp
-#    tasks/server/load_server_file_task.cpp
-#    tasks/server/load_server_file_task.hpp
+    tasks/server/abstract_server_task.hpp
+    tasks/server/bind_server_prepared_statement_task.cpp
+    tasks/server/bind_server_prepared_statement_task.hpp
+    tasks/server/create_pipeline_task.cpp
+    tasks/server/create_pipeline_task.hpp
+    tasks/server/execute_server_prepared_statement_task.cpp
+    tasks/server/execute_server_prepared_statement_task.hpp
+    tasks/server/execute_server_query_task.cpp
+    tasks/server/execute_server_query_task.hpp
+    tasks/server/load_server_file_task.cpp
+    tasks/server/load_server_file_task.hpp
     type_cast.hpp
     type_comparison.hpp
     types.cpp

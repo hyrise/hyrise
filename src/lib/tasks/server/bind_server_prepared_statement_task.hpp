@@ -13,14 +13,14 @@ class SQLQueryPlan;
 class BindServerPreparedStatementTask : public AbstractServerTask<std::unique_ptr<SQLQueryPlan>> {
  public:
   BindServerPreparedStatementTask(const std::shared_ptr<SQLPipeline> sql_pipeline,
-                                  std::vector<AllParameterVariant> params)
-      : _sql_pipeline(sql_pipeline), _params(std::move(params)) {}
+                                  std::unordered_map<ParameterID, AllTypeVariant> parameters)
+      : _sql_pipeline(sql_pipeline), _parameters(std::move(parameters)) {}
 
  protected:
   void _on_execute() override;
 
   const std::shared_ptr<SQLPipeline> _sql_pipeline;
-  std::vector<AllParameterVariant> _params;
+  const std::unordered_map<ParameterID, AllTypeVariant> _parameters;
 };
 
 }  // namespace opossum
