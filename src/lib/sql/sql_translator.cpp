@@ -552,7 +552,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
     }
   }
 
-  AssertInput(join_mode == JoinMode::Inner || join_predicates.size(), "Multiple Predicates not supported in Outer Join");
+  AssertInput(join_mode == JoinMode::Inner || join_predicates.size(),
+              "Multiple Predicates not supported in Outer Join");
 
   /**
    * Add local predicates - ignore local predicates on the preserving side of OUTER JOINs
@@ -1049,7 +1050,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           aggregate_function = AggregateFunction::CountDistinct;
         }
 
-        AssertInput(expr.exprList && expr.exprList->size() == 1, "Expected exactly one argument for this AggregateFunction");
+        AssertInput(expr.exprList && expr.exprList->size() == 1,
+                    "Expected exactly one argument for this AggregateFunction");
 
         switch (aggregate_function) {
           case AggregateFunction::Min:
