@@ -55,7 +55,7 @@ class ExpressionResult : public BaseExpressionResult {
 
   ExpressionResult() = default;
 
-  ExpressionResult(std::vector<T> values, std::vector<bool> nulls = {})
+  explicit ExpressionResult(std::vector<T> values, std::vector<bool> nulls = {})
       : values(std::move(values)), nulls(std::move(nulls)) {
     DebugAssert(nulls.empty() || nulls.size() == values.size(), "Need as many nulls as values or no nulls at all");
   }

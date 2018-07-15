@@ -14,6 +14,6 @@ ParameterID ParameterIDAllocator::allocate_for_value_placeholder(const ValuePlac
 
 const std::unordered_map<ValuePlaceholderID, ParameterID>& ParameterIDAllocator::value_placeholders() const {
   return _value_placeholders;
-};
+}
 
 }  // namespace opossum

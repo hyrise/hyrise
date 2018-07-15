@@ -5,7 +5,7 @@
 #include "boost/algorithm/string/join.hpp"
 #include "storage/table.hpp"
 
-using namespace std::string_literals;
+using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 

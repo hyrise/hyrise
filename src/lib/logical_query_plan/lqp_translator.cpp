@@ -60,7 +60,7 @@
 #include "update_node.hpp"
 #include "validate_node.hpp"
 
-using namespace std::string_literals;
+using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 

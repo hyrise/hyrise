@@ -8,7 +8,7 @@
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 
-using namespace opossum::expression_functional;
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 

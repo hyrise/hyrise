@@ -32,8 +32,8 @@
 #include "storage/value_column.hpp"
 #include "utils/assert.hpp"
 
-using namespace std::string_literals;
-using namespace opossum::expression_functional;
+using namespace std::string_literals;  // NOLINT
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
@@ -109,13 +109,13 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_arithme
 
   // clang-format off
   switch (expression.arithmetic_operator) {
-    case ArithmeticOperator::Addition:       return _evaluate_binary_with_default_null_logic<Result, AdditionEvaluator>(left, right);
+    case ArithmeticOperator::Addition:       return _evaluate_binary_with_default_null_logic<Result, AdditionEvaluator>(left, right);  // NOLINT
     case ArithmeticOperator::Subtraction:    return _evaluate_binary_with_default_null_logic<Result, SubtractionEvaluator>(left, right);  // NOLINT
     case ArithmeticOperator::Multiplication: return _evaluate_binary_with_default_null_logic<Result, MultiplicationEvaluator>(left, right);  // NOLINT
 
     // Division and Modulo need to catch division by zero
-    case ArithmeticOperator::Division:       return _evaluate_binary_with_custom_null_logic<Result, DivisionEvaluator>(left, right);
-    case ArithmeticOperator::Modulo:         return _evaluate_binary_with_custom_null_logic<Result, ModuloEvaluator>(left, right);
+    case ArithmeticOperator::Division:       return _evaluate_binary_with_custom_null_logic<Result, DivisionEvaluator>(left, right);  // NOLINT
+    case ArithmeticOperator::Modulo:         return _evaluate_binary_with_custom_null_logic<Result, ModuloEvaluator>(left, right);  // NOLINT
   }
   // clang-format on
 }
@@ -315,7 +315,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
             for (auto list_element_idx = ChunkOffset{0}; list_element_idx < list.size(); ++list_element_idx) {
               // `a IN (x,y,z)` is supposed to have the same semantics as `a = x OR a = y OR a = z`, so we use `Equals`
               // here as well.
-              EqualsEvaluator{}(result_values[chunk_offset], list.value(list_element_idx),
+              EqualsEvaluator{}(result_values[chunk_offset], list.value(list_element_idx),  // NOLINT - complains about missing spaces before "{"...
                                 left_view.value(chunk_offset));
               if (result_values[chunk_offset]) break;
 
@@ -478,8 +478,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
 
       if constexpr (std::is_same_v<Result, NullValue> || std::is_same_v<ArgumentDataType, NullValue>) {
         // Something to Null cast. Do nothing, this is handled by the nulls vector
-      } else if constexpr (std::is_same_v<Result, std::string>) {
-        if constexpr (std::is_same_v<ArgumentDataType, std::string>) {
+      } else if constexpr (std::is_same_v<Result, std::string>) {  // NOLINT
+        if constexpr (std::is_same_v<ArgumentDataType, std::string>) {  // NOLINT
           // String to String "cast"
           values[chunk_offset] = argument_value;
         } else {
@@ -490,7 +490,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
           values[chunk_offset] = stream.str();
         }
       } else {
-        if constexpr (std::is_same_v<ArgumentDataType, std::string>) {
+        if constexpr (std::is_same_v<ArgumentDataType, std::string>) {  // NOLINT
           char* end;
 
           // String to Numeric cast. Uses strto{l,f} because the behaviour of this function matches the expected
@@ -783,8 +783,8 @@ ExpressionEvaluator::_evaluate_logical_expression<ExpressionEvaluator::Bool>(con
 
   // clang-format off
   switch (expression.logical_operator) {
-    case LogicalOperator::Or:  return _evaluate_binary_with_custom_null_logic<ExpressionEvaluator::Bool, TernaryOrEvaluator>(left, right);
-    case LogicalOperator::And: return _evaluate_binary_with_custom_null_logic<ExpressionEvaluator::Bool, TernaryAndEvaluator>(left, right);
+    case LogicalOperator::Or:  return _evaluate_binary_with_custom_null_logic<ExpressionEvaluator::Bool, TernaryOrEvaluator>(left, right);  // NOLINT
+    case LogicalOperator::And: return _evaluate_binary_with_custom_null_logic<ExpressionEvaluator::Bool, TernaryAndEvaluator>(left, right);  // NOLINT
   }
   // clang-format on
 }

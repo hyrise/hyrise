@@ -21,7 +21,7 @@
 #include "types.hpp"
 #include "utils/load_table.hpp"
 
-using namespace opossum::expression_functional;
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 

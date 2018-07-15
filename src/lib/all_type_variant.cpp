@@ -1,9 +1,10 @@
 #include "all_type_variant.hpp"
 
-#include "boost/functional/hash.hpp"
-#include "utils/assert.hpp"
-
 #include <cmath>
+
+#include "boost/functional/hash.hpp"
+
+#include "utils/assert.hpp"
 
 namespace opossum {
 

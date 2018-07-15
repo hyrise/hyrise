@@ -21,7 +21,7 @@ std::shared_ptr<AbstractExpression> ListExpression::deep_copy() const {
 }
 
 std::string ListExpression::as_column_name() const {
-  return std::string{"("} + expression_column_names(arguments) + ")";
+  return std::string("(") + expression_column_names(arguments) + ")";
 }
 
 bool ListExpression::_shallow_equals(const AbstractExpression& expression) const { return true; }

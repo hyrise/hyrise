@@ -8,7 +8,7 @@
 #include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
-using namespace std::string_literals;
+using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 

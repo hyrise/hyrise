@@ -40,6 +40,6 @@ size_t hash<opossum::LQPColumnReference>::operator()(const opossum::LQPColumnRef
   auto hash = boost::hash_value(column_reference.original_node().get());
   boost::hash_combine(hash, static_cast<size_t>(column_reference.original_column_id()));
   return hash;
-};
+}
 
 }  // namespace std

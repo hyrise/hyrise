@@ -1,6 +1,6 @@
-#include "gtest/gtest.h"
-
 #include <regex>
+
+#include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
 #include "expression/lqp_column_expression.hpp"
@@ -16,7 +16,7 @@
 #include "testing_assert.hpp"
 #include "utils/load_table.hpp"
 
-using namespace opossum::expression_functional;
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
@@ -333,10 +333,8 @@ TEST_F(LogicalQueryPlanTest, PrintWithoutSubselects) {
     JoinNode::make(JoinMode::Inner, equals_(a1, a2),
       UnionNode::make(UnionMode::Positions,
         PredicateNode::make(equals_(a1, 5), node_int_int),
-        PredicateNode::make(equals_(a1, 6), node_int_int)
-      ),
-    node_int_int_int
-  ));
+        PredicateNode::make(equals_(a1, 6), node_int_int)),
+    node_int_int_int));
   // clang-format on
 
   std::stringstream stream;
@@ -397,16 +395,14 @@ TEST_F(LogicalQueryPlanTest, DeepCopySubSelects) {
   const auto sub_select_lqp =
   AggregateNode::make(expression_vector(), expression_vector(min_(add_(a2, parameter_a))),
     ProjectionNode::make(expression_vector(a2, b2, add_(a2, parameter_a)),
-      node_int_int_int
-  ));
+      node_int_int_int));
   const auto sub_select = select_(sub_select_lqp, std::make_pair(ParameterID{0}, b1));
 
   const auto lqp =
   ProjectionNode::make(expression_vector(a1, sub_select),
     PredicateNode::make(greater_than_(a1, sub_select),
       ProjectionNode::make(expression_vector(sub_select, a1, b1),
-        node_int_int
-  )));
+        node_int_int)));
   // clang-format on
 
   const auto copied_lqp = lqp->deep_copy();

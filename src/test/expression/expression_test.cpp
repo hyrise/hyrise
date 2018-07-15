@@ -222,7 +222,7 @@ TEST_F(ExpressionTest, DataType) {
   EXPECT_EQ(is_null_(5)->data_type(), DataType::Int);
 
   EXPECT_EQ(case_(1, int32_t{1}, int32_t{1})->data_type(), DataType::Int);
-  EXPECT_EQ(case_(1, double(2.3), int32_t{1})->data_type(), DataType::Double);
+  EXPECT_EQ(case_(1, double{2.3}, int32_t{1})->data_type(), DataType::Double);
   EXPECT_EQ(substr_("Hello", 1, 2)->data_type(), DataType::String);
   EXPECT_EQ(concat_("Hello", "World")->data_type(), DataType::String);
   EXPECT_EQ(concat_("Hello", "World")->data_type(), DataType::String);

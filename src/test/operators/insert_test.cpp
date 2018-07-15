@@ -17,7 +17,7 @@
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
-using namespace opossum::expression_functional;
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 

@@ -54,8 +54,8 @@
 
 #include "SQLParser.h"
 
-using namespace std::string_literals;
-using namespace opossum::expression_functional;
+using namespace std::string_literals;  // NOLINT
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace {
 
@@ -1086,7 +1086,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
         return std::make_shared<FunctionExpression>(function_iter->second, arguments);
       } else {
-        Fail(std::string{"Couldn't resolve function '"} + name + "'");
+        Fail("Couldn't resolve function '"s + name + "'");
       }
     }
 

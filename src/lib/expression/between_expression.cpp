@@ -28,7 +28,7 @@ std::string BetweenExpression::as_column_name() const {
          << _enclose_argument_as_column_name(*lower_bound()) << " AND "
          << _enclose_argument_as_column_name(*upper_bound());
   return stream.str();
-};
+}
 
 ExpressionPrecedence BetweenExpression::_precedence() const { return ExpressionPrecedence::BinaryTernaryPredicate; }
 

@@ -58,8 +58,8 @@ class SQLTranslator final {
  private:
   // Track state while translating the FROM clause. This makes sure only the actually available SQL identifiers can be
   // used, e.g. "SELECT * FROM t1, t2 JOIN t3 ON t1.a = t2.a" is illegal since t1 is invisible to the seconds entry.
-  // Also ensures the correct Columns go into Select wildcards, even in presence of NATURAL/SEMI joins that remove columns
-  // from input tables
+  // Also ensures the correct Columns go into Select wildcards, even in presence of NATURAL/SEMI joins that remove
+  // columns from input tables
   struct TableSourceState final {
     TableSourceState() = default;
     TableSourceState(

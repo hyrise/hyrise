@@ -13,7 +13,7 @@
 #include "utils/assert.hpp"
 #include "utils/print_directed_acyclic_graph.hpp"
 
-using namespace std::string_literals;
+using namespace std::string_literals;  // NOLINT
 
 namespace {
 
@@ -34,7 +34,7 @@ void collect_lqps_from_expression(const std::shared_ptr<AbstractExpression>& exp
     collect_lqps_in_plan(*lqp_select_expression->lqp, lqps);
     return true;
   });
-};
+}
 
 /**
  * Utility for AbstractLQPNode::print()
@@ -47,7 +47,7 @@ void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::sh
 
   if (lqp.left_input()) collect_lqps_in_plan(*lqp.left_input(), lqps);
   if (lqp.right_input()) collect_lqps_in_plan(*lqp.right_input(), lqps);
-};
+}
 
 }  // namespace
 
@@ -212,8 +212,8 @@ std::shared_ptr<TableStatistics> AbstractLQPNode::derive_statistics_from(
 }
 
 void AbstractLQPNode::print(std::ostream& out) const {
-  // Recursively collect all LQPs in LQPSelectExpressions (and any anywhere within those) in this LQP into a list and then print
-  // them
+  // Recursively collect all LQPs in LQPSelectExpressions (and any anywhere within those) in this LQP into a list and
+  // then print them
   auto lqps = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
   collect_lqps_in_plan(*this, lqps);
 

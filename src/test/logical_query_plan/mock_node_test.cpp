@@ -11,7 +11,7 @@
 #include "statistics/generate_table_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 
-using namespace opossum::expression_functional;
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 

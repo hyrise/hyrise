@@ -1,10 +1,10 @@
-#include "gtest/gtest.h"
-
 #include <string>
+
+#include "gtest/gtest.h"
 
 #include "expression/evaluation/like_matcher.hpp"
 
-using namespace std::string_literals;
+using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 

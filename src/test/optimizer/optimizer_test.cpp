@@ -102,8 +102,7 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
   const auto lqp =
   ProjectionNode::make(expression_vector(add_(b, select_a)),
     PredicateNode::make(greater_than_(a, select_b),
-      node_a
-  ));
+      node_a));
   // clang-format on
 
   const auto rule = std::make_shared<MockRule>();
@@ -137,8 +136,7 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   PredicateNode::make(greater_than_(add_(b, select_a), 2),
     ProjectionNode::make(expression_vector(add_(b, select_a)),
       PredicateNode::make(greater_than_(a, select_b),
-        node_a
-  ))));
+        node_a))));
   // clang-format on
 
   /**

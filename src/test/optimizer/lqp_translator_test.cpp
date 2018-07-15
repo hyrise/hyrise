@@ -270,8 +270,8 @@ TEST_F(LQPTranslatorTest, SelectExpressionCorrelated) {
   const auto subselect_lqp =
   AggregateNode::make(expression_vector(), expression_vector(min_(a_plus_a_plus_d)),
     ProjectionNode::make(expression_vector(a_plus_a_plus_d),
-      int_float_node
-  ));
+      int_float_node));
+
   const auto subselect = select_(subselect_lqp, std::make_pair(ParameterID{0}, int_float5_a),
                                  std::make_pair(ParameterID{1}, int_float5_d));
 
@@ -318,8 +318,8 @@ TEST_F(LQPTranslatorTest, Sort) {
   ProjectionNode::make(expression_vector(int_float_a, int_float_b),
     SortNode::make(expression_vector(int_float_a, add_(int_float_a, int_float_b), int_float_b), order_by_modes,
       ProjectionNode::make(expression_vector(add_(int_float_a, int_float_b), int_float_a, int_float_b),
-        int_float_node
-  )));
+        int_float_node)));
+
   // clang-format on
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 
@@ -361,8 +361,7 @@ TEST_F(LQPTranslatorTest, JoinNonEqui) {
   // clang-format off
   const auto lqp =
   JoinNode::make(JoinMode::Inner, less_than_(int_float_a, int_float2_b),
-    int_float2_node, int_float_node
-  );
+    int_float2_node, int_float_node);
   // clang-format on
   const auto pqp = LQPTranslator{}.translate_node(lqp);
 

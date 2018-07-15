@@ -19,7 +19,7 @@
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
 
-using namespace opossum::expression_functional;
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
@@ -99,16 +99,14 @@ TEST_F(JoinDetectionRuleTest, SimpleDetectionTest) {
   PredicateNode::make(equals_(_a_a, _b_a),
     JoinNode::make(JoinMode::Cross,
       _table_node_a,
-      _table_node_b
-  ));
+      _table_node_b));
   // clang-format on
 
   // clang-format off
   const auto expected_lqp =
   JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
     _table_node_a,
-    _table_node_b
-  );
+    _table_node_b);
   // clang-format on
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -147,8 +145,7 @@ TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
     PredicateNode::make(equals_(_a_a, _b_a),
       JoinNode::make(JoinMode::Cross,
         _table_node_a,
-        _table_node_b
-  )));
+        _table_node_b)));
   // clang-format on
 
   // clang-format off
@@ -156,8 +153,7 @@ TEST_F(JoinDetectionRuleTest, SecondDetectionTest) {
   ProjectionNode::make(expression_vector(_a_a),
     JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
       _table_node_a,
-      _table_node_b
-  ));
+      _table_node_b));
   // clang-format on
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -183,8 +179,7 @@ TEST_F(JoinDetectionRuleTest, NoPredicate) {
   ProjectionNode::make(expression_vector(_a_a),
     JoinNode::make(JoinMode::Cross,
       _table_node_a,
-      _table_node_b
-  ));
+      _table_node_b));
   // clang-format on
 
   // clang-format off
@@ -192,8 +187,7 @@ TEST_F(JoinDetectionRuleTest, NoPredicate) {
   ProjectionNode::make(expression_vector(_a_a),
     JoinNode::make(JoinMode::Cross,
       _table_node_a,
-      _table_node_b
-  ));
+      _table_node_b));
   // clang-format on
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -219,8 +213,7 @@ TEST_F(JoinDetectionRuleTest, Nop) {
   ProjectionNode::make(expression_vector(_a_a),
     JoinNode::make(JoinMode::Cross,
       _table_node_a,
-      _table_node_b
-  ));
+      _table_node_b));
   // clang-format on
 
   // clang-format off
@@ -228,8 +221,7 @@ TEST_F(JoinDetectionRuleTest, Nop) {
   ProjectionNode::make(expression_vector(_a_a),
     JoinNode::make(JoinMode::Cross,
       _table_node_a,
-      _table_node_b
-  ));
+      _table_node_b));
   // clang-format on
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -260,8 +252,7 @@ TEST_F(JoinDetectionRuleTest, NoMatchingPredicate) {
     PredicateNode::make(equals_(_a_a, _a_b),
       JoinNode::make(JoinMode::Cross,
         _table_node_a,
-        _table_node_b
-  )));
+        _table_node_b)));
   // clang-format on
 
   // clang-format off
@@ -270,8 +261,7 @@ TEST_F(JoinDetectionRuleTest, NoMatchingPredicate) {
     PredicateNode::make(equals_(_a_a, _a_b),
       JoinNode::make(JoinMode::Cross,
         _table_node_a,
-        _table_node_b
-  )));
+        _table_node_b)));
   // clang-format on
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -302,8 +292,7 @@ TEST_F(JoinDetectionRuleTest, NonCrossJoin) {
     PredicateNode::make(equals_(_a_a, _b_a),
     JoinNode::make(JoinMode::Inner, equals_(_a_b, _b_b),
       _table_node_a,
-      _table_node_b
-  )));
+      _table_node_b)));
   // clang-format on
 
   // clang-format off
@@ -312,8 +301,7 @@ TEST_F(JoinDetectionRuleTest, NonCrossJoin) {
     PredicateNode::make(equals_(_a_a, _b_a),
     JoinNode::make(JoinMode::Inner, equals_(_a_b, _b_b),
       _table_node_a,
-      _table_node_b
-  )));
+      _table_node_b)));
   // clang-format on
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -358,8 +346,7 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins) {
       JoinNode::make(JoinMode::Cross,
         _table_node_a,
         _table_node_b),
-      _table_node_c
-  )));
+      _table_node_c)));
   // clang-format on
 
   // clang-format off
@@ -369,8 +356,7 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins) {
       JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
         _table_node_a,
         _table_node_b),
-    _table_node_c
-  ));
+    _table_node_c));
   // clang-format on
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
@@ -418,8 +404,7 @@ TEST_F(JoinDetectionRuleTest, JoinInRightChild) {
     _table_node_a,
     JoinNode::make(JoinMode::Inner, equals_(_b_a, _c_b),
       _table_node_b,
-      _table_node_c)
-  );
+      _table_node_c));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -477,8 +462,7 @@ TEST_F(JoinDetectionRuleTest, MultipleJoins2) {
       JoinNode::make(JoinMode::Cross,
         _table_node_a,
         _table_node_b),
-    _table_node_c
-  ));
+    _table_node_c));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

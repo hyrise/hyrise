@@ -1,6 +1,6 @@
-#include "gtest/gtest.h"
-
 #include <regex>
+
+#include "gtest/gtest.h"
 
 #include "expression/case_expression.hpp"
 #include "expression/expression_functional.hpp"
@@ -31,15 +31,13 @@ class LQPSelectExpressionTest : public ::testing::Test {
     lqp_a =
     AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_(ParameterID{0})))),
       ProjectionNode::make(expression_vector(add_(a, parameter_(ParameterID{0}))),
-        int_float_node_a
-    ));
+        int_float_node_a));
 
     parameter_c = parameter_(ParameterID{0}, a);
     lqp_c =
     AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_c))),
       ProjectionNode::make(expression_vector(add_(a, parameter_c)),
-        int_float_node_a
-    ));
+        int_float_node_a));
     // clang-format on
 
     select_a = select_(lqp_a);
@@ -64,8 +62,7 @@ TEST_F(LQPSelectExpressionTest, DeepEquals) {
   const auto lqp_b =
   AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_(ParameterID{0})))),
     ProjectionNode::make(expression_vector(add_(a, parameter_(ParameterID{0}))),
-      int_float_node_a
-  ));
+      int_float_node_a));
 
   const auto int_float_node_b = StoredTableNode::make("int_float");
   const auto a2 = int_float_node_b->get_column("a");
@@ -73,15 +70,13 @@ TEST_F(LQPSelectExpressionTest, DeepEquals) {
   const auto lqp_d =
   AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_d))),
     ProjectionNode::make(expression_vector(add_(a, parameter_d)),
-      int_float_node_a
-  ));
+      int_float_node_a));
 
   const auto parameter_e = parameter_(ParameterID{0}, b);
   const auto lqp_e =
   AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_d))),
     ProjectionNode::make(expression_vector(add_(a, parameter_d)),
-      int_float_node_a
-  ));
+      int_float_node_a));
   // clang-format on
 
   const auto select_b = select_(lqp_b);
@@ -131,8 +126,7 @@ TEST_F(LQPSelectExpressionTest, IsNullable) {
   const auto lqp_c =
   AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, null_()))),
     ProjectionNode::make(expression_vector(add_(a, null_())),
-      int_float_node_a
-  ));
+      int_float_node_a));
   // clang-format off
 
   EXPECT_TRUE(select_(lqp_c)->is_nullable());
@@ -140,11 +134,11 @@ TEST_F(LQPSelectExpressionTest, IsNullable) {
 
 TEST_F(LQPSelectExpressionTest, AsColumnName) {
   EXPECT_TRUE(std::regex_search(select_a->as_column_name(), std::regex{"SUBSELECT \\(LQP, 0x[0-9a-f]+\\)"}));
-  EXPECT_TRUE(std::regex_search(select_c->as_column_name(), std::regex{"SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)"}));
+  EXPECT_TRUE(std::regex_search(select_c->as_column_name(), std::regex{"SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)"}));  // NOLINT
 
   // Test IN and EXISTS here as well, since they need subselects to function
-  EXPECT_TRUE(std::regex_search(exists_(select_c)->as_column_name(), std::regex{"EXISTS\\(SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)\\)"}));
-  EXPECT_TRUE(std::regex_search(in_(5, select_c)->as_column_name(), std::regex{"\\(5\\) IN SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)"}));
+  EXPECT_TRUE(std::regex_search(exists_(select_c)->as_column_name(), std::regex{"EXISTS\\(SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)\\)"}));  // NOLINT
+  EXPECT_TRUE(std::regex_search(in_(5, select_c)->as_column_name(), std::regex{"\\(5\\) IN SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)"}));  // NOLINT
 }
 
 }  // namespace opossum

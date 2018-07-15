@@ -15,7 +15,7 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
-using namespace opossum::expression_functional;
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 class OperatorsDifferenceTest : public BaseTest {

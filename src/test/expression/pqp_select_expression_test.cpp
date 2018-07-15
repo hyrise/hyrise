@@ -1,6 +1,6 @@
-#include "gtest/gtest.h"
-
 #include <regex>
+
+#include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"

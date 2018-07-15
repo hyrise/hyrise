@@ -64,8 +64,7 @@ TEST_F(ConstantCalculationRuleTest, ResolveExpressionTest) {
   ProjectionNode::make(expression_vector(a, b),
     PredicateNode::make(equals_(a, 1234),
       ProjectionNode::make(expression_vector(add_(1233, 1), a, b),
-        stored_table_node
-  )));
+        stored_table_node)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -82,8 +81,7 @@ TEST_F(ConstantCalculationRuleTest, DoesntPruneList) {
   ProjectionNode::make(expression_vector(a, b),
     PredicateNode::make(not_equals_(in_(a, list_(1, 2, 8, 4)), 0),
       ProjectionNode::make(expression_vector(in_(a, list_(1, 2, 8, 4)), a, b),
-        stored_table_node
-  )));
+        stored_table_node)));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

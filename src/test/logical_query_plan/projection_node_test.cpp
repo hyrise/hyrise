@@ -13,7 +13,7 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "storage/storage_manager.hpp"
 
-using namespace opossum::expression_functional;
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 

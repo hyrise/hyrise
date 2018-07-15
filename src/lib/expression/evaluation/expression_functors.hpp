@@ -44,7 +44,7 @@ struct TernaryOrEvaluator {
     const auto b_is_true = !b_null && to_bool(b_value);
     result_value = a_is_true || b_is_true;
     result_null = (a_null || b_null) && !result_value;
-  };
+  }
 };
 
 /**
@@ -67,7 +67,7 @@ struct TernaryAndEvaluator {
 
     if constexpr (!std::is_same_v<NullValue, ArgA>) result_null |= a_value && b_null;
     if constexpr (!std::is_same_v<NullValue, ArgB>) result_null |= b_value && a_null;
-  };
+  }
 };
 
 /**
@@ -94,7 +94,7 @@ struct STLComparisonFunctorWrapper {
     } else {
       result = static_cast<Result>(Functor<std::common_type_t<ArgA, ArgB>>{}(a, b));
     }
-  };
+  }
 };
 
 using EqualsEvaluator = STLComparisonFunctorWrapper<std::equal_to>;
@@ -124,7 +124,7 @@ struct STLArithmeticFunctorWrapper {
     } else {
       result = Functor<std::common_type_t<ArgA, ArgB>>{}(a, b);
     }
-  };
+  }
 };
 
 using AdditionEvaluator = STLArithmeticFunctorWrapper<std::plus>;
@@ -160,7 +160,7 @@ struct ModuloEvaluator {
         }
       }
     }
-  };
+  }
 };
 
 // Custom NULL logic returns NULL if the divisor is NULL
@@ -186,7 +186,7 @@ struct DivisionEvaluator {
         result_value = a_value / b_value;
       }
     }
-  };
+  }
 };
 
 struct CaseEvaluator {

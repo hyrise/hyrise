@@ -20,7 +20,7 @@
 #include "tpch/tpch_db_generator.hpp"
 #include "tpch/tpch_queries.hpp"
 
-using namespace std::string_literals;
+using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
