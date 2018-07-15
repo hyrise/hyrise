@@ -34,29 +34,29 @@ class TPCHTest : public BaseTestWithParam<std::pair<const size_t, const char*>> 
 
   std::vector<std::string> tpch_table_names{{"customer", "lineitem", "nation", "orders", "part", "partsupp", "region", "supplier"}};
   
-  std::unordered_map<size_t, std::string> scale_factor_by_query{
-    {1, "0.001"},
-    {2, "0.01"},
-    {3, "0.001"},
-    {4, "0.001"},
-    {5, "0.001"},
-    {6, "0.001"},
-    {7, "0.001"},
-    {8, "0.001"},
-    {9, "0.001"},
-    {10, "0.001"},
-    {11, "0.01"},
-    {12, "0.001"},
-    {13, "0.001"},
-    {14, "0.01"},
-    {15, "0.01"},
-    {16, "0.001"},
-    {17, "0.001"},
-    {18, "0.01"},
-    {19, "0.001"},
-    {20, "0.01"},
-    {21, "0.01"},
-    {22, "0.001"}
+  std::unordered_map<size_t, float> scale_factor_by_query{
+    {1, 0.001f},
+    {2, 0.01f},
+    {3, 0.001f},
+    {4, 0.001f},
+    {5, 0.001f},
+    {6, 0.001f},
+    {7, 0.001f},
+    {8, 0.001f},
+    {9, 0.001f},
+    {10, 0.001f},
+    {11, 0.01f},
+    {12, 0.001f},
+    {13, 0.001f},
+    {14, 0.01f},
+    {15, 0.01f},
+    {16, 0.001f},
+    {17, 0.001f},
+    {18, 0.01f},
+    {19, 0.001f},
+    {20, 0.01f},
+    {21, 0.01f},
+    {22, 0.001f}
   };  
 };
 
@@ -64,18 +64,16 @@ TEST_P(TPCHTest, TPCHQueryTest) {
   size_t query_idx;
   const char* query;
   std::tie(query_idx, query) = GetParam();
-  const auto scale_factor_str = scale_factor_by_query.at(query_idx);
 
-  // Chosen rather arbitrarily
-  const auto chunk_size = 1'000;
+  /**
+   * Generate the TPC-H tables with a scale factor appropriate for this query
+   */
+  const auto scale_factor = scale_factor_by_query.at(query_idx);
 
-  std::cout << "Query " << query_idx << "; Scale Factor: " << scale_factor_str << std::endl;
-
-  /** Load tables appropriately sized for this Query */
+  TpchDbGenerator{scale_factor, 10'000}.generate_and_store();
   for (const auto& tpch_table_name : tpch_table_names) {
-    const auto tpch_table_path = std::string("src/test/tables/tpch/sf-"s + scale_factor_str + "/") + tpch_table_name + ".tbl";
-    StorageManager::get().add_table(tpch_table_name, load_table(tpch_table_path, chunk_size));
-    _sqlite_wrapper->create_table_from_tbl(tpch_table_path, tpch_table_name);
+    const auto table = StorageManager::get().get_table(tpch_table_name);
+    _sqlite_wrapper->create_table(*table, tpch_table_name);
   }
 
   SCOPED_TRACE("TPC-H " + std::to_string(query_idx));
