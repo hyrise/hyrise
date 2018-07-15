@@ -7,6 +7,7 @@
 
 #include "SQLParser.h"
 #include "create_sql_parser_error_message.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
@@ -22,21 +23,16 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
               "Transaction context without MVCC enabled makes no sense");
 
   hsql::SQLParserResult parse_result;
+
   const auto start = std::chrono::high_resolution_clock::now();
-  try {
-    hsql::SQLParser::parse(sql, &parse_result);
-  } catch (const std::exception& exception) {
-    throw std::runtime_error("Error while parsing SQL query:\n  " + std::string(exception.what()));
-  }
+  hsql::SQLParser::parse(sql, &parse_result);
 
   const auto done = std::chrono::high_resolution_clock::now();
   _metrics.parse_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - start);
 
-  if (!parse_result.isValid()) {
-    throw std::runtime_error(create_sql_parser_error_message(sql, parse_result));
-  }
-
+  AssertInput(parse_result.isValid(), create_sql_parser_error_message(sql, parse_result));
   DebugAssert(parse_result.size() > 0, "Cannot create empty SQLPipeline.");
+  
   _sql_pipeline_statements.reserve(parse_result.size());
 
   std::vector<std::shared_ptr<hsql::SQLParserResult>> parsed_statements;

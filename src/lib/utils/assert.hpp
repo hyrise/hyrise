@@ -7,6 +7,8 @@
 #include <stdexcept>
 #include <string>
 
+#include "invalid_input_exception.hpp"
+
 /**
  * This file provides better assertions than the std cassert/assert.h - DebugAssert(condition, msg) and Fail(msg) can be
  * used
@@ -32,6 +34,9 @@
  *
  * --> Use Assert() whenever an invariant should be checked even in release builds, either because testing it is
  *     very cheap or the invariant is considered very important
+ *
+ * --> Use AssertInput() to check if the user input is correct. This provides a more specific error handling since an
+ *     invalid input might want to be caught.
  */
 
 // __FILENAME__ is __FILE__ with irrelevant leading chars trimmed
@@ -48,6 +53,11 @@ namespace opossum {
 #define Assert(expr, msg)                                                                  \
   if (!static_cast<bool>(expr)) {                                                          \
     opossum::Fail(std::string(__FILENAME__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg); \
+  }
+
+#define AssertInput(expr, msg)                                                             \
+  if (!static_cast<bool>(expr)) {                                                          \
+    throw InvalidInputException(std::string("Invalid input error: ") + msg);               \
   }
 
 #if IS_DEBUG

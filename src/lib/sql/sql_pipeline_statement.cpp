@@ -55,15 +55,11 @@ const std::shared_ptr<hsql::SQLParserResult>& SQLPipelineStatement::get_parsed_s
   DebugAssert(!_sql_string.empty(), "Cannot parse empty SQL string");
 
   _parsed_sql_statement = std::make_shared<hsql::SQLParserResult>();
-  try {
-    hsql::SQLParser::parse(_sql_string, _parsed_sql_statement.get());
-  } catch (const std::exception& exception) {
-    throw std::runtime_error("Error while parsing SQL query:\n  " + std::string(exception.what()));
-  }
 
-  if (!_parsed_sql_statement->isValid()) {
-    throw std::runtime_error(create_sql_parser_error_message(_sql_string, *_parsed_sql_statement));
-  }
+  hsql::SQLParser::parse(_sql_string, _parsed_sql_statement.get());
+
+  AssertInput(_parsed_sql_statement->isValid(),
+    create_sql_parser_error_message(_sql_string, *_parsed_sql_statement));
 
   Assert(_parsed_sql_statement->size() == 1,
          "SQLPipelineStatement must hold exactly one statement. "
@@ -171,7 +167,8 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
     auto plan = _prepared_statements->try_get(execute_statement->name);
     _parameter_ids = plan->parameter_ids();
 
-    Assert(plan, "Requested prepared statement does not exist!");
+    AssertInput(plan, "Requested prepared statement does not exist!");
+
     assert_same_mvcc_mode(*plan);
 
     // We don't want to set the parameters of the "prototype" plan in the cache
@@ -193,8 +190,8 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
       }
     }
 
-    Assert(parameters.size() == plan->parameter_ids().size(),
-           "Number of arguments provided does not match expected number of arguments.");
+    AssertInput(parameters.size() == plan->parameter_ids().size(),
+      "Number of arguments provided does not match expected number of arguments.");
 
     _query_plan->append_plan(*plan);
     _query_plan->tree_roots().front()->set_parameters(parameters);

@@ -1,7 +1,9 @@
 #include "all_parameter_variant.hpp"
 
-#include <boost/lexical_cast.hpp>
+#include <sstream>
 #include <string>
+
+#include <boost/lexical_cast.hpp>
 
 #include "all_type_variant.hpp"
 
@@ -12,7 +14,9 @@ std::string to_string(const AllParameterVariant& x) {
   } else if (is_column_id(x)) {
     return std::string("Col #") + std::to_string(boost::get<ColumnID>(x));
   } else if (is_lqp_column_reference(x)) {
-    Fail("Not yet implemented");
+    std::stringstream stream;
+    stream << boost::get<LQPColumnReference>(x);
+    return stream.str();
   } else {
     return boost::lexical_cast<std::string>(x);
   }

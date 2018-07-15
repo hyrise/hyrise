@@ -7,10 +7,6 @@
 
 namespace opossum {
 
-bool is_integral_data_type(const DataType data_type) {
-  return data_type == DataType::Long || data_type == DataType::Int;
-}
-
 bool is_floating_point_data_type(const DataType data_type) {
   return data_type == DataType::Float || data_type == DataType::Double;
 }
