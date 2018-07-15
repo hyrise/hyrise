@@ -246,7 +246,7 @@ const char* const tpch_query_6 =
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
  *  3. Extract is not supported
- *    a. Use full date instead
+ *    a. Use SUBSTR instead
  *  4. implicit type conversions for arithmetic operations are not supported
  *    a. changed 1 to 1.0 explicitly
  */
@@ -260,7 +260,7 @@ const char* const tpch_query_7 =
           (SELECT
               n1.n_name as supp_nation,
               n2.n_name as cust_nation,
-              l_shipdate as l_year,
+              SUBSTR(l_shipdate, 0, 4) as l_year,
               l_extendedprice * (1.0 - l_discount) as volume
           FROM
               supplier,
@@ -330,11 +330,11 @@ const char* const tpch_query_7 =
  *  2. dates are not supported
  *    a. use strings as data type for now
  *  3. Extract is not supported
- *    a. Use full date instead
+ *    a. Use SUBSTR instead
  */
 const char* const tpch_query_8 =
     R"(SELECT o_year, SUM(case when nation = 'BRAZIL' then volume else 0 end) / SUM(volume) as mkt_share
-     FROM (SELECT o_orderdate as o_year, l_extendedprice * (1-l_discount) as volume,
+     FROM (SELECT SUBSTR(o_orderdate, 0, 4) as o_year, l_extendedprice * (1-l_discount) as volume,
      n2.n_name as nation FROM "part", supplier, lineitem, orders, customer, nation n1, nation n2, region
      WHERE p_partkey = l_partkey AND s_suppkey = l_suppkey AND l_orderkey = o_orderkey AND
      o_custkey = c_custkey AND c_nationkey = n1.n_nationkey AND n1.n_regionkey = r_regionkey AND
@@ -371,7 +371,7 @@ const char* const tpch_query_8 =
  * Changes:
  *  1. Random values are hardcoded
  *  2. Extract is not supported
- *    a. Use full date instead
+ *    a. Use SUBSTR instead
  *  3. implicit type conversions for arithmetic operations are not supported
  *    a. changed 1 to 1.0 explicitly
  */
@@ -379,7 +379,7 @@ const char* const tpch_query_8 =
 // FROM supplier, lineitem, partsupp, orders, nation, "part"   back to original
 // FROM "part", supplier, lineitem, partsupp, orders, nation   as soon as join ordering is fixed
 const char* const tpch_query_9 =
-    R"(SELECT nation, o_year, SUM(amount) as sum_profit FROM (SELECT n_name as nation, o_orderdate as o_year,
+    R"(SELECT nation, o_year, SUM(amount) as sum_profit FROM (SELECT n_name as nation, SUBSTR(o_orderdate, 0, 4) as o_year,
       l_extendedprice * (1.0 - l_discount) - ps_supplycost * l_quantity as amount
       FROM supplier, lineitem, partsupp, orders, nation, "part" WHERE s_suppkey = l_suppkey
       AND ps_suppkey = l_suppkey AND ps_partkey = l_partkey AND p_partkey = l_partkey AND o_orderkey = l_orderkey
@@ -605,17 +605,16 @@ const char* const tpch_query_14 =
  *    b. pre-calculate date operation
  *  3. implicit type conversions for arithmetic operations are not supported
  *    a. changed 1 to 1.0 explicitly
+ *  4. Removed "drop view revenue[STREAM_ID];" because with it SQLiteWrapper doesn't return a result.
  */
 const char* const tpch_query_15 =
     R"(create view revenue (supplier_no, total_revenue) as SELECT l_suppkey,
-      SUM(l_extendedprice * (1.0 - l_discount)) FROM lineitem WHERE l_shipdate >= '1995-02-13'
-      AND l_shipdate < '1995-05-13' GROUP BY l_suppkey;
+      SUM(l_extendedprice * (1.0 - l_discount)) FROM lineitem WHERE l_shipdate >= '1993-05-13'
+      AND l_shipdate < '1993-08-13' GROUP BY l_suppkey;
 
       SELECT s_suppkey, s_name, s_address, s_phone, total_revenue FROM supplier, revenue
       WHERE s_suppkey = supplier_no AND total_revenue = (SELECT max(total_revenue)
-      FROM revenue) ORDER BY s_suppkey;
-
-      drop view revenue;)";
+      FROM revenue) ORDER BY s_suppkey;)";
 
 /**
  * TPC-H 16
@@ -743,18 +742,18 @@ const char* const tpch_query_18 =
  *  1. Random values are hardcoded
  *  2. implicit type conversions for arithmetic operations are not supported
  *    a. changed 1 to 1.0 explicitly
+ *  3. Extracted "p_partkey = l_partkey" to make JoinDetectionRule work
  */
 const char* const tpch_query_19 =
-    R"(SELECT SUM(l_extendedprice * (1.0 - l_discount) ) as revenue FROM lineitem, "part" WHERE (p_partkey = l_partkey
-      AND p_brand = 'Brand#12' AND p_container in ( 'SM CASE', 'SM BOX', 'SM PACK', 'SM PKG') AND
+    R"(SELECT SUM(l_extendedprice * (1.0 - l_discount) ) as revenue FROM lineitem, "part" WHERE p_partkey = l_partkey AND ((
+      p_brand = 'Brand#12' AND p_container in ( 'SM CASE', 'SM BOX', 'SM PACK', 'SM PKG') AND
       l_quantity >= 1 AND l_quantity <= 1 + 10 AND p_size between 1 AND 5 AND l_shipmode
-      in ('AIR', 'AIR REG') AND l_shipinstruct = 'DELIVER IN PERSON') or (p_partkey = l_partkey
-      AND p_brand = 'Brand#23' AND p_container in ('MED BAG', 'MED BOX', 'MED PKG', 'MED PACK')
+      in ('AIR', 'AIR REG') AND l_shipinstruct = 'DELIVER IN PERSON') or (p_brand = 'Brand#23' AND p_container in ('MED BAG', 'MED BOX', 'MED PKG', 'MED PACK')
       AND l_quantity >= 10 AND l_quantity <= 10 + 10 AND p_size between 1 AND 10
       AND l_shipmode in ('AIR', 'AIR REG') AND l_shipinstruct = 'DELIVER IN PERSON') or
-      (p_partkey = l_partkey AND p_brand = 'Brand#34' AND p_container in ( 'LG CASE', 'LG BOX', 'LG PACK', 'LG PKG')
+      (p_brand = 'Brand#34' AND p_container in ( 'LG CASE', 'LG BOX', 'LG PACK', 'LG PKG')
       AND l_quantity >= 20 AND l_quantity <= 20 + 10 AND p_size between 1 AND 15 AND l_shipmode in
-      ('AIR', 'AIR REG') AND l_shipinstruct = 'DELIVER IN PERSON');)";
+      ('AIR', 'AIR REG') AND l_shipinstruct = 'DELIVER IN PERSON'));)";
 
 /**
  * TPC-H 20

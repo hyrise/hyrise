@@ -33,30 +33,34 @@ class TPCHTest : public BaseTestWithParam<std::pair<const size_t, const char*>> 
   std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
 
   std::vector<std::string> tpch_table_names{{"customer", "lineitem", "nation", "orders", "part", "partsupp", "region", "supplier"}};
-  
+
+  // Scale factors chosen so the query
+  //   -> actually returns result rows (which some don't for small scale factors)
+  //   -> doesn't crush a 16GB dev machine
+  //   -> runs for a few seconds on a release build
   std::unordered_map<size_t, float> scale_factor_by_query{
-    {1, 0.001f},
-    {2, 0.01f},
-    {3, 0.001f},
-    {4, 0.001f},
-    {5, 0.001f},
-    {6, 0.001f},
-    {7, 0.001f},
-    {8, 0.001f},
-    {9, 0.001f},
-    {10, 0.001f},
+    {1, 0.01f},
+    {2, 0.004f},
+    {3, 0.01f},
+    {4, 0.005f},
+    {5, 0.01f},
+    {6, 0.01f},
+    {7, 0.01f},
+    {8, 0.01f},
+    {9, 0.01f},
+    {10, 0.02f},
     {11, 0.01f},
-    {12, 0.001f},
-    {13, 0.001f},
+    {12, 0.01f},
+    {13, 0.01f},
     {14, 0.01f},
     {15, 0.01f},
-    {16, 0.001f},
-    {17, 0.001f},
-    {18, 0.01f},
-    {19, 0.001f},
-    {20, 0.01f},
-    {21, 0.01f},
-    {22, 0.001f}
+    {16, 0.01f},
+    {17, 0.013f},
+    {18, 0.005f},
+    {19, 0.01f},
+    {20, 0.008f},
+    {21, 0.0075f},
+    {22, 0.01f}
   };  
 };
 
@@ -87,11 +91,6 @@ TEST_P(TPCHTest, TPCHQueryTest) {
   } else {
     std::cout << "Cannot print plan, needs to be executed first" << std::endl;
   }
-
-  if (query_idx == 17) {
-    FAIL();
-  }
-
   const auto result_table = sql_pipeline.get_result_table();
 
   // EXPECT_TABLE_EQ would crash if one table is a nullptr

@@ -105,7 +105,7 @@ bool almost_equals(T left_val, T right_val, opossum::FloatComparisonMode float_c
   if (float_comparison_mode == opossum::FloatComparisonMode::AbsoluteDifference) {
     return std::fabs(left_val - right_val) < EPSILON;
   } else {
-    return std::fabs(left_val - right_val) < std::fabs(right_val * EPSILON);
+    return std::fabs(left_val - right_val) < std::max(EPSILON, std::fabs(right_val * EPSILON));
   }
 }
 
