@@ -104,6 +104,7 @@ set(
 #    server/server_session_test.cpp
     sql/sql_basic_cache_test.cpp
     sql/sqlite_testrunner/sqlite_testrunner.cpp
+    sql/sqlite_testrunner/sqlite_wrapper_test.cpp
     sql/sql_identifier_context_test.cpp
     sql/sql_pipeline_statement_test.cpp
     sql/sql_pipeline_test.cpp

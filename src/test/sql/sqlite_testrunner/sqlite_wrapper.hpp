@@ -53,6 +53,11 @@ class SQLiteWrapper final {
    */
   void _add_row(std::shared_ptr<Table> table, sqlite3_stmt* result_row, int column_count);
 
+  /**
+   * Execute an SQL statement on the wrapped sqlite db
+   */
+  void _exec_sql(const std::string& sql) const;
+
   sqlite3* _db;
 };
 
