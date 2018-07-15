@@ -24,9 +24,19 @@
 #include "value_expression.hpp"
 
 /**
- * This file provides convenience methods to create (nested) Expression objects with little boilerplate
+ * This file provides convenience methods to create (nested) Expression objects with little boilerplate.
  *
- * So this
+ * NOTE: functions suffixed with "_" (e.g. equals_()) to alert the unsuspecting reader to the fact this is something
+ *       different thant the equality check he might expect when reading "equals" *
+ *
+ * In Hyrise we say...
+ *      case_(equals_(a, 123),
+ *            b,
+ *            case_(equals_(a, 1234),
+ *                  a,
+ *                  null_()))
+ *
+ * ...and it actually means:
  *     const auto value_123 = std::make_shared<ValueExpression>(123);
  *     const auto value_1234 = std::make_shared<ValueExpression>(1234);
  *     const auto a_eq_123 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, int_float_a_expression, value_123);
@@ -35,12 +45,7 @@
  *     const auto case_a_eq_1234 = std::make_shared<CaseExpression>(a_eq_1234, int_float_a_expression, null_value);
  *     const auto case_a_eq_123 = std::make_shared<CaseExpression>(a_eq_123, int_float_b_expression, case_a_eq_1234);
  *
- *  becomes
- *      case_(equals(a, 123),
- *            b,
- *            case_(equals(a, 1234),
- *                  a,
- *                  null()))
+ *  ...and I think that's beautiful.
  */
 
 namespace opossum {
@@ -178,31 +183,31 @@ std::shared_ptr<FunctionExpression> concat_(const Args... args) {
 }
 
 template <typename... Args>
-std::shared_ptr<ListExpression> list(Args&&... args) {
+std::shared_ptr<ListExpression> list_(Args&&... args) {
   return std::make_shared<ListExpression>(expression_vector(std::forward<Args>(args)...));
 }
 
 template <typename V, typename S>
-std::shared_ptr<InExpression> in(const V& v, const S& s) {
+std::shared_ptr<InExpression> in_(const V& v, const S& s) {
   return std::make_shared<InExpression>(to_expression(v), to_expression(s));
 }
 
-std::shared_ptr<ExistsExpression> exists(const std::shared_ptr<AbstractExpression>& select_expression);
+std::shared_ptr<ExistsExpression> exists_(const std::shared_ptr<AbstractExpression>& select_expression);
 
 template <typename F>
-std::shared_ptr<ExtractExpression> extract(const DatetimeComponent datetime_component, const F& from) {
+std::shared_ptr<ExtractExpression> extract_(const DatetimeComponent datetime_component, const F& from) {
   return std::make_shared<ExtractExpression>(datetime_component, to_expression(from));
 }
 
-std::shared_ptr<ParameterExpression> parameter(const ParameterID parameter_id);
-std::shared_ptr<LQPColumnExpression> column(const LQPColumnReference& column_reference);
+std::shared_ptr<ParameterExpression> parameter_(const ParameterID parameter_id);
+std::shared_ptr<LQPColumnExpression> column_(const LQPColumnReference &column_reference);
 
 template <typename ReferencedExpression>
-std::shared_ptr<ParameterExpression> parameter(const ParameterID parameter_id, const ReferencedExpression& referenced) {
+std::shared_ptr<ParameterExpression> parameter_(const ParameterID parameter_id, const ReferencedExpression& referenced) {
   return std::make_shared<ParameterExpression>(parameter_id, *to_expression(referenced));
 }
 
-std::shared_ptr<AggregateExpression> count_star();
+std::shared_ptr<AggregateExpression> count_star_();
 
 template <typename Argument>
 std::shared_ptr<UnaryMinusExpression> unary_minus(const Argument& argument) {

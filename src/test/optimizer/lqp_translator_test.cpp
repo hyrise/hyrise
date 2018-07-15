@@ -261,8 +261,8 @@ TEST_F(LQPTranslatorTest, SelectExpressionCorrelated) {
    * LQP resembles:
    *   SELECT (SELECT MIN(a + int_float5.d + int_float5.a) FROM int_float), a FROM int_float5;
    */
-  const auto parameter_a = parameter(ParameterID{0}, int_float5_a);
-  const auto parameter_d = parameter(ParameterID{1}, int_float5_d);
+  const auto parameter_a = parameter_(ParameterID{0}, int_float5_a);
+  const auto parameter_d = parameter_(ParameterID{1}, int_float5_d);
 
   const auto a_plus_a_plus_d = add_(int_float_a, add_(parameter_a, parameter_d));
 

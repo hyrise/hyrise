@@ -29,12 +29,12 @@ class LQPSelectExpressionTest : public ::testing::Test {
 
     // clang-format off
     lqp_a =
-    AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter(ParameterID{0})))),
-      ProjectionNode::make(expression_vector(add_(a, parameter(ParameterID{0}))),
+    AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_(ParameterID{0})))),
+      ProjectionNode::make(expression_vector(add_(a, parameter_(ParameterID{0}))),
         int_float_node_a
     ));
 
-    parameter_c = parameter(ParameterID{0}, a);
+    parameter_c = parameter_(ParameterID{0}, a);
     lqp_c =
     AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_c))),
       ProjectionNode::make(expression_vector(add_(a, parameter_c)),
@@ -62,21 +62,21 @@ TEST_F(LQPSelectExpressionTest, DeepEquals) {
 
   // clang-format off
   const auto lqp_b =
-  AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter(ParameterID{0})))),
-    ProjectionNode::make(expression_vector(add_(a, parameter(ParameterID{0}))),
+  AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_(ParameterID{0})))),
+    ProjectionNode::make(expression_vector(add_(a, parameter_(ParameterID{0}))),
       int_float_node_a
   ));
 
   const auto int_float_node_b = StoredTableNode::make("int_float");
   const auto a2 = int_float_node_b->get_column("a");
-  const auto parameter_d = parameter(ParameterID{0}, a2);
+  const auto parameter_d = parameter_(ParameterID{0}, a2);
   const auto lqp_d =
   AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_d))),
     ProjectionNode::make(expression_vector(add_(a, parameter_d)),
       int_float_node_a
   ));
 
-  const auto parameter_e = parameter(ParameterID{0}, b);
+  const auto parameter_e = parameter_(ParameterID{0}, b);
   const auto lqp_e =
   AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_d))),
     ProjectionNode::make(expression_vector(add_(a, parameter_d)),
@@ -143,8 +143,8 @@ TEST_F(LQPSelectExpressionTest, AsColumnName) {
   EXPECT_TRUE(std::regex_search(select_c->as_column_name(), std::regex{"SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)"}));
 
   // Test IN and EXISTS here as well, since they need subselects to function
-  EXPECT_TRUE(std::regex_search(exists(select_c)->as_column_name(), std::regex{"EXISTS\\(SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)\\)"}));
-  EXPECT_TRUE(std::regex_search(in(5, select_c)->as_column_name(), std::regex{"\\(5\\) IN SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)"}));
+  EXPECT_TRUE(std::regex_search(exists_(select_c)->as_column_name(), std::regex{"EXISTS\\(SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)\\)"}));
+  EXPECT_TRUE(std::regex_search(in_(5, select_c)->as_column_name(), std::regex{"\\(5\\) IN SUBSELECT \\(LQP, 0x[0-9a-f]+, Parameters: a\\)"}));
 }
 
 }  // namespace opossum

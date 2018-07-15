@@ -388,15 +388,15 @@ TEST_F(SQLTranslatorTest, WhereExists) {
       compile_query("SELECT * FROM int_float WHERE EXISTS(SELECT * FROM int_float2 WHERE int_float.a = int_float2.a);");
 
   // clang-format off
-  const auto parameter_int_float_a = parameter(ParameterID{0}, int_float_a);
+  const auto parameter_int_float_a = parameter_(ParameterID{0}, int_float_a);
   const auto sub_select_lqp =
   PredicateNode::make(equals_(parameter_int_float_a, int_float2_a), stored_table_node_int_float2);
   const auto sub_select = select_(sub_select_lqp, std::make_pair(ParameterID{0}, int_float_a));
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-    PredicateNode::make(not_equals_(exists(sub_select), 0),
-      ProjectionNode::make(expression_vector(exists(sub_select), int_float_a, int_float_b),
+    PredicateNode::make(not_equals_(exists_(sub_select), 0),
+      ProjectionNode::make(expression_vector(exists_(sub_select), int_float_a, int_float_b),
         stored_table_node_int_float
   )));
   // clang-format on
@@ -408,7 +408,7 @@ TEST_F(SQLTranslatorTest, WhereWithCorrelatedSelect) {
   const auto actual_lqp =
       compile_query("SELECT * FROM int_float WHERE a > (SELECT MIN(a + int_float.b) FROM int_float2);");
 
-  const auto parameter_b = parameter(ParameterID{0}, int_float_b);
+  const auto parameter_b = parameter_(ParameterID{0}, int_float_b);
 
   // clang-format off
   const auto sub_select_lqp =
@@ -471,8 +471,8 @@ TEST_F(SQLTranslatorTest, WhereNotFallback) {
   // clang-format off
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(int_float_a, int_float_b),
-    PredicateNode::make(equals_(in(int_float_a, list(1, 2)), 0),
-        ProjectionNode::make(expression_vector(in(int_float_a, list(1, 2)), int_float_a, int_float_b),
+    PredicateNode::make(equals_(in_(int_float_a, list_(1, 2)), 0),
+        ProjectionNode::make(expression_vector(in_(int_float_a, list_(1, 2)), int_float_a, int_float_b),
       stored_table_node_int_float)));
   // clang-format on
 
@@ -509,7 +509,7 @@ TEST_F(SQLTranslatorTest, AggregateCount) {
   const auto actual_lqp_count_star = compile_query("SELECT b, COUNT(*) FROM int_float GROUP BY b");
   // clang-format off
   const auto expected_lqp_star =
-  AggregateNode::make(expression_vector(int_float_b), expression_vector(count_star()),
+  AggregateNode::make(expression_vector(int_float_b), expression_vector(count_star_()),
     stored_table_node_int_float
   );
   // clang-format on
@@ -612,7 +612,7 @@ TEST_F(SQLTranslatorTest, SubSelectSelectList) {
   const auto actual_lqp = compile_query("SELECT (SELECT MIN(a + d) FROM int_float), a FROM int_float5 AS f");
 
   // clang-format off
-  const auto parameter_d = parameter(ParameterID{0}, int_float5_d);
+  const auto parameter_d = parameter_(ParameterID{0}, int_float5_d);
   const auto a_plus_d = add_(int_float_a, parameter_d);
   const auto sub_select_lqp =
   AggregateNode::make(expression_vector(), expression_vector(min_(a_plus_d)),
@@ -652,7 +652,7 @@ TEST_F(SQLTranslatorTest, OrderByTest) {
 TEST_F(SQLTranslatorTest, InArray) {
   const auto actual_lqp = compile_query("SELECT * FROM int_float WHERE a + 7 IN (1+2,3,4)");
 
-  const auto a_plus_7_in = in(add_(int_float_a, 7), list(add_(1, 2), 3, 4));
+  const auto a_plus_7_in = in_(add_(int_float_a, 7), list_(add_(1, 2), 3, 4));
 
   // clang-format off
   const auto expected_lqp =
@@ -673,7 +673,7 @@ TEST_F(SQLTranslatorTest, InSelect) {
   const auto sub_select_lqp = stored_table_node_int_float2;
   const auto sub_select = select_(sub_select_lqp);
 
-  const auto a_plus_7_in = in(add_(int_float_a, 7), sub_select);
+  const auto a_plus_7_in = in_(add_(int_float_a, 7), sub_select);
 
   // clang-format off
   const auto expected_lqp =
@@ -693,8 +693,8 @@ TEST_F(SQLTranslatorTest, InCorrelatedSelect) {
       "b)");
 
   // clang-format off
-  const auto parameter_a = parameter(ParameterID{1}, int_float_a);
-  const auto parameter_b = parameter(ParameterID{0}, int_float_b);
+  const auto parameter_a = parameter_(ParameterID{1}, int_float_a);
+  const auto parameter_b = parameter_(ParameterID{0}, int_float_b);
 
   const auto b_times_a_times_a = mul_(mul_(parameter_b, parameter_a), parameter_a);
 
@@ -708,7 +708,7 @@ TEST_F(SQLTranslatorTest, InCorrelatedSelect) {
   const auto sub_select = select_(sub_select_lqp, std::make_pair(ParameterID{1}, int_float_a),
                                   std::make_pair(ParameterID{0}, int_float_b));
 
-  const auto a_in_sub_select = in(int_float_a, sub_select);
+  const auto a_in_sub_select = in_(int_float_a, sub_select);
 
   // clang-format off
   const auto expected_lqp =
@@ -974,7 +974,7 @@ TEST_F(SQLTranslatorTest, Extract) {
 
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(extract(DatetimeComponent::Month, "1993-08-01")), DummyTableNode::make());
+  ProjectionNode::make(expression_vector(extract_(DatetimeComponent::Month, "1993-08-01")), DummyTableNode::make());
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -985,8 +985,8 @@ TEST_F(SQLTranslatorTest, ValuePlaceholders) {
 
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(add_(int_float_a, parameter(ParameterID{1})), parameter(ParameterID{2})),
-    PredicateNode::make(greater_than_(int_float_a, parameter(ParameterID{0})),
+  ProjectionNode::make(expression_vector(add_(int_float_a, parameter_(ParameterID{1})), parameter_(ParameterID{2})),
+    PredicateNode::make(greater_than_(int_float_a, parameter_(ParameterID{0})),
       stored_table_node_int_float
   ));
   // clang-format on
@@ -1007,8 +1007,8 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocationSimple) {
   actual_lqp->print();
 
   // clang-format off
-  const auto parameter_int_float_b = parameter(ParameterID{1}, int_float_b);
-  const auto parameter_int_float2_a = parameter(ParameterID{0}, int_float2_a);
+  const auto parameter_int_float_b = parameter_(ParameterID{1}, int_float_b);
+  const auto parameter_int_float2_a = parameter_(ParameterID{0}, int_float2_a);
 
   // "(SELECT int_float2.a + int_float.b)"
   const auto expected_sub_sub_select_lqp =
@@ -1051,9 +1051,9 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
           .at(0);
 
   // clang-format off
-  const auto parameter_int_float_a = parameter(ParameterID{2}, int_float_a);
-  const auto parameter_int_float_b = parameter(ParameterID{3}, int_float_b);
-  const auto parameter_int_float2_a = parameter(ParameterID{4}, int_float2_a);
+  const auto parameter_int_float_a = parameter_(ParameterID{2}, int_float_a);
+  const auto parameter_int_float_b = parameter_(ParameterID{3}, int_float_b);
+  const auto parameter_int_float2_a = parameter_(ParameterID{4}, int_float2_a);
 
   // "(SELECT MIN(b) + int_float.a FROM int_float2)"
   const auto expected_sub_select_lqp_a =
@@ -1081,10 +1081,10 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
   const auto expected_sub_select_b = select_(expected_sub_select_lqp_b, std::make_pair(ParameterID{3}, int_float_b));
 
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(parameter(ParameterID{1}),
+  ProjectionNode::make(expression_vector(parameter_(ParameterID{1}),
                                          expected_sub_select_a,
                                          expected_sub_select_b),
-    PredicateNode::make(greater_than_(int_float_a, parameter(ParameterID{0})),
+    PredicateNode::make(greater_than_(int_float_a, parameter_(ParameterID{0})),
       stored_table_node_int_float
   ));
   // clang-format on
@@ -1139,7 +1139,7 @@ TEST_F(SQLTranslatorTest, Exists) {
 
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(exists(select_(stored_table_node_int_float))),
+  ProjectionNode::make(expression_vector(exists_(select_(stored_table_node_int_float))),
     DummyTableNode::make()
   );
   // clang-format on
@@ -1152,7 +1152,7 @@ TEST_F(SQLTranslatorTest, NotExists) {
 
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(equals_(exists(select_(stored_table_node_int_float)), 0)),
+  ProjectionNode::make(expression_vector(equals_(exists_(select_(stored_table_node_int_float)), 0)),
     DummyTableNode::make()
   );
   // clang-format on
@@ -1166,12 +1166,12 @@ TEST_F(SQLTranslatorTest, ExistsCorrelated) {
 
   // clang-format off
   const auto sub_select_lqp =
-  PredicateNode::make(greater_than_(int_float_a, parameter(ParameterID{0}, int_float2_b)),
+  PredicateNode::make(greater_than_(int_float_a, parameter_(ParameterID{0}, int_float2_b)),
     stored_table_node_int_float);
   const auto sub_select = select_(sub_select_lqp, std::make_pair(ParameterID{0}, int_float2_b));
 
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(exists(sub_select)),
+  ProjectionNode::make(expression_vector(exists_(sub_select)),
     stored_table_node_int_float2
   );
   // clang-format on

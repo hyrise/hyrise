@@ -46,7 +46,7 @@ class LRUCache : public AbstractCache<Key, Value> {
   bool has(const Key& key) const { return _map.find(key) != _map.end(); }
 
   // Returns the underlying list of all elements in the cache.
-  std::list<KeyValuePair>& list() { return _list; }
+  std::list<KeyValuePair>& list_() { return _list; }
 
   size_t size() const { return _map.size(); }
 
