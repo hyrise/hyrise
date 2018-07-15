@@ -424,7 +424,6 @@ set(
     storage/index/group_key/variable_length_key_store.cpp
     storage/index/group_key/variable_length_key_store.hpp
     storage/index/index_info.hpp
-    storage/materialize.cpp
     storage/materialize.hpp
     storage/mvcc_columns.cpp
     storage/mvcc_columns.hpp
@@ -510,7 +509,6 @@ set(
     utils/format_bytes.hpp
     utils/format_duration.cpp
     utils/format_duration.hpp
-    utils/lambda_visitor.hpp
     utils/load_table.cpp
     utils/load_table.hpp
     utils/murmur_hash.cpp

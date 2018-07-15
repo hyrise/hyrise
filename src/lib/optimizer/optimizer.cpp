@@ -15,7 +15,7 @@
 #include "strategy/predicate_reordering_rule.hpp"
 
 /**
- * IMPORTANT NOTICE ON OPTIMIZING SUB-SELECT LQPS
+ * IMPORTANT NOTES ON OPTIMIZING SUB-SELECT LQPS
  *
  * Multiple Expressions in different nodes might reference the same LQP. Most commonly this will be the case for a
  * ProjectionNode computing a subselect and a subsequent PredicateNode filtering based on it.

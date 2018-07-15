@@ -31,7 +31,6 @@
 #include "storage/materialize.hpp"
 #include "storage/value_column.hpp"
 #include "utils/assert.hpp"
-#include "utils/lambda_visitor.hpp"
 
 using namespace std::string_literals;
 using namespace opossum::expression_functional;
