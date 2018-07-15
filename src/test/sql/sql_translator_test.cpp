@@ -1320,4 +1320,16 @@ TEST_F(SQLTranslatorTest, DropView) {
   EXPECT_LQP_EQ(lqp, result_node);
 }
 
+TEST_F(SQLTranslatorTest, CatchInputErrors) {
+  EXPECT_THROW(compile_query("SELECT no_such_table.* FROM int_float;"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT no_such_function(5+3);"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT no_such_column FROM int_float;"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT * FROM no_such_table;"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT b, SUM(b) AS s FROM table_a GROUP BY a;"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT * FROM table_a JOIN table_b ON a = b;"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT * FROM table_a JOIN table_b ON table_a.a = table_b.a AND a = 3;"), InvalidInputException);  // NOLINT
+  EXPECT_THROW(compile_query("SELECT * FROM int_float WHERE 3 + 4;"), InvalidInputException);
+  EXPECT_THROW(compile_query("INSERT INTO int_float VALUES (1, 2, 3, 4)"), InvalidInputException);
+}
+
 }  // namespace opossum
