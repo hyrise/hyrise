@@ -17,11 +17,11 @@ class DeleteNodeTest : public ::testing::Test {
 TEST_F(DeleteNodeTest, Description) { EXPECT_EQ(_delete_node->description(), "[Delete] Table: 'table_a'"); }
 
 TEST_F(DeleteNodeTest, Equals) {
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_delete_node, _delete_node));
+  EXPECT_EQ(*_delete_node, *_delete_node);
   const auto different_delete_node = DeleteNode::make("table_b");
-  EXPECT_TRUE(lqp_find_subplan_mismatch(_delete_node, different_delete_node).has_value());
+  EXPECT_NE(*_delete_node, *different_delete_node);
 }
 
-TEST_F(DeleteNodeTest, Copy) { EXPECT_TRUE(!lqp_find_subplan_mismatch(_delete_node, _delete_node->deep_copy())); }
+TEST_F(DeleteNodeTest, Copy) { EXPECT_EQ(*_delete_node, *_delete_node->deep_copy()); }
 
 }  // namespace opossum

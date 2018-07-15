@@ -4,12 +4,12 @@
 
 #include "base_test.hpp"
 
-#include "expression/expression_factory.hpp"
+#include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 
-using namespace opossum::expression_factory;
+using namespace opossum::expression_functional;
 
 namespace opossum {
 

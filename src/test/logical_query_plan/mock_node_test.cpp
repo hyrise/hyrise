@@ -5,13 +5,13 @@
 
 #include "base_test.hpp"
 
-#include "expression/expression_factory.hpp"
+#include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "statistics/generate_table_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 
-using namespace opossum::expression_factory;
+using namespace opossum::expression_functional;
 
 namespace opossum {
 
@@ -49,18 +49,22 @@ TEST_F(MockNodeTest, OutputColumnExpression) {
 }
 
 TEST_F(MockNodeTest, Equals) {
+  // Consume the result of an equality check to avoid "equality comparison result unused [-Werror,-Wunused-comparison]"
+  // errors
+  const auto dummy = [](const auto v) {};
+
   // Can't compare MockNodes with statistics
-  EXPECT_ANY_THROW(lqp_find_subplan_mismatch(_mock_node_a, _mock_node_a));
+  EXPECT_ANY_THROW(dummy(*_mock_node_a == *_mock_node_a));
   const auto other_mock_node_a = MockNode::make(_statistics);
-  EXPECT_ANY_THROW(lqp_find_subplan_mismatch(_mock_node_a, other_mock_node_a));
+  EXPECT_ANY_THROW(dummy(*_mock_node_a == *other_mock_node_a));
 
   //
   const auto same_mock_node_b =
       MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "mock_name");
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_mock_node_b, _mock_node_b));
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_mock_node_b, same_mock_node_b));
+  EXPECT_EQ(*_mock_node_b, *_mock_node_b);
+  EXPECT_EQ(*_mock_node_b, *same_mock_node_b);
 }
 
-TEST_F(MockNodeTest, Copy) { EXPECT_TRUE(!lqp_find_subplan_mismatch(_mock_node_b, _mock_node_b->deep_copy())); }
+TEST_F(MockNodeTest, Copy) { EXPECT_EQ(*_mock_node_b, *_mock_node_b->deep_copy()); }
 
 }  // namespace opossum

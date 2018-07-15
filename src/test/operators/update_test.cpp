@@ -6,7 +6,7 @@
 #include "gtest/gtest.h"
 
 #include "concurrency/transaction_manager.hpp"
-#include "expression/expression_factory.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "operators/get_table.hpp"
 #include "operators/projection.hpp"
@@ -17,7 +17,7 @@
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
-using namespace opossum::expression_factory;  // NOLINT
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 

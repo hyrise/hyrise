@@ -4,14 +4,14 @@
 
 #include "gtest/gtest.h"
 
-#include "expression/expression_factory.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "storage/storage_manager.hpp"
 #include "types.hpp"
 
-using namespace opossum::expression_factory;
+using namespace opossum::expression_functional;
 
 namespace opossum {
 

@@ -4,7 +4,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "expression/expression_factory.hpp"
+#include "expression/expression_functional.hpp"
 #include "operators/difference.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
@@ -21,7 +21,7 @@
 #include "types.hpp"
 #include "utils/load_table.hpp"
 
-using namespace opossum::expression_factory;
+using namespace opossum::expression_functional;
 
 namespace opossum {
 

@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-#include "expression/expression_factory.hpp"
+#include "expression/expression_functional.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/create_view_node.hpp"
@@ -29,7 +29,7 @@
 
 #include "testing_assert.hpp"
 
-using namespace opossum::expression_factory;  // NOLINT
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 

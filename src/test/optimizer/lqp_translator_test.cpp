@@ -8,7 +8,7 @@
 
 #include "expression/aggregate_expression.hpp"
 #include "expression/arithmetic_expression.hpp"
-#include "expression/expression_factory.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -42,7 +42,7 @@
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
 
-using namespace opossum::expression_factory;  // NOLINT
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 

@@ -1,11 +1,11 @@
 #include "gtest/gtest.h"
 
-#include "expression/expression_factory.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 
-using namespace opossum::expression_factory;
+using namespace opossum::expression_functional;
 
 namespace opossum {
 

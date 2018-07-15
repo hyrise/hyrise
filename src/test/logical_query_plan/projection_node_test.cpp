@@ -7,13 +7,13 @@
 #include "base_test.hpp"
 
 #include "expression/abstract_expression.hpp"
-#include "expression/expression_factory.hpp"
+#include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "storage/storage_manager.hpp"
 
-using namespace opossum::expression_factory;
+using namespace opossum::expression_functional;
 
 namespace opossum {
 
@@ -41,17 +41,17 @@ TEST_F(ProjectionNodeTest, Description) {
 }
 
 TEST_F(ProjectionNodeTest, Equals) {
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_projection_node, _projection_node));
+  EXPECT_EQ(*_projection_node, *_projection_node);
 
   const auto different_projection_node_a =
       ProjectionNode::make(expression_vector(_a, _c, _b, add(_b, _c), add(_a, _c)), _mock_node);
   const auto different_projection_node_b = ProjectionNode::make(expression_vector(_c, _a, _b, add(_b, _c)), _mock_node);
-  EXPECT_TRUE(lqp_find_subplan_mismatch(_projection_node, different_projection_node_a).has_value());
-  EXPECT_TRUE(lqp_find_subplan_mismatch(_projection_node, different_projection_node_b).has_value());
+  EXPECT_NE(*_projection_node, *different_projection_node_a);
+  EXPECT_NE(*_projection_node, *different_projection_node_b);
 }
 
 TEST_F(ProjectionNodeTest, Copy) {
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_projection_node->deep_copy(), _projection_node));
+  EXPECT_EQ(*_projection_node->deep_copy(), *_projection_node);
 }
 
 }  // namespace opossum

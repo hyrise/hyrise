@@ -5,7 +5,7 @@
 #include "expression/arithmetic_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/case_expression.hpp"
-#include "expression/expression_factory.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
@@ -34,7 +34,7 @@
 #include "tpch/tpch_queries.hpp"
 #include "utils/load_table.hpp"
 
-using namespace opossum::expression_factory;  // NOLINT
+using namespace opossum::expression_functional;  // NOLINT
 using namespace std::string_literals;         // NOLINT
 
 namespace {

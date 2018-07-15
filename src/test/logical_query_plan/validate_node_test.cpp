@@ -18,8 +18,8 @@ class ValidateNodeTest : public BaseTest {
 
 TEST_F(ValidateNodeTest, Description) { EXPECT_EQ(_validate_node->description(), "[Validate]"); }
 
-TEST_F(ValidateNodeTest, Equals) { EXPECT_TRUE(!lqp_find_subplan_mismatch(_validate_node, _validate_node)); }
+TEST_F(ValidateNodeTest, Equals) { EXPECT_EQ(*_validate_node, *_validate_node); }
 
-TEST_F(ValidateNodeTest, Copy) { EXPECT_TRUE(!lqp_find_subplan_mismatch(_validate_node->deep_copy(), _validate_node)); }
+TEST_F(ValidateNodeTest, Copy) { EXPECT_EQ(*_validate_node->deep_copy(), *_validate_node); }
 
 }  // namespace opossum

@@ -46,8 +46,8 @@ TEST_F(UnionNodeTest, OutputColumnExpressions) {
   EXPECT_EQ(*_union_node->column_expressions().at(2), *_mock_node1->column_expressions().at(2));
 }
 
-TEST_F(UnionNodeTest, Equals) { EXPECT_TRUE(!lqp_find_subplan_mismatch(_union_node, _union_node)); }
+TEST_F(UnionNodeTest, Equals) { EXPECT_EQ(*_union_node, *_union_node); }
 
-TEST_F(UnionNodeTest, Copy) { EXPECT_TRUE(!lqp_find_subplan_mismatch(_union_node->deep_copy(), _union_node)); }
+TEST_F(UnionNodeTest, Copy) { EXPECT_EQ(*_union_node->deep_copy(), *_union_node); }
 
 }  // namespace opossum

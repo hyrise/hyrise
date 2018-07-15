@@ -47,8 +47,8 @@ set(
     expression/evaluation/expression_functors.hpp
     expression/evaluation/like_matcher.cpp
     expression/evaluation/like_matcher.hpp
-    expression/expression_factory.cpp
-    expression/expression_factory.hpp
+    expression/expression_functional.cpp
+    expression/expression_functional.hpp
     expression/expression_utils.cpp
     expression/expression_utils.hpp
     expression/extract_expression.cpp

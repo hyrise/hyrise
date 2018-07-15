@@ -21,9 +21,9 @@ TEST_F(InsertNodeTest, Description) { EXPECT_EQ(_insert_node->description(), "[I
 TEST_F(InsertNodeTest, TableName) { EXPECT_EQ(_insert_node->table_name(), "table_a"); }
 
 TEST_F(InsertNodeTest, Equals) {
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_insert_node, _insert_node));
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_insert_node, InsertNode::make("table_a")));
-  EXPECT_TRUE(lqp_find_subplan_mismatch(_insert_node, InsertNode::make("table_b")).has_value());
+  EXPECT_EQ(*_insert_node, *_insert_node);
+  EXPECT_EQ(*_insert_node, *InsertNode::make("table_a"));
+  EXPECT_NE(*_insert_node, *InsertNode::make("table_b"));
 }
 
 }  // namespace opossum

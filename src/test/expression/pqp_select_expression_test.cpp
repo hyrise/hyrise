@@ -2,7 +2,7 @@
 
 #include <regex>
 
-#include "expression/expression_factory.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_select_expression.hpp"
@@ -14,7 +14,7 @@
 #include "utils/load_table.hpp"
 
 using namespace std::string_literals;         // NOLINT
-using namespace opossum::expression_factory;  // NOLINT
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 

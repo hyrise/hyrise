@@ -60,9 +60,7 @@ bool LQPSelectExpression::is_nullable() const {
 bool LQPSelectExpression::_shallow_equals(const AbstractExpression& expression) const {
   const auto& lqp_select_expression = static_cast<const LQPSelectExpression&>(expression);
 
-  const auto mismatch = lqp_find_subplan_mismatch(lqp, lqp_select_expression.lqp);
-
-  return !mismatch && parameter_ids == lqp_select_expression.parameter_ids;
+  return *lqp == *lqp_select_expression.lqp && parameter_ids == lqp_select_expression.parameter_ids;
 }
 
 size_t LQPSelectExpression::_on_hash() const {

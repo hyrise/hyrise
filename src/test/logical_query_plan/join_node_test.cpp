@@ -5,14 +5,14 @@
 
 #include "base_test.hpp"
 
-#include "expression/expression_factory.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "storage/storage_manager.hpp"
 
-using namespace opossum::expression_factory;
+using namespace opossum::expression_functional;
 
 namespace opossum {
 

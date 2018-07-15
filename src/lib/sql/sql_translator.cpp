@@ -19,7 +19,7 @@
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/case_expression.hpp"
 #include "expression/exists_expression.hpp"
-#include "expression/expression_factory.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/in_expression.hpp"
 #include "expression/is_null_expression.hpp"
@@ -55,7 +55,7 @@
 #include "SQLParser.h"
 
 using namespace std::string_literals;
-using namespace opossum::expression_factory;
+using namespace opossum::expression_functional;
 
 namespace {
 

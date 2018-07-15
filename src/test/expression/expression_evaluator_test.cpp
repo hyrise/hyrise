@@ -8,7 +8,7 @@
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/evaluation/expression_result.hpp"
 #include "expression/exists_expression.hpp"
-#include "expression/expression_factory.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/extract_expression.hpp"
 #include "expression/function_expression.hpp"
@@ -27,7 +27,7 @@
 #include "testing_assert.hpp"
 #include "utils/load_table.hpp"
 
-using namespace opossum::expression_factory;
+using namespace opossum::expression_functional;
 
 namespace opossum {
 

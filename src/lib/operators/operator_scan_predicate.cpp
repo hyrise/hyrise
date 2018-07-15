@@ -2,7 +2,7 @@
 
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/parameter_expression.hpp"
-#include "expression/expression_factory.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "utils/assert.hpp"
@@ -10,7 +10,7 @@
 namespace {
 
 using namespace opossum;  // NOLINT
-using namespace opossum::expression_factory;  // NOLINT
+using namespace opossum::expression_functional;  // NOLINT
 
 std::optional<AllParameterVariant> resolve_all_parameter_variant(const AbstractExpression& expression,
                                                                  const AbstractLQPNode& node) {

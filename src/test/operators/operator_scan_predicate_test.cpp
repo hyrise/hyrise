@@ -1,10 +1,10 @@
 #include "gtest/gtest.h"
 
-#include "expression/expression_factory.hpp"
+#include "expression/expression_functional.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
 
-using namespace opossum::expression_factory;  // NOLINT
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 

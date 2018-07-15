@@ -5,12 +5,12 @@
 
 #include "base_test.hpp"
 
-#include "expression/expression_factory.hpp"
+#include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 
-using namespace opossum::expression_factory;  // NOLINT
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
@@ -41,6 +41,6 @@ TEST_F(UpdateNodeTest, Equals) {
   EXPECT_NE(*_update_node, *other_update_node_c);
 }
 
-TEST_F(UpdateNodeTest, Copy) { EXPECT_TRUE(!lqp_find_subplan_mismatch(_update_node->deep_copy(), _update_node)); }
+TEST_F(UpdateNodeTest, Copy) { EXPECT_EQ(*_update_node->deep_copy(), *_update_node); }
 
 }  // namespace opossum

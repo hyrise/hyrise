@@ -7,7 +7,7 @@
 
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
-#include "expression/expression_factory.hpp"
+#include "expression/expression_functional.hpp"
 #include "operators/get_table.hpp"
 #include "operators/insert.hpp"
 #include "operators/projection.hpp"
@@ -17,7 +17,7 @@
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
-using namespace opossum::expression_factory;
+using namespace opossum::expression_functional;
 
 namespace opossum {
 

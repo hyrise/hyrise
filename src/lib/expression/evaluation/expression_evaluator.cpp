@@ -13,7 +13,7 @@
 #include "expression/case_expression.hpp"
 #include "expression/cast_expression.hpp"
 #include "expression/exists_expression.hpp"
-#include "expression/expression_factory.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/extract_expression.hpp"
 #include "expression/function_expression.hpp"
 #include "expression/in_expression.hpp"
@@ -34,7 +34,7 @@
 #include "utils/lambda_visitor.hpp"
 
 using namespace std::string_literals;
-using namespace opossum::expression_factory;
+using namespace opossum::expression_functional;
 
 namespace opossum {
 

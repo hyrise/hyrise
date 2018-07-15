@@ -6,7 +6,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "expression/expression_factory.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/print.hpp"
@@ -18,7 +18,7 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
-using namespace opossum::expression_factory;
+using namespace opossum::expression_functional;
 
 namespace opossum {
 

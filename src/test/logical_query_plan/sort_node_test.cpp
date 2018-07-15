@@ -5,12 +5,12 @@
 
 #include "base_test.hpp"
 
-#include "expression/expression_factory.hpp"
+#include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 
-using namespace opossum::expression_factory;
+using namespace opossum::expression_functional;
 
 namespace opossum {
 
@@ -49,7 +49,7 @@ TEST_F(SortNodeTest, Descriptions) {
 }
 
 TEST_F(SortNodeTest, Equals) {
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_sort_node, _sort_node));
+  EXPECT_EQ(*_sort_node, *_sort_node);
 
   const auto sort_a =
       SortNode::make(expression_vector(_a_i), std::vector<OrderByMode>{OrderByMode::Descending}, _table_node);
@@ -59,18 +59,18 @@ TEST_F(SortNodeTest, Equals) {
   const auto sort_c =
       SortNode::make(expression_vector(_a_i), std::vector<OrderByMode>{OrderByMode::Ascending}, _table_node);
 
-  EXPECT_TRUE(lqp_find_subplan_mismatch(_sort_node, sort_a).has_value());
-  EXPECT_TRUE(lqp_find_subplan_mismatch(_sort_node, sort_b).has_value());
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_sort_node, sort_c));
+  EXPECT_NE(*_sort_node, *sort_a);
+  EXPECT_NE(*_sort_node, *sort_b);
+  EXPECT_EQ(*_sort_node, *sort_c);
 }
 
 TEST_F(SortNodeTest, Copy) {
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(_sort_node->deep_copy(), _sort_node));
+  EXPECT_EQ(*_sort_node->deep_copy(), *_sort_node);
 
   const auto sort_b = SortNode::make(
       expression_vector(_a_d, _a_f, _a_i),
       std::vector<OrderByMode>{OrderByMode::Descending, OrderByMode::Ascending, OrderByMode::Descending}, _table_node);
-  EXPECT_TRUE(!lqp_find_subplan_mismatch(sort_b->deep_copy(), sort_b));
+  EXPECT_EQ(*sort_b->deep_copy(), *sort_b);
 }
 
 }  // namespace opossum

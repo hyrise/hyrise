@@ -48,68 +48,88 @@ namespace opossum {
 class AbstractOperator;
 class LQPColumnReference;
 
-namespace expression_factory {
+namespace expression_functional {
 
-// to_expression() overload that just forwards
+/**
+ * @defgroup Turn expression-like things (Values, LQPColumnReferences, Expressions themselves) into expressions
+ *
+ * Mostly used internally in this file
+ *
+ * @{
+ */
 std::shared_ptr<AbstractExpression> to_expression(const std::shared_ptr<AbstractExpression>& expression);
-
 std::shared_ptr<LQPColumnExpression> to_expression(const LQPColumnReference& column_reference);
 std::shared_ptr<ValueExpression> to_expression(const AllTypeVariant& value);
+/** @} */
 
 std::shared_ptr<ValueExpression> value(const AllTypeVariant& value);
 std::shared_ptr<ValueExpression> null();
 
-template <auto t, typename E>
+namespace detail {
+
+/**
+ * @defgroup Static objects that create Expressions that have an enum member (e.g. PredicateCondition::Equals)
+ *
+ * Having these eliminates the need to specify a function for each Expression-Enum-Member combination
+ *
+ * @{
+ */
+
+template<auto t, typename E>
 struct unary final {
-  template <typename A>
-  std::shared_ptr<E> operator()(const A& a) const {
+  template<typename A>
+  std::shared_ptr<E> operator()(const A &a) const {
     return std::make_shared<E>(t, to_expression(a));
   };
 };
 
-template <auto t, typename E>
+template<auto t, typename E>
 struct binary final {
-  template <typename A, typename B>
-  std::shared_ptr<E> operator()(const A& a, const B& b) const {
+  template<typename A, typename B>
+  std::shared_ptr<E> operator()(const A &a, const B &b) const {
     return std::make_shared<E>(t, to_expression(a), to_expression(b));
   };
 };
 
-template <typename E>
+template<typename E>
 struct ternary final {
-  template <typename A, typename B, typename C>
-  std::shared_ptr<E> operator()(const A& a, const B& b, const C& c) const {
+  template<typename A, typename B, typename C>
+  std::shared_ptr<E> operator()(const A &a, const B &b, const C &c) const {
     return std::make_shared<E>(to_expression(a), to_expression(b), to_expression(c));
   };
 };
 
-extern unary<PredicateCondition::IsNull, IsNullExpression> is_null;
-extern unary<PredicateCondition::IsNotNull, IsNullExpression> is_not_null;
-extern unary<AggregateFunction::Sum, AggregateExpression> sum;
-extern unary<AggregateFunction::Max, AggregateExpression> max;
-extern unary<AggregateFunction::Min, AggregateExpression> min;
-extern unary<AggregateFunction::Avg, AggregateExpression> avg;
-extern unary<AggregateFunction::Count, AggregateExpression> count;
-extern unary<AggregateFunction::CountDistinct, AggregateExpression> count_distinct;
+/** @} */
 
-extern binary<ArithmeticOperator::Division, ArithmeticExpression> div_;
-extern binary<ArithmeticOperator::Multiplication, ArithmeticExpression> mul;
-extern binary<ArithmeticOperator::Addition, ArithmeticExpression> add;
-extern binary<ArithmeticOperator::Subtraction, ArithmeticExpression> sub;
-extern binary<ArithmeticOperator::Modulo, ArithmeticExpression> mod;
-extern binary<PredicateCondition::Like, BinaryPredicateExpression> like;
-extern binary<PredicateCondition::NotLike, BinaryPredicateExpression> not_like;
-extern binary<PredicateCondition::Equals, BinaryPredicateExpression> equals;
-extern binary<PredicateCondition::NotEquals, BinaryPredicateExpression> not_equals;
-extern binary<PredicateCondition::LessThan, BinaryPredicateExpression> less_than;
-extern binary<PredicateCondition::LessThanEquals, BinaryPredicateExpression> less_than_equals;
-extern binary<PredicateCondition::GreaterThanEquals, BinaryPredicateExpression> greater_than_equals;
-extern binary<PredicateCondition::GreaterThan, BinaryPredicateExpression> greater_than;
-extern binary<LogicalOperator::And, LogicalExpression> and_;
-extern binary<LogicalOperator::Or, LogicalExpression> or_;
+}
 
-extern ternary<BetweenExpression> between;
-extern ternary<CaseExpression> case_;
+inline detail::unary<PredicateCondition::IsNull, IsNullExpression> is_null;
+inline detail::unary<PredicateCondition::IsNotNull, IsNullExpression> is_not_null;
+inline detail::unary<AggregateFunction::Sum, AggregateExpression> sum;
+inline detail::unary<AggregateFunction::Max, AggregateExpression> max;
+inline detail::unary<AggregateFunction::Min, AggregateExpression> min;
+inline detail::unary<AggregateFunction::Avg, AggregateExpression> avg;
+inline detail::unary<AggregateFunction::Count, AggregateExpression> count;
+inline detail::unary<AggregateFunction::CountDistinct, AggregateExpression> count_distinct;
+
+inline detail::binary<ArithmeticOperator::Division, ArithmeticExpression> div_;
+inline detail::binary<ArithmeticOperator::Multiplication, ArithmeticExpression> mul;
+inline detail::binary<ArithmeticOperator::Addition, ArithmeticExpression> add;
+inline detail::binary<ArithmeticOperator::Subtraction, ArithmeticExpression> sub;
+inline detail::binary<ArithmeticOperator::Modulo, ArithmeticExpression> mod;
+inline detail::binary<PredicateCondition::Like, BinaryPredicateExpression> like;
+inline detail::binary<PredicateCondition::NotLike, BinaryPredicateExpression> not_like;
+inline detail::binary<PredicateCondition::Equals, BinaryPredicateExpression> equals;
+inline detail::binary<PredicateCondition::NotEquals, BinaryPredicateExpression> not_equals;
+inline detail::binary<PredicateCondition::LessThan, BinaryPredicateExpression> less_than;
+inline detail::binary<PredicateCondition::LessThanEquals, BinaryPredicateExpression> less_than_equals;
+inline detail::binary<PredicateCondition::GreaterThanEquals, BinaryPredicateExpression> greater_than_equals;
+inline detail::binary<PredicateCondition::GreaterThan, BinaryPredicateExpression> greater_than;
+inline detail::binary<LogicalOperator::And, LogicalExpression> and_;
+inline detail::binary<LogicalOperator::Or, LogicalExpression> or_;
+
+inline detail::ternary<BetweenExpression> between;
+inline detail::ternary<CaseExpression> case_;
 
 template <typename... Args>
 std::shared_ptr<LQPSelectExpression> select(const std::shared_ptr<AbstractLQPNode>& lqp,
@@ -194,6 +214,6 @@ std::shared_ptr<CastExpression> cast(const Argument& argument, const DataType da
   return std::make_shared<CastExpression>(to_expression(argument), data_type);
 }
 
-}  // namespace expression_factory
+}  // namespace expression_functional
 
 }  // namespace opossum

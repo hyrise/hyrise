@@ -109,7 +109,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   std::shared_ptr<AbstractLQPNode> deep_copy(LQPNodeMapping extern_node_mapping = {}) const;
 
   /**
-   * Compare this node with another, without comparing inputs. Prefer lqp_find_subplan_mismatch() over this function.
+   * Compare this node with another, without comparing inputs.
    * @param node_mapping    Mapping from nodes in this node's input plans to corresponding nodes in the input plans of
    *                        rhs
    */

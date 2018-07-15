@@ -30,7 +30,7 @@ set(
     logical_query_plan/delete_node_test.cpp
     logical_query_plan/drop_view_node_test.cpp
     logical_query_plan/dummy_table_node_test.cpp
-    logical_query_plan/lqp_find_subplan_mismatch.cpp
+    logical_query_plan/lqp_find_subplan_mismatch_test.cpp
     logical_query_plan/insert_node_test.cpp
     logical_query_plan/join_node_test.cpp
     logical_query_plan/limit_node_test.cpp
