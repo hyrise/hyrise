@@ -128,7 +128,9 @@ TEST_F(ServerTestRunner, TestPreparedStatement) {
 
 TEST_F(ServerTestRunner, TestParallelConnections) {
   // This test is by no means perfect, as it can show flaky behaviour. But it is rather hard to get reliable tests with
-  // multiple concurrent connections to detect a randomly (but often) occurring bug.
+  // multiple concurrent connections to detect a randomly (but often) occurring bug. This test will/can only fail if a
+  // bug is present but it should not fail if no bug is present. It just sends 100 parallel connections and if that
+  // fails, there probably is a bug.
   const std::string sql = "SELECT * FROM table_a;";
   const auto expected_num_rows = _table_a->row_count();
 
