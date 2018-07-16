@@ -134,15 +134,17 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_statement(const hsql::
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::InsertStatement& insert) {
   const std::string table_name{insert.tableName};
+
+  AssertInput(StorageManager::get().has_table(table_name), "Insert: Invalid table name: " + table_name);
+
   auto target_table = StorageManager::get().get_table(table_name);
 
-  Assert(target_table != nullptr, "Insert: Invalid table name");
 
   std::shared_ptr<AbstractLQPNode> current_result_node;
 
   // Check for SELECT ... INTO .. query
   if (insert.type == hsql::kInsertSelect) {
-    DebugAssert(insert.select != nullptr, "Insert: no select statement given");
+    AssertInput(insert.select != nullptr, "Insert: no select statement given");
     current_result_node = _translate_select(*insert.select);
   } else {
     current_result_node = DummyTableNode::make();
@@ -192,7 +194,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
     // For SELECT ... INTO we are basically done because can use the above node as input.
 
     if (insert.type == hsql::kInsertValues) {
-      DebugAssert(insert.values != nullptr, "Insert: no values given");
+      AssertInput(insert.values != nullptr, "Insert: no values given");
 
       Assert(data_types_match_expr_types(target_table->column_data_types(), *insert.values),
              "Insert: Column type mismatch");
@@ -313,7 +315,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select(const hsql::Se
     current_result_node = _translate_where(*select.whereClause, current_result_node);
   }
 
-  DebugAssert(select.selectList != nullptr, "SELECT list needs to exist");
+  AssertInput(select.selectList != nullptr, "SELECT list needs to exist");
   DebugAssert(!select.selectList->empty(), "SELECT list needs to have entries");
 
   Assert(!select.selectDistinct, "DISTINCT is not yet supported");
@@ -456,8 +458,8 @@ LQPInputSide SQLTranslator::_get_side(const std::shared_ptr<AbstractLQPNode>& le
   const auto qualified = HSQLExprTranslator::to_qualified_column_name(*expr);
   const auto left = left_node->find_column(qualified);
   const auto right = right_node->find_column(qualified);
-  Assert(left.has_value() ^ right.has_value(),
-         std::string("Column '") + qualified.as_string() + "' was not found or is not unique");
+  AssertInput(left.has_value() ^ right.has_value(),
+         "Column '" + qualified.as_string() + "' was not found or is not unique");
   return left ? LQPInputSide::Left : LQPInputSide::Right;
 }
 
@@ -605,7 +607,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref_alias(const
 
   // To stick to the sql standard there must be an alias for every column of the renamed table
   // https://www.contrib.andrew.cmu.edu/~shadow/sql/sql1992.txt 6.3
-  Assert(table.alias->columns->size() == node->output_column_count(),
+  AssertInput(table.alias->columns->size() == node->output_column_count(),
          "The number of column aliases must match the number of columns");
 
   auto& column_references = node->output_column_references();
@@ -637,7 +639,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_table_ref(const hsql:
         node = StorageManager::get().get_view(table.name);
         Assert(!_validate || node->subplan_is_validated(), "Trying to add non-validated view to validated query");
       } else {
-        Fail(std::string("Did not find a table or view with name ") + table.name);
+        throw InvalidInputException(std::string("Did not find a table or view with name ") + table.name);
       }
       break;
     case hsql::kTableSelect:
@@ -806,7 +808,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
 
       const auto qualified_column_name = HSQLExprTranslator::to_qualified_column_name(*groupby_hsql_expr);
       const auto column_reference = groupby_aliasing_node->find_column(qualified_column_name);
-      DebugAssert(column_reference, "Couldn't resolve groupby column.");
+      AssertInput(column_reference, "Couldn't resolve groupby column.");
 
       groupby_column_references.emplace_back(*column_reference);
     }
@@ -842,18 +844,18 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_aggregate(
        * This if block is mostly used to conduct an SQL conformity check, whether column references in the SELECT list of
        * aggregates appear in the GROUP BY clause.
        */
-      Assert(group_by != nullptr,
+      AssertInput(group_by != nullptr,
              "SELECT list of aggregate contains a column, but the query does not have a GROUP BY clause.");
 
       const auto qualified_column_name = HSQLExprTranslator::to_qualified_column_name(*select_column_hsql_expr);
       const auto column_reference = groupby_aliasing_node->find_column(qualified_column_name);
-      DebugAssert(column_reference, "Couldn't resolve groupby column.");
+      AssertInput(column_reference, "Couldn't resolve groupby column.");
 
       const auto iter =
           std::find(groupby_column_references.begin(), groupby_column_references.end(), *column_reference);
 
-      Assert(iter != groupby_column_references.end(), std::string("Column '") + select_column_hsql_expr->getName() +
-                                                          "' is specified in SELECT list, but not in GROUP BY clause.");
+      AssertInput(iter != groupby_column_references.end(), "Column '" + select_column_hsql_expr->getName()
+                                                        + "' is specified in SELECT list, but not in GROUP BY clause.");
 
       const auto column_id = static_cast<ColumnID>(std::distance(groupby_column_references.begin(), iter));
       output_columns.emplace_back(column_id, alias);
@@ -961,7 +963,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_projection(
          * it gets added to the list of Columns that the Projection outputs.
          */
         auto origin_node = input_node->find_table_name_origin(*expr->table_name());
-        Assert(origin_node, "Couldn't resolve '" + *expr->table_name() + "'.*");
+        AssertInput(origin_node, "Couldn't resolve '" + *expr->table_name() + "'.*");
 
         for (auto origin_node_column_id = ColumnID{0}; origin_node_column_id < origin_node->output_column_count();
              ++origin_node_column_id) {
@@ -1259,7 +1261,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::Cr
 
       if (create_statement.viewColumns) {
         // The CREATE VIEW statement has renamed the columns: CREATE VIEW myview (foo, bar) AS SELECT ...
-        Assert(create_statement.viewColumns->size() == view->output_column_count(),
+        AssertInput(create_statement.viewColumns->size() == view->output_column_count(),
                "Number of Columns in CREATE VIEW does not match SELECT statement");
 
         // Create a list of renamed column expressions

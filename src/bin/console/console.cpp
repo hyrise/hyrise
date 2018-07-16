@@ -37,6 +37,7 @@
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
+#include "utils/invalid_input_exception.hpp"
 #include "utils/filesystem.hpp"
 #include "utils/load_table.hpp"
 
@@ -245,7 +246,7 @@ bool Console::_initialize_pipeline(const std::string& sql) {
       _sql_pipeline = std::make_unique<SQLPipeline>(
           SQLPipelineBuilder{sql}.with_prepared_statement_cache(_prepared_statements).create_pipeline());
     }
-  } catch (const std::exception& exception) {
+  } catch (const InvalidInputException& exception) {
     out(std::string(exception.what()) + '\n');
     return false;
   }
@@ -258,7 +259,7 @@ int Console::_eval_sql(const std::string& sql) {
 
   try {
     _sql_pipeline->get_result_table();
-  } catch (const std::exception& exception) {
+  } catch (const InvalidInputException& exception) {
     out(std::string(exception.what()) + "\n");
     if (_handle_rollback() && _explicitly_created_transaction_context == nullptr &&
         _sql_pipeline->statement_count() > 1) {
@@ -603,8 +604,7 @@ int Console::_change_runtime_setting(const std::string& input) {
 
   if (property == "scheduler") {
     if (value == "on") {
-      opossum::CurrentScheduler::set(
-          std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology()));
+      opossum::CurrentScheduler::set(std::make_shared<opossum::NodeQueueScheduler>());
       out("Scheduler turned on\n");
     } else if (value == "off") {
       opossum::CurrentScheduler::set(nullptr);
@@ -809,7 +809,7 @@ char* Console::_command_generator_tpcc(const char* text, int state) {
 
 bool Console::_handle_rollback() {
   auto failed_pipeline = _sql_pipeline->failed_pipeline_statement();
-  if (failed_pipeline->transaction_context() && failed_pipeline->transaction_context()->aborted()) {
+  if (failed_pipeline && failed_pipeline->transaction_context() && failed_pipeline->transaction_context()->aborted()) {
     out("The transaction has been rolled back.\n");
     _explicitly_created_transaction_context = nullptr;
     return true;

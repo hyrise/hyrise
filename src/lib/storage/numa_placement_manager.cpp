@@ -12,6 +12,7 @@
 #include <stdexcept>
 #include <string>
 
+#include "scheduler/topology.hpp"
 #include "storage/storage_manager.hpp"
 #include "tasks/chunk_metrics_collection_task.hpp"
 #include "tasks/migration_preparation_task.hpp"
@@ -28,17 +29,16 @@ NUMAPlacementManager& NUMAPlacementManager::get() {
   return instance;
 }
 
-NUMAPlacementManager::NUMAPlacementManager(const std::shared_ptr<Topology> topology)
-    : _topology(topology), _current_node_id(0) {
+NUMAPlacementManager::NUMAPlacementManager() : _current_node_id(0) {
   // The NUMAPlacementManager must exist before any table is stored in the storage manager. Otherwise, we might migrate
   // parts of that table. On termination of the program, the NUMAPlacementManager would be destroyed first, taking the
   // memory sources with it. This means that the destructors of those tables would fail.
   Assert(StorageManager::get().table_names().size() == 0, "NUMAPlacementManager must be created before any table");
 
-  for (size_t i = 0; i < _topology->nodes().size(); i++) {
+  for (auto node_id = size_t{0}; node_id < Topology::current().nodes().size(); node_id++) {
     char msource_name[26];
-    std::snprintf(msource_name, sizeof(msource_name), "numa_%03lu", i);
-    _memory_resources.push_back(NUMAMemoryResource(i, std::string(msource_name)));
+    std::snprintf(msource_name, sizeof(msource_name), "numa_%03lu", node_id);
+    _memory_resources.push_back(NUMAMemoryResource(node_id, std::string(msource_name)));
   }
 
   _collector_thread = std::make_unique<PausableLoopThread>(_options.counter_history_interval,
@@ -56,12 +56,13 @@ void NUMAPlacementManager::set_options(const NUMAPlacementManager::Options optio
 
 boost::container::pmr::memory_resource* NUMAPlacementManager::get_next_memory_resource() {
   const auto node_id = _current_node_id;
-  _current_node_id = (_current_node_id + 1) % _topology->nodes().size();
+  _current_node_id = (_current_node_id + 1) % Topology::current().nodes().size();
   return get_memory_resource(node_id);
 }
 
 boost::container::pmr::memory_resource* NUMAPlacementManager::get_memory_resource(int node_id) {
-  DebugAssert(node_id >= 0 && node_id < static_cast<int>(_topology->nodes().size()), "node_id is out of bounds");
+  DebugAssert(node_id >= 0 && node_id < static_cast<int>(Topology::current().nodes().size()),
+              "node_id is out of bounds");
   return &_memory_resources[static_cast<size_t>(node_id)];
 }
 
@@ -83,8 +84,6 @@ void NUMAPlacementManager::pause() {
 }
 
 const NUMAPlacementManager::Options& NUMAPlacementManager::options() const { return _options; }
-
-const std::shared_ptr<Topology>& NUMAPlacementManager::topology() const { return _topology; }
 
 }  // namespace opossum
 

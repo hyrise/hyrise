@@ -74,7 +74,6 @@ namespace opossum {
 
 class ProcessingUnit;
 class TaskQueue;
-class Topology;
 class UidAllocator;
 
 /**
@@ -82,7 +81,7 @@ class UidAllocator;
  */
 class NodeQueueScheduler : public AbstractScheduler {
  public:
-  explicit NodeQueueScheduler(std::shared_ptr<Topology> setup);
+  NodeQueueScheduler();
   ~NodeQueueScheduler();
 
   /**
