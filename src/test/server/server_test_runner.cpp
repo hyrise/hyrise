@@ -1,6 +1,7 @@
 #include <pqxx/pqxx>
 
 #include <thread>
+#include <future>
 
 #include "base_test.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
