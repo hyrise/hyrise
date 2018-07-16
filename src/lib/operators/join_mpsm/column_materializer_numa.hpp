@@ -69,8 +69,7 @@ using MaterializedNUMAPartitionList = std::vector<MaterializedNUMAPartition<T>>;
 template <typename T>
 class ColumnMaterializerNUMA {
  public:
-  explicit ColumnMaterializerNUMA(std::shared_ptr<Topology> topology, bool materialize_null)
-      : _topology(topology), _materialize_null{materialize_null} {}
+  explicit ColumnMaterializerNUMA(bool materialize_null) : _materialize_null{materialize_null} {}
 
  public:
   /**
@@ -81,8 +80,9 @@ class ColumnMaterializerNUMA {
   std::pair<std::unique_ptr<MaterializedNUMAPartitionList<T>>, std::unique_ptr<PosList>> materialize(
       std::shared_ptr<const Table> input, ColumnID column_id) {
     auto output = std::make_unique<MaterializedNUMAPartitionList<T>>();
+    const auto node_count = Topology::current().nodes().size();
+
     // ensure we have enough lists to represent the NUMA Nodes
-    const auto node_count = _topology->nodes().size();
     output->reserve(node_count);
 
     for (auto node_id = NodeID{0}; node_id < node_count; node_id++) {
@@ -195,7 +195,6 @@ class ColumnMaterializerNUMA {
   }
 
  private:
-  std::shared_ptr<Topology> _topology;
   bool _materialize_null;
 };
 

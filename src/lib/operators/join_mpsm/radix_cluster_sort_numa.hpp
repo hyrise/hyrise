@@ -8,7 +8,6 @@
 
 #include "column_materializer_numa.hpp"
 #include "resolve_type.hpp"
-#include "scheduler/topology.hpp"
 
 namespace opossum {
 
@@ -51,12 +50,11 @@ class RadixClusterSortNUMA {
  public:
   RadixClusterSortNUMA(const std::shared_ptr<const Table> left, const std::shared_ptr<const Table> right,
                        const std::pair<ColumnID, ColumnID>& column_ids, const bool materialize_null_left,
-                       const bool materialize_null_right, std::shared_ptr<Topology> topology, size_t cluster_count)
+                       const bool materialize_null_right, size_t cluster_count)
       : _input_table_left{left},
         _input_table_right{right},
         _left_column_id{column_ids.first},
         _right_column_id{column_ids.second},
-        _topology{topology},
         _cluster_count{cluster_count},
         _materialize_null_left{materialize_null_left},
         _materialize_null_right{materialize_null_right} {
@@ -112,10 +110,6 @@ class RadixClusterSortNUMA {
   std::shared_ptr<const Table> _input_table_right;
   const ColumnID _left_column_id;
   const ColumnID _right_column_id;
-
-  // Topology containing information about availbalbe NUMA nodes/cores,
-  // or a fake NUMA topology in case of non-NUMA systems.
-  std::shared_ptr<Topology> _topology;
 
   // The cluster count must be a power of two, i.e. 1, 2, 4, 8, 16, ...
   // It is asserted to be a power of two in the constructor.
@@ -344,8 +338,8 @@ class RadixClusterSortNUMA {
     auto output = RadixClusterOutput<T>();
 
     // Sort the chunks of the input tables in the non-equi cases
-    auto left_column_materializer = ColumnMaterializerNUMA<T>(_topology, _materialize_null_left);
-    auto right_column_materializer = ColumnMaterializerNUMA<T>(_topology, _materialize_null_right);
+    auto left_column_materializer = ColumnMaterializerNUMA<T>(_materialize_null_left);
+    auto right_column_materializer = ColumnMaterializerNUMA<T>(_materialize_null_right);
     auto materialization_left = left_column_materializer.materialize(_input_table_left, _left_column_id);
     auto materialization_right = right_column_materializer.materialize(_input_table_right, _right_column_id);
     auto materialized_left_columns = std::move(materialization_left.first);
