@@ -22,7 +22,7 @@ const int Topology::_number_of_hardware_nodes = numa_num_configured_nodes();
 const int Topology::_number_of_hardware_nodes = 1;
 #endif
 
-Topology& Topology::current() {
+Topology& Topology::get() {
   static Topology instance;
   return instance;
 }
@@ -43,19 +43,19 @@ void TopologyNode::print(std::ostream& stream) const {
 }
 
 void Topology::use_default_topology() {
-  Topology::current()._init_default_topology();
+  Topology::get()._init_default_topology();
 }
 
 void Topology::use_numa_topology(uint32_t max_num_cores) {
-  Topology::current()._init_numa_topology(max_num_cores);
+  Topology::get()._init_numa_topology(max_num_cores);
 }
 
 void Topology::use_non_numa_topology(uint32_t max_num_cores) {
-  Topology::current()._init_non_numa_topology(max_num_cores);
+  Topology::get()._init_non_numa_topology(max_num_cores);
 }
 
 void Topology::use_fake_numa_topology(uint32_t max_num_workers, uint32_t workers_per_node) {
-  Topology::current()._init_fake_numa_topology(max_num_workers, workers_per_node);
+  Topology::get()._init_fake_numa_topology(max_num_workers, workers_per_node);
 }
 
 

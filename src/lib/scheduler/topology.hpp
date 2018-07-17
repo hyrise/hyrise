@@ -35,7 +35,7 @@ struct TopologyNode final {
  */
 class Topology final {
  public:
-  static Topology& current();
+  static Topology& get();
 
   /**
    * Use the default system topology.

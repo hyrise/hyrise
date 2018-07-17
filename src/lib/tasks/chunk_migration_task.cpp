@@ -34,7 +34,7 @@ void ChunkMigrationTask::_on_execute() {
     DebugAssert(chunk_is_completed(chunk, table->max_chunk_size()),
                 "Chunk is not completed and thus can’t be migrated.");
 
-    chunk->migrate(Topology::current().get_memory_resource(_target_node_id));
+    chunk->migrate(Topology::get().get_memory_resource(_target_node_id));
   }
 }
 

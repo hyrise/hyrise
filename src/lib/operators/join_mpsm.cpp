@@ -174,7 +174,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   **/
   ClusterID _determine_number_of_clusters() {
     // Get the next lower power of two of the bigger chunk number
-    const size_t numa_nodes = Topology::current().nodes().size();
+    const size_t numa_nodes = Topology::get().nodes().size();
     return static_cast<ClusterID>(std::pow(2, std::floor(std::log2(numa_nodes))));
   }
 

@@ -47,8 +47,8 @@ void NUMAPlacementManager::set_options(const NUMAPlacementManager::Options optio
 
 boost::container::pmr::memory_resource* NUMAPlacementManager::get_next_memory_resource() {
   const auto node_id = _current_node_id;
-  _current_node_id = (_current_node_id + 1) % Topology::current().nodes().size();
-  return Topology::current().get_memory_resource(node_id);
+  _current_node_id = (_current_node_id + 1) % Topology::get().nodes().size();
+  return Topology::get().get_memory_resource(node_id);
 }
 
 void NUMAPlacementManager::resume() {

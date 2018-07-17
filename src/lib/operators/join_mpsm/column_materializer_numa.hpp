@@ -38,7 +38,7 @@ struct MaterializedNUMAPartition {
 
   explicit MaterializedNUMAPartition(NodeID node_id, size_t reserve_size)
       : _node_id{node_id},
-        _alloc{Topology::current().get_memory_resource(node_id)},
+        _alloc{Topology::get().get_memory_resource(node_id)},
         _chunk_columns(reserve_size) {
   }
 
@@ -72,7 +72,7 @@ class ColumnMaterializerNUMA {
   std::pair<std::unique_ptr<MaterializedNUMAPartitionList<T>>, std::unique_ptr<PosList>> materialize(
       std::shared_ptr<const Table> input, ColumnID column_id) {
     auto output = std::make_unique<MaterializedNUMAPartitionList<T>>();
-    const auto node_count = Topology::current().nodes().size();
+    const auto node_count = Topology::get().nodes().size();
 
     // ensure we have enough lists to represent the NUMA Nodes
     output->reserve(node_count);
