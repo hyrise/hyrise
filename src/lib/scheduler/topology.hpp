@@ -97,7 +97,7 @@ class Topology final {
   size_t _num_cpus;
   bool _fake_numa_topology;
 
-  static const int number_of_hardware_nodes;
+  static const int _number_of_hardware_nodes;
 
   std::vector<NUMAMemoryResource> _memory_resources;
 };
