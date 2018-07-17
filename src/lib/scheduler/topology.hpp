@@ -31,42 +31,48 @@ struct TopologyNode final {
  * It is initialized with the actual system topology by default, but can be newly initialized with a custom topology
  * if needed, e.g. for testing purposes.
  *
- * The 'init_*_topology()' methods replace the current topology information by the new one, and should be used carefully.
+ * The static 'use_*_topology()' methods replace the current topology information by the new one, and should be used carefully.
  */
 class Topology final {
  public:
   static Topology& current();
 
   /**
-   * Initialize with the default system topology.
+   * Use the default system topology.
    *
-   * Calls init_numa_topology() or init_non_numa_topology() if on a NUMA or non-NUMA system respectively.
+   * Calls _init_default_topology() internally.
+   * Calls _init_numa_topology() or _init_non_numa_topology() if on a NUMA or non-NUMA system respectively.
    */
-  void init_default_topology();
+  static void use_default_topology();
 
   /**
-   * Initialize with a NUMA topology.
+   * Use a NUMA topology.
    * The topology has a number of cores equal to either max_num_cores or the number of physically availyble cores,
    * whichever one is lower. The cores are distributed among the available NUMA nodes in a way that a node is filled up
    * to it's maximum core count first, bevor a new node is added.
    *
-   * Calls init_fake_numa_topology() if on a non-NUMA system.
+   * Calls _init_numa_topology() internally.
+   * Calls _init_fake_numa_topology() if on a non-NUMA system.
    */
-  void init_numa_topology(uint32_t max_num_cores = 0);
+  static void use_numa_topology(uint32_t max_num_cores = 0);
 
   /**
-   * Initialize with a non-NUMA topology.
+   * Use a non-NUMA topology.
    * The topology has one node, and a number of cores equal to either max_num_cores or the number of physically
    * availyble cores, whichever one is lower.
+   *
+   * Calls _init_non_numa_topology() internally.
    */
-  void init_non_numa_topology(uint32_t max_num_cores = 0);
+  static void use_non_numa_topology(uint32_t max_num_cores = 0);
 
   /**
-   * Initialize with a fake-NUMA topology.
+   * Use a fake-NUMA topology.
    * The topology has a number of cores equal to either max_num_cores or the number of physically availyble cores,
    * whichever one is lower. Virtual NUMA nodes are created based on the workers_per_node parameter.
+   *
+   * Calls _init_fake_numa_topology() internally.
    */
-  void init_fake_numa_topology(uint32_t max_num_workers = 0, uint32_t workers_per_node = 1);
+  static void use_fake_numa_topology(uint32_t max_num_workers = 0, uint32_t workers_per_node = 1);
 
   const std::vector<TopologyNode>& nodes();
 
@@ -78,6 +84,11 @@ class Topology final {
 
  private:
   Topology();
+
+  void _init_default_topology();
+  void _init_numa_topology(uint32_t max_num_cores = 0);
+  void _init_non_numa_topology(uint32_t max_num_cores = 0);
+  void _init_fake_numa_topology(uint32_t max_num_workers = 0, uint32_t workers_per_node = 1);
 
   void _clear();
   void _create_memory_resources();

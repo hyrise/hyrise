@@ -42,21 +42,38 @@ void TopologyNode::print(std::ostream& stream) const {
   stream << "]";
 }
 
-void Topology::init_default_topology() {
+void Topology::use_default_topology() {
+  Topology::current()._init_default_topology();
+}
+
+void Topology::use_numa_topology(uint32_t max_num_cores) {
+  Topology::current()._init_numa_topology(max_num_cores);
+}
+
+void Topology::use_non_numa_topology(uint32_t max_num_cores) {
+  Topology::current()._init_non_numa_topology(max_num_cores);
+}
+
+void Topology::use_fake_numa_topology(uint32_t max_num_workers, uint32_t workers_per_node) {
+  Topology::current()._init_fake_numa_topology(max_num_workers, workers_per_node);
+}
+
+
+void Topology::_init_default_topology() {
 #if !HYRISE_NUMA_SUPPORT
-  init_non_numa_topology();
+  _init_non_numa_topology();
 #else
-  init_numa_topology();
+  _init_numa_topology();
 #endif
 }
 
-void Topology::init_numa_topology(uint32_t max_num_cores) {
+void Topology::_init_numa_topology(uint32_t max_num_cores) {
 #if !HYRISE_NUMA_SUPPORT
-  init_fake_numa_topology(max_num_cores);
+  _init_fake_numa_topology(max_num_cores);
 #else
 
   if (numa_available() < 0) {
-    return init_fake_numa_topology(max_num_cores);
+    return _init_fake_numa_topology(max_num_cores);
   }
 
   _clear();
@@ -94,7 +111,7 @@ void Topology::init_numa_topology(uint32_t max_num_cores) {
 #endif
 }
 
-void Topology::init_non_numa_topology(uint32_t max_num_cores) {
+void Topology::_init_non_numa_topology(uint32_t max_num_cores) {
   _clear();
   _fake_numa_topology = false;
 
@@ -120,7 +137,7 @@ void Topology::init_non_numa_topology(uint32_t max_num_cores) {
   _create_memory_resources();
 }
 
-void Topology::init_fake_numa_topology(uint32_t max_num_workers, uint32_t workers_per_node) {
+void Topology::_init_fake_numa_topology(uint32_t max_num_workers, uint32_t workers_per_node) {
   _clear();
   _fake_numa_topology = true;
 
