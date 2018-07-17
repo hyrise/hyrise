@@ -17,9 +17,9 @@
 namespace opossum {
 
 #if HYRISE_NUMA_SUPPORT
-const int Topology::_number_of_hardware_nodes = numa_num_configured_nodes();
+const int Topology::number_of_hardware_nodes = numa_num_configured_nodes();
 #else
-const int Topology::_number_of_hardware_nodes = 1;
+const int Topology::number_of_hardware_nodes = 1;
 #endif
 
 Topology& Topology::get() {
@@ -206,7 +206,7 @@ void Topology::_create_memory_resources() {
 
     // If we have a fake NUMA topology that has more nodes than our system has available,
     // distribute the fake nodes among the physically available ones.
-    auto system_node_id = _fake_numa_topology ? node_id % _number_of_hardware_nodes : node_id;
+    auto system_node_id = _fake_numa_topology ? node_id % number_of_hardware_nodes : node_id;
     _memory_resources.push_back(NUMAMemoryResource(system_node_id, memsource_name.str()));
   }
 }
