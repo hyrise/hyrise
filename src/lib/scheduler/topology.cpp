@@ -9,15 +9,27 @@
 #include <thread>
 #include <utility>
 #include <vector>
+#include <sstream>
+#include <iomanip>
+
+#include "utils/numa_memory_resource.hpp"
 
 namespace opossum {
 
-Topology& Topology::current() {
+#if HYRISE_NUMA_SUPPORT
+const int Topology::_number_of_hardware_nodes = numa_num_configured_nodes(); // NOLINT
+#else
+const int Topology::_number_of_hardware_nodes = 1; // NOLINT
+#endif
+
+Topology& Topology::get() {
   static Topology instance;
   return instance;
 }
 
-Topology::Topology() { init_default_topology(); }
+Topology::Topology() {
+  _init_default_topology();
+}
 
 void TopologyNode::print(std::ostream& stream) const {
   stream << "Number of Node CPUs: " << cpus.size() << ", CPUIDs: [";
@@ -30,25 +42,42 @@ void TopologyNode::print(std::ostream& stream) const {
   stream << "]";
 }
 
-void Topology::init_default_topology() {
+void Topology::use_default_topology() {
+  Topology::get()._init_default_topology();
+}
+
+void Topology::use_numa_topology(uint32_t max_num_cores) {
+  Topology::get()._init_numa_topology(max_num_cores);
+}
+
+void Topology::use_non_numa_topology(uint32_t max_num_cores) {
+  Topology::get()._init_non_numa_topology(max_num_cores);
+}
+
+void Topology::use_fake_numa_topology(uint32_t max_num_workers, uint32_t workers_per_node) {
+  Topology::get()._init_fake_numa_topology(max_num_workers, workers_per_node);
+}
+
+
+void Topology::_init_default_topology() {
 #if !HYRISE_NUMA_SUPPORT
-  init_non_numa_topology();
+  _init_non_numa_topology();
 #else
-  init_numa_topology();
+  _init_numa_topology();
 #endif
 }
 
-void Topology::init_numa_topology(uint32_t max_num_cores) {
+void Topology::_init_numa_topology(uint32_t max_num_cores) {
 #if !HYRISE_NUMA_SUPPORT
-  init_fake_numa_topology(max_num_cores);
+  _init_fake_numa_topology(max_num_cores);
 #else
 
   if (numa_available() < 0) {
-    return init_fake_numa_topology(max_num_cores);
+    return _init_fake_numa_topology(max_num_cores);
   }
 
-  _nodes.clear();
-  _num_cpus = 0;
+  _clear();
+  _fake_numa_topology = false;
 
   auto max_node = numa_max_node();
   auto num_configured_cpus = static_cast<CpuID>(numa_num_configured_cpus());
@@ -76,13 +105,15 @@ void Topology::init_numa_topology(uint32_t max_num_cores) {
     }
   }
 
+  _create_memory_resources();
+
   numa_free_cpumask(cpu_bitmask);
 #endif
 }
 
-void Topology::init_non_numa_topology(uint32_t max_num_cores) {
-  _nodes.clear();
-  _num_cpus = 0;
+void Topology::_init_non_numa_topology(uint32_t max_num_cores) {
+  _clear();
+  _fake_numa_topology = false;
 
   auto max_num_threads = std::thread::hardware_concurrency();
 
@@ -102,11 +133,13 @@ void Topology::init_non_numa_topology(uint32_t max_num_cores) {
 
   auto node = TopologyNode(std::move(cpus));
   _nodes.emplace_back(std::move(node));
+
+  _create_memory_resources();
 }
 
-void Topology::init_fake_numa_topology(uint32_t max_num_workers, uint32_t workers_per_node) {
-  _nodes.clear();
-  _num_cpus = 0;
+void Topology::_init_fake_numa_topology(uint32_t max_num_workers, uint32_t workers_per_node) {
+  _clear();
+  _fake_numa_topology = true;
 
   auto max_num_threads = std::thread::hardware_concurrency();
 
@@ -139,11 +172,17 @@ void Topology::init_fake_numa_topology(uint32_t max_num_workers, uint32_t worker
   }
 
   _num_cpus = num_workers;
+  _create_memory_resources();
 }
 
 const std::vector<TopologyNode>& Topology::nodes() { return _nodes; }
 
 size_t Topology::num_cpus() const { return _num_cpus; }
+
+boost::container::pmr::memory_resource* Topology::get_memory_resource(int node_id) {
+  DebugAssert(node_id >= 0 && node_id < static_cast<int>(_nodes.size()), "node_id is out of bounds");
+  return &_memory_resources[static_cast<size_t>(node_id)];
+}
 
 void Topology::print(std::ostream& stream) const {
   stream << "Number of CPUs: " << _num_cpus << std::endl;
@@ -151,6 +190,24 @@ void Topology::print(std::ostream& stream) const {
     stream << "Node #" << node_idx << " - ";
     _nodes[node_idx].print(stream);
     stream << std::endl;
+  }
+}
+
+void Topology::_clear() {
+  _nodes.clear();
+  _memory_resources.clear();
+  _num_cpus = 0;
+}
+
+void Topology::_create_memory_resources() {
+  for (auto node_id = size_t{0}; node_id < _nodes.size(); node_id++) {
+    auto memsource_name = std::stringstream();
+    memsource_name << "numa_" << std::setw(3) << std::setfill('0') << node_id;
+
+    // If we have a fake NUMA topology that has more nodes than our system has available,
+    // distribute the fake nodes among the physically available ones.
+    auto system_node_id = _fake_numa_topology ? node_id % _number_of_hardware_nodes : node_id;
+    _memory_resources.push_back(NUMAMemoryResource(system_node_id, memsource_name.str()));
   }
 }
 
