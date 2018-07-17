@@ -2,9 +2,6 @@
 
 #include "numa_placement_manager.hpp"
 
-#include <numa.h>
-#include <boost/container/pmr/memory_resource.hpp>
-
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
@@ -52,13 +49,6 @@ boost::container::pmr::memory_resource* NUMAPlacementManager::get_next_memory_re
   const auto node_id = _current_node_id;
   _current_node_id = (_current_node_id + 1) % Topology::current().nodes().size();
   return Topology::current().get_memory_resource(node_id);
-}
-
-int NUMAPlacementManager::get_node_id_of(void* ptr) {
-  int status[1];
-  void* addr = {ptr};
-  numa_move_pages(0, 1, static_cast<void**>(&addr), NULL, reinterpret_cast<int*>(&status), 0);
-  return status[0];
 }
 
 void NUMAPlacementManager::resume() {

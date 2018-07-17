@@ -2,13 +2,13 @@
 
 #if HYRISE_NUMA_SUPPORT
 
-#include <boost/container/pmr/memory_resource.hpp>
-
 #include <chrono>
 #include <memory>
 #include <vector>
 
 #include "utils/pausable_loop_thread.hpp"
+
+namespace boost { namespace container { namespace pmr { class memory_resource; }}}
 
 namespace opossum {
 
@@ -57,7 +57,6 @@ class NUMAPlacementManager {
   };
 
   static NUMAPlacementManager& get();
-  static int get_node_id_of(void* ptr);
 
   // Returns the memory resource of the next node according to a round robin placement policy
   boost::container::pmr::memory_resource* get_next_memory_resource();
