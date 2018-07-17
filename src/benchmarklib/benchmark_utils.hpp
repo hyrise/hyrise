@@ -38,6 +38,7 @@ std::ostream& get_out_stream(const bool verbose);
 struct QueryBenchmarkResult {
   size_t num_iterations = 0;
   Duration duration = Duration{};
+  std::vector<Duration> iteration_durations;
 };
 
 using QueryID = size_t;
@@ -55,12 +56,14 @@ struct BenchmarkState {
   bool keep_running();
 
   State state{State::NotStarted};
-  TimePoint begin = TimePoint{};
-  TimePoint end = TimePoint{};
+  TimePoint benchmark_begin = TimePoint{};
+  TimePoint iteration_begin = TimePoint{};
+  TimePoint benchmark_end = TimePoint{};
 
   size_t num_iterations = 0;
   size_t max_num_iterations;
   Duration max_duration;
+  std::vector<Duration> iteration_durations;
 };
 
 // View EncodingConfig::description to see format of encoding JSON

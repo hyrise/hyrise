@@ -31,28 +31,41 @@ std::ostream& get_out_stream(const bool verbose) {
 }
 
 BenchmarkState::BenchmarkState(const size_t max_num_iterations, const opossum::Duration max_duration)
-    : max_num_iterations(max_num_iterations), max_duration(max_duration) {}
+    : max_num_iterations(max_num_iterations), max_duration(max_duration) {
+  iteration_durations.reserve(max_num_iterations);
+}
 
 bool BenchmarkState::keep_running() {
+  bool is_first_iteration = false;
+
   switch (state) {
     case State::NotStarted:
-      begin = std::chrono::high_resolution_clock::now();
+      benchmark_begin = std::chrono::high_resolution_clock::now();
       state = State::Running;
+      is_first_iteration = true;
       break;
     case State::Over:
       return false;
     default: {}
   }
 
+  const auto now = std::chrono::high_resolution_clock::now();
+  const auto benchmark_duration = now - benchmark_begin;
+  const auto iteration_duration = now - iteration_begin;
+
+  if (!is_first_iteration) {
+    iteration_durations.push_back(iteration_duration);
+  }
+
+  benchmark_end = now;
+  iteration_begin = now;
+
   if (num_iterations >= max_num_iterations) {
-    end = std::chrono::high_resolution_clock::now();
     state = State::Over;
     return false;
   }
 
-  end = std::chrono::high_resolution_clock::now();
-  const auto duration = end - begin;
-  if (duration >= max_duration) {
+  if (benchmark_duration >= max_duration) {
     state = State::Over;
     return false;
   }
