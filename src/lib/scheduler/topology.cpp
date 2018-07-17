@@ -17,9 +17,9 @@
 namespace opossum {
 
 #if HYRISE_NUMA_SUPPORT
-const int Topology::_number_of_hardware_nodes = numa_num_configured_nodes();
+const int Topology::_number_of_hardware_nodes = numa_num_configured_nodes(); // NOLINT
 #else
-const int Topology::_number_of_hardware_nodes = 1;
+const int Topology::_number_of_hardware_nodes = 1; // NOLINT
 #endif
 
 Topology& Topology::get() {
