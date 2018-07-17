@@ -73,6 +73,7 @@ const char* const tpch_query_1 =
  *
  * Changes:
  *  1. Random values are hardcoded
+ *  2. Changed to ordering in the FROM clause for better join ordering
  */
 const char* const tpch_query_2 =
     R"(SELECT s_acctbal, s_name, n_name, p_partkey, p_mfgr, s_address, s_phone, s_comment

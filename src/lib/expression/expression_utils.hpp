@@ -102,7 +102,7 @@ DataType expression_common_type(const DataType lhs, const DataType rhs);
 /**
  * @return Whether the expression only references expressions/columns that the specified LQP outputs
  */
-bool expression_evaluateable_on_lqp(const std::shared_ptr<AbstractExpression>& expression, const AbstractLQPNode& lqp);
+bool expression_evaluable_on_lqp(const std::shared_ptr<AbstractExpression>& expression, const AbstractLQPNode& lqp);
 
 /**
  * Convert "a AND b AND c" to [a,b,c] where a,b,c can be arbitrarily complex expressions

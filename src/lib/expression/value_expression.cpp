@@ -20,7 +20,7 @@ std::string ValueExpression::as_column_name() const {
   std::stringstream stream;
 
   if (value.type() == typeid(std::string)) {
-    stream << "\"" << value << "\"";
+    stream << "'" << value << "'";
   } else {
     stream << value;
   }
@@ -42,7 +42,7 @@ bool ValueExpression::_shallow_equals(const AbstractExpression& expression) cons
   const auto& value_expression = static_cast<const ValueExpression&>(expression);
 
   /**
-   * Even though null != null, two null expressions are *the same expressions*
+   * Even though null != null, two null expressions are *the same expressions* (e.g. when resolving ColumnIDs)
    */
   if (data_type() == DataType::Null && value_expression.data_type() == DataType::Null) return true;
 

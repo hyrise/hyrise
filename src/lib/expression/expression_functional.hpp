@@ -27,7 +27,7 @@
  * This file provides convenience methods to create (nested) Expression objects with little boilerplate.
  *
  * NOTE: functions suffixed with "_" (e.g. equals_()) to alert the unsuspecting reader to the fact this is something
- *       different thant the equality check he might expect when reading "equals" *
+ *       different than the equality check he might expect when reading "equals" *
  *
  * In Hyrise we say...
  *      case_(equals_(a, 123),
@@ -53,6 +53,9 @@ namespace opossum {
 class AbstractOperator;
 class LQPColumnReference;
 
+/**
+ * expression_"functional", since it supplies a functional-programming like interface to build nested expressions
+ */
 namespace expression_functional {
 
 /**

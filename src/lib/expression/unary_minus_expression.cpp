@@ -27,4 +27,6 @@ DataType UnaryMinusExpression::data_type() const { return argument()->data_type(
 
 bool UnaryMinusExpression::_shallow_equals(const AbstractExpression& expression) const { return true; }
 
+size_t UnaryMinusExpression::_on_hash() const { return AbstractExpression::_on_hash(); }
+
 }  // namespace opossum

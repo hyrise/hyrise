@@ -67,7 +67,7 @@ size_t LQPSelectExpression::_on_hash() const {
   // Return 0, thus forcing a hash collision for LQPSelectExpressions and triggering a full equality check.
   // TODO(moritz) LQP hashing will be introduced with the JoinOrdering optimizer, until then we live with these
   //              collisions
-  return 0;
+  return AbstractExpression::_on_hash();
 }
 
 }  // namespace opossum

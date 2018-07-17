@@ -113,11 +113,8 @@ size_t ParameterExpression::_on_hash() const {
     boost::hash_combine(hash, static_cast<std::underlying_type_t<DataType>>(_referenced_expression_info->data_type));
     boost::hash_combine(hash, _referenced_expression_info->nullable);
     boost::hash_combine(hash, _referenced_expression_info->column_name);
-  } else {
-    boost::hash_combine(hash, 0);
-    boost::hash_combine(hash, 0);
-    boost::hash_combine(hash, 0);
   }
+
   return hash;
 }
 

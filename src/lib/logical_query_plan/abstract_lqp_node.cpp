@@ -107,7 +107,7 @@ LQPInputSide AbstractLQPNode::get_input_side(const std::shared_ptr<AbstractLQPNo
   } else if (output->_inputs[1].get() == this) {
     return LQPInputSide::Right;
   } else {
-    Fail("Specified output node is not actually a output node of this node.");
+    Fail("Specified output node is not actually an output node of this node.");
   }
 }
 

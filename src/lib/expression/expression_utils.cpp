@@ -135,16 +135,16 @@ DataType expression_common_type(const DataType lhs, const DataType rhs) {
   return DataType::Int;
 }
 
-bool expression_evaluateable_on_lqp(const std::shared_ptr<AbstractExpression>& expression, const AbstractLQPNode& lqp) {
-  auto evaluateable = true;
+bool expression_evaluable_on_lqp(const std::shared_ptr<AbstractExpression>& expression, const AbstractLQPNode& lqp) {
+  auto evaluable = true;
 
   visit_expression(expression, [&](const auto& sub_expression) {
     if (lqp.find_column_id(*sub_expression)) return false;
-    if (sub_expression->type == ExpressionType::Column) evaluateable = false;
+    if (sub_expression->type == ExpressionType::Column) evaluable = false;
     return true;
   });
 
-  return evaluateable;
+  return evaluable;
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> expression_flatten_conjunction(

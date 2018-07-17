@@ -33,4 +33,6 @@ bool ExistsExpression::is_nullable() const { return false; }
 
 bool ExistsExpression::_shallow_equals(const AbstractExpression& expression) const { return true; }
 
+size_t ExistsExpression::_on_hash() const { return AbstractExpression::_on_hash(); }
+
 }  // namespace opossum

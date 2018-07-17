@@ -11,7 +11,6 @@ std::string create_sql_parser_error_message(const std::string& sql, const hsql::
   std::stringstream error_msg;
   error_msg << "SQL query not valid.\n";
 
-#if IS_DEBUG  // Only create nice error message in debug build
   std::vector<std::string> sql_lines;
   boost::algorithm::split(sql_lines, sql, boost::is_any_of("\n"));
 
@@ -35,7 +34,6 @@ std::string create_sql_parser_error_message(const std::string& sql, const hsql::
       error_msg << std::string(error_col - num_tabs, ' ') << color_red << "^=== ERROR HERE!" << color_reset << "\n";
     }
   }
-#endif
 
   error_msg << "=========="
             << "\nError line: " << result.errorLine() << "\nError column: " << result.errorColumn()

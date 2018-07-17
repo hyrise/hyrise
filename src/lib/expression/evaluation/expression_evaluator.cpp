@@ -66,7 +66,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
     case ExpressionType::Column: {
       const auto* pqp_column_expression = dynamic_cast<const PQPColumnExpression*>(&expression);
       Assert(pqp_column_expression,
-             "Can only evaluate PQPColumnExpressions, LQPSelectExpressions need to be translated first");
+             "Can only evaluate PQPColumnExpressions, LQPColumnExpressions need to be translated first");
       return _evaluate_column_expression<Result>(*pqp_column_expression);
     }
 
@@ -174,7 +174,9 @@ ExpressionEvaluator::_evaluate_like_expression<ExpressionEvaluator::Bool>(const 
    *    - `a LIKE '%hello%'`
    *    - `'hello' LIKE b`
    */
-  if (left_results->is_literal() == right_results->is_literal()) {
+  const auto both_are_literals = left_results->is_literal() && right_results->is_literal();
+  const auto both_are_series = !left_results->is_literal() && !right_results->is_literal();
+  if (both_are_literals || both_are_series) {
     // E.g., `a LIKE b` - A new matcher for each row and a different value as well
     for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
       LikeMatcher{right_results->values[row_idx]}.resolve(invert_results, [&](const auto& matcher) {

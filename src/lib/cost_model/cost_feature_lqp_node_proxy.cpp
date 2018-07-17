@@ -35,6 +35,8 @@ CostFeatureVariant CostFeatureLQPNodeProxy::_extract_feature_impl(const CostFeat
       return _node->get_statistics()->row_count();
 
     default:
+      // For features that we can't extract from the interface of AbstractLQPNode, call a function dedicated to extract
+      // features from this node type
       switch (_node->type) {
         case LQPNodeType::Predicate:
           return _extract_feature_from_predicate_node(cost_feature);

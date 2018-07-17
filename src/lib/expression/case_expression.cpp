@@ -34,4 +34,6 @@ std::shared_ptr<AbstractExpression> CaseExpression::deep_copy() const {
 
 bool CaseExpression::_shallow_equals(const AbstractExpression& expression) const { return true; }
 
+size_t CaseExpression::_on_hash() const { return AbstractExpression::_on_hash(); }
+
 }  // namespace opossum

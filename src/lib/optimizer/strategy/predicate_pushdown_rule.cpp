@@ -34,8 +34,8 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
     if (join_node->join_mode != JoinMode::Inner && join_node->join_mode != JoinMode::Cross)
       return _apply_to_inputs(node);
 
-    const auto move_to_left = expression_evaluateable_on_lqp(predicate_node->predicate, *join_node->left_input());
-    const auto move_to_right = expression_evaluateable_on_lqp(predicate_node->predicate, *join_node->right_input());
+    const auto move_to_left = expression_evaluable_on_lqp(predicate_node->predicate, *join_node->left_input());
+    const auto move_to_right = expression_evaluable_on_lqp(predicate_node->predicate, *join_node->right_input());
 
     if (!move_to_left && !move_to_right) return _apply_to_inputs(node);
 

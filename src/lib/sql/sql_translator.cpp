@@ -542,9 +542,9 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
   auto join_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
 
   for (const auto& predicate : raw_join_predicate_cnf) {
-    if (expression_evaluateable_on_lqp(predicate, *left_input_lqp)) {
+    if (expression_evaluable_on_lqp(predicate, *left_input_lqp)) {
       left_local_predicates.emplace_back(predicate);
-    } else if (expression_evaluateable_on_lqp(predicate, *right_input_lqp)) {
+    } else if (expression_evaluable_on_lqp(predicate, *right_input_lqp)) {
       right_local_predicates.emplace_back(predicate);
     } else {
       // Accept any kind of predicate here and let the LQPTranslator fail on those that it doesn't support

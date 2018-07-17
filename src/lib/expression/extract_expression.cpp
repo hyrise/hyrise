@@ -54,4 +54,10 @@ bool ExtractExpression::_shallow_equals(const AbstractExpression& expression) co
   return other_extract_expression.datetime_component == datetime_component;
 }
 
+size_t ExtractExpression::_on_hash() const {
+  // Hashing an enum class is a pain
+  using DatetimeUnderlyingType = std::underlying_type_t<DatetimeComponent>;
+  return std::hash<DatetimeUnderlyingType>{}(static_cast<DatetimeUnderlyingType>(datetime_component));
+}
+
 }  // namespace opossum

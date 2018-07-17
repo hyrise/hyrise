@@ -11,7 +11,7 @@ ListExpression::ListExpression(const std::vector<std::shared_ptr<AbstractExpress
     : AbstractExpression(ExpressionType::List, elements) {}
 
 DataType ListExpression::data_type() const {
-  Fail("An ListExpression doesn't have a single type, each of its elements might have a different type");
+  Fail("A ListExpression doesn't have a single type, each of its elements might have a different type");
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& ListExpression::elements() const { return arguments; }
@@ -25,5 +25,7 @@ std::string ListExpression::as_column_name() const {
 }
 
 bool ListExpression::_shallow_equals(const AbstractExpression& expression) const { return true; }
+
+size_t ListExpression::_on_hash() const { return AbstractExpression::_on_hash(); }
 
 }  // namespace opossum
