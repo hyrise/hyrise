@@ -23,9 +23,9 @@ Topology& Topology::current() {
 
 Topology::Topology()
 #if HYRISE_NUMA_SUPPORT
-  : _numa_num_configured_nodes(numa_num_configured_nodes())
+  : _number_of_hardware_nodes(numa_num_configured_nodes())
 #else
-  : _numa_num_configured_nodes(1)
+  : _number_of_hardware_nodes(1)
 #endif
 {
   init_default_topology();
@@ -189,7 +189,7 @@ void Topology::_create_memory_resources() {
 
     // If we have a fake NUMA topology that has more nodes than our system has available,
     // distribute the fake nodes among the physically available ones.
-    auto system_node_id = _fake_numa_topology ? node_id % _numa_num_configured_nodes : node_id;
+    auto system_node_id = _fake_numa_topology ? node_id % _number_of_hardware_nodes : node_id;
     _memory_resources.push_back(NUMAMemoryResource(system_node_id, memsource_name.str()));
   }
 }
