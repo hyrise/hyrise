@@ -6,6 +6,9 @@
 #include <vector>
 
 #include "types.hpp"
+#include "utils/numa_memory_resource.hpp"
+
+namespace boost { namespace container { namespace pmr { class memory_resource; }}}
 
 namespace opossum {
 
@@ -69,12 +72,20 @@ class Topology final {
 
   size_t num_cpus() const;
 
+  boost::container::pmr::memory_resource* get_memory_resource(int node_id);
+
   void print(std::ostream& stream = std::cout) const;
 
  private:
   Topology();
 
+  void _clear();
+  void _create_memory_resources();
+
   std::vector<TopologyNode> _nodes;
   size_t _num_cpus;
+  bool _fake_numa_topology;
+
+  std::vector<NUMAMemoryResource> _memory_resources;
 };
 }  // namespace opossum

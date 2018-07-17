@@ -9,11 +9,7 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/topology.hpp"
 #include "storage/create_iterable_from_column.hpp"
-#if HYRISE_NUMA_SUPPORT
-#include "storage/numa_placement_manager.hpp"
-#else
 #include "utils/boost_default_memory_resource.cpp"
-#endif
 #include "types.hpp"
 #include "utils/numa_memory_resource.hpp"
 
@@ -42,11 +38,7 @@ struct MaterializedNUMAPartition {
 
   explicit MaterializedNUMAPartition(NodeID node_id, size_t reserve_size)
       : _node_id{node_id},
-#if HYRISE_NUMA_SUPPORT
-        _alloc{NUMAPlacementManager::get().get_memory_resource(node_id)},
-#else
-        _alloc{boost::container::pmr::get_default_resource()},
-#endif
+        _alloc{Topology::current().get_memory_resource(node_id)},
         _chunk_columns(reserve_size) {
   }
 

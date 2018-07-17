@@ -56,7 +56,7 @@ class NUMAPlacementTest : public BaseTest {
     for (size_t i = 0; i < num_chunks; i++) {
       ChunkColumns columns;
 
-      const auto alloc = PolymorphicAllocator<Chunk>(NUMAPlacementManager::get().get_memory_resource(0));
+      const auto alloc = PolymorphicAllocator<Chunk>(Topology::current().get_memory_resource(0));
       auto value_column = std::allocate_shared<ValueColumn<int>>(alloc, alloc);
       auto& values = value_column->values();
       values.reserve(num_rows_per_chunk);
