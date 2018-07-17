@@ -16,19 +16,19 @@
 
 namespace opossum {
 
+#if HYRISE_NUMA_SUPPORT
+const int Topology::_number_of_hardware_nodes = numa_num_configured_nodes();
+#else
+const int Topology::_number_of_hardware_nodes = 1;
+#endif
+
 Topology& Topology::current() {
   static Topology instance;
   return instance;
 }
 
-Topology::Topology()
-#if HYRISE_NUMA_SUPPORT
-  : _number_of_hardware_nodes(numa_num_configured_nodes())
-#else
-  : _number_of_hardware_nodes(1)
-#endif
-{
-  init_default_topology();
+Topology::Topology() {
+  _init_default_topology();
 }
 
 void TopologyNode::print(std::ostream& stream) const {
