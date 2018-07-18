@@ -195,7 +195,9 @@ TEST_F(JitCodeSpecializerTest, ReplacesLoadInstructions) {
   }
 }
 
-TEST_F(JitCodeSpecializerTest, UnrollsLoops) {
+// ToDo(anyone) Fix loop unrolling
+// See issue #933 (https://github.com/hyrise/hyrise/issues/976)
+TEST_F(JitCodeSpecializerTest, DISABLED_UnrollsLoops) {
   // int32_t opossum::apply_multiple_operations(const std::vector<std::shared_ptr<const AbstractOperation>>&, int32_t);
   std::string apply_multiple_operations_fn_symbol =
       "_ZN7opossum25apply_multiple_operationsERKNS_18MultipleOperationsEi";
