@@ -443,6 +443,7 @@ set(
     utils/print_directed_acyclic_graph.hpp
     utils/scoped_locking_ptr.hpp
     utils/systemtap.hpp
+    utils/tracing/provider.h
     utils/template_type.hpp
     utils/timer.cpp
     utils/timer.hpp

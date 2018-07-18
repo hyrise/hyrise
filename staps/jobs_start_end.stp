@@ -16,10 +16,10 @@ probe begin
 }
 
 // Job started event
-probe process(@1).provider("hyrise").mark("job_start")
+probe process(@1).provider("HYRISE").mark("JOB_START")
 {
     /*
-      arg1: _id (int) 
+      arg1: _id (int)
       arg2: _description  (string)
       arg3: this  (long, needed as identifier)
     */
@@ -43,7 +43,7 @@ probe process(@1).provider("hyrise").mark("job_start")
 }
 
 // Job finished event
-probe process(@1).provider("hyrise").mark("job_end")
+probe process(@1).provider("HYRISE").mark("JOB_END")
 {
     /*
       arg1: _id (int) 

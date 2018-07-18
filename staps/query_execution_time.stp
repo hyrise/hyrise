@@ -8,13 +8,13 @@ probe begin
 }
 
 // Store start point
-probe process(@1).provider("hyrise").mark("query_start")
+probe process(@1).provider("HYRISE").mark("QUERY_START")
 {
     start[$arg3, user_string($arg1)] = gettimeofday_us()
 }
 
 // Query has finished
-probe process(@1).provider("hyrise").mark("query_end")
+probe process(@1).provider("HYRISE").mark("QUERY_END")
 {
     end = gettimeofday_us()
     printf("============================\n"
