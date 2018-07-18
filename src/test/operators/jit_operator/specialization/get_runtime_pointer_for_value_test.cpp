@@ -98,7 +98,7 @@ class GetRuntimePointerForValueTest : public BaseTest {
   llvm::Value* _value_5;
   llvm::Value* _value_6;
   llvm::Value* _value_7;
-}
+};
 
 TEST_F(GetRuntimePointerForValueTest, BitcodePointerInstructionsAreProperlySimulated) {
   bitcode_pointer_test();
