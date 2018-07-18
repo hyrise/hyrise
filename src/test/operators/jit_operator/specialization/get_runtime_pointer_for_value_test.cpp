@@ -60,8 +60,9 @@ class GetRuntimePointerForValueTest : public BaseTest {
     ASSERT_EQ(known_runtime_pointer->address(), expected_address);
   }
 
-  __attribute__((no_sanitize_memory)) void bitcode_pointer_test() {
-    // We need this method so that we can set attribute on it
+  __attribute__((no_sanitize_address)) void bitcode_pointer_test() {
+    // We need this method so that we can set the no-sanitize attribute on it. We don't want the sanitizer to run here
+    // because the pointers do not point to actual memory
 
     // Create a set of valid pointers that the function can work on
     int64_t some_value;
@@ -98,6 +99,7 @@ class GetRuntimePointerForValueTest : public BaseTest {
   llvm::Value* _value_6;
   llvm::Value* _value_7;
 };
+
 
 TEST_F(GetRuntimePointerForValueTest, BitcodePointerInstructionsAreProperlySimulated) { bitcode_pointer_test(); }
 

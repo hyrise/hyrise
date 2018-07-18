@@ -120,6 +120,7 @@ set(
     storage/encoding_test.hpp
     storage/encoded_column_test.cpp
     storage/group_key_index_test.cpp
+    storage/btree_index_test.cpp
     storage/iterables_test.cpp
     storage/materialize_test.cpp
     storage/multi_column_index_test.cpp

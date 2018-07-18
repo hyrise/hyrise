@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "SQLParser.h"
+#include "benchmark_utils.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "operators/get_table.hpp"
@@ -123,7 +124,7 @@ Console::Console()
 
   // Register words specifically for command completion purposes, e.g.
   // for TPC-C table generation, 'CUSTOMER', 'DISTRICT', etc
-  auto tpcc_generators = opossum::TpccTableGenerator::tpcc_table_generator_functions();
+  auto tpcc_generators = opossum::TpccTableGenerator::table_generator_functions();
   for (auto it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it) {
     _tpcc_commands.push_back(it->first);
   }
@@ -233,8 +234,10 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
 bool Console::_initialize_pipeline(const std::string& sql) {
   try {
     if (_explicitly_created_transaction_context != nullptr) {
+      // We want to keep the temporary tables for debugging and visualization
       _sql_pipeline =
           std::make_unique<SQLPipeline>(SQLPipelineBuilder{sql}
+                                            .dont_cleanup_temporaries()
                                             .with_prepared_statement_cache(_prepared_statements)
                                             .with_transaction_context(_explicitly_created_transaction_context)
                                             .create_pipeline());
@@ -383,21 +386,21 @@ int Console::generate_tpcc(const std::string& tablename) {
   if (tablename.empty() || "ALL" == tablename) {
     out("Generating TPCC tables (this might take a while) ...\n");
     auto tables = opossum::TpccTableGenerator().generate_all_tables();
-    for (auto& pair : tables) {
-      StorageManager::get().add_table(pair.first, pair.second);
+    for (auto& [table_name, table] : tables) {
+      StorageManager::get().add_table(table_name, table);
     }
-    return Console::ReturnCode::Ok;
+    return ReturnCode::Ok;
   }
 
   out("Generating TPCC table: \"" + tablename + "\" ...\n");
-  auto table = opossum::TpccTableGenerator::generate_tpcc_table(tablename);
+  auto table = opossum::TpccTableGenerator().generate_table(tablename);
   if (table == nullptr) {
     out("Error: No TPCC table named \"" + tablename + "\" available.\n");
-    return Console::ReturnCode::Error;
+    return ReturnCode::Error;
   }
 
   opossum::StorageManager::get().add_table(tablename, table);
-  return Console::ReturnCode::Ok;
+  return ReturnCode::Ok;
 }
 
 int Console::load_table(const std::string& args) {
@@ -554,7 +557,7 @@ int Console::visualize(const std::string& input) {
 
   } else {
     // Visualize the Physical Query Plan
-    SQLQueryPlan query_plan;
+    SQLQueryPlan query_plan{CleanupTemporaries::No};
 
     try {
       if (!no_execute) {
