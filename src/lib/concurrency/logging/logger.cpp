@@ -75,7 +75,7 @@ void Logger::setup(std::string folder, const Implementation implementation) {
 
   _create_directories();
 
-  _set_implementation(implementation);
+  _implementation = implementation;
 }
 
 void Logger::delete_log_files() {
