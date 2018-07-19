@@ -144,7 +144,7 @@ node {
             dir ('coverage') {
               htmlFiles = (findFiles(glob: '*.html')).join(',').replaceAll("${workspace}/coverage/", "")
             }
-            echo (findFiles(glob: '*.html')).join(',').replaceAll("${workspace}/coverage/", "")
+            echo (((findFiles(glob: '*.html')).join(',').replaceAll("${workspace}/coverage/", "")))
             sh 'ls coverage'
             archive 'coverage_badge.svg'
             archive 'coverage_percent.txt'
