@@ -138,11 +138,12 @@ node {
       }, clangDebugCoverage: {
         stage("clang-debug-coverage") {
           if (env.BRANCH_NAME == 'master' || full_ci) {
+            sh "export CCACHE_BASEDIR=`pwd`; ./scripts/coverage.sh --generate_badge=true --launcher=ccache"
+
             def htmlFiles
             dir ('coverage') {
               htmlFiles = findFiles glob: '*.html'
             }
-            sh "export CCACHE_BASEDIR=`pwd`; ./scripts/coverage.sh --generate_badge=true --launcher=ccache"
             archive 'coverage_badge.svg'
             archive 'coverage_percent.txt'
             publishHTML (target: [
