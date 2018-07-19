@@ -27,7 +27,7 @@ TEST_F(CuckooHashtableTest, StackRowIDs) {
   auto row_ids = hashtable->get(5);
 
   EXPECT_TRUE(row_ids);
-  EXPECT_EQ(row_ids->size(), 2u);
+  EXPECT_EQ(row_ids->get().size(), 2u);
 }
 
 /*

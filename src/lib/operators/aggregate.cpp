@@ -605,14 +605,19 @@ write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
   auto& values = column->values();
   auto& null_values = column->null_values();
 
+  values.resize(results->size());
+  null_values.resize(results->size());
+
+  size_t i = 0;
   for (auto& kv : *results) {
-    null_values.push_back(!kv.second.current_aggregate);
+    null_values[i] = !kv.second.current_aggregate;
 
     if (!kv.second.current_aggregate) {
-      values.push_back(AggregateType());
+      values[i] = AggregateType();
     } else {
-      values.push_back(*kv.second.current_aggregate);
+      values[i] = *kv.second.current_aggregate;
     }
+    ++i;
   }
 }
 
@@ -626,9 +631,12 @@ typename std::enable_if<func == AggregateFunction::Count, void>::type write_aggr
   DebugAssert(!column->is_nullable(), "Aggregate: Output column for COUNT shouldn't be nullable");
 
   auto& values = column->values();
+  values.resize(results->size());
 
+  size_t i = 0;
   for (auto& kv : *results) {
-    values.push_back(kv.second.aggregate_count);
+    values[i] = kv.second.aggregate_count;
+    ++i;
   }
 }
 
@@ -642,9 +650,12 @@ typename std::enable_if<func == AggregateFunction::CountDistinct, void>::type wr
   DebugAssert(!column->is_nullable(), "Aggregate: Output column for COUNT shouldn't be nullable");
 
   auto& values = column->values();
+  values.resize(results->size());
 
+  size_t i = 0;
   for (auto& kv : *results) {
-    values.push_back(kv.second.distinct_values.size());
+    values[i] = kv.second.distinct_values.size();
+    ++i;
   }
 }
 
@@ -660,14 +671,19 @@ write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
   auto& values = column->values();
   auto& null_values = column->null_values();
 
+  values.resize(results->size());
+  null_values.resize(results->size());
+
+  size_t i = 0;
   for (auto& kv : *results) {
-    null_values.push_back(!kv.second.current_aggregate);
+    null_values[i] = !kv.second.current_aggregate;
 
     if (!kv.second.current_aggregate) {
-      values.push_back(AggregateType());
+      values[i] = AggregateType();
     } else {
-      values.push_back(*kv.second.current_aggregate / static_cast<AggregateType>(kv.second.aggregate_count));
+      values[i] = *kv.second.current_aggregate / static_cast<AggregateType>(kv.second.aggregate_count);
     }
+    ++i;
   }
 }
 
@@ -751,7 +767,7 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
   constexpr bool NEEDS_NULL = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
   _output_column_definitions.emplace_back(output_column_name, aggregate_data_type, NEEDS_NULL);
 
-  auto col = std::make_shared<ValueColumn<decltype(aggregate_type)>>(NEEDS_NULL);
+  auto output_column = std::make_shared<ValueColumn<decltype(aggregate_type)>>(NEEDS_NULL);
 
   auto context = std::static_pointer_cast<AggregateContext<ColumnType, decltype(aggregate_type)>>(
       _contexts_per_column[column_index]);
@@ -768,16 +784,16 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
 
   // write aggregated values into the column
   if (!context->results->empty()) {
-    write_aggregate_values<ColumnType, decltype(aggregate_type), function>(col, context->results);
+    write_aggregate_values<ColumnType, decltype(aggregate_type), function>(output_column, context->results);
   } else if (_groupby_columns.empty()) {
     // If we did not GROUP BY anything and we have no results, we need to add NULL for most aggregates and 0 for count
-    col->values().push_back(decltype(aggregate_type){});
+    output_column->values().push_back(decltype(aggregate_type){});
     if (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct) {
-      col->null_values().push_back(true);
+      output_column->null_values().push_back(true);
     }
   }
 
-  _output_columns.push_back(col);
+  _output_columns.push_back(output_column);
 }
 
 std::shared_ptr<ColumnVisitableContext> Aggregate::_create_aggregate_context(const DataType data_type,

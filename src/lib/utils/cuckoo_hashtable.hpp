@@ -40,12 +40,12 @@ class HashTable : private Noncopyable {
       auto position = hash<T>(i, value);
       auto element = _hashtables[i][position];
       if (element != nullptr && value_equal(element->value, value)) {
-        element->row_ids->push_back(row_id);
+        element->row_ids.push_back(row_id);
         return;
       }
     }
     auto element =
-        std::make_shared<HashElement>(HashElement{value, std::make_shared<PosList>(pmr_vector<RowID>{row_id})});
+        std::make_shared<HashElement>(HashElement{value, pmr_vector<RowID>{row_id}});
     place(element, 0, 0);
   }
 
@@ -54,7 +54,7 @@ class HashTable : private Noncopyable {
   All the matching RowIDs are returned in row_ids.
   */
   template <typename S>
-  std::shared_ptr<PosList> get(S value) {
+  std::optional<std::reference_wrapper<const PosList>> get(S value) const {
     for (size_t i = 0; i < NUMBER_OF_HASH_FUNCTIONS; i++) {
       auto position = hash<S>(i, value);
       auto element = _hashtables[i][position];
@@ -62,7 +62,7 @@ class HashTable : private Noncopyable {
         return element->row_ids;
       }
     }
-    return nullptr;
+    return std::nullopt;
   }
 
  protected:
@@ -71,7 +71,7 @@ class HashTable : private Noncopyable {
   */
   struct HashElement {
     T value;
-    std::shared_ptr<PosList> row_ids;
+    PosList row_ids;
   };
 
   /*
@@ -113,7 +113,7 @@ class HashTable : private Noncopyable {
   return hashed value for a value
   */
   template <typename R>
-  int hash(int seed, R value) {
+  int hash(int seed, R value) const {
     // avoid a seed of 0 and increase it by some factor, 10 seems to be working fine
     return murmur2<R>(value, (seed + 1) * 10) % _input_table_size;
   }
