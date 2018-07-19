@@ -4,7 +4,7 @@
 
 #include "abstract_lqp_node.hpp"
 #include "enable_make_for_lqp_node.hpp"
-#include "storage/view.hpp"
+#include "storage/lqp_view.hpp"
 
 namespace opossum {
 
@@ -13,20 +13,20 @@ namespace opossum {
  */
 class CreateViewNode : public EnableMakeForLQPNode<CreateViewNode>, public AbstractLQPNode {
  public:
-  CreateViewNode(const std::string& view_name, const std::shared_ptr<View>& view);
+  CreateViewNode(const std::string& view_name, const std::shared_ptr<LQPView>& view);
 
   std::string description() const override;
 
   std::string view_name() const;
-  std::shared_ptr<View> view() const;
+  std::shared_ptr<LQPView> view() const;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _shallow_copy_impl(LQPNodeMapping& node_mapping) const override;
-  bool _shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
+  std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
+  bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 
  private:
   const std::string _view_name;
-  const std::shared_ptr<View> _view;
+  const std::shared_ptr<LQPView> _view;
 };
 
 }  // namespace opossum

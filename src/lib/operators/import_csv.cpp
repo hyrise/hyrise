@@ -51,4 +51,8 @@ std::shared_ptr<AbstractOperator> ImportCsv::_on_deep_copy(
   return std::make_shared<ImportCsv>(_filename, _tablename, _csv_meta);
 }
 
+void ImportCsv::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+
+}
+
 }  // namespace opossum

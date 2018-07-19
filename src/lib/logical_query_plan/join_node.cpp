@@ -94,7 +94,7 @@ std::shared_ptr<TableStatistics> JoinNode::derive_statistics_from(
   }
 }
 
-std::shared_ptr<AbstractLQPNode> JoinNode::_shallow_copy_impl(LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> JoinNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   if (join_predicate) {
     return JoinNode::make(join_mode, expression_copy_and_adapt_to_different_lqp(*join_predicate, node_mapping));
   } else {
@@ -102,7 +102,7 @@ std::shared_ptr<AbstractLQPNode> JoinNode::_shallow_copy_impl(LQPNodeMapping& no
   }
 }
 
-bool JoinNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+bool JoinNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& join_node = static_cast<const JoinNode&>(rhs);
 
   if ((join_predicate == nullptr) != (join_node.join_predicate == nullptr)) return false;

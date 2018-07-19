@@ -1285,7 +1285,7 @@ TEST_F(SQLTranslatorTest, CreateView) {
                                                                       });
   // clang-format on
 
-  const auto view = std::make_shared<View>(view_lqp, view_columns);
+  const auto view = std::make_shared<LQPView>(view_lqp, view_columns);
 
   const auto lqp = CreateViewNode::make("my_first_view", view);
 
@@ -1304,7 +1304,7 @@ TEST_F(SQLTranslatorTest, CreateAliasView) {
   const auto view_lqp = PredicateNode::make(equals_(int_float_a, "b"), stored_table_node_int_float);
   // clang-format on
 
-  const auto view = std::make_shared<View>(view_lqp, view_columns);
+  const auto view = std::make_shared<LQPView>(view_lqp, view_columns);
 
   const auto expected_lqp = CreateViewNode::make("my_second_view", view);
 

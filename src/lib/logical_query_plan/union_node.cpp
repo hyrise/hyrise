@@ -26,11 +26,11 @@ std::shared_ptr<TableStatistics> UnionNode::derive_statistics_from(
   Fail("Statistics for UNION not yet implemented");
 }
 
-std::shared_ptr<AbstractLQPNode> UnionNode::_shallow_copy_impl(LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> UnionNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return UnionNode::make(union_mode);
 }
 
-bool UnionNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+bool UnionNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& union_node = static_cast<const UnionNode&>(rhs);
   return union_mode == union_node.union_mode;
 }

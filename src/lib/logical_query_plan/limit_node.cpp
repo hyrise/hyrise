@@ -18,11 +18,11 @@ std::string LimitNode::description() const {
   return stream.str();
 }
 
-std::shared_ptr<AbstractLQPNode> LimitNode::_shallow_copy_impl(LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> LimitNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return LimitNode::make(expression_copy_and_adapt_to_different_lqp(*num_rows_expression, node_mapping));
 }
 
-bool LimitNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+bool LimitNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& limit_node = static_cast<const LimitNode&>(rhs);
   return expression_equal_to_expression_in_different_lqp(*num_rows_expression, *limit_node.num_rows_expression,
                                                          node_mapping);

@@ -22,11 +22,11 @@ std::string InsertNode::description() const {
 
 const std::string& InsertNode::table_name() const { return _table_name; }
 
-std::shared_ptr<AbstractLQPNode> InsertNode::_shallow_copy_impl(LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> InsertNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return InsertNode::make(_table_name);
 }
 
-bool InsertNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+bool InsertNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& insert_node_rhs = static_cast<const InsertNode&>(rhs);
   return _table_name == insert_node_rhs._table_name;
 }

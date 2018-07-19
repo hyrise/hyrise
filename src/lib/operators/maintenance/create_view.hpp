@@ -8,12 +8,12 @@
 
 namespace opossum {
 
-class View;
+class LQPView;
 
 // maintenance operator for the "CREATE VIEW" sql statement
 class CreateView : public AbstractReadOnlyOperator {
  public:
-  CreateView(const std::string& view_name, const std::shared_ptr<View>& view);
+  CreateView(const std::string& view_name, const std::shared_ptr<LQPView>& view);
 
   const std::string name() const override;
 
@@ -23,9 +23,10 @@ class CreateView : public AbstractReadOnlyOperator {
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_input_left,
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
  private:
   const std::string _view_name;
-  const std::shared_ptr<View> _view;
+  const std::shared_ptr<LQPView> _view;
 };
 }  // namespace opossum

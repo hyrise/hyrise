@@ -236,4 +236,8 @@ std::shared_ptr<AbstractOperator> Insert::_on_deep_copy(
   return std::make_shared<Insert>(_target_table_name, copied_input_left);
 }
 
+void Insert::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+
+}
+
 }  // namespace opossum

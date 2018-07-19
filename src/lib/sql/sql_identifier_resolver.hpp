@@ -23,7 +23,7 @@ struct SQLIdentifierContextEntry final {
  * Its main purpose is name resolution during the SQL translation. As such,
  * it performs resolution of Table and Column Aliases.
  */
-class SQLIdentifierContext final {
+class SQLIdentifierResolver final {
  public:
   void set_column_name(const std::shared_ptr<AbstractExpression>& expression, const std::string& column_name);
   void set_table_name(const std::shared_ptr<AbstractExpression>& expression, const std::string& table_name);
@@ -38,7 +38,7 @@ class SQLIdentifierContext final {
    */
   std::vector<std::shared_ptr<AbstractExpression>> resolve_table_name(const std::string& table_name) const;
 
-  void append(SQLIdentifierContext&& rhs);
+  void append(SQLIdentifierResolver&& rhs);
 
  private:
   SQLIdentifierContextEntry& _find_or_create_expression_entry(const std::shared_ptr<AbstractExpression>& expression);

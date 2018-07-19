@@ -35,6 +35,10 @@ std::shared_ptr<AbstractOperator> ExportCsv::_on_deep_copy(
   return std::make_shared<ExportCsv>(copied_input_left, _filename);
 }
 
+void ExportCsv::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+
+}
+
 void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table>& table, const std::string& meta_file_path) {
   CsvMeta meta{};
   meta.chunk_size = table->max_chunk_size();

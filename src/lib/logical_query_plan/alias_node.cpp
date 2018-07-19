@@ -31,11 +31,11 @@ std::string AliasNode::description() const {
 
 const std::vector<std::shared_ptr<AbstractExpression>>& AliasNode::column_expressions() const { return _expressions; }
 
-std::shared_ptr<AbstractLQPNode> AliasNode::_shallow_copy_impl(LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> AliasNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return std::make_shared<AliasNode>(expressions_copy_and_adapt_to_different_lqp(_expressions, node_mapping), aliases);
 }
 
-bool AliasNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+bool AliasNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& alias_node = static_cast<const AliasNode&>(rhs);
   return expressions_equal_to_expressions_in_different_lqp(_expressions, alias_node._expressions, node_mapping) &&
          aliases == alias_node.aliases;

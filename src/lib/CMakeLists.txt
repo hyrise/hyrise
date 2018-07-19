@@ -337,10 +337,10 @@ set(
     sql/sql_query_plan.hpp
     sql/sql_identifier.cpp
     sql/sql_identifier.hpp
-    sql/sql_identifier_context.cpp
-    sql/sql_identifier_context.hpp
-    sql/sql_identifier_context_proxy.cpp
-    sql/sql_identifier_context_proxy.hpp
+    sql/sql_identifier_resolver.cpp
+    sql/sql_identifier_resolver.hpp
+    sql/sql_identifier_resolver_proxy.cpp
+    sql/sql_identifier_resolver_proxy.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
     storage/base_column.cpp
@@ -427,8 +427,8 @@ set(
     storage/run_length_column.hpp
     storage/run_length_column/run_length_column_iterable.hpp
     storage/run_length_column/run_length_encoder.hpp
-    storage/view.cpp
-    storage/view.hpp
+    storage/lqp_view.cpp
+    storage/lqp_view.hpp
     storage/storage_manager.cpp
     storage/storage_manager.hpp
     storage/table_column_definition.cpp

@@ -18,11 +18,11 @@ const std::vector<std::shared_ptr<AbstractExpression>>& DummyTableNode::column_e
   return _column_expressions;
 }
 
-std::shared_ptr<AbstractLQPNode> DummyTableNode::_shallow_copy_impl(LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> DummyTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return std::make_shared<DummyTableNode>();
 }
 
-bool DummyTableNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+bool DummyTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   return true;
 }
 

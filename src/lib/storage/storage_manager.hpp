@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "types.hpp"
-#include "view.hpp"
+#include "lqp_view.hpp"
 
 namespace opossum {
 
@@ -36,13 +36,13 @@ class StorageManager : private Noncopyable {
   std::vector<std::string> table_names() const;
 
   // adds a view to the storage manager
-  void add_view(const std::string& name, const std::shared_ptr<View>& view);
+  void add_lqp_view(const std::string& name, const std::shared_ptr<LQPView>& view);
 
   // removes the view from the storage manger
-  void drop_view(const std::string& name);
+  void drop_lqp_view(const std::string& name);
 
   // returns the view instance with the given name
-  std::shared_ptr<View> get_view(const std::string& name) const;
+  std::shared_ptr<LQPView> get_view(const std::string& name) const;
 
   // returns whether the storage manager holds a table with the given name
   bool has_view(const std::string& name) const;
@@ -69,6 +69,6 @@ class StorageManager : private Noncopyable {
   StorageManager& operator=(StorageManager&&) = default;
 
   std::map<std::string, std::shared_ptr<Table>> _tables;
-  std::map<std::string, std::shared_ptr<View>> _views;
+  std::map<std::string, std::shared_ptr<LQPView>> _views;
 };
 }  // namespace opossum

@@ -48,4 +48,9 @@ std::shared_ptr<AbstractOperator> UnionAll::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<UnionAll>(copied_input_left, copied_input_right);
 }
+
+void UnionAll::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+
+}
+
 }  // namespace opossum

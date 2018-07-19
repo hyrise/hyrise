@@ -139,7 +139,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   virtual void _on_cleanup();
 
   // override this if the Operator uses Expressions and set the parameters within them
-  virtual void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
+  virtual void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) = 0;
 
   // override this if the Operator uses Expressions and set the transaction context in the SubSelectExpressions
   virtual void _on_set_transaction_context(std::weak_ptr<TransactionContext> transaction_context);

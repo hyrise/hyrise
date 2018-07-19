@@ -69,6 +69,10 @@ const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<JoinMPSM>(copied_input_left, copied_input_right, _mode, _column_ids, _predicate_condition);
 }
 
+void JoinMPSM::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+
+}
+
 const std::string JoinMPSM::name() const { return "Join MPSM"; }
 
 template <typename T>

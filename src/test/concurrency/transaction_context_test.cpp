@@ -46,6 +46,8 @@ class CommitFuncOp : public AbstractReadWriteOperator {
     Fail("Unexpected function call");
   }
 
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override {}
+
   void _on_commit_records(const CommitID cid) override { _func(); }
 
   void _on_rollback_records() override {}

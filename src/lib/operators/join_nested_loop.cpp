@@ -38,6 +38,10 @@ std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_deep_copy(
                                           _predicate_condition);
 }
 
+void JoinNestedLoop::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+
+}
+
 std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   PerformanceWarning("Nested Loop Join used");
 

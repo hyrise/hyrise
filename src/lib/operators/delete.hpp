@@ -27,6 +27,7 @@ class Delete : public AbstractReadWriteOperator {
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_input_left,
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
   void _on_commit_records(const CommitID cid) override;
   void _finish_commit() override;
   void _on_rollback_records() override;

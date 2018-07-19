@@ -67,7 +67,7 @@ std::shared_ptr<TableStatistics> MockNode::derive_statistics_from(
   return boost::get<std::shared_ptr<TableStatistics>>(_constructor_arguments);
 }
 
-std::shared_ptr<AbstractLQPNode> MockNode::_shallow_copy_impl(LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   if (_constructor_arguments.type() == typeid(std::shared_ptr<TableStatistics>)) {
     return MockNode::make(boost::get<std::shared_ptr<TableStatistics>>(_constructor_arguments));
   } else {
@@ -75,7 +75,7 @@ std::shared_ptr<AbstractLQPNode> MockNode::_shallow_copy_impl(LQPNodeMapping& no
   }
 }
 
-bool MockNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+bool MockNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& mock_node = static_cast<const MockNode&>(rhs);
 
   if (_constructor_arguments.which() != mock_node._constructor_arguments.which()) return false;

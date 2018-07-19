@@ -10,11 +10,11 @@ LogicalPlanRootNode::LogicalPlanRootNode() : AbstractLQPNode(LQPNodeType::Root) 
 
 std::string LogicalPlanRootNode::description() const { return "[LogicalPlanRootNode]"; }
 
-std::shared_ptr<AbstractLQPNode> LogicalPlanRootNode::_shallow_copy_impl(LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> LogicalPlanRootNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return make();
 }
 
-bool LogicalPlanRootNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+bool LogicalPlanRootNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   return true;
 }
 

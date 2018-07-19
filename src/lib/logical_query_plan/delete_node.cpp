@@ -21,11 +21,11 @@ std::string DeleteNode::description() const {
 
 const std::string& DeleteNode::table_name() const { return _table_name; }
 
-std::shared_ptr<AbstractLQPNode> DeleteNode::_shallow_copy_impl(LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> DeleteNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return DeleteNode::make(_table_name);
 }
 
-bool DeleteNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+bool DeleteNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto delete_node_rhs = static_cast<const DeleteNode&>(rhs);
   return _table_name == delete_node_rhs._table_name;
 }

@@ -1,19 +1,19 @@
-#include "sql_identifier_context_proxy.hpp"
+#include "sql_identifier_resolver_proxy.hpp"
 
 #include "parameter_id_allocator.hpp"
-#include "sql_identifier_context.hpp"
+#include "sql_identifier_resolver.hpp"
 
 namespace opossum {
 
-SQLIdentifierContextProxy::SQLIdentifierContextProxy(
-    const std::shared_ptr<SQLIdentifierContext>& wrapped_context,
+SQLIdentifierResolverProxy::SQLIdentifierResolverProxy(
+    const std::shared_ptr<SQLIdentifierResolver>& wrapped_context,
     const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
-    const std::shared_ptr<SQLIdentifierContextProxy>& outer_context_proxy)
+    const std::shared_ptr<SQLIdentifierResolverProxy>& outer_context_proxy)
     : _wrapped_context(wrapped_context),
       _parameter_id_allocator(parameter_id_allocator),
       _outer_context_proxy(outer_context_proxy) {}
 
-std::shared_ptr<AbstractExpression> SQLIdentifierContextProxy::resolve_identifier_relaxed(
+std::shared_ptr<AbstractExpression> SQLIdentifierResolverProxy::resolve_identifier_relaxed(
     const SQLIdentifier& identifier) {
   auto expression = _wrapped_context->resolve_identifier_relaxed(identifier);
   if (expression) {
@@ -35,7 +35,7 @@ std::shared_ptr<AbstractExpression> SQLIdentifierContextProxy::resolve_identifie
   return nullptr;
 }
 
-const ExpressionUnorderedMap<ParameterID>& SQLIdentifierContextProxy::accessed_expressions() const {
+const ExpressionUnorderedMap<ParameterID>& SQLIdentifierResolverProxy::accessed_expressions() const {
   return _accessed_expressions;
 }
 

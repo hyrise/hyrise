@@ -8,15 +8,15 @@
 #include "expression/parameter_expression.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "sql/parameter_id_allocator.hpp"
-#include "sql/sql_identifier_context.hpp"
-#include "sql/sql_identifier_context_proxy.hpp"
+#include "sql/sql_identifier_resolver.hpp"
+#include "sql/sql_identifier_resolver_proxy.hpp"
 
 using namespace std::string_literals;            // NOLINT
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class SQLIdentifierContextTest : public ::testing::Test {
+class SQLIdentifierResolverTest : public ::testing::Test {
  public:
   void SetUp() override {
     node_a = MockNode::make(MockNode::ColumnDefinitions{
@@ -43,11 +43,11 @@ class SQLIdentifierContextTest : public ::testing::Test {
 
   std::shared_ptr<MockNode> node_a, node_b, node_c;
   std::shared_ptr<AbstractExpression> expression_a, expression_b, expression_c, expression_unnamed;
-  SQLIdentifierContext context;
+  SQLIdentifierResolver context;
   std::shared_ptr<ParameterIDAllocator> parameter_id_allocator;
 };
 
-TEST_F(SQLIdentifierContextTest, ResolveIdentifier) {
+TEST_F(SQLIdentifierResolverTest, ResolveIdentifier) {
   EXPECT_EQ(context.resolve_identifier_relaxed({"a"s}), expression_a);
   EXPECT_EQ(context.resolve_identifier_relaxed({"b"s}), expression_b);
   EXPECT_EQ(context.resolve_identifier_relaxed({"c"s}), expression_c);
@@ -57,7 +57,7 @@ TEST_F(SQLIdentifierContextTest, ResolveIdentifier) {
   EXPECT_EQ(context.resolve_identifier_relaxed({"x"s, "T1"}), nullptr);
 }
 
-TEST_F(SQLIdentifierContextTest, ColumnNameChanges) {
+TEST_F(SQLIdentifierResolverTest, ColumnNameChanges) {
   context.set_column_name(expression_a, "x");
 
   EXPECT_EQ(context.resolve_identifier_relaxed({"a"s}), nullptr);
@@ -68,7 +68,7 @@ TEST_F(SQLIdentifierContextTest, ColumnNameChanges) {
   EXPECT_EQ(context.resolve_identifier_relaxed({"b"s}), expression_b);
 }
 
-TEST_F(SQLIdentifierContextTest, TableNameChanges) {
+TEST_F(SQLIdentifierResolverTest, TableNameChanges) {
   context.set_column_name(expression_a, "x");
   context.set_table_name(expression_a, "X");
 
@@ -82,7 +82,7 @@ TEST_F(SQLIdentifierContextTest, TableNameChanges) {
   EXPECT_EQ(context.resolve_identifier_relaxed({"b"s, "T1"}), expression_b);
 }
 
-TEST_F(SQLIdentifierContextTest, ColumnNameRedundancy) {
+TEST_F(SQLIdentifierResolverTest, ColumnNameRedundancy) {
   auto expression_a2 = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_c, ColumnID{2}));
 
   context.set_column_name(expression_a2, {"a"s});
@@ -96,7 +96,7 @@ TEST_F(SQLIdentifierContextTest, ColumnNameRedundancy) {
   EXPECT_EQ(context.resolve_identifier_relaxed({"a"s, "T2"}), expression_a2);
 }
 
-TEST_F(SQLIdentifierContextTest, ResolveOuterExpression) {
+TEST_F(SQLIdentifierResolverTest, ResolveOuterExpression) {
   /**
    * Simulate a scenario in which a Sub-Subquery accesses an Identifier from the outermost and intermediate queries
    */
@@ -107,26 +107,26 @@ TEST_F(SQLIdentifierContextTest, ResolveOuterExpression) {
   const auto outermost_expression_a = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_b, ColumnID{0}));
   const auto outermost_expression_b = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_b, ColumnID{1}));
   const auto outermost_expression_c = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_b, ColumnID{2}));
-  const auto outermost_context = std::make_shared<SQLIdentifierContext>();
+  const auto outermost_context = std::make_shared<SQLIdentifierResolver>();
   outermost_context->set_column_name(outermost_expression_a, "outermost_a");
   outermost_context->set_column_name(outermost_expression_b, "b");  // Intentionally named just "b"
   outermost_context->set_column_name(outermost_expression_c, "c");  // Intentionally named just "c"
   outermost_context->set_table_name(outermost_expression_b, "Outermost");
 
   const auto outermost_context_proxy =
-      std::make_shared<SQLIdentifierContextProxy>(outermost_context, parameter_id_allocator);
+      std::make_shared<SQLIdentifierResolverProxy>(outermost_context, parameter_id_allocator);
 
   /**
    * Create context and context proxy for the nested ("intermediate") query
    */
-  auto intermediate_context = std::make_shared<SQLIdentifierContext>();
+  auto intermediate_context = std::make_shared<SQLIdentifierResolver>();
   const auto intermediate_expression_a = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_c, ColumnID{0}));
   const auto intermediate_expression_b = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_c, ColumnID{1}));
   intermediate_context->set_column_name(intermediate_expression_a, "intermediate_a");
   intermediate_context->set_column_name(intermediate_expression_b, "b");  // Intentionally named just "b"
   intermediate_context->set_table_name(intermediate_expression_b, "Intermediate");
 
-  const auto intermediate_context_proxy = std::make_shared<SQLIdentifierContextProxy>(
+  const auto intermediate_context_proxy = std::make_shared<SQLIdentifierResolverProxy>(
       intermediate_context, parameter_id_allocator, outermost_context_proxy);
 
   /**
@@ -161,12 +161,12 @@ TEST_F(SQLIdentifierContextTest, ResolveOuterExpression) {
   EXPECT_EQ(intermediate_context_proxy->accessed_expressions().count(intermediate_expression_a), 1u);
 }
 
-TEST_F(SQLIdentifierContextTest, GetExpressionIdentifier) {
+TEST_F(SQLIdentifierResolverTest, GetExpressionIdentifier) {
   EXPECT_EQ(context.get_expression_identifier(expression_a), SQLIdentifier("a", "T1"));
   EXPECT_EQ(context.get_expression_identifier(expression_unnamed), std::nullopt);
 }
 
-TEST_F(SQLIdentifierContextTest, DeepEqualsIsUsed) {
+TEST_F(SQLIdentifierResolverTest, DeepEqualsIsUsed) {
   /**
    * Test that we can use equivalent Expression objects that are stored in different Objects
    */
@@ -178,7 +178,7 @@ TEST_F(SQLIdentifierContextTest, DeepEqualsIsUsed) {
   EXPECT_EQ(context.get_expression_identifier(expression_a2), SQLIdentifier("a2"s, "T2"));
 }
 
-TEST_F(SQLIdentifierContextTest, ResolveTableName) {
+TEST_F(SQLIdentifierResolverTest, ResolveTableName) {
   /**
    * Test that all Expressions of a table name can be found
    */

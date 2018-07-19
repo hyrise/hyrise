@@ -25,8 +25,8 @@ class UpdateNode : public EnableMakeForLQPNode<UpdateNode>, public AbstractLQPNo
   const std::vector<std::shared_ptr<AbstractExpression>> update_column_expressions;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _shallow_copy_impl(LQPNodeMapping& node_mapping) const override;
-  bool _shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
+  std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
+  bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
 
 }  // namespace opossum

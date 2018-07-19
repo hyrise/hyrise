@@ -40,6 +40,10 @@ std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
   return copy;
 }
 
+void GetTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+
+}
+
 std::shared_ptr<const Table> GetTable::_on_execute() {
   auto original_table = StorageManager::get().get_table(_name);
   if (_excluded_chunk_ids.empty()) {

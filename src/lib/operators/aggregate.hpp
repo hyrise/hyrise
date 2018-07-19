@@ -95,6 +95,8 @@ class Aggregate : public AbstractReadOnlyOperator {
       const std::shared_ptr<AbstractOperator>& copied_input_left,
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
 
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
+
   void _on_cleanup() override;
 
   template <typename ColumnType>

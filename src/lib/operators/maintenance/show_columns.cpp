@@ -27,6 +27,10 @@ std::shared_ptr<AbstractOperator> ShowColumns::_on_deep_copy(
   return std::make_shared<ShowColumns>(_table_name);
 }
 
+void ShowColumns::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+
+}
+
 std::shared_ptr<const Table> ShowColumns::_on_execute() {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("column_name", DataType::String);

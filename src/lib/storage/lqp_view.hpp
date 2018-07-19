@@ -9,12 +9,12 @@ namespace opossum {
 
 class AbstractLQPNode;
 
-class View {
+class LQPView {
  public:
-  View(const std::shared_ptr<AbstractLQPNode>& lqp, const std::unordered_map<ColumnID, std::string>& column_names);
+  LQPView(const std::shared_ptr<AbstractLQPNode>& lqp, const std::unordered_map<ColumnID, std::string>& column_names);
 
-  std::shared_ptr<View> deep_copy() const;
-  bool deep_equals(const View& other) const;
+  std::shared_ptr<LQPView> deep_copy() const;
+  bool deep_equals(const LQPView& other) const;
 
   const std::shared_ptr<AbstractLQPNode> lqp;
   const std::unordered_map<ColumnID, std::string> column_names;

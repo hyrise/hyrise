@@ -26,6 +26,7 @@ class Difference : public AbstractReadOnlyOperator {
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_input_left,
       const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
  private:
   void _append_string_representation(std::ostream& row_string_buffer, const AllTypeVariant value);

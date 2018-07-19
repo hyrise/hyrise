@@ -31,6 +31,10 @@ std::shared_ptr<AbstractOperator> AliasOperator::_on_deep_copy(
   return std::make_shared<AliasOperator>(copied_input_left, _column_ids, _aliases);
 }
 
+void AliasOperator::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+
+}
+
 std::shared_ptr<const Table> AliasOperator::_on_execute() {
   /**
    * Generate the new TableColumnDefinitions, that is, setting the new names for the columns

@@ -130,4 +130,8 @@ std::shared_ptr<AbstractOperator> Delete::_on_deep_copy(
   return std::make_shared<Delete>(_table_name, copied_input_left);
 }
 
+void Delete::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+
+}
+
 }  // namespace opossum

@@ -140,4 +140,8 @@ std::shared_ptr<AbstractOperator> Update::_on_deep_copy(
   return std::make_shared<Update>(_table_to_update_name, copied_input_left, copied_input_right);
 }
 
+void Update::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+
+}
+
 }  // namespace opossum

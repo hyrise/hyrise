@@ -43,13 +43,13 @@ std::shared_ptr<TableStatistics> StoredTableNode::derive_statistics_from(
   return StorageManager::get().get_table(table_name)->table_statistics();
 }
 
-std::shared_ptr<AbstractLQPNode> StoredTableNode::_shallow_copy_impl(LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> StoredTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   const auto copy = make(table_name);
   copy->set_excluded_chunk_ids(_excluded_chunk_ids);
   return copy;
 }
 
-bool StoredTableNode::_shallow_equals_impl(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& stored_table_node = static_cast<const StoredTableNode&>(rhs);
   return table_name == stored_table_node.table_name && _excluded_chunk_ids == stored_table_node._excluded_chunk_ids;
 }

@@ -173,7 +173,7 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy(LQPNodeMapping node_
 
 bool AbstractLQPNode::shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   if (type != rhs.type) return false;
-  return _shallow_equals_impl(rhs, node_mapping);
+  return _on_shallow_equals(rhs, node_mapping);
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& AbstractLQPNode::column_expressions() const {
@@ -269,7 +269,7 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_shallow_copy(LQPNodeMapping& 
   // Handle diamond shapes in the LQP; don't copy nodes twice
   if (node_mapping_iter != node_mapping.end()) return node_mapping_iter->second;
 
-  auto shallow_copy = _shallow_copy_impl(node_mapping);
+  auto shallow_copy = _on_shallow_copy(node_mapping);
   node_mapping.emplace(shared_from_this(), shallow_copy);
 
   return shallow_copy;
