@@ -1,8 +1,8 @@
 #include <gmock/gmock.h>
 #include <boost/asio/ip/tcp.hpp>
 #include <server/server_session.hpp>
-// The template is defined and default-instantiated in the .cpp
-#include <server/server_session.cpp>
+// The template is ServerSessionImpl defined and default-instantiated in the .cpp, we include it here to mock it
+#include <server/server_session.cpp>  // NOLINT
 #include "../base_test.hpp"
 #include "mock_connection.hpp"
 #include "mock_task_runner.hpp"

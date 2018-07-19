@@ -9,7 +9,6 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/topology.hpp"
 #include "storage/create_iterable_from_column.hpp"
-#include "utils/boost_default_memory_resource.cpp"
 #include "types.hpp"
 #include "utils/numa_memory_resource.hpp"
 
