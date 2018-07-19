@@ -166,7 +166,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     DebugAssert(query_result.iteration_durations.size() == num_iterations,
                 "number of iterations and number of iteration durations does not match");
 
-    // Copy values in order to sort them
+    // Transform iteration Durations into numerical representation
     auto iteration_durations = std::vector<Duration::rep>();
     iteration_durations.reserve(query_result.iteration_durations.size());
     std::transform(query_result.iteration_durations.cbegin(), query_result.iteration_durations.cend(),
@@ -190,14 +190,14 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
         [mean](const auto& sum, const auto& duration) { return sum + ((duration - mean) * (duration - mean)); });
     const auto variance =
         num_iterations > 1 ? static_cast<double>(sum_of_squared_deviations) / (num_iterations - 1) : 0.0;
-    const auto stddev = sqrt(variance);
+    const auto standard_deviation = sqrt(variance);
 
     nlohmann::json benchmark{
         {"name", name},
         {"iterations", query_result.num_iterations},
         {"avg_real_time_per_iteration", time_per_query},
         {"median_real_time_per_iteration", median},
-        {"real_time_per_iteration_standard_deviation", stddev},
+        {"real_time_per_iteration_standard_deviation", standard_deviation},
         {"items_per_second", items_per_second},
         {"time_unit", "ns"},
     };
