@@ -223,7 +223,7 @@ void LikeTableScanImpl::resolve_pattern_matcher(const AllPatternVariant& pattern
   }
 }
 
-std::string LikeTableScanImpl::sql_like_to_regex(const std::string& sql_like) {
+std::string LikeTableScanImpl::sql_like_to_regex(std::string sql_like) {
   // Do substitution of <backslash> with <backslash><backslash> FIRST, because otherwise it will also replace
   // backslashes introduced by the other substitutions
   constexpr auto REPLACE_BY = std::array<std::pair<const char*, const char*>, 14u>{{{"\\", "\\\\"},

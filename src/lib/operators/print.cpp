@@ -110,7 +110,8 @@ std::shared_ptr<const Table> Print::_on_execute() {
 // In order to print the table as an actual table, with columns being aligned, we need to calculate the
 // number of characters in the printed representation of each column
 // `min` and `max` can be used to limit the width of the columns - however, every column fits at least the column's name
-std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table>& table) const {
+std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max,
+                                                   const std::shared_ptr<const Table>& table) const {
   std::vector<uint16_t> widths(table->column_count());
   // calculate the length of the column name
   for (ColumnID col{0}; col < table->column_count(); ++col) {

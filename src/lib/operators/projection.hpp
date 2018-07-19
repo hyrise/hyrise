@@ -26,7 +26,7 @@ class Projection : public AbstractReadOnlyOperator {
  public:
   using ColumnExpressions = std::vector<std::shared_ptr<PQPExpression>>;
 
-  Projection(const std::shared_ptr<const AbstractOperator> in, const ColumnExpressions& column_expressions);
+  Projection(const std::shared_ptr<const AbstractOperator>& in, const ColumnExpressions& column_expressions);
 
   const std::string name() const override;
   const std::string description(DescriptionMode description_mode) const override;

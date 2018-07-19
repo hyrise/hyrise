@@ -22,7 +22,8 @@ namespace opossum {
 class JoinIndex : public AbstractJoinOperator {
  public:
   JoinIndex(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
-            const JoinMode mode, const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition predicate_condition);
+            const JoinMode mode, const std::pair<ColumnID, ColumnID>& column_ids,
+            const PredicateCondition predicate_condition);
 
   const std::string name() const override;
 

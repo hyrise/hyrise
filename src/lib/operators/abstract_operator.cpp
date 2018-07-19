@@ -95,7 +95,8 @@ void AbstractOperator::set_transaction_context(const std::weak_ptr<TransactionCo
   _transaction_context = transaction_context;
 }
 
-void AbstractOperator::set_transaction_context_recursively(const std::weak_ptr<TransactionContext>& transaction_context) {
+void AbstractOperator::set_transaction_context_recursively(
+    const std::weak_ptr<TransactionContext>& transaction_context) {
   set_transaction_context(transaction_context);
 
   if (_input_left != nullptr) mutable_input_left()->set_transaction_context_recursively(transaction_context);

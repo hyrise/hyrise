@@ -312,9 +312,10 @@ bool JitAwareLQPTranslator::_node_is_jittable(const std::shared_ptr<AbstractLQPN
     // We do not support the count distinct function yet and thus need to check all aggregate expressions.
     auto aggregate_node = std::static_pointer_cast<AggregateNode>(node);
     auto aggregate_expressions = aggregate_node->aggregate_expressions();
-    auto has_count_distict = std::count_if(
-        aggregate_expressions.begin(), aggregate_expressions.end(),
-        [](auto& expression) { return expression->aggregate_function() == AggregateFunction::CountDistinct; }) > 0;
+    auto has_count_distict =
+        std::count_if(aggregate_expressions.begin(), aggregate_expressions.end(), [](auto& expression) {
+          return expression->aggregate_function() == AggregateFunction::CountDistinct;
+        }) > 0;
     return allow_aggregate_node && !has_count_distict;
   }
 
