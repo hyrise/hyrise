@@ -61,7 +61,7 @@ node {
 ///        }
 ///      }
 
-///     parallel clangDebugRun: {
+     parallel clangDebugRun: {
 ///       stage("clang-debug:test") {
 ///         sh "./clang-debug/hyriseTest clang-debug"
 ///       }
