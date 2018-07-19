@@ -97,10 +97,10 @@ set(
     optimizer/strategy/strategy_base_test.cpp
     optimizer/strategy/strategy_base_test.hpp
     scheduler/scheduler_test.cpp
-#    server/mock_connection.hpp
-#    server/mock_task_runner.hpp
-#    server/postgres_wire_handler_test.cpp
-#    server/server_session_test.cpp
+    server/mock_connection.hpp
+    server/mock_task_runner.hpp
+    server/postgres_wire_handler_test.cpp
+    server/server_session_test.cpp
     sql/sql_basic_cache_test.cpp
     sql/sqlite_testrunner/sqlite_testrunner.cpp
     sql/sqlite_testrunner/sqlite_wrapper_test.cpp
@@ -223,7 +223,7 @@ endif()
 set (
     SYSTEM_TEST_SOURCES
     ${SHARED_SOURCES}
-    #server/server_test_runner.cpp
+    server/server_test_runner.cpp
     tpc/tpch_test.cpp
     tpc/tpch_db_generator_test.cpp
     gtest_main.cpp
