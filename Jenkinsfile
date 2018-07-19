@@ -138,6 +138,10 @@ node {
       }, clangDebugCoverage: {
         stage("clang-debug-coverage") {
           if (env.BRANCH_NAME == 'master' || full_ci) {
+            def htmlFiles
+            dir ('coverage') {
+              htmlFiles = findFiles glob: '*.html'
+            }
             sh "export CCACHE_BASEDIR=`pwd`; ./scripts/coverage.sh --generate_badge=true --launcher=ccache"
             archive 'coverage_badge.svg'
             archive 'coverage_percent.txt'
@@ -146,8 +150,8 @@ node {
               alwaysLinkToLastBuild: false,
               keepAll: true,
               reportDir: 'coverage',
-              reportFiles: 'index.html',
-              reportName: "Llvm-cov Report"
+              reportFiles: htmlFiles,
+              reportName: "llvm-coverage"
             ])
             script {
               coverageChange = sh script: "./scripts/compare_coverage.sh", returnStdout: true
