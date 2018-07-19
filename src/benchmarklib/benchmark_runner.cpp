@@ -166,6 +166,11 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     DebugAssert(query_result.iteration_durations.size() == num_iterations,
                 "number of iterations and number of iteration durations does not match");
 
+    const auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(query_result.duration).count();
+    const auto duration_seconds = static_cast<float>(duration_ns) / 1'000'000'000;
+    const auto items_per_second = static_cast<float>(query_result.num_iterations) / duration_seconds;
+    const auto time_per_query = duration_ns / query_result.num_iterations;
+
     // Transform iteration Durations into numerical representation
     auto iteration_durations = std::vector<double>();
     iteration_durations.reserve(query_result.iteration_durations.size());
@@ -174,18 +179,8 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
                      return static_cast<double>(std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count());
                    });
 
-    const auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(query_result.duration).count();
-    const auto duration_seconds = static_cast<float>(duration_ns) / 1'000'000'000;
-    const auto items_per_second = static_cast<float>(query_result.num_iterations) / duration_seconds;
-    const auto time_per_query = duration_ns / query_result.num_iterations;
-
-    std::sort(iteration_durations.begin(), iteration_durations.end());
-
+    // Calculate standard deviation and relative standard deviation
     const auto mean = time_per_query;
-    const auto median =
-        num_iterations % 2 == 0
-            ? ((iteration_durations[num_iterations / 2 - 1] + iteration_durations[num_iterations / 2]) / 2)
-            : iteration_durations[num_iterations / 2];
     const auto sum_of_squared_deviations = std::accumulate(
         iteration_durations.cbegin(), iteration_durations.cend(), 0.0,
         [mean](const auto& sum, const auto& duration) { return sum + ((duration - mean) * (duration - mean)); });
@@ -198,11 +193,8 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
         {"name", name},
         {"iterations", query_result.num_iterations},
         {"real_time_per_iteration_avg", time_per_query},
-        {"real_time_per_iteration_med", median},
         {"real_time_per_iteration_relative_standard_deviation", relative_standard_deviation},
         {"real_time_per_iteration_standard_deviation", standard_deviation},
-        {"real_time_per_iteration_variance", variance},
-        {"real_time_per_iteration_sum_of_squared_deviations", sum_of_squared_deviations},
         {"items_per_second", items_per_second},
         {"time_unit", "ns"},
     };
