@@ -122,9 +122,7 @@ TEST_F(JitOperatorWrapperTest, CallsJitOperatorHooks) {
   jit_operator_wrapper.execute();
 }
 
-// ToDo(anyone) Fix inline methods (this test only fails on the test server, it works on Pella)
-// See issue #933 (https://github.com/hyrise/hyrise/issues/976)
-TEST_F(JitOperatorWrapperTest, DISABLED_JitOperatorsSpecializedWithMultipleInliningOfSameFunction) {
+TEST_F(JitOperatorWrapperTest, JitOperatorsSpecializedWithMultipleInliningOfSameFunction) {
   // During query specialization, the function calls of JitExpression::compute are inlined with two different objects:
   // First the compute function call with the object "expression" is inlined,
   // then the two function calls with the two time referenced object "column_expression" are inlined.
