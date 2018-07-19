@@ -142,7 +142,7 @@ node {
 
             def htmlFiles
             dir ('coverage') {
-              htmlFiles = (findFiles(glob: '*.html')).join(',')
+              htmlFiles = (findFiles(glob: '*.html')).join(',').replaceAll("${workspace}/coverage/", "")
             }
             archive 'coverage_badge.svg'
             archive 'coverage_percent.txt'
