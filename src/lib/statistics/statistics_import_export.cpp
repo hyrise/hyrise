@@ -87,7 +87,7 @@ nlohmann::json export_table_statistics(const TableStatistics& table_statistics) 
   return table_statistics_json;
 }
 
-nlohmann::json export_column_statistics(const BaseColumnStatistics& abstract_column_statistics) {
+nlohmann::json export_column_statistics(const BaseColumnStatistics& column_statistics) {
   nlohmann::json column_statistics_json;
   column_statistics_json["data_type"] = data_type_to_string.left.at(abstract_column_statistics.data_type());
   column_statistics_json["distinct_count"] = abstract_column_statistics.distinct_count();

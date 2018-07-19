@@ -12,8 +12,8 @@ namespace opossum {
 
 class UnionAll : public AbstractReadOnlyOperator {
  public:
-  UnionAll(const std::shared_ptr<const AbstractOperator> left_in,
-           const std::shared_ptr<const AbstractOperator> right_in);
+  UnionAll(const std::shared_ptr<const AbstractOperator>& left_in,
+           const std::shared_ptr<const AbstractOperator>& right_in);
   const std::string name() const override;
 
  protected:

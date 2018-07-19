@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-CreateView::CreateView(const std::string& view_name, std::shared_ptr<const AbstractLQPNode> lqp)
+CreateView::CreateView(const std::string& view_name, const std::shared_ptr<const AbstractLQPNode>& lqp)
     : AbstractReadOnlyOperator(OperatorType::CreateView), _view_name(view_name), _lqp(lqp) {}
 
 const std::string CreateView::name() const { return "CreateView"; }

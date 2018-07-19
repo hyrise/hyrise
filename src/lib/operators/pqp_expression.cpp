@@ -16,7 +16,7 @@ std::shared_ptr<PQPExpression> PQPExpression::create_column(const ColumnID colum
   return expression;
 }
 
-std::shared_ptr<PQPExpression> PQPExpression::create_subselect(std::shared_ptr<AbstractOperator> root_operator,
+std::shared_ptr<PQPExpression> PQPExpression::create_subselect(const std::shared_ptr<AbstractOperator>& root_operator,
                                                                const std::optional<std::string>& alias) {
   auto expression = std::make_shared<PQPExpression>(ExpressionType::Subselect);
   expression->_subselect_operator = root_operator;
@@ -75,7 +75,7 @@ std::shared_ptr<const Table> PQPExpression::subselect_table() {
 
 bool PQPExpression::has_subselect_table() const { return _subselect_table != nullptr; }
 
-void PQPExpression::set_subselect_table(std::shared_ptr<const Table> table) {
+void PQPExpression::set_subselect_table(const std::shared_ptr<const Table>& table) {
   DebugAssert(type() == ExpressionType::Subselect, "Table can only be set for subselect expressions.");
   _subselect_table = table;
 }

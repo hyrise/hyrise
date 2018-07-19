@@ -24,7 +24,7 @@ class LQPExpression : public AbstractExpression<LQPExpression> {
    * Create an expression representing a subselect.
    * The expression will contain the root LQP node of the subselect.
    */
-  static std::shared_ptr<LQPExpression> create_subselect(std::shared_ptr<AbstractLQPNode> root_node = nullptr,
+  static std::shared_ptr<LQPExpression> create_subselect(const std::shared_ptr<AbstractLQPNode>& root_node = nullptr,
                                                          const std::optional<std::string>& alias = std::nullopt);
 
   // Necessary for the AbstractExpression<T>::create_*() methods

@@ -15,8 +15,8 @@ class JoinIndex;
 
 class JoinNestedLoop : public AbstractJoinOperator {
  public:
-  JoinNestedLoop(const std::shared_ptr<const AbstractOperator> left,
-                 const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+  JoinNestedLoop(const std::shared_ptr<const AbstractOperator>& left,
+                 const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                  const ColumnIDPair& column_ids, const PredicateCondition predicate_condition);
 
   const std::string name() const override;
@@ -60,8 +60,8 @@ class JoinNestedLoop : public AbstractJoinOperator {
 
   void _create_table_structure();
 
-  void _write_output_chunks(ChunkColumns& columns, const std::shared_ptr<const Table> input_table,
-                            std::shared_ptr<PosList> pos_list);
+  void _write_output_chunks(ChunkColumns& columns, const std::shared_ptr<const Table>& input_table,
+                            const std::shared_ptr<PosList>& pos_list);
 
   void _on_cleanup() override;
 

@@ -78,7 +78,7 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
 }
 
 std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
-    const std::vector<std::shared_ptr<ChunkStatistics>>& statistics, std::shared_ptr<PredicateNode> predicate) {
+    const std::vector<std::shared_ptr<ChunkStatistics>>& statistics, const std::shared_ptr<PredicateNode>& predicate) {
   if (!is_variant(predicate->value())) {
     return std::set<ChunkID>();
   }

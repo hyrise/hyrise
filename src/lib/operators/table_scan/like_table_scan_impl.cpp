@@ -21,7 +21,7 @@
 
 namespace opossum {
 
-LikeTableScanImpl::LikeTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
+LikeTableScanImpl::LikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID left_column_id,
                                      const PredicateCondition predicate_condition, const std::string& pattern)
     : BaseSingleColumnTableScanImpl{in_table, left_column_id, predicate_condition},
       _pattern{pattern},
@@ -223,7 +223,7 @@ void LikeTableScanImpl::resolve_pattern_matcher(const AllPatternVariant& pattern
   }
 }
 
-std::string LikeTableScanImpl::sql_like_to_regex(std::string sql_like) {
+std::string LikeTableScanImpl::sql_like_to_regex(const std::string& sql_like) {
   // Do substitution of <backslash> with <backslash><backslash> FIRST, because otherwise it will also replace
   // backslashes introduced by the other substitutions
   constexpr auto REPLACE_BY = std::array<std::pair<const char*, const char*>, 14u>{{{"\\", "\\\\"},

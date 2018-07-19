@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-SQLQueryPlanVisualizer::SQLQueryPlanVisualizer() : AbstractVisualizer() {}
+SQLQueryPlanVisualizer::SQLQueryPlanVisualizer() = default;
 
 SQLQueryPlanVisualizer::SQLQueryPlanVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info,
                                                VizVertexInfo vertex_info, VizEdgeInfo edge_info)

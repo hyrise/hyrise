@@ -5,12 +5,12 @@
 #endif
 
 #include <algorithm>
+#include <iomanip>
 #include <memory>
+#include <sstream>
 #include <thread>
 #include <utility>
 #include <vector>
-#include <sstream>
-#include <iomanip>
 
 #include "utils/numa_memory_resource.hpp"
 
@@ -207,7 +207,7 @@ void Topology::_create_memory_resources() {
     // If we have a fake NUMA topology that has more nodes than our system has available,
     // distribute the fake nodes among the physically available ones.
     auto system_node_id = _fake_numa_topology ? node_id % _number_of_hardware_nodes : node_id;
-    _memory_resources.push_back(NUMAMemoryResource(system_node_id, memsource_name.str()));
+    _memory_resources.emplace_back(NUMAMemoryResource(system_node_id, memsource_name.str()));
   }
 }
 

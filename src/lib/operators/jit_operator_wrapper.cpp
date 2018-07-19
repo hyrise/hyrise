@@ -4,7 +4,7 @@
 
 namespace opossum {
 
-JitOperatorWrapper::JitOperatorWrapper(const std::shared_ptr<const AbstractOperator> left,
+JitOperatorWrapper::JitOperatorWrapper(const std::shared_ptr<const AbstractOperator>& left,
                                        const JitExecutionMode execution_mode,
                                        const std::vector<std::shared_ptr<AbstractJittable>>& jit_operators)
     : AbstractReadOnlyOperator{OperatorType::JitOperatorWrapper, left},

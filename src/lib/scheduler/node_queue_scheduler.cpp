@@ -17,7 +17,7 @@
 
 namespace opossum {
 
-NodeQueueScheduler::NodeQueueScheduler() : AbstractScheduler() {
+NodeQueueScheduler::NodeQueueScheduler() {
   _worker_id_allocator = std::make_shared<UidAllocator>();
 }
 
