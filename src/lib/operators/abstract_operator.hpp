@@ -31,6 +31,7 @@ enum class OperatorType {
   JitOperatorWrapper,
   JoinHash,
   JoinIndex,
+  JoinMPSM,
   JoinNestedLoop,
   JoinSortMerge,
   Limit,

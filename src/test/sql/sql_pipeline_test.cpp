@@ -378,7 +378,8 @@ TEST_F(SQLPipelineTest, GetResultTableExecutionRequired) {
 TEST_F(SQLPipelineTest, GetResultTableWithScheduler) {
   auto sql_pipeline = SQLPipelineBuilder{_join_query}.create_pipeline();
 
-  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
+  Topology::use_fake_numa_topology(8, 4);
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
   const auto& table = sql_pipeline.get_result_table();
 
   EXPECT_TABLE_EQ_UNORDERED(table, _join_result);
@@ -387,7 +388,8 @@ TEST_F(SQLPipelineTest, GetResultTableWithScheduler) {
 TEST_F(SQLPipelineTest, CleanupWithScheduler) {
   auto sql_pipeline = SQLPipelineBuilder{_join_query}.create_pipeline();
 
-  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
+  Topology::use_fake_numa_topology(8, 4);
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
   sql_pipeline.get_result_table();
 
   for (auto task_it = sql_pipeline.get_tasks()[0].cbegin(); task_it != sql_pipeline.get_tasks()[0].cend() - 1;
@@ -399,7 +401,8 @@ TEST_F(SQLPipelineTest, CleanupWithScheduler) {
 TEST_F(SQLPipelineTest, DisabledCleanupWithScheduler) {
   auto sql_pipeline = SQLPipelineBuilder{_join_query}.dont_cleanup_temporaries().create_pipeline();
 
-  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
+  Topology::use_fake_numa_topology(8, 4);
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
   sql_pipeline.get_result_table();
 
   for (auto task_it = sql_pipeline.get_tasks()[0].cbegin(); task_it != sql_pipeline.get_tasks()[0].cend() - 1;

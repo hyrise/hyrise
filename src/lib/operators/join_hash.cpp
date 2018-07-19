@@ -26,8 +26,10 @@ namespace opossum {
 
 JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
                    const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
-                   const ColumnIDPair& column_ids, const PredicateCondition predicate_condition)
-    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, column_ids, predicate_condition) {
+                   const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
+                   const size_t radix_bits)
+    : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, column_ids, predicate_condition),
+      _radix_bits(radix_bits) {
   DebugAssert(predicate_condition == PredicateCondition::Equals, "Operator not supported by Hash Join.");
 }
 
@@ -75,7 +77,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
   _impl = make_unique_by_data_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
       build_input->column_data_type(build_column_id), probe_input->column_data_type(probe_column_id), build_operator,
-      probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped);
+      probe_operator, _mode, adjusted_column_ids, _predicate_condition, inputs_swapped, _radix_bits);
   return _impl->_on_execute();
 }
 
@@ -402,7 +404,7 @@ void probe(const RadixContainer<RightType>& radix_container,
 
           // This is where the actual comparison happens. `get` only returns values that match and eliminates hash
           // collisions.
-          auto row_ids = hashtable->get(row.value);
+          auto row_ids = hashtable->get(type_cast<HashedType>(row.value));
 
           if (row_ids) {
             for (const auto& row_id : *row_ids) {
@@ -596,13 +598,14 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  public:
   JoinHashImpl(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
                const JoinMode mode, const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
-               const bool inputs_swapped)
+               const bool inputs_swapped, const size_t radix_bits)
       : _left(left),
         _right(right),
         _mode(mode),
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
-        _inputs_swapped(inputs_swapped) {}
+        _inputs_swapped(inputs_swapped),
+        _radix_bits(radix_bits) {}
 
   virtual ~JoinHashImpl() = default;
 
@@ -616,7 +619,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
   std::shared_ptr<Table> _output_table;
 
   const unsigned int _partitioning_seed = 13;
-  const size_t _radix_bits = 9;
+  const size_t _radix_bits;
 
   // Determine correct type for hashing
   using HashedType = typename JoinHashTraits<LeftType, RightType>::HashType;

@@ -12,11 +12,13 @@ CommitID CommitContext::commit_id() const { return _commit_id; }
 bool CommitContext::is_pending() const { return _pending; }
 
 void CommitContext::make_pending(const TransactionID transaction_id, std::function<void(TransactionID)> callback) {
-  _pending = true;
-
   if (callback) {
     _callback = [callback, transaction_id]() { callback(transaction_id); };
   }
+
+  // This line MUST be AFTER setting the callback. Otherwise we run into a race condition while committing, because this
+  // is 'pending' but the callback is not there yet.
+  _pending = true;
 }
 
 void CommitContext::fire_callback() {

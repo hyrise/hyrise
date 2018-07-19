@@ -4,8 +4,8 @@
 
 #include "base_test.hpp"
 
-#include "logical_query_plan/lqp_utils.cpp"
-#include "logical_query_plan/mock_node.cpp"
+#include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 
 namespace opossum {

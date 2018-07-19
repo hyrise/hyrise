@@ -8,6 +8,7 @@
 #include "operators/difference.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
@@ -54,7 +55,7 @@ template <typename T>
 class DeepCopyTestJoin : public OperatorDeepCopyTest {};
 
 // here we define all Join types
-using JoinTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge>;
+using JoinTypes = ::testing::Types<JoinNestedLoop, JoinHash, JoinSortMerge, JoinMPSM>;
 TYPED_TEST_CASE(DeepCopyTestJoin, JoinTypes);
 
 TYPED_TEST(DeepCopyTestJoin, DeepCopyJoin) {
