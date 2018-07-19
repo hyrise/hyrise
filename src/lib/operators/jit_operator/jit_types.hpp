@@ -218,6 +218,7 @@ enum class JitExpressionType {
   GreaterThanEquals,
   LessThan,
   LessThanEquals,
+  Between,
   Like,
   NotLike,
   And,

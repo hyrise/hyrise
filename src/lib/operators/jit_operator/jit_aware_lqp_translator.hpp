@@ -40,7 +40,7 @@ class JitAwareLQPTranslator final : public LQPTranslator {
   std::shared_ptr<AbstractOperator> translate_node(const std::shared_ptr<AbstractLQPNode>& node) const final;
 
  private:
-  std::shared_ptr<JitOperatorWrapper> _try_translate_node_to_jit_operators(
+  std::shared_ptr<JitOperatorWrapper> _try_translate_sub_plan_to_jit_operators(
       const std::shared_ptr<AbstractLQPNode>& node) const;
 
   std::shared_ptr<const JitExpression> _try_translate_node_to_jit_expression(
@@ -56,7 +56,7 @@ class JitAwareLQPTranslator final : public LQPTranslator {
       const std::shared_ptr<AbstractLQPNode>& input_node) const;
 
   std::shared_ptr<const JitExpression> _try_translate_column_to_jit_expression(
-      const LQPColumnReference& lqp_column_reference, JitReadTuples& jit_source,
+      const AbstractExpression& lqp_expression, JitReadTuples& jit_source,
       const std::shared_ptr<AbstractLQPNode>& input_node) const;
 
   std::shared_ptr<const JitExpression> _try_translate_variant_to_jit_expression(
@@ -83,6 +83,8 @@ class JitAwareLQPTranslator final : public LQPTranslator {
   // from the lambda determines whether the current node should be explored further.
   void _visit(const std::shared_ptr<AbstractLQPNode>& node,
               std::function<bool(const std::shared_ptr<AbstractLQPNode>&)> func) const;
+
+  static JitExpressionType _expression_to_jit_expression_type(const AbstractExpression& expression);
 };
 
 }  // namespace opossum
