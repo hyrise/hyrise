@@ -23,7 +23,7 @@ JitAwareLQPTranslator::JitAwareLQPTranslator() {
 #if !HYRISE_JIT_SUPPORT
   Fail("Query translation with JIT operators requested, but jitting is not available");
 #endif
-  ;  // Stop clang-tidy from complaining about an empty constructor
+  {}  // Stop clang-tidy from complaining about an empty constructor
 }
 
 std::shared_ptr<AbstractOperator> JitAwareLQPTranslator::translate_node(

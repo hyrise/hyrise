@@ -35,7 +35,7 @@ class JitCompiler {
   using ModuleHandle = CompileLayer::ModuleHandleT;
 
  public:
-  explicit JitCompiler();
+  JitCompiler();
   ~JitCompiler();
 
   // Adds a module to the LLVM just-in-time compiler and compiles it to machine code immediately
