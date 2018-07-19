@@ -167,11 +167,11 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
                 "number of iterations and number of iteration durations does not match");
 
     // Transform iteration Durations into numerical representation
-    auto iteration_durations = std::vector<Duration::rep>();
+    auto iteration_durations = std::vector<double>();
     iteration_durations.reserve(query_result.iteration_durations.size());
     std::transform(query_result.iteration_durations.cbegin(), query_result.iteration_durations.cend(),
                    std::back_inserter(iteration_durations), [](const auto& duration) {
-                     return std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count();
+                     return static_cast<double>(std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count());
                    });
 
     const auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(query_result.duration).count();
@@ -180,24 +180,29 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     const auto time_per_query = duration_ns / query_result.num_iterations;
 
     std::sort(iteration_durations.begin(), iteration_durations.end());
+
     const auto mean = time_per_query;
     const auto median =
         num_iterations % 2 == 0
             ? ((iteration_durations[num_iterations / 2 - 1] + iteration_durations[num_iterations / 2]) / 2)
             : iteration_durations[num_iterations / 2];
     const auto sum_of_squared_deviations = std::accumulate(
-        iteration_durations.cbegin(), iteration_durations.cend(), 0,
+        iteration_durations.cbegin(), iteration_durations.cend(), 0.0,
         [mean](const auto& sum, const auto& duration) { return sum + ((duration - mean) * (duration - mean)); });
     const auto variance =
         num_iterations > 1 ? static_cast<double>(sum_of_squared_deviations) / (num_iterations - 1) : 0.0;
     const auto standard_deviation = sqrt(variance);
+    const auto relative_standard_deviation = standard_deviation / mean;
 
     nlohmann::json benchmark{
         {"name", name},
         {"iterations", query_result.num_iterations},
-        {"avg_real_time_per_iteration", time_per_query},
-        {"median_real_time_per_iteration", median},
+        {"real_time_per_iteration_avg", time_per_query},
+        {"real_time_per_iteration_med", median},
+        {"real_time_per_iteration_relative_standard_deviation", relative_standard_deviation},
         {"real_time_per_iteration_standard_deviation", standard_deviation},
+        {"real_time_per_iteration_variance", variance},
+        {"real_time_per_iteration_sum_of_squared_deviations", sum_of_squared_deviations},
         {"items_per_second", items_per_second},
         {"time_unit", "ns"},
     };
