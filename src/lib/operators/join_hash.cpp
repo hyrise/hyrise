@@ -405,7 +405,7 @@ void probe(const RadixContainer<RightType>& radix_container,
 
           // This is where the actual comparison happens. `get` only returns values that match and eliminates hash
           // collisions.
-          auto row_ids = hashtable->get(row.value);
+          auto row_ids = hashtable->get(type_cast<HashedType>(row.value));
 
           if (row_ids) {
             for (const auto& row_id : *row_ids) {
