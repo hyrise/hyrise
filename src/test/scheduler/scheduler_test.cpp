@@ -108,7 +108,8 @@ class SchedulerTest : public BaseTest {
  * Schedule some tasks with subtasks, make sure all of them finish
  */
 TEST_F(SchedulerTest, BasicTest) {
-  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
+  Topology::use_fake_numa_topology(8, 4);
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
 
   std::atomic_uint counter{0};
 
@@ -128,7 +129,8 @@ TEST_F(SchedulerTest, BasicTestWithoutScheduler) {
 }
 
 TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
-  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
+  Topology::use_fake_numa_topology(8, 4);
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
 
   std::atomic_uint counter{0u};
 
@@ -140,7 +142,8 @@ TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
 }
 
 TEST_F(SchedulerTest, MultipleDependenciesWithScheduler) {
-  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
+  Topology::use_fake_numa_topology(8, 4);
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
 
   std::atomic_uint counter{0u};
 
@@ -152,7 +155,8 @@ TEST_F(SchedulerTest, MultipleDependenciesWithScheduler) {
 }
 
 TEST_F(SchedulerTest, DiamondDependenciesWithScheduler) {
-  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
+  Topology::use_fake_numa_topology(8, 4);
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
 
   std::atomic_uint counter{0};
 
@@ -182,7 +186,8 @@ TEST_F(SchedulerTest, DiamondDependenciesWithoutScheduler) {
 }
 
 TEST_F(SchedulerTest, MultipleOperators) {
-  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
+  Topology::use_fake_numa_topology(8, 4);
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
 
   auto test_table = load_table("src/test/tables/int_float.tbl", 2);
   StorageManager::get().add_table("table", std::move(test_table));

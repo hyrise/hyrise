@@ -9,8 +9,27 @@
 #include <thread>
 #include <utility>
 #include <vector>
+#include <sstream>
+#include <iomanip>
+
+#include "utils/numa_memory_resource.hpp"
 
 namespace opossum {
+
+#if HYRISE_NUMA_SUPPORT
+const int Topology::_number_of_hardware_nodes = numa_num_configured_nodes(); // NOLINT
+#else
+const int Topology::_number_of_hardware_nodes = 1; // NOLINT
+#endif
+
+Topology& Topology::get() {
+  static Topology instance;
+  return instance;
+}
+
+Topology::Topology() {
+  _init_default_topology();
+}
 
 void TopologyNode::print(std::ostream& stream) const {
   stream << "Number of Node CPUs: " << cpus.size() << ", CPUIDs: [";
@@ -23,85 +42,147 @@ void TopologyNode::print(std::ostream& stream) const {
   stream << "]";
 }
 
-std::shared_ptr<Topology> Topology::create_fake_numa_topology(uint32_t max_num_workers, uint32_t workers_per_node) {
-  auto max_num_threads = std::thread::hardware_concurrency();
-
-  /**
-   * Leave one thread free so hopefully the system won't freeze - but if we only have one thread, use that one.
-   */
-  auto num_workers = std::max<int32_t>(1, max_num_threads - 1);
-  if (max_num_workers != 0) {
-    num_workers = std::min<int32_t>(num_workers, max_num_workers);
-  }
-
-  auto num_nodes = num_workers / workers_per_node;
-  if (num_workers % workers_per_node != 0) num_nodes++;
-
-  std::vector<TopologyNode> nodes;
-  nodes.reserve(num_nodes);
-
-  CpuID cpu_id{0};
-
-  for (auto n = 0u; n < num_nodes; n++) {
-    std::vector<TopologyCpu> cpus;
-
-    for (auto w = 0u; w < workers_per_node && cpu_id < num_workers; w++) {
-      cpus.emplace_back(TopologyCpu(cpu_id));
-      cpu_id++;
-    }
-
-    TopologyNode node(std::move(cpus));
-
-    nodes.emplace_back(std::move(node));
-  }
-
-  return std::make_shared<Topology>(std::move(nodes), num_workers);
+void Topology::use_default_topology() {
+  Topology::get()._init_default_topology();
 }
 
-std::shared_ptr<Topology> Topology::create_numa_topology(uint32_t max_num_cores) {
+void Topology::use_numa_topology(uint32_t max_num_cores) {
+  Topology::get()._init_numa_topology(max_num_cores);
+}
+
+void Topology::use_non_numa_topology(uint32_t max_num_cores) {
+  Topology::get()._init_non_numa_topology(max_num_cores);
+}
+
+void Topology::use_fake_numa_topology(uint32_t max_num_workers, uint32_t workers_per_node) {
+  Topology::get()._init_fake_numa_topology(max_num_workers, workers_per_node);
+}
+
+
+void Topology::_init_default_topology() {
 #if !HYRISE_NUMA_SUPPORT
-  return create_fake_numa_topology(max_num_cores);
+  _init_non_numa_topology();
+#else
+  _init_numa_topology();
+#endif
+}
+
+void Topology::_init_numa_topology(uint32_t max_num_cores) {
+#if !HYRISE_NUMA_SUPPORT
+  _init_fake_numa_topology(max_num_cores);
 #else
 
   if (numa_available() < 0) {
-    return create_fake_numa_topology(max_num_cores);
+    return _init_fake_numa_topology(max_num_cores);
   }
 
+  _clear();
+  _fake_numa_topology = false;
+
   auto max_node = numa_max_node();
-  CpuID num_configured_cpus{numa_num_configured_cpus()};
+  auto num_configured_cpus = static_cast<CpuID>(numa_num_configured_cpus());
   auto cpu_bitmask = numa_allocate_cpumask();
-  uint32_t core_count = 0;
+  auto core_count = uint32_t{0};
 
-  std::vector<TopologyNode> nodes;
-
-  for (int n = 0; n <= max_node; n++) {
+  for (auto node_id = 0; node_id <= max_node; node_id++) {
     if (max_num_cores == 0 || core_count < max_num_cores) {
-      std::vector<TopologyCpu> cpus;
+      auto cpus = std::vector<TopologyCpu>();
 
-      numa_node_to_cpus(n, cpu_bitmask);
+      numa_node_to_cpus(node_id, cpu_bitmask);
 
       for (CpuID cpu_id{0}; cpu_id < num_configured_cpus; ++cpu_id) {
         if (numa_bitmask_isbitset(cpu_bitmask, cpu_id)) {
           if (max_num_cores == 0 || core_count < max_num_cores) {
             cpus.emplace_back(TopologyCpu(cpu_id));
+            _num_cpus++;
           }
           core_count++;
         }
       }
 
       TopologyNode node(std::move(cpus));
-      nodes.emplace_back(std::move(node));
+      _nodes.emplace_back(std::move(node));
     }
   }
 
+  _create_memory_resources();
+
   numa_free_cpumask(cpu_bitmask);
-  return std::make_shared<Topology>(std::move(nodes), num_configured_cpus);
 #endif
+}
+
+void Topology::_init_non_numa_topology(uint32_t max_num_cores) {
+  _clear();
+  _fake_numa_topology = false;
+
+  auto max_num_threads = std::thread::hardware_concurrency();
+
+  /**
+   * Leave one thread free so hopefully the system won't freeze - but if we only have one thread, use that one.
+   */
+  _num_cpus = std::max<uint32_t>(1, max_num_threads - 1);
+  if (max_num_cores != 0) {
+    _num_cpus = std::min<uint32_t>(_num_cpus, max_num_cores);
+  }
+
+  auto cpus = std::vector<TopologyCpu>();
+
+  for (auto cpu_id = CpuID{0}; cpu_id < _num_cpus; cpu_id++) {
+    cpus.emplace_back(TopologyCpu(cpu_id));
+  }
+
+  auto node = TopologyNode(std::move(cpus));
+  _nodes.emplace_back(std::move(node));
+
+  _create_memory_resources();
+}
+
+void Topology::_init_fake_numa_topology(uint32_t max_num_workers, uint32_t workers_per_node) {
+  _clear();
+  _fake_numa_topology = true;
+
+  auto max_num_threads = std::thread::hardware_concurrency();
+
+  /**
+   * Leave one thread free so hopefully the system won't freeze - but if we only have one thread, use that one.
+   */
+  auto num_workers = std::max<uint32_t>(1, max_num_threads - 1);
+  if (max_num_workers != 0) {
+    num_workers = std::min<uint32_t>(num_workers, max_num_workers);
+  }
+
+  auto num_nodes = num_workers / workers_per_node;
+  if (num_workers % workers_per_node != 0) num_nodes++;
+
+  _nodes.reserve(num_nodes);
+
+  auto cpu_id = CpuID{0};
+
+  for (auto node_id = uint32_t{0}; node_id < num_nodes; node_id++) {
+    auto cpus = std::vector<TopologyCpu>();
+
+    for (auto worker_id = uint32_t{0}; worker_id < workers_per_node && cpu_id < num_workers; worker_id++) {
+      cpus.emplace_back(TopologyCpu(cpu_id));
+      cpu_id++;
+    }
+
+    auto node = TopologyNode(std::move(cpus));
+
+    _nodes.emplace_back(std::move(node));
+  }
+
+  _num_cpus = num_workers;
+  _create_memory_resources();
 }
 
 const std::vector<TopologyNode>& Topology::nodes() { return _nodes; }
 
 size_t Topology::num_cpus() const { return _num_cpus; }
+
+boost::container::pmr::memory_resource* Topology::get_memory_resource(int node_id) {
+  DebugAssert(node_id >= 0 && node_id < static_cast<int>(_nodes.size()), "node_id is out of bounds");
+  return &_memory_resources[static_cast<size_t>(node_id)];
+}
 
 void Topology::print(std::ostream& stream) const {
   stream << "Number of CPUs: " << _num_cpus << std::endl;
@@ -109,6 +190,24 @@ void Topology::print(std::ostream& stream) const {
     stream << "Node #" << node_idx << " - ";
     _nodes[node_idx].print(stream);
     stream << std::endl;
+  }
+}
+
+void Topology::_clear() {
+  _nodes.clear();
+  _memory_resources.clear();
+  _num_cpus = 0;
+}
+
+void Topology::_create_memory_resources() {
+  for (auto node_id = size_t{0}; node_id < _nodes.size(); node_id++) {
+    auto memsource_name = std::stringstream();
+    memsource_name << "numa_" << std::setw(3) << std::setfill('0') << node_id;
+
+    // If we have a fake NUMA topology that has more nodes than our system has available,
+    // distribute the fake nodes among the physically available ones.
+    auto system_node_id = _fake_numa_topology ? node_id % _number_of_hardware_nodes : node_id;
+    _memory_resources.push_back(NUMAMemoryResource(system_node_id, memsource_name.str()));
   }
 }
 

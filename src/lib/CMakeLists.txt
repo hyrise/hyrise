@@ -122,6 +122,8 @@ set(
     operators/join_hash.hpp
     operators/join_index.cpp
     operators/join_index.hpp
+    operators/join_mpsm.cpp
+    operators/join_mpsm.hpp
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
     operators/join_sort_merge/column_materializer.hpp
@@ -213,7 +215,6 @@ set(
     planviz/sql_query_plan_visualizer.cpp
     planviz/sql_query_plan_visualizer.hpp
     resolve_type.hpp
-    scheduler/abstract_scheduler.cpp
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp
     scheduler/abstract_task.hpp

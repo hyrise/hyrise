@@ -445,7 +445,8 @@ TEST_F(SQLPipelineStatementTest, GetResultTableJoin) {
 TEST_F(SQLPipelineStatementTest, GetResultTableWithScheduler) {
   auto sql_pipeline = SQLPipelineBuilder{_join_query}.create_pipeline_statement();
 
-  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
+  Topology::use_fake_numa_topology(8, 4);
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
   const auto& table = sql_pipeline.get_result_table();
 
   EXPECT_TABLE_EQ_UNORDERED(table, _join_result);

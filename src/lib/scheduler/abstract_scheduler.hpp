@@ -10,16 +10,12 @@ namespace opossum {
 class AbstractTask;
 class CurrentScheduler;
 class TaskQueue;
-class Topology;
 
 class AbstractScheduler {
   friend class CurrentScheduler;
 
  public:
-  explicit AbstractScheduler(std::shared_ptr<Topology> topology);
   virtual ~AbstractScheduler() = default;
-
-  const std::shared_ptr<Topology>& topology() const;
 
   /**
    * Begin the schedulers lifecycle as the global Scheduler instance. In this method do work that can't be done before
@@ -33,9 +29,6 @@ class AbstractScheduler {
 
   virtual void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
                         SchedulePriority priority = SchedulePriority::Normal) = 0;
-
- protected:
-  std::shared_ptr<Topology> _topology;
 };
 
 }  // namespace opossum

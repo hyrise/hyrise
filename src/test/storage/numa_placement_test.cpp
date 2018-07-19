@@ -32,7 +32,7 @@ class NUMAPlacementTest : public BaseTest {
     const auto table = create_table(_chunk_count, 1000);
     StorageManager::get().add_table("table", table);
 
-    _node_count = NUMAPlacementManager::get().topology()->nodes().size();
+    _node_count = Topology::get().nodes().size();
   }
 
   // Returns a vector that contains the counts of chunks per node.
@@ -56,7 +56,7 @@ class NUMAPlacementTest : public BaseTest {
     for (size_t i = 0; i < num_chunks; i++) {
       ChunkColumns columns;
 
-      const auto alloc = PolymorphicAllocator<Chunk>(NUMAPlacementManager::get().get_memory_resource(0));
+      const auto alloc = PolymorphicAllocator<Chunk>(Topology::get().get_memory_resource(0));
       auto value_column = std::allocate_shared<ValueColumn<int>>(alloc, alloc);
       auto& values = value_column->values();
       values.reserve(num_rows_per_chunk);

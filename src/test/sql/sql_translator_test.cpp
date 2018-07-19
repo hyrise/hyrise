@@ -27,6 +27,7 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/invalid_input_exception.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
@@ -184,7 +185,7 @@ TEST_F(SQLTranslatorTest, AggregateWithGroupBy) {
 TEST_F(SQLTranslatorTest, AggregateWithInvalidGroupBy) {
   // Cannot select b without it being in the GROUP BY clause.
   const auto query = "SELECT b, SUM(b) AS s FROM table_a GROUP BY a;";
-  EXPECT_THROW(compile_query(query), std::logic_error);
+  EXPECT_THROW(compile_query(query), InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, AggregateWithExpression) {
@@ -626,7 +627,7 @@ TEST_F(SQLTranslatorTest, AccessInvalidColumn) {
 
 TEST_F(SQLTranslatorTest, AccessInvalidTable) {
   const auto query = "SELECT * FROM invalid_table;";
-  EXPECT_THROW(compile_query(query), std::logic_error);
+  EXPECT_THROW(compile_query(query), InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, ColumnAlias) {
@@ -700,12 +701,12 @@ TEST_F(SQLTranslatorTest, MultipleJoinConditionsOnBothSides) {
 
 TEST_F(SQLTranslatorTest, JoinConditionAmbiguous) {
   const auto query = "SELECT * FROM table_a JOIN table_b ON a = b";
-  EXPECT_THROW(compile_query(query), std::logic_error);
+  EXPECT_THROW(compile_query(query), InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, NonJoinConditionAmbiguous) {
   const auto query = "SELECT * FROM table_a JOIN table_b ON table_a.a = table_b.a AND a = 3";
-  EXPECT_THROW(compile_query(query), std::logic_error);
+  EXPECT_THROW(compile_query(query), InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, ColumnsOfJoinConditionPermuted) {

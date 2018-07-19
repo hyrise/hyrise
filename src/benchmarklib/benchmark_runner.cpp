@@ -29,11 +29,10 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, const NamedQueri
 
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
   if (config.enable_scheduler) {
-    const auto topology = Topology::create_numa_topology();
     config.out << "- Multi-threaded Topology:" << std::endl;
-    topology->print(config.out);
+    Topology::get().print(config.out);
 
-    const auto scheduler = std::make_shared<NodeQueueScheduler>(topology);
+    const auto scheduler = std::make_shared<NodeQueueScheduler>();
     CurrentScheduler::set(scheduler);
   }
 }

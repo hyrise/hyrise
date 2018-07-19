@@ -5,8 +5,9 @@
 // Systemtap is not available on OS X. The alternative would be dtrace. Actually, systemtap probes are compatible
 // with dtrace probes and the other way round. However, Apple's dtrace implementation differs from the original solaris
 // implementation. Thus, Apple's dtrace does not understand the USDT probe definition. In order to be able to compile
-// the project on MAC we define the probes in this file.
+// the project on Mac we define the probes in this file.
 
+// In order to be compatible with Mac dtrace probes, both provider and probe name have to be uppercase
 constexpr bool is_valid_name(const char* name) {
   do {
     if (*name >= 'a' && *name <= 'z') return false;
@@ -19,6 +20,7 @@ constexpr bool is_valid_name(const char* name) {
 
 #include "utils/tracing/provider.h"
 
+// Construct the probe definition by provider and probe name
 #define _build_name(provider, probe, ...) \
   static_assert(is_valid_name(#provider) && is_valid_name(#probe), "Provider and probe name must be upper case!"); \
   provider##_##probe(__VA_ARGS__);
