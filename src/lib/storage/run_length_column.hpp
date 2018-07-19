@@ -3,8 +3,8 @@
 
 #include <memory>
 
-#include "base_column_t.hpp"
 #include "base_encoded_column.hpp"
+#include "base_typed_column.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -27,7 +27,7 @@ class BaseCompressedVector;
  * additional boolean vector.
  */
 template <typename T>
-class RunLengthColumn : public BaseEncodedColumn, public BaseColumnT<T> {
+class RunLengthColumn : public BaseEncodedColumn, public BaseTypedColumn<T> {
  public:
   explicit RunLengthColumn(const std::shared_ptr<const pmr_vector<T>>& values,
                            const std::shared_ptr<const pmr_vector<bool>>& null_values,

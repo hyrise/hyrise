@@ -6,14 +6,14 @@
 #include <utility>
 #include <vector>
 
-#include "base_column_t.hpp"
+#include "base_typed_column.hpp"
 #include "base_value_column.hpp"
 
 namespace opossum {
 
 // ValueColumn is a specific column type that stores all its values in a vector.
 template <typename T>
-class ValueColumn : public BaseValueColumn, public BaseColumnT<T> {
+class ValueColumn : public BaseValueColumn, public BaseTypedColumn<T> {
  public:
   explicit ValueColumn(bool nullable = false);
   explicit ValueColumn(const PolymorphicAllocator<T>& alloc, bool nullable = false);

@@ -9,8 +9,8 @@
 #include <array>
 #include <memory>
 
-#include "base_column_t.hpp"
 #include "base_encoded_column.hpp"
+#include "base_typed_column.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "types.hpp"
 
@@ -31,7 +31,7 @@ class BaseCompressedVector;
  */
 template <typename T, typename = std::enable_if_t<encoding_supports_data_type(
                           enum_c<EncodingType, EncodingType::FrameOfReference>, hana::type_c<T>)>>
-class FrameOfReferenceColumn : public BaseEncodedColumn, public BaseColumnT<T> {
+class FrameOfReferenceColumn : public BaseEncodedColumn, public BaseTypedColumn<T> {
  public:
   /**
    * The column is divided into fixed-size blocks.

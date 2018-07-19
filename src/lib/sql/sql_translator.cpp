@@ -372,7 +372,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_join(const hsql::Join
   std::vector<const hsql::Expr*> condition_list;
   _flatten_conjunctive_expression_tree(join.condition, condition_list);
 
-  std::vector<const hsql::Expr *> join_conditions, left_conditions, right_conditions;
+  std::vector<const hsql::Expr*> join_conditions, left_conditions, right_conditions;
   _get_sides_from_operator_expressions(condition_list, left_node, right_node, join_conditions, left_conditions,
                                        right_conditions);
 

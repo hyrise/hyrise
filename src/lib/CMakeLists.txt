@@ -280,7 +280,7 @@ set(
     storage/base_column.cpp
     storage/base_column_encoder.hpp
     storage/base_column.hpp
-    storage/base_column_t.hpp
+    storage/base_typed_column.hpp
     storage/base_dictionary_column.cpp
     storage/base_dictionary_column.hpp
     storage/base_encoded_column.cpp

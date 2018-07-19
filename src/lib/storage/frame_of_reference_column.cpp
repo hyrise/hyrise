@@ -13,7 +13,7 @@ FrameOfReferenceColumn<T, U>::FrameOfReferenceColumn(const pmr_vector<T> block_m
                                                      std::unique_ptr<const BaseCompressedVector> offset_values)
     : BaseColumn{data_type_from_type<T>()},
       BaseEncodedColumn{data_type_from_type<T>()},
-      BaseColumnT<T>{data_type_from_type<T>()},
+      BaseTypedColumn<T>{data_type_from_type<T>()},
       _block_minima{std::move(block_minima)},
       _null_values{std::move(null_values)},
       _offset_values{std::move(offset_values)},

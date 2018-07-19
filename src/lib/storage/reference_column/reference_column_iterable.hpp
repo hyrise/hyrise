@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "resolve_type.hpp"
-#include "storage/base_column_t.hpp"
+#include "storage/base_typed_column.hpp"
 #include "storage/column_iterables.hpp"
 #include "storage/reference_column.hpp"
 
@@ -76,7 +76,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
     void _insert_referenced_column(const ChunkID chunk_id) {
       if (_columns[chunk_id] == nullptr) {
         auto column = _table->get_chunk(chunk_id)->get_column(_column_id);
-        auto base_column_t = std::dynamic_pointer_cast<const BaseColumnT<T>>(column);
+        auto base_column_t = std::dynamic_pointer_cast<const BaseTypedColumn<T>>(column);
         DebugAssert(base_column_t, "Cannot cast to BaseColumnT<T>");
         _columns[chunk_id] = base_column_t;
         //        resolve_column_type<T>(*column, [&](auto& typed_column) {
@@ -97,7 +97,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
     const PosListIterator _begin_pos_list_it;
     PosListIterator _pos_list_it;
 
-    std::vector<std::shared_ptr<const BaseColumnT<T>>> _columns;
+    std::vector<std::shared_ptr<const BaseTypedColumn<T>>> _columns;
   };
 };
 

@@ -17,7 +17,7 @@ DictionaryColumn<T>::DictionaryColumn(const std::shared_ptr<const pmr_vector<T>>
                                       const ValueID null_value_id)
     : BaseColumn(data_type_from_type<T>()),
       BaseDictionaryColumn(data_type_from_type<T>()),
-      BaseColumnT<T>(data_type_from_type<T>()),
+      BaseTypedColumn<T>(data_type_from_type<T>()),
       _dictionary{dictionary},
       _attribute_vector{attribute_vector},
       _null_value_id{null_value_id},

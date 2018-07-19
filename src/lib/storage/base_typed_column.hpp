@@ -9,7 +9,7 @@ namespace opossum {
 // a ReferenceColumn. The ReferenceColumnIterable is using this class.
 
 template <typename T>
-class BaseColumnT : public virtual BaseColumn {
+class BaseTypedColumn : public virtual BaseColumn {
  public:
   using BaseColumn::BaseColumn;
   // returns a pair which has a boolean and a value of type T.

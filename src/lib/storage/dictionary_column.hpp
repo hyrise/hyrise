@@ -4,7 +4,7 @@
 #include <string>
 
 #include "base_dictionary_column.hpp"
-#include "storage/base_column_t.hpp"
+#include "storage/base_typed_column.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "types.hpp"
 
@@ -18,7 +18,7 @@ class BaseCompressedVector;
  * Uses vector compression schemes for its attribute vector.
  */
 template <typename T>
-class DictionaryColumn : public BaseDictionaryColumn, public BaseColumnT<T> {
+class DictionaryColumn : public BaseDictionaryColumn, public BaseTypedColumn<T> {
  public:
   explicit DictionaryColumn(const std::shared_ptr<const pmr_vector<T>>& dictionary,
                             const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
