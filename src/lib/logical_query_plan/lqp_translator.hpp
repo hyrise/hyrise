@@ -22,6 +22,8 @@ struct OperatorJoinPredicate;
  */
 class LQPTranslator {
  public:
+  virtual ~LQPTranslator() = default;
+
   virtual std::shared_ptr<AbstractOperator> translate_node(const std::shared_ptr<AbstractLQPNode>& node) const;
 
  private:

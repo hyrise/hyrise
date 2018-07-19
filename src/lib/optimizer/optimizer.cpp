@@ -54,17 +54,17 @@ void collect_select_expressions_by_lqp(SelectExpressionsByLQP& select_expression
   for (const auto& expression : node->node_expressions()) {
     visit_expression(expression, [&](const auto& sub_expression) {
       const auto lqp_select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression);
-      if (!lqp_select_expression) return true;
+      if (!lqp_select_expression) return ExpressionVisitation::VisitArguments;
 
       for (auto& lqp_and_select_expressions : select_expressions_by_lqp) {
         if (*lqp_and_select_expressions.first == *lqp_select_expression->lqp) {
           lqp_and_select_expressions.second.emplace_back(lqp_select_expression);
-          return false;
+          return ExpressionVisitation::DoNotVisitArguments;
         }
       }
       select_expressions_by_lqp.emplace_back(lqp_select_expression->lqp, std::vector{lqp_select_expression});
 
-      return false;
+      return ExpressionVisitation::DoNotVisitArguments;
     });
   }
 

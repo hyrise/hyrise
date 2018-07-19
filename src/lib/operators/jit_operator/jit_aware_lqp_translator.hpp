@@ -43,11 +43,11 @@ class JitAwareLQPTranslator final : public LQPTranslator {
   std::shared_ptr<JitOperatorWrapper> _try_translate_sub_plan_to_jit_operators(
       const std::shared_ptr<AbstractLQPNode>& node) const;
 
-  std::shared_ptr<const JitExpression> _try_translate_node_to_jit_expression(
+  std::shared_ptr<const JitExpression> _try_translate_subplan_to_jit_predicate_expression(
       const std::shared_ptr<AbstractLQPNode>& node, JitReadTuples& jit_source,
       const std::shared_ptr<AbstractLQPNode>& input_node) const;
 
-  std::shared_ptr<const JitExpression> _try_translate_predicate_to_jit_expression(
+  std::shared_ptr<const JitExpression> _try_translate_predicate_node_to_jit_expression(
       const std::shared_ptr<PredicateNode>& node, JitReadTuples& jit_source,
       const std::shared_ptr<AbstractLQPNode>& input_node) const;
 

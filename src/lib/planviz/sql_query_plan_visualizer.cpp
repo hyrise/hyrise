@@ -53,7 +53,7 @@ void SQLQueryPlanVisualizer::_build_subtree(
     for (const auto& column_expression : projection->expressions) {
       visit_expression(column_expression, [&](const auto& sub_expression) {
         const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression);
-        if (!pqp_select_expression) return true;
+        if (!pqp_select_expression) return ExpressionVisitation::VisitArguments;
 
         _build_subtree(pqp_select_expression->pqp, visualized_ops);
 
@@ -62,7 +62,7 @@ void SQLQueryPlanVisualizer::_build_subtree(
         edge_info.style = "dashed";
         _add_edge(pqp_select_expression->pqp, op, edge_info);
 
-        return true;
+        return ExpressionVisitation::VisitArguments;
       });
     }
   }

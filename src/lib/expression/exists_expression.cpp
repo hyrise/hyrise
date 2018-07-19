@@ -9,11 +9,11 @@ namespace opossum {
 
 ExistsExpression::ExistsExpression(const std::shared_ptr<AbstractExpression>& select)
     : AbstractExpression(ExpressionType::Exists, {select}) {
-  Assert(select->type == ExpressionType::Select, "EXISTS needs SelectExpression as argument");
+  Assert(select->type == ExpressionType::LQPSelect || select->type == ExpressionType::PQPSelect, "EXISTS needs SelectExpression as argument");
 }
 
 std::shared_ptr<AbstractExpression> ExistsExpression::select() const {
-  Assert(arguments[0]->type == ExpressionType::Select, "Expected to contain SelectExpression");
+  Assert(arguments[0]->type == ExpressionType::LQPSelect || arguments[0]->type == ExpressionType::PQPSelect, "Expected to contain SelectExpression");
   return arguments[0];
 }
 

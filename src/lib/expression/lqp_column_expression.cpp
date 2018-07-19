@@ -11,7 +11,7 @@
 namespace opossum {
 
 LQPColumnExpression::LQPColumnExpression(const LQPColumnReference& column_reference)
-    : column_reference(column_reference) {}
+    : AbstractExpression(ExpressionType::LQPColumn, {}), column_reference(column_reference) {}
 
 std::shared_ptr<AbstractExpression> LQPColumnExpression::deep_copy() const {
   return std::make_shared<LQPColumnExpression>(column_reference);
@@ -63,6 +63,10 @@ bool LQPColumnExpression::is_nullable() const {
   } else {
     Fail("Only columns in StoredTableNodes and MockNodes (for tests) can be referenced in LQPColumnExpressions");
   }
+}
+
+bool LQPColumnExpression::requires_computation() const {
+  return false;
 }
 
 bool LQPColumnExpression::_shallow_equals(const AbstractExpression& expression) const {

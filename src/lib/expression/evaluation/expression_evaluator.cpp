@@ -56,19 +56,11 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
     case ExpressionType::Predicate:
       return _evaluate_predicate_expression<Result>(static_cast<const AbstractPredicateExpression&>(expression));
 
-    case ExpressionType::Select: {
-      const auto* pqp_select_expression = dynamic_cast<const PQPSelectExpression*>(&expression);
-      Assert(pqp_select_expression,
-             "Can only evaluate PQPSelectExpression, LQPSelectExpressions need to be translated first");
-      return _evaluate_select_expression<Result>(*pqp_select_expression);
-    }
+    case ExpressionType::PQPSelect:
+      return _evaluate_select_expression<Result>(*static_cast<const PQPSelectExpression*>(&expression));
 
-    case ExpressionType::Column: {
-      const auto* pqp_column_expression = dynamic_cast<const PQPColumnExpression*>(&expression);
-      Assert(pqp_column_expression,
-             "Can only evaluate PQPColumnExpressions, LQPColumnExpressions need to be translated first");
-      return _evaluate_column_expression<Result>(*pqp_column_expression);
-    }
+    case ExpressionType::PQPColumn:
+      return _evaluate_column_expression<Result>(*static_cast<const PQPColumnExpression*>(&expression));
 
     // ValueExpression and ParameterExpression both need to unpack an AllTypeVariant, so one functions handles both
     case ExpressionType::Parameter:
@@ -98,6 +90,10 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
 
     case ExpressionType::List:
       Fail("Can't evaluate a ListExpression, lists should only appear as the right operand of an InExpression");
+
+    case ExpressionType::LQPColumn:
+    case ExpressionType::LQPSelect:
+      Fail("Can't evaluate a LQP expression, those need to be translated by the LQPTranslator first.");
   }
 }
 
@@ -282,7 +278,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 
     return evaluate_expression_to_result<ExpressionEvaluator::Bool>(*predicate_disjunction);
 
-  } else if (right_expression.type == ExpressionType::Select) {
+  } else if (right_expression.type == ExpressionType::PQPSelect) {
     const auto* select_expression = dynamic_cast<const PQPSelectExpression*>(&right_expression);
     Assert(select_expression, "Expected PQPSelectExpression");
 

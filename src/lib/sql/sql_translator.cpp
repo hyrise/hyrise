@@ -690,7 +690,7 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
 
   // Visitor that identifies aggregates and their arguments
   const auto find_aggregates_and_arguments = [&](auto& sub_expression) {
-    if (sub_expression->type != ExpressionType::Aggregate) return true;
+    if (sub_expression->type != ExpressionType::Aggregate) return ExpressionVisitation::VisitArguments;
 
     /**
      * If the AggregateExpression has already been computed in a previous node (consider "x" in
@@ -698,7 +698,7 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
      * considered a "Aggregate" in the current SELECT list. Handling this as a special case seems hacky to me as well,
      * but it's the best solution I can come up with right now.
      */
-    if (_current_lqp->find_column_id(*sub_expression)) return false;
+    if (_current_lqp->find_column_id(*sub_expression)) return ExpressionVisitation::DoNotVisitArguments;
 
     auto aggregate_expression = std::static_pointer_cast<AggregateExpression>(sub_expression);
     if (aggregate_expression_set.emplace(aggregate_expression).second) {
@@ -712,7 +712,7 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
       }
     }
 
-    return false;
+    return ExpressionVisitation::DoNotVisitArguments;
   };
 
   // Identify all Aggregates and their arguments needed for SELECT and build the select_list_elements

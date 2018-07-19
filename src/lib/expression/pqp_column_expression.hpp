@@ -1,6 +1,6 @@
 #pragma once
 
-#include "abstract_column_expression.hpp"
+#include "abstract_expression.hpp"
 
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -10,7 +10,7 @@ namespace opossum {
 /**
  * Wraps a ColumnID and its associated data_type/nullability/column_name
  */
-class PQPColumnExpression : public AbstractColumnExpression {
+class PQPColumnExpression : public AbstractExpression {
  public:
   static std::shared_ptr<PQPColumnExpression> from_table(const Table& table, const std::string& column_name);
 
@@ -21,6 +21,7 @@ class PQPColumnExpression : public AbstractColumnExpression {
   std::string as_column_name() const override;
   DataType data_type() const override;
   bool is_nullable() const override;
+  bool requires_computation() const override;
 
   const ColumnID column_id;
 

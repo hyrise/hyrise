@@ -214,7 +214,7 @@ std::shared_ptr<ParameterExpression> parameter_(const ParameterID parameter_id,
 std::shared_ptr<AggregateExpression> count_star_();
 
 template <typename Argument>
-std::shared_ptr<UnaryMinusExpression> unary_minus(const Argument& argument) {
+std::shared_ptr<UnaryMinusExpression> unary_minus_(const Argument& argument) {
   return std::make_shared<UnaryMinusExpression>(to_expression(argument));
 }
 

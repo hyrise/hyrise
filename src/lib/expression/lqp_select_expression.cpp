@@ -14,7 +14,7 @@ namespace opossum {
 LQPSelectExpression::LQPSelectExpression(const std::shared_ptr<AbstractLQPNode>& lqp,
                                          const std::vector<ParameterID>& parameter_ids,
                                          const std::vector<std::shared_ptr<AbstractExpression>>& parameter_expressions)
-    : AbstractExpression(ExpressionType::Select, parameter_expressions), lqp(lqp), parameter_ids(parameter_ids) {
+    : AbstractExpression(ExpressionType::LQPSelect, parameter_expressions), lqp(lqp), parameter_ids(parameter_ids) {
   Assert(parameter_ids.size() == parameter_expressions.size(),
          "Need exactly as many ParameterIDs as parameter Expressions");
 }

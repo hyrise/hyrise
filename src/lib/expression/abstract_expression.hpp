@@ -17,7 +17,8 @@ enum class ExpressionType {
   Arithmetic,
   Cast,
   Case,
-  Column,
+  PQPColumn,
+  LQPColumn,
   Exists,
   Extract,
   Function,
@@ -25,7 +26,8 @@ enum class ExpressionType {
   Logical,
   Parameter,
   Predicate,
-  Select,
+  PQPSelect,
+  LQPSelect,
   UnaryMinus,
   Value
 };

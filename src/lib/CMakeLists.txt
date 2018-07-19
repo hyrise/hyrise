@@ -17,8 +17,6 @@ set(
     concurrency/transaction_manager.hpp
     constant_mappings.cpp
     constant_mappings.hpp
-    expression/abstract_column_expression.cpp
-    expression/abstract_column_expression.hpp
     expression/abstract_expression.cpp
     expression/abstract_expression.hpp
     expression/abstract_predicate_expression.cpp

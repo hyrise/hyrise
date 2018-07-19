@@ -1143,7 +1143,7 @@ TEST_F(SQLTranslatorTest, UnaryMinus) {
 
   // clang-format off
   const auto expected_lqp =
-  ProjectionNode::make(expression_vector(unary_minus(int_float_a)),
+  ProjectionNode::make(expression_vector(unary_minus_(int_float_a)),
     stored_table_node_int_float);
   // clang-format on
 
@@ -1320,7 +1320,26 @@ TEST_F(SQLTranslatorTest, DropView) {
   EXPECT_LQP_EQ(lqp, result_node);
 }
 
+TEST_F(SQLTranslatorTest, OperatorPrecedence) {
+  /**
+   * Though the operator precedence is handled by the sql-parser, do some checks here as well that it works as expected.
+   * SQLite is our reference: https://www.sqlite.org/lang_expr.html
+   * For operators with the same precedence, we evaluate left-to-right
+   */
+
+  // clang-format off
+  EXPECT_LQP_EQ(compile_query("SELECT 1 + 2 * 3 / -4"), ProjectionNode::make(expression_vector(add_(1, div_(mul_(2, 3), -4))), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(compile_query("SELECT 1 + 2 * 3 / 4"), ProjectionNode::make(expression_vector(add_(1, div_(mul_(2, 3), 4))), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(compile_query("SELECT 3 + 5 % 3"), ProjectionNode::make(expression_vector(add_(3, mod_(5, 3))), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(compile_query("SELECT 3 + 5 > 4 / 2"), ProjectionNode::make(expression_vector(greater_than_(add_(3, 5), div_(4, 2))), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(compile_query("SELECT 5 < 3 == 2 < 1"), ProjectionNode::make(expression_vector(equals_(less_than_(5, 3), less_than_(2, 1))), DummyTableNode::make()));  // NOLINT
+  EXPECT_LQP_EQ(compile_query("SELECT 1 OR 2 AND 3 OR 4"), ProjectionNode::make(expression_vector(or_(or_(1, and_(2, 3)), 4)), DummyTableNode::make()));  // NOLINT
+  // clang-format on
+}
+
 TEST_F(SQLTranslatorTest, CatchInputErrors) {
+  EXPECT_THROW(compile_query("SELEC *;"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT * FRO int_float;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT no_such_table.* FROM int_float;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT no_such_function(5+3);"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT no_such_column FROM int_float;"), InvalidInputException);

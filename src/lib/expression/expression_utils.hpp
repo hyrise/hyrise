@@ -70,10 +70,18 @@ std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQP
  */
 std::string expression_column_names(const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
+enum class ExpressionVisitation {
+  VisitArguments, DoNotVisitArguments
+};
+
 /**
+ * Calls the passed @param visitor on each sub-expression of the @param expression.
+ * The visitor returns `ExpressionVisitation`, indicating whether the current expression's arguments should be visited
+ * as well.
+ *
  * @tparam Expression   Either `std::shared_ptr<AbstractExpression>` or `const std::shared_ptr<AbstractExpression>`
  * @tparam Visitor      Functor called with every sub expression as a param.
- *                      Return true to traverse to sub expressions of the current expression
+ *                      Return `ExpressionVisitation`
  */
 template <typename Expression, typename Visitor>
 void visit_expression(Expression& expression, Visitor visitor) {
@@ -85,7 +93,7 @@ void visit_expression(Expression& expression, Visitor visitor) {
     auto expression_reference = expression_queue.front();
     expression_queue.pop();
 
-    if (visitor(expression_reference.get())) {
+    if (visitor(expression_reference.get()) == ExpressionVisitation::VisitArguments) {
       for (auto& argument : expression_reference.get()->arguments) {
         expression_queue.push(argument);
       }

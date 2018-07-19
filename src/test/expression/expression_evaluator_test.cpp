@@ -326,14 +326,14 @@ TEST_F(ExpressionEvaluatorTest, IsNullSeries) {
 }
 
 TEST_F(ExpressionEvaluatorTest, NegateLiteral) {
-  EXPECT_TRUE(test_expression<double>(*unary_minus(2.5), {-2.5}));
-  EXPECT_TRUE(test_expression<int32_t>(*unary_minus(int32_t{-3}), {int32_t{3}}));
+  EXPECT_TRUE(test_expression<double>(*unary_minus_(2.5), {-2.5}));
+  EXPECT_TRUE(test_expression<int32_t>(*unary_minus_(int32_t{-3}), {int32_t{3}}));
 }
 
 TEST_F(ExpressionEvaluatorTest, NegateSeries) {
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *unary_minus(a), {-1, -2, -3, -4}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *unary_minus(c), {-33, std::nullopt, -34, std::nullopt}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *unary_minus(unary_minus(c)), {33, std::nullopt, 34, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *unary_minus_(a), {-1, -2, -3, -4}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *unary_minus_(c), {-33, std::nullopt, -34, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *unary_minus_(unary_minus_(c)), {33, std::nullopt, 34, std::nullopt}));
 }
 
 TEST_F(ExpressionEvaluatorTest, LikeLiteral) {

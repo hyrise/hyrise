@@ -78,14 +78,14 @@ std::shared_ptr<AbstractExpression> expression_copy_and_adapt_to_different_lqp(c
 void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expression,
                                        const LQPNodeMapping& node_mapping) {
   visit_expression(expression, [&](auto& expression_ptr) {
-    if (expression_ptr->type != ExpressionType::Column) return true;
+    if (expression_ptr->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
 
     const auto lqp_column_expression_ptr = std::dynamic_pointer_cast<LQPColumnExpression>(expression_ptr);
     Assert(lqp_column_expression_ptr, "Asked to adapt expression in LQP, but encountered non-LQP ColumnExpression");
 
     expression_ptr = expression_adapt_to_different_lqp(*lqp_column_expression_ptr, node_mapping);
 
-    return false;
+    return ExpressionVisitation::DoNotVisitArguments;
   });
 }
 
@@ -139,9 +139,9 @@ bool expression_evaluable_on_lqp(const std::shared_ptr<AbstractExpression>& expr
   auto evaluable = true;
 
   visit_expression(expression, [&](const auto& sub_expression) {
-    if (lqp.find_column_id(*sub_expression)) return false;
-    if (sub_expression->type == ExpressionType::Column) evaluable = false;
-    return true;
+    if (lqp.find_column_id(*sub_expression)) return ExpressionVisitation::DoNotVisitArguments;
+    if (sub_expression->type == ExpressionType::LQPColumn) evaluable = false;
+    return ExpressionVisitation::VisitArguments;
   });
 
   return evaluable;
@@ -154,10 +154,10 @@ std::vector<std::shared_ptr<AbstractExpression>> expression_flatten_conjunction(
   visit_expression(expression, [&](const auto& sub_expression) {
     if (sub_expression->type == ExpressionType::Logical) {
       const auto logical_expression = std::static_pointer_cast<LogicalExpression>(sub_expression);
-      if (logical_expression->logical_operator == LogicalOperator::And) return true;
+      if (logical_expression->logical_operator == LogicalOperator::And) return ExpressionVisitation::VisitArguments;
     }
     flattened_expressions.emplace_back(sub_expression);
-    return false;
+    return ExpressionVisitation::DoNotVisitArguments;
   });
 
   return flattened_expressions;
@@ -172,15 +172,15 @@ void expression_set_parameters(const std::shared_ptr<AbstractExpression>& expres
       if (value_iter != parameters.end()) {
         parameter_expression->set_value(value_iter->second);
       }
-      return false;
+      return ExpressionVisitation::DoNotVisitArguments;
 
     } else if (const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression);
                pqp_select_expression) {
       pqp_select_expression->pqp->set_parameters(parameters);
-      return false;
+      return ExpressionVisitation::DoNotVisitArguments;
 
     } else {
-      return true;
+      return ExpressionVisitation::VisitArguments;
     }
   });
 }
@@ -195,13 +195,13 @@ void expressions_set_parameters(const std::vector<std::shared_ptr<AbstractExpres
 void expression_set_transaction_context(const std::shared_ptr<AbstractExpression>& expression,
                                         std::weak_ptr<TransactionContext> transaction_context) {
   visit_expression(expression, [&](auto& sub_expression) {
-    if (sub_expression->type != ExpressionType::Select) return true;
+    if (sub_expression->type != ExpressionType::PQPSelect) return ExpressionVisitation::VisitArguments;
 
     const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression);
     Assert(pqp_select_expression, "Expected a PQPSelectExpression here")
         pqp_select_expression->pqp->set_transaction_context_recursively(transaction_context);
 
-    return false;
+    return ExpressionVisitation::DoNotVisitArguments;
   });
 }
 

@@ -69,8 +69,8 @@ TEST_F(ExpressionTest, Equals) {
   EXPECT_NE(*parameter_(ParameterID{4}), *parameter_(ParameterID{5}));
   EXPECT_EQ(*extract_(DatetimeComponent::Month, "1999-07-30"), *extract_(DatetimeComponent::Month, "1999-07-30"));
   EXPECT_NE(*extract_(DatetimeComponent::Day, "1999-07-30"), *extract_(DatetimeComponent::Month, "1999-07-30"));
-  EXPECT_EQ(*unary_minus(6), *unary_minus(6));
-  EXPECT_NE(*unary_minus(6), *unary_minus(6.5));
+  EXPECT_EQ(*unary_minus_(6), *unary_minus_(6));
+  EXPECT_NE(*unary_minus_(6), *unary_minus_(6.5));
   EXPECT_EQ(*cast(6.5, DataType::Int), *cast(6.5, DataType::Int));
   EXPECT_NE(*cast(6.5, DataType::Int), *cast(6.5, DataType::Float));
 }
@@ -109,7 +109,7 @@ TEST_F(ExpressionTest, RequiresCalculation) {
   EXPECT_TRUE(in_(1, list_(1, 2, 3))->requires_computation());
   EXPECT_TRUE(is_null_(null_())->requires_computation());
   EXPECT_TRUE(and_(1, 0)->requires_computation());
-  EXPECT_TRUE(unary_minus(5)->requires_computation());
+  EXPECT_TRUE(unary_minus_(5)->requires_computation());
   EXPECT_FALSE(parameter_(ParameterID{5})->requires_computation());
   EXPECT_FALSE(parameter_(ParameterID{5}, a)->requires_computation());
   EXPECT_FALSE(column_(a)->requires_computation());
@@ -144,19 +144,19 @@ TEST_F(ExpressionTest, AsColumnName) {
   EXPECT_EQ(not_equals_(5, 3)->as_column_name(), "5 != 3");
   EXPECT_EQ(between(5, 3, 4)->as_column_name(), "5 BETWEEN 3 AND 4");
   EXPECT_EQ(case_(1, 3, case_(0, 2, 1))->as_column_name(), "CASE WHEN 1 THEN 3 ELSE CASE WHEN 0 THEN 2 ELSE 1 END END");
-  EXPECT_EQ(extract_(DatetimeComponent::Month, "1993-03-04")->as_column_name(), "EXTRACT(MONTH FROM \"1993-03-04\")");
-  EXPECT_EQ(substr_("Hello", 1, 2)->as_column_name(), "SUBSTR(\"Hello\", 1, 2)");
-  EXPECT_EQ(concat_("Hello", "World")->as_column_name(), "CONCAT(\"Hello\", \"World\")");
+  EXPECT_EQ(extract_(DatetimeComponent::Month, "1993-03-04")->as_column_name(), "EXTRACT(MONTH FROM '1993-03-04')");
+  EXPECT_EQ(substr_("Hello", 1, 2)->as_column_name(), "SUBSTR('Hello', 1, 2)");
+  EXPECT_EQ(concat_("Hello", "World")->as_column_name(), "CONCAT('Hello', 'World')");
   EXPECT_EQ(and_(1, 0)->as_column_name(), "1 AND 0");
   EXPECT_EQ(or_(1, 0)->as_column_name(), "1 OR 0");
   EXPECT_EQ(is_null_(1)->as_column_name(), "1 IS NULL");
   EXPECT_EQ(is_not_null_(1)->as_column_name(), "1 IS NOT NULL");
   EXPECT_EQ(list_(1)->as_column_name(), "(1)");
   EXPECT_EQ(list_(1)->as_column_name(), "(1)");
-  EXPECT_EQ(unary_minus(3)->as_column_name(), "-(3)");
+  EXPECT_EQ(unary_minus_(3)->as_column_name(), "-(3)");
   EXPECT_EQ(value_(3.25)->as_column_name(), "3.25");
   EXPECT_EQ(null_()->as_column_name(), "NULL");
-  EXPECT_EQ(cast("36", DataType::Float)->as_column_name(), "CAST(\"36\" AS float)");
+  EXPECT_EQ(cast("36", DataType::Float)->as_column_name(), "CAST('36' AS float)");
   EXPECT_EQ(parameter_(ParameterID{0})->as_column_name(), "Parameter[id=0]");
   EXPECT_EQ(parameter_(ParameterID{0}, a)->as_column_name(), "Parameter[name=a;id=0]");
 }
@@ -206,8 +206,8 @@ TEST_F(ExpressionTest, DataType) {
   EXPECT_EQ(add_(double{1.3}, float{2})->data_type(), DataType::Double);
   EXPECT_EQ(add_(double{1.3}, double{2})->data_type(), DataType::Double);
   EXPECT_EQ(add_(int32_t{1}, double{2})->data_type(), DataType::Double);
-  EXPECT_EQ(unary_minus(float{2})->data_type(), DataType::Float);
-  EXPECT_EQ(unary_minus(double{2})->data_type(), DataType::Double);
+  EXPECT_EQ(unary_minus_(float{2})->data_type(), DataType::Float);
+  EXPECT_EQ(unary_minus_(double{2})->data_type(), DataType::Double);
   EXPECT_EQ(value_(double{2})->data_type(), DataType::Double);
   EXPECT_EQ(value_("Hello")->data_type(), DataType::String);
   EXPECT_EQ(null_()->data_type(), DataType::Null);

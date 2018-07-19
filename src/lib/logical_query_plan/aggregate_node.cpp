@@ -7,7 +7,6 @@
 #include <string>
 #include <vector>
 
-#include "expression/abstract_column_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "types.hpp"

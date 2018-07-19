@@ -55,7 +55,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
    * Check if we should just forward columns from the input
    */
   const auto forward_columns = std::all_of(expressions.begin(), expressions.end(), [&](const auto& expression) {
-    return expression->type == ExpressionType::Column;
+    return expression->type == ExpressionType::PQPColumn;
   });
 
   const auto output_table_type = forward_columns ? input_table_left()->type() : TableType::Data;

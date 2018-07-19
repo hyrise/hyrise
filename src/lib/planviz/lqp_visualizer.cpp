@@ -58,9 +58,9 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
     for (const auto& column_expression : projection->column_expressions()) {
       visit_expression(column_expression, [&](const auto& sub_expression) {
         const auto lqp_select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression);
-        if (!lqp_select_expression) return true;
+        if (!lqp_select_expression) return ExpressionVisitation::VisitArguments;
 
-        if (!visualized_sub_queries.emplace(lqp_select_expression).second) return true;
+        if (!visualized_sub_queries.emplace(lqp_select_expression).second) return ExpressionVisitation::VisitArguments;
 
         _build_subtree(lqp_select_expression->lqp, visualized_nodes, visualized_sub_queries);
 
@@ -69,7 +69,7 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
         edge_info.style = "dashed";
         _add_edge(lqp_select_expression->lqp, node, edge_info);
 
-        return true;
+        return ExpressionVisitation::VisitArguments;
       });
     }
   }

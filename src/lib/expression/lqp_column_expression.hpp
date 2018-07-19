@@ -1,6 +1,6 @@
 #pragma once
 
-#include "abstract_column_expression.hpp"
+#include "abstract_expression.hpp"
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
@@ -8,7 +8,7 @@
 
 namespace opossum {
 
-class LQPColumnExpression : public AbstractColumnExpression {
+class LQPColumnExpression : public AbstractExpression {
  public:
   explicit LQPColumnExpression(const LQPColumnReference& column_reference);
 
@@ -16,6 +16,7 @@ class LQPColumnExpression : public AbstractColumnExpression {
   std::string as_column_name() const override;
   DataType data_type() const override;
   bool is_nullable() const override;
+  bool requires_computation() const override;
 
   const LQPColumnReference column_reference;
 
