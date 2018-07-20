@@ -24,7 +24,8 @@ namespace opossum {
 class JoinHash : public AbstractJoinOperator {
  public:
   JoinHash(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
-           const JoinMode mode, const ColumnIDPair& column_ids, const PredicateCondition predicate_condition);
+           const JoinMode mode, const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
+           const size_t radix_bits = 9);
 
   const std::string name() const override;
 
@@ -36,6 +37,7 @@ class JoinHash : public AbstractJoinOperator {
   void _on_cleanup() override;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
+  const size_t _radix_bits;
 
   template <typename LeftType, typename RightType>
   class JoinHashImpl;

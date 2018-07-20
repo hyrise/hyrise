@@ -102,7 +102,7 @@ TEST_F(OperatorsImportCsvTest, EmptyStrings) {
 }
 
 TEST_F(OperatorsImportCsvTest, Parallel) {
-  Topology::current().init_fake_numa_topology(8, 4);
+  Topology::use_fake_numa_topology(8, 4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
   auto importer = std::make_shared<OperatorTask>(std::make_shared<ImportCsv>("src/test/csv/float_int_large.csv"),
                                                  CleanupTemporaries::Yes);
