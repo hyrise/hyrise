@@ -9,6 +9,10 @@ namespace opossum {
 
 class AbstractLQPNode;
 
+/**
+ * A SQL View represented by an LQP.
+ * When used in an SQL query, the SQLTranslator hooks a copy of this LQP into the LQP it creates
+ */
 class LQPView {
  public:
   LQPView(const std::shared_ptr<AbstractLQPNode>& lqp, const std::unordered_map<ColumnID, std::string>& column_names);

@@ -74,8 +74,6 @@ std::shared_ptr<AbstractOperator> JitAwareLQPTranslator::translate_node(
   return jit_operator ? jit_operator : LQPTranslator::translate_node(node);
 }
 
-void JitAwareLQPTranslator::set_force_jit(const bool force_jit) { _force_jit = force_jit; }
-
 std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_plan_to_jit_operators(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   auto jittable_node_count = size_t{0};

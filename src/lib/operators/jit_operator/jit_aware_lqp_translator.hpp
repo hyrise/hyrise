@@ -39,9 +39,6 @@ class JitAwareLQPTranslator final : public LQPTranslator {
   JitAwareLQPTranslator();
   std::shared_ptr<AbstractOperator> translate_node(const std::shared_ptr<AbstractLQPNode>& node) const final;
 
-  // If jitting is enabled by force, it is performed wherever possible, not wherever a performance benefit is expected
-  void set_force_jit(const bool force_jit);
-
  private:
   std::shared_ptr<JitOperatorWrapper> _try_translate_sub_plan_to_jit_operators(
       const std::shared_ptr<AbstractLQPNode>& node) const;
@@ -59,8 +56,6 @@ class JitAwareLQPTranslator final : public LQPTranslator {
               std::function<bool(const std::shared_ptr<AbstractLQPNode>&)> func) const;
 
   static JitExpressionType _expression_to_jit_expression_type(const AbstractExpression& expression);
-
-  bool _force_jit = false;
 };
 
 }  // namespace opossum
