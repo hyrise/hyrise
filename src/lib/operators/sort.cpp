@@ -31,9 +31,7 @@ std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
   return std::make_shared<Sort>(copied_input_left, _column_id, _order_by_mode, _output_chunk_size);
 }
 
-void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
-
-}
+void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Sort::_on_execute() {
   _impl = make_unique_by_data_type<AbstractReadOnlyOperatorImpl, SortImpl>(

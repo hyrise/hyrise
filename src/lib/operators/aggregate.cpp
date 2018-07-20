@@ -69,9 +69,7 @@ std::shared_ptr<AbstractOperator> Aggregate::_on_deep_copy(
   return std::make_shared<Aggregate>(copied_input_left, _aggregates, _groupby_column_ids);
 }
 
-void Aggregate::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
-
-}
+void Aggregate::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 void Aggregate::_on_cleanup() {
   _contexts_per_column.clear();

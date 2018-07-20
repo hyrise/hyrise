@@ -6,9 +6,9 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/maintenance/create_view.hpp"
+#include "storage/lqp_view.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "storage/lqp_view.hpp"
 
 #include "utils/assert.hpp"
 

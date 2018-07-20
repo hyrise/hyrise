@@ -12,7 +12,8 @@ void BindServerPreparedStatementTask::_on_execute() {
     auto query_plan = std::make_unique<SQLQueryPlan>(placeholder_plan->deep_copy());
 
     std::unordered_map<ParameterID, AllTypeVariant> pqp_parameters;
-    for (auto value_placeholder_id = ValuePlaceholderID{0}; value_placeholder_id < _params.size(); ++value_placeholder_id) {
+    for (auto value_placeholder_id = ValuePlaceholderID{0}; value_placeholder_id < _params.size();
+         ++value_placeholder_id) {
       const auto parameter_id = placeholder_plan->parameter_ids().at(value_placeholder_id);
       pqp_parameters.emplace(parameter_id, _params[value_placeholder_id]);
     }

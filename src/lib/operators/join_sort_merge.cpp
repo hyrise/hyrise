@@ -55,9 +55,7 @@ std::shared_ptr<AbstractOperator> JoinSortMerge::_on_deep_copy(
                                          _predicate_condition);
 }
 
-void JoinSortMerge::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
-
-}
+void JoinSortMerge::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
   // Check column types

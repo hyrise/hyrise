@@ -3,12 +3,12 @@
 #include <set>
 
 #include "expression/expression_functional.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
 #include "utils/assert.hpp"
 
-using namespace opossum::expression_functional;
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace {
 
@@ -158,7 +158,7 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(const std:
       }
     }
 
-    case LQPNodeType::Union:{
+    case LQPNodeType::Union: {
       const auto union_node = std::dynamic_pointer_cast<UnionNode>(lqp);
       const auto left_input_expression = lqp_subplan_to_boolean_expression(lqp->left_input());
       const auto right_input_expression = lqp_subplan_to_boolean_expression(lqp->right_input());
@@ -176,7 +176,6 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(const std:
     default:
       return nullptr;
   }
-
 }
 
 }  // namespace opossum

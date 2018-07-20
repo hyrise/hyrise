@@ -102,7 +102,7 @@ void JitHashmapValue::set_is_null(const bool is_null, const size_t index, JitRun
 }
 
 bool jit_expression_is_binary(const JitExpressionType expression_type) {
-  switch(expression_type) {
+  switch (expression_type) {
     case JitExpressionType::Addition:
     case JitExpressionType::Subtraction:
     case JitExpressionType::Multiplication:

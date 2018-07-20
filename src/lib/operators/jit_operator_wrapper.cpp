@@ -88,8 +88,6 @@ std::shared_ptr<AbstractOperator> JitOperatorWrapper::_on_deep_copy(
   return std::make_shared<JitOperatorWrapper>(copied_input_left, _execution_mode, _jit_operators);
 }
 
-void JitOperatorWrapper::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
-
-}
+void JitOperatorWrapper::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 }  // namespace opossum

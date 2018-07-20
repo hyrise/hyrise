@@ -65,9 +65,7 @@ bool LQPColumnExpression::is_nullable() const {
   }
 }
 
-bool LQPColumnExpression::requires_computation() const {
-  return false;
-}
+bool LQPColumnExpression::requires_computation() const { return false; }
 
 bool LQPColumnExpression::_shallow_equals(const AbstractExpression& expression) const {
   const auto* lqp_column_expression = dynamic_cast<const LQPColumnExpression*>(&expression);

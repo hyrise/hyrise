@@ -29,8 +29,8 @@ class ParameterIDAllocator;
 class SQLIdentifierResolverProxy final {
  public:
   SQLIdentifierResolverProxy(const std::shared_ptr<SQLIdentifierResolver>& wrapped_resolver,
-                            const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
-                            const std::shared_ptr<SQLIdentifierResolverProxy>& outer_context_proxy = {});
+                             const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator,
+                             const std::shared_ptr<SQLIdentifierResolverProxy>& outer_context_proxy = {});
 
   std::shared_ptr<AbstractExpression> resolve_identifier_relaxed(const SQLIdentifier& identifier);
 

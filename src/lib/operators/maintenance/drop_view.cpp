@@ -20,9 +20,7 @@ std::shared_ptr<AbstractOperator> DropView::_on_deep_copy(
   return std::make_shared<DropView>(_view_name);
 }
 
-void DropView::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
-
-}
+void DropView::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> DropView::_on_execute() {
   StorageManager::get().drop_lqp_view(_view_name);

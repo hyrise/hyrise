@@ -14,8 +14,12 @@ std::shared_ptr<PQPColumnExpression> PQPColumnExpression::from_table(const Table
 }
 
 PQPColumnExpression::PQPColumnExpression(const ColumnID column_id, const DataType data_type, const bool nullable,
-                                         const std::string& column_name):
-AbstractExpression(ExpressionType::PQPColumn, {}), column_id(column_id), _data_type(data_type), _nullable(nullable), _column_name(column_name) {}
+                                         const std::string& column_name)
+    : AbstractExpression(ExpressionType::PQPColumn, {}),
+      column_id(column_id),
+      _data_type(data_type),
+      _nullable(nullable),
+      _column_name(column_name) {}
 
 std::shared_ptr<AbstractExpression> PQPColumnExpression::deep_copy() const {
   return std::make_shared<PQPColumnExpression>(column_id, _data_type, _nullable, _column_name);
@@ -27,7 +31,7 @@ DataType PQPColumnExpression::data_type() const { return _data_type; }
 
 bool PQPColumnExpression::is_nullable() const { return _nullable; }
 
-bool PQPColumnExpression::requires_computation() const { return false; };
+bool PQPColumnExpression::requires_computation() const { return false; }
 
 bool PQPColumnExpression::_shallow_equals(const AbstractExpression& expression) const {
   const auto* pqp_column_expression = dynamic_cast<const PQPColumnExpression*>(&expression);

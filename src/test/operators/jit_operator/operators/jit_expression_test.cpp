@@ -279,9 +279,9 @@ TEST_F(JitExpressionTest, NestedExpressions) {
 
   // Compute "(A - (B * C)) / (D + B)"
   {
-    auto b_times_c =
-        std::make_shared<JitExpression>(std::make_shared<JitExpression>(b_tuple_value), JitExpressionType::Multiplication,
-                                        std::make_shared<JitExpression>(c_tuple_value), 4);
+    auto b_times_c = std::make_shared<JitExpression>(std::make_shared<JitExpression>(b_tuple_value),
+                                                     JitExpressionType::Multiplication,
+                                                     std::make_shared<JitExpression>(c_tuple_value), 4);
     auto a_minus_b_times_c = std::make_shared<JitExpression>(std::make_shared<JitExpression>(a_tuple_value),
                                                              JitExpressionType::Subtraction, b_times_c, 5);
     auto d_plus_b =

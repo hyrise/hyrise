@@ -110,8 +110,6 @@ std::shared_ptr<AbstractOperator> Product::_on_deep_copy(
   return std::make_shared<Product>(copied_input_left, copied_input_right);
 }
 
-void Product::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
-
-}
+void Product::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 }  // namespace opossum

@@ -48,13 +48,13 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 #include "logical_query_plan/validate_node.hpp"
+#include "storage/lqp_view.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "storage/lqp_view.hpp"
 
 #include "SQLParser.h"
 
-using namespace std::string_literals;  // NOLINT
+using namespace std::string_literals;            // NOLINT
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace {
@@ -132,7 +132,9 @@ const std::unordered_map<ValuePlaceholderID, ParameterID>& SQLTranslator::value_
   return _parameter_id_allocator->value_placeholders();
 }
 
-std::shared_ptr<SQLIdentifierResolver> SQLTranslator::sql_identifier_resolver() const { return _sql_identifier_resolver; }
+std::shared_ptr<SQLIdentifierResolver> SQLTranslator::sql_identifier_resolver() const {
+  return _sql_identifier_resolver;
+}
 
 std::vector<std::shared_ptr<AbstractLQPNode>> SQLTranslator::translate_sql(const std::string& sql) {
   hsql::SQLParserResult parser_result;
@@ -295,7 +297,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
     // Create a Projection that matches the specified columns with the columns of `table_name`
 
     AssertInput(insert.columns->size() == column_expressions.size(),
-           "INSERT: Target column count and number of input columns mismatch");
+                "INSERT: Target column count and number of input columns mismatch");
 
     auto expressions = std::vector<std::shared_ptr<AbstractExpression>>(target_table->column_count(), null_());
     auto source_column_id = ColumnID{0};
@@ -347,8 +349,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
   }
 
   AssertInput(insert_data_node->column_expressions().size() == target_table->column_count(),
-         "INSERT: Column count mismatch");
-
+              "INSERT: Column count mismatch");
 
   /**
    * NOTE: DataType checking has to be done at runtime, as Query could still contain Placeholder with unspecified type
@@ -386,7 +387,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   // The update operator wants ReferenceColumns on its left side
   // TODO(anyone): fix this
   AssertInput(!std::dynamic_pointer_cast<StoredTableNode>(selection_lqp),
-         "Unconditional updates are currently not supported");
+              "Unconditional updates are currently not supported");
 
   for (const auto* update_clause : *update.updates) {
     const auto column_name = std::string{update_clause->column};
@@ -489,11 +490,11 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
     const auto& column_expressions = lqp->column_expressions();
 
     AssertInput(hsql_table_ref.alias->columns->size() == column_expressions.size(),
-           "Must specify a name for exactly each column");
+                "Must specify a name for exactly each column");
 
     for (auto column_id = ColumnID{0}; column_id < hsql_table_ref.alias->columns->size(); ++column_id) {
       sql_identifier_resolver->set_column_name(column_expressions[column_id],
-                                              (*hsql_table_ref.alias->columns)[column_id]);
+                                               (*hsql_table_ref.alias->columns)[column_id]);
     }
   }
 
@@ -632,7 +633,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_natural_join(const hsq
 
     if (right_identifier) {
       const auto left_expression =
-      left_sql_identifier_resolver->resolve_identifier_relaxed({right_identifier->column_name});
+          left_sql_identifier_resolver->resolve_identifier_relaxed({right_identifier->column_name});
 
       if (left_expression) {
         // Two columns match, let's join on them.
@@ -807,7 +808,7 @@ void SQLTranslator::_translate_select_list_groupby_having(const hsql::SelectStat
           // Select all columns from the FROM element with the specified name
           const auto from_element_iter = _from_clause_result->elements_by_table_name.find(hsql_expr->table);
           AssertInput(from_element_iter != _from_clause_result->elements_by_table_name.end(),
-                 std::string("No such element in FROM with table name '") + hsql_expr->table + "'");
+                      std::string("No such element in FROM with table name '") + hsql_expr->table + "'");
 
           _inflated_select_list_expressions.insert(_inflated_select_list_expressions.end(),
                                                    from_element_iter->second.begin(), from_element_iter->second.end());
@@ -886,7 +887,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::Cr
       if (create_statement.viewColumns) {
         // The CREATE VIEW statement has renamed the columns: CREATE VIEW myview (foo, bar) AS SELECT ...
         AssertInput(create_statement.viewColumns->size() == lqp->column_expressions().size(),
-               "Number of Columns in CREATE VIEW does not match SELECT statement");
+                    "Number of Columns in CREATE VIEW does not match SELECT statement");
 
         for (auto column_id = ColumnID{0}; column_id < create_statement.viewColumns->size(); ++column_id) {
           column_names.emplace(column_id, (*create_statement.viewColumns)[column_id]);

@@ -8,7 +8,7 @@ using namespace std::string_literals;  // NOLINT
 namespace opossum {
 
 void SQLIdentifierResolver::set_column_name(const std::shared_ptr<AbstractExpression>& expression,
-                                           const std::string& column_name) {
+                                            const std::string& column_name) {
   auto& entry = _find_or_create_expression_entry(expression);
   if (entry.identifier) {
     entry.identifier->column_name = column_name;
@@ -18,7 +18,7 @@ void SQLIdentifierResolver::set_column_name(const std::shared_ptr<AbstractExpres
 }
 
 void SQLIdentifierResolver::set_table_name(const std::shared_ptr<AbstractExpression>& expression,
-                                          const std::string& table_name) {
+                                           const std::string& table_name) {
   auto& entry = _find_or_create_expression_entry(expression);
   if (!entry.identifier) entry.identifier.emplace(expression->as_column_name());
 

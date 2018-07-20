@@ -6,8 +6,8 @@
 #include <string>
 #include <vector>
 
-#include "types.hpp"
 #include "lqp_view.hpp"
+#include "types.hpp"
 
 namespace opossum {
 

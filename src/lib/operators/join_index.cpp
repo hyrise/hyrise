@@ -40,9 +40,7 @@ std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
   return std::make_shared<JoinIndex>(copied_input_left, copied_input_right, _mode, _column_ids, _predicate_condition);
 }
 
-void JoinIndex::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
-
-}
+void JoinIndex::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> JoinIndex::_on_execute() {
   _create_table_structure();

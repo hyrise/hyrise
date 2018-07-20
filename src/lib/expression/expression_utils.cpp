@@ -227,5 +227,4 @@ bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>&
   return placeholder_found;
 }
 
-
 }  // namespace opossum

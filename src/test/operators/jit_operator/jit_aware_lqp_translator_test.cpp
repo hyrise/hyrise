@@ -3,9 +3,9 @@
 #include "../../base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
-#include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "operators/jit_operator/jit_aware_lqp_translator.hpp"
 #include "operators/jit_operator/operators/jit_aggregate.hpp"
@@ -15,7 +15,7 @@
 #include "operators/jit_operator/operators/jit_write_tuples.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 
-using namespace opossum::expression_functional;
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
@@ -51,7 +51,6 @@ class JitAwareLQPTranslatorTest : public BaseTest {
 
   std::shared_ptr<const JitOperatorWrapper> translate_lqp(const std::shared_ptr<AbstractLQPNode>& lqp) const {
     JitAwareLQPTranslator lqp_translator;
-    //lqp_translator.set_force_jit(true);
     std::shared_ptr<const AbstractOperator> current_node = lqp_translator.translate_node(lqp);
     while (current_node && !std::dynamic_pointer_cast<const JitOperatorWrapper>(current_node)) {
       current_node = current_node->input_left();
@@ -92,7 +91,8 @@ TEST_F(JitAwareLQPTranslatorTest, JitPipelineRequiresASingleInputNode) {
     // Although both inputs of the UnionNode eventually lead to the same StoredTableNode (i.e., the LQP has a diamond
     // shape), one of the paths contains a non-jittable SortNode. Thus the jit-aware translator should reject the LQP
     // and not create an operator pipeline.
-    const auto sort_node = std::make_shared<SortNode>(expression_vector(a_a), std::vector<OrderByMode>{OrderByMode::Ascending});
+    const auto sort_node =
+        std::make_shared<SortNode>(expression_vector(a_a), std::vector<OrderByMode>{OrderByMode::Ascending});
     const auto union_node = std::make_shared<UnionNode>(UnionMode::Positions);
 
     sort_node->set_left_input(stored_table_node_a);
@@ -304,10 +304,8 @@ TEST_F(JitAwareLQPTranslatorTest, UnionsGetTransformedToDisjunction) {
   UnionNode::make(UnionMode::Positions,
     UnionNode::make(UnionMode::Positions,
       PredicateNode::make(greater_than_(a_a, a_b), stored_table_node_a),
-      PredicateNode::make(greater_than_(a_b, a_c), stored_table_node_a)
-    ),
-    PredicateNode::make(greater_than_(a_c, a_a), stored_table_node_a)
-  );
+      PredicateNode::make(greater_than_(a_b, a_c), stored_table_node_a)),
+    PredicateNode::make(greater_than_(a_c, a_a), stored_table_node_a));
   // clang-format on
 
   const auto jit_operator_wrapper = translate_lqp(lqp);

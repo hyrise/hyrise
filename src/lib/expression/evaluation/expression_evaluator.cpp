@@ -3,8 +3,8 @@
 #include <iterator>
 #include <type_traits>
 
-#include "boost/variant/apply_visitor.hpp"
 #include "boost/lexical_cast.hpp"
+#include "boost/variant/apply_visitor.hpp"
 
 #include "all_parameter_variant.hpp"
 #include "expression/abstract_expression.hpp"
@@ -33,7 +33,7 @@
 #include "storage/value_column.hpp"
 #include "utils/assert.hpp"
 
-using namespace std::string_literals;  // NOLINT
+using namespace std::string_literals;            // NOLINT
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
@@ -314,7 +314,8 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
             for (auto list_element_idx = ChunkOffset{0}; list_element_idx < list.size(); ++list_element_idx) {
               // `a IN (x,y,z)` is supposed to have the same semantics as `a = x OR a = y OR a = z`, so we use `Equals`
               // here as well.
-              EqualsEvaluator{}(result_values[chunk_offset], list.value(list_element_idx),  // NOLINT - complains about missing spaces before "{"...
+              EqualsEvaluator{}(result_values[chunk_offset],  // NOLINT - complains about missing spaces before "{"...
+                                list.value(list_element_idx),
                                 left_view.value(chunk_offset));
               if (result_values[chunk_offset]) break;
 

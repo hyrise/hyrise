@@ -61,9 +61,7 @@ std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
                                      _right_values, _right_values2);
 }
 
-void IndexScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
-
-}
+void IndexScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<JobTask> IndexScan::_create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex) {
   auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
