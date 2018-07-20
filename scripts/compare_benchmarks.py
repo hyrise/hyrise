@@ -21,8 +21,10 @@ with open(sys.argv[1]) as old_file:
 with open(sys.argv[2]) as new_file:
     new_data = json.load(new_file)
 
-table = BeautifulTable(default_alignment = BeautifulTable.ALIGN_LEFT)
-table.column_headers = ["Benchmark", "prev. iter/s", "prev. rel. stdev", "new iter/s", "new rel. stdev", "change"]
+table = BeautifulTable(default_alignment = BeautifulTable.ALIGN_LEFT, max_width=100)
+table.column_headers = ["Benchmark", "prev. iter/s", "RSD", "new iter/s", "RSD", "change"]
+table.column_widths = [9, 10, 10, 10, 10, 20]
+table.width_exceed_policy = BeautifulTable.WEP_ELLIPSIS
 table.row_separator_char = ''
 table.top_border_char = ''
 table.bottom_border_char = ''
@@ -36,11 +38,13 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
 		print("Benchmark name mismatch")
 		exit()
 	diff = float(new['items_per_second']) / float(old['items_per_second']) - 1
+	old_rsd = "{0:.0%}".format(old['real_time_per_iteration_relative_standard_deviation'])
+	new_rsd = "{0:.0%}".format(new['real_time_per_iteration_relative_standard_deviation'])
 	average_diff_sum += diff
 	diff_formatted = format_diff(diff)
-	table.append_row([old['name'], str(old['items_per_second']), str(old['real_time_per_iteration_relative_standard_deviation']), str(new['items_per_second']), str(new['real_time_per_iteration_relative_standard_deviation']), diff_formatted])
+	table.append_row([old['name'], str(old['items_per_second']), old_rsd, str(new['items_per_second']), new_rsd, diff_formatted])
 
-table.append_row(['average', '', '', format_diff(average_diff_sum / len(old_data['benchmarks']))])
+table.append_row(['average', '', '', '', '', format_diff(average_diff_sum / len(old_data['benchmarks']))])
 
 print("")
 print(table)
