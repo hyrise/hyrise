@@ -1194,7 +1194,7 @@ TEST_F(SQLTranslatorTest, InsertValuesColumnSubset) {
   // clang-format off
   const auto expected_lqp =
   InsertNode::make("int_float",
-    ProjectionNode::make(expression_vector(cast(null_(), DataType::Int), 12.5f),
+    ProjectionNode::make(expression_vector(cast_(null_(), DataType::Int), 12.5f),
       DummyTableNode::make()));
   // clang-format on
 
@@ -1207,7 +1207,7 @@ TEST_F(SQLTranslatorTest, InsertNull) {
   // clang-format off
   const auto expected_lqp =
   InsertNode::make("int_float",
-    ProjectionNode::make(expression_vector(cast(null_(), DataType::Int), 12.5f),
+    ProjectionNode::make(expression_vector(cast_(null_(), DataType::Int), 12.5f),
       DummyTableNode::make()));
   // clang-format on
 
@@ -1222,6 +1222,19 @@ TEST_F(SQLTranslatorTest, InsertSubquery) {
   InsertNode::make("int_float",
     PredicateNode::make(greater_than_(int_float2_a, 5),
       stored_table_node_int_float2));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, InsertConvertibleType) {
+  const auto actual_lqp = compile_query("INSERT INTO int_float VALUES (5.5, 12)");
+
+  // clang-format off
+  const auto expected_lqp =
+  InsertNode::make("int_float",
+    ProjectionNode::make(expression_vector(cast_(5.5, DataType::Int), cast_(12, DataType::Float))),
+      DummyTableNode::make());
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

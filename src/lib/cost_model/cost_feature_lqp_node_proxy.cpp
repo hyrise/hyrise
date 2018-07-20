@@ -34,17 +34,18 @@ CostFeatureVariant CostFeatureLQPNodeProxy::_extract_feature_impl(const CostFeat
     case CostFeature::OutputRowCount:
       return _node->get_statistics()->row_count();
 
+    default:;
+  }
+
+  // For features that we can't extract from the interface of AbstractLQPNode, call a function dedicated to extract
+  // features from this node type
+  switch (_node->type) {
+    case LQPNodeType::Predicate:
+      return _extract_feature_from_predicate_node(cost_feature);
+    case LQPNodeType::Join:
+      return _extract_feature_from_join_node(cost_feature);
     default:
-      // For features that we can't extract from the interface of AbstractLQPNode, call a function dedicated to extract
-      // features from this node type
-      switch (_node->type) {
-        case LQPNodeType::Predicate:
-          return _extract_feature_from_predicate_node(cost_feature);
-        case LQPNodeType::Join:
-          return _extract_feature_from_join_node(cost_feature);
-        default:
-          Fail("CostFeature not defined for LQPNodeType");
-      }
+      Fail("CostFeature not defined for LQPNodeType");
   }
 }
 

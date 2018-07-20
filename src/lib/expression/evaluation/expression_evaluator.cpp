@@ -4,6 +4,7 @@
 #include <type_traits>
 
 #include "boost/variant/apply_visitor.hpp"
+#include "boost/lexical_cast.hpp"
 
 #include "all_parameter_variant.hpp"
 #include "expression/abstract_expression.hpp"
@@ -110,8 +111,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_arithme
     case ArithmeticOperator::Multiplication: return _evaluate_binary_with_default_null_logic<Result, MultiplicationEvaluator>(left, right);  // NOLINT
 
     // Division and Modulo need to catch division by zero
-    case ArithmeticOperator::Division:       return _evaluate_binary_with_custom_null_logic<Result, DivisionEvaluator>(left, right);  // NOLINT
-    case ArithmeticOperator::Modulo:         return _evaluate_binary_with_custom_null_logic<Result, ModuloEvaluator>(left, right);  // NOLINT
+    case ArithmeticOperator::Division:       return _evaluate_binary_with_functor_based_null_logic<Result, DivisionEvaluator>(left, right);  // NOLINT
+    case ArithmeticOperator::Modulo:         return _evaluate_binary_with_functor_based_null_logic<Result, ModuloEvaluator>(left, right);  // NOLINT
   }
   // clang-format on
 }
@@ -475,33 +476,22 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
       const auto& argument_value = argument_result.value(chunk_offset);
 
       if constexpr (std::is_same_v<Result, NullValue> || std::is_same_v<ArgumentDataType, NullValue>) {
-        // Something to Null cast. Do nothing, this is handled by the nulls vector
+        // "<Something> to Null" cast. Do nothing, this is handled by the `nulls` vector
       } else if constexpr (std::is_same_v<Result, std::string>) {  // NOLINT
-        if constexpr (std::is_same_v<ArgumentDataType, std::string>) {  // NOLINT
-          // String to String "cast"
-          values[chunk_offset] = argument_value;
-        } else {
-          // Numeric to String cast. Uses std::stringstream instead of sto{l/f/ll}() since the latter puts trailing
-          // zeros on floats, e.g., 5.5 -> "5.50000"
-          std::ostringstream stream;
-          stream << argument_value;
-          values[chunk_offset] = stream.str();
-        }
+        // "<Something> to String" cast. Sould never fail, thus boost::lexical_cast (which throws on error) is fine
+        values[chunk_offset] = boost::lexical_cast<Result>(argument_value);
       } else {
         if constexpr (std::is_same_v<ArgumentDataType, std::string>) {  // NOLINT
-          char* end;
-
-          // String to Numeric cast. Uses strto{l,f} because the behaviour of this function matches the expected
-          // behaviour, i.e. returning zero on conversion error.
-          if constexpr (std::is_same_v<Result, int32_t> || std::is_same_v<Result, int64_t>) {
-            values[chunk_offset] = std::strtol(argument_value.c_str(), &end, 10);
-          } else if constexpr (std::is_same_v<Result, float> || std::is_same_v<Result, double>) {
-            values[chunk_offset] = std::strtof(argument_value.c_str(), &end);
-          } else {
-            Fail("Casting string to numeric argument type not implemented");
+          // "String to Numeric" cast
+          // As in SQLite, an illegal conversion (e.g. CAST("Hello" AS INT)) yields zero
+          // Does NOT use boost::lexical_cast() as that would throw on error - and we do not do the
+          // exception-as-flow-control thing.
+          if (!boost::conversion::try_lexical_convert(argument_value, values[chunk_offset])) {
+            values[chunk_offset] = 0;
           }
         } else {
-          // Numeric to Numeric cast
+          // "Numeric to Numeric" cast. Use static_cast<> as boost::conversion::try_lexical_convert() would fail for
+          // CAST(5.5 AS INT)
           values[chunk_offset] = static_cast<Result>(argument_value);
         }
       }
@@ -781,8 +771,8 @@ ExpressionEvaluator::_evaluate_logical_expression<ExpressionEvaluator::Bool>(con
 
   // clang-format off
   switch (expression.logical_operator) {
-    case LogicalOperator::Or:  return _evaluate_binary_with_custom_null_logic<ExpressionEvaluator::Bool, TernaryOrEvaluator>(left, right);  // NOLINT
-    case LogicalOperator::And: return _evaluate_binary_with_custom_null_logic<ExpressionEvaluator::Bool, TernaryAndEvaluator>(left, right);  // NOLINT
+    case LogicalOperator::Or:  return _evaluate_binary_with_functor_based_null_logic<ExpressionEvaluator::Bool, TernaryOrEvaluator>(left, right);  // NOLINT
+    case LogicalOperator::And: return _evaluate_binary_with_functor_based_null_logic<ExpressionEvaluator::Bool, TernaryAndEvaluator>(left, right);  // NOLINT
   }
   // clang-format on
 }
@@ -832,7 +822,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_
 }
 
 template <typename Result, typename Functor>
-std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_with_custom_null_logic(
+std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_with_functor_based_null_logic(
     const AbstractExpression& left_expression, const AbstractExpression& right_expression) {
   auto result = std::shared_ptr<ExpressionResult<Result>>{};
 

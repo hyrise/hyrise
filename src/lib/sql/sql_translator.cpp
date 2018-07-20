@@ -264,9 +264,11 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
 
   /**
    * 1. Create the expressions/LQP producing the data to insert.
+   *        - For `INSERT INTO <table> SELECT ...` this means evaluating the select statement
+   *        - For `INSERT INTO <table> VALUES ...` this means creating a one row table with the VALUES
    */
   if (insert.type == hsql::kInsertSelect) {
-    // `INSERT ... INTO newtable FROM oldtable WHERE condition`
+    // `INSERT INTO newtable SELECT ... FROM oldtable WHERE condition`
     AssertInput(insert.select, "INSERT INTO ... SELECT ...: No SELECT statement given");
     insert_data_node = translate_select_statement(*insert.select);
     column_expressions = insert_data_node->column_expressions();
@@ -318,15 +320,24 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
     auto expression = column_expressions[column_id];
     if (const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(expression); value_expression) {
       if (variant_is_null(value_expression->value)) {
-        column_expressions[column_id] = cast(null_(), target_table->column_data_type(column_id));
+        column_expressions[column_id] = cast_(null_(), target_table->column_data_type(column_id));
         insert_data_projection_required = true;
       }
     }
   }
 
   /**
-   * 4. Project the data to insert if required, i.e. when column order needed to be arranged or NULLs were wrapped in
-   *    `CAST(NULL as <data_type>)`
+   * 4. Perform type conversions if necessary so the types of the inserted data exactly matches the table column types
+   */
+  for (auto column_id = ColumnID{0}; column_id < target_table->column_count(); ++column_id) {
+    if (target_table->column_data_type(column_id) != column_expressions[column_id]->data_type()) {
+      column_expressions[column_id] = cast_(column_expressions[column_id], target_table->column_data_type(column_id));
+    }
+  }
+
+  /**
+   * 5. Project the data to insert ONLY if required, i.e. when column order needed to be arranged or NULLs were wrapped
+   *    in `CAST(NULL as <data_type>)`
    */
   if (insert_data_projection_required) {
     insert_data_node = ProjectionNode::make(column_expressions, insert_data_node);
@@ -334,6 +345,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
 
   AssertInput(insert_data_node->column_expressions().size() == target_table->column_count(),
          "INSERT: Column count mismatch");
+
 
   /**
    * NOTE: DataType checking has to be done at runtime, as Query could still contain Placeholder with unspecified type

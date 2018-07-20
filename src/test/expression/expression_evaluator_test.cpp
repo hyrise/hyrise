@@ -567,23 +567,23 @@ TEST_F(ExpressionEvaluatorTest, ExtractSeries) {
 }
 
 TEST_F(ExpressionEvaluatorTest, CastLiterals) {
-  EXPECT_TRUE(test_expression<int32_t>(*cast(5.5, DataType::Int), {5}));
-  EXPECT_TRUE(test_expression<float>(*cast(5.5, DataType::Float), {5.5f}));
-  EXPECT_TRUE(test_expression<float>(*cast(5, DataType::Float), {5.0f}));
-  EXPECT_TRUE(test_expression<std::string>(*cast(5.5, DataType::String), {"5.5"}));
-  EXPECT_TRUE(test_expression<int32_t>(*cast(null_(), DataType::Int), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*cast_(5.5, DataType::Int), {5}));
+  EXPECT_TRUE(test_expression<float>(*cast_(5.5, DataType::Float), {5.5f}));
+  EXPECT_TRUE(test_expression<float>(*cast_(5, DataType::Float), {5.0f}));
+  EXPECT_TRUE(test_expression<std::string>(*cast_(5.5, DataType::String), {"5.5"}));
+  EXPECT_TRUE(test_expression<int32_t>(*cast_(null_(), DataType::Int), {std::nullopt}));
 
   // Following SQLite, CAST("Hello" AS INT) yields zero
-  EXPECT_TRUE(test_expression<int32_t>(*cast("Hello", DataType::Int), {0}));
-  EXPECT_TRUE(test_expression<float>(*cast("Hello", DataType::Float), {0.0f}));
+  EXPECT_TRUE(test_expression<int32_t>(*cast_("Hello", DataType::Int), {0}));
+  EXPECT_TRUE(test_expression<float>(*cast_("Hello", DataType::Float), {0.0f}));
 }
 TEST_F(ExpressionEvaluatorTest, CastSeries) {
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *cast(a, DataType::Int), {1, 2, 3, 4}));
-  EXPECT_TRUE(test_expression<float>(table_a, *cast(a, DataType::Float), {1.0f, 2.0f, 3.0f, 4.0f}));
-  EXPECT_TRUE(test_expression<std::string>(table_a, *cast(a, DataType::String), {"1", "2", "3", "4"}));
-  EXPECT_TRUE(test_expression<int32_t>(table_a, *cast(f, DataType::Int), {99, 2, 13, 15}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *cast_(a, DataType::Int), {1, 2, 3, 4}));
+  EXPECT_TRUE(test_expression<float>(table_a, *cast_(a, DataType::Float), {1.0f, 2.0f, 3.0f, 4.0f}));
+  EXPECT_TRUE(test_expression<std::string>(table_a, *cast_(a, DataType::String), {"1", "2", "3", "4"}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *cast_(f, DataType::Int), {99, 2, 13, 15}));
   EXPECT_TRUE(
-      test_expression<std::string>(table_a, *cast(c, DataType::String), {"33", std::nullopt, "34", std::nullopt}));
+      test_expression<std::string>(table_a, *cast_(c, DataType::String), {"33", std::nullopt, "34", std::nullopt}));
 }
 
 }  // namespace opossum

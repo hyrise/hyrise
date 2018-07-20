@@ -219,7 +219,7 @@ std::shared_ptr<UnaryMinusExpression> unary_minus_(const Argument& argument) {
 }
 
 template <typename Argument>
-std::shared_ptr<CastExpression> cast(const Argument& argument, const DataType data_type) {
+std::shared_ptr<CastExpression> cast_(const Argument& argument, const DataType data_type) {
   return std::make_shared<CastExpression>(to_expression(argument), data_type);
 }
 

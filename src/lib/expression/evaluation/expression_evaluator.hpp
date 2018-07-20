@@ -117,12 +117,14 @@ class ExpressionEvaluator final {
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> _evaluate_exists_expression(const ExistsExpression& exists_expression);
 
+  // See docs for `_evaluate_default_null_logic()`
   template <typename Result, typename Functor>
   std::shared_ptr<ExpressionResult<Result>> _evaluate_binary_with_default_null_logic(
       const AbstractExpression& left_expression, const AbstractExpression& right_expression);
 
+  // The functor decides whether the result is null or not
   template <typename Result, typename Functor>
-  std::shared_ptr<ExpressionResult<Result>> _evaluate_binary_with_custom_null_logic(
+  std::shared_ptr<ExpressionResult<Result>> _evaluate_binary_with_functor_based_null_logic(
       const AbstractExpression& left_expression, const AbstractExpression& right_expression);
 
   template <typename Functor>
