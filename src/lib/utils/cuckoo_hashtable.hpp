@@ -23,7 +23,8 @@ class HashTable : private Noncopyable {
  public:
   explicit HashTable(size_t input_table_size) : _input_table_size(input_table_size) {
     // prepare internal hash tables and fill with empty elements
-    _hashtables.resize(NUMBER_OF_HASH_FUNCTIONS, std::vector<std::optional<HashElement>>(input_table_size));
+    // can't use resize because elements are not copyable
+    for (size_t i = 0; i < NUMBER_OF_HASH_FUNCTIONS; ++i) _hashtables.emplace_back(input_table_size);
   }
 
   // we need to explicitly set the move constructor to default when
@@ -38,14 +39,14 @@ class HashTable : private Noncopyable {
     // Check whether value is already in hashtable, then just add row id
     for (size_t i = 0; i < NUMBER_OF_HASH_FUNCTIONS; i++) {
       auto position = hash<T>(i, value);
-      auto element = _hashtables[i][position];
+      auto& element = _hashtables[i][position];
       if (element && value_equal(element->value, value)) {
         element->row_ids.push_back(row_id);
         return;
       }
     }
     auto element = HashElement{value, pmr_vector<RowID>{row_id}};
-    place(element, 0, 0);
+    place(std::move(element), 0, 0);
   }
 
   /*
@@ -56,9 +57,9 @@ class HashTable : private Noncopyable {
   std::optional<std::reference_wrapper<const PosList>> get(S value) const {
     for (size_t i = 0; i < NUMBER_OF_HASH_FUNCTIONS; i++) {
       auto position = hash<S>(i, value);
-      auto element = _hashtables[i][position];
+      const auto& element = _hashtables[i][position];
       if (element && value_equal(element->value, value)) {
-        return element->row_ids;
+        return std::cref(element->row_ids);
       }
     }
     return std::nullopt;
@@ -68,7 +69,8 @@ class HashTable : private Noncopyable {
   /*
   We use this struct internally for storing data. It should not be exposed to other classes.
   */
-  struct HashElement {
+  struct HashElement : private Noncopyable {
+    HashElement(T v, PosList r) : value(v), row_ids(r) {}
     T value;
     PosList row_ids;
   };
@@ -99,12 +101,10 @@ class HashTable : private Noncopyable {
     auto position = hash(hash_function, element->value);
     auto& hashtable = _hashtables[hash_function];
 
-    auto old_element = hashtable[position];
+    auto old_element = std::move(hashtable[position]);
+    hashtable[position] = std::move(element);
     if (old_element) {
-      hashtable[position] = element;
-      place(old_element, (hash_function + 1) % NUMBER_OF_HASH_FUNCTIONS, iterations + 1);
-    } else {
-      hashtable[position] = element;
+      place(std::move(old_element), (hash_function + 1) % NUMBER_OF_HASH_FUNCTIONS, iterations + 1);
     }
   }
 

@@ -405,10 +405,10 @@ void probe(const RadixContainer<RightType>& radix_container,
 
           // This is where the actual comparison happens. `get` only returns values that match and eliminates hash
           // collisions.
-          const auto& row_ids = hashtable->get(type_cast<HashedType>(row.value));
+          const auto& matching_rows = hashtable->get(type_cast<HashedType>(row.value));
 
-          if (row_ids) {
-            for (const auto row_id : row_ids->get()) {
+          if (matching_rows) {
+            for (const auto row_id : matching_rows->get()) {
               if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
                 pos_list_left_local.emplace_back(row_id);
                 pos_list_right_local.emplace_back(row.row_id);
