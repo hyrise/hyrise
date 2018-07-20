@@ -42,7 +42,7 @@ struct ParsePacket {
 struct BindPacket {
   std::string statement_name;
   std::string destination_portal;
-  std::unordered_map<ParameterID, AllTypeVariant> params;
+  std::vector<AllTypeVariant> params;
 };
 
 class PostgresWireHandler {

@@ -13,6 +13,7 @@
 #include "expression/lqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -24,6 +25,8 @@
 #include "operators/jit_write_tuples.hpp"
 #include "storage/storage_manager.hpp"
 #include "types.hpp"
+
+using namespace std::string_literals;  // NOLINT
 
 namespace {
 
@@ -42,7 +45,7 @@ const std::unordered_map<PredicateCondition, JitExpressionType> predicate_condit
   {PredicateCondition::IsNull, JitExpressionType::IsNull},
   {PredicateCondition::IsNotNull, JitExpressionType::IsNotNull}};
 
-const std::unordered_map<ArithmeticOperator, JitExpressionType> arithmetic_operator_to_jit_expression = {
+const std::unordered_map<ArithmeticOperator, JitExpressionType> arithmetic_operator_to_jit_expression_type = {
   {ArithmeticOperator::Addition, JitExpressionType::Addition},
   {ArithmeticOperator::Subtraction, JitExpressionType::Subtraction},
   {ArithmeticOperator::Multiplication, JitExpressionType::Multiplication},
@@ -71,6 +74,8 @@ std::shared_ptr<AbstractOperator> JitAwareLQPTranslator::translate_node(
   return jit_operator ? jit_operator : LQPTranslator::translate_node(node);
 }
 
+void JitAwareLQPTranslator::set_force_jit(const bool force_jit) { _force_jit = force_jit; }
+
 std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_plan_to_jit_operators(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   auto jittable_node_count = size_t{0};
@@ -93,9 +98,8 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
   //   - If there is more than one input node, don't JIT
   //   - Always JIT AggregateNodes, as the JitAggregate is significantly faster than the Aggregate operator
   //   - Otherwise, JIT if there are two or more jittable nodes
-  if (input_nodes.size() != 1 ||jittable_node_count < 1 || (jittable_node_count < 2 && node->type != LQPNodeType::Aggregate)) {
-    return nullptr;
-  }
+  if (input_nodes.size() != 1 || jittable_node_count < 1) return nullptr;
+  if (jittable_node_count == 1 && node->type == LQPNodeType::Projection) return nullptr;
 
   // The input_node is not being integrated into the operator chain, but instead serves as the input to the JitOperators
   const auto input_node = *input_nodes.begin();
@@ -114,13 +118,16 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
   // If we can reach the input node without encountering a UnionNode or PredicateNode,
   // there is no need to filter any tuples
   if (filter_node != input_node) {
-    // However, if we do need to filter, we first convert the subplan into a JitExpression
-    const auto jit_predicate_expression = _try_translate_subplan_to_jit_predicate_expression(filter_node, *read_tuples, input_node);
-    if (!jit_predicate_expression) return nullptr;
+    const auto boolean_expression = lqp_subplan_to_boolean_expression(filter_node);
+    if (!boolean_expression) return nullptr;
+
+    const auto jit_boolean_expression = _try_translate_expression_to_jit_expression(*boolean_expression, *read_tuples, input_node);
+    if (!jit_boolean_expression) return nullptr;
+
     // make sure that the expression gets computed ...
-    jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_predicate_expression));
+    jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_boolean_expression));
     // and then filter on the resulting boolean.
-    jit_operator->add_jit_operator(std::make_shared<JitFilter>(jit_predicate_expression->result()));
+    jit_operator->add_jit_operator(std::make_shared<JitFilter>(jit_boolean_expression->result()));
   }
 
   if (node->type == LQPNodeType::Aggregate) {
@@ -132,7 +139,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
     auto aggregate = std::make_shared<JitAggregate>();
 
     for (const auto& groupby_expression : aggregate_node->group_by_expressions) {
-      const auto jit_expression = _try_translate_column_to_jit_expression(*groupby_expression, *read_tuples, input_node);
+      const auto jit_expression = _try_translate_expression_to_jit_expression(*groupby_expression, *read_tuples, input_node);
       if (!jit_expression) return nullptr;
       // Create a JitCompute operator for each computed groupby column ...
       if (jit_expression->expression_type() != JitExpressionType::Column) {
@@ -144,14 +151,14 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
 
     for (const auto& expression : aggregate_node->aggregate_expressions) {
       const auto aggregate_expression = std::dynamic_pointer_cast<AggregateExpression>(expression);
-      DebugAssert(aggregate_expression->type == ExpressionType::Aggregate, "Expression is not a function.");
+      DebugAssert(aggregate_expression, "Expression is not a function.");
 
       const auto jit_expression = _try_translate_expression_to_jit_expression(
           *aggregate_expression->arguments[0], *read_tuples, input_node);
       if (!jit_expression) return nullptr;
       // Create a JitCompute operator for each aggregate expression on a computed value ...
       if (jit_expression->expression_type() != JitExpressionType::Column) {
-        jit_operator->add_jit_operator(std::make_shared<JitCompute>(expression));
+        jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_expression));
       }
       // ... and add the aggregate expression to the JitAggregate operator.
       aggregate->add_aggregate_column(aggregate_expression->as_column_name(), jit_expression->result(),
@@ -163,7 +170,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
     // Add a compute operator for each computed output column (i.e., a column that is not from a stored table).
     auto write_table = std::make_shared<JitWriteTuples>();
     for (const auto& column_expression : node->column_expressions()) {
-      const auto jit_expression = _try_translate_column_to_jit_expression(*column_expression, *read_tuples, input_node);
+      const auto jit_expression = _try_translate_expression_to_jit_expression(*column_expression, *read_tuples, input_node);
       if (!jit_expression) return nullptr;
       // If the JitExpression is of type JitExpressionType::Column, there is no need to add a compute node, since it
       // would not compute anything anyway
@@ -179,97 +186,27 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
   return jit_operator;
 }
 
-std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_subplan_to_jit_predicate_expression(
-    const std::shared_ptr<AbstractLQPNode>& node, JitReadTuples& jit_source,
-    const std::shared_ptr<AbstractLQPNode>& input_node) const {
-
-  switch (node->type) {
-    case LQPNodeType::Predicate: {
-      const auto left = _try_translate_predicate_node_to_jit_expression(std::dynamic_pointer_cast<PredicateNode>(node), jit_source,
-                                                 input_node);
-
-      // If the PredicateNode has further conditions (either PredicateNodes or UnionNodes) as children, we need a
-      // logical AND here. In this case, the condition represented by the PredicateNode itself becomes the left side
-      // and the input to the predicate node becomes the right side of the conjunction.
-      // If the PredicateNode has no further conditions (i.e., all tuples pass into the PredicateNode unconditionally),
-      // there is no need to create a dedicated AND-expression.
-      if (_input_is_filtered(node->left_input())) {
-        const auto right = _try_translate_predicate_node_to_jit_expression(std::dynamic_pointer_cast<PredicateNode>(node), jit_source,
-                                                           input_node);
-        return left && right
-               ? std::make_shared<JitExpression>(left, JitExpressionType::And, right, jit_source.add_temporary_value())
-               : nullptr;
-      } else {
-        return left;
-      }
-    }
-
-    case LQPNodeType::Union:
-      const auto left = _try_translate_subplan_to_jit_predicate_expression(node->left_input(), jit_source, input_node);
-      const auto right = _try_translate_subplan_to_jit_predicate_expression(node->right_input(), jit_source, input_node);
-      return left && right
-                 ? std::make_shared<JitExpression>(left, JitExpressionType::Or, right, jit_source.add_temporary_value())
-                 : nullptr;
-
-    case LQPNodeType::Projection:
-      // We don't care about projection nodes here, since they do not perform any tuple filtering
-      return _try_translate_subplan_to_jit_predicate_expression(node->left_input(), jit_source, input_node);
-
-    default:
-      return nullptr;
-  }
-}
-
-std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_predicate_node_to_jit_expression(
-    const std::shared_ptr<PredicateNode>& node,
-    JitReadTuples& jit_source,
-    const std::shared_ptr<AbstractLQPNode>& input_node) const {
-  const auto predicate_expression = std::dynamic_pointer_cast<AbstractPredicateExpression>(node->predicate);
-  if (predicate_expression) return nullptr;
-
-  auto condition = predicate_condition_to_jit_expression_type.at(predicate_expression->predicate_condition);
-  auto left = _try_translate_column_to_jit_expression(*predicate_expression->arguments[0], jit_source, input_node);
-  if (!left) return nullptr;
-  std::shared_ptr<const JitExpression> right;
-
-  switch (condition) {
-    /* Binary predicates */
-    case JitExpressionType::Equals:
-    case JitExpressionType::NotEquals:
-    case JitExpressionType::LessThan:
-    case JitExpressionType::LessThanEquals:
-    case JitExpressionType::GreaterThan:
-    case JitExpressionType::GreaterThanEquals:
-    case JitExpressionType::Like:
-    case JitExpressionType::NotLike: {
-      const auto right_value_expression = std::dynamic_pointer_cast<ValueExpression>(predicate_expression->arguments[1]);
-      if (!right_value_expression) return nullptr;
-
-      right = _try_translate_variant_to_jit_expression(right_value_expression->value, jit_source, input_node);
-      return right ? std::make_shared<JitExpression>(left, condition, right, jit_source.add_temporary_value())
-                   : nullptr;
-    }
-    /* Unary predicates */
-    case JitExpressionType::IsNull:
-    case JitExpressionType::IsNotNull:
-      return std::make_shared<JitExpression>(left, condition, jit_source.add_temporary_value());
-    default:
-      return nullptr;
-  }
-}
-
 std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expression_to_jit_expression(
     const AbstractExpression& expression, JitReadTuples& jit_source,
     const std::shared_ptr<AbstractLQPNode>& input_node) const {
+
+  const auto input_node_column_id = input_node->find_column_id(expression);
+  if (input_node_column_id) {
+    const auto tuple_value = jit_source.add_input_column(expression.data_type(), expression.is_nullable(), *input_node_column_id);
+    return std::make_shared<JitExpression>(tuple_value);
+  }
+
   std::shared_ptr<const JitExpression> left, right;
   switch (expression.type) {
     case ExpressionType::Value: {
       const auto* value_expression = dynamic_cast<const ValueExpression*>(&expression);
-      return _try_translate_variant_to_jit_expression(value_expression->value, jit_source, input_node);
+      const auto tuple_value = jit_source.add_literal_value(value_expression->value);
+      return std::make_shared<JitExpression>(tuple_value);
     }
 
-    case ExpressionType::Column:
-      return _try_translate_column_to_jit_expression(expression, jit_source, input_node);
+    case ExpressionType::LQPColumn:
+      // Column SHOULD have been resolved by `find_column_id()` call above the switch
+      Fail("Column doesn't exist in input_node");
 
     case ExpressionType::Predicate:
     case ExpressionType::Arithmetic:
@@ -277,6 +214,7 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
       std::vector<std::shared_ptr<const JitExpression>> jit_expression_arguments;
       for (const auto& argument : expression.arguments) {
         const auto jit_expression = _try_translate_expression_to_jit_expression(*argument, jit_source, input_node);
+        if (!jit_expression) return nullptr;
         jit_expression_arguments.emplace_back(jit_expression);
       }
 
@@ -296,54 +234,19 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
   }
 }
 
-std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_column_to_jit_expression(
-    const AbstractExpression& expression, JitReadTuples& jit_source,
-    const std::shared_ptr<AbstractLQPNode>& input_node) const {
-  const auto column_id = input_node->find_column_id(expression);
-
-  if (expression.type == ExpressionType::Column) {
-    // we reached a "raw" data column and register it as an input column
-    const auto tuple_value = jit_source.add_input_column(expression.data_type(), expression.is_nullable(), column_id.value());
-    return std::make_shared<JitExpression>(tuple_value);
-  } else if (expression.type != ExpressionType::Aggregate) {
-    // if the LQPColumnReference references a computed column, we need to compute that expression as well
-    return _try_translate_expression_to_jit_expression(expression, jit_source, input_node);
-  } else {
-    return nullptr;
-  }
-}
-
-std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_variant_to_jit_expression(
-    const AllParameterVariant& value, JitReadTuples& jit_source,
-    const std::shared_ptr<AbstractLQPNode>& input_node) const {
-  if (is_lqp_column_reference(value)) {
-    return _try_translate_column_to_jit_expression(boost::get<LQPColumnReference>(value), jit_source, input_node);
-  } else if (is_variant(value)) {
-    const auto variant = boost::get<AllTypeVariant>(value);
-    const auto tuple_value = jit_source.add_literal_value(variant);
-    return std::make_shared<JitExpression>(tuple_value);
-  } else {
-    return nullptr;
-  }
-}
-
-bool JitAwareLQPTranslator::_input_is_filtered(const std::shared_ptr<AbstractLQPNode>& node) const {
-  auto current_node = node;
-  while (current_node->type == LQPNodeType::Projection) {
-    current_node = current_node->left_input();
-  }
-  return current_node->type == LQPNodeType::Predicate || current_node->type == LQPNodeType::Union;
-}
-
 bool JitAwareLQPTranslator::_node_is_jittable(const std::shared_ptr<AbstractLQPNode>& node,
                                               const bool allow_aggregate_node) const {
   if (node->type == LQPNodeType::Aggregate) {
     // We do not support the count distinct function yet and thus need to check all aggregate expressions.
     auto aggregate_node = std::static_pointer_cast<AggregateNode>(node);
     auto aggregate_expressions = aggregate_node->aggregate_expressions;
-    auto has_count_distinct = std::none_of(
+    auto has_count_distinct = std::any_of(
         aggregate_expressions.begin(), aggregate_expressions.end(),
-        [](auto& expression) { return expression->aggregate_function == AggregateFunction::CountDistinct; });
+        [](auto& expression) {
+          const auto aggregate_expression = std::dynamic_pointer_cast<AggregateExpression>(expression);
+          Assert(aggregate_expression, "Expected AggregateExpression");
+          return aggregate_expression->aggregate_function == AggregateFunction::CountDistinct;
+        });
     return allow_aggregate_node && !has_count_distinct;
   }
 
@@ -384,7 +287,7 @@ void JitAwareLQPTranslator::_visit(const std::shared_ptr<AbstractLQPNode>& node,
   }
 }
 
-JitExpressionType JitAwareLQPTranslator::_expression_to_jit_expression_type(const AbstractExpression& expression) const {
+JitExpressionType JitAwareLQPTranslator::_expression_to_jit_expression_type(const AbstractExpression& expression) {
   switch (expression.type) {
     case ExpressionType::Arithmetic: {
       const auto* arithmetic_expression = dynamic_cast<const ArithmeticExpression*>(&expression);
@@ -400,7 +303,6 @@ JitExpressionType JitAwareLQPTranslator::_expression_to_jit_expression_type(cons
       const auto* logical_expression = dynamic_cast<const LogicalExpression*>(&expression);
       return logical_operator_to_jit_expression.at(logical_expression->logical_operator);
     }
-
 
     default:
       Fail("Expression "s + expression.as_column_name() + " is jit incompatible");

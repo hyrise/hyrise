@@ -7,6 +7,7 @@
 namespace opossum {
 
 class AbstractLQPNode;
+class AbstractExpression;
 
 using LQPNodeMapping = std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>;
 using LQPMismatch = std::pair<std::shared_ptr<const AbstractLQPNode>, std::shared_ptr<const AbstractLQPNode>>;
@@ -34,5 +35,11 @@ void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node);
  * @return whether all paths to all leafs contain a Validate node - i.e. the LQP can be used in an MVCC aware context
  */
 bool lqp_is_validated(const std::shared_ptr<AbstractLQPNode>& lqp);
+
+/**
+ * Create a boolean expression from an LQP by considering PredicateNodes and UnionNodes
+ * @return      the expression, or nullptr if no expression could be created
+ */
+std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(const std::shared_ptr<AbstractLQPNode>& lqp);
 
 }  // namespace opossum

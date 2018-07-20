@@ -74,19 +74,18 @@ BindPacket PostgresWireHandler::handle_bind_packet(const InputPacket& packet) {
 
   auto num_parameter_values = ntohs(read_value<int16_t>(packet));
 
-  std::unordered_map<ParameterID, AllTypeVariant> parameters;
+  std::vector<AllTypeVariant> parameter_values;
   for (auto i = 0; i < num_parameter_values; ++i) {
-    auto parameter_id = ntohl(read_value<ParameterID::base_type>(packet));
     auto parameter_value_length = ntohl(read_value<int32_t>(packet));
     auto x = read_values<char>(packet, parameter_value_length);
     const std::string x_str(x.begin(), x.end());
-    parameters.emplace(parameter_id, x_str);
+    parameter_values.emplace_back(x_str);
   }
 
   auto num_result_column_format_codes = ntohs(read_value<int16_t>(packet));
   auto result_column_format_codes = read_values<int16_t>(packet, num_result_column_format_codes);
 
-  return BindPacket{statement_name, portal, std::move(parameters)};
+  return BindPacket{statement_name, portal, std::move(parameter_values)};
 }
 
 std::string PostgresWireHandler::handle_execute_packet(const InputPacket& packet) {

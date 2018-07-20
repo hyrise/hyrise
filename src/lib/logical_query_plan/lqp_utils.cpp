@@ -1,7 +1,14 @@
 #include "lqp_utils.hpp"
 
+#include <set>
+
+#include "expression/expression_functional.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "utils/assert.hpp"
+
+using namespace opossum::expression_functional;
 
 namespace {
 
@@ -133,6 +140,43 @@ bool lqp_is_validated(const std::shared_ptr<AbstractLQPNode>& lqp) {
   if (!lqp->left_input() && !lqp->right_input()) return false;
 
   return lqp_is_validated(lqp->left_input()) && lqp_is_validated(lqp->right_input());
+}
+
+std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression(const std::shared_ptr<AbstractLQPNode>& lqp) {
+  static const auto whitelist = std::set<LQPNodeType>{LQPNodeType::Projection, LQPNodeType::Sort};
+
+  if (whitelist.count(lqp->type)) return lqp_subplan_to_boolean_expression(lqp->left_input());
+
+  switch (lqp->type) {
+    case LQPNodeType::Predicate: {
+      const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(lqp);
+      const auto left_input_expression = lqp_subplan_to_boolean_expression(lqp->left_input());
+      if (left_input_expression) {
+        return and_(predicate_node->predicate, left_input_expression);
+      } else {
+        return predicate_node->predicate;
+      }
+    }
+
+    case LQPNodeType::Union:{
+      const auto union_node = std::dynamic_pointer_cast<UnionNode>(lqp);
+      const auto left_input_expression = lqp_subplan_to_boolean_expression(lqp->left_input());
+      const auto right_input_expression = lqp_subplan_to_boolean_expression(lqp->right_input());
+      if (left_input_expression && right_input_expression) {
+        return or_(left_input_expression, right_input_expression);
+      } else {
+        return nullptr;
+      }
+    }
+
+    case LQPNodeType::Projection:
+    case LQPNodeType::Sort:
+      return lqp_subplan_to_boolean_expression(lqp->left_input());
+
+    default:
+      return nullptr;
+  }
+
 }
 
 }  // namespace opossum

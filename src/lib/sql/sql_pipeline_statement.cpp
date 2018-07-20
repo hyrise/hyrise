@@ -88,10 +88,11 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
     Assert(_prepared_statements, "Cannot prepare statement without prepared statement cache.");
 
     lqp_roots = sql_translator.translate_sql(prepared_statement->query);
-    _parameter_ids = sql_translator.value_placeholders();
   } else {
     lqp_roots = sql_translator.translate_parser_result(*parsed_sql);
   }
+
+  _parameter_ids = sql_translator.value_placeholders();
 
   DebugAssert(lqp_roots.size() == 1, "LQP translation returned no or more than one LQP root for a single statement.");
   _unoptimized_logical_plan = lqp_roots.front();
@@ -204,11 +205,10 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
     started = std::chrono::high_resolution_clock::now();
     _query_plan->add_tree_by_root(_lqp_translator->translate_node(lqp));
 
-    // Set number of parameters to match later in case of prepared statement
-    _query_plan->set_parameter_ids(_parameter_ids);
-
     done = std::chrono::high_resolution_clock::now();
   }
+
+  _query_plan->set_parameter_ids(_parameter_ids);
 
   if (_use_mvcc == UseMvcc::Yes) _query_plan->set_transaction_context(_transaction_context);
 

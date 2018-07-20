@@ -38,7 +38,7 @@ class SQLQueryPlan {
   // Calls set_transaction_context_recursively on all roots.
   void set_transaction_context(std::shared_ptr<TransactionContext> context);
 
-  // Set the parameter ids of the value placeholder
+  // Set the parameter ids of the value placeholders
   void set_parameter_ids(const std::unordered_map<ValuePlaceholderID, ParameterID>& parameter_ids);
   const std::unordered_map<ValuePlaceholderID, ParameterID>& parameter_ids() const;
 
