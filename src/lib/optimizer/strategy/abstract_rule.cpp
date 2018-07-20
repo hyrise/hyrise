@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-bool AbstractRule::_apply_to_inputs(const std::shared_ptr<AbstractLQPNode>& node) {
+bool AbstractRule::_apply_to_inputs(std::shared_ptr<AbstractLQPNode> node) {
   auto inputs_changed = false;
 
   // Apply this rule recursively
