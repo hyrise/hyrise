@@ -92,7 +92,8 @@ std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query
   std::vector<std::string> queries;
   boost::algorithm::split(queries, sql_query, boost::is_any_of(";"));
 
-  queries.erase(std::remove_if(queries.begin(), queries.end(), [](std::string const& query) { return query.empty(); }),
+  queries.erase(std::remove_if(queries.begin(), queries.end(),
+                               [](std::string const& query) { return query.empty() || query == "\n"; }),
                 queries.end());
 
   // We need to split the queries such that we only create columns/add rows from the final SELECT query
