@@ -330,7 +330,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
    * 4. Perform type conversions if necessary so the types of the inserted data exactly matches the table column types
    */
   for (auto column_id = ColumnID{0}; column_id < target_table->column_count(); ++column_id) {
-    if (target_table->column_data_type(column_id) != column_expressions[column_id]->data_type()) {
+    // Always cast if the expression contains a placeholder, since we can't know the actual data type of the expression
+    // until it is replaced.
+    if (expression_contains_placeholders(column_expressions[column_id]) ||
+        target_table->column_data_type(column_id) != column_expressions[column_id]->data_type()) {
       column_expressions[column_id] = cast_(column_expressions[column_id], target_table->column_data_type(column_id));
     }
   }

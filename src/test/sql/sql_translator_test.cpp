@@ -1233,8 +1233,8 @@ TEST_F(SQLTranslatorTest, InsertConvertibleType) {
   // clang-format off
   const auto expected_lqp =
   InsertNode::make("int_float",
-    ProjectionNode::make(expression_vector(cast_(5.5, DataType::Int), cast_(12, DataType::Float))),
-      DummyTableNode::make());
+    ProjectionNode::make(expression_vector(cast_(5.5f, DataType::Int), cast_(12, DataType::Float)),
+      DummyTableNode::make()));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

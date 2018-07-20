@@ -22,8 +22,8 @@ LQPNodeMapping lqp_create_node_mapping(const std::shared_ptr<AbstractLQPNode>& l
  * @return std::nullopt if the LQPs were equal. A pair of a node in this LQP and a node in the rhs LQP that were first
  *         discovered to differ.
  */
-std::optional<LQPMismatch> lqp_find_subplan_mismatch(const std::shared_ptr<AbstractLQPNode>& lhs,
-                                                     const std::shared_ptr<AbstractLQPNode>& rhs);
+std::optional<LQPMismatch> lqp_find_subplan_mismatch(const std::shared_ptr<const AbstractLQPNode>& lhs,
+                                                     const std::shared_ptr<const AbstractLQPNode>& rhs);
 
 void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
                       const std::shared_ptr<AbstractLQPNode>& replacement_node);

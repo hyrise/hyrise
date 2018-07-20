@@ -58,13 +58,17 @@ LQPNodeMapping lqp_create_node_mapping(const std::shared_ptr<AbstractLQPNode>& l
   return mapping;
 }
 
-std::optional<LQPMismatch> lqp_find_subplan_mismatch(const std::shared_ptr<AbstractLQPNode>& lhs,
-                                                     const std::shared_ptr<AbstractLQPNode>& rhs) {
+std::optional<LQPMismatch> lqp_find_subplan_mismatch(const std::shared_ptr<const AbstractLQPNode>& lhs,
+                                                     const std::shared_ptr<const AbstractLQPNode>& rhs) {
   // Check for type/structural mismatched
   auto mismatch = lqp_find_structure_mismatch(lhs, rhs);
   if (mismatch) return mismatch;
 
-  const auto node_mapping = lqp_create_node_mapping(lhs, rhs);
+  // For lqp_create_node_mapping() we need mutable pointers - but won't use them to manipulate, promised.
+  // It's just that NodeMapping has takes a mutable ptr in as the value type
+  const auto mutable_lhs = std::const_pointer_cast<AbstractLQPNode>(lhs);
+  const auto mutable_rhs = std::const_pointer_cast<AbstractLQPNode>(rhs);
+  const auto node_mapping = lqp_create_node_mapping(mutable_lhs, mutable_rhs);
 
   return lqp_find_subplan_mismatch_impl(node_mapping, lhs, rhs);
 }

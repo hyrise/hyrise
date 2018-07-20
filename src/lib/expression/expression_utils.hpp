@@ -134,4 +134,6 @@ void expression_set_transaction_context(const std::shared_ptr<AbstractExpression
 void expressions_set_transaction_context(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
                                          std::weak_ptr<TransactionContext> transaction_context);
 
+bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>& expression);
+
 }  // namespace opossum

@@ -231,10 +231,7 @@ void AbstractLQPNode::print(std::ostream& out) const {
 }
 
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
-  // lqp_find_subplan_mismatch() takes mutable pointers, but won't manipulate, promised.
-  const auto mutable_this = std::const_pointer_cast<AbstractLQPNode>(shared_from_this());
-  const auto mutable_rhs = std::const_pointer_cast<AbstractLQPNode>(rhs.shared_from_this());
-  return !lqp_find_subplan_mismatch(mutable_this, mutable_rhs);
+  return !lqp_find_subplan_mismatch(shared_from_this(), rhs.shared_from_this());
 }
 
 bool AbstractLQPNode::operator!=(const AbstractLQPNode& rhs) const { return !operator==(rhs); }

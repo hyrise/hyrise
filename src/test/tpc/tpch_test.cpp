@@ -25,7 +25,7 @@ using namespace std::string_literals;  // NOLINT
 namespace opossum {
 
 class TPCHTest : public BaseTestWithParam<std::pair<const size_t, const char*>> {
- protected:
+ public:
   void SetUp() override { _sqlite_wrapper = std::make_shared<SQLiteWrapper>(); }
 
   std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
@@ -45,7 +45,7 @@ class TPCHTest : public BaseTestWithParam<std::pair<const size_t, const char*>> 
 
 TEST_P(TPCHTest, TPCHQueryTest) {
   size_t query_idx;
-  const char* query;
+  std::string query;
   std::tie(query_idx, query) = GetParam();
 
   /**

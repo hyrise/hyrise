@@ -212,4 +212,20 @@ void expressions_set_transaction_context(const std::vector<std::shared_ptr<Abstr
   }
 }
 
+bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>& expression) {
+  auto placeholder_found = false;
+
+  visit_expression(expression, [&](const auto& sub_expression) {
+    const auto parameter_expression = std::dynamic_pointer_cast<ParameterExpression>(sub_expression);
+    if (parameter_expression) {
+      placeholder_found |= parameter_expression->parameter_expression_type == ParameterExpressionType::ValuePlaceholder;
+    }
+
+    return ExpressionVisitation::VisitArguments;
+  });
+
+  return placeholder_found;
+}
+
+
 }  // namespace opossum
