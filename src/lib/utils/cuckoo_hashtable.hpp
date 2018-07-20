@@ -24,7 +24,9 @@ class HashTable : private Noncopyable {
   explicit HashTable(size_t input_table_size) : _input_table_size(input_table_size) {
     // prepare internal hash tables and fill with empty elements
     // can't use resize because elements are not copyable
-    for (size_t i = 0; i < NUMBER_OF_HASH_FUNCTIONS; ++i) _hashtables.emplace_back(input_table_size);
+    for (size_t i = 0; i < NUMBER_OF_HASH_FUNCTIONS; ++i) {
+      _hashtables.emplace_back(input_table_size);
+    }
   }
 
   // we need to explicitly set the move constructor to default when

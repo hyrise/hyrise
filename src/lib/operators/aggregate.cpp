@@ -612,9 +612,7 @@ write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
   for (auto& kv : *results) {
     null_values[i] = !kv.second.current_aggregate;
 
-    if (!kv.second.current_aggregate) {
-      values[i] = AggregateType();
-    } else {
+    if (kv.second.current_aggregate) {
       values[i] = *kv.second.current_aggregate;
     }
     ++i;
