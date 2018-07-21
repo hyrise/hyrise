@@ -1,7 +1,8 @@
 #include "aggregate.hpp"
 
-#include <algorithm>
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
+
+#include <algorithm>
 #include <memory>
 #include <optional>
 #include <string>
