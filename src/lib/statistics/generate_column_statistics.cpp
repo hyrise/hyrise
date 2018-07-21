@@ -44,7 +44,8 @@ std::shared_ptr<BaseColumnStatistics> generate_column_statistics<std::string>(co
       table.row_count() > 0 ? static_cast<float>(null_value_count) / static_cast<float>(table.row_count()) : 0.0f;
   const auto distinct_count = static_cast<float>(distinct_set.size());
 
-  return std::make_shared<ColumnStatistics<std::string>>(null_value_ratio, distinct_count, std::string{min}, std::string{max});
+  return std::make_shared<ColumnStatistics<std::string>>(null_value_ratio, distinct_count, std::string{min},
+                                                         std::string{max});
 }
 
 }  // namespace opossum
