@@ -4,6 +4,6 @@ namespace opossum {
 template <typename T>
 constexpr size_t aligned_size() {
   return sizeof(T) + alignof(T) - 1 - (sizeof(T) - 1) % alignof(T);
-};
+}
 
 }  // namespace opossum
