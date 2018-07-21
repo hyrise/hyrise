@@ -420,7 +420,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_case_ex
   std::shared_ptr<ExpressionResult<Result>> result;
 
   _resolve_to_expression_results(
-      *case_expression.then(), *case_expression.else_(), [&](const auto& then_result, const auto& else_result) {
+      *case_expression.then(), *case_expression.otherwise(), [&](const auto& then_result, const auto& else_result) {
         using ThenResultType = typename std::decay_t<decltype(then_result)>::Type;
         using ElseResultType = typename std::decay_t<decltype(else_result)>::Type;
 

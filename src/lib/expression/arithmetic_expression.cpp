@@ -78,6 +78,7 @@ ExpressionPrecedence ArithmeticExpression::_precedence() const {
     case ArithmeticOperator::Modulo:
       return ExpressionPrecedence::MultiplicationDivision;
   }
+  Fail("GCC thinks this is reachable...");
 }
 
 }  // namespace opossum
