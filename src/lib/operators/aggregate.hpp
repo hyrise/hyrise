@@ -70,8 +70,12 @@ using AggregateKeys = pmr_vector<AggregateKey>;
 using KeysPerChunk = pmr_vector<AggregateKeys>;
 
 // We use monotonic_buffer_resource for the vector of vectors that hold the aggregate keys. That is so that we can
-// save time when allocating and we can throw away everything in this temporary structure as once (once the resource
+// save time when allocating and we can throw away everything in this temporary structure at once (once the resource
 // gets deleted). Also, we use the scoped_allocator_adaptor to propagate the allocator to all inner vectors.
+// This is suitable here because the amount of memory needed is known from the start. In other places with frequent
+// reallocations, this might make less sense.
+// We use boost over std because libc++ does not yet (July 2018) support monotonic_buffer_resource:
+// https://libcxx.llvm.org/ts1z_status.html
 using AggregateKeysAllocator = boost::container::scoped_allocator_adaptor<PolymorphicAllocator<AggregateKeys>>;
 
 using AggregateColumnDefinition = AggregateColumnDefinitionTemplate<ColumnID>;

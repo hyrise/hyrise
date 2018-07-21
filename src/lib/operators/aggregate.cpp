@@ -16,7 +16,9 @@
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_column.hpp"
 #include "type_comparison.hpp"
+#include "utils/aligned_size.hpp"
 #include "utils/assert.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 
@@ -342,10 +344,16 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   */
 
   // Allocate a temporary memory buffer, for more details see aggregate.hpp
-  size_t needed_size = input_table->chunk_count() * sizeof(std::vector<AggregateKey>) +
-                       input_table->row_count() * (sizeof(AggregateKey) + _groupby_column_ids.size());
+  size_t needed_size_per_aggregate_key =
+      aligned_size<AggregateKey>() + _groupby_column_ids.size() * aligned_size<AggregateKeyEntry>();
+  size_t needed_size = aligned_size<KeysPerChunk>() + input_table->chunk_count() * aligned_size<AggregateKeys>() +
+                       input_table->row_count() * needed_size_per_aggregate_key;
+
   auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(needed_size);
   auto allocator = AggregateKeysAllocator{PolymorphicAllocator<AggregateKeys>{&temp_buffer}};
+  auto start_next_buffer_size = temp_buffer.next_buffer_size();
+
+  // Create the actual data structure
   auto keys_per_chunk = KeysPerChunk{allocator};
   keys_per_chunk.reserve(input_table->chunk_count());
 
@@ -353,6 +361,16 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
     keys_per_chunk.emplace_back(input_table->get_chunk(chunk_id)->size(), AggregateKey(_groupby_column_ids.size()));
   }
 
+  // Make sure that we did not have to allocate more memory than originally computed
+  if (temp_buffer.next_buffer_size() != start_next_buffer_size) {
+    // The buffer sizes are increasing when the current buffer is full. We can use this to make sure that we allocated
+    // enough space from the beginning on. It would be more intuitive to compare current_buffer(), but this seems to
+    // be broken in boost: https://svn.boost.org/trac10/ticket/13639#comment:1
+    PerformanceWarning(std::string("needed_size ") + std::to_string(needed_size) +
+                       " was not enough and a second buffer was needed");
+  }
+
+  // Now that we have the data structures in place, we can start the actual work
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(_groupby_column_ids.size());
 
