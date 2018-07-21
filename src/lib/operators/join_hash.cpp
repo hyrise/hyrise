@@ -225,6 +225,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
       auto& histogram = static_cast<std::vector<size_t>&>(*histograms[chunk_id]);
 
       auto materialized_chunk = std::vector<std::pair<RowID, T>>();
+      materialized_chunk.reserve(column->size());  // resize + operator[]== would be slower here
 
       // Materialize the chunk
       resolve_column_type<T>(*column, [&, chunk_id, keep_nulls](auto& typed_column) {
@@ -492,6 +493,7 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
         }
       } else if (mode == JoinMode::Anti) {
         // no hashtable on other side, but we are in Anti mode
+        pos_list_local.reserve(partition_end - partition_begin);
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
           auto& row = partition[partition_offset];
           pos_list_local.emplace_back(row.row_id);
