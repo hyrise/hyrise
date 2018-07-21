@@ -87,8 +87,6 @@ CostFeatureVariant CostFeatureLQPNodeProxy::_extract_feature_from_predicate_node
 }
 
 CostFeatureVariant CostFeatureLQPNodeProxy::_extract_feature_from_join_node(const CostFeature cost_feature) const {
-  const auto predicate_node = std::static_pointer_cast<PredicateNode>(_node);
-
   const auto operator_predicate = OperatorJoinPredicate::from_expression(
       *std::static_pointer_cast<JoinNode>(_node)->join_predicate, *_node->left_input(), *_node->right_input());
   Assert(operator_predicate, "Predicate too complex to extract a CostFeature from");
