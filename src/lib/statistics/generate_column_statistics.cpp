@@ -1,5 +1,7 @@
 #include "generate_column_statistics.hpp"
 
+#include <string_view>
+
 namespace opossum {
 
 /**
@@ -9,12 +11,12 @@ namespace opossum {
 template <>
 std::shared_ptr<BaseColumnStatistics> generate_column_statistics<std::string>(const Table& table,
                                                                               const ColumnID column_id) {
-  std::unordered_set<std::string> distinct_set;
+  std::unordered_set<std::string_view> distinct_set;
 
   auto null_value_count = size_t{0};
 
-  auto min = std::string{};
-  auto max = std::string{};
+  auto min = std::string_view{};
+  auto max = std::string_view{};
 
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     const auto base_column = table.get_chunk(chunk_id)->get_column(column_id);
@@ -29,8 +31,8 @@ std::shared_ptr<BaseColumnStatistics> generate_column_statistics<std::string>(co
             min = column_value.value();
             max = column_value.value();
           } else {
-            min = std::min(min, column_value.value());
-            max = std::max(max, column_value.value());
+            min = std::min(min, std::string_view{column_value.value()});
+            max = std::max(max, std::string_view{column_value.value()});
           }
           distinct_set.insert(column_value.value());
         }
@@ -42,7 +44,7 @@ std::shared_ptr<BaseColumnStatistics> generate_column_statistics<std::string>(co
       table.row_count() > 0 ? static_cast<float>(null_value_count) / static_cast<float>(table.row_count()) : 0.0f;
   const auto distinct_count = static_cast<float>(distinct_set.size());
 
-  return std::make_shared<ColumnStatistics<std::string>>(null_value_ratio, distinct_count, min, max);
+  return std::make_shared<ColumnStatistics<std::string>>(null_value_ratio, distinct_count, std::string{min}, std::string{max});
 }
 
 }  // namespace opossum
