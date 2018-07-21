@@ -43,11 +43,16 @@ class HashTable : private Noncopyable {
       auto position = hash<T>(i, value);
       auto& element = _hashtables[i][position];
       if (element && value_equal(element->value, value)) {
-        element->row_ids.push_back(row_id);
+        if (std::holds_alternative<RowID>(element->row_ids)) {
+          // Previously, there was only one row id stored for this value. Convert the entry to a multi-row-id one.
+          element->row_ids = PosList{std::get<RowID>(element->row_ids), row_id};
+        } else {
+          std::get<PosList>(element->row_ids).push_back(row_id);
+        }
         return;
       }
     }
-    auto element = HashElement{value, pmr_vector<RowID>{row_id}};
+    auto element = HashElement{value, row_id};
     place(std::move(element), 0, 0);
   }
 
@@ -56,7 +61,7 @@ class HashTable : private Noncopyable {
   All the matching RowIDs are returned in row_ids.
   */
   template <typename S>
-  std::optional<std::reference_wrapper<const PosList>> get(S value) const {
+  std::optional<std::reference_wrapper<const std::variant<RowID, PosList>>> get(S value) const {
     for (size_t i = 0; i < NUMBER_OF_HASH_FUNCTIONS; i++) {
       auto position = hash<S>(i, value);
       const auto& element = _hashtables[i][position];
@@ -72,9 +77,12 @@ class HashTable : private Noncopyable {
   We use this struct internally for storing data. It should not be exposed to other classes.
   */
   struct HashElement : private Noncopyable {
+    HashElement(T v, RowID r) : value(v), row_ids(r) {}
     HashElement(T v, PosList r) : value(v), row_ids(r) {}
     T value;
-    PosList row_ids;
+
+    // In many cases, we only have a single entry per value. For TPC-H, only 5% would call
+    std::variant<RowID, PosList> row_ids;
   };
 
   /*
