@@ -42,16 +42,20 @@ class SQLTranslator final {
       const std::shared_ptr<SQLIdentifierResolverProxy>& external_sql_identifier_resolver_proxy = {},
       const std::shared_ptr<ParameterIDAllocator>& parameter_id_allocator = std::make_shared<ParameterIDAllocator>());
 
+  /**
+   * @return after translate_*(), contains the ParameterIDs allocated for the placeholders in the query
+   */
   const std::unordered_map<ValuePlaceholderID, ParameterID>& value_placeholders() const;
 
-  std::shared_ptr<SQLIdentifierResolver> sql_identifier_resolver() const;
-
-  std::vector<std::shared_ptr<AbstractLQPNode>> translate_sql(const std::string& sql);
+  /**
+   * Main entry point. Translate an AST produced by the SQLParser into LQPs, one for each SQL statement
+   */
   std::vector<std::shared_ptr<AbstractLQPNode>> translate_parser_result(const hsql::SQLParserResult& result);
 
-  std::shared_ptr<AbstractLQPNode> translate_statement(const hsql::SQLStatement& statement);
-  std::shared_ptr<AbstractLQPNode> translate_select_statement(const hsql::SelectStatement& select);
-
+  /**
+   * Translate an Expression AST into a Hyrise-expression. No columns can be referenced in expressions translated by
+   * this call.
+   */
   static std::shared_ptr<AbstractExpression> translate_hsql_expr(const hsql::Expr& hsql_expr);
 
  private:
@@ -85,6 +89,9 @@ class SQLTranslator final {
   struct SQLWildcard final {
     std::optional<std::string> table_name;
   };
+
+  std::shared_ptr<AbstractLQPNode> _translate_statement(const hsql::SQLStatement& statement);
+  std::shared_ptr<AbstractLQPNode> _translate_select_statement(const hsql::SelectStatement& select);
 
   TableSourceState _translate_table_ref(const hsql::TableRef& hsql_table_ref);
   TableSourceState _translate_table_origin(const hsql::TableRef& hsql_table_ref);

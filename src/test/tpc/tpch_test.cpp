@@ -67,8 +67,7 @@ TEST_P(TPCHTest, TPCHQueryTest) {
 
   // TPC-H 15 needs special patching as it contains a DROP VIEW that doesn't return a table as last statement
   if (query_idx == 15) {
-    Assert(sql_pipeline.statement_count() == 3u, "Expected 3 statements in TPC-H 15")
-    sql_pipeline.get_result_table();
+    Assert(sql_pipeline.statement_count() == 3u, "Expected 3 statements in TPC-H 15") sql_pipeline.get_result_table();
 
     hyrise_result_table = sql_pipeline.get_result_tables()[1];
 
@@ -79,7 +78,6 @@ TEST_P(TPCHTest, TPCHQueryTest) {
     sqlite_result_table = _sqlite_wrapper->execute_query(query);
     hyrise_result_table = sql_pipeline.get_result_table();
   }
-
 
   // EXPECT_TABLE_EQ crashes if one table is a nullptr
   ASSERT_TRUE(hyrise_result_table);

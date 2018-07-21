@@ -13,18 +13,24 @@ class SQLIdentifierResolver;
 class ParameterIDAllocator;
 
 /**
- * Used during SQLTranslation to resolve "outer expressions" in sub-Selects.
+ * Used during SQLTranslation to resolve identifiers from outer SELECTs in sub-SELECTs.
+ * The SQLIdentifierResolverProxy provides and tracks access to a SELECT statement's identifiers from ANY inner
+ *   query, no matter how deeply nested.
+ *
+ * Each nested SELECT is translated by a separate instance of the SQLTranslator. Each SQLTranslator has a
+ *   SQLIdentifierResolver to resolve identifiers from its of SELECT-statement and an optional
+ *   SQLIdentifierResolverProxy to resolve expressions from any parent SELECT.
+ *
  * Consider "SELECT (SELECT t1.a + b FROM t2) FROM t2". The SQLTranslator uses the SQLIdentifierResolverProxy to resolve
- * "t1.a" while translating the sub-Select.
+ *   "t1.a", since "t1.a" cannot be resolved using its own SQLIdentifierResolver.
  *
- * -> The SQLIdentifierResolverProxy wraps the SQLIdentifierResolver of the parent query and can thus access expressions
- *    from the outer query. Every access to an expression from an outer query is tracked, so the outer query can bind
- *    these expressions as parameters to the sub-Select.
+ * The ParameterIDAllocator is global to the entire statement translation and makes sure ParamterIDs are unique
+ *   across sub queries
  *
- * -> The ParameterIDAllocator is global to the entire statement translation and makes sure ParamterIDs are unique
- *    across sub queries
- *
- * -> To be able to access expressions from any parent of the parent query, the `outer_context_proxy` is used.
+ * To be able to access expressions from SELECT-statements above the direct parent statement, the outer_context_proxy
+ *   is used. If such a parent-parent query exists, `outer_context_proxy` points to its context. This nesting continues
+ *   to any expression from any outer query can be accessed from any inner query and accesses to expressions from outer
+ *   queries are tracked by the correct SQLIdentifierResolverProxy.
  */
 class SQLIdentifierResolverProxy final {
  public:

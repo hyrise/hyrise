@@ -48,13 +48,6 @@ std::shared_ptr<AbstractExpression> SQLIdentifierResolver::resolve_identifier_re
   return matching_expressions[0];
 }
 
-std::shared_ptr<AbstractExpression> SQLIdentifierResolver::resolve_identifier_strict(
-    const SQLIdentifier& identifier) const {
-  const auto expression = resolve_identifier_relaxed(identifier);
-  Assert(expression, "Couldn't resolve identifier "s + identifier.as_string());
-  return expression;
-}
-
 const std::optional<SQLIdentifier> SQLIdentifierResolver::get_expression_identifier(
     const std::shared_ptr<AbstractExpression>& expression) const {
   auto entry_iter = std::find_if(_entries.begin(), _entries.end(),

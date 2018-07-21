@@ -69,7 +69,7 @@ class SQLPipeline : public Noncopyable {
 
   // get_result_tables().back()
   std::shared_ptr<const Table> get_result_table();
-  
+
   // Executes all tasks, waits for them to finish, and returns the resulting tables
   const std::vector<std::shared_ptr<const Table>>& get_result_tables();
 

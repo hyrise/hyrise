@@ -50,8 +50,7 @@ const std::unordered_map<ArithmeticOperator, JitExpressionType> arithmetic_opera
     {ArithmeticOperator::Subtraction, JitExpressionType::Subtraction},
     {ArithmeticOperator::Multiplication, JitExpressionType::Multiplication},
     {ArithmeticOperator::Division, JitExpressionType::Division},
-    {ArithmeticOperator::Modulo, JitExpressionType::Modulo}
-};
+    {ArithmeticOperator::Modulo, JitExpressionType::Modulo}};
 
 const std::unordered_map<LogicalOperator, JitExpressionType> logical_operator_to_jit_expression = {
     {LogicalOperator::And, JitExpressionType::And}, {LogicalOperator::Or, JitExpressionType::Or}};

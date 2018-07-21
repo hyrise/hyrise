@@ -28,6 +28,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
+#include "sql/create_sql_parser_error_message.hpp"
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "testing_assert.hpp"
@@ -37,33 +38,23 @@
 using namespace opossum::expression_functional;  // NOLINT
 using namespace std::string_literals;            // NOLINT
 
-namespace {
-void load_test_tables() {
-  opossum::StorageManager::get().add_table("int_float", opossum::load_table("src/test/tables/int_float.tbl"));
-  opossum::StorageManager::get().add_table("int_string", opossum::load_table("src/test/tables/int_string.tbl"));
-  opossum::StorageManager::get().add_table("int_float2", opossum::load_table("src/test/tables/int_float2.tbl"));
-  opossum::StorageManager::get().add_table("int_float5", opossum::load_table("src/test/tables/int_float5.tbl"));
-  opossum::StorageManager::get().add_table("int_int_int", opossum::load_table("src/test/tables/int_int_int.tbl"));
-}
-
-std::shared_ptr<opossum::AbstractLQPNode> compile_query(const std::string& query) {
-  const auto lqps = opossum::SQLTranslator{}.translate_sql(query);
-  Assert(lqps.size() == 1, "Expected just one LQP");
-  return lqps.at(0);
-}
-}  // namespace
-
 namespace opossum {
 
 class SQLTranslatorTest : public ::testing::Test {
  public:
   void SetUp() override {
-    load_test_tables();
+    opossum::StorageManager::get().add_table("int_float", opossum::load_table("src/test/tables/int_float.tbl"));
+    opossum::StorageManager::get().add_table("int_string", opossum::load_table("src/test/tables/int_string.tbl"));
+    opossum::StorageManager::get().add_table("int_float2", opossum::load_table("src/test/tables/int_float2.tbl"));
+    opossum::StorageManager::get().add_table("int_float5", opossum::load_table("src/test/tables/int_float5.tbl"));
+    opossum::StorageManager::get().add_table("int_int_int", opossum::load_table("src/test/tables/int_int_int.tbl"));
+
     stored_table_node_int_float = StoredTableNode::make("int_float");
     stored_table_node_int_string = StoredTableNode::make("int_string");
     stored_table_node_int_float2 = StoredTableNode::make("int_float2");
     stored_table_node_int_float5 = StoredTableNode::make("int_float5");
     stored_table_node_int_int_int = StoredTableNode::make("int_int_int");
+
     int_float_a = stored_table_node_int_float->get_column("a");
     int_float_b = stored_table_node_int_float->get_column("b");
     int_string_a = stored_table_node_int_string->get_column("a");
@@ -78,6 +69,16 @@ class SQLTranslatorTest : public ::testing::Test {
   }
 
   void TearDown() override { StorageManager::reset(); }
+
+  std::shared_ptr<opossum::AbstractLQPNode> compile_query(const std::string& query) {
+    hsql::SQLParserResult parser_result;
+    hsql::SQLParser::parseSQLString(query, &parser_result);
+    Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
+
+    const auto lqps = opossum::SQLTranslator{}.translate_parser_result(parser_result);
+    Assert(lqps.size() == 1, "Expected just one LQP");
+    return lqps.at(0);
+  }
 
   std::shared_ptr<StoredTableNode> stored_table_node_int_float;
   std::shared_ptr<StoredTableNode> stored_table_node_int_string;
@@ -968,11 +969,16 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocationSimple) {
   /**
    * Test that ParameterIDs are correctly allocated to ValuePlaceholders and External Parameters
    */
+
+  const auto query = "SELECT (SELECT (SELECT int_float2.a + int_float.b) FROM int_float2) FROM int_float";
+
+  hsql::SQLParserResult parser_result;
+  hsql::SQLParser::parseSQLString(query, &parser_result);
+  Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
+
   SQLTranslator sql_translator;
 
-  const auto actual_lqp =
-      sql_translator.translate_sql("SELECT (SELECT (SELECT int_float2.a + int_float.b) FROM int_float2) FROM int_float")
-          .at(0);
+  const auto actual_lqp = sql_translator.translate_parser_result(parser_result).at(0);
 
   // clang-format off
   const auto parameter_int_float_b = parameter_(ParameterID{1}, int_float_b);
@@ -1004,16 +1010,18 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
   /**
    * Test that ParameterIDs are correctly allocated to ValuePlaceholders and External Parameters
    */
-  SQLTranslator sql_translator;
+  const auto query =
+      "SELECT ?, "
+      "  (SELECT MIN(b) + int_float.a FROM int_float2), "
+      "  (SELECT MAX(b) + int_float.b + (SELECT int_float2.a + int_float.b) FROM int_float2)"
+      "FROM int_float WHERE a > ?";
 
-  const auto actual_lqp =
-      sql_translator
-          .translate_sql(
-              "SELECT ?, "
-              "  (SELECT MIN(b) + int_float.a FROM int_float2), "
-              "  (SELECT MAX(b) + int_float.b + (SELECT int_float2.a + int_float.b) FROM int_float2)"
-              "FROM int_float WHERE a > ?")
-          .at(0);
+  hsql::SQLParserResult parser_result;
+  hsql::SQLParser::parseSQLString(query, &parser_result);
+  Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
+
+  SQLTranslator sql_translator;
+  const auto actual_lqp = sql_translator.translate_parser_result(parser_result).at(0);
 
   // clang-format off
   const auto parameter_int_float_a = parameter_(ParameterID{2}, int_float_a);
@@ -1071,12 +1079,14 @@ TEST_F(SQLTranslatorTest, ParameterIDAllocation) {
 }
 
 TEST_F(SQLTranslatorTest, UseMvcc) {
-  const auto lqp_a = SQLTranslator{UseMvcc::No}
-                         .translate_sql("SELECT * FROM int_float, int_float2 WHERE int_float.a = int_float2.b")
-                         .at(0);
-  const auto lqp_b = SQLTranslator{UseMvcc::Yes}
-                         .translate_sql("SELECT * FROM int_float, int_float2 WHERE int_float.a = int_float2.b")
-                         .at(0);
+  const auto query = "SELECT * FROM int_float, int_float2 WHERE int_float.a = int_float2.b";
+
+  hsql::SQLParserResult parser_result;
+  hsql::SQLParser::parseSQLString(query, &parser_result);
+  Assert(parser_result.isValid(), create_sql_parser_error_message(query, parser_result));
+
+  const auto lqp_a = SQLTranslator{UseMvcc::No}.translate_parser_result(parser_result).at(0);
+  const auto lqp_b = SQLTranslator{UseMvcc::Yes}.translate_parser_result(parser_result).at(0);
 
   EXPECT_FALSE(lqp_is_validated(lqp_a));
   EXPECT_TRUE(lqp_is_validated(lqp_b));
@@ -1351,8 +1361,6 @@ TEST_F(SQLTranslatorTest, OperatorPrecedence) {
 }
 
 TEST_F(SQLTranslatorTest, CatchInputErrors) {
-  EXPECT_THROW(compile_query("SELEC *;"), InvalidInputException);
-  EXPECT_THROW(compile_query("SELECT * FRO int_float;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT no_such_table.* FROM int_float;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT no_such_function(5+3);"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT no_such_column FROM int_float;"), InvalidInputException);

@@ -315,8 +315,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
               // `a IN (x,y,z)` is supposed to have the same semantics as `a = x OR a = y OR a = z`, so we use `Equals`
               // here as well.
               EqualsEvaluator{}(result_values[chunk_offset],  // NOLINT - complains about missing spaces before "{"...
-                                list.value(list_element_idx),
-                                left_view.value(chunk_offset));
+                                list.value(list_element_idx), left_view.value(chunk_offset));
               if (result_values[chunk_offset]) break;
 
               list_contains_null |= list.is_null(list_element_idx);

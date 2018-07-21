@@ -87,7 +87,11 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
     // However, that part is not yet parsed, so we need to parse the raw string from the PreparedStatement.
     Assert(_prepared_statements, "Cannot prepare statement without prepared statement cache.");
 
-    lqp_roots = sql_translator.translate_sql(prepared_statement->query);
+    hsql::SQLParserResult parser_result;
+    hsql::SQLParser::parseSQLString(prepared_statement->query, &parser_result);
+    AssertInput(parser_result.isValid(), create_sql_parser_error_message(prepared_statement->query, parser_result));
+
+    lqp_roots = sql_translator.translate_parser_result(parser_result);
   } else {
     lqp_roots = sql_translator.translate_parser_result(*parsed_sql);
   }

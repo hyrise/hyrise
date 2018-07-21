@@ -132,37 +132,23 @@ const std::unordered_map<ValuePlaceholderID, ParameterID>& SQLTranslator::value_
   return _parameter_id_allocator->value_placeholders();
 }
 
-std::shared_ptr<SQLIdentifierResolver> SQLTranslator::sql_identifier_resolver() const {
-  return _sql_identifier_resolver;
-}
-
-std::vector<std::shared_ptr<AbstractLQPNode>> SQLTranslator::translate_sql(const std::string& sql) {
-  hsql::SQLParserResult parser_result;
-  hsql::SQLParser::parse(sql, &parser_result);
-
-  AssertInput(parser_result.isValid(), create_sql_parser_error_message(sql, parser_result));
-  AssertInput(parser_result.size() > 0, "Cannot create empty SQLPipeline.");
-
-  return translate_parser_result(parser_result);
-}
-
 std::vector<std::shared_ptr<AbstractLQPNode>> SQLTranslator::translate_parser_result(
     const hsql::SQLParserResult& result) {
   std::vector<std::shared_ptr<AbstractLQPNode>> result_nodes;
   const std::vector<hsql::SQLStatement*>& statements = result.getStatements();
 
   for (const hsql::SQLStatement* stmt : statements) {
-    auto result_node = translate_statement(*stmt);
+    auto result_node = _translate_statement(*stmt);
     result_nodes.push_back(result_node);
   }
 
   return result_nodes;
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_statement(const hsql::SQLStatement& statement) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_statement(const hsql::SQLStatement& statement) {
   switch (statement.type()) {
     case hsql::kStmtSelect:
-      return translate_select_statement(static_cast<const hsql::SelectStatement&>(statement));
+      return _translate_select_statement(static_cast<const hsql::SelectStatement&>(statement));
     case hsql::kStmtInsert:
       return _translate_insert(static_cast<const hsql::InsertStatement&>(statement));
     case hsql::kStmtDelete:
@@ -180,7 +166,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_statement(const hsql::
   }
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::translate_select_statement(const hsql::SelectStatement& select) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(const hsql::SelectStatement& select) {
   // SQL Orders of Operations: http://www.bennadel.com/blog/70-sql-query-order-of-operations.htm
   // 1. FROM clause (incl. JOINs and subselects that are part of this)
   // 2. WHERE clause
@@ -272,7 +258,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
   if (insert.type == hsql::kInsertSelect) {
     // `INSERT INTO newtable SELECT ... FROM oldtable WHERE condition`
     AssertInput(insert.select, "INSERT INTO ... SELECT ...: No SELECT statement given");
-    insert_data_node = translate_select_statement(*insert.select);
+    insert_data_node = _translate_select_statement(*insert.select);
     column_expressions = insert_data_node->column_expressions();
 
   } else {
@@ -464,11 +450,11 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
       table_name = hsql_table_ref.alias->name;
 
       SQLTranslator sub_select_translator{_use_mvcc};
-      lqp = sub_select_translator.translate_select_statement(*hsql_table_ref.select);
+      lqp = sub_select_translator._translate_select_statement(*hsql_table_ref.select);
 
       for (const auto& sub_select_expression : lqp->column_expressions()) {
         const auto identifier =
-            sub_select_translator.sql_identifier_resolver()->get_expression_identifier(sub_select_expression);
+            sub_select_translator._sql_identifier_resolver->get_expression_identifier(sub_select_expression);
 
         // Make sure each column from the SubSelect has a name
         if (identifier) {
@@ -880,7 +866,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::Show
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::CreateStatement& create_statement) {
   switch (create_statement.type) {
     case hsql::CreateType::kCreateView: {
-      auto lqp = translate_select_statement((const hsql::SelectStatement&)*create_statement.select);
+      auto lqp = _translate_select_statement((const hsql::SelectStatement&)*create_statement.select);
 
       std::unordered_map<ColumnID, std::string> column_names;
 
@@ -1218,10 +1204,12 @@ std::shared_ptr<LQPSelectExpression> SQLTranslator::_translate_hsql_sub_select(
       sql_identifier_resolver, _parameter_id_allocator, _external_sql_identifier_resolver_proxy);
 
   auto sub_select_translator = SQLTranslator{_use_mvcc, sql_identifier_proxy, _parameter_id_allocator};
-  const auto sub_select_lqp = sub_select_translator.translate_select_statement(select);
+  const auto sub_select_lqp = sub_select_translator._translate_select_statement(select);
   const auto parameter_count = sql_identifier_proxy->accessed_expressions().size();
+
   auto parameter_ids = std::vector<ParameterID>{};
   parameter_ids.reserve(parameter_count);
+
   auto parameter_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   parameter_expressions.reserve(parameter_count);
 
