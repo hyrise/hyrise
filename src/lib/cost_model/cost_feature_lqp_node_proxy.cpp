@@ -57,7 +57,7 @@ CostFeatureVariant CostFeatureLQPNodeProxy::_extract_feature_from_predicate_node
       std::dynamic_pointer_cast<BetweenExpression>(predicate_node->predicate)) {
     return PredicateCondition::Between;
   }
-  goiigodoidjfsdoifjsodijfsdoifjsdf const auto operator_predicates = OperatorScanPredicate::from_expression(
+  const auto operator_predicates = OperatorScanPredicate::from_expression(
       *std::static_pointer_cast<PredicateNode>(_node)->predicate, *_node->left_input());
   Assert(operator_predicates, "Predicate too complex to extract a CostFeature from");
   const auto& operator_predicate = operator_predicates->at(0);
