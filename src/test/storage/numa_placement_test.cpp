@@ -76,7 +76,7 @@ class NUMAPlacementTest : public BaseTest {
 
 // Tests the chunk migration algorithm without the integrated loop
 // of NUMAPlacementManager.
-TEST_F(NUMAPlacementTest, ChunkMigration) {
+TEST_F(NUMAPlacementTest, /* #646 */ DISABLED_ChunkMigration) {
   const auto& table = StorageManager::get().get_table("table");
   const auto& options = NUMAPlacementManager::get().options();
 
@@ -104,7 +104,7 @@ TEST_F(NUMAPlacementTest, ChunkMigration) {
 }
 
 // Tests the integrated loop of NUMAPlacementManager.
-TEST_F(NUMAPlacementTest, IntegratedLoopTest) {
+TEST_F(NUMAPlacementTest, /* #646 */ DISABLED_IntegratedLoopTest) {
   const auto& table = StorageManager::get().get_table("table");
   const auto& options = NUMAPlacementManager::get().options();
 
