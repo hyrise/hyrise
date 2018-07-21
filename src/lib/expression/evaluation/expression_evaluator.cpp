@@ -96,6 +96,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
     case ExpressionType::LQPSelect:
       Fail("Can't evaluate a LQP expression, those need to be translated by the LQPTranslator first.");
   }
+  Fail("GCC thinks this is reachable");
 }
 
 template <typename Result>
@@ -115,6 +116,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_arithme
     case ArithmeticOperator::Modulo:         return _evaluate_binary_with_functor_based_null_logic<Result, ModuloEvaluator>(left, right);  // NOLINT
   }
   // clang-format on
+  Fail("GCC thinks this is reachable");
 }
 template <>
 std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
@@ -392,6 +394,7 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
       return _evaluate_is_null_expression<ExpressionEvaluator::Bool>(
           static_cast<const IsNullExpression&>(predicate_expression));
   }
+  Fail("GCC thinks this is reachable");
 }
 
 template <typename Result>
@@ -569,6 +572,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_functio
       }
       // clang-format on
   }
+  Fail("GCC thinks this is reachable");
 }
 
 template <>
@@ -589,6 +593,7 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_ex
     case DatetimeComponent::Second:
       Fail("Hour, Minute and Second not available in String Datetimes");
   }
+  Fail("GCC thinks this is reachable");
 }
 
 template <typename Result>
@@ -775,6 +780,8 @@ ExpressionEvaluator::_evaluate_logical_expression<ExpressionEvaluator::Bool>(con
     case LogicalOperator::And: return _evaluate_binary_with_functor_based_null_logic<ExpressionEvaluator::Bool, TernaryAndEvaluator>(left, right);  // NOLINT
   }
   // clang-format on
+
+  Fail("GCC thinks this is reachable");
 }
 
 template <typename Result>

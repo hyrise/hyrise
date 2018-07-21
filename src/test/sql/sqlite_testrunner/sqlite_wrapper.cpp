@@ -107,7 +107,7 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
   for (auto column_id = ColumnID{0}; column_id < table.column_definitions().size(); column_id++) {
     create_table_query << table.column_definitions()[column_id].name << " " << col_types[column_id];
 
-    if (column_id + 1 < table.column_definitions().size()) {
+    if (column_id + 1u < table.column_definitions().size()) {
       create_table_query << ", ";
     }
   }
@@ -131,7 +131,7 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
           insert_query << value;
         }
 
-        if ((column_id + 1) < table.column_count()) {
+        if ((column_id + 1u) < table.column_count()) {
           insert_query << ", ";
         }
       }

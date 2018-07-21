@@ -942,7 +942,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
           return PredicateNode::make(not_equals_(expression, 0), current_node);
         }
       }
-    }
+    } break;
 
     case ExpressionType::Exists: {
       current_node = _add_expressions_if_unavailable(current_node, {expression});
@@ -952,6 +952,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
     default:
       FailInput("Cannot use this ExpressionType as predicate");
   }
+
+  Fail("GCC thinks this is reachable");
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_prune_expressions(
