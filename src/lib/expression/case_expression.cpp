@@ -26,7 +26,9 @@ std::string CaseExpression::as_column_name() const {
   return stream.str();
 }
 
-DataType CaseExpression::data_type() const { return expression_common_type(then()->data_type(), otherwise()->data_type()); }
+DataType CaseExpression::data_type() const {
+  return expression_common_type(then()->data_type(), otherwise()->data_type());
+}
 
 std::shared_ptr<AbstractExpression> CaseExpression::deep_copy() const {
   return std::make_shared<CaseExpression>(when()->deep_copy(), then()->deep_copy(), otherwise()->deep_copy());
