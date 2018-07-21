@@ -615,7 +615,9 @@ const char* const tpch_query_15 =
 
       SELECT s_suppkey, s_name, s_address, s_phone, total_revenue FROM supplier, revenue
       WHERE s_suppkey = supplier_no AND total_revenue = (SELECT max(total_revenue)
-      FROM revenue) ORDER BY s_suppkey;)";
+      FROM revenue) ORDER BY s_suppkey;
+
+      drop view revenue;)";
 
 /**
  * TPC-H 16

@@ -183,22 +183,32 @@ const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_
 }
 
 std::shared_ptr<const Table> SQLPipeline::get_result_table() {
+  const auto& tables = get_result_tables();
+  Assert(!tables.empty(), "No result tables");
+  return tables.back();
+}
+
+const std::vector<std::shared_ptr<const Table>>& SQLPipeline::get_result_tables() {
   if (_pipeline_was_executed) {
-    return _result_table;
+    return _result_tables;
   }
+
+  _result_tables.reserve(_sql_pipeline_statements.size());
 
   for (auto& pipeline_statement : _sql_pipeline_statements) {
     pipeline_statement->get_result_table();
     if (_transaction_context && _transaction_context->aborted()) {
       _failed_pipeline_statement = pipeline_statement;
-      return nullptr;
+      _result_tables.clear();
+      return _result_tables;
     }
+
+    _result_tables.emplace_back(pipeline_statement->get_result_table());
   }
 
-  _result_table = _sql_pipeline_statements.back()->get_result_table();
   _pipeline_was_executed = true;
 
-  return _result_table;
+  return _result_tables;
 }
 
 std::shared_ptr<TransactionContext> SQLPipeline::transaction_context() const { return _transaction_context; }

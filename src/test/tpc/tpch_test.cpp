@@ -61,16 +61,31 @@ TEST_P(TPCHTest, TPCHQueryTest) {
 
   SCOPED_TRACE("TPC-H " + std::to_string(query_idx));
 
-  const auto sqlite_result_table = _sqlite_wrapper->execute_query(query);
+  std::shared_ptr<const Table> sqlite_result_table, hyrise_result_table;
+
   auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline();
 
-  const auto result_table = sql_pipeline.get_result_table();
+  // TPC-H 15 needs special patching as it contains a DROP VIEW that doesn't return a table as last statement
+  if (query_idx == 15) {
+    Assert(sql_pipeline.statement_count() == 3u, "Expected 3 statements in TPC-H 15")
+    sql_pipeline.get_result_table();
 
-  // EXPECT_TABLE_EQ would crash if one table is a nullptr
-  ASSERT_TRUE(result_table);
+    hyrise_result_table = sql_pipeline.get_result_tables()[1];
+
+    // Omit the "DROP VIEW" from the SQLite query
+    const auto sqlite_query = sql_pipeline.get_sql_strings()[0] + sql_pipeline.get_sql_strings()[1];
+    sqlite_result_table = _sqlite_wrapper->execute_query(sqlite_query);
+  } else {
+    sqlite_result_table = _sqlite_wrapper->execute_query(query);
+    hyrise_result_table = sql_pipeline.get_result_table();
+  }
+
+
+  // EXPECT_TABLE_EQ crashes if one table is a nullptr
+  ASSERT_TRUE(hyrise_result_table);
   ASSERT_TRUE(sqlite_result_table);
 
-  EXPECT_TABLE_EQ(result_table, sqlite_result_table, OrderSensitivity::No, TypeCmpMode::Lenient,
+  EXPECT_TABLE_EQ(hyrise_result_table, sqlite_result_table, OrderSensitivity::No, TypeCmpMode::Lenient,
                   FloatComparisonMode::RelativeDifference);
 }
 
