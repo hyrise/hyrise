@@ -122,7 +122,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_index_scan(
     const std::shared_ptr<PredicateNode>& predicate_node, const AllParameterVariant& value, const ColumnID column_id,
-    const std::shared_ptr<AbstractOperator> input_operator) const {
+    const std::shared_ptr<AbstractOperator>& input_operator) const {
   DebugAssert(
       is_variant(value),
       "We do not support IndexScan on two-column predicates. Fail! The optimizer should have dealt with the problem.");
@@ -289,7 +289,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
     auto current_column_id = static_cast<ColumnID::base_type>(groupby_columns.size());
 
     for (auto& aggregate_expression : aggregate_expressions) {
-      Assert(aggregate_expression->aggregate_function_arguments().size(), "Aggregate: empty expression list");
+      Assert(!aggregate_expression->aggregate_function_arguments().empty(), "Aggregate: empty expression list");
       DebugAssert(aggregate_expression->type() == ExpressionType::Function, "Expression is not a function.");
 
       // Do not project for COUNT(*)

@@ -17,7 +17,7 @@
 
 namespace opossum {
 
-ExportCsv::ExportCsv(const std::shared_ptr<const AbstractOperator> in, const std::string& filename)
+ExportCsv::ExportCsv(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename)
     : AbstractReadOnlyOperator(OperatorType::ExportCsv, in), _filename(filename) {}
 
 const std::string ExportCsv::name() const { return "ExportCSV"; }

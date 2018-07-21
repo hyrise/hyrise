@@ -16,8 +16,8 @@ namespace opossum {
  */
 class Difference : public AbstractReadOnlyOperator {
  public:
-  Difference(const std::shared_ptr<const AbstractOperator> left_in,
-             const std::shared_ptr<const AbstractOperator> right_in);
+  Difference(const std::shared_ptr<const AbstractOperator>& left_in,
+             const std::shared_ptr<const AbstractOperator>& right_in);
 
   const std::string name() const override;
 

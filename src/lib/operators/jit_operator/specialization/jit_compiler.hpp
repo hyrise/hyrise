@@ -35,7 +35,7 @@ class JitCompiler {
   using ModuleHandle = CompileLayer::ModuleHandleT;
 
  public:
-  explicit JitCompiler(const std::shared_ptr<llvm::LLVMContext>& context);
+  JitCompiler();
   ~JitCompiler();
 
   // Adds a module to the LLVM just-in-time compiler and compiles it to machine code immediately
@@ -74,7 +74,6 @@ class JitCompiler {
   // Checks LLVM error codes and fails on actual errors
   void _handle_error(llvm::Error error);
 
-  const std::shared_ptr<llvm::LLVMContext> _context;
   const std::unique_ptr<llvm::TargetMachine> _target_machine;
   const llvm::DataLayout _data_layout;
   ObjectLayer _object_layer;

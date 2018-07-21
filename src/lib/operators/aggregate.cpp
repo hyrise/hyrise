@@ -19,9 +19,9 @@
 
 namespace opossum {
 
-Aggregate::Aggregate(const std::shared_ptr<AbstractOperator> in,
+Aggregate::Aggregate(const std::shared_ptr<AbstractOperator>& in,
                      const std::vector<AggregateColumnDefinition>& aggregates,
-                     const std::vector<ColumnID> groupby_column_ids)
+                     const std::vector<ColumnID>& groupby_column_ids)
     : AbstractReadOnlyOperator(OperatorType::Aggregate, in),
       _aggregates(aggregates),
       _groupby_column_ids(groupby_column_ids) {
@@ -83,14 +83,14 @@ void Aggregate::_on_cleanup() {
 Visitor context for the partitioning/grouping visitor
 */
 struct GroupByContext : ColumnVisitableContext {
-  GroupByContext(std::shared_ptr<const Table> t, ChunkID chunk, ColumnID column,
-                 std::shared_ptr<std::vector<AggregateKey>> keys)
+  GroupByContext(const std::shared_ptr<const Table>& t, ChunkID chunk, ColumnID column,
+                 const std::shared_ptr<std::vector<AggregateKey>>& keys)
       : table_in(t), chunk_id(chunk), column_id(column), hash_keys(keys) {}
 
   // constructor for use in ReferenceColumn::visit_dereferenced
-  GroupByContext(std::shared_ptr<BaseColumn>, const std::shared_ptr<const Table> referenced_table,
-                 std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
-                 std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets)
+  GroupByContext(const std::shared_ptr<BaseColumn>&, const std::shared_ptr<const Table>& referenced_table,
+                 const std::shared_ptr<ColumnVisitableContext>& base_context, ChunkID chunk_id,
+                 const std::shared_ptr<std::vector<ChunkOffset>>& chunk_offsets)
       : table_in(referenced_table),
         chunk_id(chunk_id),
         column_id(std::static_pointer_cast<GroupByContext>(base_context)->column_id),
@@ -109,13 +109,13 @@ Visitor context for the AggregateVisitor.
 */
 template <typename ColumnType, typename AggregateType>
 struct AggregateContext : ColumnVisitableContext {
-  AggregateContext() {}
-  explicit AggregateContext(std::shared_ptr<GroupByContext> base_context) : groupby_context(base_context) {}
+  AggregateContext() = default;
+  explicit AggregateContext(const std::shared_ptr<GroupByContext>& base_context) : groupby_context(base_context) {}
 
   // constructor for use in ReferenceColumn::visit_dereferenced
-  AggregateContext(std::shared_ptr<BaseColumn>, const std::shared_ptr<const Table>,
-                   std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
-                   std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets)
+  AggregateContext(const std::shared_ptr<BaseColumn>&, const std::shared_ptr<const Table>&,
+                   const std::shared_ptr<ColumnVisitableContext>& base_context, ChunkID chunk_id,
+                   const std::shared_ptr<std::vector<ChunkOffset>>& chunk_offsets)
       : groupby_context(std::static_pointer_cast<AggregateContext>(base_context)->groupby_context),
         results(std::static_pointer_cast<AggregateContext>(base_context)->results) {
     groupby_context->chunk_id = chunk_id;
@@ -240,7 +240,7 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Su
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, std::optional<AggregateType> current_aggregate) {
       // add new value to sum
-      return new_value + (!current_aggregate ? 0 : *current_aggregate);
+      return new_value + (!current_aggregate ? 0 : *current_aggregate);  // NOLINT - false positive hicpp-use-nullptr
     };
   }
 };
@@ -250,7 +250,7 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Av
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, std::optional<AggregateType> current_aggregate) {
       // add new value to sum
-      return new_value + (!current_aggregate ? 0 : *current_aggregate);
+      return new_value + (!current_aggregate ? 0 : *current_aggregate);  // NOLINT - false positive hicpp-use-nullptr
     };
   }
 };

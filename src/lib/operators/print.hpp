@@ -15,7 +15,7 @@ enum PrintFlags { PrintIgnoreEmptyChunks = 1 << 0, PrintMvcc = 1 << 1 };
  */
 class Print : public AbstractReadOnlyOperator {
  public:
-  explicit Print(const std::shared_ptr<const AbstractOperator> in, std::ostream& out = std::cout, uint32_t flags = 0);
+  explicit Print(const std::shared_ptr<const AbstractOperator>& in, std::ostream& out = std::cout, uint32_t flags = 0);
 
   const std::string name() const override;
 
@@ -23,7 +23,8 @@ class Print : public AbstractReadOnlyOperator {
   static void print(std::shared_ptr<const AbstractOperator> in, uint32_t flags = 0, std::ostream& out = std::cout);
 
  protected:
-  std::vector<uint16_t> _column_string_widths(uint16_t min, uint16_t max, std::shared_ptr<const Table> t) const;
+  std::vector<uint16_t> _column_string_widths(uint16_t min, uint16_t max,
+                                              const std::shared_ptr<const Table>& table) const;
   std::string _truncate_cell(const AllTypeVariant& cell, uint16_t max_width) const;
   std::shared_ptr<const Table> _on_execute() override;
   std::shared_ptr<AbstractOperator> _on_recreate(

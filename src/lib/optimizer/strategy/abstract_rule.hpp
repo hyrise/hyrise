@@ -29,7 +29,7 @@ class AbstractRule {
    * IMPORTANT: Takes a copy of the node ptr because applying this rule to inputs of this node might remove this node
    * from the tree, which might result in this node being deleted if we don't take a copy of the shared_ptr here.
    */
-  bool _apply_to_inputs(std::shared_ptr<AbstractLQPNode> node);
+  bool _apply_to_inputs(std::shared_ptr<AbstractLQPNode> node);  // NOLINT
 };
 
 }  // namespace opossum

@@ -34,7 +34,7 @@ class ExportCsv : public AbstractReadOnlyOperator {
    *                    the gettable operator.
    * @param filename    Location and name of the output file. Additionally a file called <filename>.meta is created.
    */
-  explicit ExportCsv(const std::shared_ptr<const AbstractOperator> in, const std::string& filename);
+  explicit ExportCsv(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename);
 
   const std::string name() const override;
 
@@ -93,7 +93,7 @@ class ExportCsv : public AbstractReadOnlyOperator {
   // Name of the output file
   const std::string _filename;
 
-  static void _generate_meta_info_file(const std::shared_ptr<const Table>& table, const std::string& meta_file);
+  static void _generate_meta_info_file(const std::shared_ptr<const Table>& table, const std::string& meta_file_path);
   static void _generate_content_file(const std::shared_ptr<const Table>& table, const std::string& csv_file);
 };
 }  // namespace opossum
