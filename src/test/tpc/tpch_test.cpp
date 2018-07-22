@@ -9,7 +9,6 @@
 
 #include "logical_query_plan/lqp_translator.hpp"
 #include "operators/abstract_operator.hpp"
-#include "operators/jit_operator/jit_aware_lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/operator_task.hpp"
 #include "sql/sql_pipeline.hpp"

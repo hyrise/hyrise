@@ -1094,7 +1094,11 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_co
     for (const auto& argument_result : argument_results) {
       argument_result->as_view([&](const auto& argument_view) {
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < result_size; ++chunk_offset) {
-          result_nulls[chunk_offset] = result_nulls[chunk_offset] || argument_view.is_null(chunk_offset);
+          // This was `result_nulls[chunk_offset] = result_nulls[chunk_offset] || argument_view.is_null(chunk_offset);`
+          // but valgrind reported access to uninitialized memory in release builds (and ONLY in them!). I can't see
+          // how there was anything uninitialised given the `result_nulls.resize(result_size, false);` above.
+          // Anyway, changing it to the line below silences valgrind.
+          if (argument_view.is_null(chunk_offset)) result_nulls[chunk_offset] = true;
         }
       });
     }
