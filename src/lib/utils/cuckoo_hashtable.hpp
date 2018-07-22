@@ -83,6 +83,8 @@ class HashTable : private Noncopyable {
     T value;
 
     // In many cases, we only have a single entry per value. For TPC-H, only 5% would call
+    // `PosList::push_back`. By having this variant, we can save us the cost of allocating
+    // heap storage for a single value.
     std::variant<RowID, PosList> row_ids;
   };
 
