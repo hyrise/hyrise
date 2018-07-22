@@ -65,8 +65,8 @@ std::shared_ptr<PosList> ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk
         auto left_column_iterable = create_iterable_from_column<LeftType>(typed_left_column);
         auto right_column_iterable = create_iterable_from_column<RightType>(typed_right_column);
 
-        left_column_iterable.with_iterators([&](auto left_it, auto left_end) {
-          right_column_iterable.with_iterators([&](auto right_it, auto right_end) {
+        left_column_iterable.with_iterators([&, chunk_id](auto left_it, auto left_end) {
+          right_column_iterable.with_iterators([&, chunk_id](auto right_it, auto right_end) {
             with_comparator(_predicate_condition, [&](auto comparator) {
               this->_binary_scan(comparator, left_it, left_end, right_it, chunk_id, *matches_out);
             });
