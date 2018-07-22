@@ -133,11 +133,11 @@ void JoinNestedLoop::_join_two_untyped_columns(const std::shared_ptr<const BaseC
         auto iterable_left = create_iterable_from_column<LeftType>(typed_left_column);
         auto iterable_right = create_iterable_from_column<RightType>(typed_right_column);
 
-        iterable_left.with_iterators([&, params_copy=params](auto left_it, auto left_end) {
-          iterable_right.with_iterators([&, params_copy=params](auto right_it, auto right_end) {
-            with_comparator(params_copy.predicate_condition, [&, params_copy=params](auto comparator) {
+        iterable_left.with_iterators([&, params_copy = params](auto left_it, auto left_end) {
+          iterable_right.with_iterators([&, params_copy2 = params_copy](auto right_it, auto right_end) {
+            with_comparator(params_copy.predicate_condition, [&, params_copy3 = params_copy2](auto comparator) {
               this->_join_two_typed_columns(comparator, left_it, left_end, right_it, right_end, chunk_id_left,
-                                      chunk_id_right, params_copy);
+                                            chunk_id_right, const_cast<JoinNestedLoop::JoinParams>(params_copy3));
             });
           });
         });
