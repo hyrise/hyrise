@@ -1060,7 +1060,7 @@ std::shared_ptr<ExpressionResult<std::string>> ExpressionEvaluator::_evaluate_co
   for (const auto& argument : arguments) {
     // CONCAT with a NULL literal argument -> result is NULL
     if (argument->data_type() == DataType::Null) {
-      auto null_value_result = ExpressionResult<std::string>{{{}}, {true}};
+      auto null_value_result = ExpressionResult<std::string>{{std::string{}}, {true}};
       return std::make_shared<ExpressionResult<std::string>>(null_value_result);
     }
 

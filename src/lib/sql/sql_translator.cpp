@@ -344,16 +344,16 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
   return InsertNode::make(table_name, insert_data_node);
 }
 
-std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::DeleteStatement& delete_) {
+std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::DeleteStatement& delete_statement) {
   const auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
-  auto data_to_delete_node = _translate_stored_table(delete_.tableName, sql_identifier_resolver);
+  auto data_to_delete_node = _translate_stored_table(delete_statement.tableName, sql_identifier_resolver);
 
-  if (delete_.expr) {
-    const auto delete_where_expression = _translate_hsql_expr(*delete_.expr, sql_identifier_resolver);
+  if (delete_statement.expr) {
+    const auto delete_where_expression = _translate_hsql_expr(*delete_statement.expr, sql_identifier_resolver);
     data_to_delete_node = _translate_predicate_expression(delete_where_expression, data_to_delete_node);
   }
 
-  return DeleteNode::make(delete_.tableName, data_to_delete_node);
+  return DeleteNode::make(delete_statement.tableName, data_to_delete_node);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::UpdateStatement& update) {

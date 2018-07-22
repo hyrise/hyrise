@@ -107,7 +107,7 @@ class SQLTranslator final {
   void _translate_limit(const hsql::LimitDescription& limit);
 
   std::shared_ptr<AbstractLQPNode> _translate_insert(const hsql::InsertStatement& insert);
-  std::shared_ptr<AbstractLQPNode> _translate_delete(const hsql::DeleteStatement& delete_);
+  std::shared_ptr<AbstractLQPNode> _translate_delete(const hsql::DeleteStatement& delete_statement);
   std::shared_ptr<AbstractLQPNode> _translate_update(const hsql::UpdateStatement& update);
 
   std::shared_ptr<AbstractLQPNode> _translate_create(const hsql::CreateStatement& create_statement);
