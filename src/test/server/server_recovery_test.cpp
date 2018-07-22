@@ -1,8 +1,15 @@
+#if __has_include(<filesystem>)
+#include <filesystem>
+namespace filesystem = std::filesystem;
+#else
+#include <experimental/filesystem>
+namespace filesystem = std::experimental::filesystem;
+#endif
+
 #include <pqxx/pqxx>
 
 #include <thread>
 #include <exception>
-#include <boost/filesystem.hpp>
 
 #include "base_test.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -13,99 +20,125 @@
 
 namespace opossum {
 
+std::string str(Logger::Implementation implementation) {
+  switch (implementation) {
+    case Logger::Implementation::Simple: return "SimpleLogger";
+    case Logger::Implementation::GroupCommit: return "GroupCommitLogger";
+    default: return "unknown";
+  }
+}
+
 class ServerRecoveryTest : public BaseTestWithParam<Logger::Implementation> {
  protected:
   
   static constexpr char _folder[6] = "data/";
 
-  void start_server(Logger::Implementation implementation) {
-    StorageManager::get().reset();
-    SQLQueryCache<SQLQueryPlan>::get().clear();
-
-    // just to be sure, since it is essential for these tests
-    EXPECT_FALSE(StorageManager::get().has_table("a_table"));
-
-    // Set scheduler so that the server can execute the tasks on separate threads.
-    CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_numa_topology()));
-
-    uint16_t server_port = 0;
-    std::mutex mutex{};
-    std::condition_variable cv{};
-
-    // run on port 0 so the server can pick a free one
-    auto server_runner = [&](boost::asio::io_service& io_service) {
-      Server server{io_service, /* port = */ 0, test_data_path + _folder, implementation};
-
-      {
-        std::unique_lock<std::mutex> lock{mutex};
-        server_port = server.get_port_number();
-      }
-
-      cv.notify_one();
-
-      io_service.run();
-    };
-
-    _io_service = std::make_unique<boost::asio::io_service>();
-    _server_thread = std::make_unique<std::thread>(server_runner, std::ref(*_io_service));
-
-    // We need to wait here for the server to have started so we can get its port, which must be set != 0
-    {
-      std::unique_lock<std::mutex> lock{mutex};
-      cv.wait(lock, [&] { return server_port != 0; });
-    }
-
-    // Get randomly assigned port number for client connection
-    _connection_string = "hostaddr=127.0.0.1 port=" + std::to_string(server_port);
-
-    // Logger needs to be reconstructed since it gets deconstructed on every server shutdown
-    Logger::_reconstruct();
-  }
-
-  void shutdown_server() {
-    // Give the server time to shut down gracefully before force-closing the socket it's working on
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-    _io_service->stop();
-    _server_thread->join();
-  }
-
-  void TearDown() override {
-    shutdown_server();
-    Logger::_set_implementation(Logger::Implementation::No);
-    Logger::delete_log_files();
-  }
-
   void restart_server(Logger::Implementation implementation) {
-    shutdown_server();
-    // set NoLogger since the server expects NoLogger on startup
-    Logger::_set_implementation(Logger::Implementation::No);
+    terminate_server();
     start_server(implementation);
   }
 
-  std::unique_ptr<boost::asio::io_service> _io_service;
-  std::unique_ptr<std::thread> _server_thread;
+  void TearDown() override {
+    terminate_server();
+    if (filesystem::exists(test_data_path + _folder)) {
+      filesystem::remove_all(test_data_path + _folder);
+    }
+  }
+
+  void start_server(Logger::Implementation implementation) {
+    std::string implementation_string = str(implementation);
+
+    // TODO: auto port
+    auto cmd = "\"" + build_dir + "/hyriseServer\" 1234 " + implementation_string + " " + test_data_path + _folder + " &";
+    std::system(cmd.c_str());
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    _connection_string = "hostaddr=127.0.0.1 port=1234";
+  }
+
+  void terminate_server() {
+    std::system("pkill hyriseServer");
+  }
+
   std::string _connection_string;
 };
 
-TEST_P(ServerRecoveryTest, TestSimpleInsert) {
+// // currently doubles won't be logged correctly
+// // currently it is not possible to insert nulls
+// TEST_P(ServerRecoveryTest, TestWorkflow) {
+//   start_server(GetParam());
+
+//   pqxx::connection connection{_connection_string};
+//   pqxx::nontransaction transaction{connection};
+
+//   EXPECT_THROW(transaction.exec("SELECT * FROM a_table;"), std::exception);
+
+//   transaction.exec("load src/test/tables/int_float_double_string_null.tbl a_table;");
+//   const auto result = transaction.exec("SELECT * FROM a_table;");
+//   EXPECT_EQ(result.size(), 6u);
+
+//   transaction.exec("INSERT INTO a_table VALUES (41, 41.0, 41.0, '41');");
+//   transaction.exec("INSERT INTO a_table VALUES (229, 929.7, 14.983, 'öäüia');");
+//   transaction.exec("DELETE FROM a_table WHERE i = 2 or s = 'f';");
+//   transaction.exec("UPDATE a_table SET i = 7, f = 7.2 WHERE i = 41;");
+//   transaction.exec("INSERT INTO a_table VALUES (999, null, null, 'abcde');");
+//   transaction.exec("INSERT INTO a_table VALUES (null, 0.123, 3.21, 'xy');");
+//   transaction.exec("UPDATE a_table SET i = null, d = null WHERE i = 1;");
+//   transaction.exec("DELETE FROM a_table WHERE i = 6;");
+//   transaction.exec("INSERT INTO a_table VALUES (null, null, null, null);");
+//   transaction.exec("DELETE FROM a_table WHERE f = 4.0;");
+
+//   restart_server(GetParam());
+
+//   pqxx::connection connection2{_connection_string};
+//   pqxx::nontransaction transaction2{connection2};
+//   const auto result2 = transaction2.exec("SELECT * FROM a_table;");
+
+//   EXPECT_EQ(result2.size(), 7u);
+
+//   int i;
+//   float f;
+//   double d;
+//   std::string s;
+
+//   // TODO
+//   result2[0][0].to(i);
+//   result2[0][1].to(f);
+//   result2[0][2].to(d);
+//   result2[0][3].to(s);
+//   EXPECT_EQ(i, );
+//   EXPECT_EQ(f, );
+//   EXPECT_EQ(d, );
+//   EXPECT_EQ(s, );
+// }
+
+TEST_P(ServerRecoveryTest, TestWorkflowWithIntAndString) {
   start_server(GetParam());
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 
   pqxx::connection connection{_connection_string};
   pqxx::nontransaction transaction{connection};
 
   EXPECT_THROW(transaction.exec("SELECT * FROM a_table;"), std::exception);
 
-  auto a_table = load_table("src/test/tables/int_float.tbl", 2);
+  transaction.exec("load src/test/tables/int_string.tbl a_table;");
 
-  transaction.exec("load src/test/tables/int_float.tbl a_table;");
   const auto result = transaction.exec("SELECT * FROM a_table;");
-  EXPECT_EQ(result.size(), a_table->row_count());
+  EXPECT_EQ(result.size(), 12u);
 
-  transaction.exec("INSERT INTO a_table VALUES (1, 1.0);");
-  transaction.exec("INSERT INTO a_table VALUES (994, 994.0);");
-  transaction.exec("DELETE FROM a_table WHERE a = 123");
-  transaction.exec("UPDATE a_table SET a = 7, b = 7.2 WHERE a = 1234");
+  transaction.exec("INSERT INTO a_table VALUES (41, '41');");
+  transaction.exec("INSERT INTO a_table VALUES (229, 'öäüia');");
+  transaction.exec("DELETE FROM a_table WHERE a = 4 or b = 'test16';");
+  transaction.exec("UPDATE a_table SET a = 9001, b = 'some string' WHERE a = 41;");
+  transaction.exec("INSERT INTO a_table VALUES (999, 'abcde');");
+  transaction.exec("INSERT INTO a_table VALUES (131, 'xy');");
+  transaction.exec("UPDATE a_table SET a= 12, b = '' WHERE a = 2;");
+  transaction.exec("DELETE FROM a_table WHERE a = 6;");
+  transaction.exec("INSERT INTO a_table VALUES (0, 'test0');");
+  transaction.exec("DELETE FROM a_table WHERE a = 12 or b = 'test20' or b = 'test19';");
+  transaction.exec("DELETE FROM a_table WHERE b = 'test18' or a = 10;");
 
   restart_server(GetParam());
 
@@ -113,7 +146,43 @@ TEST_P(ServerRecoveryTest, TestSimpleInsert) {
   pqxx::nontransaction transaction2{connection2};
   const auto result2 = transaction2.exec("SELECT * FROM a_table;");
 
-  EXPECT_EQ(result2.size(), a_table->row_count() + 1);
+  EXPECT_EQ(result2.size(), 8u);
+
+  int i;
+  std::string s;
+
+  result2[0][0].to(i);
+  result2[0][1].to(s);
+  EXPECT_EQ(i, 8);
+  EXPECT_EQ(s, "test8");
+  result2[1][0].to(i);
+  result2[1][1].to(s);
+  EXPECT_EQ(i, 14);
+  EXPECT_EQ(s, "test14");
+  result2[2][0].to(i);
+  result2[2][1].to(s);
+  EXPECT_EQ(i, 21);
+  EXPECT_EQ(s, "test21");
+  result2[3][0].to(i);
+  result2[3][1].to(s);
+  EXPECT_EQ(i, 229);
+  EXPECT_EQ(s, "öäüia");
+  result2[4][0].to(i);
+  result2[4][1].to(s);
+  EXPECT_EQ(i, 9001);
+  EXPECT_EQ(s, "some string");
+  result2[5][0].to(i);
+  result2[5][1].to(s);
+  EXPECT_EQ(i, 999);
+  EXPECT_EQ(s, "abcde");
+  result2[6][0].to(i);
+  result2[6][1].to(s);
+  EXPECT_EQ(i, 131);
+  EXPECT_EQ(s, "xy");
+  result2[7][0].to(i);
+  result2[7][1].to(s);
+  EXPECT_EQ(i, 0);
+  EXPECT_EQ(s, "test0");
 }
 
 Logger::Implementation logging_implementations[] = {
@@ -122,11 +191,7 @@ Logger::Implementation logging_implementations[] = {
 };
 
 auto formatter = [](const testing::TestParamInfo<Logger::Implementation> info) {
-  switch (info.param) {
-    case Logger::Implementation::Simple: return "Simple";
-    case Logger::Implementation::GroupCommit: return "GroupCommit";
-    default: return "unknown";
-  }
+  return str(info.param);
 };
 
 INSTANTIATE_TEST_CASE_P(logging_implementations, ServerRecoveryTest, ::testing::ValuesIn(logging_implementations), formatter);
