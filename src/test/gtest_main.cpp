@@ -13,6 +13,7 @@ namespace filesystem = std::experimental::filesystem;
 #include "utils/performance_warning.hpp"
 
 std::string opossum::test_data_path; 
+std::string opossum::build_dir;
 
 void create_test_data_directory(std::optional<std::string>& prefix) {
   Assert(!filesystem::exists(opossum::test_data_path),
@@ -32,19 +33,14 @@ void remove_test_data_directory() {
   }
 }
 
-// Setup a gracefull termination of the test program.
-// Logger implementations should not be changed during runtime. This is enforced by design, but they are changed during
-// tests. Therefore this function needs to be called before program termination.
-void shutdown_logger() {
-  opossum::Logger::_shutdown_after_all_tests();
-}
-
 int main(int argc, char** argv) {
   Assert(filesystem::exists("src/test/tables"),
          "Cannot find src/test/tables. Are you running the test suite from the main folder of the Hyrise repository?");
 
   opossum::PerformanceWarningDisabler pwd;
   ::testing::InitGoogleTest(&argc, argv);
+
+  opossum::build_dir = filesystem::path(argv[0]).parent_path().string();
 
   std::optional<std::string> prefix;
   if (argc > 1) {
@@ -58,8 +54,6 @@ int main(int argc, char** argv) {
   create_test_data_directory(prefix);
 
   int ret = RUN_ALL_TESTS();
-  
-  shutdown_logger();
 
   remove_test_data_directory();
 
