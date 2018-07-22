@@ -135,7 +135,7 @@ void JoinNestedLoop::_join_two_untyped_columns(const std::shared_ptr<const BaseC
 
         iterable_left.with_iterators([&, params_copy = params](auto left_it, auto left_end) {
           iterable_right.with_iterators([&, params_copy2 = params_copy](auto right_it, auto right_end) {
-            with_comparator(params_copy.predicate_condition, [&, params_copy3 = params_cop2](auto comparator) {
+            with_comparator(params_copy.predicate_condition, [&, params_copy3 = params_copy2](auto comparator) {
               _join_two_typed_columns(comparator, left_it, left_end, right_it, right_end, chunk_id_left,
                                       chunk_id_right, params_copy3);
             });
