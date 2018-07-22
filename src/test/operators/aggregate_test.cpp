@@ -91,42 +91,23 @@ class OperatorsAggregateTest : public BaseTest {
 
   void test_output(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateColumnDefinition>& aggregates,
                    const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name, size_t chunk_size,
-                   bool test_references = true) {
+                   bool test_aggregate_on_reference_table = true) {
     // load expected results from file
     std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
 
-    // collect possible columns to scan before aggregate
-    std::set<ColumnID> ref_columns;
+    // Test the Aggregate on stored table data
+    auto aggregate = std::make_shared<Aggregate>(in, aggregates, groupby_column_ids);
+    aggregate->execute();
+    EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
 
-    // this means no prior table scan
-    ref_columns.insert(INVALID_COLUMN_ID);
+    if (test_aggregate_on_reference_table) {
+      // Perform a TableScan to create a reference table
+      const auto table_scan = std::make_shared<TableScan>(in, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+      table_scan->execute();
 
-    if (test_references) {
-      for (const auto& agg : aggregates) {
-        ref_columns.insert(*agg.column);
-      }
-
-      for (const auto column_id : groupby_column_ids) {
-        ref_columns.insert(column_id);
-      }
-    }
-
-    EXPECT_NE(ref_columns.size(), 0u);
-
-    for (auto& ref : ref_columns) {
-      // make one Aggregate w/o ReferenceColumn
-      auto input = in;
-
-      if (ref != INVALID_COLUMN_ID) {
-        // also try a TableScan on every involved column
-        input = std::make_shared<TableScan>(in, ref, PredicateCondition::GreaterThanEquals, 0);
-        input->execute();
-      }
-
-      // build and execute Aggregate
-      auto aggregate = std::make_shared<Aggregate>(input, aggregates, groupby_column_ids);
-      EXPECT_NE(aggregate, nullptr) << "Could not build Aggregate";
+      // Perform the Aggregate on a reference table
+      const auto aggregate = std::make_shared<Aggregate>(table_scan, aggregates, groupby_column_ids);
       aggregate->execute();
       EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
     }
