@@ -28,7 +28,6 @@ TEST_F(CuckooHashtableTest, StackRowIDs) {
   EXPECT_TRUE(std::holds_alternative<RowID>(row_ids->get()));
   EXPECT_EQ(std::get<RowID>(row_ids->get()), (RowID{ChunkID{0}, 12}));
 
-
   hashtable->put(5, RowID{ChunkID{0}, 13});
   row_ids = hashtable->get(5);
   EXPECT_TRUE(row_ids);

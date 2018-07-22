@@ -416,11 +416,11 @@ void probe(const RadixContainer<RightType>& radix_container,
                 }
               }
             } else {
-                const auto row_id = std::get<RowID>(matching_rows->get());
-                if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
-                  pos_list_left_local.emplace_back(row_id);
-                  pos_list_right_local.emplace_back(row.row_id);
-                }
+              const auto row_id = std::get<RowID>(matching_rows->get());
+              if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
+                pos_list_left_local.emplace_back(row_id);
+                pos_list_right_local.emplace_back(row.row_id);
+              }
             }
             // We assume that the relations have been swapped previously,
             // so that the outer relation is the probing relation.
