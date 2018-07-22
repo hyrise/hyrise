@@ -80,7 +80,7 @@ bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) co
 
 std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     const std::vector<std::shared_ptr<ChunkStatistics>>& statistics,
-    std::shared_ptr<PredicateNode> predicate_node) const {
+    const std::shared_ptr<PredicateNode>& predicate_node) const {
   const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate_node->predicate, *predicate_node);
   if (!operator_predicates) return {};
 

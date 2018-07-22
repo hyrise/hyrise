@@ -11,6 +11,8 @@
 #include "constant_mappings.hpp"
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
+#include "sql/sql_pipeline.hpp"
+#include "sql/sql_pipeline_builder.hpp"
 
 namespace opossum {
 
@@ -144,11 +146,8 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
 std::shared_ptr<Table> SQLiteWrapper::execute_query(const std::string& sql_query) {
   sqlite3_stmt* result_row;
 
-  std::vector<std::string> queries;
-  boost::algorithm::split(queries, sql_query, boost::is_any_of(";"));
-
-  queries.erase(std::remove_if(queries.begin(), queries.end(), [](std::string const& query) { return query.empty(); }),
-                queries.end());
+  auto sql_pipeline = SQLPipelineBuilder{sql_query}.create_pipeline();
+  const auto& queries = sql_pipeline.get_sql_strings();
 
   // We need to split the queries such that we only create columns/add rows from the final SELECT query
   std::vector<std::string> queries_before_select(queries.begin(), queries.end() - 1);

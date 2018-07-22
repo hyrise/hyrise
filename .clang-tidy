@@ -1,6 +1,28 @@
 Checks: 'readability-identifier-naming,-clang-analyzer-security.insecureAPI.rand'
 
-# Checks: '*,-*-default-arguments,-*braces-around-statements,-cppcoreguidelines-pro-bounds-pointer-arithmetic,-google-build-using-namespace,-google-runtime-references,-cert-err58-cpp,-fuchsia-overloaded-operator,-readability-else-after-return,-clang-analyzer-security.insecureAPI.rand'
+# Checks: '*,-*-default-arguments,-*braces-around-statements,-cppcoreguidelines-pro-bounds-pointer-arithmetic,-google-build-using-namespace,-google-runtime-references,-cert-err58-cpp,-fuchsia-overloaded-operator,-readability-else-after-return,-clang-analyzer-security.insecureAPI.rand,-readability-implicit-bool-conversion,-cppcoreguidelines-pro-type-reinterpret-cast,-readability-misleading-indentation,-modernize-pass-by-value,-cppcoreguidelines-pro-bounds-constant-array-index,-cppcoreguidelines-pro-type-static-cast-downcast,-misc-unused-parameters,-cppcoreguidelines-pro-bounds-array-to-pointer-decay,-hicpp-no-array-decay,-readability-named-parameter'
+
+
+# Explanation of disabled checks:
+#   *-default-arguments
+#   *braces-around-statements                            We do allow then blocks without braces if they are in the same line
+#   -cppcoreguidelines-pro-bounds-pointer-arithmetic  
+#   google-build-using-namespace                        
+#   google-runtime-references  
+#   cert-err58-cpp  
+#   fuchsia-overloaded-operator  
+#   readability-else-after-return  
+#   clang-analyzer-security.insecureAPI.rand  
+#   readability-implicit-bool-conversion                 Doesn't like if(map.count(foo))
+#   cppcoreguidelines-pro-type-reinterpret-cast          We need reinterpret_cast for jitting
+#   readability-misleading-indentation                   Doesn't like if constexpr
+#   modernize-pass-by-value                              We don't trust people to properly use std::move
+#   cppcoreguidelines-pro-bounds-constant-array-index    Weird stuff. "do not use array subscript when the index is not an integer constant expression"?!
+#   cppcoreguidelines-pro-type-static-cast-downcast      We do allow static downcasts for performance reasons
+#   misc-unused-parameters                               We don't care about unused parameters
+#   cppcoreguidelines-pro-bounds-array-to-pointer-decay  Weird stuff - it doesn't like `description_mode == DescriptionMode::MultiLine`
+#   hicpp-no-array-decay                                 dto.
+#   readability-named-parameter                          Unused parameters don't need names
 
 CheckOptions:
   - key: readability-identifier-naming.ClassCase

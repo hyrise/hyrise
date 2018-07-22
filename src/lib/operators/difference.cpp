@@ -15,8 +15,8 @@
 #include "utils/assert.hpp"
 
 namespace opossum {
-Difference::Difference(const std::shared_ptr<const AbstractOperator> left_in,
-                       const std::shared_ptr<const AbstractOperator> right_in)
+Difference::Difference(const std::shared_ptr<const AbstractOperator>& left_in,
+                       const std::shared_ptr<const AbstractOperator>& right_in)
     : AbstractReadOnlyOperator(OperatorType::Difference, left_in, right_in) {}
 
 const std::string Difference::name() const { return "Difference"; }

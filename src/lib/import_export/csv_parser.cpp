@@ -48,7 +48,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
   std::list<ChunkColumns> columns_by_chunks;
   std::vector<std::shared_ptr<JobTask>> tasks;
   std::vector<size_t> field_ends;
-  while (_find_fields_in_chunk(content_view, *table.get(), field_ends)) {
+  while (_find_fields_in_chunk(content_view, *table, field_ends)) {
     // create empty chunk
     columns_by_chunks.emplace_back();
     auto& columns = columns_by_chunks.back();

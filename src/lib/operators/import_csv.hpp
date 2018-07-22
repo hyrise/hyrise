@@ -29,11 +29,11 @@ class ImportCsv : public AbstractReadOnlyOperator {
    * @param tablename     Optional. Name of the table to store/look up in the StorageManager.
    * @param meta          Optional. A specific meta config, to override the given .json file.
    */
-  explicit ImportCsv(const std::string& filename, const std::optional<std::string> tablename = std::nullopt,
-                     const std::optional<CsvMeta> csv_meta = std::nullopt);
+  explicit ImportCsv(const std::string& filename, const std::optional<std::string>& tablename = std::nullopt,
+                     const std::optional<CsvMeta>& csv_meta = std::nullopt);
 
-  explicit ImportCsv(const std::string& filename, const std::optional<CsvMeta> csv_meta,
-                     const std::optional<std::string> tablename = std::nullopt);
+  explicit ImportCsv(const std::string& filename, const std::optional<CsvMeta>& csv_meta,
+                     const std::optional<std::string>& tablename = std::nullopt);
 
   const std::string name() const override;
 

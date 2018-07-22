@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-Limit::Limit(const std::shared_ptr<const AbstractOperator> in,
+Limit::Limit(const std::shared_ptr<const AbstractOperator>& in,
              const std::shared_ptr<AbstractExpression>& row_count_expression)
     : AbstractReadOnlyOperator(OperatorType::Limit, in), _row_count_expression(row_count_expression) {}
 

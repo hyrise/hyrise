@@ -23,8 +23,9 @@ namespace opossum {
    */
 class JoinSortMerge : public AbstractJoinOperator {
  public:
-  JoinSortMerge(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
-                const JoinMode mode, const ColumnIDPair& column_ids, const PredicateCondition op);
+  JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left,
+                const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
+                const ColumnIDPair& column_ids, const PredicateCondition op);
 
   const std::string name() const override;
 

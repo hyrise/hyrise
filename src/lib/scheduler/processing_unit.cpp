@@ -13,8 +13,8 @@ static constexpr size_t MAX_WORKERS_PER_CORE = 200;
 
 namespace opossum {
 
-ProcessingUnit::ProcessingUnit(std::shared_ptr<TaskQueue> queue, std::shared_ptr<UidAllocator> worker_id_allocator,
-                               CpuID cpu_id)
+ProcessingUnit::ProcessingUnit(const std::shared_ptr<TaskQueue>& queue,
+                               const std::shared_ptr<UidAllocator>& worker_id_allocator, CpuID cpu_id)
     : _queue(queue), _worker_id_allocator(worker_id_allocator), _cpu_id(cpu_id) {
   // Do not start worker yet, the object is still under construction and no shared_ptr of it is held right now -
   // shared_from_this will fail!

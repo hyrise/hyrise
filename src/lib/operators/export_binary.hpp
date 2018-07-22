@@ -21,7 +21,7 @@ enum class CompressedVectorType : uint8_t;
  */
 class ExportBinary : public AbstractReadOnlyOperator {
  public:
-  explicit ExportBinary(const std::shared_ptr<const AbstractOperator> in, const std::string& filename);
+  explicit ExportBinary(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename);
 
   /**
    * Executes the export operator

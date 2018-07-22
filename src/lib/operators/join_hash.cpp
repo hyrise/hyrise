@@ -24,8 +24,8 @@
 
 namespace opossum {
 
-JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
-                   const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
+                   const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                    const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
                    const size_t radix_bits)
     : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, column_ids, predicate_condition),
@@ -180,7 +180,7 @@ constexpr uint32_t hash_value(OriginalType& value, const unsigned int seed) {
 }
 
 template <typename T, typename HashedType>
-std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Table> in_table, ColumnID column_id,
+std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
                                                 std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
                                                 const size_t radix_bits, const unsigned int partitioning_seed,
                                                 bool keep_nulls = false) {
@@ -189,7 +189,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
   elements->resize(in_table->row_count());
 
   // fan-out
-  const size_t num_partitions = 1 << radix_bits;
+  const size_t num_partitions = 1ull << radix_bits;
 
   // currently, we just do one pass
   size_t pass = 0;
@@ -289,12 +289,12 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
 }
 
 template <typename T>
-RadixContainer<T> partition_radix_parallel(std::shared_ptr<Partition<T>> materialized,
-                                           std::shared_ptr<std::vector<size_t>> chunk_offsets,
+RadixContainer<T> partition_radix_parallel(const std::shared_ptr<Partition<T>>& materialized,
+                                           const std::shared_ptr<std::vector<size_t>>& chunk_offsets,
                                            std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
                                            const size_t radix_bits, bool keep_nulls = false) {
   // fan-out
-  const size_t num_partitions = 1 << radix_bits;
+  const size_t num_partitions = 1ull << radix_bits;
 
   // currently, we just do one pass
   size_t pass = 0;
@@ -513,7 +513,7 @@ using PosLists = std::vector<std::shared_ptr<const PosList>>;
 using PosListsByColumn = std::vector<std::shared_ptr<PosLists>>;
 
 // See usage in _on_execute() for doc.
-PosListsByColumn setup_pos_lists_by_column(const std::shared_ptr<const Table> input_table) {
+PosListsByColumn setup_pos_lists_by_column(const std::shared_ptr<const Table>& input_table) {
   DebugAssert(input_table->type() == TableType::References, "Function only works for reference tables");
 
   std::map<PosLists, std::shared_ptr<PosLists>> shared_pos_lists_by_pos_lists;
@@ -544,7 +544,7 @@ PosListsByColumn setup_pos_lists_by_column(const std::shared_ptr<const Table> in
   return pos_lists_by_column;
 }
 
-void write_output_columns(ChunkColumns& output_columns, const std::shared_ptr<const Table> input_table,
+void write_output_columns(ChunkColumns& output_columns, const std::shared_ptr<const Table>& input_table,
                           const PosListsByColumn& input_pos_list_ptrs_sptrs_by_column,
                           std::shared_ptr<PosList> pos_list) {
   std::map<std::shared_ptr<PosLists>, std::shared_ptr<PosList>> output_pos_list_cache;
@@ -598,9 +598,10 @@ void write_output_columns(ChunkColumns& output_columns, const std::shared_ptr<co
 template <typename LeftType, typename RightType>
 class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  public:
-  JoinHashImpl(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
-               const JoinMode mode, const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
-               const bool inputs_swapped, const size_t radix_bits)
+  JoinHashImpl(const std::shared_ptr<const AbstractOperator>& left,
+               const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
+               const ColumnIDPair& column_ids, const PredicateCondition predicate_condition, const bool inputs_swapped,
+               const size_t radix_bits)
       : _left(left),
         _right(right),
         _mode(mode),
@@ -608,8 +609,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _predicate_condition(predicate_condition),
         _inputs_swapped(inputs_swapped),
         _radix_bits(radix_bits) {}
-
-  virtual ~JoinHashImpl() = default;
 
  protected:
   const std::shared_ptr<const AbstractOperator> _left, _right;

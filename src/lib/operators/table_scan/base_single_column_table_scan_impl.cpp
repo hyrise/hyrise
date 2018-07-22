@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-BaseSingleColumnTableScanImpl::BaseSingleColumnTableScanImpl(std::shared_ptr<const Table> in_table,
+BaseSingleColumnTableScanImpl::BaseSingleColumnTableScanImpl(const std::shared_ptr<const Table>& in_table,
                                                              const ColumnID left_column_id,
                                                              const PredicateCondition predicate_condition)
     : BaseTableScanImpl{in_table, left_column_id, predicate_condition} {}

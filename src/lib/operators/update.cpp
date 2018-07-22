@@ -15,7 +15,7 @@
 
 namespace opossum {
 
-Update::Update(const std::string& table_to_update_name, std::shared_ptr<AbstractOperator> fields_to_update_op,
+Update::Update(const std::string& table_to_update_name, const std::shared_ptr<AbstractOperator>& fields_to_update_op,
                std::shared_ptr<AbstractOperator> update_values_op)
     : AbstractReadWriteOperator(OperatorType::Update, fields_to_update_op, update_values_op),
       _table_to_update_name{table_to_update_name} {}

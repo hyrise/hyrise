@@ -32,7 +32,7 @@ TransactionContext::~TransactionContext() {
               "A registered operator failed but transaction has not been rolled back.");
 
   DebugAssert(([this]() {
-                const auto has_registered_operators = _rw_operators.size() > 0u;
+                const auto has_registered_operators = !_rw_operators.empty();
                 const auto committed_or_rolled_back =
                     _phase == TransactionPhase::Committed || _phase == TransactionPhase::RolledBack;
                 return !has_registered_operators || committed_or_rolled_back;
@@ -70,7 +70,7 @@ bool TransactionContext::rollback() {
   return true;
 }
 
-bool TransactionContext::commit_async(std::function<void(TransactionID)> callback) {
+bool TransactionContext::commit_async(const std::function<void(TransactionID)>& callback) {
   const auto success = _prepare_commit();
 
   if (!success) return false;

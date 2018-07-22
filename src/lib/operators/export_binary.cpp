@@ -112,7 +112,7 @@ void export_value(std::ofstream& ofstream, const T& value) {
 
 namespace opossum {
 
-ExportBinary::ExportBinary(const std::shared_ptr<const AbstractOperator> in, const std::string& filename)
+ExportBinary::ExportBinary(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename)
     : AbstractReadOnlyOperator(OperatorType::ExportBinary, in), _filename(filename) {}
 
 const std::string ExportBinary::name() const { return "ExportBinary"; }
