@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 #include <utility>
-#include <variant>
+#include <variant>  // NOLINT
 #include <vector>
 
 #include "murmur_hash.hpp"
