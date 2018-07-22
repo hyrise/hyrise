@@ -9,6 +9,7 @@
 
 #include "logical_query_plan/lqp_translator.hpp"
 #include "operators/abstract_operator.hpp"
+#include "operators/jit_operator/jit_aware_lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "scheduler/operator_task.hpp"
 #include "sql/sql_pipeline.hpp"
@@ -63,7 +64,9 @@ TEST_P(TPCHTest, TPCHQueryTest) {
 
   std::shared_ptr<const Table> sqlite_result_table, hyrise_result_table;
 
-  auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{query}.
+  disable_mvcc().
+  create_pipeline();
 
   // TPC-H 15 needs special patching as it contains a DROP VIEW that doesn't return a table as last statement
   if (query_idx == 15) {

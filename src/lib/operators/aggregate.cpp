@@ -663,13 +663,13 @@ template <typename ColumnType, AggregateFunction function>
 void Aggregate::write_aggregate_output(ColumnID column_index) {
   // retrieve type information from the aggregation traits
   typename AggregateTraits<ColumnType, function>::AggregateType aggregate_type;
-  auto AGGREGATE_DATA_TYPE = AggregateTraits<ColumnType, function>::AGGREGATE_DATA_TYPE;
+  auto aggregate_data_type = AggregateTraits<ColumnType, function>::AGGREGATE_DATA_TYPE;
 
   const auto& aggregate = _aggregates[column_index];
 
-  if (AGGREGATE_DATA_TYPE == DataType::Null) {
+  if (aggregate_data_type == DataType::Null) {
     // if not specified, it’s the input column’s type
-    AGGREGATE_DATA_TYPE = input_table_left()->column_data_type(*aggregate.column);
+    aggregate_data_type = input_table_left()->column_data_type(*aggregate.column);
   }
 
   // Generate column name, TODO(anybody), actually, the AggregateExpression can do this, but the Aggregate operator
@@ -695,7 +695,7 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
   }
 
   constexpr bool NEEDS_NULL = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
-  _output_column_definitions.emplace_back(column_name_stream.str(), AGGREGATE_DATA_TYPE, NEEDS_NULL);
+  _output_column_definitions.emplace_back(column_name_stream.str(), aggregate_data_type, NEEDS_NULL);
 
   auto output_column = std::make_shared<ValueColumn<decltype(aggregate_type)>>(NEEDS_NULL);
 

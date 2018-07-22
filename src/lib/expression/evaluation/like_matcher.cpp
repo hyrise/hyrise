@@ -90,7 +90,7 @@ LikeMatcher::AllPatternVariant LikeMatcher::pattern_string_to_pattern_variant(co
 std::string LikeMatcher::sql_like_to_regex(std::string sql_like) {
   // Do substitution of <backslash> with <backslash><backslash> FIRST, because otherwise it will also replace
   // backslashes introduced by the other substitutions
-  constexpr auto replace_by = std::array<std::pair<const char*, const char*>, 14u>{{{"\\", "\\\\"},
+  constexpr auto REPLACE_BY = std::array<std::pair<const char*, const char*>, 14u>{{{"\\", "\\\\"},
                                                                                     {".", "\\."},
                                                                                     {"^", "\\^"},
                                                                                     {"$", "\\$"},
@@ -105,7 +105,7 @@ std::string LikeMatcher::sql_like_to_regex(std::string sql_like) {
                                                                                     {"%", ".*"},
                                                                                     {"_", "."}}};
 
-  for (const auto& pair : replace_by) {
+  for (const auto& pair : REPLACE_BY) {
     boost::replace_all(sql_like, pair.first, pair.second);
   }
 
