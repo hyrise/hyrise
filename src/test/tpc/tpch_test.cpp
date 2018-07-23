@@ -63,9 +63,7 @@ TEST_P(TPCHTest, TPCHQueryTest) {
 
   std::shared_ptr<const Table> sqlite_result_table, hyrise_result_table;
 
-  auto sql_pipeline = SQLPipelineBuilder{query}.
-  disable_mvcc().
-  create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{query}.disable_mvcc().create_pipeline();
 
   // TPC-H 15 needs special patching as it contains a DROP VIEW that doesn't return a table as last statement
   if (query_idx == 15) {

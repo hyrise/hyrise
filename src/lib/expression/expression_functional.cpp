@@ -20,13 +20,17 @@ std::shared_ptr<ValueExpression> value_(const AllTypeVariant& value) {  // NOLIN
   return std::make_shared<ValueExpression>(value);
 }
 
-std::shared_ptr<ValueExpression> null_() { return std::make_shared<ValueExpression>(NullValue{}); }  // NOLINT - clang-tidy doesn't like the suffix
+std::shared_ptr<ValueExpression> null_() {
+  return std::make_shared<ValueExpression>(NullValue{});
+}  // NOLINT - clang-tidy doesn't like the suffix
 
-std::shared_ptr<ParameterExpression> parameter_(const ParameterID parameter_id) {  // NOLINT - clang-tidy doesn't like the suffix
+std::shared_ptr<ParameterExpression> parameter_(
+    const ParameterID parameter_id) {  // NOLINT - clang-tidy doesn't like the suffix
   return std::make_shared<ParameterExpression>(parameter_id);
 }
 
-std::shared_ptr<LQPColumnExpression> column_(const LQPColumnReference& column_reference) {  // NOLINT - clang-tidy doesn't like the suffix
+std::shared_ptr<LQPColumnExpression> column_(
+    const LQPColumnReference& column_reference) {  // NOLINT - clang-tidy doesn't like the suffix
   return std::make_shared<LQPColumnExpression>(column_reference);
 }
 
@@ -34,7 +38,8 @@ std::shared_ptr<AggregateExpression> count_star_() {  // NOLINT - clang-tidy doe
   return std::make_shared<AggregateExpression>(AggregateFunction::Count);
 }
 
-std::shared_ptr<ExistsExpression> exists_(const std::shared_ptr<AbstractExpression>& select_expression) {  // NOLINT - clang-tidy doesn't like the suffix
+std::shared_ptr<ExistsExpression> exists_(
+    const std::shared_ptr<AbstractExpression>& select_expression) {  // NOLINT - clang-tidy doesn't like the suffix
   return std::make_shared<ExistsExpression>(select_expression);
 }
 

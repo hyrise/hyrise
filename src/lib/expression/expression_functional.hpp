@@ -140,7 +140,7 @@ inline detail::ternary<BetweenExpression> between;
 inline detail::ternary<CaseExpression> case_;
 
 template <typename... Args>
-std::shared_ptr<LQPSelectExpression> select_(const std::shared_ptr<AbstractLQPNode>& lqp,   // NOLINT
+std::shared_ptr<LQPSelectExpression> select_(const std::shared_ptr<AbstractLQPNode>& lqp,  // NOLINT
                                              Args&&... parameter_id_expression_pairs) {
   if constexpr (sizeof...(Args) > 0) {
     // Correlated subselect

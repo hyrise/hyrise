@@ -246,7 +246,8 @@ bool JitAwareLQPTranslator::_node_is_jittable(const std::shared_ptr<AbstractLQPN
           Assert(aggregate_expression, "Expected AggregateExpression");
           // Right now, the JIT doesn't support CountDistinct and Count(*) (which can be recognized by an empty
           // argument list)
-          return aggregate_expression->aggregate_function == AggregateFunction::CountDistinct || aggregate_expression->arguments.empty();
+          return aggregate_expression->aggregate_function == AggregateFunction::CountDistinct ||
+                 aggregate_expression->arguments.empty();
         });
     return allow_aggregate_node && !has_unsupported_aggregate;
   }
