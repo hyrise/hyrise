@@ -240,13 +240,15 @@ bool JitAwareLQPTranslator::_node_is_jittable(const std::shared_ptr<AbstractLQPN
     // We do not support the count distinct function yet and thus need to check all aggregate expressions.
     auto aggregate_node = std::static_pointer_cast<AggregateNode>(node);
     auto aggregate_expressions = aggregate_node->aggregate_expressions;
-    auto has_count_distinct =
+    auto has_unsupported_aggregate =
         std::any_of(aggregate_expressions.begin(), aggregate_expressions.end(), [](auto& expression) {
           const auto aggregate_expression = std::dynamic_pointer_cast<AggregateExpression>(expression);
           Assert(aggregate_expression, "Expected AggregateExpression");
-          return aggregate_expression->aggregate_function == AggregateFunction::CountDistinct;
+          // Right now, the JIT doesn't support CountDistinct and Count(*) (which can be recognized by an empty
+          // argument list)
+          return aggregate_expression->aggregate_function == AggregateFunction::CountDistinct || aggregate_expression->arguments.empty();
         });
-    return allow_aggregate_node && !has_count_distinct;
+    return allow_aggregate_node && !has_unsupported_aggregate;
   }
 
   if (node->type == LQPNodeType::Predicate) {
