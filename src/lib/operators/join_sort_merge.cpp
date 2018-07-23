@@ -19,7 +19,7 @@
 namespace opossum {
 
 /**
-* TODO(arne.mayer): Outer not-equal join (outer !=)
+* TODO(anyone): Outer not-equal join (outer !=)
 * TODO(anyone): Choose an appropriate number of clusters.
 **/
 
@@ -532,6 +532,12 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     // Parallel join for each cluster
     for (size_t cluster_number = 0; cluster_number < _cluster_count; ++cluster_number) {
+      // Avoid empty jobs for inner equi joins
+      if (_mode == JoinMode::Inner && _op == PredicateCondition::Equals) {
+        if (*_sorted_left_table)[cluster_number]->size() = 0 || *_sorted_right_table)[cluster_number]->size() == 0) {
+          continue;
+        }
+      }
       jobs.push_back(std::make_shared<JobTask>([this, cluster_number] { this->_join_cluster(cluster_number); }));
       jobs.back()->schedule();
     }
