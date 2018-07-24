@@ -23,6 +23,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   friend class Worker;
 
  public:
+  AbstractTask(bool stealable = true);
   virtual ~AbstractTask() = default;
 
   /**
@@ -40,6 +41,11 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
    * @return The task finished executing
    */
   bool is_done() const;
+
+  /**
+   * @return Workers are allowed to steal the task from another node
+   */
+  bool is_stealable() const;
 
   /**
    * Description for debugging purposes
@@ -130,6 +136,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   TaskID _id = INVALID_TASK_ID;
   NodeID _node_id = INVALID_NODE_ID;
   bool _done = false;
+  bool _stealable;
   std::function<void()> _done_callback;
 
   // For dependencies

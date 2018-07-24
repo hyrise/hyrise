@@ -17,7 +17,7 @@ class AbstractTask;
  */
 class TaskQueue {
  public:
-  static constexpr uint32_t NUM_PRIORITY_LEVELS = 4;
+  static constexpr uint32_t NUM_PRIORITY_LEVELS = 3;
 
   explicit TaskQueue(NodeID node_id);
 

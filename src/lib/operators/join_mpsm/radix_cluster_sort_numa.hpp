@@ -221,9 +221,9 @@ class RadixClusterSortNUMA {
               (*output_cluster)[insert_position] = entry;
               ++insert_position;
             }
-          });
+          }, true);
       cluster_jobs.push_back(job);
-      job->schedule(node_id, SchedulePriority::Unstealable);
+      job->schedule(node_id, SchedulePriority::JobTask);
     }
 
     CurrentScheduler::wait_for_tasks(cluster_jobs);
@@ -253,10 +253,10 @@ class RadixClusterSortNUMA {
       auto job = std::make_shared<JobTask>([&output, &input_chunks, node_id, radix_bitmask, this]() {
         (*output)[node_id] = _cluster((*input_chunks)[node_id],
                                       [=](const T& value) { return get_radix<T>(value, radix_bitmask); }, node_id);
-      });
+      }, true);
 
       cluster_jobs.push_back(job);
-      job->schedule(node_id, SchedulePriority::Unstealable);
+      job->schedule(node_id, SchedulePriority::JobTask);
     }
 
     CurrentScheduler::wait_for_tasks(cluster_jobs);
@@ -299,10 +299,10 @@ class RadixClusterSortNUMA {
 
           std::copy(src->begin(), src->end(), std::back_inserter(*chunk_column));
         }
-      });
+      }, true);
 
       repartition_jobs.push_back(job);
-      job->schedule(numa_node, SchedulePriority::Unstealable);
+      job->schedule(numa_node, SchedulePriority::JobTask);
     }
 
     CurrentScheduler::wait_for_tasks(repartition_jobs);
@@ -320,10 +320,10 @@ class RadixClusterSortNUMA {
       for (auto cluster : partition._chunk_columns) {
         auto job = std::make_shared<JobTask>([cluster]() {
           std::sort(cluster->begin(), cluster->end(), [](auto& left, auto& right) { return left.value < right.value; });
-        });
+        }, true);
 
         sort_jobs.push_back(job);
-        job->schedule(partition._node_id, SchedulePriority::Unstealable);
+        job->schedule(partition._node_id, SchedulePriority::JobTask);
       }
     }
 

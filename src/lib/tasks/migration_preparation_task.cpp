@@ -190,9 +190,9 @@ void MigrationPreparationTask::_on_execute() {
     for (const auto& migration_chunk : migration_candidates) {
       const auto target_node = node_info.cold_nodes.at(chunk_counter % node_info.cold_nodes.size());
       const auto task = std::make_shared<ChunkMigrationTask>(migration_chunk.table_name,
-                                                             std::vector<ChunkID>({migration_chunk.id}), target_node);
+                                                             std::vector<ChunkID>({migration_chunk.id}), target_node, false);
 
-      task->schedule(target_node, SchedulePriority::Unstealable);
+      task->schedule(target_node, SchedulePriority::JobTask);
       jobs.push_back(task);
       chunk_counter++;
     }

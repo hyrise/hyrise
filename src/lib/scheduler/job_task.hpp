@@ -28,7 +28,7 @@ namespace opossum {
  */
 class JobTask : public AbstractTask {
  public:
-  explicit JobTask(const std::function<void()>& fn) : _fn(fn) {}
+  explicit JobTask(const std::function<void()>& fn, bool stealable = true) : AbstractTask(stealable), _fn(fn) {}
 
   void schedule(NodeID preferred_node_id = CURRENT_NODE_ID, SchedulePriority priority = SchedulePriority::JobTask);
 

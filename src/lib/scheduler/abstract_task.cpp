@@ -14,6 +14,8 @@
 
 namespace opossum {
 
+AbstractTask::AbstractTask(bool stealable) : _stealable(stealable) {}
+
 TaskID AbstractTask::id() const { return _id; }
 
 NodeID AbstractTask::node_id() const { return _node_id; }
@@ -21,6 +23,8 @@ NodeID AbstractTask::node_id() const { return _node_id; }
 bool AbstractTask::is_ready() const { return _pending_predecessors == 0; }
 
 bool AbstractTask::is_done() const { return _done; }
+
+bool AbstractTask::is_stealable() const { return _stealable; }
 
 bool AbstractTask::is_scheduled() const { return _is_scheduled; }
 

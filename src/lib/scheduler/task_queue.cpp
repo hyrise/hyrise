@@ -28,14 +28,13 @@ void TaskQueue::push(const std::shared_ptr<AbstractTask>& task, uint32_t priorit
 
 std::shared_ptr<AbstractTask> TaskQueue::pull(SchedulePriority min_priority) {
   std::shared_ptr<AbstractTask> task;
-  for (auto priority : {SchedulePriority::JobTask, SchedulePriority::High, SchedulePriority::Normal, SchedulePriority::Unstealable}) {
+  for (auto priority : {SchedulePriority::JobTask, SchedulePriority::High, SchedulePriority::Normal}) {
     if (priority > min_priority) {
       break;
     }
     auto& queue = _queues[static_cast<uint32_t>(priority)];
-    queue.try_pop(task);
-
-    if (task) {
+    
+    if (queue.try_pop(task)) {
       _num_tasks--;
       return task;
     }
@@ -47,11 +46,14 @@ std::shared_ptr<AbstractTask> TaskQueue::steal() {
   std::shared_ptr<AbstractTask> task;
   for (auto priority : {SchedulePriority::JobTask, SchedulePriority::High, SchedulePriority::Normal}) {
     auto& queue = _queues[static_cast<uint32_t>(priority)];
-    queue.try_pop(task);
 
-    if (task) {
-      _num_tasks--;
-      return task;
+    if (queue.try_pop(task)) {
+      if (task->is_stealable()) {
+        _num_tasks--;
+        return task;
+      } else {
+        queue.push(task);
+      }
     }
   }
   return nullptr;
