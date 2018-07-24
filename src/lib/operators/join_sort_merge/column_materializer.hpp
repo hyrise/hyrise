@@ -49,7 +49,7 @@ class ColumnMaterializer {
     auto output = std::make_unique<MaterializedColumnList<T>>(input->chunk_count());
     auto null_rows = std::make_unique<PosList>();
 
-    std::vector<std::shared_ptr<AbstractTask>> jobs;
+    std::vector<std::shared_ptr<JobTask>> jobs;
     for (ChunkID chunk_id{0}; chunk_id < input->chunk_count(); ++chunk_id) {
       jobs.push_back(_create_chunk_materialization_job(output, null_rows, chunk_id, input, column_id));
       jobs.back()->schedule();

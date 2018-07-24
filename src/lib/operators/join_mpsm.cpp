@@ -382,7 +382,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   * Performs the join on all clusters in parallel.
   **/
   void _perform_join() {
-    auto jobs = std::vector<std::shared_ptr<AbstractTask>>();
+    auto jobs = std::vector<std::shared_ptr<JobTask>>();
 
     // Parallel join for each cluster
     for (auto cluster_number = ClusterID{0}; cluster_number < _cluster_count; ++cluster_number) {

@@ -209,7 +209,7 @@ class RadixClusterSortNUMA {
     }
 
     // Move each entry into its appropriate cluster in parallel
-    std::vector<std::shared_ptr<AbstractTask>> cluster_jobs;
+    std::vector<std::shared_ptr<JobTask>> cluster_jobs;
     for (auto chunk_number = size_t{0}; chunk_number < num_chunks; ++chunk_number) {
       auto job = std::make_shared<JobTask>(
           [chunk_number, &output_table, &input_chunks, &numa_partition_information, &clusterer] {
@@ -245,7 +245,7 @@ class RadixClusterSortNUMA {
 
     output->resize(_cluster_count);
 
-    std::vector<std::shared_ptr<AbstractTask>> cluster_jobs;
+    std::vector<std::shared_ptr<JobTask>> cluster_jobs;
 
     for (NodeID node_id{0}; node_id < _cluster_count; node_id++) {
       DebugAssert(node_id < input_chunks->size(), "Node ID out of range. Node ID: " + std::to_string(node_id) +
@@ -282,7 +282,7 @@ class RadixClusterSortNUMA {
       }
     }
 
-    auto repartition_jobs = std::vector<std::shared_ptr<AbstractTask>>();
+    auto repartition_jobs = std::vector<std::shared_ptr<JobTask>>();
 
     for (NodeID numa_node{0}; numa_node < _cluster_count; ++numa_node) {
       auto job = std::make_shared<JobTask>([this, numa_node, &private_partitions, &homogenous_partitions]() {
@@ -314,7 +314,7 @@ class RadixClusterSortNUMA {
   * Sorts all clusters of a materialized table.
   **/
   void _sort_clusters(std::unique_ptr<MaterializedNUMAPartitionList<T>>& partitions) {
-    auto sort_jobs = std::vector<std::shared_ptr<AbstractTask>>();
+    auto sort_jobs = std::vector<std::shared_ptr<JobTask>>();
 
     for (auto& partition : (*partitions)) {
       for (auto cluster : partition._chunk_columns) {
