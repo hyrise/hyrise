@@ -18,7 +18,7 @@ struct ColumnID;
  */
 class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public AbstractLQPNode {
  public:
-  static std::shared_ptr<ProjectionNode> make_pass_through(const std::shared_ptr<AbstractLQPNode>& child);
+  static std::shared_ptr<ProjectionNode> make_pass_through(const std::shared_ptr<AbstractLQPNode>& input);
 
   explicit ProjectionNode(const std::vector<std::shared_ptr<LQPExpression>>& column_expressions);
 

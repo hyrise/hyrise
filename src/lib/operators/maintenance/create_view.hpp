@@ -12,7 +12,7 @@ namespace opossum {
 // maintenance operator for the "CREATE VIEW" sql statement
 class CreateView : public AbstractReadOnlyOperator {
  public:
-  explicit CreateView(const std::string& view_name, std::shared_ptr<const AbstractLQPNode> lqp);
+  explicit CreateView(const std::string& view_name, const std::shared_ptr<const AbstractLQPNode>& lqp);
 
   const std::string name() const override;
 

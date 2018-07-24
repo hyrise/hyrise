@@ -11,7 +11,7 @@ namespace opossum {
 
 using opossum::then_operator::then;
 
-std::vector<ColumnDescription> QueryResponseBuilder::build_row_description(const std::shared_ptr<const Table> table) {
+std::vector<ColumnDescription> QueryResponseBuilder::build_row_description(const std::shared_ptr<const Table>& table) {
   std::vector<ColumnDescription> result;
 
   const auto& column_names = table->column_names();

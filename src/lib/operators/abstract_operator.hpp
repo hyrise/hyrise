@@ -67,8 +67,8 @@ enum class OperatorType {
 
 class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, private Noncopyable {
  public:
-  AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator> left = nullptr,
-                   const std::shared_ptr<const AbstractOperator> right = nullptr);
+  AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left = nullptr,
+                   const std::shared_ptr<const AbstractOperator>& right = nullptr);
 
   virtual ~AbstractOperator() = default;
 
@@ -92,10 +92,10 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   bool transaction_context_is_set() const;
 
   std::shared_ptr<TransactionContext> transaction_context() const;
-  void set_transaction_context(std::weak_ptr<TransactionContext> transaction_context);
+  void set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context);
 
   // Calls set_transaction_context on itself and both input operators recursively
-  void set_transaction_context_recursively(std::weak_ptr<TransactionContext> transaction_context);
+  void set_transaction_context_recursively(const std::weak_ptr<TransactionContext>& transaction_context);
 
   // Returns a new instance of the same operator with the same configuration.
   // The given arguments are used to replace the ValuePlaceholder objects within the new operator, if applicable.

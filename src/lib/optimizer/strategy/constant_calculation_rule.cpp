@@ -64,7 +64,7 @@ bool ConstantCalculationRule::_replace_expression_in_outputs(const std::shared_p
                                                              const LQPColumnReference& expression_column,
                                                              const AllTypeVariant& value) {
   auto output_plan_changed = false;
-  for (auto output : node->outputs()) {
+  for (const auto& output : node->outputs()) {
     if (output->type() != LQPNodeType::Predicate) {
       output_plan_changed |= _replace_expression_in_outputs(output, expression_column, value);
       continue;

@@ -13,9 +13,9 @@
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
+#include "storage/index/b_tree/b_tree_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
-#include "storage/index/b_tree/b_tree_index.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 
@@ -80,8 +80,8 @@ class JoinIndexTest : public BaseTest {
   }
 
   // builds and executes the given Join and checks correctness of the output
-  void test_join_output(const std::shared_ptr<const AbstractOperator> left,
-                        const std::shared_ptr<const AbstractOperator> right,
+  void test_join_output(const std::shared_ptr<const AbstractOperator>& left,
+                        const std::shared_ptr<const AbstractOperator>& right,
                         const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition predicate_condition,
                         const JoinMode mode, const std::string& file_name, size_t chunk_size) {
     // load expected results from file
@@ -101,8 +101,8 @@ class JoinIndexTest : public BaseTest {
       _table_wrapper_k, _table_wrapper_l, _table_wrapper_m, _table_wrapper_n;
 };
 
-typedef ::testing::Types<AdaptiveRadixTreeIndex, CompositeGroupKeyIndex,
-  BTreeIndex /* , GroupKeyIndex */> DerivedIndices;
+typedef ::testing::Types<AdaptiveRadixTreeIndex, CompositeGroupKeyIndex, BTreeIndex /* , GroupKeyIndex */>
+    DerivedIndices;
 
 TYPED_TEST_CASE(JoinIndexTest, DerivedIndices);
 

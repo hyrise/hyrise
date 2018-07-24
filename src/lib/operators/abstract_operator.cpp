@@ -15,8 +15,8 @@
 
 namespace opossum {
 
-AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator> left,
-                                   const std::shared_ptr<const AbstractOperator> right)
+AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
+                                   const std::shared_ptr<const AbstractOperator>& right)
     : _type(type), _input_left(left), _input_right(right) {}
 
 OperatorType AbstractOperator::type() const { return _type; }
@@ -91,11 +91,12 @@ std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() cons
   return transaction_context_is_set() ? _transaction_context->lock() : nullptr;
 }
 
-void AbstractOperator::set_transaction_context(std::weak_ptr<TransactionContext> transaction_context) {
+void AbstractOperator::set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {
   _transaction_context = transaction_context;
 }
 
-void AbstractOperator::set_transaction_context_recursively(std::weak_ptr<TransactionContext> transaction_context) {
+void AbstractOperator::set_transaction_context_recursively(
+    const std::weak_ptr<TransactionContext>& transaction_context) {
   set_transaction_context(transaction_context);
 
   if (_input_left != nullptr) mutable_input_left()->set_transaction_context_recursively(transaction_context);

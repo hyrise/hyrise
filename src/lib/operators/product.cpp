@@ -9,8 +9,8 @@
 #include "storage/reference_column.hpp"
 
 namespace opossum {
-Product::Product(const std::shared_ptr<const AbstractOperator> left,
-                 const std::shared_ptr<const AbstractOperator> right)
+Product::Product(const std::shared_ptr<const AbstractOperator>& left,
+                 const std::shared_ptr<const AbstractOperator>& right)
     : AbstractReadOnlyOperator(OperatorType::Product, left, right) {}
 
 const std::string Product::name() const { return "Product"; }
@@ -41,7 +41,8 @@ std::shared_ptr<const Table> Product::_on_execute() {
   return output;
 }
 
-void Product::_add_product_of_two_chunks(std::shared_ptr<Table> output, ChunkID chunk_id_left, ChunkID chunk_id_right) {
+void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, ChunkID chunk_id_left,
+                                         ChunkID chunk_id_right) {
   const auto chunk_left = input_table_left()->get_chunk(chunk_id_left);
   const auto chunk_right = input_table_right()->get_chunk(chunk_id_right);
 

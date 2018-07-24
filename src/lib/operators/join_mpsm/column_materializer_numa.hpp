@@ -36,10 +36,7 @@ struct MaterializedNUMAPartition {
   std::vector<std::shared_ptr<MaterializedChunk<T>>> _chunk_columns;
 
   explicit MaterializedNUMAPartition(NodeID node_id, size_t reserve_size)
-      : _node_id{node_id},
-        _alloc{Topology::get().get_memory_resource(node_id)},
-        _chunk_columns(reserve_size) {
-  }
+      : _node_id{node_id}, _alloc{Topology::get().get_memory_resource(node_id)}, _chunk_columns(reserve_size) {}
 
   MaterializedNUMAPartition() {}
 

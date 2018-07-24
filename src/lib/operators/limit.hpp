@@ -10,7 +10,7 @@ namespace opossum {
 // operator to limit the input to n rows
 class Limit : public AbstractReadOnlyOperator {
  public:
-  explicit Limit(const std::shared_ptr<const AbstractOperator> in, const size_t num_rows);
+  explicit Limit(const std::shared_ptr<const AbstractOperator>& in, const size_t num_rows);
 
   const std::string name() const override;
 

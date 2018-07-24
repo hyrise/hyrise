@@ -37,8 +37,8 @@ STRONG_TYPEDEF(size_t, ClusterID);
 **/
 
 namespace opossum {
-JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator> left,
-                   const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+JoinMPSM::JoinMPSM(const std::shared_ptr<const AbstractOperator>& left,
+                   const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                    const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition op)
     : AbstractJoinOperator(OperatorType::JoinMPSM, left, right, mode, column_ids, op) {
   // Validate the parameters
@@ -121,7 +121,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   **/
   struct TableRange;
   struct TablePosition {
-    TablePosition() {}
+    TablePosition() = default;
     TablePosition(NodeID partition, ClusterID cluster, size_t index)
         : cluster{cluster}, index{index}, partition{partition} {}
 
@@ -456,8 +456,8 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   * Turns a pos list that is pointing to reference column entries into a pos list pointing to the original table.
   * This is done because there should not be any reference columns referencing reference columns.
   **/
-  std::shared_ptr<PosList> _dereference_pos_list(std::shared_ptr<const Table> input_table, ColumnID column_id,
-                                                 std::shared_ptr<const PosList> pos_list) {
+  std::shared_ptr<PosList> _dereference_pos_list(std::shared_ptr<const Table>& input_table, ColumnID column_id,
+                                                 std::shared_ptr<const PosList>& pos_list) {
     // Get all the input pos lists so that we only have to pointer cast the columns once
     auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
     for (auto chunk_id = ChunkID{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
@@ -483,7 +483,7 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   /**
   * Executes the MPSMJoin operator.
   **/
-  std::shared_ptr<const Table> _on_execute() {
+  std::shared_ptr<const Table> _on_execute() override {
     auto include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
     auto include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
     auto radix_clusterer =
