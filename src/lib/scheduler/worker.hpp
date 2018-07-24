@@ -23,7 +23,7 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
  public:
   static std::shared_ptr<Worker> get_this_thread_worker();
 
-  Worker(std::weak_ptr<ProcessingUnit> processing_unit, std::shared_ptr<TaskQueue> queue, WorkerID id, CpuID cpu_id);
+  Worker(std::weak_ptr<ProcessingUnit> processing_unit, std::shared_ptr<TaskQueue> queue, WorkerID id, CpuID cpu_id, SchedulePriority min_priority = SchedulePriority::All);
 
   /**
    * Unique ID of a worker. Currently not in use, but really helpful for debugging.
@@ -67,6 +67,7 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   std::shared_ptr<TaskQueue> _queue;
   WorkerID _id;
   CpuID _cpu_id;
+  SchedulePriority _min_priority;
 };
 
 }  // namespace opossum

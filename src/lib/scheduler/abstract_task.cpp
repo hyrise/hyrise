@@ -99,7 +99,7 @@ void AbstractTask::execute() {
   if (_done_callback) _done_callback();
 
   {
-    std::unique_lock<std::mutex> lock(_done_mutex);
+    std::lock_guard<std::mutex> lock(_done_mutex);
     _done = true;
   }
   _done_condition_variable.notify_all();
