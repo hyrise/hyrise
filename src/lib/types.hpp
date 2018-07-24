@@ -153,10 +153,10 @@ constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max(
 
 // The Scheduler currently supports just these 3 priorities, subject to change.
 enum class SchedulePriority {
-  All = 3,          // Default priority when it comes to pulling tasks from the TaskQueue
-  Normal = 2,       // Schedule task at the end of the queue
-  High = 1,         // Schedule task at the beginning of the queue, but not before any JobTask
-  JobTask = 0       // Schedule task at the beginning of the queue
+  All = 3,     // Default priority when it comes to pulling tasks from the TaskQueue
+  Normal = 2,  // Schedule task at the end of the queue
+  High = 1,    // Schedule task at the beginning of the queue, but not before any JobTask
+  JobTask = 0  // Schedule task at the beginning of the queue
 };
 
 // Part of AllParameterVariant to reference parameters that will be replaced later.

@@ -23,7 +23,8 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
  public:
   static std::shared_ptr<Worker> get_this_thread_worker();
 
-  Worker(const std::weak_ptr<ProcessingUnit>& processing_unit, const std::shared_ptr<TaskQueue>& queue, WorkerID id, CpuID cpu_id, SchedulePriority min_priority = SchedulePriority::All);
+  Worker(const std::weak_ptr<ProcessingUnit>& processing_unit, const std::shared_ptr<TaskQueue>& queue, WorkerID id,
+         CpuID cpu_id, SchedulePriority min_priority = SchedulePriority::All);
 
   /**
    * Unique ID of a worker. Currently not in use, but really helpful for debugging.

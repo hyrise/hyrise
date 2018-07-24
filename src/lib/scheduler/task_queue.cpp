@@ -33,7 +33,7 @@ std::shared_ptr<AbstractTask> TaskQueue::pull(SchedulePriority min_priority) {
       break;
     }
     auto& queue = _queues[static_cast<uint32_t>(priority)];
-    
+
     if (queue.try_pop(task)) {
       _num_tasks--;
       return task;

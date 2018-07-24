@@ -58,14 +58,15 @@ void ProcessingUnit::wake_or_create_worker() {
     std::lock_guard<std::mutex> lock(_mutex);
 
     if (_workers.size() < MAX_WORKERS_PER_CORE) {
-      auto worker = std::make_shared<Worker>(shared_from_this(), _queue, _worker_id_allocator->allocate(), _cpu_id, SchedulePriority::All);
+      auto worker = std::make_shared<Worker>(shared_from_this(), _queue, _worker_id_allocator->allocate(), _cpu_id,
+                                             SchedulePriority::All);
       _workers.emplace_back(worker);
 
       auto fn = std::bind(&Worker::operator(), worker.get());
       _threads.emplace_back(fn);
     } else if (_workers.size() < MAX_WORKERS_PER_CORE + MAX_WORKERS_PER_CORE_JOBTASKS) {
-
-      auto worker = std::make_shared<Worker>(shared_from_this(), _queue, _worker_id_allocator->allocate(), _cpu_id, SchedulePriority::JobTask);
+      auto worker = std::make_shared<Worker>(shared_from_this(), _queue, _worker_id_allocator->allocate(), _cpu_id,
+                                             SchedulePriority::JobTask);
       _workers.emplace_back(worker);
 
       auto fn = std::bind(&Worker::operator(), worker.get());
