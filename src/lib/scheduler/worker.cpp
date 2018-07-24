@@ -70,6 +70,8 @@ void Worker::operator()() {
     // TODO(all): this might shutdown the worker and leave non-ready tasks in the queue.
     // Figure out how we want to deal with that later.
     if (!task) {
+      // If the worker is the dedicated JobTask worker, go back into hibernation to wake up
+      // (or pass priority to) one of the all-priorities workers.
       if (_min_priority < SchedulePriority::All) {
         processing_unit->yield_active_worker_token(_id);
         processing_unit->wake_or_create_worker();
