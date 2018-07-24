@@ -9,9 +9,9 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
-#include "utils/load_table.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 

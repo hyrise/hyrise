@@ -23,7 +23,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   friend class Worker;
 
  public:
-  AbstractTask(bool stealable = true);
+  explicit AbstractTask(bool stealable = true);
   virtual ~AbstractTask() = default;
 
   /**
