@@ -187,13 +187,11 @@ std::shared_ptr<const Table> SQLPipeline::get_result_table() {
   }
 
   for (auto& pipeline_statement : _sql_pipeline_statements) {
-    DTRACE_PROBE3(HYRISE, QUERY_START, pipeline_statement->get_sql_string(), pipeline_statement->get_tasks().size(),
-    _sql_pipeline_statements);
+    DTRACE_PROBE3(HYRISE, QUERY_START, pipeline_statement->get_sql_string().c_str(), pipeline_statement->get_tasks().size(),reinterpret_cast<uintptr_t>(this));
 
     pipeline_statement->get_result_table();
 
-    DTRACE_PROBE3(HYRISE, QUERY_END, pipeline_statement->get_sql_string(), pipeline_statement->get_tasks().size(),
-    _sql_pipeline_statements);
+    DTRACE_PROBE3(HYRISE, QUERY_END, pipeline_statement->get_sql_string().c_str(), pipeline_statement->get_tasks().size(),reinterpret_cast<uintptr_t>(this));
 
     if (_transaction_context && _transaction_context->aborted()) {
       _failed_pipeline_statement = pipeline_statement;
