@@ -31,7 +31,7 @@ with open(sys.argv[2]) as new_file:
 
 table = BeautifulTable(default_alignment = BeautifulTable.ALIGN_LEFT, max_width=100)
 table.column_headers = ["Benchmark", "prev. iter/s", "new iter/s", "change", "p-value"]
-table.column_widths = [10, 10, 10, 20, 10]
+table.column_widths = [10, 10, 10, 20, 20]
 table.width_exceed_policy = BeautifulTable.WEP_ELLIPSIS
 table.row_separator_char = ''
 table.top_border_char = ''
