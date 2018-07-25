@@ -162,8 +162,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
   for (const auto& named_query : _queries) {
     const auto& name = named_query.first;
     const auto& query_result = _query_results_by_query_name.at(name);
-    const auto& num_iterations = query_result.num_iterations;
-    DebugAssert(query_result.iteration_durations.size() == num_iterations,
+    DebugAssert(query_result.iteration_durations.size() == query_result.num_iterations,
                 "number of iterations and number of iteration durations does not match");
 
     const auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(query_result.duration).count();
@@ -179,22 +178,11 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
                      return static_cast<double>(std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count());
                    });
 
-    // Calculate standard deviation and relative standard deviation
-    const auto mean = time_per_query;
-    const auto sum_of_squared_deviations = std::accumulate(
-        iteration_durations.cbegin(), iteration_durations.cend(), 0.0,
-        [mean](const auto& sum, const auto& duration) { return sum + ((duration - mean) * (duration - mean)); });
-    const auto variance =
-        num_iterations > 1 ? static_cast<double>(sum_of_squared_deviations) / (num_iterations - 1) : 0.0;
-    const auto standard_deviation = sqrt(variance);
-    const auto relative_standard_deviation = standard_deviation / mean;
-
     nlohmann::json benchmark{
         {"name", name},
         {"iterations", query_result.num_iterations},
-        {"real_time_per_iteration_avg", time_per_query},
-        {"real_time_per_iteration_relative_standard_deviation", relative_standard_deviation},
-        {"real_time_per_iteration_standard_deviation", standard_deviation},
+        {"iteration_durations", iteration_durations},
+        {"avg_real_time_per_iteration", time_per_query},
         {"items_per_second", items_per_second},
         {"time_unit", "ns"},
     };
