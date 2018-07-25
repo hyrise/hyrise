@@ -16,7 +16,7 @@ std::shared_ptr<LQPExpression> LQPExpression::create_column(const LQPColumnRefer
   return expression;
 }
 
-std::shared_ptr<LQPExpression> LQPExpression::create_subselect(std::shared_ptr<AbstractLQPNode> root_node,
+std::shared_ptr<LQPExpression> LQPExpression::create_subselect(const std::shared_ptr<AbstractLQPNode>& root_node,
                                                                const std::optional<std::string>& alias) {
   auto expression = std::make_shared<LQPExpression>(ExpressionType::Subselect);
   expression->_subselect_node = root_node;

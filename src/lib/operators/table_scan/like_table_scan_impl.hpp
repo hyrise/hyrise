@@ -30,7 +30,7 @@ class Table;
  */
 class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
  public:
-  LikeTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
+  LikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID left_column_id,
                     const PredicateCondition predicate_condition, const std::string& pattern);
 
   void handle_column(const BaseValueColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
@@ -46,7 +46,7 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
   /**
    * Turn SQL LIKE-pattern into a C++ regex.
    */
-  static std::string sql_like_to_regex(std::string sqllike);
+  static std::string sql_like_to_regex(std::string sql_like);
 
   enum class Wildcard { SingleChar /* '_' */, AnyChars /* '%' */ };
   using PatternToken = boost::variant<std::string, Wildcard>;  // Keep type order, users rely on which()

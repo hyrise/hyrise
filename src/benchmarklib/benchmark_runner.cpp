@@ -63,7 +63,8 @@ void BenchmarkRunner::run() {
   // Visualize query plans
   if (_config.enable_visualization) {
     for (const auto& name_and_plans : _query_plans) {
-      const auto& name = name_and_plans.first;
+      auto name = name_and_plans.first;
+      boost::replace_all(name, " ", "_");
       const auto& lqps = name_and_plans.second.lqps;
       const auto& pqps = name_and_plans.second.pqps;
 

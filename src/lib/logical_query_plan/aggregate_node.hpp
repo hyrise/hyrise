@@ -24,7 +24,7 @@ namespace opossum {
  */
 class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public AbstractLQPNode {
  public:
-  explicit AggregateNode(const std::vector<std::shared_ptr<LQPExpression>>& aggregates,
+  explicit AggregateNode(const std::vector<std::shared_ptr<LQPExpression>>& aggregate_expressions,
                          const std::vector<LQPColumnReference>& groupby_column_references);
 
   const std::vector<std::shared_ptr<LQPExpression>>& aggregate_expressions() const;

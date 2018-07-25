@@ -19,9 +19,9 @@
 
 namespace opossum {
 
-Aggregate::Aggregate(const std::shared_ptr<AbstractOperator> in,
+Aggregate::Aggregate(const std::shared_ptr<AbstractOperator>& in,
                      const std::vector<AggregateColumnDefinition>& aggregates,
-                     const std::vector<ColumnID> groupby_column_ids)
+                     const std::vector<ColumnID>& groupby_column_ids)
     : AbstractReadOnlyOperator(OperatorType::Aggregate, in),
       _aggregates(aggregates),
       _groupby_column_ids(groupby_column_ids) {
@@ -83,14 +83,14 @@ void Aggregate::_on_cleanup() {
 Visitor context for the partitioning/grouping visitor
 */
 struct GroupByContext : ColumnVisitableContext {
-  GroupByContext(std::shared_ptr<const Table> t, ChunkID chunk, ColumnID column,
-                 std::shared_ptr<std::vector<AggregateKey>> keys)
+  GroupByContext(const std::shared_ptr<const Table>& t, ChunkID chunk, ColumnID column,
+                 const std::shared_ptr<std::vector<AggregateKey>>& keys)
       : table_in(t), chunk_id(chunk), column_id(column), hash_keys(keys) {}
 
   // constructor for use in ReferenceColumn::visit_dereferenced
-  GroupByContext(std::shared_ptr<BaseColumn>, const std::shared_ptr<const Table> referenced_table,
-                 std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
-                 std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets)
+  GroupByContext(const std::shared_ptr<BaseColumn>&, const std::shared_ptr<const Table>& referenced_table,
+                 const std::shared_ptr<ColumnVisitableContext>& base_context, ChunkID chunk_id,
+                 const std::shared_ptr<std::vector<ChunkOffset>>& chunk_offsets)
       : table_in(referenced_table),
         chunk_id(chunk_id),
         column_id(std::static_pointer_cast<GroupByContext>(base_context)->column_id),
@@ -109,13 +109,13 @@ Visitor context for the AggregateVisitor.
 */
 template <typename ColumnType, typename AggregateType>
 struct AggregateContext : ColumnVisitableContext {
-  AggregateContext() {}
-  explicit AggregateContext(std::shared_ptr<GroupByContext> base_context) : groupby_context(base_context) {}
+  AggregateContext() = default;
+  explicit AggregateContext(const std::shared_ptr<GroupByContext>& base_context) : groupby_context(base_context) {}
 
   // constructor for use in ReferenceColumn::visit_dereferenced
-  AggregateContext(std::shared_ptr<BaseColumn>, const std::shared_ptr<const Table>,
-                   std::shared_ptr<ColumnVisitableContext> base_context, ChunkID chunk_id,
-                   std::shared_ptr<std::vector<ChunkOffset>> chunk_offsets)
+  AggregateContext(const std::shared_ptr<BaseColumn>&, const std::shared_ptr<const Table>&,
+                   const std::shared_ptr<ColumnVisitableContext>& base_context, ChunkID chunk_id,
+                   const std::shared_ptr<std::vector<ChunkOffset>>& chunk_offsets)
       : groupby_context(std::static_pointer_cast<AggregateContext>(base_context)->groupby_context),
         results(std::static_pointer_cast<AggregateContext>(base_context)->results) {
     groupby_context->chunk_id = chunk_id;
@@ -240,7 +240,7 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Su
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, std::optional<AggregateType> current_aggregate) {
       // add new value to sum
-      return new_value + (!current_aggregate ? 0 : *current_aggregate);
+      return new_value + (!current_aggregate ? 0 : *current_aggregate);  // NOLINT - false positive hicpp-use-nullptr
     };
   }
 };
@@ -250,7 +250,7 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Av
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
     return [](ColumnType new_value, std::optional<AggregateType> current_aggregate) {
       // add new value to sum
-      return new_value + (!current_aggregate ? 0 : *current_aggregate);
+      return new_value + (!current_aggregate ? 0 : *current_aggregate);  // NOLINT - false positive hicpp-use-nullptr
     };
   }
 };
@@ -605,14 +605,17 @@ write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
   auto& values = column->values();
   auto& null_values = column->null_values();
 
-  for (auto& kv : *results) {
-    null_values.push_back(!kv.second.current_aggregate);
+  values.resize(results->size());
+  null_values.resize(results->size());
 
-    if (!kv.second.current_aggregate) {
-      values.push_back(AggregateType());
-    } else {
-      values.push_back(*kv.second.current_aggregate);
+  size_t i = 0;
+  for (auto& kv : *results) {
+    null_values[i] = !kv.second.current_aggregate;
+
+    if (kv.second.current_aggregate) {
+      values[i] = *kv.second.current_aggregate;
     }
+    ++i;
   }
 }
 
@@ -626,9 +629,12 @@ typename std::enable_if<func == AggregateFunction::Count, void>::type write_aggr
   DebugAssert(!column->is_nullable(), "Aggregate: Output column for COUNT shouldn't be nullable");
 
   auto& values = column->values();
+  values.resize(results->size());
 
+  size_t i = 0;
   for (auto& kv : *results) {
-    values.push_back(kv.second.aggregate_count);
+    values[i] = kv.second.aggregate_count;
+    ++i;
   }
 }
 
@@ -642,9 +648,12 @@ typename std::enable_if<func == AggregateFunction::CountDistinct, void>::type wr
   DebugAssert(!column->is_nullable(), "Aggregate: Output column for COUNT shouldn't be nullable");
 
   auto& values = column->values();
+  values.resize(results->size());
 
+  size_t i = 0;
   for (auto& kv : *results) {
-    values.push_back(kv.second.distinct_values.size());
+    values[i] = kv.second.distinct_values.size();
+    ++i;
   }
 }
 
@@ -660,14 +669,17 @@ write_aggregate_values(std::shared_ptr<ValueColumn<AggregateType>> column,
   auto& values = column->values();
   auto& null_values = column->null_values();
 
-  for (auto& kv : *results) {
-    null_values.push_back(!kv.second.current_aggregate);
+  values.resize(results->size());
+  null_values.resize(results->size());
 
-    if (!kv.second.current_aggregate) {
-      values.push_back(AggregateType());
-    } else {
-      values.push_back(*kv.second.current_aggregate / static_cast<AggregateType>(kv.second.aggregate_count));
+  size_t i = 0;
+  for (auto& kv : *results) {
+    null_values[i] = !kv.second.current_aggregate;
+
+    if (kv.second.current_aggregate) {
+      values[i] = *kv.second.current_aggregate / static_cast<AggregateType>(kv.second.aggregate_count);
     }
+    ++i;
   }
 }
 
@@ -751,7 +763,7 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
   constexpr bool NEEDS_NULL = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
   _output_column_definitions.emplace_back(output_column_name, aggregate_data_type, NEEDS_NULL);
 
-  auto col = std::make_shared<ValueColumn<decltype(aggregate_type)>>(NEEDS_NULL);
+  auto output_column = std::make_shared<ValueColumn<decltype(aggregate_type)>>(NEEDS_NULL);
 
   auto context = std::static_pointer_cast<AggregateContext<ColumnType, decltype(aggregate_type)>>(
       _contexts_per_column[column_index]);
@@ -768,16 +780,16 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
 
   // write aggregated values into the column
   if (!context->results->empty()) {
-    write_aggregate_values<ColumnType, decltype(aggregate_type), function>(col, context->results);
+    write_aggregate_values<ColumnType, decltype(aggregate_type), function>(output_column, context->results);
   } else if (_groupby_columns.empty()) {
     // If we did not GROUP BY anything and we have no results, we need to add NULL for most aggregates and 0 for count
-    col->values().push_back(decltype(aggregate_type){});
+    output_column->values().push_back(decltype(aggregate_type){});
     if (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct) {
-      col->null_values().push_back(true);
+      output_column->null_values().push_back(true);
     }
   }
 
-  _output_columns.push_back(col);
+  _output_columns.push_back(output_column);
 }
 
 std::shared_ptr<ColumnVisitableContext> Aggregate::_create_aggregate_context(const DataType data_type,

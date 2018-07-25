@@ -6,8 +6,8 @@
 namespace opossum {
 
 AbstractReadWriteOperator::AbstractReadWriteOperator(const OperatorType type,
-                                                     const std::shared_ptr<const AbstractOperator> left,
-                                                     const std::shared_ptr<const AbstractOperator> right)
+                                                     const std::shared_ptr<const AbstractOperator>& left,
+                                                     const std::shared_ptr<const AbstractOperator>& right)
     : AbstractOperator(type, left, right), _state{ReadWriteOperatorState::Pending} {}
 
 void AbstractReadWriteOperator::execute() {

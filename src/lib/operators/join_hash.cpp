@@ -24,8 +24,8 @@
 
 namespace opossum {
 
-JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator> left,
-                   const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
+                   const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                    const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
                    const size_t radix_bits)
     : AbstractJoinOperator(OperatorType::JoinHash, left, right, mode, column_ids, predicate_condition),
@@ -118,12 +118,12 @@ struct RadixContainer {
 Build all the hash tables for the partitions of Left. We parallelize this process for all partitions of Left
 */
 template <typename LeftType, typename HashedType>
-std::vector<std::shared_ptr<HashTable<HashedType>>> build(const RadixContainer<LeftType>& radix_container) {
+std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<LeftType>& radix_container) {
   /*
   NUMA notes:
   The hashtables for each partition P should also reside on the same node as the two vectors leftP and rightP.
   */
-  std::vector<std::shared_ptr<HashTable<HashedType>>> hashtables;
+  std::vector<std::optional<HashTable<HashedType>>> hashtables;
   hashtables.resize(radix_container.partition_offsets.size() - 1);
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
@@ -144,15 +144,15 @@ std::vector<std::shared_ptr<HashTable<HashedType>>> build(const RadixContainer<L
                                                  partition_size]() {
       auto& partition_left = static_cast<Partition<LeftType>&>(*radix_container.elements);
 
-      auto hashtable = std::make_shared<HashTable<HashedType>>(partition_size);
+      auto hashtable = HashTable<HashedType>{partition_size};
 
       for (size_t partition_offset = partition_left_begin; partition_offset < partition_left_end; ++partition_offset) {
         auto& element = partition_left[partition_offset];
 
-        hashtable->put(type_cast<HashedType>(element.value), element.row_id);
+        hashtable.put(type_cast<HashedType>(element.value), element.row_id);
       }
 
-      hashtables[current_partition_id] = hashtable;
+      hashtables[current_partition_id] = std::move(hashtable);
     }));
     jobs.back()->schedule();
   }
@@ -179,7 +179,7 @@ constexpr uint32_t hash_value(OriginalType& value, const unsigned int seed) {
 }
 
 template <typename T, typename HashedType>
-std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Table> in_table, ColumnID column_id,
+std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
                                                 std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
                                                 const size_t radix_bits, const unsigned int partitioning_seed,
                                                 bool keep_nulls = false) {
@@ -188,7 +188,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
   elements->resize(in_table->row_count());
 
   // fan-out
-  const size_t num_partitions = 1 << radix_bits;
+  const size_t num_partitions = 1ull << radix_bits;
 
   // currently, we just do one pass
   size_t pass = 0;
@@ -288,12 +288,12 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
 }
 
 template <typename T>
-RadixContainer<T> partition_radix_parallel(std::shared_ptr<Partition<T>> materialized,
-                                           std::shared_ptr<std::vector<size_t>> chunk_offsets,
+RadixContainer<T> partition_radix_parallel(const std::shared_ptr<Partition<T>>& materialized,
+                                           const std::shared_ptr<std::vector<size_t>>& chunk_offsets,
                                            std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
                                            const size_t radix_bits, bool keep_nulls = false) {
   // fan-out
-  const size_t num_partitions = 1 << radix_bits;
+  const size_t num_partitions = 1ull << radix_bits;
 
   // currently, we just do one pass
   size_t pass = 0;
@@ -364,7 +364,7 @@ RadixContainer<T> partition_radix_parallel(std::shared_ptr<Partition<T>> materia
   */
 template <typename RightType, typename HashedType>
 void probe(const RadixContainer<RightType>& radix_container,
-           const std::vector<std::shared_ptr<HashTable<HashedType>>>& hashtables, std::vector<PosList>& pos_list_left,
+           const std::vector<std::optional<HashTable<HashedType>>>& hashtables, std::vector<PosList>& pos_list_left,
            std::vector<PosList>& pos_list_right, const JoinMode mode) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size() - 1);
@@ -394,7 +394,7 @@ void probe(const RadixContainer<RightType>& radix_container,
       PosList pos_list_right_local;
 
       if (hashtables[current_partition_id]) {
-        auto& hashtable = hashtables.at(current_partition_id);
+        const auto& hashtable = hashtables.at(current_partition_id);
 
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
           auto& row = partition[partition_offset];
@@ -405,10 +405,10 @@ void probe(const RadixContainer<RightType>& radix_container,
 
           // This is where the actual comparison happens. `get` only returns values that match and eliminates hash
           // collisions.
-          auto row_ids = hashtable->get(type_cast<HashedType>(row.value));
+          const auto& matching_rows = hashtable->get(type_cast<HashedType>(row.value));
 
-          if (row_ids) {
-            for (const auto& row_id : *row_ids) {
+          if (matching_rows) {
+            for (const auto row_id : matching_rows->get()) {
               if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
                 pos_list_left_local.emplace_back(row_id);
                 pos_list_right_local.emplace_back(row.row_id);
@@ -451,7 +451,7 @@ void probe(const RadixContainer<RightType>& radix_container,
 
 template <typename RightType, typename HashedType>
 void probe_semi_anti(const RadixContainer<RightType>& radix_container,
-                     const std::vector<std::shared_ptr<HashTable<HashedType>>>& hashtables,
+                     const std::vector<std::optional<HashTable<HashedType>>>& hashtables,
                      std::vector<PosList>& pos_lists, const JoinMode mode) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size() - 1);
@@ -472,7 +472,7 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
 
       PosList pos_list_local;
 
-      if (auto& hashtable = hashtables[current_partition_id]) {
+      if (const auto& hashtable = hashtables[current_partition_id]) {
         // Valid hashtable found, so there is at least one match in this partition
 
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
@@ -482,7 +482,7 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
             continue;
           }
 
-          auto matching_rows = hashtable->get(row.value);
+          const auto& matching_rows = hashtable->get(row.value);
 
           if ((mode == JoinMode::Semi && matching_rows) || (mode == JoinMode::Anti && !matching_rows)) {
             // Semi: found at least one match for this row -> match
@@ -512,7 +512,7 @@ using PosLists = std::vector<std::shared_ptr<const PosList>>;
 using PosListsByColumn = std::vector<std::shared_ptr<PosLists>>;
 
 // See usage in _on_execute() for doc.
-PosListsByColumn setup_pos_lists_by_column(const std::shared_ptr<const Table> input_table) {
+PosListsByColumn setup_pos_lists_by_column(const std::shared_ptr<const Table>& input_table) {
   DebugAssert(input_table->type() == TableType::References, "Function only works for reference tables");
 
   std::map<PosLists, std::shared_ptr<PosLists>> shared_pos_lists_by_pos_lists;
@@ -543,7 +543,7 @@ PosListsByColumn setup_pos_lists_by_column(const std::shared_ptr<const Table> in
   return pos_lists_by_column;
 }
 
-void write_output_columns(ChunkColumns& output_columns, const std::shared_ptr<const Table> input_table,
+void write_output_columns(ChunkColumns& output_columns, const std::shared_ptr<const Table>& input_table,
                           const PosListsByColumn& input_pos_list_ptrs_sptrs_by_column,
                           std::shared_ptr<PosList> pos_list) {
   std::map<std::shared_ptr<PosLists>, std::shared_ptr<PosList>> output_pos_list_cache;
@@ -597,9 +597,10 @@ void write_output_columns(ChunkColumns& output_columns, const std::shared_ptr<co
 template <typename LeftType, typename RightType>
 class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
  public:
-  JoinHashImpl(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
-               const JoinMode mode, const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
-               const bool inputs_swapped, const size_t radix_bits)
+  JoinHashImpl(const std::shared_ptr<const AbstractOperator>& left,
+               const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
+               const ColumnIDPair& column_ids, const PredicateCondition predicate_condition, const bool inputs_swapped,
+               const size_t radix_bits)
       : _left(left),
         _right(right),
         _mode(mode),
@@ -607,8 +608,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _predicate_condition(predicate_condition),
         _inputs_swapped(inputs_swapped),
         _radix_bits(radix_bits) {}
-
-  virtual ~JoinHashImpl() = default;
 
  protected:
   const std::shared_ptr<const AbstractOperator> _left, _right;

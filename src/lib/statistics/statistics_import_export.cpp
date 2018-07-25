@@ -87,15 +87,15 @@ nlohmann::json export_table_statistics(const TableStatistics& table_statistics) 
   return table_statistics_json;
 }
 
-nlohmann::json export_column_statistics(const BaseColumnStatistics& abstract_column_statistics) {
+nlohmann::json export_column_statistics(const BaseColumnStatistics& base_column_statistics) {
   nlohmann::json column_statistics_json;
-  column_statistics_json["data_type"] = data_type_to_string.left.at(abstract_column_statistics.data_type());
-  column_statistics_json["distinct_count"] = abstract_column_statistics.distinct_count();
-  column_statistics_json["null_value_ratio"] = abstract_column_statistics.null_value_ratio();
+  column_statistics_json["data_type"] = data_type_to_string.left.at(base_column_statistics.data_type());
+  column_statistics_json["distinct_count"] = base_column_statistics.distinct_count();
+  column_statistics_json["null_value_ratio"] = base_column_statistics.null_value_ratio();
 
-  resolve_data_type(abstract_column_statistics.data_type(), [&](const auto type) {
+  resolve_data_type(base_column_statistics.data_type(), [&](const auto type) {
     using ColumnDataType = typename decltype(type)::type;
-    const auto& column_statistics = static_cast<const ColumnStatistics<ColumnDataType>&>(abstract_column_statistics);
+    const auto& column_statistics = static_cast<const ColumnStatistics<ColumnDataType>&>(base_column_statistics);
     column_statistics_json["min"] = column_statistics.min();
     column_statistics_json["max"] = column_statistics.max();
   });

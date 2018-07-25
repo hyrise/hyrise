@@ -30,7 +30,8 @@ bool is_row_visible(CommitID our_tid, CommitID snapshot_commit_id, ChunkOffset c
 
 }  // namespace
 
-Validate::Validate(const std::shared_ptr<AbstractOperator> in) : AbstractReadOnlyOperator(OperatorType::Validate, in) {}
+Validate::Validate(const std::shared_ptr<AbstractOperator>& in)
+    : AbstractReadOnlyOperator(OperatorType::Validate, in) {}
 
 const std::string Validate::name() const { return "Validate"; }
 

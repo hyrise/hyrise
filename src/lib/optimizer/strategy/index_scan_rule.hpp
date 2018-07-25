@@ -33,7 +33,7 @@ class IndexScanRule : public AbstractRule {
  protected:
   bool _is_index_scan_applicable(const IndexInfo& indx_info,
                                  const std::shared_ptr<PredicateNode>& predicate_node) const;
-  inline bool _is_single_column_index(const IndexInfo& indexed_columns) const;
+  inline bool _is_single_column_index(const IndexInfo& index_info) const;
 };
 
 }  // namespace opossum
