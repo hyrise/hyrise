@@ -79,7 +79,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             exit 1
         fi
     else
-        echo "Unsupported architecture $unamestr."
+        echo "Unsupported operating system $unamestr."
         exit 1
     fi
 fi
