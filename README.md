@@ -69,7 +69,7 @@ Note, that the tests/sanitizers/etc need to be executed from the project root in
 *Supports only clang on MacOS and only gcc on linux*
 
 ### Address/UndefinedBehavior Sanitizers
-`cmake -DENABLE_SANITIZATION=ON` will generate Makefiles with AddressSanitizer and Undefined Behavior options.
+`cmake -ENABLE_ADDR_UB_SANITIZATION=ON` will generate Makefiles with AddressSanitizer and Undefined Behavior options.
 Compile and run them as normal - if any issues are detected, they will be printed to the console.
 It will fail on the first detected error and will print a summary.
 To convert addresses to actual source code locations, make sure llvm-symbolizer is installed (included in the llvm package) and is available in `$PATH`.
