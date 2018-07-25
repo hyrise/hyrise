@@ -44,8 +44,11 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
         : _table{table},
           _column_id{column_id},
           _begin_pos_list_it{begin_pos_list_it},
-          _pos_list_it{pos_list_it}
-    {
+          _pos_list_it{pos_list_it},
+          _columns{_table->chunk_count(), nullptr} {
+      for (auto chunk_id = ChunkID{0}; chunk_id < _table->chunk_count(); ++chunk_id) {
+        _insert_referenced_column(chunk_id);
+      }
     }
 
    private:
@@ -64,13 +67,27 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
       const auto chunk_offset_into_ref_column =
           static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
 
-      const auto& chunk = _table->get_chunk(chunk_id);
-      const auto base_column = chunk->get_column(_column_id);
-      const auto base_column_t = std::dynamic_pointer_cast<const BaseTypedColumn<T>>(base_column);
-
-      const auto typed_value = base_column_t->get_typed_value(chunk_offset);
+      const auto typed_value = _columns[chunk_id]->get_typed_value(chunk_offset);
 
       return ColumnIteratorValue<T>{typed_value.first, typed_value.second, chunk_offset_into_ref_column};
+    }
+
+   private:
+    void _insert_referenced_column(const ChunkID chunk_id) {
+      if (_columns[chunk_id] == nullptr) {
+        auto column = _table->get_chunk(chunk_id)->get_column(_column_id);
+        auto base_column_t = std::dynamic_pointer_cast<const BaseTypedColumn<T>>(column);
+        DebugAssert(base_column_t, "Cannot cast to BaseColumnT<T>");
+        _columns[chunk_id] = base_column_t;
+        //        resolve_column_type<T>(*column, [&](auto& typed_column) {
+        //          using ColumnType = typename std::decay<decltype(typed_column)>::type;
+        //          if constexpr (std::is_same<ColumnType, ReferenceColumn>::value) {
+        //            Fail("ReferenceColumn cannot reference another ReferenceColumn");
+        //          } else {
+        //            _columns[chunk_id] = &typed_column;
+        //          }
+        //        });
+      }
     }
 
    private:
@@ -79,6 +96,8 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
 
     const PosListIterator _begin_pos_list_it;
     PosListIterator _pos_list_it;
+
+    std::vector<std::shared_ptr<const BaseTypedColumn<T>>> _columns;
   };
 };
 
