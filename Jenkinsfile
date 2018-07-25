@@ -34,6 +34,8 @@ node {
         mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
         mkdir clang-release && cd clang-release && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 .. &\
         mkdir clang-release-addr-ub-sanitizers-no-numa && cd clang-release-addr-ub-sanitizers-no-numa && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_ADDR_UB_SANITIZATION=ON -DENABLE_NUMA_SUPPORT=OFF .. &\
+        mkdir clang-release-thread-sanitizer && cd clang-release-thread-sanitizer && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_THREAD_SANITIZATION=ON .. &\
+        mkdir clang-release-thread-sanitizer-no-numa && cd clang-release-thread-sanitizer-no-numa && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_THREAD_SANITIZATION=ON -DENABLE_NUMA_SUPPORT=OFF .. &\
         mkdir gcc-debug && cd gcc-debug && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
         mkdir gcc-release && cd gcc-release && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
         wait"
@@ -126,6 +128,15 @@ node {
             Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizers")
           }
         }
+      }, clangReleaseThreadSanitizer: {
+        stage("clang-release:thread-sanitizer") {
+          if (env.BRANCH_NAME == 'master' || full_ci) {
+            sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-thread-sanitizer && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            sh "./clang-release-thread-sanitizer/hyriseTest clang-release-thread-sanitizer"
+          } else {
+            Utils.markStageSkippedForConditional("clangReleaseThreadSanitizer")
+          }
+        }
       }, clangReleaseAddrUBSanitizersNoNuma: {
         stage("clang-release:addr-ub-sanitizers w/o NUMA") {
           if (env.BRANCH_NAME == 'master' || full_ci) {
@@ -133,6 +144,15 @@ node {
             sh "LSAN_OPTIONS=suppressions=.lsan-ignore.txt ASAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-addr-ub-sanitizers-no-numa/hyriseTest clang-release-addr-ub-sanitizers-no-numa"
           } else {
             Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizersNoNuma")
+          }
+        }
+      }, clangReleaseThreadSanitizerNoNuma: {
+        stage("clang-release:thread-sanitizer w/o NUMA") {
+          if (env.BRANCH_NAME == 'master' || full_ci) {
+            sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-thread-sanitizer-no-numa && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            sh "./clang-release-thread-sanitizer-no-numa/hyriseTest clang-release-thread-sanitizer-no-numa"
+          } else {
+            Utils.markStageSkippedForConditional("clangReleaseThreadSanitizerNoNuma")
           }
         }
       }, clangDebugCoverage: {
