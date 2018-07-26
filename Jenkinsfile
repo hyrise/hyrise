@@ -94,7 +94,7 @@ node {
       throw error
     } finally {
 
-      sh "ls -A1 | xargs rm -rf"
+      ///sh "ls -A1 | xargs rm -rf"
       ///deleteDir()
     }
   }
