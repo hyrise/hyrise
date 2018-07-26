@@ -55,10 +55,9 @@ node {
             archive 'coverage_percent.txt'
             publishHTML (target: [
               allowMissing: false,
-              alwaysLinkToLastBuild: true,
+              alwaysLinkToLastBuild: false,
               keepAll: true,
-              reportDir: "coverage/coverage",
-              includes: '**/*',
+              reportDir: "coverage",
               reportFiles: 'index.html',
               reportName: "Llvm-cov_Report"
             ])
