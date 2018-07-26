@@ -56,7 +56,7 @@ node {
               allowMissing: false,
               alwaysLinkToLastBuild: true,
               keepAll: true,
-              reportDir: "'coverage','coverage/coverage'",
+              reportDir: "coverage,coverage/coverage",
               includes: '**/*',
               reportFiles: 'index.html',
               reportName: "Llvm-cov_Report"
