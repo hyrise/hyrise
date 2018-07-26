@@ -54,7 +54,7 @@ node {
             archive 'coverage_percent.txt'
             publishHTML (target: [
               allowMissing: false,
-              alwaysLinkToLastBuild: false,
+              alwaysLinkToLastBuild: true,
               keepAll: true,
               reportDir: 'coverage',
               includes: '**/*',
