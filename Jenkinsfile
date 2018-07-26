@@ -193,8 +193,8 @@ node {
       throw error
     } finally {
 
-      ///sh "ls -A1 | xargs rm -rf"
-      ///deleteDir()
+      sh "ls -A1 | xargs rm -rf"
+      deleteDir()
     }
   }
 }
