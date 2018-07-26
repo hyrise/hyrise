@@ -42,10 +42,101 @@ node {
         full_ci = sh(script: "./scripts/current_branch_has_pull_request_label.py FullCI", returnStdout: true).trim() == "true"
       }
 
-
+      parallel clangRelease: {
+        stage("clang-release") {
+          if (env.BRANCH_NAME == 'master' || full_ci) {
+            sh "export CCACHE_BASEDIR=`pwd`; cd clang-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            sh "./clang-release/hyriseTest clang-release"
+          } else {
+            Utils.markStageSkippedForConditional("clangRelease")
+          }
+        }
+      }, clangDebugBuildOnly: {
+        stage("clang-debug") {
+          sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+        }
+      }, lint: {
+        stage("Linting") {
+          sh '''
+            scripts/lint.sh
+          '''
+        }
+      }
 
       parallel clangDebugRun: {
-        
+        stage("clang-debug:test") {
+          sh "./clang-debug/hyriseTest clang-debug"
+        }
+      }, clangDebugRunShuffled: {
+        stage("clang-debug:test-shuffle") {
+          if (env.BRANCH_NAME == 'master' || full_ci) {
+            sh "mkdir ./clang-debug/run-shuffled"
+            sh "./clang-debug/hyriseTest clang-debug/run-shuffled --gtest_repeat=5 --gtest_shuffle"
+          } else {
+            Utils.markStageSkippedForConditional("clangDebugRunShuffled")
+          }
+        }
+      }, clangDebugTidy: {
+        stage("clang-debug:tidy") {
+          if (env.BRANCH_NAME == 'master' || full_ci) {
+            sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-tidy && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+          } else {
+            Utils.markStageSkippedForConditional("clangDebugTidy")
+          }
+        }
+      }, clangDebugSanitizers: {
+        stage("clang-debug:sanitizers") {
+          if (env.BRANCH_NAME == 'master' || full_ci) {
+            sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            sh "LSAN_OPTIONS=suppressions=.lsan-ignore.txt ASAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-debug-sanitizers/hyriseTest clang-debug-sanitizers"
+          } else {
+            Utils.markStageSkippedForConditional("clangDebugSanitizers")
+          }
+        }
+      }, gccDebug: {
+        stage("gcc-debug") {
+          sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+          sh "./gcc-debug/hyriseTest gcc-debug"
+        }
+      }, gccRelease: {
+        if (env.BRANCH_NAME == 'master' || full_ci) {
+          stage("gcc-release") {
+            sh "export CCACHE_BASEDIR=`pwd`; cd gcc-release && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            sh "./gcc-release/hyriseTest gcc-release"
+          }
+        } else {
+            Utils.markStageSkippedForConditional("gccRelease")
+        }
+      }, clangSystemTestDebug: {
+        stage("System Test") {
+            sh "./clang-debug/hyriseSystemTest"
+        }
+      }, clangSystemTestRelease: {
+        if (env.BRANCH_NAME == 'master' || full_ci) {
+          stage("System Test") {
+              sh "./clang-release/hyriseSystemTest"
+          }
+        } else {
+            Utils.markStageSkippedForConditional("clangSystemTestRelease")
+          }
+      }, clangReleaseSanitizers: {
+        stage("clang-release:sanitizers") {
+          if (env.BRANCH_NAME == 'master' || full_ci) {
+            sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            sh "LSAN_OPTIONS=suppressions=.lsan-ignore.txt ASAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers/hyriseTest clang-release-sanitizers"
+          } else {
+            Utils.markStageSkippedForConditional("clangReleaseSanitizers")
+          }
+        }
+      }, clangReleaseSanitizersNoNuma: {
+        stage("clang-release:sanitizers w/o NUMA") {
+          if (env.BRANCH_NAME == 'master' || full_ci) {
+            sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-sanitizers-no-numa && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            sh "LSAN_OPTIONS=suppressions=.lsan-ignore.txt ASAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers-no-numa/hyriseTest clang-release-sanitizers-no-numa"
+          } else {
+            Utils.markStageSkippedForConditional("clangReleaseSanitizersNoNuma")
+          }
+        }
       }, clangDebugCoverage: {
         stage("clang-debug-coverage") {
           if (env.BRANCH_NAME == 'master' || full_ci) {
@@ -57,7 +148,7 @@ node {
               allowMissing: false,
               alwaysLinkToLastBuild: false,
               keepAll: true,
-              reportDir: "coverage",
+              reportDir: 'coverage',
               reportFiles: 'index.html',
               reportName: "Llvm-cov_Report"
             ])
@@ -69,7 +160,15 @@ node {
             Utils.markStageSkippedForConditional("clangDebugCoverage")
           }
         }
-      
+      }, memcheckClangRelease: {
+        stage("valgrind-memcheck-release") {
+          if (env.BRANCH_NAME == 'master' || full_ci) {
+            sh "mkdir ./clang-release-memcheck"
+            sh "valgrind --tool=memcheck --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+          } else {
+            Utils.markStageSkippedForConditional("memcheckClangRelease")
+          }
+        }
       }
 
       stage("Cleanup") {
