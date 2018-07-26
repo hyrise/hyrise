@@ -141,7 +141,7 @@ node {
         stage("clang-debug-coverage") {
           if (env.BRANCH_NAME == 'master' || full_ci) {
             sh "export CCACHE_BASEDIR=`pwd`; ./scripts/coverage.sh --generate_badge=true --launcher=ccache"
-            sh "find coverage -type d -exec chmod +rx {} \\;"
+            sh "find coverage -type d -exec chmod +r {} \\;"
             archive 'coverage_badge.svg'
             archive 'coverage_percent.txt'
             publishHTML (target: [
