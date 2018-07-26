@@ -56,7 +56,7 @@ node {
               allowMissing: false,
               alwaysLinkToLastBuild: true,
               keepAll: true,
-              reportDir: "coverage,coverage/coverage",
+              reportDir: "coverage/coverage",
               includes: '**/*',
               reportFiles: 'index.html',
               reportName: "Llvm-cov_Report"
@@ -95,7 +95,7 @@ node {
     } finally {
 
       sh "ls -A1 | xargs rm -rf"
-      deleteDir()
+      ///deleteDir()
     }
   }
 }
