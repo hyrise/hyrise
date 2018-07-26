@@ -59,7 +59,7 @@ node {
               reportDir: 'coverage',
               includes: '**/*',
               reportFiles: 'index.html',
-              reportName: "Llvm-cov Report"
+              reportName: "Llvm-cov_Report"
             ])
             script {
               coverageChange = sh script: "./scripts/compare_coverage.sh", returnStdout: true
