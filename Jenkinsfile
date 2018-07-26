@@ -148,6 +148,7 @@ node {
               alwaysLinkToLastBuild: false,
               keepAll: true,
               reportDir: 'coverage',
+              includes: '**/*',
               reportFiles: 'index.html',
               reportName: "Llvm-cov Report"
             ])
