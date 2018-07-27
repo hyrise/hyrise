@@ -6,14 +6,16 @@ node {
       githubNotify context: 'CI Pipeline', status: 'PENDING'
 
       // Cancel previous builds
-      def jobname = env.JOB_NAME
-      def buildnum = env.BUILD_NUMBER.toInteger()
-      def job = Jenkins.instance.getItemByFullName(jobname)
-       for (build in job.builds) {
-        if (!build.isBuilding()) { continue; }
-        if (buildnum == build.getNumber().toInteger()) { continue; }
-        echo "Cancelling previous build " + build.getNumber().toString()
-        build.doStop();
+      if (env.BRANCH_NAME != 'master') {
+        def jobname = env.JOB_NAME
+        def buildnum = env.BUILD_NUMBER.toInteger()
+        def job = Jenkins.instance.getItemByFullName(jobname)
+        for (build in job.builds) {
+          if (!build.isBuilding()) { continue; }
+          if (buildnum == build.getNumber().toInteger()) { continue; }
+          echo "Cancelling previous build " + build.getNumber().toString()
+          build.doStop();
+        }
       }
     }
   }
@@ -139,6 +141,7 @@ node {
         stage("clang-debug-coverage") {
           if (env.BRANCH_NAME == 'master' || full_ci) {
             sh "export CCACHE_BASEDIR=`pwd`; ./scripts/coverage.sh --generate_badge=true --launcher=ccache"
+            sh "find coverage -type d -exec chmod +rx {} \\;"
             archive 'coverage_badge.svg'
             archive 'coverage_percent.txt'
             publishHTML (target: [
@@ -147,7 +150,7 @@ node {
               keepAll: true,
               reportDir: 'coverage',
               reportFiles: 'index.html',
-              reportName: "Llvm-cov Report"
+              reportName: "Llvm-cov_Report"
             ])
             script {
               coverageChange = sh script: "./scripts/compare_coverage.sh", returnStdout: true
