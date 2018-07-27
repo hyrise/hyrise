@@ -27,6 +27,20 @@ target_link_libraries(
 )
 
 add_executable(
+    hyriseCostModelCalibration
+
+    costmodel/cost_model_calibration_main.cpp
+    costmodel/cost_model_calibration.cpp
+    costmodel/cost_model_calibration.hpp
+)
+
+target_link_libraries(
+    hyriseCostModelCalibration
+    hyrise
+    hyriseBenchmarkLib
+)
+
+add_executable(
     hyriseBenchmarkPlayground
 
     benchmark_playground.cpp
