@@ -12,8 +12,8 @@
 
 #include <queue>
 
-#include "llvm_extensions.hpp"
 #include "jit_runtime_pointer.hpp"
+#include "llvm_extensions.hpp"
 
 namespace opossum {
 
