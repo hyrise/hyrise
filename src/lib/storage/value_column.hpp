@@ -44,7 +44,7 @@ class ValueColumn : public BaseValueColumn, public BaseTypedColumn<T> {
   void append(const AllTypeVariant& val) final;
 
   // Add a value (or NULL) to the end of the column.
-  virtual void append_typed_value(const std::pair<T, bool>& value) final;
+  void append_typed_value(const std::pair<T, bool>& value) final;
 
   // Return all values. This is the preferred method to check a value at a certain index. Usually you need to
   // access more than a single value anyway.

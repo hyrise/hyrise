@@ -41,7 +41,7 @@ class FixedStringDictionaryColumn : public BaseDictionaryColumn, public BaseType
 
   const std::pair<T, bool> get_typed_value(const ChunkOffset chunk_offset) const final;
 
-  void append_typed_value(const std::pair<T, bool>& pair) override final;
+  void append_typed_value(const std::pair<T, bool>& pair) final;
 
   size_t size() const final;
 
