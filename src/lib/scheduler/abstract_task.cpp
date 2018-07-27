@@ -100,7 +100,7 @@ void AbstractTask::execute() {
 
   {
     std::unique_lock<std::mutex> lock(_done_mutex);
-    _done.exchange(true);
+    _done = true;
   }
   _done_condition_variable.notify_all();
 }
