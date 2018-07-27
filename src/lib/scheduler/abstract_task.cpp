@@ -83,7 +83,7 @@ void AbstractTask::join() {
 
 void AbstractTask::_join_without_replacement_worker() {
   std::unique_lock<std::mutex> lock(_done_mutex);
-  _done_condition_variable.wait(lock, [&]() { return _done; });
+  _done_condition_variable.wait(lock, [&]() { return _done == true; });
 }
 
 void AbstractTask::execute() {
@@ -100,7 +100,7 @@ void AbstractTask::execute() {
 
   {
     std::unique_lock<std::mutex> lock(_done_mutex);
-    _done = true;
+    _done.exchange(true);
   }
   _done_condition_variable.notify_all();
 }
