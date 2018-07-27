@@ -432,6 +432,9 @@ void probe(const RadixContainer<RightType>& radix_container,
           Hence we are going to write NULL values for each row.
           */
 
+        pos_list_left_local.reserve(partition_end - partition_begin);
+        pos_list_right_local.reserve(partition_end - partition_begin);
+
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
           auto& row = partition[partition_offset];
           pos_list_left_local.emplace_back(NULL_ROW_ID);
