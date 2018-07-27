@@ -89,13 +89,12 @@ class Sort::SortImplMaterializeOutput {
         auto chunk_offset_out = 0u;
 
         auto column_ptr_and_is_typed_by_chunk_id = std::unordered_map < ChunkID,
-             std::pair<std::shared_ptr<const BaseColumn>, bool>;
+             std::pair<std::shared_ptr<const BaseColumn>, bool>>();
         column_ptr_and_is_typed_by_chunk_id.reserve(row_count_out);
 
         for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
           const auto [chunk_id, chunk_offset] = _row_id_value_vector->at(row_index).first;  // NOLINT
 
-          std::shared_ptr<const BaseColumn> column;
           std::shared_ptr<const BaseTypedColumn<ColumnDataType>> typed_column;
 
           auto& column_ptr_and_is_typed_pair = column_ptr_and_is_typed_by_chunk_id[chunk_id];
@@ -110,6 +109,7 @@ class Sort::SortImplMaterializeOutput {
 
           // If the input column is not a ReferenceColumn, we can take a fast(er) path
           if (is_typed) {
+            typed_column = std::dynamic_pointer_cast<const BaseTypedColumn<ColumnDataType>>(column);
             const auto value = typed_column->get_typed_value(chunk_offset);
             (*column_it)->append_typed_value(value);
           } else {
