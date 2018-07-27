@@ -1,0 +1,2 @@
+# Thread Sanitizer Suppressions
+race:^tbb*

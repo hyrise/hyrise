@@ -132,7 +132,7 @@ node {
         stage("clang-release:thread-sanitizer") {
           if (env.BRANCH_NAME == 'master' || full_ci) {
             sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-thread-sanitizer && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-            sh "./clang-release-thread-sanitizer/hyriseTest clang-release-thread-sanitizer"
+            sh "TSAN_OPTIONS=suppressions=.tsan-ignore.txt ./clang-release-thread-sanitizer/hyriseTest clang-release-thread-sanitizer"
           } else {
             Utils.markStageSkippedForConditional("clangReleaseThreadSanitizer")
           }
@@ -150,7 +150,7 @@ node {
         stage("clang-release:thread-sanitizer w/o NUMA") {
           if (env.BRANCH_NAME == 'master' || full_ci) {
             sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-thread-sanitizer-no-numa && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-            sh "./clang-release-thread-sanitizer-no-numa/hyriseTest clang-release-thread-sanitizer-no-numa"
+            sh "TSAN_OPTIONS=suppressions=.tsan-ignore.txt ./clang-release-thread-sanitizer-no-numa/hyriseTest clang-release-thread-sanitizer-no-numa"
           } else {
             Utils.markStageSkippedForConditional("clangReleaseThreadSanitizerNoNuma")
           }
