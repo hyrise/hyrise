@@ -53,7 +53,7 @@ option(ENABLE_THREAD_SANITIZATION "Set to ON to build Hyrise with TSAN enabled. 
 if (${ENABLE_THREAD_SANITIZATION})
     # add_compile_options() wants list, CMAKE_EXE_LINKER_FLAGS a string. There are probably cleverer ways than
     # duplicating the flags, but this is probably the simplest solution.
-    add_compile_options(-fsanitize=thread)
+    add_compile_options(-fsanitize=thread -O1)
     set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=thread")
 endif()
 
