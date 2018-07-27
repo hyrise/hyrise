@@ -59,6 +59,8 @@ class FrameOfReferenceColumn : public BaseEncodedColumn, public BaseTypedColumn<
 
   const std::pair<T, bool> get_typed_value(const ChunkOffset chunk_offset) const final;
 
+  void append_typed_value(const std::pair<T, bool>& pair) override final;
+
   size_t size() const final;
 
   std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;

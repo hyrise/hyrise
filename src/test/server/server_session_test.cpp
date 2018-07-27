@@ -12,12 +12,12 @@ namespace opossum {
 
 using ::testing::_;
 using ::testing::An;
-using ::testing::InSequence;
-using ::testing::Return;
-using ::testing::Invoke;
-using ::testing::Throw;
 using ::testing::ByMove;
+using ::testing::InSequence;
+using ::testing::Invoke;
 using ::testing::NiceMock;
+using ::testing::Return;
+using ::testing::Throw;
 
 // We're using a NiceMock here to suppress warnings when 'uninteresting' calls happen
 // (i.e. calls irrelevant to the specific test case, defaulting to a mock specified using ON_CALL().WillByDefault() )
@@ -60,21 +60,28 @@ class ServerSessionTest : public BaseTest {
     // (i.e. don't throw an exception)
     ON_CALL(*_connection, send_ssl_denied()).WillByDefault(Invoke([]() { return boost::make_ready_future(); }));
     ON_CALL(*_connection, send_auth()).WillByDefault(Invoke([]() { return boost::make_ready_future(); }));
-    ON_CALL(*_connection, send_parameter_status(_, _))
-        .WillByDefault(Invoke([](const std::string&, const std::string&) { return boost::make_ready_future(); }));
+    ON_CALL(*_connection, send_parameter_status(_, _)).WillByDefault(Invoke([](const std::string&, const std::string&) {
+      return boost::make_ready_future();
+    }));
     ON_CALL(*_connection, send_ready_for_query()).WillByDefault(Invoke([]() { return boost::make_ready_future(); }));
-    ON_CALL(*_connection, send_error(_))
-        .WillByDefault(Invoke([](const std::string&) { return boost::make_ready_future(); }));
-    ON_CALL(*_connection, send_notice(_))
-        .WillByDefault(Invoke([](const std::string&) { return boost::make_ready_future(); }));
-    ON_CALL(*_connection, send_status_message(_))
-        .WillByDefault(Invoke([](const NetworkMessageType&) { return boost::make_ready_future(); }));
-    ON_CALL(*_connection, send_row_description(_))
-        .WillByDefault(Invoke([](const std::vector<ColumnDescription>&) { return boost::make_ready_future(); }));
-    ON_CALL(*_connection, send_data_row(_))
-        .WillByDefault(Invoke([](const std::vector<std::string>&) { return boost::make_ready_future(); }));
-    ON_CALL(*_connection, send_command_complete(_))
-        .WillByDefault(Invoke([](const std::string&) { return boost::make_ready_future(); }));
+    ON_CALL(*_connection, send_error(_)).WillByDefault(Invoke([](const std::string&) {
+      return boost::make_ready_future();
+    }));
+    ON_CALL(*_connection, send_notice(_)).WillByDefault(Invoke([](const std::string&) {
+      return boost::make_ready_future();
+    }));
+    ON_CALL(*_connection, send_status_message(_)).WillByDefault(Invoke([](const NetworkMessageType&) {
+      return boost::make_ready_future();
+    }));
+    ON_CALL(*_connection, send_row_description(_)).WillByDefault(Invoke([](const std::vector<ColumnDescription>&) {
+      return boost::make_ready_future();
+    }));
+    ON_CALL(*_connection, send_data_row(_)).WillByDefault(Invoke([](const std::vector<std::string>&) {
+      return boost::make_ready_future();
+    }));
+    ON_CALL(*_connection, send_command_complete(_)).WillByDefault(Invoke([](const std::string&) {
+      return boost::make_ready_future();
+    }));
   }
 
   std::shared_ptr<SQLPipeline> _create_working_sql_pipeline() {

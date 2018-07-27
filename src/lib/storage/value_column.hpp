@@ -30,8 +30,6 @@ class ValueColumn : public BaseValueColumn, public BaseTypedColumn<T> {
   // Use values() and null_values() to get the vectors and check the content yourself.
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
 
-  const std::pair<T, bool> get_typed_value(const ChunkOffset chunk_offset) const final;
-
   // Returns whether a value is NULL
   bool is_null(const ChunkOffset chunk_offset) const;
 
@@ -39,8 +37,14 @@ class ValueColumn : public BaseValueColumn, public BaseTypedColumn<T> {
   // Only use if you are certain that no null values are present, otherwise an Assert fails.
   const T get(const ChunkOffset chunk_offset) const;
 
+  // return the value at a certain position.
+  const std::pair<T, bool> get_typed_value(const ChunkOffset chunk_offset) const final;
+
   // Add a value to the end of the column.
   void append(const AllTypeVariant& val) final;
+
+  // Add a value (or NULL) to the end of the column.
+  virtual void append_typed_value(const std::pair<T, bool>& value) final;
 
   // Return all values. This is the preferred method to check a value at a certain index. Usually you need to
   // access more than a single value anyway.

@@ -90,11 +90,18 @@ class Sort::SortImplMaterializeOutput {
           const auto [chunk_id, chunk_offset] = _row_id_value_vector->at(row_index).first;  // NOLINT
 
           const auto column = _table_in->get_chunk(chunk_id)->get_column(column_id);
+          const auto typed_column = std::dynamic_pointer_cast<const BaseTypedColumn<ColumnDataType>>(column);
 
-          // Previously the value was retrieved by calling a virtual method,
-          // which was just as slow as using the subscript operator.
-          const auto value = (*column)[chunk_offset];
-          (*column_it)->append(value);
+          // If the input column is not a ReferenceColumn, we can take a fast(er) path
+          if (typed_column) {
+            const auto value = typed_column->get_typed_value(chunk_offset);
+            (*column_it)->append_typed_value(value);
+          } else {
+            // Previously the value was retrieved by calling a virtual method,
+            // which was just as slow as using the subscript operator.
+            const auto value = (*column)[chunk_offset];
+            (*column_it)->append(value);
+          }
 
           ++chunk_offset_out;
 

@@ -43,6 +43,11 @@ const std::pair<T, bool> FixedStringDictionaryColumn<T>::get_typed_value(const C
 }
 
 template <typename T>
+void FixedStringDictionaryColumn<T>::append_typed_value(const std::pair<T, bool>&) {
+  Fail("Encoded column is immutable.");
+}
+
+template <typename T>
 std::shared_ptr<const pmr_vector<std::string>> FixedStringDictionaryColumn<T>::dictionary() const {
   return _dictionary->dictionary();
 }

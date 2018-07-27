@@ -43,6 +43,11 @@ const std::pair<T, bool> DictionaryColumn<T>::get_typed_value(const ChunkOffset 
 }
 
 template <typename T>
+void DictionaryColumn<T>::append_typed_value(const std::pair<T, bool>&) {
+  Fail("Encoded column is immutable.");
+}
+
+template <typename T>
 std::shared_ptr<const pmr_vector<T>> DictionaryColumn<T>::dictionary() const {
   return _dictionary;
 }

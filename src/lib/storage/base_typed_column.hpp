@@ -15,5 +15,7 @@ class BaseTypedColumn : public virtual BaseColumn {
   // returns a pair which has a boolean and a value of type T.
   // The boolean is true if the value is NULL.
   virtual const std::pair<T, bool> get_typed_value(const ChunkOffset chunk_offset) const = 0;
+
+  virtual void append_typed_value(const std::pair<T, bool>& value) = 0;
 };
 }  // namespace opossum

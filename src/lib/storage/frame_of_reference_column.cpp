@@ -55,6 +55,11 @@ const std::pair<T, bool> FrameOfReferenceColumn<T, U>::get_typed_value(const Chu
 }
 
 template <typename T, typename U>
+void FrameOfReferenceColumn<T, U>::append_typed_value(const std::pair<T, bool>&) {
+  Fail("Encoded column is immutable.");
+}
+
+template <typename T, typename U>
 size_t FrameOfReferenceColumn<T, U>::size() const {
   return _offset_values->size();
 }
