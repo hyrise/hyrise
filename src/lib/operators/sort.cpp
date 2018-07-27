@@ -88,8 +88,8 @@ class Sort::SortImplMaterializeOutput {
         auto chunk_it = output_columns_by_chunk.begin();
         auto chunk_offset_out = 0u;
 
-        auto column_ptr_and_is_typed_by_chunk_id = std::unordered_map < ChunkID,
-             std::pair<std::shared_ptr<const BaseColumn>, bool>>();
+        auto column_ptr_and_is_typed_by_chunk_id =
+            std::unordered_map<ChunkID, std::pair<std::shared_ptr<const BaseColumn>, bool>>();
         column_ptr_and_is_typed_by_chunk_id.reserve(row_count_out);
 
         for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
