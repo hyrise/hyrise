@@ -129,7 +129,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
 
   TaskID _id = INVALID_TASK_ID;
   NodeID _node_id = INVALID_NODE_ID;
-  bool _done = false;
+  std::atomic_bool _done{false};
   std::function<void()> _done_callback;
 
   // For dependencies
