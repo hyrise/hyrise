@@ -89,27 +89,6 @@ void ValueColumn<T>::append(const AllTypeVariant& val) {
   _values.push_back(type_cast<T>(val));
 }
 
-template <>
-void ValueColumn<std::string>::append(const AllTypeVariant& val) {
-  bool is_null = variant_is_null(val);
-
-  if (is_nullable()) {
-    _null_values->push_back(is_null);
-
-    if (is_null) {
-      _values.push_back(std::string{});
-      return;
-    }
-  }
-
-  Assert(!is_null, "ValueColumns is not nullable but value passed is null.");
-
-  auto typed_val = type_cast<std::string>(val);
-  Assert((typed_val.length() <= std::numeric_limits<StringLength>::max()), "String value is too long to append!");
-
-  _values.push_back(typed_val);
-}
-
 template <typename T>
 const pmr_concurrent_vector<T>& ValueColumn<T>::values() const {
   return _values;

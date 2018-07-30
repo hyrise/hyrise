@@ -30,9 +30,9 @@ void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values)
  * this size.
  * This approach is indeed faster than a dynamic approach with a stringstream.
  */
-template <typename T = opossum::StringLength, typename Alloc>
+template <typename Alloc>
 void export_string_values(std::ofstream& ofstream, const std::vector<std::string, Alloc>& values) {
-  std::vector<T> string_lengths(values.size());
+  std::vector<size_t> string_lengths(values.size());
   size_t total_length = 0;
 
   // Save the length of each string.
@@ -155,7 +155,7 @@ void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std:
   }
   export_values(ofstream, column_types);
   export_values(ofstream, columns_are_nullable);
-  export_string_values<ColumnNameLength>(ofstream, column_names);
+  export_string_values(ofstream, column_names);
 }
 
 void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::ofstream& ofstream,
@@ -216,12 +216,12 @@ void ExportBinary::ExportBinaryVisitor<std::string>::handle_column(
 
   std::stringstream values;
   std::string value;
-  std::vector<StringLength> string_lengths(ref_column.size());
+  std::vector<size_t> string_lengths(ref_column.size());
 
   // We export the values materialized
   for (ChunkOffset row = 0; row < ref_column.size(); ++row) {
     value = type_cast<std::string>(ref_column[row]);
-    string_lengths[row] = static_cast<StringLength>(value.length());
+    string_lengths[row] = value.length();
     values << value;
   }
 

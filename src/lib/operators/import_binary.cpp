@@ -47,9 +47,8 @@ pmr_vector<bool> ImportBinary::_read_values(std::ifstream& file, const size_t co
   return pmr_vector<bool>(readable_bools.begin(), readable_bools.end());
 }
 
-template <typename T>
 pmr_vector<std::string> ImportBinary::_read_string_values(std::ifstream& file, const size_t count) {
-  const auto string_lengths = _read_values<T>(file, count);
+  const auto string_lengths = _read_values<size_t>(file, count);
   const auto total_length = std::accumulate(string_lengths.cbegin(), string_lengths.cend(), static_cast<size_t>(0));
   const auto buffer = _read_values<char>(file, total_length);
 
@@ -109,7 +108,7 @@ std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstr
   const auto column_count = _read_value<ColumnID>(file);
   const auto data_types = _read_values<std::string>(file, column_count);
   const auto column_nullables = _read_values<bool>(file, column_count);
-  const auto column_names = _read_string_values<ColumnNameLength>(file, column_count);
+  const auto column_names = _read_string_values(file, column_count);
 
   TableColumnDefinitions output_column_definitions;
   for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
