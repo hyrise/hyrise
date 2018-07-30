@@ -454,6 +454,7 @@ set(
     pthread
     sqlparser
     ${TBB_LIBRARY}
+    stdc++fs
 )
 
 if (${ENABLE_JIT_SUPPORT})
