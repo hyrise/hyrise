@@ -32,10 +32,11 @@ node {
         sh "./install.sh"
         sh "mkdir clang-debug && cd clang-debug && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 .. &\
         mkdir clang-debug-tidy && cd clang-debug-tidy && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_CLANG_TIDY=ON .. &\
-        mkdir clang-debug-sanitizers && cd clang-debug-sanitizers && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_SANITIZATION=ON .. &\
-        mkdir clang-release-sanitizers && cd clang-release-sanitizers && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_SANITIZATION=ON .. &\
+        mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+        mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
         mkdir clang-release && cd clang-release && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 .. &\
-        mkdir clang-release-sanitizers-no-numa && cd clang-release-sanitizers-no-numa && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_SANITIZATION=ON -DENABLE_NUMA_SUPPORT=OFF .. &\
+        mkdir clang-release-addr-ub-sanitizers-no-numa && cd clang-release-addr-ub-sanitizers-no-numa && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_ADDR_UB_SANITIZATION=ON -DENABLE_NUMA_SUPPORT=OFF .. &\
+        mkdir clang-release-thread-sanitizer-no-numa && cd clang-release-thread-sanitizer-no-numa && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER=clang-6.0 -DCMAKE_CXX_COMPILER=clang++-6.0 -DENABLE_THREAD_SANITIZATION=ON -DENABLE_NUMA_SUPPORT=OFF .. &\
         mkdir gcc-debug && cd gcc-debug && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
         mkdir gcc-release && cd gcc-release && cmake -DCI_BUILD=ON -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ .. &\
         wait"
@@ -84,13 +85,13 @@ node {
             Utils.markStageSkippedForConditional("clangDebugTidy")
           }
         }
-      }, clangDebugSanitizers: {
-        stage("clang-debug:sanitizers") {
+      }, clangDebugAddrUBSanitizers: {
+        stage("clang-debug:addr-ub-sanitizers") {
           if (env.BRANCH_NAME == 'master' || full_ci) {
-            sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-            sh "LSAN_OPTIONS=suppressions=.lsan-ignore.txt ASAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-debug-sanitizers/hyriseTest clang-debug-sanitizers"
+            sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug-addr-ub-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            sh "LSAN_OPTIONS=suppressions=.lsan-ignore.txt ASAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-debug-addr-ub-sanitizers/hyriseTest clang-debug-addr-ub-sanitizers"
           } else {
-            Utils.markStageSkippedForConditional("clangDebugSanitizers")
+            Utils.markStageSkippedForConditional("clangDebugAddrUBSanitizers")
           }
         }
       }, gccDebug: {
@@ -119,22 +120,31 @@ node {
         } else {
             Utils.markStageSkippedForConditional("clangSystemTestRelease")
           }
-      }, clangReleaseSanitizers: {
-        stage("clang-release:sanitizers") {
+      }, clangReleaseAddrUBSanitizers: {
+        stage("clang-release:addr-ub-sanitizers") {
           if (env.BRANCH_NAME == 'master' || full_ci) {
-            sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-            sh "LSAN_OPTIONS=suppressions=.lsan-ignore.txt ASAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers/hyriseTest clang-release-sanitizers"
+            sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-addr-ub-sanitizers && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            sh "LSAN_OPTIONS=suppressions=.lsan-ignore.txt ASAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-addr-ub-sanitizers/hyriseTest clang-release-addr-ub-sanitizers"
           } else {
-            Utils.markStageSkippedForConditional("clangReleaseSanitizers")
+            Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizers")
           }
         }
-      }, clangReleaseSanitizersNoNuma: {
-        stage("clang-release:sanitizers w/o NUMA") {
+      }, clangReleaseAddrUBSanitizersNoNuma: {
+        stage("clang-release:addr-ub-sanitizers w/o NUMA") {
           if (env.BRANCH_NAME == 'master' || full_ci) {
-            sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-sanitizers-no-numa && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-            sh "LSAN_OPTIONS=suppressions=.lsan-ignore.txt ASAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-sanitizers-no-numa/hyriseTest clang-release-sanitizers-no-numa"
+            sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-addr-ub-sanitizers-no-numa && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            sh "LSAN_OPTIONS=suppressions=.lsan-ignore.txt ASAN_OPTIONS=suppressions=.asan-ignore.txt ./clang-release-addr-ub-sanitizers-no-numa/hyriseTest clang-release-addr-ub-sanitizers-no-numa"
           } else {
-            Utils.markStageSkippedForConditional("clangReleaseSanitizersNoNuma")
+            Utils.markStageSkippedForConditional("clangReleaseAddrUBSanitizersNoNuma")
+          }
+        }
+      }, clangReleaseThreadSanitizerNoNuma: {
+        stage("clang-release:thread-sanitizer w/o NUMA") {
+          if (env.BRANCH_NAME == 'master' || full_ci) {
+            sh "export CCACHE_BASEDIR=`pwd`; cd clang-release-thread-sanitizer-no-numa && make hyriseTest -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+            sh "TSAN_OPTIONS=suppressions=.tsan-ignore.txt ./clang-release-thread-sanitizer-no-numa/hyriseTest clang-release-thread-sanitizer-no-numa"
+          } else {
+            Utils.markStageSkippedForConditional("clangReleaseThreadSanitizerNoNuma")
           }
         }
       }, clangDebugCoverage: {
