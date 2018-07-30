@@ -222,9 +222,9 @@ class RadixClusterSortNUMA {
               ++insert_position;
             }
           },
-          true);
+          SchedulePriority::JobTask, true);
       cluster_jobs.push_back(job);
-      job->schedule(node_id, SchedulePriority::JobTask);
+      job->schedule(node_id);
     }
 
     CurrentScheduler::wait_for_tasks(cluster_jobs);
@@ -256,10 +256,10 @@ class RadixClusterSortNUMA {
             (*output)[node_id] = _cluster((*input_chunks)[node_id],
                                           [=](const T& value) { return get_radix<T>(value, radix_bitmask); }, node_id);
           },
-          true);
+          SchedulePriority::JobTask, true);
 
       cluster_jobs.push_back(job);
-      job->schedule(node_id, SchedulePriority::JobTask);
+      job->schedule(node_id);
     }
 
     CurrentScheduler::wait_for_tasks(cluster_jobs);
@@ -304,10 +304,10 @@ class RadixClusterSortNUMA {
               std::copy(src->begin(), src->end(), std::back_inserter(*chunk_column));
             }
           },
-          true);
+          SchedulePriority::JobTask, true);
 
       repartition_jobs.push_back(job);
-      job->schedule(numa_node, SchedulePriority::JobTask);
+      job->schedule(numa_node);
     }
 
     CurrentScheduler::wait_for_tasks(repartition_jobs);
@@ -328,10 +328,10 @@ class RadixClusterSortNUMA {
               std::sort(cluster->begin(), cluster->end(),
                         [](auto& left, auto& right) { return left.value < right.value; });
             },
-            true);
+            SchedulePriority::JobTask, true);
 
         sort_jobs.push_back(job);
-        job->schedule(partition._node_id, SchedulePriority::JobTask);
+        job->schedule(partition._node_id);
       }
     }
 

@@ -14,7 +14,7 @@
 
 namespace opossum {
 
-AbstractTask::AbstractTask(bool stealable) : _stealable(stealable) {}
+AbstractTask::AbstractTask(SchedulePriority priority, bool stealable) : _priority(priority), _stealable(stealable) {}
 
 TaskID AbstractTask::id() const { return _id; }
 
@@ -56,11 +56,11 @@ void AbstractTask::set_done_callback(const std::function<void()>& done_callback)
   _done_callback = done_callback;
 }
 
-void AbstractTask::schedule(NodeID preferred_node_id, SchedulePriority priority) {
+void AbstractTask::schedule(NodeID preferred_node_id) {
   _mark_as_scheduled();
 
   if (CurrentScheduler::is_set()) {
-    CurrentScheduler::get()->schedule(shared_from_this(), preferred_node_id, priority);
+    CurrentScheduler::get()->schedule(shared_from_this(), preferred_node_id, _priority);
   } else {
     // If the Task isn't ready, it will execute() once its dependency counter reaches 0
     if (is_ready()) execute();
