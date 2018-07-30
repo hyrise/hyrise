@@ -1,2 +1,2 @@
-# Thread Sanitizer Suppressions
+# There are multiple data races in libtbb (probably false positives)
 race:^tbb*
