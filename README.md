@@ -77,7 +77,7 @@ To specify a custom location for the symbolizer, set `$ASAN_SYMBOLIZER_PATH` to 
 This seems to work out of the box on macOS - If not, make sure to have llvm installed.
 The binary can be executed with `LSAN_OPTIONS=suppressions=asan-ignore.txt ./<YourBuildDirectory>/hyriseTest`.
 
-`cmake -ENABLE_THREAD_SANITIZATION=ON` will work as above but with the ThreadSanitizer. It is not possible to combine more than two sanitizers for a single binary.
+`cmake -ENABLE_THREAD_SANITIZATION=ON` will work as above but with the ThreadSanitizer. Some sanitizers are mutually exclusive, which is why we use two configurations for this.
 
 ### Compile Times
 When trying to optimize the time spent building the project, it is often helpful to have an idea how much time is spent where.
