@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "column_visitable.hpp"
+#include "abstract_column_visitor.hpp"
 #include "resolve_type.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
@@ -142,11 +142,6 @@ pmr_concurrent_vector<bool>& ValueColumn<T>::null_values() {
 template <typename T>
 size_t ValueColumn<T>::size() const {
   return _values.size();
-}
-
-template <typename T>
-void ValueColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context) const {
-  visitable.handle_column(*this, std::move(context));
 }
 
 template <typename T>

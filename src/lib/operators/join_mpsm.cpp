@@ -14,7 +14,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/topology.hpp"
-#include "storage/column_visitable.hpp"
+#include "storage/abstract_column_visitor.hpp"
 #include "storage/dictionary_column.hpp"
 
 #include "storage/reference_column.hpp"

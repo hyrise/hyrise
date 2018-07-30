@@ -33,13 +33,12 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
   LikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID left_column_id,
                     const PredicateCondition predicate_condition, const std::string& pattern);
 
-  void handle_column(const BaseValueColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
+  void handle_column(const BaseValueColumn& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
 
   void handle_column(const BaseDictionaryColumn& base_column,
-                     std::shared_ptr<ColumnVisitableContext> base_context) override;
+                     std::shared_ptr<ColumnVisitorContext> base_context) override;
 
-  void handle_column(const BaseEncodedColumn& base_column,
-                     std::shared_ptr<ColumnVisitableContext> base_context) override;
+  void handle_column(const BaseEncodedColumn& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
 
   using BaseSingleColumnTableScanImpl::handle_column;
 

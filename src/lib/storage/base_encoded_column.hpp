@@ -20,9 +20,6 @@ class BaseEncodedColumn : public BaseColumn {
   // Encoded columns are immutable
   void append(const AllTypeVariant&) final;
 
-  // calls the column-specific handler in an operator (visitor pattern)
-  void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
-
   virtual EncodingType encoding_type() const = 0;
 
   /**
