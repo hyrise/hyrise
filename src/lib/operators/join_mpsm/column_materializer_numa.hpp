@@ -128,7 +128,7 @@ class ColumnMaterializerNUMA {
             _materialize_column(typed_column, chunk_id, null_rows_output, (*output)[numa_node_id]);
           });
         },
-        SchedulePriority::JobTask, false);
+        false);
   }
 
   /**
