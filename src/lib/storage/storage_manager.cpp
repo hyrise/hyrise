@@ -114,7 +114,7 @@ void StorageManager::print(std::ostream& out) const {
 void StorageManager::reset() { get() = StorageManager(); }
 
 void StorageManager::export_all_tables_as_csv(const std::string& path) {
-  auto jobs = std::vector<std::shared_ptr<JobTask>>{};
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(_tables.size());
 
   for (auto& pair : _tables) {

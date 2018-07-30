@@ -348,7 +348,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
                                                                             AggregateKey(_groupby_column_ids.size()));
   }
 
-  std::vector<std::shared_ptr<JobTask>> jobs;
+  std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(_groupby_column_ids.size());
 
   for (size_t group_column_index = 0; group_column_index < _groupby_column_ids.size(); ++group_column_index) {

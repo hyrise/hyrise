@@ -528,7 +528,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Performs the join on all clusters in parallel.
   **/
   void _perform_join() {
-    std::vector<std::shared_ptr<JobTask>> jobs;
+    std::vector<std::shared_ptr<AbstractTask>> jobs;
 
     // Parallel join for each cluster
     for (size_t cluster_number = 0; cluster_number < _cluster_count; ++cluster_number) {

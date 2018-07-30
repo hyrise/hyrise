@@ -84,7 +84,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
   const auto excluded_chunk_set = std::unordered_set<ChunkID>{_excluded_chunk_ids.cbegin(), _excluded_chunk_ids.cend()};
 
-  auto jobs = std::vector<std::shared_ptr<JobTask>>{};
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(_in_table->chunk_count() - excluded_chunk_set.size());
 
   for (ChunkID chunk_id{0u}; chunk_id < _in_table->chunk_count(); ++chunk_id) {

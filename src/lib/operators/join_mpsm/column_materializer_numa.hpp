@@ -80,7 +80,7 @@ class ColumnMaterializerNUMA {
     }
     auto null_rows = std::make_unique<PosList>();
 
-    auto jobs = std::vector<std::shared_ptr<JobTask>>();
+    auto jobs = std::vector<std::shared_ptr<AbstractTask>>();
     for (auto chunk_id = ChunkID{0}; chunk_id < input->chunk_count(); ++chunk_id) {
       // This allocator is used to ensure that materialized chunks are colocated with the original chunks
       auto alloc = MaterializedValueAllocator<T>{input->get_chunk(chunk_id)->get_allocator()};
@@ -113,7 +113,7 @@ class ColumnMaterializerNUMA {
   /**
    * Creates a job to materialize and sort a chunk.
    **/
-  std::shared_ptr<JobTask> _create_chunk_materialization_job(std::unique_ptr<MaterializedNUMAPartitionList<T>>& output,
+  std::shared_ptr<AbstractTask> _create_chunk_materialization_job(std::unique_ptr<MaterializedNUMAPartitionList<T>>& output,
                                                              std::unique_ptr<PosList>& null_rows_output,
                                                              ChunkID chunk_id, std::shared_ptr<const Table> input,
                                                              ColumnID column_id, NodeID numa_node_id) {

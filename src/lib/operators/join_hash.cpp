@@ -126,7 +126,7 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
   std::vector<std::optional<HashTable<HashedType>>> hashtables;
   hashtables.resize(radix_container.partition_offsets.size() - 1);
 
-  std::vector<std::shared_ptr<JobTask>> jobs;
+  std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size() - 1);
 
   for (size_t current_partition_id = 0; current_partition_id < (radix_container.partition_offsets.size() - 1);
@@ -209,7 +209,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
   histograms = std::vector<std::shared_ptr<std::vector<size_t>>>();
   histograms.resize(chunk_offsets.size());
 
-  std::vector<std::shared_ptr<JobTask>> jobs;
+  std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(in_table->chunk_count());
 
   for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); ++chunk_id) {
@@ -322,7 +322,7 @@ RadixContainer<T> partition_radix_parallel(const std::shared_ptr<Partition<T>>& 
   }
   radix_output.partition_offsets[num_partitions] = offset;
 
-  std::vector<std::shared_ptr<JobTask>> jobs;
+  std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(offsets.size());
 
   for (ChunkID chunk_id{0}; chunk_id < offsets.size(); ++chunk_id) {
@@ -367,7 +367,7 @@ template <typename RightType, typename HashedType>
 void probe(const RadixContainer<RightType>& radix_container,
            const std::vector<std::optional<HashTable<HashedType>>>& hashtables, std::vector<PosList>& pos_list_left,
            std::vector<PosList>& pos_list_right, const JoinMode mode) {
-  std::vector<std::shared_ptr<JobTask>> jobs;
+  std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size() - 1);
 
   /*
@@ -457,7 +457,7 @@ template <typename RightType, typename HashedType>
 void probe_semi_anti(const RadixContainer<RightType>& radix_container,
                      const std::vector<std::optional<HashTable<HashedType>>>& hashtables,
                      std::vector<PosList>& pos_lists, const JoinMode mode) {
-  std::vector<std::shared_ptr<JobTask>> jobs;
+  std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size() - 1);
 
   for (size_t current_partition_id = 0; current_partition_id < (radix_container.partition_offsets.size() - 1);

@@ -36,7 +36,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   std::mutex output_mutex;
 
-  auto jobs = std::vector<std::shared_ptr<JobTask>>{};
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   if (_included_chunk_ids.empty()) {
     jobs.reserve(_in_table->chunk_count());
     for (auto chunk_id = ChunkID{0u}; chunk_id < _in_table->chunk_count(); ++chunk_id) {
@@ -61,7 +61,7 @@ std::shared_ptr<AbstractOperator> IndexScan::_on_recreate(
                                      _right_values, _right_values2);
 }
 
-std::shared_ptr<JobTask> IndexScan::_create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex) {
+std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex) {
   auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {
     const auto matches_out = std::make_shared<PosList>(_scan_chunk(chunk_id));
 
