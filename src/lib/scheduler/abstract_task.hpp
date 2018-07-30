@@ -23,7 +23,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   friend class Worker;
 
  public:
-  explicit AbstractTask(SchedulePriority priority = SchedulePriority::Normal, bool stealable = true);
+  explicit AbstractTask(SchedulePriority priority = SchedulePriority::Default, bool stealable = true);
   virtual ~AbstractTask() = default;
 
   /**

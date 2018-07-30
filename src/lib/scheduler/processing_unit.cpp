@@ -59,7 +59,7 @@ void ProcessingUnit::wake_or_create_worker() {
 
     if (_workers.size() < MAX_WORKERS_PER_CORE) {
       auto worker = std::make_shared<Worker>(shared_from_this(), _queue, _worker_id_allocator->allocate(), _cpu_id,
-                                             SchedulePriority::All);
+                                             SchedulePriority::Lowest);
       _workers.emplace_back(worker);
 
       auto fn = std::bind(&Worker::operator(), worker.get());

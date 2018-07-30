@@ -28,7 +28,7 @@ void TaskQueue::push(const std::shared_ptr<AbstractTask>& task, uint32_t priorit
 
 std::shared_ptr<AbstractTask> TaskQueue::pull(SchedulePriority min_priority) {
   std::shared_ptr<AbstractTask> task;
-  for (auto priority : {SchedulePriority::JobTask, SchedulePriority::High, SchedulePriority::Normal}) {
+  for (auto priority : {SchedulePriority::JobTask, SchedulePriority::Highest, SchedulePriority::Default, SchedulePriority::Lowest}) {
     if (priority > min_priority) {
       break;
     }
@@ -44,7 +44,7 @@ std::shared_ptr<AbstractTask> TaskQueue::pull(SchedulePriority min_priority) {
 
 std::shared_ptr<AbstractTask> TaskQueue::steal() {
   std::shared_ptr<AbstractTask> task;
-  for (auto priority : {SchedulePriority::JobTask, SchedulePriority::High, SchedulePriority::Normal}) {
+  for (auto priority : {SchedulePriority::JobTask, SchedulePriority::Highest, SchedulePriority::Default, SchedulePriority::Lowest}) {
     auto& queue = _queues[static_cast<uint32_t>(priority)];
 
     if (queue.try_pop(task)) {
