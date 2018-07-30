@@ -22,8 +22,10 @@ CostModelCalibration::CostModelCalibration(const nlohmann::json& configuration):
 
 void CostModelCalibration::calibrate() {
   size_t number_of_iterations = _configuration["calibration_runs"];
+  auto queries = _generateQueries(_configuration["table_specifications"]);
+
   for (size_t i = 0; i < number_of_iterations; i++) {
-    for (const auto& query : _queries) {
+    for (const auto& query : queries) {
       auto pipeline_builder = SQLPipelineBuilder{query};
       pipeline_builder.dont_cleanup_temporaries();
       auto pipeline = pipeline_builder.create_pipeline();
@@ -65,35 +67,69 @@ void CostModelCalibration::_traverse(const std::shared_ptr<const AbstractOperato
 void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOperator> & op) {
   auto description = op->name();
   auto time = op->base_performance_data().walltime;
-  std::ostringstream out;
-  auto time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(time).count();
+  auto execution_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(time).count();
 
   if (const auto& output = op->get_output()) {
-    auto row_count = output->row_count();
-    auto chunk_count = output->chunk_count();
-    auto mem_usage = output->estimate_memory_usage();
-
+    // Inputs
     auto left_input_row_count = (op->input_left()) ? op->input_left()->get_output()->row_count() : 0;
     auto right_input_row_count = (op->input_right()) ? op->input_right()->get_output()->row_count() : 0;
+    auto left_input_memory_usage = (op->input_left()) ? op->input_left()->get_output()->estimate_memory_usage() : 0;
+    auto right_input_memory_usage = (op->input_right()) ? op->input_right()->get_output()->estimate_memory_usage() : 0;
 
-    auto left_input_mem_usage = (op->input_left()) ? op->input_left()->get_output()->estimate_memory_usage() : 0;
-    auto right_input_mem_usage = (op->input_right()) ? op->input_right()->get_output()->estimate_memory_usage() : 0;
+    // Output
+    auto output_row_count = output->row_count();
+    // Calculate cross-join cardinality. Use 1 for cases, in which one side is empty to avoid divisions by zero
+    auto total_input_row_count = ((left_input_row_count != 0) ? left_input_row_count : 1) * ((right_input_row_count != 0) ? right_input_row_count : 1);
+    auto output_selectivity = output_row_count / total_input_row_count;
+    auto output_chunk_count = output->chunk_count();
+    auto output_memory_usage = output->estimate_memory_usage();
 
     nlohmann::json operator_result{
-            {"operator", description},
-            {"time_ns", time_ns},
-            {"output_row_count", row_count},
+            {"operator_type", description},
+            {"execution_time_ns", execution_time_ns},
+            {"output_row_count", output_row_count},
+            {"output_selectivity", output_selectivity},
             {"left_input_row_count", left_input_row_count},
             {"right_input_row_count", right_input_row_count},
             // strong-typedef ChunkID is not JSON-compatible, get underlying value here
-            {"chunk_count", chunk_count.t},
-            {"output_mem_usage_bytes", mem_usage},
-            {"left_input_mem_usage_bytes", left_input_mem_usage},
-            {"right_input_mem_usage_bytes", right_input_mem_usage},
+            {"output_chunk_count", output_chunk_count.t},
+            {"output_memory_usage_bytes", output_memory_usage},
+            {"left_input_memory_usage_bytes", left_input_memory_usage},
+            {"right_input_memory_usage_bytes", right_input_memory_usage},
     };
 
     _operators.push_back(operator_result);
   }
+}
+
+const std::vector<std::string> CostModelCalibration::_generateQueries(const nlohmann::json& table_definitions) {
+
+  std::vector<std::string> queries;
+
+  for (const auto & table_definition : table_definitions) {
+    std::cout << "Using table definition for table " << table_definition["table_name"] << " to generate queries" << std::endl;
+  }
+
+  return std::vector<std::string> {
+    "SELECT column_a FROM SomeTable;",
+//            "SELECT column_b FROM SomeTable;",
+//            "SELECT column_c FROM SomeTable;",
+//            "SELECT column_a, column_b, column_c FROM SomeTable;",
+//            "SELECT * FROM SomeTable;",
+            "SELECT column_a, column_b, column_c FROM SomeTable WHERE column_a = 753;",
+            "SELECT column_a, column_b, column_c FROM SomeTable WHERE column_a = 345;",
+            "SELECT column_a, column_b, column_c, column_d FROM SomeTable WHERE column_d = 4;",
+            "SELECT column_a, column_b, column_c, column_d FROM SomeTable WHERE column_d = 7;",
+            "SELECT column_a, column_b, column_c, column_d FROM SomeTable WHERE column_d = 9;",
+            "SELECT column_a, column_b, column_c FROM SomeTable WHERE column_a < 200;",
+            "SELECT column_a, column_b, column_c FROM SomeTable WHERE column_a < 600;",
+            "SELECT column_a, column_b, column_c FROM SomeTable WHERE column_a < 900;",
+            "SELECT column_a, column_b, column_c FROM SomeTable WHERE column_a < 900 AND column_d = 4;",
+            "SELECT column_a, column_b, column_c FROM SomeTable WHERE column_a < 900 AND column_b < 'Bradley Davis';",
+            "SELECT column_b FROM SomeTable WHERE column_b < 'Bradley Davis';",
+            "SELECT column_a FROM SomeSecondTable WHERE column_b = 4"
+//            "SELECT COUNT(*) FROM SomeTable"
+  };
 }
 
 
