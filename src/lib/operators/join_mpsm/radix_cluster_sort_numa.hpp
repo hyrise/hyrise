@@ -232,7 +232,7 @@ class RadixClusterSortNUMA {
     DebugAssert(output_table._chunk_columns.size() == _cluster_count,
                 "Error in clustering: Number of output chunk columns does not match the number of clusters.")
 
-    return output_table;
+        return output_table;
   }
 
   /**

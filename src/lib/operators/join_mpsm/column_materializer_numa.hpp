@@ -113,10 +113,9 @@ class ColumnMaterializerNUMA {
   /**
    * Creates a job to materialize and sort a chunk.
    **/
-  std::shared_ptr<AbstractTask> _create_chunk_materialization_job(std::unique_ptr<MaterializedNUMAPartitionList<T>>& output,
-                                                             std::unique_ptr<PosList>& null_rows_output,
-                                                             ChunkID chunk_id, std::shared_ptr<const Table> input,
-                                                             ColumnID column_id, NodeID numa_node_id) {
+  std::shared_ptr<AbstractTask> _create_chunk_materialization_job(
+      std::unique_ptr<MaterializedNUMAPartitionList<T>>& output, std::unique_ptr<PosList>& null_rows_output,
+      ChunkID chunk_id, std::shared_ptr<const Table> input, ColumnID column_id, NodeID numa_node_id) {
     // This allocator ensures that materialized values are colocated with the actual values.
     auto alloc = MaterializedValueAllocator<T>{input->get_chunk(chunk_id)->get_allocator()};
 
