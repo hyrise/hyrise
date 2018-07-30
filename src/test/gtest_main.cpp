@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
 
   int ret = RUN_ALL_TESTS();
 
-  //remove_test_data_directory();
+  remove_test_data_directory();
 
   return ret;
 }
