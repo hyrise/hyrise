@@ -21,7 +21,7 @@ IsNullTableScanImpl::IsNullTableScanImpl(const std::shared_ptr<const Table>& in_
 }
 
 void IsNullTableScanImpl::handle_column(const ReferenceColumn& base_colummn,
-                                        std::shared_ptr<ColumnVisitableContext> base_context) {
+                                        std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   BaseSingleColumnTableScanImpl::handle_column(base_colummn, base_context);
 
@@ -36,7 +36,7 @@ void IsNullTableScanImpl::handle_column(const ReferenceColumn& base_colummn,
 }
 
 void IsNullTableScanImpl::handle_column(const BaseValueColumn& base_column,
-                                        std::shared_ptr<ColumnVisitableContext> base_context) {
+                                        std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 
@@ -59,7 +59,7 @@ void IsNullTableScanImpl::handle_column(const BaseValueColumn& base_column,
 }
 
 void IsNullTableScanImpl::handle_column(const BaseDictionaryColumn& base_colummn,
-                                        std::shared_ptr<ColumnVisitableContext> base_context) {
+                                        std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 
@@ -70,7 +70,7 @@ void IsNullTableScanImpl::handle_column(const BaseDictionaryColumn& base_colummn
 }
 
 void IsNullTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
-                                        std::shared_ptr<ColumnVisitableContext> base_context) {
+                                        std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 

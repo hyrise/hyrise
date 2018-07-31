@@ -1,18 +1,17 @@
 #pragma once
 
 #ifdef __clang__
-  #pragma clang diagnostic ignored "-Wall"
-  #include <btree_map.h>
-  #pragma clang diagnostic pop
+#pragma clang diagnostic ignored "-Wall"
+#include <btree_map.h>
+#pragma clang diagnostic pop
 #elif __GNUC__
-  #pragma GCC system_header
-  #include <btree_map.h>
+#pragma GCC system_header
+#include <btree_map.h>
 #endif
 
-
-#include "types.hpp"
 #include "all_type_variant.hpp"
 #include "storage/base_column.hpp"
+#include "types.hpp"
 
 namespace opossum {
 

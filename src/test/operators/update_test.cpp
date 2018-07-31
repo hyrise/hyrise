@@ -6,8 +6,9 @@
 #include "gtest/gtest.h"
 
 #include "concurrency/transaction_manager.hpp"
+#include "expression/expression_functional.hpp"
+#include "expression/pqp_column_expression.hpp"
 #include "operators/get_table.hpp"
-#include "operators/pqp_expression.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/update.hpp"
@@ -15,6 +16,8 @@
 #include "statistics/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
+
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
@@ -48,9 +51,9 @@ void OperatorsUpdateTest::helper(std::shared_ptr<GetTable> table_to_update, std:
   auto updated_rows_count = update_values->get_output()->row_count();
 
   auto projection1 = std::make_shared<Projection>(
-      ref_table, Projection::ColumnExpressions({PQPExpression::create_column(ColumnID{0})}));
+      ref_table, expression_vector(PQPColumnExpression::from_table(*ref_table->get_output(), "a")));
   auto projection2 = std::make_shared<Projection>(
-      ref_table, Projection::ColumnExpressions({PQPExpression::create_column(ColumnID{1})}));
+      ref_table, expression_vector(PQPColumnExpression::from_table(*ref_table->get_output(), "b")));
   projection1->set_transaction_context(t_context);
   projection2->set_transaction_context(t_context);
   projection1->execute();
@@ -156,9 +159,7 @@ TEST_F(OperatorsUpdateTest, MissingChunks) {
   table_scan1->set_transaction_context(t_context);
   table_scan1->execute();
 
-  Projection::ColumnExpressions column_expressions{PQPExpression::create_literal(1, {"a"}),
-                                                   PQPExpression::create_literal(1, {"b"})};
-  auto updated_rows = std::make_shared<Projection>(table_scan1, column_expressions);
+  auto updated_rows = std::make_shared<Projection>(table_scan1, expression_vector(1, 1));
   updated_rows->set_transaction_context(t_context);
   updated_rows->execute();
 

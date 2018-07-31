@@ -11,9 +11,9 @@
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
+#include "storage/index/b_tree/b_tree_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
-#include "storage/index/b_tree/b_tree_index.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
 
@@ -89,7 +89,8 @@ class OperatorsIndexScanTest : public BaseTest {
 };
 
 typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex, CompositeGroupKeyIndex,
-  BTreeIndex /* add further indices */> DerivedIndices;
+                         BTreeIndex /* add further indices */>
+    DerivedIndices;
 
 TYPED_TEST_CASE(OperatorsIndexScanTest, DerivedIndices);
 
@@ -125,8 +126,8 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
 }
 
 TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionaryValue) {
-  const auto all_rows = std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108,
-                                                    110, 112};
+  const auto all_rows =
+      std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
   const auto no_rows = std::vector<AllTypeVariant>{};
 
   const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{30}};
@@ -157,8 +158,8 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionary
 }
 
 TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryValue) {
-  const auto all_rows = std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108,
-                                                    110, 112};
+  const auto all_rows =
+      std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
   const auto no_rows = std::vector<AllTypeVariant>{};
 
   const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{-10}};

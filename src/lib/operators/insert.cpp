@@ -230,10 +230,12 @@ void Insert::_on_rollback_records() {
   }
 }
 
-std::shared_ptr<AbstractOperator> Insert::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<Insert>(_target_table_name, recreated_input_left);
+std::shared_ptr<AbstractOperator> Insert::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<Insert>(_target_table_name, copied_input_left);
 }
+
+void Insert::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 }  // namespace opossum

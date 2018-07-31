@@ -40,41 +40,12 @@ class JitAwareLQPTranslator final : public LQPTranslator {
   std::shared_ptr<AbstractOperator> translate_node(const std::shared_ptr<AbstractLQPNode>& node) const final;
 
  private:
-  std::shared_ptr<JitOperatorWrapper> _try_translate_node_to_jit_operators(
+  std::shared_ptr<JitOperatorWrapper> _try_translate_sub_plan_to_jit_operators(
       const std::shared_ptr<AbstractLQPNode>& node) const;
 
-  std::shared_ptr<const JitExpression> _try_translate_node_to_jit_expression(
-      const std::shared_ptr<AbstractLQPNode>& node, JitReadTuples& jit_source,
-      const std::shared_ptr<AbstractLQPNode>& input_node) const;
-
-  std::shared_ptr<const JitExpression> _try_translate_predicate_to_jit_expression(
-      const std::shared_ptr<PredicateNode>& node, JitReadTuples& jit_source,
-      const std::shared_ptr<AbstractLQPNode>& input_node) const;
-
   std::shared_ptr<const JitExpression> _try_translate_expression_to_jit_expression(
-      const LQPExpression& lqp_expression, JitReadTuples& jit_source,
+      const AbstractExpression& expression, JitReadTuples& jit_source,
       const std::shared_ptr<AbstractLQPNode>& input_node) const;
-
-  std::shared_ptr<const JitExpression> _try_translate_column_to_jit_expression(
-      const LQPColumnReference& lqp_column_reference, JitReadTuples& jit_source,
-      const std::shared_ptr<AbstractLQPNode>& input_node) const;
-
-  std::shared_ptr<const JitExpression> _try_translate_variant_to_jit_expression(
-      const AllParameterVariant& value, JitReadTuples& jit_source,
-      const std::shared_ptr<AbstractLQPNode>& input_node) const;
-
-  // Returns whether the part of the query plan represented by this LQP node filters tuples in some way.
-  // This information is needed when converting a PredicateNode to a JitExpression to determine whether the
-  // PredicateNode is part of a conjunction.
-  // Example: SELECT ... WHERE A > 3 AND B < 4;
-  // The LQP represents the WHERE clause as two consecutive PredicateNodes. When translating to a JitExpressions, the
-  // first PredicateNode (A > 3) gets translated into a conjuction, with its condition being the
-  // left-hand side: (A > 3) AND ...
-  // The right-hand side of the conjunction is created by translating the second PredicateNode (B < 4) to JitExpression.
-  // Since the second predicate has no further PredicateNodes following is, it can be translated into a simple
-  // expression without the need to add an additional AND node.
-  // This helper method distinguish these two cases for a given node.
-  bool _input_is_filtered(const std::shared_ptr<AbstractLQPNode>& node) const;
 
   // Returns whether an LQP node with its current configuration can be part of an operator pipeline.
   bool _node_is_jittable(const std::shared_ptr<AbstractLQPNode>& node, const bool allow_aggregate_node) const;
@@ -82,7 +53,9 @@ class JitAwareLQPTranslator final : public LQPTranslator {
   // Traverses the LQP in a breadth-first fashion and passes all visited nodes to a lambda. The boolean returned
   // from the lambda determines whether the current node should be explored further.
   void _visit(const std::shared_ptr<AbstractLQPNode>& node,
-              const std::function<bool(const std::shared_ptr<AbstractLQPNode>&)>& func) const;
+              std::function<bool(const std::shared_ptr<AbstractLQPNode>&)> func) const;
+
+  static JitExpressionType _expression_to_jit_expression_type(const AbstractExpression& expression);
 };
 
 }  // namespace opossum

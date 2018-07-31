@@ -28,7 +28,7 @@ class PredicateNode;
 class IndexScanRule : public AbstractRule {
  public:
   std::string name() const override;
-  bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) override;
+  bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
  protected:
   bool _is_index_scan_applicable(const IndexInfo& indx_info,

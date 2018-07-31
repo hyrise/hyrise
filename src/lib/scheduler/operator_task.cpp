@@ -14,8 +14,9 @@
 #include "scheduler/worker.hpp"
 
 namespace opossum {
-OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op, CleanupTemporaries cleanup_temporaries)
-    : _op(std::move(op)), _cleanup_temporaries(cleanup_temporaries) {}
+OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op, CleanupTemporaries cleanup_temporaries,
+                           SchedulePriority priority, bool stealable)
+    : AbstractTask(priority, stealable), _op(std::move(op)), _cleanup_temporaries(cleanup_temporaries) {}
 
 std::string OperatorTask::description() const {
   return "OperatorTask with id: " + std::to_string(id()) + " for op: " + _op->description();

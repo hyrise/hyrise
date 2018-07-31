@@ -48,6 +48,10 @@ namespace opossum {
 
 [[noreturn]] inline void Fail(const std::string& msg) { throw std::logic_error(msg); }
 
+[[noreturn]] inline void FailInput(const std::string& msg) {
+  throw InvalidInputException(std::string("Invalid input error: ") + msg);
+}
+
 }  // namespace opossum
 
 #define Assert(expr, msg)                                                                  \
@@ -55,9 +59,9 @@ namespace opossum {
     opossum::Fail(std::string(__FILENAME__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg); \
   }
 
-#define AssertInput(expr, msg)                                                             \
-  if (!static_cast<bool>(expr)) {                                                          \
-    throw InvalidInputException(std::string("Invalid input error: ") + msg);               \
+#define AssertInput(expr, msg)                                               \
+  if (!static_cast<bool>(expr)) {                                            \
+    throw InvalidInputException(std::string("Invalid input error: ") + msg); \
   }
 
 #if IS_DEBUG
