@@ -4,7 +4,7 @@
 #include <string>
 #include <utility>
 
-#include "column_visitable.hpp"
+#include "abstract_column_visitor.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -38,10 +38,6 @@ const std::shared_ptr<const Table> ReferenceColumn::referenced_table() const { r
 ColumnID ReferenceColumn::referenced_column_id() const { return _referenced_column_id; }
 
 size_t ReferenceColumn::size() const { return _pos_list->size(); }
-
-void ReferenceColumn::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context) const {
-  visitable.handle_column(*this, std::move(context));
-}
 
 std::shared_ptr<BaseColumn> ReferenceColumn::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   // ReferenceColumns are considered as intermediate datastructures and are

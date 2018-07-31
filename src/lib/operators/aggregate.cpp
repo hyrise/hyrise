@@ -82,14 +82,13 @@ void Aggregate::_on_cleanup() {
 /*
 Visitor context for the partitioning/grouping visitor
 */
-struct GroupByContext : ColumnVisitableContext {
+struct GroupByContext : ColumnVisitorContext {
   GroupByContext(const std::shared_ptr<const Table>& t, ChunkID chunk, ColumnID column,
                  const std::shared_ptr<std::vector<AggregateKey>>& keys)
       : table_in(t), chunk_id(chunk), column_id(column), hash_keys(keys) {}
 
-  // constructor for use in ReferenceColumn::visit_dereferenced
   GroupByContext(const std::shared_ptr<BaseColumn>&, const std::shared_ptr<const Table>& referenced_table,
-                 const std::shared_ptr<ColumnVisitableContext>& base_context, ChunkID chunk_id,
+                 const std::shared_ptr<ColumnVisitorContext>& base_context, ChunkID chunk_id,
                  const std::shared_ptr<std::vector<ChunkOffset>>& chunk_offsets)
       : table_in(referenced_table),
         chunk_id(chunk_id),
@@ -108,13 +107,12 @@ struct GroupByContext : ColumnVisitableContext {
 Visitor context for the AggregateVisitor.
 */
 template <typename ColumnType, typename AggregateType>
-struct AggregateContext : ColumnVisitableContext {
+struct AggregateContext : ColumnVisitorContext {
   AggregateContext() = default;
   explicit AggregateContext(const std::shared_ptr<GroupByContext>& base_context) : groupby_context(base_context) {}
 
-  // constructor for use in ReferenceColumn::visit_dereferenced
   AggregateContext(const std::shared_ptr<BaseColumn>&, const std::shared_ptr<const Table>&,
-                   const std::shared_ptr<ColumnVisitableContext>& base_context, ChunkID chunk_id,
+                   const std::shared_ptr<ColumnVisitorContext>& base_context, ChunkID chunk_id,
                    const std::shared_ptr<std::vector<ChunkOffset>>& chunk_offsets)
       : groupby_context(std::static_pointer_cast<AggregateContext>(base_context)->groupby_context),
         results(std::static_pointer_cast<AggregateContext>(base_context)->results) {
@@ -400,7 +398,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   /*
   AGGREGATION PHASE
   */
-  _contexts_per_column = std::vector<std::shared_ptr<ColumnVisitableContext>>(_aggregates.size());
+  _contexts_per_column = std::vector<std::shared_ptr<ColumnVisitorContext>>(_aggregates.size());
 
   if (_aggregates.empty()) {
     /*
@@ -792,9 +790,9 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
   _output_columns.push_back(output_column);
 }
 
-std::shared_ptr<ColumnVisitableContext> Aggregate::_create_aggregate_context(const DataType data_type,
-                                                                             const AggregateFunction function) const {
-  std::shared_ptr<ColumnVisitableContext> context;
+std::shared_ptr<ColumnVisitorContext> Aggregate::_create_aggregate_context(const DataType data_type,
+                                                                           const AggregateFunction function) const {
+  std::shared_ptr<ColumnVisitorContext> context;
   resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
     switch (function) {
@@ -822,7 +820,7 @@ std::shared_ptr<ColumnVisitableContext> Aggregate::_create_aggregate_context(con
 }
 
 template <typename ColumnDataType, AggregateFunction aggregate_function>
-std::shared_ptr<ColumnVisitableContext> Aggregate::_create_aggregate_context_impl() const {
+std::shared_ptr<ColumnVisitorContext> Aggregate::_create_aggregate_context_impl() const {
   const auto context = std::make_shared<
       AggregateContext<ColumnDataType, typename AggregateTraits<ColumnDataType, aggregate_function>::AggregateType>>();
   context->results = std::make_shared<typename decltype(context->results)::element_type>();

@@ -281,7 +281,6 @@ set(
     storage/base_column.cpp
     storage/base_column_encoder.hpp
     storage/base_column.hpp
-    storage/base_dictionary_column.cpp
     storage/base_dictionary_column.hpp
     storage/base_encoded_column.cpp
     storage/base_encoded_column.hpp
@@ -303,7 +302,7 @@ set(
     storage/column_iterables/constant_value_iterable.hpp
     storage/column_iterables/create_iterable_from_attribute_vector.hpp
     storage/column_iterables.hpp
-    storage/column_visitable.hpp
+    storage/abstract_column_visitor.hpp
     storage/create_iterable_from_column.hpp
     storage/dictionary_column/attribute_vector_iterable.hpp
     storage/dictionary_column.cpp

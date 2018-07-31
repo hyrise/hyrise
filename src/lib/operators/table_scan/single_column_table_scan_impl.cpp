@@ -37,7 +37,7 @@ std::shared_ptr<PosList> SingleColumnTableScanImpl::scan_chunk(ChunkID chunk_id)
 }
 
 void SingleColumnTableScanImpl::handle_column(const BaseValueColumn& base_column,
-                                              std::shared_ptr<ColumnVisitableContext> base_context) {
+                                              std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
@@ -64,7 +64,7 @@ void SingleColumnTableScanImpl::handle_column(const BaseValueColumn& base_column
 }
 
 void SingleColumnTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
-                                              std::shared_ptr<ColumnVisitableContext> base_context) {
+                                              std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
@@ -91,7 +91,7 @@ void SingleColumnTableScanImpl::handle_column(const BaseEncodedColumn& base_colu
 }
 
 void SingleColumnTableScanImpl::handle_column(const BaseDictionaryColumn& left_column,
-                                              std::shared_ptr<ColumnVisitableContext> base_context) {
+                                              std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto chunk_id = context->_chunk_id;

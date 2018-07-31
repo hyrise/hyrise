@@ -30,7 +30,7 @@ LikeTableScanImpl::LikeTableScanImpl(const std::shared_ptr<const Table>& in_tabl
 }
 
 void LikeTableScanImpl::handle_column(const BaseValueColumn& base_column,
-                                      std::shared_ptr<ColumnVisitableContext> base_context) {
+                                      std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
@@ -42,7 +42,7 @@ void LikeTableScanImpl::handle_column(const BaseValueColumn& base_column,
 }
 
 void LikeTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
-                                      std::shared_ptr<ColumnVisitableContext> base_context) {
+                                      std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
@@ -55,7 +55,7 @@ void LikeTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
 }
 
 void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
-                                      std::shared_ptr<ColumnVisitableContext> base_context) {
+                                      std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
