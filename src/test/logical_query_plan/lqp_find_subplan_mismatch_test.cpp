@@ -157,7 +157,6 @@ TEST_F(LQPFindSubplanMismatchTest, TypeMismatch) {
 
   auto mismatch = lqp_find_subplan_mismatch(first_node, second_node);
   ASSERT_TRUE(mismatch);
-  EXPECT_LQP_EQ(first_node, second_node);
 }
 
 }  // namespace opossum
