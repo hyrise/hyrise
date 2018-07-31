@@ -50,9 +50,11 @@ class TableScan : public AbstractReadOnlyOperator {
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  std::shared_ptr<AbstractOperator> _on_deep_copy(
+      const std::shared_ptr<AbstractOperator>& copied_input_left,
+      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   void _on_cleanup() override;
 
@@ -61,7 +63,7 @@ class TableScan : public AbstractReadOnlyOperator {
  private:
   const ColumnID _left_column_id;
   const PredicateCondition _predicate_condition;
-  const AllParameterVariant _right_parameter;
+  AllParameterVariant _right_parameter;
 
   std::vector<ChunkID> _excluded_chunk_ids;
 

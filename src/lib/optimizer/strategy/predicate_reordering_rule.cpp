@@ -8,6 +8,7 @@
 
 #include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
@@ -16,15 +17,15 @@ namespace opossum {
 
 std::string PredicateReorderingRule::name() const { return "Predicate Reordering Rule"; }
 
-bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
+bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   auto reordered = false;
 
-  if (node->type() == LQPNodeType::Predicate) {
+  if (node->type == LQPNodeType::Predicate) {
     std::vector<std::shared_ptr<PredicateNode>> predicate_nodes;
 
     // Gather adjacent PredicateNodes
     auto current_node = node;
-    while (current_node->type() == LQPNodeType::Predicate) {
+    while (current_node->type == LQPNodeType::Predicate) {
       // Once a node has multiple outputs, we're not talking about a Predicate chain anymore
       if (current_node->outputs().size() > 1) {
         break;
@@ -69,7 +70,7 @@ bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<Pr
 
   // Untie predicates from LQP, so we can freely retie them
   for (auto& predicate : predicates) {
-    predicate->remove_from_tree();
+    lqp_remove_node(predicate);
   }
 
   // Sort in descending order

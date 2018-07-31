@@ -25,11 +25,13 @@ OrderByMode Sort::order_by_mode() const { return _order_by_mode; }
 
 const std::string Sort::name() const { return "Sort"; }
 
-std::shared_ptr<AbstractOperator> Sort::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<Sort>(recreated_input_left, _column_id, _order_by_mode, _output_chunk_size);
+std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<Sort>(copied_input_left, _column_id, _order_by_mode, _output_chunk_size);
 }
+
+void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Sort::_on_execute() {
   _impl = make_unique_by_data_type<AbstractReadOnlyOperatorImpl, SortImpl>(
@@ -133,7 +135,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
  public:
   using RowIDValuePair = std::pair<RowID, SortColumnType>;
 
-  SortImpl(const std::shared_ptr<const Table> table_in, const ColumnID column_id,
+  SortImpl(const std::shared_ptr<const Table>& table_in, const ColumnID column_id,
            const OrderByMode order_by_mode = OrderByMode::Ascending, const size_t output_chunk_size = 0)
       : _table_in(table_in),
         _column_id(column_id),
@@ -157,7 +159,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     }
 
     // 2b. Insert null rows if necessary
-    if (_null_value_rows->size()) {
+    if (!_null_value_rows->empty()) {
       if (_order_by_mode == OrderByMode::AscendingNullsLast || _order_by_mode == OrderByMode::DescendingNullsLast) {
         // NULLs last
         _row_id_value_vector->insert(_row_id_value_vector->end(), _null_value_rows->begin(), _null_value_rows->end());

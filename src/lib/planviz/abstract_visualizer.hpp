@@ -90,7 +90,7 @@ class AbstractVisualizer {
     auto renderer = _graphviz_config.renderer;
     auto format = _graphviz_config.format;
 
-    auto cmd = renderer + " -T" + format + " " + graph_filename + " > " + img_filename;
+    auto cmd = renderer + " -T" + format + " \"" + graph_filename + "\" > \"" + img_filename + "\"";
     auto ret = system(cmd.c_str());
 
     Assert(ret == 0, "Calling graphviz' " + renderer +

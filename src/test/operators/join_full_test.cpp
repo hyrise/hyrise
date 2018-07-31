@@ -212,12 +212,6 @@ TYPED_TEST(JoinFullTest, OuterJoinDict) {
                                              JoinMode::Outer, "src/test/tables/joinoperators/int_outer_join.tbl", 1);
 }
 
-TYPED_TEST(JoinFullTest, SelfJoin) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_a,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Self, "src/test/tables/joinoperators/int_self_join.tbl", 1);
-}
-
 TYPED_TEST(JoinFullTest, SmallerInnerJoin) {
   // Joining two Integer Columns
   this->template test_join_output<TypeParam>(

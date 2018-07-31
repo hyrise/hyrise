@@ -26,9 +26,9 @@ namespace {
 // predicate and then optimized to a Join.
 std::function<bool(const std::shared_ptr<opossum::AbstractLQPNode>&)> contains_cross =
     [](const std::shared_ptr<opossum::AbstractLQPNode>& node) {
-      if (node->type() != opossum::LQPNodeType::Join) return false;
+      if (node->type != opossum::LQPNodeType::Join) return false;
       if (auto join_node = std::dynamic_pointer_cast<opossum::JoinNode>(node)) {
-        return join_node->join_mode() == opossum::JoinMode::Cross;
+        return join_node->join_mode == opossum::JoinMode::Cross;
       }
       return false;
     };
@@ -128,7 +128,7 @@ TEST_F(SQLPipelineTest, SimpleCreationInvalid) {
 TEST_F(SQLPipelineTest, ConstructorCombinations) {
   // Simple sanity test for all other constructor options
   const auto optimizer = Optimizer::create_default_optimizer();
-  auto prepared_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
+  auto prepared_cache = std::make_shared<PreparedStatementCache>(5);
   auto transaction_context = TransactionManager::get().new_transaction_context();
 
   // No transaction context
@@ -378,7 +378,7 @@ TEST_F(SQLPipelineTest, GetResultTableExecutionRequired) {
 TEST_F(SQLPipelineTest, GetResultTableWithScheduler) {
   auto sql_pipeline = SQLPipelineBuilder{_join_query}.create_pipeline();
 
-  Topology::current().init_fake_numa_topology(8, 4);
+  Topology::use_fake_numa_topology(8, 4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
   const auto& table = sql_pipeline.get_result_table();
 
@@ -388,7 +388,7 @@ TEST_F(SQLPipelineTest, GetResultTableWithScheduler) {
 TEST_F(SQLPipelineTest, CleanupWithScheduler) {
   auto sql_pipeline = SQLPipelineBuilder{_join_query}.create_pipeline();
 
-  Topology::current().init_fake_numa_topology(8, 4);
+  Topology::use_fake_numa_topology(8, 4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
   sql_pipeline.get_result_table();
 
@@ -401,7 +401,7 @@ TEST_F(SQLPipelineTest, CleanupWithScheduler) {
 TEST_F(SQLPipelineTest, DisabledCleanupWithScheduler) {
   auto sql_pipeline = SQLPipelineBuilder{_join_query}.dont_cleanup_temporaries().create_pipeline();
 
-  Topology::current().init_fake_numa_topology(8, 4);
+  Topology::use_fake_numa_topology(8, 4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
   sql_pipeline.get_result_table();
 
@@ -412,7 +412,7 @@ TEST_F(SQLPipelineTest, DisabledCleanupWithScheduler) {
 }
 
 TEST_F(SQLPipelineTest, GetResultTableBadQuery) {
-  auto sql = "SELECT a + b FROM table_a";
+  auto sql = "SELECT a + not_a_column FROM table_a";
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
 
   EXPECT_THROW(sql_pipeline.get_result_table(), std::exception);

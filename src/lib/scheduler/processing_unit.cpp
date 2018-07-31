@@ -9,12 +9,13 @@
 // It is important to limit the number of workers per core to avoid
 // resource depletion. This number is an arbitrary pick, but has been reached
 // and exceeded in experiments.
-static constexpr size_t MAX_WORKERS_PER_CORE = 200;
+static constexpr size_t MAX_WORKERS_PER_CORE = 5;
+static constexpr size_t MAX_WORKERS_PER_CORE_JOBTASKS = 1;
 
 namespace opossum {
 
-ProcessingUnit::ProcessingUnit(std::shared_ptr<TaskQueue> queue, std::shared_ptr<UidAllocator> worker_id_allocator,
-                               CpuID cpu_id)
+ProcessingUnit::ProcessingUnit(const std::shared_ptr<TaskQueue>& queue,
+                               const std::shared_ptr<UidAllocator>& worker_id_allocator, CpuID cpu_id)
     : _queue(queue), _worker_id_allocator(worker_id_allocator), _cpu_id(cpu_id) {
   // Do not start worker yet, the object is still under construction and no shared_ptr of it is held right now -
   // shared_from_this will fail!
@@ -57,7 +58,15 @@ void ProcessingUnit::wake_or_create_worker() {
     std::lock_guard<std::mutex> lock(_mutex);
 
     if (_workers.size() < MAX_WORKERS_PER_CORE) {
-      auto worker = std::make_shared<Worker>(shared_from_this(), _queue, _worker_id_allocator->allocate(), _cpu_id);
+      auto worker = std::make_shared<Worker>(shared_from_this(), _queue, _worker_id_allocator->allocate(), _cpu_id,
+                                             SchedulePriority::Lowest);
+      _workers.emplace_back(worker);
+
+      auto fn = std::bind(&Worker::operator(), worker.get());
+      _threads.emplace_back(fn);
+    } else if (_workers.size() < MAX_WORKERS_PER_CORE + MAX_WORKERS_PER_CORE_JOBTASKS) {
+      auto worker = std::make_shared<Worker>(shared_from_this(), _queue, _worker_id_allocator->allocate(), _cpu_id,
+                                             SchedulePriority::JobTask);
       _workers.emplace_back(worker);
 
       auto fn = std::bind(&Worker::operator(), worker.get());

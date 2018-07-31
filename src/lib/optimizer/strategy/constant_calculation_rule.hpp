@@ -10,10 +10,8 @@
 
 namespace opossum {
 
+class AbstractExpression;
 class AbstractLQPNode;
-class ProjectionNode;
-class LQPExpression;
-class LQPColumnReference;
 
 /**
  * This optimizer rule looks for Expressions in ProjectionNodes that are calculable at planning time
@@ -22,18 +20,10 @@ class LQPColumnReference;
 class ConstantCalculationRule : public AbstractRule {
  public:
   std::string name() const override;
-  bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) override;
+  bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
  private:
-  bool _replace_expression_in_outputs(const std::shared_ptr<AbstractLQPNode>& node,
-                                      const LQPColumnReference& expression_column, const AllTypeVariant& value);
-  void _remove_column_from_projection(const std::shared_ptr<ProjectionNode>& node, ColumnID column_id);
-
-  std::optional<DataType> _get_type_of_expression(const std::shared_ptr<LQPExpression>& expression) const;
-
-  template <typename T>
-  std::optional<AllTypeVariant> _calculate_expression(boost::hana::basic_type<T> type,
-                                                      const std::shared_ptr<LQPExpression>& expression) const;
+  void _prune_expression(std::shared_ptr<AbstractExpression>& expression) const;
 };
 
 }  // namespace opossum

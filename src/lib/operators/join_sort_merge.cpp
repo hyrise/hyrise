@@ -13,13 +13,13 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/column_visitable.hpp"
+#include "storage/abstract_column_visitor.hpp"
 #include "storage/reference_column.hpp"
 
 namespace opossum {
 
 /**
-* TODO(arne.mayer): Outer not-equal join (outer !=)
+* TODO(anyone): Outer not-equal join (outer !=)
 * TODO(anyone): Choose an appropriate number of clusters.
 **/
 
@@ -32,8 +32,8 @@ namespace opossum {
 *    and handled at once. If a join-match is identified, the corresponding row_ids are noted for the output.
 * -> Using the join result, the output table is built using pos lists referencing the original tables.
 **/
-JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator> left,
-                             const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left,
+                             const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                              const ColumnIDPair& column_ids, const PredicateCondition op)
     : AbstractJoinOperator(OperatorType::JoinSortMerge, left, right, mode, column_ids, op) {
   // Validate the parameters
@@ -48,12 +48,14 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator> left,
               "Outer joins are not implemented for not-equals joins.");
 }
 
-std::shared_ptr<AbstractOperator> JoinSortMerge::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<JoinSortMerge>(recreated_input_left, recreated_input_right, _mode, _column_ids,
+std::shared_ptr<AbstractOperator> JoinSortMerge::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<JoinSortMerge>(copied_input_left, copied_input_right, _mode, _column_ids,
                                          _predicate_condition);
 }
+
+void JoinSortMerge::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
   // Check column types
@@ -119,7 +121,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   **/
   struct TableRange;
   struct TablePosition {
-    TablePosition() {}
+    TablePosition() = default;
     TablePosition(size_t cluster, size_t index) : cluster{cluster}, index{index} {}
 
     size_t cluster;
@@ -173,7 +175,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Gets the table position corresponding to the end of the table, i.e. the last entry of the last cluster.
   **/
   static TablePosition _end_of_table(std::unique_ptr<MaterializedColumnList<T>>& table) {
-    DebugAssert(table->size() > 0, "table has no chunks");
+    DebugAssert(!table->empty(), "table has no chunks");
     auto last_cluster = table->size() - 1;
     return TablePosition(last_cluster, (*table)[last_cluster]->size());
   }
@@ -312,9 +314,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * This constitutes the merge phase of the join. The output combinations of row ids are determined by _join_runs.
   **/
   void _join_cluster(size_t cluster_number) {
-    _output_pos_lists_left[cluster_number] = std::make_shared<PosList>();
-    _output_pos_lists_right[cluster_number] = std::make_shared<PosList>();
-
     auto& left_cluster = (*_sorted_left_table)[cluster_number];
     auto& right_cluster = (*_sorted_right_table)[cluster_number];
 
@@ -372,10 +371,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
     DebugAssert(
         _op != PredicateCondition::Equals,
         "Complete table order is required for _table_min_value which is only " + "available in the non-equi case");
-    DebugAssert(sorted_table->size() > 0, "Sorted table has no partitions");
+    DebugAssert(!sorted_table->empty(), "Sorted table has no partitions");
 
-    for (auto partition : *sorted_table) {
-      if (partition->size() > 0) {
+    for (const auto& partition : *sorted_table) {
+      if (!partition->empty()) {
         return (*partition)[0].value;
       }
     }
@@ -389,10 +388,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   T& _table_max_value(std::unique_ptr<MaterializedColumnList<T>>& sorted_table) {
     DebugAssert(_op != PredicateCondition::Equals,
                 "The table needs to be sorted for _table_max_value which is only " + "the case in the non-equi case");
-    DebugAssert(sorted_table->size() > 0, "Sorted table is empty");
+    DebugAssert(!sorted_table->empty(), "Sorted table is empty");
 
     for (size_t partition_id = sorted_table->size() - 1; partition_id < sorted_table->size(); --partition_id) {
-      if ((*sorted_table)[partition_id]->size() > 0) {
+      if (!(*sorted_table)[partition_id]->empty()) {
         return (*sorted_table)[partition_id]->back().value;
       }
     }
@@ -409,7 +408,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
                                                            Function condition) {
     for (size_t partition_id = 0; partition_id < sorted_table->size(); ++partition_id) {
       auto partition = (*sorted_table)[partition_id];
-      if (partition->size() > 0 && condition(partition->back().value)) {
+      if (!partition->empty() && condition(partition->back().value)) {
         for (size_t index = 0; index < partition->size(); ++index) {
           if (condition((*partition)[index].value)) {
             return TablePosition(partition_id, index);
@@ -430,7 +429,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
       std::unique_ptr<MaterializedColumnList<T>>& sorted_table, Function condition) {
     for (size_t partition_id = sorted_table->size() - 1; partition_id < sorted_table->size(); --partition_id) {
       auto partition = (*sorted_table)[partition_id];
-      if (partition->size() > 0 && condition((*partition)[0].value)) {
+      if (!partition->empty() && condition((*partition)[0].value)) {
         for (size_t index = partition->size() - 1; index < partition->size(); --index) {
           if (condition((*partition)[index].value)) {
             return TablePosition(partition_id, index + 1);
@@ -532,6 +531,16 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     // Parallel join for each cluster
     for (size_t cluster_number = 0; cluster_number < _cluster_count; ++cluster_number) {
+      // Create output position lists
+      _output_pos_lists_left[cluster_number] = std::make_shared<PosList>();
+      _output_pos_lists_right[cluster_number] = std::make_shared<PosList>();
+
+      // Avoid empty jobs for inner equi joins
+      if (_mode == JoinMode::Inner && _op == PredicateCondition::Equals) {
+        if ((*_sorted_left_table)[cluster_number]->size() == 0 || (*_sorted_right_table)[cluster_number]->size() == 0) {
+          continue;
+        }
+      }
       jobs.push_back(std::make_shared<JobTask>([this, cluster_number] { this->_join_cluster(cluster_number); }));
       jobs.back()->schedule();
     }
@@ -607,8 +616,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * Turns a pos list that is pointing to reference column entries into a pos list pointing to the original table.
   * This is done because there should not be any reference columns referencing reference columns.
   **/
-  std::shared_ptr<PosList> _dereference_pos_list(std::shared_ptr<const Table> input_table, ColumnID column_id,
-                                                 std::shared_ptr<const PosList> pos_list) {
+  std::shared_ptr<PosList> _dereference_pos_list(const std::shared_ptr<const Table>& input_table, ColumnID column_id,
+                                                 const std::shared_ptr<const PosList>& pos_list) {
     // Get all the input pos lists so that we only have to pointer cast the columns once
     auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
     for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
@@ -634,7 +643,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Executes the SortMergeJoin operator.
   **/
-  std::shared_ptr<const Table> _on_execute() {
+  std::shared_ptr<const Table> _on_execute() override {
     bool include_null_left = (_mode == JoinMode::Left || _mode == JoinMode::Outer);
     bool include_null_right = (_mode == JoinMode::Right || _mode == JoinMode::Outer);
     auto radix_clusterer = RadixClusterSort<T>(

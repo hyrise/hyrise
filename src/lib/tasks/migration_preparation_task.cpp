@@ -168,7 +168,7 @@ void MigrationPreparationTask::_on_execute() {
   auto chunk_infos =
       collect_chunk_infos(StorageManager::get(), _options.counter_history_range, _options.counter_history_interval);
   size_t chunk_counter = 0;
-  NodeInfoSet node_info = compute_node_info(get_node_temperatures(chunk_infos, Topology::current().nodes().size()));
+  NodeInfoSet node_info = compute_node_info(get_node_temperatures(chunk_infos, Topology::get().nodes().size()));
 
   // Migrations are only considered when the imbalance between the NUMA nodes is high enough.
   if (node_info.imbalance > _options.imbalance_threshold && node_info.cold_nodes.size() > 0) {
@@ -189,10 +189,11 @@ void MigrationPreparationTask::_on_execute() {
 
     for (const auto& migration_chunk : migration_candidates) {
       const auto target_node = node_info.cold_nodes.at(chunk_counter % node_info.cold_nodes.size());
-      const auto task = std::make_shared<ChunkMigrationTask>(migration_chunk.table_name,
-                                                             std::vector<ChunkID>({migration_chunk.id}), target_node);
+      const auto task =
+          std::make_shared<ChunkMigrationTask>(migration_chunk.table_name, std::vector<ChunkID>({migration_chunk.id}),
+                                               target_node, SchedulePriority::JobTask, false);
 
-      task->schedule(target_node, SchedulePriority::Unstealable);
+      task->schedule(target_node);
       jobs.push_back(task);
       chunk_counter++;
     }

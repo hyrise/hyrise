@@ -17,9 +17,7 @@
 
 namespace opossum {
 
-NodeQueueScheduler::NodeQueueScheduler() : AbstractScheduler() {
-  _worker_id_allocator = std::make_shared<UidAllocator>();
-}
+NodeQueueScheduler::NodeQueueScheduler() { _worker_id_allocator = std::make_shared<UidAllocator>(); }
 
 NodeQueueScheduler::~NodeQueueScheduler() {
   if (IS_DEBUG && !_shut_down) {
@@ -30,15 +28,15 @@ NodeQueueScheduler::~NodeQueueScheduler() {
 }
 
 void NodeQueueScheduler::begin() {
-  _processing_units.reserve(Topology::current().num_cpus());
-  _queues.reserve(Topology::current().nodes().size());
+  _processing_units.reserve(Topology::get().num_cpus());
+  _queues.reserve(Topology::get().nodes().size());
 
-  for (auto node_id = NodeID{0}; node_id < Topology::current().nodes().size(); node_id++) {
+  for (auto node_id = NodeID{0}; node_id < Topology::get().nodes().size(); node_id++) {
     auto queue = std::make_shared<TaskQueue>(node_id);
 
     _queues.emplace_back(queue);
 
-    auto& topology_node = Topology::current().nodes()[node_id];
+    auto& topology_node = Topology::get().nodes()[node_id];
 
     for (auto& topology_cpu : topology_node.cpus) {
       _processing_units.emplace_back(

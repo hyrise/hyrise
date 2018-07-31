@@ -30,7 +30,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, const NamedQueri
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
   if (config.enable_scheduler) {
     config.out << "- Multi-threaded Topology:" << std::endl;
-    Topology::current().print(config.out);
+    Topology::get().print(config.out);
 
     const auto scheduler = std::make_shared<NodeQueueScheduler>();
     CurrentScheduler::set(scheduler);
@@ -63,7 +63,8 @@ void BenchmarkRunner::run() {
   // Visualize query plans
   if (_config.enable_visualization) {
     for (const auto& name_and_plans : _query_plans) {
-      const auto& name = name_and_plans.first;
+      auto name = name_and_plans.first;
+      boost::replace_all(name, " ", "_");
       const auto& lqps = name_and_plans.second.lqps;
       const auto& pqps = name_and_plans.second.pqps;
 
@@ -148,7 +149,6 @@ void BenchmarkRunner::_execute_query(const NamedQuery& named_query) {
   if (_config.enable_visualization) {
     const auto query_plans_iter = _query_plans.find(name);
     if (query_plans_iter == _query_plans.end()) {
-      Assert(pipeline.get_query_plans().size() == 1, "Expected exactly one SQLQueryPlan");
       QueryPlans plans{pipeline.get_optimized_logical_plans(), pipeline.get_query_plans()};
       _query_plans.emplace(name, plans);
     }

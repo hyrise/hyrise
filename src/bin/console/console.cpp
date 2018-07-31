@@ -37,8 +37,8 @@
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
-#include "utils/invalid_input_exception.hpp"
 #include "utils/filesystem.hpp"
+#include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
 
 #define ANSI_COLOR_RED "\x1B[31m"
@@ -130,7 +130,7 @@ Console::Console()
     _tpcc_commands.push_back(it->first);
   }
 
-  _prepared_statements = std::make_shared<SQLQueryCache<SQLQueryPlan>>(DefaultCacheCapacity);
+  _prepared_statements = std::make_shared<PreparedStatementCache>(DefaultCacheCapacity);
 }
 
 Console& Console::get() {

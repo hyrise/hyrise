@@ -1,10 +1,10 @@
 #include "b_tree_index_impl.hpp"
 
+#include "resolve_type.hpp"
+#include "storage/create_iterable_from_column.hpp"
 #include "storage/index/base_index.hpp"
 #include "types.hpp"
-#include "resolve_type.hpp"
 #include "utils/assert.hpp"
-#include "storage/create_iterable_from_column.hpp"
 
 namespace opossum {
 
@@ -55,9 +55,7 @@ BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::upper_bound(DataType valu
 
 template <typename DataType>
 uint64_t BTreeIndexImpl<DataType>::memory_consumption() const {
-  return sizeof(std::vector<ChunkOffset>) +
-         sizeof(ChunkOffset) * _chunk_offsets.size() +
-         _btree.bytes_used();
+  return sizeof(std::vector<ChunkOffset>) + sizeof(ChunkOffset) * _chunk_offsets.size() + _btree.bytes_used();
 }
 
 template <typename DataType>
@@ -74,7 +72,7 @@ void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const BaseColu
   });
 
   // Sort
-  std::sort(values.begin(), values.end(), [](const auto& a, const auto& b){ return a.second < b.second; });
+  std::sort(values.begin(), values.end(), [](const auto& a, const auto& b) { return a.second < b.second; });
   _chunk_offsets.resize(values.size());
   for (size_t i = 0; i < values.size(); i++) {
     _chunk_offsets[i] = values[i].first;

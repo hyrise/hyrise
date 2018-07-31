@@ -11,7 +11,7 @@ class SQLPipeline;
 
 class QueryResponseBuilder {
  public:
-  static std::vector<ColumnDescription> build_row_description(const std::shared_ptr<const Table> table);
+  static std::vector<ColumnDescription> build_row_description(const std::shared_ptr<const Table>& table);
   static std::string build_command_complete_message(hsql::StatementType statement_type, uint64_t row_count);
   static std::string build_execution_info_message(std::shared_ptr<SQLPipeline> sql_pipeline);
 
