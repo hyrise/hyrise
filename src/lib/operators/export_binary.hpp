@@ -6,7 +6,7 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "import_export/binary.hpp"
-#include "storage/column_visitable.hpp"
+#include "storage/abstract_column_visitor.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
 #include "utils/assert.hpp"
@@ -54,7 +54,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * Column count          | ColumnID                              |   2
    * Column types          | TypeID array                          |   Column Count * 1
    * Column nullable       | bool (stored as BoolAsByteType)       |   Column Count * 1
-   * Column name lengths   | ColumnNameLength array                |   Column Count * 1
+   * Column name lengths   | size_t array                          |   Column Count * 1
    * Column names          | std::string array                     |   Sum of lengths of all names
    *
    * @param table The table that is to be exported
@@ -83,14 +83,14 @@ class ExportBinary : public AbstractReadOnlyOperator {
   template <typename T>
   class ExportBinaryVisitor;
 
-  struct ExportContext : ColumnVisitableContext {
+  struct ExportContext : ColumnVisitorContext {
     explicit ExportContext(std::ofstream& ofstream) : ofstream(ofstream) {}
     std::ofstream& ofstream;
   };
 };
 
 template <typename T>
-class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
+class ExportBinary::ExportBinaryVisitor : public AbstractColumnVisitor {
   /**
    * Value Columns are dumped with the following layout:
    *
@@ -99,7 +99,7 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * Column Type           | ColumnType                            |   1
    * Null Values'          | vector<bool> (BoolAsByteType)         |   rows * 1
    * Values°               | T (int, float, double, long)          |   rows * sizeof(T)
-   * Length of Strings^    | vector<StringLength>                  |   rows * 2
+   * Length of Strings^    | vector<size_t>                        |   rows * 2
    * Values^               | std::string                           |   rows * string.length()
    *
    * Please note that the number of rows are written in the header of the chunk.
@@ -113,7 +113,7 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    *
    */
-  void handle_column(const BaseValueColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) final;
+  void handle_column(const BaseValueColumn& base_column, std::shared_ptr<ColumnVisitorContext> base_context) final;
 
   /**
    * Reference Columns are dumped with the following layout, which is similar to value columns:
@@ -122,7 +122,7 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * -----------------------------------------------------------------------------------------
    * Column Type           | ColumnType                            |   1
    * Values°               | T (int, float, double, long)          |   rows * sizeof(T)
-   * Length of Strings^    | vector<StringLength>                  |   rows * 2
+   * Length of Strings^    | vector<size_t>                        |   rows * 2
    * Values^               | std::string                           |   rows * string.length()
    *
    * Please note that the number of rows are written in the header of the chunk.
@@ -134,7 +134,7 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * @param base_column The Column to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
-  void handle_column(const ReferenceColumn& ref_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
+  void handle_column(const ReferenceColumn& ref_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
 
   /**
    * Dictionary Columns are dumped with the following layout:
@@ -145,7 +145,7 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * Width of attribute v. | AttributeVectorWidth                  |   1
    * Size of dictionary v. | ValueID                               |   4
    * Dictionary Values°    | T (int, float, double, long)          |   dict. size * sizeof(T)
-   * Dict. String Length^  | StringLength                          |   dict. size * 2
+   * Dict. String Length^  | size_t                                |   dict. size * 2
    * Dictionary Values^    | std::string                           |   Sum of all string lengths
    * Attribute v. values   | uintX                                 |   rows * width of attribute v.
    *
@@ -153,16 +153,15 @@ class ExportBinary::ExportBinaryVisitor : public ColumnVisitable {
    * The type of the column can be found in the global header of the file.
    *
    * ^: These fields are only written if the type of the column IS a string.
-   * °: This field is writen if the type of the column is NOT a string
+   * °: This field is written if the type of the column is NOT a string
    *
    * @param base_column The Column to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
   void handle_column(const BaseDictionaryColumn& base_column,
-                     std::shared_ptr<ColumnVisitableContext> base_context) override;
+                     std::shared_ptr<ColumnVisitorContext> base_context) override;
 
-  void handle_column(const BaseEncodedColumn& base_column,
-                     std::shared_ptr<ColumnVisitableContext> base_context) override;
+  void handle_column(const BaseEncodedColumn& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
 
  private:
   // Chooses the right FixedSizeByteAlignedVector depending on the attribute_vector_width and exports it.

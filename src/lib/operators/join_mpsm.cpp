@@ -14,7 +14,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/topology.hpp"
-#include "storage/column_visitable.hpp"
+#include "storage/abstract_column_visitor.hpp"
 #include "storage/dictionary_column.hpp"
 
 #include "storage/reference_column.hpp"
@@ -387,8 +387,8 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
     // Parallel join for each cluster
     for (auto cluster_number = ClusterID{0}; cluster_number < _cluster_count; ++cluster_number) {
-      jobs.push_back(std::make_shared<JobTask>([this, cluster_number] { this->_join_cluster(cluster_number); }));
-      jobs.back()->schedule(static_cast<NodeID>(cluster_number), SchedulePriority::Unstealable);
+      jobs.push_back(std::make_shared<JobTask>([this, cluster_number] { this->_join_cluster(cluster_number); }, true));
+      jobs.back()->schedule(static_cast<NodeID>(cluster_number));
     }
 
     CurrentScheduler::wait_for_tasks(jobs);

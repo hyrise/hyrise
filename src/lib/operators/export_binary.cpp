@@ -30,9 +30,9 @@ void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values)
  * this size.
  * This approach is indeed faster than a dynamic approach with a stringstream.
  */
-template <typename T = opossum::StringLength, typename Alloc>
+template <typename Alloc>
 void export_string_values(std::ofstream& ofstream, const std::vector<std::string, Alloc>& values) {
-  std::vector<T> string_lengths(values.size());
+  std::vector<size_t> string_lengths(values.size());
   size_t total_length = 0;
 
   // Save the length of each string.
@@ -157,7 +157,7 @@ void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std:
   }
   export_values(ofstream, column_types);
   export_values(ofstream, columns_are_nullable);
-  export_string_values<ColumnNameLength>(ofstream, column_names);
+  export_string_values(ofstream, column_names);
 }
 
 void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::ofstream& ofstream,
@@ -169,14 +169,18 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
 
   // Iterating over all columns of this chunk and exporting them
   for (ColumnID column_id{0}; column_id < chunk->column_count(); column_id++) {
-    auto visitor = make_unique_by_data_type<ColumnVisitable, ExportBinaryVisitor>(table->column_data_type(column_id));
-    chunk->get_column(column_id)->visit(*visitor, context);
+    auto visitor =
+        make_unique_by_data_type<AbstractColumnVisitor, ExportBinaryVisitor>(table->column_data_type(column_id));
+    resolve_data_and_column_type(*chunk->get_column(column_id),
+                                 [&](const auto data_type_t, const auto& resolved_column) {
+                                   visitor->handle_column(resolved_column, context);
+                                 });
   }
 }
 
 template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseValueColumn& base_column,
-                                                         std::shared_ptr<ColumnVisitableContext> base_context) {
+                                                         std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
   const auto& column = static_cast<const ValueColumn<T>&>(base_column);
 
@@ -191,7 +195,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseValueColumn& 
 
 template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::handle_column(const ReferenceColumn& ref_column,
-                                                         std::shared_ptr<ColumnVisitableContext> base_context) {
+                                                         std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
   // We materialize reference columns and save them as value columns
@@ -206,8 +210,8 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_column(const ReferenceColumn& 
 
 // handle_column implementation for string columns
 template <>
-void ExportBinary::ExportBinaryVisitor<std::string>::handle_column(
-    const ReferenceColumn& ref_column, std::shared_ptr<ColumnVisitableContext> base_context) {
+void ExportBinary::ExportBinaryVisitor<std::string>::handle_column(const ReferenceColumn& ref_column,
+                                                                   std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
   // We materialize reference columns and save them as value columns
@@ -218,12 +222,12 @@ void ExportBinary::ExportBinaryVisitor<std::string>::handle_column(
 
   std::stringstream values;
   std::string value;
-  std::vector<StringLength> string_lengths(ref_column.size());
+  std::vector<size_t> string_lengths(ref_column.size());
 
   // We export the values materialized
   for (ChunkOffset row = 0; row < ref_column.size(); ++row) {
     value = type_cast<std::string>(ref_column[row]);
-    string_lengths[row] = static_cast<StringLength>(value.length());
+    string_lengths[row] = value.length();
     values << value;
   }
 
@@ -233,7 +237,7 @@ void ExportBinary::ExportBinaryVisitor<std::string>::handle_column(
 
 template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseDictionaryColumn& base_column,
-                                                         std::shared_ptr<ColumnVisitableContext> base_context) {
+                                                         std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
   const auto is_fixed_size_byte_aligned = [&]() {
@@ -289,7 +293,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseDictionaryCol
 
 template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseEncodedColumn& base_column,
-                                                         std::shared_ptr<ColumnVisitableContext> base_context) {
+                                                         std::shared_ptr<ColumnVisitorContext> base_context) {
   Fail("Binary export not implemented yet for encoded columns.");
 }
 

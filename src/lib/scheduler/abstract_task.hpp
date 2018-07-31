@@ -23,6 +23,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   friend class Worker;
 
  public:
+  explicit AbstractTask(SchedulePriority priority = SchedulePriority::Default, bool stealable = true);
   virtual ~AbstractTask() = default;
 
   /**
@@ -40,6 +41,11 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
    * @return The task finished executing
    */
   bool is_done() const;
+
+  /**
+   * @return Workers are allowed to steal the task from another node
+   */
+  bool is_stealable() const;
 
   /**
    * Description for debugging purposes
@@ -82,7 +88,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   /**
    * Schedules the task if a Scheduler is available, otherwise just executes it on the current Thread
    */
-  void schedule(NodeID preferred_node_id = CURRENT_NODE_ID, SchedulePriority priority = SchedulePriority::Normal);
+  void schedule(NodeID preferred_node_id = CURRENT_NODE_ID);
 
   /**
    * Waits for the Task to finish
@@ -129,7 +135,9 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
 
   TaskID _id = INVALID_TASK_ID;
   NodeID _node_id = INVALID_NODE_ID;
-  bool _done = false;
+  SchedulePriority _priority;
+  bool _stealable;
+  std::atomic_bool _done{false};
   std::function<void()> _done_callback;
 
   // For dependencies

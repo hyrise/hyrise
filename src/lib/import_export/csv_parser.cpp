@@ -46,7 +46,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
 
   // Save chunks in list to avoid memory relocation
   std::list<ChunkColumns> columns_by_chunks;
-  std::vector<std::shared_ptr<JobTask>> tasks;
+  std::vector<std::shared_ptr<AbstractTask>> tasks;
   std::vector<size_t> field_ends;
   while (_find_fields_in_chunk(content_view, *table, field_ends)) {
     // create empty chunk

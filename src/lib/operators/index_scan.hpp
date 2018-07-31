@@ -11,7 +11,7 @@
 namespace opossum {
 
 class Table;
-class JobTask;
+class AbstractTask;
 
 /**
  * Operator that performs a predicate search using indices
@@ -44,7 +44,7 @@ class IndexScan : public AbstractReadOnlyOperator {
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   void _validate_input();
-  std::shared_ptr<JobTask> _create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex);
+  std::shared_ptr<AbstractTask> _create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex);
   PosList _scan_chunk(const ChunkID chunk_id);
 
  private:
