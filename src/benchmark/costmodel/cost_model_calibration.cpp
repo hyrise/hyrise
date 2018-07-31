@@ -73,6 +73,8 @@ void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOp
     // Inputs
     auto left_input_row_count = (op->input_left()) ? op->input_left()->get_output()->row_count() : 0;
     auto right_input_row_count = (op->input_right()) ? op->input_right()->get_output()->row_count() : 0;
+    auto left_input_chunk_count = (op->input_left()) ? op->input_left()->get_output()->chunk_count() : 0;
+    auto right_input_chunk_count = (op->input_right()) ? op->input_right()->get_output()->chunk_count() : 0;
     auto left_input_memory_usage = (op->input_left()) ? op->input_left()->get_output()->estimate_memory_usage() : 0;
     auto right_input_memory_usage = (op->input_right()) ? op->input_right()->get_output()->estimate_memory_usage() : 0;
 
@@ -90,7 +92,9 @@ void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOp
             {"output_row_count", output_row_count},
             {"output_selectivity", output_selectivity},
             {"left_input_row_count", left_input_row_count},
+            {"left_input_chunk_count", left_input_chunk_count},
             {"right_input_row_count", right_input_row_count},
+            {"right_input_chunk_count", right_input_chunk_count},
             // strong-typedef ChunkID is not JSON-compatible, get underlying value here
             {"output_chunk_count", output_chunk_count.t},
             {"output_memory_usage_bytes", output_memory_usage},
