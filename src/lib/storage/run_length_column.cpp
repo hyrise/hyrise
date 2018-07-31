@@ -39,24 +39,27 @@ template <typename T>
 const AllTypeVariant RunLengthColumn<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
   const auto typed_value = get_typed_value(chunk_offset);
-  if (typed_value.second) return NULL_VALUE;
-  return typed_value.first;
+  if (!typed_value.has_value()) {
+    return NULL_VALUE;
+  }
+  return *typed_value;
 }
 
 template <typename T>
-const std::pair<T, bool> RunLengthColumn<T>::get_typed_value(const ChunkOffset chunk_offset) const {
+const std::optional<T> RunLengthColumn<T>::get_typed_value(const ChunkOffset chunk_offset) const final {
   const auto end_position_it = std::lower_bound(_end_positions->cbegin(), _end_positions->cend(), chunk_offset);
   const auto index = std::distance(_end_positions->cbegin(), end_position_it);
 
   const auto is_null = (*_null_values)[index];
-  if (is_null) return std::make_pair(T{}, true);
+  if (is_null) {
+    return std::nullopt;
+  }
 
-  const auto value = (*_values)[index];
-  return std::make_pair(value, false);
+  return (*_values)[index];
 }
 
 template <typename T>
-void RunLengthColumn<T>::append_typed_value(const std::pair<T, bool>&) {
+void RunLengthColumn<T>::append_typed_value(const std::optional<opossum::T> value_or_null) {
   Fail("Encoded column is immutable.");
 }
 

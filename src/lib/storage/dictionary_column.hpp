@@ -34,9 +34,9 @@ class DictionaryColumn : public BaseDictionaryColumn, public BaseTypedColumn<T> 
 
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const final;
 
-  const std::pair<T, bool> get_typed_value(const ChunkOffset chunk_offset) const final;
+  const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const final;
 
-  void append_typed_value(const std::pair<T, bool>& pair) final;
+  void append_typed_value(const std::optional<T>) final;
 
   size_t size() const final;
 

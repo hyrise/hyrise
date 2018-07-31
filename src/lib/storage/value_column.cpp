@@ -70,17 +70,19 @@ const AllTypeVariant ValueColumn<T>::operator[](const ChunkOffset chunk_offset) 
   PerformanceWarning("operator[] used");
 
   const auto typed_value = get_typed_value(chunk_offset);
-  if (typed_value.second) return NULL_VALUE;
-  return typed_value.first;
+  if (!typed_value.has_value()) {
+    return NULL_VALUE;
+  }
+  return typed_value->get();
 }
 
 template <typename T>
-const std::pair<T, bool> ValueColumn<T>::get_typed_value(const ChunkOffset chunk_offset) const {
+const std::optional<T> ValueColumn<T>::get_typed_value(const ChunkOffset chunk_offset) const {
   // Column supports null values and value is null
   if (is_nullable() && (*_null_values)[chunk_offset]) {
-    return std::make_pair(T{}, true);
+    return std::nullopt;
   }
-  return std::make_pair(_values[chunk_offset], false);
+  return _values[chunk_offset];
 }
 
 template <typename T>
@@ -106,7 +108,7 @@ void ValueColumn<T>::append(const AllTypeVariant& val) {
     return;
   }
 
-  Assert(!is_null, "ValueColumns is not nullable but value passed is null.");
+  Assert(!is_null, "ValueColumn is not nullable but value passed is null.");
 
   _values.push_back(type_cast<T>(val));
 }
@@ -133,19 +135,18 @@ void ValueColumn<std::string>::append(const AllTypeVariant& val) {
 }
 
 template <typename T>
-void ValueColumn<T>::append_typed_value(const std::pair<T, bool>& pair) {
-  const T& value = pair.first;
-  const bool is_null = pair.second;
+void ValueColumn<T>::append_typed_value(const std::optional<opossum::T> value_or_null) {
+  const bool is_null = !value_or_null.has_value();
 
   if (is_nullable()) {
     (*_null_values).push_back(is_null);
-    _values.push_back(is_null ? T{} : value);
+    _values.push_back(is_null ? T{} : *value_or_null);
     return;
   }
 
-  Assert(!is_null, "ValueColumns is not nullable but value passed is null.");
+  Assert(!is_null, "ValueColumn is not nullable but value passed is null.");
 
-  _values.push_back(value);
+  _values.push_back(*value_or_null);
 }
 
 template <typename T>

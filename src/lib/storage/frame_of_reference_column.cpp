@@ -40,22 +40,25 @@ const AllTypeVariant FrameOfReferenceColumn<T, U>::operator[](const ChunkOffset 
   DebugAssert(chunk_offset < size(), "Passed chunk offset must be valid.");
 
   const auto typed_value = get_typed_value(chunk_offset);
-  if (typed_value.second) return NULL_VALUE;
-  return typed_value.first;
+  if (!typed_value.has_value()) {
+    return NULL_VALUE;
+  }
+  return *typed_value;
 }
 
 template <typename T, typename U>
-const std::pair<T, bool> FrameOfReferenceColumn<T, U>::get_typed_value(const ChunkOffset chunk_offset) const {
+const std::optional<opossum::T> FrameOfReferenceColumn<T, U>::get_typed_value(
+    const ChunkOffset chunk_offset) const final {
   if (_null_values[chunk_offset]) {
-    return std::make_pair(T{}, true);
+    return std::nullopt;
   }
   const auto minimum = _block_minima[chunk_offset / block_size];
   const auto value = static_cast<T>(_decoder->get(chunk_offset)) + minimum;
-  return std::make_pair(value, false);
+  return value;
 }
 
 template <typename T, typename U>
-void FrameOfReferenceColumn<T, U>::append_typed_value(const std::pair<T, bool>&) {
+void FrameOfReferenceColumn<T, U>::append_typed_value(const std::optional<T> value_or_null) {
   Fail("Encoded column is immutable.");
 }
 

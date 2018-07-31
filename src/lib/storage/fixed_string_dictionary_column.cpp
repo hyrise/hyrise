@@ -29,21 +29,23 @@ const AllTypeVariant FixedStringDictionaryColumn<T>::operator[](const ChunkOffse
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
 
   const auto typed_value = get_typed_value(chunk_offset);
-  if (typed_value.second) return NULL_VALUE;
-  return typed_value.first;
+  if (!typed_value.has_value()) {
+    return NULL_VALUE;
+  }
+  return *typed_value;
 }
 
 template <typename T>
-const std::pair<T, bool> FixedStringDictionaryColumn<T>::get_typed_value(const ChunkOffset chunk_offset) const {
+const std::optional<T> FixedStringDictionaryColumn<T>::get_typed_value(const ChunkOffset chunk_offset) const final {
   const auto value_id = _decoder->get(chunk_offset);
   if (value_id == _null_value_id) {
-    return std::make_pair(T{}, true);
+    return std::nullopt;
   }
-  return std::make_pair(_dictionary->get_string_at(value_id), false);
+  return _dictionary->get_string_at(value_id);
 }
 
 template <typename T>
-void FixedStringDictionaryColumn<T>::append_typed_value(const std::pair<T, bool>&) {
+void FixedStringDictionaryColumn<T>::append_typed_value(const std::optional<T>) {
   Fail("Encoded column is immutable.");
 }
 
