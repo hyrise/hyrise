@@ -42,13 +42,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
    */
   TableColumnDefinitions column_definitions;
   for (const auto& expression : expressions) {
-    // TODO(anybody) Until #962 is resolved, we need to limit the length of a column name
-    auto column_name = expression->as_column_name();
-    if (column_name.size() > std::numeric_limits<ColumnNameLength>::max()) {
-      column_name = column_name.substr(0, std::numeric_limits<ColumnNameLength>::max() - 3) + "...";
-    }
-
-    column_definitions.emplace_back(column_name, expression->data_type(), expression->is_nullable());
+    column_definitions.emplace_back(expression->as_column_name(), expression->data_type(), expression->is_nullable());
   }
 
   /**

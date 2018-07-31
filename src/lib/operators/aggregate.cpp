@@ -686,12 +686,6 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
   }
   column_name_stream << ")";
 
-  // TODO(anybody) Until #962 is resolved, we need to limit the length of a column name
-  auto column_name = column_name_stream.str();
-  if (column_name.size() > std::numeric_limits<ColumnNameLength>::max()) {
-    column_name = column_name.substr(0, std::numeric_limits<ColumnNameLength>::max() - 3) + "...";
-  }
-
   constexpr bool NEEDS_NULL = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
   _output_column_definitions.emplace_back(column_name_stream.str(), aggregate_data_type, NEEDS_NULL);
 
