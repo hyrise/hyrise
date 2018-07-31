@@ -63,7 +63,7 @@ JitAwareLQPTranslator::JitAwareLQPTranslator() {
 #if !HYRISE_JIT_SUPPORT
   Fail("Query translation with JIT operators requested, but jitting is not available");
 #else
-  ;  // make clang-tidy happy
+  {}  // make clang-tidy happy
 #endif
 }
 
