@@ -352,7 +352,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
 
   auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(needed_size);
   auto allocator = AggregateKeysAllocator{PolymorphicAllocator<AggregateKeys>{&temp_buffer}};
-  auto start_next_buffer_size = temp_buffer.next_buffer_size();
+  const auto start_next_buffer_size = temp_buffer.next_buffer_size();
 
   // Create the actual data structure
   auto keys_per_chunk = KeysPerChunk{allocator};
