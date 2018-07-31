@@ -156,7 +156,8 @@ enum class SchedulePriority {
   Lowest = 3,   // Default priority when it comes to pulling tasks from the TaskQueue
   Default = 2,  // Schedule task at the end of the queue
   Highest = 1,  // Schedule task at the beginning of the queue, but not before any JobTask
-  JobTask = 0   // Schedule task at the beginning of the queue
+  JobTask = 0   // Schedule task at the beginning of the queue. This is so that we have guaranteed progress and tasks
+                // that wait for JobTasks to do the actual work do not block the execution.
 };
 
 // Part of AllParameterVariant to reference parameters that will be replaced later.
