@@ -63,7 +63,7 @@ void StorageManager::add_lqp_view(const std::string& name, const std::shared_ptr
          "Cannot add view " + name + " - a table with the same name already exists");
   Assert(_views.find(name) == _views.end(), "A view with the name " + name + " already exists");
 
-  _views.emplace(name, std::move(view));
+  _views.emplace(name, view);
 }
 
 void StorageManager::drop_lqp_view(const std::string& name) {
@@ -125,7 +125,7 @@ void StorageManager::export_all_tables_as_csv(const std::string& path) {
       auto table_wrapper = std::make_shared<TableWrapper>(table);
       table_wrapper->execute();
 
-      auto export_csv = std::make_shared<ExportCsv>(table_wrapper, path + "/" + name + ".csv");
+      auto export_csv = std::make_shared<ExportCsv>(table_wrapper, path + "/" + name + ".csv");  // NOLINT
       export_csv->execute();
     });
     jobs.push_back(job_task);

@@ -5,7 +5,7 @@
 
 namespace opossum {
 
-unsigned int murmur_hash2(const void* key, int len, unsigned int seed);
+unsigned int murmur_hash2(const void* key, unsigned int len, unsigned int seed);
 
 // murmur hash for builtin number types (int, double)
 template <typename T>

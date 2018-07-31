@@ -10,8 +10,8 @@
 
 namespace opossum {
 
-ReferenceColumn::ReferenceColumn(const std::shared_ptr<const Table> referenced_table,
-                                 const ColumnID referenced_column_id, const std::shared_ptr<const PosList> pos)
+ReferenceColumn::ReferenceColumn(const std::shared_ptr<const Table>& referenced_table,
+                                 const ColumnID referenced_column_id, const std::shared_ptr<const PosList>& pos)
     : BaseColumn(referenced_table->column_data_type(referenced_column_id)),
       _referenced_table(referenced_table),
       _referenced_column_id(referenced_column_id),

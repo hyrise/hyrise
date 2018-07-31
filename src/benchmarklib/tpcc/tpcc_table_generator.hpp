@@ -44,9 +44,9 @@ class TpccTableGenerator : public opossum::AbstractBenchmarkTableGenerator {
 
   order_line_counts_type generate_order_line_counts();
 
-  std::shared_ptr<Table> generate_order_table(order_line_counts_type order_line_counts);
+  std::shared_ptr<Table> generate_order_table(const order_line_counts_type& order_line_counts);
 
-  std::shared_ptr<Table> generate_order_line_table(order_line_counts_type order_line_counts);
+  std::shared_ptr<Table> generate_order_line_table(const order_line_counts_type& order_line_counts);
 
   std::shared_ptr<Table> generate_new_order_table();
 
@@ -61,7 +61,7 @@ class TpccTableGenerator : public opossum::AbstractBenchmarkTableGenerator {
   const EncodingConfig _encoding_config;
 
  protected:
-  void _encode_table(const std::string& table_name, std::shared_ptr<Table> table);
+  void _encode_table(const std::string& table_name, const std::shared_ptr<Table>& table);
 
   template <typename T>
   std::vector<T> _generate_inner_order_line_column(std::vector<size_t> indices,

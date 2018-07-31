@@ -66,7 +66,7 @@ class JitWriteTuples : public AbstractJittableSink {
   void before_query(Table& out_table, JitRuntimeContext& context) const override;
   void after_chunk(Table& out_table, JitRuntimeContext& context) const override;
 
-  void add_output_column(const std::string& column_name, const JitTupleValue& tuple_value);
+  void add_output_column(const std::string& column_name, const JitTupleValue& value);
 
   std::vector<JitOutputColumn> output_columns() const;
 

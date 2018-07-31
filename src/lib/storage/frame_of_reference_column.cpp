@@ -8,12 +8,12 @@
 namespace opossum {
 
 template <typename T, typename U>
-FrameOfReferenceColumn<T, U>::FrameOfReferenceColumn(const pmr_vector<T> block_minima,
-                                                     const pmr_vector<bool> null_values,
+FrameOfReferenceColumn<T, U>::FrameOfReferenceColumn(const pmr_vector<T>& block_minima,
+                                                     const pmr_vector<bool>& null_values,
                                                      std::unique_ptr<const BaseCompressedVector> offset_values)
     : BaseEncodedColumn{data_type_from_type<T>()},
-      _block_minima{std::move(block_minima)},
-      _null_values{std::move(null_values)},
+      _block_minima{block_minima},
+      _null_values{null_values},
       _offset_values{std::move(offset_values)},
       _decoder{_offset_values->create_base_decoder()} {}
 
