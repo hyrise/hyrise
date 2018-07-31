@@ -19,7 +19,7 @@
 namespace opossum {
 
 /**
-* TODO(arne.mayer): Outer not-equal join (outer !=)
+* TODO(anyone): Outer not-equal join (outer !=)
 * TODO(anyone): Choose an appropriate number of clusters.
 **/
 
@@ -312,9 +312,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * This constitutes the merge phase of the join. The output combinations of row ids are determined by _join_runs.
   **/
   void _join_cluster(size_t cluster_number) {
-    _output_pos_lists_left[cluster_number] = std::make_shared<PosList>();
-    _output_pos_lists_right[cluster_number] = std::make_shared<PosList>();
-
     auto& left_cluster = (*_sorted_left_table)[cluster_number];
     auto& right_cluster = (*_sorted_right_table)[cluster_number];
 
@@ -532,6 +529,16 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     // Parallel join for each cluster
     for (size_t cluster_number = 0; cluster_number < _cluster_count; ++cluster_number) {
+      // Create output position lists
+      _output_pos_lists_left[cluster_number] = std::make_shared<PosList>();
+      _output_pos_lists_right[cluster_number] = std::make_shared<PosList>();
+
+      // Avoid empty jobs for inner equi joins
+      if (_mode == JoinMode::Inner && _op == PredicateCondition::Equals) {
+        if ((*_sorted_left_table)[cluster_number]->size() == 0 || (*_sorted_right_table)[cluster_number]->size() == 0) {
+          continue;
+        }
+      }
       jobs.push_back(std::make_shared<JobTask>([this, cluster_number] { this->_join_cluster(cluster_number); }));
       jobs.back()->schedule();
     }
