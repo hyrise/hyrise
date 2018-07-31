@@ -31,13 +31,11 @@ namespace {
  *  1. dates are not supported
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
- *  2. implicit type conversions for arithmetic operations are not supported
- *    a. changed 1 to 1.0 explicitly
  */
 const char* const tpch_query_1 =
     R"(SELECT l_returnflag, l_linestatus, SUM(l_quantity) as sum_qty, SUM(l_extendedprice) as sum_base_price,
-      SUM(l_extendedprice*(1.0-l_discount)) as sum_disc_price,
-      SUM(l_extendedprice*(1.0-l_discount)*(1.0+l_tax)) as sum_charge, AVG(l_quantity) as avg_qty,
+      SUM(l_extendedprice*(1-l_discount)) as sum_disc_price,
+      SUM(l_extendedprice*(1-l_discount)*(1+l_tax)) as sum_charge, AVG(l_quantity) as avg_qty,
       AVG(l_extendedprice) as avg_price, AVG(l_discount) as avg_disc, COUNT(*) as count_order
       FROM lineitem
       WHERE l_shipdate <= '1998-12-01'
@@ -73,7 +71,7 @@ const char* const tpch_query_1 =
  *
  * Changes:
  *  1. Random values are hardcoded
- *  2. Changed to ordering in the FROM clause for better join ordering
+ *  2. Changed ordering in the FROM clause for better join ordering while we are still working on the ordering.
  */
 const char* const tpch_query_2 =
     R"(SELECT s_acctbal, s_name, n_name, p_partkey, p_mfgr, s_address, s_phone, s_comment
@@ -98,12 +96,9 @@ const char* const tpch_query_2 =
  *
  * Changes:
  *  1. Random values are hardcoded
- *  2. implicit type conversions for arithmetic operations are not supported
- *    a. changed 1 to 1.0 explicitly
- *  3. Be aware that we ignore the column ordering here.
  */
 const char* const tpch_query_3 =
-    R"(SELECT l_orderkey, SUM(l_extendedprice*(1.0-l_discount)) as revenue, o_orderdate, o_shippriority
+    R"(SELECT l_orderkey, SUM(l_extendedprice*(1-l_discount)) as revenue, o_orderdate, o_shippriority
       FROM customer, orders, lineitem
       WHERE c_mktsegment = 'BUILDING' AND c_custkey = o_custkey AND l_orderkey = o_orderkey
       AND o_orderdate < '1995-03-15' AND l_shipdate > '1995-03-15'
@@ -141,7 +136,7 @@ const char* const tpch_query_3 =
 const char* const tpch_query_4 =
     R"(SELECT o_orderpriority, count(*) as order_count FROM orders WHERE o_orderdate >= '1996-07-01' AND
     o_orderdate < '1996-10-01' AND exists (
-    SELECT *FROM lineitem WHERE l_orderkey = o_orderkey AND l_commitdate < l_receiptdate)
+    SELECT * FROM lineitem WHERE l_orderkey = o_orderkey AND l_commitdate < l_receiptdate)
     GROUP BY o_orderpriority ORDER BY o_orderpriority;)";
 
 /**
@@ -183,7 +178,7 @@ const char* const tpch_query_4 =
  *    a. changed 1 to 1.0 explicitly
  */
 const char* const tpch_query_5 =
-    R"(SELECT n_name, SUM(l_extendedprice * (1.0 - l_discount)) as revenue
+    R"(SELECT n_name, SUM(l_extendedprice * (1 - l_discount)) as revenue
       FROM customer, orders, lineitem, supplier, nation, region
       WHERE c_custkey = o_custkey AND l_orderkey = o_orderkey AND l_suppkey = s_suppkey AND c_nationkey = s_nationkey
       AND s_nationkey = n_nationkey AND n_regionkey = r_regionkey AND r_name = 'AMERICA' AND o_orderdate >= '1994-01-01'
@@ -248,8 +243,6 @@ const char* const tpch_query_6 =
  *    b. pre-calculate date operation
  *  3. Extract is not supported
  *    a. Use SUBSTR instead (because our date columns are strings AND SQLite doesn't support EXTRACT)
- *  4. implicit type conversions for arithmetic operations are not supported
- *    a. changed 1 to 1.0 explicitly
  */
 const char* const tpch_query_7 =
     R"(SELECT
@@ -262,7 +255,7 @@ const char* const tpch_query_7 =
               n1.n_name as supp_nation,
               n2.n_name as cust_nation,
               SUBSTR(l_shipdate, 0, 4) as l_year,
-              l_extendedprice * (1.0 - l_discount) as volume
+              l_extendedprice * (1 - l_discount) as volume
           FROM
               supplier,
               lineitem,
@@ -373,15 +366,14 @@ const char* const tpch_query_8 =
  *  1. Random values are hardcoded
  *  2. Extract is not supported
  *    a. Use SUBSTR instead
- *  3. implicit type conversions for arithmetic operations are not supported
- *    a. changed 1 to 1.0 explicitly
+ *  3. Changed ordering in the FROM clause for better join ordering while we are still working on the ordering.
  */
 // TODO(anyone): change order of:
 // FROM supplier, lineitem, partsupp, orders, nation, "part"   back to original
 // FROM "part", supplier, lineitem, partsupp, orders, nation   as soon as join ordering is fixed
 const char* const tpch_query_9 =
     R"(SELECT nation, o_year, SUM(amount) as sum_profit FROM (SELECT n_name as nation, SUBSTR(o_orderdate, 0, 4) as o_year,
-      l_extendedprice * (1.0 - l_discount) - ps_supplycost * l_quantity as amount
+      l_extendedprice * (1 - l_discount) - ps_supplycost * l_quantity as amount
       FROM supplier, lineitem, partsupp, orders, nation, "part" WHERE s_suppkey = l_suppkey
       AND ps_suppkey = l_suppkey AND ps_partkey = l_partkey AND p_partkey = l_partkey AND o_orderkey = l_orderkey
       AND s_nationkey = n_nationkey AND p_name like '%green%') as profit
@@ -429,12 +421,9 @@ const char* const tpch_query_9 =
  *  2. dates are not supported
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
- *  3. implicit type conversions for arithmetic operations are not supported
- *    a. changed 1 to 1.0 explicitly
- *  4. Be aware that we ignore the column ordering here
  */
 const char* const tpch_query_10 =
-    R"(SELECT c_custkey, c_name, SUM(l_extendedprice * (1.0 - l_discount)) as revenue, c_acctbal, n_name, c_address,
+    R"(SELECT c_custkey, c_name, SUM(l_extendedprice * (1 - l_discount)) as revenue, c_acctbal, n_name, c_address,
       c_phone, c_comment
       FROM customer, orders, lineitem, nation
       WHERE c_custkey = o_custkey AND l_orderkey = o_orderkey AND o_orderdate >= '1993-10-01'
@@ -538,9 +527,10 @@ const char* const tpch_query_12 =
  *
  * Changes:
  *  1. Random values are hardcoded
+ *  2. Subselect column aliases are moved into subselect
  */
 const char* const tpch_query_13 =
-    R"(SELECT c_count, count(*) as custdist FROM (SELECT c_custkey, count(o_orderkey) as c_count
+    R"(SELECT c_count, count(*) as custdist FROM (SELECT c_custkey, count(o_orderkey) AS c_count
       FROM customer left outer join orders on c_custkey = o_custkey AND o_comment not like '%special%request%'
       GROUP BY c_custkey) as c_orders GROUP BY c_count ORDER BY custdist DESC, c_count DESC;)";
 
@@ -565,12 +555,10 @@ const char* const tpch_query_13 =
  *  2. dates are not supported
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
- *  3. implicit type conversions for arithmetic operations are not supported
- *    a. changed 1 to 1.0 explicitly
  */
 const char* const tpch_query_14 =
-    R"(SELECT 100.00 * SUM(case when p_type like 'PROMO%' then l_extendedprice*(1.0-l_discount) else 0 end)
-      / SUM(l_extendedprice * (1.0 - l_discount)) as promo_revenue FROM lineitem, "part" WHERE l_partkey = p_partkey
+    R"(SELECT 100.00 * SUM(case when p_type like 'PROMO%' then l_extendedprice*(1-l_discount) else 0 end)
+      / SUM(l_extendedprice * (1 - l_discount)) as promo_revenue FROM lineitem, "part" WHERE l_partkey = p_partkey
       AND l_shipdate >= '1995-09-01' AND l_shipdate < '1995-10-01';)";
 
 /**
@@ -610,7 +598,7 @@ const char* const tpch_query_14 =
  */
 const char* const tpch_query_15 =
     R"(create view revenue (supplier_no, total_revenue) as SELECT l_suppkey,
-      SUM(l_extendedprice * (1.0 - l_discount)) FROM lineitem WHERE l_shipdate >= '1993-05-13'
+      SUM(l_extendedprice * (1 - l_discount)) FROM lineitem WHERE l_shipdate >= '1993-05-13'
       AND l_shipdate < '1993-08-13' GROUP BY l_suppkey;
 
       SELECT s_suppkey, s_name, s_address, s_phone, total_revenue FROM supplier, revenue
@@ -748,7 +736,7 @@ const char* const tpch_query_18 =
  *  3. Extracted "p_partkey = l_partkey" to make JoinDetectionRule work
  */
 const char* const tpch_query_19 =
-    R"(SELECT SUM(l_extendedprice * (1.0 - l_discount) ) as revenue FROM lineitem, "part" WHERE p_partkey = l_partkey AND ((
+    R"(SELECT SUM(l_extendedprice * (1 - l_discount) ) as revenue FROM lineitem, "part" WHERE p_partkey = l_partkey AND ((
       p_brand = 'Brand#12' AND p_container in ( 'SM CASE', 'SM BOX', 'SM PACK', 'SM PKG') AND
       l_quantity >= 1 AND l_quantity <= 1 + 10 AND p_size between 1 AND 5 AND l_shipmode
       in ('AIR', 'AIR REG') AND l_shipinstruct = 'DELIVER IN PERSON') or (p_brand = 'Brand#23' AND p_container in ('MED BAG', 'MED BOX', 'MED PKG', 'MED PACK')
