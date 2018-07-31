@@ -26,14 +26,14 @@ def calculate_and_format_p_value(old, new):
 	new_runtime = sum(runtime for runtime in new['iteration_durations'])
 	if (old_runtime < min_runtime_ns or new_runtime < min_runtime_ns):
 		is_significant = False
-		notes += " (run time too short)"
+		notes += "(run time too short) "
 
 	if (len(old['iteration_durations']) < min_iterations or len(new['iteration_durations']) < min_iterations):
 		is_significant = False
-		notes += " (not enough runs)"
+		notes += "(not enough runs) "
 
 	color = 'green' if is_significant else 'grey'
-	return colored("{0:.4f}".format(p_value) + notes, color)
+	return colored(notes + "{0:.4f}".format(p_value), color)
 
 
 if(len(sys.argv) != 3):
@@ -66,6 +66,7 @@ for old, new in zip(old_data['benchmarks'], new_data['benchmarks']):
 table_data.append(['average', '', '', '', '', format_diff(average_diff_sum / len(old_data['benchmarks'])), ''])
 
 table = AsciiTable(table_data)
+table.justify_columns[6] = 'right'
 
 print("")
 print(table.table)
