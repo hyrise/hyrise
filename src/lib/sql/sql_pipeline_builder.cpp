@@ -45,7 +45,8 @@ SQLPipeline SQLPipelineBuilder::create_pipeline() const {
   DTRACE_PROBE1(HYRISE, CREATE_PIPELINE, this);
   auto lqp_translator = _lqp_translator ? _lqp_translator : std::make_shared<LQPTranslator>();
   auto optimizer = _optimizer ? _optimizer : Optimizer::create_default_optimizer();
-  auto pipeline = SQLPipeline(_sql, _transaction_context, _use_mvcc, lqp_translator, optimizer, _prepared_statements, _cleanup_temporaries);
+  auto pipeline = SQLPipeline(_sql, _transaction_context, _use_mvcc, lqp_translator, optimizer, _prepared_statements,
+                              _cleanup_temporaries);
   DTRACE_PROBE3(HYRISE, PIPELINE_CREATION_DONE, pipeline.get_sql_strings().size(), _sql, this);
   return pipeline;
 }

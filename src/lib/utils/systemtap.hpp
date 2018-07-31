@@ -21,15 +21,14 @@ constexpr bool is_valid_name(const char* name) {
 #include "utils/tracing/provider.h"
 
 // Construct the probe definition by provider and probe name
-#define _build_name(provider, probe, ...) \
+#define _build_name(provider, probe, ...)                                                                          \
   static_assert(is_valid_name(#provider) && is_valid_name(#probe), "Provider and probe name must be upper case!"); \
   provider##_##probe(__VA_ARGS__);
 
 #define DTRACE_PROBE(provider, probe) _build_name(provider, probe);
 #define DTRACE_PROBE1(provider, probe, parm1) _build_name(provider, probe, parm1);
 #define DTRACE_PROBE2(provider, probe, parm1, parm2) _build_name(provider, probe, parm1, parm2);
-#define DTRACE_PROBE3(provider, probe, parm1, parm2, parm3) \
-  _build_name(provider, probe, parm1, parm2, parm3)
+#define DTRACE_PROBE3(provider, probe, parm1, parm2, parm3) _build_name(provider, probe, parm1, parm2, parm3)
 #define DTRACE_PROBE4(provider, probe, parm1, parm2, parm3, parm4) \
   _build_name(provider, probe, parm1, parm2, parm3, parm4);
 #define DTRACE_PROBE5(provider, probe, parm1, parm2, parm3, parm4, parm5) \

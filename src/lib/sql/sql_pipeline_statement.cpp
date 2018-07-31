@@ -59,7 +59,7 @@ const std::shared_ptr<hsql::SQLParserResult>& SQLPipelineStatement::get_parsed_s
   hsql::SQLParser::parse(_sql_string, _parsed_sql_statement.get());
 
   AssertInput(_parsed_sql_statement->isValid(),
-    SQLPipelineStatement::create_parse_error_message(_sql_string, *_parsed_sql_statement));
+              SQLPipelineStatement::create_parse_error_message(_sql_string, *_parsed_sql_statement));
 
   Assert(_parsed_sql_statement->size() == 1,
          "SQLPipelineStatement must hold exactly one statement. "
@@ -172,7 +172,7 @@ const std::shared_ptr<SQLQueryPlan>& SQLPipelineStatement::get_query_plan() {
     }
 
     AssertInput(arguments.size() == plan->num_parameters(),
-      "Number of arguments provided does not match expected number of arguments.");
+                "Number of arguments provided does not match expected number of arguments.");
 
     _query_plan->append_plan(plan->recreate(arguments));
     done = std::chrono::high_resolution_clock::now();
@@ -252,15 +252,9 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
   _result_table = tasks.back()->get_operator()->get_output();
   if (_result_table == nullptr) _query_has_output = false;
 
-  DTRACE_PROBE8(HYRISE, SUMMARY,
-      get_sql_string(),
-      metrics()->translate_time_micros,
-      metrics()->optimize_time_micros,
-      metrics()->compile_time_micros,
-      metrics()->execution_time_micros,
-      metrics()->query_plan_cache_hit,
-      get_tasks().size(),
-      this);
+  DTRACE_PROBE8(HYRISE, SUMMARY, get_sql_string(), metrics()->translate_time_micros, metrics()->optimize_time_micros,
+                metrics()->compile_time_micros, metrics()->execution_time_micros, metrics()->query_plan_cache_hit,
+                get_tasks().size(), this);
   return _result_table;
 }
 

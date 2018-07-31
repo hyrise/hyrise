@@ -5,7 +5,6 @@
 
 global pipeline_creation_time
 global parsing_time
-global pipelines
 
 global tasks_per_statement
 global task_list
@@ -56,7 +55,7 @@ probe process(@1).provider("HYRISE").mark("SUMMARY")
            "\tQuery plan cached: %s\n"
            "\tAmount of tasks scheduled: %i\n"
            "\tQuery execution time: %i μs\n"
-          " \tOperator execution times (preserved order):\n\n"
+          " \tOperator execution times (preserved order):\n"
            , user_string($arg1), $arg2, $arg3, $arg4, $arg6 ? "yes" : "no", $arg7, $arg5
         )
 
