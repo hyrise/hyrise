@@ -95,7 +95,7 @@ JoinMode translate_join_mode(const hsql::JoinType join_type) {
   };
 
   auto it = join_type_to_mode.find(join_type);
-  Assert(it != join_type_to_mode.end(), "Unknown to handle join type.");
+  Assert(it != join_type_to_mode.end(), "Unknown join type.");
   return it->second;
 }
 
@@ -177,10 +177,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   // 7. ORDER BY clause
   // 8. LIMIT clause
 
-  Assert(select.selectList != nullptr, "SELECT list needs to exist");
-  Assert(!select.selectList->empty(), "SELECT list needs to have entries");
-  Assert(select.unionSelect == nullptr, "Set operations (UNION/INTERSECT/...) are not supported yet");
-  Assert(!select.selectDistinct, "DISTINCT is not yet supported");
+  AssertInput(select.selectList != nullptr, "SELECT list needs to exist");
+  AssertInput(!select.selectList->empty(), "SELECT list needs to have entries");
+  AssertInput(select.unionSelect == nullptr, "Set operations (UNION/INTERSECT/...) are not supported yet");
+  AssertInput(!select.selectDistinct, "DISTINCT is not yet supported");
 
   // Translate FROM
   if (select.fromTable) {
