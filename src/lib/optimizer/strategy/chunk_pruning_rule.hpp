@@ -26,7 +26,7 @@ class ChunkPruningRule : public AbstractRule {
   bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
  protected:
-  std::set<ChunkID> _compute_exclude_list(const std::vector<std::shared_ptr<ChunkStatistics>>& stats,
+  std::set<ChunkID> _compute_exclude_list(const std::vector<std::shared_ptr<ChunkStatistics>>& statistics,
                                           const std::shared_ptr<PredicateNode>& predicate) const;
 };
 

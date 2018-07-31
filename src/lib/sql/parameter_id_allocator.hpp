@@ -14,7 +14,7 @@ namespace opossum {
 class ParameterIDAllocator {
  public:
   ParameterID allocate();
-  ParameterID allocate_for_value_placeholder(const ValuePlaceholderID value_placeholder);
+  ParameterID allocate_for_value_placeholder(const ValuePlaceholderID value_placeholder_id);
 
   const std::unordered_map<ValuePlaceholderID, ParameterID>& value_placeholders() const;
 

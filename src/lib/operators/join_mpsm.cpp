@@ -124,11 +124,11 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
   struct TablePosition {
     TablePosition() = default;
     TablePosition(NodeID partition, ClusterID cluster, size_t index)
-        : cluster{cluster}, index{index}, partition{partition} {}
+        : partition{partition}, cluster{cluster}, index{index} {}
 
-    ClusterID cluster;
-    size_t index;
     NodeID partition;
+    ClusterID cluster;
+    size_t index{0};
 
     TableRange to(TablePosition position) { return TableRange(*this, position); }
   };

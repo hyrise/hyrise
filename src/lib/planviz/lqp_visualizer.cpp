@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-LQPVisualizer::LQPVisualizer() : AbstractVisualizer() {
+LQPVisualizer::LQPVisualizer() {
   // Set defaults for this visualizer
   _default_vertex.shape = "parallelogram";
 }

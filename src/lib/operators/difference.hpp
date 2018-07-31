@@ -29,6 +29,6 @@ class Difference : public AbstractReadOnlyOperator {
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
  private:
-  void _append_string_representation(std::ostream& row_string_buffer, const AllTypeVariant value);
+  void _append_string_representation(std::ostream& row_string_buffer, const AllTypeVariant& value);
 };
 }  // namespace opossum

@@ -88,7 +88,7 @@ void Limit::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVari
   expression_set_parameters(_row_count_expression, parameters);
 }
 
-void Limit::_on_set_transaction_context(std::weak_ptr<TransactionContext> transaction_context) {
+void Limit::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {
   expression_set_transaction_context(_row_count_expression, transaction_context);
 }
 

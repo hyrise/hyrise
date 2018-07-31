@@ -25,7 +25,7 @@ TableStatistics generate_table_statistics(const Table& table) {
     });
   }
 
-  return {table.type(), static_cast<float>(table.row_count()), std::move(column_statistics)};
+  return {table.type(), static_cast<float>(table.row_count()), column_statistics};
 }
 
 }  // namespace opossum

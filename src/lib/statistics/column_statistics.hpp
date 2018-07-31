@@ -36,7 +36,7 @@ class ColumnStatistics : public BaseColumnStatistics {
    */
   std::shared_ptr<BaseColumnStatistics> clone() const override;
   FilterByValueEstimate estimate_predicate_with_value(
-      const PredicateCondition predicate_condition, const AllTypeVariant& value,
+      const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& value2 = std::nullopt) const override;
 
   FilterByValueEstimate estimate_predicate_with_value_placeholder(

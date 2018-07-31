@@ -143,7 +143,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_client_
 
 template <typename TConnection, typename TTaskRunner>
 boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_send_simple_query_response(
-    std::shared_ptr<SQLPipeline> sql_pipeline) {
+    const std::shared_ptr<SQLPipeline>& sql_pipeline) {
   auto result_table = sql_pipeline->get_result_table();
 
   auto send_row_data = [=]() {
@@ -244,7 +244,7 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_bind_co
 
   auto statement_type = sql_pipeline->get_parsed_sql_statements().front()->getStatements().front()->type();
 
-  auto task = std::make_shared<BindServerPreparedStatementTask>(sql_pipeline, std::move(packet.params));
+  auto task = std::make_shared<BindServerPreparedStatementTask>(sql_pipeline, packet.params);
   return _task_runner->dispatch_server_task(task) >> then >>
          [=](std::unique_ptr<SQLQueryPlan> query_plan) {
            std::shared_ptr<SQLQueryPlan> shared_query_plan = std::move(query_plan);
@@ -255,7 +255,8 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_bind_co
 }
 
 template <typename TConnection, typename TTaskRunner>
-boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_describe_command(std::string portal_name) {
+boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_describe_command(
+    const std::string& portal_name) {
   // Ignore this because this message is received in a batch with other commands that handle the response.
   return boost::make_ready_future();
 }
@@ -277,7 +278,8 @@ boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_flush_c
 }
 
 template <typename TConnection, typename TTaskRunner>
-boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_execute_command(std::string portal_name) {
+boost::future<void> ServerSessionImpl<TConnection, TTaskRunner>::_handle_execute_command(
+    const std::string& portal_name) {
   auto portal_it = _portals.find(portal_name);
   if (portal_it == _portals.end()) throw std::logic_error("The specified portal does not exist.");
 

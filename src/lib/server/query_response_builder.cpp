@@ -78,11 +78,11 @@ std::string QueryResponseBuilder::build_command_complete_message(hsql::Statement
   }
 }
 
-std::string QueryResponseBuilder::build_execution_info_message(std::shared_ptr<SQLPipeline> sql_pipeline) {
+std::string QueryResponseBuilder::build_execution_info_message(const std::shared_ptr<SQLPipeline>& sql_pipeline) {
   return sql_pipeline->metrics().to_string();
 }
 
-boost::future<uint64_t> QueryResponseBuilder::send_query_response(send_row_t send_row, const Table& table) {
+boost::future<uint64_t> QueryResponseBuilder::send_query_response(const send_row_t& send_row, const Table& table) {
   // Essentially we're iterating over every row in every chunk in the table, generating and sending
   // its string representation. However, because of the asynchronous send_row call, we have to
   // use this two-level recursion instead of two nested for-loops
@@ -90,7 +90,7 @@ boost::future<uint64_t> QueryResponseBuilder::send_query_response(send_row_t sen
   return _send_query_response_chunks(send_row, table, ChunkID{0}) >> then >> [&]() { return table.row_count(); };
 }
 
-boost::future<void> QueryResponseBuilder::_send_query_response_chunks(send_row_t send_row, const Table& table,
+boost::future<void> QueryResponseBuilder::_send_query_response_chunks(const send_row_t& send_row, const Table& table,
                                                                       ChunkID current_chunk_id) {
   if (current_chunk_id == table.chunk_count()) return boost::make_ready_future();
 
@@ -101,7 +101,7 @@ boost::future<void> QueryResponseBuilder::_send_query_response_chunks(send_row_t
                    ChunkID{current_chunk_id + 1});
 }
 
-boost::future<void> QueryResponseBuilder::_send_query_response_rows(send_row_t send_row, const Chunk& chunk,
+boost::future<void> QueryResponseBuilder::_send_query_response_rows(const send_row_t& send_row, const Chunk& chunk,
                                                                     ChunkOffset current_chunk_offset) {
   if (current_chunk_offset == chunk.size()) return boost::make_ready_future();
 

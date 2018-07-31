@@ -32,7 +32,7 @@ void Projection::_on_set_parameters(const std::unordered_map<ParameterID, AllTyp
   expressions_set_parameters(expressions, parameters);
 }
 
-void Projection::_on_set_transaction_context(std::weak_ptr<TransactionContext> transaction_context) {
+void Projection::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {
   expressions_set_transaction_context(expressions, transaction_context);
 }
 

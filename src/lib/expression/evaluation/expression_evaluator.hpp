@@ -63,7 +63,7 @@ class ExpressionEvaluator final {
 
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> _evaluate_predicate_expression(
-      const AbstractPredicateExpression& expression);
+      const AbstractPredicateExpression& predicate_expression);
 
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> _evaluate_binary_predicate_expression(
