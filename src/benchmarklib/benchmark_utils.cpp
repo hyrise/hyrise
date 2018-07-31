@@ -50,21 +50,25 @@ bool BenchmarkState::keep_running() {
   }
 
   const auto now = std::chrono::high_resolution_clock::now();
-  const auto benchmark_duration = now - benchmark_begin;
-  const auto iteration_duration = now - iteration_begin;
 
   if (!is_first_iteration) {
+    // "Finish" the current iteration, i.e. get its duration
+    const auto iteration_duration = now - iteration_begin;
     iteration_durations.push_back(iteration_duration);
   }
 
+  // "Start" new iteration
   benchmark_end = now;
   iteration_begin = now;
 
+  // Stop execution if we reached the maximum number of iterations
   if (num_iterations >= max_num_iterations) {
     state = State::Over;
     return false;
   }
 
+  // Stop execution if we reached the time limit
+  const auto benchmark_duration = now - benchmark_begin;
   if (benchmark_duration >= max_duration) {
     state = State::Over;
     return false;
