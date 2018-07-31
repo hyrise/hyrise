@@ -44,6 +44,8 @@ class AbstractColumnIteratorValue {
 template <typename T>
 class ColumnIteratorValue : public AbstractColumnIteratorValue<T> {
  public:
+  static constexpr bool Nullable = true;
+
   ColumnIteratorValue(const T& value, const bool null_value, const ChunkOffset& chunk_offset)
       : _value{value}, _null_value{null_value}, _chunk_offset{chunk_offset} {}
 
@@ -65,6 +67,8 @@ class ColumnIteratorValue : public AbstractColumnIteratorValue<T> {
 template <typename T>
 class NonNullColumnIteratorValue : public AbstractColumnIteratorValue<T> {
  public:
+  static constexpr bool Nullable = false;
+
   NonNullColumnIteratorValue(const T& value, const ChunkOffset& chunk_offset)
       : _value{value}, _chunk_offset{chunk_offset} {}
 
@@ -86,6 +90,8 @@ class NonNullColumnIteratorValue : public AbstractColumnIteratorValue<T> {
  */
 class ColumnIteratorNullValue : public AbstractColumnIteratorValue<boost::blank> {
  public:
+  static constexpr bool Nullable = true;
+
   ColumnIteratorNullValue(const bool null_value, const ChunkOffset& chunk_offset)
       : _null_value{null_value}, _chunk_offset{chunk_offset} {}
 

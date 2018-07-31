@@ -1,143 +1,69 @@
 #include "constant_calculation_rule.hpp"
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "constant_mappings.hpp"
+#include "expression/abstract_expression.hpp"
+#include "expression/abstract_predicate_expression.hpp"
+#include "expression/evaluation/expression_evaluator.hpp"
+#include "expression/expression_utils.hpp"
+#include "expression/value_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_column_reference.hpp"
-#include "logical_query_plan/lqp_expression.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "resolve_type.hpp"
-#include "utils/arithmetic_operator_expression.hpp"
 
 namespace opossum {
 
 std::string ConstantCalculationRule::name() const { return "Constant Calculation Rule"; }
 
-bool ConstantCalculationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
-  if (node->type() != LQPNodeType::Projection) {
-    return _apply_to_inputs(node);
-  }
+bool ConstantCalculationRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+  // We can't prune Aggregate arguments, because the operator doesn't support, e.g., `MIN(1)`, whereas it supports
+  // `MIN(2-1)`, since `2-1` is a column.
+  if (node->type == LQPNodeType::Aggregate) return _apply_to_inputs(node);
 
-  auto projection_node = std::static_pointer_cast<ProjectionNode>(node);
-
-  const auto column_expressions = projection_node->column_expressions();
-  for (auto column_id = ColumnID{0}; column_id < column_expressions.size(); column_id++) {
-    const auto& expression = column_expressions[column_id];
-    if (!expression->is_arithmetic_operator()) {
-      continue;
-    }
-
-    // If the expression contains operands with different types, or one of the operands is a column reference,
-    // it can't be resolved in this rule, and will be handled by the Projection later.
-    const auto expression_type = _get_type_of_expression(expression);
-    if (expression_type == std::nullopt) {
-      continue;
-    }
-
-    auto value = std::optional<AllTypeVariant>{};
-
-    if (*expression_type == DataType::Null) {
-      value = NULL_VALUE;
-    } else {
-      resolve_data_type(*expression_type, [&](auto type) { value = _calculate_expression(type, expression); });
-    }
-
-    // If the value is std::nullopt, then the expression could not be resolved at this point,
-    // e.g. because it is not an arithmetic operator.
-    if (value != std::nullopt &&
-        _replace_expression_in_outputs(node, node->output_column_references()[column_id], *value)) {
-      // If we successfully replaced the occurrences of the expression in the output tree,
-      // we can remove the column here.
-      _remove_column_from_projection(projection_node, column_id);
-    }
+  for (auto& expression : node->node_expressions()) {
+    _prune_expression(expression);
   }
 
   return _apply_to_inputs(node);
 }
 
-bool ConstantCalculationRule::_replace_expression_in_outputs(const std::shared_ptr<AbstractLQPNode>& node,
-                                                             const LQPColumnReference& expression_column,
-                                                             const AllTypeVariant& value) {
-  auto output_plan_changed = false;
-  for (const auto& output : node->outputs()) {
-    if (output->type() != LQPNodeType::Predicate) {
-      output_plan_changed |= _replace_expression_in_outputs(output, expression_column, value);
-      continue;
+void ConstantCalculationRule::_prune_expression(std::shared_ptr<AbstractExpression>& expression) const {
+  for (auto& argument : expression->arguments) {
+    _prune_expression(argument);
+  }
+
+  if (expression->arguments.empty()) return;
+
+  // Only prune a whitelisted selection of ExpressionTypes, because we can't, e.g., prune List of literals.
+  if (expression->type != ExpressionType::Predicate && expression->type != ExpressionType::Arithmetic &&
+      expression->type != ExpressionType::Logical) {
+    return;
+  }
+
+  const auto all_arguments_are_values =
+      std::all_of(expression->arguments.begin(), expression->arguments.end(),
+                  [&](const auto& argument) { return argument->type == ExpressionType::Value; });
+
+  if (!all_arguments_are_values) return;
+
+  resolve_data_type(expression->data_type(), [&](const auto data_type_t) {
+    using ExpressionDataType = typename decltype(data_type_t)::type;
+    const auto result = ExpressionEvaluator{}.evaluate_expression_to_result<ExpressionDataType>(*expression);
+    Assert(result->is_literal(), "Expected Literal");
+
+    if (result->is_null(0)) {
+      expression = std::make_shared<ValueExpression>(NullValue{});
+    } else {
+      expression = std::make_shared<ValueExpression>(result->value(0));
     }
-
-    auto predicate_node = std::static_pointer_cast<PredicateNode>(output);
-
-    // We look for a PredicateNode which has an LQPColumnReference as value,
-    // referring to the column which contains the Expression we resolved before.
-    if (is_lqp_column_reference(predicate_node->value()) &&
-        boost::get<LQPColumnReference>(predicate_node->value()) == expression_column) {
-      // We replace the LQPColumnReference with the actual result of the Expression it was referring to.
-      auto new_predicate_node = std::make_shared<PredicateNode>(predicate_node->column_reference(),
-                                                                predicate_node->predicate_condition(), value);
-      predicate_node->replace_with(new_predicate_node);
-      output_plan_changed = true;
-    }
-
-    output_plan_changed |= _replace_expression_in_outputs(output, expression_column, value);
-  }
-  return output_plan_changed;
-}
-
-void ConstantCalculationRule::_remove_column_from_projection(const std::shared_ptr<ProjectionNode>& node,
-                                                             ColumnID column_id) {
-  auto column_expressions = node->column_expressions();
-  column_expressions.erase(column_expressions.begin() + column_id);
-
-  auto projection_node = std::make_shared<ProjectionNode>(column_expressions);
-  node->replace_with(projection_node);
-}
-
-std::optional<DataType> ConstantCalculationRule::_get_type_of_expression(
-    const std::shared_ptr<LQPExpression>& expression) const {
-  if (expression->type() == ExpressionType::Literal) {
-    return data_type_from_all_type_variant(expression->value());
-  }
-
-  if (!expression->is_arithmetic_operator()) {
-    return std::nullopt;
-  }
-
-  const auto type_left = _get_type_of_expression(expression->left_child());
-  const auto type_right = _get_type_of_expression(expression->right_child());
-
-  if (type_left == DataType::Null) return type_right;
-  if (type_right == DataType::Null) return type_left;
-  if (type_left != type_right) return std::nullopt;
-
-  return type_left;
-}
-
-template <typename T>
-std::optional<AllTypeVariant> ConstantCalculationRule::_calculate_expression(
-    boost::hana::basic_type<T> type, const std::shared_ptr<LQPExpression>& expression) const {
-  if (expression->type() == ExpressionType::Literal) {
-    return expression->value();
-  }
-
-  if (!expression->is_arithmetic_operator()) {
-    return std::nullopt;
-  }
-
-  const auto& arithmetic_operator_function = function_for_arithmetic_expression<T>(expression->type());
-
-  const auto& left_expr = _calculate_expression(type, expression->left_child());
-  const auto& right_expr = _calculate_expression(type, expression->right_child());
-
-  if (variant_is_null(*left_expr) || variant_is_null(*right_expr)) {
-    return NULL_VALUE;
-  }
-
-  return AllTypeVariant(arithmetic_operator_function(boost::get<T>(*left_expr), boost::get<T>(*right_expr)));
+  });
 }
 
 }  // namespace opossum

@@ -65,7 +65,7 @@ class BaseColumnStatistics {
    * Since the value of the ValuePlaceholder (naturally) isn't known, has to resort to magic values.
    */
   virtual FilterByValueEstimate estimate_predicate_with_value_placeholder(
-      const PredicateCondition predicate_condition, const ValuePlaceholder& value,
+      const PredicateCondition predicate_condition,
       const std::optional<AllTypeVariant>& value2 = std::nullopt) const = 0;
 
   /**

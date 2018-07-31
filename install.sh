@@ -50,7 +50,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             exit 1
         fi
     elif [[ "$unamestr" == 'Linux' ]]; then
-        if cat /etc/lsb-release | grep DISTRIB_ID | grep Ubuntu >/dev/null; then
+        if [ -f /etc/lsb-release ] && cat /etc/lsb-release | grep DISTRIB_ID | grep Ubuntu >/dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
                 boostall=$(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ')
@@ -74,7 +74,13 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 echo "Error during installation."
                 exit 1
             fi
+        else
+            echo "Unsupported system. You might get the install script to work if you remove the '/etc/lsb-release' line, but you will be on your own."
+            exit 1
         fi
+    else
+        echo "Unsupported operating system $unamestr."
+        exit 1
     fi
 fi
 

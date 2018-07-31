@@ -9,8 +9,8 @@
 
 namespace opossum {
 
-class ColumnVisitable;
-class ColumnVisitableContext;
+class AbstractColumnVisitor;
+class ColumnVisitorContext;
 
 // BaseColumn is the abstract super class for all column types,
 // e.g., ValueColumn, ReferenceColumn
@@ -30,9 +30,6 @@ class BaseColumn : private Noncopyable {
 
   // returns the number of values
   virtual size_t size() const = 0;
-
-  // calls the column-specific handler in an operator (visitor pattern)
-  virtual void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const = 0;
 
   // Copies a column using a new allocator. This is useful for placing the column on a new NUMA node.
   virtual std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const = 0;

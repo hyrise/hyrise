@@ -14,6 +14,8 @@
 
 namespace opossum {
 
+AbstractTask::AbstractTask(SchedulePriority priority, bool stealable) : _priority(priority), _stealable(stealable) {}
+
 TaskID AbstractTask::id() const { return _id; }
 
 NodeID AbstractTask::node_id() const { return _node_id; }
@@ -21,6 +23,8 @@ NodeID AbstractTask::node_id() const { return _node_id; }
 bool AbstractTask::is_ready() const { return _pending_predecessors == 0; }
 
 bool AbstractTask::is_done() const { return _done; }
+
+bool AbstractTask::is_stealable() const { return _stealable; }
 
 bool AbstractTask::is_scheduled() const { return _is_scheduled; }
 
@@ -52,11 +56,11 @@ void AbstractTask::set_done_callback(const std::function<void()>& done_callback)
   _done_callback = done_callback;
 }
 
-void AbstractTask::schedule(NodeID preferred_node_id, SchedulePriority priority) {
+void AbstractTask::schedule(NodeID preferred_node_id) {
   _mark_as_scheduled();
 
   if (CurrentScheduler::is_set()) {
-    CurrentScheduler::get()->schedule(shared_from_this(), preferred_node_id, priority);
+    CurrentScheduler::get()->schedule(shared_from_this(), preferred_node_id, _priority);
   } else {
     // If the Task isn't ready, it will execute() once its dependency counter reaches 0
     if (is_ready()) execute();
@@ -83,7 +87,7 @@ void AbstractTask::join() {
 
 void AbstractTask::_join_without_replacement_worker() {
   std::unique_lock<std::mutex> lock(_done_mutex);
-  _done_condition_variable.wait(lock, [&]() { return _done; });
+  _done_condition_variable.wait(lock, [&]() { return _done == true; });
 }
 
 void AbstractTask::execute() {
@@ -99,7 +103,7 @@ void AbstractTask::execute() {
   if (_done_callback) _done_callback();
 
   {
-    std::unique_lock<std::mutex> lock(_done_mutex);
+    std::lock_guard<std::mutex> lock(_done_mutex);
     _done = true;
   }
   _done_condition_variable.notify_all();
@@ -118,7 +122,7 @@ void AbstractTask::_on_predecessor_done() {
       auto worker = Worker::get_this_thread_worker();
       DebugAssert(static_cast<bool>(worker), "No worker");
 
-      worker->queue()->push(shared_from_this(), static_cast<uint32_t>(SchedulePriority::High));
+      worker->queue()->push(shared_from_this(), static_cast<uint32_t>(SchedulePriority::Highest));
     } else {
       if (_is_scheduled) execute();
       // Otherwise it will get execute()d once it is scheduled. It is entirely possible for Tasks to "become ready"

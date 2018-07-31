@@ -8,6 +8,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "expression/evaluation/like_matcher.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 #include "operators/get_table.hpp"
 #include "operators/table_scan.hpp"
@@ -60,24 +61,6 @@ class OperatorsTableScanLikeTest : public BaseTest, public ::testing::WithParamI
 
   std::shared_ptr<GetTable> _gt, _gt_special_chars, _gt_string, _gt_string_compressed;
 };
-
-TEST_F(OperatorsTableScanLikeTest, PatternToTokens) {
-  const auto tokens_a = LikeTableScanImpl::pattern_string_to_tokens("");
-  const auto tokens_b = LikeTableScanImpl::pattern_string_to_tokens("%abc%_def__Hello%");
-
-  ASSERT_EQ(tokens_a.size(), 0u);
-
-  ASSERT_EQ(tokens_b.size(), 9u);
-  EXPECT_EQ(tokens_b.at(0), LikeTableScanImpl::PatternToken(LikeTableScanImpl::Wildcard::AnyChars));
-  EXPECT_EQ(tokens_b.at(1), LikeTableScanImpl::PatternToken("abc"s));
-  EXPECT_EQ(tokens_b.at(2), LikeTableScanImpl::PatternToken(LikeTableScanImpl::Wildcard::AnyChars));
-  EXPECT_EQ(tokens_b.at(3), LikeTableScanImpl::PatternToken(LikeTableScanImpl::Wildcard::SingleChar));
-  EXPECT_EQ(tokens_b.at(4), LikeTableScanImpl::PatternToken("def"s));
-  EXPECT_EQ(tokens_b.at(5), LikeTableScanImpl::PatternToken(LikeTableScanImpl::Wildcard::SingleChar));
-  EXPECT_EQ(tokens_b.at(6), LikeTableScanImpl::PatternToken(LikeTableScanImpl::Wildcard::SingleChar));
-  EXPECT_EQ(tokens_b.at(7), LikeTableScanImpl::PatternToken("Hello"s));
-  EXPECT_EQ(tokens_b.at(8), LikeTableScanImpl::PatternToken(LikeTableScanImpl::Wildcard::AnyChars));
-}
 
 auto formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
   return std::to_string(static_cast<uint32_t>(info.param));

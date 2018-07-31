@@ -28,13 +28,12 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
 
   std::shared_ptr<PosList> scan_chunk(ChunkID) override;
 
-  void handle_column(const BaseValueColumn& base_column, std::shared_ptr<ColumnVisitableContext> base_context) override;
+  void handle_column(const BaseValueColumn& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
 
   void handle_column(const BaseDictionaryColumn& base_column,
-                     std::shared_ptr<ColumnVisitableContext> base_context) override;
+                     std::shared_ptr<ColumnVisitorContext> base_context) override;
 
-  void handle_column(const BaseEncodedColumn& base_column,
-                     std::shared_ptr<ColumnVisitableContext> base_context) override;
+  void handle_column(const BaseEncodedColumn& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
 
   using BaseSingleColumnTableScanImpl::handle_column;
 

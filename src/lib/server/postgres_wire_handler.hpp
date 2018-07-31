@@ -42,7 +42,7 @@ struct ParsePacket {
 struct BindPacket {
   std::string statement_name;
   std::string destination_portal;
-  std::vector<AllParameterVariant> params;
+  std::vector<AllTypeVariant> params;
 };
 
 class PostgresWireHandler {

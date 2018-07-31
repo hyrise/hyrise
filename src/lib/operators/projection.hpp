@@ -11,27 +11,19 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
-#include "storage/chunk.hpp"
-#include "storage/reference_column.hpp"
-#include "types.hpp"
+#include "expression/abstract_expression.hpp"
 
 namespace opossum {
 
-class PQPExpression;
-
 /**
- * Operator to select a subset of the set of all columns found in the table
+ * Operator to evaluate Expressions (except for AggregateExpressions)
  */
 class Projection : public AbstractReadOnlyOperator {
  public:
-  using ColumnExpressions = std::vector<std::shared_ptr<PQPExpression>>;
-
-  Projection(const std::shared_ptr<const AbstractOperator>& in, const ColumnExpressions& column_expressions);
+  Projection(const std::shared_ptr<const AbstractOperator>& in,
+             const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
   const std::string name() const override;
-  const std::string description(DescriptionMode description_mode) const override;
-
-  const ColumnExpressions& column_expressions() const;
 
   /**
    * The dummy table is used for literal projections that have no input table.
@@ -51,32 +43,16 @@ class Projection : public AbstractReadOnlyOperator {
 
   static std::shared_ptr<Table> dummy_table();
 
+  const std::vector<std::shared_ptr<AbstractExpression>> expressions;
+
  protected:
-  ColumnExpressions _column_expressions;
-
-  template <typename T>
-  static std::shared_ptr<BaseColumn> _create_column(boost::hana::basic_type<T> type, const ChunkID chunk_id,
-                                                    const std::shared_ptr<PQPExpression>& expression,
-                                                    std::shared_ptr<const Table> input_table_left,
-                                                    bool reuse_column_from_input);
-
-  static DataType _get_type_of_expression(const std::shared_ptr<PQPExpression>& expression,
-                                          const std::shared_ptr<const Table>& table);
-
-  /**
-   * This function evaluates the given expression on a single chunk.
-   * It returns a vector containing the materialized values resulting from the expression.
-   */
-  template <typename T>
-  static const pmr_concurrent_vector<std::pair<bool, T>> _evaluate_expression(
-      const std::shared_ptr<PQPExpression>& expression, const std::shared_ptr<const Table> table,
-      const ChunkID chunk_id);
-
   std::shared_ptr<const Table> _on_execute() override;
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
+  void _on_set_transaction_context(std::weak_ptr<TransactionContext> transaction_context) override;
 
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  std::shared_ptr<AbstractOperator> _on_deep_copy(
+      const std::shared_ptr<AbstractOperator>& copied_input_left,
+      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
 };
 
 }  // namespace opossum

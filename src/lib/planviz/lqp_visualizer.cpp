@@ -7,6 +7,8 @@
 #include <utility>
 #include <vector>
 
+#include "expression/expression_utils.hpp"
+#include "expression/lqp_select_expression.hpp"
 #include "logical_query_plan/projection_node.hpp"
 
 namespace opossum {
@@ -23,14 +25,16 @@ LQPVisualizer::LQPVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_
 
 void LQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractLQPNode>>& lqp_roots) {
   std::unordered_set<std::shared_ptr<const AbstractLQPNode>> visualized_nodes;
+  ExpressionUnorderedSet visualized_sub_queries;
 
   for (const auto& root : lqp_roots) {
-    _build_subtree(root, visualized_nodes);
+    _build_subtree(root, visualized_nodes, visualized_sub_queries);
   }
 }
 
 void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
-                                   std::unordered_set<std::shared_ptr<const AbstractLQPNode>>& visualized_nodes) {
+                                   std::unordered_set<std::shared_ptr<const AbstractLQPNode>>& visualized_nodes,
+                                   ExpressionUnorderedSet& visualized_sub_queries) {
   // Avoid drawing dataflows/ops redundantly in diamond shaped Nodes
   if (visualized_nodes.find(node) != visualized_nodes.end()) return;
   visualized_nodes.insert(node);
@@ -39,27 +43,34 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
 
   if (node->left_input()) {
     auto left_input = node->left_input();
-    _build_subtree(left_input, visualized_nodes);
+    _build_subtree(left_input, visualized_nodes, visualized_sub_queries);
     _build_dataflow(left_input, node);
   }
 
   if (node->right_input()) {
     auto right_input = node->right_input();
-    _build_subtree(right_input, visualized_nodes);
+    _build_subtree(right_input, visualized_nodes, visualized_sub_queries);
     _build_dataflow(right_input, node);
   }
 
   // Visualize subselects
   if (const auto projection = std::dynamic_pointer_cast<ProjectionNode>(node)) {
     for (const auto& column_expression : projection->column_expressions()) {
-      if (column_expression->is_subselect()) {
-        _build_subtree(column_expression->subselect_node(), visualized_nodes);
+      visit_expression(column_expression, [&](const auto& sub_expression) {
+        const auto lqp_select_expression = std::dynamic_pointer_cast<LQPSelectExpression>(sub_expression);
+        if (!lqp_select_expression) return ExpressionVisitation::VisitArguments;
+
+        if (!visualized_sub_queries.emplace(lqp_select_expression).second) return ExpressionVisitation::VisitArguments;
+
+        _build_subtree(lqp_select_expression->lqp, visualized_nodes, visualized_sub_queries);
 
         auto edge_info = _default_edge;
-        edge_info.label = "Scalar Subquery";
+        edge_info.label = "Subquery";
         edge_info.style = "dashed";
-        _add_edge(column_expression->subselect_node(), node, edge_info);
-      }
+        _add_edge(lqp_select_expression->lqp, node, edge_info);
+
+        return ExpressionVisitation::VisitArguments;
+      });
     }
   }
 }

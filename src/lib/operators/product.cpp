@@ -20,14 +20,12 @@ std::shared_ptr<const Table> Product::_on_execute() {
 
   // add columns from left table to output
   for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
-    column_definitions.emplace_back(input_table_left()->column_name(column_id),
-                                    input_table_left()->column_data_type(column_id));
+    column_definitions.emplace_back(input_table_left()->column_definitions()[column_id]);
   }
 
   // add columns from right table to output
   for (ColumnID column_id{0}; column_id < input_table_right()->column_count(); ++column_id) {
-    column_definitions.emplace_back(input_table_right()->column_name(column_id),
-                                    input_table_right()->column_data_type(column_id));
+    column_definitions.emplace_back(input_table_right()->column_definitions()[column_id]);
   }
 
   auto output = std::make_shared<Table>(column_definitions, TableType::References);
@@ -107,9 +105,12 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
 
   output->append_chunk(output_columns);
 }
-std::shared_ptr<AbstractOperator> Product::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<Product>(recreated_input_left, recreated_input_right);
+std::shared_ptr<AbstractOperator> Product::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<Product>(copied_input_left, copied_input_right);
 }
+
+void Product::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+
 }  // namespace opossum

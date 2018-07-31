@@ -5,6 +5,7 @@
 #include "boost/detail/templated_streams.hpp"
 #endif  // BOOST_NO_IOSTREAM
 
+#include "boost/functional/hash.hpp"
 #include "boost/mpl/bool.hpp"
 #include "boost/type_traits/is_empty.hpp"
 #include "boost/type_traits/is_pod.hpp"
@@ -21,7 +22,12 @@ struct NullValue {};
 
 // Relational operators
 inline bool operator==(const NullValue&, const NullValue&) { return false; }
+inline bool operator!=(const NullValue&, const NullValue&) { return false; }
 inline bool operator<(const NullValue&, const NullValue&) { return false; }
+inline bool operator<=(const NullValue&, const NullValue&) { return false; }
+inline bool operator>(const NullValue&, const NullValue&) { return false; }
+inline bool operator>=(const NullValue&, const NullValue&) { return false; }
+inline NullValue operator-(const NullValue&) { return NullValue{}; }
 
 inline size_t hash_value(const NullValue& null_value) {
   // Aggregate wants all NULLs in one bucket

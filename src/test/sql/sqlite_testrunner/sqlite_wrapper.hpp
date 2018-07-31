@@ -27,6 +27,14 @@ class SQLiteWrapper final {
   void create_table_from_tbl(const std::string& file, const std::string& table_name);
 
   /*
+   * Creates a table in the sqlite database from a given opossum Table
+   *
+   * @param table      The table to load into sqlite
+   * @param tablename  The desired table name
+   */
+  void create_table(const Table& table, const std::string& table_name);
+
+  /*
    * Executes a sql query in the sqlite database context.
    *
    * @param sql_query Query to be executed
@@ -44,6 +52,11 @@ class SQLiteWrapper final {
    * Adds a single row to given opossum table according to an sqlite intermediate statement (one result row).
    */
   void _add_row(std::shared_ptr<Table> table, sqlite3_stmt* result_row, int column_count);
+
+  /**
+   * Execute an SQL statement on the wrapped sqlite db
+   */
+  void _exec_sql(const std::string& sql) const;
 
   sqlite3* _db;
 };

@@ -39,9 +39,10 @@ class ImportBinary : public AbstractReadOnlyOperator {
    */
   std::shared_ptr<const Table> _on_execute() final;
 
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  std::shared_ptr<AbstractOperator> _on_deep_copy(
+      const std::shared_ptr<AbstractOperator>& copied_input_left,
+      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   // Returns the name of the operator
   const std::string name() const final;
@@ -60,7 +61,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * Column count          | ColumnID                              |   2
    * Column types          | TypeID array                          |   Column Count * 1
    * Column nullable       | bool (stored as BoolAsByteType)       |   Column Count * 1
-   * Column name lengths   | ColumnNameLength array                |   Column Count * 1
+   * Column name lengths   | size_t array                          |   Column Count * 1
    * Column names          | std::string array                     |   Sum of lengths of all names
    *
    */
@@ -94,7 +95,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    *
    * Description           | Type                                  | Size in byte
    * -----------------------------------------------------------------------------------------
-   * Length of Strings     | StringLength array                    |   row_count * 2
+   * Length of Strings     | size_t array                          |   row_count * 2
    * Values                | std::string array                     |   Total sum of string lengths
    *
    *
@@ -126,7 +127,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * Width of attribute v. | AttributeVectorWidth                  |   1
    * Size of dictionary v. | ValueID                               |   4
    * Dictionary Values°    | T (int, float, double, long)          |   dict. size * sizeof(T)
-   * Dict. String Length^  | StringLength                          |   dict. size * 2
+   * Dict. String Length^  | size_t                                |   dict. size * 2
    * Dictionary Values^    | std::string                           |   Sum of all string lengths
    * Attribute v. values   | uintX                                 |   row_count * width of attribute v.
    *
@@ -145,7 +146,6 @@ class ImportBinary : public AbstractReadOnlyOperator {
   static pmr_vector<T> _read_values(std::ifstream& file, const size_t count);
 
   // Reads row_count many strings from input file. String lengths are encoded in type T.
-  template <typename T = StringLength>
   static pmr_vector<std::string> _read_string_values(std::ifstream& file, const size_t count);
 
   // Reads a single value of type T from the input file.

@@ -11,6 +11,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "operators/operator_scan_predicate.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -29,19 +30,19 @@ constexpr float INDEX_SCAN_ROW_COUNT_THRESHOLD = 1000.0f;
 
 std::string IndexScanRule::name() const { return "Index Scan Rule"; }
 
-bool IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) {
-  if (node->type() == LQPNodeType::Predicate) {
+bool IndexScanRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
+  if (node->type == LQPNodeType::Predicate) {
     const auto& child = node->left_input();
 
-    if (child->type() == LQPNodeType::StoredTable) {
+    if (child->type == LQPNodeType::StoredTable) {
       const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
       const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(child);
-      const auto table = StorageManager::get().get_table(stored_table_node->table_name());
+      const auto table = StorageManager::get().get_table(stored_table_node->table_name);
 
       const auto index_infos = table->get_indexes();
       for (const auto& index_info : index_infos) {
         if (_is_index_scan_applicable(index_info, predicate_node)) {
-          predicate_node->set_scan_type(ScanType::IndexScan);
+          predicate_node->scan_type = ScanType::IndexScan;
         }
       }
     }
@@ -56,16 +57,22 @@ bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,
 
   if (index_info.type != ColumnIndexType::GroupKey) return false;
 
-  // Currently, we do not support two-column predicates
-  if (is_column_id(predicate_node->value())) return false;
+  const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate_node->predicate, *predicate_node);
+  if (!operator_predicates) return false;
+  if (operator_predicates->size() != 1) return false;
 
-  const auto column_id = predicate_node->get_output_column_id(predicate_node->column_reference());
-  if (index_info.column_ids[0] != column_id) return false;
+  const auto& operator_predicate = (*operator_predicates)[0];
+
+  // Currently, we do not support two-column predicates
+  if (is_column_id(operator_predicate.value)) return false;
+
+  if (index_info.column_ids[0] != operator_predicate.column_id) return false;
 
   const auto row_count_table = predicate_node->left_input()->derive_statistics_from(nullptr, nullptr)->row_count();
   if (row_count_table < INDEX_SCAN_ROW_COUNT_THRESHOLD) return false;
 
-  const auto row_count_predicate = predicate_node->derive_statistics_from(predicate_node->left_input())->row_count();
+  const auto row_count_predicate =
+      predicate_node->derive_statistics_from(predicate_node->left_input(), nullptr)->row_count();
   const float selectivity = row_count_predicate / row_count_table;
 
   if (selectivity > INDEX_SCAN_SELECTIVITY_THRESHOLD) return false;

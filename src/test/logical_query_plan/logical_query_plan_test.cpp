@@ -1,28 +1,40 @@
-#include <array>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
+#include <regex>
 
-#include "base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "abstract_expression.hpp"
+#include "expression/expression_functional.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/lqp_expression.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "storage/storage_manager.hpp"
+#include "testing_assert.hpp"
+#include "utils/load_table.hpp"
+
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class LogicalQueryPlanTest : public BaseTest {
- protected:
+class LogicalQueryPlanTest : public ::testing::Test {
+ public:
   void SetUp() override {
+    StorageManager::get().add_table("int_int", load_table("src/test/tables/int_int.tbl"));
+    StorageManager::get().add_table("int_int_int", load_table("src/test/tables/int_int_int.tbl"));
+
+    node_int_int = StoredTableNode::make("int_int");
+    a1 = node_int_int->get_column("a");
+    b1 = node_int_int->get_column("b");
+
+    node_int_int_int = StoredTableNode::make("int_int_int");
+    a2 = node_int_int_int->get_column("a");
+    b2 = node_int_int_int->get_column("b");
+    c2 = node_int_int_int->get_column("c");
+
     /**
      * Init some nodes for the tests to use
      */
@@ -34,10 +46,10 @@ class LogicalQueryPlanTest : public BaseTest {
     _t_b_a = LQPColumnReference{_mock_node_b, ColumnID{0}};
     _t_b_b = LQPColumnReference{_mock_node_b, ColumnID{1}};
 
-    _predicate_node_a = PredicateNode::make(_t_a_a, PredicateCondition::Equals, 42);
-    _predicate_node_b = PredicateNode::make(_t_a_b, PredicateCondition::Equals, 1337);
-    _projection_node = ProjectionNode::make(LQPExpression::create_columns({_t_a_a, _t_a_b}));
-    _join_node = JoinNode::make(JoinMode::Inner, LQPColumnReferencePair{_t_a_a, _t_b_a}, PredicateCondition::Equals);
+    _predicate_node_a = PredicateNode::make(equals_(_t_a_a, 42));
+    _predicate_node_b = PredicateNode::make(equals_(_t_a_b, 1337));
+    _projection_node = ProjectionNode::make(expression_vector(_t_a_a, _t_a_b));
+    _join_node = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_a));
 
     /**
      * Init complex graph.
@@ -58,7 +70,7 @@ class LogicalQueryPlanTest : public BaseTest {
     _nodes[7] = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "b"}}});
     _nodes[0] = JoinNode::make(JoinMode::Cross);
     _nodes[1] = JoinNode::make(JoinMode::Cross);
-    _nodes[2] = PredicateNode::make(LQPColumnReference{_nodes[6], ColumnID{0}}, PredicateCondition::Equals, 42);
+    _nodes[2] = PredicateNode::make(equals_(LQPColumnReference{_nodes[6], ColumnID{0}}, 42));
     _nodes[3] = JoinNode::make(JoinMode::Cross);
     _nodes[4] = JoinNode::make(JoinMode::Cross);
     _nodes[5] = JoinNode::make(JoinMode::Cross);
@@ -75,6 +87,13 @@ class LogicalQueryPlanTest : public BaseTest {
     _nodes[1]->set_left_input(_nodes[2]);
     _nodes[0]->set_left_input(_nodes[1]);
   }
+
+  void TearDown() override { StorageManager::reset(); }
+
+  std::shared_ptr<Table> table_int_int;
+  std::shared_ptr<StoredTableNode> node_int_int, node_int_int_int;
+  LQPColumnReference a1, b1;
+  LQPColumnReference a2, b2, c2;
 
   std::array<std::shared_ptr<AbstractLQPNode>, 8> _nodes;
 
@@ -172,21 +191,6 @@ TEST_F(LogicalQueryPlanTest, TwoInputsTest) {
   ASSERT_EQ(_mock_node_b->outputs(), std::vector<std::shared_ptr<AbstractLQPNode>>{_join_node});
 }
 
-TEST_F(LogicalQueryPlanTest, AliasedSubqueryTest) {
-  _predicate_node_a->set_left_input(_mock_node_a);
-
-  ASSERT_EQ(_predicate_node_a->find_table_name_origin("t_a"), _mock_node_a);
-
-  _predicate_node_a->set_alias(std::string("foo"));
-
-  ASSERT_EQ(_predicate_node_a->find_table_name_origin("foo"), _predicate_node_a);
-  ASSERT_EQ(_predicate_node_a->find_table_name_origin("t_a"), nullptr);
-
-  ASSERT_EQ(_predicate_node_a->get_column({"b"}), _t_a_b);
-  ASSERT_EQ(_predicate_node_a->get_column({"b", {"foo"}}), _t_a_b);
-  ASSERT_EQ(_predicate_node_a->find_column({"b", "t_a"}), std::nullopt);
-}
-
 TEST_F(LogicalQueryPlanTest, ComplexGraphStructure) {
   ASSERT_LQP_TIE(_nodes[0], LQPInputSide::Left, _nodes[1]);
   ASSERT_LQP_TIE(_nodes[0], LQPInputSide::Right, _nodes[4]);
@@ -201,27 +205,8 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphStructure) {
   ASSERT_LQP_TIE(_nodes[4], LQPInputSide::Right, _nodes[7]);
 }
 
-TEST_F(LogicalQueryPlanTest, ComplexGraphPrinted) {
-  std::stringstream stream;
-  _nodes[0]->print(stream);
-
-  ASSERT_EQ(stream.str(), R"([0] [Cross Join]
- \_[1] [Cross Join]
- |  \_[2] [Predicate] a = 42
- |  |  \_[3] [Cross Join]
- |  |     \_[4] [MockTable]
- |  |     \_[5] [MockTable]
- |  \_[6] [Cross Join]
- |     \_Recurring Node --> [3]
- |     \_Recurring Node --> [5]
- \_[7] [Cross Join]
-    \_Recurring Node --> [3]
-    \_Recurring Node --> [5]
-)");
-}
-
 TEST_F(LogicalQueryPlanTest, ComplexGraphRemoveFromTree) {
-  _nodes[2]->remove_from_tree();
+  lqp_remove_node(_nodes[2]);
 
   EXPECT_TRUE(_nodes[2]->outputs().empty());
   EXPECT_EQ(_nodes[2]->left_input(), nullptr);
@@ -237,8 +222,8 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphRemoveFromTree) {
 }
 
 TEST_F(LogicalQueryPlanTest, ComplexGraphRemoveFromTreeLeaf) {
-  _nodes[6]->remove_from_tree();
-  _nodes[7]->remove_from_tree();
+  lqp_remove_node(_nodes[6]);
+  lqp_remove_node(_nodes[7]);
 
   EXPECT_TRUE(_nodes[6]->outputs().empty());
   EXPECT_TRUE(_nodes[7]->outputs().empty());
@@ -254,7 +239,7 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphRemoveFromTreeLeaf) {
 TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWith) {
   auto new_node = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
 
-  _nodes[5]->replace_with(new_node);
+  lqp_replace_node(_nodes[5], new_node);
 
   // Make sure _nodes[5] is untied from the LQP
   EXPECT_TRUE(_nodes[5]->outputs().empty());
@@ -281,8 +266,8 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWithLeaf) {
   auto new_node_a = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
   auto new_node_b = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
 
-  _nodes[6]->replace_with(new_node_a);
-  _nodes[7]->replace_with(new_node_b);
+  lqp_replace_node(_nodes[6], new_node_a);
+  lqp_replace_node(_nodes[7], new_node_b);
 
   // Make sure _nodes[6] is untied from the LQP
   EXPECT_TRUE(_nodes[6]->outputs().empty());
@@ -299,101 +284,143 @@ TEST_F(LogicalQueryPlanTest, ComplexGraphReplaceWithLeaf) {
   ASSERT_LQP_TIE(_nodes[4], LQPInputSide::Right, new_node_b);
 }
 
-TEST_F(LogicalQueryPlanTest, ColumnReferenceCloning) {
-  /**
-   * Test AbstractLQPNode::deep_copy_column_reference()
-   */
+TEST_F(LogicalQueryPlanTest, CreateNodeMapping) {
+  const auto projection_node = ProjectionNode::make(node_int_int->column_expressions(), node_int_int);
+  const auto lqp = projection_node;
 
-  auto mock_node_a =
-      MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}});
-  auto mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
-  auto join_node = JoinNode::make(JoinMode::Cross);
-  auto predicate_node =
-      PredicateNode::make(LQPColumnReference{mock_node_b, ColumnID{0}}, PredicateCondition::Equals, 3);
+  const auto copied_lqp = lqp->deep_copy();
+  const auto copied_projection_node = std::dynamic_pointer_cast<ProjectionNode>(copied_lqp);
+  const auto copied_node_int_int = std::dynamic_pointer_cast<StoredTableNode>(copied_lqp->left_input());
 
-  const auto column_reference_a = LQPColumnReference{mock_node_a, ColumnID{1}};
-  const auto column_reference_b = LQPColumnReference{mock_node_b, ColumnID{0}};
+  auto node_mapping = lqp_create_node_mapping(lqp, copied_lqp);
 
-  auto aggregate_node =
-      AggregateNode::make(std::vector<std::shared_ptr<LQPExpression>>({LQPExpression::create_aggregate_function(
-                              AggregateFunction::Sum, {LQPExpression::create_column(column_reference_a)})}),
-                          std::vector<LQPColumnReference>{{column_reference_b}});
-
-  aggregate_node->set_left_input(predicate_node);
-  predicate_node->set_left_input(join_node);
-  join_node->set_left_input(mock_node_a);
-  join_node->set_right_input(mock_node_b);
-
-  const auto lqp = aggregate_node;
-  const auto lqp_copy = lqp->deep_copy();
-
-  const auto column_reference_c = LQPColumnReference{aggregate_node, ColumnID{1}};
-
-  /**
-   * Test that column_reference_a and column_reference_b can be resolved from the JoinNode
-   */
-  EXPECT_EQ(AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_a, lqp->left_input(),
-                                                                     lqp_copy->left_input())
-                .original_column_id(),
-            column_reference_a.original_column_id());
-  EXPECT_EQ(AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_a, lqp->left_input(),
-                                                                     lqp_copy->left_input())
-                .original_node(),
-            lqp_copy->left_input()->left_input()->left_input());
-
-  EXPECT_EQ(AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_b, lqp->left_input(),
-                                                                     lqp_copy->left_input())
-                .original_column_id(),
-            column_reference_b.original_column_id());
-  EXPECT_EQ(AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_b, lqp->left_input(),
-                                                                     lqp_copy->left_input())
-                .original_node(),
-            lqp_copy->left_input()->left_input()->right_input());
-
-  /**
-   * column_reference_b can be resolved from the Aggregate since it is a GroupByColumn
-   */
-  EXPECT_EQ(
-      AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_b, lqp, lqp_copy).original_column_id(),
-      column_reference_b.original_column_id());
-  EXPECT_EQ(AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_b, lqp, lqp_copy).original_node(),
-            lqp_copy->left_input()->left_input()->right_input());
-
-  /**
-   * SUM(a) can be resolved from the Aggregate
-   */
-  EXPECT_EQ(
-      AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_c, lqp, lqp_copy).original_column_id(),
-      column_reference_c.original_column_id());
-  EXPECT_EQ(AbstractLQPNode::adapt_column_reference_to_different_lqp(column_reference_c, lqp, lqp_copy).original_node(),
-            lqp_copy);
+  EXPECT_EQ(node_mapping[projection_node], copied_projection_node);
+  EXPECT_EQ(node_mapping[node_int_int], copied_node_int_int);
 }
 
-TEST_F(LogicalQueryPlanTest, ColumnIDByColumnReference) {
-  /**
-   * Test AbstractLQPNode::{get, find}_output_column_id_by_column_reference
-   */
+TEST_F(LogicalQueryPlanTest, DeepCopyBasics) {
+  const auto expression_a = std::make_shared<LQPColumnExpression>(LQPColumnReference{node_int_int, ColumnID{0}});
+  const auto expression_b = std::make_shared<LQPColumnExpression>(LQPColumnReference{node_int_int, ColumnID{1}});
 
-  auto mock_node_a =
-      MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}});
-  auto mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
-  const auto column_reference_a = LQPColumnReference{mock_node_a, ColumnID{0}};
-  const auto column_reference_b = LQPColumnReference{mock_node_a, ColumnID{1}};
-  auto aggregate_node =
-      AggregateNode::make(std::vector<std::shared_ptr<LQPExpression>>({LQPExpression::create_aggregate_function(
-                              AggregateFunction::Sum, {LQPExpression::create_column(column_reference_a)})}),
-                          std::vector<LQPColumnReference>{{column_reference_b}});
+  const auto projection_node = ProjectionNode::make(node_int_int->column_expressions(), node_int_int);
+  const auto lqp = projection_node;
 
-  aggregate_node->set_left_input(mock_node_a);
+  const auto copied_lqp = lqp->deep_copy();
 
-  const auto column_reference_c = LQPColumnReference{aggregate_node, ColumnID{1}};
+  EXPECT_LQP_EQ(copied_lqp, lqp);
 
-  EXPECT_EQ(mock_node_a->get_output_column_id(column_reference_a), ColumnID{0});
-  EXPECT_EQ(mock_node_a->get_output_column_id(column_reference_b), ColumnID{1});
-  EXPECT_EQ(aggregate_node->get_output_column_id(column_reference_b), ColumnID{0});
-  EXPECT_EQ(aggregate_node->get_output_column_id(column_reference_c), ColumnID{1});
-  EXPECT_EQ(aggregate_node->find_output_column_id(column_reference_a), std::nullopt);
-  EXPECT_EQ(mock_node_a->find_output_column_id(LQPColumnReference{mock_node_b, ColumnID{0}}), std::nullopt);
+  const auto copied_projection_node = std::dynamic_pointer_cast<ProjectionNode>(copied_lqp);
+  const auto copied_node_int_int = std::dynamic_pointer_cast<StoredTableNode>(copied_lqp->left_input());
+
+  // Nodes in copied LQP should have different pointers
+  EXPECT_NE(projection_node, copied_projection_node);
+  EXPECT_NE(node_int_int, copied_node_int_int);
+
+  // Check that expressions in copied LQP point to StoredTableNode in their LQP, not into the original LQP
+  const auto copied_expression_a =
+      std::dynamic_pointer_cast<LQPColumnExpression>(copied_projection_node->expressions.at(0));
+  const auto copied_expression_b =
+      std::dynamic_pointer_cast<LQPColumnExpression>(copied_projection_node->expressions.at(1));
+
+  EXPECT_EQ(copied_expression_a->column_reference.original_node(), copied_node_int_int);
+  EXPECT_EQ(copied_expression_b->column_reference.original_node(), copied_node_int_int);
+}
+
+TEST_F(LogicalQueryPlanTest, PrintWithoutSubselects) {
+  // clang-format off
+  const auto lqp =
+  PredicateNode::make(greater_than_(a1, 5),
+    JoinNode::make(JoinMode::Inner, equals_(a1, a2),
+      UnionNode::make(UnionMode::Positions,
+        PredicateNode::make(equals_(a1, 5), node_int_int),
+        PredicateNode::make(equals_(a1, 6), node_int_int)),
+    node_int_int_int));
+  // clang-format on
+
+  std::stringstream stream;
+  lqp->print(stream);
+
+  EXPECT_EQ(stream.str(), R"([0] [Predicate] a > 5
+ \_[1] [Join] Mode: Inner a = a
+    \_[2] [UnionNode] Mode: UnionPositions
+    |  \_[3] [Predicate] a = 5
+    |  |  \_[4] [StoredTable] Name: 'int_int'
+    |  \_[5] [Predicate] a = 6
+    |     \_Recurring Node --> [4]
+    \_[6] [StoredTable] Name: 'int_int_int'
+)");
+}
+
+TEST_F(LogicalQueryPlanTest, PrintWithSubselects) {
+  // clang-format off
+  const auto subselect_b_lqp =
+  PredicateNode::make(equals_(a2, 5), node_int_int_int);
+  const auto subselect_b = select_(subselect_b_lqp);
+
+  const auto subselect_a_lqp =
+  PredicateNode::make(equals_(a2, subselect_b), node_int_int_int);
+  const auto subselect_a = select_(subselect_a_lqp);
+
+  const auto lqp =
+  PredicateNode::make(greater_than_(a1, subselect_a), node_int_int);
+  // clang-format on
+
+  std::stringstream stream;
+  lqp->print(stream);
+
+  // Result is undeterministic, but should look something like (order and addresses may vary)
+  // [0] [Predicate] a > SUBSELECT (LQP, 0x4e2bda0, Parameters: )
+  //  \_[1] [StoredTable] Name: 'int_int'
+  // -------- Subselects ---------
+  // 0x4e2d160:
+  // [0] [Predicate] a = 5
+  //  \_[1] [StoredTable] Name: 'int_int_int'
+
+  // 0x4e2bda0:
+  // [0] [Predicate] a = SUBSELECT (LQP, 0x4e2d160, Parameters: )
+  //  \_[1] [StoredTable] Name: 'int_int_int'
+
+  EXPECT_TRUE(std::regex_search(stream.str().c_str(),
+                                std::regex{R"(\[0\] \[Predicate\] a \> SUBSELECT \(LQP, 0x[a-z0-9]+\))"}));
+  EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{"Subselects"}));
+  EXPECT_TRUE(
+      std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] a = SUBSELECT \(LQP, 0x[a-z0-9]+\))"}));
+  EXPECT_TRUE(std::regex_search(stream.str().c_str(), std::regex{R"(\[0\] \[Predicate\] a = 5)"}));
+}
+
+TEST_F(LogicalQueryPlanTest, DeepCopySubSelects) {
+  const auto parameter_a = parameter_(ParameterID{0}, b1);
+
+  // clang-format off
+  const auto sub_select_lqp =
+  AggregateNode::make(expression_vector(), expression_vector(min_(add_(a2, parameter_a))),
+    ProjectionNode::make(expression_vector(a2, b2, add_(a2, parameter_a)),
+      node_int_int_int));
+  const auto sub_select = select_(sub_select_lqp, std::make_pair(ParameterID{0}, b1));
+
+  const auto lqp =
+  ProjectionNode::make(expression_vector(a1, sub_select),
+    PredicateNode::make(greater_than_(a1, sub_select),
+      ProjectionNode::make(expression_vector(sub_select, a1, b1),
+        node_int_int)));
+  // clang-format on
+
+  const auto copied_lqp = lqp->deep_copy();
+
+  EXPECT_LQP_EQ(copied_lqp, lqp);
+  const auto copied_projection_a = std::dynamic_pointer_cast<ProjectionNode>(copied_lqp);
+  const auto copied_predicate_a = std::dynamic_pointer_cast<PredicateNode>(copied_lqp->left_input());
+
+  const auto copied_sub_select_a =
+      std::dynamic_pointer_cast<LQPSelectExpression>(copied_lqp->column_expressions().at(1));
+  const auto copied_sub_select_b =
+      std::dynamic_pointer_cast<LQPSelectExpression>(copied_predicate_a->predicate->arguments.at(1));
+
+  // Check that LQPs and SelectExpressions were actually duplicated
+  EXPECT_NE(copied_sub_select_a, sub_select);
+  EXPECT_NE(copied_sub_select_a->lqp, sub_select->lqp);
+  EXPECT_NE(copied_sub_select_b, sub_select);
+  EXPECT_NE(copied_sub_select_b->lqp, sub_select->lqp);
 }
 
 }  // namespace opossum
