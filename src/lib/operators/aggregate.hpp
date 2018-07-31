@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/container/pmr/polymorphic_allocator.hpp>
+#include <boost/container/scoped_allocator.hpp>
 #include <boost/functional/hash.hpp>
 #include <functional>
 #include <limits>
@@ -60,7 +62,19 @@ struct AggregateResult {
 /*
 The key type that is used for the aggregation map.
 */
-using AggregateKey = std::vector<uint64_t>;
+using AggregateKeyEntry = uint64_t;
+using AggregateKey = pmr_vector<AggregateKeyEntry>;
+using AggregateKeys = pmr_vector<AggregateKey>;
+using KeysPerChunk = pmr_vector<AggregateKeys>;
+
+// We use monotonic_buffer_resource for the vector of vectors that hold the aggregate keys. That is so that we can
+// save time when allocating and we can throw away everything in this temporary structure at once (once the resource
+// gets deleted). Also, we use the scoped_allocator_adaptor to propagate the allocator to all inner vectors.
+// This is suitable here because the amount of memory needed is known from the start. In other places with frequent
+// reallocations, this might make less sense.
+// We use boost over std because libc++ does not yet (July 2018) support monotonic_buffer_resource:
+// https://libcxx.llvm.org/ts1z_status.html
+using AggregateKeysAllocator = boost::container::scoped_allocator_adaptor<PolymorphicAllocator<AggregateKeys>>;
 
 /**
  * Types that are used for the special COUNT(*) and DISTINCT implementations
@@ -117,7 +131,8 @@ class Aggregate : public AbstractReadOnlyOperator {
   void _write_groupby_output(PosList& pos_list);
 
   template <typename ColumnDataType, AggregateFunction function>
-  void _aggregate_column(ChunkID chunk_id, ColumnID column_index, const BaseColumn& base_column);
+  void _aggregate_column(ChunkID chunk_id, ColumnID column_index, const BaseColumn& base_column,
+                         const KeysPerChunk& keys_per_chunk);
 
   std::shared_ptr<ColumnVisitorContext> _create_aggregate_context(const DataType data_type,
                                                                   const AggregateFunction function) const;
@@ -133,7 +148,6 @@ class Aggregate : public AbstractReadOnlyOperator {
 
   ChunkColumns _groupby_columns;
   std::vector<std::shared_ptr<ColumnVisitorContext>> _contexts_per_column;
-  std::vector<std::shared_ptr<std::vector<AggregateKey>>> _keys_per_chunk;
 };
 
 }  // namespace opossum

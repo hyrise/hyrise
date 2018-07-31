@@ -486,6 +486,7 @@ set(
     types.cpp
     types.hpp
     uid_allocator.hpp
+    utils/aligned_size.hpp
     utils/assert.hpp
     utils/boost_default_memory_resource.cpp
     utils/copyable_atomic.hpp
@@ -518,6 +519,7 @@ set(
     LIBRARIES
     pthread
     sqlparser
+    boost_container
     ${TBB_LIBRARY}
 )
 

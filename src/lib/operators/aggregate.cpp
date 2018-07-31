@@ -1,5 +1,7 @@
 #include "aggregate.hpp"
 
+#include <boost/container/pmr/monotonic_buffer_resource.hpp>
+
 #include <algorithm>
 #include <memory>
 #include <optional>
@@ -16,7 +18,9 @@
 #include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_column.hpp"
 #include "type_comparison.hpp"
+#include "utils/aligned_size.hpp"
 #include "utils/assert.hpp"
+#include "utils/performance_warning.hpp"
 
 namespace opossum {
 
@@ -71,10 +75,7 @@ std::shared_ptr<AbstractOperator> Aggregate::_on_deep_copy(
 
 void Aggregate::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-void Aggregate::_on_cleanup() {
-  _contexts_per_column.clear();
-  _keys_per_chunk.clear();
-}
+void Aggregate::_on_cleanup() { _contexts_per_column.clear(); }
 
 /*
 Visitor context for the partitioning/grouping visitor
@@ -196,7 +197,8 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Co
 };
 
 template <typename ColumnDataType, AggregateFunction function>
-void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const BaseColumn& base_column) {
+void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const BaseColumn& base_column,
+                                  const KeysPerChunk& keys_per_chunk) {
   using AggregateType = typename AggregateTraits<ColumnDataType, function>::AggregateType;
 
   auto aggregator = AggregateFunctionBuilder<ColumnDataType, AggregateType, function>().get_aggregate_function();
@@ -205,7 +207,7 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const
       *std::static_pointer_cast<AggregateContext<ColumnDataType, AggregateType>>(_contexts_per_column[column_index]);
 
   auto& results = *context.results;
-  auto& hash_keys = _keys_per_chunk[chunk_id];
+  const auto& hash_keys = keys_per_chunk[chunk_id];
 
   resolve_column_type<ColumnDataType>(
       base_column, [&results, &hash_keys, chunk_id, aggregator](const auto& typed_column) {
@@ -215,22 +217,22 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const
 
         // Now that all relevant types have been resolved, we can iterate over the column and build the aggregations.
         iterable.for_each([&, chunk_id, aggregator](const auto& value) {
-          results[(*hash_keys)[chunk_offset]].row_id = RowID(chunk_id, chunk_offset);
+          results[hash_keys[chunk_offset]].row_id = RowID(chunk_id, chunk_offset);
 
           /**
           * If the value is NULL, the current aggregate value does not change.
           */
           if (!value.is_null()) {
             // If we have a value, use the aggregator lambda to update the current aggregate value for this group
-            results[(*hash_keys)[chunk_offset]].current_aggregate =
-                aggregator(value.value(), results[(*hash_keys)[chunk_offset]].current_aggregate);
+            results[hash_keys[chunk_offset]].current_aggregate =
+                aggregator(value.value(), results[hash_keys[chunk_offset]].current_aggregate);
 
             // increase value counter
-            ++results[(*hash_keys)[chunk_offset]].aggregate_count;
+            ++results[hash_keys[chunk_offset]].aggregate_count;
 
             if (function == AggregateFunction::CountDistinct) {
               // for the case of CountDistinct, insert this value into the set to keep track of distinct values
-              results[(*hash_keys)[chunk_offset]].distinct_values.insert(value.value());
+              results[hash_keys[chunk_offset]].distinct_values.insert(value.value());
             }
           }
 
@@ -267,18 +269,40 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   This is done by creating a vector that contains the AggregateKey for each row.
   It is gradually built by visitors, one for each group column.
   */
-  _keys_per_chunk = std::vector<std::shared_ptr<std::vector<AggregateKey>>>(input_table->chunk_count());
+
+  // Allocate a temporary memory buffer, for more details see aggregate.hpp
+  size_t needed_size_per_aggregate_key =
+      aligned_size<AggregateKey>() + _groupby_column_ids.size() * aligned_size<AggregateKeyEntry>();
+  size_t needed_size = aligned_size<KeysPerChunk>() + input_table->chunk_count() * aligned_size<AggregateKeys>() +
+                       input_table->row_count() * needed_size_per_aggregate_key;
+
+  auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(needed_size);
+  auto allocator = AggregateKeysAllocator{PolymorphicAllocator<AggregateKeys>{&temp_buffer}};
+  const auto start_next_buffer_size = temp_buffer.next_buffer_size();
+
+  // Create the actual data structure
+  auto keys_per_chunk = KeysPerChunk{allocator};
+  keys_per_chunk.reserve(input_table->chunk_count());
 
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-    _keys_per_chunk[chunk_id] = std::make_shared<std::vector<AggregateKey>>(input_table->get_chunk(chunk_id)->size(),
-                                                                            AggregateKey(_groupby_column_ids.size()));
+    keys_per_chunk.emplace_back(input_table->get_chunk(chunk_id)->size(), AggregateKey(_groupby_column_ids.size()));
   }
 
+  // Make sure that we did not have to allocate more memory than originally computed
+  if (temp_buffer.next_buffer_size() != start_next_buffer_size) {
+    // The buffer sizes are increasing when the current buffer is full. We can use this to make sure that we allocated
+    // enough space from the beginning on. It would be more intuitive to compare current_buffer(), but this seems to
+    // be broken in boost: https://svn.boost.org/trac10/ticket/13639#comment:1
+    PerformanceWarning(std::string("needed_size ") + std::to_string(needed_size) +
+                       " was not enough and a second buffer was needed");
+  }
+
+  // Now that we have the data structures in place, we can start the actual work
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(_groupby_column_ids.size());
 
   for (size_t group_column_index = 0; group_column_index < _groupby_column_ids.size(); ++group_column_index) {
-    jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, this]() {
+    jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, &keys_per_chunk, this]() {
       const auto column_id = _groupby_column_ids.at(group_column_index);
       const auto data_type = input_table->column_data_type(column_id);
 
@@ -289,8 +313,8 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
         Store unique IDs for equal values in the groupby column (similar to dictionary encoding). 
         The ID 0 is reserved for NULL values. The combined IDs build an AggregateKey for each row.
         */
-        auto id_map = std::unordered_map<ColumnDataType, uint64_t>();
-        uint64_t id_counter = 1u;
+        auto id_map = std::unordered_map<ColumnDataType, AggregateKeyEntry>();
+        AggregateKeyEntry id_counter = 1u;
 
         for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
           const auto chunk_in = input_table->get_chunk(chunk_id);
@@ -302,11 +326,11 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
             ChunkOffset chunk_offset{0};
             iterable.for_each([&](const auto& value) {
               if (value.is_null()) {
-                (*_keys_per_chunk[chunk_id])[chunk_offset][group_column_index] = 0u;
+                keys_per_chunk[chunk_id][chunk_offset][group_column_index] = 0u;
               } else {
                 auto inserted = id_map.try_emplace(value.value(), id_counter);
                 // store either the current id_counter or the existing ID of the value
-                (*_keys_per_chunk[chunk_id])[chunk_offset][group_column_index] = inserted.first->second;
+                keys_per_chunk[chunk_id][chunk_offset][group_column_index] = inserted.first->second;
 
                 // if the id_map didn't have the value as a key and a new element was inserted
                 if (inserted.second) ++id_counter;
@@ -368,7 +392,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
   for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
     auto chunk_in = input_table->get_chunk(chunk_id);
 
-    auto& hash_keys = _keys_per_chunk[chunk_id];
+    const auto& hash_keys = keys_per_chunk[chunk_id];
 
     if (_aggregates.empty()) {
       /**
@@ -397,7 +421,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
       auto& results = *context->results;
 
       for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_in->size(); chunk_offset++) {
-        results[(*hash_keys)[chunk_offset]].row_id = RowID(chunk_id, chunk_offset);
+        results[hash_keys[chunk_offset]].row_id = RowID(chunk_id, chunk_offset);
       }
     } else {
       ColumnID column_index{0};
@@ -405,7 +429,7 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
         /**
          * Special COUNT(*) implementation.
          * Because COUNT(*) does not have a specific target column, we use the maximum ColumnID.
-         * We then basically go through the _keys_per_chunk map and count the occurrences of each group key.
+         * We then go through the keys_per_chunk map and count the occurrences of each group key.
          * The results are saved in the regular aggregate_count variable so that we don't need a
          * specific output logic for COUNT(*).
          */
@@ -417,8 +441,8 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
 
           // count occurrences for each group key
           for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_in->size(); chunk_offset++) {
-            results[(*hash_keys)[chunk_offset]].row_id = RowID(chunk_id, chunk_offset);
-            ++results[(*hash_keys)[chunk_offset]].aggregate_count;
+            results[hash_keys[chunk_offset]].row_id = RowID(chunk_id, chunk_offset);
+            ++results[hash_keys[chunk_offset]].aggregate_count;
           }
 
           ++column_index;
@@ -437,22 +461,28 @@ std::shared_ptr<const Table> Aggregate::_on_execute() {
 
           switch (aggregate.function) {
             case AggregateFunction::Min:
-              _aggregate_column<ColumnDataType, AggregateFunction::Min>(chunk_id, column_index, *base_column);
+              _aggregate_column<ColumnDataType, AggregateFunction::Min>(chunk_id, column_index, *base_column,
+                                                                        keys_per_chunk);
               break;
             case AggregateFunction::Max:
-              _aggregate_column<ColumnDataType, AggregateFunction::Max>(chunk_id, column_index, *base_column);
+              _aggregate_column<ColumnDataType, AggregateFunction::Max>(chunk_id, column_index, *base_column,
+                                                                        keys_per_chunk);
               break;
             case AggregateFunction::Sum:
-              _aggregate_column<ColumnDataType, AggregateFunction::Sum>(chunk_id, column_index, *base_column);
+              _aggregate_column<ColumnDataType, AggregateFunction::Sum>(chunk_id, column_index, *base_column,
+                                                                        keys_per_chunk);
               break;
             case AggregateFunction::Avg:
-              _aggregate_column<ColumnDataType, AggregateFunction::Avg>(chunk_id, column_index, *base_column);
+              _aggregate_column<ColumnDataType, AggregateFunction::Avg>(chunk_id, column_index, *base_column,
+                                                                        keys_per_chunk);
               break;
             case AggregateFunction::Count:
-              _aggregate_column<ColumnDataType, AggregateFunction::Count>(chunk_id, column_index, *base_column);
+              _aggregate_column<ColumnDataType, AggregateFunction::Count>(chunk_id, column_index, *base_column,
+                                                                          keys_per_chunk);
               break;
             case AggregateFunction::CountDistinct:
-              _aggregate_column<ColumnDataType, AggregateFunction::CountDistinct>(chunk_id, column_index, *base_column);
+              _aggregate_column<ColumnDataType, AggregateFunction::CountDistinct>(chunk_id, column_index, *base_column,
+                                                                                  keys_per_chunk);
               break;
           }
         });
