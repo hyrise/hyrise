@@ -48,7 +48,7 @@ class Projection : public AbstractReadOnlyOperator {
  protected:
   std::shared_ptr<const Table> _on_execute() override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
-  void _on_set_transaction_context(std::weak_ptr<TransactionContext> transaction_context) override;
+  void _on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) override;
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_input_left,

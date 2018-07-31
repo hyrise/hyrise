@@ -10,7 +10,7 @@ namespace opossum {
 
 SQLQueryPlan::SQLQueryPlan(CleanupTemporaries cleanup_temporaries) : _cleanup_temporaries(cleanup_temporaries) {}
 
-void SQLQueryPlan::add_tree_by_root(std::shared_ptr<AbstractOperator> op) { _roots.push_back(op); }
+void SQLQueryPlan::add_tree_by_root(const std::shared_ptr<AbstractOperator>& op) { _roots.push_back(op); }
 
 void SQLQueryPlan::append_plan(const SQLQueryPlan& other_plan) {
   _roots.insert(_roots.end(), other_plan._roots.begin(), other_plan._roots.end());
@@ -34,7 +34,7 @@ SQLQueryPlan SQLQueryPlan::deep_copy() const {
   SQLQueryPlan new_plan{_cleanup_temporaries};
 
   for (const auto& root : _roots) {
-    DebugAssert(root.get() != nullptr, "Root operator in plan should not be null.");
+    DebugAssert(root != nullptr, "Root operator in plan should not be null.");
     std::shared_ptr<AbstractOperator> new_root = root->deep_copy();
     new_plan.add_tree_by_root(new_root);
   }
@@ -44,7 +44,7 @@ SQLQueryPlan SQLQueryPlan::deep_copy() const {
   return new_plan;
 }
 
-void SQLQueryPlan::set_transaction_context(std::shared_ptr<TransactionContext> context) {
+void SQLQueryPlan::set_transaction_context(const std::shared_ptr<TransactionContext>& context) {
   for (const auto& root : _roots) {
     root->set_transaction_context_recursively(context);
   }

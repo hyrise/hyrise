@@ -75,9 +75,7 @@ bool IndexScanRule::_is_index_scan_applicable(const IndexInfo& index_info,
       predicate_node->derive_statistics_from(predicate_node->left_input(), nullptr)->row_count();
   const float selectivity = row_count_predicate / row_count_table;
 
-  if (selectivity > INDEX_SCAN_SELECTIVITY_THRESHOLD) return false;
-
-  return true;
+  return selectivity <= INDEX_SCAN_SELECTIVITY_THRESHOLD;
 }
 
 inline bool IndexScanRule::_is_single_column_index(const IndexInfo& index_info) const {

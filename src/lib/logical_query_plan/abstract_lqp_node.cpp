@@ -167,8 +167,8 @@ std::vector<LQPOutputRelation> AbstractLQPNode::output_relations() const {
 
 size_t AbstractLQPNode::output_count() const { return _outputs.size(); }
 
-std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy(LQPNodeMapping node_mapping) const {
-  return _deep_copy_impl(node_mapping);
+std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy(LQPNodeMapping input_node_mapping) const {
+  return _deep_copy_impl(input_node_mapping);
 }
 
 bool AbstractLQPNode::shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {

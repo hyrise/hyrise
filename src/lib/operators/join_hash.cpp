@@ -98,7 +98,7 @@ struct PartitionedElement {
   PartitionedElement(RowID row, Hash hash, T val) : row_id(row), partition_hash(hash), value(val) {}
 
   RowID row_id;
-  Hash partition_hash;
+  Hash partition_hash{0};
   T value;
 };
 

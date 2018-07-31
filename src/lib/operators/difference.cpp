@@ -137,7 +137,7 @@ std::shared_ptr<const Table> Difference::_on_execute() {
   return output;
 }
 
-void Difference::_append_string_representation(std::ostream& row_string_buffer, const AllTypeVariant value) {
+void Difference::_append_string_representation(std::ostream& row_string_buffer, const AllTypeVariant& value) {
   const auto string_value = type_cast<std::string>(value);
   const auto length = static_cast<uint32_t>(string_value.length());
 

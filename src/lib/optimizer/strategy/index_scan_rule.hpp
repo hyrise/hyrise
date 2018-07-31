@@ -31,7 +31,7 @@ class IndexScanRule : public AbstractRule {
   bool apply_to(const std::shared_ptr<AbstractLQPNode>& node) const override;
 
  protected:
-  bool _is_index_scan_applicable(const IndexInfo& indx_info,
+  bool _is_index_scan_applicable(const IndexInfo& index_info,
                                  const std::shared_ptr<PredicateNode>& predicate_node) const;
   inline bool _is_single_column_index(const IndexInfo& index_info) const;
 };

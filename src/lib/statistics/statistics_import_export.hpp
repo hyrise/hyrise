@@ -18,5 +18,5 @@ TableStatistics import_table_statistics(const nlohmann::json& json);
 std::shared_ptr<BaseColumnStatistics> import_column_statistics(const nlohmann::json& json);
 
 nlohmann::json export_table_statistics(const TableStatistics& table_statistics);
-nlohmann::json export_column_statistics(const BaseColumnStatistics& column_statistics);
+nlohmann::json export_column_statistics(const BaseColumnStatistics& base_column_statistics);
 }  // namespace opossum

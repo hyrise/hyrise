@@ -13,19 +13,19 @@
 
 namespace opossum {
 
-IsNullTableScanImpl::IsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID base_colummn_id,
+IsNullTableScanImpl::IsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID base_column_id,
                                          const PredicateCondition& predicate_condition)
-    : BaseSingleColumnTableScanImpl{in_table, base_colummn_id, predicate_condition} {
+    : BaseSingleColumnTableScanImpl{in_table, base_column_id, predicate_condition} {
   DebugAssert(predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull,
               "Invalid PredicateCondition");
 }
 
-void IsNullTableScanImpl::handle_column(const ReferenceColumn& base_colummn,
+void IsNullTableScanImpl::handle_column(const ReferenceColumn& base_column,
                                         std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
-  BaseSingleColumnTableScanImpl::handle_column(base_colummn, base_context);
+  BaseSingleColumnTableScanImpl::handle_column(base_column, base_context);
 
-  const auto pos_list = *base_colummn.pos_list();
+  const auto pos_list = *base_column.pos_list();
 
   // Additionally to the null values in the referencED column, we need to find null values in the referencING column
   if (_predicate_condition == PredicateCondition::IsNull) {
@@ -52,21 +52,21 @@ void IsNullTableScanImpl::handle_column(const BaseValueColumn& base_column,
   DebugAssert(base_column.is_nullable(),
               "Columns that are not nullable should have been caught by edge case handling.");
 
-  auto base_colummn_iterable = NullValueVectorIterable{base_column.null_values()};
+  auto base_column_iterable = NullValueVectorIterable{base_column.null_values()};
 
-  base_colummn_iterable.with_iterators(mapped_chunk_offsets.get(),
-                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
+  base_column_iterable.with_iterators(mapped_chunk_offsets.get(),
+                                      [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
-void IsNullTableScanImpl::handle_column(const BaseDictionaryColumn& base_colummn,
+void IsNullTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
                                         std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 
-  auto base_colummn_iterable = create_iterable_from_attribute_vector(base_colummn);
+  auto base_column_iterable = create_iterable_from_attribute_vector(base_column);
 
-  base_colummn_iterable.with_iterators(mapped_chunk_offsets.get(),
-                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
+  base_column_iterable.with_iterators(mapped_chunk_offsets.get(),
+                                      [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
 void IsNullTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
@@ -74,15 +74,15 @@ void IsNullTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 
-  const auto base_colummn_type = _in_table->column_data_type(_left_column_id);
+  const auto base_column_type = _in_table->column_data_type(_left_column_id);
 
-  resolve_data_type(base_colummn_type, [&](auto type) {
+  resolve_data_type(base_column_type, [&](auto type) {
     using Type = typename decltype(type)::type;
 
     resolve_encoded_column_type<Type>(base_column, [&](const auto& typed_column) {
-      auto base_colummn_iterable = create_iterable_from_column(typed_column);
+      auto base_column_iterable = create_iterable_from_column(typed_column);
 
-      base_colummn_iterable.with_iterators(
+      base_column_iterable.with_iterators(
           mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
     });
   });

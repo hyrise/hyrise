@@ -128,9 +128,9 @@ void expressions_set_parameters(const std::vector<std::shared_ptr<AbstractExpres
  * Traverse the expression(s) for subselects and set the transaction context in them
  */
 void expression_set_transaction_context(const std::shared_ptr<AbstractExpression>& expression,
-                                        std::weak_ptr<TransactionContext> transaction_context);
+                                        const std::weak_ptr<TransactionContext>& transaction_context);
 void expressions_set_transaction_context(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
-                                         std::weak_ptr<TransactionContext> transaction_context);
+                                         const std::weak_ptr<TransactionContext>& transaction_context);
 
 bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>& expression);
 

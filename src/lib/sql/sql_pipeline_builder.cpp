@@ -52,8 +52,8 @@ SQLPipelineStatement SQLPipelineBuilder::create_pipeline_statement(
   auto lqp_translator = _lqp_translator ? _lqp_translator : std::make_shared<LQPTranslator>();
   auto optimizer = _optimizer ? _optimizer : Optimizer::create_default_optimizer();
 
-  return {_sql,      parsed_sql,           _use_mvcc,           _transaction_context, lqp_translator,
-          optimizer, _prepared_statements, _cleanup_temporaries};
+  return {_sql,      std::move(parsed_sql), _use_mvcc,           _transaction_context, lqp_translator,
+          optimizer, _prepared_statements,  _cleanup_temporaries};
 }
 
 }  // namespace opossum
