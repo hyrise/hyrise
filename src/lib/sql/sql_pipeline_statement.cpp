@@ -14,6 +14,7 @@
 #include "sql/sql_query_plan.hpp"
 #include "sql/sql_translator.hpp"
 #include "utils/assert.hpp"
+#include "utils/systemtap.hpp"
 
 namespace opossum {
 
@@ -237,6 +238,7 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
     return _result_table;
   }
 
+  DTRACE_PROBE3(HYRISE, TASKS_PER_STATEMENT, tasks, _sql_string, this);
   CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 
   if (_auto_commit) {
@@ -250,6 +252,15 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
   _result_table = tasks.back()->get_operator()->get_output();
   if (_result_table == nullptr) _query_has_output = false;
 
+  DTRACE_PROBE8(HYRISE, SUMMARY,
+      get_sql_string(),
+      metrics()->translate_time_micros,
+      metrics()->optimize_time_micros,
+      metrics()->compile_time_micros,
+      metrics()->execution_time_micros,
+      metrics()->query_plan_cache_hit,
+      get_tasks().size(),
+      this);
   return _result_table;
 }
 

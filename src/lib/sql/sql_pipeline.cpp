@@ -28,6 +28,7 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
 
   const auto done = std::chrono::high_resolution_clock::now();
   _metrics.parse_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - start);
+  DTRACE_PROBE2(HYRISE, SQL_PARSING, sql, _metrics.parse_time_micros.count());
 
   AssertInput(parse_result.isValid(), SQLPipelineStatement::create_parse_error_message(sql, parse_result));
 
@@ -187,14 +188,7 @@ std::shared_ptr<const Table> SQLPipeline::get_result_table() {
   }
 
   for (auto& pipeline_statement : _sql_pipeline_statements) {
-    DTRACE_PROBE3(HYRISE, QUERY_START, pipeline_statement->get_sql_string(), pipeline_statement->get_tasks().size(),
-    _sql_pipeline_statements);
-
     pipeline_statement->get_result_table();
-
-    DTRACE_PROBE3(HYRISE, QUERY_END, pipeline_statement->get_sql_string(), pipeline_statement->get_tasks().size(),
-    _sql_pipeline_statements);
-
     if (_transaction_context && _transaction_context->aborted()) {
       _failed_pipeline_statement = pipeline_statement;
       return nullptr;

@@ -2,9 +2,9 @@
 
 #include <memory>
 #include <vector>
-#include "utils/systemtap.hpp"
 
 #include "utils/assert.hpp"
+#include "utils/systemtap.hpp"
 #include "worker.hpp"
 
 namespace opossum {
@@ -70,6 +70,7 @@ template <typename TaskType>
 void CurrentScheduler::schedule_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks) {
   DTRACE_PROBE1(HYRISE, SCHEDULE_TASKS, tasks.size());
   for (auto& task : tasks) {
+    DTRACE_PROBE2(HYRISE, TASKS, tasks, task);
     task->schedule();
   }
 }

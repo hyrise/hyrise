@@ -11,6 +11,7 @@
 #include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/print_directed_acyclic_graph.hpp"
+#include "utils/systemtap.hpp"
 #include "utils/timer.hpp"
 
 namespace opossum {
@@ -22,6 +23,7 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
 OperatorType AbstractOperator::type() const { return _type; }
 
 void AbstractOperator::execute() {
+  DTRACE_PROBE1(HYRISE, OPERATOR_STARTED, name());
   DebugAssert(!_input_left || _input_left->get_output(), "Left input has not yet been executed");
   DebugAssert(!_input_right || _input_right->get_output(), "Right input has not yet been executed");
   DebugAssert(!_output, "Operator has already been executed");
@@ -50,6 +52,9 @@ void AbstractOperator::execute() {
   _on_cleanup();
 
   _base_performance_data.walltime = performance_timer.lap();
+  DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name(), _base_performance_data.walltime.count(),
+    _output->row_count(), _output->chunk_count(), this);
+
 }
 
 // returns the result of the operator

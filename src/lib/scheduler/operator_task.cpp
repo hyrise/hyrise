@@ -12,6 +12,7 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/processing_unit.hpp"
 #include "scheduler/worker.hpp"
+#include "utils/systemtap.hpp"
 
 namespace opossum {
 OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op, CleanupTemporaries cleanup_temporaries)
@@ -80,6 +81,7 @@ void OperatorTask::_on_execute() {
         Fail("Trying to execute operators for a transaction that is already committed");
     }
   }
+  DTRACE_PROBE2(HYRISE, OPERATOR_TASKS, _op, this);
 
   _op->execute();
 
