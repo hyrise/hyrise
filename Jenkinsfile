@@ -177,15 +177,15 @@ node {
             Utils.markStageSkippedForConditional("clangDebugCoverage")
           }
         }
-      }, memcheckClangRelease: {
-        stage("valgrind-memcheck-release") {
-          if (env.BRANCH_NAME == 'master' || full_ci) {
-            sh "mkdir ./clang-release-memcheck"
-            sh "valgrind --tool=memcheck --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
-            sh "valgrind --tool=memcheck --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=.valgrind-ignore.txt ./clang-release/hyriseSystemTest clang-release-memcheck"
-          } else {
-            Utils.markStageSkippedForConditional("memcheckClangRelease")
-          }
+      }
+
+      stage("valgrind-memcheck-release") {
+        if (env.BRANCH_NAME == 'master' || full_ci) {
+          sh "mkdir ./clang-release-memcheck"
+          sh "valgrind --tool=memcheck --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=.valgrind-ignore.txt ./clang-release/hyriseTest clang-release-memcheck --gtest_filter=-NUMAMemoryResourceTest.BasicAllocate"
+          sh "valgrind --tool=memcheck --error-exitcode=1 --leak-check=full --gen-suppressions=all --suppressions=.valgrind-ignore.txt ./clang-release/hyriseSystemTest clang-release-memcheck"
+        } else {
+          Utils.markStageSkippedForConditional("memcheckClangRelease")
         }
       }
 
