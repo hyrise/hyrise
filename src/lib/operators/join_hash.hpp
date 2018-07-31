@@ -23,19 +23,22 @@ namespace opossum {
  */
 class JoinHash : public AbstractJoinOperator {
  public:
-  JoinHash(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
-           const JoinMode mode, const ColumnIDPair& column_ids, const PredicateCondition predicate_condition);
+  JoinHash(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
+           const JoinMode mode, const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
+           const size_t radix_bits = 9);
 
   const std::string name() const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  std::shared_ptr<AbstractOperator> _on_deep_copy(
+      const std::shared_ptr<AbstractOperator>& copied_input_left,
+      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
   void _on_cleanup() override;
 
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
+  const size_t _radix_bits;
 
   template <typename LeftType, typename RightType>
   class JoinHashImpl;

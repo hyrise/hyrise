@@ -144,6 +144,16 @@ class Chunk : private Noncopyable {
    */
   size_t estimate_memory_usage() const;
 
+  /**
+   * @return A clone of this Chunk, with the same columns, allocator etc.
+   */
+  std::shared_ptr<Chunk> forward_clone() const;
+
+  /**
+   * @return A clone of this Chunk, with the same allocator etc. but all Columns become materialized ValueColumns
+   */
+  std::shared_ptr<Chunk> materialized_clone() const;
+
  private:
   std::vector<std::shared_ptr<const BaseColumn>> _get_columns_for_ids(const std::vector<ColumnID>& column_ids) const;
 

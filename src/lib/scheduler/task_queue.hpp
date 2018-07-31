@@ -17,7 +17,7 @@ class AbstractTask;
  */
 class TaskQueue {
  public:
-  static constexpr uint32_t NUM_PRIORITY_LEVELS = 3;
+  static constexpr uint32_t NUM_PRIORITY_LEVELS = 4;
 
   explicit TaskQueue(NodeID node_id);
 
@@ -25,12 +25,14 @@ class TaskQueue {
 
   NodeID node_id() const;
 
-  void push(std::shared_ptr<AbstractTask> task, uint32_t priority);
+  void push(const std::shared_ptr<AbstractTask>& task, uint32_t priority);
 
   /**
    * Returns a Tasks that is ready to be executed and removes it from the queue
+   *
+   * @param min_priority defines the minimum priority a tasks must hast to be pulled
    */
-  std::shared_ptr<AbstractTask> pull();
+  std::shared_ptr<AbstractTask> pull(SchedulePriority min_priority = SchedulePriority::Lowest);
 
   /**
    * Returns a Tasks that is ready to be executed and removes it from one of the stealable queues

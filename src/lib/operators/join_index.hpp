@@ -21,23 +21,25 @@ namespace opossum {
    */
 class JoinIndex : public AbstractJoinOperator {
  public:
-  JoinIndex(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
-            const JoinMode mode, const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition scan_type);
+  JoinIndex(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
+            const JoinMode mode, const std::pair<ColumnID, ColumnID>& column_ids,
+            const PredicateCondition predicate_condition);
 
   const std::string name() const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  std::shared_ptr<AbstractOperator> _on_deep_copy(
+      const std::shared_ptr<AbstractOperator>& copied_input_left,
+      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   void _perform_join();
 
   template <typename LeftIterator>
   void _join_two_columns_using_index(LeftIterator left_it, LeftIterator left_end, const ChunkID chunk_id_left,
-                                     const ChunkID chunk_id_right, std::shared_ptr<BaseIndex> index);
+                                     const ChunkID chunk_id_right, const std::shared_ptr<BaseIndex>& index);
 
   template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
   void _join_two_columns_nested_loop(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
@@ -49,7 +51,7 @@ class JoinIndex : public AbstractJoinOperator {
 
   void _create_table_structure();
 
-  void _write_output_columns(ChunkColumns& output_columns, const std::shared_ptr<const Table> input_table,
+  void _write_output_columns(ChunkColumns& output_columns, const std::shared_ptr<const Table>& input_table,
                              std::shared_ptr<PosList> pos_list);
 
   void _on_cleanup() override;

@@ -5,6 +5,7 @@
 
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/maintenance/drop_view.hpp"
+#include "storage/lqp_view.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 
@@ -20,7 +21,10 @@ class DropViewTest : public BaseTest {
 
     sm.add_table("first_table", t1);
 
-    sm.add_view("view_name", StoredTableNode::make("first_table"));
+    const auto view_lqp = StoredTableNode::make("first_table");
+    const auto view = std::make_shared<LQPView>(view_lqp, std::unordered_map<ColumnID, std::string>{});
+
+    sm.add_lqp_view("view_name", view);
   }
 };
 
@@ -30,14 +34,14 @@ TEST_F(DropViewTest, OperatorName) {
   EXPECT_EQ(dv->name(), "DropView");
 }
 
-TEST_F(DropViewTest, Recreate) {
+TEST_F(DropViewTest, DeepCopy) {
   auto dv = std::make_shared<DropView>("view_name");
 
   dv->execute();
   EXPECT_NE(dv->get_output(), nullptr);
 
-  const auto recreated = dv->recreate();
-  EXPECT_EQ(recreated->get_output(), nullptr);
+  const auto copy = dv->deep_copy();
+  EXPECT_EQ(copy->get_output(), nullptr);
 }
 
 TEST_F(DropViewTest, CanDropViews) {

@@ -32,8 +32,8 @@ TEST_F(JitComputeTest, TriggersComputationOfNestedExpression) {
   auto a_expression = std::make_shared<JitExpression>(a_value);
   auto b_expression = std::make_shared<JitExpression>(b_value);
   auto c_expression = std::make_shared<JitExpression>(c_value);
-  auto a_plus_b = std::make_shared<JitExpression>(a_expression, ExpressionType::Addition, b_expression, 3);
-  auto expression = std::make_shared<JitExpression>(a_plus_b, ExpressionType::GreaterThan, c_expression, 4);
+  auto a_plus_b = std::make_shared<JitExpression>(a_expression, JitExpressionType::Addition, b_expression, 3);
+  auto expression = std::make_shared<JitExpression>(a_plus_b, JitExpressionType::GreaterThan, c_expression, 4);
 
   // Construct operator chain
   auto source = std::make_shared<MockOperator>();

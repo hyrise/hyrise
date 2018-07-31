@@ -9,7 +9,6 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/topology.hpp"
 #include "storage/create_iterable_from_column.hpp"
-#include "utils/boost_default_memory_resource.cpp"
 #include "types.hpp"
 #include "utils/numa_memory_resource.hpp"
 
@@ -37,10 +36,7 @@ struct MaterializedNUMAPartition {
   std::vector<std::shared_ptr<MaterializedChunk<T>>> _chunk_columns;
 
   explicit MaterializedNUMAPartition(NodeID node_id, size_t reserve_size)
-      : _node_id{node_id},
-        _alloc{Topology::get().get_memory_resource(node_id)},
-        _chunk_columns(reserve_size) {
-  }
+      : _node_id{node_id}, _alloc{Topology::get().get_memory_resource(node_id)}, _chunk_columns(reserve_size) {}
 
   MaterializedNUMAPartition() {}
 
@@ -100,7 +96,7 @@ class ColumnMaterializerNUMA {
       jobs.push_back(_create_chunk_materialization_job(output, null_rows, chunk_id, input, column_id, numa_node_id));
       // we schedule each job on the same node as the chunk it operates on
       // this drastically minimizes reads to foreign numa nodes
-      jobs.back()->schedule(numa_node_id, SchedulePriority::Unstealable);
+      jobs.back()->schedule(numa_node_id);
     }
 
     CurrentScheduler::wait_for_tasks(jobs);
@@ -117,20 +113,21 @@ class ColumnMaterializerNUMA {
   /**
    * Creates a job to materialize and sort a chunk.
    **/
-  std::shared_ptr<JobTask> _create_chunk_materialization_job(std::unique_ptr<MaterializedNUMAPartitionList<T>>& output,
-                                                             std::unique_ptr<PosList>& null_rows_output,
-                                                             ChunkID chunk_id, std::shared_ptr<const Table> input,
-                                                             ColumnID column_id, NodeID numa_node_id) {
+  std::shared_ptr<AbstractTask> _create_chunk_materialization_job(
+      std::unique_ptr<MaterializedNUMAPartitionList<T>>& output, std::unique_ptr<PosList>& null_rows_output,
+      ChunkID chunk_id, std::shared_ptr<const Table> input, ColumnID column_id, NodeID numa_node_id) {
     // This allocator ensures that materialized values are colocated with the actual values.
     auto alloc = MaterializedValueAllocator<T>{input->get_chunk(chunk_id)->get_allocator()};
 
     const auto column = input->get_chunk(chunk_id)->get_column(column_id);
 
-    return std::make_shared<JobTask>([this, &output, &null_rows_output, column, chunk_id, alloc, numa_node_id] {
-      resolve_column_type<T>(*column, [&](auto& typed_column) {
-        _materialize_column(typed_column, chunk_id, null_rows_output, (*output)[numa_node_id]);
-      });
-    });
+    return std::make_shared<JobTask>(
+        [this, &output, &null_rows_output, column, chunk_id, alloc, numa_node_id] {
+          resolve_column_type<T>(*column, [&](auto& typed_column) {
+            _materialize_column(typed_column, chunk_id, null_rows_output, (*output)[numa_node_id]);
+          });
+        },
+        false);
   }
 
   /**

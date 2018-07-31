@@ -28,7 +28,8 @@ namespace opossum {
  */
 class JobTask : public AbstractTask {
  public:
-  explicit JobTask(const std::function<void()>& fn) : _fn(fn) {}
+  explicit JobTask(const std::function<void()>& fn, bool stealable = true)
+      : AbstractTask(SchedulePriority::JobTask, stealable), _fn(fn) {}
 
  protected:
   void _on_execute() override;

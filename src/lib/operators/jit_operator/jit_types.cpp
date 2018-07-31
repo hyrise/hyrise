@@ -101,6 +101,35 @@ void JitHashmapValue::set_is_null(const bool is_null, const size_t index, JitRun
   context.hashmap.columns[_column_index].set_is_null(index, is_null);
 }
 
+bool jit_expression_is_binary(const JitExpressionType expression_type) {
+  switch (expression_type) {
+    case JitExpressionType::Addition:
+    case JitExpressionType::Subtraction:
+    case JitExpressionType::Multiplication:
+    case JitExpressionType::Division:
+    case JitExpressionType::Modulo:
+    case JitExpressionType::Power:
+    case JitExpressionType::Equals:
+    case JitExpressionType::NotEquals:
+    case JitExpressionType::GreaterThan:
+    case JitExpressionType::GreaterThanEquals:
+    case JitExpressionType::LessThan:
+    case JitExpressionType::LessThanEquals:
+    case JitExpressionType::Like:
+    case JitExpressionType::NotLike:
+    case JitExpressionType::And:
+    case JitExpressionType::Or:
+      return true;
+
+    case JitExpressionType::Column:
+    case JitExpressionType::Between:
+    case JitExpressionType::Not:
+    case JitExpressionType::IsNull:
+    case JitExpressionType::IsNotNull:
+      return false;
+  }
+}
+
 // cleanup
 #undef JIT_VARIANT_VECTOR_GET
 #undef JIT_VARIANT_VECTOR_SET

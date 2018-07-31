@@ -29,11 +29,11 @@ class ImportCsv : public AbstractReadOnlyOperator {
    * @param tablename     Optional. Name of the table to store/look up in the StorageManager.
    * @param meta          Optional. A specific meta config, to override the given .json file.
    */
-  explicit ImportCsv(const std::string& filename, const std::optional<std::string> tablename = std::nullopt,
-                     const std::optional<CsvMeta> csv_meta = std::nullopt);
+  explicit ImportCsv(const std::string& filename, const std::optional<std::string>& tablename = std::nullopt,
+                     const std::optional<CsvMeta>& csv_meta = std::nullopt);
 
-  explicit ImportCsv(const std::string& filename, const std::optional<CsvMeta> csv_meta,
-                     const std::optional<std::string> tablename = std::nullopt);
+  explicit ImportCsv(const std::string& filename, const std::optional<CsvMeta>& csv_meta,
+                     const std::optional<std::string>& tablename = std::nullopt);
 
   const std::string name() const override;
 
@@ -41,9 +41,10 @@ class ImportCsv : public AbstractReadOnlyOperator {
   // Returns the table that was created from the csv file.
   std::shared_ptr<const Table> _on_execute() override;
 
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  std::shared_ptr<AbstractOperator> _on_deep_copy(
+      const std::shared_ptr<AbstractOperator>& copied_input_left,
+      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
  private:
   // Path to the input file

@@ -15,14 +15,17 @@ class JoinIndex;
 
 class JoinNestedLoop : public AbstractJoinOperator {
  public:
-  JoinNestedLoop(const std::shared_ptr<const AbstractOperator> left,
-                 const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
+  JoinNestedLoop(const std::shared_ptr<const AbstractOperator>& left,
+                 const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                  const ColumnIDPair& column_ids, const PredicateCondition predicate_condition);
 
   const std::string name() const override;
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+
+ protected:
+  std::shared_ptr<AbstractOperator> _on_deep_copy(
+      const std::shared_ptr<AbstractOperator>& copied_input_left,
+      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   struct JoinParams {
     PosList& pos_list_left;
@@ -60,8 +63,8 @@ class JoinNestedLoop : public AbstractJoinOperator {
 
   void _create_table_structure();
 
-  void _write_output_chunks(ChunkColumns& columns, const std::shared_ptr<const Table> input_table,
-                            std::shared_ptr<PosList> pos_list);
+  void _write_output_chunks(ChunkColumns& columns, const std::shared_ptr<const Table>& input_table,
+                            const std::shared_ptr<PosList>& pos_list);
 
   void _on_cleanup() override;
 

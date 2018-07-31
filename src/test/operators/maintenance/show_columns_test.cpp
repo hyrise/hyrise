@@ -28,12 +28,12 @@ TEST_F(ShowColumnsTest, OperatorName) {
   EXPECT_EQ(sc->name(), "ShowColumns");
 }
 
-TEST_F(ShowColumnsTest, CanBeRecreated) {
+TEST_F(ShowColumnsTest, CanBeCopied) {
   auto sc = std::make_shared<ShowColumns>("table_name");
 
-  auto recreated = sc->recreate({});
-  ASSERT_NE(nullptr, std::dynamic_pointer_cast<ShowColumns>(recreated));
-  ASSERT_NE(sc, recreated) << "Recreate returned the same object";
+  auto copied = sc->deep_copy();
+  ASSERT_NE(nullptr, std::dynamic_pointer_cast<ShowColumns>(copied));
+  ASSERT_NE(sc, copied) << "Copy returned the same object";
 }
 
 TEST_F(ShowColumnsTest, CanShowColumns) {

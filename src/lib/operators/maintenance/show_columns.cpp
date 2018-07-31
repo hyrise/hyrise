@@ -21,11 +21,13 @@ ShowColumns::ShowColumns(const std::string& table_name)
 
 const std::string ShowColumns::name() const { return "ShowColumns"; }
 
-std::shared_ptr<AbstractOperator> ShowColumns::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+std::shared_ptr<AbstractOperator> ShowColumns::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<ShowColumns>(_table_name);
 }
+
+void ShowColumns::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> ShowColumns::_on_execute() {
   TableColumnDefinitions column_definitions;

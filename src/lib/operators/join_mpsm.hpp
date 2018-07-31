@@ -23,7 +23,7 @@ namespace opossum {
 **/
 class JoinMPSM : public AbstractJoinOperator {
  public:
-  JoinMPSM(const std::shared_ptr<const AbstractOperator> left, const std::shared_ptr<const AbstractOperator> right,
+  JoinMPSM(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
            const JoinMode mode, const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition op);
 
   const std::string name() const override;
@@ -31,9 +31,10 @@ class JoinMPSM : public AbstractJoinOperator {
  protected:
   std::shared_ptr<const Table> _on_execute() override;
   void _on_cleanup() override;
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  std::shared_ptr<AbstractOperator> _on_deep_copy(
+      const std::shared_ptr<AbstractOperator>& copied_input_left,
+      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   template <typename T>
   class JoinMPSMImpl;

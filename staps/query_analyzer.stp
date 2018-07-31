@@ -15,7 +15,7 @@ global operator_name
 global counter = 0
 
 // If debug is enabled, the executed operators will be printed immidiately to the console
-global debug = 1
+global debug = 0
 
 probe begin
 {

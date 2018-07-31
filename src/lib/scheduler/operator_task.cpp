@@ -15,15 +15,16 @@
 #include "utils/systemtap.hpp"
 
 namespace opossum {
-OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op, CleanupTemporaries cleanup_temporaries)
-    : _op(std::move(op)), _cleanup_temporaries(cleanup_temporaries) {}
+OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op, CleanupTemporaries cleanup_temporaries,
+                           SchedulePriority priority, bool stealable)
+    : AbstractTask(priority, stealable), _op(std::move(op)), _cleanup_temporaries(cleanup_temporaries) {}
 
 std::string OperatorTask::description() const {
   return "OperatorTask with id: " + std::to_string(id()) + " for op: " + _op->description();
 }
 
 const std::vector<std::shared_ptr<OperatorTask>> OperatorTask::make_tasks_from_operator(
-    std::shared_ptr<AbstractOperator> op, CleanupTemporaries cleanup_temporaries) {
+    const std::shared_ptr<AbstractOperator>& op, CleanupTemporaries cleanup_temporaries) {
   std::vector<std::shared_ptr<OperatorTask>> tasks;
   std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<OperatorTask>> task_by_op;
   OperatorTask::_add_tasks_from_operator(op, tasks, task_by_op, cleanup_temporaries);
