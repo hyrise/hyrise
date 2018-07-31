@@ -26,9 +26,9 @@ namespace {
 // predicate and then optimized to a Join.
 std::function<bool(const std::shared_ptr<opossum::AbstractLQPNode>&)> contains_cross =
     [](const std::shared_ptr<opossum::AbstractLQPNode>& node) {
-      if (node->type() != opossum::LQPNodeType::Join) return false;
+      if (node->type != opossum::LQPNodeType::Join) return false;
       if (auto join_node = std::dynamic_pointer_cast<opossum::JoinNode>(node)) {
-        return join_node->join_mode() == opossum::JoinMode::Cross;
+        return join_node->join_mode == opossum::JoinMode::Cross;
       }
       return false;
     };
@@ -159,7 +159,7 @@ TEST_F(SQLPipelineStatementTest, ConstructorCombinations) {
   // Simple sanity test for all other constructor options
 
   const auto optimizer = Optimizer::create_default_optimizer();
-  auto prepared_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
+  auto prepared_cache = std::make_shared<PreparedStatementCache>(5);
   auto transaction_context = TransactionManager::get().new_transaction_context();
 
   // No transaction context
@@ -227,7 +227,6 @@ TEST_F(SQLPipelineStatementTest, GetUnoptimizedLQP) {
 
   const auto& lqp = sql_pipeline.get_unoptimized_logical_plan();
 
-  EXPECT_EQ(lqp->output_column_names(), _join_column_names);
   EXPECT_TRUE(contained_in_lqp(lqp, contains_cross));
 }
 
@@ -237,7 +236,6 @@ TEST_F(SQLPipelineStatementTest, GetUnoptimizedLQPTwice) {
   sql_pipeline.get_unoptimized_logical_plan();
   const auto& lqp = sql_pipeline.get_unoptimized_logical_plan();
 
-  EXPECT_EQ(lqp->output_column_names(), _join_column_names);
   EXPECT_TRUE(contained_in_lqp(lqp, contains_cross));
 }
 
@@ -248,7 +246,7 @@ TEST_F(SQLPipelineStatementTest, GetUnoptimizedLQPValidated) {
 
   // We did not need the context yet
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
-  EXPECT_TRUE(lqp->subplan_is_validated());
+  EXPECT_TRUE(lqp_is_validated(lqp));
 }
 
 TEST_F(SQLPipelineStatementTest, GetUnoptimizedLQPNotValidated) {
@@ -258,7 +256,7 @@ TEST_F(SQLPipelineStatementTest, GetUnoptimizedLQPNotValidated) {
 
   // We did not need the context yet
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
-  EXPECT_FALSE(lqp->subplan_is_validated());
+  EXPECT_FALSE(lqp_is_validated(lqp));
 }
 
 TEST_F(SQLPipelineStatementTest, GetOptimizedLQP) {
@@ -266,7 +264,6 @@ TEST_F(SQLPipelineStatementTest, GetOptimizedLQP) {
 
   const auto& lqp = sql_pipeline.get_optimized_logical_plan();
 
-  EXPECT_EQ(lqp->output_column_names(), _join_column_names);
   EXPECT_FALSE(contained_in_lqp(lqp, contains_cross));
 }
 
@@ -276,7 +273,6 @@ TEST_F(SQLPipelineStatementTest, GetOptimizedLQPTwice) {
   sql_pipeline.get_optimized_logical_plan();
   const auto& lqp = sql_pipeline.get_optimized_logical_plan();
 
-  EXPECT_EQ(lqp->output_column_names(), _join_column_names);
   EXPECT_FALSE(contained_in_lqp(lqp, contains_cross));
 }
 
@@ -287,7 +283,7 @@ TEST_F(SQLPipelineStatementTest, GetOptimizedLQPValidated) {
 
   // We did not need the context yet
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
-  EXPECT_TRUE(lqp->subplan_is_validated());
+  EXPECT_TRUE(lqp_is_validated(lqp));
 }
 
 TEST_F(SQLPipelineStatementTest, GetOptimizedLQPNotValidated) {
@@ -297,7 +293,7 @@ TEST_F(SQLPipelineStatementTest, GetOptimizedLQPNotValidated) {
 
   // We did not need the context yet
   EXPECT_EQ(sql_pipeline.transaction_context(), nullptr);
-  EXPECT_FALSE(lqp->subplan_is_validated());
+  EXPECT_FALSE(lqp_is_validated(lqp));
 }
 
 TEST_F(SQLPipelineStatementTest, GetOptimizedLQPDoesNotInfluenceUnoptimizedLQP) {
@@ -391,7 +387,9 @@ TEST_F(SQLPipelineStatementTest, GetTasks) {
 
   const auto& tasks = sql_pipeline.get_tasks();
 
-  EXPECT_EQ(tasks.size(), 3u);
+  //  [0] [Validate]
+  //  \_[1] [StoredTable] Name: 'table_a'
+  EXPECT_EQ(tasks.size(), 2u);
   EXPECT_TRUE(_contains_validate(tasks));
 }
 
@@ -401,7 +399,9 @@ TEST_F(SQLPipelineStatementTest, GetTasksTwice) {
   sql_pipeline.get_tasks();
   const auto& tasks = sql_pipeline.get_tasks();
 
-  EXPECT_EQ(tasks.size(), 3u);
+  //  [0] [Validate]
+  //  \_[1] [StoredTable] Name: 'table_a'
+  EXPECT_EQ(tasks.size(), 2u);
   EXPECT_TRUE(_contains_validate(tasks));
 }
 
@@ -410,7 +410,8 @@ TEST_F(SQLPipelineStatementTest, GetTasksNotValidated) {
 
   const auto& tasks = sql_pipeline.get_tasks();
 
-  EXPECT_EQ(tasks.size(), 2u);
+  // [0] [StoredTable] Name: 'table_a'
+  EXPECT_EQ(tasks.size(), 1u);
   EXPECT_FALSE(_contains_validate(tasks));
 }
 
@@ -450,14 +451,6 @@ TEST_F(SQLPipelineStatementTest, GetResultTableWithScheduler) {
   const auto& table = sql_pipeline.get_result_table();
 
   EXPECT_TABLE_EQ_UNORDERED(table, _join_result);
-}
-
-TEST_F(SQLPipelineStatementTest, GetResultTableBadQueryNoMVCC) {
-  auto sql = "SELECT a + b FROM table_a";
-  auto sql_pipeline = SQLPipelineBuilder{sql}.disable_mvcc().create_pipeline_statement();
-
-  // Make sure this is actually the failed execution and not a logic_error from the transaction management.
-  EXPECT_THROW(sql_pipeline.get_result_table(), std::logic_error);
 }
 
 TEST_F(SQLPipelineStatementTest, GetResultTableNoOutput) {
@@ -521,7 +514,7 @@ TEST_F(SQLPipelineStatementTest, ParseErrorDebugMessage) {
 }
 
 TEST_F(SQLPipelineStatementTest, PreparedStatementPrepare) {
-  auto prepared_statement_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
+  auto prepared_statement_cache = std::make_shared<PreparedStatementCache>(5);
 
   const std::string prepared_statement = "PREPARE x1 FROM 'SELECT * FROM table_a WHERE a = ?'";
   auto sql_pipeline = SQLPipelineBuilder{prepared_statement}
@@ -537,7 +530,7 @@ TEST_F(SQLPipelineStatementTest, PreparedStatementPrepare) {
 }
 
 TEST_F(SQLPipelineStatementTest, PreparedStatementExecute) {
-  auto prepared_statement_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
+  auto prepared_statement_cache = std::make_shared<PreparedStatementCache>(5);
 
   const std::string prepared_statement = "PREPARE x1 FROM 'SELECT * FROM table_a WHERE a = ?'";
   auto prepare_sql_pipeline = SQLPipelineBuilder{prepared_statement}
@@ -560,7 +553,7 @@ TEST_F(SQLPipelineStatementTest, PreparedStatementExecute) {
 }
 
 TEST_F(SQLPipelineStatementTest, PreparedStatementMultiPlaceholderExecute) {
-  auto prepared_statement_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
+  auto prepared_statement_cache = std::make_shared<PreparedStatementCache>(5);
 
   const std::string prepared_statement = "PREPARE x1 FROM 'SELECT * FROM table_a WHERE a = ? OR (a > ? AND b < ?)'";
   auto prepare_sql_pipeline = SQLPipelineBuilder{prepared_statement}
@@ -584,7 +577,7 @@ TEST_F(SQLPipelineStatementTest, PreparedStatementMultiPlaceholderExecute) {
 }
 
 TEST_F(SQLPipelineStatementTest, MultiplePreparedStatementsExecute) {
-  auto prepared_statement_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
+  auto prepared_statement_cache = std::make_shared<PreparedStatementCache>(5);
 
   const std::string prepared_statement1 = "PREPARE x1 FROM 'SELECT * FROM table_a WHERE a = ?'";
   const std::string prepared_statement2 = "PREPARE x2 FROM 'SELECT * FROM table_a WHERE a > ?'";
@@ -660,7 +653,7 @@ TEST_F(SQLPipelineStatementTest, MultiplePreparedStatementsExecute) {
 }
 
 TEST_F(SQLPipelineStatementTest, PreparedInsertStatementExecute) {
-  auto prepared_statement_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
+  auto prepared_statement_cache = std::make_shared<PreparedStatementCache>(5);
 
   const std::string prepared_statement = "PREPARE x1 FROM 'INSERT INTO table_a VALUES (?, ?)'";
   auto prepare_sql_pipeline = SQLPipelineBuilder{prepared_statement}
@@ -683,7 +676,7 @@ TEST_F(SQLPipelineStatementTest, PreparedInsertStatementExecute) {
 }
 
 TEST_F(SQLPipelineStatementTest, PreparedUpdateStatementExecute) {
-  auto prepared_statement_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
+  auto prepared_statement_cache = std::make_shared<PreparedStatementCache>(5);
 
   const std::string prepared_statement = "PREPARE x1 FROM 'UPDATE table_a SET a = ? WHERE a = ?'";
   auto prepare_sql_pipeline = SQLPipelineBuilder{prepared_statement}
@@ -711,7 +704,7 @@ TEST_F(SQLPipelineStatementTest, PreparedUpdateStatementExecute) {
 }
 
 TEST_F(SQLPipelineStatementTest, PreparedDeleteStatementExecute) {
-  auto prepared_statement_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
+  auto prepared_statement_cache = std::make_shared<PreparedStatementCache>(5);
 
   const std::string prepared_statement = "PREPARE x1 FROM 'DELETE FROM table_a WHERE a = ?'";
   auto prepare_sql_pipeline = SQLPipelineBuilder{prepared_statement}
@@ -746,7 +739,7 @@ TEST_F(SQLPipelineStatementTest, CacheQueryPlan) {
   EXPECT_TRUE(cache.has(_select_query_a));
 }
 
-TEST_F(SQLPipelineStatementTest, RecreateSubselectFromCache) {
+TEST_F(SQLPipelineStatementTest, CopySubselectFromCache) {
   const std::string subselect_query = "SELECT * FROM table_int WHERE a = (SELECT MAX(b) FROM table_int)";
 
   auto first_subselect_sql_pipeline = SQLPipelineBuilder{subselect_query}.create_pipeline_statement();

@@ -254,12 +254,6 @@ TYPED_TEST(JoinEquiTest, InnerRefJoinFilteredBig) {
                                              "src/test/tables/joinoperators/int_string_inner_join_filtered.tbl", 1);
 }
 
-TYPED_TEST(JoinEquiTest, SelfJoin) {
-  this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_a,
-                                             ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                                             JoinMode::Self, "src/test/tables/joinoperators/int_self_join.tbl", 1);
-}
-
 TYPED_TEST(JoinEquiTest, JoinOnMixedValueAndDictionaryColumns) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_c_dict, this->_table_wrapper_b,
                                              ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,

@@ -13,8 +13,11 @@
 namespace opossum {
 
 ChunkMigrationTask::ChunkMigrationTask(const std::string& table_name, const std::vector<ChunkID>& chunk_ids,
-                                       int target_node_id)
-    : _table_name(table_name), _target_node_id(target_node_id), _chunk_ids(chunk_ids) {}
+                                       int target_node_id, SchedulePriority priority, bool stealable)
+    : AbstractTask(priority, stealable),
+      _table_name(table_name),
+      _target_node_id(target_node_id),
+      _chunk_ids(chunk_ids) {}
 
 void ChunkMigrationTask::_on_execute() {
   auto table = StorageManager::get().get_table(_table_name);

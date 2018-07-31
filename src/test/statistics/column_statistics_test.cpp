@@ -87,8 +87,8 @@ class ColumnStatisticsTest : public BaseTest {
       const std::vector<T>& values2, const std::vector<float>& expected_selectivities) {
     auto expected_selectivities_itr = expected_selectivities.begin();
     for (const auto& value2 : values2) {
-      auto result_container = column_statistic->estimate_predicate_with_value_placeholder(
-          predicate_condition, ValuePlaceholder(0), AllTypeVariant(value2));
+      auto result_container =
+          column_statistic->estimate_predicate_with_value_placeholder(predicate_condition, AllTypeVariant(value2));
       EXPECT_FLOAT_EQ(result_container.selectivity, *expected_selectivities_itr++);
     }
   }
@@ -196,40 +196,38 @@ TEST_F(ColumnStatisticsTest, BetweenTest) {
 TEST_F(ColumnStatisticsTest, StoredProcedureNotEqualsTest) {
   PredicateCondition predicate_condition = PredicateCondition::NotEquals;
 
-  auto result_container_int =
-      _column_statistics_int->estimate_predicate_with_value_placeholder(predicate_condition, ValuePlaceholder(0));
+  auto result_container_int = _column_statistics_int->estimate_predicate_with_value_placeholder(predicate_condition);
   EXPECT_FLOAT_EQ(result_container_int.selectivity, 5.f / 6.f);
 
   auto result_container_float =
-      _column_statistics_float->estimate_predicate_with_value_placeholder(predicate_condition, ValuePlaceholder(0));
+      _column_statistics_float->estimate_predicate_with_value_placeholder(predicate_condition);
   EXPECT_FLOAT_EQ(result_container_float.selectivity, 5.f / 6.f);
 
   auto result_container_double =
-      _column_statistics_double->estimate_predicate_with_value_placeholder(predicate_condition, ValuePlaceholder(0));
+      _column_statistics_double->estimate_predicate_with_value_placeholder(predicate_condition);
   EXPECT_FLOAT_EQ(result_container_double.selectivity, 5.f / 6.f);
 
   auto result_container_string =
-      _column_statistics_string->estimate_predicate_with_value_placeholder(predicate_condition, ValuePlaceholder(0));
+      _column_statistics_string->estimate_predicate_with_value_placeholder(predicate_condition);
   EXPECT_FLOAT_EQ(result_container_string.selectivity, 5.f / 6.f);
 }
 
 TEST_F(ColumnStatisticsTest, StoredProcedureEqualsTest) {
   PredicateCondition predicate_condition = PredicateCondition::Equals;
 
-  auto result_container_int =
-      _column_statistics_int->estimate_predicate_with_value_placeholder(predicate_condition, ValuePlaceholder(0));
+  auto result_container_int = _column_statistics_int->estimate_predicate_with_value_placeholder(predicate_condition);
   EXPECT_FLOAT_EQ(result_container_int.selectivity, 1.f / 6.f);
 
   auto result_container_float =
-      _column_statistics_float->estimate_predicate_with_value_placeholder(predicate_condition, ValuePlaceholder(0));
+      _column_statistics_float->estimate_predicate_with_value_placeholder(predicate_condition);
   EXPECT_FLOAT_EQ(result_container_float.selectivity, 1.f / 6.f);
 
   auto result_container_double =
-      _column_statistics_double->estimate_predicate_with_value_placeholder(predicate_condition, ValuePlaceholder(0));
+      _column_statistics_double->estimate_predicate_with_value_placeholder(predicate_condition);
   EXPECT_FLOAT_EQ(result_container_double.selectivity, 1.f / 6.f);
 
   auto result_container_string =
-      _column_statistics_string->estimate_predicate_with_value_placeholder(predicate_condition, ValuePlaceholder(0));
+      _column_statistics_string->estimate_predicate_with_value_placeholder(predicate_condition);
   EXPECT_FLOAT_EQ(result_container_string.selectivity, 1.f / 6.f);
 }
 
@@ -237,20 +235,19 @@ TEST_F(ColumnStatisticsTest, StoredProcedureOpenEndedTest) {
   // OpLessThan, OpGreaterThan, OpLessThanEquals, OpGreaterThanEquals are same for stored procedures
   PredicateCondition predicate_condition = PredicateCondition::LessThan;
 
-  auto result_container_int =
-      _column_statistics_int->estimate_predicate_with_value_placeholder(predicate_condition, ValuePlaceholder(0));
+  auto result_container_int = _column_statistics_int->estimate_predicate_with_value_placeholder(predicate_condition);
   EXPECT_FLOAT_EQ(result_container_int.selectivity, 1.f / 3.f);
 
   auto result_container_float =
-      _column_statistics_float->estimate_predicate_with_value_placeholder(predicate_condition, ValuePlaceholder(0));
+      _column_statistics_float->estimate_predicate_with_value_placeholder(predicate_condition);
   EXPECT_FLOAT_EQ(result_container_float.selectivity, 1.f / 3.f);
 
   auto result_container_double =
-      _column_statistics_double->estimate_predicate_with_value_placeholder(predicate_condition, ValuePlaceholder(0));
+      _column_statistics_double->estimate_predicate_with_value_placeholder(predicate_condition);
   EXPECT_FLOAT_EQ(result_container_double.selectivity, 1.f / 3.f);
 
   auto result_container_string =
-      _column_statistics_string->estimate_predicate_with_value_placeholder(predicate_condition, ValuePlaceholder(0));
+      _column_statistics_string->estimate_predicate_with_value_placeholder(predicate_condition);
   EXPECT_FLOAT_EQ(result_container_string.selectivity, 1.f / 3.f);
 }
 

@@ -1,7 +1,9 @@
 #include "gtest/gtest.h"
 
 #include "logical_query_plan/create_view_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
+#include "storage/lqp_view.hpp"
 
 namespace opossum {
 
@@ -9,22 +11,44 @@ class CreateViewNodeTest : public ::testing::Test {
  public:
   void SetUp() override {
     _view_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "a"}}));
-    _create_view_node = std::make_shared<CreateViewNode>("some_view", _view_node);
+    _view = std::make_shared<LQPView>(_view_node, std::unordered_map<ColumnID, std::string>{{ColumnID{0}, {"a"}}});
+    _create_view_node = CreateViewNode::make("some_view", _view);
   }
 
   std::shared_ptr<CreateViewNode> _create_view_node;
+  std::shared_ptr<LQPView> _view;
   std::shared_ptr<MockNode> _view_node;
 };
 
-TEST_F(CreateViewNodeTest, ShallowEquals) {
-  EXPECT_TRUE(_create_view_node->shallow_equals(*_create_view_node));
+TEST_F(CreateViewNodeTest, Description) {
+  EXPECT_EQ(_create_view_node->description(),
+            "[CreateView] Name: 'some_view' (\n"
+            "[0] [MockNode 'Unnamed']\n"
+            ")");
+}
 
-  const auto other_view_node_a = std::make_shared<CreateViewNode>("some_view", _view_node);
-  EXPECT_TRUE(other_view_node_a->shallow_equals(*_create_view_node));
-  EXPECT_TRUE(_create_view_node->shallow_equals(*other_view_node_a));
+TEST_F(CreateViewNodeTest, Equals) {
+  EXPECT_EQ(*_create_view_node, *_create_view_node);
 
-  const auto other_view_node_b = std::make_shared<CreateViewNode>("some_views", _view_node);
-  EXPECT_FALSE(other_view_node_b->shallow_equals(*_create_view_node));
+  const auto same_create_view_node = CreateViewNode::make("some_view", _view);
+  const auto different_create_view_node_a = CreateViewNode::make("some_view2", _view);
+
+  const auto different_view_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "b"}}));
+  const auto different_view =
+      std::make_shared<LQPView>(different_view_node, std::unordered_map<ColumnID, std::string>{{ColumnID{0}, {"b"}}});
+  const auto different_create_view_node_b = CreateViewNode::make("some_view", different_view);
+
+  EXPECT_NE(*different_create_view_node_a, *_create_view_node);
+  EXPECT_NE(*different_create_view_node_b, *_create_view_node);
+}
+
+TEST_F(CreateViewNodeTest, Copy) {
+  const auto same_view_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "a"}}));
+  const auto same_view =
+      std::make_shared<LQPView>(_view_node, std::unordered_map<ColumnID, std::string>{{ColumnID{0}, {"a"}}});
+  const auto same_create_view_node = CreateViewNode::make("some_view", _view);
+
+  EXPECT_EQ(*same_create_view_node, *_create_view_node->deep_copy());
 }
 
 }  // namespace opossum

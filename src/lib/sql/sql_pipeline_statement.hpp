@@ -12,6 +12,8 @@
 
 namespace opossum {
 
+using PreparedStatementCache = SQLQueryCache<SQLQueryPlan>;
+
 // Holds relevant information about the execution of an SQLPipelineStatement.
 struct SQLPipelineStatementMetrics {
   std::chrono::microseconds translate_time_micros{};
@@ -21,8 +23,6 @@ struct SQLPipelineStatementMetrics {
 
   bool query_plan_cache_hit = false;
 };
-
-using PreparedStatementCache = std::shared_ptr<SQLQueryCache<SQLQueryPlan>>;
 
 /**
  * This is the unified interface to handle SQL queries and related operations.
@@ -45,7 +45,8 @@ class SQLPipelineStatement : public Noncopyable {
   SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                        const UseMvcc use_mvcc, const std::shared_ptr<TransactionContext>& transaction_context,
                        const std::shared_ptr<LQPTranslator>& lqp_translator,
-                       const std::shared_ptr<Optimizer>& optimizer, const PreparedStatementCache& prepared_statements,
+                       const std::shared_ptr<Optimizer>& optimizer,
+                       const std::shared_ptr<PreparedStatementCache>& prepared_statements,
                        const CleanupTemporaries cleanup_temporaries);
 
   // Returns the raw SQL string.
@@ -75,9 +76,6 @@ class SQLPipelineStatement : public Noncopyable {
 
   const std::shared_ptr<SQLPipelineStatementMetrics>& metrics() const;
 
-  // Helper function to create a pretty print error message after an invalid SQL parse
-  static std::string create_parse_error_message(const std::string& sql, const hsql::SQLParserResult& result);
-
  private:
   const std::string _sql_string;
   const UseMvcc _use_mvcc;
@@ -105,9 +103,8 @@ class SQLPipelineStatement : public Noncopyable {
 
   std::shared_ptr<SQLPipelineStatementMetrics> _metrics;
 
-  PreparedStatementCache _prepared_statements;
-  // Number of placeholders in prepared statement; default 0 because we assume no prepared statement
-  uint16_t _num_parameters = 0;
+  std::shared_ptr<PreparedStatementCache> _prepared_statements;
+  std::unordered_map<ValuePlaceholderID, ParameterID> _parameter_ids;
 
   // Delete temporary tables
   const CleanupTemporaries _cleanup_temporaries;

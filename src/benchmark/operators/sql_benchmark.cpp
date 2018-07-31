@@ -35,7 +35,7 @@ class SQLBenchmark : public BenchmarkBasicFixture {
     while (st.KeepRunning()) {
       SQLParserResult result;
       SQLParser::parseSQLString(query, &result);
-      auto result_node = SQLTranslator{false}.translate_parse_result(result)[0];
+      auto result_node = SQLTranslator{UseMvcc::No}.translate_parser_result(result)[0];
       LQPTranslator{}.translate_node(result_node);
     }
   }
@@ -53,7 +53,7 @@ class SQLBenchmark : public BenchmarkBasicFixture {
     SQLParserResult result;
     SQLParser::parseSQLString(query, &result);
     while (st.KeepRunning()) {
-      auto result_node = SQLTranslator{false}.translate_parse_result(result)[0];
+      auto result_node = SQLTranslator{UseMvcc::No}.translate_parser_result(result)[0];
       LQPTranslator{}.translate_node(result_node);
     }
   }

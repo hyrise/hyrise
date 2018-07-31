@@ -13,7 +13,7 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/column_visitable.hpp"
+#include "storage/abstract_column_visitor.hpp"
 #include "storage/create_iterable_from_column.hpp"
 #include "type_cast.hpp"
 #include "type_comparison.hpp"
@@ -35,12 +35,13 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
 
 const std::string JoinHash::name() const { return "JoinHash"; }
 
-std::shared_ptr<AbstractOperator> JoinHash::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<JoinHash>(recreated_input_left, recreated_input_right, _mode, _column_ids,
-                                    _predicate_condition);
+std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<JoinHash>(copied_input_left, copied_input_right, _mode, _column_ids, _predicate_condition);
 }
+
+void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> JoinHash::_on_execute() {
   std::shared_ptr<const AbstractOperator> build_operator;
@@ -225,6 +226,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
       auto& histogram = static_cast<std::vector<size_t>&>(*histograms[chunk_id]);
 
       auto materialized_chunk = std::vector<std::pair<RowID, T>>();
+      materialized_chunk.reserve(column->size());  // resize + operator[]== would be slower here
 
       // Materialize the chunk
       resolve_column_type<T>(*column, [&, chunk_id, keep_nulls](auto& typed_column) {
@@ -431,6 +433,9 @@ void probe(const RadixContainer<RightType>& radix_container,
           Hence we are going to write NULL values for each row.
           */
 
+        pos_list_left_local.reserve(partition_end - partition_begin);
+        pos_list_right_local.reserve(partition_end - partition_begin);
+
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
           auto& row = partition[partition_offset];
           pos_list_left_local.emplace_back(NULL_ROW_ID);
@@ -492,6 +497,7 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
         }
       } else if (mode == JoinMode::Anti) {
         // no hashtable on other side, but we are in Anti mode
+        pos_list_local.reserve(partition_end - partition_begin);
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
           auto& row = partition[partition_offset];
           pos_list_local.emplace_back(row.row_id);

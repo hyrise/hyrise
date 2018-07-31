@@ -137,10 +137,4 @@ TYPED_TEST(JoinNullTest, RightJoinWithNullAsInnerDict) {
       PredicateCondition::Equals, JoinMode::Right, "src/test/tables/joinoperators/int_right_join_null_inner.tbl", 1);
 }
 
-TYPED_TEST(JoinNullTest, SelfJoinWithNullDict) {
-  this->template test_join_output<TypeParam>(
-      this->_table_wrapper_a_null_dict, this->_table_wrapper_a_null_dict, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-      PredicateCondition::Equals, JoinMode::Self, "src/test/tables/joinoperators/int_float_with_null_self_join.tbl", 1);
-}
-
 }  // namespace opossum

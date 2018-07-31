@@ -221,9 +221,10 @@ class RadixClusterSortNUMA {
               (*output_cluster)[insert_position] = entry;
               ++insert_position;
             }
-          });
+          },
+          true);
       cluster_jobs.push_back(job);
-      job->schedule(node_id, SchedulePriority::Unstealable);
+      job->schedule(node_id);
     }
 
     CurrentScheduler::wait_for_tasks(cluster_jobs);
@@ -231,7 +232,7 @@ class RadixClusterSortNUMA {
     DebugAssert(output_table._chunk_columns.size() == _cluster_count,
                 "Error in clustering: Number of output chunk columns does not match the number of clusters.")
 
-    return output_table;
+        return output_table;
   }
 
   /**
@@ -250,13 +251,15 @@ class RadixClusterSortNUMA {
     for (NodeID node_id{0}; node_id < _cluster_count; node_id++) {
       DebugAssert(node_id < input_chunks->size(), "Node ID out of range. Node ID: " + std::to_string(node_id) +
                                                       " Cluster count: " + std::to_string(_cluster_count));
-      auto job = std::make_shared<JobTask>([&output, &input_chunks, node_id, radix_bitmask, this]() {
-        (*output)[node_id] = _cluster((*input_chunks)[node_id],
-                                      [=](const T& value) { return get_radix<T>(value, radix_bitmask); }, node_id);
-      });
+      auto job = std::make_shared<JobTask>(
+          [&output, &input_chunks, node_id, radix_bitmask, this]() {
+            (*output)[node_id] = _cluster((*input_chunks)[node_id],
+                                          [=](const T& value) { return get_radix<T>(value, radix_bitmask); }, node_id);
+          },
+          true);
 
       cluster_jobs.push_back(job);
-      job->schedule(node_id, SchedulePriority::Unstealable);
+      job->schedule(node_id);
     }
 
     CurrentScheduler::wait_for_tasks(cluster_jobs);
@@ -285,24 +288,26 @@ class RadixClusterSortNUMA {
     auto repartition_jobs = std::vector<std::shared_ptr<AbstractTask>>();
 
     for (NodeID numa_node{0}; numa_node < _cluster_count; ++numa_node) {
-      auto job = std::make_shared<JobTask>([this, numa_node, &private_partitions, &homogenous_partitions]() {
-        homogenous_partitions->emplace_back(MaterializedNUMAPartition<T>(numa_node, 1));
+      auto job = std::make_shared<JobTask>(
+          [this, numa_node, &private_partitions, &homogenous_partitions]() {
+            homogenous_partitions->emplace_back(MaterializedNUMAPartition<T>(numa_node, 1));
 
-        auto& homogenous_partition = (*homogenous_partitions)[numa_node];
+            auto& homogenous_partition = (*homogenous_partitions)[numa_node];
 
-        auto chunk_column = std::make_shared<MaterializedChunk<T>>();
-        chunk_column->reserve(_cluster_count);
-        homogenous_partition._chunk_columns[0] = chunk_column;
+            auto chunk_column = std::make_shared<MaterializedChunk<T>>();
+            chunk_column->reserve(_cluster_count);
+            homogenous_partition._chunk_columns[0] = chunk_column;
 
-        for (const auto& partition : (*private_partitions)) {
-          const auto& src = partition._chunk_columns[numa_node];
+            for (const auto& partition : (*private_partitions)) {
+              const auto& src = partition._chunk_columns[numa_node];
 
-          std::copy(src->begin(), src->end(), std::back_inserter(*chunk_column));
-        }
-      });
+              std::copy(src->begin(), src->end(), std::back_inserter(*chunk_column));
+            }
+          },
+          true);
 
       repartition_jobs.push_back(job);
-      job->schedule(numa_node, SchedulePriority::Unstealable);
+      job->schedule(numa_node);
     }
 
     CurrentScheduler::wait_for_tasks(repartition_jobs);
@@ -318,12 +323,15 @@ class RadixClusterSortNUMA {
 
     for (auto& partition : (*partitions)) {
       for (auto cluster : partition._chunk_columns) {
-        auto job = std::make_shared<JobTask>([cluster]() {
-          std::sort(cluster->begin(), cluster->end(), [](auto& left, auto& right) { return left.value < right.value; });
-        });
+        auto job = std::make_shared<JobTask>(
+            [cluster]() {
+              std::sort(cluster->begin(), cluster->end(),
+                        [](auto& left, auto& right) { return left.value < right.value; });
+            },
+            true);
 
         sort_jobs.push_back(job);
-        job->schedule(partition._node_id, SchedulePriority::Unstealable);
+        job->schedule(partition._node_id);
       }
     }
 

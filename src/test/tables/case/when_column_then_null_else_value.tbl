@@ -1,0 +1,6 @@
+a|b|c|d|e|case_expr
+int|int|int|float|int|int_null
+1|41|42|4.4|0|null
+0|45|46|4.8|1|143
+0|51|52|5.4|0|143
+1|55|56|5.8|1|null

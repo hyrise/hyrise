@@ -61,8 +61,8 @@ TEST_F(SQLQueryPlanCacheTest, SQLQueryPlanCacheTest) {
 
   // Retrieve and execute the cached plan.
   const SQLQueryPlan cached_plan = cache.get(Q1);
-  auto task_list1 = cached_plan.recreate().create_tasks();
-  auto task_list2 = cached_plan.recreate().create_tasks();
+  auto task_list1 = cached_plan.deep_copy().create_tasks();
+  auto task_list2 = cached_plan.deep_copy().create_tasks();
 
   for (auto task : task_list1) task->execute();
   for (auto task : task_list2) task->execute();

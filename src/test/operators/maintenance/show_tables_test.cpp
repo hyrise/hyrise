@@ -19,12 +19,12 @@ TEST_F(ShowTablesTest, OperatorName) {
   EXPECT_EQ(st->name(), "ShowTables");
 }
 
-TEST_F(ShowTablesTest, CanBeRecreated) {
+TEST_F(ShowTablesTest, CanBeCopied) {
   auto st = std::make_shared<ShowTables>();
 
-  auto recreated = st->recreate({});
-  ASSERT_NE(nullptr, std::dynamic_pointer_cast<ShowTables>(recreated));
-  ASSERT_NE(st, recreated) << "Recreate returned the same object";
+  auto copy = st->deep_copy();
+  ASSERT_NE(nullptr, std::dynamic_pointer_cast<ShowTables>(copy));
+  ASSERT_NE(st, copy) << "Copy returned the same object";
 }
 
 TEST_F(ShowTablesTest, CanShowTables) {

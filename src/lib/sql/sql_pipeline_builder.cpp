@@ -20,7 +20,7 @@ SQLPipelineBuilder& SQLPipelineBuilder::with_optimizer(const std::shared_ptr<Opt
 }
 
 SQLPipelineBuilder& SQLPipelineBuilder::with_prepared_statement_cache(
-    const PreparedStatementCache& prepared_statements) {
+    const std::shared_ptr<PreparedStatementCache>& prepared_statements) {
   _prepared_statements = prepared_statements;
   return *this;
 }

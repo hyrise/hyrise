@@ -20,8 +20,6 @@ class RuleBatch final {
 
   void add_rule(const std::shared_ptr<AbstractRule>& rule);
 
-  bool apply_rules_to(const std::shared_ptr<AbstractLQPNode>& root_node) const;
-
  private:
   const RuleBatchExecutionPolicy _execution_policy;
   std::vector<std::shared_ptr<AbstractRule>> _rules;
