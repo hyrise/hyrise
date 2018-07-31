@@ -1,2 +1,7 @@
 # There are multiple data races in libtbb (probably false positives)
 race:^tbb*
+
+# "libstdc++ is not instrumented, so tsan misses atomic operations related to shared_ptr"
+# https://groups.google.com/forum/#!topic/thread-sanitizer/vz_s-t226Vg
+race:^std::__1::shared_ptr*
+race:^std::__1::weak_ptr*

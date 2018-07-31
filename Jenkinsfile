@@ -43,6 +43,24 @@ node {
         full_ci = sh(script: "./scripts/current_branch_has_pull_request_label.py FullCI", returnStdout: true).trim() == "true"
       }
 
+      parallel clangDebug: {
+        stage("clang-debug") {
+          sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+          sh "./clang-debug/hyriseTest clang-debug"
+        }
+      }, gccDebug: {
+        stage("gcc-debug") {
+          sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
+          sh "./gcc-debug/hyriseTest gcc-debug"
+        }
+      }, lint: {
+        stage("Linting") {
+          sh '''
+            scripts/lint.sh
+          '''
+        }
+      }
+
       parallel clangRelease: {
         stage("clang-release") {
           if (env.BRANCH_NAME == 'master' || full_ci) {
@@ -53,21 +71,14 @@ node {
             Utils.markStageSkippedForConditional("clangRelease")
           }
         }
-      }, clangDebugBuildOnly: {
-        stage("clang-debug") {
-          sh "export CCACHE_BASEDIR=`pwd`; cd clang-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-        }
-      }, lint: {
-        stage("Linting") {
-          sh '''
-            scripts/lint.sh
-          '''
-        }
-      }
-
-      parallel clangDebugRun: {
-        stage("clang-debug:test") {
-          sh "./clang-debug/hyriseSystemTest clang-debug"
+      }, debugSystemTests: {
+        stage("clang-debug:system-test") {
+          if (env.BRANCH_NAME == 'master' || full_ci) {
+            sh "./clang-debug/hyriseSystemTest clang-debug"
+            sh "./gcc-debug/hyriseSystemTest gcc-debug"
+          } else {
+            Utils.markStageSkippedForConditional("debugSystemTests")
+          }
         }
       }, clangDebugRunShuffled: {
         stage("clang-debug:test-shuffle") {
