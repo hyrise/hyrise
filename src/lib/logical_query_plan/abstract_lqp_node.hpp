@@ -102,11 +102,11 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /** @} */
 
   /**
-   * @param extern_node_mapping     if the LQP contains external expressions, a mapping for the nodes used by them needs
-   *                                to be provided
-   * @return                        A deep copy of the LQP this Node is the root of
+   * @param input_node_mapping     if the LQP contains external expressions, a mapping for the nodes used by them needs
+   *                               to be provided
+   * @return                       A deep copy of the LQP this Node is the root of
    */
-  std::shared_ptr<AbstractLQPNode> deep_copy(LQPNodeMapping extern_node_mapping = {}) const;
+  std::shared_ptr<AbstractLQPNode> deep_copy(LQPNodeMapping input_node_mapping = {}) const;
 
   /**
    * Compare this node with another, without comparing inputs.
