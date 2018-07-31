@@ -177,14 +177,13 @@ set(
     operators/index_scan.hpp
     operators/insert.cpp
     operators/insert.hpp
-#    operators/jit_operator/jit_operations.hpp
-#    operators/jit_operator/jit_types.cpp
-#    operators/jit_operator/jit_types.hpp
     operators/join_hash.cpp
     operators/join_hash/hash_traits.hpp
     operators/join_hash.hpp
     operators/join_index.cpp
     operators/join_index.hpp
+    operators/join_mpsm/column_materializer_numa.hpp
+    operators/join_mpsm/radix_cluster_sort_numa.hpp
     operators/join_mpsm.cpp
     operators/join_mpsm.hpp
     operators/join_nested_loop.cpp
@@ -496,6 +495,7 @@ set(
     utils/format_bytes.hpp
     utils/format_duration.cpp
     utils/format_duration.hpp
+    utils/invalid_input_exception.hpp
     utils/load_table.cpp
     utils/load_table.hpp
     utils/murmur_hash.cpp
