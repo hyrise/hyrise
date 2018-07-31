@@ -16,7 +16,8 @@ class AbstractOperator;
 class OperatorTask : public AbstractTask {
  public:
   // We don't like abbreviations, but "operator" is a keyword
-  OperatorTask(std::shared_ptr<AbstractOperator> op, CleanupTemporaries cleanup_temporaries);
+  OperatorTask(std::shared_ptr<AbstractOperator> op, CleanupTemporaries cleanup_temporaries,
+               SchedulePriority priority = SchedulePriority::Default, bool stealable = true);
 
   /**
    * Create tasks recursively from result operator and set task dependencies automatically.

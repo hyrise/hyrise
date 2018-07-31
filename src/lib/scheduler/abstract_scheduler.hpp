@@ -28,7 +28,7 @@ class AbstractScheduler {
   virtual const std::vector<std::shared_ptr<TaskQueue>>& queues() const = 0;
 
   virtual void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
-                        SchedulePriority priority = SchedulePriority::Normal) = 0;
+                        SchedulePriority priority = SchedulePriority::Default) = 0;
 };
 
 }  // namespace opossum
