@@ -383,7 +383,6 @@ _CPP_HEADERS = frozenset([
     'unordered_set',
     'utility',
     'valarray',
-    'variant',
     'vector',
     # 17.6.1.2 C++ headers for C library facilities
     'cassert',

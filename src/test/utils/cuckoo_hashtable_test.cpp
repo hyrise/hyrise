@@ -25,16 +25,16 @@ TEST_F(CuckooHashtableTest, StackRowIDs) {
   hashtable->put(5, RowID{ChunkID{0}, 12});
   auto row_ids = hashtable->get(5);
   EXPECT_TRUE(row_ids);
-  EXPECT_TRUE(std::holds_alternative<RowID>(row_ids->get()));
-  EXPECT_EQ(std::get<RowID>(row_ids->get()), (RowID{ChunkID{0}, 12}));
+  EXPECT_EQ(row_ids->get().type(), typeid(RowID));
+  EXPECT_EQ(boost::get<RowID>(row_ids->get()), (RowID{ChunkID{0}, 12}));
 
   hashtable->put(5, RowID{ChunkID{0}, 13});
   row_ids = hashtable->get(5);
   EXPECT_TRUE(row_ids);
-  EXPECT_TRUE(std::holds_alternative<PosList>(row_ids->get()));
-  EXPECT_EQ(std::get<PosList>(row_ids->get()).size(), 2u);
-  EXPECT_EQ(std::get<PosList>(row_ids->get())[0], (RowID{ChunkID{0}, 12}));
-  EXPECT_EQ(std::get<PosList>(row_ids->get())[0], (RowID{ChunkID{0}, 13}));
+  EXPECT_EQ(row_ids->get().type(), typeid(PosList));
+  EXPECT_EQ(boost::get<PosList>(row_ids->get()).size(), 2u);
+  EXPECT_EQ(boost::get<PosList>(row_ids->get())[0], (RowID{ChunkID{0}, 12}));
+  EXPECT_EQ(boost::get<PosList>(row_ids->get())[1], (RowID{ChunkID{0}, 13}));
 }
 
 /*

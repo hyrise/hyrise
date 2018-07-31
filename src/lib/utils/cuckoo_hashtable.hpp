@@ -1,9 +1,9 @@
 #pragma once
 
+#include <boost/variant.hpp>
 #include <memory>
 #include <string>
 #include <utility>
-#include <variant>  // NOLINT
 #include <vector>
 
 #include "murmur_hash.hpp"
@@ -44,11 +44,11 @@ class HashTable : private Noncopyable {
       auto position = hash<T>(i, value);
       auto& element = _hashtables[i][position];
       if (element && value_equal(element->value, value)) {
-        if (std::holds_alternative<RowID>(element->row_ids)) {
+        if (element->row_ids.type() == typeid(RowID)) {
           // Previously, there was only one row id stored for this value. Convert the entry to a multi-row-id one.
-          element->row_ids = PosList{std::get<RowID>(element->row_ids), row_id};
+          element->row_ids = PosList{boost::get<RowID>(element->row_ids), row_id};
         } else {
-          std::get<PosList>(element->row_ids).push_back(row_id);
+          boost::get<PosList>(element->row_ids).push_back(row_id);
         }
         return;
       }
@@ -62,7 +62,7 @@ class HashTable : private Noncopyable {
   All the matching RowIDs are returned in row_ids.
   */
   template <typename S>
-  std::optional<std::reference_wrapper<const std::variant<RowID, PosList>>> get(S value) const {
+  std::optional<std::reference_wrapper<const boost::variant<RowID, PosList>>> get(S value) const {
     for (size_t i = 0; i < NUMBER_OF_HASH_FUNCTIONS; i++) {
       auto position = hash<S>(i, value);
       const auto& element = _hashtables[i][position];
@@ -85,7 +85,7 @@ class HashTable : private Noncopyable {
     // In many cases, we only have a single entry per value. For TPC-H, only 5% would call
     // `PosList::push_back`. By having this variant, we can save us the cost of allocating
     // heap storage for a single value.
-    std::variant<RowID, PosList> row_ids;
+    boost::variant<RowID, PosList> row_ids;
   };
 
   /*
