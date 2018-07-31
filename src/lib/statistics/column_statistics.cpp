@@ -9,6 +9,15 @@
 namespace opossum {
 
 template <typename ColumnDataType>
+ColumnStatistics<ColumnDataType> ColumnStatistics<ColumnDataType>::dummy() {
+  if constexpr (std::is_same_v<ColumnDataType, std::string>) {
+    return ColumnStatistics{1.0f, 1.0f, {}, {}};
+  } else {
+    return ColumnStatistics{1.0f, 1.0f, {0}, {0}};
+  }
+}
+
+template <typename ColumnDataType>
 ColumnStatistics<ColumnDataType>::ColumnStatistics(const float null_value_ratio, const float distinct_count,
                                                    const ColumnDataType min, const ColumnDataType max)
     : BaseColumnStatistics(data_type_from_type<ColumnDataType>(), null_value_ratio, distinct_count),
@@ -111,8 +120,7 @@ FilterByValueEstimate ColumnStatistics<std::string>::estimate_predicate_with_val
 
 template <typename ColumnDataType>
 FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_value_placeholder(
-    const PredicateCondition predicate_condition, const ValuePlaceholder& value,
-    const std::optional<AllTypeVariant>& value2) const {
+    const PredicateCondition predicate_condition, const std::optional<AllTypeVariant>& value2) const {
   switch (predicate_condition) {
     // Simply assume the value will be in (_min, _max) and pick _min as the representative
     case PredicateCondition::Equals:
@@ -207,7 +215,10 @@ FilterByColumnComparisonEstimate ColumnStatistics<ColumnDataType>::estimate_pred
    *  = 29 / 40 = 72.5 % // NOLINT
    */
 
-  Assert(_data_type == abstract_right_column_statistics.data_type(), "Cannot compare columns of different type");
+  // Cannot compare columns of different type
+  if (_data_type != abstract_right_column_statistics.data_type()) {
+    return {1.0f, without_null_values(), abstract_right_column_statistics.without_null_values()};
+  }
 
   const auto& right_column_statistics =
       static_cast<const ColumnStatistics<ColumnDataType>&>(abstract_right_column_statistics);
@@ -430,7 +441,11 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_equals_with_val
     new_distinct_count = 0.f;
   }
   auto column_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>(0.0f, new_distinct_count, value, value);
-  return {non_null_value_ratio() * new_distinct_count / distinct_count(), column_statistics};
+  if (distinct_count() == 0.0f) {
+    return {0.0f, column_statistics};
+  } else {
+    return {non_null_value_ratio() * new_distinct_count / distinct_count(), column_statistics};
+  }
 }
 
 template <typename ColumnDataType>
@@ -441,7 +456,11 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_not_equals_with
     return {non_null_value_ratio(), without_null_values()};
   }
   auto column_statistics = std::make_shared<ColumnStatistics<ColumnDataType>>(0.0f, distinct_count() - 1, _min, _max);
-  return {non_null_value_ratio() * (1 - 1.f / distinct_count()), column_statistics};
+  if (distinct_count() == 0.0f) {
+    return {0.0f, column_statistics};
+  } else {
+    return {non_null_value_ratio() * (1 - 1.f / distinct_count()), column_statistics};
+  }
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(ColumnStatistics);

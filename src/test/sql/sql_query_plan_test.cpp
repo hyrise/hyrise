@@ -40,7 +40,7 @@ TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneTest) {
   EXPECT_EQ("GetTable", tasks[0]->get_operator()->name());
   EXPECT_EQ("Projection", tasks[1]->get_operator()->name());
 
-  const auto plan2 = plan1->recreate();
+  const auto plan2 = plan1->deep_copy();
   auto cloned_tasks = plan2.create_tasks();
   ASSERT_EQ(2u, cloned_tasks.size());
   EXPECT_EQ("GetTable", cloned_tasks[0]->get_operator()->name());
@@ -75,12 +75,12 @@ TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneWithSchedulerTest) {
   Topology::use_fake_numa_topology(8, 4);
   CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
 
-  auto cloned_tasks = tmpl->recreate().create_tasks();
+  auto cloned_tasks = tmpl->deep_copy().create_tasks();
   for (auto task : cloned_tasks) {
     task->schedule();
   }
 
-  auto cloned_tasks2 = tmpl->recreate().create_tasks();
+  auto cloned_tasks2 = tmpl->deep_copy().create_tasks();
   for (auto task : cloned_tasks2) {
     task->schedule();
   }

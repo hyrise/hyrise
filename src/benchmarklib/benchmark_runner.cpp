@@ -149,7 +149,6 @@ void BenchmarkRunner::_execute_query(const NamedQuery& named_query) {
   if (_config.enable_visualization) {
     const auto query_plans_iter = _query_plans.find(name);
     if (query_plans_iter == _query_plans.end()) {
-      Assert(pipeline.get_query_plans().size() == 1, "Expected exactly one SQLQueryPlan");
       QueryPlans plans{pipeline.get_optimized_logical_plans(), pipeline.get_query_plans()};
       _query_plans.emplace(name, plans);
     }

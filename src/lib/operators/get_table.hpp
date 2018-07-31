@@ -21,9 +21,10 @@ class GetTable : public AbstractReadOnlyOperator {
 
   void set_excluded_chunk_ids(const std::vector<ChunkID>& excluded_chunk_ids);
 
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  std::shared_ptr<AbstractOperator> _on_deep_copy(
+      const std::shared_ptr<AbstractOperator>& copied_input_left,
+      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;

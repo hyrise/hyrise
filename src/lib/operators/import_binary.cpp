@@ -96,11 +96,13 @@ std::shared_ptr<const Table> ImportBinary::_on_execute() {
   return table;
 }
 
-std::shared_ptr<AbstractOperator> ImportBinary::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
+std::shared_ptr<AbstractOperator> ImportBinary::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
   return std::make_shared<ImportBinary>(_filename, _tablename);
 }
+
+void ImportBinary::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::pair<std::shared_ptr<Table>, ChunkID> ImportBinary::_read_header(std::ifstream& file) {
   const auto chunk_size = _read_value<ChunkOffset>(file);

@@ -5,73 +5,43 @@
 #include <vector>
 
 #include "constant_mappings.hpp"
+#include "expression/expression_utils.hpp"
 #include "types.hpp"
+#include "utils/assert.hpp"
 
 namespace opossum {
 
-OrderByDefinition::OrderByDefinition(const LQPColumnReference& column_reference, const OrderByMode order_by_mode)
-    : column_reference(column_reference), order_by_mode(order_by_mode) {}
-
-SortNode::SortNode(const OrderByDefinitions& order_by_definitions)
-    : AbstractLQPNode(LQPNodeType::Sort), _order_by_definitions(order_by_definitions) {}
-
-std::shared_ptr<AbstractLQPNode> SortNode::_deep_copy_impl(
-    const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-    const std::shared_ptr<AbstractLQPNode>& copied_right_input) const {
-  OrderByDefinitions order_by_definitions;
-  order_by_definitions.reserve(_order_by_definitions.size());
-
-  for (const auto& order_by_definition : _order_by_definitions) {
-    const auto column_reference =
-        adapt_column_reference_to_different_lqp(order_by_definition.column_reference, left_input(), copied_left_input);
-    order_by_definitions.emplace_back(column_reference, order_by_definition.order_by_mode);
-  }
-
-  return SortNode::make(order_by_definitions);
+SortNode::SortNode(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
+                   const std::vector<OrderByMode>& order_by_modes)
+    : AbstractLQPNode(LQPNodeType::Sort), expressions(expressions), order_by_modes(order_by_modes) {
+  Assert(expressions.size() == order_by_modes.size(), "Expected as many Expressions as OrderByModes");
 }
 
 std::string SortNode::description() const {
-  std::ostringstream s;
+  std::stringstream stream;
 
-  s << "[Sort] ";
+  stream << "[Sort] ";
 
-  auto stream_aggregate = [&](const OrderByDefinition& definition) {
-    s << definition.column_reference.description();
-    s << " (" << order_by_mode_to_string.at(definition.order_by_mode) + ")";
-  };
+  for (auto expression_idx = size_t{0}; expression_idx < expressions.size(); ++expression_idx) {
+    stream << expressions[expression_idx]->as_column_name() << " ";
+    stream << "(" << order_by_mode_to_string.at(order_by_modes[expression_idx]) << ")";
 
-  auto it = _order_by_definitions.begin();
-  if (it != _order_by_definitions.end()) {
-    stream_aggregate(*it);
-    ++it;
+    if (expression_idx + 1 < expressions.size()) stream << ", ";
   }
-
-  for (; it != _order_by_definitions.end(); ++it) {
-    s << ", ";
-    stream_aggregate(*it);
-  }
-
-  return s.str();
+  return stream.str();
 }
 
-const OrderByDefinitions& SortNode::order_by_definitions() const { return _order_by_definitions; }
+std::vector<std::shared_ptr<AbstractExpression>> SortNode::node_expressions() const { return expressions; }
 
-bool SortNode::shallow_equals(const AbstractLQPNode& rhs) const {
-  Assert(rhs.type() == type(), "Can only compare nodes of the same type()");
+std::shared_ptr<AbstractLQPNode> SortNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
+  return SortNode::make(expressions_copy_and_adapt_to_different_lqp(expressions, node_mapping), order_by_modes);
+}
+
+bool SortNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& sort_node = static_cast<const SortNode&>(rhs);
 
-  if (_order_by_definitions.size() != sort_node._order_by_definitions.size()) return false;
-
-  for (size_t definition_idx = 0; definition_idx < sort_node._order_by_definitions.size(); ++definition_idx) {
-    if (_order_by_definitions[definition_idx].order_by_mode !=
-        sort_node._order_by_definitions[definition_idx].order_by_mode)
-      return false;
-    if (!_equals(*this, _order_by_definitions[definition_idx].column_reference, sort_node,
-                 sort_node._order_by_definitions[definition_idx].column_reference))
-      return false;
-  }
-
-  return true;
+  return expressions_equal_to_expressions_in_different_lqp(expressions, sort_node.expressions, node_mapping) &&
+         order_by_modes == sort_node.order_by_modes;
 }
 
 }  // namespace opossum

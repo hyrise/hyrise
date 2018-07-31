@@ -40,6 +40,7 @@ STRONG_TYPEDEF(uint16_t, ColumnID);
 STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
 STRONG_TYPEDEF(uint32_t, NodeID);
 STRONG_TYPEDEF(uint32_t, CpuID);
+STRONG_TYPEDEF(uint16_t, ValuePlaceholderID);
 
 namespace opossum {
 
@@ -74,6 +75,10 @@ class pmr_concurrent_vector : public tbb::concurrent_vector<T> {
       : tbb::concurrent_vector<T>(other), _alloc(alloc) {}
   pmr_concurrent_vector(std::vector<T>& values, PolymorphicAllocator<T> alloc = {})  // NOLINT
       : tbb::concurrent_vector<T>(values.begin(), values.end()), _alloc(alloc) {}
+
+  template <class I>
+  pmr_concurrent_vector(I first, I last, PolymorphicAllocator<T> alloc = {})
+      : tbb::concurrent_vector<T>(first, last), _alloc(alloc) {}
 
   const PolymorphicAllocator<T>& get_allocator() const { return _alloc; }
 
@@ -158,27 +163,6 @@ enum class SchedulePriority {
                 // that wait for JobTasks to do the actual work do not block the execution.
 };
 
-// Part of AllParameterVariant to reference parameters that will be replaced later.
-// When stored in an operator, the operator's recreate method can contain functionality
-// that will replace a ValuePlaceholder with an explicit value from a given list of arguments
-class ValuePlaceholder {
- public:
-  explicit ValuePlaceholder(uint16_t index) : _index(index) {}
-
-  uint16_t index() const { return _index; }
-
-  friend std::ostream& operator<<(std::ostream& o, const ValuePlaceholder& placeholder) {
-    o << "?" << placeholder.index();
-    return o;
-  }
-
-  bool operator==(const ValuePlaceholder& other) const { return _index == other._index; }
-
- private:
-  uint16_t _index;
-};
-
-// TODO(anyone): integrate and replace with ExpressionType
 enum class PredicateCondition {
   Equals,
   NotEquals,
@@ -186,7 +170,7 @@ enum class PredicateCondition {
   LessThanEquals,
   GreaterThan,
   GreaterThanEquals,
-  Between,  // Currently, OpBetween is not handled by a single scan. The LQPTranslator creates two scans.
+  Between,
   In,
   Like,
   NotLike,
@@ -194,59 +178,17 @@ enum class PredicateCondition {
   IsNotNull
 };
 
-enum class ExpressionType {
-  /*Any literal value*/
-  Literal,
-  /*A star as in SELECT * FROM ...*/
-  Star,
-  /*A parameter used in PreparedStatements*/
-  Placeholder,
-  /*An identifier for a column*/
-  Column,
-  /*An identifier for a function, such as COUNT, MIN, MAX*/
-  Function,
+bool is_binary_predicate_condition(const PredicateCondition predicate_condition);
 
-  /*A subselect*/
-  Subselect,
+// ">" becomes "<" etc.
+PredicateCondition flip_predicate_condition(const PredicateCondition predicate_condition);
 
-  /*Arithmetic operators*/
-  Addition,
-  Subtraction,
-  Multiplication,
-  Division,
-  Modulo,
-  Power,
+// ">" becomes "<=" etc.
+PredicateCondition inverse_predicate_condition(const PredicateCondition predicate_condition);
 
-  /*Logical operators*/
-  Equals,
-  NotEquals,
-  LessThan,
-  LessThanEquals,
-  GreaterThan,
-  GreaterThanEquals,
-  Like,
-  NotLike,
-  And,
-  Or,
-  Between,
-  Not,
-
-  /*Set operators*/
-  In,
-  Exists,
-
-  /*Others*/
-  IsNull,
-  IsNotNull,
-  Case,
-  Hint
-};
-
-enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self, Semi, Anti };
+enum class JoinMode { Inner, Left, Right, Outer, Cross, Semi, Anti };
 
 enum class UnionMode { Positions };
-
-enum class AggregateFunction { Min, Max, Sum, Avg, Count, CountDistinct };
 
 enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
 
@@ -266,5 +208,8 @@ class Noncopyable {
   Noncopyable(const Noncopyable&) = delete;
   const Noncopyable& operator=(const Noncopyable&) = delete;
 };
+
+// Dummy type, can be used to overload functions with a variant accepting a Null value
+struct Null {};
 
 }  // namespace opossum

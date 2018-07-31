@@ -54,12 +54,14 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   return _out_table;
 }
 
-std::shared_ptr<AbstractOperator> IndexScan::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<IndexScan>(recreated_input_left, _index_type, _left_column_ids, _predicate_condition,
+std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<IndexScan>(copied_input_left, _index_type, _left_column_ids, _predicate_condition,
                                      _right_values, _right_values2);
 }
+
+void IndexScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID chunk_id, std::mutex& output_mutex) {
   auto job_task = std::make_shared<JobTask>([=, &output_mutex]() {

@@ -11,21 +11,15 @@ namespace opossum {
  */
 class LimitNode : public EnableMakeForLQPNode<LimitNode>, public AbstractLQPNode {
  public:
-  explicit LimitNode(const size_t num_rows);
+  explicit LimitNode(const std::shared_ptr<AbstractExpression>& num_rows_expression);
 
   std::string description() const override;
 
-  size_t num_rows() const;
-
-  bool shallow_equals(const AbstractLQPNode& rhs) const override;
+  const std::shared_ptr<AbstractExpression> num_rows_expression;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
-
- private:
-  const size_t _num_rows;
+  std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
+  bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
 
 }  // namespace opossum

@@ -48,12 +48,14 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left
               "Outer joins are not implemented for not-equals joins.");
 }
 
-std::shared_ptr<AbstractOperator> JoinSortMerge::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<JoinSortMerge>(recreated_input_left, recreated_input_right, _mode, _column_ids,
+std::shared_ptr<AbstractOperator> JoinSortMerge::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<JoinSortMerge>(copied_input_left, copied_input_right, _mode, _column_ids,
                                          _predicate_condition);
 }
+
+void JoinSortMerge::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
   // Check column types

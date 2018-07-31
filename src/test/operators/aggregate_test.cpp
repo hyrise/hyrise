@@ -261,13 +261,6 @@ TEST_F(OperatorsAggregateTest, TwoAggregateSumAvg) {
                     {ColumnID{0}}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg.tbl", 1);
 }
 
-TEST_F(OperatorsAggregateTest, TwoAggregateSumAvgAlias) {
-  this->test_output(_table_wrapper_1_2,
-                    {{ColumnID{1}, AggregateFunction::Sum, std::optional<std::string>("sum_b")},
-                     {ColumnID{2}, AggregateFunction::Avg}},
-                    {ColumnID{0}}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg_alias.tbl", 1);
-}
-
 TEST_F(OperatorsAggregateTest, TwoAggregateSumSum) {
   this->test_output(_table_wrapper_1_2, {{ColumnID{1}, AggregateFunction::Sum}, {ColumnID{2}, AggregateFunction::Sum}},
                     {ColumnID{0}}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_sum.tbl", 1);

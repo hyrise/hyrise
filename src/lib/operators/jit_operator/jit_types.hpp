@@ -204,6 +204,32 @@ class JitHashmapValue {
   const size_t _column_index;
 };
 
+enum class JitExpressionType {
+  Addition,
+  Column,
+  Subtraction,
+  Multiplication,
+  Division,
+  Modulo,
+  Power,
+  Equals,
+  NotEquals,
+  GreaterThan,
+  GreaterThanEquals,
+  LessThan,
+  LessThanEquals,
+  Between,
+  Like,
+  NotLike,
+  And,
+  Or,
+  Not,
+  IsNull,
+  IsNotNull
+};
+
+bool jit_expression_is_binary(const JitExpressionType expression_type);
+
 // cleanup
 #undef JIT_VARIANT_VECTOR_MEMBER
 #undef JIT_VARIANT_VECTOR_RESIZE

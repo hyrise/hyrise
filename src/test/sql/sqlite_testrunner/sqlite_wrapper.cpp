@@ -11,6 +11,7 @@
 #include "constant_mappings.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
 namespace opossum {
@@ -27,7 +28,6 @@ SQLiteWrapper::SQLiteWrapper() {
 SQLiteWrapper::~SQLiteWrapper() { sqlite3_close(_db); }
 
 void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::string& table_name) {
-  char* err_msg;
   std::ifstream infile(file);
   Assert(infile.is_open(), "SQLiteWrapper: Could not find file " + file);
 
@@ -78,13 +78,68 @@ void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::st
     query << ");";
   }
 
-  int rc = sqlite3_exec(_db, query.str().c_str(), 0, 0, &err_msg);
+  _exec_sql(query.str());
+}
 
-  if (rc != SQLITE_OK) {
-    auto msg = std::string(err_msg);
-    sqlite3_free(err_msg);
-    sqlite3_close(_db);
-    throw std::runtime_error("Failed to create table. SQL error: " + msg + "\n");
+void SQLiteWrapper::create_table(const Table& table, const std::string& table_name) {
+  std::vector<std::string> col_types;
+
+  for (const auto& column_definition : table.column_definitions()) {
+    switch (column_definition.data_type) {
+      case DataType::Int:
+      case DataType::Long:
+        col_types.push_back("INT");
+        break;
+      case DataType::Float:
+      case DataType::Double:
+        col_types.push_back("REAL");
+        break;
+      case DataType::String:
+        col_types.push_back("TEXT");
+        break;
+      case DataType::Null:
+      case DataType::Bool:
+        Fail("SQLiteWrapper: column type not supported.");
+        break;
+    }
+  }
+
+  std::stringstream create_table_query;
+  create_table_query << "CREATE TABLE " << table_name << "(";
+  for (auto column_id = ColumnID{0}; column_id < table.column_definitions().size(); column_id++) {
+    create_table_query << table.column_definitions()[column_id].name << " " << col_types[column_id];
+
+    if (column_id + 1u < table.column_definitions().size()) {
+      create_table_query << ", ";
+    }
+  }
+  create_table_query << ");";
+  _exec_sql(create_table_query.str());
+
+  for (auto chunk_id = ChunkID{0}; chunk_id < table.chunk_count(); ++chunk_id) {
+    const auto chunk = table.get_chunk(chunk_id);
+
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
+      std::stringstream insert_query;
+
+      insert_query << "INSERT INTO " << table_name << " VALUES (";
+      for (auto column_id = ColumnID{0}; column_id < table.column_count(); column_id++) {
+        const auto column = chunk->get_column(column_id);
+        const auto value = (*column)[chunk_offset];
+
+        if (col_types[column_id] == "TEXT" && !variant_is_null(value)) {
+          insert_query << "'" << value << "'";
+        } else {
+          insert_query << value;
+        }
+
+        if ((column_id + 1u) < table.column_count()) {
+          insert_query << ", ";
+        }
+      }
+      insert_query << ");";
+      _exec_sql(insert_query.str());
+    }
   }
 }
 
@@ -231,6 +286,18 @@ void SQLiteWrapper::_add_row(std::shared_ptr<Table> table, sqlite3_stmt* result_
   }
 
   table->append(row);
+}
+
+void SQLiteWrapper::_exec_sql(const std::string& sql) const {
+  char* err_msg;
+  auto rc = sqlite3_exec(_db, sql.c_str(), 0, 0, &err_msg);
+
+  if (rc != SQLITE_OK) {
+    auto msg = std::string(err_msg);
+    sqlite3_free(err_msg);
+    sqlite3_close(_db);
+    Fail("Failed to create table. SQL error: " + msg + "\n");
+  }
 }
 
 }  // namespace opossum

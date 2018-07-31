@@ -1,0 +1,6 @@
+a|b|c|d|s1|s2|s3|dates|dates2|e|f
+int|int|int_null|int|string|string|string_null|string|string_null|float|double
+1|2|33|2|a|b|null|2017-12-06|2017-12-06|20.5|99.5
+2|3|null|5|Hello|World|abcd|2014-08-05|2014-08-05|100.0|2.2
+3|4|34|6|what|up|xyzlol|2011-09-03|null|42.8|13.8
+4|5|null|7|Same|Same|null|2010-01-02|null|-14.0|15.9

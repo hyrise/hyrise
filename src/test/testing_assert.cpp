@@ -9,7 +9,6 @@
 #include "all_type_variant.hpp"
 #include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/join_node.hpp"
 #include "storage/table.hpp"
 #include "storage/value_column.hpp"
 
@@ -106,7 +105,7 @@ bool almost_equals(T left_val, T right_val, opossum::FloatComparisonMode float_c
   if (float_comparison_mode == opossum::FloatComparisonMode::AbsoluteDifference) {
     return std::fabs(left_val - right_val) < EPSILON;
   } else {
-    return std::fabs(left_val - right_val) < std::fabs(right_val * EPSILON);
+    return std::fabs(left_val - right_val) < std::max(EPSILON, std::fabs(right_val * EPSILON));
   }
 }
 
@@ -255,18 +254,6 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
 
   return true;
 }
-
-void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, PredicateCondition predicate_condition,
-                            const LQPColumnReference& left_column_reference,
-                            const LQPColumnReference& right_column_reference) {
-  ASSERT_EQ(node->type(), LQPNodeType::Join);  // Can't cast otherwise
-  auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
-  ASSERT_EQ(join_node->join_mode(), JoinMode::Inner);  // Can't access join_column_ids() otherwise
-  EXPECT_EQ(join_node->predicate_condition(), predicate_condition);
-  EXPECT_EQ(join_node->join_column_references(), std::make_pair(left_column_reference, right_column_reference));
-}
-
-void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node) {}
 
 bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& output, LQPInputSide input_side,
                    const std::shared_ptr<const AbstractLQPNode>& input) {

@@ -29,11 +29,13 @@ std::shared_ptr<const Table> ExportCsv::_on_execute() {
   return _input_left->get_output();
 }
 
-std::shared_ptr<AbstractOperator> ExportCsv::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<ExportCsv>(recreated_input_left, _filename);
+std::shared_ptr<AbstractOperator> ExportCsv::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<ExportCsv>(copied_input_left, _filename);
 }
+
+void ExportCsv::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table>& table, const std::string& meta_file_path) {
   CsvMeta meta{};

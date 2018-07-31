@@ -278,8 +278,7 @@ TEST_F(ServerSessionTest, SessionHandlesExtendedProtocolFlow) {
 
   // The session schedules a task to derive a Query Plan from the SQL Pipeline
   const auto placeholder_plan = sql_pipeline->get_query_plans().front();
-  placeholder_plan->set_num_parameters(0);
-  auto sql_query_plan = std::make_unique<SQLQueryPlan>(placeholder_plan->recreate({}));
+  auto sql_query_plan = std::make_unique<SQLQueryPlan>(placeholder_plan->deep_copy());
 
   EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<BindServerPreparedStatementTask>>()))
       .WillOnce(Return(ByMove(boost::make_ready_future(std::move(sql_query_plan)))));
@@ -429,8 +428,7 @@ TEST_F(ServerSessionTest, SessionSendsErrorWhenRedefiningNamedPortal) {
       .WillOnce(Return(ByMove(boost::make_ready_future(bind_packet))));
 
   const auto placeholder_plan = sql_pipeline->get_query_plans().front();
-  placeholder_plan->set_num_parameters(0);
-  auto sql_query_plan = std::make_unique<SQLQueryPlan>(placeholder_plan->recreate({}));
+  auto sql_query_plan = std::make_unique<SQLQueryPlan>(placeholder_plan->deep_copy());
 
   EXPECT_CALL(*_task_runner, dispatch_server_task(An<std::shared_ptr<BindServerPreparedStatementTask>>()))
       .WillOnce(Return(ByMove(boost::make_ready_future(std::move(sql_query_plan)))));

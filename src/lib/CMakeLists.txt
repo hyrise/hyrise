@@ -5,8 +5,6 @@ include(${PROJECT_SOURCE_DIR}/cmake/git_watcher.cmake)
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
-    abstract_expression.cpp
-    abstract_expression.hpp
     all_parameter_variant.cpp
     all_parameter_variant.hpp
     all_type_variant.cpp
@@ -19,6 +17,71 @@ set(
     concurrency/transaction_manager.hpp
     constant_mappings.cpp
     constant_mappings.hpp
+    expression/abstract_expression.cpp
+    expression/abstract_expression.hpp
+    expression/abstract_predicate_expression.cpp
+    expression/abstract_predicate_expression.hpp
+    expression/aggregate_expression.cpp
+    expression/aggregate_expression.hpp
+    expression/arithmetic_expression.cpp
+    expression/arithmetic_expression.hpp
+    expression/expression_precedence.hpp
+    expression/list_expression.cpp
+    expression/list_expression.hpp
+    expression/between_expression.cpp
+    expression/between_expression.hpp
+    expression/binary_predicate_expression.cpp
+    expression/binary_predicate_expression.hpp
+    expression/case_expression.cpp
+    expression/case_expression.hpp
+    expression/cast_expression.cpp
+    expression/cast_expression.hpp
+    expression/exists_expression.cpp
+    expression/exists_expression.hpp
+    expression/evaluation/expression_evaluator.cpp
+    expression/evaluation/expression_evaluator.hpp
+    expression/evaluation/expression_result.hpp
+    expression/evaluation/expression_result_views.hpp
+    expression/evaluation/expression_functors.hpp
+    expression/evaluation/like_matcher.cpp
+    expression/evaluation/like_matcher.hpp
+    expression/expression_functional.cpp
+    expression/expression_functional.hpp
+    expression/expression_utils.cpp
+    expression/expression_utils.hpp
+    expression/extract_expression.cpp
+    expression/extract_expression.hpp
+    expression/function_expression.cpp
+    expression/function_expression.hpp
+    expression/in_expression.cpp
+    expression/in_expression.hpp
+    expression/is_null_expression.cpp
+    expression/is_null_expression.hpp
+    expression/logical_expression.cpp
+    expression/logical_expression.hpp
+    expression/lqp_column_expression.cpp
+    expression/lqp_column_expression.hpp
+    expression/lqp_select_expression.cpp
+    expression/lqp_select_expression.hpp
+    expression/unary_minus_expression.cpp
+    expression/unary_minus_expression.hpp
+    expression/parameter_expression.cpp
+    expression/parameter_expression.hpp
+    expression/pqp_column_expression.cpp
+    expression/pqp_column_expression.hpp
+    expression/pqp_select_expression.cpp
+    expression/pqp_select_expression.hpp
+    expression/value_expression.cpp
+    expression/value_expression.hpp
+    import_export/binary.hpp
+    import_export/csv_converter.cpp
+    import_export/csv_converter.hpp
+    import_export/csv_meta.cpp
+    import_export/csv_meta.hpp
+    import_export/csv_parser.cpp
+    import_export/csv_parser.hpp
+    import_export/csv_writer.cpp
+    import_export/csv_writer.hpp
     cost_model/abstract_cost_feature_proxy.cpp
     cost_model/abstract_cost_feature_proxy.hpp
     cost_model/abstract_cost_model.cpp
@@ -32,17 +95,10 @@ set(
     cost_model/cost.hpp
     cost_model/cost_model_logical.cpp
     cost_model/cost_model_logical.hpp
-    import_export/binary.hpp
-    import_export/csv_converter.cpp
-    import_export/csv_converter.hpp
-    import_export/csv_meta.cpp
-    import_export/csv_meta.hpp
-    import_export/csv_parser.cpp
-    import_export/csv_parser.hpp
-    import_export/csv_writer.cpp
-    import_export/csv_writer.hpp
     logical_query_plan/abstract_lqp_node.cpp
     logical_query_plan/abstract_lqp_node.hpp
+    logical_query_plan/alias_node.cpp
+    logical_query_plan/alias_node.hpp
     logical_query_plan/aggregate_node.cpp
     logical_query_plan/aggregate_node.hpp
     logical_query_plan/create_view_node.cpp
@@ -53,6 +109,7 @@ set(
     logical_query_plan/drop_view_node.hpp
     logical_query_plan/dummy_table_node.cpp
     logical_query_plan/dummy_table_node.hpp
+    logical_query_plan/enable_make_for_lqp_node.hpp
     logical_query_plan/insert_node.cpp
     logical_query_plan/insert_node.hpp
     logical_query_plan/join_node.cpp
@@ -63,10 +120,10 @@ set(
     logical_query_plan/logical_plan_root_node.hpp
     logical_query_plan/lqp_column_reference.cpp
     logical_query_plan/lqp_column_reference.hpp
-    logical_query_plan/lqp_expression.cpp
-    logical_query_plan/lqp_expression.hpp
     logical_query_plan/lqp_translator.cpp
     logical_query_plan/lqp_translator.hpp
+    logical_query_plan/lqp_utils.cpp
+    logical_query_plan/lqp_utils.hpp
     logical_query_plan/mock_node.cpp
     logical_query_plan/mock_node.hpp
     logical_query_plan/predicate_node.cpp
@@ -96,9 +153,12 @@ set(
     operators/abstract_read_only_operator.hpp
     operators/abstract_read_write_operator.cpp
     operators/abstract_read_write_operator.hpp
+    operators/aggregate/aggregate_traits.hpp
     operators/aggregate.cpp
     operators/aggregate.hpp
     operators/base_operator_performance_data.hpp
+    operators/alias_operator.cpp
+    operators/alias_operator.hpp
     operators/delete.cpp
     operators/delete.hpp
     operators/difference.cpp
@@ -117,6 +177,9 @@ set(
     operators/index_scan.hpp
     operators/insert.cpp
     operators/insert.hpp
+#    operators/jit_operator/jit_operations.hpp
+#    operators/jit_operator/jit_types.cpp
+#    operators/jit_operator/jit_types.hpp
     operators/join_hash.cpp
     operators/join_hash/hash_traits.hpp
     operators/join_hash.hpp
@@ -132,6 +195,10 @@ set(
     operators/join_sort_merge/radix_cluster_sort.hpp
     operators/limit.cpp
     operators/limit.hpp
+    operators/operator_scan_predicate.cpp
+    operators/operator_scan_predicate.hpp
+    operators/operator_join_predicate.cpp
+    operators/operator_join_predicate.hpp
     operators/maintenance/create_view.cpp
     operators/maintenance/create_view.hpp
     operators/maintenance/drop_view.cpp
@@ -140,8 +207,7 @@ set(
     operators/maintenance/show_columns.hpp
     operators/maintenance/show_tables.cpp
     operators/maintenance/show_tables.hpp
-    operators/pqp_expression.cpp
-    operators/pqp_expression.hpp
+    operators/maintenance/show_tables.hpp
     operators/print.cpp
     operators/print.hpp
     operators/product.cpp
@@ -182,15 +248,6 @@ set(
     statistics/chunk_statistics/chunk_statistics.hpp
     statistics/chunk_statistics/min_max_filter.hpp
     statistics/chunk_statistics/range_filter.hpp
-    optimizer/join_ordering/join_edge.cpp
-    optimizer/join_ordering/join_edge.hpp
-    optimizer/join_ordering/join_graph_builder.cpp
-    optimizer/join_ordering/join_graph_builder.hpp
-    optimizer/join_ordering/join_graph.cpp
-    optimizer/join_ordering/join_graph.hpp
-    optimizer/join_ordering/join_plan_predicate.cpp
-    optimizer/join_ordering/join_plan_predicate.hpp
-    optimizer/join_ordering/join_vertex_set.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
@@ -260,13 +317,15 @@ set(
     statistics/table_statistics.cpp
     statistics/table_statistics.hpp
     sql/abstract_cache.hpp
+    sql/create_sql_parser_error_message.cpp
+    sql/create_sql_parser_error_message.hpp
     sql/gdfs_cache.hpp
     sql/gds_cache.hpp
-    sql/hsql_expr_translator.cpp
-    sql/hsql_expr_translator.hpp
     sql/lru_cache.hpp
     sql/lru_k_cache.hpp
     sql/random_cache.hpp
+    sql/parameter_id_allocator.cpp
+    sql/parameter_id_allocator.hpp
     sql/sql_pipeline_builder.cpp
     sql/sql_pipeline_builder.hpp
     sql/sql_pipeline.cpp
@@ -276,6 +335,12 @@ set(
     sql/sql_query_cache.hpp
     sql/sql_query_plan.cpp
     sql/sql_query_plan.hpp
+    sql/sql_identifier.cpp
+    sql/sql_identifier.hpp
+    sql/sql_identifier_resolver.cpp
+    sql/sql_identifier_resolver.hpp
+    sql/sql_identifier_resolver_proxy.cpp
+    sql/sql_identifier_resolver_proxy.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
     storage/base_column.cpp
@@ -361,6 +426,8 @@ set(
     storage/run_length_column.hpp
     storage/run_length_column/run_length_column_iterable.hpp
     storage/run_length_column/run_length_encoder.hpp
+    storage/lqp_view.cpp
+    storage/lqp_view.hpp
     storage/storage_manager.cpp
     storage/storage_manager.hpp
     storage/table_column_definition.cpp
@@ -416,10 +483,9 @@ set(
     tasks/server/load_server_file_task.hpp
     type_cast.hpp
     type_comparison.hpp
+    types.cpp
     types.hpp
     uid_allocator.hpp
-    utils/arithmetic_operator_expression.hpp
-    utils/arithmetic_operator_expression_impl.hpp
     utils/assert.hpp
     utils/boost_default_memory_resource.cpp
     utils/copyable_atomic.hpp
@@ -459,8 +525,6 @@ if (${ENABLE_JIT_SUPPORT})
     include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
     set(JIT_EMBEDDED_SOURCES
         # Files listed here will be embedded into the binary as LLVM-IR
-        abstract_expression.cpp
-        abstract_expression.hpp
         operators/jit_operator/jit_types.cpp
         operators/jit_operator/jit_types.hpp
         operators/jit_operator/jit_operations.cpp

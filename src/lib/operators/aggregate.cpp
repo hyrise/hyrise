@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "aggregate/aggregate_traits.hpp"
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
@@ -57,22 +58,18 @@ const std::string Aggregate::description(DescriptionMode description_mode) const
       desc << "(*)";
     }
 
-    if (aggregate.alias) {
-      desc << " AS " << *aggregate.alias;
-    }
-
-    if (expression_idx + 1 < _aggregates.size()) {
-      desc << ", ";
-    }
+    if (expression_idx + 1 < _aggregates.size()) desc << ", ";
   }
   return desc.str();
 }
 
-std::shared_ptr<AbstractOperator> Aggregate::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<Aggregate>(recreated_input_left, _aggregates, _groupby_column_ids);
+std::shared_ptr<AbstractOperator> Aggregate::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<Aggregate>(copied_input_left, _aggregates, _groupby_column_ids);
 }
+
+void Aggregate::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 void Aggregate::_on_cleanup() {
   _contexts_per_column.clear();
@@ -123,75 +120,6 @@ struct AggregateContext : ColumnVisitorContext {
   std::shared_ptr<GroupByContext> groupby_context;
   std::shared_ptr<std::unordered_map<AggregateKey, AggregateResult<AggregateType, ColumnType>, std::hash<AggregateKey>>>
       results;
-};
-
-/*
-The following structs describe the different aggregate traits.
-Given a ColumnType and AggregateFunction, certain traits like the aggregate type
-can be deduced.
-*/
-template <typename ColumnType, AggregateFunction function, class Enable = void>
-struct AggregateTraits {};
-
-// COUNT on all types
-template <typename ColumnType>
-struct AggregateTraits<ColumnType, AggregateFunction::Count> {
-  using AggregateType = int64_t;
-  static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Long;
-};
-
-// COUNT(DISTINCT) on all types
-template <typename ColumnType>
-struct AggregateTraits<ColumnType, AggregateFunction::CountDistinct> {
-  using AggregateType = int64_t;
-  static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Long;
-};
-
-// MIN/MAX on all types
-template <typename ColumnType, AggregateFunction function>
-struct AggregateTraits<
-    ColumnType, function,
-    typename std::enable_if_t<function == AggregateFunction::Min || function == AggregateFunction::Max, void>> {
-  using AggregateType = ColumnType;
-  static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Null;
-};
-
-// AVG on arithmetic types
-template <typename ColumnType, AggregateFunction function>
-struct AggregateTraits<
-    ColumnType, function,
-    typename std::enable_if_t<function == AggregateFunction::Avg && std::is_arithmetic<ColumnType>::value, void>> {
-  using AggregateType = double;
-  static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Double;
-};
-
-// SUM on integers
-template <typename ColumnType, AggregateFunction function>
-struct AggregateTraits<
-    ColumnType, function,
-    typename std::enable_if_t<function == AggregateFunction::Sum && std::is_integral<ColumnType>::value, void>> {
-  using AggregateType = int64_t;
-  static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Long;
-};
-
-// SUM on floating point numbers
-template <typename ColumnType, AggregateFunction function>
-struct AggregateTraits<
-    ColumnType, function,
-    typename std::enable_if_t<function == AggregateFunction::Sum && std::is_floating_point<ColumnType>::value, void>> {
-  using AggregateType = double;
-  static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Double;
-};
-
-// invalid: AVG on non-arithmetic types
-template <typename ColumnType, AggregateFunction function>
-struct AggregateTraits<
-    ColumnType, function,
-    typename std::enable_if_t<!std::is_arithmetic<ColumnType>::value &&
-                                  (function == AggregateFunction::Avg || function == AggregateFunction::Sum),
-                              void>> {
-  using AggregateType = ColumnType;
-  static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Null;
 };
 
 /*
@@ -742,24 +670,24 @@ void Aggregate::write_aggregate_output(ColumnID column_index) {
     aggregate_data_type = input_table_left()->column_data_type(*aggregate.column);
   }
 
-  // use the alias or generate the name, e.g. MAX(column_a)
-  std::string output_column_name;
-  if (aggregate.alias) {
-    output_column_name = *aggregate.alias;
-  } else if (!aggregate.column) {
-    output_column_name = "COUNT(*)";
+  // Generate column name, TODO(anybody), actually, the AggregateExpression can do this, but the Aggregate operator
+  // doesn't use Expressions, yet
+  std::stringstream column_name_stream;
+  if (aggregate.function == AggregateFunction::CountDistinct) {
+    column_name_stream << "COUNT(DISTINCT ";
   } else {
-    const auto& column_name = input_table_left()->column_name(*aggregate.column);
-
-    if (aggregate.function == AggregateFunction::CountDistinct) {
-      output_column_name = std::string("COUNT(DISTINCT ") + column_name + ")";
-    } else {
-      output_column_name = aggregate_function_to_string.left.at(function) + "(" + column_name + ")";
-    }
+    column_name_stream << aggregate_function_to_string.left.at(aggregate.function) << "(";
   }
 
+  if (aggregate.column) {
+    column_name_stream << input_table_left()->column_name(*aggregate.column);
+  } else {
+    column_name_stream << "*";
+  }
+  column_name_stream << ")";
+
   constexpr bool NEEDS_NULL = (function != AggregateFunction::Count && function != AggregateFunction::CountDistinct);
-  _output_column_definitions.emplace_back(output_column_name, aggregate_data_type, NEEDS_NULL);
+  _output_column_definitions.emplace_back(column_name_stream.str(), aggregate_data_type, NEEDS_NULL);
 
   auto output_column = std::make_shared<ValueColumn<decltype(aggregate_type)>>(NEEDS_NULL);
 

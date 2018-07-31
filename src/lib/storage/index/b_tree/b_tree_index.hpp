@@ -1,10 +1,10 @@
 #pragma once
 
-#include "types.hpp"
 #include "all_type_variant.hpp"
-#include "storage/index/base_index.hpp"
-#include "storage/base_column.hpp"
 #include "b_tree_index_impl.hpp"
+#include "storage/base_column.hpp"
+#include "storage/index/base_index.hpp"
+#include "types.hpp"
 
 namespace opossum {
 

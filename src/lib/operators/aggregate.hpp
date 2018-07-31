@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
+#include "expression/aggregate_expression.hpp"
 #include "resolve_type.hpp"
 #include "storage/abstract_column_visitor.hpp"
 #include "storage/reference_column.hpp"
@@ -28,15 +29,12 @@ struct GroupByContext;
  * function they use. COUNT() is the exception that doesn't use a Column, which is why column is optional
  * Optionally, an alias can be specified to use as the output name.
  */
-template <typename ColumnReferenceType>
-struct AggregateColumnDefinitionTemplate {
-  AggregateColumnDefinitionTemplate(const std::optional<ColumnReferenceType>& column, const AggregateFunction function,
-                                    const std::optional<std::string>& alias = std::nullopt)
-      : column(column), function(function), alias(alias) {}
+struct AggregateColumnDefinition final {
+  AggregateColumnDefinition(const std::optional<ColumnID>& column, const AggregateFunction function)
+      : column(column), function(function) {}
 
-  std::optional<ColumnReferenceType> column{std::nullopt};
+  std::optional<ColumnID> column;
   AggregateFunction function;
-  std::optional<std::string> alias;
 };
 
 /*
@@ -63,8 +61,6 @@ struct AggregateResult {
 The key type that is used for the aggregation map.
 */
 using AggregateKey = std::vector<uint64_t>;
-
-using AggregateColumnDefinition = AggregateColumnDefinitionTemplate<ColumnID>;
 
 /**
  * Types that are used for the special COUNT(*) and DISTINCT implementations
@@ -95,9 +91,11 @@ class Aggregate : public AbstractReadOnlyOperator {
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  std::shared_ptr<AbstractOperator> _on_deep_copy(
+      const std::shared_ptr<AbstractOperator>& copied_input_left,
+      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   void _on_cleanup() override;
 

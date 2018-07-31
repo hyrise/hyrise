@@ -7,10 +7,13 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "expression/expression_functional.hpp"
 #include "operators/limit.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "types.hpp"
+
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
@@ -22,7 +25,7 @@ class OperatorsLimitTest : public BaseTest {
   }
 
   void test_limit_1() {
-    auto limit = std::make_shared<Limit>(_input_operator, 1);
+    auto limit = std::make_shared<Limit>(_input_operator, to_expression(int64_t{1}));
     limit->execute();
 
     auto expected_result = load_table("src/test/tables/int_int3_limit_1.tbl", 3);
@@ -30,7 +33,7 @@ class OperatorsLimitTest : public BaseTest {
   }
 
   void test_limit_2() {
-    auto limit = std::make_shared<Limit>(_input_operator, 2);
+    auto limit = std::make_shared<Limit>(_input_operator, to_expression(int64_t{2}));
     limit->execute();
 
     auto expected_result = load_table("src/test/tables/int_int3_limit_2.tbl", 3);
@@ -41,7 +44,7 @@ class OperatorsLimitTest : public BaseTest {
    * Limit across chunks.
    */
   void test_limit_4() {
-    auto limit = std::make_shared<Limit>(_input_operator, 4);
+    auto limit = std::make_shared<Limit>(_input_operator, to_expression(int64_t{4}));
     limit->execute();
 
     auto expected_result = load_table("src/test/tables/int_int3_limit_4.tbl", 3);
@@ -52,7 +55,7 @@ class OperatorsLimitTest : public BaseTest {
    * Limit with more elements than exist in table.
    */
   void test_limit_10() {
-    auto limit = std::make_shared<Limit>(_input_operator, 10);
+    auto limit = std::make_shared<Limit>(_input_operator, to_expression(int64_t{10}));
     limit->execute();
 
     auto expected_result = load_table("src/test/tables/int_int3.tbl", 3);

@@ -132,11 +132,13 @@ std::shared_ptr<const Table> ExportBinary::_on_execute() {
   return _input_left->get_output();
 }
 
-std::shared_ptr<AbstractOperator> ExportBinary::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<ExportBinary>(recreated_input_left, _filename);
+std::shared_ptr<AbstractOperator> ExportBinary::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<ExportBinary>(copied_input_left, _filename);
 }
+
+void ExportBinary::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std::ofstream& ofstream) {
   export_value(ofstream, static_cast<ChunkOffset>(table->max_chunk_size()));

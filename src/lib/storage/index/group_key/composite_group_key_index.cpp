@@ -39,7 +39,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
     auto dict_column = std::dynamic_pointer_cast<const BaseDictionaryColumn>(column);
     Assert(static_cast<bool>(dict_column), "CompositeGroupKeyIndex only works with dictionary columns.");
     Assert(is_fixed_size_byte_aligned(dict_column->compressed_vector_type()),
-                "CompositeGroupKeyIndex only works with fixed-size byte-aligned compressed attribute vectors.");
+           "CompositeGroupKeyIndex only works with fixed-size byte-aligned compressed attribute vectors.");
     _indexed_columns.emplace_back(dict_column);
   }
 
@@ -71,7 +71,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
 
   for (ChunkOffset chunk_offset = 0; chunk_offset < column_size; ++chunk_offset) {
     auto concatenated_key = VariableLengthKey(bytes_per_key);
-    for (const auto & [ byte_width, decompressor ] : attribute_vector_widths_and_decompressors) {
+    for (const auto& [byte_width, decompressor] : attribute_vector_widths_and_decompressors) {
       concatenated_key.shift_and_set(decompressor->get(chunk_offset), byte_width * CHAR_BIT);
     }
     keys[chunk_offset] = std::move(concatenated_key);

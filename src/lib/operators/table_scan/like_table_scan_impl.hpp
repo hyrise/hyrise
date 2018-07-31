@@ -9,6 +9,7 @@
 
 #include "base_single_column_table_scan_impl.hpp"
 #include "boost/variant.hpp"
+#include "expression/evaluation/like_matcher.hpp"
 
 #include "types.hpp"
 
@@ -42,58 +43,6 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
 
   using BaseSingleColumnTableScanImpl::handle_column;
 
-  /**
-   * Turn SQL LIKE-pattern into a C++ regex.
-   */
-  static std::string sql_like_to_regex(std::string sql_like);
-
-  enum class Wildcard { SingleChar /* '_' */, AnyChars /* '%' */ };
-  using PatternToken = boost::variant<std::string, Wildcard>;  // Keep type order, users rely on which()
-  using PatternTokens = std::vector<PatternToken>;
-
-  /**
-   * Turn a pattern string, e.g. "H_llo W%ld" into Tokens {"H", PatternWildcard::SingleChar, "llo W",
-   * PatternWildcard::AnyChars, "ld"}
-   */
-  static PatternTokens pattern_string_to_tokens(const std::string& pattern);
-
-  /**
-   * To speed up LIKE there are special implementations available for simple, common patterns.
-   * Any other pattern will fall back to regex.
-   */
-  // 'hello%'
-  struct StartsWithPattern final {
-    std::string string;
-  };
-  // '%hello'
-  struct EndsWithPattern final {
-    std::string string;
-  };
-  // '%hello%'
-  struct ContainsPattern final {
-    std::string string;
-  };
-  // '%hello%world%nice%weather%'
-  struct MultipleContainsPattern final {
-    std::vector<std::string> strings;
-  };
-
-  /**
-   * Contains one of the specialised patterns from above (StartsWithPattern, ...) or falls back to std::regex for a
-   * general pattern.
-   */
-  using AllPatternVariant =
-      boost::variant<std::regex, StartsWithPattern, EndsWithPattern, ContainsPattern, MultipleContainsPattern>;
-
-  static AllPatternVariant pattern_string_to_pattern_variant(const std::string& pattern);
-
-  /**
-   * Call functor with the resolved Pattern
-   */
-  template <typename Functor>
-  static void resolve_pattern_matcher(const AllPatternVariant& pattern_variant, const bool invert_results,
-                                      const Functor& functor);
-
  private:
   /**
    * Scan the iterable (using the optional mapped_chunk_offsets) with _pattern_variant and fill the matches_out with
@@ -109,14 +58,10 @@ class LikeTableScanImpl : public BaseSingleColumnTableScanImpl {
    */
   std::pair<size_t, std::vector<bool>> _find_matches_in_dictionary(const pmr_vector<std::string>& dictionary);
 
-  const std::string _pattern;
+  const LikeMatcher _matcher;
 
   // For NOT LIKE support
   const bool _invert_results;
-
-  AllPatternVariant _pattern_variant;
 };
-
-std::ostream& operator<<(std::ostream& stream, const LikeTableScanImpl::Wildcard& wildcard);
 
 }  // namespace opossum
