@@ -33,7 +33,7 @@ def calculate_and_format_p_value(old, new):
 		notes += " (not enough runs)"
 
 	color = 'green' if is_significant else 'grey'
-	return colored("{0:.5}".format(p_value) + notes, color)
+	return colored("{0:.4f}".format(p_value) + notes, color)
 
 
 if(len(sys.argv) != 3):
