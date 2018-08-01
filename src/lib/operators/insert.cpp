@@ -16,7 +16,7 @@
 namespace opossum {
 
 // We need these classes to perform the dynamic cast into a templated ValueColumn
-class AbstractTypedColumnProcessor {
+class AbstractTypedColumnProcessor : public Noncopyable {
  public:
   AbstractTypedColumnProcessor() = default;
   AbstractTypedColumnProcessor(const AbstractTypedColumnProcessor&) = delete;

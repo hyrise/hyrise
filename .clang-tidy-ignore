@@ -4,4 +4,4 @@ src/lib/operators/jit_operator/specialization/llvm/InlineFunction.cpp  # File cl
 src/lib/operators/jit_operator/specialization/llvm/CloneFunction.cpp   # dto.
 
 src/lib/server/client_connection.cpp                                   # clang-tidy doesn't like htons
-server/postgres_wire_handler.cpp                                       # dto.
+src/lib/server/postgres_wire_handler.cpp                               # dto.

@@ -10,9 +10,9 @@
 namespace opossum {
 
 void execute_tasks_with_context(std::vector<std::shared_ptr<OperatorTask>>& tasks,
-                                std::shared_ptr<TransactionContext> t_context) {
+                                const std::shared_ptr<TransactionContext>& transaction_context) {
   for (auto& task : tasks) {
-    task->get_operator()->set_transaction_context(t_context);
+    task->get_operator()->set_transaction_context(transaction_context);
   }
   CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 }

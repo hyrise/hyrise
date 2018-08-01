@@ -71,17 +71,17 @@ class JitAggregate : public AbstractJittableSink {
   void after_query(Table& out_table, JitRuntimeContext& context) const final;
 
   // Adds an aggregate to the operator that is to be computed on tuple groups.
-  void add_aggregate_column(const std::string& column_name, const JitTupleValue& tuple_value,
+  void add_aggregate_column(const std::string& column_name, const JitTupleValue& value,
                             const AggregateFunction function);
 
   // Adds a column to the operator that is to be considered when grouping tuples.
-  void add_groupby_column(const std::string& column_name, const JitTupleValue& tuple_value);
+  void add_groupby_column(const std::string& column_name, const JitTupleValue& value);
 
   const std::vector<JitAggregateColumn> aggregate_columns() const;
   const std::vector<JitGroupByColumn> groupby_columns() const;
 
  private:
-  void _consume(JitRuntimeContext& ctx) const final;
+  void _consume(JitRuntimeContext& context) const final;
 
   uint32_t _num_hashmap_columns{0};
   std::vector<JitAggregateColumn> _aggregate_columns;

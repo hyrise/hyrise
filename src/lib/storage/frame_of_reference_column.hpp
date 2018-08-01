@@ -42,7 +42,7 @@ class FrameOfReferenceColumn : public BaseEncodedColumn {
    */
   static constexpr auto block_size = 2048u;
 
-  explicit FrameOfReferenceColumn(const pmr_vector<T> reference_frames, const pmr_vector<bool> null_values,
+  explicit FrameOfReferenceColumn(pmr_vector<T> block_minima, pmr_vector<bool> null_values,
                                   std::unique_ptr<const BaseCompressedVector> offset_values);
 
   const pmr_vector<T>& block_minima() const;

@@ -49,7 +49,7 @@ const AllTypeVariant RunLengthColumn<T>::operator[](const ChunkOffset chunk_offs
 
 template <typename T>
 size_t RunLengthColumn<T>::size() const {
-  if (_end_positions->size() == 0u) return 0u;
+  if (_end_positions->empty()) return 0u;
   return _end_positions->back() + 1u;
 }
 

@@ -17,7 +17,7 @@ void BindServerPreparedStatementTask::_on_execute() {
       const auto parameter_id = placeholder_plan->parameter_ids().at(value_placeholder_id);
       pqp_parameters.emplace(parameter_id, _params[value_placeholder_id]);
     }
-    Assert(query_plan->tree_roots().size(), "Expected just one PQP");
+    Assert(!query_plan->tree_roots().empty(), "Expected just one PQP");
     query_plan->tree_roots().at(0)->set_parameters(pqp_parameters);
 
     _promise.set_value(std::move(query_plan));

@@ -22,7 +22,7 @@ std::ostream& get_out_stream(const bool verbose) {
   // See https://stackoverflow.com/a/11826666
   class NullBuffer : public std::streambuf {
    public:
-    int overflow(int c) { return c; }
+    int overflow(int c) override { return c; }
   };
 
   static NullBuffer null_buffer;
@@ -80,14 +80,14 @@ bool BenchmarkState::keep_running() {
 }
 
 BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool verbose, const ChunkOffset chunk_size,
-                                 const EncodingConfig encoding_type, const size_t max_num_query_runs,
+                                 const EncodingConfig& encoding_config, const size_t max_num_query_runs,
                                  const Duration& max_duration, const UseMvcc use_mvcc,
                                  const std::optional<std::string>& output_file_path, const bool enable_scheduler,
                                  const bool enable_visualization, std::ostream& out)
     : benchmark_mode(benchmark_mode),
       verbose(verbose),
       chunk_size(chunk_size),
-      encoding_config(encoding_type),
+      encoding_config(encoding_config),
       max_num_query_runs(max_num_query_runs),
       max_duration(max_duration),
       use_mvcc(use_mvcc),
@@ -353,7 +353,7 @@ nlohmann::json EncodingConfig::to_json() const {
   return json;
 }
 
-void BenchmarkTableEncoder::encode(const std::string& table_name, std::shared_ptr<Table> table,
+void BenchmarkTableEncoder::encode(const std::string& table_name, const std::shared_ptr<Table>& table,
                                    const EncodingConfig& config) {
   const auto& type_mapping = config.type_encoding_mapping;
   const auto& custom_mapping = config.custom_encoding_mapping;

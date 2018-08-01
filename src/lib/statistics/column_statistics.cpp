@@ -406,8 +406,8 @@ float ColumnStatistics<ColumnDataType>::estimate_range_selectivity(const ColumnD
  * Specialization for strings as they cannot be used in subtractions.
  */
 template <>
-float ColumnStatistics<std::string>::estimate_range_selectivity(const std::string minimum,
-                                                                const std::string maximum) const {
+float ColumnStatistics<std::string>::estimate_range_selectivity(const std::string minimum,          // NOLINT
+                                                                const std::string maximum) const {  // NOLINT
   // TODO(anyone) implement selectivity for range approximation for column type string.
   return (maximum < minimum) ? 0.f : 1.f;
 }
