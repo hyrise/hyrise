@@ -29,4 +29,18 @@ do
 	echo $line | sed 's/\(:[^:]*:\)/\1 /'
 done <<< "$namecheck"
 
+for dir in src/*
+do
+	for file in $(find $dir -name *.cpp -o -name *.hpp)
+	do
+		if grep $(basename $file) $dir/CMakeLists.txt | grep -v '#' > /dev/null
+		then
+			continue
+		else
+			echo $file not found in $dir/CMakeLists.txt
+			exitcode=1
+		fi
+	done
+done
+
 exit $exitcode

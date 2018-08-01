@@ -71,26 +71,27 @@ INSTANTIATE_TEST_CASE_P(EncodingTypes, OperatorsTableScanStringTest,
                                           EncodingType::FixedStringDictionary, EncodingType::RunLength),
                         formatter);
 
-TEST_F(OperatorsTableScanStringTest, ScanEquals) {
-  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, PredicateCondition::Equals, "Reeperbahn");
+TEST_P(OperatorsTableScanStringTest, ScanEquals) {
+  auto scan = std::make_shared<TableScan>(_gt_string_compressed, ColumnID{1}, PredicateCondition::Equals, "Reeperbahn");
   scan->execute();
   EXPECT_EQ(scan->get_output()->row_count(), 1u);
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_equals.tbl", 1);
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-TEST_F(OperatorsTableScanStringTest, ScanNotEquals) {
-  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, PredicateCondition::NotEquals, "Reeperbahn");
+TEST_P(OperatorsTableScanStringTest, ScanNotEquals) {
+  auto scan =
+      std::make_shared<TableScan>(_gt_string_compressed, ColumnID{1}, PredicateCondition::NotEquals, "Reeperbahn");
   scan->execute();
-  EXPECT_EQ(scan->get_output()->row_count(), 6u);
+  EXPECT_EQ(scan->get_output()->row_count(), 5u);
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_not_equals.tbl", 1);
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-TEST_F(OperatorsTableScanStringTest, ScanLessThan) {
-  auto scan = std::make_shared<TableScan>(_gt_string, ColumnID{1}, PredicateCondition::NotEquals, "Schiff");
+TEST_P(OperatorsTableScanStringTest, ScanLessThan) {
+  auto scan = std::make_shared<TableScan>(_gt_string_compressed, ColumnID{1}, PredicateCondition::LessThan, "Schiff");
   scan->execute();
-  EXPECT_EQ(scan->get_output()->row_count(), 6u);
+  EXPECT_EQ(scan->get_output()->row_count(), 5u);
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_less_than.tbl", 1);
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }

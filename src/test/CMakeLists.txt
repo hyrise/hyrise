@@ -76,7 +76,7 @@ set(
     operators/projection_test.cpp
     operators/operator_deep_copy_test.cpp
     operators/sort_test.cpp
-    operators/table_scan_like_test.cpp
+    operators/table_scan_string_test.cpp
     operators/table_scan_test.cpp
     operators/union_all_test.cpp
     operators/union_positions_test.cpp
@@ -114,6 +114,7 @@ set(
     statistics/chunk_statistics/pruning_filters_test.cpp
     statistics/column_statistics_test.cpp
     statistics/generate_table_statistics_test.cpp
+    statistics/statistics_import_export_test.cpp
     statistics/statistics_test_utils.hpp
     statistics/table_statistics_test.cpp
     statistics/table_statistics_join_test.cpp
@@ -149,7 +150,9 @@ set(
     testing_assert.hpp
     utils/cuckoo_hashtable_test.cpp
     utils/format_bytes_test.cpp
+    utils/format_duration_test.cpp
     utils/numa_memory_resource_test.cpp
+    gtest_case_template.cpp
     gtest_main.cpp
 )
 
