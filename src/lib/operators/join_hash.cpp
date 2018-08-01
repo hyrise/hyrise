@@ -410,7 +410,18 @@ void probe(const RadixContainer<RightType>& radix_container,
           const auto& matching_rows = hashtable->get(type_cast<HashedType>(row.value));
 
           if (matching_rows) {
-            for (const auto row_id : matching_rows->get()) {
+            // We store a variant of <RowID, PosList> to reduce the number of allocations (see the cuckoo hashmap)
+            if (matching_rows->get().type() == typeid(PosList)) {
+              // Multiple matches, stored in one PosList
+              for (const auto row_id : boost::get<PosList>(matching_rows->get())) {
+                if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
+                  pos_list_left_local.emplace_back(row_id);
+                  pos_list_right_local.emplace_back(row.row_id);
+                }
+              }
+            } else {
+              // A single RowID
+              const auto row_id = boost::get<RowID>(matching_rows->get());
               if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
                 pos_list_left_local.emplace_back(row_id);
                 pos_list_right_local.emplace_back(row.row_id);
