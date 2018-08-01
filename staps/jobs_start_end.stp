@@ -24,6 +24,8 @@ probe process(@1).provider("HYRISE").mark("JOB_START")
       arg3: this  (long, needed as identifier)
     */
 
+    job_start[$arg3] = gettimeofday_us()
+    
     // Get first 3 elements of call stack
     callers = ucallers(2)
     str_tok = tokenize(callers, " ")
@@ -34,7 +36,6 @@ probe process(@1).provider("HYRISE").mark("JOB_START")
     caller = usymname(strtol(str_tok, 16))
     job_caller[$arg3] = caller
 
-    job_start[$arg3] = gettimeofday_us()
     description = user_string($arg2)
     printf("Starting job with id %i\n"
            "\tCalled by %s\n"
