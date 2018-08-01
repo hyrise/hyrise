@@ -52,8 +52,9 @@ void AbstractOperator::execute() {
   _on_cleanup();
 
   _base_performance_data.walltime = performance_timer.lap();
-  DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name(), _base_performance_data.walltime.count(), _output->row_count(),
-                _output->chunk_count(), this);
+
+  DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name(), _base_performance_data.walltime.count(),
+                _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0, this);
 }
 
 // returns the result of the operator
