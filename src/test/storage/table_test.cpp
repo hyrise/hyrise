@@ -83,12 +83,6 @@ TEST_F(StorageTableTest, GetValue) {
   EXPECT_THROW(t->get_value<int>(ColumnID{3}, 0u), std::exception);
 }
 
-TEST_F(StorageTableTest, ColumnNameTooLong) {
-  EXPECT_THROW(
-      TableColumnDefinition(std::string(std::numeric_limits<ColumnNameLength>::max() + 1ul, 'A'), DataType::Int);
-      , std::exception);
-}
-
 TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
   t = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
 

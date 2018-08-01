@@ -11,19 +11,22 @@
 #include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/print_directed_acyclic_graph.hpp"
+#include "utils/timer.hpp"
 
 namespace opossum {
 
-AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator> left,
-                                   const std::shared_ptr<const AbstractOperator> right)
+AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
+                                   const std::shared_ptr<const AbstractOperator>& right)
     : _type(type), _input_left(left), _input_right(right) {}
 
 OperatorType AbstractOperator::type() const { return _type; }
 
 void AbstractOperator::execute() {
+  DebugAssert(!_input_left || _input_left->get_output(), "Left input has not yet been executed");
+  DebugAssert(!_input_right || _input_right->get_output(), "Right input has not yet been executed");
   DebugAssert(!_output, "Operator has already been executed");
 
-  auto start = std::chrono::high_resolution_clock::now();
+  Timer performance_timer;
 
   auto transaction_context = this->transaction_context();
 
@@ -46,8 +49,7 @@ void AbstractOperator::execute() {
   // release any temporary data if possible
   _on_cleanup();
 
-  auto end = std::chrono::high_resolution_clock::now();
-  _performance_data.walltime_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+  _base_performance_data.walltime = performance_timer.lap();
 }
 
 // returns the result of the operator
@@ -68,11 +70,13 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const {
   return _output;
 }
 
+void AbstractOperator::clear_output() { _output = nullptr; }
+
 const std::string AbstractOperator::description(DescriptionMode description_mode) const { return name(); }
 
-std::shared_ptr<AbstractOperator> AbstractOperator::recreate(const std::vector<AllParameterVariant>& args) const {
-  std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>> recreated_ops;
-  return _recreate_impl(recreated_ops, args);
+std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy() const {
+  std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>> copied_ops;
+  return _deep_copy_impl(copied_ops);
 }
 
 std::shared_ptr<const Table> AbstractOperator::input_table_left() const { return _input_left->get_output(); }
@@ -87,11 +91,13 @@ std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() cons
   return transaction_context_is_set() ? _transaction_context->lock() : nullptr;
 }
 
-void AbstractOperator::set_transaction_context(std::weak_ptr<TransactionContext> transaction_context) {
+void AbstractOperator::set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {
   _transaction_context = transaction_context;
+  _on_set_transaction_context(transaction_context);
 }
 
-void AbstractOperator::set_transaction_context_recursively(std::weak_ptr<TransactionContext> transaction_context) {
+void AbstractOperator::set_transaction_context_recursively(
+    const std::weak_ptr<TransactionContext>& transaction_context) {
   set_transaction_context(transaction_context);
 
   if (_input_left != nullptr) mutable_input_left()->set_transaction_context_recursively(transaction_context);
@@ -106,7 +112,7 @@ std::shared_ptr<AbstractOperator> AbstractOperator::mutable_input_right() const 
   return std::const_pointer_cast<AbstractOperator>(_input_right);
 }
 
-const AbstractOperator::PerformanceData& AbstractOperator::performance_data() const { return _performance_data; }
+const BaseOperatorPerformanceData& AbstractOperator::base_performance_data() const { return _base_performance_data; }
 
 std::shared_ptr<const AbstractOperator> AbstractOperator::input_left() const { return _input_left; }
 
@@ -130,30 +136,41 @@ void AbstractOperator::print(std::ostream& stream) const {
 
       stream << format_bytes(output->estimate_memory_usage());
       stream << "/";
-      stream << format_duration(op->performance_data().walltime_ns) << ")";
+      stream << format_duration(
+                    std::chrono::duration_cast<std::chrono::nanoseconds>(op->base_performance_data().walltime))
+             << ")";
     }
   };
 
   print_directed_acyclic_graph<const AbstractOperator>(shared_from_this(), get_children_fn, node_print_fn, stream);
 }
 
+void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+  _on_set_parameters(parameters);
+  if (input_left()) mutable_input_left()->set_parameters(parameters);
+  if (input_right()) mutable_input_right()->set_parameters(parameters);
+}
+
+void AbstractOperator::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {}
+
 void AbstractOperator::_on_cleanup() {}
 
-std::shared_ptr<AbstractOperator> AbstractOperator::_recreate_impl(
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& recreated_ops,
-    const std::vector<AllParameterVariant>& args) const {
-  const auto recreated_ops_iter = recreated_ops.find(this);
-  if (recreated_ops_iter != recreated_ops.end()) return recreated_ops_iter->second;
+std::shared_ptr<AbstractOperator> AbstractOperator::_deep_copy_impl(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  const auto copied_ops_iter = copied_ops.find(this);
+  if (copied_ops_iter != copied_ops.end()) return copied_ops_iter->second;
 
-  const auto recreated_input_left =
-      input_left() ? input_left()->_recreate_impl(recreated_ops, args) : std::shared_ptr<AbstractOperator>{};
-  const auto recreated_input_right =
-      input_right() ? input_right()->_recreate_impl(recreated_ops, args) : std::shared_ptr<AbstractOperator>{};
+  const auto copied_input_left =
+      input_left() ? input_left()->_deep_copy_impl(copied_ops) : std::shared_ptr<AbstractOperator>{};
+  const auto copied_input_right =
+      input_right() ? input_right()->_deep_copy_impl(copied_ops) : std::shared_ptr<AbstractOperator>{};
 
-  const auto recreated_op = _on_recreate(args, recreated_input_left, recreated_input_right);
-  recreated_ops.emplace(this, recreated_op);
+  const auto copied_op = _on_deep_copy(copied_input_left, copied_input_right);
+  if (_transaction_context) copied_op->set_transaction_context(*_transaction_context);
 
-  return recreated_op;
+  copied_ops.emplace(this, copied_op);
+
+  return copied_op;
 }
 
 }  // namespace opossum

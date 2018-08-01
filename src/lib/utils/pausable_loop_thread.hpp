@@ -13,7 +13,7 @@ namespace opossum {
 // paused state.
 struct PausableLoopThread {
  public:
-  explicit PausableLoopThread(std::chrono::milliseconds loop_sleep_time, std::function<void(size_t)> loop_func);
+  explicit PausableLoopThread(std::chrono::milliseconds loop_sleep_time, const std::function<void(size_t)>& loop_func);
 
   ~PausableLoopThread();
   void pause();

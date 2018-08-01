@@ -4,7 +4,7 @@
 
 #include "SQLParserResult.h"
 #include "concurrency/transaction_context.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/lqp_translator.hpp"
 #include "optimizer/optimizer.hpp"
 #include "sql/sql_query_cache.hpp"
 #include "sql/sql_query_plan.hpp"
@@ -12,7 +12,17 @@
 
 namespace opossum {
 
-using PreparedStatementCache = std::shared_ptr<SQLQueryCache<SQLQueryPlan>>;
+using PreparedStatementCache = SQLQueryCache<SQLQueryPlan>;
+
+// Holds relevant information about the execution of an SQLPipelineStatement.
+struct SQLPipelineStatementMetrics {
+  std::chrono::microseconds translate_time_micros{};
+  std::chrono::microseconds optimize_time_micros{};
+  std::chrono::microseconds compile_time_micros{};
+  std::chrono::microseconds execution_time_micros{};
+
+  bool query_plan_cache_hit = false;
+};
 
 /**
  * This is the unified interface to handle SQL queries and related operations.
@@ -34,7 +44,10 @@ class SQLPipelineStatement : public Noncopyable {
   // Prefer using the SQLPipelineBuilder for constructing SQLPipelineStatements conveniently
   SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                        const UseMvcc use_mvcc, const std::shared_ptr<TransactionContext>& transaction_context,
-                       const std::shared_ptr<Optimizer>& optimizer, const PreparedStatementCache& prepared_statements);
+                       const std::shared_ptr<LQPTranslator>& lqp_translator,
+                       const std::shared_ptr<Optimizer>& optimizer,
+                       const std::shared_ptr<PreparedStatementCache>& prepared_statements,
+                       const CleanupTemporaries cleanup_temporaries);
 
   // Returns the raw SQL string.
   const std::string& get_sql_string();
@@ -61,13 +74,7 @@ class SQLPipelineStatement : public Noncopyable {
   // This can be a nullptr if no transaction management is wanted.
   const std::shared_ptr<TransactionContext>& transaction_context() const;
 
-  std::chrono::microseconds compile_time_microseconds() const;
-  std::chrono::microseconds execution_time_microseconds() const;
-
-  bool query_plan_cache_hit() const;
-
-  // Helper function to create a pretty print error message after an invalid SQL parse
-  static std::string create_parse_error_message(const std::string& sql, const hsql::SQLParserResult& result);
+  const std::shared_ptr<SQLPipelineStatementMetrics>& metrics() const;
 
  private:
   const std::string _sql_string;
@@ -78,6 +85,9 @@ class SQLPipelineStatement : public Noncopyable {
 
   // Might be the Statement's own transaction context, or the one shared by all Statements in a Pipeline
   std::shared_ptr<TransactionContext> _transaction_context;
+
+  // The translator to be used to translate the abstract LQP into an executable PQP
+  const std::shared_ptr<LQPTranslator> _lqp_translator;
 
   const std::shared_ptr<Optimizer> _optimizer;
 
@@ -90,15 +100,14 @@ class SQLPipelineStatement : public Noncopyable {
   std::shared_ptr<const Table> _result_table;
   // Assume there is an output table. Only change if nullptr is returned from execution.
   bool _query_has_output = true;
-  bool _query_plan_cache_hit = false;
 
-  // Execution times
-  std::chrono::microseconds _compile_time_micros;
-  std::chrono::microseconds _execution_time_micros;
+  std::shared_ptr<SQLPipelineStatementMetrics> _metrics;
 
-  PreparedStatementCache _prepared_statements;
-  // Number of placeholders in prepared statement; default 0 becasue we assume no prepared statement
-  uint16_t _num_parameters = 0;
+  std::shared_ptr<PreparedStatementCache> _prepared_statements;
+  std::unordered_map<ValuePlaceholderID, ParameterID> _parameter_ids;
+
+  // Delete temporary tables
+  const CleanupTemporaries _cleanup_temporaries;
 };
 
 }  // namespace opossum

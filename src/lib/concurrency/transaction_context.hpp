@@ -95,7 +95,7 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
    * @param callback called when transaction is actually committed
    * @return false if called a second time
    */
-  bool commit_async(std::function<void(TransactionID)> callback);
+  bool commit_async(const std::function<void(TransactionID)>& callback);
 
   /**
    * Commits the transaction.

@@ -7,8 +7,11 @@
 
 #include "abstract_lqp_node.hpp"
 #include "all_type_variant.hpp"
+#include "lqp_column_reference.hpp"
 
 namespace opossum {
+
+class TableStatistics;
 
 /**
  * Node that represents a table that has no data backing it, but may provide
@@ -21,27 +24,29 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
  public:
   using ColumnDefinitions = std::vector<std::pair<DataType, std::string>>;
 
-  explicit MockNode(const ColumnDefinitions& column_definitions,
-                    const std::optional<std::string>& alias = std::nullopt);
-  explicit MockNode(const std::shared_ptr<TableStatistics>& statistics,
-                    const std::optional<std::string>& alias = std::nullopt);
+  explicit MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& name = {});
+  explicit MockNode(const std::shared_ptr<TableStatistics>& statistics);
 
-  const std::vector<std::string>& output_column_names() const override;
+  LQPColumnReference get_column(const std::string& name) const;
 
+  const ColumnDefinitions& column_definitions() const;
   const boost::variant<ColumnDefinitions, std::shared_ptr<TableStatistics>>& constructor_arguments() const;
 
-  std::string description() const override;
-  std::string get_verbose_column_name(ColumnID column_id) const override;
+  const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
 
-  bool shallow_equals(const AbstractLQPNode& rhs) const override;
+  std::string description() const override;
+
+  std::shared_ptr<TableStatistics> derive_statistics_from(
+      const std::shared_ptr<AbstractLQPNode>& left_input,
+      const std::shared_ptr<AbstractLQPNode>& right_input = nullptr) const override;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
+  std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
+  bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 
  private:
-  std::vector<std::string> _output_column_names;
+  std::optional<std::string> _name;
+  mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _column_expressions;
 
   // Constructor args to keep around for deep_copy()
   boost::variant<ColumnDefinitions, std::shared_ptr<TableStatistics>> _constructor_arguments;

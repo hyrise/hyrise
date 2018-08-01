@@ -21,6 +21,9 @@ class ValueColumn : public BaseValueColumn {
   explicit ValueColumn(pmr_concurrent_vector<T>&& values, const PolymorphicAllocator<T>& alloc = {});
   explicit ValueColumn(pmr_concurrent_vector<T>&& values, pmr_concurrent_vector<bool>&& null_values,
                        const PolymorphicAllocator<T>& alloc = {});
+  explicit ValueColumn(std::vector<T>& values, const PolymorphicAllocator<T>& alloc = {});
+  explicit ValueColumn(std::vector<T>& values, std::vector<bool>& null_values,
+                       const PolymorphicAllocator<T>& alloc = {});
 
   // Return the value at a certain position. If you want to write efficient operators, back off!
   // Use values() and null_values() to get the vectors and check the content yourself.
@@ -54,9 +57,6 @@ class ValueColumn : public BaseValueColumn {
 
   // Return the number of entries in the column.
   size_t size() const final;
-
-  // Visitor pattern, see base_column.hpp
-  void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
 
   // Copies a ValueColumn using a new allocator. This is useful for placing the ValueColumn on a new NUMA node.
   std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;

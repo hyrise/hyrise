@@ -10,6 +10,7 @@
 #include <memory>
 
 #include "base_encoded_column.hpp"
+#include "storage/vector_compression/base_compressed_vector.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -41,7 +42,7 @@ class FrameOfReferenceColumn : public BaseEncodedColumn {
    */
   static constexpr auto block_size = 2048u;
 
-  explicit FrameOfReferenceColumn(const pmr_vector<T> reference_frames, const pmr_vector<bool> null_values,
+  explicit FrameOfReferenceColumn(pmr_vector<T> block_minima, pmr_vector<bool> null_values,
                                   std::unique_ptr<const BaseCompressedVector> offset_values);
 
   const pmr_vector<T>& block_minima() const;
@@ -77,6 +78,7 @@ class FrameOfReferenceColumn : public BaseEncodedColumn {
   const pmr_vector<T> _block_minima;
   const pmr_vector<bool> _null_values;
   const std::unique_ptr<const BaseCompressedVector> _offset_values;
+  std::unique_ptr<BaseVectorDecompressor> _decoder;
 };
 
 }  // namespace opossum

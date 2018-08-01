@@ -50,11 +50,11 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
             exit 1
         fi
     elif [[ "$unamestr" == 'Linux' ]]; then
-        if cat /etc/lsb-release | grep DISTRIB_ID | grep Ubuntu >/dev/null; then
+        if [ -f /etc/lsb-release ] && cat /etc/lsb-release | grep DISTRIB_ID | grep Ubuntu >/dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
                 boostall=$(apt-cache search --names-only '^libboost1.[0-9]+-all-dev$' | sort | tail -n 1 | cut -f1 -d' ')
-                sudo apt-get install --no-install-recommends -y clang-6.0 libclang-6.0-dev clang-format-6.0 gcovr python2.7 gcc-7 llvm libnuma-dev libnuma1 libtbb-dev build-essential cmake libreadline-dev libncurses5-dev libsqlite3-dev parallel $boostall libpq-dev &
+                sudo apt-get install --no-install-recommends -y clang-6.0 libclang-6.0-dev clang-tidy-6.0 clang-format-6.0 gcovr python2.7 gcc-7 llvm llvm-6.0-tools libnuma-dev libnuma1 libtbb-dev build-essential cmake libreadline-dev libncurses5-dev libsqlite3-dev parallel $boostall libpq-dev &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during installation."
@@ -69,12 +69,18 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 fi
 
                 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 --slave /usr/bin/g++ g++ /usr/bin/g++-7
-                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-6.0 60 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-6.0
+                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-6.0 60 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-6.0 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-6.0
             else
                 echo "Error during installation."
                 exit 1
             fi
+        else
+            echo "Unsupported system. You might get the install script to work if you remove the '/etc/lsb-release' line, but you will be on your own."
+            exit 1
         fi
+    else
+        echo "Unsupported operating system $unamestr."
+        exit 1
     fi
 fi
 

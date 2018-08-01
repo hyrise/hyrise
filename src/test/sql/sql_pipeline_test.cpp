@@ -26,9 +26,9 @@ namespace {
 // predicate and then optimized to a Join.
 std::function<bool(const std::shared_ptr<opossum::AbstractLQPNode>&)> contains_cross =
     [](const std::shared_ptr<opossum::AbstractLQPNode>& node) {
-      if (node->type() != opossum::LQPNodeType::Join) return false;
+      if (node->type != opossum::LQPNodeType::Join) return false;
       if (auto join_node = std::dynamic_pointer_cast<opossum::JoinNode>(node)) {
-        return join_node->join_mode() == opossum::JoinMode::Cross;
+        return join_node->join_mode == opossum::JoinMode::Cross;
       }
       return false;
     };
@@ -128,7 +128,7 @@ TEST_F(SQLPipelineTest, SimpleCreationInvalid) {
 TEST_F(SQLPipelineTest, ConstructorCombinations) {
   // Simple sanity test for all other constructor options
   const auto optimizer = Optimizer::create_default_optimizer();
-  auto prepared_cache = std::make_shared<SQLQueryCache<SQLQueryPlan>>(5);
+  auto prepared_cache = std::make_shared<PreparedStatementCache>(5);
   auto transaction_context = TransactionManager::get().new_transaction_context();
 
   // No transaction context
@@ -272,11 +272,14 @@ TEST_F(SQLPipelineTest, GetQueryPlansMultiple) {
 TEST_F(SQLPipelineTest, GetQueryPlanTwice) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
 
+  const auto& metrics = sql_pipeline.metrics();
+
   sql_pipeline.get_query_plans();
-  auto duration = sql_pipeline.compile_time_microseconds();
+  ASSERT_EQ(metrics.statement_metrics.size(), 1u);
+  auto duration = metrics.statement_metrics[0]->compile_time_micros;
 
   const auto& plans = sql_pipeline.get_query_plans();
-  auto duration2 = sql_pipeline.compile_time_microseconds();
+  auto duration2 = metrics.statement_metrics[0]->compile_time_micros;
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
@@ -350,11 +353,15 @@ TEST_F(SQLPipelineTest, GetResultTableMultiple) {
 TEST_F(SQLPipelineTest, GetResultTableTwice) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
 
+  const auto& metrics = sql_pipeline.metrics();
+
   sql_pipeline.get_result_table();
-  auto duration = sql_pipeline.execution_time_microseconds();
+  ASSERT_EQ(metrics.statement_metrics.size(), 1u);
+  auto duration = metrics.statement_metrics[0]->execution_time_micros;
 
   const auto& table = sql_pipeline.get_result_table();
-  auto duration2 = sql_pipeline.execution_time_microseconds();
+  ASSERT_EQ(metrics.statement_metrics.size(), 1u);
+  auto duration2 = metrics.statement_metrics[0]->execution_time_micros;
 
   // Make sure this was not run twice
   EXPECT_EQ(duration, duration2);
@@ -371,14 +378,41 @@ TEST_F(SQLPipelineTest, GetResultTableExecutionRequired) {
 TEST_F(SQLPipelineTest, GetResultTableWithScheduler) {
   auto sql_pipeline = SQLPipelineBuilder{_join_query}.create_pipeline();
 
-  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
+  Topology::use_fake_numa_topology(8, 4);
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
   const auto& table = sql_pipeline.get_result_table();
 
   EXPECT_TABLE_EQ_UNORDERED(table, _join_result);
 }
 
+TEST_F(SQLPipelineTest, CleanupWithScheduler) {
+  auto sql_pipeline = SQLPipelineBuilder{_join_query}.create_pipeline();
+
+  Topology::use_fake_numa_topology(8, 4);
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+  sql_pipeline.get_result_table();
+
+  for (auto task_it = sql_pipeline.get_tasks()[0].cbegin(); task_it != sql_pipeline.get_tasks()[0].cend() - 1;
+       ++task_it) {
+    EXPECT_EQ(std::dynamic_pointer_cast<OperatorTask>(*task_it)->get_operator()->get_output(), nullptr);
+  }
+}
+
+TEST_F(SQLPipelineTest, DisabledCleanupWithScheduler) {
+  auto sql_pipeline = SQLPipelineBuilder{_join_query}.dont_cleanup_temporaries().create_pipeline();
+
+  Topology::use_fake_numa_topology(8, 4);
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
+  sql_pipeline.get_result_table();
+
+  for (auto task_it = sql_pipeline.get_tasks()[0].cbegin(); task_it != sql_pipeline.get_tasks()[0].cend() - 1;
+       ++task_it) {
+    EXPECT_NE(std::dynamic_pointer_cast<OperatorTask>(*task_it)->get_operator()->get_output(), nullptr);
+  }
+}
+
 TEST_F(SQLPipelineTest, GetResultTableBadQuery) {
-  auto sql = "SELECT a + b FROM table_a";
+  auto sql = "SELECT a + not_a_column FROM table_a";
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
 
   EXPECT_THROW(sql_pipeline.get_result_table(), std::exception);
@@ -399,14 +433,25 @@ TEST_F(SQLPipelineTest, GetResultTableNoOutput) {
 TEST_F(SQLPipelineTest, GetTimes) {
   auto sql_pipeline = SQLPipelineBuilder{_select_query_a}.create_pipeline();
 
-  EXPECT_THROW(sql_pipeline.compile_time_microseconds(), std::exception);
-  EXPECT_THROW(sql_pipeline.execution_time_microseconds(), std::exception);
+  const auto& metrics = sql_pipeline.metrics();
+  ASSERT_EQ(metrics.statement_metrics.size(), 1u);
+  const auto& statement_metrics = metrics.statement_metrics[0];
+
+  const auto zero_duration = std::chrono::microseconds::zero();
+
+  EXPECT_EQ(statement_metrics->translate_time_micros, zero_duration);
+  EXPECT_EQ(statement_metrics->optimize_time_micros, zero_duration);
+  EXPECT_EQ(statement_metrics->compile_time_micros, zero_duration);
+  EXPECT_EQ(statement_metrics->execution_time_micros, zero_duration);
 
   // Run to get times
   sql_pipeline.get_result_table();
 
-  EXPECT_GT(sql_pipeline.compile_time_microseconds().count(), 0);
-  EXPECT_GT(sql_pipeline.execution_time_microseconds().count(), 0);
+  EXPECT_GT(metrics.parse_time_micros, zero_duration);
+  EXPECT_GT(statement_metrics->translate_time_micros, zero_duration);
+  EXPECT_GT(statement_metrics->optimize_time_micros, zero_duration);
+  EXPECT_GT(statement_metrics->compile_time_micros, zero_duration);
+  EXPECT_GT(statement_metrics->execution_time_micros, zero_duration);
 }
 
 TEST_F(SQLPipelineTest, RequiresExecutionVariations) {

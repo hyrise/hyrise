@@ -68,11 +68,9 @@ TableStatistics TableStatistics::estimate_predicate(const ColumnID column_id,
     predicated_column_statistics[column_id] = estimate.column_statistics;
     predicated_row_count *= estimate.selectivity;
   } else {
-    Assert(is_placeholder(value), "AllParameterVariant type is not implemented in statistics component.");
-    const auto value_placeholder = boost::get<ValuePlaceholder>(value);
-
-    const auto estimate = left_operand_column_statistics->estimate_predicate_with_value_placeholder(predicate_condition,
-                                                                                                    value_placeholder);
+    Assert(is_parameter_id(value), "AllParameterVariant type is not implemented in statistics component.");
+    const auto estimate =
+        left_operand_column_statistics->estimate_predicate_with_value_placeholder(predicate_condition);
 
     predicated_column_statistics[column_id] = estimate.column_statistics;
     predicated_row_count *= estimate.selectivity;
@@ -107,7 +105,6 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
                                                           const JoinMode mode, const ColumnIDPair column_ids,
                                                           const PredicateCondition predicate_condition) const {
   Assert(mode != JoinMode::Cross, "Use function estimate_cross_join for cross joins.");
-  Assert(mode != JoinMode::Natural, "Natural joins are not supported by statistics component.");
 
   /**
    * The approach to calculate the join table statistics is to split the join into a cross join followed by a predicate.
@@ -166,12 +163,6 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
    * to the right columns would still be 1 + 1 = 2. However, no null values are added to the the left columns.
    * This results in a join result row count of 1 + 2 = 3.
    */
-
-  // For self joins right_table_statistics should be this.
-  if (mode == JoinMode::Self) {
-    Assert(this == &right_table_statistics, "Self joins should pass the same table as right_table_statistics again.");
-  }
-
   // copy column statistics and calculate cross join row count
   auto join_table_stats = estimate_cross_join(right_table_statistics);
 
@@ -196,24 +187,24 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
     return null_value_no;
   };
 
-  auto adjust_null_value_ratio_for_outer_join = [&](
-      const std::vector<std::shared_ptr<const BaseColumnStatistics>>::iterator col_begin,
-      const std::vector<std::shared_ptr<const BaseColumnStatistics>>::iterator col_end, const float row_count,
-      const float null_value_no, const float new_row_count) {
-    if (null_value_no == 0) {
-      return;
-    }
-    // adjust null value ratios in columns from the right table
-    for (auto col_itr = col_begin; col_itr != col_end; ++col_itr) {
-      // columns need to be copied before changed, somebody else could use it
-      *col_itr = (*col_itr)->clone();
-      float column_null_value_no = (*col_itr)->null_value_ratio() * row_count;
-      float right_null_value_ratio = (column_null_value_no + null_value_no) / new_row_count;
+  auto adjust_null_value_ratio_for_outer_join =
+      [&](const std::vector<std::shared_ptr<const BaseColumnStatistics>>::iterator col_begin,
+          const std::vector<std::shared_ptr<const BaseColumnStatistics>>::iterator col_end, const float row_count,
+          const float null_value_no, const float new_row_count) {
+        if (null_value_no == 0) {
+          return;
+        }
+        // adjust null value ratios in columns from the right table
+        for (auto col_itr = col_begin; col_itr != col_end; ++col_itr) {
+          // columns need to be copied before changed, somebody else could use it
+          *col_itr = (*col_itr)->clone();
+          float column_null_value_no = (*col_itr)->null_value_ratio() * row_count;
+          float right_null_value_ratio = (column_null_value_no + null_value_no) / new_row_count;
 
-      // We just created these column statistics and are therefore qualified to modify them
-      std::const_pointer_cast<BaseColumnStatistics>(*col_itr)->set_null_value_ratio(right_null_value_ratio);
-    }
-  };
+          // We just created these column statistics and are therefore qualified to modify them
+          std::const_pointer_cast<BaseColumnStatistics>(*col_itr)->set_null_value_ratio(right_null_value_ratio);
+        }
+      };
 
   // calculate how many null values need to be added to columns from the left table for right/outer joins
   auto left_null_value_no = calculate_added_null_values_for_outer_join(
@@ -239,7 +230,6 @@ TableStatistics TableStatistics::estimate_predicated_join(const TableStatistics&
   };
 
   switch (mode) {
-    case JoinMode::Self:
     case JoinMode::Inner: {
       join_table_stats._column_statistics[column_ids.first] = stats_container.left_column_statistics;
       join_table_stats._column_statistics[new_right_column_id] = stats_container.right_column_statistics;

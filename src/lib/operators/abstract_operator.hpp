@@ -6,6 +6,8 @@
 #include <vector>
 
 #include "all_parameter_variant.hpp"
+#include "base_operator_performance_data.hpp"
+#include "expression/parameter_expression.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -16,6 +18,7 @@ class TransactionContext;
 
 enum class OperatorType {
   Aggregate,
+  Alias,
   Delete,
   Difference,
   ExportBinary,
@@ -25,8 +28,10 @@ enum class OperatorType {
   ImportCsv,
   IndexScan,
   Insert,
+  JitOperatorWrapper,
   JoinHash,
   JoinIndex,
+  JoinMPSM,
   JoinNestedLoop,
   JoinSortMerge,
   Limit,
@@ -64,8 +69,8 @@ enum class OperatorType {
 
 class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, private Noncopyable {
  public:
-  AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator> left = nullptr,
-                   const std::shared_ptr<const AbstractOperator> right = nullptr);
+  AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left = nullptr,
+                   const std::shared_ptr<const AbstractOperator>& right = nullptr);
 
   virtual ~AbstractOperator() = default;
 
@@ -75,7 +80,12 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   virtual void execute();
 
   // returns the result of the operator
+  // When using OperatorTasks, they automatically clear this once all successors are done. This reduces the number of
+  // temporary tables.
   std::shared_ptr<const Table> get_output() const;
+
+  // clears the output of this operator to free up space
+  void clear_output();
 
   virtual const std::string name() const = 0;
   virtual const std::string description(DescriptionMode description_mode = DescriptionMode::SingleLine) const;
@@ -84,16 +94,15 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   bool transaction_context_is_set() const;
 
   std::shared_ptr<TransactionContext> transaction_context() const;
-  void set_transaction_context(std::weak_ptr<TransactionContext> transaction_context);
+  void set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context);
 
   // Calls set_transaction_context on itself and both input operators recursively
-  void set_transaction_context_recursively(std::weak_ptr<TransactionContext> transaction_context);
+  void set_transaction_context_recursively(const std::weak_ptr<TransactionContext>& transaction_context);
 
   // Returns a new instance of the same operator with the same configuration.
-  // The given arguments are used to replace the ValuePlaceholder objects within the new operator, if applicable.
-  // Recursively recreates the input operators and passes the argument list along.
+  // Recursively copies the input operators.
   // An operator needs to implement this method in order to be cacheable.
-  virtual std::shared_ptr<AbstractOperator> recreate(const std::vector<AllParameterVariant>& args = {}) const;
+  std::shared_ptr<AbstractOperator> deep_copy() const;
 
   // Get the input operators.
   std::shared_ptr<const AbstractOperator> input_left() const;
@@ -108,12 +117,15 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   std::shared_ptr<const Table> input_table_left() const;
   std::shared_ptr<const Table> input_table_right() const;
 
-  struct PerformanceData {
-    uint64_t walltime_ns = 0;  // time spent in nanoseconds executing this operator
-  };
-  const AbstractOperator::PerformanceData& performance_data() const;
+  // Return data about the operators performance (runtime, e.g.) AFTER it has been executed.
+  // Derived operators may produce more finely grained performance data (e.g. JoinHash::join_hash_performance_data())
+  const BaseOperatorPerformanceData& base_performance_data() const;
 
   void print(std::ostream& stream = std::cout) const;
+
+  // Set all specified parameters within this Operator's expressions and its inputs
+  // Parameters can be ValuePlaceholders of prepared SQL statements, or external values in correlated subslects
+  void set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters);
 
  protected:
   // abstract method to actually execute the operator
@@ -126,17 +138,22 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // clean up after execution (if it makes sense)
   virtual void _on_cleanup();
 
+  // override this if the Operator uses Expressions and set the parameters within them
+  virtual void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) = 0;
+
+  // override this if the Operator uses Expressions and set the transaction context in the SubSelectExpressions
+  virtual void _on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context);
+
   void _print_impl(std::ostream& out, std::vector<bool>& levels,
                    std::unordered_map<const AbstractOperator*, size_t>& id_by_operator, size_t& id_counter) const;
 
-  // Looks itself up in @param recreated_ops to support diamond shapes in PQPs, if not found calls _on_recreate()
-  std::shared_ptr<AbstractOperator> _recreate_impl(
-      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& recreated_ops,
-      const std::vector<AllParameterVariant>& args) const;
+  // Looks itself up in @param copied_ops to support diamond shapes in PQPs, if not found calls _on_deep_copy()
+  std::shared_ptr<AbstractOperator> _deep_copy_impl(
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const;
 
-  virtual std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const = 0;
+  virtual std::shared_ptr<AbstractOperator> _on_deep_copy(
+      const std::shared_ptr<AbstractOperator>& copied_input_left,
+      const std::shared_ptr<AbstractOperator>& copied_input_right) const = 0;
 
   const OperatorType _type;
 
@@ -150,9 +167,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
   // Weak pointer breaks cyclical dependency between operators and context
   std::optional<std::weak_ptr<TransactionContext>> _transaction_context;
 
-  PerformanceData _performance_data;
-
-  std::weak_ptr<OperatorTask> _operator_task;
+  BaseOperatorPerformanceData _base_performance_data;
 };
 
 }  // namespace opossum

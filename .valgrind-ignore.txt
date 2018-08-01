@@ -53,3 +53,11 @@
    fun:hwloc_topology_init
    fun:*Topology*
 }
+
+{
+   <jit_runtime_pointer_are_able_to_handle_invalid_pointers_themselves>
+   Memcheck:Param
+   write(buf)
+   fun:write
+   fun:_ZNK7opossum*RuntimePointer8is_validEv
+}

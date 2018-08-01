@@ -3,6 +3,12 @@ cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 
 project(Hyrise)
 
+if(APPLE)
+    set(CMAKE_EXE_LINKER_FLAGS -Wl,-export_dynamic)
+else()
+    set(CMAKE_EXE_LINKER_FLAGS -Wl,--export-dynamic)
+endif()
+
 option(ENABLE_UNSUPPORTED_COMPILER "Set to ON to build Hyrise even if the compiler is not supported. Default: OFF" OFF)
 function(compiler_not_supported message)
     if (${ENABLE_UNSUPPORTED_COMPILER})
@@ -33,15 +39,23 @@ else()
     compiler_not_supported("You are using an unsupported compiler (${CMAKE_CXX_COMPILER_ID})! Compilation has only been tested with Clang (Linux + OS X) and GCC (Linux).")
 endif()
 
-# Enable sanitization if requested
-option(ENABLE_SANITIZATION "Set to ON to build Hyrise with ASAN and UBSAN enabled. Default: OFF" OFF)
-if (${ENABLE_SANITIZATION})
+# Enable address and undefined behavior sanitization if requested
+option(ENABLE_ADDR_UB_SANITIZATION "Set to ON to build Hyrise with ASAN and UBSAN enabled. Default: OFF" OFF)
+if (${ENABLE_ADDR_UB_SANITIZATION})
     # add_compile_options() wants list, CMAKE_EXE_LINKER_FLAGS a string. There are probably cleverer ways than
-    # duplicating the flags, but this is prbly the simplest solution.
+    # duplicating the flags, but this is probably the simplest solution.
     add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer)
     set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer")
 endif()
 
+# Enable thread sanitization if requested
+option(ENABLE_THREAD_SANITIZATION "Set to ON to build Hyrise with TSAN enabled. Default: OFF" OFF)
+if (${ENABLE_THREAD_SANITIZATION})
+    # add_compile_options() wants list, CMAKE_EXE_LINKER_FLAGS a string. There are probably cleverer ways than
+    # duplicating the flags, but this is probably the simplest solution.
+    add_compile_options(-fsanitize=thread -O1)
+    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=thread")
+endif()
 
 # Set default build type if none was passed on the command line
 if(NOT CMAKE_BUILD_TYPE)
@@ -58,30 +72,20 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -march=native")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -march=native")
 
-# Link Time Optimization (LTO)
-if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-    if(NOT ${CMAKE_VERSION} VERSION_LESS "3.9.0")
-        cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
-        include(CheckIPOSupported)
-        check_ipo_supported()
-        set_target_properties(PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
-        add_definitions(-DWITH_LTO)
-    endif()
-endif()
-
 # Require NCurses over Curses
 set(CURSES_NEED_NCURSES TRUE)
 
 # Dependencies
 find_package(FS REQUIRED)
 find_package(Numa)
-find_package(LLVM CONFIG)
+find_package(LLVM 6.0.0 CONFIG)
 find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
 find_package(Curses REQUIRED)
 find_package(Sqlite3 REQUIRED)
 find_package(PQ REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system thread filesystem)
+
 
 add_definitions(-DBOOST_THREAD_VERSION=5)
 
@@ -102,10 +106,35 @@ if(${CI_BUILD})
     endif()
 endif()
 
+# Link Time Optimization (LTO)
+cmake_policy(SET CMP0069 NEW)
+option(ENABLE_LTO "Set to ON to build Hyrise with enabled Link Time Optimization (LTO). Default: OFF" OFF)
+if (${ENABLE_LTO})
+    if(NOT ${CMAKE_VERSION} VERSION_LESS "3.9.0")
+        cmake_minimum_required(VERSION 3.9 FATAL_ERROR)
+        include(CheckIPOSupported)
+        check_ipo_supported(RESULT ipo_supported OUTPUT ipo_output)
+        if(ipo_supported)
+            set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+            add_definitions(-DWITH_LTO)
+            message(STATUS "Building with Link-Time Optimization")
+        else()
+            message(WARNING "LTO not supported: ${ipo_output}")
+        endif()
+    endif()
+endif()
 
 # Include sub-CMakeLists.txt
 add_subdirectory(third_party/ EXCLUDE_FROM_ALL)
+
+# Some third-party libs don't support LTO (if enabled above):
+foreach(no_lto_target gtest gtest_main gmock gmock_main hpinuma_s hpinuma hpinuma_base_s hpinuma_base hpinuma_util_tool hpinuma_msource hpinuma_msource_s)
+    if(TARGET no_lto_target)
+        set_property(TARGET ${no_lto_target} PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
+    endif()
+endforeach(no_lto_target)
 add_subdirectory(src)
+
 
 # Useful for printing all c++ files in a directory:
 # find . -type f -name "*.cpp" -o -name "*.hpp" | cut -c 3- | sort

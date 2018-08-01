@@ -49,7 +49,7 @@ namespace detail {
 #define DATA_TYPE_ENUM_VALUES BOOST_PP_SEQ_TRANSFORM(GET_ELEM, 1, DATA_TYPE_INFO)
 #define DATA_TYPE_STRINGS BOOST_PP_SEQ_TRANSFORM(GET_ELEM, 2, DATA_TYPE_INFO)
 
-// We use a boolean data type in the JitOperator.
+// We use a boolean data type in the JitOperatorWrapper.
 // However, adding it to DATA_TYPE_INFO would trigger many unnecessary template instantiations for all other operators
 // and should thus be avoided for compilation performance reasons.
 // We thus only add "Bool" to the DataType enum and define JIT_DATA_TYPE_INFO (with a boolean data type) in
@@ -90,6 +90,8 @@ using AllTypeVariant = detail::AllTypeVariant;
 // Function to check if AllTypeVariant is null
 inline bool variant_is_null(const AllTypeVariant& variant) { return (variant.which() == 0); }
 
+bool is_floating_point_data_type(const DataType data_type);
+
 /**
  * Notes:
  *   – Use this instead of AllTypeVariant{}, AllTypeVariant{NullValue{}}, NullValue{}, etc.
@@ -126,3 +128,12 @@ static const auto NULL_VALUE = AllTypeVariant{};
 bool all_type_variant_near(const AllTypeVariant& lhs, const AllTypeVariant& rhs, double max_abs_error = 0.001);
 
 }  // namespace opossum
+
+namespace std {
+
+template <>
+struct hash<opossum::AllTypeVariant> {
+  size_t operator()(const opossum::AllTypeVariant& all_type_variant) const;
+};
+
+}  // namespace std

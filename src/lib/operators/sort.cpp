@@ -12,7 +12,7 @@
 
 namespace opossum {
 
-Sort::Sort(const std::shared_ptr<const AbstractOperator> in, const ColumnID column_id, const OrderByMode order_by_mode,
+Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const ColumnID column_id, const OrderByMode order_by_mode,
            const size_t output_chunk_size)
     : AbstractReadOnlyOperator(OperatorType::Sort, in),
       _column_id(column_id),
@@ -25,11 +25,13 @@ OrderByMode Sort::order_by_mode() const { return _order_by_mode; }
 
 const std::string Sort::name() const { return "Sort"; }
 
-std::shared_ptr<AbstractOperator> Sort::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<Sort>(recreated_input_left, _column_id, _order_by_mode, _output_chunk_size);
+std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<Sort>(copied_input_left, _column_id, _order_by_mode, _output_chunk_size);
 }
+
+void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Sort::_on_execute() {
   _impl = make_unique_by_data_type<AbstractReadOnlyOperatorImpl, SortImpl>(
@@ -45,8 +47,8 @@ template <typename SortColumnType>
 class Sort::SortImplMaterializeOutput {
  public:
   // creates a new table with reference columns
-  SortImplMaterializeOutput(std::shared_ptr<const Table> in,
-                            std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> id_value_map,
+  SortImplMaterializeOutput(const std::shared_ptr<const Table>& in,
+                            const std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>>& id_value_map,
                             const size_t output_chunk_size)
       : _table_in(in), _output_chunk_size(output_chunk_size), _row_id_value_vector(id_value_map) {}
 
@@ -87,7 +89,7 @@ class Sort::SortImplMaterializeOutput {
         auto chunk_it = output_columns_by_chunk.begin();
         auto chunk_offset_out = 0u;
         for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
-          const auto[chunk_id, chunk_offset] = _row_id_value_vector->at(row_index).first;
+          const auto [chunk_id, chunk_offset] = _row_id_value_vector->at(row_index).first;  // NOLINT
 
           const auto column = _table_in->get_chunk(chunk_id)->get_column(column_id);
 
@@ -121,6 +123,7 @@ class Sort::SortImplMaterializeOutput {
     return output;
   }
 
+ protected:
   const std::shared_ptr<const Table> _table_in;
   const size_t _output_chunk_size;
   const std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> _row_id_value_vector;
@@ -132,7 +135,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
  public:
   using RowIDValuePair = std::pair<RowID, SortColumnType>;
 
-  SortImpl(const std::shared_ptr<const Table> table_in, const ColumnID column_id,
+  SortImpl(const std::shared_ptr<const Table>& table_in, const ColumnID column_id,
            const OrderByMode order_by_mode = OrderByMode::Ascending, const size_t output_chunk_size = 0)
       : _table_in(table_in),
         _column_id(column_id),
@@ -143,19 +146,20 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     _null_value_rows = std::make_shared<std::vector<RowIDValuePair>>();
   }
 
+ protected:
   std::shared_ptr<const Table> _on_execute() override {
     // 1. Prepare Sort: Creating rowid-value-Structure
     _materialize_sort_column();
 
     // 2. After we got our ValueRowID Map we sort the map by the value of the pair
     if (_order_by_mode == OrderByMode::Ascending || _order_by_mode == OrderByMode::AscendingNullsLast) {
-      sort_with_operator<std::less<>>();
+      _sort_with_operator<std::less<>>();
     } else {
-      sort_with_operator<std::greater<>>();
+      _sort_with_operator<std::greater<>>();
     }
 
     // 2b. Insert null rows if necessary
-    if (_null_value_rows->size()) {
+    if (!_null_value_rows->empty()) {
       if (_order_by_mode == OrderByMode::AscendingNullsLast || _order_by_mode == OrderByMode::DescendingNullsLast) {
         // NULLs last
         _row_id_value_vector->insert(_row_id_value_vector->end(), _null_value_rows->begin(), _null_value_rows->end());
@@ -199,7 +203,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
   }
 
   template <typename Comparator>
-  void sort_with_operator() {
+  void _sort_with_operator() {
     Comparator comparator;
     std::stable_sort(_row_id_value_vector->begin(), _row_id_value_vector->end(),
                      [comparator](RowIDValuePair a, RowIDValuePair b) { return comparator(a.second, b.second); });

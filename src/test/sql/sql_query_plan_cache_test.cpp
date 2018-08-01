@@ -33,7 +33,7 @@ class SQLQueryPlanCacheTest : public BaseTest {
     auto pipeline_statement = SQLPipelineBuilder{query}.create_pipeline_statement();
     pipeline_statement.get_result_table();
 
-    if (pipeline_statement.query_plan_cache_hit()) {
+    if (pipeline_statement.metrics()->query_plan_cache_hit) {
       _query_plan_cache_hits++;
     }
   }
@@ -61,8 +61,8 @@ TEST_F(SQLQueryPlanCacheTest, SQLQueryPlanCacheTest) {
 
   // Retrieve and execute the cached plan.
   const SQLQueryPlan cached_plan = cache.get(Q1);
-  auto task_list1 = cached_plan.recreate().create_tasks();
-  auto task_list2 = cached_plan.recreate().create_tasks();
+  auto task_list1 = cached_plan.deep_copy().create_tasks();
+  auto task_list2 = cached_plan.deep_copy().create_tasks();
 
   for (auto task : task_list1) task->execute();
   for (auto task : task_list2) task->execute();

@@ -1,7 +1,5 @@
 #include "like_table_scan_impl.hpp"
 
-#include <boost/algorithm/string/replace.hpp>
-
 #include <algorithm>
 #include <array>
 #include <map>
@@ -21,37 +19,26 @@
 
 namespace opossum {
 
-LikeTableScanImpl::LikeTableScanImpl(std::shared_ptr<const Table> in_table, const ColumnID left_column_id,
-                                     const PredicateCondition predicate_condition, const std::string& right_wildcard)
+LikeTableScanImpl::LikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID left_column_id,
+                                     const PredicateCondition predicate_condition, const std::string& pattern)
     : BaseSingleColumnTableScanImpl{in_table, left_column_id, predicate_condition},
-      _right_wildcard{right_wildcard},
-      _invert_results(predicate_condition == PredicateCondition::NotLike) {
-  // convert the given SQL-like search term into a c++11 regex to use it for the actual matching
-  auto regex_string = sqllike_to_regex(_right_wildcard);
-  _regex = std::regex{regex_string, std::regex_constants::icase};  // case insensitivity
-}
+      _matcher{pattern},
+      _invert_results(predicate_condition == PredicateCondition::NotLike) {}
 
 void LikeTableScanImpl::handle_column(const BaseValueColumn& base_column,
-                                      std::shared_ptr<ColumnVisitableContext> base_context) {
+                                      std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
   const auto chunk_id = context->_chunk_id;
-
   auto& left_column = static_cast<const ValueColumn<std::string>&>(base_column);
-
   auto left_iterable = ValueColumnIterable<std::string>{left_column};
-  auto right_iterable = ConstantValueIterable<std::regex>{_regex};
 
-  const auto regex_match = [this](const std::string& str) { return std::regex_match(str, _regex) ^ _invert_results; };
-
-  left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
-    this->_unary_scan(regex_match, left_it, left_end, chunk_id, matches_out);
-  });
+  _scan_iterable(left_iterable, chunk_id, matches_out, mapped_chunk_offsets.get());
 }
 
 void LikeTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
-                                      std::shared_ptr<ColumnVisitableContext> base_context) {
+                                      std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
@@ -59,57 +46,33 @@ void LikeTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
 
   resolve_encoded_column_type<std::string>(base_column, [&](const auto& typed_column) {
     auto left_iterable = create_iterable_from_column(typed_column);
-    auto right_iterable = ConstantValueIterable<std::regex>{_regex};
-
-    const auto regex_match = [this](const std::string& str) { return std::regex_match(str, _regex) ^ _invert_results; };
-
-    left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
-      this->_unary_scan(regex_match, left_it, left_end, chunk_id, matches_out);
-    });
+    _scan_iterable(left_iterable, chunk_id, matches_out, mapped_chunk_offsets.get());
   });
 }
 
-std::string LikeTableScanImpl::sqllike_to_regex(std::string sqllike) {
-  // Do substitution of <backslash> with <backslash><backslash> FIRST, because otherwise it will also replace
-  // backslashes introduced by the other substitutions
-  constexpr auto replace_by = std::array<std::pair<const char*, const char*>, 15u>{{{"\\", "\\\\"},
-                                                                                    {".", "\\."},
-                                                                                    {"^", "\\^"},
-                                                                                    {"$", "\\$"},
-                                                                                    {"+", "\\+"},
-                                                                                    {"?", "\\?"},
-                                                                                    {"(", "\\("},
-                                                                                    {")", "\\)"},
-                                                                                    {"{", "\\{"},
-                                                                                    {"}", "\\}"},
-                                                                                    {"|", "\\|"},
-                                                                                    {".", "\\."},
-                                                                                    {"*", "\\*"},
-                                                                                    {"%", ".*"},
-                                                                                    {"_", "."}}};
-
-  for (const auto& pair : replace_by) {
-    boost::replace_all(sqllike, pair.first, pair.second);
-  }
-
-  return "^" + sqllike + "$";
-}
-
 void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
-                                      std::shared_ptr<ColumnVisitableContext> base_context) {
-  const auto& left_column = static_cast<const DictionaryColumn<std::string>&>(base_column);
+                                      std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
   const auto chunk_id = context->_chunk_id;
 
-  const auto result = _find_matches_in_dictionary(*left_column.dictionary());
+  std::pair<size_t, std::vector<bool>> result;
+
+  if (base_column.encoding_type() == EncodingType::Dictionary) {
+    const auto& left_column = static_cast<const DictionaryColumn<std::string>&>(base_column);
+    result = _find_matches_in_dictionary(*left_column.dictionary());
+  } else {
+    const auto& left_column = static_cast<const FixedStringDictionaryColumn<std::string>&>(base_column);
+    result = _find_matches_in_dictionary(*left_column.dictionary());
+  }
+
   const auto& match_count = result.first;
   const auto& dictionary_matches = result.second;
 
-  auto attribute_vector_iterable = create_iterable_from_attribute_vector(left_column);
+  auto attribute_vector_iterable = create_iterable_from_attribute_vector(base_column);
 
-  // Regex matches all
+  // LIKE matches all rows
   if (match_count == dictionary_matches.size()) {
     attribute_vector_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
       static const auto always_true = [](const auto&) { return true; };
@@ -119,7 +82,7 @@ void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
     return;
   }
 
-  // Regex mathes none
+  // LIKE matches no rows
   if (match_count == 0u) {
     return;
   }
@@ -128,6 +91,16 @@ void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
 
   attribute_vector_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
     this->_unary_scan(dictionary_lookup, left_it, left_end, chunk_id, matches_out);
+  });
+}
+
+template <typename Iterable>
+void LikeTableScanImpl::_scan_iterable(const Iterable& iterable, const ChunkID chunk_id, PosList& matches_out,
+                                       const ChunkOffsetsList* const mapped_chunk_offsets) {
+  _matcher.resolve(_invert_results, [&](const auto& matcher) {
+    iterable.with_iterators(mapped_chunk_offsets, [&](auto left_it, auto left_end) {
+      this->_unary_scan(matcher, left_it, left_end, chunk_id, matches_out);
+    });
   });
 }
 
@@ -141,11 +114,13 @@ std::pair<size_t, std::vector<bool>> LikeTableScanImpl::_find_matches_in_diction
   count = 0u;
   dictionary_matches.reserve(dictionary.size());
 
-  for (const auto& value : dictionary) {
-    const auto result = std::regex_match(value, _regex) ^ _invert_results;
-    count += static_cast<size_t>(result);
-    dictionary_matches.push_back(result);
-  }
+  _matcher.resolve(_invert_results, [&](const auto& matcher) {
+    for (const auto& value : dictionary) {
+      const auto result = matcher(value);
+      count += static_cast<size_t>(result);
+      dictionary_matches.push_back(result);
+    }
+  });
 
   return result;
 }

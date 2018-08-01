@@ -75,36 +75,21 @@ class TableStatisticsJoinTest : public BaseTest {
 TEST_F(TableStatisticsJoinTest, InnerJoinTest) {
   // test selectivity calculations for join_modes which do not produce null values in the result, predicate conditions
   // and column combinations of int_equal_distribution.tbl
-  std::vector<JoinMode> join_modes{JoinMode::Inner, JoinMode::Self};
+  std::vector<JoinMode> join_modes{JoinMode::Inner};
   std::vector<PredicateCondition> predicate_conditions{
       PredicateCondition::Equals,         PredicateCondition::NotEquals,   PredicateCondition::LessThan,
       PredicateCondition::LessThanEquals, PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals};
 
   // 3 dimensional table of cached row count results
   // [ join_modes index ][ predicate_conditions index ][ column combination index = 4 * col1_index + col2_index ]
-  const std::vector<std::vector<std::vector<uint32_t>>> row_counts{
-      {
-          {5400, 5400, 5400, 5400, 5400, 10800, 10800, 4320, 5400, 10800, 16200, 6480, 5400, 4320, 6480, 6480},
-          {27000, 27000, 27000, 27000, 27000, 21600, 21600, 28080, 27000, 21600, 16200, 25920, 27000, 28080, 25920,
-           25920},
-          {13500, 5400, 8100, 16200, 21600, 10800, 16200, 25920, 18900, 5400, 8100, 22680, 10800, 2160, 3240, 12960},
-          {18900, 10800, 13500, 21600, 27000, 21600, 27000, 30240, 24300, 16200, 24300, 29160, 16200, 6480, 9720,
-           19440},
-          {13500, 21600, 18900, 10800, 5400, 10800, 5400, 2160, 8100, 16200, 8100, 3240, 16200, 25920, 22680, 12960},
-          {18900, 27000, 24300, 16200, 10800, 21600, 16200, 6480, 13500, 27000, 24300, 9720, 21600, 30240, 29160,
-           19440},
-      },
-      {
-          {5400, 5400, 5400, 5400, 5400, 10800, 10800, 4320, 5400, 10800, 16200, 6480, 5400, 4320, 6480, 6480},
-          {27000, 27000, 27000, 27000, 27000, 21600, 21600, 28080, 27000, 21600, 16200, 25920, 27000, 28080, 25920,
-           25920},
-          {13500, 5400, 8100, 16200, 21600, 10800, 16200, 25920, 18900, 5400, 8100, 22680, 10800, 2160, 3240, 12960},
-          {18900, 10800, 13500, 21600, 27000, 21600, 27000, 30240, 24300, 16200, 24300, 29160, 16200, 6480, 9720,
-           19440},
-          {13500, 21600, 18900, 10800, 5400, 10800, 5400, 2160, 8100, 16200, 8100, 3240, 16200, 25920, 22680, 12960},
-          {18900, 27000, 24300, 16200, 10800, 21600, 16200, 6480, 13500, 27000, 24300, 9720, 21600, 30240, 29160,
-           19440},
-      }};
+  const std::vector<std::vector<std::vector<uint32_t>>> row_counts{{
+      {5400, 5400, 5400, 5400, 5400, 10800, 10800, 4320, 5400, 10800, 16200, 6480, 5400, 4320, 6480, 6480},
+      {27000, 27000, 27000, 27000, 27000, 21600, 21600, 28080, 27000, 21600, 16200, 25920, 27000, 28080, 25920, 25920},
+      {13500, 5400, 8100, 16200, 21600, 10800, 16200, 25920, 18900, 5400, 8100, 22680, 10800, 2160, 3240, 12960},
+      {18900, 10800, 13500, 21600, 27000, 21600, 27000, 30240, 24300, 16200, 24300, 29160, 16200, 6480, 9720, 19440},
+      {13500, 21600, 18900, 10800, 5400, 10800, 5400, 2160, 8100, 16200, 8100, 3240, 16200, 25920, 22680, 12960},
+      {18900, 27000, 24300, 16200, 10800, 21600, 16200, 6480, 13500, 27000, 24300, 9720, 21600, 30240, 29160, 19440},
+  }};
 
   for (auto join_modes_index = 0u; join_modes_index < join_modes.size(); ++join_modes_index) {
     for (auto predicate_conditions_index = 0u; predicate_conditions_index < predicate_conditions.size();

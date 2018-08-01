@@ -16,19 +16,19 @@ namespace opossum {
  */
 class Difference : public AbstractReadOnlyOperator {
  public:
-  Difference(const std::shared_ptr<const AbstractOperator> left_in,
-             const std::shared_ptr<const AbstractOperator> right_in);
+  Difference(const std::shared_ptr<const AbstractOperator>& left_in,
+             const std::shared_ptr<const AbstractOperator>& right_in);
 
   const std::string name() const override;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  std::shared_ptr<AbstractOperator> _on_deep_copy(
+      const std::shared_ptr<AbstractOperator>& copied_input_left,
+      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
  private:
-  void initialize_chunk(const size_t chunk_id);
-  void append_string_representation(std::ostream& row_string_buffer, const AllTypeVariant value);
+  void _append_string_representation(std::ostream& row_string_buffer, const AllTypeVariant& value);
 };
 }  // namespace opossum

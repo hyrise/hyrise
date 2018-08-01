@@ -54,7 +54,7 @@ class ClientConnection : public std::enable_shared_from_this<ClientConnection> {
  protected:
   boost::future<InputPacket> _receive_bytes_async(size_t size);
 
-  boost::future<uint64_t> _send_bytes_async(std::shared_ptr<OutputPacket> packet, bool flush = false);
+  boost::future<uint64_t> _send_bytes_async(const std::shared_ptr<OutputPacket>& packet, bool flush = false);
   boost::future<uint64_t> _flush_async();
 
   boost::asio::ip::tcp::socket _socket;

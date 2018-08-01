@@ -12,6 +12,7 @@
 
 namespace opossum {
 
+class AbstractExpression;
 class TableStatistics;
 
 enum class ScanType : uint8_t { TableScan, IndexScan };
@@ -25,37 +26,21 @@ enum class ScanType : uint8_t { TableScan, IndexScan };
  */
 class PredicateNode : public EnableMakeForLQPNode<PredicateNode>, public AbstractLQPNode {
  public:
-  PredicateNode(const LQPColumnReference& column_reference, const PredicateCondition predicate_condition,
-                const AllParameterVariant& value, const std::optional<AllTypeVariant>& value2 = std::nullopt);
+  explicit PredicateNode(const std::shared_ptr<AbstractExpression>& predicate);
 
   std::string description() const override;
-
-  const LQPColumnReference& column_reference() const;
-  PredicateCondition predicate_condition() const;
-  const AllParameterVariant& value() const;
-  const std::optional<AllTypeVariant>& value2() const;
-
-  ScanType scan_type() const;
-  void set_scan_type(ScanType scan_type);
-
+  std::vector<std::shared_ptr<AbstractExpression>> node_expressions() const override;
   std::shared_ptr<TableStatistics> derive_statistics_from(
       const std::shared_ptr<AbstractLQPNode>& left_input,
       const std::shared_ptr<AbstractLQPNode>& right_input = nullptr) const override;
 
-  bool shallow_equals(const AbstractLQPNode& rhs) const override;
+  const std::shared_ptr<AbstractExpression> predicate;
+  ScanType scan_type{ScanType::TableScan};
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
-
- private:
-  const LQPColumnReference _column_reference;
-  const PredicateCondition _predicate_condition;
-  const AllParameterVariant _value;
-  const std::optional<AllTypeVariant> _value2;
-
-  ScanType _scan_type = ScanType::TableScan;
+  std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
+  bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
+  //
 };
 
 }  // namespace opossum

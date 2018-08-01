@@ -1,8 +1,10 @@
+# Setup the version.hpp file.
+# Include this here because we need the GENERATED property on version.hpp and in CMake that property has directory
+# scope
+include(${PROJECT_SOURCE_DIR}/cmake/git_watcher.cmake)
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
-    abstract_expression.cpp
-    abstract_expression.hpp
     all_parameter_variant.cpp
     all_parameter_variant.hpp
     all_type_variant.cpp
@@ -30,6 +32,62 @@ set(
     concurrency/transaction_manager.hpp
     constant_mappings.cpp
     constant_mappings.hpp
+    expression/abstract_expression.cpp
+    expression/abstract_expression.hpp
+    expression/abstract_predicate_expression.cpp
+    expression/abstract_predicate_expression.hpp
+    expression/aggregate_expression.cpp
+    expression/aggregate_expression.hpp
+    expression/arithmetic_expression.cpp
+    expression/arithmetic_expression.hpp
+    expression/expression_precedence.hpp
+    expression/list_expression.cpp
+    expression/list_expression.hpp
+    expression/between_expression.cpp
+    expression/between_expression.hpp
+    expression/binary_predicate_expression.cpp
+    expression/binary_predicate_expression.hpp
+    expression/case_expression.cpp
+    expression/case_expression.hpp
+    expression/cast_expression.cpp
+    expression/cast_expression.hpp
+    expression/exists_expression.cpp
+    expression/exists_expression.hpp
+    expression/evaluation/expression_evaluator.cpp
+    expression/evaluation/expression_evaluator.hpp
+    expression/evaluation/expression_result.hpp
+    expression/evaluation/expression_result_views.hpp
+    expression/evaluation/expression_functors.hpp
+    expression/evaluation/like_matcher.cpp
+    expression/evaluation/like_matcher.hpp
+    expression/expression_functional.cpp
+    expression/expression_functional.hpp
+    expression/expression_utils.cpp
+    expression/expression_utils.hpp
+    expression/extract_expression.cpp
+    expression/extract_expression.hpp
+    expression/function_expression.cpp
+    expression/function_expression.hpp
+    expression/in_expression.cpp
+    expression/in_expression.hpp
+    expression/is_null_expression.cpp
+    expression/is_null_expression.hpp
+    expression/logical_expression.cpp
+    expression/logical_expression.hpp
+    expression/lqp_column_expression.cpp
+    expression/lqp_column_expression.hpp
+    expression/lqp_select_expression.cpp
+    expression/lqp_select_expression.hpp
+    expression/unary_minus_expression.cpp
+    expression/unary_minus_expression.hpp
+    expression/parameter_expression.cpp
+    expression/parameter_expression.hpp
+    expression/pqp_column_expression.cpp
+    expression/pqp_column_expression.hpp
+    expression/pqp_select_expression.cpp
+    expression/pqp_select_expression.hpp
+    expression/value_expression.cpp
+    expression/value_expression.hpp
     import_export/binary.hpp
     import_export/csv_converter.cpp
     import_export/csv_converter.hpp
@@ -39,8 +97,23 @@ set(
     import_export/csv_parser.hpp
     import_export/csv_writer.cpp
     import_export/csv_writer.hpp
+    cost_model/abstract_cost_feature_proxy.cpp
+    cost_model/abstract_cost_feature_proxy.hpp
+    cost_model/abstract_cost_model.cpp
+    cost_model/abstract_cost_model.hpp
+    cost_model/cost_feature.cpp
+    cost_model/cost_feature.hpp
+    cost_model/cost_feature_lqp_node_proxy.cpp
+    cost_model/cost_feature_lqp_node_proxy.hpp
+    cost_model/cost_feature_operator_proxy.cpp
+    cost_model/cost_feature_operator_proxy.hpp
+    cost_model/cost.hpp
+    cost_model/cost_model_logical.cpp
+    cost_model/cost_model_logical.hpp
     logical_query_plan/abstract_lqp_node.cpp
     logical_query_plan/abstract_lqp_node.hpp
+    logical_query_plan/alias_node.cpp
+    logical_query_plan/alias_node.hpp
     logical_query_plan/aggregate_node.cpp
     logical_query_plan/aggregate_node.hpp
     logical_query_plan/create_view_node.cpp
@@ -51,6 +124,7 @@ set(
     logical_query_plan/drop_view_node.hpp
     logical_query_plan/dummy_table_node.cpp
     logical_query_plan/dummy_table_node.hpp
+    logical_query_plan/enable_make_for_lqp_node.hpp
     logical_query_plan/insert_node.cpp
     logical_query_plan/insert_node.hpp
     logical_query_plan/join_node.cpp
@@ -61,10 +135,10 @@ set(
     logical_query_plan/logical_plan_root_node.hpp
     logical_query_plan/lqp_column_reference.cpp
     logical_query_plan/lqp_column_reference.hpp
-    logical_query_plan/lqp_expression.cpp
-    logical_query_plan/lqp_expression.hpp
     logical_query_plan/lqp_translator.cpp
     logical_query_plan/lqp_translator.hpp
+    logical_query_plan/lqp_utils.cpp
+    logical_query_plan/lqp_utils.hpp
     logical_query_plan/mock_node.cpp
     logical_query_plan/mock_node.hpp
     logical_query_plan/predicate_node.cpp
@@ -94,8 +168,12 @@ set(
     operators/abstract_read_only_operator.hpp
     operators/abstract_read_write_operator.cpp
     operators/abstract_read_write_operator.hpp
+    operators/aggregate/aggregate_traits.hpp
     operators/aggregate.cpp
     operators/aggregate.hpp
+    operators/base_operator_performance_data.hpp
+    operators/alias_operator.cpp
+    operators/alias_operator.hpp
     operators/delete.cpp
     operators/delete.hpp
     operators/difference.cpp
@@ -119,6 +197,10 @@ set(
     operators/join_hash.hpp
     operators/join_index.cpp
     operators/join_index.hpp
+    operators/join_mpsm/column_materializer_numa.hpp
+    operators/join_mpsm/radix_cluster_sort_numa.hpp
+    operators/join_mpsm.cpp
+    operators/join_mpsm.hpp
     operators/join_nested_loop.cpp
     operators/join_nested_loop.hpp
     operators/join_sort_merge/column_materializer.hpp
@@ -127,6 +209,10 @@ set(
     operators/join_sort_merge/radix_cluster_sort.hpp
     operators/limit.cpp
     operators/limit.hpp
+    operators/operator_scan_predicate.cpp
+    operators/operator_scan_predicate.hpp
+    operators/operator_join_predicate.cpp
+    operators/operator_join_predicate.hpp
     operators/maintenance/create_view.cpp
     operators/maintenance/create_view.hpp
     operators/maintenance/drop_view.cpp
@@ -135,8 +221,7 @@ set(
     operators/maintenance/show_columns.hpp
     operators/maintenance/show_tables.cpp
     operators/maintenance/show_tables.hpp
-    operators/pqp_expression.cpp
-    operators/pqp_expression.hpp
+    operators/maintenance/show_tables.hpp
     operators/print.cpp
     operators/print.hpp
     operators/product.cpp
@@ -177,15 +262,6 @@ set(
     statistics/chunk_statistics/chunk_statistics.hpp
     statistics/chunk_statistics/min_max_filter.hpp
     statistics/chunk_statistics/range_filter.hpp
-    optimizer/join_ordering/join_edge.cpp
-    optimizer/join_ordering/join_edge.hpp
-    optimizer/join_ordering/join_graph_builder.cpp
-    optimizer/join_ordering/join_graph_builder.hpp
-    optimizer/join_ordering/join_graph.cpp
-    optimizer/join_ordering/join_graph.hpp
-    optimizer/join_ordering/join_plan_predicate.cpp
-    optimizer/join_ordering/join_plan_predicate.hpp
-    optimizer/join_ordering/join_vertex_set.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
@@ -198,8 +274,8 @@ set(
     optimizer/strategy/index_scan_rule.hpp
     optimizer/strategy/join_detection_rule.cpp
     optimizer/strategy/join_detection_rule.hpp
-    optimizer/strategy/predicate_pushdown_rule.hpp
     optimizer/strategy/predicate_pushdown_rule.cpp
+    optimizer/strategy/predicate_pushdown_rule.hpp
     optimizer/strategy/predicate_reordering_rule.cpp
     optimizer/strategy/predicate_reordering_rule.hpp
     optimizer/strategy/rule_batch.cpp
@@ -210,7 +286,6 @@ set(
     planviz/sql_query_plan_visualizer.cpp
     planviz/sql_query_plan_visualizer.hpp
     resolve_type.hpp
-    scheduler/abstract_scheduler.cpp
     scheduler/abstract_scheduler.hpp
     scheduler/abstract_task.cpp
     scheduler/abstract_task.hpp
@@ -230,19 +305,19 @@ set(
     scheduler/topology.hpp
     scheduler/worker.cpp
     scheduler/worker.hpp
-    server/server.cpp
-    server/server.hpp
-    server/server_session.cpp
-    server/server_session.hpp
+    server/client_connection.cpp
+    server/client_connection.hpp
     server/postgres_wire_handler.cpp
     server/postgres_wire_handler.hpp
     server/query_response_builder.cpp
     server/query_response_builder.hpp
+    server/server.cpp
+    server/server.hpp
+    server/server_session.cpp
+    server/server_session.hpp
     server/task_runner.hpp
     server/then_operator.hpp
     server/types.hpp
-    server/client_connection.cpp
-    server/client_connection.hpp
     server/use_boost_future.hpp
     server/use_boost_future_impl.hpp
     statistics/base_column_statistics.cpp
@@ -256,13 +331,15 @@ set(
     statistics/table_statistics.cpp
     statistics/table_statistics.hpp
     sql/abstract_cache.hpp
+    sql/create_sql_parser_error_message.cpp
+    sql/create_sql_parser_error_message.hpp
     sql/gdfs_cache.hpp
     sql/gds_cache.hpp
-    sql/hsql_expr_translator.cpp
-    sql/hsql_expr_translator.hpp
     sql/lru_cache.hpp
     sql/lru_k_cache.hpp
     sql/random_cache.hpp
+    sql/parameter_id_allocator.cpp
+    sql/parameter_id_allocator.hpp
     sql/sql_pipeline_builder.cpp
     sql/sql_pipeline_builder.hpp
     sql/sql_pipeline.cpp
@@ -272,25 +349,29 @@ set(
     sql/sql_query_cache.hpp
     sql/sql_query_plan.cpp
     sql/sql_query_plan.hpp
+    sql/sql_identifier.cpp
+    sql/sql_identifier.hpp
+    sql/sql_identifier_resolver.cpp
+    sql/sql_identifier_resolver.hpp
+    sql/sql_identifier_resolver_proxy.cpp
+    sql/sql_identifier_resolver_proxy.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
-    storage/base_column_encoder.hpp
     storage/base_column.cpp
+    storage/base_column_encoder.hpp
     storage/base_column.hpp
-    storage/base_dictionary_column.cpp
     storage/base_dictionary_column.hpp
     storage/base_encoded_column.cpp
     storage/base_encoded_column.hpp
     storage/base_value_column.hpp
+    storage/chunk_access_counter.cpp
+    storage/chunk_access_counter.hpp
     storage/chunk.cpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
     storage/chunk.hpp
-    storage/chunk_access_counter.cpp
-    storage/chunk_access_counter.hpp
     storage/column_encoding_utils.cpp
     storage/column_encoding_utils.hpp
-    storage/column_iterables.hpp
     storage/column_iterables/any_column_iterable.hpp
     storage/column_iterables/any_column_iterator.hpp
     storage/column_iterables/base_column_iterators.hpp
@@ -299,25 +380,35 @@ set(
     storage/column_iterables/column_iterator_values.hpp
     storage/column_iterables/constant_value_iterable.hpp
     storage/column_iterables/create_iterable_from_attribute_vector.hpp
-    storage/column_visitable.hpp
+    storage/column_iterables.hpp
+    storage/abstract_column_visitor.hpp
     storage/create_iterable_from_column.hpp
-    storage/create_iterable_from_column.ipp
     storage/dictionary_column/attribute_vector_iterable.hpp
     storage/dictionary_column.cpp
     storage/dictionary_column/dictionary_column_iterable.hpp
     storage/dictionary_column/dictionary_encoder.hpp
     storage/dictionary_column.hpp
     storage/encoding_type.hpp
-    storage/frame_of_reference_column.hpp
+    storage/fixed_string_dictionary_column.cpp
+    storage/fixed_string_dictionary_column.hpp
+    storage/fixed_string_dictionary_column/fixed_string.cpp
+    storage/fixed_string_dictionary_column/fixed_string.hpp
+    storage/fixed_string_dictionary_column/fixed_string_vector.cpp
+    storage/fixed_string_dictionary_column/fixed_string_vector.hpp
+    storage/fixed_string_dictionary_column/fixed_string_vector_iterator.cpp
+    storage/fixed_string_dictionary_column/fixed_string_vector_iterator.hpp
     storage/frame_of_reference_column.cpp
+    storage/frame_of_reference_column.hpp
     storage/frame_of_reference/frame_of_reference_encoder.hpp
     storage/frame_of_reference/frame_of_reference_iterable.hpp
-    storage/mvcc_columns.cpp
-    storage/mvcc_columns.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp
+    storage/index/b_tree/b_tree_index.cpp
+    storage/index/b_tree/b_tree_index.hpp
+    storage/index/b_tree/b_tree_index_impl.cpp
+    storage/index/b_tree/b_tree_index_impl.hpp
     storage/index/base_index.cpp
     storage/index/base_index.hpp
     storage/index/column_index_type.hpp
@@ -335,6 +426,8 @@ set(
     storage/index/group_key/variable_length_key_store.hpp
     storage/index/index_info.hpp
     storage/materialize.hpp
+    storage/mvcc_columns.cpp
+    storage/mvcc_columns.hpp
     storage/numa_placement_manager.cpp
     storage/numa_placement_manager.hpp
     storage/proxy_chunk.cpp
@@ -347,12 +440,14 @@ set(
     storage/run_length_column.hpp
     storage/run_length_column/run_length_column_iterable.hpp
     storage/run_length_column/run_length_encoder.hpp
+    storage/lqp_view.cpp
+    storage/lqp_view.hpp
     storage/storage_manager.cpp
     storage/storage_manager.hpp
-    storage/table.cpp
-    storage/table.hpp
     storage/table_column_definition.cpp
     storage/table_column_definition.hpp
+    storage/table.cpp
+    storage/table.hpp
     storage/value_column.cpp
     storage/value_column.hpp
     storage/value_column/null_value_vector_iterable.hpp
@@ -364,8 +459,8 @@ set(
     storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_compressor.cpp
     storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_compressor.hpp
     storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_decompressor.hpp
-    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp
     storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp
+    storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp
     storage/vector_compression/resolve_compressed_vector_type.hpp
     storage/vector_compression/simd_bp128/oversized_types.hpp
     storage/vector_compression/simd_bp128/simd_bp128_compressor.cpp
@@ -402,19 +497,21 @@ set(
     tasks/server/load_server_file_task.hpp
     type_cast.hpp
     type_comparison.hpp
+    types.cpp
     types.hpp
     uid_allocator.hpp
-    utils/arithmetic_operator_expression.hpp
-    utils/arithmetic_operator_expression_impl.hpp
+    utils/aligned_size.hpp
     utils/assert.hpp
     utils/boost_default_memory_resource.cpp
     utils/copyable_atomic.hpp
     utils/cuckoo_hashtable.hpp
     utils/enum_constant.hpp
+    utils/filesystem.hpp
     utils/format_bytes.cpp
     utils/format_bytes.hpp
     utils/format_duration.cpp
     utils/format_duration.hpp
+    utils/invalid_input_exception.hpp
     utils/load_table.cpp
     utils/load_table.hpp
     utils/murmur_hash.cpp
@@ -430,12 +527,16 @@ set(
     utils/print_directed_acyclic_graph.hpp
     utils/scoped_locking_ptr.hpp
     utils/template_type.hpp
+    utils/timer.cpp
+    utils/timer.hpp
+    ${CMAKE_BINARY_DIR}/version.hpp
 )
 
 set(
     LIBRARIES
     pthread
     sqlparser
+    boost_container
     ${TBB_LIBRARY}
     ${Boost_FILESYSTEM_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
@@ -445,26 +546,46 @@ if (${ENABLE_JIT_SUPPORT})
     include(${CMAKE_SOURCE_DIR}/cmake/EmbedLLVM.cmake)
     set(JIT_EMBEDDED_SOURCES
         # Files listed here will be embedded into the binary as LLVM-IR
-        operators/jit_operator/jit_operations.cpp
-        operators/jit_operator/jit_operations.hpp
         operators/jit_operator/jit_types.cpp
         operators/jit_operator/jit_types.hpp
+        operators/jit_operator/jit_operations.cpp
+        operators/jit_operator/jit_operations.hpp
         operators/jit_operator/operators/abstract_jittable.hpp
         operators/jit_operator/operators/abstract_jittable_sink.hpp
+        operators/jit_operator/operators/jit_aggregate.cpp
+        operators/jit_operator/operators/jit_aggregate.hpp
         operators/jit_operator/operators/jit_compute.cpp
         operators/jit_operator/operators/jit_compute.hpp
         operators/jit_operator/operators/jit_expression.cpp
         operators/jit_operator/operators/jit_expression.hpp
         operators/jit_operator/operators/jit_filter.cpp
         operators/jit_operator/operators/jit_filter.hpp
-        operators/jit_operator/operators/jit_read_tuple.cpp
-        operators/jit_operator/operators/jit_read_tuple.hpp
-        operators/jit_operator/operators/jit_write_tuple.cpp
-        operators/jit_operator/operators/jit_write_tuple.hpp
+        operators/jit_operator/operators/jit_read_tuples.cpp
+        operators/jit_operator/operators/jit_read_tuples.hpp
+        operators/jit_operator/operators/jit_write_tuples.cpp
+        operators/jit_operator/operators/jit_write_tuples.hpp
     )
-    embed_llvm(LLVM_BUNDLE_FILE ${JIT_EMBEDDED_SOURCES})
+    embed_llvm(LLVM_BUNDLE_FILE jit_llvm_bundle ${JIT_EMBEDDED_SOURCES})
     set(
         SOURCES
+        operators/jit_operator/jit_aware_lqp_translator.cpp
+        operators/jit_operator/jit_aware_lqp_translator.hpp
+        operators/jit_operator/specialization/jit_compiler.cpp
+        operators/jit_operator/specialization/jit_compiler.hpp
+        operators/jit_operator/specialization/jit_code_specializer.cpp
+        operators/jit_operator/specialization/jit_code_specializer.hpp
+        operators/jit_operator/specialization/jit_repository.cpp
+        operators/jit_operator/specialization/jit_repository.hpp
+        operators/jit_operator/specialization/jit_runtime_pointer.cpp
+        operators/jit_operator/specialization/jit_runtime_pointer.hpp
+        operators/jit_operator/specialization/llvm/CloneFunction.cpp
+        operators/jit_operator/specialization/llvm/InlineFunction.cpp
+        operators/jit_operator/specialization/llvm_extensions.cpp
+        operators/jit_operator/specialization/llvm_extensions.hpp
+        operators/jit_operator/specialization/llvm_utils.cpp
+        operators/jit_operator/specialization/llvm_utils.hpp
+        operators/jit_operator_wrapper.cpp
+        operators/jit_operator_wrapper.hpp
         ${SOURCES}
         ${JIT_EMBEDDED_SOURCES}
         ${LLVM_BUNDLE_FILE})
@@ -480,3 +601,4 @@ endif()
 # Configure the regular hyrise library used for tests/server/playground...
 add_library(hyrise STATIC ${SOURCES})
 target_link_libraries(hyrise ${LIBRARIES})
+target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR})

@@ -18,10 +18,10 @@ class TransactionContext;
 // When caching a query (through prepared statements or automatically) its SQLQueryPlan object is cached.
 class SQLQueryPlan {
  public:
-  SQLQueryPlan();
+  explicit SQLQueryPlan(CleanupTemporaries cleanup_temporaries);
 
   // Add a new operator tree to the query plan by adding the root operator.
-  void add_tree_by_root(std::shared_ptr<AbstractOperator> op);
+  void add_tree_by_root(const std::shared_ptr<AbstractOperator>& op);
 
   // Append all operator trees from the other plan.
   void append_plan(const SQLQueryPlan& other_plan);
@@ -33,24 +33,22 @@ class SQLQueryPlan {
   const std::vector<std::shared_ptr<AbstractOperator>>& tree_roots() const;
 
   // Recreates the query plan with a new and equivalent set of operator trees.
-  // The given list of arguments is passed to the recreate method of all operators to replace ValuePlaceholders.
-  SQLQueryPlan recreate(const std::vector<AllParameterVariant>& arguments = {}) const;
+  SQLQueryPlan deep_copy() const;
 
   // Calls set_transaction_context_recursively on all roots.
-  void set_transaction_context(std::shared_ptr<TransactionContext> context);
+  void set_transaction_context(const std::shared_ptr<TransactionContext>& context);
 
-  // Set the number of parameters that this query plan contains.
-  void set_num_parameters(uint16_t num_parameters);
-
-  // Get the number of parameters that this query plan contains.
-  uint16_t num_parameters() const;
+  // Set the parameter ids of the value placeholders
+  void set_parameter_ids(const std::unordered_map<ValuePlaceholderID, ParameterID>& parameter_ids);
+  const std::unordered_map<ValuePlaceholderID, ParameterID>& parameter_ids() const;
 
  protected:
+  // Should we delete temporary result tables once they are not needed anymore?
+  CleanupTemporaries _cleanup_temporaries;
+
   // Root nodes of all operator trees that this plan contains.
   std::vector<std::shared_ptr<AbstractOperator>> _roots;
-
-  // Number of PlaceholderValues within the plan's operators.
-  uint16_t _num_parameters;
+  std::unordered_map<ValuePlaceholderID, ParameterID> _parameter_ids;
 };
 
 }  // namespace opossum

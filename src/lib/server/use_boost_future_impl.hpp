@@ -77,7 +77,7 @@ void asio_handler_invoke(Function f, boost_promise_handler<T>* h) {
 
 #if !defined(GENERATING_DOCUMENTATION)
 
-// Handler traits specialisation for promise_handler.
+// Handler traits specialisation for boost_promise_handler.
 template <typename T>
 class async_result<detail::boost_promise_handler<T> > {
  public:

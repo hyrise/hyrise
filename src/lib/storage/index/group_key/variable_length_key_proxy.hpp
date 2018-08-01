@@ -66,7 +66,7 @@ class VariableLengthKeyProxy : public VariableLengthKeyConstProxy {
   VariableLengthKeyProxy& operator=(const VariableLengthKeyProxy& other);
   VariableLengthKeyProxy& operator=(const VariableLengthKeyConstProxy& other);
 
-  VariableLengthKeyProxy& operator=(const VariableLengthKey& key);
+  VariableLengthKeyProxy& operator=(const VariableLengthKey& other);
   VariableLengthKeyProxy& operator<<=(CompositeKeyLength shift);
   VariableLengthKeyProxy& operator|=(uint64_t other);
 

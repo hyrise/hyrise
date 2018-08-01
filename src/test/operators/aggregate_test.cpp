@@ -91,42 +91,23 @@ class OperatorsAggregateTest : public BaseTest {
 
   void test_output(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateColumnDefinition>& aggregates,
                    const std::vector<ColumnID>& groupby_column_ids, const std::string& file_name, size_t chunk_size,
-                   bool test_references = true) {
+                   bool test_aggregate_on_reference_table = true) {
     // load expected results from file
     std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
 
-    // collect possible columns to scan before aggregate
-    std::set<ColumnID> ref_columns;
+    // Test the Aggregate on stored table data
+    auto aggregate = std::make_shared<Aggregate>(in, aggregates, groupby_column_ids);
+    aggregate->execute();
+    EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
 
-    // this means no prior table scan
-    ref_columns.insert(INVALID_COLUMN_ID);
+    if (test_aggregate_on_reference_table) {
+      // Perform a TableScan to create a reference table
+      const auto table_scan = std::make_shared<TableScan>(in, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+      table_scan->execute();
 
-    if (test_references) {
-      for (const auto& agg : aggregates) {
-        ref_columns.insert(*agg.column);
-      }
-
-      for (const auto column_id : groupby_column_ids) {
-        ref_columns.insert(column_id);
-      }
-    }
-
-    EXPECT_NE(ref_columns.size(), 0u);
-
-    for (auto& ref : ref_columns) {
-      // make one Aggregate w/o ReferenceColumn
-      auto input = in;
-
-      if (ref != INVALID_COLUMN_ID) {
-        // also try a TableScan on every involved column
-        input = std::make_shared<TableScan>(in, ref, PredicateCondition::GreaterThanEquals, 0);
-        input->execute();
-      }
-
-      // build and execute Aggregate
-      auto aggregate = std::make_shared<Aggregate>(input, aggregates, groupby_column_ids);
-      EXPECT_NE(aggregate, nullptr) << "Could not build Aggregate";
+      // Perform the Aggregate on a reference table
+      const auto aggregate = std::make_shared<Aggregate>(table_scan, aggregates, groupby_column_ids);
       aggregate->execute();
       EXPECT_TABLE_EQ_UNORDERED(aggregate->get_output(), expected_result);
     }
@@ -278,12 +259,6 @@ TEST_F(OperatorsAggregateTest, TwoAggregateAvgAvg) {
 TEST_F(OperatorsAggregateTest, TwoAggregateSumAvg) {
   this->test_output(_table_wrapper_1_2, {{ColumnID{1}, AggregateFunction::Sum}, {ColumnID{2}, AggregateFunction::Avg}},
                     {ColumnID{0}}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg.tbl", 1);
-}
-
-TEST_F(OperatorsAggregateTest, TwoAggregateSumAvgAlias) {
-  this->test_output(_table_wrapper_1_2, {{ColumnID{1}, AggregateFunction::Sum, std::optional<std::string>("sum_b")},
-                                         {ColumnID{2}, AggregateFunction::Avg}},
-                    {ColumnID{0}}, "src/test/tables/aggregateoperator/groupby_int_1gb_2agg/sum_avg_alias.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, TwoAggregateSumSum) {
@@ -473,6 +448,31 @@ TEST_F(OperatorsAggregateTest, DictionarySingleAggregateCountWithNull) {
 }
 
 /**
+ * Tests for empty tables
+ */
+
+TEST_F(OperatorsAggregateTest, TwoAggregateEmptyTable) {
+  auto filtered = std::make_shared<TableScan>(_table_wrapper_1_2, ColumnID{0}, PredicateCondition::LessThan, 0);
+  filtered->execute();
+  this->test_output(filtered,
+                    {{ColumnID{1}, AggregateFunction::Max},
+                     {ColumnID{2}, AggregateFunction::Count},
+                     {std::nullopt, AggregateFunction::Count}},
+                    {}, "src/test/tables/aggregateoperator/0gb_3agg/max_count_count_empty.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, TwoAggregateEmptyTableGrouped) {
+  auto filtered = std::make_shared<TableScan>(_table_wrapper_1_2, ColumnID{0}, PredicateCondition::LessThan, 0);
+  filtered->execute();
+  this->test_output(filtered,
+                    {{ColumnID{1}, AggregateFunction::Max},
+                     {ColumnID{2}, AggregateFunction::Count},
+                     {std::nullopt, AggregateFunction::Count}},
+                    {ColumnID{0}}, "src/test/tables/aggregateoperator/groupby_int_1gb_3agg/max_count_count_empty.tbl",
+                    1);
+}
+
+/**
  * Tests for ReferenceColumns
  */
 
@@ -534,21 +534,6 @@ TEST_F(OperatorsAggregateTest, OuterJoinThenAggregate) {
 
   this->test_output(join, {{ColumnID{1}, AggregateFunction::Min}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/outer_join.tbl", 1, false);
-}
-
-TEST_F(OperatorsAggregateTest, EmptyInputTable) {
-  const auto table_scan =
-      std::make_shared<TableScan>(_table_wrapper_int_int, ColumnID{0}, PredicateCondition::LessThan, int32_t{32});
-
-  const auto aggregates = std::vector<AggregateColumnDefinition>({{ColumnID{0}, AggregateFunction::Sum}});
-  const auto aggregate = std::make_shared<Aggregate>(table_scan, aggregates, std::vector<ColumnID>({ColumnID{1}}));
-
-  table_scan->execute();
-  aggregate->execute();
-
-  EXPECT_EQ(aggregate->get_output()->chunk_count(), 1u);
-  EXPECT_EQ(aggregate->get_output()->row_count(), 0u);
-  EXPECT_EQ(aggregate->get_output()->column_count(), 2u);
 }
 
 }  // namespace opossum

@@ -23,6 +23,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   friend class Worker;
 
  public:
+  explicit AbstractTask(SchedulePriority priority = SchedulePriority::Default, bool stealable = true);
   virtual ~AbstractTask() = default;
 
   /**
@@ -42,6 +43,11 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   bool is_done() const;
 
   /**
+   * @return Workers are allowed to steal the task from another node
+   */
+  bool is_stealable() const;
+
+  /**
    * Description for debugging purposes
    */
   virtual std::string description() const;
@@ -57,6 +63,11 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
    * @param successor Task that will be executed after this
    */
   void set_as_predecessor_of(std::shared_ptr<AbstractTask> successor);
+
+  /**
+   * @return the predecessors of this Task
+   */
+  const std::vector<std::weak_ptr<AbstractTask>>& predecessors() const;
 
   /**
    * @return the successors of this Task
@@ -77,7 +88,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   /**
    * Schedules the task if a Scheduler is available, otherwise just executes it on the current Thread
    */
-  void schedule(NodeID preferred_node_id = CURRENT_NODE_ID, SchedulePriority priority = SchedulePriority::Normal);
+  void schedule(NodeID preferred_node_id = CURRENT_NODE_ID);
 
   /**
    * Waits for the Task to finish
@@ -118,22 +129,20 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   void _join_without_replacement_worker();
 
   /**
-   * Called when a dependency is initialized (by set_as_predecessor_of)
-   */
-  void _on_predecessor_added();
-
-  /**
    * Called by a dependency when it finished execution
    */
   void _on_predecessor_done();
 
   TaskID _id = INVALID_TASK_ID;
   NodeID _node_id = INVALID_NODE_ID;
-  bool _done = false;
+  SchedulePriority _priority;
+  bool _stealable;
+  std::atomic_bool _done{false};
   std::function<void()> _done_callback;
 
   // For dependencies
-  std::atomic_uint _predecessor_counter{0};
+  std::atomic_uint _pending_predecessors{0};
+  std::vector<std::weak_ptr<AbstractTask>> _predecessors;
   std::vector<std::shared_ptr<AbstractTask>> _successors;
 
   // For making sure a task gets only scheduled and enqueued once, respectively

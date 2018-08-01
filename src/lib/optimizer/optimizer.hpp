@@ -33,6 +33,9 @@ class Optimizer final {
 
   // Rather arbitrary right now, atm all rules should be done after one iteration
   uint32_t _max_num_iterations = 10;
+
+  bool _apply_rule_batch(const RuleBatch& rule_batch, const std::shared_ptr<AbstractLQPNode>& root_node) const;
+  bool _apply_rule(const AbstractRule& rule, const std::shared_ptr<AbstractLQPNode>& root_node) const;
 };
 
 }  // namespace opossum

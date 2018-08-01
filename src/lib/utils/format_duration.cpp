@@ -4,8 +4,8 @@
 
 namespace opossum {
 
-std::string format_duration(uint64_t total_nanoseconds) {
-  uint64_t nanoseconds_remaining = total_nanoseconds;
+std::string format_duration(const std::chrono::nanoseconds& total_nanoseconds) {
+  auto nanoseconds_remaining = total_nanoseconds.count();
 
   const auto minutes = nanoseconds_remaining / 60'000'000'000;
   nanoseconds_remaining -= minutes * 60'000'000'000;

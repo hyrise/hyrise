@@ -15,8 +15,8 @@
 
 namespace opossum {
 
-Update::Update(const std::string& table_to_update_name, std::shared_ptr<AbstractOperator> fields_to_update_op,
-               std::shared_ptr<AbstractOperator> update_values_op)
+Update::Update(const std::string& table_to_update_name, const std::shared_ptr<AbstractOperator>& fields_to_update_op,
+               const std::shared_ptr<AbstractOperator>& update_values_op)
     : AbstractReadWriteOperator(OperatorType::Update, fields_to_update_op, update_values_op),
       _table_to_update_name{table_to_update_name} {}
 
@@ -134,10 +134,12 @@ bool Update::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
   return true;
 }
 
-std::shared_ptr<AbstractOperator> Update::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<Update>(_table_to_update_name, recreated_input_left, recreated_input_right);
+std::shared_ptr<AbstractOperator> Update::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<Update>(_table_to_update_name, copied_input_left, copied_input_right);
 }
+
+void Update::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 }  // namespace opossum

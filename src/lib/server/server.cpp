@@ -20,14 +20,14 @@ Server::Server(boost::asio::io_service& io_service, uint16_t port,
       _socket(io_service) {
   Logger::setup(log_folder, logging_implementation);
   Logger::getInstance().recover();
-  accept_next_connection();
+  _accept_next_connection();
 }
 
-void Server::accept_next_connection() {
-  _acceptor.async_accept(_socket, boost::bind(&Server::start_session, this, boost::asio::placeholders::error));
+void Server::_accept_next_connection() {
+  _acceptor.async_accept(_socket, boost::bind(&Server::_start_session, this, boost::asio::placeholders::error));
 }
 
-void Server::start_session(boost::system::error_code error) {
+void Server::_start_session(boost::system::error_code error) {
   if (!error) {
     auto connection = std::make_shared<ClientConnection>(std::move(_socket));
     auto task_runner = std::make_shared<TaskRunner>(_io_service);
@@ -36,7 +36,7 @@ void Server::start_session(boost::system::error_code error) {
     session->start() >> then >> [=]() mutable { session.reset(); };
   }
 
-  accept_next_connection();
+  _accept_next_connection();
 }
 
 uint16_t Server::get_port_number() { return _acceptor.local_endpoint().port(); }

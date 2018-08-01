@@ -59,11 +59,13 @@ UnionPositions::UnionPositions(const std::shared_ptr<const AbstractOperator>& le
                                const std::shared_ptr<const AbstractOperator>& right)
     : AbstractReadOnlyOperator(OperatorType::UnionPositions, left, right) {}
 
-std::shared_ptr<AbstractOperator> UnionPositions::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<UnionPositions>(recreated_input_left, recreated_input_right);
+std::shared_ptr<AbstractOperator> UnionPositions::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<UnionPositions>(copied_input_left, copied_input_right);
 }
+
+void UnionPositions::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 const std::string UnionPositions::name() const { return "UnionPositions"; }
 
@@ -272,7 +274,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
       size_t next_segment_id = 0;
       const auto chunk = table->get_chunk(chunk_id);
       for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-        if (column_id == _column_segment_offsets[next_segment_id]) {
+        if (next_segment_id < _column_segment_offsets.size() && column_id == _column_segment_offsets[next_segment_id]) {
           next_segment_id++;
           current_pos_list = nullptr;
         }

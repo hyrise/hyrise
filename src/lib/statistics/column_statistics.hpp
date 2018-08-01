@@ -16,6 +16,9 @@ namespace opossum {
 template <typename ColumnDataType>
 class ColumnStatistics : public BaseColumnStatistics {
  public:
+  // To be used for columns for which ColumnStatistics can't be computed
+  static ColumnStatistics dummy();
+
   ColumnStatistics(const float null_value_ratio, const float distinct_count, const ColumnDataType min,
                    const ColumnDataType max);
 
@@ -33,15 +36,16 @@ class ColumnStatistics : public BaseColumnStatistics {
    */
   std::shared_ptr<BaseColumnStatistics> clone() const override;
   FilterByValueEstimate estimate_predicate_with_value(
-      const PredicateCondition predicate_condition, const AllTypeVariant& value,
+      const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
       const std::optional<AllTypeVariant>& value2 = std::nullopt) const override;
 
   FilterByValueEstimate estimate_predicate_with_value_placeholder(
-      const PredicateCondition predicate_condition, const ValuePlaceholder& value,
+      const PredicateCondition predicate_condition,
       const std::optional<AllTypeVariant>& value2 = std::nullopt) const override;
 
   FilterByColumnComparisonEstimate estimate_predicate_with_column(
-      const PredicateCondition predicate_condition, const BaseColumnStatistics& right_column_statistics) const override;
+      const PredicateCondition predicate_condition,
+      const BaseColumnStatistics& base_right_column_statistics) const override;
 
   std::string description() const override;
   /** @} */
