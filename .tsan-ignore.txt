@@ -5,3 +5,8 @@ race:^tbb*
 # https://groups.google.com/forum/#!topic/thread-sanitizer/vz_s-t226Vg
 race:^std::__1::shared_ptr*
 race:^std::__1::weak_ptr*
+race:shared_count
+
+# Boost is not built with tsan support, either
+race:boost::detail::thread_data_base
+race:thread_data
