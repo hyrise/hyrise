@@ -1,6 +1,7 @@
 #include "join_hash.hpp"
 
 #include <boost/lexical_cast.hpp>
+#include <cmath>
 #include <memory>
 #include <numeric>
 #include <string>
@@ -258,7 +259,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
             uint32_t hashed_value = hash_value<T, HashedType>(elem.second, partitioning_seed);
             output[row_id] = PartitionedElement<T>{RowID{chunk_id, offset}, hashed_value, elem.second};
 
-            const Hash radix = (output[row_id].partition_hash >> (32 - radix_bits * (pass + 1))) & mask;
+            const Hash radix = output[row_id].partition_hash & mask;
             histogram[radix]++;
 
             row_id++;
@@ -274,7 +275,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
           uint32_t hashed_value = hash_value<T, HashedType>(elem.second, partitioning_seed);
           output[row_id] = PartitionedElement<T>{elem.first, hashed_value, elem.second};
 
-          const Hash radix = (output[row_id].partition_hash >> (32 - radix_bits * (pass + 1))) & mask;
+          const Hash radix = output[row_id].partition_hash & mask;
           histogram[radix]++;
 
           row_id++;
@@ -346,7 +347,7 @@ RadixContainer<T> partition_radix_parallel(const std::shared_ptr<Partition<T>>& 
           continue;
         }
 
-        const size_t radix = (element.partition_hash >> (32 - radix_bits * (pass + 1))) & mask;
+        const size_t radix = element.partition_hash & mask;
 
         out[output_offsets[radix]++] = element;
       }
@@ -623,8 +624,43 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _mode(mode),
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
-        _inputs_swapped(inputs_swapped),
-        _radix_bits(radix_bits) {}
+        _inputs_swapped(inputs_swapped)
+        {
+                    /* Hash joins perform best for join relations with very different sizes. In case the 
+           optimizer selects the hash join due to such a situation, but neglects that the
+           input switch will be switched (e.g., due to the join type), we will warn the user. */
+          if (inputs_swapped) {
+            PerformanceWarning("Inputs swapped for hash join.");
+          }
+
+          /*
+          Setting number of bits for radix clustering:
+          The number of bits is used to create probe partitions with a size that can
+          be expected to fit into the L2 cache.
+          This should incorporate hardware knowledge, once available in Hyrise.
+          As of now, we assume a L2 cache size of 256 KB.
+          We estimate the size the following way:
+            - we assume each key appears once (that is an overcount, but since we'd like
+            have rather a hash map that is slightly smaller than L2 rather than
+            slightly larger, that's not an issue)
+            - each entry in the hash map is a data structure holding the actual value
+            and the RowID
+            - we use the general rule of thumb for modern hashmaps with 3x the space of the actual data
+            (cf. hash_map_size_factor, see https://tessil.github.io/2016/08/29/benchmark-hopscotch-map.html
+            & https://github.com/sparsehash/sparsehash)
+          */
+          const auto probe_relation_size = inputs_swapped ? _right->get_output()->row_count() : _left->get_output()->row_count();
+          const auto complete_pos_list_size = probe_relation_size * (sizeof(LeftType) + sizeof(RowID));
+
+          // size adaption for the hash table (this accounts for the cuckoo hash tables, others might differ)
+          const auto hash_map_size_factor = 4.0f;
+
+          // this might be a too simple heuristic
+          const auto cluster_count = std::max(1.0f, hash_map_size_factor * (complete_pos_list_size / 256'000));
+          const auto bits_required = std::ceil(std::log2(cluster_count));
+
+          _radix_bits = bits_required;
+        }
 
  protected:
   const std::shared_ptr<const AbstractOperator> _left, _right;
@@ -635,8 +671,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
   std::shared_ptr<Table> _output_table;
 
-  const unsigned int _partitioning_seed = 13;
-  const size_t _radix_bits;
+  const unsigned int _partitioning_seed = 17;
+  size_t _radix_bits;
 
   // Determine correct type for hashing
   using HashedType = typename JoinHashTraits<LeftType, RightType>::HashType;
