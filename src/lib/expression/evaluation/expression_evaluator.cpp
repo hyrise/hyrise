@@ -344,7 +344,8 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 }
 
 template <typename Result>
-std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_in_expression(const InExpression& expression) {
+std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_in_expression(
+    const InExpression& in_expression) {
   Fail("InExpression supports only bool as result");
 }
 
@@ -399,7 +400,7 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
 
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_predicate_expression(
-    const AbstractPredicateExpression& expression) {
+    const AbstractPredicateExpression& predicate_expression) {
   Fail("Can only evaluate predicates to bool");
 }
 

@@ -554,7 +554,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
     }
   }
 
-  AssertInput(join_mode == JoinMode::Inner || join_predicates.size(),
+  AssertInput(join_mode == JoinMode::Inner || !join_predicates.empty(),
               "Multiple Predicates not supported in Outer Join");
 
   /**
@@ -866,7 +866,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_show(const hsql::Show
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::CreateStatement& create_statement) {
   switch (create_statement.type) {
     case hsql::CreateType::kCreateView: {
-      auto lqp = _translate_select_statement((const hsql::SelectStatement&)*create_statement.select);
+      auto lqp = _translate_select_statement(static_cast<const hsql::SelectStatement&>(*create_statement.select));
 
       std::unordered_map<ColumnID, std::string> column_names;
 
@@ -1281,8 +1281,8 @@ void SQLTranslator::TableSourceState::append(TableSourceState&& rhs) {
 
   // This should be ::merge, but that is not yet supported by clang.
   // elements_by_table_name.merge(std::move(rhs.elements_by_table_name));
-  for (auto it = rhs.elements_by_table_name.begin(); it != rhs.elements_by_table_name.end(); ++it) {
-    elements_by_table_name.try_emplace(it->first, std::move(it->second));
+  for (auto& kv : rhs.elements_by_table_name) {
+    elements_by_table_name.try_emplace(kv.first, std::move(kv.second));
   }
 
   elements_in_order.insert(elements_in_order.end(), rhs.elements_in_order.begin(), rhs.elements_in_order.end());

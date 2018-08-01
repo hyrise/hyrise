@@ -59,9 +59,11 @@ const std::unordered_map<LogicalOperator, JitExpressionType> logical_operator_to
 
 namespace opossum {
 
-JitAwareLQPTranslator::JitAwareLQPTranslator() : LQPTranslator() {
+JitAwareLQPTranslator::JitAwareLQPTranslator() {
 #if !HYRISE_JIT_SUPPORT
   Fail("Query translation with JIT operators requested, but jitting is not available");
+#else
+  {}  // make clang-tidy happy
 #endif
 }
 
@@ -269,7 +271,7 @@ bool JitAwareLQPTranslator::_node_is_jittable(const std::shared_ptr<AbstractLQPN
 }
 
 void JitAwareLQPTranslator::_visit(const std::shared_ptr<AbstractLQPNode>& node,
-                                   std::function<bool(const std::shared_ptr<AbstractLQPNode>&)> func) const {
+                                   const std::function<bool(const std::shared_ptr<AbstractLQPNode>&)>& func) const {
   std::unordered_set<std::shared_ptr<const AbstractLQPNode>> visited;
   std::queue<std::shared_ptr<AbstractLQPNode>> queue({node});
 

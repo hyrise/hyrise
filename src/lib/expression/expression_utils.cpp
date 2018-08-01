@@ -193,7 +193,7 @@ void expressions_set_parameters(const std::vector<std::shared_ptr<AbstractExpres
 }
 
 void expression_set_transaction_context(const std::shared_ptr<AbstractExpression>& expression,
-                                        std::weak_ptr<TransactionContext> transaction_context) {
+                                        const std::weak_ptr<TransactionContext>& transaction_context) {
   visit_expression(expression, [&](auto& sub_expression) {
     if (sub_expression->type != ExpressionType::PQPSelect) return ExpressionVisitation::VisitArguments;
 
@@ -206,7 +206,7 @@ void expression_set_transaction_context(const std::shared_ptr<AbstractExpression
 }
 
 void expressions_set_transaction_context(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
-                                         std::weak_ptr<TransactionContext> transaction_context) {
+                                         const std::weak_ptr<TransactionContext>& transaction_context) {
   for (const auto& expression : expressions) {
     expression_set_transaction_context(expression, transaction_context);
   }

@@ -90,7 +90,7 @@ void SingleColumnTableScanImpl::handle_column(const BaseEncodedColumn& base_colu
   });
 }
 
-void SingleColumnTableScanImpl::handle_column(const BaseDictionaryColumn& left_column,
+void SingleColumnTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
                                               std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
@@ -112,7 +112,7 @@ void SingleColumnTableScanImpl::handle_column(const BaseDictionaryColumn& left_c
    * value_id >= value  |  value_id >= dict.lower_bound(value)
    */
 
-  const auto search_value_id = _get_search_value_id(left_column);
+  const auto search_value_id = _get_search_value_id(base_column);
 
   /**
    * Early Outs
@@ -126,9 +126,9 @@ void SingleColumnTableScanImpl::handle_column(const BaseDictionaryColumn& left_c
    * value_id >= value | search_vid == 0                       | search_vid == INVALID_VALUE_ID
    */
 
-  auto left_iterable = create_iterable_from_attribute_vector(left_column);
+  auto left_iterable = create_iterable_from_attribute_vector(base_column);
 
-  if (_right_value_matches_all(left_column, search_value_id)) {
+  if (_right_value_matches_all(base_column, search_value_id)) {
     left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
       static const auto always_true = [](const auto&) { return true; };
       this->_unary_scan(always_true, left_it, left_end, chunk_id, matches_out);
@@ -137,7 +137,7 @@ void SingleColumnTableScanImpl::handle_column(const BaseDictionaryColumn& left_c
     return;
   }
 
-  if (_right_value_matches_none(left_column, search_value_id)) {
+  if (_right_value_matches_none(base_column, search_value_id)) {
     return;
   }
 

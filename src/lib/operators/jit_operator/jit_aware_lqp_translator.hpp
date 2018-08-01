@@ -53,7 +53,7 @@ class JitAwareLQPTranslator final : public LQPTranslator {
   // Traverses the LQP in a breadth-first fashion and passes all visited nodes to a lambda. The boolean returned
   // from the lambda determines whether the current node should be explored further.
   void _visit(const std::shared_ptr<AbstractLQPNode>& node,
-              std::function<bool(const std::shared_ptr<AbstractLQPNode>&)> func) const;
+              const std::function<bool(const std::shared_ptr<AbstractLQPNode>&)>& func) const;
 
   static JitExpressionType _expression_to_jit_expression_type(const AbstractExpression& expression);
 };

@@ -38,7 +38,7 @@ class SQLPipelineBuilder final {
   explicit SQLPipelineBuilder(const std::string& sql);
 
   SQLPipelineBuilder& with_mvcc(const UseMvcc use_mvcc);
-  SQLPipelineBuilder& with_lqp_translator(const std::shared_ptr<LQPTranslator>& translator);
+  SQLPipelineBuilder& with_lqp_translator(const std::shared_ptr<LQPTranslator>& lqp_translator);
   SQLPipelineBuilder& with_optimizer(const std::shared_ptr<Optimizer>& optimizer);
   SQLPipelineBuilder& with_prepared_statement_cache(const std::shared_ptr<PreparedStatementCache>& prepared_statements);
   SQLPipelineBuilder& with_transaction_context(const std::shared_ptr<TransactionContext>& transaction_context);

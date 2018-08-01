@@ -28,13 +28,13 @@ std::shared_ptr<AbstractOperator> Print::_on_deep_copy(
 
 void Print::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-void Print::print(std::shared_ptr<const Table> table, uint32_t flags, std::ostream& out) {
+void Print::print(const std::shared_ptr<const Table>& table, uint32_t flags, std::ostream& out) {
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
   Print(table_wrapper, out, flags).execute();
 }
 
-void Print::print(std::shared_ptr<const AbstractOperator> in, uint32_t flags, std::ostream& out) {
+void Print::print(const std::shared_ptr<const AbstractOperator>& in, uint32_t flags, std::ostream& out) {
   Print(in, out, flags).execute();
 }
 

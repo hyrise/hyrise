@@ -1,18 +1,18 @@
 Checks: 'readability-identifier-naming,-clang-analyzer-security.insecureAPI.rand'
 
-# Checks: '*,-*-default-arguments,-*braces-around-statements,-cppcoreguidelines-pro-bounds-pointer-arithmetic,-google-build-using-namespace,-google-runtime-references,-cert-err58-cpp,-fuchsia-overloaded-operator,-readability-else-after-return,-clang-analyzer-security.insecureAPI.rand,-readability-implicit-bool-conversion,-cppcoreguidelines-pro-type-reinterpret-cast,-readability-misleading-indentation,-modernize-pass-by-value,-cppcoreguidelines-pro-bounds-constant-array-index,-cppcoreguidelines-pro-type-static-cast-downcast,-misc-unused-parameters,-cppcoreguidelines-pro-bounds-array-to-pointer-decay,-hicpp-no-array-decay,-readability-named-parameter'
+# Checks: '*,-*-default-arguments,-*braces-around-statements,-cppcoreguidelines-pro-bounds-pointer-arithmetic,-google-build-using-namespace,-google-runtime-references,-cert-err58-cpp,-fuchsia-overloaded-operator,-readability-else-after-return,-clang-analyzer-security.insecureAPI.rand,-readability-implicit-bool-conversion,-cppcoreguidelines-pro-type-reinterpret-cast,-readability-misleading-indentation,-modernize-pass-by-value,-cppcoreguidelines-pro-bounds-constant-array-index,-cppcoreguidelines-pro-type-static-cast-downcast,-misc-unused-parameters,-cppcoreguidelines-pro-bounds-array-to-pointer-decay,-hicpp-no-array-decay,-readability-named-parameter,-cert-dcl58-cpp,-clang-analyzer-optin.cplusplus.VirtualCall'
 
 
 # Explanation of disabled checks:
-#   *-default-arguments
+#   *-default-arguments                                  We do use default arguments (and like them)
 #   *braces-around-statements                            We do allow then blocks without braces if they are in the same line
 #   -cppcoreguidelines-pro-bounds-pointer-arithmetic  
-#   google-build-using-namespace                        
+#   google-build-using-namespace                         While we discourage its use, in some cases, using namespace makes sense
 #   google-runtime-references  
 #   cert-err58-cpp  
 #   fuchsia-overloaded-operator  
 #   readability-else-after-return  
-#   clang-analyzer-security.insecureAPI.rand  
+#   clang-analyzer-security.insecureAPI.rand             We don't care about cryptographically unsafe rand() calls
 #   readability-implicit-bool-conversion                 Doesn't like if(map.count(foo))
 #   cppcoreguidelines-pro-type-reinterpret-cast          We need reinterpret_cast for jitting
 #   readability-misleading-indentation                   Doesn't like if constexpr
@@ -23,6 +23,9 @@ Checks: 'readability-identifier-naming,-clang-analyzer-security.insecureAPI.rand
 #   cppcoreguidelines-pro-bounds-array-to-pointer-decay  Weird stuff - it doesn't like `description_mode == DescriptionMode::MultiLine`
 #   hicpp-no-array-decay                                 dto.
 #   readability-named-parameter                          Unused parameters don't need names
+#   cert-dcl58-cpp                                       Adding a hash function to std is perfectly legal: https://en.cppreference.com/w/cpp/language/extending_std
+#   clang-analyzer-optin.cplusplus.VirtualCall           false positive in boost::lexical_cast
+#   modernize-avoid-bind                                 meh, bind isn't thaaaat bad
 
 CheckOptions:
   - key: readability-identifier-naming.ClassCase

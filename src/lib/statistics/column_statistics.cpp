@@ -164,7 +164,7 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_
 
 template <typename ColumnDataType>
 FilterByColumnComparisonEstimate ColumnStatistics<ColumnDataType>::estimate_predicate_with_column(
-    const PredicateCondition predicate_condition, const BaseColumnStatistics& abstract_right_column_statistics) const {
+    const PredicateCondition predicate_condition, const BaseColumnStatistics& base_right_column_statistics) const {
   /**
    * Calculate expected selectivity by looking at what ratio of values of both columns are in the overlapping value
    * range of both columns. 
@@ -216,12 +216,12 @@ FilterByColumnComparisonEstimate ColumnStatistics<ColumnDataType>::estimate_pred
    */
 
   // Cannot compare columns of different type
-  if (_data_type != abstract_right_column_statistics.data_type()) {
-    return {1.0f, without_null_values(), abstract_right_column_statistics.without_null_values()};
+  if (_data_type != base_right_column_statistics.data_type()) {
+    return {1.0f, without_null_values(), base_right_column_statistics.without_null_values()};
   }
 
   const auto& right_column_statistics =
-      static_cast<const ColumnStatistics<ColumnDataType>&>(abstract_right_column_statistics);
+      static_cast<const ColumnStatistics<ColumnDataType>&>(base_right_column_statistics);
 
   // if columns have no distinct values, they can only have null values which cannot be selected with this predicate
   if (distinct_count() == 0 || right_column_statistics.distinct_count() == 0) {
@@ -362,12 +362,11 @@ FilterByColumnComparisonEstimate ColumnStatistics<ColumnDataType>::estimate_pred
  */
 template <>
 FilterByColumnComparisonEstimate ColumnStatistics<std::string>::estimate_predicate_with_column(
-    const PredicateCondition predicate_condition, const BaseColumnStatistics& abstract_right_column_statistics) const {
+    const PredicateCondition predicate_condition, const BaseColumnStatistics& base_right_column_statistics) const {
   // TODO(anybody) implement special case for strings
-  Assert(_data_type == abstract_right_column_statistics.data_type(), "Cannot compare columns of different type");
+  Assert(_data_type == base_right_column_statistics.data_type(), "Cannot compare columns of different type");
 
-  const auto& right_column_statistics =
-      static_cast<const ColumnStatistics<std::string>&>(abstract_right_column_statistics);
+  const auto& right_column_statistics = static_cast<const ColumnStatistics<std::string>&>(base_right_column_statistics);
 
   // if columns have no distinct values, they can only have null values which cannot be selected with this predicate
   if (distinct_count() == 0 || right_column_statistics.distinct_count() == 0) {
@@ -407,8 +406,8 @@ float ColumnStatistics<ColumnDataType>::estimate_range_selectivity(const ColumnD
  * Specialization for strings as they cannot be used in subtractions.
  */
 template <>
-float ColumnStatistics<std::string>::estimate_range_selectivity(const std::string minimum,
-                                                                const std::string maximum) const {
+float ColumnStatistics<std::string>::estimate_range_selectivity(const std::string minimum,          // NOLINT
+                                                                const std::string maximum) const {  // NOLINT
   // TODO(anyone) implement selectivity for range approximation for column type string.
   return (maximum < minimum) ? 0.f : 1.f;
 }
@@ -418,8 +417,8 @@ FilterByValueEstimate ColumnStatistics<ColumnDataType>::estimate_range(const Col
                                                                        const ColumnDataType maximum) const {
   // NOTE: minimum can be greater than maximum (e.g. a predicate >= 2 on a column with only values of 1)
   // new minimum/maximum of table cannot be smaller/larger than the current minimum/maximum
-  const auto common_min = std::max(minimum, _min);
-  const auto common_max = std::min(maximum, _max);
+  const auto common_min = std::max(minimum, _min);  // NOLINT (false performance-unnecessary-copy-initialization)
+  const auto common_max = std::min(maximum, _max);  // NOLINT
   if (common_min == _min && common_max == _max) {
     return {non_null_value_ratio(), without_null_values()};
   }

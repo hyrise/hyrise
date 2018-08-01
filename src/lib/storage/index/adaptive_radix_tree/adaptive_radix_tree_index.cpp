@@ -65,7 +65,7 @@ std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
     const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values) {
   DebugAssert(!(values.empty()), "Index on empty column is not defined");
   _chunk_offsets.reserve(values.size());
-  Iterator begin = _chunk_offsets.cbegin();
+  auto begin = _chunk_offsets.cbegin();
   return _bulk_insert(values, static_cast<size_t>(0u), begin);
 }
 
@@ -76,7 +76,7 @@ std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
         return values.front().first == pair.first;
       })) {
     // copy the Iterator in the _chunk_offsets - vector --> this is the lower_bound of the leaf
-    Iterator lower = it;
+    auto lower = it;
     // insert the ChunkOffsets into the vector and push the Iterator further
     auto old_capacity = _chunk_offsets.capacity();
     for (const auto& pair : values) {
@@ -88,7 +88,7 @@ std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
     Assert(old_capacity == new_capacity, "_chunk_offsets capacity changes, all Iterators are invalidated");
 
     // "it" points to the position after the last inserted ChunkOffset --> this is the upper_bound of the leave
-    Iterator upper = it;
+    auto upper = it;
     return std::make_shared<Leaf>(lower, upper);
   }
 
@@ -127,7 +127,7 @@ std::vector<std::shared_ptr<const BaseColumn>> AdaptiveRadixTreeIndex::_get_inde
 AdaptiveRadixTreeIndex::BinaryComparable::BinaryComparable(ValueID value) : _parts(sizeof(value)) {
   for (size_t byte_id = 1; byte_id <= _parts.size(); ++byte_id) {
     // grab the 8 least significant bits and put them at the front of the vector
-    _parts[_parts.size() - byte_id] = static_cast<uint8_t>(value & 0xFF);
+    _parts[_parts.size() - byte_id] = static_cast<uint8_t>(value) & 0xFFu;
     // rightshift 8 bits
     value >>= 8;
   }
