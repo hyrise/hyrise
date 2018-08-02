@@ -153,7 +153,7 @@ TEST_F(ServerTestRunner, TestParallelConnections) {
   for (auto& thread_fut : thread_futures) {
     // We give this a lot of time, not because we need that long for 100 threads to finish, but because sanitizers and
     // other tools like valgrind sometimes bring a high overhead that exceeds 10 seconds.
-    if (thread_fut.wait_for(std::chrono::seconds(30)) == std::future_status::timeout) {
+    if (thread_fut.wait_for(std::chrono::seconds(150)) == std::future_status::timeout) {
       ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
     }
   }
