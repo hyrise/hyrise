@@ -234,18 +234,13 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
 
 bool Console::_initialize_pipeline(const std::string& sql) {
   try {
+    auto builder = SQLPipelineBuilder{sql}
+                       .dont_cleanup_temporaries()  // keep tables for debugging and visualization
+                       .with_prepared_statement_cache(_prepared_statements);
     if (_explicitly_created_transaction_context != nullptr) {
-      // We want to keep the temporary tables for debugging and visualization
-      _sql_pipeline =
-          std::make_unique<SQLPipeline>(SQLPipelineBuilder{sql}
-                                            .dont_cleanup_temporaries()
-                                            .with_prepared_statement_cache(_prepared_statements)
-                                            .with_transaction_context(_explicitly_created_transaction_context)
-                                            .create_pipeline());
-    } else {
-      _sql_pipeline = std::make_unique<SQLPipeline>(
-          SQLPipelineBuilder{sql}.with_prepared_statement_cache(_prepared_statements).create_pipeline());
+      builder.with_transaction_context(_explicitly_created_transaction_context);
     }
+    _sql_pipeline = std::make_unique<SQLPipeline>(builder.create_pipeline());
   } catch (const InvalidInputException& exception) {
     out(std::string(exception.what()) + '\n');
     return false;
