@@ -69,11 +69,11 @@ const AllTypeVariant ValueColumn<T>::operator[](const ChunkOffset chunk_offset) 
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
   PerformanceWarning("operator[] used");
 
-  const auto typed_value = get_typed_value(chunk_offset);
-  if (!typed_value.has_value()) {
+  // Column supports null values and value is null
+  if (is_nullable() && _null_values->at(chunk_offset)) {
     return NULL_VALUE;
   }
-  return *typed_value;
+  return _values.at(chunk_offset);
 }
 
 template <typename T>
