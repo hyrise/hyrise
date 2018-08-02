@@ -32,7 +32,7 @@ std::shared_ptr<Table> JitWriteTuples::create_output_table(const ChunkOffset inp
 void JitWriteTuples::before_query(Table& out_table, JitRuntimeContext& context) const { _create_output_chunk(context); }
 
 void JitWriteTuples::after_chunk(Table& out_table, JitRuntimeContext& context) const {
-  if (context.out_chunk.size() > 0 && context.out_chunk[0]->size() > 0) {
+  if (!context.out_chunk.empty() && context.out_chunk[0]->size() > 0) {
     out_table.append_chunk(context.out_chunk);
     _create_output_chunk(context);
   }

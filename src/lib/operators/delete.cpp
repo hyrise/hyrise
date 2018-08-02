@@ -12,7 +12,10 @@
 namespace opossum {
 
 Delete::Delete(const std::string& table_name, const std::shared_ptr<const AbstractOperator>& values_to_delete)
-    : AbstractReadWriteOperator{OperatorType::Delete, values_to_delete}, _table_name{table_name} {}
+    : AbstractReadWriteOperator{OperatorType::Delete, values_to_delete},
+      _table_name{table_name},
+      _transaction_id{0},
+      _num_rows_deleted{0} {}
 
 const std::string Delete::name() const { return "Delete"; }
 
@@ -124,10 +127,12 @@ bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
   return true;
 }
 
-std::shared_ptr<AbstractOperator> Delete::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<Delete>(_table_name, recreated_input_left);
+std::shared_ptr<AbstractOperator> Delete::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<Delete>(_table_name, copied_input_left);
 }
+
+void Delete::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 }  // namespace opossum

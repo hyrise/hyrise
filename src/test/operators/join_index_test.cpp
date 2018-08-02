@@ -80,8 +80,8 @@ class JoinIndexTest : public BaseTest {
   }
 
   // builds and executes the given Join and checks correctness of the output
-  void test_join_output(const std::shared_ptr<const AbstractOperator> left,
-                        const std::shared_ptr<const AbstractOperator> right,
+  void test_join_output(const std::shared_ptr<const AbstractOperator>& left,
+                        const std::shared_ptr<const AbstractOperator>& right,
                         const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition predicate_condition,
                         const JoinMode mode, const std::string& file_name, size_t chunk_size) {
     // load expected results from file
@@ -236,12 +236,6 @@ TYPED_TEST(JoinIndexTest, OuterJoinDict) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
                          JoinMode::Outer, "src/test/tables/joinoperators/int_outer_join.tbl", 1);
-}
-
-TYPED_TEST(JoinIndexTest, SelfJoin) {
-  this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_a,
-                         std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                         JoinMode::Self, "src/test/tables/joinoperators/int_self_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, SmallerInnerJoin) {

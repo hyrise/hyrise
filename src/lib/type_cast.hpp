@@ -5,6 +5,7 @@
 #include <boost/hana/not_equal.hpp>
 #include <boost/hana/size.hpp>
 #include <boost/hana/take_while.hpp>
+#include <boost/lexical_cast/try_lexical_convert.hpp>
 #include <boost/lexical_cast.hpp>
 #include <string>
 
@@ -47,9 +48,11 @@ template <typename T>
 std::enable_if_t<std::is_integral<T>::value, T> type_cast(const AllTypeVariant& value) {
   if (value.which() == detail::index_of(data_types_including_null, hana::type_c<T>)) return get<T>(value);
 
-  try {
-    return boost::lexical_cast<T>(value);
-  } catch (...) {
+  T converted_value;
+
+  if (boost::conversion::try_lexical_convert(value, converted_value)) {
+    return converted_value;
+  } else {
     return boost::numeric_cast<T>(boost::lexical_cast<double>(value));
   }
 }

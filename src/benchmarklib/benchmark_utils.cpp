@@ -22,7 +22,7 @@ std::ostream& get_out_stream(const bool verbose) {
   // See https://stackoverflow.com/a/11826666
   class NullBuffer : public std::streambuf {
    public:
-    int overflow(int c) { return c; }
+    int overflow(int c) override { return c; }
   };
 
   static NullBuffer null_buffer;
@@ -31,28 +31,45 @@ std::ostream& get_out_stream(const bool verbose) {
 }
 
 BenchmarkState::BenchmarkState(const size_t max_num_iterations, const opossum::Duration max_duration)
-    : max_num_iterations(max_num_iterations), max_duration(max_duration) {}
+    : max_num_iterations(max_num_iterations), max_duration(max_duration) {
+  iteration_durations.reserve(max_num_iterations);
+}
 
 bool BenchmarkState::keep_running() {
+  bool is_first_iteration = false;
+
   switch (state) {
     case State::NotStarted:
-      begin = std::chrono::high_resolution_clock::now();
+      benchmark_begin = std::chrono::high_resolution_clock::now();
       state = State::Running;
+      is_first_iteration = true;
       break;
     case State::Over:
       return false;
     default: {}
   }
 
+  const auto now = std::chrono::high_resolution_clock::now();
+
+  if (!is_first_iteration) {
+    // "Finish" the current iteration, i.e. get its duration
+    const auto iteration_duration = now - iteration_begin;
+    iteration_durations.push_back(iteration_duration);
+  }
+
+  // "Start" new iteration
+  benchmark_end = now;
+  iteration_begin = now;
+
+  // Stop execution if we reached the maximum number of iterations
   if (num_iterations >= max_num_iterations) {
-    end = std::chrono::high_resolution_clock::now();
     state = State::Over;
     return false;
   }
 
-  end = std::chrono::high_resolution_clock::now();
-  const auto duration = end - begin;
-  if (duration >= max_duration) {
+  // Stop execution if we reached the time limit
+  const auto benchmark_duration = now - benchmark_begin;
+  if (benchmark_duration >= max_duration) {
     state = State::Over;
     return false;
   }
@@ -63,14 +80,14 @@ bool BenchmarkState::keep_running() {
 }
 
 BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool verbose, const ChunkOffset chunk_size,
-                                 const EncodingConfig encoding_type, const size_t max_num_query_runs,
+                                 const EncodingConfig& encoding_config, const size_t max_num_query_runs,
                                  const Duration& max_duration, const UseMvcc use_mvcc,
                                  const std::optional<std::string>& output_file_path, const bool enable_scheduler,
                                  const bool enable_visualization, std::ostream& out)
     : benchmark_mode(benchmark_mode),
       verbose(verbose),
       chunk_size(chunk_size),
-      encoding_config(encoding_type),
+      encoding_config(encoding_config),
       max_num_query_runs(max_num_query_runs),
       max_duration(max_duration),
       use_mvcc(use_mvcc),
@@ -336,7 +353,7 @@ nlohmann::json EncodingConfig::to_json() const {
   return json;
 }
 
-void BenchmarkTableEncoder::encode(const std::string& table_name, std::shared_ptr<Table> table,
+void BenchmarkTableEncoder::encode(const std::string& table_name, const std::shared_ptr<Table>& table,
                                    const EncodingConfig& config) {
   const auto& type_mapping = config.type_encoding_mapping;
   const auto& custom_mapping = config.custom_encoding_mapping;

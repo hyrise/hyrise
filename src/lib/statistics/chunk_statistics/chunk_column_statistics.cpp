@@ -41,7 +41,7 @@ static std::shared_ptr<ChunkColumnStatistics> build_statistics_from_dictionary(c
 }
 
 std::shared_ptr<ChunkColumnStatistics> ChunkColumnStatistics::build_statistics(
-    DataType data_type, std::shared_ptr<const BaseColumn> column) {
+    DataType data_type, const std::shared_ptr<const BaseColumn>& column) {
   std::shared_ptr<ChunkColumnStatistics> statistics;
   resolve_data_and_column_type(*column, [&statistics](auto type, auto& typed_column) {
     using ColumnType = typename std::decay<decltype(typed_column)>::type;

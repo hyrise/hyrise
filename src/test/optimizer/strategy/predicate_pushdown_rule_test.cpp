@@ -3,6 +3,7 @@
 #include "base_test.hpp"
 #include "gtest/gtest.h"
 
+#include "expression/expression_functional.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -11,6 +12,8 @@
 #include "optimizer/strategy/predicate_pushdown_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "types.hpp"
+
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
@@ -41,11 +44,11 @@ class PredicatePushdownRuleTest : public StrategyBaseTest {
 };
 
 TEST_F(PredicatePushdownRuleTest, SimpleLiteralJoinPushdownTest) {
-  auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_a_a, _b_a), PredicateCondition::Equals);
+  auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, equals_(_a_a, _b_a));
   join_node->set_left_input(_table_a);
   join_node->set_right_input(_table_b);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(_a_a, PredicateCondition::GreaterThan, 10);
+  auto predicate_node_0 = std::make_shared<PredicateNode>(greater_than_(_a_a, 10));
   predicate_node_0->set_left_input(join_node);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
@@ -57,11 +60,11 @@ TEST_F(PredicatePushdownRuleTest, SimpleLiteralJoinPushdownTest) {
 }
 
 TEST_F(PredicatePushdownRuleTest, SimpleOneSideJoinPushdownTest) {
-  auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_a_a, _b_a), PredicateCondition::Equals);
+  auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, equals_(_a_a, _b_a));
   join_node->set_left_input(_table_a);
   join_node->set_right_input(_table_b);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(_a_a, PredicateCondition::GreaterThan, _a_b);
+  auto predicate_node_0 = std::make_shared<PredicateNode>(greater_than_(_a_a, _a_b));
   predicate_node_0->set_left_input(join_node);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
@@ -73,11 +76,11 @@ TEST_F(PredicatePushdownRuleTest, SimpleOneSideJoinPushdownTest) {
 }
 
 TEST_F(PredicatePushdownRuleTest, SimpleBothSideJoinPushdownTest) {
-  auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_a_b, _b_a), PredicateCondition::Equals);
+  auto join_node = std::make_shared<JoinNode>(JoinMode::Inner, equals_(_a_b, _b_a));
   join_node->set_left_input(_table_a);
   join_node->set_right_input(_table_b);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(_a_a, PredicateCondition::GreaterThan, _b_b);
+  auto predicate_node_0 = std::make_shared<PredicateNode>(greater_than_(_a_a, _b_b));
   predicate_node_0->set_left_input(join_node);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_0);
@@ -89,10 +92,11 @@ TEST_F(PredicatePushdownRuleTest, SimpleBothSideJoinPushdownTest) {
 }
 
 TEST_F(PredicatePushdownRuleTest, SimpleSortPushdownTest) {
-  auto sort_node = std::make_shared<SortNode>(std::vector<OrderByDefinition>{{_a_a, OrderByMode::Ascending}});
+  auto sort_node =
+      std::make_shared<SortNode>(expression_vector(_a_a), std::vector<OrderByMode>{OrderByMode::Ascending});
   sort_node->set_left_input(_table_a);
 
-  auto predicate_node = std::make_shared<PredicateNode>(_a_a, PredicateCondition::GreaterThan, _a_b);
+  auto predicate_node = std::make_shared<PredicateNode>(greater_than_(_a_a, _a_b));
   predicate_node->set_left_input(sort_node);
 
   auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node);
@@ -103,23 +107,21 @@ TEST_F(PredicatePushdownRuleTest, SimpleSortPushdownTest) {
 }
 
 TEST_F(PredicatePushdownRuleTest, ComplexBlockingPredicatesPushdownTest) {
-  auto join_node_ab =
-      std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_a_a, _b_a), PredicateCondition::Equals);
-  auto join_node_bc =
-      std::make_shared<JoinNode>(JoinMode::Inner, std::make_pair(_b_a, _c_a), PredicateCondition::Equals);
+  auto join_node_ab = std::make_shared<JoinNode>(JoinMode::Inner, equals_(_a_a, _b_a));
+  auto join_node_bc = std::make_shared<JoinNode>(JoinMode::Inner, equals_(_b_a, _c_a));
 
   join_node_bc->set_left_input(_table_b);
   join_node_bc->set_right_input(_table_c);
   join_node_ab->set_left_input(join_node_bc);
   join_node_ab->set_right_input(_table_a);
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(_b_b, PredicateCondition::Equals, _a_b);
+  auto predicate_node_0 = std::make_shared<PredicateNode>(equals_(_b_b, _a_b));
   predicate_node_0->set_left_input(join_node_ab);
 
-  auto predicate_node_1 = std::make_shared<PredicateNode>(_a_b, PredicateCondition::GreaterThan, 123);
+  auto predicate_node_1 = std::make_shared<PredicateNode>(greater_than_(_a_b, 123));
   predicate_node_1->set_left_input(predicate_node_0);
 
-  auto predicate_node_2 = std::make_shared<PredicateNode>(_c_a, PredicateCondition::GreaterThan, 100);
+  auto predicate_node_2 = std::make_shared<PredicateNode>(greater_than_(_c_a, 100));
   predicate_node_2->set_left_input(predicate_node_1);
 
   auto reordered0 = StrategyBaseTest::apply_rule(_rule, predicate_node_2);

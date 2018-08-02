@@ -1,10 +1,10 @@
 #pragma once
 
-#include "types.hpp"
 #include "all_type_variant.hpp"
-#include "storage/index/base_index.hpp"
-#include "storage/base_column.hpp"
 #include "b_tree_index_impl.hpp"
+#include "storage/base_column.hpp"
+#include "storage/index/base_index.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -17,7 +17,7 @@ class BTreeIndex : public BaseIndex {
   using Iterator = std::vector<ChunkOffset>::const_iterator;
 
   BTreeIndex() = delete;
-  explicit BTreeIndex(const std::vector<std::shared_ptr<const BaseColumn>> index_columns);
+  explicit BTreeIndex(const std::vector<std::shared_ptr<const BaseColumn>>& index_columns);
 
   virtual uint64_t memory_consumption() const;
 

@@ -22,7 +22,8 @@ class ChunkStatistics final : public std::enable_shared_from_this<ChunkStatistic
   /**
    * calls can_prune on the ChunkColumnStatistics corresponding to column_id
    */
-  bool can_prune(const ColumnID column_id, const AllTypeVariant& value, const PredicateCondition predicate_type) const;
+  bool can_prune(const ColumnID column_id, const AllTypeVariant& value,
+                 const PredicateCondition predicate_condition) const;
 
  protected:
   std::vector<std::shared_ptr<ChunkColumnStatistics>> _statistics;

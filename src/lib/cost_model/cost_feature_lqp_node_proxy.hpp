@@ -17,6 +17,9 @@ class CostFeatureLQPNodeProxy : public AbstractCostFeatureProxy {
 
  private:
   std::shared_ptr<AbstractLQPNode> _node;
+
+  CostFeatureVariant _extract_feature_from_predicate_node(const CostFeature cost_feature) const;
+  CostFeatureVariant _extract_feature_from_join_node(const CostFeature cost_feature) const;
 };
 
 }  // namespace opossum

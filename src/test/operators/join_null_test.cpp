@@ -12,6 +12,7 @@
 
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/join_mpsm.hpp"
 #include "operators/join_nested_loop.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/projection.hpp"
@@ -48,7 +49,7 @@ class JoinNullTest : public JoinTest {
   std::shared_ptr<TableWrapper> _table_wrapper_a_null_dict;
 };
 
-using JoinNullTypes = ::testing::Types<JoinHash, JoinSortMerge, JoinNestedLoop>;
+using JoinNullTypes = ::testing::Types<JoinHash, JoinSortMerge, JoinNestedLoop, JoinMPSM>;
 TYPED_TEST_CASE(JoinNullTest, JoinNullTypes);
 
 TYPED_TEST(JoinNullTest, InnerJoinWithNull) {
@@ -134,12 +135,6 @@ TYPED_TEST(JoinNullTest, RightJoinWithNullAsInnerDict) {
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a_null_dict, this->_table_wrapper_b_dict, ColumnIDPair(ColumnID{0}, ColumnID{0}),
       PredicateCondition::Equals, JoinMode::Right, "src/test/tables/joinoperators/int_right_join_null_inner.tbl", 1);
-}
-
-TYPED_TEST(JoinNullTest, SelfJoinWithNullDict) {
-  this->template test_join_output<TypeParam>(
-      this->_table_wrapper_a_null_dict, this->_table_wrapper_a_null_dict, ColumnIDPair(ColumnID{0}, ColumnID{0}),
-      PredicateCondition::Equals, JoinMode::Self, "src/test/tables/joinoperators/int_float_with_null_self_join.tbl", 1);
 }
 
 }  // namespace opossum

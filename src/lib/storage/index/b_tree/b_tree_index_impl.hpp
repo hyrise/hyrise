@@ -1,18 +1,17 @@
 #pragma once
 
 #ifdef __clang__
-  #pragma clang diagnostic ignored "-Wall"
-  #include <btree_map.h>
-  #pragma clang diagnostic pop
+#pragma clang diagnostic ignored "-Wall"
+#include <btree_map.h>
+#pragma clang diagnostic pop
 #elif __GNUC__
-  #pragma GCC system_header
-  #include <btree_map.h>
+#pragma GCC system_header
+#include <btree_map.h>
 #endif
 
-
-#include "types.hpp"
 #include "all_type_variant.hpp"
 #include "storage/base_column.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -48,7 +47,8 @@ class BTreeIndexImpl : public BaseBTreeIndexImpl {
 
  public:
   BTreeIndexImpl() = delete;
-  explicit BTreeIndexImpl(std::shared_ptr<const BaseColumn> index_column);
+  ~BTreeIndexImpl() = default;
+  explicit BTreeIndexImpl(const std::shared_ptr<const BaseColumn>& index_column);
 
   BTreeIndexImpl(const BTreeIndexImpl&) = delete;
   BTreeIndexImpl& operator=(const BTreeIndexImpl&) = delete;
@@ -67,7 +67,7 @@ class BTreeIndexImpl : public BaseBTreeIndexImpl {
   Iterator cend() const override;
 
  protected:
-  void _bulk_insert(const std::shared_ptr<const BaseColumn>);
+  void _bulk_insert(const std::shared_ptr<const BaseColumn>&);
 
   btree::btree_map<DataType, size_t> _btree;
 };

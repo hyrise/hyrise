@@ -19,7 +19,7 @@ class BaseColumn;
 class ChunkColumnStatistics final {
  public:
   static std::shared_ptr<ChunkColumnStatistics> build_statistics(DataType data_type,
-                                                                 std::shared_ptr<const BaseColumn> column);
+                                                                 const std::shared_ptr<const BaseColumn>& column);
 
   void add_filter(std::shared_ptr<AbstractFilter> filter);
 

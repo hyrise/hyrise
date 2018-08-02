@@ -29,11 +29,10 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, const NamedQueri
 
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
   if (config.enable_scheduler) {
-    const auto topology = Topology::create_numa_topology();
     config.out << "- Multi-threaded Topology:" << std::endl;
-    topology->print(config.out);
+    Topology::get().print(config.out);
 
-    const auto scheduler = std::make_shared<NodeQueueScheduler>(topology);
+    const auto scheduler = std::make_shared<NodeQueueScheduler>();
     CurrentScheduler::set(scheduler);
   }
 }
@@ -64,7 +63,8 @@ void BenchmarkRunner::run() {
   // Visualize query plans
   if (_config.enable_visualization) {
     for (const auto& name_and_plans : _query_plans) {
-      const auto& name = name_and_plans.first;
+      auto name = name_and_plans.first;
+      boost::replace_all(name, " ", "_");
       const auto& lqps = name_and_plans.second.lqps;
       const auto& pqps = name_and_plans.second.pqps;
 
@@ -129,7 +129,8 @@ void BenchmarkRunner::_benchmark_individual_queries() {
 
     QueryBenchmarkResult result;
     result.num_iterations = state.num_iterations;
-    result.duration = state.end - state.begin;
+    result.duration = state.benchmark_end - state.benchmark_begin;
+    result.iteration_durations = state.iteration_durations;
 
     _query_results_by_query_name.emplace(name, result);
   }
@@ -149,7 +150,6 @@ void BenchmarkRunner::_execute_query(const NamedQuery& named_query) {
   if (_config.enable_visualization) {
     const auto query_plans_iter = _query_plans.find(name);
     if (query_plans_iter == _query_plans.end()) {
-      Assert(pipeline.get_query_plans().size() == 1, "Expected exactly one SQLQueryPlan");
       QueryPlans plans{pipeline.get_optimized_logical_plans(), pipeline.get_query_plans()};
       _query_plans.emplace(name, plans);
     }
@@ -162,15 +162,26 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
   for (const auto& named_query : _queries) {
     const auto& name = named_query.first;
     const auto& query_result = _query_results_by_query_name.at(name);
+    DebugAssert(query_result.iteration_durations.size() == query_result.num_iterations,
+                "number of iterations and number of iteration durations does not match");
 
     const auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(query_result.duration).count();
     const auto duration_seconds = static_cast<float>(duration_ns) / 1'000'000'000;
     const auto items_per_second = static_cast<float>(query_result.num_iterations) / duration_seconds;
     const auto time_per_query = duration_ns / query_result.num_iterations;
 
+    // Transform iteration Durations into numerical representation
+    auto iteration_durations = std::vector<double>();
+    iteration_durations.reserve(query_result.iteration_durations.size());
+    std::transform(query_result.iteration_durations.cbegin(), query_result.iteration_durations.cend(),
+                   std::back_inserter(iteration_durations), [](const auto& duration) {
+                     return static_cast<double>(std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count());
+                   });
+
     nlohmann::json benchmark{
         {"name", name},
         {"iterations", query_result.num_iterations},
+        {"iteration_durations", iteration_durations},
         {"avg_real_time_per_iteration", time_per_query},
         {"items_per_second", items_per_second},
         {"time_unit", "ns"},

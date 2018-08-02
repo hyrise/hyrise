@@ -10,38 +10,22 @@
 namespace opossum {
 
 /**
- * Struct to specify Order By items.
- * Order By items are defined by the column they operate on and their sort order.
- */
-struct OrderByDefinition {
-  OrderByDefinition(const LQPColumnReference& column_reference, const OrderByMode order_by_mode);
-
-  LQPColumnReference column_reference;
-  OrderByMode order_by_mode;
-};
-
-using OrderByDefinitions = std::vector<OrderByDefinition>;
-
-/**
  * This node type represents sorting operations as defined in ORDER BY clauses.
  */
 class SortNode : public EnableMakeForLQPNode<SortNode>, public AbstractLQPNode {
  public:
-  explicit SortNode(const OrderByDefinitions& order_by_definitions);
+  explicit SortNode(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
+                    const std::vector<OrderByMode>& order_by_modes);
 
   std::string description() const override;
+  std::vector<std::shared_ptr<AbstractExpression>> node_expressions() const override;
 
-  const OrderByDefinitions& order_by_definitions() const;
-
-  bool shallow_equals(const AbstractLQPNode& rhs) const override;
+  const std::vector<std::shared_ptr<AbstractExpression>> expressions;
+  const std::vector<OrderByMode> order_by_modes;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
-
- private:
-  const OrderByDefinitions _order_by_definitions;
+  std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
+  bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
 
 }  // namespace opossum

@@ -234,7 +234,7 @@ boost::future<InputPacket> ClientConnection::_receive_bytes_async(size_t size) {
          };
 }
 
-boost::future<uint64_t> ClientConnection::_send_bytes_async(std::shared_ptr<OutputPacket> packet, bool flush) {
+boost::future<uint64_t> ClientConnection::_send_bytes_async(const std::shared_ptr<OutputPacket>& packet, bool flush) {
   const auto packet_size = packet->data.size();
 
   // If the packet is SslNo (size == 1), it has a special format and does not require a size

@@ -1,0 +1,6 @@
+a|b|c|d|e|case_expr|case_expr
+int|int|int|float|int|string|long_null
+1|41|42|4.4|0|Hallo|43
+0|45|46|4.8|1|Welt|42
+0|51|52|5.4|0|!|null
+1|55|56|5.8|1|Hallo|42
