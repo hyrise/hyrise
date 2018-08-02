@@ -46,7 +46,7 @@ const AllTypeVariant RunLengthColumn<T>::operator[](const ChunkOffset chunk_offs
 }
 
 template <typename T>
-const std::optional<T> RunLengthColumn<T>::get_typed_value(const ChunkOffset chunk_offset) const final {
+const std::optional<T> RunLengthColumn<T>::get_typed_value(const ChunkOffset chunk_offset) const {
   const auto end_position_it = std::lower_bound(_end_positions->cbegin(), _end_positions->cend(), chunk_offset);
   const auto index = std::distance(_end_positions->cbegin(), end_position_it);
 
@@ -59,7 +59,7 @@ const std::optional<T> RunLengthColumn<T>::get_typed_value(const ChunkOffset chu
 }
 
 template <typename T>
-void RunLengthColumn<T>::append_typed_value(const std::optional<opossum::T> value_or_null) {
+void RunLengthColumn<T>::append_typed_value(const std::optional<T> value_or_null) {
   Fail("Encoded column is immutable.");
 }
 

@@ -69,7 +69,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
 
       const auto typed_value = _columns[chunk_id]->get_typed_value(chunk_offset);
 
-      return ColumnIteratorValue<T>{typed_value.value_or(T{}), typed_value.has_value(), chunk_offset_into_ref_column};
+      return ColumnIteratorValue<T>{typed_value.value_or(T{}), !typed_value.has_value(), chunk_offset_into_ref_column};
     }
 
    private:

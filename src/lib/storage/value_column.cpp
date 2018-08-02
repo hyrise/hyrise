@@ -73,7 +73,7 @@ const AllTypeVariant ValueColumn<T>::operator[](const ChunkOffset chunk_offset) 
   if (!typed_value.has_value()) {
     return NULL_VALUE;
   }
-  return typed_value->get();
+  return *typed_value;
 }
 
 template <typename T>
@@ -135,7 +135,7 @@ void ValueColumn<std::string>::append(const AllTypeVariant& val) {
 }
 
 template <typename T>
-void ValueColumn<T>::append_typed_value(const std::optional<opossum::T> value_or_null) {
+void ValueColumn<T>::append_typed_value(const std::optional<T> value_or_null) {
   const bool is_null = !value_or_null.has_value();
 
   if (is_nullable()) {

@@ -36,7 +36,7 @@ const AllTypeVariant DictionaryColumn<T>::operator[](const ChunkOffset chunk_off
 }
 
 template <typename T>
-const std::optional<T> DictionaryColumn<T>::get_typed_value(const ChunkOffset chunk_offset) const final {
+const std::optional<T> DictionaryColumn<T>::get_typed_value(const ChunkOffset chunk_offset) const {
   const auto value_id = _decoder->get(chunk_offset);
   if (value_id == _null_value_id) {
     return std::nullopt;

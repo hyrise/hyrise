@@ -47,8 +47,7 @@ const AllTypeVariant FrameOfReferenceColumn<T, U>::operator[](const ChunkOffset 
 }
 
 template <typename T, typename U>
-const std::optional<opossum::T> FrameOfReferenceColumn<T, U>::get_typed_value(
-    const ChunkOffset chunk_offset) const final {
+const std::optional<T> FrameOfReferenceColumn<T, U>::get_typed_value(const ChunkOffset chunk_offset) const {
   if (_null_values[chunk_offset]) {
     return std::nullopt;
   }
