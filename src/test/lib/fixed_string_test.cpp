@@ -82,9 +82,4 @@ TEST_F(FixedStringTest, Print) {
   EXPECT_EQ(sstream.str().find("foo"), 0u);
 }
 
-TEST_F(FixedStringTest, ImplicitCast) {
-  std::string std_string = fixed_string1;
-  EXPECT_EQ(std_string, "foo");
-}
-
 }  // namespace opossum
