@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-Pagination::Pagination(std::stringstream& input) : _lines() {
+Pagination::Pagination(std::stringstream& input) {
   std::string line;
   while (std::getline(input, line, '\n')) {
     _lines.push_back(line);

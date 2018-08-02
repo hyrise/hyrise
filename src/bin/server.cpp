@@ -1,5 +1,6 @@
 #include <boost/asio/io_service.hpp>
 
+#include <cstdio>
 #include <cstdlib>
 #include <iostream>
 
@@ -15,7 +16,10 @@ int main(int argc, char* argv[]) {
     uint16_t port = 5432;
 
     if (argc >= 2) {
-      port = static_cast<uint16_t>(std::atoi(argv[1]));
+      char* endptr{nullptr};
+      errno = 0;
+      port = static_cast<uint16_t>(std::strtol(argv[1], &endptr, 10));
+      Assert(errno == 0 && port != 0 && *endptr == 0, "invalid port number");
     }
 
     // Set scheduler so that the server can execute the tasks on separate threads.
