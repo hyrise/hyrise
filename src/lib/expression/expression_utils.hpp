@@ -23,7 +23,7 @@ bool expressions_equal(const std::vector<std::shared_ptr<AbstractExpression>>& e
                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions_b);
 
 /**
- * Utility to check whether two vectors of Expressions are equal according to AbstractExpression::operator==()
+ * Utility to check whether an expression is contained in a vector according to AbstractExpression::operator==()
  */
 bool expressions_contain(const std::shared_ptr<AbstractExpression>& needle,
                          const std::vector<std::shared_ptr<AbstractExpression>>& haystack);
