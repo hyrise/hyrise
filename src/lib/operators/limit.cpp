@@ -6,35 +6,54 @@
 #include <utility>
 #include <vector>
 
+#include "expression/evaluation/expression_evaluator.hpp"
+#include "expression/expression_utils.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
 
-Limit::Limit(const std::shared_ptr<const AbstractOperator>& in, const size_t num_rows)
-    : AbstractReadOnlyOperator(OperatorType::Limit, in), _num_rows(num_rows) {}
+Limit::Limit(const std::shared_ptr<const AbstractOperator>& in,
+             const std::shared_ptr<AbstractExpression>& row_count_expression)
+    : AbstractReadOnlyOperator(OperatorType::Limit, in), _row_count_expression(row_count_expression) {}
 
 const std::string Limit::name() const { return "Limit"; }
 
-std::shared_ptr<AbstractOperator> Limit::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<Limit>(recreated_input_left, _num_rows);
-}
+std::shared_ptr<AbstractExpression> Limit::row_count_expression() const { return _row_count_expression; }
 
-size_t Limit::num_rows() const { return _num_rows; }
+std::shared_ptr<AbstractOperator> Limit::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<Limit>(copied_input_left, _row_count_expression->deep_copy());
+}
 
 std::shared_ptr<const Table> Limit::_on_execute() {
   const auto input_table = input_table_left();
 
+  /**
+   * Evaluate the _row_count_expression to determine the actual number of rows to "Limit" the output to
+   */
+  const auto num_rows_expression_result =
+      ExpressionEvaluator{}.evaluate_expression_to_result<int64_t>(*_row_count_expression);
+  Assert(num_rows_expression_result->size() == 1, "Expected exactly one row for Limit");
+  Assert(!num_rows_expression_result->is_null(0), "Expected non-null for Limit");
+
+  const auto signed_num_rows = num_rows_expression_result->value(0);
+  Assert(signed_num_rows >= 0, "Can't Limit to a negative number of Rows");
+
+  const auto num_rows = static_cast<size_t>(signed_num_rows);
+
+  /**
+   * Perform the actual limitting
+   */
   auto output_table = std::make_shared<Table>(input_table->column_definitions(), TableType::References);
 
   ChunkID chunk_id{0};
-  for (size_t i = 0; i < _num_rows && chunk_id < input_table->chunk_count(); chunk_id++) {
+  for (size_t i = 0; i < num_rows && chunk_id < input_table->chunk_count(); chunk_id++) {
     const auto input_chunk = input_table->get_chunk(chunk_id);
     ChunkColumns output_columns;
 
-    size_t output_chunk_row_count = std::min<size_t>(input_chunk->size(), _num_rows - i);
+    size_t output_chunk_row_count = std::min<size_t>(input_chunk->size(), num_rows - i);
 
     for (ColumnID column_id{0}; column_id < input_table->column_count(); column_id++) {
       const auto input_base_column = input_chunk->get_column(column_id);
@@ -63,6 +82,14 @@ std::shared_ptr<const Table> Limit::_on_execute() {
   }
 
   return output_table;
+}
+
+void Limit::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
+  expression_set_parameters(_row_count_expression, parameters);
+}
+
+void Limit::_on_set_transaction_context(std::weak_ptr<TransactionContext> transaction_context) {
+  expression_set_transaction_context(_row_count_expression, transaction_context);
 }
 
 }  // namespace opossum

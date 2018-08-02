@@ -14,7 +14,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/topology.hpp"
-#include "storage/column_visitable.hpp"
+#include "storage/abstract_column_visitor.hpp"
 #include "storage/dictionary_column.hpp"
 
 #include "storage/reference_column.hpp"
@@ -63,12 +63,13 @@ std::shared_ptr<const Table> JoinMPSM::_on_execute() {
 
 void JoinMPSM::_on_cleanup() { _impl.reset(); }
 
-std::shared_ptr<AbstractOperator> JoinMPSM::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<JoinMPSM>(recreated_input_left, recreated_input_right, _mode, _column_ids,
-                                    _predicate_condition);
+std::shared_ptr<AbstractOperator> JoinMPSM::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<JoinMPSM>(copied_input_left, copied_input_right, _mode, _column_ids, _predicate_condition);
 }
+
+void JoinMPSM::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 const std::string JoinMPSM::name() const { return "Join MPSM"; }
 
@@ -386,8 +387,8 @@ class JoinMPSM::JoinMPSMImpl : public AbstractJoinOperatorImpl {
 
     // Parallel join for each cluster
     for (auto cluster_number = ClusterID{0}; cluster_number < _cluster_count; ++cluster_number) {
-      jobs.push_back(std::make_shared<JobTask>([this, cluster_number] { this->_join_cluster(cluster_number); }));
-      jobs.back()->schedule(static_cast<NodeID>(cluster_number), SchedulePriority::Unstealable);
+      jobs.push_back(std::make_shared<JobTask>([this, cluster_number] { this->_join_cluster(cluster_number); }, true));
+      jobs.back()->schedule(static_cast<NodeID>(cluster_number));
     }
 
     CurrentScheduler::wait_for_tasks(jobs);

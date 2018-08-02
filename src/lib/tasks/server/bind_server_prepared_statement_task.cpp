@@ -9,9 +9,16 @@ namespace opossum {
 void BindServerPreparedStatementTask::_on_execute() {
   try {
     const auto placeholder_plan = _sql_pipeline->get_query_plans().front();
-    placeholder_plan->set_num_parameters(_params.size());
+    auto query_plan = std::make_unique<SQLQueryPlan>(placeholder_plan->deep_copy());
 
-    auto query_plan = std::make_unique<SQLQueryPlan>(placeholder_plan->recreate(_params));
+    std::unordered_map<ParameterID, AllTypeVariant> pqp_parameters;
+    for (auto value_placeholder_id = ValuePlaceholderID{0}; value_placeholder_id < _params.size();
+         ++value_placeholder_id) {
+      const auto parameter_id = placeholder_plan->parameter_ids().at(value_placeholder_id);
+      pqp_parameters.emplace(parameter_id, _params[value_placeholder_id]);
+    }
+    Assert(query_plan->tree_roots().size(), "Expected just one PQP");
+    query_plan->tree_roots().at(0)->set_parameters(pqp_parameters);
 
     _promise.set_value(std::move(query_plan));
   } catch (const std::exception& exception) {

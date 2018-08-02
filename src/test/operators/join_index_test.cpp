@@ -238,12 +238,6 @@ TYPED_TEST(JoinIndexTest, OuterJoinDict) {
                          JoinMode::Outer, "src/test/tables/joinoperators/int_outer_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, SelfJoin) {
-  this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_a,
-                         std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
-                         JoinMode::Self, "src/test/tables/joinoperators/int_self_join.tbl", 1);
-}
-
 TYPED_TEST(JoinIndexTest, SmallerInnerJoin) {
   // Joining two Integer Columns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,

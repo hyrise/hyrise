@@ -12,14 +12,4 @@ const std::vector<std::shared_ptr<AbstractRule>>& RuleBatch::rules() const { ret
 
 void RuleBatch::add_rule(const std::shared_ptr<AbstractRule>& rule) { _rules.emplace_back(rule); }
 
-bool RuleBatch::apply_rules_to(const std::shared_ptr<AbstractLQPNode>& root_node) const {
-  auto lqp_changed = false;
-
-  for (auto& rule : _rules) {
-    lqp_changed |= rule->apply_to(root_node);
-  }
-
-  return lqp_changed;
-}
-
 }  // namespace opossum

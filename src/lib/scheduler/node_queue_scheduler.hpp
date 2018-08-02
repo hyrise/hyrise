@@ -100,7 +100,7 @@ class NodeQueueScheduler : public AbstractScheduler {
    * @param priority Determines whether tasks are inserted at the beginning or end of the queue.
    */
   void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
-                SchedulePriority priority = SchedulePriority::Normal) override;
+                SchedulePriority priority = SchedulePriority::Default) override;
 
  private:
   std::atomic<TaskID> _task_counter{TaskID{0}};

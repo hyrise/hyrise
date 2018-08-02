@@ -29,8 +29,8 @@ namespace opossum {
 std::shared_ptr<Worker> Worker::get_this_thread_worker() { return ::this_thread_worker.lock(); }
 
 Worker::Worker(const std::weak_ptr<ProcessingUnit>& processing_unit, const std::shared_ptr<TaskQueue>& queue,
-               WorkerID id, CpuID cpu_id)
-    : _processing_unit(processing_unit), _queue(queue), _id(id), _cpu_id(cpu_id) {}
+               WorkerID id, CpuID cpu_id, SchedulePriority min_priority)
+    : _processing_unit(processing_unit), _queue(queue), _id(id), _cpu_id(cpu_id), _min_priority(min_priority) {}
 
 WorkerID Worker::id() const { return _id; }
 
@@ -65,11 +65,19 @@ void Worker::operator()() {
       }
     }
 
-    auto task = _queue->pull();
+    auto task = _queue->pull(_min_priority);
 
     // TODO(all): this might shutdown the worker and leave non-ready tasks in the queue.
     // Figure out how we want to deal with that later.
     if (!task) {
+      // If the worker is the dedicated JobTask worker, go back into hibernation to wake up
+      // (or pass priority to) one of the all-priorities workers.
+      if (_min_priority < SchedulePriority::Lowest) {
+        processing_unit->yield_active_worker_token(_id);
+        processing_unit->wake_or_create_worker();
+        continue;  // Re-try to become the active worker
+      }
+
       // Simple work stealing without explicitly transferring data between nodes.
       auto work_stealing_successful = false;
       for (auto& queue : scheduler->queues()) {

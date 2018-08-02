@@ -1,6 +1,7 @@
 #pragma once
 
 #include "abstract_jittable_sink.hpp"
+#include "expression/aggregate_expression.hpp"
 
 namespace opossum {
 
