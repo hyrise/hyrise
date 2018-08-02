@@ -76,6 +76,7 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
     // push below projection if the projection does not generate the column(s) that we are scanning on
     const auto projection_input = input->left_input();
     for (const auto& predicate_argument : predicate_node->predicate->arguments) {
+      if (predicate_argument->type == ExpressionType::Value) continue;
       const auto& expressions_before_projection = projection_input->column_expressions();
       if (!expressions_contain(predicate_argument, expressions_before_projection)) {
         // This column was created by the projection, so we can't push below it
