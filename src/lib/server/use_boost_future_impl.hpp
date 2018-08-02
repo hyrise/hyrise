@@ -28,10 +28,11 @@ class boost_promise_handler {
   void operator()(T t) { promise->set_value(t); }
 
   void operator()(const boost::system::error_code& ec, T t) {
-    if (ec)
+    if (ec) {
       promise->set_exception(std::make_exception_ptr(boost::system::system_error(ec)));
-    else
+    } else {
       promise->set_value(t);
+    }
   }
 
   std::shared_ptr<boost::promise<T> > promise;
@@ -52,10 +53,11 @@ class boost_promise_handler<void> {
   void operator()() { promise->set_value(); }
 
   void operator()(const boost::system::error_code& ec) {
-    if (ec)
+    if (ec) {
       promise->set_exception(std::make_exception_ptr(boost::system::system_error(ec)));
-    else
+    } else {
       promise->set_value();
+    }
   }
 
   std::shared_ptr<boost::promise<void> > promise;
