@@ -4,6 +4,7 @@
 #include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -136,6 +137,78 @@ TEST_F(PredicatePushdownRuleTest, ComplexBlockingPredicatesPushdownTest) {
   EXPECT_EQ(reordered->left_input()->left_input()->right_input()->left_input(), _table_c);
   EXPECT_EQ(reordered->left_input()->right_input(), predicate_node_1);
   EXPECT_EQ(reordered->left_input()->right_input()->left_input(), _table_a);
+}
+
+TEST_F(PredicatePushdownRuleTest, AllowedPredicatePushdownThroughProjectionTest) {
+  auto int_float_node_a = StoredTableNode::make("a");
+  auto a = LQPColumnReference{int_float_node_a, ColumnID{0}};
+
+  auto parameter_c = parameter_(ParameterID{0}, a);
+  auto lqp_c = AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_c))),
+                                   ProjectionNode::make(expression_vector(add_(a, parameter_c)), int_float_node_a));
+
+  auto select_c = select_(lqp_c, std::make_pair(ParameterID{0}, a));
+
+  auto projection_node = ProjectionNode::make(expression_vector(_a_a, _a_b, select_c), _table_a);
+
+  auto predicate_node = std::make_shared<PredicateNode>(greater_than_(_a_a, _a_b));
+  predicate_node->set_left_input(projection_node);
+
+  auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node);
+
+  EXPECT_EQ(reordered, projection_node);
+  EXPECT_EQ(reordered->left_input(), predicate_node);
+  EXPECT_EQ(reordered->left_input()->left_input(), _table_a);
+}
+
+TEST_F(PredicatePushdownRuleTest, ForbiddenPredicatePushdownThroughProjectionTest) {
+  auto int_float_node_a = StoredTableNode::make("a");
+  auto a = LQPColumnReference{int_float_node_a, ColumnID{0}};
+
+  auto parameter_c = parameter_(ParameterID{0}, a);
+  auto lqp_c = AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_c))),
+                                   ProjectionNode::make(expression_vector(add_(a, parameter_c)), int_float_node_a));
+
+  auto select_c = select_(lqp_c, std::make_pair(ParameterID{0}, a));
+
+  auto projection_node = ProjectionNode::make(expression_vector(_a_a, _a_b, select_c), _table_a);
+
+  auto predicate_node = std::make_shared<PredicateNode>(greater_than_(select_c, _a_b));
+  predicate_node->set_left_input(projection_node);
+
+  auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node);
+
+  EXPECT_EQ(reordered, predicate_node);
+  EXPECT_EQ(reordered->left_input(), projection_node);
+  EXPECT_EQ(reordered->left_input()->left_input(), _table_a);
+}
+
+TEST_F(PredicatePushdownRuleTest, PredicatePushdownThroughOtherPredicateTest) {
+  // Even if one predicate cannot be pushed down, others might be better off
+
+  auto int_float_node_a = StoredTableNode::make("a");
+  auto a = LQPColumnReference{int_float_node_a, ColumnID{0}};
+
+  auto parameter_c = parameter_(ParameterID{0}, a);
+  auto lqp_c = AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_c))),
+                                   ProjectionNode::make(expression_vector(add_(a, parameter_c)), int_float_node_a));
+
+  auto select_c = select_(lqp_c, std::make_pair(ParameterID{0}, a));
+
+  auto projection_node = ProjectionNode::make(expression_vector(_a_a, _a_b, select_c), _table_a);
+
+  auto predicate_node_1 = std::make_shared<PredicateNode>(greater_than_(select_c, _a_b));
+  predicate_node_1->set_left_input(projection_node);
+
+  auto predicate_node_2 = std::make_shared<PredicateNode>(greater_than_(_a_a, _a_b));
+  predicate_node_2->set_left_input(predicate_node_1);
+
+  auto reordered = StrategyBaseTest::apply_rule(_rule, predicate_node_2);
+
+  EXPECT_EQ(reordered, predicate_node_1);
+  EXPECT_EQ(reordered->left_input(), projection_node);
+  EXPECT_EQ(reordered->left_input()->left_input(), predicate_node_2);
+  EXPECT_EQ(reordered->left_input()->left_input()->left_input(), _table_a);
 }
 
 }  // namespace opossum
