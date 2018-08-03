@@ -380,7 +380,6 @@ set(
     storage/fixed_string_dictionary_column/fixed_string.hpp
     storage/fixed_string_dictionary_column/fixed_string_vector.cpp
     storage/fixed_string_dictionary_column/fixed_string_vector.hpp
-    storage/fixed_string_dictionary_column/fixed_string_vector_iterator.cpp
     storage/fixed_string_dictionary_column/fixed_string_vector_iterator.hpp
     storage/frame_of_reference_column.cpp
     storage/frame_of_reference_column.hpp
