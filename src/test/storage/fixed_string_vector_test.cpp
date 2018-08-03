@@ -70,15 +70,15 @@ TEST_F(FixedStringVectorTest, IteratorConst) {
   auto it_end = fixed_string_vector_const.end();
   it_end--;
 
-  EXPECT_EQ(it_begin->string(), "foo");
-  EXPECT_EQ(it_end->string(), "str3");
+  EXPECT_EQ(*it_begin, "foo");
+  EXPECT_EQ(*it_end, "str3");
 
   auto const_it_begin = fixed_string_vector_const.cbegin();
   auto const_it_end = fixed_string_vector_const.cend();
   const_it_end--;
 
-  EXPECT_EQ(const_it_begin->string(), "foo");
-  EXPECT_EQ(const_it_end->string(), "str3");
+  EXPECT_EQ(*const_it_begin, "foo");
+  EXPECT_EQ(*const_it_end, "str3");
 }
 
 TEST_F(FixedStringVectorTest, ReverseIterator) {
@@ -89,8 +89,8 @@ TEST_F(FixedStringVectorTest, ReverseIterator) {
   auto first_value = fixed_string_vector->rend();
   --first_value;
 
-  EXPECT_EQ(last_value->string(), "str3");
-  EXPECT_EQ(first_value->string(), "foo");
+  EXPECT_EQ(*last_value, "str3");
+  EXPECT_EQ(*first_value, "foo");
 
   for (auto it = fixed_string_vector->rbegin(); it != fixed_string_vector->rend(); ++it) {
     *it = fixed_string;
