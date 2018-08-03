@@ -5,6 +5,7 @@
 
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -209,6 +210,33 @@ TEST_F(PredicatePushdownRuleTest, PredicatePushdownThroughOtherPredicateTest) {
   EXPECT_EQ(reordered->left_input(), _projection_pushdown_node);
   EXPECT_EQ(reordered->left_input()->left_input(), predicate_node_2);
   EXPECT_EQ(reordered->left_input()->left_input()->left_input(), _table_a);
+}
+
+TEST_F(PredicatePushdownRuleTest, PredicatePushdownThroughMultipleNodesTest) {
+  // Even if one predicate cannot be pushed down, others might be better off
+
+  auto sort_node =
+      std::make_shared<SortNode>(expression_vector(_a_a), std::vector<OrderByMode>{OrderByMode::Ascending});
+  sort_node->set_left_input(_projection_pushdown_node);
+
+  auto predicate_node_1 = std::make_shared<PredicateNode>(greater_than_(_select_c, _a_b));
+  predicate_node_1->set_left_input(sort_node);
+
+  auto predicate_node_2 = std::make_shared<PredicateNode>(greater_than_(_a_a, _a_b));
+  predicate_node_2->set_left_input(predicate_node_1);
+
+  auto root = std::make_shared<LogicalPlanRootNode>();
+  root->set_left_input(predicate_node_2);
+
+  auto reordered = StrategyBaseTest::apply_rule(_rule, root);  // pushes predicate_node_1 under sort
+  reordered = StrategyBaseTest::apply_rule(_rule, root);  // pushes predicate_node_2 under sort
+  reordered = StrategyBaseTest::apply_rule(_rule, root);  // pushes predicate_node_2 under the projection
+
+  EXPECT_EQ(reordered->left_input(), sort_node);
+  EXPECT_EQ(reordered->left_input()->left_input(), predicate_node_1);
+  EXPECT_EQ(reordered->left_input()->left_input()->left_input(), _projection_pushdown_node);
+  EXPECT_EQ(reordered->left_input()->left_input()->left_input()->left_input(), predicate_node_2);
+  EXPECT_EQ(reordered->left_input()->left_input()->left_input()->left_input()->left_input(), _table_a);
 }
 
 }  // namespace opossum
