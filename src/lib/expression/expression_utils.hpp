@@ -106,7 +106,12 @@ void visit_expression(Expression& expression, Visitor visitor) {
 DataType expression_common_type(const DataType lhs, const DataType rhs);
 
 /**
- * @return Whether the expression only references expressions/columns that the specified LQP outputs
+ * @return Checks whether the expression can be evaluated by the ExpressionEvaluator on top of a specified LQP (i.e.,
+ *         all required columns are available).
+ *         This does not necessarily mean that `expression` is fully available at this point - for example, an `IN`
+ *         statement might still need to be converted into a boolean column by a ProjectionNode
+ *         To check if the expression is available in an evaluated form that can be used by a scan / join,
+ *         use `Operator*Predicate::from_expression(...) != nullptr`.
  */
 bool expression_evaluable_on_lqp(const std::shared_ptr<AbstractExpression>& expression, const AbstractLQPNode& lqp);
 
