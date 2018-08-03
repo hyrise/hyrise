@@ -18,12 +18,6 @@ bool expressions_equal(const std::vector<std::shared_ptr<AbstractExpression>>& e
                     [&](const auto& expression_a, const auto& expression_b) { return *expression_a == *expression_b; });
 }
 
-bool expressions_contain(const std::shared_ptr<AbstractExpression>& needle,
-                         const std::vector<std::shared_ptr<AbstractExpression>>& haystack) {
-  return std::find_if(haystack.cbegin(), haystack.cend(),
-                      [&](const auto& expression) { return *expression == *needle; }) != haystack.cend();
-}
-
 bool expressions_equal_to_expressions_in_different_lqp(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions_left,
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions_right, const LQPNodeMapping& node_mapping) {
