@@ -13,6 +13,7 @@
 #include "strategy/join_detection_rule.hpp"
 #include "strategy/predicate_pushdown_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
+#include "utils/performance_warning.hpp"
 
 /**
  * IMPORTANT NOTES ON OPTIMIZING SUB-SELECT LQPS
