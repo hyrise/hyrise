@@ -35,12 +35,10 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
 
   const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
 
-  auto input = node->left_input();
+  // First, try to push down the predicates that come below. That keeps the predicate order intact.
+  if (_apply_to_inputs(node)) return true;
 
-  if (input->type == LQPNodeType::Predicate) {
-    // First, try to push down the predicates that come below. That keeps the predicate order intact.
-    if (_apply_to_inputs(node)) return true;
-  }
+  auto input = node->left_input();
 
   while (input->type == LQPNodeType::Predicate) {
     // We gave the predicate nodes below us the chance to be pushed down, but they didn't want to. Now we ignore them.

@@ -77,7 +77,7 @@ void collect_select_expressions_by_lqp(SelectExpressionsByLQP& select_expression
 namespace opossum {
 
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
-  auto optimizer = std::make_shared<Optimizer>(10);
+  auto optimizer = std::make_shared<Optimizer>(100);
 
   RuleBatch main_batch(RuleBatchExecutionPolicy::Iterative);
   main_batch.add_rule(std::make_shared<PredicatePushdownRule>());
@@ -114,8 +114,14 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(const std::shared_ptr<Abstr
          * Apply all optimization over and over until all of them stopped changing the LQP or the max number of
          * iterations is reached
          */
-        for (uint32_t iter_index = 0; iter_index < _max_num_iterations; ++iter_index) {
-          if (!_apply_rule_batch(rule_batch, root_node)) break;
+        auto iter_index = uint32_t{0};
+        for (; iter_index < _max_num_iterations; ++iter_index) {
+          if (!_apply_rule_batch(rule_batch, root_node)) {
+            break;
+          }
+        }
+        if (iter_index == _max_num_iterations) {
+          PerformanceWarning("Maximum number of optimizer iterations reached");
         }
         break;
     }
