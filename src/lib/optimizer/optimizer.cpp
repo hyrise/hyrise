@@ -13,6 +13,7 @@
 #include "strategy/join_detection_rule.hpp"
 #include "strategy/predicate_pushdown_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
+#include "strategy/column_pruning_rule.hpp"
 
 /**
  * IMPORTANT NOTES ON OPTIMIZING SUB-SELECT LQPS
@@ -89,6 +90,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   final_batch.add_rule(std::make_shared<ChunkPruningRule>());
   final_batch.add_rule(std::make_shared<ConstantCalculationRule>());
   final_batch.add_rule(std::make_shared<IndexScanRule>());
+  final_batch.add_rule(std::make_shared<ColumnPruningRule>());
   optimizer->add_rule_batch(final_batch);
 
   return optimizer;

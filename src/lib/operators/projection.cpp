@@ -63,19 +63,22 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     ChunkColumns output_columns;
     output_columns.reserve(expressions.size());
 
+    const auto input_chunk = input_table_left()->get_chunk(chunk_id);
+
     ExpressionEvaluator evaluator(input_table_left(), chunk_id);
     for (const auto& expression : expressions) {
       if (forward_columns) {
         const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression);
         Assert(pqp_column_expression, "Expected PQPColumnExpression");
-        output_columns.emplace_back(
-            input_table_left()->get_chunk(chunk_id)->get_mutable_column(pqp_column_expression->column_id));
+        output_columns.emplace_back(std::const_pointer_cast<BaseColumn>(
+        input_chunk->get_column(pqp_column_expression->column_id)));
       } else {
         output_columns.emplace_back(evaluator.evaluate_expression_to_column(*expression));
       }
     }
 
     output_table->append_chunk(output_columns);
+    output_table->get_chunk(chunk_id)->set_mvcc_columns(input_chunk->mvcc_columns_ptr());
   }
 
   return output_table;
