@@ -10,8 +10,9 @@ namespace opossum {
 class AbstractLQPNode;
 
 /**
- * Removes never-referenced columns from the LQP by inserting ProjectionNodes that select only those expressions needed
- * "further up" in the plan.
+ * Removes never-referenced base relation columns from the LQP by inserting ProjectionNodes that select only those
+ * expressions needed "further up" in the plan.
+ * Does NOT eliminate columns added as temporary columns later in the plan.
  */
 class ColumnPruningRule : public AbstractRule {
  public:

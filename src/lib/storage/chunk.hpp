@@ -139,7 +139,7 @@ class Chunk : private Noncopyable {
 
   std::shared_ptr<ChunkStatistics> statistics() const;
 
-  void set_statistics(const std::shared_ptr<ChunkStatistics>& statistics);
+  void set_statistics(const std::shared_ptr<ChunkStatistics>& chunk_statistics);
 
   /**
    * For debugging purposes, makes an estimation about the memory used by this Chunk and its Columns
