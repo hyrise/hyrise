@@ -14,7 +14,7 @@ class BaseNonQueryNode : public AbstractLQPNode {
   const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
 
  private:
-  const std::vector<std::shared_ptr<AbstractExpression>> _column_expressions_dummy; // always empty
+  const std::vector<std::shared_ptr<AbstractExpression>> _column_expressions_dummy;  // always empty
 };
 
 }  // namespace opossum

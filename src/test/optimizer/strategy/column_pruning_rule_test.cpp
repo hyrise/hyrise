@@ -1,12 +1,12 @@
 #include "gtest/gtest.h"
 
 #include "expression/expression_functional.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "optimizer/strategy/column_pruning_rule.hpp"
 
 #include "strategy_base_test.hpp"
@@ -16,11 +16,13 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class ColumnPruningRuleTest: public StrategyBaseTest {
+class ColumnPruningRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
-    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "a");
-    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "u"}, {DataType::Int, "v"}, {DataType::Int, "w"}}, "b");
+    node_a = MockNode::make(
+        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "a");
+    node_b = MockNode::make(
+        MockNode::ColumnDefinitions{{DataType::Int, "u"}, {DataType::Int, "v"}, {DataType::Int, "w"}}, "b");
     node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}}, "c");
 
     a = node_a->get_column("a");

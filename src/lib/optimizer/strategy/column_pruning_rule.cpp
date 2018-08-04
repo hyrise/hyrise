@@ -2,26 +2,24 @@
 
 #include <unordered_map>
 
-#include "expression/abstract_expression.hpp"
-#include "expression/expression_utils.hpp"
-#include "expression/expression_functional.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/dummy_table_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
-#include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/sort_node.hpp"
 #include "../../logical_query_plan/lqp_utils.hpp"
+#include "expression/abstract_expression.hpp"
+#include "expression/expression_functional.hpp"
+#include "expression/expression_utils.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/dummy_table_node.hpp"
+#include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/projection_node.hpp"
+#include "logical_query_plan/sort_node.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-std::string ColumnPruningRule::name() const {
-  return "Column Pruning Rule";
-}
+std::string ColumnPruningRule::name() const { return "Column Pruning Rule"; }
 
 bool ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   // Collect the columns that are used in expressions somewhere in the LQP.
@@ -72,10 +70,8 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_consumed_columns(const std::s
   return consumed_columns;
 }
 
-bool ColumnPruningRule::_search_for_leafs_and_prune_columns(const std::shared_ptr<AbstractLQPNode> &lqp,
-                                                            const ExpressionUnorderedSet &referenced_columns) {
-
-
+bool ColumnPruningRule::_search_for_leafs_and_prune_columns(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                                            const ExpressionUnorderedSet& referenced_columns) {
   auto lqp_changed = false;
 
   auto leaf_parents = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, LQPInputSide>>{};
@@ -107,8 +103,8 @@ bool ColumnPruningRule::_search_for_leafs_and_prune_columns(const std::shared_pt
     // We cannot have a ProjectionNode that outputs no columns, so let's avoid that
     if (referenced_leaf_columns.empty()) continue;
 
-    // If a leaf outputs columns that are never used, prune those columns by inserting a ProjectionNode that only contains
-    // the used columns
+    // If a leaf outputs columns that are never used, prune those columns by inserting a ProjectionNode that only
+    // contains the used columns
     lqp_insert_node(parent, leaf_input_side, ProjectionNode::make(referenced_leaf_columns));
     lqp_changed = true;
   }
@@ -116,8 +112,8 @@ bool ColumnPruningRule::_search_for_leafs_and_prune_columns(const std::shared_pt
   return lqp_changed;
 }
 
-void ColumnPruningRule::_search_for_projections_and_prune_columns(const std::shared_ptr<AbstractLQPNode> &lqp,
-                                                                  const ExpressionUnorderedSet &referenced_columns) {
+void ColumnPruningRule::_search_for_projections_and_prune_columns(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                                                  const ExpressionUnorderedSet& referenced_columns) {
   /**
    * Prune otherwise unused columns that are forwarded by ProjectionNodes
    */
@@ -134,7 +130,7 @@ void ColumnPruningRule::_search_for_projections_and_prune_columns(const std::sha
   // Replace ProjectionNodes with pruned ProjectionNodes if necessary
   for (const auto& projection_node : projection_nodes) {
     auto referenced_projection_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
-    for (const auto &expression : projection_node->node_expressions()) {
+    for (const auto& expression : projection_node->node_expressions()) {
       // We keep all non-column expressions
       if (expression->type != ExpressionType::LQPColumn) {
         referenced_projection_expressions.emplace_back(expression);
@@ -155,8 +151,6 @@ void ColumnPruningRule::_search_for_projections_and_prune_columns(const std::sha
       lqp_replace_node(projection_node, ProjectionNode::make(referenced_projection_expressions));
     }
   }
-
-
 }
 
 }  // namespace opossum

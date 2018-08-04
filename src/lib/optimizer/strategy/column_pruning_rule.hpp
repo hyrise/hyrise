@@ -20,10 +20,10 @@ class ColumnPruningRule : public AbstractRule {
 
  private:
   static ExpressionUnorderedSet _collect_consumed_columns(const std::shared_ptr<AbstractLQPNode>& lqp);
-  static bool _search_for_leafs_and_prune_columns(const std::shared_ptr<AbstractLQPNode> &lqp,
-                                                  const ExpressionUnorderedSet &referenced_columns);
-  static void _search_for_projections_and_prune_columns(const std::shared_ptr<AbstractLQPNode> &lqp,
-                                                  const ExpressionUnorderedSet &referenced_columns);
+  static bool _search_for_leafs_and_prune_columns(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                                  const ExpressionUnorderedSet& referenced_columns);
+  static void _search_for_projections_and_prune_columns(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                                        const ExpressionUnorderedSet& referenced_columns);
 };
 
 }  // namespace opossum

@@ -2,9 +2,9 @@
 
 #include <memory>
 #include <optional>
+#include <queue>
 #include <unordered_map>
 #include <unordered_set>
-#include <queue>
 
 namespace opossum {
 
@@ -34,7 +34,8 @@ void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
 
 void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node);
 
-void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const LQPInputSide input_side, const std::shared_ptr<AbstractLQPNode>& node);
+void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const LQPInputSide input_side,
+                     const std::shared_ptr<AbstractLQPNode>& node);
 
 /**
  * @return whether all paths to all leafs contain a Validate node - i.e. the LQP can be used in an MVCC aware context

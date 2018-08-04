@@ -87,13 +87,9 @@ SharedScopedLockingPtr<const MvccColumns> Chunk::lock_mvcc_columns() const {
   return {*_mvcc_columns, _mvcc_columns->_mutex};
 }
 
-std::shared_ptr<MvccColumns> Chunk::mvcc_columns() const {
-  return _mvcc_columns;
-}
+std::shared_ptr<MvccColumns> Chunk::mvcc_columns() const { return _mvcc_columns; }
 
-void Chunk::set_mvcc_columns(const std::shared_ptr<MvccColumns>& mvcc_columns) {
-  _mvcc_columns = mvcc_columns;
-}
+void Chunk::set_mvcc_columns(const std::shared_ptr<MvccColumns>& mvcc_columns) { _mvcc_columns = mvcc_columns; }
 
 std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(
     const std::vector<std::shared_ptr<const BaseColumn>>& columns) const {

@@ -8,12 +8,12 @@
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
+#include "strategy/column_pruning_rule.hpp"
 #include "strategy/constant_calculation_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/join_detection_rule.hpp"
 #include "strategy/predicate_pushdown_rule.hpp"
 #include "strategy/predicate_reordering_rule.hpp"
-#include "strategy/column_pruning_rule.hpp"
 
 /**
  * IMPORTANT NOTES ON OPTIMIZING SUB-SELECT LQPS

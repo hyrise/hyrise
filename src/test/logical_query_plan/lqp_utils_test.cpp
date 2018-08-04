@@ -89,12 +89,8 @@ TEST_F(LQPUtilsTest, LQPSubplanToBooleanExpression_C) {
 
 TEST_F(LQPUtilsTest, VisitLQP) {
   const auto expected_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{
-    PredicateNode::make(greater_than_(a_a, 4)),
-    UnionNode::make(UnionMode::Positions),
-    PredicateNode::make(less_than_(a_a, 4)),
-    PredicateNode::make(equals_(a_a, 4)),
-    node_a
-  };
+      PredicateNode::make(greater_than_(a_a, 4)), UnionNode::make(UnionMode::Positions),
+      PredicateNode::make(less_than_(a_a, 4)), PredicateNode::make(equals_(a_a, 4)), node_a};
 
   expected_nodes[0]->set_left_input(expected_nodes[1]);
   expected_nodes[1]->set_left_input(expected_nodes[2]);
@@ -109,7 +105,6 @@ TEST_F(LQPUtilsTest, VisitLQP) {
   });
 
   EXPECT_EQ(actual_nodes, expected_nodes);
-
 }
 
 }  // namespace opossum
