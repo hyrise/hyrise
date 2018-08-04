@@ -27,7 +27,7 @@ class Chunk;
  * full and all of their end-cids must be smaller than infinity. This task calls
  * those chunks “completed”.
  *
- * After the columns have been replaced, the task calls Chunk::shrink_mvcc_columns()
+ * After the columns have been replaced, the task calls Chunk::shrink_lock_mvcc_columns()
  * in order to reduce fragmentation of the MVCC columns. The MVCC columns are locked
  * exclusively during this step.
  *

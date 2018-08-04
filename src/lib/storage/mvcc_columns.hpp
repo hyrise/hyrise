@@ -49,7 +49,7 @@ struct MvccColumns {
    *
    * Exclusively locked in shrink()
    * Locked for shared ownership when MVCC columns of a Chunk are accessed
-   * via the mvcc_columns() getters
+   * via the lock_mvcc_columns() getters
    */
   std::shared_mutex _mutex;
 

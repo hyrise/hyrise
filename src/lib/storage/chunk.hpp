@@ -75,8 +75,7 @@ class Chunk : private Noncopyable {
    *       However, if you call get_column again, be aware that
    *       the return type might have changed.
    */
-  std::shared_ptr<BaseColumn> get_mutable_column(ColumnID column_id) const;
-  std::shared_ptr<const BaseColumn> get_column(ColumnID column_id) const;
+  std::shared_ptr<BaseColumn> get_column(ColumnID column_id) const;
 
   const ChunkColumns& columns() const;
 
@@ -92,10 +91,10 @@ class Chunk : private Noncopyable {
    *
    * @return a locking ptr to the mvcc columns
    */
-  SharedScopedLockingPtr<MvccColumns> mvcc_columns();
-  SharedScopedLockingPtr<const MvccColumns> mvcc_columns() const;
-  std::shared_ptr<MvccColumns> mvcc_columns_ptr() const {return _mvcc_columns;}
+  SharedScopedLockingPtr<MvccColumns> lock_mvcc_columns();
+  SharedScopedLockingPtr<const MvccColumns> lock_mvcc_columns() const;
 
+  std::shared_ptr<MvccColumns> mvcc_columns() const;
   void set_mvcc_columns(const std::shared_ptr<MvccColumns>& mvcc_columns);
 
   std::vector<std::shared_ptr<BaseIndex>> get_indices(

@@ -70,15 +70,14 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       if (forward_columns) {
         const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression);
         Assert(pqp_column_expression, "Expected PQPColumnExpression");
-        output_columns.emplace_back(std::const_pointer_cast<BaseColumn>(
-        input_chunk->get_column(pqp_column_expression->column_id)));
+        output_columns.emplace_back(input_chunk->get_column(pqp_column_expression->column_id));
       } else {
         output_columns.emplace_back(evaluator.evaluate_expression_to_column(*expression));
       }
     }
 
     output_table->append_chunk(output_columns);
-    output_table->get_chunk(chunk_id)->set_mvcc_columns(input_chunk->mvcc_columns_ptr());
+    output_table->get_chunk(chunk_id)->set_mvcc_columns(input_chunk->mvcc_columns());
   }
 
   return output_table;

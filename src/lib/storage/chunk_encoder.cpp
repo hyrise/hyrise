@@ -46,7 +46,7 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
   chunk->set_statistics(std::make_shared<ChunkStatistics>(column_statistics));
 
   if (chunk->has_mvcc_columns()) {
-    chunk->mvcc_columns()->shrink();
+    chunk->lock_mvcc_columns()->shrink();
   }
 }
 
