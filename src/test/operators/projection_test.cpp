@@ -68,7 +68,8 @@ TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTable) {
 }
 
 TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTableAndExpression) {
-  const auto projection = std::make_shared<opossum::Projection>(table_wrapper_a, expression_vector(a_b, a_a, add_(a_b, a_a)));
+  const auto projection =
+      std::make_shared<opossum::Projection>(table_wrapper_a, expression_vector(a_b, a_a, add_(a_b, a_a)));
   projection->execute();
 
   const auto input_chunk = table_wrapper_a->get_output()->get_chunk(ChunkID{0});
@@ -80,9 +81,10 @@ TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTableAndExpression) {
 
 TEST_F(OperatorsProjectionTest, DontForwardReferencesWithExpression) {
   const auto table_scan =
-  std::make_shared<TableScan>(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
+      std::make_shared<TableScan>(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
   table_scan->execute();
-  const auto projection = std::make_shared<opossum::Projection>(table_scan, expression_vector(a_b, a_a, add_(a_b, a_a)));
+  const auto projection =
+      std::make_shared<opossum::Projection>(table_scan, expression_vector(a_b, a_a, add_(a_b, a_a)));
   projection->execute();
 
   const auto input_chunk = table_wrapper_a->get_output()->get_chunk(ChunkID{0});
