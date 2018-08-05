@@ -46,13 +46,16 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   }
 
   /**
-   * Check if we should just forward columns from the input
+   * If an column expression is a PQPColumnExpression then it might be possible to forward the input column, if the
+   * input TableType (References or Data) matches the output column type.
    */
-  const auto forward_columns = std::all_of(expressions.begin(), expressions.end(), [&](const auto& expression) {
+  const auto only_projects_columns = std::all_of(expressions.begin(), expressions.end(), [&](const auto& expression) {
     return expression->type == ExpressionType::PQPColumn;
   });
 
-  const auto output_table_type = forward_columns ? input_table_left()->type() : TableType::Data;
+  const auto output_table_type = only_projects_columns ? input_table_left()->type() : TableType::Data;
+  const auto forward_columns = input_table_left()->type() == output_table_type;
+
   const auto output_table =
       std::make_shared<Table>(column_definitions, output_table_type, input_table_left()->max_chunk_size());
 
@@ -67,9 +70,9 @@ std::shared_ptr<const Table> Projection::_on_execute() {
 
     ExpressionEvaluator evaluator(input_table_left(), chunk_id);
     for (const auto& expression : expressions) {
-      if (forward_columns) {
+      // Forward input column if possible
+      if (expression->type == ExpressionType::PQPColumn && forward_columns) {
         const auto pqp_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(expression);
-        Assert(pqp_column_expression, "Expected PQPColumnExpression");
         output_columns.emplace_back(input_chunk->get_column(pqp_column_expression->column_id));
       } else {
         output_columns.emplace_back(evaluator.evaluate_expression_to_column(*expression));
