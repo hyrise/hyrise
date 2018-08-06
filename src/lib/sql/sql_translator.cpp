@@ -350,7 +350,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
 
   if (delete_statement.expr) {
     const auto delete_where_expression = _translate_hsql_expr(*delete_statement.expr, sql_identifier_resolver);
-    data_to_delete_node = _translate_predicate_expression(delete_where_expression, data_to_delete_node);
+    data_to_delete_node = _translate_predicate_expression(delete_where_expression, data_to_delete_node,
+                                                          OrTranslationMode::UnionPositions);
   }
 
   return DeleteNode::make(delete_statement.tableName, data_to_delete_node);
@@ -367,7 +368,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
 
   if (update.where) {
     const auto where_expression = _translate_hsql_expr(*update.where, translation_state.sql_identifier_resolver);
-    selection_lqp = _translate_predicate_expression(where_expression, selection_lqp);
+    selection_lqp = _translate_predicate_expression(where_expression, selection_lqp, OrTranslationMode::UnionPositions);
   }
 
   // The update operator wants ReferenceColumns on its left side
@@ -912,7 +913,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
-    const std::shared_ptr<AbstractExpression>& expression, std::shared_ptr<AbstractLQPNode> current_node) const {
+    const std::shared_ptr<AbstractExpression>& expression, std::shared_ptr<AbstractLQPNode> current_node,
+    const OrTranslationMode or_translation_mode) const {
   /**
    * Translate AbstractPredicateExpression
    */
@@ -934,12 +936,33 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
 
       switch (logical_expression->logical_operator) {
         case LogicalOperator::And: {
-          current_node = _translate_predicate_expression(logical_expression->right_operand(), current_node);
-          return _translate_predicate_expression(logical_expression->left_operand(), current_node);
+          current_node =
+              _translate_predicate_expression(logical_expression->right_operand(), current_node, or_translation_mode);
+          return _translate_predicate_expression(logical_expression->left_operand(), current_node, or_translation_mode);
         }
         case LogicalOperator::Or: {
-          current_node = _add_expressions_if_unavailable(current_node, {expression});
-          return PredicateNode::make(not_equals_(expression, 0), current_node);
+          /**
+           * We have two ways to process OR predicates: Via a Projection, which also supports more complex expressions
+           * like "a + 5 > 3 OR b + c > d" and is likely faster - and via UnionPositions which has the advantage of
+           * outputting ReferenceColumns.
+           * We use UnionPositions for Deletes and Updates, since they require ReferenceColumns pointings to a stored
+           * table, and Projection everywhere else.
+           */
+
+          switch (or_translation_mode) {
+            case OrTranslationMode::Projection: {
+              current_node = _add_expressions_if_unavailable(current_node, {expression});
+              return PredicateNode::make(not_equals_(expression, 0), current_node);
+            } break;
+
+            case OrTranslationMode::UnionPositions: {
+              const auto left_input = _translate_predicate_expression(logical_expression->left_operand(), current_node,
+                                                                      or_translation_mode);
+              const auto right_input = _translate_predicate_expression(logical_expression->right_operand(),
+                                                                       current_node, or_translation_mode);
+              return UnionNode::make(UnionMode::Positions, left_input, right_input);
+            }
+          }
         }
       }
     } break;

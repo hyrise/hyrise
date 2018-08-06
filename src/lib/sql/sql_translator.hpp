@@ -114,8 +114,12 @@ class SQLTranslator final {
 
   std::shared_ptr<AbstractLQPNode> _translate_drop(const hsql::DropStatement& drop_statement);
 
+  // See docs in _translate_predicate_expression
+  enum class OrTranslationMode { Projection, UnionPositions };
+
   std::shared_ptr<AbstractLQPNode> _translate_predicate_expression(
-      const std::shared_ptr<AbstractExpression>& expression, std::shared_ptr<AbstractLQPNode> current_node) const;
+      const std::shared_ptr<AbstractExpression>& expression, std::shared_ptr<AbstractLQPNode> current_node,
+      const OrTranslationMode or_translation_mode = OrTranslationMode::Projection) const;
 
   std::shared_ptr<AbstractLQPNode> _translate_show(const hsql::ShowStatement& show_statement);
 

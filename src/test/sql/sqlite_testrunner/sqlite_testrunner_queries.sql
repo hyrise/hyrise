@@ -138,9 +138,12 @@ SELECT a, b, AVG(b) FROM mixed GROUP BY a, b HAVING MAX(c) > 10 AND MAX(c) <= 30
 -- DELETE
 DELETE FROM id_int_int_int_100; INSERT INTO id_int_int_int_100 VALUES (1, 2, 3, 4); SELECT * FROM id_int_int_int_100;
 DELETE FROM id_int_int_int_100 WHERE id > 75; SELECT * FROM id_int_int_int_100;
+DELETE FROM id_int_int_int_100 WHERE a = 4 OR b = 5; SELECT * FROM id_int_int_int_100;
+DELETE FROM id_int_int_int_100 WHERE a = 4 OR b = 5 OR (id > 50 AND (a > 50 OR a = 0)); SELECT * FROM id_int_int_int_100;
 
 -- Update
 UPDATE id_int_int_int_100 SET a = a + 1 WHERE id > 10; SELECT * FROM id_int_int_int_100;
+UPDATE id_int_int_int_100 SET a = a + 1 WHERE id > 10 OR (id < 5 AND (a = 84 OR a = 40)); SELECT * FROM id_int_int_int_100;
 
 -- INSERT
 INSERT INTO id_int_int_int_100 VALUES (100, 1, 2, 3); SELECT * FROM id_int_int_int_100;
