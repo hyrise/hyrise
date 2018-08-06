@@ -91,8 +91,8 @@ class Chunk : private Noncopyable {
    *
    * @return a locking ptr to the mvcc columns
    */
-  SharedScopedLockingPtr<MvccColumns> lock_mvcc_columns();
-  SharedScopedLockingPtr<const MvccColumns> lock_mvcc_columns() const;
+  SharedScopedLockingPtr<MvccColumns> get_scoped_mvcc_columns_lock();
+  SharedScopedLockingPtr<const MvccColumns> get_scoped_mvcc_columns_lock() const;
 
   std::shared_ptr<MvccColumns> mvcc_columns() const;
   void set_mvcc_columns(const std::shared_ptr<MvccColumns>& mvcc_columns);

@@ -23,21 +23,21 @@ std::string ColumnPruningRule::name() const { return "Column Pruning Rule"; }
 
 bool ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
   // Collect the columns that are used in expressions somewhere in the LQP.
-  // This EXCLUDES columns that merely forwarded by Projections
-  auto referenced_columns = _collect_consumed_columns(root);
+  // This EXCLUDES columns that are merely forwarded by Projections throughout the LQP
+  auto actually_used_columns = _collect_actually_used_columns(root);
 
-  // The output columns of the plan are always considered to be referenced (i.e., we cannot prune them
+  // The output columns of the plan are always considered to be referenced (i.e., we cannot prune them)
   const auto output_columns = root->column_expressions();
-  referenced_columns.insert(output_columns.begin(), output_columns.end());
+  actually_used_columns.insert(output_columns.begin(), output_columns.end());
 
   // Search for ProjectionNodes that forward the unused columns and prune them accordingly
-  _search_for_projections_and_prune_columns(root, referenced_columns);
+  _prune_unused_columns_in_projections(root, actually_used_columns);
 
   // Search the plan for leaf nodes and prune all columns from them that are not referenced
-  return _search_for_leafs_and_prune_columns(root, referenced_columns);
+  return _prune_columns_from_leafs(root, actually_used_columns);
 }
 
-ExpressionUnorderedSet ColumnPruningRule::_collect_consumed_columns(const std::shared_ptr<AbstractLQPNode>& lqp) {
+ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const std::shared_ptr<AbstractLQPNode>& lqp) {
   auto consumed_columns = ExpressionUnorderedSet{};
 
   // Search an expression for referenced columns
@@ -70,10 +70,12 @@ ExpressionUnorderedSet ColumnPruningRule::_collect_consumed_columns(const std::s
   return consumed_columns;
 }
 
-bool ColumnPruningRule::_search_for_leafs_and_prune_columns(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                                            const ExpressionUnorderedSet& referenced_columns) {
+bool ColumnPruningRule::_prune_columns_from_leafs(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                                  const ExpressionUnorderedSet& referenced_columns) {
   auto lqp_changed = false;
 
+  // Collect all parents of leafs and on which input side their leave is (if a node has two leafs as inputs, it will be
+  // collected twice)
   auto leaf_parents = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, LQPInputSide>>{};
   visit_lqp(lqp, [&](auto& node) {
     for (const auto input_side : {LQPInputSide::Left, LQPInputSide::Right}) {
@@ -85,6 +87,7 @@ bool ColumnPruningRule::_search_for_leafs_and_prune_columns(const std::shared_pt
     return LQPVisitation::VisitInputs;
   });
 
+  // Insert ProjectionNodes that prune unused columns between the leafs and their parents
   for (const auto& parent_and_leaf_input_side : leaf_parents) {
     const auto& parent = parent_and_leaf_input_side.first;
     const auto& leaf_input_side = parent_and_leaf_input_side.second;
@@ -112,8 +115,8 @@ bool ColumnPruningRule::_search_for_leafs_and_prune_columns(const std::shared_pt
   return lqp_changed;
 }
 
-void ColumnPruningRule::_search_for_projections_and_prune_columns(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                                                  const ExpressionUnorderedSet& referenced_columns) {
+void ColumnPruningRule::_prune_unused_columns_in_projections(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                                             const ExpressionUnorderedSet& referenced_columns) {
   /**
    * Prune otherwise unused columns that are forwarded by ProjectionNodes
    */
@@ -148,7 +151,7 @@ void ColumnPruningRule::_search_for_projections_and_prune_columns(const std::sha
     if (referenced_projection_expressions.empty()) {
       lqp_remove_node(projection_node);
     } else {
-      lqp_replace_node(projection_node, ProjectionNode::make(referenced_projection_expressions));
+      projection_node->expressions = referenced_projection_expressions;
     }
   }
 }

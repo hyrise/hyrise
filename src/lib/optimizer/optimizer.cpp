@@ -80,6 +80,11 @@ namespace opossum {
 std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   auto optimizer = std::make_shared<Optimizer>(10);
 
+  // Run pruning just once since the rule would otherwise insert the pruning ProjectionNodes multiple times.
+  RuleBatch pruning_batch(RuleBatchExecutionPolicy::Once);
+  pruning_batch.add_rule(std::make_shared<ColumnPruningRule>());
+  optimizer->add_rule_batch(pruning_batch);
+
   RuleBatch main_batch(RuleBatchExecutionPolicy::Iterative);
   main_batch.add_rule(std::make_shared<PredicatePushdownRule>());
   main_batch.add_rule(std::make_shared<PredicateReorderingRule>());
@@ -90,7 +95,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   final_batch.add_rule(std::make_shared<ChunkPruningRule>());
   final_batch.add_rule(std::make_shared<ConstantCalculationRule>());
   final_batch.add_rule(std::make_shared<IndexScanRule>());
-  final_batch.add_rule(std::make_shared<ColumnPruningRule>());
   optimizer->add_rule_batch(final_batch);
 
   return optimizer;

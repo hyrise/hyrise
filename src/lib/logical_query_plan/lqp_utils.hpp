@@ -62,7 +62,6 @@ enum class LQPVisitation { VisitInputs, DoNotVisitInputs };
  */
 template <typename LQP, typename Visitor>
 void visit_lqp(LQP& lqp, Visitor visitor) {
-  // The reference wrapper bit is important so we can manipulate the LQP even by replacing node
   std::queue<std::decay_t<LQP>> node_queue;
   node_queue.push(lqp);
 

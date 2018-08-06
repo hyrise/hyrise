@@ -44,7 +44,7 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
   DebugAssert(is_mutable(), "Can't append to immutable Chunk");
 
   // Do this first to ensure that the first thing to exist in a row are the MVCC columns.
-  if (has_mvcc_columns()) lock_mvcc_columns()->grow_by(1u, MvccColumns::MAX_COMMIT_ID);
+  if (has_mvcc_columns()) get_scoped_mvcc_columns_lock()->grow_by(1u, MvccColumns::MAX_COMMIT_ID);
 
   // The added values, i.e., a new row, must have the same number of attributes as the table.
   DebugAssert((_columns.size() == values.size()),
@@ -75,13 +75,13 @@ uint32_t Chunk::size() const {
 bool Chunk::has_mvcc_columns() const { return _mvcc_columns != nullptr; }
 bool Chunk::has_access_counter() const { return _access_counter != nullptr; }
 
-SharedScopedLockingPtr<MvccColumns> Chunk::lock_mvcc_columns() {
+SharedScopedLockingPtr<MvccColumns> Chunk::get_scoped_mvcc_columns_lock() {
   DebugAssert((has_mvcc_columns()), "Chunk does not have mvcc columns");
 
   return {*_mvcc_columns, _mvcc_columns->_mutex};
 }
 
-SharedScopedLockingPtr<const MvccColumns> Chunk::lock_mvcc_columns() const {
+SharedScopedLockingPtr<const MvccColumns> Chunk::get_scoped_mvcc_columns_lock() const {
   DebugAssert((has_mvcc_columns()), "Chunk does not have mvcc columns");
 
   return {*_mvcc_columns, _mvcc_columns->_mutex};

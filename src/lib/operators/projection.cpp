@@ -46,7 +46,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   }
 
   /**
-   * If an column expression is a PQPColumnExpression then it might be possible to forward the input column, if the
+   * If an expression is a PQPColumnExpression then it might be possible to forward the input column, if the
    * input TableType (References or Data) matches the output column type.
    */
   const auto only_projects_columns = std::all_of(expressions.begin(), expressions.end(), [&](const auto& expression) {
