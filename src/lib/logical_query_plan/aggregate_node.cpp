@@ -9,11 +9,11 @@
 
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
-#include "statistics/table_statistics.hpp"
+#include "resolve_type.hpp"
 #include "statistics/column_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "resolve_type.hpp"
 
 namespace opossum {
 
@@ -44,7 +44,7 @@ std::string AggregateNode::description() const {
 }
 
 std::shared_ptr<TableStatistics> AggregateNode::derive_statistics_from(
-const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
+    const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
   DebugAssert(left_input && !right_input, "AggregateNode need left_input and no right_input");
 
   const auto input_statistics = left_input->get_statistics();
@@ -62,7 +62,7 @@ const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<Abstra
       resolve_data_type(expression->data_type(), [&](const auto data_type_t) {
         using ExpressionDataType = typename decltype(data_type_t)::type;
         column_statistics.emplace_back(
-        std::make_shared<ColumnStatistics<ExpressionDataType>>(ColumnStatistics<ExpressionDataType>::dummy()));
+            std::make_shared<ColumnStatistics<ExpressionDataType>>(ColumnStatistics<ExpressionDataType>::dummy()));
       });
     }
   }
