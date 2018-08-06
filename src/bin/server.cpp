@@ -18,8 +18,9 @@ int main(int argc, char* argv[]) {
     if (argc >= 2) {
       char* endptr{nullptr};
       errno = 0;
-      port = static_cast<uint16_t>(std::strtol(argv[1], &endptr, 10));
-      Assert(errno == 0 && port != 0 && *endptr == 0, "invalid port number");
+      auto port_long = std::strtol(argv[1], &endptr, 10)
+      Assert(errno == 0 && port_long != 0 && port_long <= 65535 && *endptr == 0, "invalid port number");
+      port = static_cast<uint16_t>(port_l);
     }
 
     // Set scheduler so that the server can execute the tasks on separate threads.
