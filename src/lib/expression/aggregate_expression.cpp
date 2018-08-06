@@ -91,11 +91,7 @@ DataType AggregateExpression::data_type() const {
 bool AggregateExpression::is_nullable() const {
   // Aggregates except the COUNTs will return NULL when executed on an empty group -
   // thus they are always nullable
-  if (aggregate_function == AggregateFunction::Count || aggregate_function == AggregateFunction::CountDistinct) {
-    return AbstractExpression::is_nullable();
-  } else {
-    return true;
-  }
+  return aggregate_function != AggregateFunction::Count && aggregate_function != AggregateFunction::CountDistinct;
 }
 
 bool AggregateExpression::_shallow_equals(const AbstractExpression& expression) const {
