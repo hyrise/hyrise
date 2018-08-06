@@ -66,6 +66,8 @@ class BenchmarkRunner {
   nlohmann::json _context;
 
   std::optional<PerformanceWarningDisabler> _performance_warning_disabler;
+
+  Duration _total_run_duration{};
 };
 
 }  // namespace opossum

@@ -40,6 +40,8 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, const NamedQueri
 void BenchmarkRunner::run() {
   _config.out << "\n- Starting Benchmark..." << std::endl;
 
+  auto benchmark_start = std::chrono::steady_clock::now();
+
   // Run the queries in the selected mode
   switch (_config.benchmark_mode) {
     case BenchmarkMode::IndividualQueries: {
@@ -51,6 +53,9 @@ void BenchmarkRunner::run() {
       break;
     }
   }
+
+  auto benchmark_end = std::chrono::steady_clock::now();
+  _total_run_duration = benchmark_end - benchmark_start;
 
   // Create report
   if (_config.output_file_path) {
@@ -190,7 +195,10 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     benchmarks.push_back(benchmark);
   }
 
-  nlohmann::json report{{"context", _context}, {"benchmarks", benchmarks}};
+  const auto total_run_duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(_total_run_duration).count();
+  const auto total_run_duration_seconds = static_cast<float>(total_run_duration_ns) / 1'000'000'000;
+  nlohmann::json report{
+      {"context", _context}, {"benchmarks", benchmarks}, {"total_run_duration (s)", total_run_duration_seconds}};
 
   stream << std::setw(2) << report << std::endl;
 }
