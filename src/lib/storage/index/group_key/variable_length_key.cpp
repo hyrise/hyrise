@@ -26,7 +26,10 @@ VariableLengthKey& VariableLengthKey::operator=(const VariableLengthKeyBase& oth
   return *this;
 }
 
-VariableLengthKey& VariableLengthKey::operator=(const VariableLengthKey& other) { return operator=(other._impl); }
+VariableLengthKey& VariableLengthKey::operator=(const VariableLengthKey& other) {
+  operator=(other._impl);
+  return *this;
+}
 
 bool VariableLengthKey::operator==(const VariableLengthKey& other) const { return _impl == other._impl; }
 bool VariableLengthKey::operator==(const VariableLengthKeyConstProxy& other) const { return _impl == other._impl; }

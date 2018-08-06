@@ -13,13 +13,13 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/column_visitable.hpp"
+#include "storage/abstract_column_visitor.hpp"
 #include "storage/reference_column.hpp"
 
 namespace opossum {
 
 /**
-* TODO(arne.mayer): Outer not-equal join (outer !=)
+* TODO(anyone): Outer not-equal join (outer !=)
 * TODO(anyone): Choose an appropriate number of clusters.
 **/
 
@@ -48,12 +48,14 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left
               "Outer joins are not implemented for not-equals joins.");
 }
 
-std::shared_ptr<AbstractOperator> JoinSortMerge::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<JoinSortMerge>(recreated_input_left, recreated_input_right, _mode, _column_ids,
+std::shared_ptr<AbstractOperator> JoinSortMerge::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<JoinSortMerge>(copied_input_left, copied_input_right, _mode, _column_ids,
                                          _predicate_condition);
 }
+
+void JoinSortMerge::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
   // Check column types
@@ -312,9 +314,6 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   * This constitutes the merge phase of the join. The output combinations of row ids are determined by _join_runs.
   **/
   void _join_cluster(size_t cluster_number) {
-    _output_pos_lists_left[cluster_number] = std::make_shared<PosList>();
-    _output_pos_lists_right[cluster_number] = std::make_shared<PosList>();
-
     auto& left_cluster = (*_sorted_left_table)[cluster_number];
     auto& right_cluster = (*_sorted_right_table)[cluster_number];
 
@@ -532,6 +531,16 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     // Parallel join for each cluster
     for (size_t cluster_number = 0; cluster_number < _cluster_count; ++cluster_number) {
+      // Create output position lists
+      _output_pos_lists_left[cluster_number] = std::make_shared<PosList>();
+      _output_pos_lists_right[cluster_number] = std::make_shared<PosList>();
+
+      // Avoid empty jobs for inner equi joins
+      if (_mode == JoinMode::Inner && _op == PredicateCondition::Equals) {
+        if ((*_sorted_left_table)[cluster_number]->empty() || (*_sorted_right_table)[cluster_number]->empty()) {
+          continue;
+        }
+      }
       jobs.push_back(std::make_shared<JobTask>([this, cluster_number] { this->_join_cluster(cluster_number); }));
       jobs.back()->schedule();
     }

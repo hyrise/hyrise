@@ -33,7 +33,7 @@ class ProcessingUnit final : public std::enable_shared_from_this<ProcessingUnit>
   bool try_acquire_active_worker_token(WorkerID worker_id);
 
   /**
-   * If @worked_id owns the active worker token, it yields it, otherwise nothing happens.
+   * If @worker_id owns the active worker token, it yields it, otherwise nothing happens.
    * It's okay for Workers to call this without actually owning the token, think of Tasks waiting for multiple
    * batches of jobs.
    */

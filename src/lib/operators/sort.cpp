@@ -12,7 +12,7 @@
 
 namespace opossum {
 
-Sort::Sort(const std::shared_ptr<const AbstractOperator> in, const ColumnID column_id, const OrderByMode order_by_mode,
+Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const ColumnID column_id, const OrderByMode order_by_mode,
            const size_t output_chunk_size)
     : AbstractReadOnlyOperator(OperatorType::Sort, in),
       _column_id(column_id),
@@ -25,11 +25,13 @@ OrderByMode Sort::order_by_mode() const { return _order_by_mode; }
 
 const std::string Sort::name() const { return "Sort"; }
 
-std::shared_ptr<AbstractOperator> Sort::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<Sort>(recreated_input_left, _column_id, _order_by_mode, _output_chunk_size);
+std::shared_ptr<AbstractOperator> Sort::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<Sort>(copied_input_left, _column_id, _order_by_mode, _output_chunk_size);
 }
+
+void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Sort::_on_execute() {
   _impl = make_unique_by_data_type<AbstractReadOnlyOperatorImpl, SortImpl>(
@@ -45,8 +47,8 @@ template <typename SortColumnType>
 class Sort::SortImplMaterializeOutput {
  public:
   // creates a new table with reference columns
-  SortImplMaterializeOutput(std::shared_ptr<const Table> in,
-                            std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>> id_value_map,
+  SortImplMaterializeOutput(const std::shared_ptr<const Table>& in,
+                            const std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>>& id_value_map,
                             const size_t output_chunk_size)
       : _table_in(in), _output_chunk_size(output_chunk_size), _row_id_value_vector(id_value_map) {}
 

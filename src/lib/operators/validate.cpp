@@ -35,11 +35,13 @@ Validate::Validate(const std::shared_ptr<AbstractOperator>& in)
 
 const std::string Validate::name() const { return "Validate"; }
 
-std::shared_ptr<AbstractOperator> Validate::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<Validate>(recreated_input_left);
+std::shared_ptr<AbstractOperator> Validate::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<Validate>(copied_input_left);
 }
+
+void Validate::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> Validate::_on_execute() {
   Fail("Validate can't be called without a transaction context.");

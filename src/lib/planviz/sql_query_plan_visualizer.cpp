@@ -2,6 +2,9 @@
 #include <string>
 #include <utility>
 
+#include "expression/expression_utils.hpp"
+#include "expression/pqp_select_expression.hpp"
+#include "operators/projection.hpp"
 #include "planviz/abstract_visualizer.hpp"
 #include "planviz/sql_query_plan_visualizer.hpp"
 #include "sql/sql_query_plan.hpp"
@@ -18,6 +21,7 @@ SQLQueryPlanVisualizer::SQLQueryPlanVisualizer(GraphvizConfig graphviz_config, V
 
 void SQLQueryPlanVisualizer::_build_graph(const SQLQueryPlan& plan) {
   std::unordered_set<std::shared_ptr<const AbstractOperator>> visualized_ops;
+
   for (const auto& root : plan.tree_roots()) {
     _build_subtree(root, visualized_ops);
   }
@@ -42,6 +46,25 @@ void SQLQueryPlanVisualizer::_build_subtree(
     auto right = op->input_right();
     _build_subtree(right, visualized_ops);
     _build_dataflow(right, op);
+  }
+
+  // Visualize subselects
+  if (const auto projection = std::dynamic_pointer_cast<const Projection>(op)) {
+    for (const auto& column_expression : projection->expressions) {
+      visit_expression(column_expression, [&](const auto& sub_expression) {
+        const auto pqp_select_expression = std::dynamic_pointer_cast<PQPSelectExpression>(sub_expression);
+        if (!pqp_select_expression) return ExpressionVisitation::VisitArguments;
+
+        _build_subtree(pqp_select_expression->pqp, visualized_ops);
+
+        auto edge_info = _default_edge;
+        edge_info.label = "Subquery";
+        edge_info.style = "dashed";
+        _add_edge(pqp_select_expression->pqp, op, edge_info);
+
+        return ExpressionVisitation::VisitArguments;
+      });
+    }
   }
 }
 

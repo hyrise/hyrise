@@ -13,7 +13,7 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/column_visitable.hpp"
+#include "storage/abstract_column_visitor.hpp"
 #include "storage/create_iterable_from_column.hpp"
 #include "type_cast.hpp"
 #include "type_comparison.hpp"
@@ -35,12 +35,13 @@ JoinHash::JoinHash(const std::shared_ptr<const AbstractOperator>& left,
 
 const std::string JoinHash::name() const { return "JoinHash"; }
 
-std::shared_ptr<AbstractOperator> JoinHash::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<JoinHash>(recreated_input_left, recreated_input_right, _mode, _column_ids,
-                                    _predicate_condition);
+std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<JoinHash>(copied_input_left, copied_input_right, _mode, _column_ids, _predicate_condition);
 }
+
+void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 std::shared_ptr<const Table> JoinHash::_on_execute() {
   std::shared_ptr<const AbstractOperator> build_operator;
@@ -97,7 +98,7 @@ struct PartitionedElement {
   PartitionedElement(RowID row, Hash hash, T val) : row_id(row), partition_hash(hash), value(val) {}
 
   RowID row_id;
-  Hash partition_hash;
+  Hash partition_hash{0};
   T value;
 };
 
@@ -383,7 +384,18 @@ void probe(const RadixContainer<RightType>& radix_container,
           const auto& matching_rows = hashtable->get(type_cast<HashedType>(row.value));
 
           if (matching_rows) {
-            for (const auto row_id : matching_rows->get()) {
+            // We store a variant of <RowID, PosList> to reduce the number of allocations (see the cuckoo hashmap)
+            if (matching_rows->get().type() == typeid(PosList)) {
+              // Multiple matches, stored in one PosList
+              for (const auto row_id : boost::get<PosList>(matching_rows->get())) {
+                if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
+                  pos_list_left_local.emplace_back(row_id);
+                  pos_list_right_local.emplace_back(row.row_id);
+                }
+              }
+            } else {
+              // A single RowID
+              const auto row_id = boost::get<RowID>(matching_rows->get());
               if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
                 pos_list_left_local.emplace_back(row_id);
                 pos_list_right_local.emplace_back(row.row_id);

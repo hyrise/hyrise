@@ -3,6 +3,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "all_type_variant.hpp"
@@ -38,18 +39,33 @@ class FixedString {
   // Creates a string object from FixedString
   std::string string() const;
 
+  // Creates a string_view object from FixedString (much cheaper than string())
+  std::string_view string_view() const;
+
   // Compare FixedStrings by comparing the underlying char arrays.
   // If one FixedString is longer than the other FixedString and the beginning of the longer FixedString
   // is equal to the other FixedString, the shorter FixedString is smaller.
   // Example: "defg" < "defghi"
   bool operator<(const FixedString& other) const;
+
+  // Regular comparators that convert the fixed string into a regular string first
   friend bool operator<(const FixedString& lhs, const std::string& rhs);
   friend bool operator<(const std::string& lhs, const FixedString& rhs);
+  friend bool operator<(const FixedString& lhs, const std::string_view& rhs);
+  friend bool operator<(const std::string_view& lhs, const FixedString& rhs);
+  friend bool operator<(const FixedString& lhs, const char* rhs);
+  friend bool operator<(const char* lhs, const FixedString& rhs);
 
   // The FixedStrings must have the same length to be equal
   bool operator==(const FixedString& other) const;
+
+  // Regular comparators that wrap the fixed string into a string_view first
   friend bool operator==(const FixedString& lhs, const std::string& rhs);
   friend bool operator==(const std::string& lhs, const FixedString& rhs);
+  friend bool operator==(const FixedString& lhs, const std::string_view& rhs);
+  friend bool operator==(const std::string_view& lhs, const FixedString& rhs);
+  friend bool operator==(const FixedString& lhs, const char* rhs);
+  friend bool operator==(const char* lhs, const FixedString& rhs);
 
   // Prints FixedString as string
   friend std::ostream& operator<<(std::ostream& os, const FixedString& obj);
@@ -59,8 +75,6 @@ class FixedString {
 
   // Swap two FixedStrings by exchanging the underlying memory's content
   void swap(FixedString& other);
-
-  operator std::string() const;
 
  protected:
   char* const _mem;

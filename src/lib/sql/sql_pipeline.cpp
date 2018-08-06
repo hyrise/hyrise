@@ -6,13 +6,15 @@
 #include <utility>
 
 #include "SQLParser.h"
+#include "create_sql_parser_error_message.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
 
 SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionContext> transaction_context,
                          const UseMvcc use_mvcc, const std::shared_ptr<LQPTranslator>& lqp_translator,
-                         const std::shared_ptr<Optimizer>& optimizer, const PreparedStatementCache& prepared_statements,
+                         const std::shared_ptr<Optimizer>& optimizer,
+                         const std::shared_ptr<PreparedStatementCache>& prepared_statements,
                          const CleanupTemporaries cleanup_temporaries)
     : _transaction_context(transaction_context), _optimizer(optimizer) {
   DebugAssert(!_transaction_context || _transaction_context->phase() == TransactionPhase::Active,
@@ -28,9 +30,9 @@ SQLPipeline::SQLPipeline(const std::string& sql, std::shared_ptr<TransactionCont
   const auto done = std::chrono::high_resolution_clock::now();
   _metrics.parse_time_micros = std::chrono::duration_cast<std::chrono::microseconds>(done - start);
 
-  AssertInput(parse_result.isValid(), SQLPipelineStatement::create_parse_error_message(sql, parse_result));
-
+  AssertInput(parse_result.isValid(), create_sql_parser_error_message(sql, parse_result));
   DebugAssert(parse_result.size() > 0, "Cannot create empty SQLPipeline.");
+
   _sql_pipeline_statements.reserve(parse_result.size());
 
   std::vector<std::shared_ptr<hsql::SQLParserResult>> parsed_statements;
@@ -181,22 +183,32 @@ const std::vector<std::vector<std::shared_ptr<OperatorTask>>>& SQLPipeline::get_
 }
 
 std::shared_ptr<const Table> SQLPipeline::get_result_table() {
+  const auto& tables = get_result_tables();
+  Assert(!tables.empty(), "No result tables");
+  return tables.back();
+}
+
+const std::vector<std::shared_ptr<const Table>>& SQLPipeline::get_result_tables() {
   if (_pipeline_was_executed) {
-    return _result_table;
+    return _result_tables;
   }
+
+  _result_tables.reserve(_sql_pipeline_statements.size());
 
   for (auto& pipeline_statement : _sql_pipeline_statements) {
     pipeline_statement->get_result_table();
     if (_transaction_context && _transaction_context->aborted()) {
       _failed_pipeline_statement = pipeline_statement;
-      return nullptr;
+      _result_tables.clear();
+      return _result_tables;
     }
+
+    _result_tables.emplace_back(pipeline_statement->get_result_table());
   }
 
-  _result_table = _sql_pipeline_statements.back()->get_result_table();
   _pipeline_was_executed = true;
 
-  return _result_table;
+  return _result_tables;
 }
 
 std::shared_ptr<TransactionContext> SQLPipeline::transaction_context() const { return _transaction_context; }

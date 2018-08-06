@@ -29,12 +29,12 @@ class ServerSessionImpl : public std::enable_shared_from_this<ServerSessionImpl<
   boost::future<void> _handle_simple_query_command(const std::string& sql);
   boost::future<void> _handle_parse_command(const ParsePacket& parse_info);
   boost::future<void> _handle_bind_command(const BindPacket& packet);
-  boost::future<void> _handle_describe_command(std::string portal_name);
-  boost::future<void> _handle_execute_command(std::string portal_name);
+  boost::future<void> _handle_describe_command(const std::string& portal_name);
+  boost::future<void> _handle_execute_command(const std::string& portal_name);
   boost::future<void> _handle_sync_command();
   boost::future<void> _handle_flush_command();
 
-  boost::future<void> _send_simple_query_response(std::shared_ptr<SQLPipeline> sql_pipeline);
+  boost::future<void> _send_simple_query_response(const std::shared_ptr<SQLPipeline>& sql_pipeline);
 
   std::shared_ptr<TConnection> _connection;
   std::shared_ptr<TTaskRunner> _task_runner;

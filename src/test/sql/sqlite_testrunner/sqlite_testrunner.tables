@@ -1,5 +1,6 @@
 src/test/tables/sqlite/mixed_types_100.tbl mixed
 src/test/tables/sqlite/mixed_types_null_100.tbl mixed_null
 src/test/tables/sqlite/id_int_int_int_100.tbl id_int_int_int_100
+src/test/tables/sqlite/int_date.tbl int_date
 
 src/test/tables/tpch/sf-0.001/customer.tbl tpch_customer

@@ -25,8 +25,7 @@ TpccTableGenerator::TpccTableGenerator(const ChunkOffset chunk_size, const size_
                                        EncodingConfig encoding_config)
     : AbstractBenchmarkTableGenerator(chunk_size),
       _warehouse_size(warehouse_size),
-      _encoding_config(std::move(encoding_config)),
-      _random_gen(TpccRandomGenerator()) {}
+      _encoding_config(std::move(encoding_config)) {}
 
 std::shared_ptr<Table> TpccTableGenerator::generate_items_table() {
   auto cardinalities = std::make_shared<std::vector<size_t>>(std::initializer_list<size_t>{NUM_ITEMS});
@@ -295,7 +294,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_history_table() {
 }
 
 std::shared_ptr<Table> TpccTableGenerator::generate_order_table(
-    TpccTableGenerator::order_line_counts_type order_line_counts) {
+    const TpccTableGenerator::order_line_counts_type& order_line_counts) {
   auto cardinalities = std::make_shared<std::vector<size_t>>(
       std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS});
 
@@ -394,7 +393,7 @@ void TpccTableGenerator::_add_order_line_column(std::vector<ChunkColumns>& colum
 }
 
 std::shared_ptr<Table> TpccTableGenerator::generate_order_line_table(
-    TpccTableGenerator::order_line_counts_type order_line_counts) {
+    const TpccTableGenerator::order_line_counts_type& order_line_counts) {
   auto cardinalities = std::make_shared<std::vector<size_t>>(
       std::initializer_list<size_t>{_warehouse_size, NUM_DISTRICTS_PER_WAREHOUSE, NUM_ORDERS});
 
@@ -527,7 +526,7 @@ std::shared_ptr<Table> TpccTableGenerator::generate_table(const std::string& tab
   return generators[table_name]();
 }
 
-void TpccTableGenerator::_encode_table(const std::string& table_name, std::shared_ptr<Table> table) {
+void TpccTableGenerator::_encode_table(const std::string& table_name, const std::shared_ptr<Table>& table) {
   BenchmarkTableEncoder::encode(table_name, table, _encoding_config);
 }
 

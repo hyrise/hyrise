@@ -16,8 +16,11 @@
 namespace opossum {
 
 // We need these classes to perform the dynamic cast into a templated ValueColumn
-class AbstractTypedColumnProcessor {
+class AbstractTypedColumnProcessor : public Noncopyable {
  public:
+  AbstractTypedColumnProcessor() = default;
+  AbstractTypedColumnProcessor(const AbstractTypedColumnProcessor&) = delete;
+  AbstractTypedColumnProcessor& operator=(const AbstractTypedColumnProcessor&) = delete;
   virtual ~AbstractTypedColumnProcessor() = default;
   virtual void resize_vector(std::shared_ptr<BaseColumn> column, size_t new_size) = 0;
   virtual void copy_data(std::shared_ptr<const BaseColumn> source, size_t source_start_index,
@@ -230,10 +233,12 @@ void Insert::_on_rollback_records() {
   }
 }
 
-std::shared_ptr<AbstractOperator> Insert::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<Insert>(_target_table_name, recreated_input_left);
+std::shared_ptr<AbstractOperator> Insert::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<Insert>(_target_table_name, copied_input_left);
 }
+
+void Insert::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 }  // namespace opossum

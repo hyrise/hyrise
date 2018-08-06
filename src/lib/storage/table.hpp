@@ -99,7 +99,7 @@ class Table : private Noncopyable {
    * Appends an existing chunk to this table.
    * Makes sure the columns in the chunk match with the TableType and the MVCC setting is the same as for the table.
    */
-  void append_chunk(const std::shared_ptr<Chunk> chunk);
+  void append_chunk(const std::shared_ptr<Chunk>& chunk);
 
   // Create and append a Chunk consisting of ValueColumns.
   void append_mutable_chunk();
@@ -113,7 +113,7 @@ class Table : private Noncopyable {
 
   // inserts a row at the end of the table
   // note this is slow and not thread-safe and should be used for testing purposes only
-  void append(std::vector<AllTypeVariant> values);
+  void append(const std::vector<AllTypeVariant>& values);
 
   // returns one materialized value
   // multiversion concurrency control values of chunks are ignored

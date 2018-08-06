@@ -27,7 +27,7 @@ class Insert;
 class Update : public AbstractReadWriteOperator {
  public:
   explicit Update(const std::string& table_to_update_name, const std::shared_ptr<AbstractOperator>& fields_to_update_op,
-                  std::shared_ptr<AbstractOperator> update_values);
+                  const std::shared_ptr<AbstractOperator>& update_values_op);
 
   ~Update();
 
@@ -35,9 +35,10 @@ class Update : public AbstractReadWriteOperator {
 
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  std::shared_ptr<AbstractOperator> _on_deep_copy(
+      const std::shared_ptr<AbstractOperator>& copied_input_left,
+      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
   bool _execution_input_valid(const std::shared_ptr<TransactionContext>& context) const;
 
   // Commit happens in Insert and Delete operators

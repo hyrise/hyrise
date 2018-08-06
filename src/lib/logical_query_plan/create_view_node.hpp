@@ -3,30 +3,30 @@
 #include <string>
 
 #include "abstract_lqp_node.hpp"
+#include "enable_make_for_lqp_node.hpp"
+#include "storage/lqp_view.hpp"
 
 namespace opossum {
 
 /**
  * This node type represents the CREATE VIEW management command.
  */
-class CreateViewNode : public AbstractLQPNode {
+class CreateViewNode : public EnableMakeForLQPNode<CreateViewNode>, public AbstractLQPNode {
  public:
-  explicit CreateViewNode(const std::string& view_name, const std::shared_ptr<const AbstractLQPNode>& lqp);
+  CreateViewNode(const std::string& view_name, const std::shared_ptr<LQPView>& view);
 
   std::string description() const override;
-  const std::vector<std::string>& output_column_names() const override;
-
-  bool shallow_equals(const AbstractLQPNode& rhs) const override;
 
   std::string view_name() const;
-  std::shared_ptr<const AbstractLQPNode> lqp() const;
+  std::shared_ptr<LQPView> view() const;
 
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
+  std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
+  bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
+
+ private:
   const std::string _view_name;
-  const std::shared_ptr<const AbstractLQPNode> _lqp;
+  const std::shared_ptr<LQPView> _view;
 };
 
 }  // namespace opossum

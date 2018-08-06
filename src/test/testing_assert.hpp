@@ -47,12 +47,6 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
 
 // @}
 
-void ASSERT_INNER_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node, PredicateCondition predicate_condition,
-                            const LQPColumnReference& left_column_reference,
-                            const LQPColumnReference& right_column_reference);
-
-void ASSERT_CROSS_JOIN_NODE(const std::shared_ptr<AbstractLQPNode>& node);
-
 bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& output, LQPInputSide input_side,
                    const std::shared_ptr<const AbstractLQPNode>& input);
 
@@ -94,48 +88,26 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
   EXPECT_TABLE_EQ(opossum_table, expected_table, OrderSensitivity::Yes, TypeCmpMode::Strict, \
                   FloatComparisonMode::AbsoluteDifference)
 
-/**
- * Checks whether test_value differs at max `reference_value * rel_error` from reference_value.
- */
-#define EXPECT_REL_NEAR(test_value, reference_value, rel_error) \
-  EXPECT_NEAR(test_value, reference_value, std::fabs(reference_value* rel_error))
-
-/**
- * Assert that a LQP `node` is a StoredTableNode referring to Table `table_name`
- */
-#define ASSERT_STORED_TABLE_NODE(node, actual_table_name) \
-  ASSERT_EQ(node->type(), LQPNodeType::StoredTable);      \
-  ASSERT_EQ(std::dynamic_pointer_cast<const StoredTableNode>(node)->table_name(), actual_table_name);
-
-/**
- * Assert that the `expression` is a Column Expression referring to `actual_column_id`
- */
-#define ASSERT_COLUMN_EXPRESSION(expression, actual_column_reference) \
-  ASSERT_EQ(expression->type(), ExpressionType::Column);              \
-  ASSERT_EQ(expression->column_reference(), actual_column_reference);
-
-/**
- * Assert that `expression` models an Aggregate Function operating on `actual_column_id`
- */
-#define ASSERT_AGGREGATE_FUNCTION_EXPRESSION(expression, actual_aggregate_function, actual_column_reference) \
-  ASSERT_EQ(expression->type(), ExpressionType::Function);                                                   \
-  ASSERT_EQ(expression->aggregate_function(), actual_aggregate_function);                                    \
-  ASSERT_EQ(expression->aggregate_function_arguments().size(), 1u);                                          \
-  ASSERT_EQ(expression->aggregate_function_arguments()[0]->type(), ExpressionType::Column);                  \
-  ASSERT_EQ(expression->aggregate_function_arguments()[0]->column_reference(), actual_column_reference);
-
 #define ASSERT_LQP_TIE(output, input_side, input) \
   if (!opossum::check_lqp_tie(output, input_side, input)) FAIL();
 
-#define EXPECT_LQP_EQ(lhs, rhs)                                  \
-  {                                                              \
-    const auto mismatch = lhs->find_first_subplan_mismatch(rhs); \
-    if (mismatch) {                                              \
-      std::cout << "Differing subtrees" << std::endl;            \
-      mismatch->first->print();                                  \
-      std::cout << std::endl;                                    \
-      mismatch->second->print();                                 \
-      std::cout << std::endl;                                    \
-      GTEST_FAIL();                                              \
-    }                                                            \
+#define EXPECT_LQP_EQ(lhs, rhs)                                             \
+  {                                                                         \
+    const auto mismatch = lqp_find_subplan_mismatch(lhs, rhs);              \
+    if (mismatch) {                                                         \
+      std::cout << "Differing subtrees" << std::endl;                       \
+      std::cout << "-------------- Actual LQP --------------" << std::endl; \
+      if (mismatch->first)                                                  \
+        mismatch->first->print();                                           \
+      else                                                                  \
+        std::cout << "NULL" << std::endl;                                   \
+      std::cout << std::endl;                                               \
+      std::cout << "------------- Expected LQP -------------" << std::endl; \
+      if (mismatch->second)                                                 \
+        mismatch->second->print();                                          \
+      else                                                                  \
+        std::cout << "NULL" << std::endl;                                   \
+      std::cout << "-------------..............-------------" << std::endl; \
+      GTEST_FAIL();                                                         \
+    }                                                                       \
   }
