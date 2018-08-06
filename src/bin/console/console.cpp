@@ -2,9 +2,10 @@
 
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
+#include <readline/history.h>
+#include <readline/readline.h>
+#include <sys/stat.h>
 
-// clang-format off
-// (because it likes to mess up the order of readline)
 #include <chrono>
 #include <csetjmp>
 #include <csignal>
@@ -13,13 +14,9 @@
 #include <iomanip>
 #include <iostream>
 #include <memory>
-#include <readline/history.h>
-#include <readline/readline.h>
 #include <regex>
 #include <string>
-#include <sys/stat.h>
 #include <vector>
-// clang-format on
 
 #include "SQLParser.h"
 #include "benchmark_utils.hpp"
