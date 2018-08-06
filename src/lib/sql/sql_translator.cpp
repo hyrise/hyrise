@@ -936,7 +936,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
 
       switch (logical_expression->logical_operator) {
         case LogicalOperator::And: {
-          current_node = _translate_predicate_expression(logical_expression->right_operand(), current_node, or_translation_mode);
+          current_node =
+              _translate_predicate_expression(logical_expression->right_operand(), current_node, or_translation_mode);
           return _translate_predicate_expression(logical_expression->left_operand(), current_node, or_translation_mode);
         }
         case LogicalOperator::Or: {
