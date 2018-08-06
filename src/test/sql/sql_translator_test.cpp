@@ -1275,6 +1275,25 @@ TEST_F(SQLTranslatorTest, DeleteConditional) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(SQLTranslatorTest, DeleteConditionalWithOr) {
+  const auto actual_lqp = compile_query("DELETE FROM int_float WHERE a > 5 OR b < 3 OR a = 4");
+
+  // clang-format off
+  const auto expected_lqp =
+  DeleteNode::make("int_float",
+    UnionNode::make(UnionMode::Positions,
+      UnionNode::make(UnionMode::Positions,
+        PredicateNode::make(greater_than_(int_float_a, 5),
+          stored_table_node_int_float),
+        PredicateNode::make(less_than_(int_float_b, 3),
+          stored_table_node_int_float)),
+      PredicateNode::make(equals_(int_float_a, 4),
+        stored_table_node_int_float)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(SQLTranslatorTest, UpdateConditional) {
   const auto actual_lqp = compile_query("UPDATE int_float SET b = 3.2 WHERE a > 1;");
 
@@ -1283,6 +1302,26 @@ TEST_F(SQLTranslatorTest, UpdateConditional) {
   UpdateNode::make("int_float", expression_vector(int_float_a, 3.2f),
     PredicateNode::make(greater_than_(int_float_a, 1),
       stored_table_node_int_float));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, UpdateComplexConditional) {
+  const auto actual_lqp = compile_query("UPDATE int_float SET b = 3.2 WHERE a > 1 AND (a < 100 OR (b = 5 OR b = 6));");
+
+  // clang-format off
+  const auto expected_lqp =
+  UpdateNode::make("int_float", expression_vector(int_float_a, 3.2f),
+    PredicateNode::make(greater_than_(int_float_a, 1),
+      UnionNode::make(UnionMode::Positions,
+        PredicateNode::make(less_than_(int_float_a, 100),
+          stored_table_node_int_float),
+        UnionNode::make(UnionMode::Positions,
+          PredicateNode::make(equals_(int_float_b, 5),
+            stored_table_node_int_float),
+          PredicateNode::make(equals_(int_float_b, 6),
+            stored_table_node_int_float)))));
   // clang-format on
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
