@@ -166,7 +166,7 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
 
     // Set corresponding bit in bitmap to 1 if the value is a NullValue
     if (!has_content) {
-      entry.data[null_bitmap_pos] |= 1u << bit_pos;
+      entry.data[null_bitmap_pos] |= 0b00000001 << bit_pos;
     }
 
     // Increase bit_pos for next value and increase null_bitmap_pos every eigth values to adress the next byte
