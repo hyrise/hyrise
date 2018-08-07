@@ -537,7 +537,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
       // Avoid empty jobs for inner equi joins
       if (_mode == JoinMode::Inner && _op == PredicateCondition::Equals) {
-        if ((*_sorted_left_table)[cluster_number]->size() == 0 || (*_sorted_right_table)[cluster_number]->size() == 0) {
+        if ((*_sorted_left_table)[cluster_number]->empty() || (*_sorted_right_table)[cluster_number]->empty()) {
           continue;
         }
       }

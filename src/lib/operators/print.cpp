@@ -28,13 +28,13 @@ std::shared_ptr<AbstractOperator> Print::_on_deep_copy(
 
 void Print::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-void Print::print(std::shared_ptr<const Table> table, uint32_t flags, std::ostream& out) {
+void Print::print(const std::shared_ptr<const Table>& table, uint32_t flags, std::ostream& out) {
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
   Print(table_wrapper, out, flags).execute();
 }
 
-void Print::print(std::shared_ptr<const AbstractOperator> in, uint32_t flags, std::ostream& out) {
+void Print::print(const std::shared_ptr<const AbstractOperator>& in, uint32_t flags, std::ostream& out) {
   Print(in, out, flags).execute();
 }
 
@@ -87,7 +87,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
       }
 
       if (_flags & PrintMvcc && chunk->has_mvcc_columns()) {
-        auto mvcc_columns = chunk->mvcc_columns();
+        auto mvcc_columns = chunk->get_scoped_mvcc_columns_lock();
 
         auto begin = mvcc_columns->begin_cids[row];
         auto end = mvcc_columns->end_cids[row];

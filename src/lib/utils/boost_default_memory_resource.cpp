@@ -11,18 +11,18 @@ namespace pmr {
 
 class default_resource_impl : public memory_resource {  // NOLINT
  public:
-  virtual void* do_allocate(std::size_t bytes, std::size_t alignment) { return std::malloc(bytes); }
+  void* do_allocate(std::size_t bytes, std::size_t alignment) override { return std::malloc(bytes); }  // NOLINT
 
-  virtual void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) { std::free(p); }
+  void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override { std::free(p); }  // NOLINT
 
-  virtual bool do_is_equal(const memory_resource& other) const BOOST_NOEXCEPT { return &other == this; }
+  bool do_is_equal(const memory_resource& other) const BOOST_NOEXCEPT override { return &other == this; }
 };
 
 memory_resource* get_default_resource() BOOST_NOEXCEPT {
   // Yes, this leaks. We have had SO many problems with the default memory resource going out of scope
   // before the other things were cleaned up that we decided to live with the leak, rather than
   // running into races over and over again.
-  static default_resource_impl* default_resource_instance = new default_resource_impl();
+  static auto* default_resource_instance = new default_resource_impl();
   return default_resource_instance;
 }
 

@@ -17,9 +17,9 @@
 
 namespace opossum {
 
-Chunk::Chunk(const ChunkColumns& columns, std::shared_ptr<MvccColumns> mvcc_columns,
+Chunk::Chunk(const ChunkColumns& columns, const std::shared_ptr<MvccColumns>& mvcc_columns,
              const std::optional<PolymorphicAllocator<Chunk>>& alloc,
-             const std::shared_ptr<ChunkAccessCounter> access_counter)
+             const std::shared_ptr<ChunkAccessCounter>& access_counter)
     : _columns(columns), _mvcc_columns(mvcc_columns), _access_counter(access_counter) {
 #if IS_DEBUG
   const auto chunk_size = columns.empty() ? 0u : columns[0]->size();
@@ -36,7 +36,7 @@ bool Chunk::is_mutable() const { return _is_mutable; }
 
 void Chunk::mark_immutable() { _is_mutable = false; }
 
-void Chunk::replace_column(size_t column_id, std::shared_ptr<BaseColumn> column) {
+void Chunk::replace_column(size_t column_id, const std::shared_ptr<BaseColumn>& column) {
   std::atomic_store(&_columns.at(column_id), column);
 }
 
@@ -44,7 +44,7 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
   DebugAssert(is_mutable(), "Can't append to immutable Chunk");
 
   // Do this first to ensure that the first thing to exist in a row are the MVCC columns.
-  if (has_mvcc_columns()) mvcc_columns()->grow_by(1u, MvccColumns::MAX_COMMIT_ID);
+  if (has_mvcc_columns()) get_scoped_mvcc_columns_lock()->grow_by(1u, MvccColumns::MAX_COMMIT_ID);
 
   // The added values, i.e., a new row, must have the same number of attributes as the table.
   DebugAssert((_columns.size() == values.size()),
@@ -58,12 +58,7 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
   }
 }
 
-std::shared_ptr<BaseColumn> Chunk::get_mutable_column(ColumnID column_id) const {
-  Assert(is_mutable(), "Cannot get mutable column from immutable chunk.");
-  return std::atomic_load(&_columns.at(column_id));
-}
-
-std::shared_ptr<const BaseColumn> Chunk::get_column(ColumnID column_id) const {
+std::shared_ptr<BaseColumn> Chunk::get_column(ColumnID column_id) const {
   return std::atomic_load(&_columns.at(column_id));
 }
 
@@ -80,17 +75,21 @@ uint32_t Chunk::size() const {
 bool Chunk::has_mvcc_columns() const { return _mvcc_columns != nullptr; }
 bool Chunk::has_access_counter() const { return _access_counter != nullptr; }
 
-SharedScopedLockingPtr<MvccColumns> Chunk::mvcc_columns() {
+SharedScopedLockingPtr<MvccColumns> Chunk::get_scoped_mvcc_columns_lock() {
   DebugAssert((has_mvcc_columns()), "Chunk does not have mvcc columns");
 
   return {*_mvcc_columns, _mvcc_columns->_mutex};
 }
 
-SharedScopedLockingPtr<const MvccColumns> Chunk::mvcc_columns() const {
+SharedScopedLockingPtr<const MvccColumns> Chunk::get_scoped_mvcc_columns_lock() const {
   DebugAssert((has_mvcc_columns()), "Chunk does not have mvcc columns");
 
   return {*_mvcc_columns, _mvcc_columns->_mutex};
 }
+
+std::shared_ptr<MvccColumns> Chunk::mvcc_columns() const { return _mvcc_columns; }
+
+void Chunk::set_mvcc_columns(const std::shared_ptr<MvccColumns>& mvcc_columns) { _mvcc_columns = mvcc_columns; }
 
 std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(
     const std::vector<std::shared_ptr<const BaseColumn>>& columns) const {
@@ -100,7 +99,7 @@ std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(
   return result;
 }
 
-std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(const std::vector<ColumnID> column_ids) const {
+std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(const std::vector<ColumnID>& column_ids) const {
   auto columns = _get_columns_for_ids(column_ids);
   return get_indices(columns);
 }
@@ -115,12 +114,12 @@ std::shared_ptr<BaseIndex> Chunk::get_index(const ColumnIndexType index_type,
 }
 
 std::shared_ptr<BaseIndex> Chunk::get_index(const ColumnIndexType index_type,
-                                            const std::vector<ColumnID> column_ids) const {
+                                            const std::vector<ColumnID>& column_ids) const {
   auto columns = _get_columns_for_ids(column_ids);
   return get_index(index_type, columns);
 }
 
-void Chunk::remove_index(std::shared_ptr<BaseIndex> index) {
+void Chunk::remove_index(const std::shared_ptr<BaseIndex>& index) {
   auto it = std::find(_indices.cbegin(), _indices.cend(), index);
   DebugAssert(it != _indices.cend(), "Trying to remove a non-existing index");
   _indices.erase(it);
@@ -148,14 +147,14 @@ bool Chunk::references_exactly_one_table() const {
 
 void Chunk::migrate(boost::container::pmr::memory_resource* memory_source) {
   // Migrating chunks with indices is not implemented yet.
-  if (_indices.size() > 0) {
+  if (!_indices.empty()) {
     Fail("Cannot migrate Chunk with Indices.");
   }
 
   _alloc = PolymorphicAllocator<size_t>(memory_source);
   ChunkColumns new_columns(_alloc);
-  for (size_t i = 0; i < _columns.size(); i++) {
-    new_columns.push_back(_columns.at(i)->copy_using_allocator(_alloc));
+  for (const auto& column : _columns) {
+    new_columns.push_back(column->copy_using_allocator(_alloc));
   }
   _columns = std::move(new_columns);
 }
@@ -200,7 +199,7 @@ std::vector<std::shared_ptr<const BaseColumn>> Chunk::_get_columns_for_ids(
 
 std::shared_ptr<ChunkStatistics> Chunk::statistics() const { return _statistics; }
 
-void Chunk::set_statistics(std::shared_ptr<ChunkStatistics> chunk_statistics) {
+void Chunk::set_statistics(const std::shared_ptr<ChunkStatistics>& chunk_statistics) {
   Assert(!is_mutable(), "Cannot set statistics on mutable chunks.");
   DebugAssert(chunk_statistics->statistics().size() == column_count(),
               "ChunkStatistics must have same column amount as Chunk");

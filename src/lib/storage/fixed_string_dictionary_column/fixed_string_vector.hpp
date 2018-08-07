@@ -45,17 +45,16 @@ class FixedStringVector {
   const std::string get_string_at(const size_t value_id) const;
 
   // Make the FixedStringVector of FixedStrings iterable in different ways
-  FixedStringIterator begin() noexcept;
-  FixedStringIterator end() noexcept;
-  FixedStringIterator begin() const noexcept;
-  FixedStringIterator end() const noexcept;
+  FixedStringIterator<false> begin() noexcept;
+  FixedStringIterator<false> end() noexcept;
+  FixedStringIterator<true> begin() const noexcept;
+  FixedStringIterator<true> end() const noexcept;
+  FixedStringIterator<true> cbegin() const noexcept;
+  FixedStringIterator<true> cend() const noexcept;
 
-  FixedStringIterator cbegin() const noexcept;
-  FixedStringIterator cend() const noexcept;
-
-  typedef boost::reverse_iterator<FixedStringIterator> reverse_iterator;
-  reverse_iterator rbegin() noexcept;
-  reverse_iterator rend() noexcept;
+  using ReverseIterator = boost::reverse_iterator<FixedStringIterator<false>>;
+  ReverseIterator rbegin() noexcept;
+  ReverseIterator rend() noexcept;
 
   // Return a pointer to the underlying memory
   char* data();
@@ -70,7 +69,7 @@ class FixedStringVector {
   void reserve(const size_t n);
 
   // Remove elements from the vector
-  void erase(const FixedStringIterator start, const FixedStringIterator end);
+  void erase(const FixedStringIterator<false> start, const FixedStringIterator<false> end);
 
   // Reduce capacity to fit its size
   void shrink_to_fit();

@@ -46,7 +46,7 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
   chunk->set_statistics(std::make_shared<ChunkStatistics>(column_statistics));
 
   if (chunk->has_mvcc_columns()) {
-    chunk->mvcc_columns()->shrink();
+    chunk->get_scoped_mvcc_columns_lock()->shrink();
   }
 }
 
@@ -64,7 +64,7 @@ void ChunkEncoder::encode_chunks(const std::shared_ptr<Table>& table, const std:
     Assert(chunk_id < table->chunk_count(), "Chunk with given ID does not exist.");
 
     auto chunk = table->get_chunk(chunk_id);
-    const auto chunk_encoding_spec = chunk_encoding_specs.at(chunk_id);
+    const auto& chunk_encoding_spec = chunk_encoding_specs.at(chunk_id);
 
     encode_chunk(chunk, data_types, chunk_encoding_spec);
   }

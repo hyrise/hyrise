@@ -101,6 +101,8 @@ set(
     logical_query_plan/alias_node.hpp
     logical_query_plan/aggregate_node.cpp
     logical_query_plan/aggregate_node.hpp
+    logical_query_plan/base_non_query_node.hpp
+    logical_query_plan/base_non_query_node.cpp
     logical_query_plan/create_view_node.cpp
     logical_query_plan/create_view_node.hpp
     logical_query_plan/delete_node.cpp
@@ -177,14 +179,13 @@ set(
     operators/index_scan.hpp
     operators/insert.cpp
     operators/insert.hpp
-#    operators/jit_operator/jit_operations.hpp
-#    operators/jit_operator/jit_types.cpp
-#    operators/jit_operator/jit_types.hpp
     operators/join_hash.cpp
     operators/join_hash/hash_traits.hpp
     operators/join_hash.hpp
     operators/join_index.cpp
     operators/join_index.hpp
+    operators/join_mpsm/column_materializer_numa.hpp
+    operators/join_mpsm/radix_cluster_sort_numa.hpp
     operators/join_mpsm.cpp
     operators/join_mpsm.hpp
     operators/join_nested_loop.cpp
@@ -252,6 +253,8 @@ set(
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
     optimizer/strategy/abstract_rule.hpp
+    optimizer/strategy/column_pruning_rule.cpp
+    optimizer/strategy/column_pruning_rule.hpp
     optimizer/strategy/chunk_pruning_rule.cpp
     optimizer/strategy/chunk_pruning_rule.hpp
     optimizer/strategy/constant_calculation_rule.cpp
@@ -381,7 +384,6 @@ set(
     storage/fixed_string_dictionary_column/fixed_string.hpp
     storage/fixed_string_dictionary_column/fixed_string_vector.cpp
     storage/fixed_string_dictionary_column/fixed_string_vector.hpp
-    storage/fixed_string_dictionary_column/fixed_string_vector_iterator.cpp
     storage/fixed_string_dictionary_column/fixed_string_vector_iterator.hpp
     storage/frame_of_reference_column.cpp
     storage/frame_of_reference_column.hpp
@@ -486,6 +488,7 @@ set(
     types.cpp
     types.hpp
     uid_allocator.hpp
+    utils/aligned_size.hpp
     utils/assert.hpp
     utils/boost_default_memory_resource.cpp
     utils/copyable_atomic.hpp
@@ -496,6 +499,7 @@ set(
     utils/format_bytes.hpp
     utils/format_duration.cpp
     utils/format_duration.hpp
+    utils/invalid_input_exception.hpp
     utils/load_table.cpp
     utils/load_table.hpp
     utils/murmur_hash.cpp
@@ -518,6 +522,7 @@ set(
     LIBRARIES
     pthread
     sqlparser
+    boost_container
     ${TBB_LIBRARY}
 )
 

@@ -75,7 +75,7 @@ class JitVariantVector {
   template <typename T>
   T get(const size_t index) const;
   template <typename T>
-  void set(const size_t index, const T value);
+  void set(const size_t index, const T& value);
   bool is_null(const size_t index);
   void set_is_null(const size_t index, const bool is_null);
 

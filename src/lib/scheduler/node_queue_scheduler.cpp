@@ -117,6 +117,6 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
               "preferred_node_id is not within range of available nodes");
 
   auto queue = _queues[preferred_node_id];
-  queue->push(std::move(task), static_cast<uint32_t>(priority));
+  queue->push(task, static_cast<uint32_t>(priority));
 }
 }  // namespace opossum

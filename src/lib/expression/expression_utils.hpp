@@ -106,7 +106,10 @@ void visit_expression(Expression& expression, Visitor visitor) {
 DataType expression_common_type(const DataType lhs, const DataType rhs);
 
 /**
- * @return Whether the expression only references expressions/columns that the specified LQP outputs
+ * @return Checks whether the expression can be evaluated by the ExpressionEvaluator on top of a specified LQP (i.e.,
+ *         all required LQPColumnExpressions are available from this LQP).
+ *         To check if an expression is available in a form ready to be used by a scan/join,
+ *         use `Operator*Predicate::from_expression(...) != nullptr`.
  */
 bool expression_evaluable_on_lqp(const std::shared_ptr<AbstractExpression>& expression, const AbstractLQPNode& lqp);
 
@@ -128,9 +131,9 @@ void expressions_set_parameters(const std::vector<std::shared_ptr<AbstractExpres
  * Traverse the expression(s) for subselects and set the transaction context in them
  */
 void expression_set_transaction_context(const std::shared_ptr<AbstractExpression>& expression,
-                                        std::weak_ptr<TransactionContext> transaction_context);
+                                        const std::weak_ptr<TransactionContext>& transaction_context);
 void expressions_set_transaction_context(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
-                                         std::weak_ptr<TransactionContext> transaction_context);
+                                         const std::weak_ptr<TransactionContext>& transaction_context);
 
 bool expression_contains_placeholders(const std::shared_ptr<AbstractExpression>& expression);
 

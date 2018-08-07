@@ -13,6 +13,19 @@ namespace opossum {
 
 std::string PredicatePushdownRule::name() const { return "Predicate Pushdown Rule"; }
 
+namespace {
+// Pushes `node` under `push_below`.
+void push_down(const std::shared_ptr<AbstractLQPNode>& node, std::shared_ptr<AbstractLQPNode> push_below) {
+  DebugAssert(node->left_input() && !node->right_input(), "This helper can only push down if there is a single input");
+
+  lqp_remove_node(node);
+  const auto previous_left_input = push_below->left_input();
+
+  push_below->set_left_input(node);
+  node->set_left_input(previous_left_input);
+}
+}  // namespace
+
 bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   if (node->type != LQPNodeType::Predicate) return _apply_to_inputs(node);
 
@@ -20,19 +33,25 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
   const auto outputs = node->outputs();
   if (outputs.empty() || outputs.size() > 1) return _apply_to_inputs(node);
 
-  // Find a join node
   const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
 
+  // First, try to push down the predicates that come below. That keeps the predicate order intact.
+  if (_apply_to_inputs(node)) return true;
+
   auto input = node->left_input();
+
   while (input->type == LQPNodeType::Predicate) {
+    // We gave the predicate nodes below us the chance to be pushed down, but they didn't want to. Now we ignore them.
+    // We only move past it if we can get past a non-predicate node.
     input = input->left_input();
   }
 
   if (input->type == LQPNodeType::Join) {
     const auto join_node = std::dynamic_pointer_cast<JoinNode>(input);
 
-    if (join_node->join_mode != JoinMode::Inner && join_node->join_mode != JoinMode::Cross)
+    if (join_node->join_mode != JoinMode::Inner && join_node->join_mode != JoinMode::Cross) {
       return _apply_to_inputs(node);
+    }
 
     const auto move_to_left = expression_evaluable_on_lqp(predicate_node->predicate, *join_node->left_input());
     const auto move_to_right = expression_evaluable_on_lqp(predicate_node->predicate, *join_node->right_input());
@@ -54,17 +73,17 @@ bool PredicatePushdownRule::apply_to(const std::shared_ptr<AbstractLQPNode>& nod
     return true;
 
   } else if (input->type == LQPNodeType::Sort) {
-    // push always down if other node is a sort node
-    const auto sort_node = std::dynamic_pointer_cast<SortNode>(input);
-
-    lqp_remove_node(node);
-    const auto previous_left_input = sort_node->left_input();
-
-    sort_node->set_left_input(node);
-    node->set_left_input(previous_left_input);
-
+    // always push down if other node is a sort node
+    push_down(node, input);
     return true;
+  } else if (input->type == LQPNodeType::Projection) {
+    // push below projection if the projection does not generate the column(s) that we are scanning on
+    if (OperatorScanPredicate::from_expression(*predicate_node->predicate, *input->left_input()) != std::nullopt) {
+      push_down(node, input);
+      return true;
+    }
   }
+
   return false;
 }
 

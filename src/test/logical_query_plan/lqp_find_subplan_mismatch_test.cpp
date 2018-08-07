@@ -148,4 +148,15 @@ TEST_F(LQPFindSubplanMismatchTest, AdditionalNode) {
   EXPECT_EQ(mismatch->second, additional_predicate_node);
 }
 
+TEST_F(LQPFindSubplanMismatchTest, TypeMismatch) {
+  const auto first_node = PredicateNode::make(between(_query_nodes_rhs.table_a_a, int32_t{42}, int32_t{45}));
+  const auto second_node = PredicateNode::make(between(_query_nodes_rhs.table_a_a, int64_t{42}, int64_t{45}));
+
+  first_node->set_left_input(_query_nodes_rhs.stored_table_node_a);
+  second_node->set_left_input(_query_nodes_rhs.stored_table_node_a);
+
+  auto mismatch = lqp_find_subplan_mismatch(first_node, second_node);
+  ASSERT_TRUE(mismatch);
+}
+
 }  // namespace opossum

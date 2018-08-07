@@ -21,7 +21,7 @@ class SQLQueryPlan {
   explicit SQLQueryPlan(CleanupTemporaries cleanup_temporaries);
 
   // Add a new operator tree to the query plan by adding the root operator.
-  void add_tree_by_root(std::shared_ptr<AbstractOperator> op);
+  void add_tree_by_root(const std::shared_ptr<AbstractOperator>& op);
 
   // Append all operator trees from the other plan.
   void append_plan(const SQLQueryPlan& other_plan);
@@ -36,7 +36,7 @@ class SQLQueryPlan {
   SQLQueryPlan deep_copy() const;
 
   // Calls set_transaction_context_recursively on all roots.
-  void set_transaction_context(std::shared_ptr<TransactionContext> context);
+  void set_transaction_context(const std::shared_ptr<TransactionContext>& context);
 
   // Set the parameter ids of the value placeholders
   void set_parameter_ids(const std::unordered_map<ValuePlaceholderID, ParameterID>& parameter_ids);

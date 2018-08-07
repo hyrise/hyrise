@@ -8,7 +8,7 @@
 namespace opossum {
 
 CreateViewNode::CreateViewNode(const std::string& view_name, const std::shared_ptr<LQPView>& view)
-    : AbstractLQPNode(LQPNodeType::CreateView), _view_name(view_name), _view(view) {}
+    : BaseNonQueryNode(LQPNodeType::CreateView), _view_name(view_name), _view(view) {}
 
 std::string CreateViewNode::view_name() const { return _view_name; }
 

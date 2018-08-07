@@ -9,7 +9,7 @@
 namespace opossum {
 
 template <typename DataType>
-BTreeIndexImpl<DataType>::BTreeIndexImpl(std::shared_ptr<const BaseColumn> index_column) {
+BTreeIndexImpl<DataType>::BTreeIndexImpl(const std::shared_ptr<const BaseColumn>& index_column) {
   _bulk_insert(index_column);
 }
 
@@ -59,7 +59,7 @@ uint64_t BTreeIndexImpl<DataType>::memory_consumption() const {
 }
 
 template <typename DataType>
-void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const BaseColumn> column) {
+void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const BaseColumn>& column) {
   std::vector<std::pair<ChunkOffset, DataType>> values;
 
   // Materialize

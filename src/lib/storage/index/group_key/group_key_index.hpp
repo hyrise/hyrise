@@ -51,7 +51,7 @@ class GroupKeyIndex : public BaseIndex {
   GroupKeyIndex(GroupKeyIndex&&) = default;
   GroupKeyIndex& operator=(GroupKeyIndex&&) = default;
 
-  explicit GroupKeyIndex(const std::vector<std::shared_ptr<const BaseColumn>> index_columns);
+  explicit GroupKeyIndex(const std::vector<std::shared_ptr<const BaseColumn>>& index_columns);
 
  private:
   Iterator _lower_bound(const std::vector<AllTypeVariant>& values) const final;

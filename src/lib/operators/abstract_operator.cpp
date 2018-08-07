@@ -151,7 +151,7 @@ void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllT
   if (input_right()) mutable_input_right()->set_parameters(parameters);
 }
 
-void AbstractOperator::_on_set_transaction_context(std::weak_ptr<TransactionContext> transaction_context) {}
+void AbstractOperator::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {}
 
 void AbstractOperator::_on_cleanup() {}
 
