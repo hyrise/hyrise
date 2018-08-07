@@ -2,10 +2,10 @@
 
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
-
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <sys/stat.h>
+
 #include <chrono>
 #include <csetjmp>
 #include <csignal>
@@ -97,15 +97,12 @@ namespace opossum {
 Console::Console()
     : _prompt("> "),
       _multiline_input(""),
-      _history_file(),
-      _commands(),
-      _tpcc_commands(),
       _out(std::cout.rdbuf()),
       _log("console.log", std::ios_base::app | std::ios_base::out),
       _verbose(false) {
   // Init readline basics, tells readline to use our custom command completion function
   rl_attempted_completion_function = &Console::_command_completion;
-  rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");
+  rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");  // NOLINT (legacy API)
 
   // Register default commands to Console
   register_command("exit", std::bind(&Console::_exit, this, std::placeholders::_1));
@@ -126,8 +123,8 @@ Console::Console()
   // Register words specifically for command completion purposes, e.g.
   // for TPC-C table generation, 'CUSTOMER', 'DISTRICT', etc
   auto tpcc_generators = opossum::TpccTableGenerator::table_generator_functions();
-  for (auto it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it) {
-    _tpcc_commands.push_back(it->first);
+  for (const auto& generator : tpcc_generators) {
+    _tpcc_commands.push_back(generator.first);
   }
 
   _prepared_statements = std::make_shared<PreparedStatementCache>(DefaultCacheCapacity);
@@ -162,7 +159,7 @@ int Console::read() {
   }
 
   // Free buffer, since readline() allocates new string every time
-  free(buffer);
+  free(buffer);  // NOLINT (legacy API)
 
   return _eval(input);
 }
@@ -321,7 +318,7 @@ void Console::out(const std::string& output, bool console_print) {
   _log.flush();
 }
 
-void Console::out(std::shared_ptr<const Table> table, uint32_t flags) {
+void Console::out(const std::shared_ptr<const Table>& table, uint32_t flags) {
   int size_y, size_x;
   rl_get_screen_size(&size_y, &size_x);
 
@@ -621,9 +618,9 @@ int Console::_exec_script(const std::string& script_file) {
   std::ifstream script(filepath);
 
   const auto is_regular_file = [](const std::string& path) {
-    struct stat path_stat;
+    struct stat path_stat {};
     stat(path.c_str(), &path_stat);
-    return S_ISREG(path_stat.st_mode);
+    return S_ISREG(path_stat.st_mode);  // NOLINT
   };
 
   if (!script.good()) {
@@ -775,7 +772,7 @@ char* Console::_command_generator(const char* text, int state) {
     auto& command = it->first;
     ++it;
     if (command.find(text) != std::string::npos) {
-      char* completion = new char[command.size()];
+      auto completion = new char[command.size()];  // NOLINT (legacy API)
       snprintf(completion, command.size() + 1, "%s", command.c_str());
       return completion;
     }
@@ -794,7 +791,7 @@ char* Console::_command_generator_tpcc(const char* text, int state) {
     auto& command = *it;
     ++it;
     if (command.find(text) != std::string::npos) {
-      char* completion = new char[command.size()];
+      auto completion = new char[command.size()];  // NOLINT (legacy API)
       snprintf(completion, command.size() + 1, "%s", command.c_str());
       return completion;
     }
