@@ -31,7 +31,7 @@ bool ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) c
   actually_used_columns.insert(output_columns.begin(), output_columns.end());
 
   // Search for ProjectionNodes that forward the unused columns and prune them accordingly
-  _prune_unused_columns_in_projections(root, actually_used_columns);
+  _prune_columns_in_projections(root, actually_used_columns);
 
   // Search the plan for leaf nodes and prune all columns from them that are not referenced
   return _prune_columns_from_leafs(root, actually_used_columns);
@@ -115,8 +115,8 @@ bool ColumnPruningRule::_prune_columns_from_leafs(const std::shared_ptr<Abstract
   return lqp_changed;
 }
 
-void ColumnPruningRule::_prune_unused_columns_in_projections(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                                             const ExpressionUnorderedSet& referenced_columns) {
+void ColumnPruningRule::_prune_columns_in_projections(const std::shared_ptr<AbstractLQPNode> &lqp,
+                                                      const ExpressionUnorderedSet &referenced_columns) {
   /**
    * Prune otherwise unused columns that are forwarded by ProjectionNodes
    */
