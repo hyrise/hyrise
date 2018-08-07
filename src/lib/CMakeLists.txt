@@ -507,6 +507,8 @@ set(
     utils/pausable_loop_thread.hpp
     utils/performance_warning.cpp
     utils/performance_warning.hpp
+    utils/plugin_manager.cpp
+    utils/plugin_manager.hpp
     utils/print_directed_acyclic_graph.hpp
     utils/scoped_locking_ptr.hpp
     utils/string_functions.hpp
