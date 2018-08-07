@@ -404,10 +404,7 @@ int Console::_generate_tpcc(const std::string& tablename) {
 }
 
 int Console::_load_table(const std::string& args) {
-  std::string input = args;
-  boost::algorithm::trim<std::string>(input);
-  std::vector<std::string> arguments;
-  boost::algorithm::split(arguments, input, boost::is_space());
+  std::vector<std::string> arguments = trim_and_split(args);
 
   if (arguments.size() != 2) {
     out("Usage:\n");
@@ -415,8 +412,8 @@ int Console::_load_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  const std::string& filepath = arguments.at(0);
-  const std::string& tablename = arguments.at(1);
+  const std::string& filepath = arguments[0];
+  const std::string& tablename = arguments[1];
 
   std::vector<std::string> file_parts;
   boost::algorithm::split(file_parts, filepath, boost::is_any_of("."));
@@ -457,10 +454,7 @@ int Console::_load_table(const std::string& args) {
 }
 
 int Console::_print_table(const std::string& args) {
-  std::string input = args;
-  boost::algorithm::trim<std::string>(input);
-  std::vector<std::string> arguments;
-  boost::algorithm::split(arguments, input, boost::is_space());
+  std::vector<std::string> arguments = trim_and_split(args);
 
   if (arguments.size() != 1) {
     out("Usage:\n");
