@@ -199,7 +199,7 @@ BenchmarkRunner BenchmarkRunner::create(const BenchmarkConfig& config, const std
     }
 
     config.out << "- Adding table '" << table_name << "'" << std::endl;
-//    BenchmarkTableEncoder::encode(table_name, table, config.encoding_config);
+    BenchmarkTableEncoder::encode(table_name, table, config.encoding_config);
     StorageManager::get().add_table(table_name, table);
   }
 

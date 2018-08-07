@@ -2,6 +2,7 @@
 #include <fstream>
 #include <json.hpp>
 
+#include "calibration_query_generator.hpp"
 #include "cost_model_calibration.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/storage_manager.hpp"
@@ -22,9 +23,11 @@ CostModelCalibration::CostModelCalibration(const nlohmann::json& configuration):
 
 void CostModelCalibration::calibrate() {
   size_t number_of_iterations = _configuration["calibration_runs"];
-  auto queries = _generateQueries(_configuration["table_specifications"]);
 
   for (size_t i = 0; i < number_of_iterations; i++) {
+    // Regenerate Queries for each iteration...
+    auto queries = _generateQueries(_configuration["table_specifications"]);
+
     for (const auto& query : queries) {
       auto pipeline_builder = SQLPipelineBuilder{query};
       pipeline_builder.dont_cleanup_temporaries();
@@ -112,6 +115,13 @@ const std::vector<std::string> CostModelCalibration::_generateQueries(const nloh
 
   for (const auto & table_definition : table_definitions) {
     std::cout << "Using table definition for table " << table_definition["table_name"] << " to generate queries" << std::endl;
+
+    // Generate 'SELECT a, b, c FROM TABLE'
+    queries.push_back(CalibrationQueryGenerator::generate_select_star(table_definition));
+  }
+
+  for (const auto &query : queries) {
+    std::cout << query << std::endl;
   }
 
   return std::vector<std::string> {

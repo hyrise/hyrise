@@ -30,6 +30,9 @@ add_executable(
     hyriseCostModelCalibration
 
     costmodel/cost_model_calibration_main.cpp
+
+    costmodel/calibration_query_generator.cpp
+    costmodel/calibration_query_generator.hpp
     costmodel/cost_model_calibration.cpp
     costmodel/cost_model_calibration.hpp
 )
