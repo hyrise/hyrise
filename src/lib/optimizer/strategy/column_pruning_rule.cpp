@@ -2,7 +2,6 @@
 
 #include <unordered_map>
 
-#include "../../logical_query_plan/lqp_utils.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -21,7 +20,7 @@ namespace opossum {
 
 std::string ColumnPruningRule::name() const { return "Column Pruning Rule"; }
 
-bool ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
+bool ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const {
   // Collect the columns that are used in expressions somewhere in the LQP.
   // This EXCLUDES columns that are merely forwarded by Projections throughout the LQP
   auto actually_used_columns = _collect_actually_used_columns(root);
