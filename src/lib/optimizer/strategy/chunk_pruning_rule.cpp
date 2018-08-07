@@ -18,7 +18,7 @@ namespace opossum {
 
 std::string ChunkPruningRule::name() const { return "Chunk Pruning Rule"; }
 
-bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const {
+bool ChunkPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   // we only want to follow chains of predicates
   if (node->type != LQPNodeType::Predicate) {
     return _apply_to_inputs(node);
