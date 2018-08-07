@@ -38,8 +38,10 @@
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/filesystem.hpp"
+#include "utils/string_functions.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
+#include "utils/plugin_manager.hpp"
 
 #define ANSI_COLOR_RED "\x1B[31m"
 #define ANSI_COLOR_GREEN "\x1B[32m"
@@ -122,6 +124,8 @@ Console::Console()
   register_command("txinfo", std::bind(&Console::_print_transaction_info, this, std::placeholders::_1));
   register_command("pwd", std::bind(&Console::_print_current_working_directory, this, std::placeholders::_1));
   register_command("setting", std::bind(&Console::_change_runtime_setting, this, std::placeholders::_1));
+  register_command("load_plugin", std::bind(&Console::_load_plugin, this, std::placeholders::_1));
+  register_command("stop_plugin", std::bind(&Console::_stop_plugin, this, std::placeholders::_1));
 
   // Register words specifically for command completion purposes, e.g.
   // for TPC-C table generation, 'CUSTOMER', 'DISTRICT', etc
@@ -721,10 +725,44 @@ int Console::_print_transaction_info(const std::string& input) {
   return ReturnCode::Ok;
 }
 
-int Console::_print_current_working_directory(const std::string&) {
+int Console::_print_current_working_directory(const std::string& input) {
   out(filesystem::current_path().string() + "\n");
   return ReturnCode::Ok;
 }
+
+int Console::_load_plugin(const std::string& args) {
+  auto arguments = trim_and_split(args);
+
+  if (arguments.size() != 2) {
+    out("Usage:\n");
+    out("  load_plugin PLUGINPATH PLUGINNAME\n");
+    return ReturnCode::Error;
+  }
+
+  const std::string& plugin_path = arguments[0];
+  const std::string& plugin_name = arguments[1];
+
+  PluginManager::get().load_plugin(plugin_path, plugin_name);
+
+  return ReturnCode::Ok;
+}
+
+int Console::_stop_plugin(const std::string& input) {
+  auto arguments = trim_and_split(input);
+
+  if (arguments.size() != 1) {
+    out("Usage:\n");
+    out("  stop_plugin PLUGINNAME\n");
+    return ReturnCode::Error;
+  }
+
+  const std::string& plugin_name = arguments[0];
+
+  PluginManager::get().stop_plugin(plugin_name);
+
+  return ReturnCode::Ok;
+}
+
 
 // GNU readline interface to our commands
 

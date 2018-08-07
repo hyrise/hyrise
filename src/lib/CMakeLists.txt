@@ -509,6 +509,7 @@ set(
     utils/performance_warning.hpp
     utils/print_directed_acyclic_graph.hpp
     utils/scoped_locking_ptr.hpp
+    utils/string_functions.hpp
     utils/template_type.hpp
     utils/timer.cpp
     utils/timer.hpp
