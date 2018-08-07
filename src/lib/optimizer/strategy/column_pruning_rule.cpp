@@ -2,7 +2,6 @@
 
 #include <unordered_map>
 
-#include "../../logical_query_plan/lqp_utils.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -21,20 +20,20 @@ namespace opossum {
 
 std::string ColumnPruningRule::name() const { return "Column Pruning Rule"; }
 
-bool ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& root) const {
+bool ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const {
   // Collect the columns that are used in expressions somewhere in the LQP.
   // This EXCLUDES columns that are merely forwarded by Projections throughout the LQP
-  auto actually_used_columns = _collect_actually_used_columns(root);
+  auto actually_used_columns = _collect_actually_used_columns(lqp);
 
   // The output columns of the plan are always considered to be referenced (i.e., we cannot prune them)
-  const auto output_columns = root->column_expressions();
+  const auto output_columns = lqp->column_expressions();
   actually_used_columns.insert(output_columns.begin(), output_columns.end());
 
   // Search for ProjectionNodes that forward the unused columns and prune them accordingly
-  _prune_columns_in_projections(root, actually_used_columns);
+  _prune_columns_in_projections(lqp, actually_used_columns);
 
   // Search the plan for leaf nodes and prune all columns from them that are not referenced
-  return _prune_columns_from_leafs(root, actually_used_columns);
+  return _prune_columns_from_leafs(lqp, actually_used_columns);
 }
 
 ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const std::shared_ptr<AbstractLQPNode>& lqp) {
