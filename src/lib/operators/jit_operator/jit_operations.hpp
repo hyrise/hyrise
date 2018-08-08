@@ -71,7 +71,6 @@ namespace opossum {
 /* Arithmetic operators */
 struct JitAddition {
   OPTNONE std::string operator()(const std::string& a, const std::string& b) const { return a + b; }
-
   template <typename T1, typename T2,
             typename = typename std::enable_if_t<std::is_scalar_v<T1> && std::is_scalar_v<T2>>>
   auto operator()(const T1 a, const T2 b) const {

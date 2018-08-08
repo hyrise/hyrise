@@ -62,8 +62,6 @@ const std::unordered_map<LogicalOperator, JitExpressionType> logical_operator_to
 
 namespace opossum {
 
-JitAwareLQPTranslator::JitAwareLQPTranslator() {}
-
 std::shared_ptr<AbstractOperator> JitAwareLQPTranslator::translate_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   // Jit operators materialize their output table and cannot be used in non-select queries
@@ -319,16 +317,6 @@ JitExpressionType JitAwareLQPTranslator::_expression_to_jit_expression_type(cons
     default:
       Fail("Expression "s + expression.as_column_name() + " is jit incompatible");
   }
-}
-
-}  // namespace opossum
-
-#else
-
-namespace opossum {
-
-JitAwareLQPTranslator::JitAwareLQPTranslator() {
-  Fail("Query translation with JIT operators requested, but jitting is not available");
 }
 
 }  // namespace opossum
