@@ -26,9 +26,10 @@ void CostModelCalibration::calibrate() {
 
   for (size_t i = 0; i < number_of_iterations; i++) {
     // Regenerate Queries for each iteration...
-    auto queries = _generateQueries(_configuration["table_specifications"]);
+    auto queries = CalibrationQueryGenerator::generate_queries(_configuration["table_specifications"]);
 
     for (const auto& query : queries) {
+      std::cout << "Running " << query << std::endl;
       auto pipeline_builder = SQLPipelineBuilder{query};
       pipeline_builder.dont_cleanup_temporaries();
       auto pipeline = pipeline_builder.create_pipeline();
@@ -108,43 +109,5 @@ void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOp
     _operators.push_back(operator_result);
   }
 }
-
-const std::vector<std::string> CostModelCalibration::_generateQueries(const nlohmann::json& table_definitions) {
-
-  std::vector<std::string> queries;
-
-  for (const auto & table_definition : table_definitions) {
-    std::cout << "Using table definition for table " << table_definition["table_name"] << " to generate queries" << std::endl;
-
-    // Generate 'SELECT a, b, c FROM TABLE'
-    queries.push_back(CalibrationQueryGenerator::generate_select_star(table_definition));
-  }
-
-  for (const auto &query : queries) {
-    std::cout << query << std::endl;
-  }
-
-  return std::vector<std::string> {
-    "SELECT column_a FROM SomeTable;",
-//            "SELECT column_b FROM SomeTable;",
-//            "SELECT column_c FROM SomeTable;",
-//            "SELECT column_a, column_b, column_c FROM SomeTable;",
-//            "SELECT * FROM SomeTable;",
-            "SELECT column_a, column_b, column_c FROM SomeTable WHERE column_a = 753;",
-            "SELECT column_a, column_b, column_c FROM SomeTable WHERE column_a = 345;",
-            "SELECT column_a, column_b, column_c, column_d FROM SomeTable WHERE column_d = 4;",
-            "SELECT column_a, column_b, column_c, column_d FROM SomeTable WHERE column_d = 7;",
-            "SELECT column_a, column_b, column_c, column_d FROM SomeTable WHERE column_d = 9;",
-            "SELECT column_a, column_b, column_c FROM SomeTable WHERE column_a < 200;",
-            "SELECT column_a, column_b, column_c FROM SomeTable WHERE column_a < 600;",
-            "SELECT column_a, column_b, column_c FROM SomeTable WHERE column_a < 900;",
-            "SELECT column_a, column_b, column_c FROM SomeTable WHERE column_a < 900 AND column_d = 4;",
-            "SELECT column_a, column_b, column_c FROM SomeTable WHERE column_a < 900 AND column_b < 'Bradley Davis';",
-            "SELECT column_b FROM SomeTable WHERE column_b < 'Bradley Davis';",
-            "SELECT column_a FROM SomeSecondTable WHERE column_b = 4"
-//            "SELECT COUNT(*) FROM SomeTable"
-  };
-}
-
 
 }  // namespace opossum

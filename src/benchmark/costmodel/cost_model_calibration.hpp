@@ -16,7 +16,6 @@ public:
     void calibrate();
 
 private:
-    const std::vector<std::string> _generateQueries(const nlohmann::json& table_definitions);
     void _traverse(const std::shared_ptr<const AbstractOperator> & op);
     void _printOperator(const std::shared_ptr<const AbstractOperator> & op);
 
