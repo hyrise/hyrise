@@ -168,7 +168,7 @@ Hashes the given value into the HashedType that is defined by the current Hash T
 Performs a lexical cast first, if necessary.
 */
 template <typename OriginalType, typename HashedType>
-constexpr uint32_t hash_value(OriginalType& value, const unsigned int seed) {
+constexpr uint32_t hash_value(const OriginalType& value, const unsigned int seed) {
   // clang-format off
   // doesn't deal with constexpr nicely
   if constexpr(!std::is_same_v<OriginalType, HashedType>) {
@@ -217,69 +217,43 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
     jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id]() {
       // Get information from work queue
       auto output_offset = chunk_offsets[chunk_id];
+      auto output_iterator = elements->begin() + output_offset;
       auto column = in_table->get_chunk(chunk_id)->get_column(column_id);
-      auto& output = static_cast<Partition<T>&>(*elements);
 
       // prepare histogram
       histograms[chunk_id] = std::make_shared<std::vector<size_t>>(num_partitions);
-
       auto& histogram = static_cast<std::vector<size_t>&>(*histograms[chunk_id]);
 
-      auto materialized_chunk = std::vector<std::pair<RowID, T>>();
-      materialized_chunk.reserve(column->size());  // resize + operator[]== would be slower here
-
-      // Materialize the chunk
       resolve_column_type<T>(*column, [&, chunk_id, keep_nulls](auto& typed_column) {
+        auto reference_column_offset = ChunkID{0};
         auto iterable = create_iterable_from_column<T>(typed_column);
 
         iterable.for_each([&, chunk_id, keep_nulls](const auto& value) {
           if (!value.is_null() || keep_nulls) {
-            materialized_chunk.emplace_back(RowID{chunk_id, value.chunk_offset()}, value.value());
-          } else {
-            // We need to add this to avoid gaps in the list of offsets when we iterate later on
-            materialized_chunk.emplace_back(NULL_ROW_ID, T{});
+            const uint32_t hashed_value = hash_value<T, HashedType>(value.value(), partitioning_seed);
+
+            /*
+            For ReferenceColumns we do not use the RowIDs from the referenced tables.
+            Instead, we use the index in the ReferenceColumn itself. This way we can later correctly dereference
+            values from different inputs (important for Multi Joins).
+            */
+            if constexpr (std::is_same<std::decay<decltype(typed_column)>, ReferenceColumn>::value) {
+              *(output_iterator++) =
+                  PartitionedElement<T>{RowID{chunk_id, reference_column_offset}, hashed_value, value.value()};
+            } else {
+              *(output_iterator++) =
+                  PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, hashed_value, value.value()};
+            }
+
+            const Hash radix = (hashed_value >> (32 - radix_bits * (pass + 1))) & mask;
+            histogram[radix]++;
+          }
+          // reference_column_offset is only used for ReferenceColumns
+          if constexpr (std::is_same<std::decay<decltype(typed_column)>, ReferenceColumn>::value) {
+            reference_column_offset++;
           }
         });
       });
-
-      size_t row_id = output_offset;
-
-      /*
-      For ReferenceColumns we do not use the RowIDs from the referenced tables.
-      Instead, we use the index in the ReferenceColumn itself. This way we can later correctly dereference
-      values from different inputs (important for Multi Joins).
-      For performance reasons this if statement is around the for loop.
-      */
-      if (auto ref_column = std::dynamic_pointer_cast<const ReferenceColumn>(column)) {
-        // hash and add to the other elements
-        ChunkOffset offset = 0;
-        for (auto&& elem : materialized_chunk) {
-          if (elem.first.chunk_offset != INVALID_CHUNK_OFFSET) {
-            uint32_t hashed_value = hash_value<T, HashedType>(elem.second, partitioning_seed);
-            output[row_id] = PartitionedElement<T>{RowID{chunk_id, offset}, hashed_value, elem.second};
-
-            const Hash radix = (output[row_id].partition_hash >> (32 - radix_bits * (pass + 1))) & mask;
-            histogram[radix]++;
-
-            row_id++;
-          }
-
-          offset++;
-        }
-      } else {
-        // hash and add to the other elements
-        for (auto&& elem : materialized_chunk) {
-          if (elem.first.chunk_offset == INVALID_CHUNK_OFFSET) continue;
-
-          uint32_t hashed_value = hash_value<T, HashedType>(elem.second, partitioning_seed);
-          output[row_id] = PartitionedElement<T>{elem.first, hashed_value, elem.second};
-
-          const Hash radix = (output[row_id].partition_hash >> (32 - radix_bits * (pass + 1))) & mask;
-          histogram[radix]++;
-
-          row_id++;
-        }
-      }
     }));
     jobs.back()->schedule();
   }

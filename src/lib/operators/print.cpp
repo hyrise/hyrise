@@ -87,7 +87,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
       }
 
       if (_flags & PrintMvcc && chunk->has_mvcc_columns()) {
-        auto mvcc_columns = chunk->mvcc_columns();
+        auto mvcc_columns = chunk->get_scoped_mvcc_columns_lock();
 
         auto begin = mvcc_columns->begin_cids[row];
         auto end = mvcc_columns->end_cids[row];

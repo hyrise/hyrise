@@ -89,6 +89,7 @@ set(
     statistics/table_statistics_test.cpp
     optimizer/lqp_translator_test.cpp
     optimizer/optimizer_test.cpp
+    optimizer/strategy/column_pruning_rule_test.cpp
     optimizer/strategy/chunk_pruning_test.cpp
     optimizer/strategy/constant_calculation_rule_test.cpp
     optimizer/strategy/index_scan_rule_test.cpp

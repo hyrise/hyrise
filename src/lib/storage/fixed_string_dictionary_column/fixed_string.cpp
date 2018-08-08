@@ -49,6 +49,8 @@ size_t FixedString::maximum_length() const { return _maximum_length; }
 
 std::string FixedString::string() const { return std::string(_mem, strnlen(_mem, _maximum_length)); }
 
+std::string_view FixedString::string_view() const { return std::string_view(_mem, strnlen(_mem, _maximum_length)); }
+
 bool FixedString::operator<(const FixedString& other) const {
   const auto smallest_length = std::min(size(), other.size());
   const auto result = memcmp(_mem, other._mem, smallest_length);
@@ -59,6 +61,14 @@ bool FixedString::operator<(const FixedString& other) const {
 bool operator<(const FixedString& lhs, const std::string& rhs) { return lhs.string() < rhs; }
 
 bool operator<(const std::string& lhs, const FixedString& rhs) { return lhs < rhs.string(); }
+
+bool operator<(const FixedString& lhs, const std::string_view& rhs) { return lhs.string_view() < rhs; }
+
+bool operator<(const std::string_view& lhs, const FixedString& rhs) { return lhs < rhs.string_view(); }
+
+bool operator<(const FixedString& lhs, const char* rhs) { return lhs.string_view() < rhs; }
+
+bool operator<(const char* lhs, const FixedString& rhs) { return lhs < rhs.string_view(); }
 
 bool FixedString::operator==(const FixedString& other) const {
   if (size() != other.size()) return false;
@@ -79,6 +89,12 @@ bool operator==(const FixedString& lhs, const std::string& rhs) { return lhs.str
 
 bool operator==(const std::string& lhs, const FixedString& rhs) { return lhs == rhs.string(); }
 
-FixedString::operator std::string() const { return string(); }
+bool operator==(const FixedString& lhs, const std::string_view& rhs) { return lhs.string_view() == rhs; }
+
+bool operator==(const std::string_view& lhs, const FixedString& rhs) { return lhs == rhs.string_view(); }
+
+bool operator==(const FixedString& lhs, const char* rhs) { return lhs.string_view() == rhs; }
+
+bool operator==(const char* lhs, const FixedString& rhs) { return lhs == rhs.string_view(); }
 
 }  // namespace opossum
