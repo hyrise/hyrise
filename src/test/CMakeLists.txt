@@ -152,6 +152,7 @@ set(
     utils/format_bytes_test.cpp
     utils/format_duration_test.cpp
     utils/numa_memory_resource_test.cpp
+    utils/plugin_manager_test.cpp
     gtest_case_template.cpp
     gtest_main.cpp
 )
@@ -243,6 +244,7 @@ set(
     ${FILESYSTEM_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
+    ${CMAKE_DL_LIBS}
 )
 
 # Build special sanitizer version of googletest
@@ -250,8 +252,18 @@ include_directories(../../third_party/googletest/googletest/)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
+# Configure TestPlugin
+add_library(TestPlugin SHARED
+    utils/test_plugin.cpp
+)
+target_link_libraries(TestPlugin hyrise ${LIBRARIES})
+
+# We define LIB_DIR to always load the TestPlugin from the correct directory for testing purposes
+add_definitions(-DLIB_DIR="${CMAKE_BINARY_DIR}/lib/")
+
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
+add_dependencies(hyriseTest TestPlugin)
 target_link_libraries(hyriseTest hyrise hyriseBenchmarkLib ${LIBRARIES})
 
 # Configure hyriseSystemTest

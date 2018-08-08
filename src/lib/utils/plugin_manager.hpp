@@ -3,14 +3,11 @@
 #include <unordered_map>
 
 #include "types.hpp"
-#include "/Users/jan/Desktop/hyrise-plugins/src/AbstractPlugin.hpp"
+#include "utils/abstract_plugin.hpp"
 
 
 namespace opossum {
 
-// class AbstractPlugin;
-
-// TODO: Find name
 struct PluginHandleWrapper {
   PluginHandle handle;
   AbstractPlugin* plugin;
@@ -19,6 +16,8 @@ struct PluginHandleWrapper {
 using PluginName = std::string;
 
 class PluginManager : private Noncopyable {
+  friend class PluginManagerTest;
+
  public: 
   static PluginManager& get();
 
