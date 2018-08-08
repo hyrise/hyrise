@@ -33,6 +33,7 @@ AbstractLogger& Logger::getInstance() {
     case Implementation::No: { static NoLogger instance; return instance; }
     case Implementation::Simple: { static SimpleLogger instance; return instance; }
     case Implementation::GroupCommit: { static GroupCommitLogger instance; return instance; }
+    default: {DebugAssert(false, "Logger: no implementation set."); static NoLogger instance; return instance;}
   }
 }
 
