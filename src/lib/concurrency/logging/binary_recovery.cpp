@@ -143,11 +143,10 @@ void BinaryRecovery::recover() {
         bit_pos = (bit_pos + 1) % 8;
         if (bit_pos == 0) {
           ++bitmap_index;
-        };
+        }
       }
 
       transactions.emplace_back(LoggedItem(LogType::Value, transaction_id, table_name, row_id, values));
-
     }  // while not end of file
   }    // for every logfile
 

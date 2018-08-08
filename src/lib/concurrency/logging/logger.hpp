@@ -58,8 +58,8 @@ class Logger {
   static void _create_directories();
   static u_int32_t _get_latest_log_number();
 
-  static std::string _data_path;
   // linter wants these to be char[], but then we loose operator+ of strings
+  static std::string _data_path;
   static std::string _log_path;
   static const std::string _log_folder;
   static const std::string _filename;

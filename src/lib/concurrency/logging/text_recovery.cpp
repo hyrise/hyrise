@@ -139,7 +139,6 @@ void TextRecovery::recover() {
       }
 
       transactions.emplace_back(LoggedItem(LogType::Value, transaction_id, table_name, row_id, values));
-
     }  // while there is a line
   }    // for every logfile
 

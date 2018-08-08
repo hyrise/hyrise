@@ -1,10 +1,9 @@
 #pragma once
 
-#include "abstract_logger.hpp"
-
 #include <fstream>
 #include <mutex>
 
+#include "abstract_logger.hpp"
 #include "../../utils/loop_thread.hpp"
 #include "types.hpp"
 

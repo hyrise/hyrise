@@ -1,8 +1,8 @@
 #pragma once
 
-#include "abstract_recovery.hpp"
-
 #include <fstream>
+
+#include "abstract_recovery.hpp"
 
 namespace opossum {
 

@@ -78,7 +78,7 @@ class LogEntry {
   uint32_t cursor{0};
   std::vector<char> data;
 
-  LogEntry(uint32_t count) { data.resize(count); }
+  explicit LogEntry(uint32_t count) { data.resize(count); }
 
   template <typename T>
   LogEntry& operator<<(const T& value) {
@@ -112,7 +112,7 @@ LogEntry& LogEntry::operator<<<std::string>(const std::string& value) {
 // then resize the vector and finally write the values in the second pass.
 class EntryWriter : public boost::static_visitor<bool> {
  public:
-  EntryWriter(LogEntry& entry) : _entry(entry) {}
+  explicit EntryWriter(LogEntry& entry) : _entry(entry) {}
 
   template <typename T>
   bool operator()(T v) {

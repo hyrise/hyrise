@@ -1,12 +1,13 @@
 #include "logger.hpp"
 
+#include <boost/filesystem.hpp>
+#include <boost/range.hpp>
+#include <boost/range/algorithm/reverse.hpp>
+
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <algorithm>
-#include <boost/filesystem.hpp>
-#include <boost/range.hpp>
-#include <boost/range/algorithm/reverse.hpp>
 #include <sstream>
 
 #include "abstract_logger.hpp"
@@ -21,12 +22,12 @@ const Logger::Implementation Logger::default_implementation = Implementation::Gr
 // Logging is initially set to NoLogger and set to an implementation by console or server
 Logger::Implementation Logger::_implementation = Implementation::No;
 
-const std::string Logger::default_data_path = "./data/";
+const std::string Logger::default_data_path = "./data/";  // NOLINT
 
-std::string Logger::_data_path = default_data_path;
-const std::string Logger::_log_folder = "logs/";
-std::string Logger::_log_path = _data_path + _log_folder;
-const std::string Logger::_filename = "hyrise-log";
+std::string Logger::_data_path = default_data_path;  // NOLINT
+const std::string Logger::_log_folder = "logs/";  // NOLINT
+std::string Logger::_log_path = _data_path + _log_folder;  // NOLINT
+const std::string Logger::_filename = "hyrise-log";  // NOLINT
 
 AbstractLogger& Logger::getInstance() {
   switch (_implementation) {
