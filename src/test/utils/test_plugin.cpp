@@ -34,8 +34,6 @@ public:
 
 };
 
-
-// In the end, the plugin needs to be made usable from the outside.
-EXPORT(TestPlugin);
+EXPORT(TestPlugin)
 
 }  // namespace opossum

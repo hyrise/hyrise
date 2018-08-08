@@ -1,5 +1,7 @@
 #include <iostream>
 
+#include "types.hpp"
+
 #define EXPORT(PluginName) \
 extern "C" AbstractPlugin* factory(void) {\
   return static_cast<AbstractPlugin*>(&(PluginName::get()));\
@@ -7,7 +9,7 @@ extern "C" AbstractPlugin* factory(void) {\
 
 namespace opossum {
 
-class AbstractPlugin {
+class AbstractPlugin : private Noncopyable {
 protected:
   AbstractPlugin() {};
   AbstractPlugin& operator=(AbstractPlugin&&) = default;
@@ -23,8 +25,6 @@ public:
   virtual void start() const = 0;
 
   virtual void stop() const = 0;
-
-  virtual ~AbstractPlugin() {};
 };
 
 }  // namespace opossum
