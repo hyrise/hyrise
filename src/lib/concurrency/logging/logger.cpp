@@ -23,10 +23,10 @@ Logger::Implementation Logger::_implementation = Implementation::No;
 
 const std::string Logger::default_data_path = "./data/";
 
-std::string Logger::data_path = default_data_path;
-const std::string Logger::log_folder = "logs/";
-std::string Logger::log_path = data_path + log_folder;
-const std::string Logger::filename = "hyrise-log";
+std::string Logger::_data_path = default_data_path;
+const std::string Logger::_log_folder = "logs/";
+std::string Logger::_log_path = _data_path + _log_folder;
+const std::string Logger::_filename = "hyrise-log";
 
 AbstractLogger& Logger::getInstance() {
   switch (_implementation) {
@@ -41,8 +41,8 @@ void Logger::setup(std::string folder, const Implementation implementation) {
   DebugAssert(folder.length() > 0, "Logger: empty string is no folder");
   DebugAssert(folder[folder.size() - 1] == '/', "Logger: expected '/' at end of path");
   
-  data_path = folder;
-  log_path = data_path + log_folder;
+  _data_path = folder;
+  _log_path = _data_path + _log_folder;
 
   _create_directories();
 
@@ -50,26 +50,26 @@ void Logger::setup(std::string folder, const Implementation implementation) {
 }
 
 void Logger::delete_log_files() {
-  boost::filesystem::remove_all(log_path);
+  boost::filesystem::remove_all(_log_path);
   _create_directories();
 }
 
 void Logger::_create_directories() {
-  boost::filesystem::create_directory(data_path);
-  boost::filesystem::create_directory(log_path);
+  boost::filesystem::create_directory(_data_path);
+  boost::filesystem::create_directory(_log_path);
 }
 
 std::string Logger::get_new_log_path() {
   auto log_number = _get_latest_log_number() + 1;
-  std::string path = log_path + filename + std::to_string(log_number);
+  std::string path = _log_path + _filename + std::to_string(log_number);
   return path;
 }
 
 std::vector<std::string> Logger::get_all_log_file_paths() {
-  DebugAssert(boost::filesystem::exists(log_path), "Logger: Log path does not exist.");
+  DebugAssert(boost::filesystem::exists(_log_path), "Logger: Log path does not exist.");
   std::vector<std::string> result;
-  for (auto& path : boost::make_iterator_range(boost::filesystem::directory_iterator(log_path), {})) {
-    auto pos = path.path().string().rfind(filename);
+  for (auto& path : boost::make_iterator_range(boost::filesystem::directory_iterator(_log_path), {})) {
+    auto pos = path.path().string().rfind(_filename);
     if (pos == std::string::npos) {
       continue;
     }
@@ -77,7 +77,7 @@ std::vector<std::string> Logger::get_all_log_file_paths() {
   }
 
   if (result.size() > 0) {
-    auto pos = result[0].rfind(filename) + filename.length();
+    auto pos = result[0].rfind(_filename) + _filename.length();
     std::sort(result.begin(), result.end(), [&pos](std::string a, std::string b){ 
       return std::stoul(a.substr(pos)) < std::stoul(b.substr(pos)); });
   }
@@ -87,13 +87,13 @@ std::vector<std::string> Logger::get_all_log_file_paths() {
 u_int32_t Logger::_get_latest_log_number() {
   u_int32_t max_number{0};
 
-  for (auto& path : boost::make_iterator_range(boost::filesystem::directory_iterator(log_path), {})) {
-    auto pos = path.path().string().rfind(filename);
+  for (auto& path : boost::make_iterator_range(boost::filesystem::directory_iterator(_log_path), {})) {
+    auto pos = path.path().string().rfind(_filename);
     if (pos == std::string::npos) {
       continue;
     }
 
-    u_int32_t number = std::stoul(path.path().string().substr(pos + filename.length()));
+    u_int32_t number = std::stoul(path.path().string().substr(pos + _filename.length()));
     max_number = std::max(max_number, number);
   }
   return max_number;

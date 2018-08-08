@@ -1,6 +1,6 @@
 /*
  *  Logger is a singleton that grants access to the logging system via Logger::getInstance(). 
- *  It instantiates a logging implmenentation and returns it as AbstractLogger. 
+ *  It instantiates a logging implementation and returns it as AbstractLogger. 
  *  The logging system persists database changes to disk that can be used to recover after startup.
  *  A logging implementation therefore provides following functions:
  *    - commit(...)
@@ -9,7 +9,7 @@
  *    - flush()
  *    - recover()
  * 
- *  If you want to turn logging off, you need to set NoLogger as the logging implementation.
+ *  Logging is turned on by console and server on startup by calling setup().
  * 
  *  When implementing a NewLogger it needs to fullfill following requirements:
  *    -  NewLogger has to be a child of AbstractLogger
@@ -49,7 +49,7 @@ class Logger {
   static void setup(std::string folder, const Implementation implementation);
 
   // Called while setting up a new database in console or in tests
-  // Current logging implementation has to be shut_down beforehand or not instantiated yet.
+  // Current logging implementation has to be shut down beforehand or not instantiated yet.
   static void delete_log_files();
 
   static const Implementation default_implementation;
@@ -59,11 +59,11 @@ class Logger {
   static void _create_directories();
   static u_int32_t _get_latest_log_number();
   
-  static std::string data_path;
+  static std::string _data_path;
   // linter wants these to be char[], but then we loose operator+ of strings
-  static std::string log_path;
-  static const std::string log_folder;
-  static const std::string filename;
+  static std::string _log_path;
+  static const std::string _log_folder;
+  static const std::string _filename;
 
   static Implementation _implementation;
 };

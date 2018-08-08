@@ -11,7 +11,6 @@ set(
     all_type_variant.hpp
     concurrency/commit_context.cpp
     concurrency/commit_context.hpp
-    concurrency/logging/abstract_logger.cpp
     concurrency/logging/abstract_logger.hpp
     concurrency/logging/abstract_recovery.hpp
     concurrency/logging/abstract_recovery.cpp

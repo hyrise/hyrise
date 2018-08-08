@@ -34,7 +34,7 @@
  *       - table_name           : table_name.size() + 1                   : string terminated with \0
  * 
  *  Possible improvements:
- *    1.  For each log entry a vector<char> is allocated to created that entry and then copy it into the buffer.
+ *    1.  For each log entry a vector<char> is allocated to create that entry and then copy it into the buffer.
  *        Maybe allocate a big memory block once.
  *    2.  The entry vector gets resized for each value. Maybe .reserve() beforehand or calculate the number of bytes for
  *        all values by iterating over them before putting them into the entry.
@@ -93,13 +93,11 @@ class LogEntry {
 
 template <>
 LogEntry& LogEntry::operator<< <std::string>(const std::string& value) {
-  // Assume entry is already large enough to fit the new value
   DebugAssert(cursor + value.size() < data.size(),
     "Logger: value does not fit into vector, call resize() beforehand");
   
   value.copy(&data[cursor], value.size());
 
-  // Assume that the next byte is NULL so the string gets terminated
   DebugAssert(data[cursor + value.size()] == '\0', "Logger: Byte is not NULL initiated");
 
   cursor += value.size() + 1;
@@ -107,7 +105,7 @@ LogEntry& LogEntry::operator<< <std::string>(const std::string& value) {
   return *this;
 }
 
-// ValueVisitor is used to write multiple AllTypeVariants into an entry successively.
+// EntryWriter is used to write multiple AllTypeVariants into an entry successively.
 // It returns a boolean to indicate if something has been written into entry.
 // Therefore the visitation returns false if the AllTypeVariant is a NullValue. 
 // This boolean then is used to set the corresponding bit in the null_value_bitmap.
@@ -115,9 +113,9 @@ LogEntry& LogEntry::operator<< <std::string>(const std::string& value) {
 // It might improve performance to iterate twice over all values: 
 // Acumulate the bytes needed for all values in the first pass,
 // then resize the vector and finally write the values in the second pass.
-class ValueVisitor : public boost::static_visitor<bool> {
+class EntryWriter : public boost::static_visitor<bool> {
  public:
-  ValueVisitor(LogEntry& entry) : _entry(entry) {}
+  EntryWriter(LogEntry& entry) : _entry(entry) {}
 
   template <typename T>
   bool operator()(T v) {
@@ -130,14 +128,14 @@ class ValueVisitor : public boost::static_visitor<bool> {
 };
 
 template <>
-bool ValueVisitor::operator()(std::string v) {
+bool EntryWriter::operator()(std::string v) {
   _entry.data.resize(_entry.data.size() + v.size() + 1);
   _entry << v;
   return true;
 }
 
 template <>
-bool ValueVisitor::operator()(NullValue v) {
+bool EntryWriter::operator()(NullValue v) {
   return false;
 }
 
@@ -158,7 +156,7 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
 
   DebugAssert(entry.data[null_bitmap_pos] == '\0', "Logger: memory is not NULL");
 
-  ValueVisitor visitor(entry);
+  EntryWriter visitor(entry);
   auto bit_pos = 0u;
   for (auto& value : values) {
     auto has_content = boost::apply_visitor(visitor, value);

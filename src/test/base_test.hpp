@@ -7,7 +7,6 @@
 
 #include "concurrency/transaction_manager.hpp"
 #include "gtest/gtest.h"
-#include "concurrency/logging/logger.hpp"
 #include "operators/abstract_operator.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "storage/column_encoding_utils.hpp"

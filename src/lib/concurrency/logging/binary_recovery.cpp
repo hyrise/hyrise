@@ -23,7 +23,6 @@ std::string BinaryRecovery::_read(std::ifstream& file) {
   return result;
 }
 
-// read datatype from file
 AllTypeVariant BinaryRecovery::_read_AllTypeVariant(std::ifstream& file, DataType data_type) {
   AllTypeVariant value;
   switch (data_type) {

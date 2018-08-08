@@ -138,8 +138,8 @@ void TextRecovery::recover() {
 
       transactions.emplace_back(LoggedItem(LogType::Value, transaction_id, table_name, row_id, values));
 
-    }  // while there is a line end
-  }  // for every logfile end
+    }  // while there is a line
+  }  // for every logfile
 
   _update_transaction_id(last_transaction_id);
 }

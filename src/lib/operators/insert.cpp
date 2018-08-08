@@ -187,7 +187,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
                                                       num_to_insert);
       }
 
-      // logging start
+      // log values
       const auto column_count = source_chunk->column_count();
       for (decltype(source_chunk->size()) row_index = 0; row_index < source_chunk->size(); ++row_index) {
         std::vector<AllTypeVariant> row_values;
@@ -198,7 +198,6 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
         Logger::getInstance().value(context->transaction_id(), _target_table_name,
                                     RowID{target_chunk_id, target_start_index + row_index}, row_values);
       }
-      // logging end
 
       still_to_insert -= num_to_insert;
       target_start_index += num_to_insert;

@@ -11,7 +11,6 @@ class SQLPipeline;
 struct CreatePipelineResult {
   std::shared_ptr<SQLPipeline> sql_pipeline;
   std::optional<std::pair<std::string, std::string>> load_table;
-  std::optional<bool> recover_database;
 };
 
 // This task is used to parse an SQL string from a client and wrap it in an SQLPipeline. It is a separate task and not
