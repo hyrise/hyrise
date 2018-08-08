@@ -1,8 +1,9 @@
 #pragma once
 
+#include "logical_query_plan/lqp_translator.hpp"
+
 #if HYRISE_JIT_SUPPORT
 
-#include "logical_query_plan/lqp_translator.hpp"
 #include "operators/jit_operator/operators/jit_expression.hpp"
 #include "operators/jit_operator_wrapper.hpp"
 
