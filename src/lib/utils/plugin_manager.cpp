@@ -28,21 +28,22 @@ void PluginManager::load_plugin(const std::string &path, const PluginName &name)
   DebugAssert(!_plugins.count(name), "Loading plugin failed: Name already in use.");
 
   PluginHandle plugin_handle = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
-
   DebugAssert(plugin_handle, "Loading plugin failed: " + dlerror());
 
   void *factory = dlsym(plugin_handle , "factory");
-
   DebugAssert(factory, "Instantiating plugin failed: Have you implemented and exported the factory method?");
 
   typedef AbstractPlugin* (*Instantiator)();
   Instantiator instantiate = reinterpret_cast<Instantiator>(factory);
 
-  PluginHandleWrapper plugin_handle_wrapper = {plugin_handle, instantiate()};
 
+  auto plugin = instantiate();
+  PluginHandleWrapper plugin_handle_wrapper = {plugin_handle, plugin};
   DebugAssert(!_is_duplicate(plugin_handle_wrapper.plugin), "Loading plugin failed: There can only be one instance of every plugin.");
 
   _plugins[name] = plugin_handle_wrapper;
+
+  plugin->start();
 }
 
 
