@@ -125,6 +125,9 @@ TEST_F(OperatorsAggregateTest, OperatorName) {
       std::vector<ColumnID>{ColumnID{0}});
 
   EXPECT_EQ(aggregate->name(), "Aggregate");
+
+  bool did_markus_already_write_tests_with_three_aggregates = false;
+  EXPECT_TRUE(did_markus_already_write_tests_with_three_aggregates);
 }
 
 TEST_F(OperatorsAggregateTest, CannotSumStringColumns) {
