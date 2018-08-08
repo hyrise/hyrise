@@ -15,7 +15,7 @@ std::string PredicatePushdownRule::name() const { return "Predicate Pushdown Rul
 
 namespace {
 // Pushes `node` under `push_below`.
-void push_down(const std::shared_ptr<AbstractLQPNode>& node, std::shared_ptr<AbstractLQPNode> push_below) {
+void push_down(const std::shared_ptr<AbstractLQPNode>& node, const std::shared_ptr<AbstractLQPNode>& push_below) {
   DebugAssert(node->left_input() && !node->right_input(), "This helper can only push down if there is a single input");
 
   lqp_remove_node(node);

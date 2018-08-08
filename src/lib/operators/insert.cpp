@@ -21,6 +21,8 @@ class AbstractTypedColumnProcessor : public Noncopyable {
   AbstractTypedColumnProcessor() = default;
   AbstractTypedColumnProcessor(const AbstractTypedColumnProcessor&) = delete;
   AbstractTypedColumnProcessor& operator=(const AbstractTypedColumnProcessor&) = delete;
+  AbstractTypedColumnProcessor(AbstractTypedColumnProcessor&&) = default;
+  AbstractTypedColumnProcessor& operator=(AbstractTypedColumnProcessor&&) = default;
   virtual ~AbstractTypedColumnProcessor() = default;
   virtual void resize_vector(std::shared_ptr<BaseColumn> column, size_t new_size) = 0;
   virtual void copy_data(std::shared_ptr<const BaseColumn> source, size_t source_start_index,

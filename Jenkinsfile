@@ -72,10 +72,10 @@ node {
           }
         }
       }, debugSystemTests: {
-        stage("clang-debug:system-test") {
+        stage("system-tests") {
           if (env.BRANCH_NAME == 'master' || full_ci) {
-            sh "./clang-debug/hyriseSystemTest clang-debug"
-            sh "./gcc-debug/hyriseSystemTest gcc-debug"
+            sh "mkdir clang-debug-system &&  ./clang-debug/hyriseSystemTest clang-debug-system"
+            sh "mkdir gcc-debug-system &&  ./gcc-debug/hyriseSystemTest gcc-debug-system"
           } else {
             Utils.markStageSkippedForConditional("debugSystemTests")
           }
@@ -107,12 +107,6 @@ node {
           } else {
             Utils.markStageSkippedForConditional("clangDebugAddrUBSanitizers")
           }
-        }
-      }, gccDebug: {
-        stage("gcc-debug") {
-          sh "export CCACHE_BASEDIR=`pwd`; cd gcc-debug && make all -j \$(( \$(cat /proc/cpuinfo | grep processor | wc -l) / 3))"
-          sh "./gcc-debug/hyriseTest gcc-debug"
-          sh "./gcc-debug/hyriseSystemTest gcc-debug"
         }
       }, gccRelease: {
         if (env.BRANCH_NAME == 'master' || full_ci) {

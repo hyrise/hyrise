@@ -125,9 +125,10 @@ size_t ValueColumn<T>::size() const {
 
 template <typename T>
 std::shared_ptr<BaseColumn> ValueColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
-  pmr_concurrent_vector<T> new_values(_values, alloc);
+  pmr_concurrent_vector<T> new_values(_values, alloc);  // NOLINT(cppcoreguidelines-slicing)
+                                                        // (clang-tidy reports slicing that comes from tbb)
   if (is_nullable()) {
-    pmr_concurrent_vector<bool> new_null_values(*_null_values, alloc);
+    pmr_concurrent_vector<bool> new_null_values(*_null_values, alloc);  // NOLINT(cppcoreguidelines-slicing) (see above)
     return std::allocate_shared<ValueColumn<T>>(alloc, std::move(new_values), std::move(new_null_values));
   } else {
     return std::allocate_shared<ValueColumn<T>>(alloc, std::move(new_values));
