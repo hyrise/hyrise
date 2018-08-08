@@ -4,17 +4,17 @@
 #include <boost/bind.hpp>
 
 #include "client_connection.hpp"
+#include "concurrency/logging/logger.hpp"
 #include "server_session.hpp"
 #include "task_runner.hpp"
 #include "then_operator.hpp"
-#include "concurrency/logging/logger.hpp"
 
 namespace opossum {
 
 using opossum::then_operator::then;
 
-Server::Server(boost::asio::io_service& io_service, uint16_t port, 
-  const std::string& log_folder, const Logger::Implementation logging_implementation)
+Server::Server(boost::asio::io_service& io_service, uint16_t port, const std::string& log_folder,
+               const Logger::Implementation logging_implementation)
     : _io_service(io_service),
       _acceptor(io_service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
       _socket(io_service) {

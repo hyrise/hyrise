@@ -1,18 +1,18 @@
 #include "logger.hpp"
 
-#include <algorithm>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sstream>
+#include <algorithm>
 #include <boost/filesystem.hpp>
 #include <boost/range.hpp>
 #include <boost/range/algorithm/reverse.hpp>
+#include <sstream>
 
 #include "abstract_logger.hpp"
 #include "group_commit_logger.hpp"
-#include "simple_logger.hpp"
 #include "no_logger.hpp"
+#include "simple_logger.hpp"
 
 namespace opossum {
 
@@ -30,10 +30,23 @@ const std::string Logger::_filename = "hyrise-log";
 
 AbstractLogger& Logger::getInstance() {
   switch (_implementation) {
-    case Implementation::No: { static NoLogger instance; return instance; }
-    case Implementation::Simple: { static SimpleLogger instance; return instance; }
-    case Implementation::GroupCommit: { static GroupCommitLogger instance; return instance; }
-    default: {DebugAssert(false, "Logger: no implementation set."); static NoLogger instance; return instance;}
+    case Implementation::No: {
+      static NoLogger instance;
+      return instance;
+    }
+    case Implementation::Simple: {
+      static SimpleLogger instance;
+      return instance;
+    }
+    case Implementation::GroupCommit: {
+      static GroupCommitLogger instance;
+      return instance;
+    }
+    default: {
+      DebugAssert(false, "Logger: no implementation set.");
+      static NoLogger instance;
+      return instance;
+    }
   }
 }
 
@@ -41,7 +54,7 @@ void Logger::setup(std::string folder, const Implementation implementation) {
   DebugAssert(_implementation == Implementation::No, "Logger: changing folder but may have open file handle.");
   DebugAssert(folder.length() > 0, "Logger: empty string is no folder");
   DebugAssert(folder[folder.size() - 1] == '/', "Logger: expected '/' at end of path");
-  
+
   _data_path = folder;
   _log_path = _data_path + _log_folder;
 
@@ -79,8 +92,8 @@ std::vector<std::string> Logger::get_all_log_file_paths() {
 
   if (result.size() > 0) {
     auto pos = result[0].rfind(_filename) + _filename.length();
-    std::sort(result.begin(), result.end(), [&pos](std::string a, std::string b){ 
-      return std::stoul(a.substr(pos)) < std::stoul(b.substr(pos)); });
+    std::sort(result.begin(), result.end(),
+              [&pos](std::string a, std::string b) { return std::stoul(a.substr(pos)) < std::stoul(b.substr(pos)); });
   }
   return (result);
 }

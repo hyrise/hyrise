@@ -13,10 +13,10 @@ class BinaryRecovery : public AbstractRecovery {
 
   static BinaryRecovery& getInstance();
 
-  void recover() override ;
+  void recover() override;
 
  private:
-  BinaryRecovery(){}
+  BinaryRecovery() {}
 
   AllTypeVariant _read_AllTypeVariant(std::ifstream& file, DataType data_type);
 

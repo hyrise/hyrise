@@ -1,5 +1,5 @@
-#include "utils/filesystem.hpp"
 #include <pqxx/pqxx>
+#include "utils/filesystem.hpp"
 
 #include "base_test.hpp"
 
@@ -9,15 +9,17 @@ namespace opossum {
 
 std::string str(Logger::Implementation implementation) {
   switch (implementation) {
-    case Logger::Implementation::Simple: return "SimpleLogger";
-    case Logger::Implementation::GroupCommit: return "GroupCommitLogger";
-    default: return "unknown";
+    case Logger::Implementation::Simple:
+      return "SimpleLogger";
+    case Logger::Implementation::GroupCommit:
+      return "GroupCommitLogger";
+    default:
+      return "unknown";
   }
 }
 
 class ServerRecoveryTest : public BaseTestWithParam<Logger::Implementation> {
  protected:
-  
   static constexpr char _folder[6] = "data/";
 
   void restart_server(Logger::Implementation implementation) {
@@ -35,7 +37,8 @@ class ServerRecoveryTest : public BaseTestWithParam<Logger::Implementation> {
   void start_server(Logger::Implementation implementation) {
     std::string implementation_string = str(implementation);
 
-    auto cmd = "\"" + build_dir + "/hyriseServer\" 1234 " + implementation_string + " " + test_data_path + _folder + " &";
+    auto cmd =
+        "\"" + build_dir + "/hyriseServer\" 1234 " + implementation_string + " " + test_data_path + _folder + " &";
     std::system(cmd.c_str());
 
     _connection_string = "hostaddr=127.0.0.1 port=1234";
@@ -43,13 +46,10 @@ class ServerRecoveryTest : public BaseTestWithParam<Logger::Implementation> {
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
   }
 
-  void terminate_server() {
-    std::system("pkill hyriseServer");
-  }
+  void terminate_server() { std::system("pkill hyriseServer"); }
 
   std::string _connection_string;
 };
-
 
 /*  
  *  Currently these are not supported, but should be tested when fixed/implemented:
@@ -151,15 +151,12 @@ TEST_P(ServerRecoveryTest, TestWorkflow) {
   EXPECT_EQ(s, "");
 }
 
-Logger::Implementation logging_implementations[] = {
-  Logger::Implementation::Simple, 
-  Logger::Implementation::GroupCommit
-};
+Logger::Implementation logging_implementations[] = {Logger::Implementation::Simple,
+                                                    Logger::Implementation::GroupCommit};
 
-auto formatter = [](const testing::TestParamInfo<Logger::Implementation> info) {
-  return str(info.param);
-};
+auto formatter = [](const testing::TestParamInfo<Logger::Implementation> info) { return str(info.param); };
 
-INSTANTIATE_TEST_CASE_P(logging_implementations, ServerRecoveryTest, ::testing::ValuesIn(logging_implementations), formatter);
+INSTANTIATE_TEST_CASE_P(logging_implementations, ServerRecoveryTest, ::testing::ValuesIn(logging_implementations),
+                        formatter);
 
 }  // namespace opossum

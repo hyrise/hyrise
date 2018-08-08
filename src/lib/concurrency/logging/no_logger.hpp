@@ -21,15 +21,15 @@ class NoLogger : public AbstractLogger {
   };
 
   void value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,
-             const std::vector<AllTypeVariant> values) override {};
+             const std::vector<AllTypeVariant> values) override{};
 
-  void invalidate(const TransactionID transaction_id, const std::string& table_name, const RowID row_id) override {};
+  void invalidate(const TransactionID transaction_id, const std::string& table_name, const RowID row_id) override{};
 
-  void load_table(const std::string& file_path, const std::string& table_name) override {};
+  void load_table(const std::string& file_path, const std::string& table_name) override{};
 
-  void flush() override {};
+  void flush() override{};
 
-  void recover() override {};
+  void recover() override{};
 
  protected:
   friend class Logger;

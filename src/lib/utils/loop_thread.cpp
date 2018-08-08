@@ -28,8 +28,6 @@ LoopThread::~LoopThread() {
   if (_loop_thread.joinable()) _loop_thread.join();
 }
 
-void LoopThread::set_loop_sleep_time(std::chrono::milliseconds loop_sleep_time) {
-  _loop_sleep_time = loop_sleep_time;
-}
+void LoopThread::set_loop_sleep_time(std::chrono::milliseconds loop_sleep_time) { _loop_sleep_time = loop_sleep_time; }
 
 }  // namespace opossum

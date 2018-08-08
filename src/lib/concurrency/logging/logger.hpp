@@ -33,8 +33,7 @@ namespace opossum {
 
 class Logger {
  public:
-
-  enum class Implementation {No, Simple, GroupCommit};
+  enum class Implementation { No, Simple, GroupCommit };
 
   Logger(const Logger&) = delete;
   Logger& operator=(const Logger&) = delete;
@@ -55,10 +54,10 @@ class Logger {
   static const Implementation default_implementation;
   static const std::string default_data_path;
 
- private:   
+ private:
   static void _create_directories();
   static u_int32_t _get_latest_log_number();
-  
+
   static std::string _data_path;
   // linter wants these to be char[], but then we loose operator+ of strings
   static std::string _log_path;

@@ -12,7 +12,7 @@ namespace opossum {
 class Server {
  public:
   Server(boost::asio::io_service& io_service, uint16_t port, const std::string& log_folder = Logger::default_data_path,
-    const Logger::Implementation logging_implementation = Logger::default_implementation);
+         const Logger::Implementation logging_implementation = Logger::default_implementation);
 
   uint16_t get_port_number();
 

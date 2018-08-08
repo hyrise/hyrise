@@ -10,7 +10,7 @@ class AbstractLogger {
   AbstractLogger(const AbstractLogger&) = delete;
   AbstractLogger& operator=(const AbstractLogger&) = delete;
 
-  // A transaction is committed only after calling its callback. 
+  // A transaction is committed only after calling its callback.
   // Therefore handle all callbacks in your Logger implementation.
   virtual void commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) = 0;
 
@@ -31,7 +31,7 @@ class AbstractLogger {
  protected:
   friend class Logger;
 
-  AbstractLogger() {};
+  AbstractLogger(){};
 };
 
 }  // namespace opossum

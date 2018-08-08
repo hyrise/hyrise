@@ -38,14 +38,14 @@ void SimpleLogger::commit(const TransactionID transaction_id, std::function<void
 }
 
 void SimpleLogger::value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,
-                          const std::vector<AllTypeVariant> values) {
+                         const std::vector<AllTypeVariant> values) {
   std::stringstream ss;
   ss << "(v," << transaction_id << "," << table_name.size() << "," << table_name << "," << row_id << ",(";
-  
+
   std::stringstream value_ss;
   value_ss << values[0];
   ss << value_ss.str().size() << "," << value_ss.str();
-  for (auto value = ++values.begin(); value != values.end(); ++value){
+  for (auto value = ++values.begin(); value != values.end(); ++value) {
     value_ss.str("");
     value_ss << (*value);
     ss << "," << value_ss.str().size() << "," << value_ss.str();
@@ -94,8 +94,6 @@ void SimpleLogger::_open_logfile() {
   _file_mutex.unlock();
 }
 
-SimpleLogger::SimpleLogger() : AbstractLogger() {
-  _open_logfile();
-}
+SimpleLogger::SimpleLogger() : AbstractLogger() { _open_logfile(); }
 
 }  // namespace opossum

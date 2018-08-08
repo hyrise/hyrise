@@ -55,7 +55,7 @@ AllTypeVariant BinaryRecovery::_read_AllTypeVariant(std::ifstream& file, DataTyp
 
 void BinaryRecovery::recover() {
   TransactionID last_transaction_id{0};
-  for (auto& log_path: Logger::get_all_log_file_paths()) {
+  for (auto& log_path : Logger::get_all_log_file_paths()) {
     std::ifstream log_file(log_path);
     DebugAssert(log_file.is_open(), "Recovery: could not open logfile " + log_path);
 
@@ -74,7 +74,7 @@ void BinaryRecovery::recover() {
       }
 
       DebugAssert(log_type == 't' || log_type == 'i' || log_type == 'v' || log_type == 'l',
-        "Recovery: invalid log type token");
+                  "Recovery: invalid log type token");
 
       // if load entry
       if (log_type == 'l') {
@@ -92,11 +92,11 @@ void BinaryRecovery::recover() {
         _redo_transactions(transaction_id, transactions);
         last_transaction_id = std::max(transaction_id, last_transaction_id);
         continue;
-      } 
+      }
 
       // else invalidation or value
       DebugAssert(log_type == 'v' || log_type == 'i', "Recovery: First token of new entry is not handled properly.");
-      
+
       // Invalidation and begin of value entries:
       //   - log entry type ('v') : sizeof(char)
       //   - transaction_id       : sizeof(transaction_id_t)
@@ -126,7 +126,7 @@ void BinaryRecovery::recover() {
 
       auto data_types = StorageManager::get().get_table(table_name)->column_data_types();
 
-      uint16_t null_bitmap_number_of_bytes = ceil(data_types.size() / 8.0); //  supports 2^16 * 8 > 500,000 values
+      uint16_t null_bitmap_number_of_bytes = ceil(data_types.size() / 8.0);  //  supports 2^16 * 8 > 500,000 values
       std::vector<char> null_bitmap(null_bitmap_number_of_bytes);
       log_file.read(&null_bitmap[0], null_bitmap_number_of_bytes);
 
@@ -141,7 +141,7 @@ void BinaryRecovery::recover() {
         }
 
         bit_pos = (bit_pos + 1) % 8;
-        if (bit_pos == 0) { 
+        if (bit_pos == 0) {
           ++bitmap_index;
         };
       }
@@ -149,7 +149,7 @@ void BinaryRecovery::recover() {
       transactions.emplace_back(LoggedItem(LogType::Value, transaction_id, table_name, row_id, values));
 
     }  // while not end of file
-  }  // for every logfile
+  }    // for every logfile
 
   _update_transaction_id(last_transaction_id);
 }

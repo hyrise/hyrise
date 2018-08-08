@@ -1,9 +1,9 @@
 #include "load_server_file_task.hpp"
 
+#include "concurrency/logging/logger.hpp"
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/load_table.hpp"
-#include "concurrency/logging/logger.hpp"
 
 namespace opossum {
 

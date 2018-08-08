@@ -1,10 +1,10 @@
 #include "console.hpp"
 
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/trim.hpp>
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <sys/stat.h>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/trim.hpp>
 
 #include <chrono>
 #include <csetjmp>
@@ -19,8 +19,8 @@
 #include <vector>
 
 #include "SQLParser.h"
-#include "concurrency/logging/logger.hpp"
 #include "benchmark_utils.hpp"
+#include "concurrency/logging/logger.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "operators/get_table.hpp"

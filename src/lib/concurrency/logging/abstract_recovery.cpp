@@ -1,10 +1,10 @@
 #include "abstract_recovery.hpp"
 
-#include "utils/load_table.hpp"
 #include "../../storage/storage_manager.hpp"
 #include "../../storage/table.hpp"
 #include "../transaction_manager.hpp"
 #include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
@@ -30,8 +30,9 @@ void AbstractRecovery::_redo_transactions(const TransactionID& transaction_id, s
     }
   }
 
-  transactions.erase(std::remove_if(transactions.begin(), transactions.end(), 
-    [&transaction_id](LoggedItem x){ return x.transaction_id == transaction_id; }),  transactions.end());
+  transactions.erase(std::remove_if(transactions.begin(), transactions.end(),
+                                    [&transaction_id](LoggedItem x) { return x.transaction_id == transaction_id; }),
+                     transactions.end());
 }
 
 void AbstractRecovery::_update_transaction_id(const TransactionID highest_committed_id) {

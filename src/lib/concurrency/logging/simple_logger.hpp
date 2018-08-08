@@ -1,7 +1,7 @@
 #pragma once
 
-#include "abstract_logger.hpp"
 #include <mutex>
+#include "abstract_logger.hpp"
 
 #include "types.hpp"
 

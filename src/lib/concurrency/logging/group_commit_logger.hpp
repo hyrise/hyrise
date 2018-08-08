@@ -5,8 +5,8 @@
 #include <fstream>
 #include <mutex>
 
-#include "types.hpp"
 #include "../../utils/loop_thread.hpp"
+#include "types.hpp"
 
 namespace opossum {
 
@@ -46,7 +46,7 @@ class GroupCommitLogger : public AbstractLogger {
   char* _buffer;
   const uint32_t _buffer_capacity;  // uint32_t: Max buffer capacity ~ 4GB
   uint32_t _buffer_position;
-  bool _has_unflushed_buffer; 
+  bool _has_unflushed_buffer;
   std::mutex _buffer_mutex;
 
   std::vector<std::pair<std::function<void(TransactionID)>, TransactionID>> _commit_callbacks;

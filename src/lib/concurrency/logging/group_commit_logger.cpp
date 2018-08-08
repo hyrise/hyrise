@@ -78,9 +78,7 @@ class LogEntry {
   uint32_t cursor{0};
   std::vector<char> data;
 
-  LogEntry(uint32_t count) {
-    data.resize(count);
-  }
+  LogEntry(uint32_t count) { data.resize(count); }
 
   template <typename T>
   LogEntry& operator<<(const T& value) {
@@ -88,29 +86,28 @@ class LogEntry {
     *reinterpret_cast<T*>(&data[cursor]) = value;
     cursor += sizeof(T);
     return *this;
-  } 
+  }
 };
 
 template <>
-LogEntry& LogEntry::operator<< <std::string>(const std::string& value) {
-  DebugAssert(cursor + value.size() < data.size(),
-    "Logger: value does not fit into vector, call resize() beforehand");
-  
+LogEntry& LogEntry::operator<<<std::string>(const std::string& value) {
+  DebugAssert(cursor + value.size() < data.size(), "Logger: value does not fit into vector, call resize() beforehand");
+
   value.copy(&data[cursor], value.size());
 
   DebugAssert(data[cursor + value.size()] == '\0', "Logger: Byte is not NULL initiated");
 
   cursor += value.size() + 1;
-  
+
   return *this;
 }
 
 // EntryWriter is used to write multiple AllTypeVariants into an entry successively.
 // It returns a boolean to indicate if something has been written into entry.
-// Therefore the visitation returns false if the AllTypeVariant is a NullValue. 
+// Therefore the visitation returns false if the AllTypeVariant is a NullValue.
 // This boolean then is used to set the corresponding bit in the null_value_bitmap.
 // The current implementation resizes the entry for every value.
-// It might improve performance to iterate twice over all values: 
+// It might improve performance to iterate twice over all values:
 // Acumulate the bytes needed for all values in the first pass,
 // then resize the vector and finally write the values in the second pass.
 class EntryWriter : public boost::static_visitor<bool> {
@@ -144,12 +141,12 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
   // This is the entry length up to the ChunkOffset.
   // The entry then gets resized for the null value bitmap and each value
   auto entry_length =
-    sizeof(char) + sizeof(TransactionID) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset);
+      sizeof(char) + sizeof(TransactionID) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset);
   LogEntry entry(entry_length);
 
   entry << 'v' << transaction_id << table_name << row_id;
 
-  uint32_t number_of_bitmap_bytes = ceil(values.size() / 8.0);  // uint32_t resolves to ~ 34 Billion values 
+  uint32_t number_of_bitmap_bytes = ceil(values.size() / 8.0);  // uint32_t resolves to ~ 34 Billion values
   entry.data.resize(entry.data.size() + number_of_bitmap_bytes);
   auto null_bitmap_pos = entry.cursor;
   entry.cursor += number_of_bitmap_bytes;
@@ -271,7 +268,7 @@ GroupCommitLogger::GroupCommitLogger()
   memset(_buffer, 0, _buffer_capacity);
 
   _open_logfile();
-  
+
   _flush_thread = std::make_unique<LoopThread>(LOG_INTERVAL, [this]() { GroupCommitLogger::flush(); });
 }
 
