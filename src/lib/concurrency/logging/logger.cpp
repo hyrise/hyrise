@@ -16,10 +16,9 @@
 
 namespace opossum {
 
-// set default Implementation
 const Logger::Implementation Logger::default_implementation = Implementation::GroupCommit;
 
-// Logging is initially set to NoLogger for setup
+// Logging is initially set to NoLogger and set to an implementation by console or server
 Logger::Implementation Logger::_implementation = Implementation::No;
 
 const std::string Logger::default_data_path = "./data/";
@@ -34,34 +33,6 @@ AbstractLogger& Logger::getInstance() {
     case Implementation::No: { static NoLogger instance; return instance; }
     case Implementation::Simple: { static SimpleLogger instance; return instance; }
     case Implementation::GroupCommit: { static GroupCommitLogger instance; return instance; }
-  }
-}
-
-// This function should only be called by tests
-void Logger::_shutdown_after_all_tests() {
-  for (auto impl : {Implementation::Simple, Implementation::GroupCommit}) {
-    _implementation = impl;
-    _reconstruct();
-  }
-}
-
-// This function should only be called by tests
-void Logger::_set_implementation(const Logger::Implementation implementation) {
-  getInstance()._shut_down();
-  switch (_implementation) {
-    case Implementation::No: { break; }
-    case Implementation::Simple: { static_cast<SimpleLogger&>(getInstance()).~SimpleLogger(); break; }
-    case Implementation::GroupCommit: { static_cast<GroupCommitLogger&>(getInstance()).~GroupCommitLogger(); break; }
-  }
-  _implementation = implementation;
-}
-
-// This function should only be called by tests
-void Logger::_reconstruct() {
-  switch (_implementation) {
-    case Implementation::No: { break; }
-    case Implementation::Simple: { new(&getInstance()) SimpleLogger(); break; }
-    case Implementation::GroupCommit: { new(&getInstance()) GroupCommitLogger(); break; }
   }
 }
 

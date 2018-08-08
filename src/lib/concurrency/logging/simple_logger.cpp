@@ -94,14 +94,6 @@ void SimpleLogger::_open_logfile() {
   _file_mutex.unlock();
 }
 
-// This function should only be called in tests.
-void SimpleLogger::_shut_down() {
-  _file_mutex.lock();
-  flush();
-  _file_descriptor = -1;
-  _file_mutex.unlock();
-}
-
 SimpleLogger::SimpleLogger() : AbstractLogger() {
   _open_logfile();
 }

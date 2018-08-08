@@ -37,9 +37,6 @@ class GroupCommitLogger : public AbstractLogger {
   friend class Logger;
 
   GroupCommitLogger();
-  
-  // Called by tests before switching to another implementation.
-  void _shut_down() override;
 
   void _write_buffer_to_logfile();
   void _write_to_buffer(std::vector<char>& entry);

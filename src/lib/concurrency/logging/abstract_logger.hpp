@@ -32,9 +32,6 @@ class AbstractLogger {
   friend class Logger;
 
   AbstractLogger() {};
-
-  // Called by tests before switching to another implementation.
-  virtual void _shut_down() = 0;
 };
 
 }  // namespace opossum

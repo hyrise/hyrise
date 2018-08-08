@@ -84,7 +84,6 @@ class LogEntry {
 
   template <typename T>
   LogEntry& operator<<(const T& value) {
-    // Assume entry is already large enough to fit the new value
     DebugAssert(cursor + sizeof(T) <= data.size(), "Logger: value does not fit into vector, call resize() beforehand");
     *reinterpret_cast<T*>(&data[cursor]) = value;
     cursor += sizeof(T);
@@ -265,18 +264,6 @@ void GroupCommitLogger::_open_logfile() {
   _log_file.open(path, std::ios::out | std::ios::binary);
   DebugAssert(_log_file.is_open(), "Logger: Logfile could not be opened or created: " + path);
 
-  _file_mutex.unlock();
-}
-
-// This function should only be called in tests.
-void GroupCommitLogger::_shut_down() {
-  _file_mutex.lock();
-  _buffer_mutex.lock();
-
-  flush();
-  _log_file.close();
-
-  _buffer_mutex.unlock();
   _file_mutex.unlock();
 }
 

@@ -52,29 +52,12 @@ class Logger {
   // Current logging implementation has to be shut_down beforehand or not instantiated yet.
   static void delete_log_files();
 
-
-  // TODO: private
-  static u_int32_t _get_latest_log_number();
-
   static const Implementation default_implementation;
   static const std::string default_data_path;
 
  private:   
-  template <typename> friend class BaseTestWithParam;
-  friend class ServerRecoveryTest;
-  friend void ::shutdown_logger();
-
   static void _create_directories();
-
-  // Used to set logging implementation on startup or in tests.
-  // Current logging implementation has to be shut_down beforehand or not instantiated yet.
-  static void _set_implementation(const Implementation implementation);
-  
-  static void _reconstruct();
-
-  static void _shutdown_after_all_tests();
-
-
+  static u_int32_t _get_latest_log_number();
   
   static std::string data_path;
   // linter wants these to be char[], but then we loose operator+ of strings
