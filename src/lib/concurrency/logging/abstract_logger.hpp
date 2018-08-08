@@ -32,6 +32,6 @@ class AbstractLogger {
   friend class Logger;
 
   AbstractLogger() {}
-}
+};
 
 }  // namespace opossum
