@@ -238,6 +238,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   return _current_lqp;
 }
 
+void SQLTranslator::_cast_data_to_target_type(std::shared_ptr<AbstractExpression> expression, DataType type) {
+  // Always cast if the expression contains a placeholder, since we can't know the actual data type of the expression
+  // until it is replaced.
+  if (expression_contains_placeholders(expression) || type != expression->data_type()) {
+    expression = cast_(expression, type);
+  }
+}
+
 std::shared_ptr<AbstractExpression> SQLTranslator::translate_hsql_expr(const hsql::Expr& hsql_expr) {
   // Create an empty SQLIdentifier context - thus the expression cannot refer to any external columns
   return SQLTranslator{}._translate_hsql_expr(hsql_expr, std::make_shared<SQLIdentifierResolver>());
@@ -318,12 +326,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
    * 4. Perform type conversions if necessary so the types of the inserted data exactly matches the table column types
    */
   for (auto column_id = ColumnID{0}; column_id < target_table->column_count(); ++column_id) {
-    // Always cast if the expression contains a placeholder, since we can't know the actual data type of the expression
-    // until it is replaced.
-    if (expression_contains_placeholders(column_expressions[column_id]) ||
-        target_table->column_data_type(column_id) != column_expressions[column_id]->data_type()) {
-      column_expressions[column_id] = cast_(column_expressions[column_id], target_table->column_data_type(column_id));
-    }
+    _cast_data_to_target_type(column_expressions[column_id], target_table->column_data_type(column_id));
   }
 
   /**
@@ -387,10 +390,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
     update_expressions[column_id] =
         _translate_hsql_expr(*update_clause->value, translation_state.sql_identifier_resolver);
 
-    if (expression_contains_placeholders(update_expressions[column_id]) ||
-        target_table->column_data_type(column_id) != update_expressions[column_id]->data_type()) {
-      update_expressions[column_id] = cast_(update_expressions[column_id], target_table->column_data_type(column_id));
-    }
+    _cast_data_to_target_type(update_expressions[column_id], target_table->column_data_type(column_id));
   }
 
   return UpdateNode::make((update.table)->name, update_expressions, selection_lqp);
