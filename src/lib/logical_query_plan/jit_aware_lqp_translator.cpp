@@ -13,7 +13,6 @@
 #include "expression/lqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -102,15 +101,13 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
   //   - Always JIT AggregateNodes, as the JitAggregate is significantly faster than the Aggregate operator
   //   - Otherwise, JIT if there are two or more jittable nodes
   if (input_nodes.size() != 1 || jittable_node_count < 1) return nullptr;
-  if (jittable_node_count == 1 && (node->type == LQPNodeType::Projection))
-    return nullptr;
-
+  if (jittable_node_count == 1 && (node->type == LQPNodeType::Projection)) return nullptr;
 
   // The input_node is not being integrated into the operator chain, but instead serves as the input to the JitOperators
   const auto input_node = *input_nodes.begin();
 
   const auto jit_operator = std::make_shared<JitOperatorWrapper>(translate_node(input_node));
-  const auto read_tuples = std::make_shared<JitReadTuples>);
+  const auto read_tuples = std::make_shared<JitReadTuples>();
   jit_operator->add_jit_operator(read_tuples);
 
   // "filter_node". The root node of the subplan computed by a JitFilter.
@@ -148,7 +145,6 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
       const auto jit_expression =
           _try_translate_expression_to_jit_expression(*groupby_expression, *read_tuples, input_node);
       if (!jit_expression) return nullptr;
-
       // Create a JitCompute operator for each computed groupby column ...
       if (jit_expression->expression_type() != JitExpressionType::Column) {
         jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_expression));
@@ -164,7 +160,6 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
       const auto jit_expression =
           _try_translate_expression_to_jit_expression(*aggregate_expression->arguments[0], *read_tuples, input_node);
       if (!jit_expression) return nullptr;
-
       // Create a JitCompute operator for each aggregate expression on a computed value ...
       if (jit_expression->expression_type() != JitExpressionType::Column) {
         jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_expression));
@@ -221,14 +216,14 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
     case ExpressionType::Predicate:
     case ExpressionType::Arithmetic:
     case ExpressionType::Logical: {
-      const auto jit_expression_type = _expression_to_jit_expression_type(expression);
-
       std::vector<std::shared_ptr<const JitExpression>> jit_expression_arguments;
       for (const auto& argument : expression.arguments) {
         const auto jit_expression = _try_translate_expression_to_jit_expression(*argument, jit_source, input_node);
         if (!jit_expression) return nullptr;
         jit_expression_arguments.emplace_back(jit_expression);
       }
+
+      const auto jit_expression_type = _expression_to_jit_expression_type(expression);
 
       if (jit_expression_arguments.size() == 1) {
         return std::make_shared<JitExpression>(jit_expression_arguments[0], jit_expression_type,
@@ -263,7 +258,7 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
 }
 
 bool JitAwareLQPTranslator::_node_is_jittable(const std::shared_ptr<AbstractLQPNode>& node,
-                                              const bool allow_aggregate_node, const bool allow_limit_node) const {
+                                              const bool allow_aggregate_node) const {
   if (node->type == LQPNodeType::Aggregate) {
     // We do not support the count distinct function yet and thus need to check all aggregate expressions.
     auto aggregate_node = std::static_pointer_cast<AggregateNode>(node);
