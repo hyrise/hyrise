@@ -106,7 +106,7 @@ class SQLTranslator final {
   void _translate_order_by(const std::vector<hsql::OrderDescription*>& order_list);
   void _translate_limit(const hsql::LimitDescription& limit);
 
-  void _cast_data_to_target_type(std::shared_ptr<AbstractExpression> expression, DataType type);
+  void _cast_data_to_target_type(std::shared_ptr<AbstractExpression>& expression, DataType type);
 
   std::shared_ptr<AbstractLQPNode> _translate_insert(const hsql::InsertStatement& insert);
   std::shared_ptr<AbstractLQPNode> _translate_delete(const hsql::DeleteStatement& delete_statement);

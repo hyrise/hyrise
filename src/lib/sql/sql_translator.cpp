@@ -238,7 +238,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   return _current_lqp;
 }
 
-void SQLTranslator::_cast_data_to_target_type(std::shared_ptr<AbstractExpression> expression, DataType type) {
+void SQLTranslator::_cast_data_to_target_type(std::shared_ptr<AbstractExpression>& expression, DataType type) {
   // Always cast if the expression contains a placeholder, since we can't know the actual data type of the expression
   // until it is replaced.
   if (expression_contains_placeholders(expression) || type != expression->data_type()) {
