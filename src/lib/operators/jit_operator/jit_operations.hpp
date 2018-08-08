@@ -116,7 +116,6 @@ struct JitEquals {
   }
 };
 const auto jit_equals = JitEquals();
-
 struct JitNotEquals {
   OPTNONE bool operator()(const std::string& a, const std::string& b) const { return a != b; }
   template <typename T1, typename T2,
@@ -126,7 +125,6 @@ struct JitNotEquals {
   }
 };
 const auto jit_not_equals = JitNotEquals();
-
 struct JitLessThan {
   OPTNONE bool operator()(const std::string& a, const std::string& b) const { return a < b; }
   template <typename T1, typename T2,
@@ -136,7 +134,6 @@ struct JitLessThan {
   }
 };
 const auto jit_less_than = JitLessThan();
-
 struct JitLessThanEquals {
   OPTNONE bool operator()(const std::string& a, const std::string& b) const { return a <= b; }
   template <typename T1, typename T2,
@@ -146,7 +143,6 @@ struct JitLessThanEquals {
   }
 };
 const auto jit_less_than_equals = JitLessThanEquals();
-
 struct JitGreaterThan {
   OPTNONE bool operator()(const std::string& a, const std::string& b) const { return a > b; }
   template <typename T1, typename T2,
@@ -156,7 +152,6 @@ struct JitGreaterThan {
   }
 };
 const auto jit_greater_than = JitGreaterThan();
-
 struct JitGreaterThanEquals {
   OPTNONE bool operator()(const std::string& a, const std::string& b) const { return a >= b; }
   template <typename T1, typename T2,

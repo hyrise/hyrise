@@ -114,7 +114,7 @@ bool jit_aggregate_equals(const JitTupleValue& lhs, const JitHashmapValue& rhs, 
     return false;
   }
 
-  // DebugAssert(lhs.data_type() == rhs.data_type(), "Data types don't match in jit_aggregate_equals.");
+  JitDebugAssert(lhs.data_type() == rhs.data_type(), "Data types don't match in jit_aggregate_equals.");
 
   switch (lhs.data_type()) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_AGGREGATE_EQUALS_CASE, (JIT_DATA_TYPE_INFO))

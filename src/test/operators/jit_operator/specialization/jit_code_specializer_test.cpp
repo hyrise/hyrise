@@ -213,7 +213,7 @@ TEST_F(JitCodeSpecializerTest, UnrollsLoops) {
     ASSERT_EQ(specialized_module->size(), 1u);
     const auto specialized_apply_multiple_operations_fn = specialized_module->begin();
 
-    // The specialized module contains only on basic block ...
+    // The specialized module contains only one basic block ...
     const auto num_blocks = specialized_apply_multiple_operations_fn->size();
     ASSERT_EQ(num_blocks, 1u);
 

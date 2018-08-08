@@ -334,7 +334,6 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
         jit_aggregate_compute(jit_minimum, _aggregate_columns[i].tuple_value, _aggregate_columns[i].hashmap_value,
                               row_index, context);
         break;
-
       case AggregateFunction::Avg:
         // In case of an average aggregate, the two auxiliary aggregates need to be updated.
         jit_aggregate_compute(jit_addition, _aggregate_columns[i].tuple_value, _aggregate_columns[i].hashmap_value,

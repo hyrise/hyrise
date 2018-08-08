@@ -23,7 +23,6 @@
 #include "operators/jit_operator/operators/jit_read_tuples.hpp"
 #include "operators/jit_operator/operators/jit_write_tuples.hpp"
 #include "operators/operator_scan_predicate.hpp"
-#include "resolve_type.hpp"
 #include "storage/storage_manager.hpp"
 #include "types.hpp"
 
@@ -71,7 +70,7 @@ JitAwareLQPTranslator::JitAwareLQPTranslator() {
 
 std::shared_ptr<AbstractOperator> JitAwareLQPTranslator::translate_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  // Jit operators materialize their output table and cannot be used in modifying queries
+  // Jit operators materialize their output table and cannot be used in non-select queries
   if (node->type == LQPNodeType::Update || node->type == LQPNodeType::Delete) {
     return std::make_shared<LQPTranslator>()->translate_node(node);
   }
@@ -230,7 +229,7 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
         return std::make_shared<JitExpression>(jit_expression_arguments[0], jit_expression_type,
                                                jit_source.add_temporary_value());
       } else if (jit_expression_arguments.size() == 2) {
-        // if one is string, both have to be string
+        // An expression can handle strings only exclusively
         if ((jit_expression_arguments[0]->result().data_type() == DataType::String) !=
             (jit_expression_arguments[1]->result().data_type() == DataType::String)) {
           return nullptr;
@@ -239,14 +238,14 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
                                                jit_expression_arguments[1], jit_source.add_temporary_value());
       } else if (jit_expression_arguments.size() == 3) {
         DebugAssert(jit_expression_type == JitExpressionType::Between, "Only Between supported for 3 arguments");
-        auto lower_bound =
+        auto lower_bound_check =
             std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::GreaterThanEquals,
                                             jit_expression_arguments[1], jit_source.add_temporary_value());
-        auto upper_bound =
+        auto upper_bound_check =
             std::make_shared<JitExpression>(jit_expression_arguments[0], JitExpressionType::LessThanEquals,
                                             jit_expression_arguments[2], jit_source.add_temporary_value());
 
-        return std::make_shared<JitExpression>(lower_bound, JitExpressionType::And, upper_bound,
+        return std::make_shared<JitExpression>(lower_bound_check, JitExpressionType::And, upper_bound_check,
                                                jit_source.add_temporary_value());
       } else {
         Fail("Unexpected number of arguments, can't translate to JitExpression");
