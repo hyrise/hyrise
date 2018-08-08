@@ -105,8 +105,6 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
     lqp_translator = std::make_shared<LQPTranslator>();
   }
 
-  const std::string query = GetParam();
-
   const auto prepared_statement_cache = std::make_shared<PreparedStatementCache>();
 
   auto sql_pipeline = SQLPipelineBuilder{query}
