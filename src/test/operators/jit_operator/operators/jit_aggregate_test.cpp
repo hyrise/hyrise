@@ -72,7 +72,7 @@ TEST_F(JitAggregateTest, AddsAggregateColumnsToOutputTable) {
                                                                    {"avg", DataType::Double, true},
                                                                    {"avg_nullable", DataType::Double, true},
                                                                    {"sum", DataType::Long, true},
-                                                                   {"sum_nullable", DataType::Int, true}});
+                                                                   {"sum_nullable", DataType::Long, true}});
 
   EXPECT_EQ(output_table->column_definitions(), expected_column_definitions);
 }
@@ -80,16 +80,16 @@ TEST_F(JitAggregateTest, AddsAggregateColumnsToOutputTable) {
 // Check, that aggregates on invalid data types are rejected.
 TEST_F(JitAggregateTest, InvalidAggregatesAreRejected) {
   EXPECT_THROW(
-      _aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::String, false, 0), AggregateFunction::Max),
+      _aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::String, false, 0), AggregateFunction::Avg),
       std::logic_error);
   EXPECT_THROW(
-      _aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::String, true, 0), AggregateFunction::Min),
+      _aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::String, true, 0), AggregateFunction::Sum),
       std::logic_error);
   EXPECT_THROW(
-      _aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::Null, false, 0), AggregateFunction::Avg),
+      _aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::Null, false, 0), AggregateFunction::Min),
       std::logic_error);
   EXPECT_THROW(
-      _aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::Null, true, 0), AggregateFunction::Sum),
+      _aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::Null, true, 0), AggregateFunction::Max),
       std::logic_error);
   EXPECT_THROW(_aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::Int, false, 0),
                                                 AggregateFunction::CountDistinct),
@@ -230,7 +230,7 @@ TEST_F(JitAggregateTest, CorrectlyComputesAggregates) {
 
   const auto expected_column_definitions = TableColumnDefinitions({{"groupby", DataType::Int, false},
                                                                    {"count", DataType::Long, false},
-                                                                   {"sum", DataType::Int, true},
+                                                                   {"sum", DataType::Long, true},
                                                                    {"max", DataType::Int, true},
                                                                    {"min", DataType::Int, true},
                                                                    {"avg", DataType::Double, true}});
@@ -268,7 +268,7 @@ TEST_F(JitAggregateTest, NoGroupByColumns) {
   _aggregate->after_query(*output_table, context);
 
   const auto expected_column_definitions = TableColumnDefinitions({{"count", DataType::Long, false},
-                                                                   {"sum", DataType::Int, true},
+                                                                   {"sum", DataType::Long, true},
                                                                    {"max", DataType::Int, true},
                                                                    {"min", DataType::Int, true},
                                                                    {"avg", DataType::Double, true}});
@@ -302,7 +302,7 @@ TEST_F(JitAggregateTest, EmptyInputTable) {
 
   const auto expected_column_definitions = TableColumnDefinitions({{"groupby", DataType::Int, false},
                                                                    {"count", DataType::Long, false},
-                                                                   {"sum", DataType::Int, true},
+                                                                   {"sum", DataType::Long, true},
                                                                    {"max", DataType::Int, true},
                                                                    {"min", DataType::Int, true},
                                                                    {"avg", DataType::Double, true}});
@@ -331,7 +331,7 @@ TEST_F(JitAggregateTest, EmptyInputTableNoGroupbyColumns) {
   _aggregate->after_query(*output_table, context);
 
   const auto expected_column_definitions = TableColumnDefinitions({{"count", DataType::Long, false},
-                                                                   {"sum", DataType::Int, true},
+                                                                   {"sum", DataType::Long, true},
                                                                    {"max", DataType::Int, true},
                                                                    {"min", DataType::Int, true},
                                                                    {"avg", DataType::Double, true}});
