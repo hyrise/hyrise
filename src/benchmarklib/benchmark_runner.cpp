@@ -170,7 +170,7 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     DebugAssert(query_result.iteration_durations.size() == query_result.num_iterations,
                 "number of iterations and number of iteration durations does not match");
 
-    const auto duration_ns = std::chrono::duration_cast<std::chrono::seconds>(query_result.duration).count();
+    const auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(query_result.duration).count();
     const auto duration_seconds = static_cast<float>(duration_ns) / 1'000'000'000;
     const auto items_per_second = static_cast<float>(query_result.num_iterations) / duration_seconds;
     const auto time_per_query = duration_ns / query_result.num_iterations;
