@@ -69,7 +69,7 @@ namespace opossum {
 class JitAwareLQPTranslator final : public LQPTranslator {
  public:
   JitAwareLQPTranslator() { Fail("Query translation with JIT operators requested, but jitting is not available"); }
-}
+};
 
 }  // namespace opossum
 
