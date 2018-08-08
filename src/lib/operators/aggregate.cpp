@@ -219,22 +219,22 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const
 
         // Now that all relevant types have been resolved, we can iterate over the column and build the aggregations.
         iterable.for_each([&, chunk_id, aggregator](const auto& value) {
-          results[hash_keys[chunk_offset]].row_id = RowID(chunk_id, chunk_offset);
+          auto& hash_entry = results[hash_keys[chunk_offset]];
+          hash_entry.row_id = RowID(chunk_id, chunk_offset);
 
           /**
           * If the value is NULL, the current aggregate value does not change.
           */
           if (!value.is_null()) {
             // If we have a value, use the aggregator lambda to update the current aggregate value for this group
-            results[hash_keys[chunk_offset]].current_aggregate =
-                aggregator(value.value(), results[hash_keys[chunk_offset]].current_aggregate);
+            hash_entry.current_aggregate = aggregator(value.value(), hash_entry.current_aggregate);
 
             // increase value counter
-            ++results[hash_keys[chunk_offset]].aggregate_count;
+            ++hash_entry.aggregate_count;
 
             if (function == AggregateFunction::CountDistinct) {
               // for the case of CountDistinct, insert this value into the set to keep track of distinct values
-              results[hash_keys[chunk_offset]].distinct_values.insert(value.value());
+              hash_entry.distinct_values.insert(value.value());
             }
           }
 
@@ -469,8 +469,9 @@ void Aggregate::_aggregate() {
 
           // count occurrences for each group key
           for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_in->size(); chunk_offset++) {
-            results[hash_keys[chunk_offset]].row_id = RowID(chunk_id, chunk_offset);
-            ++results[hash_keys[chunk_offset]].aggregate_count;
+            auto& hash_entry = results[hash_keys[chunk_offset]];
+            hash_entry.row_id = RowID(chunk_id, chunk_offset);
+            ++hash_entry.aggregate_count;
           }
 
           ++column_index;
@@ -569,9 +570,10 @@ void Aggregate::_aggregate() {
 
 std::shared_ptr<const Table> Aggregate::_on_execute() {
   // We do not want the overhead of a vector with heap storage when we have a limited number of aggregate columns.
-  // The reason we only have specializations for 1 and 2 is because every specialization increases the compile time.
+  // The reason we only have specializations up to 2 is because every specialization increases the compile time.
   // Also, we need to make sure that there are tests for at least the first case, one array case, and the fallback.
   switch (_groupby_column_ids.size()) {
+    case 0:
     case 1:
       // No need for a complex data structure if we only have one entry
       _aggregate<AggregateKeyEntry>();
