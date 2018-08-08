@@ -1,5 +1,7 @@
 #include "jit_aware_lqp_translator.hpp"
 
+#if HYRISE_JIT_SUPPORT
+
 #include <boost/range/adaptors.hpp>
 #include <boost/range/combine.hpp>
 
@@ -60,13 +62,7 @@ const std::unordered_map<LogicalOperator, JitExpressionType> logical_operator_to
 
 namespace opossum {
 
-JitAwareLQPTranslator::JitAwareLQPTranslator() {
-#if !HYRISE_JIT_SUPPORT
-  Fail("Query translation with JIT operators requested, but jitting is not available");
-#else
-  {}  // make clang-tidy happy
-#endif
-}
+JitAwareLQPTranslator::JitAwareLQPTranslator() {}
 
 std::shared_ptr<AbstractOperator> JitAwareLQPTranslator::translate_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
@@ -326,3 +322,15 @@ JitExpressionType JitAwareLQPTranslator::_expression_to_jit_expression_type(cons
 }
 
 }  // namespace opossum
+
+#else
+
+namespace opossum {
+
+JitAwareLQPTranslator::JitAwareLQPTranslator() {
+  Fail("Query translation with JIT operators requested, but jitting is not available");
+}
+
+}  // namespace opossum
+
+#endif

@@ -24,8 +24,8 @@ namespace opossum {
 #define JitDebugAssert(expr, msg) DebugAssert(expr, msg)
 #define JitFail(msg) Fail(msg)
 #else
-#define JitDebugAssert(expr, msg) {}  // NOLINT
-#define JitFail(msg) {}  // NOLINT
+#define JitDebugAssert(expr, msg)
+#define JitFail(msg)
 #endif
 
 // We need a boolean data type in the JitOperatorWrapper, but don't want to add it to

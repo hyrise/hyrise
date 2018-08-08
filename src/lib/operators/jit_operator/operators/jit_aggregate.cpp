@@ -306,8 +306,9 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
           jit_grow_by_one(_aggregate_columns[i].hashmap_count_for_avg.value(), JitVariantVector::InitialValue::Zero,
                           context);
           break;
-        case AggregateFunction::CountDistinct:
+        case AggregateFunction::CountDistinct: {
           JitFail("Aggregate function count distinct not supported");
+        }
       }
     }
 
@@ -342,8 +343,9 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
         jit_aggregate_compute(jit_increment, _aggregate_columns[i].tuple_value,
                               _aggregate_columns[i].hashmap_count_for_avg.value(), row_index, context);
         break;
-      case AggregateFunction::CountDistinct:
+      case AggregateFunction::CountDistinct: {
         JitFail("Aggregate function count distinct not supported");
+      }
     }
   }
 }
