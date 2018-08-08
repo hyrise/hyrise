@@ -34,4 +34,4 @@ class AbstractLogger {
   AbstractLogger() {}
 };
 
-}  // namespace opossum
+}  // namespace opossumJenkins aborted
