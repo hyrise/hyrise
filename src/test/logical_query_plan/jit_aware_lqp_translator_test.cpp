@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
 #include "../base_test.hpp"
-#include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "expression/expression_functional.hpp"
+#include "logical_query_plan/jit_aware_lqp_translator.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"

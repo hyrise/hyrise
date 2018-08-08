@@ -6,8 +6,27 @@
 #include "storage/base_value_column.hpp"
 #include "storage/chunk.hpp"
 #include "storage/column_iterables/base_column_iterators.hpp"
+#include "storage/table.hpp"
+#include "types.hpp"
 
 namespace opossum {
+
+// Functions using strings are not optimised to support code specialisation on Linux.
+// This specialiation issue came up with pr #933 (https://github.com/hyrise/hyrise/pull/933).
+// opt none flag to ensure that functions handling strings are not optimized
+#if __has_attribute(optnone)
+#define OPTNONE __attribute__((optnone))
+#else
+#define OPTNONE
+#endif
+// NO_SPECIALISATION flag can be set for debugging, if query is interpreted
+#ifdef NO_SPECIALISATION
+#define JitDebugAssert(expr, msg) DebugAssert(expr, msg)
+#define JitFail(msg) Fail(msg)
+#else
+#define JitDebugAssert(expr, msg) {}  // NOLINT
+#define JitFail(msg) {}  // NOLINT
+#endif
 
 // We need a boolean data type in the JitOperatorWrapper, but don't want to add it to
 // DATA_TYPE_INFO to avoid costly template instantiations.
@@ -73,9 +92,9 @@ class JitVariantVector {
   void resize(const size_t new_size);
 
   template <typename T>
-  T get(const size_t index) const;
+  OPTNONE T get(const size_t index) const;
   template <typename T>
-  void set(const size_t index, const T& value);
+  OPTNONE void set(const size_t index, const T& value);
   bool is_null(const size_t index);
   void set_is_null(const size_t index, const bool is_null);
 
@@ -187,11 +206,11 @@ class JitHashmapValue {
   size_t column_index() const;
 
   template <typename T>
-  T get(const size_t index, JitRuntimeContext& context) const {
+  OPTNONE T get(const size_t index, JitRuntimeContext& context) const {
     return context.hashmap.columns[_column_index].get<T>(index);
   }
   template <typename T>
-  void set(const T value, const size_t index, JitRuntimeContext& context) const {
+  OPTNONE void set(const T value, const size_t index, JitRuntimeContext& context) const {
     context.hashmap.columns[_column_index].set<T>(index, value);
   }
 
@@ -225,7 +244,8 @@ enum class JitExpressionType {
   Or,
   Not,
   IsNull,
-  IsNotNull
+  IsNotNull,
+  In
 };
 
 bool jit_expression_is_binary(const JitExpressionType expression_type);

@@ -134,18 +134,12 @@ TEST_F(JitCodeSpecializerTest, ReplacesLoadInstructions) {
     const auto specialized_module =
         code_specializer.specialize_function(load_replacement_fn_symbol, std::make_shared<JitRuntimePointer>());
 
-    // Number of functions in the specialized_module module does not decrease
-    // as inlining a function does not remove it from its module.
-    ASSERT_EQ(specialized_module->size(), 2u);
+    ASSERT_EQ(specialized_module->size(), 1u);
     const auto specialized_load_replacement_fn = specialized_module->begin();
 
     // There is still one load instruction (to load the _n member from the IncrementByN instance) in the module
     const auto num_load_instructions = count_instructions<llvm::LoadInst>(*specialized_load_replacement_fn);
-    // Jit code specializer cannot inline all functions.
-    // The to be inlined function is virtual. Virtual functions cannot be inlined, if the first parameter cannot be
-    // resolved. This is here the case as no JitRuntimePointer is provided. However, as the object type is not abstract
-    // and the virtual function is also final, the function can be theoretically inlined by a smarter specializer.
-    ASSERT_EQ(num_load_instructions, 0u);  // should be 1u
+    ASSERT_EQ(num_load_instructions, 1u);
   }
   {
     // Create the operation instance
@@ -156,9 +150,7 @@ TEST_F(JitCodeSpecializerTest, ReplacesLoadInstructions) {
     const auto specialized_module = code_specializer.specialize_function(
         load_replacement_fn_symbol, std::make_shared<JitConstantRuntimePointer>(&inc_by_5));
 
-    // Number of functions in the specialized_module module does not decrease
-    // as inlining a function does not remove it from its modeule
-    ASSERT_EQ(specialized_module->size(), 2u);
+    ASSERT_EQ(specialized_module->size(), 1u);
     const auto specialized_load_replacement_fn = specialized_module->begin();
 
     // The load instruction has been replaced by a constant value that has been fetched from the instance by the
@@ -175,29 +167,15 @@ TEST_F(JitCodeSpecializerTest, ReplacesLoadInstructions) {
     ASSERT_EQ(num_instructions, 2u);
 
     // When fully compiling and executing the specialized function, it still produces the correct result.
-    /*
-    ToDo(anyone) Not all direct function calls can be successfully inlined.
-    See issue #933 (https://github.com/hyrise/hyrise/issues/976)
-    The test is temporarily disabled as the function inlining fails with:
-    "LLVM ERROR: Program used external function '__ZNK7opossum12IncrementByN5applyEi' which could not be resolved!"
-    Issue can be solved by setting the function of direct function calls to the repo function in jit_code_specializer:
-    > auto function_name = call_site.getCalledFunction()->getName().str();
-    > auto repo_function = _repository.get_function(function_name)) {
-    > call_site.setCalledFunction(repo_function)
-    Adding these lines lets other tests fail.
-
     const auto compiled_load_replacement_fn =
         code_specializer.specialize_and_compile_function<int32_t(const IncrementByN&, int32_t)>(
             load_replacement_fn_symbol, std::make_shared<JitConstantRuntimePointer>(&inc_by_5));
     const auto value = 123;
     ASSERT_EQ(compiled_load_replacement_fn(inc_by_5, value), value + 5);
-     */
   }
 }
 
-// ToDo(anyone) Fix loop unrolling
-// See issue #933 (https://github.com/hyrise/hyrise/issues/976)
-TEST_F(JitCodeSpecializerTest, DISABLED_UnrollsLoops) {
+TEST_F(JitCodeSpecializerTest, UnrollsLoops) {
   // int32_t opossum::apply_multiple_operations(const std::vector<std::shared_ptr<const AbstractOperation>>&, int32_t);
   std::string apply_multiple_operations_fn_symbol =
       "_ZN7opossum25apply_multiple_operationsERKNS_18MultipleOperationsEi";
@@ -215,14 +193,13 @@ TEST_F(JitCodeSpecializerTest, DISABLED_UnrollsLoops) {
     const auto specialized_module = code_specializer.specialize_function(
         apply_multiple_operations_fn_symbol, std::make_shared<JitConstantRuntimePointer>(&multiple_operations), false);
 
-    ASSERT_EQ(specialized_module->size(), 2u);
+    ASSERT_EQ(specialized_module->size(), 1u);
     const auto specialized_apply_multiple_operations_fn = specialized_module->begin();
 
     // The loop has not been unrolled and there is still control flow (i.e., multiple basic blocks and phi nodes), and
     // function calls in the function.
     const auto num_blocks = specialized_apply_multiple_operations_fn->size();
-    // ToDo(anyone) Not all direct function calls can be successfully inlined.
-    ASSERT_GT(num_blocks, 0u);  // This assert is disabled, right value should be 1u
+    ASSERT_GT(num_blocks, 1u);
     const auto num_phi_nodes = count_instructions<llvm::PHINode>(*specialized_apply_multiple_operations_fn);
     ASSERT_GT(num_phi_nodes, 1u);
     const auto num_call_instructions = count_instructions<llvm::CallInst>(*specialized_apply_multiple_operations_fn);
@@ -233,7 +210,7 @@ TEST_F(JitCodeSpecializerTest, DISABLED_UnrollsLoops) {
     const auto specialized_module = code_specializer.specialize_function(
         apply_multiple_operations_fn_symbol, std::make_shared<JitConstantRuntimePointer>(&multiple_operations), true);
 
-    ASSERT_EQ(specialized_module->size(), 2u);
+    ASSERT_EQ(specialized_module->size(), 1u);
     const auto specialized_apply_multiple_operations_fn = specialized_module->begin();
 
     // The specialized module contains only on basic block ...

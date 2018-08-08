@@ -82,6 +82,7 @@ std::shared_ptr<AbstractOperator> JitAwareLQPTranslator::translate_node(
 std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_plan_to_jit_operators(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   auto jittable_node_count = size_t{0};
+
   auto input_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
 
   // Traverse query tree until a non-jittable nodes is found in each branch
@@ -101,7 +102,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
   //   - Always JIT AggregateNodes, as the JitAggregate is significantly faster than the Aggregate operator
   //   - Otherwise, JIT if there are two or more jittable nodes
   if (input_nodes.size() != 1 || jittable_node_count < 1) return nullptr;
-  if (jittable_node_count == 1 && (node->type == LQPNodeType::Projection)) return nullptr;
+  if (jittable_node_count == 1 && node->type == LQPNodeType::Projection) return nullptr;
 
   // The input_node is not being integrated into the operator chain, but instead serves as the input to the JitOperators
   const auto input_node = *input_nodes.begin();

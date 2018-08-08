@@ -210,8 +210,6 @@ void JitCodeSpecializer::_inline_function_calls(SpecializationContext& context) 
 
     // Instruct LLVM to perform the function inlining and push all new call sites to the working queue
     llvm::InlineFunctionInfo info;
-    // ToDo(anyone) Not all direct function calls can be successfully inlined.
-    // See issue #933 (https://github.com/hyrise/hyrise/issues/976)
     if (InlineFunction(call_site, info, nullptr, false, nullptr, context)) {
       for (const auto& new_call_site : info.InlinedCallSites) {
         call_sites.push(new_call_site);

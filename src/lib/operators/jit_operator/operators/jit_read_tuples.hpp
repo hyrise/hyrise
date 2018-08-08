@@ -99,8 +99,6 @@ class JitReadTuples : public AbstractJittable {
   std::optional<ColumnID> find_input_column(const JitTupleValue& tuple_value) const;
   std::optional<AllTypeVariant> find_literal_value(const JitTupleValue& tuple_value) const;
 
-  // Function not optimized to ensure that function calls within this function can be found by llvm code
-  __attribute__((optnone))
   void execute(JitRuntimeContext& context) const;
 
  protected:

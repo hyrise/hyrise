@@ -28,7 +28,7 @@ namespace opossum {
 using TestConfiguration = std::pair<const char*, bool>;
 
 class TPCHTest : public BaseTestWithParam<std::pair<const size_t, TestConfiguration>> {
-public:
+ public:
   static std::multimap<size_t, TestConfiguration> build_combinations() {
     std::multimap<size_t, TestConfiguration> combinations;
     for (auto it = tpch_queries.cbegin(); it != tpch_queries.cend(); ++it) {

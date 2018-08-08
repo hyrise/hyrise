@@ -109,8 +109,10 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
 
   const auto prepared_statement_cache = std::make_shared<PreparedStatementCache>();
 
-  auto sql_pipeline =
-      SQLPipelineBuilder{query}.with_prepared_statement_cache(prepared_statement_cache).with_lqp_translator(lqp_translator).create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{query}
+                          .with_prepared_statement_cache(prepared_statement_cache)
+                          .with_lqp_translator(lqp_translator)
+                          .create_pipeline();
 
   const auto& result_table = sql_pipeline.get_result_table();
 
