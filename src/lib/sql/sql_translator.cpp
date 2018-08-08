@@ -375,6 +375,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
   AssertInput(!std::dynamic_pointer_cast<StoredTableNode>(selection_lqp),
               "Unconditional updates are currently not supported");
 
+
+  const auto table_name = std::string(update.table->getName());
+  const auto target_table = StorageManager::get().get_table(table_name);
+
   for (const auto* update_clause : *update.updates) {
     const auto column_name = std::string{update_clause->column};
     const auto column_expression = translation_state.sql_identifier_resolver->resolve_identifier_relaxed(column_name);
@@ -382,6 +386,11 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
 
     update_expressions[column_id] =
         _translate_hsql_expr(*update_clause->value, translation_state.sql_identifier_resolver);
+
+    if (expression_contains_placeholders(update_expressions[column_id]) ||
+        target_table->column_data_type(column_id) != update_expressions[column_id]->data_type()) {
+      update_expressions[column_id] = cast_(update_expressions[column_id], target_table->column_data_type(column_id));
+    }
   }
 
   return UpdateNode::make((update.table)->name, update_expressions, selection_lqp);
