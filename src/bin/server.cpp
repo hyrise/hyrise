@@ -1,5 +1,6 @@
 #include <boost/asio/io_service.hpp>
 
+#include <cstdio>
 #include <cstdlib>
 #include <iostream>
 
@@ -15,12 +16,15 @@ int main(int argc, char* argv[]) {
     uint16_t port = 5432;
 
     if (argc >= 2) {
-      port = static_cast<uint16_t>(std::atoi(argv[1]));
+      char* endptr{nullptr};
+      errno = 0;
+      auto port_long = std::strtol(argv[1], &endptr, 10);
+      Assert(errno == 0 && port_long != 0 && port_long <= 65535 && *endptr == 0, "invalid port number");
+      port = static_cast<uint16_t>(port_long);
     }
 
     // Set scheduler so that the server can execute the tasks on separate threads.
-    opossum::CurrentScheduler::set(
-        std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology()));
+    opossum::CurrentScheduler::set(std::make_shared<opossum::NodeQueueScheduler>());
 
     boost::asio::io_service io_service;
 

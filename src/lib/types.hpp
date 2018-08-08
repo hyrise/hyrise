@@ -39,7 +39,8 @@ STRONG_TYPEDEF(uint32_t, ChunkID);
 STRONG_TYPEDEF(uint16_t, ColumnID);
 STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
 STRONG_TYPEDEF(uint32_t, NodeID);
-STRONG_TYPEDEF(int32_t, CpuID);
+STRONG_TYPEDEF(uint32_t, CpuID);
+STRONG_TYPEDEF(uint16_t, ValuePlaceholderID);
 
 namespace opossum {
 
@@ -74,6 +75,10 @@ class pmr_concurrent_vector : public tbb::concurrent_vector<T> {
       : tbb::concurrent_vector<T>(other), _alloc(alloc) {}
   pmr_concurrent_vector(std::vector<T>& values, PolymorphicAllocator<T> alloc = {})  // NOLINT
       : tbb::concurrent_vector<T>(values.begin(), values.end()), _alloc(alloc) {}
+
+  template <class I>
+  pmr_concurrent_vector(I first, I last, PolymorphicAllocator<T> alloc = {})
+      : tbb::concurrent_vector<T>(first, last), _alloc(alloc) {}
 
   const PolymorphicAllocator<T>& get_allocator() const { return _alloc; }
 
@@ -128,8 +133,6 @@ using TaskID = uint32_t;
 using CommitID = uint32_t;
 using TransactionID = uint32_t;
 
-using StringLength = uint16_t;     // The length of column value strings must fit in this type.
-using ColumnNameLength = uint8_t;  // The length of column names must fit in this type.
 using AttributeVectorWidth = uint8_t;
 
 using PosList = pmr_vector<RowID>;
@@ -151,34 +154,15 @@ constexpr ValueID NULL_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
 
 constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
 
-// The Scheduler currently supports just these 2 priorities, subject to change.
+// The Scheduler currently supports just these 3 priorities, subject to change.
 enum class SchedulePriority {
-  Unstealable = 2,  // Schedule task at the end of the queue with disabled workstealing
-  Normal = 1,       // Schedule task at the end of the queue
-  High = 0          // Schedule task at the beginning of the queue
+  Lowest = 3,   // Default priority when it comes to pulling tasks from the TaskQueue
+  Default = 2,  // Schedule task at the end of the queue
+  Highest = 1,  // Schedule task at the beginning of the queue, but not before any JobTask
+  JobTask = 0   // Schedule task at the beginning of the queue. This is so that we have guaranteed progress and tasks
+                // that wait for JobTasks to do the actual work do not block the execution.
 };
 
-// Part of AllParameterVariant to reference parameters that will be replaced later.
-// When stored in an operator, the operator's recreate method can contain functionality
-// that will replace a ValuePlaceholder with an explicit value from a given list of arguments
-class ValuePlaceholder {
- public:
-  explicit ValuePlaceholder(uint16_t index) : _index(index) {}
-
-  uint16_t index() const { return _index; }
-
-  friend std::ostream& operator<<(std::ostream& o, const ValuePlaceholder& placeholder) {
-    o << "?" << placeholder.index();
-    return o;
-  }
-
-  bool operator==(const ValuePlaceholder& other) const { return _index == other._index; }
-
- private:
-  uint16_t _index;
-};
-
-// TODO(anyone): integrate and replace with ExpressionType
 enum class PredicateCondition {
   Equals,
   NotEquals,
@@ -186,7 +170,7 @@ enum class PredicateCondition {
   LessThanEquals,
   GreaterThan,
   GreaterThanEquals,
-  Between,  // Currently, OpBetween is not handled by a single scan. The LQPTranslator creates two scans.
+  Between,
   In,
   Like,
   NotLike,
@@ -194,59 +178,17 @@ enum class PredicateCondition {
   IsNotNull
 };
 
-enum class ExpressionType {
-  /*Any literal value*/
-  Literal,
-  /*A star as in SELECT * FROM ...*/
-  Star,
-  /*A parameter used in PreparedStatements*/
-  Placeholder,
-  /*An identifier for a column*/
-  Column,
-  /*An identifier for a function, such as COUNT, MIN, MAX*/
-  Function,
+bool is_binary_predicate_condition(const PredicateCondition predicate_condition);
 
-  /*A subselect*/
-  Subselect,
+// ">" becomes "<" etc.
+PredicateCondition flip_predicate_condition(const PredicateCondition predicate_condition);
 
-  /*Arithmetic operators*/
-  Addition,
-  Subtraction,
-  Multiplication,
-  Division,
-  Modulo,
-  Power,
+// ">" becomes "<=" etc.
+PredicateCondition inverse_predicate_condition(const PredicateCondition predicate_condition);
 
-  /*Logical operators*/
-  Equals,
-  NotEquals,
-  LessThan,
-  LessThanEquals,
-  GreaterThan,
-  GreaterThanEquals,
-  Like,
-  NotLike,
-  And,
-  Or,
-  Between,
-  Not,
-
-  /*Set operators*/
-  In,
-  Exists,
-
-  /*Others*/
-  IsNull,
-  IsNotNull,
-  Case,
-  Hint
-};
-
-enum class JoinMode { Inner, Left, Right, Outer, Cross, Natural, Self, Semi, Anti };
+enum class JoinMode { Inner, Left, Right, Outer, Cross, Semi, Anti };
 
 enum class UnionMode { Positions };
-
-enum class AggregateFunction { Min, Max, Sum, Avg, Count, CountDistinct };
 
 enum class OrderByMode { Ascending, Descending, AscendingNullsLast, DescendingNullsLast };
 
@@ -266,5 +208,8 @@ class Noncopyable {
   Noncopyable(const Noncopyable&) = delete;
   const Noncopyable& operator=(const Noncopyable&) = delete;
 };
+
+// Dummy type, can be used to overload functions with a variant accepting a Null value
+struct Null {};
 
 }  // namespace opossum

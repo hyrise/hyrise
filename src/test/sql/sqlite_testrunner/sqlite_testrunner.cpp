@@ -26,6 +26,7 @@
 #include "sql/sql_pipeline_statement.hpp"
 #include "sqlite_wrapper.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
@@ -58,12 +59,12 @@ class SQLiteTestRunner : public BaseTestWithParam<TestConfiguration> {
 
       _sqlite->create_table_from_tbl(table_file, table_name);
 
-      std::shared_ptr<Table> table = load_table(table_file, Chunk::MAX_SIZE);
+      std::shared_ptr<Table> table = load_table(table_file);
       StorageManager::get().add_table(table_name, std::move(table));
     }
 
-    opossum::CurrentScheduler::set(
-        std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology()));
+    opossum::Topology::use_numa_topology();
+    opossum::CurrentScheduler::set(std::make_shared<opossum::NodeQueueScheduler>());
 
     SQLQueryCache<SQLQueryPlan>::get().clear();
   }
@@ -93,27 +94,31 @@ std::vector<TestConfiguration> build_combinations() {
 }
 
 TEST_P(SQLiteTestRunner, CompareToSQLite) {
-  std::ifstream file("src/test/sql/sqlite_testrunner/sqlite_testrunner_queries.sql");
   const auto& [query, use_jit] = GetParam();
 
-  SCOPED_TRACE("TPC-H " + query + " " + (use_jit ? "with JIT" : "without JIT"));
+  SCOPED_TRACE("SQLite " + query + " " + (use_jit ? "with JIT" : "without JIT"));
 
   std::shared_ptr<LQPTranslator> lqp_translator;
   if (use_jit) {
-    if constexpr (HYRISE_JIT_SUPPORT) {
-      lqp_translator = std::make_shared<JitAwareLQPTranslator>();
-    }
+    lqp_translator = std::make_shared<JitAwareLQPTranslator>();
   } else {
     lqp_translator = std::make_shared<LQPTranslator>();
   }
 
-  auto sql_pipeline = SQLPipelineBuilder{query}.with_lqp_translator(lqp_translator).create_pipeline();
+  const std::string query = GetParam();
+
+  const auto prepared_statement_cache = std::make_shared<PreparedStatementCache>();
+
+  auto sql_pipeline =
+      SQLPipelineBuilder{query}.with_prepared_statement_cache(prepared_statement_cache).with_lqp_translator(lqp_translator).create_pipeline();
+
   const auto& result_table = sql_pipeline.get_result_table();
 
   auto sqlite_result_table = _sqlite->execute_query(query);
 
   // The problem is that we can only infer columns from sqlite if they have at least one row.
-  ASSERT_TRUE(result_table->row_count() > 0 && sqlite_result_table->row_count() > 0)
+  ASSERT_TRUE(result_table && result_table->row_count() > 0 && sqlite_result_table &&
+              sqlite_result_table->row_count() > 0)
       << "The SQLiteTestRunner cannot handle queries without results";
 
   auto order_sensitivity = OrderSensitivity::No;

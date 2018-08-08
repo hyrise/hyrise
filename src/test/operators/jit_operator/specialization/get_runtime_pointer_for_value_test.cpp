@@ -100,9 +100,7 @@ class GetRuntimePointerForValueTest : public BaseTest {
   llvm::Value* _value_7;
 };
 
-TEST_F(GetRuntimePointerForValueTest, BitcodePointerInstructionsAreProperlySimulated) {
-  bitcode_pointer_test();
-}
+TEST_F(GetRuntimePointerForValueTest, BitcodePointerInstructionsAreProperlySimulated) { bitcode_pointer_test(); }
 
 TEST_F(GetRuntimePointerForValueTest, RuntimePointersAreInvalidWithoutInitialAddress) {
   //

@@ -27,10 +27,6 @@ class Chunk;
  * full and all of their end-cids must be smaller than infinity. This task calls
  * those chunks “completed”.
  *
- * After the columns have been replaced, the task calls Chunk::shrink_mvcc_columns()
- * in order to reduce fragmentation of the MVCC columns. The MVCC columns are locked
- * exclusively during this step.
- *
  * Note: Reference columns are not invalidated by this task because the order in which
  *       records are stored does not change.
  */
@@ -48,7 +44,7 @@ class ChunkCompressionTask : public AbstractTask {
    *
    * See class comment for further explanation
    */
-  bool chunk_is_completed(const std::shared_ptr<Chunk>& chunk, const uint32_t max_chunk_size);
+  bool _chunk_is_completed(const std::shared_ptr<Chunk>& chunk, const uint32_t max_chunk_size);
 
  private:
   const std::string _table_name;

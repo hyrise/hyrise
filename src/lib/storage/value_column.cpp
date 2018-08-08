@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "column_visitable.hpp"
+#include "abstract_column_visitor.hpp"
 #include "resolve_type.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
@@ -89,27 +89,6 @@ void ValueColumn<T>::append(const AllTypeVariant& val) {
   _values.push_back(type_cast<T>(val));
 }
 
-template <>
-void ValueColumn<std::string>::append(const AllTypeVariant& val) {
-  bool is_null = variant_is_null(val);
-
-  if (is_nullable()) {
-    _null_values->push_back(is_null);
-
-    if (is_null) {
-      _values.push_back(std::string{});
-      return;
-    }
-  }
-
-  Assert(!is_null, "ValueColumns is not nullable but value passed is null.");
-
-  auto typed_val = type_cast<std::string>(val);
-  Assert((typed_val.length() <= std::numeric_limits<StringLength>::max()), "String value is too long to append!");
-
-  _values.push_back(typed_val);
-}
-
 template <typename T>
 const pmr_concurrent_vector<T>& ValueColumn<T>::values() const {
   return _values;
@@ -145,15 +124,11 @@ size_t ValueColumn<T>::size() const {
 }
 
 template <typename T>
-void ValueColumn<T>::visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context) const {
-  visitable.handle_column(*this, std::move(context));
-}
-
-template <typename T>
 std::shared_ptr<BaseColumn> ValueColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
-  pmr_concurrent_vector<T> new_values(_values, alloc);
+  pmr_concurrent_vector<T> new_values(_values, alloc);  // NOLINT(cppcoreguidelines-slicing)
+                                                        // (clang-tidy reports slicing that comes from tbb)
   if (is_nullable()) {
-    pmr_concurrent_vector<bool> new_null_values(*_null_values, alloc);
+    pmr_concurrent_vector<bool> new_null_values(*_null_values, alloc);  // NOLINT(cppcoreguidelines-slicing) (see above)
     return std::allocate_shared<ValueColumn<T>>(alloc, std::move(new_values), std::move(new_null_values));
   } else {
     return std::allocate_shared<ValueColumn<T>>(alloc, std::move(new_values));

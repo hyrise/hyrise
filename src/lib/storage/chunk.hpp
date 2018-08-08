@@ -40,17 +40,20 @@ using ChunkColumns = pmr_vector<std::shared_ptr<BaseColumn>>;
  */
 class Chunk : private Noncopyable {
  public:
-  static const ChunkOffset MAX_SIZE;
+  // The last chunk offset is reserved for NULL as used in ReferenceColumns.
+  static constexpr ChunkOffset MAX_SIZE = std::numeric_limits<ChunkOffset>::max() - 1;
 
-  Chunk(const ChunkColumns& columns, std::shared_ptr<MvccColumns> mvcc_columns = nullptr,
+  Chunk(const ChunkColumns& columns, const std::shared_ptr<MvccColumns>& mvcc_columns = nullptr,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
-        const std::shared_ptr<ChunkAccessCounter> access_counter = nullptr);
+        const std::shared_ptr<ChunkAccessCounter>& access_counter = nullptr);
 
   // returns whether new rows can be appended to this Chunk
   bool is_mutable() const;
 
+  void mark_immutable();
+
   // Atomically replaces the current column at column_id with the passed column
-  void replace_column(size_t column_id, std::shared_ptr<BaseColumn> column);
+  void replace_column(size_t column_id, const std::shared_ptr<BaseColumn>& column);
 
   // returns the number of columns (cannot exceed ColumnID (uint16_t))
   uint16_t column_count() const;
@@ -72,8 +75,7 @@ class Chunk : private Noncopyable {
    *       However, if you call get_column again, be aware that
    *       the return type might have changed.
    */
-  std::shared_ptr<BaseColumn> get_mutable_column(ColumnID column_id) const;
-  std::shared_ptr<const BaseColumn> get_column(ColumnID column_id) const;
+  std::shared_ptr<BaseColumn> get_column(ColumnID column_id) const;
 
   const ChunkColumns& columns() const;
 
@@ -89,16 +91,19 @@ class Chunk : private Noncopyable {
    *
    * @return a locking ptr to the mvcc columns
    */
-  SharedScopedLockingPtr<MvccColumns> mvcc_columns();
-  SharedScopedLockingPtr<const MvccColumns> mvcc_columns() const;
+  SharedScopedLockingPtr<MvccColumns> get_scoped_mvcc_columns_lock();
+  SharedScopedLockingPtr<const MvccColumns> get_scoped_mvcc_columns_lock() const;
+
+  std::shared_ptr<MvccColumns> mvcc_columns() const;
+  void set_mvcc_columns(const std::shared_ptr<MvccColumns>& mvcc_columns);
 
   std::vector<std::shared_ptr<BaseIndex>> get_indices(
       const std::vector<std::shared_ptr<const BaseColumn>>& columns) const;
-  std::vector<std::shared_ptr<BaseIndex>> get_indices(const std::vector<ColumnID> column_ids) const;
+  std::vector<std::shared_ptr<BaseIndex>> get_indices(const std::vector<ColumnID>& column_ids) const;
 
   std::shared_ptr<BaseIndex> get_index(const ColumnIndexType index_type,
                                        const std::vector<std::shared_ptr<const BaseColumn>>& columns) const;
-  std::shared_ptr<BaseIndex> get_index(const ColumnIndexType index_type, const std::vector<ColumnID> column_ids) const;
+  std::shared_ptr<BaseIndex> get_index(const ColumnIndexType index_type, const std::vector<ColumnID>& column_ids) const;
 
   template <typename Index>
   std::shared_ptr<BaseIndex> create_index(const std::vector<std::shared_ptr<const BaseColumn>>& index_columns) {
@@ -118,11 +123,11 @@ class Chunk : private Noncopyable {
 
   template <typename Index>
   std::shared_ptr<BaseIndex> create_index(const std::vector<ColumnID>& column_ids) {
-    const auto columns = get_columns_for_ids(column_ids);
+    const auto columns = _get_columns_for_ids(column_ids);
     return create_index<Index>(columns);
   }
 
-  void remove_index(std::shared_ptr<BaseIndex> index);
+  void remove_index(const std::shared_ptr<BaseIndex>& index);
 
   void migrate(boost::container::pmr::memory_resource* memory_source);
 
@@ -134,7 +139,7 @@ class Chunk : private Noncopyable {
 
   std::shared_ptr<ChunkStatistics> statistics() const;
 
-  void set_statistics(std::shared_ptr<ChunkStatistics> statistics);
+  void set_statistics(const std::shared_ptr<ChunkStatistics>& chunk_statistics);
 
   /**
    * For debugging purposes, makes an estimation about the memory used by this Chunk and its Columns
@@ -142,7 +147,7 @@ class Chunk : private Noncopyable {
   size_t estimate_memory_usage() const;
 
  private:
-  std::vector<std::shared_ptr<const BaseColumn>> get_columns_for_ids(const std::vector<ColumnID>& column_ids) const;
+  std::vector<std::shared_ptr<const BaseColumn>> _get_columns_for_ids(const std::vector<ColumnID>& column_ids) const;
 
  private:
   PolymorphicAllocator<Chunk> _alloc;
@@ -151,6 +156,7 @@ class Chunk : private Noncopyable {
   std::shared_ptr<ChunkAccessCounter> _access_counter;
   pmr_vector<std::shared_ptr<BaseIndex>> _indices;
   std::shared_ptr<ChunkStatistics> _statistics;
+  bool _is_mutable = true;
 };
 
 }  // namespace opossum

@@ -13,20 +13,6 @@ CsvWriter::CsvWriter(const std::string& file, const ParseConfig& config) : _conf
   _stream.open(file);
 }
 
-/*
- * Escapes each quote character with an escape symbol.
- */
-std::string CsvWriter::escape(const std::string& string) {
-  std::string result(string);
-  size_t next_pos = 0;
-  while (std::string::npos != (next_pos = result.find(_config.quote, next_pos))) {
-    result.insert(next_pos, 1, _config.escape);
-    // Has to jump 2 positions ahead because a new character had been inserted.
-    next_pos += 2;
-  }
-  return result;
-}
-
 void CsvWriter::write(const AllTypeVariant& value) {
   if (_current_col_count > 0) {
     _stream << _config.separator;
@@ -63,8 +49,22 @@ void CsvWriter::_write_string_value(const std::string& value) {
    * characters.
    */
   _stream << _config.quote;
-  _stream << escape(value);
+  _stream << _escape(value);
   _stream << _config.quote;
+}
+
+/*
+ * Escapes each quote character with an escape symbol.
+ */
+std::string CsvWriter::_escape(const std::string& string) {
+  std::string result(string);
+  size_t next_pos = 0;
+  while (std::string::npos != (next_pos = result.find(_config.quote, next_pos))) {
+    result.insert(next_pos, 1, _config.escape);
+    // Has to jump 2 positions ahead because a new character had been inserted.
+    next_pos += 2;
+  }
+  return result;
 }
 
 }  // namespace opossum

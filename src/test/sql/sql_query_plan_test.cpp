@@ -36,15 +36,17 @@ TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneTest) {
   // Get the query plan.
   const auto& plan1 = pipeline_statement.get_query_plan();
   auto tasks = plan1->create_tasks();
-  ASSERT_EQ(2u, tasks.size());
+  ASSERT_EQ(3u, tasks.size());
   EXPECT_EQ("GetTable", tasks[0]->get_operator()->name());
   EXPECT_EQ("Projection", tasks[1]->get_operator()->name());
+  EXPECT_EQ("Projection", tasks[2]->get_operator()->name());
 
-  const auto plan2 = plan1->recreate();
+  const auto plan2 = plan1->deep_copy();
   auto cloned_tasks = plan2.create_tasks();
-  ASSERT_EQ(2u, cloned_tasks.size());
+  ASSERT_EQ(3u, cloned_tasks.size());
   EXPECT_EQ("GetTable", cloned_tasks[0]->get_operator()->name());
   EXPECT_EQ("Projection", cloned_tasks[1]->get_operator()->name());
+  EXPECT_EQ("Projection", cloned_tasks[2]->get_operator()->name());
 
   // Execute both task lists.
   for (auto task : tasks) {
@@ -72,14 +74,15 @@ TEST_F(SQLQueryPlanTest, SQLQueryPlanCloneWithSchedulerTest) {
   const auto& tmpl = pipeline_statement.get_query_plan();
 
   // Get a copy and schedule all tasks.
-  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_fake_numa_topology(8, 4)));
+  Topology::use_fake_numa_topology(8, 4);
+  CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
 
-  auto cloned_tasks = tmpl->recreate().create_tasks();
+  auto cloned_tasks = tmpl->deep_copy().create_tasks();
   for (auto task : cloned_tasks) {
     task->schedule();
   }
 
-  auto cloned_tasks2 = tmpl->recreate().create_tasks();
+  auto cloned_tasks2 = tmpl->deep_copy().create_tasks();
   for (auto task : cloned_tasks2) {
     task->schedule();
   }

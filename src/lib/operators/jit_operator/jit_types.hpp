@@ -75,7 +75,7 @@ class JitVariantVector {
   template <typename T>
   T get(const size_t index) const;
   template <typename T>
-  void set(const size_t index, const T value);
+  void set(const size_t index, const T& value);
   bool is_null(const size_t index);
   void set_is_null(const size_t index, const bool is_null);
 
@@ -203,6 +203,32 @@ class JitHashmapValue {
   const bool _is_nullable;
   const size_t _column_index;
 };
+
+enum class JitExpressionType {
+  Addition,
+  Column,
+  Subtraction,
+  Multiplication,
+  Division,
+  Modulo,
+  Power,
+  Equals,
+  NotEquals,
+  GreaterThan,
+  GreaterThanEquals,
+  LessThan,
+  LessThanEquals,
+  Between,
+  Like,
+  NotLike,
+  And,
+  Or,
+  Not,
+  IsNull,
+  IsNotNull
+};
+
+bool jit_expression_is_binary(const JitExpressionType expression_type);
 
 // cleanup
 #undef JIT_VARIANT_VECTOR_MEMBER

@@ -8,7 +8,7 @@
 
 namespace opossum {
 
-GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseColumn>> index_columns)
+GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseColumn>>& index_columns)
     : BaseIndex{get_index_type_of<GroupKeyIndex>()},
       _index_column(std::dynamic_pointer_cast<const BaseDictionaryColumn>(index_columns[0])) {
   Assert(static_cast<bool>(_index_column), "GroupKeyIndex only works with dictionary columns.");

@@ -22,7 +22,7 @@ std::ostream& get_out_stream(const bool verbose) {
   // See https://stackoverflow.com/a/11826666
   class NullBuffer : public std::streambuf {
    public:
-    int overflow(int c) { return c; }
+    int overflow(int c) override { return c; }
   };
 
   static NullBuffer null_buffer;
@@ -31,28 +31,45 @@ std::ostream& get_out_stream(const bool verbose) {
 }
 
 BenchmarkState::BenchmarkState(const size_t max_num_iterations, const opossum::Duration max_duration)
-    : max_num_iterations(max_num_iterations), max_duration(max_duration) {}
+    : max_num_iterations(max_num_iterations), max_duration(max_duration) {
+  iteration_durations.reserve(max_num_iterations);
+}
 
 bool BenchmarkState::keep_running() {
+  bool is_first_iteration = false;
+
   switch (state) {
     case State::NotStarted:
-      begin = std::chrono::high_resolution_clock::now();
+      benchmark_begin = std::chrono::high_resolution_clock::now();
       state = State::Running;
+      is_first_iteration = true;
       break;
     case State::Over:
       return false;
     default: {}
   }
 
+  const auto now = std::chrono::high_resolution_clock::now();
+
+  if (!is_first_iteration) {
+    // "Finish" the current iteration, i.e. get its duration
+    const auto iteration_duration = now - iteration_begin;
+    iteration_durations.push_back(iteration_duration);
+  }
+
+  // "Start" new iteration
+  benchmark_end = now;
+  iteration_begin = now;
+
+  // Stop execution if we reached the maximum number of iterations
   if (num_iterations >= max_num_iterations) {
-    end = std::chrono::high_resolution_clock::now();
     state = State::Over;
     return false;
   }
 
-  end = std::chrono::high_resolution_clock::now();
-  const auto duration = end - begin;
-  if (duration >= max_duration) {
+  // Stop execution if we reached the time limit
+  const auto benchmark_duration = now - benchmark_begin;
+  if (benchmark_duration >= max_duration) {
     state = State::Over;
     return false;
   }
@@ -63,14 +80,14 @@ bool BenchmarkState::keep_running() {
 }
 
 BenchmarkConfig::BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool verbose, const ChunkOffset chunk_size,
-                                 const EncodingConfig encoding_type, const size_t max_num_query_runs,
+                                 const EncodingConfig& encoding_config, const size_t max_num_query_runs,
                                  const Duration& max_duration, const UseMvcc use_mvcc,
                                  const std::optional<std::string>& output_file_path, const bool enable_scheduler,
                                  const bool enable_visualization, std::ostream& out)
     : benchmark_mode(benchmark_mode),
       verbose(verbose),
       chunk_size(chunk_size),
-      encoding_config(encoding_type),
+      encoding_config(encoding_config),
       max_num_query_runs(max_num_query_runs),
       max_duration(max_duration),
       use_mvcc(use_mvcc),
@@ -212,7 +229,7 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
   Assert(encoding_config_json.count("default"), "Config must contain default encoding.");
   const auto default_spec = encoding_spec_from_json(encoding_config_json["default"]);
 
-  EncodingMapping type_encoding_mapping;
+  DataTypeEncodingMapping type_encoding_mapping;
   const auto has_type_encoding = encoding_config_json.find("type") != encoding_config_json.end();
   if (has_type_encoding) {
     const auto type_encoding = encoding_config_json["type"];
@@ -220,12 +237,14 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
 
     for (const auto& type : nlohmann::json::iterator_wrapper(type_encoding)) {
       const auto type_str = boost::to_lower_copy(type.key());
-      Assert(data_type_to_string.right.find(type_str) != data_type_to_string.right.end(),
-             "Unknown data type for encoding: " + type_str);
+      const auto data_type_it = data_type_to_string.right.find(type_str);
+      Assert(data_type_it != data_type_to_string.right.end(), "Unknown data type for encoding: " + type_str);
 
       const auto& encoding_info = type.value();
       Assert(encoding_info.is_object(), "The type encoding info needs to be specified as a json object.");
-      type_encoding_mapping[type_str] = encoding_spec_from_json(encoding_info);
+
+      const auto data_type = data_type_it->second;
+      type_encoding_mapping[data_type] = encoding_spec_from_json(encoding_info);
     }
   }
 
@@ -241,7 +260,7 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
       const auto& columns = table.value();
 
       Assert(columns.is_object(), "The custom column encoding needs to be specified as a json object.");
-      custom_encoding_mapping.emplace(table_name, std::map<std::string, ColumnEncodingSpec>());
+      custom_encoding_mapping.emplace(table_name, std::unordered_map<std::string, ColumnEncodingSpec>());
 
       for (const auto& column : nlohmann::json::iterator_wrapper(columns)) {
         const auto& column_name = column.key();
@@ -262,11 +281,11 @@ std::string CLIConfigParser::detailed_help(const cxxopts::Options& options) {
 EncodingConfig::EncodingConfig() : EncodingConfig{ColumnEncodingSpec{EncodingType::Dictionary}} {}
 
 EncodingConfig::EncodingConfig(ColumnEncodingSpec default_encoding_spec)
-    : EncodingConfig{default_encoding_spec, {}, {}} {}
+    : EncodingConfig{std::move(default_encoding_spec), {}, {}} {}
 
-EncodingConfig::EncodingConfig(ColumnEncodingSpec default_encoding_spec, EncodingMapping type_encoding_mapping,
+EncodingConfig::EncodingConfig(ColumnEncodingSpec default_encoding_spec, DataTypeEncodingMapping type_encoding_mapping,
                                TableColumnEncodingMapping encoding_mapping)
-    : default_encoding_spec{default_encoding_spec},
+    : default_encoding_spec{std::move(default_encoding_spec)},
       type_encoding_mapping{std::move(type_encoding_mapping)},
       custom_encoding_mapping{std::move(encoding_mapping)} {}
 
@@ -310,7 +329,8 @@ nlohmann::json EncodingConfig::to_json() const {
 
   nlohmann::json type_mapping{};
   for (const auto& [type, spec] : type_encoding_mapping) {
-    type_mapping[type] = encoding_spec_to_string_map(spec);
+    const auto& type_str = data_type_to_string.left.at(type);
+    type_mapping[type_str] = encoding_spec_to_string_map(spec);
   }
 
   if (!type_mapping.empty()) {
@@ -333,7 +353,7 @@ nlohmann::json EncodingConfig::to_json() const {
   return json;
 }
 
-void BenchmarkTableEncoder::encode(const std::string& table_name, std::shared_ptr<Table> table,
+void BenchmarkTableEncoder::encode(const std::string& table_name, const std::shared_ptr<Table>& table,
                                    const EncodingConfig& config) {
   const auto& type_mapping = config.type_encoding_mapping;
   const auto& custom_mapping = config.custom_encoding_mapping;
@@ -355,8 +375,8 @@ void BenchmarkTableEncoder::encode(const std::string& table_name, std::shared_pt
       }
     }
 
-    const auto& column_type_str = data_type_to_string.left.find(table->column_data_type(column_id))->second;
-    const auto& encoding_by_data_type = type_mapping.find(column_type_str);
+    const auto& column_type = table->column_data_type(column_id);
+    const auto& encoding_by_data_type = type_mapping.find(column_type);
     if (encoding_by_data_type != type_mapping.end()) {
       // The column type has a specific encoding
       chunk_spec.push_back(encoding_by_data_type->second);
@@ -419,11 +439,11 @@ The encoding is always required, the compression is optional.
   },
 
   "type": {
-    <DATA_TPYE>: {
+    <DATA_TYPE>: {
       "encoding": <ENCODING_TYPE_STRING>,
       "compression": <VECTOR_COMPRESSION_TYPE_STRING>
     },
-    <DATA_TPYE>: {
+    <DATA_TYPE>: {
       "encoding": <ENCODING_TYPE_STRING>
     }
   },

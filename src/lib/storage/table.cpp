@@ -85,7 +85,7 @@ ColumnID Table::column_id_by_name(const std::string& column_name) const {
   return static_cast<ColumnID>(std::distance(_column_definitions.begin(), iter));
 }
 
-void Table::append(std::vector<AllTypeVariant> values) {
+void Table::append(const std::vector<AllTypeVariant>& values) {
   if (_chunks.empty() || _chunks.back()->size() >= _max_chunk_size) {
     append_mutable_chunk();
   }
@@ -168,7 +168,7 @@ void Table::append_chunk(const ChunkColumns& columns, const std::optional<Polymo
   _chunks.emplace_back(std::make_shared<Chunk>(columns, mvcc_columns, alloc, access_counter));
 }
 
-void Table::append_chunk(const std::shared_ptr<Chunk> chunk) {
+void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
 #if IS_DEBUG
   for (const auto& column : chunk->columns()) {
     const auto is_reference_column = std::dynamic_pointer_cast<ReferenceColumn>(column) != nullptr;

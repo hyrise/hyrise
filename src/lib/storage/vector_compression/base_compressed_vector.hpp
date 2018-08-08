@@ -58,7 +58,7 @@ using BaseCompressedVectorIterator = boost::iterator_facade<Derived, uint32_t, b
 /**
  * @brief Implements the non-virtual interface of all vectors
  *
- * Sub-classes must implement all method starting with `_on_`.
+ * Sub-classes must implement all method starting with `on_`.
  */
 template <typename Derived>
 class CompressedVector : public BaseCompressedVector {
@@ -72,20 +72,20 @@ class CompressedVector : public BaseCompressedVector {
    * @brief Returns a vector specific decoder
    * @return a unique_ptr of subclass of BaseVectorDecompressor
    */
-  auto create_decoder() const { return _self()._on_create_decoder(); }
+  auto create_decoder() const { return _self().on_create_decoder(); }
 
   /**
    * @brief Returns an iterator to the beginning
    * @return a constant input iterator returning uint32_t
    */
-  auto begin() const { return _self()._on_begin(); }
+  auto begin() const { return _self().on_begin(); }
   auto cbegin() const { return begin(); }
 
   /**
    * @brief Returns an iterator to the end
    * @return a constant input iterator returning uint32_t
    */
-  auto end() const { return _self()._on_end(); }
+  auto end() const { return _self().on_end(); }
   auto cend() const { return end(); }
   /**@}*/
 
@@ -95,18 +95,16 @@ class CompressedVector : public BaseCompressedVector {
    * @{
    */
 
-  size_t size() const final { return _self()._on_size(); }
-  size_t data_size() const final { return _self()._on_data_size(); }
+  size_t size() const final { return _self().on_size(); }
+  size_t data_size() const final { return _self().on_data_size(); }
 
   CompressedVectorType type() const final { return get_compressed_vector_type<Derived>(); }
 
-  std::unique_ptr<BaseVectorDecompressor> create_base_decoder() const final {
-    return _self()._on_create_base_decoder();
-  }
+  std::unique_ptr<BaseVectorDecompressor> create_base_decoder() const final { return _self().on_create_base_decoder(); }
 
   std::unique_ptr<const BaseCompressedVector> copy_using_allocator(
       const PolymorphicAllocator<size_t>& alloc) const final {
-    return _self()._on_copy_using_allocator(alloc);
+    return _self().on_copy_using_allocator(alloc);
   }
 
   /**@}*/

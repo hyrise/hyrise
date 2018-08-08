@@ -15,6 +15,7 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
+#include "scheduler/topology.hpp"
 #include "storage/chunk.hpp"
 #include "storage/numa_placement_manager.hpp"
 #include "storage/storage_manager.hpp"
@@ -70,7 +71,7 @@ std::vector<double> scale(const std::vector<double>& container) {
 
 // Determines whether a NUMA node has enough capacity by specifying a relative threshold.
 bool node_has_capacity(size_t node_id, double threshold = 0.8) {
-  size_t total_capacity = numa_node_size(node_id, NULL);
+  size_t total_capacity = numa_node_size(node_id, nullptr);
   int64_t dummy;
   size_t free_capacity = numa_node_size(node_id, &dummy);
   return static_cast<double>(total_capacity * (1.0 - threshold)) <= static_cast<double>(free_capacity);
@@ -163,16 +164,14 @@ MigrationPreparationTask::MigrationPreparationTask(const NUMAPlacementManager::O
 // This task first collects temperature metrics of chunks and NUMA nodes,
 // identifies chunks that are candidates for migration and schedules migration tasks.
 void MigrationPreparationTask::_on_execute() {
-  const auto topology = NUMAPlacementManager::get().topology();
-
   // Collect chunk and NUMA node temperature metrics
   auto chunk_infos =
       collect_chunk_infos(StorageManager::get(), _options.counter_history_range, _options.counter_history_interval);
   size_t chunk_counter = 0;
-  NodeInfoSet node_info = compute_node_info(get_node_temperatures(chunk_infos, topology->nodes().size()));
+  NodeInfoSet node_info = compute_node_info(get_node_temperatures(chunk_infos, Topology::get().nodes().size()));
 
   // Migrations are only considered when the imbalance between the NUMA nodes is high enough.
-  if (node_info.imbalance > _options.imbalance_threshold && node_info.cold_nodes.size() > 0) {
+  if (node_info.imbalance > _options.imbalance_threshold && !node_info.cold_nodes.empty()) {
     // Identify migration candidates (chunks)
     std::vector<ChunkInfo> migration_candidates;
     for (const auto& chunk_info : chunk_infos) {
@@ -190,10 +189,11 @@ void MigrationPreparationTask::_on_execute() {
 
     for (const auto& migration_chunk : migration_candidates) {
       const auto target_node = node_info.cold_nodes.at(chunk_counter % node_info.cold_nodes.size());
-      const auto task = std::make_shared<ChunkMigrationTask>(migration_chunk.table_name,
-                                                             std::vector<ChunkID>({migration_chunk.id}), target_node);
+      const auto task =
+          std::make_shared<ChunkMigrationTask>(migration_chunk.table_name, std::vector<ChunkID>({migration_chunk.id}),
+                                               target_node, SchedulePriority::JobTask, false);
 
-      task->schedule(target_node, SchedulePriority::Unstealable);
+      task->schedule(target_node);
       jobs.push_back(task);
       chunk_counter++;
     }

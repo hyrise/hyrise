@@ -58,20 +58,20 @@ std::vector<std::string> StorageManager::table_names() const {
   return table_names;
 }
 
-void StorageManager::add_view(const std::string& name, std::shared_ptr<const AbstractLQPNode> view) {
+void StorageManager::add_lqp_view(const std::string& name, const std::shared_ptr<LQPView>& view) {
   Assert(_tables.find(name) == _tables.end(),
          "Cannot add view " + name + " - a table with the same name already exists");
   Assert(_views.find(name) == _views.end(), "A view with the name " + name + " already exists");
 
-  _views.emplace(name, std::move(view));
+  _views.emplace(name, view);
 }
 
-void StorageManager::drop_view(const std::string& name) {
+void StorageManager::drop_lqp_view(const std::string& name) {
   const auto num_deleted = _views.erase(name);
   Assert(num_deleted == 1, "Error deleting view " + name + ": _erase() returned " + std::to_string(num_deleted) + ".");
 }
 
-std::shared_ptr<AbstractLQPNode> StorageManager::get_view(const std::string& name) const {
+std::shared_ptr<LQPView> StorageManager::get_view(const std::string& name) const {
   const auto iter = _views.find(name);
   Assert(iter != _views.end(), "No such view named '" + name + "'");
 
@@ -125,7 +125,7 @@ void StorageManager::export_all_tables_as_csv(const std::string& path) {
       auto table_wrapper = std::make_shared<TableWrapper>(table);
       table_wrapper->execute();
 
-      auto export_csv = std::make_shared<ExportCsv>(table_wrapper, path + "/" + name + ".csv");
+      auto export_csv = std::make_shared<ExportCsv>(table_wrapper, path + "/" + name + ".csv");  // NOLINT
       export_csv->execute();
     });
     jobs.push_back(job_task);

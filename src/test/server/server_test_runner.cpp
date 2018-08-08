@@ -1,5 +1,6 @@
 #include <pqxx/pqxx>
 
+#include <future>
 #include <thread>
 
 #include "base_test.hpp"
@@ -20,13 +21,13 @@ class ServerTestRunner : public BaseTest {
     StorageManager::get().add_table("table_a", _table_a);
 
     // Set scheduler so that the server can execute the tasks on separate threads.
-    CurrentScheduler::set(std::make_shared<NodeQueueScheduler>(Topology::create_numa_topology()));
+    CurrentScheduler::set(std::make_shared<NodeQueueScheduler>());
 
     uint16_t server_port = 0;
     std::mutex mutex{};
-    std::condition_variable cv{};
+    auto cv = std::make_shared<std::condition_variable>();
 
-    auto server_runner = [&](boost::asio::io_service& io_service) {
+    auto server_runner = [&, cv](boost::asio::io_service& io_service) {
       Server server{io_service, /* port = */ 0};  // run on port 0 so the server can pick a free one
 
       {
@@ -34,7 +35,7 @@ class ServerTestRunner : public BaseTest {
         server_port = server.get_port_number();
       }
 
-      cv.notify_one();
+      cv->notify_one();
 
       io_service.run();
     };
@@ -45,7 +46,7 @@ class ServerTestRunner : public BaseTest {
     // We need to wait here for the server to have started so we can get its port, which must be set != 0
     {
       std::unique_lock<std::mutex> lock{mutex};
-      cv.wait(lock, [&] { return server_port != 0; });
+      cv->wait(lock, [&] { return server_port != 0; });
     }
 
     // Get randomly assigned port number for client connection
@@ -123,6 +124,39 @@ TEST_F(ServerTestRunner, TestPreparedStatement) {
   transaction.exec("INSERT INTO table_a VALUES (55555, 1.0);");
   const auto result2 = transaction.exec_prepared(prepared_name, param);
   EXPECT_EQ(result2.size(), 2u);
+}
+
+TEST_F(ServerTestRunner, TestParallelConnections) {
+  // This test is by no means perfect, as it can show flaky behaviour. But it is rather hard to get reliable tests with
+  // multiple concurrent connections to detect a randomly (but often) occurring bug. This test will/can only fail if a
+  // bug is present but it should not fail if no bug is present. It just sends 100 parallel connections and if that
+  // fails, there probably is a bug.
+  const std::string sql = "SELECT * FROM table_a;";
+  const auto expected_num_rows = _table_a->row_count();
+
+  const auto connection_run = [&]() {
+    pqxx::connection connection{_connection_string};
+    pqxx::nontransaction transaction{connection};
+    const auto result = transaction.exec(sql);
+    EXPECT_EQ(result.size(), expected_num_rows);
+  };
+
+  const auto num_threads = 100u;
+  std::vector<std::future<void>> thread_futures;
+  thread_futures.reserve(num_threads);
+
+  for (auto thread_num = 0u; thread_num < num_threads; ++thread_num) {
+    // We want a future to the thread running, so we can kill it after a future.wait(timeout) or the test would freeze
+    thread_futures.emplace_back(std::async(std::launch::async, connection_run));
+  }
+
+  for (auto& thread_fut : thread_futures) {
+    // We give this a lot of time, not because we need that long for 100 threads to finish, but because sanitizers and
+    // other tools like valgrind sometimes bring a high overhead that exceeds 10 seconds.
+    if (thread_fut.wait_for(std::chrono::seconds(150)) == std::future_status::timeout) {
+      ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
+    }
+  }
 }
 
 }  // namespace opossum

@@ -7,9 +7,8 @@
 
 namespace opossum {
 
-JitCompiler::JitCompiler(const std::shared_ptr<llvm::LLVMContext>& context)
-    : _context{context},
-      _target_machine{llvm::EngineBuilder().selectTarget()},
+JitCompiler::JitCompiler()
+    : _target_machine{llvm::EngineBuilder().selectTarget()},
       _data_layout{_target_machine->createDataLayout()},
       _object_layer{[]() { return std::make_shared<llvm::SectionMemoryManager>(); }},
       _compile_layer{_object_layer, llvm::orc::SimpleCompiler(*_target_machine)},
@@ -42,7 +41,7 @@ JitCompiler::ModuleHandle JitCompiler::add_module(const std::shared_ptr<llvm::Mo
                                llvm::JITSymbolFlags::Exported);
       });
 
-  const auto handle = _handle_error(_compile_layer.addModule(std::move(module), std::move(resolver)));
+  const auto handle = _handle_error(_compile_layer.addModule(module, resolver));
   _modules.push_back(handle);
   return handle;
 }

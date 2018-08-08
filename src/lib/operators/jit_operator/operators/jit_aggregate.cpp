@@ -56,7 +56,7 @@ void JitAggregate::before_query(Table& out_table, JitRuntimeContext& context) co
 // We thus rely on the SFINAE pattern to provide a fallback implementation that throws an exception.
 // This is why this operation must be performed in a separate function.
 template <typename ColumnDataType>
-typename std::enable_if<std::is_arithmetic<ColumnDataType>::value, void>::type _compute_averages(
+typename std::enable_if<std::is_arithmetic<ColumnDataType>::value, void>::type compute_averages(
     const std::vector<ColumnDataType>& sum_values, const std::vector<int64_t>& count_values,
     std::vector<double>& avg_values) {
   for (auto i = 0u; i < sum_values.size(); ++i) {
@@ -72,7 +72,7 @@ typename std::enable_if<std::is_arithmetic<ColumnDataType>::value, void>::type _
 
 // Fallback implementation for non-numeric data types to make the compiler happy (see above).
 template <typename ColumnDataType>
-typename std::enable_if<!std::is_arithmetic<ColumnDataType>::value, void>::type _compute_averages(
+typename std::enable_if<!std::is_arithmetic<ColumnDataType>::value, void>::type compute_averages(
     const std::vector<ColumnDataType>& sum_values, const std::vector<int64_t>& count_values,
     std::vector<double>& avg_values) {
   Fail("Invalid aggregate");
@@ -84,15 +84,15 @@ void JitAggregate::after_query(Table& out_table, JitRuntimeContext& context) con
 
   // If the operator did not consume a single tuple and there are no groupby columns, we create a single row in the
   // output with uninitialized aggregate values (0 for count, NULL for sum, max, min, avg).
-  if (context.hashmap.indices.size() == 0 && _groupby_columns.empty()) {
+  if (context.hashmap.indices.empty() && _groupby_columns.empty()) {
     std::vector<AllTypeVariant> values;
     values.reserve(_aggregate_columns.size());
 
     for (const auto& column : _aggregate_columns) {
       if (column.function == AggregateFunction::Count) {
-        values.push_back(int64_t{0});
+        values.emplace_back(int64_t{0});
       } else {
-        values.push_back(NullValue{});
+        values.emplace_back(NullValue{});
       }
     }
 
@@ -139,7 +139,7 @@ void JitAggregate::after_query(Table& out_table, JitRuntimeContext& context) con
 
         // Then compute the averages.
         auto avg_values = std::vector<double>(sum_values.size());
-        _compute_averages(sum_values, count_values, avg_values);
+        compute_averages(sum_values, count_values, avg_values);
 
         if (column.hashmap_value.is_nullable()) {
           auto& null_values = context.hashmap.columns[column.hashmap_value.column_index()].get_is_null_vector();
@@ -174,8 +174,9 @@ void JitAggregate::add_aggregate_column(const std::string& column_name, const Ji
   switch (function) {
     case AggregateFunction::Count:
       // Count aggregates always produce a non-nullable long column.
-      _aggregate_columns.push_back(JitAggregateColumn{column_name, column_position, function, value,
-                                                      JitHashmapValue(DataType::Long, false, _num_hashmap_columns++)});
+      _aggregate_columns.emplace_back(
+          JitAggregateColumn{column_name, column_position, function, value,
+                             JitHashmapValue(DataType::Long, false, _num_hashmap_columns++)});
       break;
     case AggregateFunction::Sum:
     case AggregateFunction::Max:
@@ -183,7 +184,7 @@ void JitAggregate::add_aggregate_column(const std::string& column_name, const Ji
       Assert(value.data_type() != DataType::String && value.data_type() != DataType::Null,
              "Invalid data type for aggregate function.");
       // The data type depends on the input value.
-      _aggregate_columns.push_back(
+      _aggregate_columns.emplace_back(
           JitAggregateColumn{column_name, column_position, function, value,
                              JitHashmapValue(value.data_type(), true, _num_hashmap_columns++)});
       break;
@@ -191,9 +192,10 @@ void JitAggregate::add_aggregate_column(const std::string& column_name, const Ji
       Assert(value.data_type() != DataType::String && value.data_type() != DataType::Null,
              "Invalid data type for aggregate function.");
       // Average aggregates are computed by first computing two aggregates: a SUM and a COUNT
-      _aggregate_columns.push_back(JitAggregateColumn{column_name, column_position, function, value,
-                                                      JitHashmapValue(value.data_type(), true, _num_hashmap_columns++),
-                                                      JitHashmapValue(DataType::Long, false, _num_hashmap_columns++)});
+      _aggregate_columns.emplace_back(
+          JitAggregateColumn{column_name, column_position, function, value,
+                             JitHashmapValue(value.data_type(), true, _num_hashmap_columns++),
+                             JitHashmapValue(DataType::Long, false, _num_hashmap_columns++)});
       break;
     case AggregateFunction::CountDistinct:
       Fail("Not supported");
@@ -202,7 +204,7 @@ void JitAggregate::add_aggregate_column(const std::string& column_name, const Ji
 
 void JitAggregate::add_groupby_column(const std::string& column_name, const JitTupleValue& value) {
   auto column_position = _aggregate_columns.size() + _groupby_columns.size();
-  _groupby_columns.push_back(
+  _groupby_columns.emplace_back(
       JitGroupByColumn{column_name, column_position, value,
                        JitHashmapValue(value.data_type(), value.is_nullable(), _num_hashmap_columns++)});
 }
@@ -223,7 +225,7 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
 
   // Compute a hash for each groupby column and combine the resulting hashes.
   for (uint32_t i = 0; i < num_groupby_columns; ++i) {
-    hash_value = (hash_value << 5) ^ jit_hash(_groupby_columns[i].tuple_value, context);
+    hash_value = (hash_value << 5u) ^ jit_hash(_groupby_columns[i].tuple_value, context);
   }
 
   // Step 2: Look up the rows with this hash in the hashmap.
@@ -292,7 +294,7 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
     }
 
     // Add the index of the new tuple group to the hashmap.
-    hash_bucket.push_back(row_index);
+    hash_bucket.emplace_back(row_index);
   }
 
   // Step 3: Update the aggregate values by calling jit_aggregate_compute with appropriate operation lambdas.

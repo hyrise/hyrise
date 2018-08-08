@@ -47,9 +47,9 @@ class OperatorsValidateVisibilityTest : public BaseTest {
 TEST_F(OperatorsValidateVisibilityTest, Impossible) {
   auto context = std::make_shared<TransactionContext>(2, 2);
 
-  t->get_chunk(ChunkID{0})->mvcc_columns()->tids[0] = 2;
-  t->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[0] = 2;
-  t->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[0] = 2;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->tids[0] = 2;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->begin_cids[0] = 2;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->end_cids[0] = 2;
 
   validate->set_transaction_context(context);
   validate->execute();
@@ -61,9 +61,9 @@ TEST_F(OperatorsValidateVisibilityTest, Impossible) {
 TEST_F(OperatorsValidateVisibilityTest, PastDelete) {
   auto context = std::make_shared<TransactionContext>(2, 2);
 
-  t->get_chunk(ChunkID{0})->mvcc_columns()->tids[0] = 42;
-  t->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[0] = 2;
-  t->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[0] = 2;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->tids[0] = 42;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->begin_cids[0] = 2;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->end_cids[0] = 2;
 
   validate->set_transaction_context(context);
   validate->execute();
@@ -75,9 +75,9 @@ TEST_F(OperatorsValidateVisibilityTest, PastDelete) {
 TEST_F(OperatorsValidateVisibilityTest, Impossible2) {
   auto context = std::make_shared<TransactionContext>(2, 2);
 
-  t->get_chunk(ChunkID{0})->mvcc_columns()->tids[0] = 2;
-  t->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[0] = 4;
-  t->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[0] = 1;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->tids[0] = 2;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->begin_cids[0] = 4;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->end_cids[0] = 1;
 
   validate->set_transaction_context(context);
   validate->execute();
@@ -89,9 +89,9 @@ TEST_F(OperatorsValidateVisibilityTest, Impossible2) {
 TEST_F(OperatorsValidateVisibilityTest, OwnDeleteUncommitted) {
   auto context = std::make_shared<TransactionContext>(2, 2);
 
-  t->get_chunk(ChunkID{0})->mvcc_columns()->tids[0] = 2;
-  t->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[0] = 1;
-  t->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[0] = 6;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->tids[0] = 2;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->begin_cids[0] = 1;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->end_cids[0] = 6;
 
   validate->set_transaction_context(context);
   validate->execute();
@@ -103,9 +103,9 @@ TEST_F(OperatorsValidateVisibilityTest, OwnDeleteUncommitted) {
 TEST_F(OperatorsValidateVisibilityTest, Impossible3) {
   auto context = std::make_shared<TransactionContext>(2, 2);
 
-  t->get_chunk(ChunkID{0})->mvcc_columns()->tids[0] = 50;
-  t->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[0] = 3;
-  t->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[0] = 1;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->tids[0] = 50;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->begin_cids[0] = 3;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->end_cids[0] = 1;
 
   validate->set_transaction_context(context);
   validate->execute();
@@ -117,9 +117,9 @@ TEST_F(OperatorsValidateVisibilityTest, Impossible3) {
 TEST_F(OperatorsValidateVisibilityTest, OwnInsert) {
   auto context = std::make_shared<TransactionContext>(2, 2);
 
-  t->get_chunk(ChunkID{0})->mvcc_columns()->tids[0] = 2;
-  t->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[0] = 3;
-  t->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[0] = 3;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->tids[0] = 2;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->begin_cids[0] = 3;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->end_cids[0] = 3;
 
   validate->set_transaction_context(context);
   validate->execute();
@@ -131,9 +131,9 @@ TEST_F(OperatorsValidateVisibilityTest, OwnInsert) {
 TEST_F(OperatorsValidateVisibilityTest, PastInsertOrFutureDelete) {
   auto context = std::make_shared<TransactionContext>(2, 2);
 
-  t->get_chunk(ChunkID{0})->mvcc_columns()->tids[0] = 99;
-  t->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[0] = 2;
-  t->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[0] = 3;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->tids[0] = 99;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->begin_cids[0] = 2;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->end_cids[0] = 3;
 
   validate->set_transaction_context(context);
   validate->execute();
@@ -145,9 +145,9 @@ TEST_F(OperatorsValidateVisibilityTest, PastInsertOrFutureDelete) {
 TEST_F(OperatorsValidateVisibilityTest, UncommittedInsertOrFutureInsert) {
   auto context = std::make_shared<TransactionContext>(2, 2);
 
-  t->get_chunk(ChunkID{0})->mvcc_columns()->tids[0] = 99;
-  t->get_chunk(ChunkID{0})->mvcc_columns()->begin_cids[0] = 3;
-  t->get_chunk(ChunkID{0})->mvcc_columns()->end_cids[0] = 3;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->tids[0] = 99;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->begin_cids[0] = 3;
+  t->get_chunk(ChunkID{0})->get_scoped_mvcc_columns_lock()->end_cids[0] = 3;
 
   validate->set_transaction_context(context);
   validate->execute();

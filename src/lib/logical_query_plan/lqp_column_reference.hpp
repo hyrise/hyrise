@@ -21,8 +21,6 @@ class LQPColumnReference final {
   std::shared_ptr<const AbstractLQPNode> original_node() const;
   ColumnID original_column_id() const;
 
-  std::string description() const;
-
   bool operator==(const LQPColumnReference& rhs) const;
 
  private:
@@ -33,3 +31,12 @@ class LQPColumnReference final {
 
 std::ostream& operator<<(std::ostream& os, const LQPColumnReference& column_reference);
 }  // namespace opossum
+
+namespace std {
+
+template <>
+struct hash<opossum::LQPColumnReference> {
+  size_t operator()(const opossum::LQPColumnReference& column_reference) const;
+};
+
+}  // namespace std

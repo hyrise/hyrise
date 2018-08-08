@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/container/pmr/polymorphic_allocator.hpp>
+#include <boost/container/scoped_allocator.hpp>
 #include <boost/functional/hash.hpp>
 #include <functional>
 #include <limits>
@@ -12,8 +14,9 @@
 #include <vector>
 
 #include "abstract_read_only_operator.hpp"
+#include "expression/aggregate_expression.hpp"
 #include "resolve_type.hpp"
-#include "storage/column_visitable.hpp"
+#include "storage/abstract_column_visitor.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/value_column.hpp"
 #include "types.hpp"
@@ -28,15 +31,12 @@ struct GroupByContext;
  * function they use. COUNT() is the exception that doesn't use a Column, which is why column is optional
  * Optionally, an alias can be specified to use as the output name.
  */
-template <typename ColumnReferenceType>
-struct AggregateColumnDefinitionTemplate {
-  AggregateColumnDefinitionTemplate(const std::optional<ColumnReferenceType>& column, const AggregateFunction function,
-                                    const std::optional<std::string>& alias = std::nullopt)
-      : column(column), function(function), alias(alias) {}
+struct AggregateColumnDefinition final {
+  AggregateColumnDefinition(const std::optional<ColumnID>& column, const AggregateFunction function)
+      : column(column), function(function) {}
 
-  std::optional<ColumnReferenceType> column;
+  std::optional<ColumnID> column;
   AggregateFunction function;
-  std::optional<std::string> alias;
 };
 
 /*
@@ -56,14 +56,25 @@ struct AggregateResult {
   std::optional<AggregateType> current_aggregate;
   size_t aggregate_count = 0;
   std::set<ColumnDataType> distinct_values;
+  RowID row_id;
 };
 
 /*
 The key type that is used for the aggregation map.
 */
-using AggregateKey = std::vector<AllTypeVariant>;
+using AggregateKeyEntry = uint64_t;
+using AggregateKey = pmr_vector<AggregateKeyEntry>;
+using AggregateKeys = pmr_vector<AggregateKey>;
+using KeysPerChunk = pmr_vector<AggregateKeys>;
 
-using AggregateColumnDefinition = AggregateColumnDefinitionTemplate<ColumnID>;
+// We use monotonic_buffer_resource for the vector of vectors that hold the aggregate keys. That is so that we can
+// save time when allocating and we can throw away everything in this temporary structure at once (once the resource
+// gets deleted). Also, we use the scoped_allocator_adaptor to propagate the allocator to all inner vectors.
+// This is suitable here because the amount of memory needed is known from the start. In other places with frequent
+// reallocations, this might make less sense.
+// We use boost over std because libc++ does not yet (July 2018) support monotonic_buffer_resource:
+// https://libcxx.llvm.org/ts1z_status.html
+using AggregateKeysAllocator = boost::container::scoped_allocator_adaptor<PolymorphicAllocator<AggregateKeys>>;
 
 /**
  * Types that are used for the special COUNT(*) and DISTINCT implementations
@@ -78,8 +89,8 @@ using DistinctAggregateType = int8_t;
  */
 class Aggregate : public AbstractReadOnlyOperator {
  public:
-  Aggregate(const std::shared_ptr<AbstractOperator> in, const std::vector<AggregateColumnDefinition>& aggregates,
-            const std::vector<ColumnID> groupby_column_ids);
+  Aggregate(const std::shared_ptr<AbstractOperator>& in, const std::vector<AggregateColumnDefinition>& aggregates,
+            const std::vector<ColumnID>& groupby_column_ids);
 
   const std::vector<AggregateColumnDefinition>& aggregates() const;
   const std::vector<ColumnID>& groupby_column_ids() const;
@@ -94,35 +105,40 @@ class Aggregate : public AbstractReadOnlyOperator {
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override;
+  std::shared_ptr<AbstractOperator> _on_deep_copy(
+      const std::shared_ptr<AbstractOperator>& copied_input_left,
+      const std::shared_ptr<AbstractOperator>& copied_input_right) const override;
+
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   void _on_cleanup() override;
 
   template <typename ColumnType>
   static void _create_aggregate_context(boost::hana::basic_type<ColumnType> type,
-                                        std::shared_ptr<ColumnVisitableContext>& aggregate_context,
+                                        std::shared_ptr<ColumnVisitorContext>& aggregate_context,
                                         AggregateFunction function);
 
   template <typename ColumnType>
   static void _create_aggregate_visitor(boost::hana::basic_type<ColumnType> type,
-                                        std::shared_ptr<ColumnVisitable>& builder,
-                                        std::shared_ptr<ColumnVisitableContext> context,
+                                        std::shared_ptr<AbstractColumnVisitor>& builder,
+                                        std::shared_ptr<ColumnVisitorContext> context,
                                         std::shared_ptr<GroupByContext> groupby_context, AggregateFunction function);
 
   template <typename ColumnType>
   void _write_aggregate_output(boost::hana::basic_type<ColumnType> type, ColumnID column_index,
                                AggregateFunction function);
 
-  template <typename ColumnDataType, AggregateFunction function>
-  void _aggregate_column(ChunkID chunk_id, ColumnID column_index, const BaseColumn& base_column);
+  void _write_groupby_output(PosList& pos_list);
 
-  std::shared_ptr<ColumnVisitableContext> _create_aggregate_context(const DataType data_type,
-                                                                    const AggregateFunction function) const;
+  template <typename ColumnDataType, AggregateFunction function>
+  void _aggregate_column(ChunkID chunk_id, ColumnID column_index, const BaseColumn& base_column,
+                         const KeysPerChunk& keys_per_chunk);
+
+  std::shared_ptr<ColumnVisitorContext> _create_aggregate_context(const DataType data_type,
+                                                                  const AggregateFunction function) const;
 
   template <typename ColumnDataType, AggregateFunction aggregate_function>
-  std::shared_ptr<ColumnVisitableContext> _create_aggregate_context_impl() const;
+  std::shared_ptr<ColumnVisitorContext> _create_aggregate_context_impl() const;
 
   const std::vector<AggregateColumnDefinition> _aggregates;
   const std::vector<ColumnID> _groupby_column_ids;
@@ -131,8 +147,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   ChunkColumns _output_columns;
 
   ChunkColumns _groupby_columns;
-  std::vector<std::shared_ptr<ColumnVisitableContext>> _contexts_per_column;
-  std::vector<std::shared_ptr<std::vector<AggregateKey>>> _keys_per_chunk;
+  std::vector<std::shared_ptr<ColumnVisitorContext>> _contexts_per_column;
 };
 
 }  // namespace opossum

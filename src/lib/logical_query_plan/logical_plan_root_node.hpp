@@ -7,7 +7,7 @@
 namespace opossum {
 
 /**
- * This node is used in the Optimizer to have an explicit root node it can hold onto the tree with.
+ * This node is used in the Optimizer to have an explicit root node it can hold onto the LQP with.
  *
  * Optimizer rules are not allowed to remove this node or add nodes above it.
  *
@@ -20,12 +20,9 @@ class LogicalPlanRootNode : public EnableMakeForLQPNode<LogicalPlanRootNode>, pu
 
   std::string description() const override;
 
-  bool shallow_equals(const AbstractLQPNode& rhs) const override;
-
  protected:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(
-      const std::shared_ptr<AbstractLQPNode>& copied_left_input,
-      const std::shared_ptr<AbstractLQPNode>& copied_right_input) const override;
+  std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
+  bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
 
 }  // namespace opossum

@@ -90,6 +90,8 @@ using AllTypeVariant = detail::AllTypeVariant;
 // Function to check if AllTypeVariant is null
 inline bool variant_is_null(const AllTypeVariant& variant) { return (variant.which() == 0); }
 
+bool is_floating_point_data_type(const DataType data_type);
+
 /**
  * Notes:
  *   – Use this instead of AllTypeVariant{}, AllTypeVariant{NullValue{}}, NullValue{}, etc.
@@ -126,3 +128,12 @@ static const auto NULL_VALUE = AllTypeVariant{};
 bool all_type_variant_near(const AllTypeVariant& lhs, const AllTypeVariant& rhs, double max_abs_error = 0.001);
 
 }  // namespace opossum
+
+namespace std {
+
+template <>
+struct hash<opossum::AllTypeVariant> {
+  size_t operator()(const opossum::AllTypeVariant& all_type_variant) const;
+};
+
+}  // namespace std

@@ -12,7 +12,10 @@
 namespace opossum {
 
 Delete::Delete(const std::string& table_name, const std::shared_ptr<const AbstractOperator>& values_to_delete)
-    : AbstractReadWriteOperator{OperatorType::Delete, values_to_delete}, _table_name{table_name} {}
+    : AbstractReadWriteOperator{OperatorType::Delete, values_to_delete},
+      _table_name{table_name},
+      _transaction_id{0},
+      _num_rows_deleted{0} {}
 
 const std::string Delete::name() const { return "Delete"; }
 
@@ -40,8 +43,9 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
 
       auto expected = 0u;
       // Actual row lock for delete happens here
-      const auto success = referenced_chunk->mvcc_columns()->tids[row_id.chunk_offset].compare_exchange_strong(
-          expected, _transaction_id);
+      const auto success =
+          referenced_chunk->get_scoped_mvcc_columns_lock()->tids[row_id.chunk_offset].compare_exchange_strong(
+              expected, _transaction_id);
 
       // the row is already locked and the transaction needs to be rolled back
       if (!success) {
@@ -61,7 +65,7 @@ void Delete::_on_commit_records(const CommitID cid) {
     for (const auto& row_id : *pos_list) {
       auto chunk = _table->get_chunk(row_id.chunk_id);
 
-      chunk->mvcc_columns()->end_cids[row_id.chunk_offset] = cid;
+      chunk->get_scoped_mvcc_columns_lock()->end_cids[row_id.chunk_offset] = cid;
       // We do not unlock the rows so subsequent transactions properly fail when attempting to update these rows.
     }
   }
@@ -84,7 +88,8 @@ void Delete::_on_rollback_records() {
       auto expected = _transaction_id;
 
       // unlock all rows locked in _on_execute
-      const auto result = chunk->mvcc_columns()->tids[row_id.chunk_offset].compare_exchange_strong(expected, 0u);
+      const auto result =
+          chunk->get_scoped_mvcc_columns_lock()->tids[row_id.chunk_offset].compare_exchange_strong(expected, 0u);
 
       // If the above operation fails, it means the row is locked by another transaction. This must have been
       // the reason why the rollback was initiated. Since _on_execute stopped at this row, we can stop
@@ -124,10 +129,12 @@ bool Delete::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
   return true;
 }
 
-std::shared_ptr<AbstractOperator> Delete::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<Delete>(_table_name, recreated_input_left);
+std::shared_ptr<AbstractOperator> Delete::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<Delete>(_table_name, copied_input_left);
 }
+
+void Delete::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 }  // namespace opossum

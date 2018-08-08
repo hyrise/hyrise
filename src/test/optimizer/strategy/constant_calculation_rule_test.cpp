@@ -7,7 +7,9 @@
 #include "../../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "abstract_expression.hpp"
+#include "expression/abstract_expression.hpp"
+#include "expression/expression_functional.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -16,6 +18,8 @@
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/storage_manager.hpp"
+
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace {
 std::shared_ptr<opossum::AbstractLQPNode> compile_query(const std::string& query) {
@@ -26,39 +30,61 @@ std::shared_ptr<opossum::AbstractLQPNode> compile_query(const std::string& query
 namespace opossum {
 
 class ConstantCalculationRuleTest : public StrategyBaseTest {
- protected:
+ public:
   void SetUp() override {
     StorageManager::get().add_table("table_a", load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE));
-    _rule = std::make_shared<ConstantCalculationRule>();
+    rule = std::make_shared<ConstantCalculationRule>();
+
+    stored_table_node = StoredTableNode::make("table_a");
+    a = stored_table_node->get_column("a");
+    b = stored_table_node->get_column("b");
   }
 
-  std::shared_ptr<ConstantCalculationRule> _rule;
+  std::shared_ptr<ConstantCalculationRule> rule;
+  std::shared_ptr<StoredTableNode> stored_table_node;
+  LQPColumnReference a, b;
 };
 
 TEST_F(ConstantCalculationRuleTest, ResolveExpressionTest) {
   const auto query = "SELECT * FROM table_a WHERE a = 1232 + 1 + 1";
   const auto result_node = compile_query(query);
 
-  const auto resolved = StrategyBaseTest::apply_rule(_rule, result_node);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(rule, result_node);
 
-  EXPECT_EQ(resolved->type(), LQPNodeType::Projection);
-  EXPECT_EQ(resolved->left_input()->type(), LQPNodeType::Projection);
-  EXPECT_FALSE(resolved->right_input());
+  /**
+   * NOTE
+   * The ProjectionNode will still contain a Column calculating 1233+1
+   *    * Because it is not the job of the ConstantCalculationRule to remove redundant columns
+   *    * It isn't pruned because the Optimizer (TODO(anybody)!) can't rewrite root expressions, because
+   *        AbstractLQPNode::node_expressions() returns them by value.
+   */
 
-  ASSERT_EQ(resolved->left_input()->left_input()->type(), LQPNodeType::Predicate);
-  const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(resolved->left_input()->left_input());
-  EXPECT_FALSE(predicate_node->right_input());
-  EXPECT_EQ(predicate_node->predicate_condition(), PredicateCondition::Equals);
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(a, b),
+    PredicateNode::make(equals_(a, 1234),
+      ProjectionNode::make(expression_vector(add_(1233, 1), a, b),
+        stored_table_node)));
+  // clang-format on
 
-  ASSERT_EQ(predicate_node->left_input()->type(), LQPNodeType::Projection);
-  const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(predicate_node->left_input());
-  EXPECT_EQ(projection_node->column_expressions().size(), 2u);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
 
-  const auto original_node = projection_node->left_input();
+TEST_F(ConstantCalculationRuleTest, DoesntPruneList) {
+  const auto query = "SELECT * FROM table_a WHERE a IN (1, 2, 3+5, 4)";
+  const auto result_node = compile_query(query);
 
-  ASSERT_TRUE(is_variant(predicate_node->value()));
-  EXPECT_EQ(predicate_node->column_reference(), LQPColumnReference(original_node, ColumnID{0}));
-  EXPECT_EQ(boost::get<AllTypeVariant>(predicate_node->value()), AllTypeVariant{1234});
+  const auto actual_lqp = StrategyBaseTest::apply_rule(rule, result_node);
+
+  // clang-format off
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(a, b),
+    PredicateNode::make(not_equals_(in_(a, list_(1, 2, 8, 4)), 0),
+      ProjectionNode::make(expression_vector(in_(a, list_(1, 2, 8, 4)), a, b),
+        stored_table_node)));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 }  // namespace opossum

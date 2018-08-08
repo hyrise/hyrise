@@ -2,10 +2,13 @@
 
 #include <cmath>
 
+#include "expression/between_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "operators/operator_join_predicate.hpp"
+#include "operators/operator_scan_predicate.hpp"
 #include "resolve_type.hpp"
 #include "statistics/column_statistics.hpp"
 #include "statistics/table_statistics.hpp"
@@ -31,59 +34,78 @@ CostFeatureVariant CostFeatureLQPNodeProxy::_extract_feature_impl(const CostFeat
     case CostFeature::OutputRowCount:
       return _node->get_statistics()->row_count();
 
+    default: {}
+  }
+
+  // For features that we can't extract from the interface of AbstractLQPNode, call a function dedicated to extract
+  // features from this node type
+  switch (_node->type) {
+    case LQPNodeType::Predicate:
+      return _extract_feature_from_predicate_node(cost_feature);
+    case LQPNodeType::Join:
+      return _extract_feature_from_join_node(cost_feature);
+    default:
+      Fail("CostFeature not defined for LQPNodeType");
+  }
+}
+
+CostFeatureVariant CostFeatureLQPNodeProxy::_extract_feature_from_predicate_node(const CostFeature cost_feature) const {
+  const auto predicate_node = std::static_pointer_cast<PredicateNode>(_node);
+
+  // PredicateCondition::Between can only be extracted with this little hack, OperatorScanPredicate will split it up
+  if (cost_feature == CostFeature::PredicateCondition &&
+      std::dynamic_pointer_cast<BetweenExpression>(predicate_node->predicate)) {
+    return PredicateCondition::Between;
+  }
+  const auto operator_predicates = OperatorScanPredicate::from_expression(
+      *std::static_pointer_cast<PredicateNode>(_node)->predicate, *_node->left_input());
+  Assert(operator_predicates, "Predicate too complex to extract a CostFeature from");
+  const auto& operator_predicate = operator_predicates->at(0);
+
+  switch (cost_feature) {
     case CostFeature::LeftDataType:
-    case CostFeature::RightDataType: {
-      auto column_reference = LQPColumnReference{};
+      return _node->column_expressions()[operator_predicate.column_id]->data_type();
 
-      if (_node->type() == LQPNodeType::Join) {
-        const auto join_node = std::static_pointer_cast<JoinNode>(_node);
-        const auto column_references = join_node->join_column_references();
-        Assert(column_references, "No columns referenced in this JoinMode");
-
-        column_reference =
-            cost_feature == CostFeature::LeftDataType ? column_references->first : column_references->second;
-      } else if (_node->type() == LQPNodeType::Predicate) {
-        const auto predicate_node = std::static_pointer_cast<PredicateNode>(_node);
-        if (cost_feature == CostFeature::LeftDataType) {
-          column_reference = predicate_node->column_reference();
-        } else {
-          if (predicate_node->value().type() == typeid(AllTypeVariant)) {
-            return data_type_from_all_type_variant(boost::get<AllTypeVariant>(predicate_node->value()));
-          } else {
-            Assert(predicate_node->value().type() == typeid(LQPColumnReference), "Expected LQPColumnReference");
-            column_reference = boost::get<LQPColumnReference>(predicate_node->value());
-          }
-        }
+    case CostFeature::RightDataType:
+      if (operator_predicate.value.type() == typeid(AllTypeVariant)) {
+        return data_type_from_all_type_variant(boost::get<AllTypeVariant>(operator_predicate.value));
       } else {
-        Fail("CostFeature not defined for LQPNodeType");
+        Assert(is_column_id(operator_predicate.value), "Expected ColumnID");
+        return _node->column_expressions()[boost::get<ColumnID>(operator_predicate.value)]->data_type();
       }
-
-      auto column_id = _node->get_output_column_id(column_reference);
-      return _node->get_statistics()->column_statistics().at(column_id)->data_type();
-    }
 
     case CostFeature::PredicateCondition:
-      if (_node->type() == LQPNodeType::Join) {
-        const auto predicate_condition = std::static_pointer_cast<JoinNode>(_node)->predicate_condition();
-        Assert(predicate_condition, "No PredicateCondition in this JoinMode");
-        return *predicate_condition;
-      } else if (_node->type() == LQPNodeType::Predicate) {
-        return std::static_pointer_cast<PredicateNode>(_node)->predicate_condition();
-      } else {
-        Fail("CostFeature not defined for LQPNodeType");
-      }
+      return operator_predicate.predicate_condition;
 
     case CostFeature::RightOperandIsColumn:
-      if (_node->type() == LQPNodeType::Predicate) {
-        return is_lqp_column_reference(std::static_pointer_cast<PredicateNode>(_node)->value());
-      } else {
-        Fail("CostFeature not defined for LQPNodeType");
-      }
+      return is_column_id(operator_predicate.value);
 
     default:
-      break;
+      Fail("Unexpected CostFeature");
   }
-  Fail("Feature extraction failed. Maybe the Feature should be handled in AbstractCostFeatureProxy?");
+}
+
+CostFeatureVariant CostFeatureLQPNodeProxy::_extract_feature_from_join_node(const CostFeature cost_feature) const {
+  const auto operator_predicate = OperatorJoinPredicate::from_expression(
+      *std::static_pointer_cast<JoinNode>(_node)->join_predicate, *_node->left_input(), *_node->right_input());
+  Assert(operator_predicate, "Predicate too complex to extract a CostFeature from");
+
+  switch (cost_feature) {
+    case CostFeature::LeftDataType:
+      return _node->left_input()->column_expressions()[operator_predicate->column_ids.first]->data_type();
+
+    case CostFeature::RightDataType:
+      return _node->right_input()->column_expressions()[operator_predicate->column_ids.second]->data_type();
+
+    case CostFeature::PredicateCondition:
+      return operator_predicate->predicate_condition;
+
+    case CostFeature::RightOperandIsColumn:
+      return true;
+
+    default:
+      Fail("Unexpected CostFeature");
+  }
 }
 
 }  // namespace opossum

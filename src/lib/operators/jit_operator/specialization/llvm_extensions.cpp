@@ -9,7 +9,7 @@
 
 namespace opossum {
 
-const std::shared_ptr<const JitRuntimePointer>& GetRuntimePointerForValue(const llvm::Value* value,
+const std::shared_ptr<const JitRuntimePointer>& GetRuntimePointerForValue(const llvm::Value* value,  // NOLINT
                                                                           SpecializationContext& context) {
   // If the value exists in the value map, use the mapped value (i.e., the value in the cloned function) for the lookup
   auto mapped_value = value;
@@ -76,7 +76,7 @@ const std::shared_ptr<const JitRuntimePointer>& GetRuntimePointerForValue(const 
 
 // Preforms constant folding (i.e., recursively simplifies operations on constant values by simulating the operation and
 // substituting the computation with the constant result)
-llvm::Constant* ConstantFoldInstruction(llvm::Instruction* inst, llvm::ArrayRef<llvm::Constant*> operands,
+llvm::Constant* ConstantFoldInstruction(llvm::Instruction* inst, llvm::ArrayRef<llvm::Constant*> operands,  // NOLINT
                                         const llvm::DataLayout& data_layout,
                                         const llvm::TargetLibraryInfo* target_library_info) {
   // PHI nodes cannot be constant folded
@@ -106,7 +106,7 @@ llvm::Constant* ConstantFoldInstruction(llvm::Instruction* inst, llvm::ArrayRef<
   return llvm::ConstantFoldInstOperands(inst, operands, data_layout, target_library_info);
 }
 
-llvm::Constant* ResolveConditionRec(llvm::Value* value, SpecializationContext& context,
+llvm::Constant* ResolveConditionRec(llvm::Value* value, SpecializationContext& context,  // NOLINT
                                     std::unordered_set<llvm::Value*>& failed) {
   // If resolving the value failed already we fail early here
   if (failed.count(value)) {
@@ -147,7 +147,7 @@ llvm::Constant* ResolveConditionRec(llvm::Value* value, SpecializationContext& c
   return nullptr;
 }
 
-llvm::Constant* ResolveCondition(llvm::Value* Value, SpecializationContext& Context) {
+llvm::Constant* ResolveCondition(llvm::Value* Value, SpecializationContext& Context) {  // NOLINT
   // Keeps track of all operands that failed to resolve to a constant to avoid duplicate lookups
   std::unordered_set<llvm::Value*> resolution_failed;
   return ResolveConditionRec(Value, Context, resolution_failed);

@@ -2,10 +2,10 @@
 
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
-
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <sys/stat.h>
+
 #include <chrono>
 #include <csetjmp>
 #include <csignal>
@@ -38,6 +38,7 @@
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/filesystem.hpp"
+#include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
 
 #define ANSI_COLOR_RED "\x1B[31m"
@@ -96,40 +97,37 @@ namespace opossum {
 Console::Console()
     : _prompt("> "),
       _multiline_input(""),
-      _history_file(),
-      _commands(),
-      _tpcc_commands(),
       _out(std::cout.rdbuf()),
       _log("console.log", std::ios_base::app | std::ios_base::out),
       _verbose(false) {
   // Init readline basics, tells readline to use our custom command completion function
-  rl_attempted_completion_function = &Console::command_completion;
-  rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");
+  rl_attempted_completion_function = &Console::_command_completion;
+  rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");  // NOLINT (legacy API)
 
   // Register default commands to Console
-  register_command("exit", std::bind(&Console::exit, this, std::placeholders::_1));
-  register_command("quit", std::bind(&Console::exit, this, std::placeholders::_1));
-  register_command("help", std::bind(&Console::help, this, std::placeholders::_1));
-  register_command("generate", std::bind(&Console::generate_tpcc, this, std::placeholders::_1));
-  register_command("load", std::bind(&Console::load_table, this, std::placeholders::_1));
-  register_command("script", std::bind(&Console::exec_script, this, std::placeholders::_1));
-  register_command("print", std::bind(&Console::print_table, this, std::placeholders::_1));
-  register_command("visualize", std::bind(&Console::visualize, this, std::placeholders::_1));
-  register_command("begin", std::bind(&Console::begin_transaction, this, std::placeholders::_1));
-  register_command("rollback", std::bind(&Console::rollback_transaction, this, std::placeholders::_1));
-  register_command("commit", std::bind(&Console::commit_transaction, this, std::placeholders::_1));
-  register_command("txinfo", std::bind(&Console::print_transaction_info, this, std::placeholders::_1));
-  register_command("pwd", std::bind(&Console::print_current_working_directory, this, std::placeholders::_1));
-  register_command("setting", std::bind(&Console::change_runtime_setting, this, std::placeholders::_1));
+  register_command("exit", std::bind(&Console::_exit, this, std::placeholders::_1));
+  register_command("quit", std::bind(&Console::_exit, this, std::placeholders::_1));
+  register_command("help", std::bind(&Console::_help, this, std::placeholders::_1));
+  register_command("generate", std::bind(&Console::_generate_tpcc, this, std::placeholders::_1));
+  register_command("load", std::bind(&Console::_load_table, this, std::placeholders::_1));
+  register_command("script", std::bind(&Console::_exec_script, this, std::placeholders::_1));
+  register_command("print", std::bind(&Console::_print_table, this, std::placeholders::_1));
+  register_command("visualize", std::bind(&Console::_visualize, this, std::placeholders::_1));
+  register_command("begin", std::bind(&Console::_begin_transaction, this, std::placeholders::_1));
+  register_command("rollback", std::bind(&Console::_rollback_transaction, this, std::placeholders::_1));
+  register_command("commit", std::bind(&Console::_commit_transaction, this, std::placeholders::_1));
+  register_command("txinfo", std::bind(&Console::_print_transaction_info, this, std::placeholders::_1));
+  register_command("pwd", std::bind(&Console::_print_current_working_directory, this, std::placeholders::_1));
+  register_command("setting", std::bind(&Console::_change_runtime_setting, this, std::placeholders::_1));
 
   // Register words specifically for command completion purposes, e.g.
   // for TPC-C table generation, 'CUSTOMER', 'DISTRICT', etc
   auto tpcc_generators = opossum::TpccTableGenerator::table_generator_functions();
-  for (auto it = tpcc_generators.begin(); it != tpcc_generators.end(); ++it) {
-    _tpcc_commands.push_back(it->first);
+  for (const auto& generator : tpcc_generators) {
+    _tpcc_commands.push_back(generator.first);
   }
 
-  _prepared_statements = std::make_shared<SQLQueryCache<SQLQueryPlan>>(DefaultCacheCapacity);
+  _prepared_statements = std::make_shared<PreparedStatementCache>(DefaultCacheCapacity);
 }
 
 Console& Console::get() {
@@ -161,12 +159,12 @@ int Console::read() {
   }
 
   // Free buffer, since readline() allocates new string every time
-  free(buffer);
+  free(buffer);  // NOLINT (legacy API)
 
   return _eval(input);
 }
 
-int Console::execute_script(const std::string& filepath) { return exec_script(filepath); }
+int Console::execute_script(const std::string& filepath) { return _exec_script(filepath); }
 
 int Console::_eval(const std::string& input) {
   // Do nothing if no input was given
@@ -233,19 +231,14 @@ int Console::_eval_command(const CommandFunction& func, const std::string& comma
 
 bool Console::_initialize_pipeline(const std::string& sql) {
   try {
+    auto builder = SQLPipelineBuilder{sql}
+                       .dont_cleanup_temporaries()  // keep tables for debugging and visualization
+                       .with_prepared_statement_cache(_prepared_statements);
     if (_explicitly_created_transaction_context != nullptr) {
-      // We want to keep the temporary tables for debugging and visualization
-      _sql_pipeline =
-          std::make_unique<SQLPipeline>(SQLPipelineBuilder{sql}
-                                            .dont_cleanup_temporaries()
-                                            .with_prepared_statement_cache(_prepared_statements)
-                                            .with_transaction_context(_explicitly_created_transaction_context)
-                                            .create_pipeline());
-    } else {
-      _sql_pipeline = std::make_unique<SQLPipeline>(
-          SQLPipelineBuilder{sql}.with_prepared_statement_cache(_prepared_statements).create_pipeline());
+      builder.with_transaction_context(_explicitly_created_transaction_context);
     }
-  } catch (const std::exception& exception) {
+    _sql_pipeline = std::make_unique<SQLPipeline>(builder.create_pipeline());
+  } catch (const InvalidInputException& exception) {
     out(std::string(exception.what()) + '\n');
     return false;
   }
@@ -258,7 +251,7 @@ int Console::_eval_sql(const std::string& sql) {
 
   try {
     _sql_pipeline->get_result_table();
-  } catch (const std::exception& exception) {
+  } catch (const InvalidInputException& exception) {
     out(std::string(exception.what()) + "\n");
     if (_handle_rollback() && _explicitly_created_transaction_context == nullptr &&
         _sql_pipeline->statement_count() > 1) {
@@ -325,7 +318,7 @@ void Console::out(const std::string& output, bool console_print) {
   _log.flush();
 }
 
-void Console::out(std::shared_ptr<const Table> table, uint32_t flags) {
+void Console::out(const std::shared_ptr<const Table>& table, uint32_t flags) {
   int size_y, size_x;
   rl_get_screen_size(&size_y, &size_x);
 
@@ -350,9 +343,9 @@ void Console::out(std::shared_ptr<const Table> table, uint32_t flags) {
 
 // Command functions
 
-int Console::exit(const std::string&) { return Console::ReturnCode::Quit; }
+int Console::_exit(const std::string&) { return Console::ReturnCode::Quit; }
 
-int Console::help(const std::string&) {
+int Console::_help(const std::string&) {
   out("HYRISE SQL Interface\n\n");
   out("Available commands:\n");
   out("  generate [TABLENAME]             - Generate available TPC-C tables, or a specific table if TABLENAME is "
@@ -382,7 +375,7 @@ int Console::help(const std::string&) {
   return Console::ReturnCode::Ok;
 }
 
-int Console::generate_tpcc(const std::string& tablename) {
+int Console::_generate_tpcc(const std::string& tablename) {
   if (tablename.empty() || "ALL" == tablename) {
     out("Generating TPCC tables (this might take a while) ...\n");
     auto tables = opossum::TpccTableGenerator().generate_all_tables();
@@ -403,7 +396,7 @@ int Console::generate_tpcc(const std::string& tablename) {
   return ReturnCode::Ok;
 }
 
-int Console::load_table(const std::string& args) {
+int Console::_load_table(const std::string& args) {
   std::string input = args;
   boost::algorithm::trim<std::string>(input);
   std::vector<std::string> arguments;
@@ -436,8 +429,8 @@ int Console::load_table(const std::string& args) {
       // We used this chunk size in order to be able to test chunk pruning
       // on sizeable data sets. This should probably be made configurable
       // at some point.
-      static constexpr auto default_chunk_size = 500'000u;
-      auto table = opossum::load_table(filepath, default_chunk_size);
+      static constexpr auto DEFAULT_CHUNK_SIZE = 500'000u;
+      auto table = opossum::load_table(filepath, DEFAULT_CHUNK_SIZE);
       auto& storage_manager = StorageManager::get();
       if (storage_manager.has_table(tablename)) {
         storage_manager.drop_table(tablename);
@@ -456,7 +449,7 @@ int Console::load_table(const std::string& args) {
   return ReturnCode::Ok;
 }
 
-int Console::print_table(const std::string& args) {
+int Console::_print_table(const std::string& args) {
   std::string input = args;
   boost::algorithm::trim<std::string>(input);
   std::vector<std::string> arguments;
@@ -483,7 +476,7 @@ int Console::print_table(const std::string& args) {
   return ReturnCode::Ok;
 }
 
-int Console::visualize(const std::string& input) {
+int Console::_visualize(const std::string& input) {
   std::vector<std::string> input_words;
   boost::algorithm::split(input_words, input, boost::is_any_of(" \n"));
 
@@ -597,14 +590,13 @@ int Console::visualize(const std::string& input) {
   return ReturnCode::Ok;
 }
 
-int Console::change_runtime_setting(const std::string& input) {
+int Console::_change_runtime_setting(const std::string& input) {
   auto property = input.substr(0, input.find_first_of(" \n"));
   auto value = input.substr(input.find_first_of(" \n") + 1, input.size());
 
   if (property == "scheduler") {
     if (value == "on") {
-      opossum::CurrentScheduler::set(
-          std::make_shared<opossum::NodeQueueScheduler>(opossum::Topology::create_numa_topology()));
+      opossum::CurrentScheduler::set(std::make_shared<opossum::NodeQueueScheduler>());
       out("Scheduler turned on\n");
     } else if (value == "off") {
       opossum::CurrentScheduler::set(nullptr);
@@ -620,15 +612,15 @@ int Console::change_runtime_setting(const std::string& input) {
   return 1;
 }
 
-int Console::exec_script(const std::string& script_file) {
+int Console::_exec_script(const std::string& script_file) {
   auto filepath = script_file;
   boost::algorithm::trim(filepath);
   std::ifstream script(filepath);
 
   const auto is_regular_file = [](const std::string& path) {
-    struct stat path_stat;
+    struct stat path_stat {};
     stat(path.c_str(), &path_stat);
-    return S_ISREG(path_stat.st_mode);
+    return S_ISREG(path_stat.st_mode);  // NOLINT
   };
 
   if (!script.good()) {
@@ -668,7 +660,7 @@ void Console::handle_signal(int sig) {
   }
 }
 
-int Console::begin_transaction(const std::string& input) {
+int Console::_begin_transaction(const std::string& input) {
   if (_explicitly_created_transaction_context != nullptr) {
     const auto transaction_id = std::to_string(_explicitly_created_transaction_context->transaction_id());
     out("There is already an active transaction (" + transaction_id + "). ");
@@ -683,7 +675,7 @@ int Console::begin_transaction(const std::string& input) {
   return ReturnCode::Ok;
 }
 
-int Console::rollback_transaction(const std::string& input) {
+int Console::_rollback_transaction(const std::string& input) {
   if (_explicitly_created_transaction_context == nullptr) {
     out("Console is in auto-commit mode. Type `begin` to start a manual transaction.\n");
     return ReturnCode::Error;
@@ -698,7 +690,7 @@ int Console::rollback_transaction(const std::string& input) {
   return ReturnCode::Ok;
 }
 
-int Console::commit_transaction(const std::string& input) {
+int Console::_commit_transaction(const std::string& input) {
   if (_explicitly_created_transaction_context == nullptr) {
     out("Console is in auto-commit mode. Type `begin` to start a manual transaction.\n");
     return ReturnCode::Error;
@@ -713,7 +705,7 @@ int Console::commit_transaction(const std::string& input) {
   return ReturnCode::Ok;
 }
 
-int Console::print_transaction_info(const std::string& input) {
+int Console::_print_transaction_info(const std::string& input) {
   if (_explicitly_created_transaction_context == nullptr) {
     out("Console is in auto-commit mode. Type `begin` to start a manual transaction.\n");
     return ReturnCode::Error;
@@ -726,14 +718,14 @@ int Console::print_transaction_info(const std::string& input) {
   return ReturnCode::Ok;
 }
 
-int Console::print_current_working_directory(const std::string&) {
+int Console::_print_current_working_directory(const std::string&) {
   out(filesystem::current_path().string() + "\n");
   return ReturnCode::Ok;
 }
 
 // GNU readline interface to our commands
 
-char** Console::command_completion(const char* text, int start, int end) {
+char** Console::_command_completion(const char* text, int start, int end) {
   char** completion_matches = nullptr;
 
   std::string input(rl_line_buffer);
@@ -751,7 +743,7 @@ char** Console::command_completion(const char* text, int start, int end) {
   if (first_word == "generate") {
     // Completion only for two words, "generate", and the TABLENAME
     if (tokens.size() <= 2) {
-      completion_matches = rl_completion_matches(text, &Console::command_generator_tpcc);
+      completion_matches = rl_completion_matches(text, &Console::_command_generator_tpcc);
     }
     // Turn off filepath completion for TPC-C table generation
     rl_attempted_completion_over = 1;
@@ -762,13 +754,13 @@ char** Console::command_completion(const char* text, int start, int end) {
     // Turn off filepath completion after first argument for "load" and "script"
     rl_attempted_completion_over = 1;
   } else if (start == 0) {
-    completion_matches = rl_completion_matches(text, &Console::command_generator);
+    completion_matches = rl_completion_matches(text, &Console::_command_generator);
   }
 
   return completion_matches;
 }
 
-char* Console::command_generator(const char* text, int state) {
+char* Console::_command_generator(const char* text, int state) {
   static RegisteredCommands::iterator it;
   auto& commands = Console::get()._commands;
 
@@ -780,7 +772,7 @@ char* Console::command_generator(const char* text, int state) {
     auto& command = it->first;
     ++it;
     if (command.find(text) != std::string::npos) {
-      char* completion = new char[command.size()];
+      auto completion = new char[command.size()];  // NOLINT (legacy API)
       snprintf(completion, command.size() + 1, "%s", command.c_str());
       return completion;
     }
@@ -788,7 +780,7 @@ char* Console::command_generator(const char* text, int state) {
   return nullptr;
 }
 
-char* Console::command_generator_tpcc(const char* text, int state) {
+char* Console::_command_generator_tpcc(const char* text, int state) {
   static std::vector<std::string>::iterator it;
   auto& commands = Console::get()._tpcc_commands;
   if (state == 0) {
@@ -799,7 +791,7 @@ char* Console::command_generator_tpcc(const char* text, int state) {
     auto& command = *it;
     ++it;
     if (command.find(text) != std::string::npos) {
-      char* completion = new char[command.size()];
+      auto completion = new char[command.size()];  // NOLINT (legacy API)
       snprintf(completion, command.size() + 1, "%s", command.c_str());
       return completion;
     }
@@ -809,7 +801,7 @@ char* Console::command_generator_tpcc(const char* text, int state) {
 
 bool Console::_handle_rollback() {
   auto failed_pipeline = _sql_pipeline->failed_pipeline_statement();
-  if (failed_pipeline->transaction_context() && failed_pipeline->transaction_context()->aborted()) {
+  if (failed_pipeline && failed_pipeline->transaction_context() && failed_pipeline->transaction_context()->aborted()) {
     out("The transaction has been rolled back.\n");
     _explicitly_created_transaction_context = nullptr;
     return true;
@@ -824,7 +816,7 @@ int main(int argc, char** argv) {
   using Return = opossum::Console::ReturnCode;
   auto& console = opossum::Console::get();
 
-  // Bind CTRL-C to behaviour specified in opossum::Console::handle_signal
+  // Bind CTRL-C to behaviour specified in opossum::Console::_handle_signal
   std::signal(SIGINT, &opossum::Console::handle_signal);
 
   console.set_prompt("> ");
