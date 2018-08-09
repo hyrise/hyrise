@@ -39,7 +39,10 @@ class TPCHTest : public BaseTestWithParam<std::pair<const size_t, TestConfigurat
     }
     return combinations;
   }
-  void SetUp() override { _sqlite_wrapper = std::make_shared<SQLiteWrapper>(); }
+  void SetUp() override {
+    _sqlite_wrapper = std::make_shared<SQLiteWrapper>();
+    SQLQueryCache<SQLQueryPlan>::get().clear();
+  }
 
   std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
 
@@ -77,8 +80,6 @@ TEST_P(TPCHTest, TPCHQueryTest) {
 
   std::shared_ptr<LQPTranslator> lqp_translator;
   if (use_jit) {
-    // Clear cache to ensure that query must be translated, again, when the JitAwareLQPTranslator is used.
-    SQLQueryCache<SQLQueryPlan>::get().clear();
     lqp_translator = std::make_shared<JitAwareLQPTranslator>();
   } else {
     lqp_translator = std::make_shared<LQPTranslator>();
