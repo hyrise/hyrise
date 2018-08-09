@@ -1,4 +1,6 @@
 #include <dlfcn.h>
+
+#include "storage/storage_manager.hpp"
 #include "utils/filesystem.hpp"
 #include "utils/assert.hpp"
 
@@ -33,11 +35,14 @@ void PluginManager::load_plugin(const std::string &path, const PluginName &name)
   void *factory = dlsym(plugin_handle , "factory");
   DebugAssert(factory, "Instantiating plugin failed: Have you implemented and exported the factory method?");
 
-  typedef AbstractPlugin* (*Instantiator)();
+  typedef AbstractPlugin* (*Instantiator)(Injection);
   Instantiator instantiate = reinterpret_cast<Instantiator>(factory);
 
 
-  auto plugin = instantiate();
+  Injection injection = {&(StorageManager::get())};
+
+
+  auto plugin = instantiate(injection);
   PluginHandleWrapper plugin_handle_wrapper = {plugin_handle, plugin};
   DebugAssert(!_is_duplicate(plugin_handle_wrapper.plugin), "Loading plugin failed: There can only be one instance of every plugin.");
 
@@ -57,9 +62,9 @@ void PluginManager::stop_plugin(const PluginName &name) {
 
 
 PluginManager::~PluginManager() {
+  std::cout << "Calling ~PluginManager" << std::endl;
   for (auto &[plugin_name, plugin_handle_wrapper] : _plugins) {
-    plugin_handle_wrapper.plugin->stop();
-    dlclose(plugin_handle_wrapper.handle);
+    stop_plugin(plugin_name);
   }
 };
 
