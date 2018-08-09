@@ -356,6 +356,7 @@ set(
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
     storage/chunk.hpp
+    storage/column_accessor.hpp
     storage/column_encoding_utils.cpp
     storage/column_encoding_utils.hpp
     storage/column_iterables/any_column_iterable.hpp
