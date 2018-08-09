@@ -291,9 +291,11 @@ void Aggregate::_aggregate() {
   size_t needed_size = aligned_size<KeysPerChunk<AggregateKey>>() +
                        input_table->chunk_count() * aligned_size<AggregateKeys<AggregateKey>>() +
                        input_table->row_count() * needed_size_per_aggregate_key;
+  needed_size *= 1.1;  // Give it a little bit more, just in case
 
   auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(needed_size);
   auto allocator = AggregateKeysAllocator{PolymorphicAllocator<AggregateKeys<AggregateKey>>{&temp_buffer}};
+  allocator.allocate(1);  // Make sure that the buffer is initialized
   const auto start_next_buffer_size = temp_buffer.next_buffer_size();
 
   // Create the actual data structure
