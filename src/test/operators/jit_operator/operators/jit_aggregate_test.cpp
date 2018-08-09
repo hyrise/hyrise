@@ -77,6 +77,7 @@ TEST_F(JitAggregateTest, AddsAggregateColumnsToOutputTable) {
   EXPECT_EQ(output_table->column_definitions(), expected_column_definitions);
 }
 
+#if IS_DEBUG
 // Check, that aggregates on invalid data types are rejected.
 TEST_F(JitAggregateTest, InvalidAggregatesAreRejected) {
   EXPECT_THROW(
@@ -95,6 +96,7 @@ TEST_F(JitAggregateTest, InvalidAggregatesAreRejected) {
                                                 AggregateFunction::CountDistinct),
                std::logic_error);
 }
+#endif
 
 // Check, that any order of groupby and aggregates columns is reflected in the output table.
 TEST_F(JitAggregateTest, MaintainsColumnOrderInOutputTable) {
