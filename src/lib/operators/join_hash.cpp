@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <cstdlib>
 
 #include "join_hash/hash_traits.hpp"
 #include "resolve_type.hpp"
@@ -626,38 +627,46 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _predicate_condition(predicate_condition),
         _inputs_swapped(inputs_swapped)
         {
-                    /* Hash joins perform best for join relations with very different sizes. In case the 
-           optimizer selects the hash join due to such a situation, but neglects that the
-           input switch will be switched (e.g., due to the join type), we will warn the user. */
+          /*
+            Hash joins perform best for join relations with a small left join partner. In case the 
+            optimizer selects the hash join due to such a situation, but neglects that the
+            input will be switched (e.g., due to the join type), the user will be warned.
+          */
           if (inputs_swapped) {
             PerformanceWarning("Inputs swapped for hash join.");
           }
 
           /*
-          Setting number of bits for radix clustering:
-          The number of bits is used to create probe partitions with a size that can
-          be expected to fit into the L2 cache.
-          This should incorporate hardware knowledge, once available in Hyrise.
-          As of now, we assume a L2 cache size of 256 KB.
-          We estimate the size the following way:
-            - we assume each key appears once (that is an overcount, but since we'd like
-            have rather a hash map that is slightly smaller than L2 rather than
-            slightly larger, that's not an issue)
-            - each entry in the hash map is a data structure holding the actual value
-            and the RowID
-            - we use the general rule of thumb for modern hashmaps with 3x the space of the actual data
-            (cf. hash_map_size_factor, see https://tessil.github.io/2016/08/29/benchmark-hopscotch-map.html
-            & https://github.com/sparsehash/sparsehash)
+            Setting number of bits for radix clustering:
+            The number of bits is used to create probe partitions with a size that can
+            be expected to fit into the L2 cache.
+            This should incorporate hardware knowledge, once available in Hyrise.
+            As of now, we assume a L2 cache size of 256 KB.
+            We estimate the size the following way:
+              - we assume each key appears once (that is an overestimation space-wise, but we
+              aim rather for a hash map that is slightly smaller than L2 than slightly larger)
+              - each entry in the hash map is a data structure holding the actual value
+              and the RowID
+              - as a general rule of thumb, modern hashmaps need 3x the space of the actual data
+              (cf. hash_map_size_factor, see https://tessil.github.io/2016/08/29/benchmark-hopscotch-map.html
+              & https://github.com/sparsehash/sparsehash)
           */
+          const auto l2_cache_size = 256'000;
+
           const auto probe_relation_size = inputs_swapped ? _right->get_output()->row_count() : _left->get_output()->row_count();
-          const auto complete_pos_list_size = probe_relation_size * (sizeof(LeftType) + sizeof(RowID));
+          const auto build_relation_size = inputs_swapped ? _left->get_output()->row_count() : _right->get_output()->row_count();
+          const auto complete_pos_list_size = probe_relation_size * (sizeof(LeftType) + sizeof(std::vector<RowID>) + sizeof(RowID));
 
           // size adaption for the hash table (this accounts for the cuckoo hash tables, others might differ)
-          const auto hash_map_size_factor = 4.0f;
+          const auto hash_map_size_factor = 6.0f;
+          const auto cluster_count = std::max(1.0f, hash_map_size_factor * (complete_pos_list_size / l2_cache_size));
 
-          // this might be a too simple heuristic
-          const auto cluster_count = std::max(1.0f, hash_map_size_factor * (complete_pos_list_size / 256'000));
-          const auto bits_required = std::ceil(std::log2(cluster_count));
+          // Usually, only the left relation is considered. But since the hash join parallelizes over the clusters,
+          // we also consider the right relation and create a cluster for every 10,000 rows.
+          const size_t large_right_relation_mitigation = std::ceil(std::log2(build_relation_size / 10'000));
+
+          const auto bits_required = std::max(static_cast<size_t>(std::ceil(std::log2(cluster_count))),
+            large_right_relation_mitigation);
 
           _radix_bits = bits_required;
         }
