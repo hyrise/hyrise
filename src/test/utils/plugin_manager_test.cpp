@@ -39,4 +39,42 @@ TEST_F(PluginManagerTest, LoadStopPlugin) {
   EXPECT_EQ(plugins.count("TestPlugin"), 0u);
 }
 
+
+// DO THIS WITHOUT STOPPING THE PLUGIN TO TEST THE PROPER WORKING DEST?rUCTOR
+// TEST_F(PluginManagerTest, LoadStopPlugin) {
+//   auto &sm = StorageManager::get();
+
+//   std::cout << "Test: " << &sm << std::endl;
+
+//   auto &pm = PluginManager::get();
+//   auto &plugins = get_plugins();
+  
+//   EXPECT_EQ(plugins.size(), 0u);
+//   pm.load_plugin(std::string(LIB_DIR) + std::string("libTestPlugin.dylib"), "TestPlugin");
+  
+//   EXPECT_EQ(plugins.count("TestPlugin"), 1u);
+//   EXPECT_EQ(plugins["TestPlugin"].plugin->description(), "This is the Hyrise TestPlugin");
+//   EXPECT_NE(plugins["TestPlugin"].handle, nullptr);
+//   EXPECT_NE(plugins["TestPlugin"].plugin, nullptr);
+
+//   // // The test plugin creates a dummy table when it is started
+//   EXPECT_TRUE(sm.has_table("DummyTable"));
+
+  // pm.stop_plugin("TestPlugin");
+
+  // // The test plugin removes the dummy table from the storage manager when it is stopped
+  // EXPECT_FALSE(sm.has_table("DummyTable"));
+  // EXPECT_EQ(plugins.count("TestPlugin"), 0u);
+// }
+
+TEST_F(PluginManagerTest, LoadingSameName) {
+  auto &pm = PluginManager::get();
+  auto &plugins = get_plugins();
+  
+  EXPECT_EQ(plugins.size(), 0u);
+  pm.load_plugin(std::string(LIB_DIR) + std::string("libTestPlugin.dylib"), "TestPlugin");
+
+  EXPECT_THROW(pm.load_plugin(std::string(LIB_DIR) + std::string("libTestPlugin.dylib"), "TestPlugin"), std::exception);
+}
+
 }  // namespace opossum

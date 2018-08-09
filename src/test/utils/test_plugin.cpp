@@ -23,11 +23,11 @@ public:
     column_definitions.emplace_back("col_1", DataType::Int);
     auto table = std::make_shared<Table>(column_definitions, TableType::Data);
 
-    _storage_manager->add_table("DummyTable", table);
+    StorageManager::get().add_table("DummyTable", table);
   }
 
   void stop() const override {
-    _storage_manager->drop_table("DummyTable");
+    StorageManager::get().drop_table("DummyTable");
   }
 
 };

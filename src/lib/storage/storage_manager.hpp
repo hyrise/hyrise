@@ -18,7 +18,10 @@ class AbstractLQPNode;
 // by mapping table names to table instances.
 class StorageManager : private Noncopyable {
  public:
-  static StorageManager& get();
+  static StorageManager& get() {
+    static StorageManager instance;
+    return instance;
+  }
 
   // adds a table to the storage manager
   void add_table(const std::string& name, std::shared_ptr<Table> table);

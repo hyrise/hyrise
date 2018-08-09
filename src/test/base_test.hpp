@@ -18,6 +18,7 @@
 #include "testing_assert.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"
+#include "utils/plugin_manager.hpp"
 
 namespace opossum {
 
@@ -70,6 +71,7 @@ class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>:
     NUMAPlacementManager::get().pause();
 #endif
 
+    PluginManager::reset();
     StorageManager::reset();
     TransactionManager::reset();
   }

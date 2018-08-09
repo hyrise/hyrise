@@ -5,23 +5,16 @@
 
 namespace opossum {
 
-struct Injection {
-  StorageManager* const storage_manager;
-};
-
 #define EXPORT(PluginName) \
-extern "C" AbstractPlugin* factory(Injection injection) {\
+extern "C" AbstractPlugin* factory() {\
   auto plugin = static_cast<AbstractPlugin*>(&(PluginName::get())); \
-  plugin->inject(injection); \
-  return plugin;\
+  return plugin; \
 }
 
 class AbstractPlugin : private Noncopyable {
 protected:
   AbstractPlugin() {};
   AbstractPlugin& operator=(AbstractPlugin&&) = default;
-
-  StorageManager* _storage_manager;
 
 public:
 
@@ -34,10 +27,6 @@ public:
   virtual void start() const = 0;
 
   virtual void stop() const = 0;
-
-  void inject(Injection injection) {
-    _storage_manager = injection.storage_manager;
-  }
 };
 
 }  // namespace opossum

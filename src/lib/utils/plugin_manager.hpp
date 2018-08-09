@@ -27,7 +27,16 @@ class PluginManager : private Noncopyable {
 
   ~PluginManager();
 
- private:
+  // deletes the entire PluginManager and creates a new one, used especially in tests
+  // This can lead to a lot of issues if there are still running tasks / threads that
+  // want to access a resource. You should be very sure that this is what you want.
+  // Have a look at base_test.hpp to see the correct order of resetting things.
+  static void reset();
+
+ protected:
+  PluginManager() {}
+  PluginManager& operator=(PluginManager&&) = default;
+
   std::unordered_map<PluginName, PluginHandleWrapper> _plugins;
 
   bool _is_duplicate(AbstractPlugin* plugin);

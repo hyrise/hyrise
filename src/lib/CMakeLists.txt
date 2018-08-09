@@ -585,5 +585,5 @@ endif()
 
 # Configure the regular hyrise library used for tests/server/playground...
 add_library(hyrise STATIC ${SOURCES})
-target_link_libraries(hyrise ${LIBRARIES})
+target_link_libraries(hyrise ${LIBRARIES} -rdynamic)
 target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR})

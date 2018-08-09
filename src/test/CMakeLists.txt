@@ -256,7 +256,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_library(TestPlugin SHARED
     utils/test_plugin.cpp
 )
-target_link_libraries(TestPlugin hyrise ${LIBRARIES})
+target_link_libraries(TestPlugin hyrise)
 
 # We define LIB_DIR to always load the TestPlugin from the correct directory for testing purposes
 add_definitions(-DLIB_DIR="${CMAKE_BINARY_DIR}/lib/")
