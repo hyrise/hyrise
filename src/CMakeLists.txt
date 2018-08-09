@@ -95,10 +95,10 @@ if (ENABLE_CLANG_TIDY)
 endif()
 
 add_subdirectory(benchmarklib)
-add_subdirectory(benchmark)
 add_subdirectory(bin)
 add_subdirectory(lib)
 
+# No clang-tidy for the following subfolders
 set(CMAKE_CXX_CLANG_TIDY "")
-
+add_subdirectory(benchmark)
 add_subdirectory(test)

@@ -88,6 +88,12 @@ DataType AggregateExpression::data_type() const {
   return aggregate_data_type;
 }
 
+bool AggregateExpression::is_nullable() const {
+  // Aggregates except the COUNTs will return NULL when executed on an empty group -
+  // thus they are always nullable
+  return aggregate_function != AggregateFunction::Count && aggregate_function != AggregateFunction::CountDistinct;
+}
+
 bool AggregateExpression::_shallow_equals(const AbstractExpression& expression) const {
   return aggregate_function == static_cast<const AggregateExpression&>(expression).aggregate_function;
 }

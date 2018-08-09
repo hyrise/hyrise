@@ -1,7 +1,7 @@
 #include <pqxx/pqxx>
 
-#include <thread>
 #include <future>
+#include <thread>
 
 #include "base_test.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
@@ -25,9 +25,9 @@ class ServerTestRunner : public BaseTest {
 
     uint16_t server_port = 0;
     std::mutex mutex{};
-    std::condition_variable cv{};
+    auto cv = std::make_shared<std::condition_variable>();
 
-    auto server_runner = [&](boost::asio::io_service& io_service) {
+    auto server_runner = [&, cv](boost::asio::io_service& io_service) {
       Server server{io_service, /* port = */ 0};  // run on port 0 so the server can pick a free one
 
       {
@@ -35,7 +35,7 @@ class ServerTestRunner : public BaseTest {
         server_port = server.get_port_number();
       }
 
-      cv.notify_one();
+      cv->notify_one();
 
       io_service.run();
     };
@@ -46,7 +46,7 @@ class ServerTestRunner : public BaseTest {
     // We need to wait here for the server to have started so we can get its port, which must be set != 0
     {
       std::unique_lock<std::mutex> lock{mutex};
-      cv.wait(lock, [&] { return server_port != 0; });
+      cv->wait(lock, [&] { return server_port != 0; });
     }
 
     // Get randomly assigned port number for client connection
@@ -151,7 +151,9 @@ TEST_F(ServerTestRunner, TestParallelConnections) {
   }
 
   for (auto& thread_fut : thread_futures) {
-    if (thread_fut.wait_for(std::chrono::seconds(10)) == std::future_status::timeout) {
+    // We give this a lot of time, not because we need that long for 100 threads to finish, but because sanitizers and
+    // other tools like valgrind sometimes bring a high overhead that exceeds 10 seconds.
+    if (thread_fut.wait_for(std::chrono::seconds(150)) == std::future_status::timeout) {
       ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
     }
   }

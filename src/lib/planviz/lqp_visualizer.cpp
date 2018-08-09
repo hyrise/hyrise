@@ -15,7 +15,7 @@ namespace opossum {
 
 LQPVisualizer::LQPVisualizer() {
   // Set defaults for this visualizer
-  _default_vertex.shape = "parallelogram";
+  _default_vertex.shape = "rectangle";
 }
 
 LQPVisualizer::LQPVisualizer(GraphvizConfig graphviz_config, VizGraphInfo graph_info, VizVertexInfo vertex_info,

@@ -244,6 +244,11 @@ TEST_F(ExpressionTest, IsNullable) {
   EXPECT_TRUE(column_(a_nullable)->is_nullable());
   EXPECT_FALSE(cast_(12, DataType::String)->is_nullable());
   EXPECT_TRUE(cast_(null_(), DataType::String)->is_nullable());
+  EXPECT_TRUE(sum_(null_())->is_nullable());
+  EXPECT_TRUE(sum_(add_(1, 2))->is_nullable());
+  EXPECT_FALSE(count_star_()->is_nullable());
+  EXPECT_FALSE(count_(5)->is_nullable());
+  EXPECT_FALSE(count_(null_())->is_nullable());
 
   // Division by zero could be nullable, thus division and modulo are always nullable
   EXPECT_TRUE(div_(1, 2)->is_nullable());
