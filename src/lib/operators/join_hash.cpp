@@ -598,18 +598,17 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _mode(mode),
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
-        _inputs_swapped(inputs_swapped)
-        {
-          /*
+        _inputs_swapped(inputs_swapped) {
+    /*
             Hash joins perform best for join relations with a small left join partner. In case the 
             optimizer selects the hash join due to such a situation, but neglects that the
             input will be switched (e.g., due to the join type), the user will be warned.
           */
-          if (inputs_swapped) {
-            PerformanceWarning("Inputs swapped for hash join.");
-          }
+    if (inputs_swapped) {
+      PerformanceWarning("Inputs swapped for hash join.");
+    }
 
-          /*
+    /*
             Setting number of bits for radix clustering:
             The number of bits is used to create probe partitions with a size that can
             be expected to fit into the L2 cache.
@@ -624,25 +623,28 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
               (cf. hash_map_size_factor, see https://tessil.github.io/2016/08/29/benchmark-hopscotch-map.html
               & https://github.com/sparsehash/sparsehash)
           */
-          const auto l2_cache_size = 256'000;
+    const auto l2_cache_size = 256'000;
 
-          const auto probe_relation_size = inputs_swapped ? _right->get_output()->row_count() : _left->get_output()->row_count();
-          const auto build_relation_size = inputs_swapped ? _left->get_output()->row_count() : _right->get_output()->row_count();
-          const auto complete_pos_list_size = probe_relation_size * (sizeof(LeftType) + sizeof(std::vector<RowID>) + sizeof(RowID));
+    const auto probe_relation_size =
+        inputs_swapped ? _right->get_output()->row_count() : _left->get_output()->row_count();
+    const auto build_relation_size =
+        inputs_swapped ? _left->get_output()->row_count() : _right->get_output()->row_count();
+    const auto complete_pos_list_size =
+        probe_relation_size * (sizeof(LeftType) + sizeof(std::vector<RowID>) + sizeof(RowID));
 
-          // size adaption for the hash table (this accounts for the cuckoo hash tables, others might differ)
-          const auto hash_map_size_factor = 6.0f;
-          const auto cluster_count = std::max(1.0f, hash_map_size_factor * (complete_pos_list_size / l2_cache_size));
+    // size adaption for the hash table (this accounts for the cuckoo hash tables, others might differ)
+    const auto hash_map_size_factor = 6.0f;
+    const auto cluster_count = std::max(1.0f, hash_map_size_factor * (complete_pos_list_size / l2_cache_size));
 
-          // Usually, only the left relation is considered. But since the hash join parallelizes over the clusters,
-          // we also consider the right relation and create a cluster for every 10,000 rows.
-          const size_t large_right_relation_mitigation = std::ceil(std::log2(build_relation_size / 10'000));
+    // Usually, only the left relation is considered. But since the hash join parallelizes over the clusters,
+    // we also consider the right relation and create a cluster for every 10,000 rows.
+    const size_t large_right_relation_mitigation = std::ceil(std::log2(build_relation_size / 10'000));
 
-          const auto bits_required = std::max(static_cast<size_t>(std::ceil(std::log2(cluster_count))),
-            large_right_relation_mitigation);
+    const auto bits_required =
+        std::max(static_cast<size_t>(std::ceil(std::log2(cluster_count))), large_right_relation_mitigation);
 
-          _radix_bits = bits_required;
-        }
+    _radix_bits = bits_required;
+  }
 
  protected:
   const std::shared_ptr<const AbstractOperator> _left, _right;
