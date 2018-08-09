@@ -322,7 +322,7 @@ RadixContainer<T> partition_radix_parallel(const std::shared_ptr<Partition<T>>& 
           continue;
         }
 
-        const size_t radix = element.partition_hash & mask;
+        const size_t radix = (element.partition_hash >> (32 - radix_bits * (pass + 1))) & mask;
 
         out[output_offsets[radix]++] = element;
       }
