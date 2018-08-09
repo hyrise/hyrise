@@ -8,7 +8,6 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include <cstdlib>
 
 #include "join_hash/hash_traits.hpp"
 #include "resolve_type.hpp"
