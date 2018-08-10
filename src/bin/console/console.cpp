@@ -38,10 +38,10 @@
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 #include "utils/filesystem.hpp"
-#include "utils/string_functions.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
+#include "utils/string_functions.hpp"
 
 #define ANSI_COLOR_RED "\x1B[31m"
 #define ANSI_COLOR_GREEN "\x1B[32m"
@@ -756,7 +756,6 @@ int Console::_stop_plugin(const std::string& input) {
 
   return ReturnCode::Ok;
 }
-
 
 // GNU readline interface to our commands
 

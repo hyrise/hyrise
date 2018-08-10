@@ -7,16 +7,13 @@
 namespace opossum {
 
 class TestPlugin : public AbstractPlugin {
-  
-public:
+ public:
   static AbstractPlugin& get() {
     static TestPlugin instance;
     return instance;
   }
 
-  const std::string description() const override { 
-    return "This is the Hyrise TestPlugin";
-  }
+  const std::string description() const override { return "This is the Hyrise TestPlugin"; }
 
   void start() const override {
     TableColumnDefinitions column_definitions;
@@ -26,10 +23,7 @@ public:
     StorageManager::get().add_table("DummyTable", table);
   }
 
-  void stop() const override {
-    StorageManager::get().drop_table("DummyTable");
-  }
-
+  void stop() const override { StorageManager::get().drop_table("DummyTable"); }
 };
 
 EXPORT(TestPlugin)

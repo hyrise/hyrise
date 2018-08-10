@@ -5,22 +5,19 @@
 
 namespace opossum {
 
-#define EXPORT(PluginName) \
-extern "C" AbstractPlugin* factory() {\
-  auto plugin = static_cast<AbstractPlugin*>(&(PluginName::get())); \
-  return plugin; \
-}
+#define EXPORT(PluginName)                                            \
+  extern "C" AbstractPlugin* factory() {                              \
+    auto plugin = static_cast<AbstractPlugin*>(&(PluginName::get())); \
+    return plugin;                                                    \
+  }
 
 class AbstractPlugin : private Noncopyable {
-protected:
-  AbstractPlugin() {};
+ protected:
+  AbstractPlugin() {}
   AbstractPlugin& operator=(AbstractPlugin&&) = default;
 
-public:
-
-  static AbstractPlugin* get() {
-    throw std::runtime_error("Every plugin needs to overwrite Plugin::get()");
-  }
+ public:
+  static AbstractPlugin* get() { throw std::runtime_error("Every plugin needs to overwrite Plugin::get()"); }
 
   virtual const std::string description() const = 0;
 

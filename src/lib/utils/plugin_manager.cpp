@@ -1,8 +1,8 @@
 #include <dlfcn.h>
 
 #include "storage/storage_manager.hpp"
-#include "utils/filesystem.hpp"
 #include "utils/assert.hpp"
+#include "utils/filesystem.hpp"
 
 #include "plugin_manager.hpp"
 
@@ -25,7 +25,7 @@ bool PluginManager::_is_duplicate(AbstractPlugin* plugin) {
 
   // return false;
 
-  for (auto &p : _plugins) {
+  for (auto& p : _plugins) {
     auto plugin_handle_wrapper = p.second;
     if (plugin_handle_wrapper.plugin == plugin) {
       return true;
@@ -35,14 +35,13 @@ bool PluginManager::_is_duplicate(AbstractPlugin* plugin) {
   return false;
 }
 
-
-void PluginManager::load_plugin(const std::string &path, const PluginName &name) {
+void PluginManager::load_plugin(const std::string& path, const PluginName& name) {
   Assert(!_plugins.count(name), "Loading plugin failed: A plugin with name  " + name + " already exists.");
 
   PluginHandle plugin_handle = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
   Assert(plugin_handle, "Loading plugin failed: " + dlerror());
 
-  void *factory = dlsym(plugin_handle , "factory");
+  void* factory = dlsym(plugin_handle, "factory");
   Assert(factory, "Instantiating plugin failed: Have you implemented and exported the factory method?");
 
   typedef AbstractPlugin* (*Instantiator)();
@@ -50,7 +49,8 @@ void PluginManager::load_plugin(const std::string &path, const PluginName &name)
 
   auto plugin = instantiate();
   PluginHandleWrapper plugin_handle_wrapper = {plugin_handle, plugin};
-  Assert(!_is_duplicate(plugin_handle_wrapper.plugin), "Loading plugin failed: There can only be one instance of every plugin.");
+  Assert(!_is_duplicate(plugin_handle_wrapper.plugin),
+         "Loading plugin failed: There can only be one instance of every plugin.");
 
   _plugins[name] = plugin_handle_wrapper;
 
@@ -59,13 +59,12 @@ void PluginManager::load_plugin(const std::string &path, const PluginName &name)
 
 void PluginManager::reset() { get() = PluginManager(); }
 
-void PluginManager::stop_plugin(const PluginName &name, bool should_erase) {
+void PluginManager::stop_plugin(const PluginName& name, bool should_erase) {
   auto plugin_handle_wrapper = _plugins.at(name);
   plugin_handle_wrapper.plugin->stop();
   dlclose(plugin_handle_wrapper.handle);
 
-  if (should_erase)
-    _plugins.erase(name);
+  if (should_erase) _plugins.erase(name);
 }
 
 void PluginManager::_clean_up() {
@@ -74,7 +73,7 @@ void PluginManager::_clean_up() {
   //   stop_plugin(plugin_name);
   // }
 
-  for (auto &p : _plugins) {
+  for (auto& p : _plugins) {
     auto plugin_name = p.first;
     stop_plugin(plugin_name, false);
   }
@@ -82,8 +81,6 @@ void PluginManager::_clean_up() {
   _plugins.clear();
 }
 
-PluginManager::~PluginManager() {
-  _clean_up();
-}
+PluginManager::~PluginManager() { _clean_up(); }
 
 }  // namespace opossum

@@ -5,7 +5,6 @@
 #include "types.hpp"
 #include "utils/abstract_plugin.hpp"
 
-
 namespace opossum {
 
 struct PluginHandleWrapper {
@@ -18,12 +17,12 @@ using PluginName = std::string;
 class PluginManager : private Noncopyable {
   friend class PluginManagerTest;
 
- public: 
+ public:
   static PluginManager& get();
 
-  void load_plugin(const std::string &path, const PluginName &name);
+  void load_plugin(const std::string& path, const PluginName& name);
 
-  void stop_plugin(const PluginName &name, bool should_erase = true);
+  void stop_plugin(const PluginName& name, bool should_erase = true);
 
   ~PluginManager();
 
