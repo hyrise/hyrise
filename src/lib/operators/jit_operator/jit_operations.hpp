@@ -77,7 +77,7 @@ struct JitAddition {
     return a + b;
   }
 };
-const auto jit_addition = JitAddition();
+const JitAddition jit_addition{};
 const auto jit_subtraction = [](const auto a, const auto b) -> decltype(a - b) { return a - b; };
 const auto jit_multiplication = [](const auto a, const auto b) -> decltype(a * b) { return a * b; };
 const auto jit_division = [](const auto a, const auto b) -> decltype(a / b) { return a / b; };
@@ -94,7 +94,7 @@ struct JitMaximum {
     return std::max(a, b);
   }
 };
-const auto jit_maximum = JitMaximum();
+const JitMaximum jit_maximum{};
 struct JitMinimum {
   OPTNONE std::string operator()(const std::string& a, const std::string& b) const { return std::min(a, b); }
   template <typename T1, typename T2,
@@ -103,7 +103,7 @@ struct JitMinimum {
     return std::min(a, b);
   }
 };
-const auto jit_minimum = JitMinimum();
+const JitMinimum jit_minimum{};
 
 /* Comparison operators */
 struct JitEquals {
@@ -114,7 +114,7 @@ struct JitEquals {
     return a == b;
   }
 };
-const auto jit_equals = JitEquals();
+const JitEquals jit_equals{};
 struct JitNotEquals {
   OPTNONE bool operator()(const std::string& a, const std::string& b) const { return a != b; }
   template <typename T1, typename T2,
@@ -123,7 +123,7 @@ struct JitNotEquals {
     return a != b;
   }
 };
-const auto jit_not_equals = JitNotEquals();
+const JitNotEquals jit_not_equals{};
 struct JitLessThan {
   OPTNONE bool operator()(const std::string& a, const std::string& b) const { return a < b; }
   template <typename T1, typename T2,
@@ -132,7 +132,7 @@ struct JitLessThan {
     return a < b;
   }
 };
-const auto jit_less_than = JitLessThan();
+const JitLessThan jit_less_than{};
 struct JitLessThanEquals {
   OPTNONE bool operator()(const std::string& a, const std::string& b) const { return a <= b; }
   template <typename T1, typename T2,
@@ -141,7 +141,7 @@ struct JitLessThanEquals {
     return a <= b;
   }
 };
-const auto jit_less_than_equals = JitLessThanEquals();
+const JitLessThanEquals jit_less_than_equals{};
 struct JitGreaterThan {
   OPTNONE bool operator()(const std::string& a, const std::string& b) const { return a > b; }
   template <typename T1, typename T2,
@@ -150,7 +150,7 @@ struct JitGreaterThan {
     return a > b;
   }
 };
-const auto jit_greater_than = JitGreaterThan();
+const JitGreaterThan jit_greater_than{};
 struct JitGreaterThanEquals {
   OPTNONE bool operator()(const std::string& a, const std::string& b) const { return a >= b; }
   template <typename T1, typename T2,
@@ -159,7 +159,7 @@ struct JitGreaterThanEquals {
     return a >= b;
   }
 };
-const auto jit_greater_than_equals = JitGreaterThanEquals();
+const JitGreaterThanEquals jit_greater_than_equals{};
 
 OPTNONE bool jit_like(const std::string& a, const std::string& b);
 OPTNONE bool jit_not_like(const std::string& a, const std::string& b);
@@ -291,7 +291,8 @@ __attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const Jit
 
   const auto catching_func = InvalidTypeCatcher<decltype(store_result_wrapper), void>(store_result_wrapper);
 
-  // this is only the case for lhs = int and rhs = float, which become long / double when aggregate sum/avg is used
+  // A type conversion is necessary, if the sum or average of a float or int column is calculated as the temporary sum
+  // is stored in the according 64 bit data type.
   if (lhs.data_type() == DataType::Int && rhs.data_type() == DataType::Long) {
     return catching_func(static_cast<int64_t>(lhs.get<int32_t>(context)), rhs.get<int64_t>(rhs_index, context));
   } else if (lhs.data_type() == DataType::Float && rhs.data_type() == DataType::Double) {
