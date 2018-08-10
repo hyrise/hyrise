@@ -44,7 +44,7 @@ class Console {
   /*
    * Register a custom command which can be called from the console.
    */
-  void register_command(const std::string& name, const CommandFunction& f);
+  void register_command(const std::string& name, const CommandFunction& func);
   RegisteredCommands commands();
 
   /*
@@ -76,7 +76,7 @@ class Console {
    * @param output The output table.
    * @param flags  Flags for the Print operator.
    */
-  void out(std::shared_ptr<const Table> table, uint32_t flags = 0);
+  void out(const std::shared_ptr<const Table>& table, uint32_t flags = 0);
 
   /*
    * Handler for SIGINT signal (caused by CTRL-C key sequence).
@@ -108,12 +108,12 @@ class Console {
   // Command functions, registered to be called from the Console
   int _exit(const std::string& args);
   int _help(const std::string& args);
-  int _generate_tpcc(const std::string& args);
+  int _generate_tpcc(const std::string& tablename);
   int _load_table(const std::string& args);
-  int _exec_script(const std::string& args);
+  int _exec_script(const std::string& script_file);
   int _print_table(const std::string& args);
   int _visualize(const std::string& input);
-  int _change_runtime_setting(const std::string& args);
+  int _change_runtime_setting(const std::string& input);
 
   int _begin_transaction(const std::string& input);
   int _rollback_transaction(const std::string& input);

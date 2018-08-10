@@ -9,6 +9,9 @@
 
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
+#include "resolve_type.hpp"
+#include "statistics/column_statistics.hpp"
+#include "statistics/table_statistics.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -38,6 +41,33 @@ std::string AggregateNode::description() const {
   stream << "] Aggregates: [" << expression_column_names(aggregate_expressions) << "]";
 
   return stream.str();
+}
+
+std::shared_ptr<TableStatistics> AggregateNode::derive_statistics_from(
+    const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
+  DebugAssert(left_input && !right_input, "AggregateNode need left_input and no right_input");
+
+  const auto input_statistics = left_input->get_statistics();
+  const auto row_count = input_statistics->row_count();
+
+  std::vector<std::shared_ptr<const BaseColumnStatistics>> column_statistics;
+  column_statistics.reserve(_column_expressions.size());
+
+  for (const auto& expression : _column_expressions) {
+    const auto column_id = left_input->find_column_id(*expression);
+    if (column_id) {
+      column_statistics.emplace_back(input_statistics->column_statistics()[*column_id]);
+    } else {
+      // TODO(anybody) Statistics for expressions not yet supported
+      resolve_data_type(expression->data_type(), [&](const auto data_type_t) {
+        using ExpressionDataType = typename decltype(data_type_t)::type;
+        column_statistics.emplace_back(
+            std::make_shared<ColumnStatistics<ExpressionDataType>>(ColumnStatistics<ExpressionDataType>::dummy()));
+      });
+    }
+  }
+
+  return std::make_shared<TableStatistics>(TableType::Data, row_count, column_statistics);
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::column_expressions() const {

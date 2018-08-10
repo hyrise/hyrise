@@ -117,7 +117,8 @@ class TableBuilder {
     // Create a column from each column vector and add it to the Chunk, then re-initialize the vector
     boost::hana::for_each(_column_vectors, [&](auto&& vector) {
       using T = typename std::decay_t<decltype(vector)>::value_type;
-      chunk_columns.push_back(std::make_shared<opossum::ValueColumn<T>>(std::move(vector)));
+      // reason for nolint: clang-tidy wants this to be a forward, but that doesn't work
+      chunk_columns.push_back(std::make_shared<opossum::ValueColumn<T>>(std::move(vector)));  // NOLINT
       vector = std::decay_t<decltype(vector)>();
     });
     _table->append_chunk(chunk_columns);

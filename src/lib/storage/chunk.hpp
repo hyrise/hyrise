@@ -75,8 +75,7 @@ class Chunk : private Noncopyable {
    *       However, if you call get_column again, be aware that
    *       the return type might have changed.
    */
-  std::shared_ptr<BaseColumn> get_mutable_column(ColumnID column_id) const;
-  std::shared_ptr<const BaseColumn> get_column(ColumnID column_id) const;
+  std::shared_ptr<BaseColumn> get_column(ColumnID column_id) const;
 
   const ChunkColumns& columns() const;
 
@@ -92,8 +91,11 @@ class Chunk : private Noncopyable {
    *
    * @return a locking ptr to the mvcc columns
    */
-  SharedScopedLockingPtr<MvccColumns> mvcc_columns();
-  SharedScopedLockingPtr<const MvccColumns> mvcc_columns() const;
+  SharedScopedLockingPtr<MvccColumns> get_scoped_mvcc_columns_lock();
+  SharedScopedLockingPtr<const MvccColumns> get_scoped_mvcc_columns_lock() const;
+
+  std::shared_ptr<MvccColumns> mvcc_columns() const;
+  void set_mvcc_columns(const std::shared_ptr<MvccColumns>& mvcc_columns);
 
   std::vector<std::shared_ptr<BaseIndex>> get_indices(
       const std::vector<std::shared_ptr<const BaseColumn>>& columns) const;
@@ -143,16 +145,6 @@ class Chunk : private Noncopyable {
    * For debugging purposes, makes an estimation about the memory used by this Chunk and its Columns
    */
   size_t estimate_memory_usage() const;
-
-  /**
-   * @return A clone of this Chunk, with the same columns, allocator etc.
-   */
-  std::shared_ptr<Chunk> forward_clone() const;
-
-  /**
-   * @return A clone of this Chunk, with the same allocator etc. but all Columns become materialized ValueColumns
-   */
-  std::shared_ptr<Chunk> materialized_clone() const;
 
  private:
   std::vector<std::shared_ptr<const BaseColumn>> _get_columns_for_ids(const std::vector<ColumnID>& column_ids) const;
