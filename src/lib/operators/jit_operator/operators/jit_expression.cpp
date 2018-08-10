@@ -170,7 +170,11 @@ std::pair<const DataType, const bool> JitExpression::_compute_result_type() {
       Fail("Expression type not supported.");
   }
 
-  return std::make_pair(result_data_type, _left_child->result().is_nullable() || _right_child->result().is_nullable());
+  const bool input_is_null =
+      _left_child->result().data_type() == DataType::Null || _right_child->result().data_type() == DataType::Null;
+
+  return std::make_pair(result_data_type,
+                        input_is_null || (_left_child->result().is_nullable() || _right_child->result().is_nullable()));
 }
 
 }  // namespace opossum

@@ -222,7 +222,9 @@ DataType jit_compute_type(const T& op_func, const DataType lhs, const DataType r
   switch (combined_types) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_COMPUTE_TYPE_CASE, (JIT_DATA_TYPE_INFO)(JIT_DATA_TYPE_INFO))
     default:
-      return DataType::Null;  // unreachable
+      // when lhs or rhs is null
+      if (lhs == DataType::Null) return rhs;
+      return lhs;
   }
 }
 

@@ -25,10 +25,14 @@ void JitReadTuples::before_query(const Table& in_table, JitRuntimeContext& conte
   // Copy all input literals to the runtime tuple
   for (const auto& input_literal : _input_literals) {
     auto data_type = input_literal.tuple_value.data_type();
-    resolve_data_type(data_type, [&](auto type) {
-      using DataType = typename decltype(type)::type;
-      context.tuple.set<DataType>(input_literal.tuple_value.tuple_index(), boost::get<DataType>(input_literal.value));
-    });
+    if (data_type != DataType::Null) {
+      resolve_data_type(data_type, [&](auto type) {
+        using DataType = typename decltype(type)::type;
+        context.tuple.set<DataType>(input_literal.tuple_value.tuple_index(), boost::get<DataType>(input_literal.value));
+      });
+    } else {
+      context.tuple.set_is_null(input_literal.tuple_value.tuple_index(), true);
+    }
   }
 }
 

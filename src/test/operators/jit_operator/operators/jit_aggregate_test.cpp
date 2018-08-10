@@ -77,8 +77,9 @@ TEST_F(JitAggregateTest, AddsAggregateColumnsToOutputTable) {
   EXPECT_EQ(output_table->column_definitions(), expected_column_definitions);
 }
 
-#if IS_DEBUG
 // Check, that aggregates on invalid data types are rejected.
+// Test case is only run in debug as checks are DebugAsserts, which are not present in release.
+#if IS_DEBUG
 TEST_F(JitAggregateTest, InvalidAggregatesAreRejected) {
   EXPECT_THROW(
       _aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::String, false, 0), AggregateFunction::Avg),

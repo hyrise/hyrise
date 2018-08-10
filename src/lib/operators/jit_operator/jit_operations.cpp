@@ -8,9 +8,10 @@ namespace opossum {
 // Returns the data type (e.g., int32_t, std::string) of a data type defined in the DATA_TYPE_INFO sequence
 #define JIT_GET_DATA_TYPE(index, s) BOOST_PP_TUPLE_ELEM(3, 0, BOOST_PP_SEQ_ELEM(index, s))
 
-#define JIT_HASH_CASE(r, types)      \
-  case JIT_GET_ENUM_VALUE(0, types): \
-    return _hash(context.tuple.get<JIT_GET_DATA_TYPE(0, types)>(value.tuple_index()));
+#define JIT_HASH_CASE(r, types)                      \
+  case JIT_GET_ENUM_VALUE(0, types):                 \
+    return std::hash<JIT_GET_DATA_TYPE(0, types)>()( \
+        context.tuple.get<JIT_GET_DATA_TYPE(0, types)>(value.tuple_index()));
 
 #define JIT_AGGREGATE_EQUALS_CASE(r, types)                          \
   case JIT_GET_ENUM_VALUE(0, types):                                 \
@@ -33,33 +34,39 @@ void jit_not(const JitTupleValue& lhs, const JitTupleValue& result, JitRuntimeCo
 
 void jit_and(const JitTupleValue& lhs, const JitTupleValue& rhs, const JitTupleValue& result,
              JitRuntimeContext& context) {
-  DebugAssert(
-      lhs.data_type() == DataType::Bool && rhs.data_type() == DataType::Bool && result.data_type() == DataType::Bool,
-      "invalid type for operation");
+  DebugAssert((lhs.data_type() == DataType::Bool || lhs.data_type() == DataType::Int) &&
+                  (rhs.data_type() == DataType::Bool || rhs.data_type() == DataType::Int) &&
+                  result.data_type() == DataType::Bool,
+              "invalid type for operation");
 
   // three-valued logic AND
+  const bool right_value = rhs.data_type() == DataType::Bool ? rhs.get<bool>(context) : rhs.get<int32_t>(context);
   if (lhs.is_null(context)) {
     result.set<bool>(false, context);
-    result.set_is_null(rhs.is_null(context) || rhs.get<bool>(context), context);
+    result.set_is_null(rhs.is_null(context) || right_value, context);
   } else {
-    result.set<bool>(lhs.get<bool>(context) && rhs.get<bool>(context), context);
-    result.set_is_null(lhs.get<bool>(context) && rhs.is_null(context), context);
+    const bool left_value = lhs.data_type() == DataType::Bool ? lhs.get<bool>(context) : lhs.get<int32_t>(context);
+    result.set<bool>(left_value && right_value, context);
+    result.set_is_null(left_value && rhs.is_null(context), context);
   }
 }
 
 void jit_or(const JitTupleValue& lhs, const JitTupleValue& rhs, const JitTupleValue& result,
             JitRuntimeContext& context) {
-  DebugAssert(
-      lhs.data_type() == DataType::Bool && rhs.data_type() == DataType::Bool && result.data_type() == DataType::Bool,
-      "invalid type for operation");
+  DebugAssert((lhs.data_type() == DataType::Bool || lhs.data_type() == DataType::Int) &&
+                  (rhs.data_type() == DataType::Bool || rhs.data_type() == DataType::Int) &&
+                  result.data_type() == DataType::Bool,
+              "invalid type for operation");
 
   // three-valued logic OR
+  const bool right_value = rhs.data_type() == DataType::Bool ? rhs.get<bool>(context) : rhs.get<int32_t>(context);
   if (lhs.is_null(context)) {
     result.set<bool>(true, context);
-    result.set_is_null(rhs.is_null(context) || !rhs.get<bool>(context), context);
+    result.set_is_null(rhs.is_null(context) || !right_value, context);
   } else {
-    result.set<bool>(lhs.get<bool>(context) || rhs.get<bool>(context), context);
-    result.set_is_null(!lhs.get<bool>(context) && rhs.is_null(context), context);
+    const bool left_value = lhs.data_type() == DataType::Bool ? lhs.get<bool>(context) : lhs.get<int32_t>(context);
+    result.set<bool>(left_value || right_value, context);
+    result.set_is_null(!left_value && rhs.is_null(context), context);
   }
 }
 
