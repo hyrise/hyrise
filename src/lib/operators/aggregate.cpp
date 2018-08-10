@@ -284,7 +284,7 @@ void Aggregate::_aggregate() {
   */
 
   // Allocate a temporary memory buffer, for more details see aggregate.hpp
-  // This calculation assumes that we use VariableLengthAggregateKeys - other data structures use less space, but
+  // This calculation assumes that we use pmr_vector<AggregateKeyEntry> - other data structures use less space, but
   // that is fine
   size_t needed_size_per_aggregate_key =
       aligned_size<AggregateKey>() + _groupby_column_ids.size() * aligned_size<AggregateKeyEntry>();

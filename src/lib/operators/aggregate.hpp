@@ -64,7 +64,6 @@ struct AggregateResult {
 The key type that is used for the aggregation map.
 */
 using AggregateKeyEntry = uint64_t;
-using VariableLengthAggregateKey = pmr_vector<AggregateKeyEntry>;
 
 template <typename AggregateKey>
 using AggregateKeys = pmr_vector<AggregateKey>;
@@ -155,8 +154,8 @@ class Aggregate : public AbstractReadOnlyOperator {
 
 namespace std {
 template <>
-struct hash<opossum::VariableLengthAggregateKey> {
-  size_t operator()(const opossum::VariableLengthAggregateKey& key) const {
+struct hash<opossum::pmr_vector<AggregateKeyEntry>> {
+  size_t operator()(const opossum::pmr_vector<AggregateKeyEntry>& key) const {
     return boost::hash_range(key.begin(), key.end());
   }
 };
