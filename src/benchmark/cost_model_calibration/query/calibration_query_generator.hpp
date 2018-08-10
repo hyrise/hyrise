@@ -15,8 +15,7 @@ namespace opossum {
         static const std::vector<std::string> generate_queries(const std::vector<CalibrationTableSpecification>& table_definitions);
 
     private:
-        static const std::string _generate_select_star(const CalibrationTableSpecification& table_definition);
-        static const std::string _generate_table_scan(const CalibrationTableSpecification& table_definition);
+        static const std::string _generate_table_scans(const CalibrationTableSpecification& table_definition);
         static const std::string _generate_select_columns(const std::map<std::string, CalibrationColumnSpecification>& column_definitions);
 
         static const std::vector<std::string> _get_column_names(const std::map<std::string, CalibrationColumnSpecification>& column_definitions);

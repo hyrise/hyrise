@@ -20,7 +20,7 @@ private:
     void _traverse(const std::shared_ptr<const AbstractOperator> & op);
     void _printOperator(const std::shared_ptr<const AbstractOperator> & op);
 
-    nlohmann::json _operators;
+    std::map<std::string, nlohmann::json> _operators;
     CalibrationConfiguration _configuration;
 };
 

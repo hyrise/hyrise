@@ -2,6 +2,7 @@
 
 #include <json.hpp>
 #include <string>
+#include <storage/encoding_type.hpp>
 
 namespace opossum {
 
@@ -11,7 +12,7 @@ namespace opossum {
                 const std::string value_distribution,
                 const bool sorted,
                 const int distinct_values,
-                const std::string encoding);
+                const EncodingType encoding);
 
         static CalibrationColumnSpecification parse_json_configuration(const nlohmann::json& configuration);
 
@@ -19,7 +20,7 @@ namespace opossum {
         std::string value_distribution;
         bool sorted;
         int distinct_values;
-        std::string encoding;
+        EncodingType encoding;
     };
 
 }  // namespace opossum

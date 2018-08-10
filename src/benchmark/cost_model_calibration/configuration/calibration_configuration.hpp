@@ -20,7 +20,7 @@ namespace opossum {
 
         std::vector<CalibrationTableSpecification> table_specifications;
         std::string output_path;
-        int calibration_runs;
+        size_t calibration_runs;
 
     };
 }  // namespace opossum
