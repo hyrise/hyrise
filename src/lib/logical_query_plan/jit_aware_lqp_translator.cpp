@@ -66,7 +66,7 @@ std::shared_ptr<AbstractOperator> JitAwareLQPTranslator::translate_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
   // Jit operators materialize their output table and cannot be used in non-select queries
   if (node->type == LQPNodeType::Update || node->type == LQPNodeType::Delete) {
-    return std::make_shared<LQPTranslator>()->translate_node(node);
+    return LQPTranslator{}.translate_node(node);
   }
   const auto jit_operator = _try_translate_sub_plan_to_jit_operators(node);
   return jit_operator ? jit_operator : LQPTranslator::translate_node(node);
