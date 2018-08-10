@@ -23,7 +23,7 @@ class PluginManager : private Noncopyable {
 
   void load_plugin(const std::string &path, const PluginName &name);
 
-  void stop_plugin(const PluginName &name);
+  void stop_plugin(const PluginName &name, bool should_erase = true);
 
   ~PluginManager();
 
@@ -40,5 +40,7 @@ class PluginManager : private Noncopyable {
   std::unordered_map<PluginName, PluginHandleWrapper> _plugins;
 
   bool _is_duplicate(AbstractPlugin* plugin);
+
+  void _clean_up();
 };
 }  // namespace opossum

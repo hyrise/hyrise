@@ -258,12 +258,18 @@ add_library(TestPlugin SHARED
 )
 target_link_libraries(TestPlugin hyrise)
 
+# Configure NonInstantiablePlugin
+add_library(NonInstantiablePlugin SHARED
+    utils/non_instantiable_plugin.cpp
+)
+target_link_libraries(NonInstantiablePlugin hyrise)
+
 # We define LIB_DIR to always load the TestPlugin from the correct directory for testing purposes
 add_definitions(-DLIB_DIR="${CMAKE_BINARY_DIR}/lib/")
 
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
-add_dependencies(hyriseTest TestPlugin)
+add_dependencies(hyriseTest TestPlugin NonInstantiablePlugin)
 target_link_libraries(hyriseTest hyrise hyriseBenchmarkLib ${LIBRARIES})
 
 # Configure hyriseSystemTest
