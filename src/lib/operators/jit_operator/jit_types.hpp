@@ -11,22 +11,18 @@
 
 namespace opossum {
 
-// Functions using strings are not optimised to support code specialisation on Linux.
+// Functions using strings are not optimised to support code spezialisation on Linux.
 // This specialiation issue came up with pr #933 (https://github.com/hyrise/hyrise/pull/933).
-// opt none flag to ensure that functions handling strings are not optimized
+// Conditionally define optnone flag to ensure that functions handling strings are not optimized.
+// Clang supports this flag. GCC does not.
 #if __has_attribute(optnone)
 #define OPTNONE __attribute__((optnone))
 #else
 #define OPTNONE
 #endif
-// NO_SPECIALISATION flag can be set for debugging, if query is interpreted
-#ifdef NO_SPECIALISATION
+
 #define JitDebugAssert(expr, msg) DebugAssert(expr, msg)
 #define JitFail(msg) Fail(msg)
-#else
-#define JitDebugAssert(expr, msg)
-#define JitFail(msg)
-#endif
 
 // We need a boolean data type in the JitOperatorWrapper, but don't want to add it to
 // DATA_TYPE_INFO to avoid costly template instantiations.
