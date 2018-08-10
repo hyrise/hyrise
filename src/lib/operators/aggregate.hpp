@@ -154,8 +154,8 @@ class Aggregate : public AbstractReadOnlyOperator {
 
 namespace std {
 template <>
-struct hash<opossum::pmr_vector<AggregateKeyEntry>> {
-  size_t operator()(const opossum::pmr_vector<AggregateKeyEntry>& key) const {
+struct hash<opossum::pmr_vector<opossum::AggregateKeyEntry>> {
+  size_t operator()(const opossum::pmr_vector<opossum::AggregateKeyEntry>& key) const {
     return boost::hash_range(key.begin(), key.end());
   }
 };
