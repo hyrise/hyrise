@@ -16,7 +16,17 @@ PluginManager& PluginManager::get() {
 }
 
 bool PluginManager::_is_duplicate(AbstractPlugin* plugin) {
-  for (auto &[plugin_name, plugin_handle_wrapper] : _plugins) {
+  // This should work as soon as we support gcc-8 or gcc-8 supports us (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740)
+  // for ([[maybe_unused]] auto &[plugin_name, plugin_handle_wrapper] : _plugins) {
+  //   if (plugin_handle_wrapper.plugin == plugin) {
+  //     return true;
+  //   }
+  // }
+
+  // return false;
+
+  for (auto &p : _plugins) {
+    auto plugin_handle_wrapper = p.second;
     if (plugin_handle_wrapper.plugin == plugin) {
       return true;
     }
@@ -59,9 +69,15 @@ void PluginManager::stop_plugin(const PluginName &name) {
 
 
 PluginManager::~PluginManager() {
-  for (auto &[plugin_name, plugin_handle_wrapper] : _plugins) {
+  // This should work as soon as we support gcc-8 or gcc-8 supports us (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740)
+  // for ([[maybe_unused]] auto &[plugin_name, plugin_handle_wrapper] : _plugins) {
+  //   stop_plugin(plugin_name);
+  // }
+
+  for (auto &p : _plugins) {
+    auto plugin_name = p.first;
     stop_plugin(plugin_name);
   }
-};
+}
 
 }  // namespace opossum

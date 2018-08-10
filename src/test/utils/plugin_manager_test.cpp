@@ -4,6 +4,18 @@
 #include "storage/storage_manager.hpp"
 #include "utils/plugin_manager.hpp"
 
+#ifdef __APPLE__
+  #define DYNAMIC_LIBRARY_SUFFIX ".dylib"
+#elif __linux__
+  #define DYNAMIC_LIBRARY_SUFFIX ".so"
+#endif
+
+const std::string build_dylib_path(const std::string& name) {
+  // CMAKE makes LIB_DIR point to the ${CMAKE_BINARY_DIR}/lib/
+  // Dynamic libraries have platform-dependent suffixes
+  return std::string(LIB_DIR) + name + std::string(DYNAMIC_LIBRARY_SUFFIX);
+}
+
 namespace opossum {
 
 class PluginManagerTest : public BaseTest {
@@ -22,7 +34,7 @@ TEST_F(PluginManagerTest, LoadStopPlugin) {
   auto &plugins = get_plugins();
   
   EXPECT_EQ(plugins.size(), 0u);
-  pm.load_plugin(std::string(LIB_DIR) + std::string("libTestPlugin.dylib"), "TestPlugin");
+  pm.load_plugin(build_dylib_path("libTestPlugin"), "TestPlugin");
   
   EXPECT_EQ(plugins.count("TestPlugin"), 1u);
   EXPECT_EQ(plugins["TestPlugin"].plugin->description(), "This is the Hyrise TestPlugin");
@@ -72,7 +84,7 @@ TEST_F(PluginManagerTest, LoadingSameName) {
   auto &plugins = get_plugins();
   
   EXPECT_EQ(plugins.size(), 0u);
-  pm.load_plugin(std::string(LIB_DIR) + std::string("libTestPlugin.dylib"), "TestPlugin");
+  pm.load_plugin(build_dylib_path("libTestPlugin"), "TestPlugin");
 
   EXPECT_THROW(pm.load_plugin(std::string(LIB_DIR) + std::string("libTestPlugin.dylib"), "TestPlugin"), std::exception);
 }
