@@ -370,6 +370,12 @@ void probe(const RadixContainer<RightType>& radix_container,
       PosList pos_list_left_local;
       PosList pos_list_right_local;
 
+      // simple heuristic to estimate result size: half of the partition's row will match
+      // a more conservative pre-allocation would be the size of the left cluster
+      const size_t expected_output_size = (partition_end - partition_begin) / 2;
+      pos_list_left_local.reserve(expected_output_size);
+      pos_list_right_local.reserve(expected_output_size);
+
       if (hashtables[current_partition_id]) {
         const auto& hashtable = hashtables.at(current_partition_id);
 
@@ -756,8 +762,16 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     // Probe phase
     std::vector<PosList> left_pos_lists;
     std::vector<PosList> right_pos_lists;
-    left_pos_lists.resize(radix_right.partition_offsets.size() - 1);
-    right_pos_lists.resize(radix_right.partition_offsets.size() - 1);
+    const size_t partition_count = radix_right.partition_offsets.size() - 1;
+    left_pos_lists.resize(partition_count);
+    right_pos_lists.resize(partition_count);
+    for (size_t i = 0; i < partition_count; i++) {
+      // simple heuristic: half of the rows of the right relation will match
+      const size_t result_rows_per_partition = _right->get_output()->row_count() / partition_count / 2;
+
+      left_pos_lists[i].reserve(result_rows_per_partition);
+      right_pos_lists[i].reserve(result_rows_per_partition);
+    }
     /*
     NUMA notes:
     The workers for each radix partition P should be scheduled on the same node as the input data:
