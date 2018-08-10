@@ -5,13 +5,14 @@
 #include <vector>
 
 #include <operators/abstract_operator.hpp>
+#include <cost_model_calibration/configuration/calibration_configuration.hpp>
 
 namespace opossum {
 
 class CostModelCalibration {
 
 public:
-    explicit CostModelCalibration(const nlohmann::json& configuration);
+    explicit CostModelCalibration(CalibrationConfiguration configuration);
 
     void calibrate();
 
@@ -20,7 +21,7 @@ private:
     void _printOperator(const std::shared_ptr<const AbstractOperator> & op);
 
     nlohmann::json _operators;
-    nlohmann::json _configuration;
+    CalibrationConfiguration _configuration;
 };
 
 }  // namespace opossum

@@ -29,12 +29,18 @@ target_link_libraries(
 add_executable(
     hyriseCostModelCalibration
 
-    costmodel/cost_model_calibration_main.cpp
+    cost_model_calibration/cost_model_calibration_main.cpp
 
-    costmodel/calibration_query_generator.cpp
-    costmodel/calibration_query_generator.hpp
-    costmodel/cost_model_calibration.cpp
-    costmodel/cost_model_calibration.hpp
+        cost_model_calibration/configuration/calibration_column_specification.cpp
+        cost_model_calibration/configuration/calibration_column_specification.hpp
+        cost_model_calibration/configuration/calibration_configuration.cpp
+        cost_model_calibration/configuration/calibration_configuration.hpp
+        cost_model_calibration/configuration/calibration_table_specification.cpp
+        cost_model_calibration/configuration/calibration_table_specification.hpp
+        cost_model_calibration/cost_model_calibration.cpp
+        cost_model_calibration/cost_model_calibration.hpp
+        cost_model_calibration/query/calibration_query_generator.cpp
+        cost_model_calibration/query/calibration_query_generator.hpp
 )
 
 target_link_libraries(

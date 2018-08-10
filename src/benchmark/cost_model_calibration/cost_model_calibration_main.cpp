@@ -3,19 +3,21 @@
 
 #include "benchmark_utils.hpp"
 #include "cost_model_calibration.hpp"
+#include "configuration/calibration_configuration.hpp"
 
 /**
  * This class runs Calibration Queries for the Cost Model.
  * Measured values are exported as JSON.
  */
 int main(int argc, char* argv[]) {
-  // TODO: Input should contain JSON with TableDefinitions
   /**
    * Relevant inputs in config
    *
    * - input tables with table spec
    * - path for output json
    * - number of iterations for calibration
+   *
+   * TODO: Proper documentation of Calibration Configuration JSON
    */
 
   if (!opossum::CLIConfigParser::cli_has_json_config(argc, argv)) {
@@ -27,5 +29,6 @@ int main(int argc, char* argv[]) {
   std::ifstream json_file{argv[1]};
   json_file >> json_config;
 
-  opossum::CostModelCalibration(json_config).calibrate();
+  const auto calibration_config = opossum::CalibrationConfiguration::parse_json_configuration(json_config);
+  opossum::CostModelCalibration(calibration_config).calibrate();
 }

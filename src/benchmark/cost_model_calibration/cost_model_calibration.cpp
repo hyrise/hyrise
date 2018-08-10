@@ -2,8 +2,8 @@
 #include <fstream>
 #include <json.hpp>
 
-#include "calibration_query_generator.hpp"
 #include "cost_model_calibration.hpp"
+#include "query/calibration_query_generator.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/format_duration.hpp"
@@ -12,21 +12,21 @@
 
 namespace opossum {
 
-CostModelCalibration::CostModelCalibration(const nlohmann::json& configuration): _configuration(configuration) {
-  const auto tableSpecifications = configuration["table_specifications"];
+CostModelCalibration::CostModelCalibration(const CalibrationConfiguration configuration): _configuration(configuration) {
+  const auto tableSpecifications = configuration.table_specifications;
 
   for (const auto& tableSpecification : tableSpecifications) {
-    auto table = load_table(tableSpecification["table_path"], 1000);
-    StorageManager::get().add_table(tableSpecification["table_name"], table);
+    auto table = load_table(tableSpecification.table_path, 1000);
+    StorageManager::get().add_table(tableSpecification.table_name, table);
   }
 }
 
 void CostModelCalibration::calibrate() {
-  size_t number_of_iterations = _configuration["calibration_runs"];
+  size_t number_of_iterations = _configuration.calibration_runs;
 
   for (size_t i = 0; i < number_of_iterations; i++) {
     // Regenerate Queries for each iteration...
-    auto queries = CalibrationQueryGenerator::generate_queries(_configuration["table_specifications"]);
+    auto queries = CalibrationQueryGenerator::generate_queries(_configuration.table_specifications);
 
     for (const auto& query : queries) {
       std::cout << "Running " << query << std::endl;
@@ -48,7 +48,7 @@ void CostModelCalibration::calibrate() {
   }
 
   // TODO: make output path configurable
-  auto outputPath = _configuration["output_path"];
+  auto outputPath = _configuration.output_path;
   std::ofstream myfile;
   myfile.open (outputPath);
   myfile << std::setw(2) << _operators << std::endl;
