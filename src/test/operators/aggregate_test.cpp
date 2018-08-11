@@ -122,9 +122,10 @@ class OperatorsAggregateTest : public BaseTest {
   }
 
   std::shared_ptr<TableWrapper> _table_wrapper_1_1, _table_wrapper_1_1_null, _table_wrapper_join_1,
-      _table_wrapper_join_2, _table_wrapper_1_2, _table_wrapper_2_1, _table_wrapper_2_2, _table_wrapper_2_0_null, _table_wrapper_3_1, _table_wrapper_3_2, _table_wrapper_3_0_null,
-      _table_wrapper_1_1_string, _table_wrapper_1_1_string_null, _table_wrapper_1_1_dict, _table_wrapper_1_1_null_dict,
-      _table_wrapper_2_0_a, _table_wrapper_2_o_b, _table_wrapper_int_int;
+      _table_wrapper_join_2, _table_wrapper_1_2, _table_wrapper_2_1, _table_wrapper_2_2, _table_wrapper_2_0_null,
+      _table_wrapper_3_1, _table_wrapper_3_2, _table_wrapper_3_0_null, _table_wrapper_1_1_string,
+      _table_wrapper_1_1_string_null, _table_wrapper_1_1_dict, _table_wrapper_1_1_null_dict, _table_wrapper_2_0_a,
+      _table_wrapper_2_o_b, _table_wrapper_int_int;
 };
 
 TEST_F(OperatorsAggregateTest, OperatorName) {
@@ -306,27 +307,32 @@ TEST_F(OperatorsAggregateTest, TwoGroupbyCount) {
 }
 
 TEST_F(OperatorsAggregateTest, ThreeGroupbyMax) {
-  this->test_output(_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Max}}, {ColumnID{0}, ColumnID{1}, ColumnID{3}},
+  this->test_output(_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Max}},
+                    {ColumnID{0}, ColumnID{1}, ColumnID{3}},
                     "src/test/tables/aggregateoperator/groupby_int_3gb_1agg/max.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, ThreeGroupbyMin) {
-  this->test_output(_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Min}}, {ColumnID{0}, ColumnID{1}, ColumnID{3}},
+  this->test_output(_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Min}},
+                    {ColumnID{0}, ColumnID{1}, ColumnID{3}},
                     "src/test/tables/aggregateoperator/groupby_int_3gb_1agg/min.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, ThreeGroupbySum) {
-  this->test_output(_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Sum}}, {ColumnID{0}, ColumnID{1}, ColumnID{3}},
+  this->test_output(_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Sum}},
+                    {ColumnID{0}, ColumnID{1}, ColumnID{3}},
                     "src/test/tables/aggregateoperator/groupby_int_3gb_1agg/sum.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, ThreeGroupbyAvg) {
-  this->test_output(_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Avg}}, {ColumnID{0}, ColumnID{1}, ColumnID{3}},
+  this->test_output(_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Avg}},
+                    {ColumnID{0}, ColumnID{1}, ColumnID{3}},
                     "src/test/tables/aggregateoperator/groupby_int_3gb_1agg/avg.tbl", 1);
 }
 
 TEST_F(OperatorsAggregateTest, ThreeGroupbyCount) {
-  this->test_output(_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Count}}, {ColumnID{0}, ColumnID{1}, ColumnID{3}},
+  this->test_output(_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Count}},
+                    {ColumnID{0}, ColumnID{1}, ColumnID{3}},
                     "src/test/tables/aggregateoperator/groupby_int_3gb_1agg/count.tbl", 1);
 }
 
@@ -456,7 +462,8 @@ TEST_F(OperatorsAggregateTest, TwoGroupbyCountStar) {
 }
 
 TEST_F(OperatorsAggregateTest, ThreeGroupbyCountStar) {
-  this->test_output(_table_wrapper_3_0_null, {{std::nullopt, AggregateFunction::Count}}, {ColumnID{0}, ColumnID{2}, ColumnID{3}},
+  this->test_output(_table_wrapper_3_0_null, {{std::nullopt, AggregateFunction::Count}},
+                    {ColumnID{0}, ColumnID{2}, ColumnID{3}},
                     "src/test/tables/aggregateoperator/groupby_int_3gb_0agg/count_star.tbl", 1, false);
 }
 
