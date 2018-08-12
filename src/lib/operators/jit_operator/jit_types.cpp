@@ -54,8 +54,15 @@ void JitVariantVector::set_is_null(const size_t index, const bool is_null) { _is
 std::vector<bool>& JitVariantVector::get_is_null_vector() { return _is_null; }
 
 // Generate get, set, grow_by_one, and get_vector methods for all data types defined in JIT_DATA_TYPE_INFO
-BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GET, _, JIT_DATA_TYPE_INFO)
-BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_SET, _, JIT_DATA_TYPE_INFO)
+#define JIT_DATA_TYPE_INFO_WO_STRING    \
+  ((int32_t,     Int,        "int"))    \
+  ((int64_t,     Long,       "long"))   \
+  ((float,       Float,      "float"))  \
+  ((double,      Double,     "double")) \
+  ((bool,        Bool,       "bool"))
+BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GET, _, JIT_DATA_TYPE_INFO_WO_STRING)
+BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_SET, _,  JIT_DATA_TYPE_INFO_WO_STRING)
+#undef JIT_DATA_TYPE_INFO_WO_STRING
 BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GROW_BY_ONE, _, JIT_DATA_TYPE_INFO)
 BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GET_VECTOR, _, JIT_DATA_TYPE_INFO)
 
