@@ -302,12 +302,12 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
         case AggregateFunction::Avg:
           row_index =
               jit_grow_by_one(_aggregate_columns[i].hashmap_value, JitVariantVector::InitialValue::Zero, context);
-          JitDebugAssert(_aggregate_columns[i].hashmap_count_for_avg, "Invalid avg aggregate column.");
+          DebugAssert(_aggregate_columns[i].hashmap_count_for_avg, "Invalid avg aggregate column.");
           jit_grow_by_one(_aggregate_columns[i].hashmap_count_for_avg.value(), JitVariantVector::InitialValue::Zero,
                           context);
           break;
         case AggregateFunction::CountDistinct: {
-          JitFail("Aggregate function count distinct not supported");
+          Fail("Aggregate function count distinct not supported");
         }
       }
     }
@@ -339,12 +339,12 @@ void JitAggregate::_consume(JitRuntimeContext& context) const {
         // In case of an average aggregate, the two auxiliary aggregates need to be updated.
         jit_aggregate_compute(jit_addition, _aggregate_columns[i].tuple_value, _aggregate_columns[i].hashmap_value,
                               row_index, context);
-        JitDebugAssert(_aggregate_columns[i].hashmap_count_for_avg, "Invalid avg aggregate column.");
+        DebugAssert(_aggregate_columns[i].hashmap_count_for_avg, "Invalid avg aggregate column.");
         jit_aggregate_compute(jit_increment, _aggregate_columns[i].tuple_value,
                               _aggregate_columns[i].hashmap_count_for_avg.value(), row_index, context);
         break;
       case AggregateFunction::CountDistinct: {
-        JitFail("Aggregate function count distinct not supported");
+        Fail("Aggregate function count distinct not supported");
       }
     }
   }

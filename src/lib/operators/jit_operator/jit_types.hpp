@@ -21,9 +21,6 @@ namespace opossum {
 #define OPTNONE
 #endif
 
-#define JitDebugAssert(expr, msg) DebugAssert(expr, msg)
-#define JitFail(msg) Fail(msg)
-
 // We need a boolean data type in the JitOperatorWrapper, but don't want to add it to
 // DATA_TYPE_INFO to avoid costly template instantiations.
 // See "all_type_variant.hpp" for details.

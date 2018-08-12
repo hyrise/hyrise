@@ -102,7 +102,7 @@ uint64_t jit_hash(const JitTupleValue& value, JitRuntimeContext& context) {
   switch (value.data_type()) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_HASH_CASE, (JIT_DATA_TYPE_INFO))
     default: {
-      JitFail("unreachable");
+      Fail("unreachable");
       return 0;
     }
   }
@@ -119,7 +119,7 @@ bool jit_aggregate_equals(const JitTupleValue& lhs, const JitHashmapValue& rhs, 
     return false;
   }
 
-  JitDebugAssert(lhs.data_type() == rhs.data_type(), "Data types don't match in jit_aggregate_equals.");
+  DebugAssert(lhs.data_type() == rhs.data_type(), "Data types don't match in jit_aggregate_equals.");
 
   switch (lhs.data_type()) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_AGGREGATE_EQUALS_CASE, (JIT_DATA_TYPE_INFO))
@@ -134,7 +134,7 @@ void jit_assign(const JitTupleValue& from, const JitHashmapValue& to, const size
   // However, this function could easily be extended to support cross-data type assignment in a fashion similar to the
   // jit_compute function.
 
-  JitDebugAssert(from.data_type() == to.data_type(), "Data types don't match in jit_assign.");
+  DebugAssert(from.data_type() == to.data_type(), "Data types don't match in jit_assign.");
 
   if (to.is_nullable()) {
     const bool is_null = from.is_null(context);

@@ -306,16 +306,6 @@ __attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const Jit
   }
 }
 
-// Helper to ensure that hashing of strings is specialised
-struct _Hash {
-  OPTNONE size_t operator()(const std::string& value) const { return std::hash<std::string>{}(value); }
-  template <typename T, typename = typename std::enable_if_t<std::is_scalar_v<T>>>
-  size_t operator()(const T value) const {
-    return std::hash<T>{}(value);
-  }
-};
-const auto _hash = _Hash();
-
 // cleanup
 #undef JIT_GET_ENUM_VALUE
 #undef JIT_GET_DATA_TYPE
