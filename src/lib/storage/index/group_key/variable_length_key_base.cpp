@@ -32,7 +32,11 @@ VariableLengthKeyBase& VariableLengthKeyBase::operator|=(uint64_t other) {
   auto raw_other = reinterpret_cast<VariableLengthKeyWord*>(&other);
   auto operation_width = std::min(static_cast<CompositeKeyLength>(sizeof(other)), _size);
   for (CompositeKeyLength i = 0; i < operation_width; ++i) {
-    _data[i] |= raw_other[i];
+    if constexpr (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {
+      _data[i] |= raw_other[i];
+    } else {
+      _data[_size - 1 - i] |= raw_other[8 - 1 - i];
+    }
   }
   return *this;
 }
@@ -44,12 +48,21 @@ VariableLengthKeyBase& VariableLengthKeyBase::operator<<=(CompositeKeyLength shi
   if (byte_shift >= _size) {
     std::fill(_data, _data + _size, static_cast<VariableLengthKeyWord>(0u));
   } else {
-    // perform shifting (keep in mind: target architecture is little-endian)
-    for (int16_t i = _size - 1; i > static_cast<int16_t>(byte_shift) - 1; --i) {
-      VariableLengthKeyWord value, borrow;
-      std::tie(value, borrow) = shift_left_with_borrow(_data[i - byte_shift], bit_shift);
-      _data[i] = value;
-      if (i + 1 < _size) _data[i + 1] |= borrow;
+    // perform shifting
+    if constexpr (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {
+      for (int16_t i = _size - 1; i > static_cast<int16_t>(byte_shift) - 1; --i) {
+        VariableLengthKeyWord value, borrow;
+        std::tie(value, borrow) = shift_left_with_borrow(_data[i - byte_shift], bit_shift);
+        _data[i] = value;
+        if (i + 1 < _size) _data[i + 1] |= borrow;
+      }
+    } else {
+      for (int16_t i = 0; i < _size - static_cast<int16_t>(byte_shift); ++i) {
+        VariableLengthKeyWord value, borrow;
+        std::tie(value, borrow) = shift_left_with_borrow(_data[i + byte_shift], bit_shift);
+        _data[i] = value;
+        if (i > 0) _data[i - 1] |= borrow;
+      }
     }
     // fill now "empty" positions with zeros
     std::fill(_data, _data + byte_shift, static_cast<VariableLengthKeyWord>(0u));
@@ -79,12 +92,16 @@ bool operator<(const VariableLengthKeyBase& left, const VariableLengthKeyBase& r
   static_assert(std::is_same<VariableLengthKeyWord, uint8_t>::value, "Changes for new word type required.");
   if (left._size != right._size) return left._size < right._size;
 
-  // compare right to left since most significant byte is on the right
-  // memcmp can not be used since it performs lexical comparision
-  // loop overflows after iteration with i == 0, so i becomes greater than left._size
-  for (CompositeKeyLength i = left._size - 1; i < left._size; --i) {
-    if (left._data[i] == right._data[i]) continue;
-    return left._data[i] < right._data[i];
+  if constexpr (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {
+    // compare right to left since most significant byte is on the right
+    // memcmp can not be used since it performs lexical comparison
+    // loop overflows after iteration with i == 0, so i becomes greater than left._size
+    for (CompositeKeyLength i = left._size - 1; i < left._size; --i) {
+      if (left._data[i] == right._data[i]) continue;
+      return left._data[i] < right._data[i];
+    }
+  } else {
+    return std::memcmp(left._data, right._data, left._size) < 0;
   }
 
   return false;
@@ -101,9 +118,16 @@ bool operator>=(const VariableLengthKeyBase& left, const VariableLengthKeyBase& 
 std::ostream& operator<<(std::ostream& os, const VariableLengthKeyBase& key) {
   os << std::hex << std::setfill('0');
   auto raw_data = reinterpret_cast<uint8_t*>(key._data);
-  for (CompositeKeyLength i = 1; i <= key._size; ++i) {
-    os << std::setw(2) << +raw_data[key._size - i];
-    if (i != key._size) os << ' ';
+  if constexpr (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {
+    for (CompositeKeyLength i = 1; i <= key._size; ++i) {
+      os << std::setw(2) << +raw_data[key._size - i];
+      if (i != key._size) os << ' ';
+    }
+  } else {
+    for (CompositeKeyLength i = 0; i < key._size; ++i) {
+      os << std::setw(2) << +raw_data[i];
+      if (i != key._size - 1) os << ' ';
+    }
   }
   os << std::dec << std::setw(0) << std::setfill(' ');
   return os;
