@@ -27,8 +27,9 @@ namespace opossum {
 
 void jit_not(const JitTupleValue& lhs, const JitTupleValue& result, JitRuntimeContext& context) {
   // If the input value is computed by a non-jit operator, its data type is int but it can be read as a bool value.
-  DebugAssert((lhs.data_type() == DataType::Bool || lhs.data_type() == DataType::Int) &&
-              result.data_type() == DataType::Bool, "invalid type for jit operation not");
+  DebugAssert(
+      (lhs.data_type() == DataType::Bool || lhs.data_type() == DataType::Int) && result.data_type() == DataType::Bool,
+      "invalid type for jit operation not");
   result.set<bool>(!lhs.get<bool>(context), context);
   result.set_is_null(lhs.is_null(context), context);
 }

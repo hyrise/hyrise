@@ -1,6 +1,6 @@
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
-#include <boost/algorithm/string/predicate.hpp>
 
 #include <fstream>
 #include <iostream>
@@ -101,7 +101,8 @@ std::vector<TestConfiguration> build_combinations() {
 TEST_P(SQLiteTestRunner, CompareToSQLite) {
   const auto& [query, use_jit, use_mvcc] = GetParam();
 
-  SCOPED_TRACE("SQLite " + query + " " + (use_jit ? "with JIT" : "without JIT") + " " + (use_mvcc ? "with MVCC" : "without MVCC"));
+  SCOPED_TRACE("SQLite " + query + " " + (use_jit ? "with JIT" : "without JIT") + " " +
+               (use_mvcc ? "with MVCC" : "without MVCC"));
 
   std::shared_ptr<LQPTranslator> lqp_translator;
   if (use_jit) {
