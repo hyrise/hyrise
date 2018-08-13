@@ -10,10 +10,26 @@ std::string JitReadTuples::description() const {
   std::stringstream desc;
   desc << "[ReadTuple] ";
   for (const auto& input_column : _input_columns) {
-    desc << "x" << input_column.tuple_value.tuple_index() << " = Col#" << input_column.column_id << ", ";
+    desc << "x" << input_column.tuple_value.tuple_index() << " = Col#" << input_column.column_id;
+    desc << " (type: ";
+    if (input_column.tuple_value.data_type() != DataType::Null) {
+      desc << data_type_to_string.left.at(input_column.tuple_value.data_type());
+    } else {
+      desc << "null";
+    }
+    desc << " , is_nullable: " << std::boolalpha << input_column.tuple_value.is_nullable() << ")"
+         << ", ";
   }
   for (const auto& input_literal : _input_literals) {
-    desc << "x" << input_literal.tuple_value.tuple_index() << " = " << input_literal.value << ", ";
+    desc << "x" << input_literal.tuple_value.tuple_index() << " = " << input_literal.value;
+    desc << " (type: ";
+    if (input_literal.tuple_value.data_type() != DataType::Null) {
+      desc << data_type_to_string.left.at(input_literal.tuple_value.data_type());
+    } else {
+      desc << "null";
+    }
+    desc << " , is_nullable: " << std::boolalpha << input_literal.tuple_value.is_nullable() << ")"
+         << ", ";
   }
   return desc.str();
 }
@@ -29,9 +45,11 @@ void JitReadTuples::before_query(const Table& in_table, JitRuntimeContext& conte
       resolve_data_type(data_type, [&](auto type) {
         using DataType = typename decltype(type)::type;
         context.tuple.set<DataType>(input_literal.tuple_value.tuple_index(), boost::get<DataType>(input_literal.value));
+        // Non-jit operators store bool values as int values
+        if constexpr (std::is_same_v<DataType, int32_t>) {
+          context.tuple.set<bool>(input_literal.tuple_value.tuple_index(), boost::get<DataType>(input_literal.value));
+        }
       });
-    } else {
-      context.tuple.set_is_null(input_literal.tuple_value.tuple_index(), true);
     }
   }
 }

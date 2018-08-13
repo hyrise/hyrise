@@ -11,10 +11,10 @@
 
 namespace opossum {
 
-// Functions using strings are not optimised to support code spezialisation on Linux.
+// Functions using strings are not optimized to support code specialization on Linux.
 // This specialiation issue came up with pr #933 (https://github.com/hyrise/hyrise/pull/933).
 // Conditionally define optnone flag to ensure that functions handling strings are not optimized.
-// Clang supports this flag. GCC does not.
+// Clang supports optnone flag. GCC does not support it.
 #if __has_attribute(optnone)
 #define OPTNONE __attribute__((optnone))
 #else

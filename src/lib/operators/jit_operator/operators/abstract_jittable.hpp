@@ -24,7 +24,7 @@ class AbstractJittable {
   virtual std::string description() const = 0;
 
  protected:
-  // inlined during compilation to reduce the number of functions inlined during specialisation
+  // inlined during compilation to reduce the number of functions inlined during specialization
   __attribute__((always_inline)) void _emit(JitRuntimeContext& context) const { _next_operator->_consume(context); }
 
  private:

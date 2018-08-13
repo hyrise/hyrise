@@ -13,10 +13,9 @@ namespace opossum {
     return std::hash<JIT_GET_DATA_TYPE(0, types)>()( \
         context.tuple.get<JIT_GET_DATA_TYPE(0, types)>(value.tuple_index()));
 
-#define JIT_AGGREGATE_EQUALS_CASE(r, types)                          \
-  case JIT_GET_ENUM_VALUE(0, types):                                 \
-    return jit_equals(lhs.get<JIT_GET_DATA_TYPE(0, types)>(context), \
-                      rhs.get<JIT_GET_DATA_TYPE(0, types)>(rhs_index, context));
+#define JIT_AGGREGATE_EQUALS_CASE(r, types) \
+  case JIT_GET_ENUM_VALUE(0, types):        \
+    return lhs.get<JIT_GET_DATA_TYPE(0, types)>(context) == rhs.get<JIT_GET_DATA_TYPE(0, types)>(rhs_index, context);
 
 #define JIT_ASSIGN_CASE(r, types)    \
   case JIT_GET_ENUM_VALUE(0, types): \
@@ -27,22 +26,22 @@ namespace opossum {
     return context.hashmap.columns[value.column_index()].grow_by_one<JIT_GET_DATA_TYPE(0, types)>(initial_value);
 
 void jit_not(const JitTupleValue& lhs, const JitTupleValue& result, JitRuntimeContext& context) {
-  // If the input value is computed by a non-jit operator, the data type is int but can it be read as a bool value.
+  // If the input value is computed by a non-jit operator, its data type is int but it can be read as a bool value.
   DebugAssert((lhs.data_type() == DataType::Bool || lhs.data_type() == DataType::Int) &&
-              result.data_type() == DataType::Bool, "invalid type for operation");
+              result.data_type() == DataType::Bool, "invalid type for jit operation not");
   result.set<bool>(!lhs.get<bool>(context), context);
   result.set_is_null(lhs.is_null(context), context);
 }
 
 void jit_and(const JitTupleValue& lhs, const JitTupleValue& rhs, const JitTupleValue& result,
              JitRuntimeContext& context) {
+  // If the input values are computed by non-jit operators, their data type is int but they can be read as bool values.
   DebugAssert((lhs.data_type() == DataType::Bool || lhs.data_type() == DataType::Int) &&
                   (rhs.data_type() == DataType::Bool || rhs.data_type() == DataType::Int) &&
                   result.data_type() == DataType::Bool,
-              "invalid type for operation");
+              "invalid type for jit operation and");
 
   // three-valued logic AND
-  // If the input values are computed by non-jit operators, the data type is int but they can be read as a bool values.
   if (lhs.is_null(context)) {
     result.set<bool>(false, context);
     result.set_is_null(rhs.is_null(context) || rhs.get<bool>(context), context);
@@ -54,17 +53,17 @@ void jit_and(const JitTupleValue& lhs, const JitTupleValue& rhs, const JitTupleV
 
 void jit_or(const JitTupleValue& lhs, const JitTupleValue& rhs, const JitTupleValue& result,
             JitRuntimeContext& context) {
+  // If the input values are computed by non-jit operators, their data type is int but they can be read as bool values.
   DebugAssert((lhs.data_type() == DataType::Bool || lhs.data_type() == DataType::Int) &&
                   (rhs.data_type() == DataType::Bool || rhs.data_type() == DataType::Int) &&
                   result.data_type() == DataType::Bool,
-              "invalid type for operation");
+              "invalid type for jit operation or");
 
   // three-valued logic OR
-  // If the input values are computed by non-jit operators, the data type is int but they can be read as a bool values.
   if (lhs.is_null(context)) {
     result.set<bool>(true, context);
     result.set_is_null(rhs.is_null(context) || !rhs.get<bool>(context), context);
-  } else {;
+  } else {
     result.set<bool>(lhs.get<bool>(context) || rhs.get<bool>(context), context);
     result.set_is_null(!lhs.get<bool>(context) && rhs.is_null(context), context);
   }
@@ -133,7 +132,6 @@ void jit_assign(const JitTupleValue& from, const JitHashmapValue& to, const size
   // jit_assign only supports identical data types. This is sufficient for the current JitAggregate implementation.
   // However, this function could easily be extended to support cross-data type assignment in a fashion similar to the
   // jit_compute function.
-
   DebugAssert(from.data_type() == to.data_type(), "Data types don't match in jit_assign.");
 
   if (to.is_nullable()) {

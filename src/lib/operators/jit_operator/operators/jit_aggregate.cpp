@@ -169,7 +169,8 @@ void JitAggregate::after_query(Table& out_table, JitRuntimeContext& context) con
 
 namespace {
 
-// The intermediary result of sum is always stored in a 64 bit data type
+// The intermediary result of sum is always stored in a 64 bit data type. The same behaviour is implemented by non-jit
+// operators.
 DataType resolve_sum_data_type(const DataType data_type) {
   switch (data_type) {
     case DataType::Int:
