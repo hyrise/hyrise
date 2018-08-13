@@ -51,6 +51,14 @@ class OperatorsAggregateTest : public BaseTest {
         load_table("src/test/tables/aggregateoperator/groupby_int_2gb_0agg/input_null.tbl", 2));
     _table_wrapper_2_0_null->execute();
 
+    _table_wrapper_3_1 = std::make_shared<TableWrapper>(
+        load_table("src/test/tables/aggregateoperator/groupby_int_3gb_1agg/input.tbl", 2));
+    _table_wrapper_3_1->execute();
+
+    _table_wrapper_3_0_null = std::make_shared<TableWrapper>(
+        load_table("src/test/tables/aggregateoperator/groupby_int_3gb_0agg/input_null.tbl", 2));
+    _table_wrapper_3_0_null->execute();
+
     _table_wrapper_1_1_string = std::make_shared<TableWrapper>(
         load_table("src/test/tables/aggregateoperator/groupby_string_1gb_1agg/input.tbl", 2));
     _table_wrapper_1_1_string->execute();
@@ -65,13 +73,13 @@ class OperatorsAggregateTest : public BaseTest {
     _table_wrapper_join_2 = std::make_shared<TableWrapper>(load_table("src/test/tables/int.tbl", 1));
     _table_wrapper_join_2->execute();
 
-    _table_wrapper_3_1 =
+    _table_wrapper_2_0_a =
         std::make_shared<TableWrapper>(load_table("src/test/tables/aggregateoperator/join_2gb_0agg/input_a.tbl", 2));
-    _table_wrapper_3_1->execute();
+    _table_wrapper_2_0_a->execute();
 
-    _table_wrapper_3_2 =
+    _table_wrapper_2_o_b =
         std::make_shared<TableWrapper>(load_table("src/test/tables/aggregateoperator/join_2gb_0agg/input_b.tbl", 2));
-    _table_wrapper_3_2->execute();
+    _table_wrapper_2_o_b->execute();
 
     auto test_table = load_table("src/test/tables/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2);
     ChunkEncoder::encode_all_chunks(test_table);
@@ -115,8 +123,9 @@ class OperatorsAggregateTest : public BaseTest {
 
   std::shared_ptr<TableWrapper> _table_wrapper_1_1, _table_wrapper_1_1_null, _table_wrapper_join_1,
       _table_wrapper_join_2, _table_wrapper_1_2, _table_wrapper_2_1, _table_wrapper_2_2, _table_wrapper_2_0_null,
-      _table_wrapper_1_1_string, _table_wrapper_1_1_string_null, _table_wrapper_1_1_dict, _table_wrapper_1_1_null_dict,
-      _table_wrapper_3_1, _table_wrapper_3_2, _table_wrapper_int_int;
+      _table_wrapper_3_1, _table_wrapper_3_2, _table_wrapper_3_0_null, _table_wrapper_1_1_string,
+      _table_wrapper_1_1_string_null, _table_wrapper_1_1_dict, _table_wrapper_1_1_null_dict, _table_wrapper_2_0_a,
+      _table_wrapper_2_o_b, _table_wrapper_int_int;
 };
 
 TEST_F(OperatorsAggregateTest, OperatorName) {
@@ -297,6 +306,36 @@ TEST_F(OperatorsAggregateTest, TwoGroupbyCount) {
                     "src/test/tables/aggregateoperator/groupby_int_2gb_1agg/count.tbl", 1);
 }
 
+TEST_F(OperatorsAggregateTest, ThreeGroupbyMax) {
+  this->test_output(_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Max}},
+                    {ColumnID{0}, ColumnID{1}, ColumnID{3}},
+                    "src/test/tables/aggregateoperator/groupby_int_3gb_1agg/max.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, ThreeGroupbyMin) {
+  this->test_output(_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Min}},
+                    {ColumnID{0}, ColumnID{1}, ColumnID{3}},
+                    "src/test/tables/aggregateoperator/groupby_int_3gb_1agg/min.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, ThreeGroupbySum) {
+  this->test_output(_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Sum}},
+                    {ColumnID{0}, ColumnID{1}, ColumnID{3}},
+                    "src/test/tables/aggregateoperator/groupby_int_3gb_1agg/sum.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, ThreeGroupbyAvg) {
+  this->test_output(_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Avg}},
+                    {ColumnID{0}, ColumnID{1}, ColumnID{3}},
+                    "src/test/tables/aggregateoperator/groupby_int_3gb_1agg/avg.tbl", 1);
+}
+
+TEST_F(OperatorsAggregateTest, ThreeGroupbyCount) {
+  this->test_output(_table_wrapper_3_1, {{ColumnID{2}, AggregateFunction::Count}},
+                    {ColumnID{0}, ColumnID{1}, ColumnID{3}},
+                    "src/test/tables/aggregateoperator/groupby_int_3gb_1agg/count.tbl", 1);
+}
+
 TEST_F(OperatorsAggregateTest, TwoGroupbyAndTwoAggregateMaxAvg) {
   this->test_output(_table_wrapper_2_2, {{ColumnID{2}, AggregateFunction::Max}, {ColumnID{3}, AggregateFunction::Avg}},
                     {ColumnID{0}, ColumnID{1}}, "src/test/tables/aggregateoperator/groupby_int_2gb_2agg/max_avg.tbl",
@@ -422,6 +461,12 @@ TEST_F(OperatorsAggregateTest, TwoGroupbyCountStar) {
                     "src/test/tables/aggregateoperator/groupby_int_2gb_0agg/count_star.tbl", 1, false);
 }
 
+TEST_F(OperatorsAggregateTest, ThreeGroupbyCountStar) {
+  this->test_output(_table_wrapper_3_0_null, {{std::nullopt, AggregateFunction::Count}},
+                    {ColumnID{0}, ColumnID{2}, ColumnID{3}},
+                    "src/test/tables/aggregateoperator/groupby_int_3gb_0agg/count_star.tbl", 1, false);
+}
+
 TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMaxWithNull) {
   this->test_output(_table_wrapper_1_1_null_dict, {{ColumnID{1}, AggregateFunction::Max}}, {ColumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_int_1gb_1agg/max_null.tbl", 1, false);
@@ -519,7 +564,7 @@ TEST_F(OperatorsAggregateTest, DictionarySingleAggregateMinOnRef) {
 }
 
 TEST_F(OperatorsAggregateTest, JoinThenAggregate) {
-  auto join = std::make_shared<JoinHash>(_table_wrapper_3_1, _table_wrapper_3_2, JoinMode::Inner,
+  auto join = std::make_shared<JoinHash>(_table_wrapper_2_0_a, _table_wrapper_2_o_b, JoinMode::Inner,
                                          ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
   join->execute();
 
