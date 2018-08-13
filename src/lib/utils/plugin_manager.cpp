@@ -8,13 +8,6 @@
 
 namespace opossum {
 
-// singleton
-PluginManager& PluginManager::get() {
-  static PluginManager instance;
-
-  return instance;
-}
-
 bool PluginManager::_is_duplicate(AbstractPlugin* plugin) {
   // This should work as soon as we support gcc-8 or gcc-8 supports us (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740)
   // for ([[maybe_unused]] auto &[plugin_name, plugin_handle_wrapper] : _plugins) {

@@ -18,7 +18,12 @@ class PluginManager : private Noncopyable {
   friend class PluginManagerTest;
 
  public:
-  static PluginManager& get();
+  // Singleton
+  inline static PluginManager& get() {
+    static PluginManager instance;
+
+    return instance;
+  }
 
   void load_plugin(const std::string& path, const PluginName& name);
 

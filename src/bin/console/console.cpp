@@ -134,11 +134,6 @@ Console::Console()
   _prepared_statements = std::make_shared<PreparedStatementCache>(DefaultCacheCapacity);
 }
 
-Console& Console::get() {
-  static Console instance;
-  return instance;
-}
-
 int Console::read() {
   char* buffer;
 

@@ -47,7 +47,12 @@ class TransactionContext;
  */
 class TransactionManager : private Noncopyable {
  public:
-  static TransactionManager& get();
+
+  // Singleton
+  inline static TransactionManager& get() {
+    static TransactionManager instance;
+    return instance;
+  }
   static void reset();
 
   CommitID last_commit_id() const;

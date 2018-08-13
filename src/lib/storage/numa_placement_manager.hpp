@@ -18,6 +18,16 @@ namespace opossum {
 // `resumed` to start its operation.
 class NUMAPlacementManager {
  public:
+
+  // Singleton
+  inline static NUMAPlacementManager& get() {
+    // Don't even think about writing a reset method. If the NUMAPlacementManager gets deleted, so do the memory
+    // resources. Without those, all destructors of all PMR vectors out there will fail.
+
+    static NUMAPlacementManager instance;
+    return instance;
+  }
+
   struct Options {
     // Parameters of the NUMA placement and chunk migration algorithm.
 

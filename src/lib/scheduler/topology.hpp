@@ -41,7 +41,12 @@ struct TopologyNode final {
  */
 class Topology final {
  public:
-  static Topology& get();
+
+  // Singleton
+  inline static Topology& get() {
+    static Topology instance;
+    return instance;
+  }
 
   /**
    * Use the default system topology.

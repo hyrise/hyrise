@@ -28,7 +28,10 @@ extern size_t jit_llvm_bundle_size;
 class JitRepository : private Noncopyable {
  public:
   // Returns the singleton repository instance that is initialized with the embedded bitcode
-  static JitRepository& get();
+  inline static JitRepository& get() {
+    static JitRepository instance;
+    return instance;
+  }
 
   // Create a repository from the given module string
   explicit JitRepository(const std::string& module_string);
