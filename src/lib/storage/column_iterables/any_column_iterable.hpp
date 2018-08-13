@@ -90,6 +90,8 @@ class AnyColumnIterable : public PointAccessibleColumnIterable<AnyColumnIterable
     });
   }
 
+  size_t _on_size() const { return _iterable._on_size(); }
+
  private:
   IterableT _iterable;
 };

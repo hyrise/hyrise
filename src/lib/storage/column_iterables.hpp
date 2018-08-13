@@ -92,7 +92,10 @@ class ColumnIterable {
    */
   template <typename Container>
   void materialize_values(Container& container) const {
-    for_each([&](const auto& value) { container.push_back(value.value()); });
+    DebugAssert(container.empty(), "Trying to materialize into a non-empty container");
+    container.resize(_self()._on_size());
+    size_t index = 0;
+    for_each([&](const auto& value) { container[index++] = value.value(); });
   }
 
   /**
@@ -104,7 +107,10 @@ class ColumnIterable {
    */
   template <typename Container>
   void materialize_values_and_nulls(Container& container) const {
-    for_each([&](const auto& value) { container.push_back(std::make_pair(value.is_null(), value.value())); });
+    DebugAssert(container.empty(), "Trying to materialize into a non-empty container");
+    container.resize(_self()._on_size());
+    size_t index = 0;
+    for_each([&](const auto& value) { container[index++] = std::make_pair(value.is_null(), value.value()); });
   }
 
   /**
@@ -113,7 +119,10 @@ class ColumnIterable {
    */
   template <typename Container>
   void materialize_nulls(Container& container) const {
-    for_each([&](const auto& value) { container.push_back(value.is_null()); });
+    DebugAssert(container.empty(), "Trying to materialize into a non-empty container");
+    container.resize(_self()._on_size());
+    size_t index = 0;
+    for_each([&](const auto& value) { container[index++] = value.is_null(); });
   }
 
   /** @} */
