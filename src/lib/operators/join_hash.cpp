@@ -7,6 +7,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <unordered_map>
 
 #include "join_hash/hash_traits.hpp"
 #include "resolve_type.hpp"
@@ -18,7 +19,6 @@
 #include "type_cast.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
-#include "utils/cuckoo_hashtable.hpp"
 #include "utils/murmur_hash.hpp"
 #include "utils/timer.hpp"
 
@@ -119,12 +119,12 @@ struct RadixContainer {
 Build all the hash tables for the partitions of Left. We parallelize this process for all partitions of Left
 */
 template <typename LeftType, typename HashedType>
-std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<LeftType>& radix_container) {
+std::vector<std::optional<std::unordered_map<HashedType, PosList>>> build(const RadixContainer<LeftType>& radix_container) {
   /*
   NUMA notes:
   The hashtables for each partition P should also reside on the same node as the two vectors leftP and rightP.
   */
-  std::vector<std::optional<HashTable<HashedType>>> hashtables;
+  std::vector<std::optional<std::unordered_map<HashedType, PosList>>> hashtables;
   hashtables.resize(radix_container.partition_offsets.size() - 1);
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
@@ -145,12 +145,12 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
                                                  partition_size]() {
       auto& partition_left = static_cast<Partition<LeftType>&>(*radix_container.elements);
 
-      auto hashtable = HashTable<HashedType>{partition_size};
+      auto hashtable = std::unordered_map<HashedType, PosList>(partition_size);
 
       for (size_t partition_offset = partition_left_begin; partition_offset < partition_left_end; ++partition_offset) {
         auto& element = partition_left[partition_offset];
 
-        hashtable.put(type_cast<HashedType>(element.value), element.row_id);
+        hashtable[type_cast<HashedType>(element.value)].push_back(element.row_id);
       }
 
       hashtables[current_partition_id] = std::move(hashtable);
@@ -340,7 +340,7 @@ RadixContainer<T> partition_radix_parallel(const std::shared_ptr<Partition<T>>& 
   */
 template <typename RightType, typename HashedType>
 void probe(const RadixContainer<RightType>& radix_container,
-           const std::vector<std::optional<HashTable<HashedType>>>& hashtables, std::vector<PosList>& pos_list_left,
+           const std::vector<std::optional<std::unordered_map<HashedType, PosList>>>& hashtables, std::vector<PosList>& pos_list_left,
            std::vector<PosList>& pos_list_right, const JoinMode mode) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size() - 1);
@@ -369,8 +369,8 @@ void probe(const RadixContainer<RightType>& radix_container,
       PosList pos_list_left_local;
       PosList pos_list_right_local;
 
-      if (hashtables[current_partition_id]) {
-        const auto& hashtable = hashtables.at(current_partition_id);
+      if (hashtables[current_partition_id].has_value()) {
+        const auto& hashtable = hashtables.at(current_partition_id).value();
 
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
           auto& row = partition[partition_offset];
@@ -379,23 +379,12 @@ void probe(const RadixContainer<RightType>& radix_container,
             continue;
           }
 
-          // This is where the actual comparison happens. `get` only returns values that match and eliminates hash
-          // collisions.
-          const auto& matching_rows = hashtable->get(type_cast<HashedType>(row.value));
+          const auto& rows_iter = hashtable.find(type_cast<HashedType>(row.value));
 
-          if (matching_rows) {
-            // We store a variant of <RowID, PosList> to reduce the number of allocations (see the cuckoo hashmap)
-            if (matching_rows->get().type() == typeid(PosList)) {
-              // Multiple matches, stored in one PosList
-              for (const auto row_id : boost::get<PosList>(matching_rows->get())) {
-                if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
-                  pos_list_left_local.emplace_back(row_id);
-                  pos_list_right_local.emplace_back(row.row_id);
-                }
-              }
-            } else {
-              // A single RowID
-              const auto row_id = boost::get<RowID>(matching_rows->get());
+          if (rows_iter != hashtable.end()) {
+            // Multiple matches, stored in one PosList
+            const auto& matching_rows = rows_iter->second;
+            for (const auto row_id : matching_rows) {
               if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
                 pos_list_left_local.emplace_back(row_id);
                 pos_list_right_local.emplace_back(row.row_id);
@@ -441,7 +430,7 @@ void probe(const RadixContainer<RightType>& radix_container,
 
 template <typename RightType, typename HashedType>
 void probe_semi_anti(const RadixContainer<RightType>& radix_container,
-                     const std::vector<std::optional<HashTable<HashedType>>>& hashtables,
+                     const std::vector<std::optional<std::unordered_map<HashedType, PosList>>>& hashtables,
                      std::vector<PosList>& pos_lists, const JoinMode mode) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size() - 1);
@@ -462,7 +451,7 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
 
       PosList pos_list_local;
 
-      if (const auto& hashtable = hashtables[current_partition_id]) {
+      if (hashtables[current_partition_id].has_value()) {
         // Valid hashtable found, so there is at least one match in this partition
 
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
@@ -472,9 +461,10 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
             continue;
           }
 
-          const auto& matching_rows = hashtable->get(row.value);
+          const auto& hashtable = hashtables[current_partition_id].value();
+          const auto it = hashtable.find(type_cast<HashedType>(row.value));
 
-          if ((mode == JoinMode::Semi && matching_rows) || (mode == JoinMode::Anti && !matching_rows)) {
+          if ((mode == JoinMode::Semi && it != hashtable.end()) || (mode == JoinMode::Anti && it == hashtable.end())) {
             // Semi: found at least one match for this row -> match
             // Anti: no matching rows found -> match
             pos_list_local.emplace_back(row.row_id);
