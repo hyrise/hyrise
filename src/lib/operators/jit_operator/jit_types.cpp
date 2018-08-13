@@ -2,17 +2,18 @@
 
 namespace opossum {
 
-#define JIT_VARIANT_VECTOR_GET(r, d, type)          \
-  template <>                                       \
-  BOOST_PP_TUPLE_ELEM(3, 0, type)                   \
-  JitVariantVector::get(const size_t index) const { \
-    return BOOST_PP_TUPLE_ELEM(3, 1, type)[index];  \
+#define JIT_VARIANT_VECTOR_GET(r, d, type)                                           \
+  template <>                                                                        \
+  BOOST_PP_TUPLE_ELEM(3, 0, type)                                                    \
+  JitVariantVector::get<BOOST_PP_TUPLE_ELEM(3, 0, type)>(const size_t index) const { \
+    return BOOST_PP_TUPLE_ELEM(3, 1, type)[index];                                   \
   }
 
-#define JIT_VARIANT_VECTOR_SET(r, d, type)                                                        \
-  template <>                                                                                     \
-  void JitVariantVector::set(const size_t index, const BOOST_PP_TUPLE_ELEM(3, 0, type) & value) { \
-    BOOST_PP_TUPLE_ELEM(3, 1, type)[index] = value;                                               \
+#define JIT_VARIANT_VECTOR_SET(r, d, type)                                                                     \
+  template <>                                                                                                  \
+  void JitVariantVector::set<BOOST_PP_TUPLE_ELEM(3, 0, type)>(const size_t index,                              \
+                                                              const BOOST_PP_TUPLE_ELEM(3, 0, type) & value) { \
+    BOOST_PP_TUPLE_ELEM(3, 1, type)[index] = value;                                                            \
   }
 
 #define JIT_VARIANT_VECTOR_RESIZE(r, d, type) BOOST_PP_TUPLE_ELEM(3, 1, type).resize(new_size);
@@ -53,27 +54,9 @@ void JitVariantVector::set_is_null(const size_t index, const bool is_null) { _is
 
 std::vector<bool>& JitVariantVector::get_is_null_vector() { return _is_null; }
 
-template <>
-void JitVariantVector::set<std::string>(const size_t index, const std::string& value) {
-  String[index] = value;
-}
-
-template <>
-std::string JitVariantVector::get<std::string>(const size_t index) const {
-  return String[index];
-}
-
 // Generate get, set, grow_by_one, and get_vector methods for all data types defined in JIT_DATA_TYPE_INFO
-// except string for get and set
-#define JIT_DATA_TYPE_INFO_WO_STRING    \
-  ((int32_t,     Int,        "int"))    \
-  ((int64_t,     Long,       "long"))   \
-  ((float,       Float,      "float"))  \
-  ((double,      Double,     "double")) \
-  ((bool,        Bool,       "bool"))
-BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GET, _, JIT_DATA_TYPE_INFO_WO_STRING)
-BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_SET, _, JIT_DATA_TYPE_INFO_WO_STRING)
-#undef JIT_DATA_TYPE_INFO_WO_STRING
+BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GET, _, JIT_DATA_TYPE_INFO)
+BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_SET, _, JIT_DATA_TYPE_INFO)
 BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GROW_BY_ONE, _, JIT_DATA_TYPE_INFO)
 BOOST_PP_SEQ_FOR_EACH(JIT_VARIANT_VECTOR_GET_VECTOR, _, JIT_DATA_TYPE_INFO)
 
