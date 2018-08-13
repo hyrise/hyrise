@@ -26,31 +26,55 @@ namespace opossum {
     }
 
     const std::string CalibrationQueryGenerator::_generate_table_scans(const CalibrationTableSpecification& table_definition) {
+      std::random_device random_device;
+      std::mt19937 engine{random_device()};
+
       // TODO:
-      auto string_template = "SELECT %1% FROM %2% WHERE %3% %4% %5%;";
-//      auto and_or = " %1% ";
-//      auto additional_predicates =  "%1% %2% %3%";
+      auto string_template = "SELECT %1% FROM %2% WHERE %3%;";
+      auto predicate_template =  "%1% %2% %3%";
 
       auto select_columns = _generate_select_columns(table_definition.columns);
       auto table_name = table_definition.table_name;
 
       auto column_definitions = table_definition.columns;
-      std::random_device random_device;
-      std::mt19937 engine{random_device()};
-      std::uniform_int_distribution<long> dist(0, column_definitions.size() - 1);
 
-      auto filter_column = std::next(column_definitions.begin(), dist(engine));
+      std::uniform_int_distribution<size_t> number_of_predicates_dist(1, 5);
+      auto number_of_predicates = number_of_predicates_dist(engine);
+
+      std::stringstream predicate_stream;
+
+      std::uniform_int_distribution<long> filter_column_dist(0, column_definitions.size() - 1);
+      std::uniform_int_distribution<int> equality_dist(0, 1);
+      for (size_t i = 0; i < number_of_predicates; i++) {
+        auto filter_column = std::next(column_definitions.begin(), filter_column_dist(engine));
+        auto filter_column_name = filter_column->first;
+        auto filter_column_value = _generate_table_scan_predicate(filter_column->second);
+
+        auto predicate_sign = equality_dist(engine) == 1 ? "=" : "<";
+        predicate_stream << boost::str(boost::format(predicate_template) % filter_column_name % predicate_sign % filter_column_value);
+
+        if (i < number_of_predicates - 1) {
+          predicate_stream << " AND ";
+        }
+      }
+
+      auto filter_column = std::next(column_definitions.begin(), filter_column_dist(engine));
       auto filter_column_name = filter_column->first;
       auto filter_column_value = _generate_table_scan_predicate(filter_column->second);
 
-      return boost::str(boost::format(string_template) % select_columns % table_name % filter_column_name % "=" % filter_column_value);
+      return boost::str(boost::format(string_template) % select_columns % table_name % predicate_stream.str());
     }
 
     const std::string CalibrationQueryGenerator::_generate_table_scan_predicate(const CalibrationColumnSpecification& column_definition) {
       auto column_type = column_definition.type;
-      if (column_type == "int") return "10";
-      if (column_type == "string") return "'Aaron Anderson'";
-      if (column_type == "float") return "0.5";
+      std::random_device random_device;
+      std::mt19937 engine{random_device()};
+      std::uniform_int_distribution<int> int_dist(0, column_definition.distinct_values - 1);
+      std::uniform_real_distribution<> float_dist(0, column_definition.distinct_values - 1);
+
+      if (column_type == "int") return std::to_string(int_dist(engine));
+      if (column_type == "string") return "'Aaron Anderson'"; // TODO: somehow get values that are actually in the generated data
+      if (column_type == "float") return std::to_string(float_dist(engine));
 
       Fail("Unsupported data type in CalibrationQueryGenerator");
     }

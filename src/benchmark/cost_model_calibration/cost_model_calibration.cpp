@@ -42,7 +42,7 @@ void CostModelCalibration::calibrate() {
     auto queries = CalibrationQueryGenerator::generate_queries(_configuration.table_specifications);
 
     for (const auto& query : queries) {
-//      std::cout << "Running " << query << std::endl;
+      std::cout << "Running " << query << std::endl;
       auto pipeline_builder = SQLPipelineBuilder{query};
       pipeline_builder.dont_cleanup_temporaries();
       auto pipeline = pipeline_builder.create_pipeline();
