@@ -1,13 +1,15 @@
 #include "join_hash.hpp"
 
 #include <boost/lexical_cast.hpp>
+#include <boost/variant.hpp>
+
 #include <memory>
 #include <numeric>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
-#include <unordered_map>
 
 #include "join_hash/hash_traits.hpp"
 #include "resolve_type.hpp"
@@ -119,12 +121,13 @@ struct RadixContainer {
 Build all the hash tables for the partitions of Left. We parallelize this process for all partitions of Left
 */
 template <typename LeftType, typename HashedType>
-std::vector<std::optional<std::unordered_map<HashedType, PosList>>> build(const RadixContainer<LeftType>& radix_container) {
+std::vector<std::optional<std::unordered_map<HashedType, boost::variant<RowID, PosList>>>> build(
+    const RadixContainer<LeftType>& radix_container) {
   /*
   NUMA notes:
   The hashtables for each partition P should also reside on the same node as the two vectors leftP and rightP.
   */
-  std::vector<std::optional<std::unordered_map<HashedType, PosList>>> hashtables;
+  std::vector<std::optional<std::unordered_map<HashedType, boost::variant<RowID, PosList>>>> hashtables;
   hashtables.resize(radix_container.partition_offsets.size() - 1);
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
@@ -145,12 +148,25 @@ std::vector<std::optional<std::unordered_map<HashedType, PosList>>> build(const 
                                                  partition_size]() {
       auto& partition_left = static_cast<Partition<LeftType>&>(*radix_container.elements);
 
-      auto hashtable = std::unordered_map<HashedType, PosList>(partition_size);
+      auto hashtable = std::unordered_map<HashedType, boost::variant<RowID, PosList>>(partition_size);
 
       for (size_t partition_offset = partition_left_begin; partition_offset < partition_left_end; ++partition_offset) {
-        auto& element = partition_left[partition_offset];
+        const auto& element = partition_left[partition_offset];
 
-        hashtable[type_cast<HashedType>(element.value)].push_back(element.row_id);
+        const auto hash_key = type_cast<HashedType>(element.value);
+        const auto it = hashtable.find(hash_key);
+        if (it == hashtable.end()) {
+          // key is not present: add value and row ID
+          hashtable[hash_key] = element.row_id;
+        } else {
+          auto& map_entry = it->second;
+          if (map_entry.type() == typeid(RowID)) {
+            // Previously, there was only one row id stored for this value. Convert the entry to a multi-row-id one.
+            hashtable[hash_key] = PosList{boost::get<RowID>(map_entry), element.row_id};
+          } else {
+            boost::get<PosList>(map_entry).push_back(element.row_id);
+          }
+        }
       }
 
       hashtables[current_partition_id] = std::move(hashtable);
@@ -340,8 +356,8 @@ RadixContainer<T> partition_radix_parallel(const std::shared_ptr<Partition<T>>& 
   */
 template <typename RightType, typename HashedType>
 void probe(const RadixContainer<RightType>& radix_container,
-           const std::vector<std::optional<std::unordered_map<HashedType, PosList>>>& hashtables, std::vector<PosList>& pos_list_left,
-           std::vector<PosList>& pos_list_right, const JoinMode mode) {
+           const std::vector<std::optional<std::unordered_map<HashedType, boost::variant<RowID, PosList>>>>& hashtables,
+           std::vector<PosList>& pos_list_left, std::vector<PosList>& pos_list_right, const JoinMode mode) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size() - 1);
 
@@ -382,9 +398,19 @@ void probe(const RadixContainer<RightType>& radix_container,
           const auto& rows_iter = hashtable.find(type_cast<HashedType>(row.value));
 
           if (rows_iter != hashtable.end()) {
-            // Multiple matches, stored in one PosList
-            const auto& matching_rows = rows_iter->second;
-            for (const auto row_id : matching_rows) {
+            // Key exists, thus we have at least one hit
+            const auto& matching_rows_variant = rows_iter->second;
+            if (matching_rows_variant.type() == typeid(PosList)) {
+              // Multiple matches, stored in one PosList
+              for (const auto row_id : boost::get<PosList>(matching_rows_variant)) {
+                if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
+                  pos_list_left_local.emplace_back(row_id);
+                  pos_list_right_local.emplace_back(row.row_id);
+                }
+              }
+            } else {
+              // A single RowID
+              const auto row_id = boost::get<RowID>(matching_rows_variant);
               if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
                 pos_list_left_local.emplace_back(row_id);
                 pos_list_right_local.emplace_back(row.row_id);
@@ -429,9 +455,10 @@ void probe(const RadixContainer<RightType>& radix_container,
 }
 
 template <typename RightType, typename HashedType>
-void probe_semi_anti(const RadixContainer<RightType>& radix_container,
-                     const std::vector<std::optional<std::unordered_map<HashedType, PosList>>>& hashtables,
-                     std::vector<PosList>& pos_lists, const JoinMode mode) {
+void probe_semi_anti(
+    const RadixContainer<RightType>& radix_container,
+    const std::vector<std::optional<std::unordered_map<HashedType, boost::variant<RowID, PosList>>>>& hashtables,
+    std::vector<PosList>& pos_lists, const JoinMode mode) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size() - 1);
 
