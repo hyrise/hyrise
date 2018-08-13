@@ -10,6 +10,7 @@ target_link_libraries(
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
     boost_program_options
+    ${FILESYSTEM_LIBRARY}
 )
 target_include_directories(
     hyriseServer
@@ -28,6 +29,7 @@ target_link_libraries(
     hyrisePlayground
     hyrise
     hyriseBenchmarkLib
+    ${FILESYSTEM_LIBRARY}
 )
 
 # Configure tpchTableGenerator

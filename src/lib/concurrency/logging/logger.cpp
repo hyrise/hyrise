@@ -1,6 +1,6 @@
 #include "logger.hpp"
 
-#include <boost/filesystem.hpp>
+#include "utils/filesystem.hpp"
 #include <boost/range.hpp>
 #include <boost/range/algorithm/reverse.hpp>
 
@@ -65,13 +65,13 @@ void Logger::setup(std::string folder, const Implementation implementation) {
 }
 
 void Logger::delete_log_files() {
-  boost::filesystem::remove_all(_log_path);
+  filesystem::remove_all(_log_path);
   _create_directories();
 }
 
 void Logger::_create_directories() {
-  boost::filesystem::create_directory(_data_path);
-  boost::filesystem::create_directory(_log_path);
+  filesystem::create_directory(_data_path);
+  filesystem::create_directory(_log_path);
 }
 
 std::string Logger::get_new_log_path() {
@@ -81,9 +81,9 @@ std::string Logger::get_new_log_path() {
 }
 
 std::vector<std::string> Logger::get_all_log_file_paths() {
-  DebugAssert(boost::filesystem::exists(_log_path), "Logger: Log path does not exist.");
+  DebugAssert(filesystem::exists(_log_path), "Logger: Log path does not exist.");
   std::vector<std::string> result;
-  for (auto& path : boost::make_iterator_range(boost::filesystem::directory_iterator(_log_path), {})) {
+  for (auto& path : boost::make_iterator_range(filesystem::directory_iterator(_log_path), {})) {
     auto pos = path.path().string().rfind(_filename);
     if (pos == std::string::npos) {
       continue;
@@ -102,7 +102,7 @@ std::vector<std::string> Logger::get_all_log_file_paths() {
 u_int32_t Logger::_get_latest_log_number() {
   u_int32_t max_number{0};
 
-  for (auto& path : boost::make_iterator_range(boost::filesystem::directory_iterator(_log_path), {})) {
+  for (auto& path : boost::make_iterator_range(filesystem::directory_iterator(_log_path), {})) {
     auto pos = path.path().string().rfind(_filename);
     if (pos == std::string::npos) {
       continue;

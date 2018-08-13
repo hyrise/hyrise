@@ -539,7 +539,6 @@ set(
     sqlparser
     boost_container
     ${TBB_LIBRARY}
-    ${Boost_FILESYSTEM_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
 )
 
