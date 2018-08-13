@@ -4,7 +4,7 @@
 #include <boost/bind.hpp>
 
 #include "client_connection.hpp"
-#include "concurrency/logging/logger.hpp"
+#include "logging/logger.hpp"
 #include "server_session.hpp"
 #include "task_runner.hpp"
 #include "then_operator.hpp"

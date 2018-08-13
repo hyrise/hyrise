@@ -3,7 +3,7 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
-#include "concurrency/logging/logger.hpp"
+#include "logging/logger.hpp"
 
 #include "server_session.hpp"
 

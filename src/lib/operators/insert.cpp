@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "../concurrency/logging/logger.hpp"
+#include "logging/logger.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "resolve_type.hpp"
 #include "storage/base_encoded_column.hpp"

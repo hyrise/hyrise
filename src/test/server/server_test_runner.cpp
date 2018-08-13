@@ -4,7 +4,7 @@
 #include <thread>
 
 #include "base_test.hpp"
-#include "concurrency/logging/logger.hpp"
+#include "logging/logger.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
 

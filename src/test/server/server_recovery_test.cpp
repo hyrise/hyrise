@@ -3,7 +3,7 @@
 
 #include "base_test.hpp"
 
-#include "concurrency/logging/logger.hpp"
+#include "logging/logger.hpp"
 
 namespace opossum {
 

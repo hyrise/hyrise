@@ -2,10 +2,10 @@
 
 #include <fstream>
 
-#include "../../operators/insert.hpp"
-#include "../../storage/storage_manager.hpp"
-#include "../../storage/table.hpp"
-#include "../transaction_manager.hpp"
+#include "operators/insert.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+#include "concurrency/transaction_manager.hpp"
 #include "logger.hpp"
 #include "types.hpp"
 

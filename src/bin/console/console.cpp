@@ -20,7 +20,7 @@
 
 #include "SQLParser.h"
 #include "benchmark_utils.hpp"
-#include "concurrency/logging/logger.hpp"
+#include "logging/logger.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "operators/get_table.hpp"

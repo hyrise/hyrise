@@ -11,20 +11,6 @@ set(
     all_type_variant.hpp
     concurrency/commit_context.cpp
     concurrency/commit_context.hpp
-    concurrency/logging/abstract_logger.hpp
-    concurrency/logging/abstract_recovery.hpp
-    concurrency/logging/abstract_recovery.cpp
-    concurrency/logging/binary_recovery.hpp
-    concurrency/logging/binary_recovery.cpp
-    concurrency/logging/group_commit_logger.cpp
-    concurrency/logging/group_commit_logger.hpp
-    concurrency/logging/logger.cpp
-    concurrency/logging/logger.hpp
-    concurrency/logging/no_logger.hpp
-    concurrency/logging/simple_logger.cpp
-    concurrency/logging/simple_logger.hpp
-    concurrency/logging/text_recovery.hpp
-    concurrency/logging/text_recovery.cpp
     concurrency/transaction_context.cpp
     concurrency/transaction_context.hpp
     concurrency/transaction_manager.cpp
@@ -109,6 +95,20 @@ set(
     cost_model/cost.hpp
     cost_model/cost_model_logical.cpp
     cost_model/cost_model_logical.hpp
+    logging/abstract_logger.hpp
+    logging/abstract_recovery.hpp
+    logging/abstract_recovery.cpp
+    logging/binary_recovery.hpp
+    logging/binary_recovery.cpp
+    logging/group_commit_logger.cpp
+    logging/group_commit_logger.hpp
+    logging/logger.cpp
+    logging/logger.hpp
+    logging/no_logger.hpp
+    logging/simple_logger.cpp
+    logging/simple_logger.hpp
+    logging/text_recovery.hpp
+    logging/text_recovery.cpp
     logical_query_plan/abstract_lqp_node.cpp
     logical_query_plan/abstract_lqp_node.hpp
     logical_query_plan/alias_node.cpp

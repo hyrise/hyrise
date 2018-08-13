@@ -4,7 +4,7 @@
 #include <cstdlib>
 #include <iostream>
 
-#include "concurrency/logging/logger.hpp"
+#include "logging/logger.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"

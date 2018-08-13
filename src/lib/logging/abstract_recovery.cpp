@@ -1,8 +1,8 @@
 #include "abstract_recovery.hpp"
 
-#include "../../storage/storage_manager.hpp"
-#include "../../storage/table.hpp"
-#include "../transaction_manager.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+#include "concurrency/transaction_manager.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"
 

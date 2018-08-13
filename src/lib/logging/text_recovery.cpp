@@ -3,12 +3,12 @@
 #include <fstream>
 #include <sstream>
 
-#include "../../operators/insert.hpp"
-#include "../../storage/chunk.hpp"
-#include "../../storage/storage_manager.hpp"
-#include "../../storage/table.hpp"
-#include "../../utils/load_table.hpp"
-#include "../transaction_manager.hpp"
+#include "operators/insert.hpp"
+#include "storage/chunk.hpp"
+#include "storage/storage_manager.hpp"
+#include "storage/table.hpp"
+#include "utils/load_table.hpp"
+#include "concurrency/transaction_manager.hpp"
 #include "logger.hpp"
 #include "types.hpp"
 

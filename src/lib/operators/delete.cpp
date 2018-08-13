@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 
-#include "../concurrency/logging/logger.hpp"
+#include "logging/logger.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/reference_column.hpp"
