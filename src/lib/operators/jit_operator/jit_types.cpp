@@ -53,7 +53,18 @@ void JitVariantVector::set_is_null(const size_t index, const bool is_null) { _is
 
 std::vector<bool>& JitVariantVector::get_is_null_vector() { return _is_null; }
 
+template <>
+void JitVariantVector::set<std::string>(const size_t index, const std::string& value) {
+  String[index] = value;
+}
+
+template <>
+std::string JitVariantVector::get<std::string>(const size_t index) const {
+  return String[index];
+}
+
 // Generate get, set, grow_by_one, and get_vector methods for all data types defined in JIT_DATA_TYPE_INFO
+// except string for get and set
 #define JIT_DATA_TYPE_INFO_WO_STRING    \
   ((int32_t,     Int,        "int"))    \
   ((int64_t,     Long,       "long"))   \

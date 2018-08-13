@@ -85,15 +85,11 @@ class JitVariantVector {
   void resize(const size_t new_size);
 
   template <typename T, typename = typename std::enable_if_t<!std::is_scalar_v<T>>>
-  OPTNONE std::string get(const size_t index) const {
-    return String[index];
-  }
+  OPTNONE std::string get(const size_t index) const;
   template <typename T, typename = typename std::enable_if_t<std::is_scalar_v<T>>>
   T get(const size_t index) const;
   template <typename T, typename = typename std::enable_if_t<!std::is_scalar_v<T>>>
-  OPTNONE void set(const size_t index, const std::string& value) {
-    String[index] = value;
-  }
+  OPTNONE void set(const size_t index, const std::string& value);
   template <typename T, typename = typename std::enable_if_t<std::is_scalar_v<T>>>
   void set(const size_t index, const T& value);
   bool is_null(const size_t index);
@@ -215,7 +211,7 @@ class JitHashmapValue {
     return context.hashmap.columns[_column_index].get<T>(index);
   }
   template <typename T, typename = typename std::enable_if_t<!std::is_scalar_v<T>>>
-  OPTNONE void set(const std::string value, const size_t index, JitRuntimeContext& context) const {
+  OPTNONE void set(const std::string& value, const size_t index, JitRuntimeContext& context) const {
     context.hashmap.columns[_column_index].set<std::string>(index, value);
   }
   template <typename T, typename = typename std::enable_if_t<std::is_scalar_v<T>>>
@@ -260,6 +256,7 @@ enum class JitExpressionType {
 bool jit_expression_is_binary(const JitExpressionType expression_type);
 
 // cleanup
+#undef OPTNONE
 #undef JIT_VARIANT_VECTOR_MEMBER
 #undef JIT_VARIANT_VECTOR_RESIZE
 

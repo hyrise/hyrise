@@ -101,10 +101,8 @@ uint64_t jit_hash(const JitTupleValue& value, JitRuntimeContext& context) {
   // For all other values the hash is computed by the corresponding std::hash function
   switch (value.data_type()) {
     BOOST_PP_SEQ_FOR_EACH_PRODUCT(JIT_HASH_CASE, (JIT_DATA_TYPE_INFO))
-    default: {
+    default:
       Fail("unreachable");
-      return 0;
-    }
   }
 }
 
