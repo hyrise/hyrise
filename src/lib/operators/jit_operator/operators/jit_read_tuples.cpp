@@ -10,26 +10,10 @@ std::string JitReadTuples::description() const {
   std::stringstream desc;
   desc << "[ReadTuple] ";
   for (const auto& input_column : _input_columns) {
-    desc << "x" << input_column.tuple_value.tuple_index() << " = Col#" << input_column.column_id;
-    desc << " (type: ";
-    if (input_column.tuple_value.data_type() != DataType::Null) {
-      desc << data_type_to_string.left.at(input_column.tuple_value.data_type());
-    } else {
-      desc << "null";
-    }
-    desc << " , is_nullable: " << std::boolalpha << input_column.tuple_value.is_nullable() << ")"
-         << ", ";
+    desc << "x" << input_column.tuple_value.tuple_index() << " = Col#" << input_column.column_id << ", ";
   }
   for (const auto& input_literal : _input_literals) {
-    desc << "x" << input_literal.tuple_value.tuple_index() << " = " << input_literal.value;
-    desc << " (type: ";
-    if (input_literal.tuple_value.data_type() != DataType::Null) {
-      desc << data_type_to_string.left.at(input_literal.tuple_value.data_type());
-    } else {
-      desc << "null";
-    }
-    desc << " , is_nullable: " << std::boolalpha << input_literal.tuple_value.is_nullable() << ")"
-         << ", ";
+    desc << "x" << input_literal.tuple_value.tuple_index() << " = " << input_literal.value << ", ";
   }
   return desc.str();
 }
