@@ -41,7 +41,6 @@ struct TopologyNode final {
  */
 class Topology final {
  public:
-
   // Singleton
   inline static Topology& get() {
     static Topology instance;

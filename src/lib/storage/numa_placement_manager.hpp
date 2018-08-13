@@ -8,7 +8,13 @@
 
 #include "utils/pausable_loop_thread.hpp"
 
-namespace boost { namespace container { namespace pmr { class memory_resource; }}}
+namespace boost {
+namespace container {
+namespace pmr {
+class memory_resource;
+}
+}  // namespace container
+}  // namespace boost
 
 namespace opossum {
 
@@ -18,7 +24,6 @@ namespace opossum {
 // `resumed` to start its operation.
 class NUMAPlacementManager {
  public:
-
   // Singleton
   inline static NUMAPlacementManager& get() {
     // Don't even think about writing a reset method. If the NUMAPlacementManager gets deleted, so do the memory

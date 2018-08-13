@@ -1,10 +1,10 @@
 #include "console.hpp"
 
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/trim.hpp>
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <sys/stat.h>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/trim.hpp>
 
 #include <chrono>
 #include <csetjmp>

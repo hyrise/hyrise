@@ -18,7 +18,6 @@ class AbstractLQPNode;
 // by mapping table names to table instances.
 class StorageManager : private Noncopyable {
  public:
-
   // Singleton
   inline static StorageManager& get() {
     static StorageManager instance;

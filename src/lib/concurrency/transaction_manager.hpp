@@ -47,7 +47,6 @@ class TransactionContext;
  */
 class TransactionManager : private Noncopyable {
  public:
-
   // Singleton
   inline static TransactionManager& get() {
     static TransactionManager instance;
