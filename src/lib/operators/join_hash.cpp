@@ -1,6 +1,7 @@
 #include "join_hash.hpp"
 
 #include <boost/lexical_cast.hpp>
+#include <cmath>
 #include <memory>
 #include <numeric>
 #include <string>
@@ -369,6 +370,12 @@ void probe(const RadixContainer<RightType>& radix_container,
       PosList pos_list_left_local;
       PosList pos_list_right_local;
 
+      // simple heuristic to estimate result size: half of the partition's row will match
+      // a more conservative pre-allocation would be the size of the left cluster
+      const size_t expected_output_size = (partition_end - partition_begin) / 2;
+      pos_list_left_local.reserve(expected_output_size);
+      pos_list_right_local.reserve(expected_output_size);
+
       if (hashtables[current_partition_id]) {
         const auto& hashtable = hashtables.at(current_partition_id);
 
@@ -597,8 +604,53 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _mode(mode),
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
-        _inputs_swapped(inputs_swapped),
-        _radix_bits(radix_bits) {}
+        _inputs_swapped(inputs_swapped) {
+    /*
+            Hash joins perform best for join relations with a small left join partner. In case the 
+            optimizer selects the hash join due to such a situation, but neglects that the
+            input will be switched (e.g., due to the join type), the user will be warned.
+          */
+    if (inputs_swapped) {
+      PerformanceWarning("Inputs swapped for hash join.");
+    }
+
+    /*
+            Setting number of bits for radix clustering:
+            The number of bits is used to create probe partitions with a size that can
+            be expected to fit into the L2 cache.
+            This should incorporate hardware knowledge, once available in Hyrise.
+            As of now, we assume a L2 cache size of 256 KB.
+            We estimate the size the following way:
+              - we assume each key appears once (that is an overestimation space-wise, but we
+              aim rather for a hash map that is slightly smaller than L2 than slightly larger)
+              - each entry in the hash map is a data structure holding the actual value
+              and the RowID
+              - as a general rule of thumb, modern hashmaps need 3x the space of the actual data
+              (cf. hash_map_size_factor, see https://tessil.github.io/2016/08/29/benchmark-hopscotch-map.html
+              & https://github.com/sparsehash/sparsehash)
+          */
+    const auto l2_cache_size = 256'000;
+
+    const auto probe_relation_size =
+        inputs_swapped ? _right->get_output()->row_count() : _left->get_output()->row_count();
+    const auto build_relation_size =
+        inputs_swapped ? _left->get_output()->row_count() : _right->get_output()->row_count();
+    const auto complete_pos_list_size =
+        probe_relation_size * (sizeof(LeftType) + sizeof(std::vector<RowID>) + sizeof(RowID));
+
+    // size adaption for the hash table (this accounts for the cuckoo hash tables, others might differ)
+    const auto hash_map_size_factor = 6.0f;
+    const auto cluster_count = std::max(1.0f, hash_map_size_factor * (complete_pos_list_size / l2_cache_size));
+
+    // Usually, only the left relation is considered. But since the hash join parallelizes over the clusters,
+    // we also consider the right relation and create a cluster for every 10,000 rows.
+    const size_t large_right_relation_mitigation = std::ceil(std::log2(build_relation_size / 10'000));
+
+    const auto bits_required =
+        std::max(static_cast<size_t>(std::ceil(std::log2(cluster_count))), large_right_relation_mitigation);
+
+    _radix_bits = bits_required;
+  }
 
  protected:
   const std::shared_ptr<const AbstractOperator> _left, _right;
@@ -609,8 +661,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
   std::shared_ptr<Table> _output_table;
 
-  const unsigned int _partitioning_seed = 13;
-  const size_t _radix_bits;
+  const unsigned int _partitioning_seed = 17;
+  size_t _radix_bits;
 
   // Determine correct type for hashing
   using HashedType = typename JoinHashTraits<LeftType, RightType>::HashType;
@@ -710,8 +762,16 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     // Probe phase
     std::vector<PosList> left_pos_lists;
     std::vector<PosList> right_pos_lists;
-    left_pos_lists.resize(radix_right.partition_offsets.size() - 1);
-    right_pos_lists.resize(radix_right.partition_offsets.size() - 1);
+    const size_t partition_count = radix_right.partition_offsets.size() - 1;
+    left_pos_lists.resize(partition_count);
+    right_pos_lists.resize(partition_count);
+    for (size_t i = 0; i < partition_count; i++) {
+      // simple heuristic: half of the rows of the right relation will match
+      const size_t result_rows_per_partition = _right->get_output()->row_count() / partition_count / 2;
+
+      left_pos_lists[i].reserve(result_rows_per_partition);
+      right_pos_lists[i].reserve(result_rows_per_partition);
+    }
     /*
     NUMA notes:
     The workers for each radix partition P should be scheduled on the same node as the input data:
