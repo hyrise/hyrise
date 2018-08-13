@@ -177,7 +177,7 @@ TEST_F(VariableLengthKeyBaseTest, ShiftAssignment) {
 
 TEST_F(VariableLengthKeyBaseTest, ShiftAndSet) {
   uint64_t memory = 0xFF000000F0F0FF00u;
-  VariableLengthKeyWord key;
+  VariableLengthKeyBase key;
   // create key pointing to lower half of memory
   if constexpr (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {
     key = VariableLengthKeyBase(reinterpret_cast<VariableLengthKeyWord*>(&memory), sizeof(uint32_t));
