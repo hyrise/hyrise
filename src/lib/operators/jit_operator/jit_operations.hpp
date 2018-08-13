@@ -66,13 +66,15 @@ namespace opossum {
  * (which throws a runtime error) for invalid data type combinations. Without the decltype return type declaration, the
  * compiler is unable to detect invalid data type combinations at template instanciation time and produces compilation
  * errors.
+ * Functions handling strings are declared as structs with operator() as the previously used lambdas caused the LLVM
+ * ERROR: "Undefined temporary symbol" during specialization. Without the check for string or non-string type, the
+ * compiler also produces compiler errors.
  */
 
 /* Arithmetic operators */
 struct JitAddition {
-  std::string operator()(const std::string& a, const std::string& b) const { return a + b; }
   template <typename T1, typename T2,
-            typename = typename std::enable_if_t<std::is_scalar_v<T1> && std::is_scalar_v<T2>>>
+            typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
   auto operator()(const T1 a, const T2 b) const {
     return a + b;
   }
@@ -87,18 +89,16 @@ const auto jit_power = [](const auto a, const auto b) -> decltype(std::pow(a, b)
 /* Aggregate operations */
 const auto jit_increment = [](const auto a, const auto b) -> decltype(b + 1) { return b + 1; };
 struct JitMaximum {
-  std::string operator()(const std::string& a, const std::string& b) const { return std::max(a, b); }
   template <typename T1, typename T2,
-            typename = typename std::enable_if_t<std::is_scalar_v<T1> && std::is_scalar_v<T2>>>
+            typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
   auto operator()(const T1 a, const T2 b) const {
     return std::max(a, b);
   }
 };
 const JitMaximum jit_maximum{};
 struct JitMinimum {
-  std::string operator()(const std::string& a, const std::string& b) const { return std::min(a, b); }
   template <typename T1, typename T2,
-            typename = typename std::enable_if_t<std::is_scalar_v<T1> && std::is_scalar_v<T2>>>
+            typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
   auto operator()(const T1 a, const T2 b) const {
     return std::min(a, b);
   }
@@ -107,54 +107,48 @@ const JitMinimum jit_minimum{};
 
 /* Comparison operators */
 struct JitEquals {
-  bool operator()(const std::string& a, const std::string& b) const { return a == b; }
   template <typename T1, typename T2,
-            typename = typename std::enable_if_t<std::is_scalar_v<T1> && std::is_scalar_v<T2>>>
+            typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
   bool operator()(const T1 a, const T2 b) const {
     return a == b;
   }
 };
 const JitEquals jit_equals{};
 struct JitNotEquals {
-  bool operator()(const std::string& a, const std::string& b) const { return a != b; }
   template <typename T1, typename T2,
-            typename = typename std::enable_if_t<std::is_scalar_v<T1> && std::is_scalar_v<T2>>>
+            typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
   bool operator()(const T1 a, const T2 b) const {
     return a != b;
   }
 };
 const JitNotEquals jit_not_equals{};
 struct JitLessThan {
-  bool operator()(const std::string& a, const std::string& b) const { return a < b; }
   template <typename T1, typename T2,
-            typename = typename std::enable_if_t<std::is_scalar_v<T1> && std::is_scalar_v<T2>>>
+            typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
   bool operator()(const T1 a, const T2 b) const {
     return a < b;
   }
 };
 const JitLessThan jit_less_than{};
 struct JitLessThanEquals {
-  bool operator()(const std::string& a, const std::string& b) const { return a <= b; }
   template <typename T1, typename T2,
-            typename = typename std::enable_if_t<std::is_scalar_v<T1> && std::is_scalar_v<T2>>>
+            typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
   bool operator()(const T1 a, const T2 b) const {
     return a <= b;
   }
 };
 const JitLessThanEquals jit_less_than_equals{};
 struct JitGreaterThan {
-  bool operator()(const std::string& a, const std::string& b) const { return a > b; }
   template <typename T1, typename T2,
-            typename = typename std::enable_if_t<std::is_scalar_v<T1> && std::is_scalar_v<T2>>>
+            typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
   bool operator()(const T1 a, const T2 b) const {
     return a > b;
   }
 };
 const JitGreaterThan jit_greater_than{};
 struct JitGreaterThanEquals {
-  bool operator()(const std::string& a, const std::string& b) const { return a >= b; }
   template <typename T1, typename T2,
-            typename = typename std::enable_if_t<std::is_scalar_v<T1> && std::is_scalar_v<T2>>>
+            typename = typename std::enable_if_t<std::is_scalar_v<T1> == std::is_scalar_v<T2>>>
   bool operator()(const T1 a, const T2 b) const {
     return a >= b;
   }
@@ -291,7 +285,8 @@ __attribute__((noinline)) void jit_aggregate_compute(const T& op_func, const Jit
 
   const auto catching_func = InvalidTypeCatcher<decltype(store_result_wrapper), void>(store_result_wrapper);
 
-  // A type conversion is necessary, if the sum or average of a float or int column is calculated as the temporary sum
+  // JIT_AGGREGATE_COMPUTE_CASE assumes that the left and right side type are the same.
+  // This is not the case when the sum or average of a float or int column is calculated as the temporary sum
   // is stored in the according 64 bit data type.
   if (lhs.data_type() == DataType::Int && rhs.data_type() == DataType::Long) {
     return catching_func(static_cast<int64_t>(lhs.get<int32_t>(context)), rhs.get<int64_t>(rhs_index, context));
