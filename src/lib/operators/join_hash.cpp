@@ -357,7 +357,7 @@ RadixContainer<T> partition_radix_parallel(const std::shared_ptr<Partition<T>>& 
 template <typename RightType, typename HashedType>
 void probe(const RadixContainer<RightType>& radix_container,
            const std::vector<std::optional<std::unordered_map<HashedType, boost::variant<RowID, PosList>>>>& hashtables,
-           std::vector<PosList>& pos_list_left, std::vector<PosList>& pos_list_right, const JoinMode mode) {
+           std::vector<PosList>& pos_lists_left, std::vector<PosList>& pos_lists_right, const JoinMode mode) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size() - 1);
 
@@ -444,8 +444,8 @@ void probe(const RadixContainer<RightType>& radix_container,
       }
 
       if (!pos_list_left_local.empty()) {
-        pos_list_left[current_partition_id] = std::move(pos_list_left_local);
-        pos_list_right[current_partition_id] = std::move(pos_list_right_local);
+        pos_lists_left[current_partition_id] = std::move(pos_list_left_local);
+        pos_lists_right[current_partition_id] = std::move(pos_list_right_local);
       }
     }));
     jobs.back()->schedule();
