@@ -101,6 +101,8 @@ set(
     logical_query_plan/alias_node.hpp
     logical_query_plan/aggregate_node.cpp
     logical_query_plan/aggregate_node.hpp
+    logical_query_plan/base_non_query_node.hpp
+    logical_query_plan/base_non_query_node.cpp
     logical_query_plan/create_view_node.cpp
     logical_query_plan/create_view_node.hpp
     logical_query_plan/delete_node.cpp
@@ -251,6 +253,8 @@ set(
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
     optimizer/strategy/abstract_rule.hpp
+    optimizer/strategy/column_pruning_rule.cpp
+    optimizer/strategy/column_pruning_rule.hpp
     optimizer/strategy/chunk_pruning_rule.cpp
     optimizer/strategy/chunk_pruning_rule.hpp
     optimizer/strategy/constant_calculation_rule.cpp
@@ -364,7 +368,6 @@ set(
     storage/column_iterables/chunk_offset_mapping.cpp
     storage/column_iterables/chunk_offset_mapping.hpp
     storage/column_iterables/column_iterator_values.hpp
-    storage/column_iterables/constant_value_iterable.hpp
     storage/column_iterables/create_iterable_from_attribute_vector.hpp
     storage/column_iterables.hpp
     storage/abstract_column_visitor.hpp
@@ -381,7 +384,6 @@ set(
     storage/fixed_string_dictionary_column/fixed_string.hpp
     storage/fixed_string_dictionary_column/fixed_string_vector.cpp
     storage/fixed_string_dictionary_column/fixed_string_vector.hpp
-    storage/fixed_string_dictionary_column/fixed_string_vector_iterator.cpp
     storage/fixed_string_dictionary_column/fixed_string_vector_iterator.hpp
     storage/frame_of_reference_column.cpp
     storage/frame_of_reference_column.hpp

@@ -40,6 +40,8 @@ class ValueColumnIterable : public PointAccessibleColumnIterable<ValueColumnIter
     }
   }
 
+  size_t _on_size() const { return _column.size(); }
+
  private:
   const ValueColumn<T>& _column;
 

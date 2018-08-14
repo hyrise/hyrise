@@ -149,7 +149,7 @@ class SimdBp128Decompressor : public BaseVectorDecompressor {
   // Index of the first element within the cached block
   size_t _cached_block_first_index;
 
-  std::array<uint8_t, Packing::blocks_in_meta_block> _cached_meta_info;
+  std::array<uint8_t, Packing::blocks_in_meta_block> _cached_meta_info{};
   const std::unique_ptr<std::array<uint32_t, Packing::block_size>> _cached_block;
 };
 

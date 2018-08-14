@@ -76,7 +76,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       for (auto row_id : *ref_col_in->pos_list()) {
         const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
-        auto mvcc_columns = referenced_chunk->mvcc_columns();
+        auto mvcc_columns = referenced_chunk->get_scoped_mvcc_columns_lock();
 
         if (is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_columns)) {
           pos_list_out->emplace_back(row_id);
@@ -95,7 +95,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
     } else {
       referenced_table = in_table;
       DebugAssert(chunk_in->has_mvcc_columns(), "Trying to use Validate on a table that has no MVCC columns");
-      const auto mvcc_columns = chunk_in->mvcc_columns();
+      const auto mvcc_columns = chunk_in->get_scoped_mvcc_columns_lock();
 
       // Generate pos_list_out.
       auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(

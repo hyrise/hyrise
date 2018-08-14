@@ -1,8 +1,8 @@
 #include <memory>
+#include <string_view>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
-
 #include "storage/fixed_string_dictionary_column/fixed_string.hpp"
 
 namespace opossum {
@@ -46,7 +46,7 @@ TEST_F(FixedStringTest, StringLength) {
   EXPECT_EQ(fixed_string, "foo");
 }
 
-TEST_F(FixedStringTest, CompareStrings) {
+TEST_F(FixedStringTest, CompareFixedStrings) {
   std::vector<char> bar_help = {'b', 'a', 'r', '\0'};
   std::vector<char> bars_help = {'b', 'a', 'r', 's'};
   FixedString bar = FixedString(&bar_help[0], 3u);
@@ -67,6 +67,26 @@ TEST_F(FixedStringTest, CompareStrings) {
   EXPECT_FALSE(bar == fixed_string2);
 }
 
+TEST_F(FixedStringTest, CompareStrings) {
+  std::string bar = "bar";
+  std::string_view bar_string_view(&bar[0], bar.size());
+
+  EXPECT_FALSE(fixed_string1 < bar);
+  EXPECT_TRUE(bar < fixed_string1);
+
+  EXPECT_FALSE(fixed_string1 < bar_string_view);
+  EXPECT_TRUE(bar_string_view < fixed_string1);
+
+  EXPECT_FALSE(fixed_string1 < bar.c_str());
+  EXPECT_TRUE(bar.c_str() < fixed_string1);
+
+  EXPECT_FALSE(fixed_string1 == bar);
+  EXPECT_FALSE(bar == fixed_string1);
+  EXPECT_EQ("foo", fixed_string1);
+  EXPECT_FALSE(fixed_string1 == bar_string_view);
+  EXPECT_FALSE(bar_string_view == fixed_string1);
+}
+
 TEST_F(FixedStringTest, Swap) {
   std::vector<char> char_vector = {'b', 'a', 'r'};
   FixedString fixed_string = FixedString(&char_vector[0], 3u);
@@ -80,11 +100,6 @@ TEST_F(FixedStringTest, Print) {
   std::stringstream sstream;
   sstream << fixed_string1;
   EXPECT_EQ(sstream.str().find("foo"), 0u);
-}
-
-TEST_F(FixedStringTest, ImplicitCast) {
-  std::string std_string = fixed_string1;
-  EXPECT_EQ(std_string, "foo");
 }
 
 }  // namespace opossum

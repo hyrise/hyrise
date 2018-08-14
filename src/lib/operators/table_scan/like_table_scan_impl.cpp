@@ -10,7 +10,6 @@
 #include <utility>
 #include <vector>
 
-#include "storage/column_iterables/constant_value_iterable.hpp"
 #include "storage/column_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/create_iterable_from_column.hpp"
 #include "storage/resolve_encoded_column_type.hpp"

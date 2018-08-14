@@ -30,6 +30,8 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
     functor(begin, end);
   }
 
+  size_t _on_size() const { return _column.size(); }
+
  private:
   const ReferenceColumn& _column;
 

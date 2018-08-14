@@ -200,13 +200,14 @@ const char* const tpch_query_5 =
  *  1. dates are not supported
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
- *  2. arithmetic expressions with constants are not resolved automatically yet, so pre-calculate them as well
+ *  2. ".06 + 0.01" is less than "0.07" in sqlite, but >= "0.07" in hyrise.
+ *    a. Add a small offset ".06 + 0.01001" to include records with a l_discount of "0.07"
  */
 const char* const tpch_query_6 =
     R"(SELECT sum(l_extendedprice*l_discount) AS REVENUE
       FROM lineitem
       WHERE l_shipdate >= '1994-01-01' AND l_shipdate < '1995-01-01'
-      AND l_discount BETWEEN .05 AND .07 AND l_quantity < 24;)";
+      AND l_discount BETWEEN .06 - 0.01 AND .06 + 0.01001 AND l_quantity < 24;)";
 
 /**
  * TPC-H 7
@@ -781,7 +782,6 @@ const char* const tpch_query_19 =
  *  2. dates are not supported
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
-
  */
 const char* const tpch_query_20 =
     R"(SELECT s_name, s_address FROM supplier, nation WHERE s_suppkey in (SELECT ps_suppkey FROM partsupp

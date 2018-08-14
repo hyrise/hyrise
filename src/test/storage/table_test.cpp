@@ -95,7 +95,7 @@ TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
 
   {
     // acquiring mvcc_columns locks them
-    auto mvcc_columns = chunk->mvcc_columns();
+    auto mvcc_columns = chunk->get_scoped_mvcc_columns_lock();
 
     mvcc_columns->tids[0u] = values[0u];
     mvcc_columns->tids[1u] = values[1u];
@@ -107,12 +107,12 @@ TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
 
   const auto previous_size = chunk->size();
 
-  chunk->mvcc_columns()->shrink();
+  chunk->get_scoped_mvcc_columns_lock()->shrink();
 
   ASSERT_EQ(previous_size, chunk->size());
   ASSERT_TRUE(chunk->has_mvcc_columns());
 
-  auto new_mvcc_columns = chunk->mvcc_columns();
+  auto new_mvcc_columns = chunk->get_scoped_mvcc_columns_lock();
 
   for (auto i = 0u; i < chunk->size(); ++i) {
     EXPECT_EQ(new_mvcc_columns->tids[i], values[i]);
