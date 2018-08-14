@@ -150,8 +150,8 @@ void BinaryRecoverer::recover() {
       }
 
       transactions.emplace_back(LoggedItem(LogType::Value, transaction_id, table_name, row_id, values));
-    }  // while not end of file
-  }    // for every logfile
+    }
+  }
 
   _update_transaction_id(last_transaction_id);
 }
