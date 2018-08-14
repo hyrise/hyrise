@@ -2,11 +2,11 @@
 
 #include <fstream>
 
+#include "concurrency/transaction_manager.hpp"
+#include "logger.hpp"
 #include "operators/insert.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "concurrency/transaction_manager.hpp"
-#include "logger.hpp"
 #include "types.hpp"
 
 namespace opossum {

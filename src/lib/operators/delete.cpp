@@ -3,8 +3,8 @@
 #include <memory>
 #include <string>
 
-#include "logging/logger.hpp"
 #include "concurrency/transaction_context.hpp"
+#include "logging/logger.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/reference_column.hpp"
 #include "storage/storage_manager.hpp"

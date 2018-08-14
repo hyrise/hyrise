@@ -9,11 +9,11 @@
 #include <algorithm>
 #include <sstream>
 
-#include "utils/filesystem.hpp"
 #include "abstract_logger.hpp"
 #include "group_commit_logger.hpp"
 #include "no_logger.hpp"
 #include "simple_logger.hpp"
+#include "utils/filesystem.hpp"
 
 namespace opossum {
 
@@ -24,10 +24,10 @@ Logger::Implementation Logger::_implementation = Implementation::No;
 
 const std::string Logger::default_data_path = "./data/";  // NOLINT
 
-std::string Logger::_data_path = default_data_path;  // NOLINT
-const std::string Logger::_log_folder = "logs/";  // NOLINT
+std::string Logger::_data_path = default_data_path;        // NOLINT
+const std::string Logger::_log_folder = "logs/";           // NOLINT
 std::string Logger::_log_path = _data_path + _log_folder;  // NOLINT
-const std::string Logger::_filename = "hyrise-log";  // NOLINT
+const std::string Logger::_filename = "hyrise-log";        // NOLINT
 
 AbstractLogger& Logger::getInstance() {
   switch (_implementation) {

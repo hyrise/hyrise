@@ -21,7 +21,7 @@ class NoLogger : public AbstractLogger {
   };
 
   void log_value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,
-             const std::vector<AllTypeVariant>& values) override{};
+                 const std::vector<AllTypeVariant>& values) override{};
 
   void log_invalidate(const TransactionID transaction_id, const std::string& table_name, const RowID row_id) override{};
 

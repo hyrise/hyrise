@@ -3,14 +3,14 @@
 #include <fstream>
 #include <sstream>
 
+#include "concurrency/transaction_manager.hpp"
+#include "logger.hpp"
 #include "operators/insert.hpp"
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "utils/load_table.hpp"
-#include "concurrency/transaction_manager.hpp"
-#include "logger.hpp"
 #include "types.hpp"
+#include "utils/load_table.hpp"
 
 namespace opossum {
 
@@ -35,7 +35,7 @@ std::string TextRecoverer::_get_substr_and_incr_begin(const std::string line, si
 // returns string value between begin and end,
 // and sets begin to begin of the next token, assuming there is a delimiter inbetween
 std::string TextRecoverer::_get_string_value_and_incr_begin(std::string& line, size_t& begin, const size_t end,
-                                                           std::ifstream& log_file) {
+                                                            std::ifstream& log_file) {
   // There might be a \n in every string, therefore the line could end in every string value
   // while string contains \n
   while (line.length() <= end) {
@@ -48,8 +48,8 @@ std::string TextRecoverer::_get_string_value_and_incr_begin(std::string& line, s
 }
 
 std::string TextRecoverer::_get_next_value_with_preceding_size_and_incr_begin(std::string& line, size_t& begin,
-                                                                             const char delimiter,
-                                                                             std::ifstream& log_file) {
+                                                                              const char delimiter,
+                                                                              std::ifstream& log_file) {
   size_t size = std::stoul(_get_substr_and_incr_begin(line, begin, delimiter));
   size_t end = begin + size - 1;
   return _get_string_value_and_incr_begin(line, begin, end, log_file);

@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-#include "logging/logger.hpp"
 #include "concurrency/transaction_context.hpp"
+#include "logging/logger.hpp"
 #include "resolve_type.hpp"
 #include "storage/base_encoded_column.hpp"
 #include "storage/storage_manager.hpp"
@@ -196,7 +196,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
         }
 
         Logger::getInstance().log_value(context->transaction_id(), _target_table_name,
-                                    RowID{target_chunk_id, target_start_index + row_index}, row_values);
+                                        RowID{target_chunk_id, target_start_index + row_index}, row_values);
       }
 
       still_to_insert -= num_to_insert;
