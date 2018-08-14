@@ -136,7 +136,7 @@ bool EntryWriter::operator()(NullValue v) {
   return false;
 }
 
-void GroupCommitLogger::value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,
+void GroupCommitLogger::log_value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,
                               const std::vector<AllTypeVariant> values) {
   // This is the entry length up to the ChunkOffset.
   // The entry then gets resized for the null value bitmap and each value
@@ -174,7 +174,7 @@ void GroupCommitLogger::value(const TransactionID transaction_id, const std::str
   _write_to_buffer(entry.data);
 }
 
-void GroupCommitLogger::commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) {
+void GroupCommitLogger::log_commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) {
   constexpr auto entry_length = sizeof(char) + sizeof(TransactionID);
   LogEntry entry(entry_length);
 
@@ -185,7 +185,7 @@ void GroupCommitLogger::commit(const TransactionID transaction_id, std::function
   _write_to_buffer(entry.data);
 }
 
-void GroupCommitLogger::load_table(const std::string& file_path, const std::string& table_name) {
+void GroupCommitLogger::log_load_table(const std::string& file_path, const std::string& table_name) {
   const auto entry_length = sizeof(char) + (file_path.size() + 1) + (table_name.size() + 1);
   LogEntry entry(entry_length);
 
@@ -194,7 +194,7 @@ void GroupCommitLogger::load_table(const std::string& file_path, const std::stri
   _write_to_buffer(entry.data);
 }
 
-void GroupCommitLogger::invalidate(const TransactionID transaction_id, const std::string& table_name,
+void GroupCommitLogger::log_invalidate(const TransactionID transaction_id, const std::string& table_name,
                                    const RowID row_id) {
   const auto entry_length =
       sizeof(char) + sizeof(TransactionID) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset);
@@ -219,7 +219,7 @@ void GroupCommitLogger::_write_to_buffer(std::vector<char>& entry) {
   _buffer_mutex.unlock();
 
   if (_buffer_position > _buffer_capacity / 2) {
-    flush();
+    log_flush();
   }
 }
 
@@ -243,7 +243,7 @@ void GroupCommitLogger::_write_buffer_to_logfile() {
   _file_mutex.unlock();
 }
 
-void GroupCommitLogger::flush() {
+void GroupCommitLogger::log_flush() {
   if (_has_unflushed_buffer) {
     _write_buffer_to_logfile();
   }
@@ -269,7 +269,7 @@ GroupCommitLogger::GroupCommitLogger()
 
   _open_logfile();
 
-  _flush_thread = std::make_unique<LoopThread>(LOG_INTERVAL, [this]() { GroupCommitLogger::flush(); });
+  _flush_thread = std::make_unique<LoopThread>(LOG_INTERVAL, [this]() { GroupCommitLogger::log_flush(); });
 }
 
 }  // namespace opossum

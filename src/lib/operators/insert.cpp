@@ -195,7 +195,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
           row_values.push_back((*source_chunk->columns()[column_index])[row_index]);
         }
 
-        Logger::getInstance().value(context->transaction_id(), _target_table_name,
+        Logger::getInstance().log_value(context->transaction_id(), _target_table_name,
                                     RowID{target_chunk_id, target_start_index + row_index}, row_values);
       }
 

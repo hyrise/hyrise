@@ -15,16 +15,16 @@ class SimpleLogger : public AbstractLogger {
   SimpleLogger(const SimpleLogger&) = delete;
   SimpleLogger& operator=(const SimpleLogger&) = delete;
 
-  void commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) override;
+  void log_commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) override;
 
-  void value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,
+  void log_value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,
              const std::vector<AllTypeVariant> values) override;
 
-  void invalidate(const TransactionID transaction_id, const std::string& table_name, const RowID row_id) override;
+  void log_invalidate(const TransactionID transaction_id, const std::string& table_name, const RowID row_id) override;
 
-  void load_table(const std::string& file_path, const std::string& table_name) override;
+  void log_load_table(const std::string& file_path, const std::string& table_name) override;
 
-  void flush() override;
+  void log_flush() override;
 
   void recover() override;
 

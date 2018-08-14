@@ -12,17 +12,17 @@ class AbstractLogger {
 
   // A transaction is committed only after calling its callback.
   // Therefore handle all callbacks in your Logger implementation.
-  virtual void commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) = 0;
+  virtual void log_commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) = 0;
 
-  virtual void value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,
+  virtual void log_value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,
                      const std::vector<AllTypeVariant> values) = 0;
 
-  virtual void invalidate(const TransactionID transaction_id, const std::string& table_name, const RowID row_id) = 0;
+  virtual void log_invalidate(const TransactionID transaction_id, const std::string& table_name, const RowID row_id) = 0;
 
   // this method should always call flush(), since load table does not commit
-  virtual void load_table(const std::string& file_path, const std::string& table_name) = 0;
+  virtual void log_load_table(const std::string& file_path, const std::string& table_name) = 0;
 
-  virtual void flush() = 0;
+  virtual void log_flush() = 0;
 
   virtual void recover() = 0;
 

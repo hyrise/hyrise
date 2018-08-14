@@ -30,14 +30,14 @@
 
 namespace opossum {
 
-void SimpleLogger::commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) {
+void SimpleLogger::log_commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) {
   std::stringstream ss;
   ss << "(t," << transaction_id << ")\n";
   _write_to_logfile(ss);
   callback(transaction_id);
 }
 
-void SimpleLogger::value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,
+void SimpleLogger::log_value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,
                          const std::vector<AllTypeVariant> values) {
   std::stringstream ss;
   ss << "(v," << transaction_id << "," << table_name.size() << "," << table_name << "," << row_id << ",(";
@@ -55,19 +55,19 @@ void SimpleLogger::value(const TransactionID transaction_id, const std::string& 
   _write_to_logfile(ss);
 }
 
-void SimpleLogger::invalidate(const TransactionID transaction_id, const std::string& table_name, const RowID row_id) {
+void SimpleLogger::log_invalidate(const TransactionID transaction_id, const std::string& table_name, const RowID row_id) {
   std::stringstream ss;
   ss << "(i," << transaction_id << "," << table_name.size() << "," << table_name << "," << row_id << ")\n";
   _write_to_logfile(ss);
 }
 
-void SimpleLogger::load_table(const std::string& file_path, const std::string& table_name) {
+void SimpleLogger::log_load_table(const std::string& file_path, const std::string& table_name) {
   std::stringstream ss;
   ss << "(l," << file_path.size() << "," << file_path << "," << table_name.size() << "," << table_name << ")\n";
   _write_to_logfile(ss);
 }
 
-void SimpleLogger::flush() { fsync(_file_descriptor); }
+void SimpleLogger::log_flush() { fsync(_file_descriptor); }
 
 void SimpleLogger::_write_to_logfile(const std::stringstream& ss) {
   _file_mutex.lock();
