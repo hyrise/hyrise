@@ -37,7 +37,7 @@ class Print : public AbstractReadOnlyOperator {
   std::ostream& _out;
   uint32_t _flags;
 
-  uint16_t _min_cell_width = 8;
-  uint16_t _max_cell_width = 20;
+  static constexpr uint16_t _min_cell_width = 8;
+  static constexpr uint16_t _max_cell_width = 20;
 };
 }  // namespace opossum
