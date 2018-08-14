@@ -12,8 +12,8 @@ void AbstractRecoverer::_redo_transactions(const TransactionID& transaction_id, 
   for (auto& transaction : transactions) {
     if (transaction.transaction_id != transaction_id) continue;
 
-    auto table = StorageManager::get().get_table(transaction.table_name);
-    auto chunk = table->get_chunk(transaction.row_id.chunk_id);
+    auto& table = StorageManager::get().get_table(transaction.table_name);
+    auto& chunk = table->get_chunk(transaction.row_id.chunk_id);
 
     if (transaction.type == LogType::Value) {
       chunk->append(*transaction.values);
