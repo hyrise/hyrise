@@ -41,7 +41,7 @@ void Print::print(const std::shared_ptr<const AbstractOperator>& in, uint32_t fl
 std::shared_ptr<const Table> Print::_on_execute() {
   PerformanceWarningDisabler pwd;
 
-  auto widths = _column_string_widths(8, 20, input_table_left());
+  auto widths = _column_string_widths(_min_cell_width, _max_cell_width, _input_table_left());
 
   // print column headers
   _out << "=== Columns" << std::endl;

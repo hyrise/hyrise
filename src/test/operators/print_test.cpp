@@ -1,6 +1,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
@@ -49,6 +50,10 @@ class PrintWrapper : public Print {
 
   std::string test_truncate_cell(const AllTypeVariant& cell, uint16_t max_width) {
     return _truncate_cell(cell, max_width);
+  }
+
+  uint16_t get_max_cell_length() {
+    return _max_cell_width;
   }
 };
 
@@ -143,9 +148,21 @@ TEST_F(OperatorsPrintTest, TruncateLongValue) {
 }
 
 TEST_F(OperatorsPrintTest, TruncateLongValueInOutput) {
+  auto print_wrap = std::make_shared<PrintWrapper>(gt);
   auto tab = StorageManager::get().get_table(table_name);
 
-  tab->append({0, "abcdefghijklmnopqrstuvwxyz"});
+  std::string input_str = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
+  auto input = AllTypeVariant{input_str};
+
+  tab->append({0, input});
+
+  auto substr_length = std::min(static_cast<int>(input_str.length()), print_wrap->get_max_cell_length() - 3);
+
+  std::string manual_substr = "|";
+  for (uint16_t i = 0; i < substr_length; i++) {
+    manual_substr += input_str.at(i);
+  }
+  manual_substr += "...|";
 
   auto wrap = std::make_shared<TableWrapper>(tab);
   wrap->execute();
@@ -154,7 +171,7 @@ TEST_F(OperatorsPrintTest, TruncateLongValueInOutput) {
   printer->execute();
 
   auto output_str = output.str();
-  EXPECT_TRUE(output_str.find("|abcdefghijklmnopq...|") != std::string::npos);
+  EXPECT_TRUE(output_str.find(manual_substr) != std::string::npos);
 }
 
 }  // namespace opossum
