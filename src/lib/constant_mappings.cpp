@@ -58,9 +58,9 @@ const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
 };
 
 const std::unordered_map<Logger::Implementation, std::string> logger_to_string = {
-    {Logger::Implementation::Simple, "SimpleLogger"}, {Logger::Implementation::GroupCommit, "GroupCommitLogger"},
-    {Logger::Implementation::No, "NoLogger"}
-};
+    {Logger::Implementation::Simple, "SimpleLogger"},
+    {Logger::Implementation::GroupCommit, "GroupCommitLogger"},
+    {Logger::Implementation::No, "NoLogger"}};
 
 const std::unordered_map<UnionMode, std::string> union_mode_to_string = {{UnionMode::Positions, "UnionPositions"}};
 

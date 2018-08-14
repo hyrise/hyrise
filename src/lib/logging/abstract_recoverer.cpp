@@ -16,7 +16,7 @@ void AbstractRecoverer::_redo_transactions(const TransactionID& transaction_id, 
     auto chunk = table->get_chunk(transaction.row_id.chunk_id);
 
     switch (transaction.type) {
-      case LogType::Value : {
+      case LogType::Value: {
         chunk->append(*transaction.values);
 
         auto mvcc_columns = chunk->mvcc_columns();
@@ -25,13 +25,14 @@ void AbstractRecoverer::_redo_transactions(const TransactionID& transaction_id, 
                         std::to_string(transaction.row_id.chunk_offset));
         mvcc_columns->begin_cids[mvcc_columns->begin_cids.size() - 1] = transaction_id;
         break;
-      } 
-      case LogType::Invalidation : { 
+      }
+      case LogType::Invalidation: {
         auto mvcc_columns = chunk->mvcc_columns();
         mvcc_columns->end_cids[transaction.row_id.chunk_offset] = transaction_id;
         break;
       }
-      default: DebugAssert(false, "recovery: transaction type not implemented yet");
+      default:
+        DebugAssert(false, "recovery: transaction type not implemented yet");
     }
   }
 

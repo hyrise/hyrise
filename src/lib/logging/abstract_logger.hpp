@@ -5,7 +5,7 @@
 
 namespace opossum {
 
-// AbstractLogger is the abstract class for all logging implementations. 
+// AbstractLogger is the abstract class for all logging implementations.
 // It serves the interface to log all db transactions and recover from logfiles on startup.
 
 class AbstractLogger {

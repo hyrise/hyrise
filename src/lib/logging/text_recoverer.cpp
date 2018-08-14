@@ -49,8 +49,7 @@ std::string TextRecoverer::_extract_string_value(std::string& line, size_t& begi
 
 // returns substring that has its size stated beforehand. Updates begin.
 std::string TextRecoverer::_extract_next_value_with_preceding_size(std::string& line, size_t& begin,
-                                                                   const char delimiter,
-                                                                   std::ifstream& log_file) {
+                                                                   const char delimiter, std::ifstream& log_file) {
   size_t size = std::stoul(_extract_up_to_delimiter(line, begin, delimiter));
   size_t end = begin + size - 1;
   return _extract_string_value(line, begin, end, log_file);
@@ -91,8 +90,7 @@ void TextRecoverer::recover() {
       // if load table entry
       if (log_type == 'l') {
         std::string path = _extract_next_value_with_preceding_size(line, next_token_begin, ',', log_file);
-        std::string table_name =
-            _extract_next_value_with_preceding_size(line, next_token_begin, ',', log_file);
+        std::string table_name = _extract_next_value_with_preceding_size(line, next_token_begin, ',', log_file);
         DebugAssert(line[next_token_begin - 1] == ')',
                     "Recoverer: load table entry expected ')', but got " + line[next_token_begin - 1] + " instead.");
 

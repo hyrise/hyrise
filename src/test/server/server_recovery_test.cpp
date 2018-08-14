@@ -144,7 +144,9 @@ TEST_P(ServerRecoveryTest, TestWorkflow) {
 Logger::Implementation logging_implementations[] = {Logger::Implementation::Simple,
                                                     Logger::Implementation::GroupCommit};
 
-auto formatter = [](const testing::TestParamInfo<Logger::Implementation> info) { return logger_to_string.at(info.param); };
+auto formatter = [](const testing::TestParamInfo<Logger::Implementation> info) {
+  return logger_to_string.at(info.param);
+};
 
 INSTANTIATE_TEST_CASE_P(logging_implementations, ServerRecoveryTest, ::testing::ValuesIn(logging_implementations),
                         formatter);

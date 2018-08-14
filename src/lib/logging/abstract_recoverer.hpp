@@ -15,7 +15,6 @@ namespace opossum {
  *  Furthermore it defines LogType and LoggedItem that are used during recovery.
  */
 
-
 class AbstractRecoverer {
  public:
   AbstractRecoverer(const AbstractRecoverer&) = delete;
