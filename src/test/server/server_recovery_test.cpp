@@ -3,20 +3,10 @@
 
 #include "base_test.hpp"
 
+#include "constant_mappings.hpp"
 #include "logging/logger.hpp"
 
 namespace opossum {
-
-std::string str(Logger::Implementation implementation) {
-  switch (implementation) {
-    case Logger::Implementation::Simple:
-      return "SimpleLogger";
-    case Logger::Implementation::GroupCommit:
-      return "GroupCommitLogger";
-    default:
-      return "unknown";
-  }
-}
 
 class ServerRecoveryTest : public BaseTestWithParam<Logger::Implementation> {
  protected:
@@ -35,7 +25,7 @@ class ServerRecoveryTest : public BaseTestWithParam<Logger::Implementation> {
   }
 
   void start_server(Logger::Implementation implementation) {
-    std::string implementation_string = str(implementation);
+    std::string implementation_string = logger_to_string.at(implementation);
 
     auto cmd =
         "\"" + build_dir + "/hyriseServer\" 1234 " + implementation_string + " " + test_data_path + _folder + " &";
@@ -154,7 +144,7 @@ TEST_P(ServerRecoveryTest, TestWorkflow) {
 Logger::Implementation logging_implementations[] = {Logger::Implementation::Simple,
                                                     Logger::Implementation::GroupCommit};
 
-auto formatter = [](const testing::TestParamInfo<Logger::Implementation> info) { return str(info.param); };
+auto formatter = [](const testing::TestParamInfo<Logger::Implementation> info) { return logger_to_string.at(info.param); };
 
 INSTANTIATE_TEST_CASE_P(logging_implementations, ServerRecoveryTest, ::testing::ValuesIn(logging_implementations),
                         formatter);

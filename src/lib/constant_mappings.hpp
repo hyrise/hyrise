@@ -7,6 +7,7 @@
 
 #include "all_type_variant.hpp"
 #include "expression/function_expression.hpp"
+#include "logging/logger.hpp"
 #include "operators/jit_operator/jit_types.hpp"
 #include "types.hpp"
 
@@ -23,6 +24,7 @@ extern const std::unordered_map<OrderByMode, std::string> order_by_mode_to_strin
 extern const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mode;
 extern const std::unordered_map<ExpressionType, std::string> expression_type_to_operator_string;
 extern const std::unordered_map<JoinMode, std::string> join_mode_to_string;
+extern const std::unordered_map<Logger::Implementation, std::string> logger_to_string;
 extern const std::unordered_map<UnionMode, std::string> union_mode_to_string;
 extern const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string;
 extern const boost::bimap<FunctionType, std::string> function_type_to_string;

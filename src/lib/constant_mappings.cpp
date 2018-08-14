@@ -11,6 +11,7 @@
 
 #include "expression/abstract_expression.hpp"
 #include "expression/aggregate_expression.hpp"
+#include "logging/logger.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
@@ -54,6 +55,11 @@ const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_order_by_mo
 const std::unordered_map<JoinMode, std::string> join_mode_to_string = {
     {JoinMode::Cross, "Cross"}, {JoinMode::Inner, "Inner"}, {JoinMode::Left, "Left"}, {JoinMode::Outer, "Outer"},
     {JoinMode::Right, "Right"}, {JoinMode::Semi, "Semi"},   {JoinMode::Anti, "Anti"},
+};
+
+const std::unordered_map<Logger::Implementation, std::string> logger_to_string = {
+    {Logger::Implementation::Simple, "SimpleLogger"}, {Logger::Implementation::GroupCommit, "GroupCommitLogger"},
+    {Logger::Implementation::No, "NoLogger"}
 };
 
 const std::unordered_map<UnionMode, std::string> union_mode_to_string = {{UnionMode::Positions, "UnionPositions"}};
