@@ -7,6 +7,7 @@
 
 namespace opossum {
 
+// This plugin does not export its instantiation for testing purposes
 class NonInstantiablePlugin : public AbstractPlugin, public Singleton<NonInstantiablePlugin> {
  public:
   const std::string description() const override {
@@ -17,7 +18,5 @@ class NonInstantiablePlugin : public AbstractPlugin, public Singleton<NonInstant
 
   void stop() const override {}
 };
-
-// EXPORT(TestPlugin)
 
 }  // namespace opossum

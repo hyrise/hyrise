@@ -5,8 +5,8 @@
 #include <boost/hana/not_equal.hpp>
 #include <boost/hana/size.hpp>
 #include <boost/hana/take_while.hpp>
-#include <boost/lexical_cast/try_lexical_convert.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/lexical_cast/try_lexical_convert.hpp>
 #include <string>
 
 #include "all_type_variant.hpp"
