@@ -61,3 +61,27 @@
    fun:write
    fun:_ZNK7opossum*RuntimePointer8is_validEv
 }
+
+{
+   <libLLVM-cond>
+   Memcheck:Cond
+   ...
+   obj:*libLLVM-6.0.so.*
+   ...
+}
+
+{
+   <libLLVM-value8>
+   Memcheck:Value8
+   ...
+   obj:*libLLVM-6.0.so.*
+   ...
+}
+
+{
+   <libLLVM_aliases-cond>
+   Memcheck:Cond
+   ...
+   fun:_ZNK4llvm*AliasSet*aliasesPointer*
+   ...
+}
