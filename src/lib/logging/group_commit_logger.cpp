@@ -137,7 +137,7 @@ bool EntryWriter::operator()(NullValue v) {
 }
 
 void GroupCommitLogger::log_value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,
-                              const std::vector<AllTypeVariant> values) {
+                              const std::vector<AllTypeVariant>& values) {
   // This is the entry length up to the ChunkOffset.
   // The entry then gets resized for the null value bitmap and each value
   auto entry_length =

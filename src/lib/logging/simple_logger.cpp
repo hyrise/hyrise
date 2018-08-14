@@ -38,7 +38,7 @@ void SimpleLogger::log_commit(const TransactionID transaction_id, std::function<
 }
 
 void SimpleLogger::log_value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,
-                         const std::vector<AllTypeVariant> values) {
+                         const std::vector<AllTypeVariant>& values) {
   std::stringstream ss;
   ss << "(v," << transaction_id << "," << table_name.size() << "," << table_name << "," << row_id << ",(";
 
