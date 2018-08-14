@@ -2,21 +2,21 @@
 
 #include <fstream>
 
-#include "abstract_recovery.hpp"
+#include "abstract_recoverer.hpp"
 
 namespace opossum {
 
-class BinaryRecovery : public AbstractRecovery {
+class BinaryRecoverer : public AbstractRecoverer {
  public:
-  BinaryRecovery(const BinaryRecovery&) = delete;
-  BinaryRecovery& operator=(const BinaryRecovery&) = delete;
+  BinaryRecoverer(const BinaryRecoverer&) = delete;
+  BinaryRecoverer& operator=(const BinaryRecoverer&) = delete;
 
-  static BinaryRecovery& getInstance();
+  static BinaryRecoverer& getInstance();
 
   void recover() override;
 
  private:
-  BinaryRecovery() {}
+  BinaryRecoverer() {}
 
   AllTypeVariant _read_AllTypeVariant(std::ifstream& file, DataType data_type);
 

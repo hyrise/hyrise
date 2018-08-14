@@ -5,15 +5,15 @@
 
 namespace opossum {
 
-class AbstractRecovery {
+class AbstractRecoverer {
  public:
-  AbstractRecovery(const AbstractRecovery&) = delete;
-  AbstractRecovery& operator=(const AbstractRecovery&) = delete;
+  AbstractRecoverer(const AbstractRecoverer&) = delete;
+  AbstractRecoverer& operator=(const AbstractRecoverer&) = delete;
 
   virtual void recover() = 0;
 
  protected:
-  AbstractRecovery() {}
+  AbstractRecoverer() {}
 
   enum class LogType { Value, Invalidation };
 

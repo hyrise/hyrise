@@ -58,7 +58,7 @@
 #include <string>
 #include <thread>
 
-#include "binary_recovery.hpp"
+#include "binary_recoverer.hpp"
 #include "logger.hpp"
 #include "types.hpp"
 
@@ -249,7 +249,7 @@ void GroupCommitLogger::log_flush() {
   }
 }
 
-void GroupCommitLogger::recover() { BinaryRecovery::getInstance().recover(); }
+void GroupCommitLogger::recover() { BinaryRecoverer::getInstance().recover(); }
 
 void GroupCommitLogger::_open_logfile() {
   DebugAssert(!_log_file.is_open(), "Logger: Log file not closed before opening another one.");

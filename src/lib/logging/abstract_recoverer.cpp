@@ -1,4 +1,4 @@
-#include "abstract_recovery.hpp"
+#include "abstract_recoverer.hpp"
 
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -8,7 +8,7 @@
 
 namespace opossum {
 
-void AbstractRecovery::_redo_transactions(const TransactionID& transaction_id, std::vector<LoggedItem>& transactions) {
+void AbstractRecoverer::_redo_transactions(const TransactionID& transaction_id, std::vector<LoggedItem>& transactions) {
   for (auto& transaction : transactions) {
     if (transaction.transaction_id != transaction_id) continue;
 
@@ -35,13 +35,13 @@ void AbstractRecovery::_redo_transactions(const TransactionID& transaction_id, s
                      transactions.end());
 }
 
-void AbstractRecovery::_update_transaction_id(const TransactionID highest_committed_id) {
+void AbstractRecoverer::_update_transaction_id(const TransactionID highest_committed_id) {
   if (highest_committed_id > 0) {
     TransactionManager::_reset_to_id(highest_committed_id + 1);
   }
 }
 
-void AbstractRecovery::_recover_table(const std::string& path, const std::string& table_name) {
+void AbstractRecoverer::_recover_table(const std::string& path, const std::string& table_name) {
   auto table = load_table(path, Chunk::MAX_SIZE);
   StorageManager::get().add_table(table_name, table);
 }

@@ -58,7 +58,7 @@ class TransactionManager : private Noncopyable {
   std::shared_ptr<TransactionContext> new_transaction_context();
 
  private:
-  friend class AbstractRecovery;
+  friend class AbstractRecoverer;
   static void _reset_to_id(TransactionID transaction_id);
 
  private:

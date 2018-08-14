@@ -1,4 +1,4 @@
-#include "binary_recovery.hpp"
+#include "binary_recoverer.hpp"
 
 #include <fstream>
 
@@ -11,19 +11,19 @@
 
 namespace opossum {
 
-BinaryRecovery& BinaryRecovery::getInstance() {
-  static BinaryRecovery instance;
+BinaryRecoverer& BinaryRecoverer::getInstance() {
+  static BinaryRecoverer instance;
   return instance;
 }
 
 template <>
-std::string BinaryRecovery::_read(std::ifstream& file) {
+std::string BinaryRecoverer::_read(std::ifstream& file) {
   std::string result;
   std::getline(file, result, '\0');
   return result;
 }
 
-AllTypeVariant BinaryRecovery::_read_AllTypeVariant(std::ifstream& file, DataType data_type) {
+AllTypeVariant BinaryRecoverer::_read_AllTypeVariant(std::ifstream& file, DataType data_type) {
   AllTypeVariant value;
   switch (data_type) {
     case DataType::Int: {
@@ -47,17 +47,17 @@ AllTypeVariant BinaryRecovery::_read_AllTypeVariant(std::ifstream& file, DataTyp
       break;
     }
     default:
-      DebugAssert(false, "recovery: read unknown type");
+      DebugAssert(false, "recoverer: read unknown type");
   }
 
   return value;
 }
 
-void BinaryRecovery::recover() {
+void BinaryRecoverer::recover() {
   TransactionID last_transaction_id{0};
   for (auto& log_path : Logger::get_all_log_file_paths()) {
     std::ifstream log_file(log_path);
-    DebugAssert(log_file.is_open(), "Recovery: could not open logfile " + log_path);
+    DebugAssert(log_file.is_open(), "Recoverer: could not open logfile " + log_path);
 
     std::vector<LoggedItem> transactions;
 
@@ -74,7 +74,7 @@ void BinaryRecovery::recover() {
       }
 
       DebugAssert(log_type == 't' || log_type == 'i' || log_type == 'v' || log_type == 'l',
-                  "Recovery: invalid log type token");
+                  "Recoverer: invalid log type token");
 
       // if load entry
       if (log_type == 'l') {
@@ -95,7 +95,7 @@ void BinaryRecovery::recover() {
       }
 
       // else invalidation or value
-      DebugAssert(log_type == 'v' || log_type == 'i', "Recovery: First token of new entry is not handled properly.");
+      DebugAssert(log_type == 'v' || log_type == 'i', "Recoverer: First token of new entry is not handled properly.");
 
       // Invalidation and begin of value entries:
       //   - log entry type ('v') : sizeof(char)

@@ -26,7 +26,7 @@
 
 #include "all_type_variant.hpp"
 #include "logger.hpp"
-#include "text_recovery.hpp"
+#include "text_recoverer.hpp"
 
 namespace opossum {
 
@@ -76,7 +76,7 @@ void SimpleLogger::_write_to_logfile(const std::stringstream& ss) {
   _file_mutex.unlock();
 }
 
-void SimpleLogger::recover() { TextRecovery::getInstance().recover(); }
+void SimpleLogger::recover() { TextRecoverer::getInstance().recover(); }
 
 void SimpleLogger::_open_logfile() {
   _file_mutex.lock();

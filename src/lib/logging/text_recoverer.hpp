@@ -1,21 +1,21 @@
 #pragma once
 
-#include "abstract_recovery.hpp"
+#include "abstract_recoverer.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
-class TextRecovery : public AbstractRecovery {
+class TextRecoverer : public AbstractRecoverer {
  public:
-  TextRecovery(const TextRecovery&) = delete;
-  TextRecovery& operator=(const TextRecovery&) = delete;
+  TextRecoverer(const TextRecoverer&) = delete;
+  TextRecoverer& operator=(const TextRecoverer&) = delete;
 
-  static TextRecovery& getInstance();
+  static TextRecoverer& getInstance();
 
   void recover();
 
  private:
-  TextRecovery() {}
+  TextRecoverer() {}
 
   std::string _get_substr_and_incr_begin(const std::string line, size_t& begin, const char delimiter);
   std::string _get_substr_and_incr_begin(const std::string line, size_t& begin, const size_t end);

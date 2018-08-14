@@ -96,10 +96,10 @@ set(
     cost_model/cost_model_logical.cpp
     cost_model/cost_model_logical.hpp
     logging/abstract_logger.hpp
-    logging/abstract_recovery.hpp
-    logging/abstract_recovery.cpp
-    logging/binary_recovery.hpp
-    logging/binary_recovery.cpp
+    logging/abstract_recoverer.hpp
+    logging/abstract_recoverer.cpp
+    logging/binary_recoverer.hpp
+    logging/binary_recoverer.cpp
     logging/group_commit_logger.cpp
     logging/group_commit_logger.hpp
     logging/logger.cpp
@@ -107,8 +107,8 @@ set(
     logging/no_logger.hpp
     logging/simple_logger.cpp
     logging/simple_logger.hpp
-    logging/text_recovery.hpp
-    logging/text_recovery.cpp
+    logging/text_recoverer.hpp
+    logging/text_recoverer.cpp
     logical_query_plan/abstract_lqp_node.cpp
     logical_query_plan/abstract_lqp_node.hpp
     logical_query_plan/alias_node.cpp
