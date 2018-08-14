@@ -5,6 +5,17 @@
 
 namespace opossum {
 
+/*  
+ *  AbstractRecoverer is the abstract class for all recovery implementations. 
+ *  It serves functionality that is used by all recoverers, namely 
+ *   -  recovery from a file
+ *   -  replay a transaction
+ *   -  update transaction_id in the TransactionManager
+ * 
+ *  Furthermore it defines LogType and LoggedItem that are used during recovery.
+ */
+
+
 class AbstractRecoverer {
  public:
   AbstractRecoverer(const AbstractRecoverer&) = delete;
