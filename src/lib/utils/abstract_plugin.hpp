@@ -3,8 +3,8 @@
 #include <iostream>
 
 #include "storage/storage_manager.hpp"
-#include "utils/singleton.hpp"
 #include "types.hpp"
+#include "utils/singleton.hpp"
 
 namespace opossum {
 

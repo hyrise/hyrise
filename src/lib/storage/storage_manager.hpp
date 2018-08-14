@@ -6,9 +6,9 @@
 #include <string>
 #include <vector>
 
-#include "utils/singleton.hpp"
 #include "lqp_view.hpp"
 #include "types.hpp"
+#include "utils/singleton.hpp"
 
 namespace opossum {
 

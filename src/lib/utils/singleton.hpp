@@ -7,21 +7,17 @@ namespace opossum {
 template <typename T>
 class Singleton : public Noncopyable {
  protected:
-  Singleton() {};
-
+  Singleton() {}
   Singleton& operator=(Singleton&&) = default;
 
  public:
-
-  virtual ~Singleton() {};
-
-  // Singleton
+  // Singleton implementation à la Scott Meyers
   inline static T& get() {
     static T instance;
-    // Singleton<T>& t = instance;
-    // t.init();
     return instance;
   }
+
+  virtual ~Singleton() {}
 };
 
 }  // namespace opossum

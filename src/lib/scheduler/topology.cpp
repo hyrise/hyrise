@@ -22,9 +22,7 @@ const int Topology::_number_of_hardware_nodes = numa_num_configured_nodes();  //
 const int Topology::_number_of_hardware_nodes = 1;  // NOLINT
 #endif
 
-Topology::Topology() {
-  _init_default_topology();
-}
+Topology::Topology() { _init_default_topology(); }
 
 void TopologyNode::print(std::ostream& stream) const {
   stream << "Number of Node CPUs: " << cpus.size() << ", CPUIDs: [";

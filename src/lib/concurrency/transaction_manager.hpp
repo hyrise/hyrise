@@ -4,8 +4,8 @@
 #include <functional>
 #include <memory>
 
-#include "utils/singleton.hpp"
 #include "types.hpp"
+#include "utils/singleton.hpp"
 
 /**
  * MVCC overview

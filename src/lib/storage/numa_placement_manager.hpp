@@ -28,7 +28,6 @@ namespace opossum {
 // resources. Without those, all destructors of all PMR vectors out there will fail.
 class NUMAPlacementManager : public Singleton<NUMAPlacementManager> {
  public:
-
   struct Options {
     // Parameters of the NUMA placement and chunk migration algorithm.
 

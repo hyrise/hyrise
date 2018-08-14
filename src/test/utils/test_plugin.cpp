@@ -5,7 +5,6 @@
 #include "utils/abstract_plugin.hpp"
 #include "utils/singleton.hpp"
 
-
 namespace opossum {
 
 class TestPlugin : public AbstractPlugin, public Singleton<TestPlugin> {

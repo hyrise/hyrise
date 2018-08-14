@@ -8,8 +8,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "utils/singleton.hpp"
 #include "types.hpp"
+#include "utils/singleton.hpp"
 
 namespace opossum {
 
