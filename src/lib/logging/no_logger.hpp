@@ -29,7 +29,7 @@ class NoLogger : public AbstractLogger {
 
   void log_flush() override{};
 
-  void recover() override{};
+  uint32_t recover() override{ return 0u; };
 
  protected:
   friend class Logger;

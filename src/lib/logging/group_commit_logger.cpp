@@ -247,7 +247,7 @@ void GroupCommitLogger::log_flush() {
   }
 }
 
-void GroupCommitLogger::recover() { BinaryRecoverer::getInstance().recover(); }
+uint32_t GroupCommitLogger::recover() { return BinaryRecoverer::getInstance().recover(); }
 
 void GroupCommitLogger::_open_logfile() {
   DebugAssert(!_log_file.is_open(), "Logger: Log file not closed before opening another one.");

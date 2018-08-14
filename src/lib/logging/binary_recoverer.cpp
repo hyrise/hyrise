@@ -60,7 +60,7 @@ AllTypeVariant BinaryRecoverer::_read_AllTypeVariant(std::ifstream& file, DataTy
   return value;
 }
 
-void BinaryRecoverer::recover() {
+uint32_t BinaryRecoverer::recover() {
   TransactionID last_transaction_id{0};
   for (auto& log_path : Logger::get_all_log_file_paths()) {
     std::ifstream log_file(log_path);
@@ -153,6 +153,7 @@ void BinaryRecoverer::recover() {
   }
 
   _update_transaction_id(last_transaction_id);
+  return _loaded_tables_amount;
 }
 
 }  // namespace opossum

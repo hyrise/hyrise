@@ -77,7 +77,7 @@ void SimpleLogger::_write_to_logfile(const std::stringstream& ss) {
   _file_mutex.unlock();
 }
 
-void SimpleLogger::recover() { TextRecoverer::getInstance().recover(); }
+uint32_t SimpleLogger::recover() { return TextRecoverer::getInstance().recover(); }
 
 void SimpleLogger::_open_logfile() {
   _file_mutex.lock();

@@ -12,7 +12,8 @@ class TextRecoverer : public AbstractRecoverer {
 
   static TextRecoverer& getInstance();
 
-  void recover();
+  // Recovers db from logfiles and returns the number of loaded tables
+  uint32_t recover() override;
 
  private:
   TextRecoverer() {}

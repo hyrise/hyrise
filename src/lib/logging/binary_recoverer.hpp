@@ -13,7 +13,8 @@ class BinaryRecoverer : public AbstractRecoverer {
 
   static BinaryRecoverer& getInstance();
 
-  void recover() override;
+  // Recovers db from logfiles and returns the number of loaded tables
+  uint32_t recover() override;
 
  private:
   BinaryRecoverer() {}

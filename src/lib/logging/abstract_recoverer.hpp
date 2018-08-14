@@ -20,7 +20,8 @@ class AbstractRecoverer {
   AbstractRecoverer(const AbstractRecoverer&) = delete;
   AbstractRecoverer& operator=(const AbstractRecoverer&) = delete;
 
-  virtual void recover() = 0;
+  // Recovers db from logfiles and returns the number of loaded tables
+  virtual uint32_t recover() = 0;
 
  protected:
   AbstractRecoverer() {}
@@ -52,6 +53,8 @@ class AbstractRecoverer {
   void _update_transaction_id(const TransactionID highest_committed_id);
 
   void _recover_table(const std::string& path, const std::string& table_name);
+
+  uint32_t _loaded_tables_amount;
 };
 
 }  // namespace opossum

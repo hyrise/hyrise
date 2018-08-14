@@ -61,7 +61,7 @@ class Logger {
   // Creates the needed folders where logs are saved
   static void _create_directories();
 
-  // Returnes the the highest logfile number found in _log_path
+  // Returns the the highest logfile number found in _log_path
   static u_int32_t _get_latest_log_number();
 
   // linter wants these to be char[], but then we loose operator+ of strings

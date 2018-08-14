@@ -55,7 +55,7 @@ std::string TextRecoverer::_extract_next_value_with_preceding_size(std::string& 
   return _extract_string_value(line, begin, end, log_file);
 }
 
-void TextRecoverer::recover() {
+uint32_t TextRecoverer::recover() {
   TransactionID last_transaction_id{0};
   for (auto& path : Logger::get_all_log_file_paths()) {
     std::ifstream log_file(path);
@@ -141,6 +141,7 @@ void TextRecoverer::recover() {
   }
 
   _update_transaction_id(last_transaction_id);
+  return _loaded_tables_amount;
 }
 
 }  // namespace opossum

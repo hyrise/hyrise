@@ -854,8 +854,8 @@ int main(int argc, char** argv) {
     }
   } else {
     console.out("Running recovery.\n");
-    opossum::Logger::get().recover();
-    console.out("Recovery done.\n\n");
+    auto loaded_tables_amount = opossum::Logger::get().recover();
+    console.out("Recovery done. Loaded " + std::to_string(loaded_tables_amount) + " tables.\n\n");
   }
 
   // Display welcome message if Console started normally

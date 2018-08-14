@@ -33,8 +33,8 @@ class AbstractLogger {
   // Flushes log to disk.
   virtual void log_flush() = 0;
 
-  // Recovers the db from disk.
-  virtual void recover() = 0;
+  // Recovers db from logfiles and returns the number of loaded tables
+  virtual uint32_t recover() = 0;
 
   virtual ~AbstractLogger() = default;
 

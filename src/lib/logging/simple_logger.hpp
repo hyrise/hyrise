@@ -26,7 +26,8 @@ class SimpleLogger : public AbstractLogger {
 
   void log_flush() override;
 
-  void recover() override;
+  // Recovers db from logfiles and returns the number of loaded tables
+  uint32_t recover() override;
 
  private:
   friend class Logger;
