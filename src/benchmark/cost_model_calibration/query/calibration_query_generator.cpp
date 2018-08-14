@@ -8,6 +8,7 @@
 #include <iostream>
 #include <random>
 #include <utils/assert.hpp>
+#include <vector>
 
 namespace opossum {
 
@@ -22,6 +23,40 @@ namespace opossum {
         queries.push_back(CalibrationQueryGenerator::_generate_table_scans(table_definition));
       }
 
+      auto join_queries = CalibrationQueryGenerator::_generate_join(table_definitions);
+      queries.insert(queries.end(), join_queries.begin(), join_queries.end());
+
+      return queries;
+    }
+
+    const std::vector<std::string> CalibrationQueryGenerator::_generate_join(const std::vector<CalibrationTableSpecification>& table_definitions) {
+      // TODO: Add JOIN Predicate
+      auto string_template = "SELECT %1% FROM %2% l JOIN %3% r ON l.%4%=r.%5%;";
+
+      std::vector<std::string> queries;
+
+      for (const auto & left_table : table_definitions) {
+        for (const auto & right_table : table_definitions) {
+          std::map<std::string, CalibrationColumnSpecification> columns;
+
+          for (const auto& column : left_table.columns) {
+            const auto column_name = "l." + column.first;
+            columns.insert(std::pair<std::string, CalibrationColumnSpecification>(column_name, column.second));
+          }
+
+          for (const auto& column : right_table.columns) {
+            const auto column_name = "r." + column.first;
+            columns.insert(std::pair<std::string, CalibrationColumnSpecification>(column_name, column.second));
+          }
+
+          auto left_join_column = "column_a";
+          auto right_join_column = "column_a";
+
+          auto select_columns = _generate_select_columns(columns);
+          queries.push_back(boost::str(boost::format(string_template) % select_columns % left_table.table_name % right_table.table_name % left_join_column % right_join_column));
+        }
+      }
+
       return queries;
     }
 
@@ -29,7 +64,6 @@ namespace opossum {
       std::random_device random_device;
       std::mt19937 engine{random_device()};
 
-      // TODO:
       auto string_template = "SELECT %1% FROM %2% WHERE %3%;";
       auto predicate_template =  "%1% %2% %3%";
 
