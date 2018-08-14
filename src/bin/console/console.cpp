@@ -854,7 +854,7 @@ int main(int argc, char** argv) {
     }
   } else {
     console.out("Running recovery.\n");
-    opossum::Logger::get()).recover();
+    opossum::Logger::get().recover();
     console.out("Recovery done.\n\n");
   }
 
