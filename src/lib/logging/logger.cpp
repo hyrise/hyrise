@@ -64,6 +64,10 @@ void Logger::setup(std::string folder, const Implementation implementation) {
   _implementation = implementation;
 }
 
+bool Logger::is_active() {
+  return _implementation != Implementation::No;
+}
+
 void Logger::delete_log_files() {
   filesystem::remove_all(_log_path);
   _create_directories();

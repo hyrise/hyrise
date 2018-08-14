@@ -188,15 +188,17 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       }
 
       // log values
-      const auto column_count = source_chunk->column_count();
-      for (decltype(source_chunk->size()) row_index = 0; row_index < source_chunk->size(); ++row_index) {
-        std::vector<AllTypeVariant> row_values;
-        for (decltype(source_chunk->column_count()) column_index = 0; column_index < column_count; ++column_index) {
-          row_values.push_back((*source_chunk->columns()[column_index])[row_index]);
-        }
+      if (Logger::is_active()) {
+        const auto column_count = source_chunk->column_count();
+        for (decltype(source_chunk->size()) row_index = 0; row_index < source_chunk->size(); ++row_index) {
+          std::vector<AllTypeVariant> row_values;
+          for (decltype(source_chunk->column_count()) column_index = 0; column_index < column_count; ++column_index) {
+            row_values.push_back((*source_chunk->columns()[column_index])[row_index]);
+          }
 
-        Logger::getInstance().log_value(context->transaction_id(), _target_table_name,
-                                        RowID{target_chunk_id, target_start_index + row_index}, row_values);
+          Logger::getInstance().log_value(context->transaction_id(), _target_table_name,
+                                          RowID{target_chunk_id, target_start_index + row_index}, row_values);
+        }
       }
 
       still_to_insert -= num_to_insert;

@@ -49,6 +49,9 @@ class Logger {
   // Current logging implementation has to be shut down beforehand or not instantiated yet.
   static void delete_log_files();
 
+  // Returns if there is any logging set or turned off by NoLogger
+  static bool is_active();
+
   static const Implementation default_implementation;
   static const std::string default_data_path;
 
