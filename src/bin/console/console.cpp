@@ -447,7 +447,7 @@ int Console::_load_table(const std::string& args) {
     return ReturnCode::Error;
   }
 
-  Logger::getInstance().log_load_table(filepath, tablename);
+  Logger::get().log_load_table(filepath, tablename);
   return ReturnCode::Ok;
 }
 
@@ -854,7 +854,7 @@ int main(int argc, char** argv) {
     }
   } else {
     console.out("Running recovery.\n");
-    opossum::Logger::getInstance().recover();
+    opossum::Logger::get()).recover();
     console.out("Recovery done.\n\n");
   }
 

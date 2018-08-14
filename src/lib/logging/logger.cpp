@@ -29,7 +29,7 @@ const std::string Logger::_log_folder = "logs/";           // NOLINT
 std::string Logger::_log_path = _data_path + _log_folder;  // NOLINT
 const std::string Logger::_filename = "hyrise-log";        // NOLINT
 
-AbstractLogger& Logger::getInstance() {
+AbstractLogger& Logger::get() {
   switch (_implementation) {
     case Implementation::No: {
       static NoLogger instance;

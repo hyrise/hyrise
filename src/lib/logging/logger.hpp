@@ -1,5 +1,5 @@
 /*
- *  Logger is a singleton that grants access to the logging system via Logger::getInstance(). 
+ *  Logger is a singleton that grants access to the logging system via Logger::get(). 
  *  It instantiates a logging implementation and returns it as AbstractLogger. 
  *  The logging system persists database changes to disk that can be used to recover after startup.
  *  A logging implementation therefore provides following functions:
@@ -16,7 +16,7 @@
  *    -  NewLogger has to implement the methods declared by AbstractLogger
  *    -  The constructor of NewLogger should be private and Logger declared as friend of NewLogger
  *    -  delete copy and copy-assign constructors
- *    -  NewLogger has to be instantiated in Logger::getInstance()
+ *    -  NewLogger has to be instantiated in Logger::get()
  * 
  *  A new logfile is created on each startup and numbered in ascending order (path = directory + filename + <number>)
  */
@@ -36,7 +36,7 @@ class Logger {
   Logger(const Logger&) = delete;
   Logger& operator=(const Logger&) = delete;
 
-  static AbstractLogger& getInstance();
+  static AbstractLogger& get();
 
   // Called by logging implementations to get their new filename
   static std::string get_new_log_path();
