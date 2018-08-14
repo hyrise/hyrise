@@ -1,8 +1,8 @@
 #include "jit_read_tuples.hpp"
 
+#include "../jit_types.hpp"
 #include "resolve_type.hpp"
 #include "storage/create_iterable_from_column.hpp"
-#include "../jit_types.hpp"
 
 namespace opossum {
 

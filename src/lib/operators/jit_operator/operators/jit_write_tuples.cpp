@@ -1,10 +1,10 @@
 #include "jit_write_tuples.hpp"
 
+#include "../jit_types.hpp"
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
 #include "storage/base_value_column.hpp"
 #include "storage/value_column.hpp"
-#include "../jit_types.hpp"
 
 namespace opossum {
 
