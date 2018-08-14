@@ -30,10 +30,10 @@ class BenchmarkPlaygroundFixture : public BenchmarkBasicFixture {
 BENCHMARK_F(BenchmarkPlaygroundFixture, BaseColumn_Subscript_Operator)(benchmark::State& state) {
   while (state.KeepRunning()) {
     benchmark::DoNotOptimize(_value_column);
-    for(auto i=0u; i<333; i++) {
-      const auto v1 = _value_column->operator [](ChunkOffset{1});
-      const auto v0 = _value_column->operator [](ChunkOffset{2});
-      const auto v2 = _value_column->operator [](ChunkOffset{0});
+    for (auto i = 0u; i < 333; i++) {
+      const auto v1 = _value_column->operator[](ChunkOffset{1});
+      const auto v0 = _value_column->operator[](ChunkOffset{2});
+      const auto v2 = _value_column->operator[](ChunkOffset{0});
       benchmark::DoNotOptimize(v1);
       benchmark::DoNotOptimize(v0);
       benchmark::DoNotOptimize(v2);
@@ -43,12 +43,11 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BaseColumn_Subscript_Operator)(benchmark
 }
 
 BENCHMARK_F(BenchmarkPlaygroundFixture, BaseTypedColumn_get_typed_value)(benchmark::State& state) {
-
   auto base_typed_column = std::dynamic_pointer_cast<const BaseTypedColumn<int>>(_value_column);
 
   while (state.KeepRunning()) {
     benchmark::DoNotOptimize(base_typed_column);
-    for(auto i=0u; i<333; i++) {
+    for (auto i = 0u; i < 333; i++) {
       const auto v1 = base_typed_column->get_typed_value(ChunkOffset{1});
       const auto v0 = base_typed_column->get_typed_value(ChunkOffset{2});
       const auto v2 = base_typed_column->get_typed_value(ChunkOffset{0});
@@ -61,12 +60,11 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BaseTypedColumn_get_typed_value)(benchma
 }
 
 BENCHMARK_F(BenchmarkPlaygroundFixture, ValueColumn_get_typed_value)(benchmark::State& state) {
-
   auto value_column_int = std::dynamic_pointer_cast<const ValueColumn<int>>(_value_column);
 
   while (state.KeepRunning()) {
     benchmark::DoNotOptimize(value_column_int);
-    for(auto i=0u; i<333; i++) {
+    for (auto i = 0u; i < 333; i++) {
       const auto v1 = value_column_int->get_typed_value(ChunkOffset{1});
       const auto v0 = value_column_int->get_typed_value(ChunkOffset{2});
       const auto v2 = value_column_int->get_typed_value(ChunkOffset{0});

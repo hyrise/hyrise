@@ -348,7 +348,6 @@ set(
     storage/base_dictionary_column.hpp
     storage/base_encoded_column.cpp
     storage/base_encoded_column.hpp
-    storage/base_typed_column.hpp
     storage/base_value_column.hpp
     storage/chunk_access_counter.cpp
     storage/chunk_access_counter.hpp

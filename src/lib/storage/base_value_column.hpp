@@ -9,7 +9,7 @@ namespace opossum {
  *
  * Exposes all methods of value columns that do not rely on its specific data type.
  */
-class BaseValueColumn : public virtual BaseColumn {
+class BaseValueColumn : public BaseColumn {
  public:
   using BaseColumn::BaseColumn;
 

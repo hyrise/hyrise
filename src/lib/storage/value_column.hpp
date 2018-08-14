@@ -6,14 +6,13 @@
 #include <utility>
 #include <vector>
 
-#include "base_typed_column.hpp"
 #include "base_value_column.hpp"
 
 namespace opossum {
 
 // ValueColumn is a specific column type that stores all its values in a vector.
 template <typename T>
-class ValueColumn : public BaseValueColumn, public BaseTypedColumn<T> {
+class ValueColumn : public BaseValueColumn {
  public:
   explicit ValueColumn(bool nullable = false);
   explicit ValueColumn(const PolymorphicAllocator<T>& alloc, bool nullable = false);
@@ -38,13 +37,13 @@ class ValueColumn : public BaseValueColumn, public BaseTypedColumn<T> {
   const T get(const ChunkOffset chunk_offset) const;
 
   // return the value at a certain position.
-  const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const final;
+  const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const;
 
   // Add a value to the end of the column.
   void append(const AllTypeVariant& val) final;
 
   // Add a value (or NULL) to the end of the column.
-  void append_typed_value(const std::optional<T> value_or_null) final;
+  void append_typed_value(const std::optional<T> value_or_null);
 
   // Return all values. This is the preferred method to check a value at a certain index. Usually you need to
   // access more than a single value anyway.

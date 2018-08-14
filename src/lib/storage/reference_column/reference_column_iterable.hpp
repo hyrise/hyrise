@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "resolve_type.hpp"
-#include "storage/base_typed_column.hpp"
+#include "storage/column_accessor.hpp"
 #include "storage/column_iterables.hpp"
 #include "storage/reference_column.hpp"
 
@@ -45,7 +45,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
           _column_id{column_id},
           _begin_pos_list_it{begin_pos_list_it},
           _pos_list_it{pos_list_it},
-          _columns{_table->chunk_count(), nullptr} {
+          _accessors{_table->chunk_count(), nullptr} {
       for (auto chunk_id = ChunkID{0}; chunk_id < _table->chunk_count(); ++chunk_id) {
         _insert_referenced_column(chunk_id);
       }
@@ -67,19 +67,18 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
       const auto chunk_offset_into_ref_column =
           static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
 
-      const auto typed_value = _columns[chunk_id]->get_typed_value(chunk_offset);
+      const auto typed_value = _accessors[chunk_id]->access(chunk_offset);
 
       return ColumnIteratorValue<T>{typed_value.value_or(T{}), !typed_value.has_value(), chunk_offset_into_ref_column};
     }
 
    private:
     void _insert_referenced_column(const ChunkID chunk_id) {
-      if (_columns[chunk_id] == nullptr) {
-        auto column = _table->get_chunk(chunk_id)->get_column(_column_id);
-        auto base_column_t = std::dynamic_pointer_cast<const BaseTypedColumn<T>>(column);
-        DebugAssert(base_column_t, "Cannot cast to BaseColumnT<T>");
-        _columns[chunk_id] = base_column_t;
-      }
+      //if (_accessors[chunk_id] == nullptr) {
+      auto column = _table->get_chunk(chunk_id)->get_column(_column_id);
+      auto accessor = get_column_accessor<T>(column);
+      _accessors[chunk_id] = accessor;
+      //}
     }
 
    private:
@@ -89,7 +88,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
     const PosListIterator _begin_pos_list_it;
     PosListIterator _pos_list_it;
 
-    std::vector<std::shared_ptr<const BaseTypedColumn<T>>> _columns;
+    std::vector<std::shared_ptr<BaseColumnAccessor<T>>> _accessors;
   };
 };
 

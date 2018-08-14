@@ -1,9 +1,9 @@
 #include <iostream>
 #include <memory>
 
-#include "types.hpp"
 #include "storage/column_accessor.hpp"
 #include "storage/value_column.hpp"
+#include "types.hpp"
 
 using namespace opossum;  // NOLINT
 
