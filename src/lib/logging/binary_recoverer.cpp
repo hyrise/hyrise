@@ -136,7 +136,7 @@ void BinaryRecoverer::recover() {
       uint32_t bitmap_index = 0;
       uint8_t bit_pos = 0;
       for (auto& data_type : data_types) {
-        if (null_bitmap[bitmap_index] & (0b00000001 << bit_pos)) {
+        if (null_bitmap[bitmap_index] & (1u << bit_pos)) {
           values.emplace_back(NullValue());
         } else {
           values.emplace_back(_read_AllTypeVariant(log_file, data_type));
