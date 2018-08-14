@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "utils/singleton.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -25,14 +26,8 @@ extern size_t jit_llvm_bundle_size;
  * The repository is implemented as a singleton. As such it also provides the global LLVMContext, calls global
  * initializations of the LLVM framework, and provides a mutex for synchronized access to LLVM data structures.
  */
-class JitRepository : private Noncopyable {
+class JitRepository : public Singleton<JitRepository> {
  public:
-  // Returns the singleton repository instance that is initialized with the embedded bitcode
-  inline static JitRepository& get() {
-    static JitRepository instance;
-    return instance;
-  }
-
   // Create a repository from the given module string
   explicit JitRepository(const std::string& module_string);
 

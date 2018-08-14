@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "utils/pausable_loop_thread.hpp"
+#include "utils/singleton.hpp"
 
 namespace boost {
 namespace container {
@@ -22,16 +23,11 @@ namespace opossum {
 // and triggers the NUMA-aware chunk migration tasks
 // The NUMAPlacementManager is initialized in a paused state and needs to be
 // `resumed` to start its operation.
-class NUMAPlacementManager {
- public:
-  // Singleton
-  inline static NUMAPlacementManager& get() {
-    // Don't even think about writing a reset method. If the NUMAPlacementManager gets deleted, so do the memory
-    // resources. Without those, all destructors of all PMR vectors out there will fail.
 
-    static NUMAPlacementManager instance;
-    return instance;
-  }
+// Don't even think about writing a reset method. If the NUMAPlacementManager gets deleted, so do the memory
+// resources. Without those, all destructors of all PMR vectors out there will fail.
+class NUMAPlacementManager : public Singleton<NUMAPlacementManager> {
+ public:
 
   struct Options {
     // Parameters of the NUMA placement and chunk migration algorithm.

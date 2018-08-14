@@ -4,6 +4,7 @@
 #include <functional>
 #include <memory>
 
+#include "utils/singleton.hpp"
 #include "types.hpp"
 
 /**
@@ -45,13 +46,8 @@ class TransactionContext;
  * which represents the current global visibility of records.
  * The TransactionManager is thread-safe.
  */
-class TransactionManager : private Noncopyable {
+class TransactionManager : public Singleton<TransactionManager> {
  public:
-  // Singleton
-  inline static TransactionManager& get() {
-    static TransactionManager instance;
-    return instance;
-  }
   static void reset();
 
   CommitID last_commit_id() const;
@@ -62,17 +58,14 @@ class TransactionManager : private Noncopyable {
   std::shared_ptr<TransactionContext> new_transaction_context();
 
  private:
-  friend class TransactionContext;
-
   TransactionManager();
 
-  TransactionManager(TransactionManager&&) = delete;
-  TransactionManager& operator=(TransactionManager&&) = delete;
+  friend class Singleton;
+  friend class TransactionContext;
 
   std::shared_ptr<CommitContext> _new_commit_context();
   void _try_increment_last_commit_id(const std::shared_ptr<CommitContext>& context);
 
- private:
   std::atomic<TransactionID> _next_transaction_id;
   // TransactionID = 0 means "not set" in the MVCC columns
   static constexpr auto INITIAL_TRANSACTION_ID = TransactionID{1};

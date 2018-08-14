@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "utils/singleton.hpp"
 #include "lqp_view.hpp"
 #include "types.hpp"
 
@@ -17,7 +18,9 @@ class AbstractLQPNode;
 // The StorageManager is a singleton that maintains all tables
 // by mapping table names to table instances.
 class StorageManager : private Noncopyable {
+// class StorageManager : private Singleton<StorageManager> {
  public:
+
   // Singleton
   inline static StorageManager& get() {
     static StorageManager instance;
@@ -70,6 +73,9 @@ class StorageManager : private Noncopyable {
 
  protected:
   StorageManager() {}
+
+  // friend class Singleton;
+
   StorageManager& operator=(StorageManager&&) = default;
 
   std::map<std::string, std::shared_ptr<Table>> _tables;

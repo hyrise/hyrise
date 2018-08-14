@@ -4,6 +4,7 @@
 
 #include "types.hpp"
 #include "utils/abstract_plugin.hpp"
+#include "utils/singleton.hpp"
 
 namespace opossum {
 
@@ -12,9 +13,7 @@ struct PluginHandleWrapper {
   AbstractPlugin* plugin;
 };
 
-using PluginName = std::string;
-
-class PluginManager : private Noncopyable {
+class PluginManager : public Singleton<PluginManager> {
   friend class PluginManagerTest;
 
  public:
@@ -37,9 +36,15 @@ class PluginManager : private Noncopyable {
   // Have a look at base_test.hpp to see the correct order of resetting things.
   static void reset();
 
+  PluginManager(PluginManager&&) = delete;
+
  protected:
   PluginManager() {}
-  PluginManager& operator=(PluginManager&&) = default;
+
+  friend class Singleton;
+
+  // PluginManager& operator=(const PluginManager&) = default;
+  // PluginManager& operator=(PluginManager&&) = default;
 
   std::unordered_map<PluginName, PluginHandleWrapper> _plugins;
 
