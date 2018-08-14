@@ -9,7 +9,7 @@
 namespace opossum {
 
 // This is necessary to make the plugin instantiable, it leads to plain C linkage to avoid
-// ungly mangled names.
+// ugly mangled names. Use EXPORT in the implementation file of your plugin.
 
 #define EXPORT(PluginName)                                            \
   extern "C" AbstractPlugin* factory() {                              \

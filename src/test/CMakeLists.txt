@@ -154,6 +154,8 @@ set(
     utils/format_duration_test.cpp
     utils/numa_memory_resource_test.cpp
     utils/plugin_manager_test.cpp
+    utils/plugin_test_utils.cpp
+    utils/plugin_test_utils.hpp
     utils/singleton_test.cpp
     gtest_case_template.cpp
     gtest_main.cpp
@@ -257,6 +259,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 # Configure TestPlugin
 add_library(TestPlugin SHARED
     utils/test_plugin.cpp
+    utils/test_plugin.hpp
 )
 target_link_libraries(TestPlugin hyrise)
 

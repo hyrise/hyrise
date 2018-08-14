@@ -15,6 +15,7 @@ struct PluginHandleWrapper {
 
 class PluginManager : public Singleton<PluginManager> {
   friend class PluginManagerTest;
+  friend class SingletonTest;
 
  public:
   // Singleton
