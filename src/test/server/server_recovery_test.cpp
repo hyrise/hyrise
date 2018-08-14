@@ -20,7 +20,7 @@ std::string str(Logger::Implementation implementation) {
 
 class ServerRecoveryTest : public BaseTestWithParam<Logger::Implementation> {
  protected:
-  static constexpr char _folder[6] = "data/";
+  static constexpr char _folder[] = "data/";
 
   void restart_server(Logger::Implementation implementation) {
     terminate_server();

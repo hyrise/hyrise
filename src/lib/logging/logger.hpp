@@ -27,8 +27,6 @@
 
 #include "types.hpp"
 
-void shutdown_logger();
-
 namespace opossum {
 
 class Logger {

@@ -108,7 +108,7 @@ LogEntry& LogEntry::operator<<<std::string>(const std::string& value) {
 // This boolean then is used to set the corresponding bit in the null_value_bitmap.
 // The current implementation resizes the entry for every value.
 // It might improve performance to iterate twice over all values:
-// Acumulate the bytes needed for all values in the first pass,
+// Accumulate the bytes needed for all values in the first pass,
 // then resize the vector and finally write the values in the second pass.
 class EntryWriter : public boost::static_visitor<bool> {
  public:
@@ -160,10 +160,10 @@ void GroupCommitLogger::log_value(const TransactionID transaction_id, const std:
 
     // Set corresponding bit in bitmap to 1 if the value is a NullValue
     if (!has_content) {
-      entry.data[null_bitmap_pos] |= 0b00000001 << bit_pos;
+      entry.data[null_bitmap_pos] |= 1u << bit_pos;
     }
 
-    // Increase bit_pos for next value and increase null_bitmap_pos every eigth values to adress the next byte
+    // Increase bit_pos for next value and increase null_bitmap_pos every eighth values to address the next byte
     if (bit_pos == 7) {
       ++null_bitmap_pos;
       DebugAssert(entry.data[null_bitmap_pos] == '\0', "Logger: memory is not NULL");
