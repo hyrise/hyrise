@@ -45,12 +45,12 @@ TEST_F(PluginManagerTest, LoadStopPlugin) {
   EXPECT_NE(plugins["TestPlugin"].handle, nullptr);
   EXPECT_NE(plugins["TestPlugin"].plugin, nullptr);
 
-  // // The test plugin creates a dummy table when it is started
+  // The test plugin creates a dummy table when it is started
   EXPECT_TRUE(sm.has_table("DummyTable"));
 
   pm.stop_plugin("TestPlugin");
 
-  // // The test plugin removes the dummy table from the storage manager when it is stopped
+  // The test plugin removes the dummy table from the storage manager when it is stopped
   EXPECT_FALSE(sm.has_table("DummyTable"));
   EXPECT_EQ(plugins.count("TestPlugin"), 0u);
 }
@@ -68,14 +68,14 @@ TEST_F(PluginManagerTest, LoadPluginAutomaticStop) {
   EXPECT_NE(plugins["TestPlugin"].handle, nullptr);
   EXPECT_NE(plugins["TestPlugin"].plugin, nullptr);
 
-  // // The test plugin creates a dummy table when it is started
+  // The test plugin creates a dummy table when it is started
   EXPECT_TRUE(sm.has_table("DummyTable"));
 
   // The PluginManager's destructor calls _clean_up(), we call it here explicitly to simulate the destructor
   // being called, which in turn should call stop() on all loaded plugins
   call_clean_up();
 
-  // // The test plugin removes the dummy table from the storage manager when it is stopped
+  // The test plugin removes the dummy table from the storage manager when it is stopped
   // (implicitly by the destructor of the PluginManager)
   EXPECT_FALSE(sm.has_table("DummyTable"));
 }

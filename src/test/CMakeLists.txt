@@ -154,6 +154,7 @@ set(
     utils/format_duration_test.cpp
     utils/numa_memory_resource_test.cpp
     utils/plugin_manager_test.cpp
+    utils/singleton_test.cpp
     gtest_case_template.cpp
     gtest_main.cpp
 )
