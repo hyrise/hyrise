@@ -41,8 +41,10 @@ class Logger {
   // Called by logging implementations to get their new filename
   static std::string get_new_log_path();
 
+  // Returns all log file paths in _log_path
   static std::vector<std::string> get_all_log_file_paths();
 
+  // Logging is turned on by console and server on startup by calling setup().
   static void setup(std::string folder, const Implementation implementation);
 
   // Called while setting up a new database in console or in tests
@@ -56,7 +58,10 @@ class Logger {
   static const std::string default_data_path;
 
  private:
+  // Creates the needed folders where logs are saved
   static void _create_directories();
+
+  // Returnes the the highest logfile number found in _log_path
   static u_int32_t _get_latest_log_number();
 
   // linter wants these to be char[], but then we loose operator+ of strings
