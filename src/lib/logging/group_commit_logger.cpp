@@ -95,8 +95,6 @@ LogEntry& LogEntry::operator<<<std::string>(const std::string& value) {
 
   value.copy(&data[cursor], value.size());
 
-  DebugAssert(data[cursor + value.size()] == '\0', "Logger: Byte is not NULL initiated");
-
   cursor += value.size() + 1;
 
   return *this;

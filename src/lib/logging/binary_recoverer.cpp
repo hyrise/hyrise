@@ -102,7 +102,6 @@ void BinaryRecoverer::recover() {
       }
 
       // else invalidation or value
-      DebugAssert(log_type == 'v' || log_type == 'i', "Recoverer: First token of new entry is not handled properly.");
 
       // Invalidation and begin of value entries:
       //   - log entry type ('v') : sizeof(char)
@@ -129,12 +128,12 @@ void BinaryRecoverer::recover() {
 
       auto data_types = StorageManager::get().get_table(table_name)->column_data_types();
 
-      uint16_t null_bitmap_number_of_bytes = ceil(data_types.size() / 8.0);  //  supports 2^16 * 8 > 500,000 values
+      uint32_t null_bitmap_number_of_bytes = ceil(data_types.size() / 8.0);  // uint32_t resolves to ~ 34 Billion values
       std::vector<char> null_bitmap(null_bitmap_number_of_bytes);
       log_file.read(&null_bitmap[0], null_bitmap_number_of_bytes);
 
       std::vector<AllTypeVariant> values;
-      uint16_t bitmap_index = 0;
+      uint32_t bitmap_index = 0;
       uint8_t bit_pos = 0;
       for (auto& data_type : data_types) {
         if (null_bitmap[bitmap_index] & (0b00000001 << bit_pos)) {
