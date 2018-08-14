@@ -43,8 +43,8 @@ class PluginManager : public Singleton<PluginManager> {
 
   friend class Singleton;
 
-  // PluginManager& operator=(const PluginManager&) = default;
-  // PluginManager& operator=(PluginManager&&) = default;
+  const PluginManager& operator=(const PluginManager&) = delete;
+  PluginManager& operator=(PluginManager&&) = default;
 
   std::unordered_map<PluginName, PluginHandleWrapper> _plugins;
 

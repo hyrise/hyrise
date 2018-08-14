@@ -8,11 +8,8 @@ template <typename T>
 class Singleton : public Noncopyable {
  protected:
   Singleton() {};
-  // Singleton& operator=(Singleton<T>&&) = delete;
- // protected:
-  // Singleton(Singleton<T>&&) = delete;
 
-  // virtual void init() = 0;
+  Singleton& operator=(Singleton&&) = default;
 
  public:
 

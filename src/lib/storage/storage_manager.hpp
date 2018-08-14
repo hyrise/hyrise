@@ -17,16 +17,8 @@ class AbstractLQPNode;
 
 // The StorageManager is a singleton that maintains all tables
 // by mapping table names to table instances.
-class StorageManager : private Noncopyable {
-// class StorageManager : private Singleton<StorageManager> {
+class StorageManager : public Singleton<StorageManager> {
  public:
-
-  // Singleton
-  inline static StorageManager& get() {
-    static StorageManager instance;
-    return instance;
-  }
-
   // adds a table to the storage manager
   void add_table(const std::string& name, std::shared_ptr<Table> table);
 
@@ -74,8 +66,9 @@ class StorageManager : private Noncopyable {
  protected:
   StorageManager() {}
 
-  // friend class Singleton;
+  friend class Singleton;
 
+  const StorageManager& operator=(const StorageManager&) = delete;
   StorageManager& operator=(StorageManager&&) = default;
 
   std::map<std::string, std::shared_ptr<Table>> _tables;
