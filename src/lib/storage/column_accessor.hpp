@@ -5,6 +5,7 @@
 #include <type_traits>
 
 #include "resolve_type.hpp"
+#include "storage/reference_column.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -30,10 +31,17 @@ class ColumnAccessor : public BaseColumnAccessor<T> {
 template <typename T>
 class ColumnAccessor<T, ReferenceColumn> : public BaseColumnAccessor<T> {
  public:
-  explicit ColumnAccessor(const ReferenceColumn& column) {}
+  explicit ColumnAccessor(const ReferenceColumn& column) : _column{column} {}
   const std::optional<T> access(ChunkOffset offset) const final {
-    Fail("Cannot use ColumnAccessor on a ReferenceColumn.");
+    const auto all_type_variant = _column[offset];
+    if (variant_is_null(all_type_variant)) {
+      return std::nullopt;
+    }
+    return type_cast<T>(all_type_variant);
   }
+
+ protected:
+  const ReferenceColumn& _column;
 };
 
 template <typename T>
