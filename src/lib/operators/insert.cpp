@@ -197,7 +197,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
           }
 
           Logger::get().log_value(context->transaction_id(), _target_table_name,
-                                          RowID{target_chunk_id, target_start_index + row_index}, row_values);
+                                  RowID{target_chunk_id, target_start_index + row_index}, row_values);
         }
       }
 
