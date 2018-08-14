@@ -1,6 +1,5 @@
 #include "logger.hpp"
 
-#include "utils/filesystem.hpp"
 #include <boost/range.hpp>
 #include <boost/range/algorithm/reverse.hpp>
 
@@ -10,6 +9,7 @@
 #include <algorithm>
 #include <sstream>
 
+#include "utils/filesystem.hpp"
 #include "abstract_logger.hpp"
 #include "group_commit_logger.hpp"
 #include "no_logger.hpp"
