@@ -6,7 +6,10 @@
 #include "cost_model_calibration.hpp"
 #include "query/calibration_query_generator.hpp"
 #include "sql/sql_pipeline_builder.hpp"
+#include "operators/table_scan.hpp"
+#include "storage/base_encoded_column.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/reference_column.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/load_table.hpp"
@@ -43,7 +46,7 @@ void CostModelCalibration::calibrate() {
     auto queries = CalibrationQueryGenerator::generate_queries(_configuration.table_specifications);
 
     for (const auto& query : queries) {
-      std::cout << "Running " << query << std::endl;
+//      std::cout << "Running " << query << std::endl;
       auto pipeline_builder = SQLPipelineBuilder{query};
       pipeline_builder.dont_cleanup_temporaries();
       auto pipeline = pipeline_builder.create_pipeline();
@@ -124,9 +127,31 @@ void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOp
     };
 
     if (description == "TableScan") {
-      // Feature Encoding
-//      auto left_input_table = op->input_table_left();
-//      auto scan_column = left_input_table->get_chunk(ChunkID{0})->
+      auto left_input_table = op->input_table_left();
+      auto table_scan_op = std::static_pointer_cast<const TableScan>(op);
+      auto chunk_count = left_input_table->chunk_count();
+
+      if (chunk_count > ChunkID{0}) {
+        auto scan_column = left_input_table->get_chunk(ChunkID{0})->get_column(table_scan_op->left_column_id());
+
+        auto scan_column_data_type = scan_column->data_type();
+        auto scan_column_memory_usage_bytes = scan_column->estimate_memory_usage();
+
+        auto reference_column = std::dynamic_pointer_cast<ReferenceColumn>(scan_column);
+        operator_result["is_scan_column_reference_column"] = reference_column ? true : false;
+
+        auto encoded_scan_column = std::dynamic_pointer_cast<BaseEncodedColumn>(scan_column);
+        if (encoded_scan_column) {
+          operator_result["scan_column_encoding"] = encoded_scan_column->encoding_type();
+        } else {
+          operator_result["scan_column_encoding"] = EncodingType::Unencoded;
+        }
+        operator_result["scan_column_data_type"] = scan_column_data_type;
+        operator_result["scan_column_memory_usage_bytes"] = scan_column_memory_usage_bytes;
+      } else {
+        // We are not interested in TableScans with empty inputs - are we?
+        return;
+      }
     } else if (description == "Projection") {
       // Feature Column Counts
       auto num_input_columns = op->input_table_left()->column_count();
@@ -137,7 +162,6 @@ void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOp
     }
 
     _operators[description].push_back(operator_result);
-//    _operators.push_back(operator_result);
   }
 }
 
