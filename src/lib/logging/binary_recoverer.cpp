@@ -23,6 +23,13 @@ std::string BinaryRecoverer::_read(std::ifstream& file) {
   return result;
 }
 
+template <>
+RowID BinaryRecoverer::_read(std::ifstream& file) {
+  auto chunk_id = _read<ChunkID>(file);
+  auto chunk_offset = _read<ChunkOffset>(file);
+  return RowID(chunk_id, chunk_offset);
+}
+
 AllTypeVariant BinaryRecoverer::_read_AllTypeVariant(std::ifstream& file, DataType data_type) {
   AllTypeVariant value;
   switch (data_type) {
@@ -105,11 +112,7 @@ void BinaryRecoverer::recover() {
 
       auto table_name = _read<std::string>(log_file);
 
-      auto chunk_id = _read<ChunkID>(log_file);
-
-      auto chunk_offset = _read<ChunkOffset>(log_file);
-
-      RowID row_id(chunk_id, chunk_offset);
+      auto row_id = _read<RowID>(log_file);
 
       // if invalidation entry
       if (log_type == 'i') {
