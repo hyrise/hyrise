@@ -46,7 +46,7 @@ void CostModelCalibration::calibrate() {
     auto queries = CalibrationQueryGenerator::generate_queries(_configuration.table_specifications);
 
     for (const auto& query : queries) {
-//      std::cout << "Running " << query << std::endl;
+      std::cout << "Running " << query << std::endl;
       auto pipeline_builder = SQLPipelineBuilder{query};
       pipeline_builder.dont_cleanup_temporaries();
       auto pipeline = pipeline_builder.create_pipeline();
@@ -98,9 +98,7 @@ void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOp
     auto left_input_row_count = (op->input_left()) ? op->input_left()->get_output()->row_count() : 0;
     auto right_input_row_count = (op->input_right()) ? op->input_right()->get_output()->row_count() : 0;
     auto left_input_chunk_count = (op->input_left()) ? op->input_left()->get_output()->chunk_count() : 0;
-//    auto right_input_chunk_count = (op->input_right()) ? op->input_right()->get_output()->chunk_count() : 0;
     auto left_input_memory_usage = (op->input_left()) ? op->input_left()->get_output()->estimate_memory_usage() : 0;
-//    auto right_input_memory_usage = (op->input_right()) ? op->input_right()->get_output()->estimate_memory_usage() : 0;
 
     // Output
     auto output_row_count = output->row_count();
@@ -111,19 +109,16 @@ void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOp
 //    auto output_memory_usage = output->estimate_memory_usage();
 
     nlohmann::json operator_result{
-//            {"operator_type", description},
             {"execution_time_ns", execution_time_ns},
             {"output_row_count", output_row_count},
             {"output_selectivity", output_selectivity},
             {"left_input_row_count", left_input_row_count},
             {"left_input_chunk_count", left_input_chunk_count},
-//            {"right_input_row_count", right_input_row_count},
-//            {"right_input_chunk_count", right_input_chunk_count},
             // strong-typedef ChunkID is not JSON-compatible, get underlying value here
 //            {"output_chunk_count", output_chunk_count.t},
 //            {"output_memory_usage_bytes", output_memory_usage},
             {"left_input_memory_usage_bytes", left_input_memory_usage},
-//            {"right_input_memory_usage_bytes", right_input_memory_usage},
+
     };
 
     if (description == "TableScan") {
@@ -138,14 +133,21 @@ void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOp
         auto scan_column_memory_usage_bytes = scan_column->estimate_memory_usage();
 
         auto reference_column = std::dynamic_pointer_cast<ReferenceColumn>(scan_column);
+        // TODO: All TableScans operate on ReferenceColumns
         operator_result["is_scan_column_reference_column"] = reference_column ? true : false;
 
-        auto encoded_scan_column = std::dynamic_pointer_cast<BaseEncodedColumn>(scan_column);
-        if (encoded_scan_column) {
-          operator_result["scan_column_encoding"] = encoded_scan_column->encoding_type();
-        } else {
-          operator_result["scan_column_encoding"] = EncodingType::Unencoded;
+        // Dereference ReferenceColumn for detailed features
+        if (reference_column && reference_column->referenced_table()->chunk_count() > ChunkID{0}) {
+          auto underlying_column = reference_column->referenced_table()->get_chunk(ChunkID{0})->get_column(reference_column->referenced_column_id());
+          auto encoded_scan_column = std::dynamic_pointer_cast<const BaseEncodedColumn>(underlying_column);
+          if (encoded_scan_column) {
+            std::cout << "Facing encoded column " << std::endl;
+            operator_result["scan_column_encoding"] = encoded_scan_column->encoding_type();
+          } else {
+            operator_result["scan_column_encoding"] = EncodingType::Unencoded;
+          }
         }
+
         operator_result["scan_column_data_type"] = scan_column_data_type;
         operator_result["scan_column_memory_usage_bytes"] = scan_column_memory_usage_bytes;
       } else {
@@ -159,6 +161,13 @@ void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOp
 
       operator_result["input_column_count"] = num_input_columns;
       operator_result["output_column_count"] = num_output_columns;
+    } else if (description == "JoinHash") {
+      auto right_input_chunk_count = (op->input_right()) ? op->input_right()->get_output()->chunk_count() : 0;
+      auto right_input_memory_usage = (op->input_right()) ? op->input_right()->get_output()->estimate_memory_usage() : 0;
+
+      operator_result["right_input_memory_usage_bytes"] = right_input_memory_usage;
+      operator_result["right_input_row_count"] = right_input_row_count;
+      operator_result["right_input_chunk_count"] = right_input_chunk_count;
     }
 
     _operators[description].push_back(operator_result);
