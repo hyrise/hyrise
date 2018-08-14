@@ -17,8 +17,7 @@ This contains the tests for the JoinHash implementation.
 class JoinHashTest : public BaseTest {
  protected:
   void SetUp() override {
-    _table_wrapper_small =
-        std::make_shared<TableWrapper>(load_table("src/test/tables/joinoperators/anti_int4.tbl", 2));
+    _table_wrapper_small = std::make_shared<TableWrapper>(load_table("src/test/tables/joinoperators/anti_int4.tbl", 2));
     _table_wrapper_small->execute();
   }
 
