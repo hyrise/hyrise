@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../jit_types.hpp"
 #include "abstract_jittable.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table.hpp"
@@ -76,7 +77,7 @@ class JitReadTuples : public AbstractJittable {
         context.tuple.set<DataType>(_tuple_value.tuple_index(), value.value());
       }
       // Non-jit operators store bool values as int values
-      if constexpr (std::is_same_v<DataType, int32_t>) {
+      if constexpr (std::is_same_v<DataType, Bool>) {
         context.tuple.set<bool>(_tuple_value.tuple_index(), value.value());
       }
       // clang-format on

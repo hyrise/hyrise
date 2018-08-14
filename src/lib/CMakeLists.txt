@@ -502,6 +502,7 @@ set(
     utils/invalid_input_exception.hpp
     utils/load_table.cpp
     utils/load_table.hpp
+    utils/make_bimap.hpp
     utils/murmur_hash.cpp
     utils/murmur_hash.hpp
     utils/numa_memory_resource.cpp
@@ -554,6 +555,8 @@ if (${ENABLE_JIT_SUPPORT})
         SOURCES
         logical_query_plan/jit_aware_lqp_translator.cpp
         logical_query_plan/jit_aware_lqp_translator.hpp
+        operators/jit_operator/jit_constant_mappings.cpp
+        operators/jit_operator/jit_constant_mappings.hpp
         operators/jit_operator/specialization/jit_compiler.cpp
         operators/jit_operator/specialization/jit_compiler.hpp
         operators/jit_operator/specialization/jit_code_specializer.cpp

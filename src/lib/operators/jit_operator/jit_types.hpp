@@ -13,13 +13,7 @@ namespace opossum {
 
 // Functions using strings are not optimized to support code specialization on Linux.
 // This specialiation issue came up with pr #933 (https://github.com/hyrise/hyrise/pull/933).
-// Conditionally define optnone flag to ensure that functions handling strings are not optimized.
-// Clang supports optnone flag. GCC does not support it.
-#if __has_attribute(optnone)
-#define OPTNONE __attribute__((optnone))
-#else
-#define OPTNONE
-#endif
+// The flag __attribute__((optnone)) ensures that clang does not optimize these functions.
 
 // We need a boolean data type in the JitOperatorWrapper, but don't want to add it to
 // DATA_TYPE_INFO to avoid costly template instantiations.
@@ -28,6 +22,10 @@ namespace opossum {
 
 #define JIT_VARIANT_VECTOR_MEMBER(r, d, type) \
   std::vector<BOOST_PP_TUPLE_ELEM(3, 0, type)> BOOST_PP_TUPLE_ELEM(3, 1, type);
+
+// Expression uses int32_t to store booleans (see src/lib/expression/evaluation/expression_evaluator.hpp)
+using Bool = int32_t;
+static constexpr auto DataTypeBool = DataType::Int;
 
 /* A brief overview of the type system and the way values are handled in the JitOperatorWrapper:
  *
@@ -85,11 +83,11 @@ class JitVariantVector {
   void resize(const size_t new_size);
 
   template <typename T, typename = typename std::enable_if_t<!std::is_scalar_v<T>>>
-  OPTNONE std::string get(const size_t index) const;
+  __attribute__((optnone)) std::string get(const size_t index) const;
   template <typename T, typename = typename std::enable_if_t<std::is_scalar_v<T>>>
   T get(const size_t index) const;
   template <typename T, typename = typename std::enable_if_t<!std::is_scalar_v<T>>>
-  OPTNONE void set(const size_t index, const std::string& value);
+  __attribute__((optnone)) void set(const size_t index, const std::string& value);
   template <typename T, typename = typename std::enable_if_t<std::is_scalar_v<T>>>
   void set(const size_t index, const T& value);
   bool is_null(const size_t index);
@@ -203,7 +201,7 @@ class JitHashmapValue {
   size_t column_index() const;
 
   template <typename T, typename = typename std::enable_if_t<!std::is_scalar_v<T>>>
-  OPTNONE std::string get(const size_t index, JitRuntimeContext& context) const {
+  __attribute__((optnone)) std::string get(const size_t index, JitRuntimeContext& context) const {
     return context.hashmap.columns[_column_index].get<std::string>(index);
   }
   template <typename T, typename = typename std::enable_if_t<std::is_scalar_v<T>>>
@@ -211,7 +209,7 @@ class JitHashmapValue {
     return context.hashmap.columns[_column_index].get<T>(index);
   }
   template <typename T, typename = typename std::enable_if_t<!std::is_scalar_v<T>>>
-  OPTNONE void set(const std::string& value, const size_t index, JitRuntimeContext& context) const {
+  __attribute__((optnone)) void set(const std::string& value, const size_t index, JitRuntimeContext& context) const {
     context.hashmap.columns[_column_index].set<std::string>(index, value);
   }
   template <typename T, typename = typename std::enable_if_t<std::is_scalar_v<T>>>
@@ -256,7 +254,6 @@ enum class JitExpressionType {
 bool jit_expression_is_binary(const JitExpressionType expression_type);
 
 // cleanup
-#undef OPTNONE
 #undef JIT_VARIANT_VECTOR_MEMBER
 #undef JIT_VARIANT_VECTOR_RESIZE
 

@@ -78,26 +78,26 @@ TEST_F(JitAggregateTest, AddsAggregateColumnsToOutputTable) {
 }
 
 // Check, that aggregates on invalid data types are rejected.
-// Test case is only run in debug as checks are DebugAsserts, which are not present in release.
-#if IS_DEBUG
 TEST_F(JitAggregateTest, InvalidAggregatesAreRejected) {
-  EXPECT_THROW(
-      _aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::String, false, 0), AggregateFunction::Avg),
-      std::logic_error);
-  EXPECT_THROW(
-      _aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::String, true, 0), AggregateFunction::Sum),
-      std::logic_error);
-  EXPECT_THROW(
-      _aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::Null, false, 0), AggregateFunction::Min),
-      std::logic_error);
-  EXPECT_THROW(
-      _aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::Null, true, 0), AggregateFunction::Max),
-      std::logic_error);
-  EXPECT_THROW(_aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::Int, false, 0),
-                                                AggregateFunction::CountDistinct),
-               std::logic_error);
+  // Test case is only run in debug mode as checks are DebugAsserts, which are not present in release mode.
+  if constexpr (IS_DEBUG) {
+    EXPECT_THROW(
+        _aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::String, false, 0), AggregateFunction::Avg),
+        std::logic_error);
+    EXPECT_THROW(
+        _aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::String, true, 0), AggregateFunction::Sum),
+        std::logic_error);
+    EXPECT_THROW(
+        _aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::Null, false, 0), AggregateFunction::Min),
+        std::logic_error);
+    EXPECT_THROW(
+        _aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::Null, true, 0), AggregateFunction::Max),
+        std::logic_error);
+    EXPECT_THROW(_aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::Int, false, 0),
+                                                  AggregateFunction::CountDistinct),
+                 std::logic_error);
+  }
 }
-#endif
 
 // Check, that any order of groupby and aggregates columns is reflected in the output table.
 TEST_F(JitAggregateTest, MaintainsColumnOrderInOutputTable) {

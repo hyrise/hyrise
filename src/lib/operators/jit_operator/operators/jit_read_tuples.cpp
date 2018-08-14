@@ -1,8 +1,8 @@
 #include "jit_read_tuples.hpp"
 
-#include "constant_mappings.hpp"
 #include "resolve_type.hpp"
 #include "storage/create_iterable_from_column.hpp"
+#include "../jit_types.hpp"
 
 namespace opossum {
 
@@ -25,12 +25,13 @@ void JitReadTuples::before_query(const Table& in_table, JitRuntimeContext& conte
   // Copy all input literals to the runtime tuple
   for (const auto& input_literal : _input_literals) {
     auto data_type = input_literal.tuple_value.data_type();
+    // If data_type is null, there is nothing to do as is_null() check on null check will always return true
     if (data_type != DataType::Null) {
       resolve_data_type(data_type, [&](auto type) {
         using DataType = typename decltype(type)::type;
         context.tuple.set<DataType>(input_literal.tuple_value.tuple_index(), boost::get<DataType>(input_literal.value));
         // Non-jit operators store bool values as int values
-        if constexpr (std::is_same_v<DataType, int32_t>) {
+        if constexpr (std::is_same_v<DataType, Bool>) {
           context.tuple.set<bool>(input_literal.tuple_value.tuple_index(), boost::get<DataType>(input_literal.value));
         }
       });
