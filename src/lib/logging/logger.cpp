@@ -52,9 +52,11 @@ AbstractLogger& Logger::getInstance() {
 }
 
 void Logger::setup(std::string folder, const Implementation implementation) {
-  DebugAssert(_implementation == Implementation::No, "Logger: changing folder but may have open file handle.");
+  DebugAssert(_implementation == Implementation::No, "Logger: Trying to setup logging that has already been setup");
   DebugAssert(folder.length() > 0, "Logger: empty string is no folder");
-  DebugAssert(folder[folder.size() - 1] == '/', "Logger: expected '/' at end of path");
+  if (folder[folder.size() - 1] != '/') {
+    folder += '/';
+  }
 
   _data_path = folder;
   _log_path = _data_path + _log_folder;
