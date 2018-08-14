@@ -184,7 +184,7 @@ Hashes the given value into the HashedType that is defined by the current Hash T
 Performs a lexical cast first, if necessary.
 */
 template <typename OriginalType, typename HashedType>
-constexpr uint32_t hash_value(const OriginalType& value, const unsigned int seed) {
+constexpr Hash hash_value(const OriginalType& value, const unsigned int seed) {
   // clang-format off
   // doesn't deal with constexpr nicely
   if constexpr(!std::is_same_v<OriginalType, HashedType>) {
@@ -246,7 +246,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
 
         iterable.for_each([&, chunk_id, keep_nulls](const auto& value) {
           if (!value.is_null() || keep_nulls) {
-            const uint32_t hashed_value = hash_value<T, HashedType>(value.value(), partitioning_seed);
+            const Hash hashed_value = hash_value<T, HashedType>(value.value(), partitioning_seed);
 
             /*
             For ReferenceColumns we do not use the RowIDs from the referenced tables.
