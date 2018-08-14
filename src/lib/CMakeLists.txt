@@ -367,7 +367,6 @@ set(
     storage/column_iterables/chunk_offset_mapping.cpp
     storage/column_iterables/chunk_offset_mapping.hpp
     storage/column_iterables/column_iterator_values.hpp
-    storage/column_iterables/constant_value_iterable.hpp
     storage/column_iterables/create_iterable_from_attribute_vector.hpp
     storage/column_iterables.hpp
     storage/abstract_column_visitor.hpp
