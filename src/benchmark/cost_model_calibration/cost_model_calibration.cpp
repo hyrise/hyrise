@@ -22,7 +22,9 @@ CostModelCalibration::CostModelCalibration(const CalibrationConfiguration config
   const auto table_specifications = configuration.table_specifications;
 
   for (const auto& table_specification : table_specifications) {
-    auto table = load_table(table_specification.table_path, 1000);
+    std::cout << "Loading table " << table_specification.table_name << std::endl;
+    auto table = load_table(table_specification.table_path, 100000);
+    std::cout << "Loaded table " << table_specification.table_name << " successfully." << std::endl;
 
     ChunkEncodingSpec chunk_spec;
 
@@ -34,7 +36,7 @@ CostModelCalibration::CostModelCalibration(const CalibrationConfiguration config
     ChunkEncoder::encode_all_chunks(table, chunk_spec);
     StorageManager::get().add_table(table_specification.table_name, table);
 
-    std::cout << "Loaded table " << table_specification.table_name << " successfully." << std::endl;
+    std::cout << "Encoded table " << table_specification.table_name << " successfully." << std::endl;
   }
 }
 
@@ -100,6 +102,8 @@ void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOp
     auto left_input_chunk_count = (op->input_left()) ? op->input_left()->get_output()->chunk_count() : 0;
     auto left_input_memory_usage = (op->input_left()) ? op->input_left()->get_output()->estimate_memory_usage() : 0;
 
+    auto left_input_chunk_size = (op->input_left()) ? op->input_left()->get_output()->max_chunk_size() : 0;
+
     // Output
     auto output_row_count = output->row_count();
     // Calculate cross-join cardinality. Use 1 for cases, in which one side is empty to avoid divisions by zero in the next step
@@ -118,7 +122,7 @@ void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOp
 //            {"output_chunk_count", output_chunk_count.t},
 //            {"output_memory_usage_bytes", output_memory_usage},
             {"left_input_memory_usage_bytes", left_input_memory_usage},
-
+            {"left_input_chunk_size", left_input_chunk_size},
     };
 
     if (description == "TableScan") {
@@ -141,7 +145,6 @@ void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOp
           auto underlying_column = reference_column->referenced_table()->get_chunk(ChunkID{0})->get_column(reference_column->referenced_column_id());
           auto encoded_scan_column = std::dynamic_pointer_cast<const BaseEncodedColumn>(underlying_column);
           if (encoded_scan_column) {
-            std::cout << "Facing encoded column " << std::endl;
             operator_result["scan_column_encoding"] = encoded_scan_column->encoding_type();
           } else {
             operator_result["scan_column_encoding"] = EncodingType::Unencoded;
@@ -164,7 +167,9 @@ void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOp
     } else if (description == "JoinHash") {
       auto right_input_chunk_count = (op->input_right()) ? op->input_right()->get_output()->chunk_count() : 0;
       auto right_input_memory_usage = (op->input_right()) ? op->input_right()->get_output()->estimate_memory_usage() : 0;
+      auto right_input_chunk_size = (op->input_right()) ? op->input_right()->get_output()->max_chunk_size() : 0;
 
+      operator_result["right_input_chunk_size"] = right_input_chunk_size;
       operator_result["right_input_memory_usage_bytes"] = right_input_memory_usage;
       operator_result["right_input_row_count"] = right_input_row_count;
       operator_result["right_input_chunk_count"] = right_input_chunk_count;

@@ -17,10 +17,8 @@ namespace opossum {
       std::vector<std::string> queries;
 
       for (const auto & table_definition : table_definitions) {
-//        std::cout << "Generating queries for " << table_definition.table_name << std::endl;
-
-// TODO: Add queries for Aggregates, Joins
-        queries.push_back(CalibrationQueryGenerator::_generate_table_scans(table_definition));
+        queries.push_back(CalibrationQueryGenerator::_generate_aggregate(table_definition));
+        queries.push_back(CalibrationQueryGenerator::_generate_table_scan(table_definition));
       }
 
       auto join_queries = CalibrationQueryGenerator::_generate_join(table_definitions);
@@ -60,7 +58,49 @@ namespace opossum {
       return queries;
     }
 
-    const std::string CalibrationQueryGenerator::_generate_table_scans(const CalibrationTableSpecification& table_definition) {
+    const std::string CalibrationQueryGenerator::_generate_aggregate(const CalibrationTableSpecification& table_definition) {
+      std::random_device random_device;
+      std::mt19937 engine{random_device()};
+
+      auto string_template = "SELECT COUNT(*) FROM %1% WHERE %2%;";
+      auto predicate_template =  "%1% %2% %3%";
+
+      auto table_name = table_definition.table_name;
+
+      auto column_definitions = table_definition.columns;
+
+      std::uniform_int_distribution<size_t> number_of_predicates_dist(1, 5);
+      auto number_of_predicates = number_of_predicates_dist(engine);
+
+      std::stringstream predicate_stream;
+
+      std::uniform_int_distribution<long> filter_column_dist(0, column_definitions.size() - 1);
+      for (size_t i = 0; i < number_of_predicates; i++) {
+        auto filter_column = std::next(column_definitions.begin(), filter_column_dist(engine));
+        auto filter_column_name = filter_column->first;
+        auto filter_column_value = _generate_table_scan_predicate(filter_column->second);
+
+        // We only want to measure various selectivities.
+        // It shouldn't be that important whether we have Point or Range Lookups.
+        // Isn't it?
+
+        // At the same time this makes sure that the probability of having empty intermediate results is reduced.
+        auto predicate_sign = "<=";
+        predicate_stream << boost::str(boost::format(predicate_template) % filter_column_name % predicate_sign % filter_column_value);
+
+        if (i < number_of_predicates - 1) {
+          predicate_stream << " AND ";
+        }
+      }
+
+      auto filter_column = std::next(column_definitions.begin(), filter_column_dist(engine));
+      auto filter_column_name = filter_column->first;
+      auto filter_column_value = _generate_table_scan_predicate(filter_column->second);
+
+      return boost::str(boost::format(string_template) % table_name % predicate_stream.str());
+    }
+
+    const std::string CalibrationQueryGenerator::_generate_table_scan(const CalibrationTableSpecification& table_definition) {
       std::random_device random_device;
       std::mt19937 engine{random_device()};
 
@@ -78,13 +118,17 @@ namespace opossum {
       std::stringstream predicate_stream;
 
       std::uniform_int_distribution<long> filter_column_dist(0, column_definitions.size() - 1);
-      std::uniform_int_distribution<int> equality_dist(0, 1);
       for (size_t i = 0; i < number_of_predicates; i++) {
         auto filter_column = std::next(column_definitions.begin(), filter_column_dist(engine));
         auto filter_column_name = filter_column->first;
         auto filter_column_value = _generate_table_scan_predicate(filter_column->second);
 
-        auto predicate_sign = equality_dist(engine) == 1 ? "=" : "<";
+        // We only want to measure various selectivities.
+        // It shouldn't be that important whether we have Point or Range Lookups.
+        // Isn't it?
+
+        // At the same time this makes sure that the probability of having empty intermediate results is reduced.
+        auto predicate_sign = "<=";
         predicate_stream << boost::str(boost::format(predicate_template) % filter_column_name % predicate_sign % filter_column_value);
 
         if (i < number_of_predicates - 1) {
