@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "storage/storage_manager.hpp"
+#include "utils/singleton.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -13,14 +14,8 @@ namespace opossum {
     return plugin;                                                    \
   }
 
-class AbstractPlugin : private Noncopyable {
- protected:
-  AbstractPlugin() {}
-  AbstractPlugin& operator=(AbstractPlugin&&) = default;
-
+class AbstractPlugin {
  public:
-  static AbstractPlugin* get() { throw std::runtime_error("Every plugin needs to overwrite Plugin::get()"); }
-
   virtual const std::string description() const = 0;
 
   virtual void start() const = 0;

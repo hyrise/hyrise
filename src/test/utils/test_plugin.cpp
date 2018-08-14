@@ -3,16 +3,13 @@
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/abstract_plugin.hpp"
+#include "utils/singleton.hpp"
+
 
 namespace opossum {
 
-class TestPlugin : public AbstractPlugin {
+class TestPlugin : public AbstractPlugin, public Singleton<TestPlugin> {
  public:
-  static AbstractPlugin& get() {
-    static TestPlugin instance;
-    return instance;
-  }
-
   const std::string description() const override { return "This is the Hyrise TestPlugin"; }
 
   void start() const override {
