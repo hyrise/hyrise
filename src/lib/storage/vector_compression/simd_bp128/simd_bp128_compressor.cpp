@@ -1,7 +1,5 @@
 #include "simd_bp128_compressor.hpp"
 
-#include <emmintrin.h>
-
 #include <algorithm>
 #include <array>
 
