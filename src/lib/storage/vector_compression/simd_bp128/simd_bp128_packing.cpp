@@ -2,9 +2,9 @@
 
 #ifdef __SSE2__
 #include <emmintrin.h>
-typedef __m128i simd_type;
+using simd_type = __m128i;
 #else
-typedef unsigned int __attribute__((vector_size(16))) simd_type;
+using simd_type = unsigned int __attribute__((vector_size(16)));
 #endif
 
 #include <algorithm>
