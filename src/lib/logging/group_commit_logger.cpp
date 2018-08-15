@@ -267,7 +267,8 @@ GroupCommitLogger::GroupCommitLogger()
 
   _open_logfile();
 
-  _flush_thread = std::make_unique<LoopThread>(LOG_INTERVAL, [this]() { GroupCommitLogger::log_flush(); });
+  _flush_thread = std::make_unique<PausableLoopThread>(LOG_INTERVAL, [this](size_t count) { GroupCommitLogger::log_flush(); });
+  _flush_thread->resume();
 }
 
 }  // namespace opossum

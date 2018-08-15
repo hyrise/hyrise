@@ -5,7 +5,7 @@
 
 #include "abstract_logger.hpp"
 #include "types.hpp"
-#include "utils/loop_thread.hpp"
+#include "utils/pausable_loop_thread.hpp"
 
 namespace opossum {
 
@@ -54,7 +54,7 @@ class GroupCommitLogger : public AbstractLogger {
   std::mutex _file_mutex;
   std::fstream _log_file;
 
-  std::unique_ptr<LoopThread> _flush_thread;
+  std::unique_ptr<PausableLoopThread> _flush_thread;
 };
 
 }  // namespace opossum
