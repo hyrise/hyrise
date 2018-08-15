@@ -10,6 +10,7 @@
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "storage/table.hpp"
+#include "utils/singleton.hpp"
 
 namespace opossum {
 
@@ -20,18 +21,12 @@ class TransactionContext;
  * Can load TPCC tables via "generate TABLENAME" command, and can execute SQL statements based on
  * opossum::SqlQueryTranslator.
  */
-class Console {
+class Console : public Singleton<Console> {
  public:
   using CommandFunction = std::function<int(const std::string&)>;
   using RegisteredCommands = std::unordered_map<std::string, CommandFunction>;
 
   enum ReturnCode { Multiline = -2, Quit = -1, Ok = 0, Error = 1 };
-
-  // Singleton
-  inline static Console& get() {
-    static Console instance;
-    return instance;
-  }
 
   /*
    * Prompts user for one line of input, evaluates the given input, and prints out the result.
@@ -93,6 +88,8 @@ class Console {
    * Non-public constructor, since Console is a Singleton.
    */
   Console();
+
+  friend class Singleton;
 
   /*
    * Evaluates given input string. Calls either _eval_command or _eval_sql.
