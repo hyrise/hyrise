@@ -26,7 +26,7 @@ class PluginManager : public Singleton<PluginManager> {
   }
 
   void load_plugin(const std::string& path, const PluginName& name);
-  void stop_plugin(const PluginName& name, bool should_erase = true);
+  void stop_plugin(const PluginName& name);
 
   ~PluginManager();
 

@@ -52,12 +52,12 @@ void PluginManager::load_plugin(const std::string& path, const PluginName& name)
 
 void PluginManager::reset() { get() = PluginManager(); }
 
-void PluginManager::stop_plugin(const PluginName& name, bool should_erase) {
+void PluginManager::stop_plugin(const PluginName& name) {
   auto plugin_handle_wrapper = _plugins.at(name);
   plugin_handle_wrapper.plugin->stop();
   dlclose(plugin_handle_wrapper.handle);
 
-  if (should_erase) _plugins.erase(name);
+  _plugins.erase(name);
 }
 
 void PluginManager::_clean_up() {
@@ -68,10 +68,8 @@ void PluginManager::_clean_up() {
 
   for (const auto& p : _plugins) {
     auto plugin_name = p.first;
-    stop_plugin(plugin_name, false);
+    stop_plugin(plugin_name);
   }
-
-  _plugins.clear();
 }
 
 PluginManager::~PluginManager() { _clean_up(); }
