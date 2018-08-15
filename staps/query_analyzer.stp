@@ -11,11 +11,13 @@ global task_list
 global operator_task_list
 global operator_statistics
 global operator_name
+global times
 
 global counter = 0
 
 // If debug is enabled, the executed operators will be printed immidiately to the console
 global debug = 0
+
 
 probe begin
 {
@@ -39,40 +41,47 @@ probe process(@1).provider("HYRISE").mark("PIPELINE_CREATION_DONE")
 {
     creation_time = gettimeofday_us() - pipeline_creation_time[$arg3]
     printf("\nSQL parsed within %i μs\n"
-           "Command contains %i statement(s)\n"
+           "Statement contains %i statement(s)\n"
            "Overall pipeline creation time: %i μs\n\n", parsing_time[user_string($arg2)], $arg1, creation_time);
 }
 
 // This probe gets executed as soon as a query fully executed
 probe process(@1).provider("HYRISE").mark("SUMMARY")
 {
-    printf("\n================================================================\n"
-           "SUMMARY:\nQuery: %s\n"
-           "----------------------------------------------------------------\n"
-           "\tTranslation time: %i μs\n"
-           "\tOptimization time: %i μs\n"
-           "\tCompile time: %i μs\n"
-           "\tQuery plan cached: %s\n"
-           "\tAmount of tasks scheduled: %i\n"
-           "\tQuery execution time: %i μs\n"
-          " \tOperator execution times (preserved order):\n"
-           , user_string($arg1), $arg2, $arg3, $arg4, $arg6 ? "yes" : "no", $arg7, $arg5
-        )
-
     tasks_for_specific_id = tasks_per_statement[$arg8]
+        printf("\n================================================================\n"
+               "SUMMARY:\nQuery: %s\n"
+               "----------------------------------------------------------------\n"
+               "\tTranslation time: %s μs\n"
+               "\tOptimization time: %i μs\n"
+               "\tLQP translation time: %i μs\n"
+               "\tQuery plan cached: %s\n"
+               "\tAmount of tasks initially scheduled: %i\n"
+               "\tQuery execution time: %i μs\n"
+               "\tOperator execution times (preserved order):\n"
+               , user_string($arg1), $arg2, $arg3, $arg4, $arg6 ? "yes" : "no", $arg7, $arg5
+            )
 
-    // Since we have to use a map and iterate over it, performance might go down after a certain time
-    foreach (task_id = [tid, counter+] in task_list) {
-        if (tasks_for_specific_id == tid) {
-            operator_id = operator_task_list[task_id]
-            printf("\t\t%s: %i μs        Fetched %i row(s) / %i chunk(s)\n", 
-                operator_name[operator_id],
-                operator_statistics[operator_id, "runtime"],
-                operator_statistics[operator_id, "rows"],
-                operator_statistics[operator_id, "chunks"])
+        // Since we have to use a map and iterate over it, performance might go down after a certain time
+        foreach (task_id = [tid, counter+] in task_list) {
+            if (tasks_for_specific_id == tid) {
+                operator_id = operator_task_list[task_id]
+                printf("\t\t%s: %i μs        Fetched %i row(s) / %i chunk(s)\n", 
+                    operator_name[operator_id],
+                    operator_statistics[operator_id, "runtime"],
+                    operator_statistics[operator_id, "rows"],
+                    operator_statistics[operator_id, "chunks"])
+                times[operator_name[operator_id]] <<< operator_statistics[operator_id, "runtime"]
+            }
         }
-    }
-    printf("================================================================\n\n")
+
+        println("\nSum of execution time per operator:")
+        foreach (time in times) {
+            printf("\t%s execution time: %i μs (%i times called)\n", time, @sum(times[time]), @count(times[time]))
+        }
+
+        delete times[operator_name[operator_id]]
+        printf("================================================================\n\n")
 }
 
 

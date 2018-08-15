@@ -513,6 +513,8 @@ set(
     utils/template_type.hpp
     utils/timer.cpp
     utils/timer.hpp
+    utils/tracing/provider.h
+    utils/tracing/probe_definitions.hpp
     ${CMAKE_BINARY_DIR}/version.hpp
 )
 
@@ -579,6 +581,18 @@ endif()
 if (${ENABLE_NUMA_SUPPORT})
     set(LIBRARIES ${LIBRARIES} ${NUMA_LIBRARY} hpinuma_msource_s)
 endif()
+
+# Generate a macro file containing probe definitions for dtrace users. As soon as a probe is not present
+# in `provider.h` a compile error would be thrown. With this ugly solution we can avoid this.
+execute_process (
+    COMMAND grep -r --include=*.[ch]pp --exclude=systemtap.hpp -h DTRACE_PROBE ${CMAKE_SOURCE_DIR}
+    COMMAND cut -d "(" -f2
+    COMMAND cut -d ")" -f1
+    COMMAND cut -d "," -f1-2
+    COMMAND sed "s/, /_/"
+    COMMAND xargs -n 1 bash -c "echo \"#ifndef $0 \n#define $0(...) \n#endif\""
+    OUTPUT_FILE ${CMAKE_SOURCE_DIR}/src/lib/utils/tracing/probe_definitions.hpp
+)
 
 # Configure the regular hyrise library used for tests/server/playground...
 add_library(hyrise STATIC ${SOURCES})
