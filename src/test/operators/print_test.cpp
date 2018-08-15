@@ -184,7 +184,7 @@ TEST_F(OperatorsPrintTest, TruncateLongValueInOutput) {
   EXPECT_TRUE(output_string.find(manual_substring) != std::string::npos);
 }
 
-TEST_F(OperatorsPrintTest, EmptyChunkFlagTest) {
+TEST_F(OperatorsPrintTest, EmptyChunkFlag) {
   auto print_wrap = PrintWrapper(gt, output, 1);
   print_wrap.execute();
   auto output_string = output.str();
@@ -194,10 +194,7 @@ TEST_F(OperatorsPrintTest, EmptyChunkFlagTest) {
   EXPECT_TRUE(output_string.find("MVCC") == std::string::npos);
 }
 
-TEST_F(OperatorsPrintTest, MVCCFlagTest) {
-  auto table = StorageManager::get().get_table(table_name);
-  table->append({0, "Zeier"});
-
+TEST_F(OperatorsPrintTest, MVCCFlag) {
   auto print_wrap = PrintWrapper(gt, output, 2);
   print_wrap.execute();
   auto output_string = output.str();
@@ -208,12 +205,29 @@ TEST_F(OperatorsPrintTest, MVCCFlagTest) {
   EXPECT_FALSE(print_wrap.is_printing_empty_chunks());
 }
 
-TEST_F(OperatorsPrintTest, AllFlagsTest) {
+TEST_F(OperatorsPrintTest, AllFlags) {
   auto print_wrap = PrintWrapper(gt, output, 3);
   print_wrap.execute();
 
   EXPECT_TRUE(print_wrap.is_printing_empty_chunks());
   EXPECT_TRUE(print_wrap.is_printing_mvcc_information());
+}
+
+TEST_F(OperatorsPrintTest, MVCCTableLoad) {
+  // per default, MVCC columns are created when loading tables
+  std::shared_ptr<TableWrapper> table = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
+  table->execute();
+
+  Print::print(table, 2, output);
+  auto output_string = output.str();
+
+  // MVCC header
+  EXPECT_TRUE(output_string.find("MVCC") != std::string::npos);
+  EXPECT_TRUE(output_string.find("_TID") != std::string::npos);
+  // chunk count of two (3 lines, chunk size 2)
+  EXPECT_TRUE(output_string.find("Chunk 1") != std::string::npos);
+  // MVCC tuple data (there is no '0' in the data loaded)
+  EXPECT_TRUE(output_string.find("0|") != std::string::npos);
 }
 
 TEST_F(OperatorsPrintTest, DirectInstantiations) {
