@@ -137,7 +137,7 @@ void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOp
         auto scan_column_memory_usage_bytes = scan_column->estimate_memory_usage();
 
         auto reference_column = std::dynamic_pointer_cast<ReferenceColumn>(scan_column);
-        // TODO: All TableScans operate on ReferenceColumns
+        // TODO: All TableScans operate on ReferenceColumns, feature might be irrelevant
         operator_result["is_scan_column_reference_column"] = reference_column ? true : false;
 
         // Dereference ReferenceColumn for detailed features

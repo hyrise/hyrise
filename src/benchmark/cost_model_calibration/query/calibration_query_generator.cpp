@@ -94,16 +94,20 @@ namespace opossum {
       std::random_device random_device;
       std::mt19937 engine{random_device()};
 
-      auto string_template = "SELECT COUNT(*) FROM %1% WHERE %2%;";
+      auto string_template = "SELECT COUNT(*) FROM %1% %2%;";
 
       auto table_name = table_definition.table_name;
 
       auto column_definitions = table_definition.columns;
 
-      std::uniform_int_distribution<size_t> number_of_predicates_dist(1, 5);
+      std::uniform_int_distribution<size_t> number_of_predicates_dist(0, 3);
       auto number_of_predicates = number_of_predicates_dist(engine);
 
       std::stringstream predicate_stream;
+
+      if (number_of_predicates > 0) {
+        predicate_stream << " WHERE ";
+      }
 
       for (size_t i = 0; i < number_of_predicates; i++) {
         predicate_stream << _generate_predicate(column_definitions);
@@ -127,7 +131,7 @@ namespace opossum {
 
       auto column_definitions = table_definition.columns;
 
-      std::uniform_int_distribution<size_t> number_of_predicates_dist(1, 5);
+      std::uniform_int_distribution<size_t> number_of_predicates_dist(1, 3);
       auto number_of_predicates = number_of_predicates_dist(engine);
 
       std::stringstream predicate_stream;
