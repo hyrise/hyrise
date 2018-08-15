@@ -28,8 +28,8 @@ namespace opossum {
     }
 
     const std::vector<std::string> CalibrationQueryGenerator::_generate_join(const std::vector<CalibrationTableSpecification>& table_definitions) {
-      // TODO: Add JOIN Predicate
-      auto string_template = "SELECT %1% FROM %2% l JOIN %3% r ON l.%4%=r.%5%;";
+      // Both Join Inputs are filtered randomly beforehand
+      auto string_template = "SELECT %1% FROM %2% l JOIN %3% r ON l.%4%=r.%5% WHERE %6% AND %7%;";
 
       std::vector<std::string> queries;
 
@@ -50,12 +50,46 @@ namespace opossum {
           auto left_join_column = "column_a";
           auto right_join_column = "column_a";
 
+          auto left_predicate = _generate_predicate(left_table.columns, "l.");
+          auto right_predicate = _generate_predicate(right_table.columns, "r.");
+
           auto select_columns = _generate_select_columns(columns);
-          queries.push_back(boost::str(boost::format(string_template) % select_columns % left_table.table_name % right_table.table_name % left_join_column % right_join_column));
+          queries.push_back(boost::str(
+                  boost::format(string_template)
+                  % select_columns
+                  % left_table.table_name
+                  % right_table.table_name
+                  % left_join_column
+                  % right_join_column
+                  % left_predicate
+                  % right_predicate));
         }
       }
 
       return queries;
+    }
+
+    const std::string CalibrationQueryGenerator::_generate_predicate(
+            const std::map<std::string, CalibrationColumnSpecification>& column_definitions,
+            const std::string column_name_prefix = ""
+            ) {
+      std::random_device random_device;
+      std::mt19937 engine{random_device()};
+      std::uniform_int_distribution<long> filter_column_dist(0, column_definitions.size() - 1);
+
+      auto predicate_template =  "%1% %2% %3%";
+
+      auto filter_column = std::next(column_definitions.begin(), filter_column_dist(engine));
+      auto filter_column_name = column_name_prefix + filter_column->first;
+      auto filter_column_value = _generate_table_scan_predicate_value(filter_column->second);
+
+      // We only want to measure various selectivities.
+      // It shouldn't be that important whether we have Point or Range Lookups.
+      // Isn't it?
+
+      // At the same time this makes sure that the probability of having empty intermediate results is reduced.
+      auto predicate_sign = "<=";
+      return boost::str(boost::format(predicate_template) % filter_column_name % predicate_sign % filter_column_value);
     }
 
     const std::string CalibrationQueryGenerator::_generate_aggregate(const CalibrationTableSpecification& table_definition) {
@@ -63,7 +97,6 @@ namespace opossum {
       std::mt19937 engine{random_device()};
 
       auto string_template = "SELECT COUNT(*) FROM %1% WHERE %2%;";
-      auto predicate_template =  "%1% %2% %3%";
 
       auto table_name = table_definition.table_name;
 
@@ -74,28 +107,22 @@ namespace opossum {
 
       std::stringstream predicate_stream;
 
-      std::uniform_int_distribution<long> filter_column_dist(0, column_definitions.size() - 1);
+//      std::uniform_int_distribution<long> filter_column_dist(0, column_definitions.size() - 1);
       for (size_t i = 0; i < number_of_predicates; i++) {
-        auto filter_column = std::next(column_definitions.begin(), filter_column_dist(engine));
-        auto filter_column_name = filter_column->first;
-        auto filter_column_value = _generate_table_scan_predicate(filter_column->second);
+//        auto filter_column = std::next(column_definitions.begin(), filter_column_dist(engine));
+//        auto filter_column_name = filter_column->first;
+//        auto filter_column_value = _generate_table_scan_predicate_value(filter_column->second);
 
-        // We only want to measure various selectivities.
-        // It shouldn't be that important whether we have Point or Range Lookups.
-        // Isn't it?
-
-        // At the same time this makes sure that the probability of having empty intermediate results is reduced.
-        auto predicate_sign = "<=";
-        predicate_stream << boost::str(boost::format(predicate_template) % filter_column_name % predicate_sign % filter_column_value);
+        predicate_stream << _generate_predicate(column_definitions);
 
         if (i < number_of_predicates - 1) {
           predicate_stream << " AND ";
         }
       }
 
-      auto filter_column = std::next(column_definitions.begin(), filter_column_dist(engine));
-      auto filter_column_name = filter_column->first;
-      auto filter_column_value = _generate_table_scan_predicate(filter_column->second);
+//      auto filter_column = std::next(column_definitions.begin(), filter_column_dist(engine));
+//      auto filter_column_name = filter_column->first;
+//      auto filter_column_value = _generate_table_scan_predicate_value(filter_column->second);
 
       return boost::str(boost::format(string_template) % table_name % predicate_stream.str());
     }
@@ -105,7 +132,6 @@ namespace opossum {
       std::mt19937 engine{random_device()};
 
       auto string_template = "SELECT %1% FROM %2% WHERE %3%;";
-      auto predicate_template =  "%1% %2% %3%";
 
       auto select_columns = _generate_select_columns(table_definition.columns);
       auto table_name = table_definition.table_name;
@@ -117,41 +143,28 @@ namespace opossum {
 
       std::stringstream predicate_stream;
 
-      std::uniform_int_distribution<long> filter_column_dist(0, column_definitions.size() - 1);
       for (size_t i = 0; i < number_of_predicates; i++) {
-        auto filter_column = std::next(column_definitions.begin(), filter_column_dist(engine));
-        auto filter_column_name = filter_column->first;
-        auto filter_column_value = _generate_table_scan_predicate(filter_column->second);
-
-        // We only want to measure various selectivities.
-        // It shouldn't be that important whether we have Point or Range Lookups.
-        // Isn't it?
-
-        // At the same time this makes sure that the probability of having empty intermediate results is reduced.
-        auto predicate_sign = "<=";
-        predicate_stream << boost::str(boost::format(predicate_template) % filter_column_name % predicate_sign % filter_column_value);
+        predicate_stream << _generate_predicate(column_definitions);
 
         if (i < number_of_predicates - 1) {
           predicate_stream << " AND ";
         }
       }
 
-      auto filter_column = std::next(column_definitions.begin(), filter_column_dist(engine));
-      auto filter_column_name = filter_column->first;
-      auto filter_column_value = _generate_table_scan_predicate(filter_column->second);
-
       return boost::str(boost::format(string_template) % select_columns % table_name % predicate_stream.str());
     }
 
-    const std::string CalibrationQueryGenerator::_generate_table_scan_predicate(const CalibrationColumnSpecification& column_definition) {
+    const std::string CalibrationQueryGenerator::_generate_table_scan_predicate_value(
+            const CalibrationColumnSpecification &column_definition) {
       auto column_type = column_definition.type;
       std::random_device random_device;
       std::mt19937 engine{random_device()};
       std::uniform_int_distribution<int> int_dist(0, column_definition.distinct_values - 1);
       std::uniform_real_distribution<> float_dist(0, column_definition.distinct_values - 1);
+//      std::uniform_int_distribution<> char_dist(0, UCHAR_MAX);
 
       if (column_type == "int") return std::to_string(int_dist(engine));
-      if (column_type == "string") return "'Aaron Anderson'"; // TODO: somehow get values that are actually in the generated data
+      if (column_type == "string") return "'" + std::string(1, 'a' + rand()%26) + "'";
       if (column_type == "float") return std::to_string(float_dist(engine));
 
       Fail("Unsupported data type in CalibrationQueryGenerator");

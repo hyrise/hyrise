@@ -19,9 +19,11 @@ namespace opossum {
         static const std::string _generate_aggregate(const CalibrationTableSpecification& table_definition);
         static const std::vector<std::string> _generate_join(const std::vector<CalibrationTableSpecification>& table_definitions);
         static const std::string _generate_select_columns(const std::map<std::string, CalibrationColumnSpecification>& column_definitions);
+        static const std::string _generate_predicate(const std::map<std::string, CalibrationColumnSpecification>& column_definitions, const std::string column_name_prefix);
 
         static const std::vector<std::string> _get_column_names(const std::map<std::string, CalibrationColumnSpecification>& column_definitions);
-        static const std::string _generate_table_scan_predicate(const CalibrationColumnSpecification& column_definition);
+        static const std::string _generate_table_scan_predicate_value(
+                const CalibrationColumnSpecification &column_definition);
 
         CalibrationQueryGenerator() = default;
     };
