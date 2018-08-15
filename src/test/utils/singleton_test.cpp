@@ -23,7 +23,6 @@ TEST_F(SingletonTest, SingleInstance) {
   auto& a = Singleton<int>::get();
   auto& b = Singleton<int>::get();
 
-  EXPECT_EQ(a, b);
   EXPECT_EQ(&a, &b);
 }
 
@@ -33,6 +32,7 @@ TEST_F(SingletonTest, SingleInstanceAcrossTranslationUnits) {
   auto& sm = StorageManager::get();
   auto& pm = PluginManager::get();
 
+  // The TestPlugin also holds a reference to the StorageManager.
   pm.load_plugin(build_dylib_path("libTestPlugin"), "TestPlugin");
   auto& plugins = get_plugins();
 

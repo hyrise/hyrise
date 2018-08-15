@@ -8,7 +8,7 @@
 
 namespace opossum {
 
-bool PluginManager::_is_duplicate(AbstractPlugin* plugin) {
+bool PluginManager::_is_duplicate(AbstractPlugin* plugin) const {
   // This should work as soon as we support gcc-8 or gcc-8 supports us (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740)
   // for ([[maybe_unused]] auto &[plugin_name, plugin_handle_wrapper] : _plugins) {
   //   if (plugin_handle_wrapper.plugin == plugin) {
@@ -18,7 +18,7 @@ bool PluginManager::_is_duplicate(AbstractPlugin* plugin) {
 
   // return false;
 
-  for (auto& p : _plugins) {
+  for (const auto& p : _plugins) {
     auto plugin_handle_wrapper = p.second;
     if (plugin_handle_wrapper.plugin == plugin) {
       return true;
@@ -66,7 +66,7 @@ void PluginManager::_clean_up() {
   //   stop_plugin(plugin_name);
   // }
 
-  for (auto& p : _plugins) {
+  for (const auto& p : _plugins) {
     auto plugin_name = p.first;
     stop_plugin(plugin_name, false);
   }

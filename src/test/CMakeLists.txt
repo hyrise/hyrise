@@ -269,7 +269,7 @@ add_library(NonInstantiablePlugin SHARED
 )
 target_link_libraries(NonInstantiablePlugin hyrise)
 
-# We define LIB_DIR to always load the TestPlugin from the correct directory for testing purposes
+# We define LIB_DIR to always load plugins from the correct directory for testing purposes
 add_definitions(-DLIB_DIR="${CMAKE_BINARY_DIR}/lib/")
 
 # Configure hyriseTest

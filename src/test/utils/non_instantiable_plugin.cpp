@@ -10,13 +10,13 @@ namespace opossum {
 // This plugin does not export its instantiation for testing purposes
 class NonInstantiablePlugin : public AbstractPlugin, public Singleton<NonInstantiablePlugin> {
  public:
-  const std::string description() const override {
+  const std::string description() const final {
     return "This is a not working Plugin because it does not export itself";
   }
 
-  void start() const override {}
+  void start() const final {}
 
-  void stop() const override {}
+  void stop() const final {}
 };
 
 }  // namespace opossum

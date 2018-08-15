@@ -9,7 +9,6 @@ target_link_libraries(
     hyrise
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
-    ${CMAKE_DL_LIBS}
     boost_program_options
 )
 target_include_directories(

@@ -364,6 +364,8 @@ int Console::_help(const std::string&) {
   out("  commit                           - Commit a manually created transaction\n");
   out("  txinfo                           - Print information on the current transaction\n");
   out("  pwd                              - Print current working directory\n");
+  out("  load_plugin FILE NAME            - Load plugin from disc specified by filepath FILE, sotre it with NAME\n");
+  out("  stop_plugin NAME                 - Stop and unload plugin NAME (also clears the query cache)\n");
   out("  quit                             - Exit the HYRISE Console\n");
   out("  help                             - Show this message\n\n");
   out("  setting [property] [value]       - Change a runtime setting\n\n");
@@ -711,7 +713,7 @@ int Console::_print_transaction_info(const std::string& input) {
   return ReturnCode::Ok;
 }
 
-int Console::_print_current_working_directory(const std::string& input) {
+int Console::_print_current_working_directory(const std::string&) {
   out(filesystem::current_path().string() + "\n");
   return ReturnCode::Ok;
 }
