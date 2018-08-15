@@ -21,52 +21,50 @@ namespace opossum {
         queries.push_back(CalibrationQueryGenerator::_generate_table_scan(table_definition));
       }
 
-      auto join_queries = CalibrationQueryGenerator::_generate_join(table_definitions);
-      queries.insert(queries.end(), join_queries.begin(), join_queries.end());
+      queries.push_back(CalibrationQueryGenerator::_generate_join(table_definitions));
 
       return queries;
     }
 
-    const std::vector<std::string> CalibrationQueryGenerator::_generate_join(const std::vector<CalibrationTableSpecification>& table_definitions) {
+    const std::string CalibrationQueryGenerator::_generate_join(const std::vector<CalibrationTableSpecification>& table_definitions) {
       // Both Join Inputs are filtered randomly beforehand
       auto string_template = "SELECT %1% FROM %2% l JOIN %3% r ON l.%4%=r.%5% WHERE %6% AND %7%;";
 
-      std::vector<std::string> queries;
+      std::random_device random_device;
+      std::mt19937 engine{random_device()};
+      std::uniform_int_distribution<long> table_dist(0, table_definitions.size() - 1);
 
-      for (const auto & left_table : table_definitions) {
-        for (const auto & right_table : table_definitions) {
-          std::map<std::string, CalibrationColumnSpecification> columns;
+      auto left_table = std::next(table_definitions.begin(), table_dist(engine));
+      auto right_table = std::next(table_definitions.begin(), table_dist(engine));
 
-          for (const auto& column : left_table.columns) {
-            const auto column_name = "l." + column.first;
-            columns.insert(std::pair<std::string, CalibrationColumnSpecification>(column_name, column.second));
-          }
+      std::map<std::string, CalibrationColumnSpecification> columns;
 
-          for (const auto& column : right_table.columns) {
-            const auto column_name = "r." + column.first;
-            columns.insert(std::pair<std::string, CalibrationColumnSpecification>(column_name, column.second));
-          }
-
-          auto left_join_column = "column_a";
-          auto right_join_column = "column_a";
-
-          auto left_predicate = _generate_predicate(left_table.columns, "l.");
-          auto right_predicate = _generate_predicate(right_table.columns, "r.");
-
-          auto select_columns = _generate_select_columns(columns);
-          queries.push_back(boost::str(
-                  boost::format(string_template)
-                  % select_columns
-                  % left_table.table_name
-                  % right_table.table_name
-                  % left_join_column
-                  % right_join_column
-                  % left_predicate
-                  % right_predicate));
-        }
+      for (const auto &column : left_table->columns) {
+        const auto column_name = "l." + column.first;
+        columns.insert(std::pair<std::string, CalibrationColumnSpecification>(column_name, column.second));
       }
 
-      return queries;
+      for (const auto &column : right_table->columns) {
+        const auto column_name = "r." + column.first;
+        columns.insert(std::pair<std::string, CalibrationColumnSpecification>(column_name, column.second));
+      }
+
+      auto left_join_column = "column_a";
+      auto right_join_column = "column_a";
+
+      auto left_predicate = _generate_predicate(left_table->columns, "l.");
+      auto right_predicate = _generate_predicate(right_table->columns, "r.");
+
+      auto select_columns = _generate_select_columns(columns);
+      return boost::str(
+              boost::format(string_template)
+              % select_columns
+              % left_table->table_name
+              % right_table->table_name
+              % left_join_column
+              % right_join_column
+              % left_predicate
+              % right_predicate);
     }
 
     const std::string CalibrationQueryGenerator::_generate_predicate(
@@ -107,22 +105,13 @@ namespace opossum {
 
       std::stringstream predicate_stream;
 
-//      std::uniform_int_distribution<long> filter_column_dist(0, column_definitions.size() - 1);
       for (size_t i = 0; i < number_of_predicates; i++) {
-//        auto filter_column = std::next(column_definitions.begin(), filter_column_dist(engine));
-//        auto filter_column_name = filter_column->first;
-//        auto filter_column_value = _generate_table_scan_predicate_value(filter_column->second);
-
         predicate_stream << _generate_predicate(column_definitions);
 
         if (i < number_of_predicates - 1) {
           predicate_stream << " AND ";
         }
       }
-
-//      auto filter_column = std::next(column_definitions.begin(), filter_column_dist(engine));
-//      auto filter_column_name = filter_column->first;
-//      auto filter_column_value = _generate_table_scan_predicate_value(filter_column->second);
 
       return boost::str(boost::format(string_template) % table_name % predicate_stream.str());
     }
