@@ -44,6 +44,10 @@ class PrintWrapper : public Print {
 
  public:
   explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in) : Print(in), tab(in->get_output()) {}
+  explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in,
+                        std::ostream& out, uint32_t flags)
+      : Print(in, out, flags), tab(in->get_output()) {}
+
   std::vector<uint16_t> test_column_string_widths(uint16_t min, uint16_t max) {
     return _column_string_widths(min, max, tab);
   }
@@ -55,9 +59,17 @@ class PrintWrapper : public Print {
   uint16_t get_max_cell_width() {
     return _max_cell_width;
   }
+
+  bool is_printing_empty_chunks() {
+    return _flags & PrintIgnoreEmptyChunks;
+  }
+
+  bool is_printing_mvcc_information() {
+    return _flags & PrintMvcc;
+  }
 };
 
-TEST_F(OperatorsPrintTest, EmptyTable) {
+TEST_F(OperatorsPrintTest, TableColumnDefinitions) {
   auto pr = std::make_shared<Print>(gt, output);
   pr->execute();
 
@@ -71,8 +83,6 @@ TEST_F(OperatorsPrintTest, EmptyTable) {
   EXPECT_TRUE(output_string.find("col_2") != std::string::npos);
   EXPECT_TRUE(output_string.find("int") != std::string::npos);
   EXPECT_TRUE(output_string.find("string") != std::string::npos);
-
-  EXPECT_TRUE(output_string.find("Empty chunk.") != std::string::npos);
 }
 
 TEST_F(OperatorsPrintTest, FilledTable) {
@@ -172,6 +182,48 @@ TEST_F(OperatorsPrintTest, TruncateLongValueInOutput) {
 
   auto output_string = output.str();
   EXPECT_TRUE(output_string.find(manual_substring) != std::string::npos);
+}
+
+TEST_F(OperatorsPrintTest, EmptyChunkFlagTest) {
+  auto print_wrap = PrintWrapper(gt, output, 1);
+  print_wrap.execute();
+  auto output_string = output.str();
+
+  EXPECT_TRUE(print_wrap.is_printing_empty_chunks());
+  EXPECT_FALSE(print_wrap.is_printing_mvcc_information());
+  EXPECT_TRUE(output_string.find("MVCC") == std::string::npos);
+}
+
+TEST_F(OperatorsPrintTest, MVCCFlagTest) {
+  auto table = StorageManager::get().get_table(table_name);
+  table->append({0, "Zeier"});
+
+  auto print_wrap = PrintWrapper(gt, output, 2);
+  print_wrap.execute();
+  auto output_string = output.str();
+
+  EXPECT_TRUE(output_string.find("MVCC") != std::string::npos);
+  EXPECT_TRUE(output_string.find("_TID") != std::string::npos);
+  EXPECT_TRUE(print_wrap.is_printing_mvcc_information());
+  EXPECT_FALSE(print_wrap.is_printing_empty_chunks());
+}
+
+TEST_F(OperatorsPrintTest, AllFlagsTest) {
+  auto print_wrap = PrintWrapper(gt, output, 3);
+  print_wrap.execute();
+
+  EXPECT_TRUE(print_wrap.is_printing_empty_chunks());
+  EXPECT_TRUE(print_wrap.is_printing_mvcc_information());
+}
+
+TEST_F(OperatorsPrintTest, DirectInstantiations) {
+  Print::print(gt, 0, output);
+  auto output_op_inst = output.str();
+  EXPECT_TRUE(output_op_inst.find("col_1") != std::string::npos);
+
+  Print::print(t, 0, output);
+  auto output_tab_inst = output.str();
+  EXPECT_TRUE(output_tab_inst.find("col_1") != std::string::npos);
 }
 
 }  // namespace opossum
