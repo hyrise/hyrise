@@ -108,6 +108,9 @@ struct PartitionedElement {
 template <typename T>
 using Partition = std::vector<PartitionedElement<T>>;
 
+template <typename T>
+using HashTable = std::unordered_map<T, boost::variant<RowID, PosList>>;
+
 /*
 This struct contains radix-partitioned data in a contiguous buffer,
 as well as a list of offsets for each partition.
@@ -122,13 +125,13 @@ struct RadixContainer {
 Build all the hash tables for the partitions of Left. We parallelize this process for all partitions of Left
 */
 template <typename LeftType, typename HashedType>
-std::vector<std::optional<std::unordered_map<HashedType, boost::variant<RowID, PosList>>>> build(
+std::vector<std::optional<HashTable<HashedType>>> build(
     const RadixContainer<LeftType>& radix_container) {
   /*
   NUMA notes:
   The hashtables for each partition P should also reside on the same node as the two vectors leftP and rightP.
   */
-  std::vector<std::optional<std::unordered_map<HashedType, boost::variant<RowID, PosList>>>> hashtables;
+  std::vector<std::optional<HashTable<HashedType>>> hashtables;
   hashtables.resize(radix_container.partition_offsets.size() - 1);
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
@@ -151,7 +154,7 @@ std::vector<std::optional<std::unordered_map<HashedType, boost::variant<RowID, P
 
       // Potentially oversizing the hash table when values are often repeated.
       // But rather have slightly too large hash tables than paying for complete rehashing/resizing.  
-      auto hashtable = std::unordered_map<HashedType, boost::variant<RowID, PosList>>(partition_size);
+      auto hashtable = HashTable<HashedType>(partition_size);
 
       for (size_t partition_offset = partition_left_begin; partition_offset < partition_left_end; ++partition_offset) {
         const auto& element = partition_left[partition_offset];
@@ -359,7 +362,7 @@ RadixContainer<T> partition_radix_parallel(const std::shared_ptr<Partition<T>>& 
   */
 template <typename RightType, typename HashedType>
 void probe(const RadixContainer<RightType>& radix_container,
-           const std::vector<std::optional<std::unordered_map<HashedType, boost::variant<RowID, PosList>>>>& hashtables,
+           const std::vector<std::optional<HashTable<HashedType>>>& hashtables,
            std::vector<PosList>& pos_lists_left, std::vector<PosList>& pos_lists_right, const JoinMode mode) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size() - 1);
@@ -467,7 +470,7 @@ void probe(const RadixContainer<RightType>& radix_container,
 template <typename RightType, typename HashedType>
 void probe_semi_anti(
     const RadixContainer<RightType>& radix_container,
-    const std::vector<std::optional<std::unordered_map<HashedType, boost::variant<RowID, PosList>>>>& hashtables,
+    const std::vector<std::optional<HashTable<HashedType>>>& hashtables,
     std::vector<PosList>& pos_lists, const JoinMode mode) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size() - 1);

@@ -1,7 +1,5 @@
 #include "simd_bp128_iterator.hpp"
 
-#include <emmintrin.h>
-
 namespace opossum {
 
 SimdBp128Iterator::SimdBp128Iterator(const pmr_vector<uint128_t>* data, size_t size, size_t absolute_index)
