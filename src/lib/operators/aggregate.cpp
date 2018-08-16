@@ -131,7 +131,7 @@ the AggregateVisitor. It is a separate class because methods cannot be partially
 Therefore, we partially specialize the whole class and define the get_aggregate_function anew every time.
 */
 template <typename ColumnType, typename AggregateType>
-using AggregateFunctor = std::function<std::optional<AggregateType>(ColumnType, std::optional<AggregateType>)>;
+using AggregateFunctor = std::function<void(const ColumnType&, std::optional<AggregateType>&)>;
 
 template <typename ColumnType, typename AggregateType, AggregateFunction function>
 struct AggregateFunctionBuilder {
@@ -141,10 +141,10 @@ struct AggregateFunctionBuilder {
 template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Min> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType new_value, std::optional<AggregateType> current_aggregate) {
+    return [](const ColumnType& new_value, std::optional<AggregateType>& current_aggregate) {
       if (!current_aggregate || value_smaller(new_value, *current_aggregate)) {
         // New minimum found
-        return new_value;
+        current_aggregate = new_value;
       }
       return *current_aggregate;
     };
@@ -154,10 +154,10 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Mi
 template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Max> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType new_value, std::optional<AggregateType> current_aggregate) {
+    return [](const ColumnType& new_value, std::optional<AggregateType>& current_aggregate) {
       if (!current_aggregate || value_greater(new_value, *current_aggregate)) {
         // New maximum found
-        return new_value;
+        current_aggregate = new_value;
       }
       return *current_aggregate;
     };
@@ -167,9 +167,13 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Ma
 template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Sum> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType new_value, std::optional<AggregateType> current_aggregate) {
+    return [](const ColumnType& new_value, std::optional<AggregateType>& current_aggregate) {
       // add new value to sum
-      return new_value + (!current_aggregate ? 0 : *current_aggregate);  // NOLINT - false positive hicpp-use-nullptr
+      if (current_aggregate) {
+        *current_aggregate += new_value;
+      } else {
+        current_aggregate = new_value;
+      }
     };
   }
 };
@@ -177,33 +181,31 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Su
 template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Avg> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType new_value, std::optional<AggregateType> current_aggregate) {
-      // add new value to sum
-      return new_value + (!current_aggregate ? 0 : *current_aggregate);  // NOLINT - false positive hicpp-use-nullptr
-    };
+    // We reuse Sum here and use it together with aggregate_count to calculate the average
+    return AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Sum>{}.get_aggregate_function();
   }
 };
 
 template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Count> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType, std::optional<AggregateType> current_aggregate) { return std::nullopt; };
+    return [](const ColumnType&, std::optional<AggregateType>& current_aggregate) { return std::nullopt; };
   }
 };
 
 template <typename ColumnType, typename AggregateType>
 struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::CountDistinct> {
   AggregateFunctor<ColumnType, AggregateType> get_aggregate_function() {
-    return [](ColumnType, std::optional<AggregateType> current_aggregate) { return std::nullopt; };
+    return [](const ColumnType&, std::optional<AggregateType>& current_aggregate) { return std::nullopt; };
   }
 };
 
-template <typename ColumnDataType, AggregateFunction function, typename AggregateKey>
+template <typename ColumnDataType, AggregateFunction Function, typename AggregateKey>
 void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const BaseColumn& base_column,
                                   const KeysPerChunk<AggregateKey>& keys_per_chunk) {
-  using AggregateType = typename AggregateTraits<ColumnDataType, function>::AggregateType;
+  using AggregateType = typename AggregateTraits<ColumnDataType, Function>::AggregateType;
 
-  auto aggregator = AggregateFunctionBuilder<ColumnDataType, AggregateType, function>().get_aggregate_function();
+  auto aggregator = AggregateFunctionBuilder<ColumnDataType, AggregateType, Function>().get_aggregate_function();
 
   auto& context = *std::static_pointer_cast<AggregateContext<ColumnDataType, AggregateType, AggregateKey>>(
       _contexts_per_column[column_index]);
@@ -211,7 +213,9 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const
   auto& results = *context.results;
   const auto& hash_keys = keys_per_chunk[chunk_id];
 
+  // clang-format off
   resolve_column_type<ColumnDataType>(
+      // clang-format on
       base_column, [&results, &hash_keys, chunk_id, aggregator](const auto& typed_column) {
         auto iterable = create_iterable_from_column<ColumnDataType>(typed_column);
 
@@ -227,12 +231,12 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const
           */
           if (!value.is_null()) {
             // If we have a value, use the aggregator lambda to update the current aggregate value for this group
-            hash_entry.current_aggregate = aggregator(value.value(), hash_entry.current_aggregate);
+            aggregator(value.value(), hash_entry.current_aggregate);
 
             // increase value counter
             ++hash_entry.aggregate_count;
 
-            if (function == AggregateFunction::CountDistinct) {
+            if constexpr (Function == AggregateFunction::CountDistinct) {
               // for the case of CountDistinct, insert this value into the set to keep track of distinct values
               hash_entry.distinct_values.insert(value.value());
             }
