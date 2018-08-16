@@ -287,39 +287,43 @@ void Aggregate::_aggregate() {
   It is gradually built by visitors, one for each group column.
   */
 
-  // Allocate a temporary memory buffer, for more details see aggregate.hpp
-  // This calculation assumes that we use pmr_vector<AggregateKeyEntry> - other data structures use less space, but
-  // that is fine
-  size_t needed_size_per_aggregate_key =
-      aligned_size<AggregateKey>() + _groupby_column_ids.size() * aligned_size<AggregateKeyEntry>();
-  size_t needed_size = aligned_size<KeysPerChunk<AggregateKey>>() +
-                       input_table->chunk_count() * aligned_size<AggregateKeys<AggregateKey>>() +
-                       input_table->row_count() * needed_size_per_aggregate_key;
-  needed_size *= 1.1;  // Give it a little bit more, just in case
+  KeysPerChunk<AggregateKey> keys_per_chunk;
 
-  auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(needed_size);
-  auto allocator = AggregateKeysAllocator{PolymorphicAllocator<AggregateKeys<AggregateKey>>{&temp_buffer}};
-  allocator.allocate(1);  // Make sure that the buffer is initialized
-  const auto start_next_buffer_size = temp_buffer.next_buffer_size();
+  {
+    // Allocate a temporary memory buffer, for more details see aggregate.hpp
+    // This calculation assumes that we use pmr_vector<AggregateKeyEntry> - other data structures use less space, but
+    // that is fine
+    size_t needed_size_per_aggregate_key =
+        aligned_size<AggregateKey>() + _groupby_column_ids.size() * aligned_size<AggregateKeyEntry>();
+    size_t needed_size = aligned_size<KeysPerChunk<AggregateKey>>() +
+                         input_table->chunk_count() * aligned_size<AggregateKeys<AggregateKey>>() +
+                         input_table->row_count() * needed_size_per_aggregate_key;
+    needed_size *= 1.1;  // Give it a little bit more, just in case
 
-  // Create the actual data structure
-  auto keys_per_chunk = KeysPerChunk<AggregateKey>{allocator};
-  keys_per_chunk.reserve(input_table->chunk_count());
-  for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-    if constexpr (std::is_same_v<AggregateKey, pmr_vector<AggregateKeyEntry>>) {
-      keys_per_chunk.emplace_back(input_table->get_chunk(chunk_id)->size(), AggregateKey(_groupby_column_ids.size()));
-    } else {
-      keys_per_chunk.emplace_back(input_table->get_chunk(chunk_id)->size(), AggregateKey{});
+    auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(needed_size);
+    auto allocator = AggregateKeysAllocator{PolymorphicAllocator<AggregateKeys<AggregateKey>>{&temp_buffer}};
+    allocator.allocate(1);  // Make sure that the buffer is initialized
+    const auto start_next_buffer_size = temp_buffer.next_buffer_size();
+
+    // Create the actual data structure
+    keys_per_chunk = KeysPerChunk<AggregateKey>{allocator};
+    keys_per_chunk.reserve(input_table->chunk_count());
+    for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
+      if constexpr (std::is_same_v<AggregateKey, pmr_vector<AggregateKeyEntry>>) {
+        keys_per_chunk.emplace_back(input_table->get_chunk(chunk_id)->size(), AggregateKey(_groupby_column_ids.size()));
+      } else {
+        keys_per_chunk.emplace_back(input_table->get_chunk(chunk_id)->size(), AggregateKey{});
+      }
     }
-  }
 
-  // Make sure that we did not have to allocate more memory than originally computed
-  if (temp_buffer.next_buffer_size() != start_next_buffer_size) {
-    // The buffer sizes are increasing when the current buffer is full. We can use this to make sure that we allocated
-    // enough space from the beginning on. It would be more intuitive to compare current_buffer(), but this seems to
-    // be broken in boost: https://svn.boost.org/trac10/ticket/13639#comment:1
-    PerformanceWarning(std::string("needed_size ") + std::to_string(needed_size) +
-                       " was not enough and a second buffer was needed");
+    // Make sure that we did not have to allocate more memory than originally computed
+    if (temp_buffer.next_buffer_size() != start_next_buffer_size) {
+      // The buffer sizes are increasing when the current buffer is full. We can use this to make sure that we allocated
+      // enough space from the beginning on. It would be more intuitive to compare current_buffer(), but this seems to
+      // be broken in boost: https://svn.boost.org/trac10/ticket/13639#comment:1
+      PerformanceWarning(std::string("needed_size ") + std::to_string(needed_size) +
+                         " was not enough and a second buffer was needed");
+    }
   }
 
   // Now that we have the data structures in place, we can start the actual work
@@ -338,7 +342,13 @@ void Aggregate::_aggregate() {
         Store unique IDs for equal values in the groupby column (similar to dictionary encoding). 
         The ID 0 is reserved for NULL values. The combined IDs build an AggregateKey for each row.
         */
-        auto id_map = std::unordered_map<ColumnDataType, AggregateKeyEntry>();
+
+        // This time, we have no idea how much space we need, so we take some memory and then rely on the automatic resizing
+        auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(1'000'000);
+        auto allocator = PolymorphicAllocator<std::pair<const ColumnDataType, AggregateKeyEntry>>{&temp_buffer};
+
+        auto id_map = std::unordered_map<ColumnDataType, AggregateKeyEntry, std::hash<ColumnDataType>,
+                                         std::equal_to<ColumnDataType>, decltype(allocator)>(allocator);
         AggregateKeyEntry id_counter = 1u;
 
         for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
