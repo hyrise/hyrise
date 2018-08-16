@@ -669,13 +669,6 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
           const auto cluster_count = std::max(1.0f, (adaption_factor * complete_hash_map_size) / l2_cache_size);
 
           _radix_bits = std::ceil(std::log2(cluster_count));
-
-          auto const env_var_radix_bits = std::getenv("HYRISE_RADIX_BITS");
-          if (env_var_radix_bits != nullptr) {
-            _radix_bits = std::stoi(env_var_radix_bits);
-          }
-          std::cout << "Joining " << build_relation_size << "x" << probe_relation_size << " -- ";
-          std::cout << "Radix bits: " << _radix_bits  << ". Probe size: " << complete_hash_map_size << " bytes." << std::endl; 
         }
 
  protected:
