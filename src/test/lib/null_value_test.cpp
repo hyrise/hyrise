@@ -11,7 +11,7 @@ namespace opossum {
 class NullValueTest : public BaseTest {
 };
 
-TEST_F(NullValueTest, NullValueComparators) {
+TEST_F(NullValueTest, Comparators) {
   auto null_0 = NullValue{};
   auto null_1 = NullValue{};
 
@@ -21,18 +21,8 @@ TEST_F(NullValueTest, NullValueComparators) {
   EXPECT_FALSE(null_0 <= null_1);
   EXPECT_FALSE(null_0 >  null_1);
   EXPECT_FALSE(null_0 >= null_1);
-}
 
-TEST_F(NullValueTest, AllTypeVariantNullComparators) {
-  auto null_0 = AllTypeVariant{};
-  auto null_1 = AllTypeVariant{};
-
-  EXPECT_FALSE(null_0 == null_1);
-  EXPECT_FALSE(null_0 != null_1);
-  EXPECT_FALSE(null_0 <  null_1);
-  EXPECT_FALSE(null_0 <= null_1);
-  EXPECT_FALSE(null_0 >  null_1);
-  EXPECT_FALSE(null_0 >= null_1);
+  EXPECT_FALSE(-NullValue{} == NullValue{});
 }
 
 }  // namespace opossum
