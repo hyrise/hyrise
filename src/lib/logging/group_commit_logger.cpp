@@ -90,7 +90,9 @@ class LogEntry {
 };
 
 template <>
-LogEntry& LogEntry::operator<<<std::string>(const std::string& value) {
+// clang-format off
+LogEntry& LogEntry::operator<< <std::string>(const std::string& value) {  // NOLINT
+// clang-format on
   DebugAssert(cursor + value.size() < data.size(), "Logger: value does not fit into vector, call resize() beforehand");
 
   value.copy(&data[cursor], value.size());
