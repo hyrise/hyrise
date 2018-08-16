@@ -48,23 +48,22 @@ ReverseIterator FixedStringVector::rbegin() noexcept { return ReverseIterator(en
 
 ReverseIterator FixedStringVector::rend() noexcept { return ReverseIterator(begin()); }
 
-FixedString FixedStringVector::operator[](const size_t value_id) {
+FixedString FixedStringVector::operator[](const size_t pos) {
   PerformanceWarning("operator[] used");
-  return FixedString(&_chars[value_id * _string_length], _string_length);
+  return FixedString(&_chars[pos * _string_length], _string_length);
 }
 
-FixedString FixedStringVector::at(const size_t value_id) {
-  return FixedString(&_chars.at(value_id * _string_length), _string_length);
+FixedString FixedStringVector::at(const size_t pos) {
+  return FixedString(&_chars.at(pos * _string_length), _string_length);
 }
 
-const std::string FixedStringVector::get_string_at(const size_t value_id) const {
-  const auto string_value = std::string(&_chars[value_id * _string_length], _string_length);
-  const auto pos = string_value.find('\0');
-
-  if (pos == std::string::npos) {
-    return string_value;
+const std::string FixedStringVector::get_string_at(const size_t pos) const {
+  const auto string_start = &_chars[pos * _string_length];
+  if (*(string_start + _string_length - 1) == '\0') {
+    // The string is zero-padded - the std::string constructor takes care of finding the correct length
+    return std::string(string_start);
   } else {
-    return string_value.substr(0, pos);
+    return std::string(string_start, _string_length);
   }
 }
 
