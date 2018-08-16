@@ -125,8 +125,7 @@ struct RadixContainer {
 Build all the hash tables for the partitions of Left. We parallelize this process for all partitions of Left
 */
 template <typename LeftType, typename HashedType>
-std::vector<std::optional<HashTable<HashedType>>> build(
-    const RadixContainer<LeftType>& radix_container) {
+std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<LeftType>& radix_container) {
   /*
   NUMA notes:
   The hashtables for each partition P should also reside on the same node as the two vectors leftP and rightP.
@@ -153,7 +152,7 @@ std::vector<std::optional<HashTable<HashedType>>> build(
       auto& partition_left = static_cast<Partition<LeftType>&>(*radix_container.elements);
 
       // Potentially oversizing the hash table when values are often repeated.
-      // But rather have slightly too large hash tables than paying for complete rehashing/resizing.  
+      // But rather have slightly too large hash tables than paying for complete rehashing/resizing.
       auto hashtable = HashTable<HashedType>(partition_size);
 
       for (size_t partition_offset = partition_left_begin; partition_offset < partition_left_end; ++partition_offset) {
@@ -362,8 +361,8 @@ RadixContainer<T> partition_radix_parallel(const std::shared_ptr<Partition<T>>& 
   */
 template <typename RightType, typename HashedType>
 void probe(const RadixContainer<RightType>& radix_container,
-           const std::vector<std::optional<HashTable<HashedType>>>& hashtables,
-           std::vector<PosList>& pos_lists_left, std::vector<PosList>& pos_lists_right, const JoinMode mode) {
+           const std::vector<std::optional<HashTable<HashedType>>>& hashtables, std::vector<PosList>& pos_lists_left,
+           std::vector<PosList>& pos_lists_right, const JoinMode mode) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size() - 1);
 
@@ -391,15 +390,14 @@ void probe(const RadixContainer<RightType>& radix_container,
       PosList pos_list_left_local;
       PosList pos_list_right_local;
 
-      // simple heuristic to estimate result size: half of the partition's row will match
-      // a more conservative pre-allocation would be the size of the left cluster
-      // TODO: info is in the radix_container ...
-      const size_t expected_output_size = (partition_end - partition_begin) / 2;
-      pos_list_left_local.reserve(expected_output_size);
-      pos_list_right_local.reserve(expected_output_size);
-
       if (hashtables[current_partition_id].has_value()) {
         const auto& hashtable = hashtables.at(current_partition_id).value();
+
+        // simple heuristic to estimate result size: half of the partition's rows will match
+        // a more conservative pre-allocation would be the size of the left cluster
+        const size_t expected_output_size = std::max(10.0, std::ceil((partition_end - partition_begin) / 2));
+        pos_list_left_local.reserve(expected_output_size);
+        pos_list_right_local.reserve(expected_output_size);
 
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
           auto& row = partition[partition_offset];
@@ -468,10 +466,9 @@ void probe(const RadixContainer<RightType>& radix_container,
 }
 
 template <typename RightType, typename HashedType>
-void probe_semi_anti(
-    const RadixContainer<RightType>& radix_container,
-    const std::vector<std::optional<HashTable<HashedType>>>& hashtables,
-    std::vector<PosList>& pos_lists, const JoinMode mode) {
+void probe_semi_anti(const RadixContainer<RightType>& radix_container,
+                     const std::vector<std::optional<HashTable<HashedType>>>& hashtables,
+                     std::vector<PosList>& pos_lists, const JoinMode mode) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size() - 1);
 
@@ -628,48 +625,48 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
         _inputs_swapped(inputs_swapped) {
-          /*
-            Setting number of bits for radix clustering:
-            The number of bits is used to create probe partitions with a size that can
-            be expected to fit into the L2 cache.
-            This should incorporate hardware knowledge, once available in Hyrise.
-            As of now, we assume a L2 cache size of 256 KB.
-            We estimate the size the following way:
-              - we assume each key appears once (that is an overestimation space-wise, but we
-              aim rather for a hash map that is slightly smaller than L2 than slightly larger)
-              - each entry in the hash map is a data structure holding the actual value
-              and the RowID
-          */
-          const auto build_relation_size = inputs_swapped ? _right->get_output()->row_count() : _left->get_output()->row_count();
-          const auto probe_relation_size = inputs_swapped ? _left->get_output()->row_count() : _right->get_output()->row_count();
+    /*
+      Setting number of bits for radix clustering:
+      The number of bits is used to create probe partitions with a size that can
+      be expected to fit into the L2 cache.
+      This should incorporate hardware knowledge, once available in Hyrise.
+      As of now, we assume a L2 cache size of 256 KB.
+      We estimate the size the following way:
+        - we assume each key appears once (that is an overestimation space-wise, but we
+        aim rather for a hash map that is slightly smaller than L2 than slightly larger)
+        - each entry in the hash map is a data structure holding the actual value
+        and the RowID
+    */
+    const auto build_relation_size = _left->get_output()->row_count();
+    const auto probe_relation_size = _right->get_output()->row_count();
 
-          if (build_relation_size > probe_relation_size) {
-            /*
-              Hash joins perform best for join relations with a small left join partner. In case the 
-              optimizer selects the hash join due to such a situation, but neglects that the
-              input will be switched (e.g., due to the join type), the user will be warned.
-            */
-            std::string warning{"Left relation larger than right relation hash join"};
-            warning += inputs_swapped ? " (input relations have been swapped)." : ".";
-            PerformanceWarning(warning);
-          }
+    if (build_relation_size > probe_relation_size) {
+      /*
+        Hash joins perform best for join relations with a small left join partner. In case the
+        optimizer selects the hash join due to such a situation, but neglects that the
+        input will be switched (e.g., due to the join type), the user will be warned.
+      */
+      std::string warning{"Left relation larger than right relation hash join"};
+      warning += inputs_swapped ? " (input relations have been swapped)." : ".";
+      PerformanceWarning(warning);
+    }
 
-          const auto l2_cache_size = 256'000; // bytes
+    const auto l2_cache_size = 256'000;  // bytes
 
-          // We assume an std::unordered_map with a linked list within the buckets.
-          // To get a pessimistic estimation (ensure that the hash table fits within the cache), we assume
-          // that each value maps to two RowIDs (thus, no single value optimizatio via boost::variant).
-          const auto complete_hash_map_size =
-            // hash map
-            build_relation_size * (sizeof(LeftType) + sizeof(void *)) +
-            // PosLists
-            (build_relation_size / 2) * (sizeof(PosList) + 2 * sizeof(RowID));
+    // We assume an std::unordered_map with a linked list within the buckets.
+    // To get a pessimistic estimation (ensure that the hash table fits within the cache), we assume
+    // that each value maps to two RowIDs (thus, no single value optimizatio via boost::variant).
+    const auto complete_hash_map_size =
+        // hash map
+        build_relation_size * (sizeof(LeftType) + sizeof(void*)) +
+        // PosLists
+        (build_relation_size / 2) * (sizeof(PosList) + 2 * sizeof(RowID));
 
-          const auto adaption_factor = 2.0f; // don't occupy the whole L2 cache
-          const auto cluster_count = std::max(1.0f, (adaption_factor * complete_hash_map_size) / l2_cache_size);
+    const auto adaption_factor = 2.0f;  // don't occupy the whole L2 cache
+    const auto cluster_count = std::max(1.0f, (adaption_factor * complete_hash_map_size) / l2_cache_size);
 
-          _radix_bits = std::ceil(std::log2(cluster_count));
-        }
+    _radix_bits = std::ceil(std::log2(cluster_count));
+  }
 
  protected:
   const std::shared_ptr<const AbstractOperator> _left, _right;
