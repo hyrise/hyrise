@@ -54,7 +54,7 @@ class AbstractRecoverer {
 
   void _recover_table(const std::string& path, const std::string& table_name);
 
-  uint32_t _loaded_tables_amount;
+  uint32_t _number_of_loaded_tables;
 };
 
 }  // namespace opossum

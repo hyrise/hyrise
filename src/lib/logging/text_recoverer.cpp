@@ -141,7 +141,7 @@ uint32_t TextRecoverer::recover() {
   }
 
   _update_transaction_id(last_transaction_id);
-  return _loaded_tables_amount;
+  return _number_of_loaded_tables;
 }
 
 }  // namespace opossum
