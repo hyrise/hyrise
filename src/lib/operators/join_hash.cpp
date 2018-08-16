@@ -266,7 +266,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
                   PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, hashed_value, value.value()};
             }
 
-            const Hash radix = (hashed_value >> (32 - radix_bits * (pass + 1))) & mask;
+            const Hash radix = hashed_value & mask;
             histogram[radix]++;
           }
           // reference_column_offset is only used for ReferenceColumns
@@ -341,7 +341,7 @@ RadixContainer<T> partition_radix_parallel(const std::shared_ptr<Partition<T>>& 
           continue;
         }
 
-        const size_t radix = (element.partition_hash >> (32 - radix_bits * (pass + 1))) & mask;
+        const size_t radix = element.partition_hash & mask;
 
         out[output_offsets[radix]++] = element;
       }
