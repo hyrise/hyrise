@@ -5,6 +5,7 @@
 #include "concurrency/transaction_manager.hpp"
 #include "logger.hpp"
 #include "operators/insert.hpp"
+#include "resolve_type.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "types.hpp"
@@ -32,30 +33,11 @@ RowID BinaryRecoverer::_read(std::ifstream& file) {
 
 AllTypeVariant BinaryRecoverer::_read_AllTypeVariant(std::ifstream& file, DataType data_type) {
   AllTypeVariant value;
-  switch (data_type) {
-    case DataType::Int: {
-      return AllTypeVariant{_read<int32_t>(file)};
-      break;
-    }
-    case DataType::Long: {
-      return AllTypeVariant{_read<int64_t>(file)};
-      break;
-    }
-    case DataType::Float: {
-      return AllTypeVariant{_read<float>(file)};
-      break;
-    }
-    case DataType::Double: {
-      return AllTypeVariant{_read<double>(file)};
-      break;
-    }
-    case DataType::String: {
-      return AllTypeVariant{_read<std::string>(file)};
-      break;
-    }
-    default:
-      DebugAssert(false, "recoverer: read unknown type");
-  }
+
+  resolve_data_type(data_type, [&] (auto type) {
+    using ColumnDataType = typename decltype(type)::type;
+    value = AllTypeVariant{_read<ColumnDataType>(file)};
+  });
 
   return value;
 }
