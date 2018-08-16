@@ -20,18 +20,18 @@ std::string PredicateReorderingRule::name() const { return "Predicate Reordering
 bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& node) const {
   auto reordered = false;
 
-  if (node->type == LQPNodeType::Predicate) {
-    std::vector<std::shared_ptr<PredicateNode>> predicate_nodes;
+  if (node->type == LQPNodeType::Predicate || node->type == LQPNodeType::Validate) {
+    std::vector<std::shared_ptr<AbstractLQPNode>> predicate_nodes;
 
     // Gather adjacent PredicateNodes
     auto current_node = node;
-    while (current_node->type == LQPNodeType::Predicate) {
+    while (current_node->type == LQPNodeType::Predicate || current_node->type == LQPNodeType::Validate) {
       // Once a node has multiple outputs, we're not talking about a Predicate chain anymore
       if (current_node->outputs().size() > 1) {
         break;
       }
 
-      predicate_nodes.emplace_back(std::dynamic_pointer_cast<PredicateNode>(current_node));
+      predicate_nodes.emplace_back(current_node);
       current_node = current_node->left_input();
     }
 
@@ -54,7 +54,7 @@ bool PredicateReorderingRule::apply_to(const std::shared_ptr<AbstractLQPNode>& n
   return reordered;
 }
 
-bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<PredicateNode>>& predicates) const {
+bool PredicateReorderingRule::_reorder_predicates(std::vector<std::shared_ptr<AbstractLQPNode>>& predicates) const {
   // Store original input and output
   auto input = predicates.back()->left_input();
   const auto outputs = predicates.front()->outputs();

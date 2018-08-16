@@ -16,6 +16,7 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
+#include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/predicate_reordering_rule.hpp"
 #include "optimizer/strategy/strategy_base_test.hpp"
 #include "statistics/column_statistics.hpp"
@@ -244,6 +245,22 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
   EXPECT_EQ(reordered->right_input(), predicate_b_node);
   EXPECT_EQ(predicate_a_node->left_input(), predicate_b_node);
   EXPECT_EQ(predicate_b_node->left_input(), table_node);
+}
+
+TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
+  // clang-format off
+  const auto input_lqp =
+    PredicateNode::make(greater_than_(a, 50),
+      ValidateNode::make(node));
+
+  const auto expected_lqp =
+    ValidateNode::make(
+      PredicateNode::make(greater_than_(a, 50),
+        node));
+  // clang-format on
+
+  const auto reordered_input_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  EXPECT_LQP_EQ(reordered_input_lqp, expected_lqp)
 }
 
 }  // namespace opossum
