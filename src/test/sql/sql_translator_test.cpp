@@ -950,7 +950,7 @@ TEST_F(SQLTranslatorTest, Extract) {
   std::shared_ptr<opossum::AbstractLQPNode> expected_lqp;
   ProjectionNode::make(expression_vector(extract_(DatetimeComponent::Year, "1993-08-01")), DummyTableNode::make());
 
-  for (auto component : components) {
+  for (const auto& component : components) {
     std::stringstream query_str;
     query_str << "SELECT EXTRACT(" << component << " FROM '1993-08-01');";
 
