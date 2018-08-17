@@ -343,7 +343,8 @@ void Aggregate::_aggregate() {
         The ID 0 is reserved for NULL values. The combined IDs build an AggregateKey for each row.
         */
 
-        // This time, we have no idea how much space we need, so we take some memory and then rely on the automatic resizing
+        // This time, we have no idea how much space we need, so we take some memory and then rely on the automatic
+        // resizing
         auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(1'000'000);
         auto allocator = PolymorphicAllocator<std::pair<const ColumnDataType, AggregateKeyEntry>>{&temp_buffer};
 
