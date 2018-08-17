@@ -144,8 +144,13 @@ TEST_F(VariableLengthKeyBaseTest, OrAssignmentWithKeyLongerThan64Bit) {
   uint64_t expected_low = 0xFF00FF00F0F0FF00u;
   uint64_t expected_high = 0x0000000000000000u;
 
-  EXPECT_EQ(expected_high, memory[1]);
-  EXPECT_EQ(expected_low, memory[0]);
+  if constexpr (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {
+    EXPECT_EQ(expected_high, memory[1]);
+    EXPECT_EQ(expected_low, memory[0]);
+  } else {
+    EXPECT_EQ(expected_high, memory[0]);
+    EXPECT_EQ(expected_low, memory[1]);
+  }
 }
 
 TEST_F(VariableLengthKeyBaseTest, ShiftAssignment) {
@@ -172,8 +177,13 @@ TEST_F(VariableLengthKeyBaseTest, ShiftAssignment) {
 
 TEST_F(VariableLengthKeyBaseTest, ShiftAndSet) {
   uint64_t memory = 0xFF000000F0F0FF00u;
-  // create key pointing to lower half of memory (on little endian architecture)
-  auto key = VariableLengthKeyBase(reinterpret_cast<VariableLengthKeyWord*>(&memory), sizeof(uint32_t));
+  VariableLengthKeyBase key;
+  // create key pointing to lower half of memory
+  if constexpr (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {
+    key = VariableLengthKeyBase(reinterpret_cast<VariableLengthKeyWord*>(&memory), sizeof(uint32_t));
+  } else {
+    key = VariableLengthKeyBase(reinterpret_cast<VariableLengthKeyWord*>(&memory) + sizeof(uint32_t), sizeof(uint32_t));
+  }
 
   uint8_t small_value = 0xFFu;
   key.shift_and_set(small_value, sizeof(uint8_t) * 8);

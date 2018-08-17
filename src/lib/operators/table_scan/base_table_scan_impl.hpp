@@ -3,6 +3,7 @@
 #include <functional>
 #include <memory>
 
+#include "storage/column_iterables.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -39,6 +40,23 @@ class BaseTableScanImpl {
       if (left.is_null()) continue;
 
       if (func(left.value())) {
+        matches_out.push_back(RowID{chunk_id, left.chunk_offset()});
+      }
+    }
+  }
+
+  // Version with a constant value on the right side. Sometimes we prefer this over _unary_scan because we can use
+  // with_comparator.
+  template <typename BinaryFunctor, typename LeftIterator, typename RightValue>
+  void __attribute__((noinline))
+  _unary_scan_with_value(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end, RightValue right_value,
+                         const ChunkID chunk_id, PosList& matches_out) {
+    for (; left_it != left_end; ++left_it) {
+      const auto left = *left_it;
+
+      if (left.is_null()) continue;
+
+      if (func(left.value(), right_value)) {
         matches_out.push_back(RowID{chunk_id, left.chunk_offset()});
       }
     }

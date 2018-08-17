@@ -66,8 +66,8 @@ class ARTNode4 final : public ARTNode {
   Iterator _delegate_to_child(
       const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
       const std::function<Iterator(size_t, const AdaptiveRadixTreeIndex::BinaryComparable&, size_t)>& function) const;
-  std::array<uint8_t, 4> _partial_keys;
-  std::array<std::shared_ptr<ARTNode>, 4> _children;
+  std::array<uint8_t, 4> _partial_keys{};
+  std::array<std::shared_ptr<ARTNode>, 4> _children{};
 };
 
 /**
@@ -96,8 +96,8 @@ class ARTNode16 final : public ARTNode {
       const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
       const std::function<Iterator(std::iterator_traits<std::array<uint8_t, 16>::iterator>::difference_type,
                                    const AdaptiveRadixTreeIndex::BinaryComparable&, size_t)>& function) const;
-  std::array<uint8_t, 16> _partial_keys;
-  std::array<std::shared_ptr<ARTNode>, 16> _children;
+  std::array<uint8_t, 16> _partial_keys{};
+  std::array<std::shared_ptr<ARTNode>, 16> _children{};
 };
 
 /**
@@ -127,8 +127,8 @@ class ARTNode48 final : public ARTNode {
       const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
       const std::function<Iterator(uint8_t, const AdaptiveRadixTreeIndex::BinaryComparable&, size_t)>& function) const;
 
-  std::array<uint8_t, 256> _index_to_child;
-  std::array<std::shared_ptr<ARTNode>, 48> _children;
+  std::array<uint8_t, 256> _index_to_child{};
+  std::array<std::shared_ptr<ARTNode>, 48> _children{};
 };
 
 /**
@@ -150,7 +150,7 @@ class ARTNode256 final : public ARTNode {
       const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
       const std::function<Iterator(uint8_t, AdaptiveRadixTreeIndex::BinaryComparable, size_t)>& function) const;
 
-  std::array<std::shared_ptr<ARTNode>, 256> _children;
+  std::array<std::shared_ptr<ARTNode>, 256> _children{};
 };
 
 /**

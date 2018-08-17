@@ -35,7 +35,7 @@ class LQPSelectExpressionTest : public ::testing::Test {
 
     parameter_c = parameter_(ParameterID{0}, a);
     lqp_c =
-    AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_c))),
+    AggregateNode::make(expression_vector(), expression_vector(count_(add_(a, parameter_c))),
       ProjectionNode::make(expression_vector(add_(a, parameter_c)),
         int_float_node_a));
     // clang-format on
@@ -68,7 +68,7 @@ TEST_F(LQPSelectExpressionTest, DeepEquals) {
   const auto a2 = int_float_node_b->get_column("a");
   const auto parameter_d = parameter_(ParameterID{0}, a2);
   const auto lqp_d =
-  AggregateNode::make(expression_vector(), expression_vector(max_(add_(a, parameter_d))),
+  AggregateNode::make(expression_vector(), expression_vector(count_(add_(a, parameter_d))),
     ProjectionNode::make(expression_vector(add_(a, parameter_d)),
       int_float_node_a));
 
@@ -113,13 +113,11 @@ TEST_F(LQPSelectExpressionTest, DataType) {
   // Can't determine the DataType of this Select, since it depends on a parameter
   EXPECT_ANY_THROW(select_a->data_type());
 
-  EXPECT_EQ(select_c->data_type(), DataType::Int);
+  EXPECT_EQ(select_c->data_type(), DataType::Long);
 }
 
 TEST_F(LQPSelectExpressionTest, IsNullable) {
-  // Can't determine the nullability of this Select, since it depends on a parameter
-  EXPECT_ANY_THROW(select_a->is_nullable());
-
+  EXPECT_TRUE(select_a->is_nullable());
   EXPECT_FALSE(select_c->is_nullable());
 
   // clang-format off

@@ -42,9 +42,21 @@ class FixedSizeByteAlignedVector : public CompressedVector<FixedSizeByteAlignedV
 
   auto on_create_decoder() const { return std::make_unique<FixedSizeByteAlignedDecompressor<UnsignedIntType>>(_data); }
 
-  auto on_begin() const { return boost::make_transform_iterator(_data.cbegin(), cast_to_uint32); }
+  auto on_begin() const {
+    if constexpr (std::is_same_v<UnsignedIntType, uint32_t>) {
+      return _data.cbegin();
+    } else {
+      return boost::make_transform_iterator(_data.cbegin(), cast_to_uint32);
+    }
+  }
 
-  auto on_end() const { return boost::make_transform_iterator(_data.cend(), cast_to_uint32); }
+  auto on_end() const {
+    if constexpr (std::is_same_v<UnsignedIntType, uint32_t>) {
+      return _data.cend();
+    } else {
+      return boost::make_transform_iterator(_data.cend(), cast_to_uint32);
+    }
+  }
 
   std::unique_ptr<const BaseCompressedVector> on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
     auto data_copy = pmr_vector<UnsignedIntType>{_data, alloc};
@@ -52,7 +64,9 @@ class FixedSizeByteAlignedVector : public CompressedVector<FixedSizeByteAlignedV
   }
 
  private:
-  static uint32_t cast_to_uint32(UnsignedIntType value) { return static_cast<uint32_t>(value); }
+  static uint32_t __attribute__((always_inline)) cast_to_uint32(UnsignedIntType value) {
+    return static_cast<uint32_t>(value);
+  }
 
  private:
   const pmr_vector<UnsignedIntType> _data;

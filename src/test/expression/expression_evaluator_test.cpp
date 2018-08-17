@@ -577,6 +577,7 @@ TEST_F(ExpressionEvaluatorTest, CastLiterals) {
   EXPECT_TRUE(test_expression<int32_t>(*cast_("Hello", DataType::Int), {0}));
   EXPECT_TRUE(test_expression<float>(*cast_("Hello", DataType::Float), {0.0f}));
 }
+
 TEST_F(ExpressionEvaluatorTest, CastSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *cast_(a, DataType::Int), {1, 2, 3, 4}));
   EXPECT_TRUE(test_expression<float>(table_a, *cast_(a, DataType::Float), {1.0f, 2.0f, 3.0f, 4.0f}));

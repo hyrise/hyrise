@@ -76,7 +76,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     auto right_chunk = input_table_right()->get_chunk(chunk_id);
 
     for (ColumnID column_id{0}; column_id < input_table_left()->column_count(); ++column_id) {
-      auto right_col = right_chunk->get_mutable_column(column_id);
+      auto right_col = right_chunk->get_column(column_id);
 
       auto left_col = std::dynamic_pointer_cast<const ReferenceColumn>(left_chunk->get_column(column_id));
 

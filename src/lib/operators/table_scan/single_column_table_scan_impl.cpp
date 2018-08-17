@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "storage/base_dictionary_column.hpp"
-#include "storage/column_iterables/constant_value_iterable.hpp"
 #include "storage/column_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/create_iterable_from_column.hpp"
 #include "storage/resolve_encoded_column_type.hpp"
@@ -51,13 +50,11 @@ void SingleColumnTableScanImpl::handle_column(const BaseValueColumn& base_column
     auto& left_column = static_cast<const ValueColumn<ColumnDataType>&>(base_column);
 
     auto left_column_iterable = create_iterable_from_column(left_column);
-    auto right_value_iterable = ConstantValueIterable<ColumnDataType>{_right_value};
 
     left_column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
-      right_value_iterable.with_iterators([&](auto right_it, auto right_end) {
-        with_comparator(_predicate_condition, [&](auto comparator) {
-          _binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
-        });
+      with_comparator(_predicate_condition, [&](auto comparator) {
+        _unary_scan_with_value(comparator, left_it, left_end, type_cast<ColumnDataType>(_right_value), chunk_id,
+                               matches_out);
       });
     });
   });
@@ -77,13 +74,10 @@ void SingleColumnTableScanImpl::handle_column(const BaseEncodedColumn& base_colu
 
     resolve_encoded_column_type<Type>(base_column, [&](const auto& typed_column) {
       auto left_column_iterable = create_iterable_from_column(typed_column);
-      auto right_value_iterable = ConstantValueIterable<Type>{_right_value};
 
       left_column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
-        right_value_iterable.with_iterators([&](auto right_it, auto right_end) {
-          with_comparator(_predicate_condition, [&](auto comparator) {
-            _binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
-          });
+        with_comparator(_predicate_condition, [&](auto comparator) {
+          _unary_scan_with_value(comparator, left_it, left_end, type_cast<Type>(_right_value), chunk_id, matches_out);
         });
       });
     });
@@ -141,13 +135,9 @@ void SingleColumnTableScanImpl::handle_column(const BaseDictionaryColumn& base_c
     return;
   }
 
-  auto right_iterable = ConstantValueIterable<ValueID>{search_value_id};
-
   left_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
-    right_iterable.with_iterators([&](auto right_it, auto right_end) {
-      this->_with_operator_for_dict_column_scan(_predicate_condition, [&](auto comparator) {
-        this->_binary_scan(comparator, left_it, left_end, right_it, chunk_id, matches_out);
-      });
+    this->_with_operator_for_dict_column_scan(_predicate_condition, [&](auto comparator) {
+      this->_unary_scan_with_value(comparator, left_it, left_end, search_value_id, chunk_id, matches_out);
     });
   });
 }
