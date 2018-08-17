@@ -29,10 +29,9 @@ class SimpleLogger : public AbstractLogger {
   // Recovers db from logfiles and returns the number of loaded tables
   uint32_t recover() override;
 
- private:
-  friend class Logger;
-
   SimpleLogger();
+
+ private:
 
   void _write_to_logfile(const std::stringstream& ss);
   void _open_logfile();

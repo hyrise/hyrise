@@ -31,8 +31,6 @@ class NoLogger : public AbstractLogger {
 
   uint32_t recover() override { return 0u; };
 
- protected:
-  friend class Logger;
   NoLogger() = default;
 };
 

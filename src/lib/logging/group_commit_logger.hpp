@@ -33,10 +33,9 @@ class GroupCommitLogger : public AbstractLogger {
   // Recovers db from logfiles and returns the number of loaded tables
   uint32_t recover() override;
 
- private:
-  friend class Logger;
-
   GroupCommitLogger();
+
+ private:
 
   void _write_buffer_to_logfile();
   void _write_to_buffer(std::vector<char>& entry);

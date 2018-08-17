@@ -29,26 +29,10 @@ const std::string Logger::_log_folder = "logs/";           // NOLINT
 std::string Logger::_log_path = _data_path + _log_folder;  // NOLINT
 const std::string Logger::_filename = "hyrise-log";        // NOLINT
 
+std::unique_ptr<AbstractLogger> Logger::_logger_instance = std::make_unique<NoLogger>();
+
 AbstractLogger& Logger::get() {
-  switch (_implementation) {
-    case Implementation::No: {
-      static NoLogger instance;
-      return instance;
-    }
-    case Implementation::Simple: {
-      static SimpleLogger instance;
-      return instance;
-    }
-    case Implementation::GroupCommit: {
-      static GroupCommitLogger instance;
-      return instance;
-    }
-    default: {
-      DebugAssert(false, "Logger: no implementation set.");
-      static NoLogger instance;
-      return instance;
-    }
-  }
+  return *_logger_instance;
 }
 
 void Logger::setup(std::string folder, const Implementation implementation) {
@@ -64,6 +48,24 @@ void Logger::setup(std::string folder, const Implementation implementation) {
   _create_directories();
 
   _implementation = implementation;
+
+  switch (_implementation) {
+    case Implementation::No: {
+      // _logger_instance is initiated with NoLogger
+      break;
+    }
+    case Implementation::Simple: {
+      _logger_instance = std::make_unique<SimpleLogger>();
+      break;
+    }
+    case Implementation::GroupCommit: {
+      _logger_instance = std::make_unique<GroupCommitLogger>();
+      break;
+    }
+    default: {
+      throw std::runtime_error("Logger: implementation unkown.");
+    }
+  }
 }
 
 bool Logger::is_active() { return _implementation != Implementation::No; }

@@ -71,6 +71,7 @@ class Logger {
   static const std::string _filename;
 
   static Implementation _implementation;
+  static std::unique_ptr<AbstractLogger> _logger_instance;
 };
 
 }  // namespace opossum
