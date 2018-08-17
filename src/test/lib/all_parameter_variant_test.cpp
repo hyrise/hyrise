@@ -111,31 +111,4 @@ TEST_F(AllParameterVariantTest, ToString) {
   }
 }
 
-TEST_F(AllParameterVariantTest, ValuesNear) {
-  {
-    const AllParameterVariant parameter_0(ParameterID{17});
-    const AllParameterVariant parameter_1(ParameterID{16});
-
-    ASSERT_TRUE(all_parameter_variant_near(parameter_0, parameter_0, 17.0));
-    ASSERT_FALSE(all_parameter_variant_near(parameter_0, parameter_1, 17.0));
-  }
-  {
-    const AllParameterVariant parameter_0(ColumnID{17});
-    const AllParameterVariant parameter_1(ColumnID{16});
-
-    ASSERT_TRUE(all_parameter_variant_near(parameter_0, parameter_0, 17.0));
-    ASSERT_FALSE(all_parameter_variant_near(parameter_0, parameter_1, 17.0));
-  }
-  {
-    const auto variant_0 = AllTypeVariant{1.0f};
-    const auto variant_1 = AllTypeVariant{1.1};
-
-    ASSERT_TRUE(all_parameter_variant_near(variant_0, variant_1, 0.2));
-    ASSERT_FALSE(all_parameter_variant_near(variant_0, variant_1, 0.05));
-
-    ASSERT_TRUE(all_parameter_variant_near(variant_1, variant_0, 0.2));
-    ASSERT_FALSE(all_parameter_variant_near(variant_1, variant_0, 0.05));
-  }
-}
-
 }  // namespace opossum
