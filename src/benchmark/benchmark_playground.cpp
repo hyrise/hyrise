@@ -3,9 +3,33 @@
 #include "benchmark/benchmark.h"
 #include "benchmark_basic_fixture.hpp"
 
-#include "storage/value_column.hpp"
-
 namespace opossum {
+
+/**
+ * Welcome to the benchmark playground. Here, you can quickly compare two
+ * approaches in a minimal setup. Of course you can also use it to just benchmark
+ * one single thing.
+ *
+ * In this example, a minimal TableScan-like operation is used to evaluate the
+ * performance impact of pre-allocating the result vector (PosList in hyrise).
+ *
+ * A few tips:
+ * * The optimizer is not your friend. If you do a bunch of calculations and
+ *   don't actually use the result, it will optimize your code out and you will
+ *   benchmark only noise.
+ * * benchmark::DoNotOptimize(<expression>); marks <expression> as "globally
+ *   aliased", meaning that the compiler has to assume that any operation that
+ *   *could* access this memory location will do so.
+ *   However, despite the name, this will not prevent the compiler from
+ *   optimizing this expression itself!
+ * * benchmark::ClobberMemory(); can be used to force calculations to be written
+ *   to memory. It acts as a memory barrier. In combination with DoNotOptimize(e),
+ *   this function effectively declares that it could touch any part of memory,
+ *   in particular globally aliased memory.
+ * * More information on that: https://stackoverflow.com/questions/40122141/
+ */
+
+using ValueT = int32_t;
 
 class BenchmarkPlaygroundFixture : public BenchmarkBasicFixture {
  public:
@@ -14,64 +38,57 @@ class BenchmarkPlaygroundFixture : public BenchmarkBasicFixture {
 
     _clear_cache();
 
-    auto value_column = std::make_shared<ValueColumn<int>>();
-    value_column->append({123});
-    value_column->append({456});
-    value_column->append({789});
-
-    _value_column = value_column;
+    // Fill the vector with 1M values in the pattern 0, 1, 2, 3, 0, 1, 2, 3, ...
+    // The "TableScan" will scan for one value (2), so it will select 25%.
+    _vec.resize(1'000'000);
+    std::generate(_vec.begin(), _vec.end(), []() {
+      static ValueT v = 0;
+      v = (v + 1) % 4;
+      return v;
+    });
   }
   void TearDown(::benchmark::State& state) override { BenchmarkBasicFixture::TearDown(state); }
 
  protected:
-  std::shared_ptr<const BaseColumn> _value_column;
+  std::vector<ValueT> _vec;
 };
 
-BENCHMARK_F(BenchmarkPlaygroundFixture, BaseColumn_Subscript_Operator)(benchmark::State& state) {
+/**
+ * Reference implementation, growing the vector on demand
+ */
+BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_Reference)(benchmark::State& state) {
+  // Add some benchmark-specific setup here
+
   while (state.KeepRunning()) {
-    benchmark::DoNotOptimize(_value_column);
-    for (auto i = 0u; i < 333; i++) {
-      const auto v1 = _value_column->operator[](ChunkOffset{1});
-      const auto v0 = _value_column->operator[](ChunkOffset{2});
-      const auto v2 = _value_column->operator[](ChunkOffset{0});
-      benchmark::DoNotOptimize(v1);
-      benchmark::DoNotOptimize(v0);
-      benchmark::DoNotOptimize(v2);
-      benchmark::ClobberMemory();
+    std::vector<size_t> result;
+    benchmark::DoNotOptimize(result.data());  // Do not optimize out the vector
+    const auto size = _vec.size();
+    for (size_t i = 0; i < size; ++i) {
+      if (_vec[i] == 2) {
+        result.push_back(i);
+        benchmark::ClobberMemory();  // Force that record to be written to memory
+      }
     }
   }
 }
 
-BENCHMARK_F(BenchmarkPlaygroundFixture, BaseTypedColumn_get_typed_value)(benchmark::State& state) {
-  auto base_typed_column = std::dynamic_pointer_cast<const BaseTypedColumn<int>>(_value_column);
+/**
+ * Alternative implementation, pre-allocating the vector
+ */
+BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_PreAllocate)(benchmark::State& state) {
+  // Add some benchmark-specific setup here
 
   while (state.KeepRunning()) {
-    benchmark::DoNotOptimize(base_typed_column);
-    for (auto i = 0u; i < 333; i++) {
-      const auto v1 = base_typed_column->get_typed_value(ChunkOffset{1});
-      const auto v0 = base_typed_column->get_typed_value(ChunkOffset{2});
-      const auto v2 = base_typed_column->get_typed_value(ChunkOffset{0});
-      benchmark::DoNotOptimize(v1);
-      benchmark::DoNotOptimize(v0);
-      benchmark::DoNotOptimize(v2);
-      benchmark::ClobberMemory();
-    }
-  }
-}
-
-BENCHMARK_F(BenchmarkPlaygroundFixture, ValueColumn_get_typed_value)(benchmark::State& state) {
-  auto value_column_int = std::dynamic_pointer_cast<const ValueColumn<int>>(_value_column);
-
-  while (state.KeepRunning()) {
-    benchmark::DoNotOptimize(value_column_int);
-    for (auto i = 0u; i < 333; i++) {
-      const auto v1 = value_column_int->get_typed_value(ChunkOffset{1});
-      const auto v0 = value_column_int->get_typed_value(ChunkOffset{2});
-      const auto v2 = value_column_int->get_typed_value(ChunkOffset{0});
-      benchmark::DoNotOptimize(v1);
-      benchmark::DoNotOptimize(v0);
-      benchmark::DoNotOptimize(v2);
-      benchmark::ClobberMemory();
+    std::vector<size_t> result;
+    benchmark::DoNotOptimize(result.data());  // Do not optimize out the vector
+    // pre-allocate result vector
+    result.reserve(250'000);
+    const auto size = _vec.size();
+    for (size_t i = 0; i < size; ++i) {
+      if (_vec[i] == 2) {
+        result.push_back(i);
+        benchmark::ClobberMemory();  // Force that record to be written to memory
+      }
     }
   }
 }
