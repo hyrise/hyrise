@@ -2,6 +2,7 @@
 # Include this here because we need the GENERATED property on version.hpp and in CMake that property has directory
 # scope
 include(${PROJECT_SOURCE_DIR}/cmake/git_watcher.cmake)
+
 # Sources and libraries shared among the different builds of the lib
 set(
     SOURCES
@@ -514,7 +515,6 @@ set(
     utils/timer.cpp
     utils/timer.hpp
     utils/tracing/provider.h
-    utils/tracing/probe_definitions.hpp
     ${CMAKE_BINARY_DIR}/version.hpp
 )
 
@@ -584,15 +584,18 @@ endif()
 
 # Generate a macro file containing probe definitions for dtrace users. As soon as a probe is not present
 # in `provider.h` a compile error would be thrown. With this ugly solution we can avoid this.
-execute_process (
-    COMMAND grep -r --include=*.[ch]pp --exclude=systemtap.hpp -h DTRACE_PROBE ${CMAKE_SOURCE_DIR}
-    COMMAND cut -d "(" -f2
-    COMMAND cut -d ")" -f1
-    COMMAND cut -d "," -f1-2
-    COMMAND sed "s/, /_/"
-    COMMAND xargs -n 1 bash -c "echo \"#ifndef $0 \n#define $0(...) \n#endif\""
-    OUTPUT_FILE ${CMAKE_SOURCE_DIR}/src/lib/utils/tracing/probe_definitions.hpp
+
+set (PROBES_FILE "${CMAKE_SOURCE_DIR}/src/lib/utils/tracing/probe_definitions.hpp")
+SET(LINE "#ifndef &\\n#define &(...)\\n#endif")
+
+add_custom_command (
+    OUTPUT ${PROBES_FILE}
+    DEPENDS ${SOURCES}
+    COMMAND rm -f ${PROBES_FILE} && grep -r --include=*.[ch]pp --exclude=systemtap.hpp --exclude=probe_definitions.hpp -h DTRACE_PROBE ${CMAKE_SOURCE_DIR} |  cut -d "(" -f2 |  cut -d ")" -f1 |  cut -d "," -f1-2 |  sed "s/, /_/" | uniq | xargs -n 1 -I & echo -e "${LINE}" > ${PROBES_FILE}
+    VERBATIM
 )
+
+set(SOURCES ${SOURCES} utils/tracing/probe_definitions.hpp)
 
 # Configure the regular hyrise library used for tests/server/playground...
 add_library(hyrise STATIC ${SOURCES})
