@@ -28,7 +28,8 @@ namespace opossum {
 JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
                      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                      const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition predicate_condition)
-    : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, column_ids, predicate_condition) {
+    : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, column_ids, predicate_condition,
+                           std::make_unique<JoinIndex::PerformanceData>()) {
   DebugAssert(mode != JoinMode::Cross, "Cross Join is not supported by index join.");
 }
 
@@ -98,6 +99,8 @@ void JoinIndex::_perform_join() {
   _pos_list_left->reserve(worst_case);
   _pos_list_right->reserve(worst_case);
 
+  auto& performance_data = static_cast<PerformanceData&>(*_performance_data);
+
   // Scan all chunks for right input
   for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < _right_in_table->chunk_count(); ++chunk_id_right) {
     const auto chunk_right = _right_in_table->get_chunk(chunk_id_right);
@@ -129,6 +132,7 @@ void JoinIndex::_perform_join() {
           });
         });
       }
+      performance_data.chunks_scanned_with_index++;
     } else {
       // Fall back to NestedLoopJoin
       const auto chunk_column_right = _right_in_table->get_chunk(chunk_id_right)->get_column(_right_column_id);
@@ -145,6 +149,7 @@ void JoinIndex::_perform_join() {
         JoinNestedLoop::_join_two_untyped_columns(chunk_column_left, chunk_column_right, chunk_id_left, chunk_id_right,
                                                   params);
       }
+      performance_data.chunks_scanned_without_index++;
     }
   }
 
@@ -182,6 +187,12 @@ void JoinIndex::_perform_join() {
   _write_output_columns(output_columns, _right_in_table, _pos_list_right);
 
   _output_table->append_chunk(output_columns);
+
+  if (performance_data.chunks_scanned_with_index > performance_data.chunks_scanned_without_index) {
+    PerformanceWarning(std::string("Only ") + std::to_string(performance_data.chunks_scanned_with_index) + " of " +
+                       std::to_string(performance_data.chunks_scanned_without_index) +
+                       " chunks scanned using an index");
+  }
 }
 
 // join loop that joins two chunks of two columns using an iterator for the left, and an index for the right
@@ -359,6 +370,14 @@ void JoinIndex::_on_cleanup() {
   _pos_list_right.reset();
   _left_matches.clear();
   _right_matches.clear();
+}
+
+std::string JoinIndex::PerformanceData::to_string(DescriptionMode description_mode) const {
+  std::string string = OperatorPerformanceData::to_string(description_mode);
+  string += (description_mode == DescriptionMode::SingleLine ? " / " : "\\n");
+  string += std::to_string(chunks_scanned_with_index) + " of " +
+            std::to_string(chunks_scanned_with_index + chunks_scanned_without_index) + " chunks used an index";
+  return string;
 }
 
 }  // namespace opossum
