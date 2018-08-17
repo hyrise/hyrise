@@ -1,6 +1,11 @@
 #include "simd_bp128_packing.hpp"
 
+#ifdef __SSE2__
 #include <emmintrin.h>
+using simd_type = __m128i;
+#else
+using simd_type = unsigned int __attribute__((vector_size(16)));
+#endif
 
 #include <algorithm>
 
@@ -27,7 +32,8 @@ namespace {
  */
 template <uint8_t bit_size, uint8_t carry_over = 0u, uint8_t remaining_recursions = bit_size>
 struct Pack128Bit {
-  void operator()(const __m128i* in, __m128i* out, __m128i& in_reg, __m128i& out_reg, const __m128i& mask) const {
+  void operator()(const simd_type* in, simd_type* out, simd_type& in_reg, simd_type& out_reg,
+                  const simd_type& mask) const {
     constexpr auto BITS_IN_WORD = 32u;
 
     // Number of integers that fit completely into the 32-bit sub-blocks
@@ -36,8 +42,13 @@ struct Pack128Bit {
     // Fill the four 32-bit sub-blocks simultaneously by bit shifting
     for (auto i = 0u; i < I_MAX; ++i) {
       const auto offset = carry_over + i * bit_size;
+#ifdef __SSE2__
       in_reg = _mm_and_si128(_mm_loadu_si128(in++), mask);
       out_reg = _mm_or_si128(out_reg, _mm_slli_epi32(in_reg, offset));
+#else
+      in_reg = *in++ & mask;
+      out_reg = out_reg | (in_reg << offset);
+#endif
     }
 
     constexpr auto NEXT_OFFSET = carry_over + I_MAX * bit_size;
@@ -45,6 +56,7 @@ struct Pack128Bit {
 
     // Check if integers need to be split
     if (NEXT_OFFSET < BITS_IN_WORD) {
+#ifdef __SSE2__
       in_reg = _mm_and_si128(_mm_loadu_si128(in++), mask);
       out_reg = _mm_or_si128(out_reg, _mm_slli_epi32(in_reg, NEXT_OFFSET));
 
@@ -52,11 +64,28 @@ struct Pack128Bit {
       ++out;
 
       out_reg = _mm_srli_epi32(in_reg, NUM_FIRST_BITS);
+#else
+      in_reg = *in++ & mask;
+      out_reg = out_reg | (in_reg << NEXT_OFFSET);
+
+      *out = out_reg;
+      ++out;
+
+      out_reg = in_reg >> NUM_FIRST_BITS;
+#endif
     } else {
+#ifdef __SSE2__
       _mm_store_si128(out, out_reg);
       ++out;
 
       out_reg = _mm_setzero_si128();
+#else
+      *out = out_reg;
+      out++;
+
+      simd_type zero_reg = {0, 0, 0, 0};
+      out_reg = zero_reg;
+#endif
     }
 
     // Calculate the new carry over
@@ -67,7 +96,8 @@ struct Pack128Bit {
 
 template <uint8_t bit_size, uint8_t carry_over>
 struct Pack128Bit<bit_size, carry_over, 0u> {
-  void operator()(const __m128i* in, __m128i* out, __m128i& in_reg, __m128i& out_reg, const __m128i& mask) const {}
+  void operator()(const simd_type* in, simd_type* out, simd_type& in_reg, simd_type& out_reg,
+                  const simd_type& mask) const {}
 };
 
 /**
@@ -75,7 +105,8 @@ struct Pack128Bit<bit_size, carry_over, 0u> {
  */
 template <uint8_t bit_size, uint8_t carry_over = 0u, uint8_t remaining_recursions = bit_size>
 struct Unpack128Bit {
-  void operator()(const __m128i* in, __m128i* out, __m128i& in_reg, __m128i& out_reg, const __m128i& mask) const {
+  void operator()(const simd_type* in, simd_type* out, simd_type& in_reg, simd_type& out_reg,
+                  const simd_type& mask) const {
     constexpr auto BITS_IN_WORD = 32u;
 
     // Number of integers that fit completely into the 32-bit sub-blocks
@@ -83,8 +114,13 @@ struct Unpack128Bit {
 
     for (auto i = 0u; i < I_MAX; ++i) {
       const auto offset = carry_over + i * bit_size;
+#ifdef __SSE2__
       out_reg = _mm_and_si128(_mm_srli_epi32(in_reg, offset), mask);
       _mm_storeu_si128(out++, out_reg);
+#else
+      out_reg = (in_reg >> offset) & mask;
+      *out++ = out_reg;
+#endif
     }
 
     constexpr auto NEXT_OFFSET = carry_over + I_MAX * bit_size;
@@ -92,17 +128,29 @@ struct Unpack128Bit {
 
     // Check if integers have been split across the 128-bit block boundary
     if (NEXT_OFFSET < BITS_IN_WORD) {
+#ifdef __SSE2__
       out_reg = _mm_srli_epi32(in_reg, NEXT_OFFSET);
       in_reg = _mm_load_si128(in++);
 
       out_reg = _mm_or_si128(out_reg, _mm_and_si128(_mm_slli_epi32(in_reg, NUM_FIRST_BITS), mask));
       _mm_storeu_si128(out++, out_reg);
+#else
+      out_reg = in_reg >> NEXT_OFFSET;
+      in_reg = *in++;
+
+      out_reg = out_reg | ((in_reg << NUM_FIRST_BITS) & mask);
+      *out++ = out_reg;
+#endif
     } else {
       constexpr auto LAST_RECURSION = 1u;
 
       // Only load another 128-bit block if it’s not the last recursion
       if (remaining_recursions > LAST_RECURSION) {
+#ifdef __SSE2__
         in_reg = _mm_load_si128(in++);
+#else
+        in_reg = *in++;
+#endif
       }
     }
 
@@ -114,7 +162,8 @@ struct Unpack128Bit {
 
 template <uint8_t bit_size, uint8_t carry_over>
 struct Unpack128Bit<bit_size, carry_over, 0u> {
-  void operator()(const __m128i* in, __m128i* out, __m128i& in_reg, __m128i& out_reg, const __m128i& mask) const {}
+  void operator()(const simd_type* in, simd_type* out, simd_type& in_reg, simd_type& out_reg,
+                  const simd_type& mask) const {}
 };
 
 void unpack_128_zeros(uint32_t* out) {
@@ -125,28 +174,43 @@ void unpack_128_zeros(uint32_t* out) {
 }  // namespace
 
 void SimdBp128Packing::write_meta_info(const uint8_t* in, uint128_t* out) {
-  const auto simd_in = reinterpret_cast<const __m128i*>(in);
-  auto simd_out = reinterpret_cast<__m128i*>(out);
+  const auto simd_in = reinterpret_cast<const simd_type*>(in);
+  auto simd_out = reinterpret_cast<simd_type*>(out);
 
+#ifdef __SSE2__
   const auto meta_block_info_rgtr = _mm_loadu_si128(simd_in);
   _mm_store_si128(simd_out, meta_block_info_rgtr);
+#else
+  *simd_out = *simd_in;
+#endif
 }
 
 void SimdBp128Packing::read_meta_info(const uint128_t* in, uint8_t* out) {
-  const auto simd_in = reinterpret_cast<const __m128i*>(in);
-  auto simd_out = reinterpret_cast<__m128i*>(out);
+  const auto simd_in = reinterpret_cast<const simd_type*>(in);
+  auto simd_out = reinterpret_cast<simd_type*>(out);
 
+#ifdef __SSE2__
   auto meta_info_block_rgtr = _mm_load_si128(simd_in);
   _mm_storeu_si128(simd_out, meta_info_block_rgtr);
+#else
+  *simd_out = *simd_in;
+#endif
 }
 
 void SimdBp128Packing::pack_block(const uint32_t* in, uint128_t* out, const uint8_t bit_size) {
-  auto simd_in = reinterpret_cast<const __m128i*>(in);
-  auto simd_out = reinterpret_cast<__m128i*>(out);
+  auto simd_in = reinterpret_cast<const simd_type*>(in);
+  auto simd_out = reinterpret_cast<simd_type*>(out);
 
+#ifdef __SSE2__
   auto in_reg = _mm_setzero_si128();
   auto out_reg = _mm_setzero_si128();
   const auto mask = _mm_set1_epi32((1ul << bit_size) - 1);
+#else
+  simd_type in_reg = {0, 0, 0, 0};
+  simd_type out_reg = {0, 0, 0, 0};
+  unsigned int one_mask = (1ul << bit_size) - 1;
+  const simd_type mask = {one_mask, one_mask, one_mask, one_mask};
+#endif
 
   switch (bit_size) {
     case 0u:
@@ -293,12 +357,19 @@ void SimdBp128Packing::unpack_block(const uint128_t* in, uint32_t* out, const ui
     return;
   }
 
-  auto simd_in = reinterpret_cast<const __m128i*>(in);
-  auto simd_out = reinterpret_cast<__m128i*>(out);
+  auto simd_in = reinterpret_cast<const simd_type*>(in);
+  auto simd_out = reinterpret_cast<simd_type*>(out);
 
+#ifdef __SSE2__
   auto in_reg = _mm_load_si128(simd_in++);
   auto out_reg = _mm_setzero_si128();
   const auto mask = _mm_set1_epi32((1ul << bit_size) - 1);
+#else
+  simd_type in_reg = *simd_in++;
+  simd_type out_reg = {0, 0, 0, 0};
+  unsigned int one_mask = (1ul << bit_size) - 1;
+  const simd_type mask = {one_mask, one_mask, one_mask, one_mask};
+#endif
 
   switch (bit_size) {
     case 1u:
