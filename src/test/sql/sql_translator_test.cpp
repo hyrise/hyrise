@@ -942,12 +942,9 @@ TEST_F(SQLTranslatorTest, LimitLiteral) {
 //  }
 
 TEST_F(SQLTranslatorTest, Extract) {
-  std::vector<DatetimeComponent> components{DatetimeComponent::Year,
-                                            DatetimeComponent::Month,
-                                            DatetimeComponent::Day,
-                                            DatetimeComponent::Hour,
-                                            DatetimeComponent::Minute,
-                                            DatetimeComponent::Second};
+  std::vector<DatetimeComponent> components{DatetimeComponent::Year,   DatetimeComponent::Month,
+                                            DatetimeComponent::Day,    DatetimeComponent::Hour,
+                                            DatetimeComponent::Minute, DatetimeComponent::Second};
 
   std::shared_ptr<opossum::AbstractLQPNode> actual_lqp;
   std::shared_ptr<opossum::AbstractLQPNode> expected_lqp;

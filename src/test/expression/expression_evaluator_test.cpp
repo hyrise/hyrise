@@ -552,9 +552,12 @@ TEST_F(ExpressionEvaluatorTest, ExtractLiterals) {
   EXPECT_TRUE(test_expression<std::string>(*extract_(DatetimeComponent::Month, null_()), {std::nullopt}));
   EXPECT_TRUE(test_expression<std::string>(*extract_(DatetimeComponent::Day, null_()), {std::nullopt}));
 
-  EXPECT_THROW(test_expression<std::string>(*extract_(DatetimeComponent::Hour, "1992-09-30"), {"30"}), std::logic_error);
-  EXPECT_THROW(test_expression<std::string>(*extract_(DatetimeComponent::Minute, "1992-09-30"), {"30"}), std::logic_error);
-  EXPECT_THROW(test_expression<std::string>(*extract_(DatetimeComponent::Second, "1992-09-30"), {"30"}), std::logic_error);
+  EXPECT_THROW(test_expression<std::string>(*extract_(DatetimeComponent::Hour, "1992-09-30"), {"30"}),
+               std::logic_error);
+  EXPECT_THROW(test_expression<std::string>(*extract_(DatetimeComponent::Minute, "1992-09-30"), {"30"}),
+               std::logic_error);
+  EXPECT_THROW(test_expression<std::string>(*extract_(DatetimeComponent::Second, "1992-09-30"), {"30"}),
+               std::logic_error);
 
   EXPECT_EQ(extract_(DatetimeComponent::Year, "1993-08-01")->data_type(), DataType::String);
 }
