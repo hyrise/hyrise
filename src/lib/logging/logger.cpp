@@ -17,7 +17,7 @@
 
 namespace opossum {
 
-const Logger::Implementation Logger::default_implementation = Implementation::GroupCommit;
+const Logger::Implementation Logger::default_implementation = Implementation::No;
 
 // Logging is initially set to NoLogger and set to an implementation by console or server
 Logger::Implementation Logger::_implementation = Implementation::No;
