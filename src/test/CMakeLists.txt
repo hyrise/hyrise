@@ -108,6 +108,7 @@ set(
     sql/sqlite_testrunner/sqlite_testrunner.cpp
     sql/sqlite_testrunner/sqlite_wrapper_test.cpp
     sql/sql_identifier_resolver_test.cpp
+    sql/sql_identifier_test.cpp
     sql/sql_pipeline_statement_test.cpp
     sql/sql_pipeline_test.cpp
     sql/sql_query_plan_cache_test.cpp
