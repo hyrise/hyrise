@@ -50,6 +50,9 @@ int main(int argc, char* argv[]) {
     // constructor and then runs forever.
     opossum::Server server{io_service, port, logging_path, implementation};
 
+    std::cout << "Port: " << port << std::endl;
+    std::cout << "PID: " << ::getpid() << std::endl;
+
     io_service.run();
   } catch (std::exception& e) {
     std::cerr << "Exception: " << e.what() << "\n";

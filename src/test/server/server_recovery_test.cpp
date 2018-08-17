@@ -24,21 +24,45 @@ class ServerRecoveryTest : public BaseTestWithParam<Logger::Implementation> {
     }
   }
 
+  std::tuple<uint32_t, uint32_t> exec(const char* cmd, const std::string& port_str, const std::string& pid_str,
+                                      const char delimiter) {
+    std::array<char, 128> buffer;
+    std::string output;
+    std::shared_ptr<FILE> pipe(popen(cmd, "r"), pclose);
+    if (!pipe) throw std::runtime_error("popen() server failed");
+    size_t port_pos;
+    size_t pid_pos;
+    while (!feof(pipe.get())) {
+        if (fgets(buffer.data(), 128, pipe.get()) != nullptr) {
+            output += buffer.data();
+        }
+        port_pos = output.find(port_str);
+        pid_pos = output.find(pid_str);
+        if (port_pos != std::string::npos && pid_pos != std::string::npos) break;
+    }
+    auto port = std::stoul(output.substr(port_pos + port_str.length(), output.find(delimiter, port_pos)));
+    
+    auto pid = std::stoul(output.substr(pid_pos + pid_str.length(), output.find(delimiter, pid_pos)));
+    
+    return {port, pid};
+  }
+
   void start_server(Logger::Implementation implementation) {
     std::string implementation_string = logger_to_string.at(implementation);
 
     auto cmd =
         "\"" + build_dir + "/hyriseServer\" 1234 " + implementation_string + " " + test_data_path + _folder + " &";
-    std::system(cmd.c_str());
 
-    _connection_string = "hostaddr=127.0.0.1 port=1234";
+    auto [port, server_pid] = exec(cmd.c_str(), "Port: ", "PID: ", '\n');
+    _server_pid = server_pid;
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    _connection_string = "hostaddr=127.0.0.1 port=" + std::to_string(port);
   }
 
-  void terminate_server() { std::system("pkill hyriseServer"); }
+  void terminate_server() { std::system(("kill " + std::to_string(_server_pid)).c_str()); }
 
   std::string _connection_string;
+  uint32_t _server_pid;
 };
 
 /*  
