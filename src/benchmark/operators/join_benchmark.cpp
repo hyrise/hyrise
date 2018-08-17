@@ -17,9 +17,9 @@ constexpr auto NUMBER_OF_CHUNKS = size_t{50};
 
 // These numbers were arbitrarily chosen to form a representative group of JoinBenchmarks
 // that run in a tolerable amount of time
-constexpr auto TABLE_SIZE_SMALL = size_t{1000};
-constexpr auto TABLE_SIZE_MEDIUM = size_t{100000};
-constexpr auto TABLE_SIZE_BIG = size_t{10000000};
+constexpr auto TABLE_SIZE_SMALL = size_t{1'000};
+constexpr auto TABLE_SIZE_MEDIUM = size_t{100'000};
+constexpr auto TABLE_SIZE_BIG = size_t{10'000'000};
 }  // namespace
 
 namespace opossum {
@@ -79,7 +79,7 @@ void bm_join_impl(benchmark::State& state, std::shared_ptr<TableWrapper> table_w
 }
 
 template <class C>
-void BM_Join_Small(benchmark::State& state) {  // NOLINT 1,000 x 1,000
+void BM_Join_SmallAndSmall(benchmark::State& state) {  // NOLINT 1,000 x 1,000
   auto table_wrapper_left = generate_table(TABLE_SIZE_SMALL);
   auto table_wrapper_right = generate_table(TABLE_SIZE_SMALL);
 
@@ -87,7 +87,7 @@ void BM_Join_Small(benchmark::State& state) {  // NOLINT 1,000 x 1,000
 }
 
 template <class C>
-void BM_Join_Skewed(benchmark::State& state) {  // NOLINT 1,000 x 10,000,000
+void BM_Join_SmallAndBig(benchmark::State& state) {  // NOLINT 1,000 x 10,000,000
   auto table_wrapper_left = generate_table(TABLE_SIZE_SMALL);
   auto table_wrapper_right = generate_table(TABLE_SIZE_BIG);
 
@@ -95,29 +95,29 @@ void BM_Join_Skewed(benchmark::State& state) {  // NOLINT 1,000 x 10,000,000
 }
 
 template <class C>
-void BM_Join_Big(benchmark::State& state) {  // NOLINT 100,000 x 100,000
+void BM_Join_MediumAndMedium(benchmark::State& state) {  // NOLINT 100,000 x 100,000
   auto table_wrapper_left = generate_table(TABLE_SIZE_MEDIUM);
   auto table_wrapper_right = generate_table(TABLE_SIZE_MEDIUM);
 
   bm_join_impl<C>(state, table_wrapper_left, table_wrapper_right);
 }
 
-BENCHMARK_TEMPLATE(BM_Join_Small, JoinNestedLoop);
+BENCHMARK_TEMPLATE(BM_Join_SmallAndSmall, JoinNestedLoop);
 
-BENCHMARK_TEMPLATE(BM_Join_Small, JoinIndex);
-BENCHMARK_TEMPLATE(BM_Join_Skewed, JoinIndex);
-BENCHMARK_TEMPLATE(BM_Join_Big, JoinIndex);
+BENCHMARK_TEMPLATE(BM_Join_SmallAndSmall, JoinIndex);
+BENCHMARK_TEMPLATE(BM_Join_SmallAndBig, JoinIndex);
+BENCHMARK_TEMPLATE(BM_Join_MediumAndMedium, JoinIndex);
 
-BENCHMARK_TEMPLATE(BM_Join_Small, JoinHash);
-BENCHMARK_TEMPLATE(BM_Join_Skewed, JoinHash);
-BENCHMARK_TEMPLATE(BM_Join_Big, JoinHash);
+BENCHMARK_TEMPLATE(BM_Join_SmallAndSmall, JoinHash);
+BENCHMARK_TEMPLATE(BM_Join_SmallAndBig, JoinHash);
+BENCHMARK_TEMPLATE(BM_Join_MediumAndMedium, JoinHash);
 
-BENCHMARK_TEMPLATE(BM_Join_Small, JoinSortMerge);
-BENCHMARK_TEMPLATE(BM_Join_Skewed, JoinSortMerge);
-BENCHMARK_TEMPLATE(BM_Join_Big, JoinSortMerge);
+BENCHMARK_TEMPLATE(BM_Join_SmallAndSmall, JoinSortMerge);
+BENCHMARK_TEMPLATE(BM_Join_SmallAndBig, JoinSortMerge);
+BENCHMARK_TEMPLATE(BM_Join_MediumAndMedium, JoinSortMerge);
 
-BENCHMARK_TEMPLATE(BM_Join_Small, JoinMPSM);
-BENCHMARK_TEMPLATE(BM_Join_Skewed, JoinMPSM);
-BENCHMARK_TEMPLATE(BM_Join_Big, JoinMPSM);
+BENCHMARK_TEMPLATE(BM_Join_SmallAndSmall, JoinMPSM);
+BENCHMARK_TEMPLATE(BM_Join_SmallAndBig, JoinMPSM);
+BENCHMARK_TEMPLATE(BM_Join_MediumAndMedium, JoinMPSM);
 
 }  // namespace opossum
