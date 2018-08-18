@@ -391,6 +391,7 @@ std::string ColumnStatistics<ColumnDataType>::description() const {
 template <typename ColumnDataType>
 float ColumnStatistics<ColumnDataType>::estimate_range_selectivity(const ColumnDataType minimum,
                                                                    const ColumnDataType maximum) const {
+  DebugAssert(minimum <= maximum, "Minimum parameter is larger than maximum parameter.");
   // minimum must be smaller or equal than maximum
   // distinction between integers and decimals
   // for integers the number of possible integers is used within the inclusive ranges

@@ -942,14 +942,23 @@ TEST_F(SQLTranslatorTest, LimitLiteral) {
 //  }
 
 TEST_F(SQLTranslatorTest, Extract) {
-  const auto actual_lqp = compile_query("SELECT EXTRACT(MONTH FROM '1993-08-01');");
+  std::vector<DatetimeComponent> components{DatetimeComponent::Year,   DatetimeComponent::Month,
+                                            DatetimeComponent::Day,    DatetimeComponent::Hour,
+                                            DatetimeComponent::Minute, DatetimeComponent::Second};
 
-  // clang-format off
-  const auto expected_lqp =
-  ProjectionNode::make(expression_vector(extract_(DatetimeComponent::Month, "1993-08-01")), DummyTableNode::make());
-  // clang-format on
+  std::shared_ptr<opossum::AbstractLQPNode> actual_lqp;
+  std::shared_ptr<opossum::AbstractLQPNode> expected_lqp;
+  ProjectionNode::make(expression_vector(extract_(DatetimeComponent::Year, "1993-08-01")), DummyTableNode::make());
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  for (const auto& component : components) {
+    std::stringstream query_str;
+    query_str << "SELECT EXTRACT(" << component << " FROM '1993-08-01');";
+
+    actual_lqp = compile_query(query_str.str());
+    expected_lqp = ProjectionNode::make(expression_vector(extract_(component, "1993-08-01")), DummyTableNode::make());
+
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
 }
 
 TEST_F(SQLTranslatorTest, ValuePlaceholders) {
