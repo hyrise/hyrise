@@ -59,6 +59,7 @@ target_compile_options(
 add_library(
     cqf
 
+    cqf/src/gqf_wrapper_2.c
     cqf/src/gqf_file.c
     cqf/src/gqf.c
     cqf/src/hashutil.c

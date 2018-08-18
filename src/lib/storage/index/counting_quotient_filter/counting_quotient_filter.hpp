@@ -34,7 +34,7 @@ class CountingQuotientFilter {
   bool is_full() const;
 
  private:
-  std::optional<quotient_filter> _quotient_filter;
+  int filter_id;
   uint64_t _quotient_bits;
   uint64_t _remainder_bits;
   uint64_t _number_of_slots;

@@ -23,14 +23,12 @@ CountingQuotientFilter<ElementType>::CountingQuotientFilter(uint8_t quotient_bit
   _hash_bits = _quotient_bits + _remainder_bits;
   _quotient_filter = quotient_filter();
   // (QF*, nslots, key_bits, value_bits, lockingmode, hashmode , seed)
-  qf_malloc(&_quotient_filter.value(), _number_of_slots, _hash_bits, 0, LOCKS_FORBIDDEN, DEFAULT, 0);
+  qf_wrapper_malloc(filter_id, _number_of_slots, _hash_bits);
 }
 
 template <typename ElementType>
 CountingQuotientFilter<ElementType>::~CountingQuotientFilter() {
-  if (_quotient_filter.has_value()) {
-    qf_destroy(&_quotient_filter.value());
-  }
+    qf_wrapper_destroy(filter_id);
 }
 
 template <typename ElementType>
@@ -39,7 +37,7 @@ void CountingQuotientFilter<ElementType>::insert(ElementType element, uint64_t c
   uint64_t bitmask = static_cast<uint64_t>(std::pow(2, _hash_bits)) - 1;
   uint64_t hash = bitmask & _hash(element);
   for (uint64_t i = 0; i < count; i++) {
-    qf_insert(&_quotient_filter.value(), hash, 0, 1);
+    qf_wrapper_insert(filter_id, hash, 0, 1);
   }
 }
 
@@ -58,7 +56,7 @@ template <typename ElementType>
 uint64_t CountingQuotientFilter<ElementType>::count(ElementType element) const {
   uint64_t bitmask = static_cast<uint64_t>(std::pow(2, _hash_bits)) - 1;
   uint64_t hash = bitmask & _hash(element);
-  return qf_count_key_value(&_quotient_filter.value(), hash, 0);
+  return qf_wrapper_count_key_value(filter_id, hash, 0);
 }
 
 /**
