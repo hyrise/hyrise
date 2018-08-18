@@ -19,7 +19,7 @@ class BinaryRecoverer : public AbstractRecoverer {
  private:
   BinaryRecoverer() {}
 
-  AllTypeVariant _read_AllTypeVariant(std::ifstream& file, DataType data_type);
+  AllTypeVariant _read_all_type_variant(std::ifstream& file, DataType data_type);
 
   template <typename T>
   T _read(std::ifstream& file) {
