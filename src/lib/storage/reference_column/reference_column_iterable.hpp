@@ -5,7 +5,6 @@
 #include <utility>
 #include <vector>
 
-#include "resolve_type.hpp"
 #include "storage/column_accessor.hpp"
 #include "storage/column_iterables.hpp"
 #include "storage/reference_column.hpp"
@@ -48,20 +47,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
           _column_id{column_id},
           _begin_pos_list_it{begin_pos_list_it},
           _pos_list_it{pos_list_it},
-          _accessors{_table->chunk_count()} {
-      //      for (auto chunk_id = ChunkID{0}; chunk_id < _table->chunk_count(); ++chunk_id) {
-      //        _create_accessor(chunk_id);
-      //      }
-    }
-
-    ~Iterator() {
-      auto count = 0u;
-      for (const auto& accessor : _accessors) {
-        if (accessor) {
-          ++count;
-        }
-      }
-    }
+          _accessors{_table->chunk_count()} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
