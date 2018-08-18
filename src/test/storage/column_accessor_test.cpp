@@ -62,43 +62,43 @@ TEST_F(ColumnAccessorTest, TestValueColumnInt) {
 }
 
 TEST_F(ColumnAccessorTest, TestValueColumnString) {
-  auto vc_int_base_accessor = get_column_accessor<std::string>(vc_str);
-  ASSERT_NE(vc_int_base_accessor, nullptr);
-  EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{0}), "Hello,");
-  EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{1}), "world");
-  EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{2}), "!");
+  auto vc_str_accessor = get_column_accessor<std::string>(vc_str);
+  ASSERT_NE(vc_str_accessor, nullptr);
+  EXPECT_EQ(vc_str_accessor->access(ChunkOffset{0}), "Hello,");
+  EXPECT_EQ(vc_str_accessor->access(ChunkOffset{1}), "world");
+  EXPECT_EQ(vc_str_accessor->access(ChunkOffset{2}), "!");
 }
 
 TEST_F(ColumnAccessorTest, TestDictionaryColumnInt) {
-  auto vc_int_base_accessor = get_column_accessor<int>(dc_int);
-  ASSERT_NE(vc_int_base_accessor, nullptr);
-  EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{0}), 4);
-  EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{1}), 6);
-  EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{2}), 3);
+  auto dc_int_accessor = get_column_accessor<int>(dc_int);
+  ASSERT_NE(dc_int_accessor, nullptr);
+  EXPECT_EQ(dc_int_accessor->access(ChunkOffset{0}), 4);
+  EXPECT_EQ(dc_int_accessor->access(ChunkOffset{1}), 6);
+  EXPECT_EQ(dc_int_accessor->access(ChunkOffset{2}), 3);
 }
 
 TEST_F(ColumnAccessorTest, TestDictionaryColumnString) {
-  auto vc_int_base_accessor = get_column_accessor<std::string>(dc_str);
-  ASSERT_NE(vc_int_base_accessor, nullptr);
-  EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{0}), "Hello,");
-  EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{1}), "world");
-  EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{2}), "!");
+  auto dc_str_accessor = get_column_accessor<std::string>(dc_str);
+  ASSERT_NE(dc_str_accessor, nullptr);
+  EXPECT_EQ(dc_str_accessor->access(ChunkOffset{0}), "Hello,");
+  EXPECT_EQ(dc_str_accessor->access(ChunkOffset{1}), "world");
+  EXPECT_EQ(dc_str_accessor->access(ChunkOffset{2}), "!");
 }
 
 TEST_F(ColumnAccessorTest, TestReferenceColumnToValueColumnInt) {
-  auto vc_int_base_accessor = get_column_accessor<int>(rc_int);
-  ASSERT_NE(vc_int_base_accessor, nullptr);
-  EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{0}), 6);
-  EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{1}), 3);
-  EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{2}), 4);
+  auto rc_int_accessor = get_column_accessor<int>(rc_int);
+  ASSERT_NE(rc_int_accessor, nullptr);
+  EXPECT_EQ(rc_int_accessor->access(ChunkOffset{0}), 6);
+  EXPECT_EQ(rc_int_accessor->access(ChunkOffset{1}), 3);
+  EXPECT_EQ(rc_int_accessor->access(ChunkOffset{2}), 4);
 }
 
 TEST_F(ColumnAccessorTest, TestReferenceColumnToDictionaryColumnString) {
-  auto vc_int_base_accessor = get_column_accessor<std::string>(rc_str);
-  ASSERT_NE(vc_int_base_accessor, nullptr);
-  EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{0}), "world");
-  EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{1}), "!");
-  EXPECT_EQ(vc_int_base_accessor->access(ChunkOffset{2}), "Hello,");
+  auto rc_str_accessor = get_column_accessor<std::string>(rc_str);
+  ASSERT_NE(rc_str_accessor, nullptr);
+  EXPECT_EQ(rc_str_accessor->access(ChunkOffset{0}), "world");
+  EXPECT_EQ(rc_str_accessor->access(ChunkOffset{1}), "!");
+  EXPECT_EQ(rc_str_accessor->access(ChunkOffset{2}), "Hello,");
 }
 
 }  // namespace opossum
