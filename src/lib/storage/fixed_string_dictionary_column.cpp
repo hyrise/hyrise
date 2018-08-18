@@ -44,11 +44,6 @@ const std::optional<T> FixedStringDictionaryColumn<T>::get_typed_value(const Chu
 }
 
 template <typename T>
-void FixedStringDictionaryColumn<T>::append_typed_value(const std::optional<T>) {
-  Fail("Encoded column is immutable.");
-}
-
-template <typename T>
 std::shared_ptr<const pmr_vector<std::string>> FixedStringDictionaryColumn<T>::dictionary() const {
   return _dictionary->dictionary();
 }

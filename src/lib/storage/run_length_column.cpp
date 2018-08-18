@@ -57,11 +57,6 @@ const std::optional<T> RunLengthColumn<T>::get_typed_value(const ChunkOffset chu
 }
 
 template <typename T>
-void RunLengthColumn<T>::append_typed_value(const std::optional<T> value_or_null) {
-  Fail("Encoded column is immutable.");
-}
-
-template <typename T>
 size_t RunLengthColumn<T>::size() const {
   if (_end_positions->empty()) return 0u;
   return _end_positions->back() + 1u;

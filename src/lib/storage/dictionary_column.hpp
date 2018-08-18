@@ -35,8 +35,6 @@ class DictionaryColumn : public BaseDictionaryColumn {
 
   const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const;
 
-  void append_typed_value(const std::optional<T>);
-
   size_t size() const final;
 
   std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;

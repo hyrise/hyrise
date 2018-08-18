@@ -54,11 +54,6 @@ const std::optional<T> FrameOfReferenceColumn<T, U>::get_typed_value(const Chunk
 }
 
 template <typename T, typename U>
-void FrameOfReferenceColumn<T, U>::append_typed_value(const std::optional<T> value_or_null) {
-  Fail("Encoded column is immutable.");
-}
-
-template <typename T, typename U>
 size_t FrameOfReferenceColumn<T, U>::size() const {
   return _offset_values->size();
 }

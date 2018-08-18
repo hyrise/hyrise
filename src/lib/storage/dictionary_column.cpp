@@ -43,11 +43,6 @@ const std::optional<T> DictionaryColumn<T>::get_typed_value(const ChunkOffset ch
 }
 
 template <typename T>
-void DictionaryColumn<T>::append_typed_value(const std::optional<T>) {
-  Fail("Encoded column is immutable.");
-}
-
-template <typename T>
 std::shared_ptr<const pmr_vector<T>> DictionaryColumn<T>::dictionary() const {
   return _dictionary;
 }
