@@ -31,7 +31,7 @@ RowID BinaryRecoverer::_read(std::ifstream& file) {
   return RowID(chunk_id, chunk_offset);
 }
 
-AllTypeVariant BinaryRecoverer::_read_AllTypeVariant(std::ifstream& file, DataType data_type) {
+AllTypeVariant BinaryRecoverer::_read_all_type_variant(std::ifstream& file, DataType data_type) {
   AllTypeVariant value;
 
   resolve_data_type(data_type, [&] (auto type) {
@@ -50,87 +50,71 @@ uint32_t BinaryRecoverer::recover() {
 
     std::vector<LoggedItem> transactions;
 
-    while (true) {
-      // Begin of all Entries:
-      //   - log entry type       : sizeof(char)
-      //   - transaction_id       : sizeof(TransactionID)
+    char log_type;
+    log_file.read(&log_type, sizeof(char));
 
-      char log_type;
+    while (!log_file.eof()) {
+      switch (log_type) {
+        // load entry
+        case 'l': {
+          auto table_path = _read<std::string>(log_file);
+          auto table_name = _read<std::string>(log_file);
+          _recover_table(table_path, table_name);
+          break;
+        }
+
+        // commit entry
+        case 't': {
+          auto transaction_id = _read<TransactionID>(log_file);
+          _redo_transactions(transaction_id, transactions);
+          last_transaction_id = std::max(transaction_id, last_transaction_id);
+          break;
+        }
+
+        // invalidation entry
+        case 'i': {
+          auto transaction_id = _read<TransactionID>(log_file);
+          auto table_name = _read<std::string>(log_file);
+          auto row_id = _read<RowID>(log_file);
+          transactions.emplace_back(LoggedItem(LogType::Invalidation, transaction_id, table_name, row_id));
+          break;
+        }
+
+        // value entry
+        case 'v': {
+          auto transaction_id = _read<TransactionID>(log_file);
+          auto table_name = _read<std::string>(log_file);
+          auto row_id = _read<RowID>(log_file);
+
+          auto data_types = StorageManager::get().get_table(table_name)->column_data_types();
+          uint32_t null_bitmap_number_of_bytes = ceil(data_types.size() / 8.0);  // uint32_t resolves to ~ 34 Billion values
+          std::vector<char> null_bitmap(null_bitmap_number_of_bytes);
+          log_file.read(&null_bitmap[0], null_bitmap_number_of_bytes);
+
+          std::vector<AllTypeVariant> values;
+          uint32_t bitmap_index = 0;
+          uint8_t bit_pos = 0;
+          for (auto& data_type : data_types) {
+            if (null_bitmap[bitmap_index] & (1u << bit_pos)) {
+              values.emplace_back(NullValue());
+            } else {
+              values.emplace_back(_read_all_type_variant(log_file, data_type));
+            }
+
+            bit_pos = (bit_pos + 1) % 8;
+            if (bit_pos == 0) {
+              ++bitmap_index;
+            }
+          }
+
+          transactions.emplace_back(LoggedItem(LogType::Value, transaction_id, table_name, row_id, values));
+          break;
+        }
+
+        default: throw("Binary recovery: invalid log type token");
+      }
+
       log_file.read(&log_type, sizeof(char));
-
-      if (log_file.eof()) {
-        break;
-      }
-
-      DebugAssert(log_type == 't' || log_type == 'i' || log_type == 'v' || log_type == 'l',
-                  "Recoverer: invalid log type token");
-
-      // if load entry
-      if (log_type == 'l') {
-        auto table_path = _read<std::string>(log_file);
-        auto table_name = _read<std::string>(log_file);
-
-        _recover_table(table_path, table_name);
-        continue;
-      }
-
-      auto transaction_id = _read<TransactionID>(log_file);
-
-      // if commit entry
-      if (log_type == 't') {
-        _redo_transactions(transaction_id, transactions);
-        last_transaction_id = std::max(transaction_id, last_transaction_id);
-        continue;
-      }
-
-      // else invalidation or value
-
-      // Invalidation and begin of value entries:
-      //   - log entry type ('v') : sizeof(char)
-      //   - transaction_id       : sizeof(transaction_id_t)
-      //   - table_name           : table_name.size() + 1, terminated with \0
-      //   - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset)
-
-      auto table_name = _read<std::string>(log_file);
-
-      auto row_id = _read<RowID>(log_file);
-
-      // if invalidation entry
-      if (log_type == 'i') {
-        transactions.emplace_back(LoggedItem(LogType::Invalidation, transaction_id, table_name, row_id));
-        continue;
-      }
-
-      // else value entry
-
-      // Remainder of value entries:
-      //   - NULL bitmap          : ceil(values.size() / 8.0)
-      //   - value                : length(value)
-      //   - any optional values
-
-      auto data_types = StorageManager::get().get_table(table_name)->column_data_types();
-
-      uint32_t null_bitmap_number_of_bytes = ceil(data_types.size() / 8.0);  // uint32_t resolves to ~ 34 Billion values
-      std::vector<char> null_bitmap(null_bitmap_number_of_bytes);
-      log_file.read(&null_bitmap[0], null_bitmap_number_of_bytes);
-
-      std::vector<AllTypeVariant> values;
-      uint32_t bitmap_index = 0;
-      uint8_t bit_pos = 0;
-      for (auto& data_type : data_types) {
-        if (null_bitmap[bitmap_index] & (1u << bit_pos)) {
-          values.emplace_back(NullValue());
-        } else {
-          values.emplace_back(_read_all_type_variant(log_file, data_type));
-        }
-
-        bit_pos = (bit_pos + 1) % 8;
-        if (bit_pos == 0) {
-          ++bitmap_index;
-        }
-      }
-
-      transactions.emplace_back(LoggedItem(LogType::Value, transaction_id, table_name, row_id, values));
     }
   }
 
