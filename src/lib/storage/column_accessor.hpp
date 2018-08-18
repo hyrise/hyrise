@@ -18,13 +18,15 @@ template <typename T>
 class BaseColumnAccessor {
  public:
   virtual const std::optional<T> access(ChunkOffset offset) const = 0;
-  virtual void append(const std::optional<T> value_or_null) = 0;
   virtual ~BaseColumnAccessor() {}
 };
 
 /**
  * A ColumnAccessor is templated per ColumnType and DataType (T).
- * It requires implementation of an implicit interface.
+ * It requires that the underlying column implements an implicit interface:
+ *
+ *   const std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const;
+ *
  */
 template <typename T, typename ColumnType>
 class ColumnAccessor : public BaseColumnAccessor<T> {
@@ -32,7 +34,6 @@ class ColumnAccessor : public BaseColumnAccessor<T> {
   explicit ColumnAccessor(const ColumnType& column) : _column{column} {}
 
   const std::optional<T> access(ChunkOffset offset) const final { return _column.get_typed_value(offset); }
-  void append(const std::optional<T> value_or_null) final { _column.append_typed_value(value_or_null); }
 
  protected:
   const ColumnType& _column;
@@ -54,8 +55,6 @@ class ColumnAccessor<T, ReferenceColumn> : public BaseColumnAccessor<T> {
     return type_cast<T>(all_type_variant);
   }
 
-  void append(const std::optional<T> value_or_null) final { Fail("ReferenceColumns are immutable"); }
-
  protected:
   const ReferenceColumn& _column;
 };
@@ -64,11 +63,11 @@ class ColumnAccessor<T, ReferenceColumn> : public BaseColumnAccessor<T> {
  * Utility method to create a ColumnAccessor for a given BaseColumn.
  */
 template <typename T>
-std::shared_ptr<BaseColumnAccessor<T>> get_column_accessor(const std::shared_ptr<const BaseColumn>& column) {
-  std::shared_ptr<BaseColumnAccessor<T>> accessor;
+std::unique_ptr<BaseColumnAccessor<T>> get_column_accessor(const std::shared_ptr<const BaseColumn>& column) {
+  std::unique_ptr<BaseColumnAccessor<T>> accessor;
   resolve_column_type<T>(*column, [&](const auto& typed_column) {
     using ColumnType = std::decay_t<decltype(typed_column)>;
-    accessor = std::make_shared<ColumnAccessor<T, ColumnType>>(typed_column);
+    accessor = std::make_unique<ColumnAccessor<T, ColumnType>>(typed_column);
   });
   return accessor;
 }

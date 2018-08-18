@@ -26,6 +26,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
     const auto end_it = _column.pos_list()->end();
 
     auto begin = Iterator{table, column_id, begin_it, begin_it};
+
     auto end = Iterator{table, column_id, begin_it, end_it};
     functor(begin, end);
   }
@@ -47,9 +48,18 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
           _column_id{column_id},
           _begin_pos_list_it{begin_pos_list_it},
           _pos_list_it{pos_list_it},
-          _accessors{_table->chunk_count(), nullptr} {
-      for (auto chunk_id = ChunkID{0}; chunk_id < _table->chunk_count(); ++chunk_id) {
-        _insert_referenced_column(chunk_id);
+          _accessors{_table->chunk_count()} {
+      //      for (auto chunk_id = ChunkID{0}; chunk_id < _table->chunk_count(); ++chunk_id) {
+      //        _create_accessor(chunk_id);
+      //      }
+    }
+
+    ~Iterator() {
+      auto count = 0u;
+      for (const auto& accessor : _accessors) {
+        if (accessor) {
+          ++count;
+        }
       }
     }
 
@@ -69,18 +79,19 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
       const auto chunk_offset_into_ref_column =
           static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
 
+      if (!_accessors[chunk_id]) {
+        _create_accessor(chunk_id);
+      }
       const auto typed_value = _accessors[chunk_id]->access(chunk_offset);
 
       return ColumnIteratorValue<T>{typed_value.value_or(T{}), !typed_value.has_value(), chunk_offset_into_ref_column};
     }
 
    private:
-    void _insert_referenced_column(const ChunkID chunk_id) {
-      //if (_accessors[chunk_id] == nullptr) {
+    void _create_accessor(const ChunkID chunk_id) const {
       auto column = _table->get_chunk(chunk_id)->get_column(_column_id);
-      auto accessor = get_column_accessor<T>(column);
-      _accessors[chunk_id] = accessor;
-      //}
+      auto accessor = std::move(get_column_accessor<T>(column));
+      _accessors[chunk_id] = std::move(accessor);
     }
 
    private:
@@ -90,7 +101,7 @@ class ReferenceColumnIterable : public ColumnIterable<ReferenceColumnIterable<T>
     const PosListIterator _begin_pos_list_it;
     PosListIterator _pos_list_it;
 
-    std::vector<std::shared_ptr<BaseColumnAccessor<T>>> _accessors;
+    mutable std::vector<std::shared_ptr<BaseColumnAccessor<T>>> _accessors;
   };
 };
 

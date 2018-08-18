@@ -105,7 +105,7 @@ class Sort::SortImplMaterializeOutput {
 
           if (!base_column) {
             base_column = _table_in->get_chunk(chunk_id)->get_column(column_id);
-            accessor = get_column_accessor<ColumnDataType>(base_column);
+            accessor = std::move(get_column_accessor<ColumnDataType>(base_column));
           }
 
           // If the input column is not a ReferenceColumn, we can take a fast(er) path
