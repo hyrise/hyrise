@@ -27,6 +27,19 @@ boost::bimap<L, R> make_bimap(std::initializer_list<typename boost::bimap<L, R>:
   return boost::bimap<L, R>(list.begin(), list.end());
 }
 
+/*
+ * Create a reversed map so that values map to their keys.
+ */
+template <typename A, typename B>
+std::unordered_map<B, A> reverse_map(std::unordered_map<A,B> map) {
+  std::unordered_map<B, A> reversed_map;
+  reversed_map.reserve(map.size());
+  for (auto& [a, b]: map) {
+    reversed_map[b] = a;
+  }
+  return reversed_map;
+}
+
 const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string =
     make_bimap<PredicateCondition, std::string>({
         {PredicateCondition::Equals, "="},
@@ -61,6 +74,8 @@ const std::unordered_map<Logger::Implementation, std::string> logger_to_string =
     {Logger::Implementation::Simple, "SimpleLogger"},
     {Logger::Implementation::GroupCommit, "GroupCommitLogger"},
     {Logger::Implementation::No, "NoLogger"}};
+
+const std::unordered_map<std::string, Logger::Implementation> string_to_logger = reverse_map(logger_to_string);
 
 const std::unordered_map<UnionMode, std::string> union_mode_to_string = {{UnionMode::Positions, "UnionPositions"}};
 

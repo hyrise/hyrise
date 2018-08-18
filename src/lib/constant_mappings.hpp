@@ -25,6 +25,7 @@ extern const std::unordered_map<hsql::OrderType, OrderByMode> order_type_to_orde
 extern const std::unordered_map<ExpressionType, std::string> expression_type_to_operator_string;
 extern const std::unordered_map<JoinMode, std::string> join_mode_to_string;
 extern const std::unordered_map<Logger::Implementation, std::string> logger_to_string;
+extern const std::unordered_map<std::string, Logger::Implementation> string_to_logger;
 extern const std::unordered_map<UnionMode, std::string> union_mode_to_string;
 extern const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string;
 extern const boost::bimap<FunctionType, std::string> function_type_to_string;

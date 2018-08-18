@@ -504,6 +504,8 @@ set(
     utils/aligned_size.hpp
     utils/assert.hpp
     utils/boost_default_memory_resource.cpp
+    utils/cli_options.hpp
+    utils/cli_options.cpp
     utils/copyable_atomic.hpp
     utils/cuckoo_hashtable.hpp
     utils/enum_constant.hpp

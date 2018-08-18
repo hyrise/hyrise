@@ -51,7 +51,7 @@ class ServerRecoveryTest : public BaseTestWithParam<Logger::Implementation> {
     std::string implementation_string = logger_to_string.at(implementation);
 
     auto cmd =
-        "\"" + build_dir + "/hyriseServer\" 1234 " + implementation_string + " " + test_data_path + _folder + " &";
+        "\"" + build_dir + "/hyriseServer\" --logger " + implementation_string + " --data_path " + test_data_path + _folder + " &";
 
     auto [port, server_pid] = exec(cmd.c_str(), "Port: ", "PID: ", '\n');
     _server_pid = server_pid;
