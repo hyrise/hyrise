@@ -80,10 +80,17 @@ class LogEntry {
 
   explicit LogEntry(uint32_t count) { data.resize(count); }
 
-  void resize(size_t size) { 
-    while (size > data.size()) {
-      data.resize(2 * data.size());
+  void resize(size_t size) {
+    auto double_size = 2 * data.size();
+    if (double_size >= size ) {
+      data.resize(double_size);
+    } else {
+      data.resize(size);
     }
+  }
+
+  uint32_t size() const {
+    return cursor;
   }
 
   template <typename T>
@@ -134,6 +141,10 @@ class EntryWriter : public boost::static_visitor<void> {
     return *this;
   }
 
+  LogEntry& entry() {
+    return _entry;
+  }
+
   void create_null_bitmap(size_t number_of_values) {
     uint32_t number_of_bitmap_bytes = ceil(number_of_values / 8.0);  // uint32_t resolves to ~ 34 Billion values
     _entry.data.resize(_entry.data.size() + number_of_bitmap_bytes);
@@ -155,7 +166,7 @@ class EntryWriter : public boost::static_visitor<void> {
     _bit_pos = (_bit_pos + 1) % 8;
   }
 
-//  private:
+ private:
   LogEntry _entry;
   uint32_t _null_bitmap_pos;
   uint32_t _bit_pos;
@@ -190,13 +201,7 @@ void GroupCommitLogger::log_value(const TransactionID transaction_id, const std:
     boost::apply_visitor(writer, value);
   }
 
-  std::vector<char> tmp_data;
-  for (auto i=0u; i < writer._entry.cursor; ++i) {
-    tmp_data.push_back(writer._entry.data[i]);
-  }
-
-  // _write_to_buffer(writer);
-  _write_to_buffer(tmp_data);
+  _write_to_buffer(writer.entry());
 }
 
 void GroupCommitLogger::log_commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) {
@@ -207,15 +212,7 @@ void GroupCommitLogger::log_commit(const TransactionID transaction_id, std::func
 
   _commit_callbacks.emplace_back(std::make_pair(callback, transaction_id));
 
-  std::vector<char> tmp_data;
-  for (auto i=0u; i < writer._entry.cursor; ++i) {
-    tmp_data.push_back(writer._entry.data[i]);
-  }
-
-  // _write_to_buffer(writer._entry.data);
-  _write_to_buffer(tmp_data);
-
-  // _write_to_buffer(entry.data);
+  _write_to_buffer(writer.entry());
 }
 
 void GroupCommitLogger::log_load_table(const std::string& file_path, const std::string& table_name) {
@@ -224,15 +221,7 @@ void GroupCommitLogger::log_load_table(const std::string& file_path, const std::
 
   writer << 'l' << file_path << table_name;
 
-  std::vector<char> tmp_data;
-  for (auto i=0u; i < writer._entry.cursor; ++i) {
-    tmp_data.push_back(writer._entry.data[i]);
-  }
-
-  // _write_to_buffer(writer._entry.data);
-  _write_to_buffer(tmp_data);
-
-  // _write_to_buffer(entry.data);
+  _write_to_buffer(writer.entry());
 }
 
 void GroupCommitLogger::log_invalidate(const TransactionID transaction_id, const std::string& table_name,
@@ -243,24 +232,16 @@ void GroupCommitLogger::log_invalidate(const TransactionID transaction_id, const
 
   writer << 'i' << transaction_id << table_name << row_id;
 
-  // _write_to_buffer(entry.data);
-
-  std::vector<char> tmp_data;
-  for (auto i=0u; i < writer._entry.cursor; ++i) {
-    tmp_data.push_back(writer._entry.data[i]);
-  }
-
-  // _write_to_buffer(writer._entry.data);
-  _write_to_buffer(tmp_data);
+  _write_to_buffer(writer.entry());
 }
 
-void GroupCommitLogger::_write_to_buffer(std::vector<char>& entry) {
+void GroupCommitLogger::_write_to_buffer(LogEntry& entry) {
   // Assume that there is always enough space in the buffer, since it is flushed on hitting half its capacity
   DebugAssert(_buffer_position + entry.size() < _buffer_capacity, "logging: entry does not fit into buffer");
 
   _buffer_mutex.lock();
 
-  memcpy(_buffer + _buffer_position, &entry[0], entry.size());
+  memcpy(_buffer + _buffer_position, &entry.data[0], entry.size());
 
   _buffer_position += entry.size();
   _has_unflushed_buffer = true;

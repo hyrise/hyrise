@@ -38,7 +38,7 @@ class GroupCommitLogger : public AbstractLogger {
  private:
 
   void _write_buffer_to_logfile();
-  void _write_to_buffer(std::vector<char>& entry);
+  void _write_to_buffer(LogEntry& entry);
 
   void _open_logfile();
 
