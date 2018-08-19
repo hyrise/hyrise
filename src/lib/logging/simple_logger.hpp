@@ -33,7 +33,7 @@ class SimpleLogger : public AbstractLogger {
 
  private:
 
-  void _write_to_logfile(const std::stringstream& ss);
+  void _write_to_logfile(const std::vector<char> data);
   void _open_logfile();
 
   int _file_descriptor;
