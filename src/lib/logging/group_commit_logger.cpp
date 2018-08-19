@@ -80,6 +80,12 @@ class LogEntry {
 
   explicit LogEntry(uint32_t count) { data.resize(count); }
 
+  void resize(size_t size) { 
+    while (size > data.size()) {
+      data.resize(2 * data.size());
+    }
+  }
+
   template <typename T>
   LogEntry& operator<<(const T& value) {
     DebugAssert(cursor + sizeof(T) <= data.size(), "Logger: value does not fit into vector, call resize() beforehand");
@@ -110,30 +116,61 @@ LogEntry& LogEntry::operator<< <std::string>(const std::string& value) {  // NOL
 // It might improve performance to iterate twice over all values:
 // Accumulate the bytes needed for all values in the first pass,
 // then resize the vector and finally write the values in the second pass.
-class EntryWriter : public boost::static_visitor<bool> {
+class EntryWriter : public boost::static_visitor<void> {
  public:
-  explicit EntryWriter(LogEntry& entry) : _entry(entry) {}
+  explicit EntryWriter(uint32_t size) : _entry(LogEntry(size)) {}
 
+  // The () operator is needed to apply a boost visitor. Therefore the mixing of << and () operators.
   template <typename T>
-  bool operator()(T v) {
-    _entry.data.resize(_entry.data.size() + sizeof(T));
+  void operator()(T v) {
+    _entry.resize(_entry.data.size() + sizeof(T));
     _entry << v;
-    return true;
+    _set_bit_in_null_bitmap(true);
   }
 
-  LogEntry& _entry;
+  template <typename T>
+  EntryWriter& operator<<(const T& v) {
+    _entry << v;
+    return *this;
+  }
+
+  void create_null_bitmap(size_t number_of_values) {
+    uint32_t number_of_bitmap_bytes = ceil(number_of_values / 8.0);  // uint32_t resolves to ~ 34 Billion values
+    _entry.data.resize(_entry.data.size() + number_of_bitmap_bytes);
+    _null_bitmap_pos = _entry.cursor;
+    _bit_pos = 0;
+    _entry.cursor += number_of_bitmap_bytes;
+  }
+
+  void _set_bit_in_null_bitmap(bool has_content) {
+    // Set corresponding bit in bitmap to 1 if the value is a NullValue
+    if (!has_content) {
+      _entry.data[_null_bitmap_pos] |= 1u << _bit_pos;
+    }
+
+    // Increase bit_pos for next value and increase null_bitmap_pos every eighth values to address the next byte
+    if (_bit_pos == 7) {
+      ++_null_bitmap_pos;
+    }
+    _bit_pos = (_bit_pos + 1) % 8;
+  }
+
+//  private:
+  LogEntry _entry;
+  uint32_t _null_bitmap_pos;
+  uint32_t _bit_pos;
 };
 
 template <>
-bool EntryWriter::operator()(std::string v) {
+void EntryWriter::operator()(std::string v) {
   _entry.data.resize(_entry.data.size() + v.size() + 1);
   _entry << v;
-  return true;
+  _set_bit_in_null_bitmap(true);
 }
 
 template <>
-bool EntryWriter::operator()(NullValue v) {
-  return false;
+void EntryWriter::operator()(NullValue v) {
+  _set_bit_in_null_bitmap(false);
 }
 
 void GroupCommitLogger::log_value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,
@@ -142,67 +179,79 @@ void GroupCommitLogger::log_value(const TransactionID transaction_id, const std:
   // The entry then gets resized for the null value bitmap and each value
   auto entry_length =
       sizeof(char) + sizeof(TransactionID) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset);
-  LogEntry entry(entry_length);
 
-  entry << 'v' << transaction_id << table_name << row_id;
+  EntryWriter writer(entry_length);
 
-  uint32_t number_of_bitmap_bytes = ceil(values.size() / 8.0);  // uint32_t resolves to ~ 34 Billion values
-  entry.data.resize(entry.data.size() + number_of_bitmap_bytes);
-  auto null_bitmap_pos = entry.cursor;
-  entry.cursor += number_of_bitmap_bytes;
+  writer << 'v' << transaction_id << table_name << row_id;
 
-  DebugAssert(entry.data[null_bitmap_pos] == '\0', "Logger: memory is not NULL");
+  writer.create_null_bitmap(values.size());
 
-  EntryWriter visitor(entry);
-  auto bit_pos = 0u;
   for (auto& value : values) {
-    auto has_content = boost::apply_visitor(visitor, value);
-
-    // Set corresponding bit in bitmap to 1 if the value is a NullValue
-    if (!has_content) {
-      entry.data[null_bitmap_pos] |= 1u << bit_pos;
-    }
-
-    // Increase bit_pos for next value and increase null_bitmap_pos every eighth values to address the next byte
-    if (bit_pos == 7) {
-      ++null_bitmap_pos;
-      DebugAssert(entry.data[null_bitmap_pos] == '\0', "Logger: memory is not NULL");
-    }
-    bit_pos = (bit_pos + 1) % 8;
+    boost::apply_visitor(writer, value);
   }
 
-  _write_to_buffer(entry.data);
+  std::vector<char> tmp_data;
+  for (auto i=0u; i < writer._entry.cursor; ++i) {
+    tmp_data.push_back(writer._entry.data[i]);
+  }
+
+  // _write_to_buffer(writer);
+  _write_to_buffer(tmp_data);
 }
 
 void GroupCommitLogger::log_commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) {
   constexpr auto entry_length = sizeof(char) + sizeof(TransactionID);
-  LogEntry entry(entry_length);
+  EntryWriter writer(entry_length);
 
-  entry << 't' << transaction_id;
+  writer << 't' << transaction_id;
 
   _commit_callbacks.emplace_back(std::make_pair(callback, transaction_id));
 
-  _write_to_buffer(entry.data);
+  std::vector<char> tmp_data;
+  for (auto i=0u; i < writer._entry.cursor; ++i) {
+    tmp_data.push_back(writer._entry.data[i]);
+  }
+
+  // _write_to_buffer(writer._entry.data);
+  _write_to_buffer(tmp_data);
+
+  // _write_to_buffer(entry.data);
 }
 
 void GroupCommitLogger::log_load_table(const std::string& file_path, const std::string& table_name) {
   const auto entry_length = sizeof(char) + (file_path.size() + 1) + (table_name.size() + 1);
-  LogEntry entry(entry_length);
+  EntryWriter writer(entry_length);
 
-  entry << 'l' << file_path << table_name;
+  writer << 'l' << file_path << table_name;
 
-  _write_to_buffer(entry.data);
+  std::vector<char> tmp_data;
+  for (auto i=0u; i < writer._entry.cursor; ++i) {
+    tmp_data.push_back(writer._entry.data[i]);
+  }
+
+  // _write_to_buffer(writer._entry.data);
+  _write_to_buffer(tmp_data);
+
+  // _write_to_buffer(entry.data);
 }
 
 void GroupCommitLogger::log_invalidate(const TransactionID transaction_id, const std::string& table_name,
                                        const RowID row_id) {
   const auto entry_length =
       sizeof(char) + sizeof(TransactionID) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset);
-  LogEntry entry(entry_length);
+  EntryWriter writer(entry_length);
 
-  entry << 'i' << transaction_id << table_name << row_id;
+  writer << 'i' << transaction_id << table_name << row_id;
 
-  _write_to_buffer(entry.data);
+  // _write_to_buffer(entry.data);
+
+  std::vector<char> tmp_data;
+  for (auto i=0u; i < writer._entry.cursor; ++i) {
+    tmp_data.push_back(writer._entry.data[i]);
+  }
+
+  // _write_to_buffer(writer._entry.data);
+  _write_to_buffer(tmp_data);
 }
 
 void GroupCommitLogger::_write_to_buffer(std::vector<char>& entry) {
