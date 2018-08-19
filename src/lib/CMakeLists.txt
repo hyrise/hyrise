@@ -107,6 +107,8 @@ set(
     logging/no_logger.hpp
     logging/simple_logger.cpp
     logging/simple_logger.hpp
+    logging/text_formatter.hpp
+    logging/text_formatter.cpp
     logging/text_recoverer.hpp
     logging/text_recoverer.cpp
     logical_query_plan/abstract_lqp_node.cpp

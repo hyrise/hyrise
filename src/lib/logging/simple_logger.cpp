@@ -31,11 +31,7 @@
 namespace opossum {
 
 void SimpleLogger::log_commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) {
-  std::stringstream ss;
-  ss << "(t," << transaction_id << ")\n";
-  auto tmp_str = ss.str();
-  std::vector<char> data(tmp_str.begin(), tmp_str.end());
-  
+  auto data = _formatter->commit_entry(transaction_id);
   _write_to_logfile(data);
   log_flush();
   callback(transaction_id);
@@ -43,42 +39,18 @@ void SimpleLogger::log_commit(const TransactionID transaction_id, std::function<
 
 void SimpleLogger::log_value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,
                              const std::vector<AllTypeVariant>& values) {
-  std::stringstream ss;
-  ss << "(v," << transaction_id << "," << table_name.size() << "," << table_name << "," << row_id << ",(";
-
-  std::stringstream value_ss;
-  value_ss << values[0];
-  ss << value_ss.str().size() << "," << value_ss.str();
-  for (auto value = ++values.begin(); value != values.end(); ++value) {
-    value_ss.str("");
-    value_ss << (*value);
-    ss << "," << value_ss.str().size() << "," << value_ss.str();
-  }
-
-  ss << "))\n";
-  auto tmp_str = ss.str();
-  std::vector<char> data(tmp_str.begin(), tmp_str.end());
-  
+  auto data = _formatter->value_entry(transaction_id, table_name, row_id, values);
   _write_to_logfile(data);
 }
 
 void SimpleLogger::log_invalidate(const TransactionID transaction_id, const std::string& table_name,
                                   const RowID row_id) {
-  std::stringstream ss;
-  ss << "(i," << transaction_id << "," << table_name.size() << "," << table_name << "," << row_id << ")\n";
-
-  auto tmp_str = ss.str();
-  std::vector<char> data(tmp_str.begin(), tmp_str.end());
-  
+  auto data = _formatter->invalidate_entry(transaction_id, table_name, row_id);
   _write_to_logfile(data);
 }
 
 void SimpleLogger::log_load_table(const std::string& file_path, const std::string& table_name) {
-  std::stringstream ss;
-  ss << "(l," << file_path.size() << "," << file_path << "," << table_name.size() << "," << table_name << ")\n";
-
-  auto tmp_str = ss.str();
-  std::vector<char> data(tmp_str.begin(), tmp_str.end());
+  auto data = _formatter->load_table_entry(file_path, table_name);
   _write_to_logfile(data);
   log_flush();
 }
@@ -110,6 +82,6 @@ void SimpleLogger::_open_logfile() {
   _file_mutex.unlock();
 }
 
-SimpleLogger::SimpleLogger() : AbstractLogger() { _open_logfile(); }
+SimpleLogger::SimpleLogger() : AbstractLogger(), _formatter(std::make_unique<TextFormatter>()) { _open_logfile(); }
 
 }  // namespace opossum
