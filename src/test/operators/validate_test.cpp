@@ -39,7 +39,7 @@ class OperatorsValidateTest : public BaseTest {
 void OperatorsValidateTest::set_all_records_visible(Table& table) {
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
     auto chunk = table.get_chunk(chunk_id);
-    auto mvcc_columns = chunk->mvcc_columns();
+    auto mvcc_columns = chunk->get_scoped_mvcc_columns_lock();
 
     for (auto i = 0u; i < chunk->size(); ++i) {
       mvcc_columns->begin_cids[i] = 0u;
@@ -49,7 +49,7 @@ void OperatorsValidateTest::set_all_records_visible(Table& table) {
 }
 
 void OperatorsValidateTest::set_record_invisible_for(Table& table, RowID row, CommitID end_cid) {
-  table.get_chunk(row.chunk_id)->mvcc_columns()->end_cids[row.chunk_offset] = end_cid;
+  table.get_chunk(row.chunk_id)->get_scoped_mvcc_columns_lock()->end_cids[row.chunk_offset] = end_cid;
 }
 
 TEST_F(OperatorsValidateTest, SimpleValidate) {

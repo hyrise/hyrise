@@ -43,6 +43,8 @@ class FrameOfReferenceIterable : public PointAccessibleColumnIterable<FrameOfRef
     });
   }
 
+  size_t _on_size() const { return _column.size(); }
+
  private:
   const FrameOfReferenceColumn<T>& _column;
 

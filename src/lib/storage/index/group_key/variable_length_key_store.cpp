@@ -19,7 +19,9 @@ VariableLengthKeyProxy VariableLengthKeyStore::operator[](ChunkOffset position) 
 }
 
 VariableLengthKeyConstProxy VariableLengthKeyStore::operator[](ChunkOffset position) const {
-  auto self = const_cast<VariableLengthKeyStore*>(this);
+  auto self = const_cast<VariableLengthKeyStore*>(this);  // NOLINT(cppcoreguidelines-pro-type-const-cast)
+  // The const_cast is grandfathered in, because it would require significant changes to get rid of it. New code should
+  // not require it.
   return VariableLengthKeyConstProxy(self->_data.data() + static_cast<size_t>(position) * _key_alignment,
                                      _bytes_per_key);
 }
@@ -54,12 +56,12 @@ VariableLengthKeyStore::const_iterator VariableLengthKeyStore::begin() const { r
 VariableLengthKeyStore::const_iterator VariableLengthKeyStore::end() const { return cend(); }
 
 VariableLengthKeyStore::const_iterator VariableLengthKeyStore::cbegin() const {
-  auto self = const_cast<VariableLengthKeyStore*>(this);
+  auto self = const_cast<VariableLengthKeyStore*>(this);  // NOLINT(cppcoreguidelines-pro-type-const-cast) (see above)
   return const_iterator(_bytes_per_key, _key_alignment, self->_data.data());
 }
 
 VariableLengthKeyStore::const_iterator VariableLengthKeyStore::cend() const {
-  auto self = const_cast<VariableLengthKeyStore*>(this);
+  auto self = const_cast<VariableLengthKeyStore*>(this);  // NOLINT(cppcoreguidelines-pro-type-const-cast) (see above)
   return const_iterator(_bytes_per_key, _key_alignment, self->_data.data() + _data.size());
 }
 

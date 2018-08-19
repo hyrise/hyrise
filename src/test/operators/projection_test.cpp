@@ -60,10 +60,38 @@ TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTable) {
   const auto projection = std::make_shared<opossum::Projection>(table_wrapper_a, expression_vector(a_b, a_a));
   projection->execute();
 
-  EXPECT_EQ(table_wrapper_a->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{1}),
-            projection->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{0}));
-  EXPECT_EQ(table_wrapper_a->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{0}),
-            projection->get_output()->get_chunk(ChunkID{0})->get_column(ColumnID{1}));
+  const auto input_chunk = table_wrapper_a->get_output()->get_chunk(ChunkID{0});
+  const auto output_chunk = projection->get_output()->get_chunk(ChunkID{0});
+
+  EXPECT_EQ(input_chunk->get_column(ColumnID{1}), output_chunk->get_column(ColumnID{0}));
+  EXPECT_EQ(input_chunk->get_column(ColumnID{0}), output_chunk->get_column(ColumnID{1}));
+}
+
+TEST_F(OperatorsProjectionTest, ForwardsIfPossibleDataTableAndExpression) {
+  const auto projection =
+      std::make_shared<opossum::Projection>(table_wrapper_a, expression_vector(a_b, a_a, add_(a_b, a_a)));
+  projection->execute();
+
+  const auto input_chunk = table_wrapper_a->get_output()->get_chunk(ChunkID{0});
+  const auto output_chunk = projection->get_output()->get_chunk(ChunkID{0});
+
+  EXPECT_EQ(input_chunk->get_column(ColumnID{1}), output_chunk->get_column(ColumnID{0}));
+  EXPECT_EQ(input_chunk->get_column(ColumnID{0}), output_chunk->get_column(ColumnID{1}));
+}
+
+TEST_F(OperatorsProjectionTest, DontForwardReferencesWithExpression) {
+  const auto table_scan =
+      std::make_shared<TableScan>(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
+  table_scan->execute();
+  const auto projection =
+      std::make_shared<opossum::Projection>(table_scan, expression_vector(a_b, a_a, add_(a_b, a_a)));
+  projection->execute();
+
+  const auto input_chunk = table_wrapper_a->get_output()->get_chunk(ChunkID{0});
+  const auto output_chunk = projection->get_output()->get_chunk(ChunkID{0});
+
+  EXPECT_NE(input_chunk->get_column(ColumnID{1}), output_chunk->get_column(ColumnID{0}));
+  EXPECT_NE(input_chunk->get_column(ColumnID{0}), output_chunk->get_column(ColumnID{1}));
 }
 
 TEST_F(OperatorsProjectionTest, ForwardsIfPossibleReferenceTable) {

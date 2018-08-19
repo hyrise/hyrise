@@ -539,6 +539,9 @@ TEST_F(ExpressionEvaluatorTest, Exists) {
 
   const auto exists_expression = std::make_shared<ExistsExpression>(pqp_select_expression);
   EXPECT_TRUE(test_expression<int32_t>(table_a, *exists_expression, {0, 0, 1, 1}));
+
+  EXPECT_EQ(exists_expression->data_type(), ExpressionEvaluator::DataTypeBool);
+  EXPECT_FALSE(exists_expression->is_nullable());
 }
 
 TEST_F(ExpressionEvaluatorTest, ExtractLiterals) {
@@ -548,6 +551,15 @@ TEST_F(ExpressionEvaluatorTest, ExtractLiterals) {
   EXPECT_TRUE(test_expression<std::string>(*extract_(DatetimeComponent::Year, null_()), {std::nullopt}));
   EXPECT_TRUE(test_expression<std::string>(*extract_(DatetimeComponent::Month, null_()), {std::nullopt}));
   EXPECT_TRUE(test_expression<std::string>(*extract_(DatetimeComponent::Day, null_()), {std::nullopt}));
+
+  EXPECT_THROW(test_expression<std::string>(*extract_(DatetimeComponent::Hour, "1992-09-30"), {"30"}),
+               std::logic_error);
+  EXPECT_THROW(test_expression<std::string>(*extract_(DatetimeComponent::Minute, "1992-09-30"), {"30"}),
+               std::logic_error);
+  EXPECT_THROW(test_expression<std::string>(*extract_(DatetimeComponent::Second, "1992-09-30"), {"30"}),
+               std::logic_error);
+
+  EXPECT_EQ(extract_(DatetimeComponent::Year, "1993-08-01")->data_type(), DataType::String);
 }
 
 TEST_F(ExpressionEvaluatorTest, ExtractSeries) {
@@ -577,6 +589,7 @@ TEST_F(ExpressionEvaluatorTest, CastLiterals) {
   EXPECT_TRUE(test_expression<int32_t>(*cast_("Hello", DataType::Int), {0}));
   EXPECT_TRUE(test_expression<float>(*cast_("Hello", DataType::Float), {0.0f}));
 }
+
 TEST_F(ExpressionEvaluatorTest, CastSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *cast_(a, DataType::Int), {1, 2, 3, 4}));
   EXPECT_TRUE(test_expression<float>(table_a, *cast_(a, DataType::Float), {1.0f, 2.0f, 3.0f, 4.0f}));

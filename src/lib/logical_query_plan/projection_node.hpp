@@ -18,7 +18,7 @@ class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public Abstr
       const std::shared_ptr<AbstractLQPNode>& left_input,
       const std::shared_ptr<AbstractLQPNode>& right_input) const override;
 
-  const std::vector<std::shared_ptr<AbstractExpression>> expressions;
+  std::vector<std::shared_ptr<AbstractExpression>> expressions;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;

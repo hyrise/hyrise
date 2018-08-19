@@ -61,7 +61,7 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
     output_columns.reserve(input_table_left()->column_count());
 
     for (const auto& column_id : _column_ids) {
-      output_columns.emplace_back(input_chunk->get_mutable_column(column_id));
+      output_columns.emplace_back(input_chunk->get_column(column_id));
     }
 
     output_table->append_chunk(output_columns, input_chunk->get_allocator(), input_chunk->access_counter());

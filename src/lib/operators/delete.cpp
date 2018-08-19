@@ -43,8 +43,9 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
 
       auto expected = 0u;
       // Actual row lock for delete happens here
-      const auto success = referenced_chunk->mvcc_columns()->tids[row_id.chunk_offset].compare_exchange_strong(
-          expected, _transaction_id);
+      const auto success =
+          referenced_chunk->get_scoped_mvcc_columns_lock()->tids[row_id.chunk_offset].compare_exchange_strong(
+              expected, _transaction_id);
 
       // the row is already locked and the transaction needs to be rolled back
       if (!success) {
@@ -64,7 +65,7 @@ void Delete::_on_commit_records(const CommitID cid) {
     for (const auto& row_id : *pos_list) {
       auto chunk = _table->get_chunk(row_id.chunk_id);
 
-      chunk->mvcc_columns()->end_cids[row_id.chunk_offset] = cid;
+      chunk->get_scoped_mvcc_columns_lock()->end_cids[row_id.chunk_offset] = cid;
       // We do not unlock the rows so subsequent transactions properly fail when attempting to update these rows.
     }
   }
@@ -87,7 +88,8 @@ void Delete::_on_rollback_records() {
       auto expected = _transaction_id;
 
       // unlock all rows locked in _on_execute
-      const auto result = chunk->mvcc_columns()->tids[row_id.chunk_offset].compare_exchange_strong(expected, 0u);
+      const auto result =
+          chunk->get_scoped_mvcc_columns_lock()->tids[row_id.chunk_offset].compare_exchange_strong(expected, 0u);
 
       // If the above operation fails, it means the row is locked by another transaction. This must have been
       // the reason why the rollback was initiated. Since _on_execute stopped at this row, we can stop

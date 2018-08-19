@@ -9,7 +9,6 @@
 #include "gtest/gtest.h"
 
 #include "storage/chunk_encoder.hpp"
-#include "storage/column_iterables/constant_value_iterable.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/dictionary_column/dictionary_column_iterable.hpp"
 #include "storage/fixed_string_dictionary_column.hpp"
@@ -215,17 +214,6 @@ TEST_F(IterablesTest, ReferenceColumnIteratorWithIterators) {
   iterable.with_iterators(SumUpWithIterator{sum});
 
   EXPECT_EQ(sum, 24'825u);
-}
-
-TEST_F(IterablesTest, ConstantValueIteratorWithIterators) {
-  auto iterable = ConstantValueIterable<int>{2u};
-
-  auto sum = 0u;
-  iterable.with_iterators([&](auto it, auto end) {
-    for (auto i = 0u; i < 10; ++i) sum += (*it).value();
-  });
-
-  EXPECT_EQ(sum, 20u);
 }
 
 TEST_F(IterablesTest, ValueColumnIteratorForEach) {
