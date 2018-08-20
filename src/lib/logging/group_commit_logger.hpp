@@ -4,6 +4,7 @@
 #include <mutex>
 
 #include "abstract_logger.hpp"
+#include "binary_formatter.hpp"
 #include "types.hpp"
 #include "utils/pausable_loop_thread.hpp"
 
@@ -38,7 +39,7 @@ class GroupCommitLogger : public AbstractLogger {
  private:
 
   void _write_buffer_to_logfile();
-  void _write_to_buffer(LogEntry& entry);
+  void _write_to_buffer(const std::vector<char>& data);
 
   void _open_logfile();
 
@@ -52,6 +53,8 @@ class GroupCommitLogger : public AbstractLogger {
 
   std::mutex _file_mutex;
   std::fstream _log_file;
+
+  BinaryFormatter _formatter;
 
   std::unique_ptr<PausableLoopThread> _flush_thread;
 };
