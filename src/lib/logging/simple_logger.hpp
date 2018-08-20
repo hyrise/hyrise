@@ -36,7 +36,7 @@ class SimpleLogger : public AbstractLogger {
 
   void _write_to_logfile(const std::vector<char> data);
   void _open_logfile();
-  std::unique_ptr<TextFormatter> _formatter;
+  TextFormatter _formatter;
 
   int _file_descriptor;
   std::mutex _file_mutex;
