@@ -200,12 +200,12 @@ struct AggregateFunctionBuilder<ColumnType, AggregateType, AggregateFunction::Co
   }
 };
 
-template <typename ColumnDataType, AggregateFunction Function, typename AggregateKey>
+template <typename ColumnDataType, AggregateFunction function, typename AggregateKey>
 void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const BaseColumn& base_column,
                                   const KeysPerChunk<AggregateKey>& keys_per_chunk) {
-  using AggregateType = typename AggregateTraits<ColumnDataType, Function>::AggregateType;
+  using AggregateType = typename AggregateTraits<ColumnDataType, function>::AggregateType;
 
-  auto aggregator = AggregateFunctionBuilder<ColumnDataType, AggregateType, Function>().get_aggregate_function();
+  auto aggregator = AggregateFunctionBuilder<ColumnDataType, AggregateType, function>().get_aggregate_function();
 
   auto& context = *std::static_pointer_cast<AggregateContext<ColumnDataType, AggregateType, AggregateKey>>(
       _contexts_per_column[column_index]);
@@ -236,7 +236,7 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, ColumnID column_index, const
             // increase value counter
             ++hash_entry.aggregate_count;
 
-            if constexpr (Function == AggregateFunction::CountDistinct) {
+            if constexpr (function == AggregateFunction::CountDistinct) {
               // for the case of CountDistinct, insert this value into the set to keep track of distinct values
               hash_entry.distinct_values.insert(value.value());
             }
