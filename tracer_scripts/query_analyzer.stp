@@ -52,7 +52,7 @@ probe process(@1).provider("HYRISE").mark("SUMMARY")
         printf("\n================================================================\n"
                "SUMMARY:\nQuery: %s\n"
                "----------------------------------------------------------------\n"
-               "\tTranslation time: %s μs\n"
+               "\tTranslation time: %i μs\n"
                "\tOptimization time: %i μs\n"
                "\tLQP translation time: %i μs\n"
                "\tQuery plan cached: %s\n"
@@ -103,12 +103,14 @@ probe process(@1).provider("HYRISE").mark("TASKS")
 // Mapping between AbstractTask and OperatorTask
 probe process(@1).provider("HYRISE").mark("OPERATOR_TASKS")
 {
+    printf("par: %i\n", $arg1)
     operator_task_list[$arg2] = $arg1
 }
 
 // Store performance statistics of each operator executed
 probe process(@1).provider("HYRISE").mark("OPERATOR_EXECUTED")
 {
+    printf("op task: %i\n", $arg5)
     operator_name[$arg5] = user_string($arg1)
     operator_statistics[$arg5, "runtime"] = $arg2
     operator_statistics[$arg5, "rows"] = $arg3
