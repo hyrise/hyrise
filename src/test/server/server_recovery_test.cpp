@@ -48,7 +48,7 @@ class ServerRecoveryTest : public BaseTestWithParam<Logger::Implementation> {
   }
 
   void start_server(Logger::Implementation implementation) {
-    std::string implementation_string = logger_to_string.at(implementation);
+    std::string implementation_string = logger_to_string.left.at(implementation);
 
     auto cmd =
         "\"" + build_dir + "/hyriseServer\" --logger " + implementation_string + " --data_path " + test_data_path + _folder + " &";
@@ -169,7 +169,7 @@ Logger::Implementation logging_implementations[] = {Logger::Implementation::Simp
                                                     Logger::Implementation::GroupCommit};
 
 auto formatter = [](const testing::TestParamInfo<Logger::Implementation> info) {
-  return logger_to_string.at(info.param);
+  return logger_to_string.left.at(info.param);
 };
 
 INSTANTIATE_TEST_CASE_P(logging_implementations, ServerRecoveryTest, ::testing::ValuesIn(logging_implementations),

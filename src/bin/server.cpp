@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
   try {
     auto port = cli_parse_result["port"].as<uint16_t>();
     Assert(port != 0 && port <= 65535, "invalid port number");
-    auto logger_implementation = opossum::string_to_logger.at(cli_parse_result["logger"].as<std::string>());
+    auto logger_implementation = opossum::logger_to_string.right.at(cli_parse_result["logger"].as<std::string>());
     auto data_path = cli_parse_result["data_path"].as<std::string>();
 
     // Set scheduler so that the server can execute the tasks on separate threads.
