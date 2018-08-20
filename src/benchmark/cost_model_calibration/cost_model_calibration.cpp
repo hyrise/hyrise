@@ -102,7 +102,7 @@ void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOp
     auto left_input_chunk_count = (op->input_left()) ? op->input_left()->get_output()->chunk_count() : 0;
     auto left_input_memory_usage = (op->input_left()) ? op->input_left()->get_output()->estimate_memory_usage() : 0;
 
-    auto left_input_chunk_size = (op->input_left()) ? op->input_left()->get_output()->max_chunk_size() : 0;
+//    auto left_input_chunk_size = (op->input_left()) ? op->input_left()->get_output()->max_chunk_size() : 0;
 
     // Output
     auto output_row_count = output->row_count();
@@ -125,7 +125,7 @@ void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOp
 //            {"output_chunk_count", output_chunk_count.t},
 //            {"output_memory_usage_bytes", output_memory_usage},
             {"left_input_memory_usage_bytes", left_input_memory_usage},
-            {"left_input_chunk_size", left_input_chunk_size},
+//            {"left_input_chunk_size", left_input_chunk_size},
     };
 
     if (description == "TableScan") {
@@ -180,7 +180,9 @@ void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOp
       operator_result["right_input_chunk_count"] = right_input_chunk_count;
     }
 
-    _operators[description].push_back(operator_result);
+    if (description == "TableScan") {
+      _operators[description].push_back(operator_result);
+    }
   }
 }
 
