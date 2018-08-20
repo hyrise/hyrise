@@ -10,6 +10,8 @@
 #include <sstream>
 
 #include "abstract_logger.hpp"
+#include "binary_formatter.hpp"
+#include "text_formatter.hpp"
 #include "group_commit_logger.hpp"
 #include "no_logger.hpp"
 #include "simple_logger.hpp"
@@ -55,11 +57,13 @@ void Logger::setup(std::string folder, const Implementation implementation) {
       break;
     }
     case Implementation::Simple: {
-      _logger_instance = std::make_unique<SimpleLogger>();
+      std::unique_ptr<AbstractFormatter> formatter = std::make_unique<TextFormatter>();
+      _logger_instance = std::make_unique<SimpleLogger>(std::move(formatter));
       break;
     }
     case Implementation::GroupCommit: {
-      _logger_instance = std::make_unique<GroupCommitLogger>();
+      std::unique_ptr<AbstractFormatter> formatter = std::make_unique<BinaryFormatter>();
+      _logger_instance = std::make_unique<GroupCommitLogger>(std::move(formatter));
       break;
     }
     default: {

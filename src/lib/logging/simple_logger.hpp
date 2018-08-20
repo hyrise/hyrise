@@ -3,7 +3,7 @@
 #include <mutex>
 
 #include "abstract_logger.hpp"
-#include "text_formatter.hpp"
+#include "abstract_formatter.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -30,13 +30,12 @@ class SimpleLogger : public AbstractLogger {
   // Recovers db from logfiles and returns the number of loaded tables
   uint32_t recover() override;
 
-  SimpleLogger();
+  SimpleLogger(std::unique_ptr<AbstractFormatter> formatter);
 
  private:
 
   void _write_to_logfile(const std::vector<char> data);
   void _open_logfile();
-  TextFormatter _formatter;
 
   int _file_descriptor;
   std::mutex _file_mutex;

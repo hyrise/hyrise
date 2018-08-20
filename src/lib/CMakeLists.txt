@@ -95,6 +95,7 @@ set(
     cost_model/cost.hpp
     cost_model/cost_model_logical.cpp
     cost_model/cost_model_logical.hpp
+    logging/abstract_formatter.hpp
     logging/abstract_logger.hpp
     logging/abstract_recoverer.hpp
     logging/abstract_recoverer.cpp

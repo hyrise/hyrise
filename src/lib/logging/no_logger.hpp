@@ -31,7 +31,7 @@ class NoLogger : public AbstractLogger {
 
   uint32_t recover() override { return 0u; };
 
-  NoLogger() = default;
+  NoLogger() : AbstractLogger(nullptr) {};
 };
 
 }  // namespace opossum

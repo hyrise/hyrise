@@ -4,7 +4,7 @@
 #include <mutex>
 
 #include "abstract_logger.hpp"
-#include "binary_formatter.hpp"
+#include "abstract_formatter.hpp"
 #include "types.hpp"
 #include "utils/pausable_loop_thread.hpp"
 
@@ -34,7 +34,7 @@ class GroupCommitLogger : public AbstractLogger {
   // Recovers db from logfiles and returns the number of loaded tables
   uint32_t recover() override;
 
-  GroupCommitLogger();
+  GroupCommitLogger(std::unique_ptr<AbstractFormatter> formatter);
 
  private:
 
@@ -53,8 +53,6 @@ class GroupCommitLogger : public AbstractLogger {
 
   std::mutex _file_mutex;
   std::fstream _log_file;
-
-  BinaryFormatter _formatter;
 
   std::unique_ptr<PausableLoopThread> _flush_thread;
 };
