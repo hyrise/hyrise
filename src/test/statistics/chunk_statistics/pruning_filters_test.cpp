@@ -16,17 +16,51 @@ namespace opossum {
 
 class PruningFiltersTest : public BaseTest {
  protected:
-  void SetUp() override { _values = pmr_vector<int>{2, 3, 4, 7, 8, 10}; }
+  void SetUp() override {
+    _values = pmr_vector<int>{-1000, 2, 3, 4, 7, 8, 10, 123456};
+    _min_value = *std::min_element(std::begin(_values), std::end(_values));
+    _max_value = *std::max_element(std::begin(_values), std::end(_values));
+    _in_between = static_cast<int>(_min_value + 0.5 * (_max_value - _min_value));
+  }
 
   pmr_vector<int> _values;
+  int _min_value, _max_value, _in_between;
 };
 
 TEST_F(PruningFiltersTest, MinMaxFilterTest) {
   auto filter = std::make_unique<MinMaxFilter<int>>(_values.front(), _values.back());
 
-  EXPECT_EQ(true, filter->can_prune({1}, PredicateCondition::Equals));
-  EXPECT_EQ(true, filter->can_prune({42}, PredicateCondition::GreaterThan));
-  EXPECT_EQ(true, filter->can_prune({-21}, PredicateCondition::LessThanEquals));
+  EXPECT_TRUE(filter->can_prune({_min_value - 1}, PredicateCondition::LessThan));
+  EXPECT_TRUE(filter->can_prune({_min_value}, PredicateCondition::LessThan));
+  EXPECT_FALSE(filter->can_prune({_in_between}, PredicateCondition::LessThan));
+  EXPECT_FALSE(filter->can_prune({_max_value}, PredicateCondition::LessThan));
+  EXPECT_FALSE(filter->can_prune({_max_value + 1}, PredicateCondition::LessThan));
+
+  EXPECT_TRUE(filter->can_prune({_min_value - 1}, PredicateCondition::LessThanEquals));
+  EXPECT_FALSE(filter->can_prune({_min_value}, PredicateCondition::LessThanEquals));
+  EXPECT_FALSE(filter->can_prune({_in_between}, PredicateCondition::LessThanEquals));
+  EXPECT_FALSE(filter->can_prune({_max_value}, PredicateCondition::LessThanEquals));
+  EXPECT_FALSE(filter->can_prune({_max_value + 1}, PredicateCondition::LessThanEquals));
+
+  EXPECT_TRUE(filter->can_prune({_min_value - 1}, PredicateCondition::Equals));
+  EXPECT_FALSE(filter->can_prune({_min_value}, PredicateCondition::Equals));
+  EXPECT_FALSE(filter->can_prune({_in_between}, PredicateCondition::Equals));
+  EXPECT_FALSE(filter->can_prune({_max_value}, PredicateCondition::Equals));
+  EXPECT_TRUE(filter->can_prune({_max_value + 1}, PredicateCondition::Equals));
+
+  EXPECT_FALSE(filter->can_prune({_min_value - 1}, PredicateCondition::GreaterThanEquals));
+  EXPECT_FALSE(filter->can_prune({_min_value}, PredicateCondition::GreaterThanEquals));
+  EXPECT_FALSE(filter->can_prune({_in_between}, PredicateCondition::GreaterThanEquals));
+  EXPECT_FALSE(filter->can_prune({_max_value}, PredicateCondition::GreaterThanEquals));
+  EXPECT_TRUE(filter->can_prune({_max_value + 1}, PredicateCondition::GreaterThanEquals));
+
+  EXPECT_FALSE(filter->can_prune({_min_value - 1}, PredicateCondition::GreaterThan));
+  EXPECT_FALSE(filter->can_prune({_min_value}, PredicateCondition::GreaterThan));
+  EXPECT_FALSE(filter->can_prune({_in_between}, PredicateCondition::GreaterThan));
+  EXPECT_TRUE(filter->can_prune({_max_value}, PredicateCondition::GreaterThan));
+  EXPECT_TRUE(filter->can_prune({_max_value + 1}, PredicateCondition::GreaterThan));
+
+  EXPECT_FALSE(filter->can_prune({_in_between}, PredicateCondition::IsNull));
 }
 
 TEST_F(PruningFiltersTest, RangeFilterGapTest) {
@@ -41,9 +75,9 @@ TEST_F(PruningFiltersTest, RangeFilterExtremesTest) {
 
   EXPECT_EQ(true, filter->can_prune({5}, PredicateCondition::Equals));
   EXPECT_EQ(true, filter->can_prune({9}, PredicateCondition::Equals));
-  EXPECT_EQ(true, filter->can_prune({21}, PredicateCondition::Equals));
-  EXPECT_EQ(true, filter->can_prune({42}, PredicateCondition::GreaterThan));
-  EXPECT_EQ(true, filter->can_prune({-5}, PredicateCondition::LessThan));
+  EXPECT_EQ(true, filter->can_prune({_max_value + 1}, PredicateCondition::Equals));
+  EXPECT_EQ(true, filter->can_prune({_max_value + 1}, PredicateCondition::GreaterThan));
+  EXPECT_EQ(true, filter->can_prune({_min_value - 1}, PredicateCondition::LessThan));
 }
 
 TEST_F(PruningFiltersTest, RangeFilterFloatTest) {
