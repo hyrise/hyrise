@@ -106,6 +106,9 @@ void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOp
 
     // Output
     auto output_row_count = output->row_count();
+    // TODO: fix cross-join cardinality. Potential Join Result is smaller..
+    // Compare https://www.doag.org/formes/pubfiles/6315126/2014-DB-Jonathan_Lewis-Calculating_Join_Selectivity-Manuskript.pdf
+
     // Calculate cross-join cardinality. Use 1 for cases, in which one side is empty to avoid divisions by zero in the next step
     auto total_input_row_count = std::max<uint64_t>(1, left_input_row_count) * std::max<uint64_t>(1, right_input_row_count);
     auto output_selectivity = output_row_count / double(total_input_row_count);
@@ -168,6 +171,8 @@ void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOp
       auto right_input_chunk_count = (op->input_right()) ? op->input_right()->get_output()->chunk_count() : 0;
       auto right_input_memory_usage = (op->input_right()) ? op->input_right()->get_output()->estimate_memory_usage() : 0;
       auto right_input_chunk_size = (op->input_right()) ? op->input_right()->get_output()->max_chunk_size() : 0;
+
+      operator_result["input_table_size_ratio"] = left_input_row_count / right_input_row_count;
 
       operator_result["right_input_chunk_size"] = right_input_chunk_size;
       operator_result["right_input_memory_usage_bytes"] = right_input_memory_usage;
