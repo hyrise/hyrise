@@ -31,7 +31,7 @@
 namespace opossum {
 
 void SimpleLogger::log_commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) {
-  const auto data = _formatter.commit_entry(transaction_id);
+  const auto& data = _formatter.commit_entry(transaction_id);
   _write_to_logfile(data);
   log_flush();
   callback(transaction_id);
@@ -39,18 +39,18 @@ void SimpleLogger::log_commit(const TransactionID transaction_id, std::function<
 
 void SimpleLogger::log_value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,
                              const std::vector<AllTypeVariant>& values) {
-  const auto data = _formatter.value_entry(transaction_id, table_name, row_id, values);
+  const auto& data = _formatter.value_entry(transaction_id, table_name, row_id, values);
   _write_to_logfile(data);
 }
 
 void SimpleLogger::log_invalidate(const TransactionID transaction_id, const std::string& table_name,
                                   const RowID row_id) {
-  const auto data = _formatter.invalidate_entry(transaction_id, table_name, row_id);
+  const auto& data = _formatter.invalidate_entry(transaction_id, table_name, row_id);
   _write_to_logfile(data);
 }
 
 void SimpleLogger::log_load_table(const std::string& file_path, const std::string& table_name) {
-  const auto data = _formatter.load_table_entry(file_path, table_name);
+  const auto& data = _formatter.load_table_entry(file_path, table_name);
   _write_to_logfile(data);
   log_flush();
 }
