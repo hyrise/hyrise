@@ -11,8 +11,8 @@
 #include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/print_directed_acyclic_graph.hpp"
-#include "utils/systemtap.hpp"
 #include "utils/timer.hpp"
+#include "utils/tracing/systemtap.hpp"
 
 namespace opossum {
 

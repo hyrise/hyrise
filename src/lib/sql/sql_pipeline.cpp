@@ -8,7 +8,7 @@
 #include "SQLParser.h"
 #include "create_sql_parser_error_message.hpp"
 #include "utils/assert.hpp"
-#include "utils/systemtap.hpp"
+#include "utils/tracing/systemtap.hpp"
 
 namespace opossum {
 

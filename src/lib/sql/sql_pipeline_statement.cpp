@@ -15,7 +15,7 @@
 #include "sql/sql_query_plan.hpp"
 #include "sql/sql_translator.hpp"
 #include "utils/assert.hpp"
-#include "utils/systemtap.hpp"
+#include "utils/tracing/systemtap.hpp"
 
 namespace opossum {
 

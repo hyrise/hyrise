@@ -1,5 +1,5 @@
 #include "sql_pipeline_builder.hpp"
-#include "utils/systemtap.hpp"
+#include "utils/tracing/systemtap.hpp"
 
 namespace opossum {
 

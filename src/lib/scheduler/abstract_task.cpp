@@ -4,11 +4,11 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include "utils/systemtap.hpp"
 
 #include "abstract_scheduler.hpp"
 #include "current_scheduler.hpp"
 #include "task_queue.hpp"
+#include "utils/tracing/systemtap.hpp"
 #include "worker.hpp"
 
 #include "utils/assert.hpp"
@@ -59,6 +59,7 @@ void AbstractTask::set_done_callback(const std::function<void()>& done_callback)
 
 void AbstractTask::schedule(NodeID preferred_node_id) {
   _mark_as_scheduled();
+
   if (CurrentScheduler::is_set()) {
     CurrentScheduler::get()->schedule(shared_from_this(), preferred_node_id, _priority);
   } else {
