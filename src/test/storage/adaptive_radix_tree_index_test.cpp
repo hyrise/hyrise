@@ -116,7 +116,8 @@ TEST_F(AdaptiveRadixTreeIndexTest, BulkInsert) {
 }
 
 TEST_F(AdaptiveRadixTreeIndexTest, VectorOfRandomInts) {
-  std::vector<int> ints(10001);
+  size_t test_size = 10'001;
+  std::vector<int> ints(test_size);
   for (auto i = 0u; i < ints.size(); ++i) {
     ints[i] = i * 2;
   }
@@ -140,6 +141,14 @@ TEST_F(AdaptiveRadixTreeIndexTest, VectorOfRandomInts) {
       expected_lower += 2;
     }
   }
+
+  int max_value = *std::max_element(std::begin(ints), std::end(ints));
+  for (int search_item = 0; search_item < 3 * test_size; search_item++) {
+    if (search_item % 2 == 0 && search_item <= max_value) continue;
+
+    EXPECT_EQ(*index->upper_bound({search_item}), *index->lower_bound({search_item}));
+  }
+
   EXPECT_EQ(index->upper_bound({99999}), index->cend());
 }
 
