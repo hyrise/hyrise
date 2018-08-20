@@ -8,7 +8,8 @@ namespace opossum{
 // LogEntry is used to create a single log entry.
 // It keeps track of the cursor position while writing values into a buffer.
 class LogEntry {
- public:
+ private:
+  friend class EntryWriter;
   uint32_t cursor{0};
   std::vector<char> data;
 
@@ -64,7 +65,7 @@ class EntryWriter : public boost::static_visitor<void> {
   // The () operator is needed to apply a boost visitor. Therefore the mixing of << and () operators.
   template <typename T>
   void operator()(T v) {
-    _entry.resize(_entry.data.size() + sizeof(T));
+    _entry.resize(_entry.size() + sizeof(T));
     _entry << v;
     _set_bit_in_null_bitmap(true);
   }
@@ -100,6 +101,11 @@ class EntryWriter : public boost::static_visitor<void> {
     _bit_pos = (_bit_pos + 1) % 8;
   }
 
+  std::vector<char>& release_data() {
+    _entry.data.resize(_entry.cursor);
+    return _entry.data;
+  }
+
  private:
   LogEntry _entry;
   uint32_t _null_bitmap_pos;
@@ -108,7 +114,7 @@ class EntryWriter : public boost::static_visitor<void> {
 
 template <>
 void EntryWriter::operator()(std::string v) {
-  _entry.data.resize(_entry.data.size() + v.size() + 1);
+  _entry.data.resize(_entry.size() + v.size() + 1);
   _entry << v;
   _set_bit_in_null_bitmap(true);
 }
@@ -124,9 +130,7 @@ std::vector<char> BinaryFormatter::commit_entry(const TransactionID transaction_
 
   writer << 't' << transaction_id;
 
-  auto& entry = writer.entry();
-  entry.data.resize(entry.cursor);
-  return entry.data;
+  return writer.release_data();
 }
 
 std::vector<char> BinaryFormatter::value_entry(const TransactionID transaction_id, const std::string& table_name, 
@@ -146,9 +150,7 @@ std::vector<char> BinaryFormatter::value_entry(const TransactionID transaction_i
     boost::apply_visitor(writer, value);
   }
 
-  auto& entry = writer.entry();
-  entry.data.resize(entry.cursor);
-  return entry.data;
+  return writer.release_data();
 }
 
 std::vector<char> BinaryFormatter::invalidate_entry(const TransactionID transaction_id, const std::string& table_name,
@@ -159,9 +161,7 @@ std::vector<char> BinaryFormatter::invalidate_entry(const TransactionID transact
 
   writer << 'i' << transaction_id << table_name << row_id;
 
-  auto& entry = writer.entry();
-  entry.data.resize(entry.cursor);
-  return entry.data;
+  return writer.release_data();
 }
 
 std::vector<char> BinaryFormatter::load_table_entry(const std::string& file_path, const std::string& table_name) {
@@ -170,10 +170,7 @@ std::vector<char> BinaryFormatter::load_table_entry(const std::string& file_path
 
   writer << 'l' << file_path << table_name;
 
-  auto& entry = writer.entry();
-  entry.data.resize(entry.cursor);
-  return entry.data;
+  return writer.release_data();
 }
-
 
 }  // namespace opossum

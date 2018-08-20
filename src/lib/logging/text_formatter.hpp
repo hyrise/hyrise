@@ -16,6 +16,9 @@ class TextFormatter {
                                             const RowID row_id);
 
   static std::vector<char> load_table_entry(const std::string& file_path, const std::string& table_name);
+
+ protected:
+  static std::vector<char> _char_vector_of(std::stringstream& ss);
 };
 
 }  // namespace opossum

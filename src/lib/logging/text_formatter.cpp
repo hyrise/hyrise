@@ -7,12 +7,16 @@
 
 namespace opossum{
 
+std::vector<char> TextFormatter::_char_vector_of(std::stringstream& ss) {
+  auto data_string = ss.str();
+  return std::vector<char>(data_string.begin(), data_string.end());
+}
+
 std::vector<char> TextFormatter::commit_entry(const TransactionID transaction_id) {
   std::stringstream ss;
   ss << "(t," << transaction_id << ")\n";
 
-  auto data_string = ss.str();
-  return std::vector<char>(data_string.begin(), data_string.end());
+  return _char_vector_of(ss);
 }
 
 std::vector<char> TextFormatter::value_entry(const TransactionID transaction_id, const std::string& table_name, 
@@ -31,8 +35,7 @@ std::vector<char> TextFormatter::value_entry(const TransactionID transaction_id,
 
   ss << "))\n";
 
-  auto data_string = ss.str();
-  return std::vector<char>(data_string.begin(), data_string.end());
+  return _char_vector_of(ss);
 }
 
 std::vector<char> TextFormatter::invalidate_entry(const TransactionID transaction_id, const std::string& table_name,
@@ -40,16 +43,14 @@ std::vector<char> TextFormatter::invalidate_entry(const TransactionID transactio
   std::stringstream ss;
   ss << "(i," << transaction_id << "," << table_name.size() << "," << table_name << "," << row_id << ")\n";
 
-  auto data_string = ss.str();
-  return std::vector<char>(data_string.begin(), data_string.end());
+  return _char_vector_of(ss);
 }
 
 std::vector<char> TextFormatter::load_table_entry(const std::string& file_path, const std::string& table_name) {
   std::stringstream ss;
   ss << "(l," << file_path.size() << "," << file_path << "," << table_name.size() << "," << table_name << ")\n";
 
-  auto data_string = ss.str();
-  return std::vector<char>(data_string.begin(), data_string.end());
+  return _char_vector_of(ss);
 }
 
 
