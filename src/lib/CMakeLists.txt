@@ -367,7 +367,6 @@ set(
     storage/column_iterables/chunk_offset_mapping.cpp
     storage/column_iterables/chunk_offset_mapping.hpp
     storage/column_iterables/column_iterator_values.hpp
-    storage/column_iterables/constant_value_iterable.hpp
     storage/column_iterables/create_iterable_from_attribute_vector.hpp
     storage/column_iterables.hpp
     storage/abstract_column_visitor.hpp
@@ -492,7 +491,6 @@ set(
     utils/assert.hpp
     utils/boost_default_memory_resource.cpp
     utils/copyable_atomic.hpp
-    utils/cuckoo_hashtable.hpp
     utils/enum_constant.hpp
     utils/filesystem.hpp
     utils/format_bytes.cpp

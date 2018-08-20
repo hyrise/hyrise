@@ -50,11 +50,4 @@ inline bool is_parameter_id(const AllParameterVariant& variant) { return (varian
 
 std::string to_string(const AllParameterVariant& x);
 
-/**
- * Checks whether two variants are equal, except when they contain float/double. In this case check whether they are
- * near, e.g. withing a certain absolute difference from each other.
- */
-bool all_parameter_variant_near(const AllParameterVariant& lhs, const AllParameterVariant& rhs,
-                                double max_abs_error = 0.001);
-
 }  // namespace opossum

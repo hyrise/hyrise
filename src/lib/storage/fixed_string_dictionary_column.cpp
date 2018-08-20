@@ -34,7 +34,7 @@ const AllTypeVariant FixedStringDictionaryColumn<T>::operator[](const ChunkOffse
     return NULL_VALUE;
   }
 
-  return _dictionary->get_string_at(value_id);
+  return AllTypeVariant{std::move(_dictionary->get_string_at(value_id))};
 }
 
 template <typename T>
