@@ -344,7 +344,8 @@ void Aggregate::_aggregate() {
         */
 
         // This time, we have no idea how much space we need, so we take some memory and then rely on the automatic
-        // resizing
+        // resizing. The size is quite random, but since single memory allocations do not cost too much, we rather
+        // allocate a bit too much.
         auto temp_buffer = boost::container::pmr::monotonic_buffer_resource(1'000'000);
         auto allocator = PolymorphicAllocator<std::pair<const ColumnDataType, AggregateKeyEntry>>{&temp_buffer};
 
