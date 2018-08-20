@@ -201,7 +201,12 @@ void GroupCommitLogger::log_value(const TransactionID transaction_id, const std:
     boost::apply_visitor(writer, value);
   }
 
-  _write_to_buffer(writer.entry());
+
+
+  auto& entry = writer.entry();
+  entry.data.resize(entry.cursor);
+  
+  _write_to_buffer(entry.data);
 }
 
 void GroupCommitLogger::log_commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) {
@@ -212,7 +217,10 @@ void GroupCommitLogger::log_commit(const TransactionID transaction_id, std::func
 
   _commit_callbacks.emplace_back(std::make_pair(callback, transaction_id));
 
-  _write_to_buffer(writer.entry());
+  auto& entry = writer.entry();
+  entry.data.resize(entry.cursor);
+  
+  _write_to_buffer(entry.data);
 }
 
 void GroupCommitLogger::log_load_table(const std::string& file_path, const std::string& table_name) {
@@ -221,7 +229,10 @@ void GroupCommitLogger::log_load_table(const std::string& file_path, const std::
 
   writer << 'l' << file_path << table_name;
 
-  _write_to_buffer(writer.entry());
+  auto& entry = writer.entry();
+  entry.data.resize(entry.cursor);
+  
+  _write_to_buffer(entry.data);
 }
 
 void GroupCommitLogger::log_invalidate(const TransactionID transaction_id, const std::string& table_name,
@@ -232,18 +243,21 @@ void GroupCommitLogger::log_invalidate(const TransactionID transaction_id, const
 
   writer << 'i' << transaction_id << table_name << row_id;
 
-  _write_to_buffer(writer.entry());
+  auto& entry = writer.entry();
+  entry.data.resize(entry.cursor);
+  
+  _write_to_buffer(entry.data);
 }
 
-void GroupCommitLogger::_write_to_buffer(LogEntry& entry) {
+void GroupCommitLogger::_write_to_buffer(std::vector<char>& data) {
   // Assume that there is always enough space in the buffer, since it is flushed on hitting half its capacity
-  DebugAssert(_buffer_position + entry.size() < _buffer_capacity, "logging: entry does not fit into buffer");
+  DebugAssert(_buffer_position + data.size() < _buffer_capacity, "logging: entry does not fit into buffer");
 
   _buffer_mutex.lock();
 
-  memcpy(_buffer + _buffer_position, &entry.data[0], entry.size());
+  memcpy(_buffer + _buffer_position, &data[0], data.size());
 
-  _buffer_position += entry.size();
+  _buffer_position += data.size();
   _has_unflushed_buffer = true;
 
   _buffer_mutex.unlock();
@@ -287,7 +301,6 @@ void GroupCommitLogger::_open_logfile() {
 
   auto path = Logger::get_new_log_path();
   _log_file.open(path, std::ios::out | std::ios::binary);
-  DebugAssert(_log_file.is_open(), "Logger: Logfile could not be opened or created: " + path);
 
   _file_mutex.unlock();
 }
