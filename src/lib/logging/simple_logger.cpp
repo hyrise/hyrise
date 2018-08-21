@@ -55,27 +55,21 @@ void SimpleLogger::log_load_table(const std::string& file_path, const std::strin
   log_flush();
 }
 
-void SimpleLogger::log_flush() { fsync(_file_descriptor); }
+void SimpleLogger::log_flush() { _log_file.sync(); }
 
 void SimpleLogger::_write_to_logfile(const std::vector<char> data) {
   _file_mutex.lock();
-  DebugAssert(_file_descriptor != -1, "Logger: Logfile not open");
-  write(_file_descriptor, reinterpret_cast<const void*>(&data[0]), data.size());
+  DebugAssert(_log_file.is_open(), "Logger: Log file not open.");
+  _log_file.write(&data[0], data.size());
   _file_mutex.unlock();
 }
 
 void SimpleLogger::_open_logfile() {
+  DebugAssert(!_log_file.is_open(), "Logger: Log file not closed before opening another one.");
   _file_mutex.lock();
 
   auto path = Logger::get_new_log_path();
-
-  // read and write rights needed, since default rights do not allow to reopen the file after restarting the db
-  mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-  int oflags = O_WRONLY | O_APPEND | O_CREAT;
-
-  _file_descriptor = open(path.c_str(), oflags, mode);
-
-  DebugAssert(_file_descriptor != -1, "Logger: Logfile could not be opened or created: " + path);
+  _log_file.open(path, std::ios::out);
 
   _file_mutex.unlock();
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <fstream>
 #include <mutex>
 
 #include "abstract_logger.hpp"
@@ -34,7 +35,7 @@ class SimpleLogger : public AbstractLogger {
   void _write_to_logfile(const std::vector<char> data);
   void _open_logfile();
 
-  int _file_descriptor;
+  std::fstream _log_file;
   std::mutex _file_mutex;
 };
 
