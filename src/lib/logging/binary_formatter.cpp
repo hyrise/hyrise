@@ -134,7 +134,7 @@ std::vector<char> BinaryFormatter::commit_entry(const TransactionID transaction_
   constexpr auto entry_length = sizeof(char) + sizeof(TransactionID);
   EntryWriter writer(entry_length);
 
-  writer << 't' << transaction_id;
+  writer << 'c' << transaction_id;
 
   return writer.release_data();
 }

@@ -76,11 +76,11 @@ uint32_t TextRecoverer::recover() {
       size_t next_token_begin = 3;
 
       char log_type = line[1];
-      DebugAssert(log_type == 't' || log_type == 'i' || log_type == 'v' || log_type == 'l',
+      DebugAssert(log_type == 'c' || log_type == 'i' || log_type == 'v' || log_type == 'l',
                   "Recoverer: invalid log type token");
 
       // if commit entry
-      if (log_type == 't') {
+      if (log_type == 'c') {
         TransactionID transaction_id = std::stoul(_extract_up_to_delimiter(line, next_token_begin, ')'));
         _redo_transactions(transaction_id, transactions);
         last_transaction_id = std::max(transaction_id, last_transaction_id);

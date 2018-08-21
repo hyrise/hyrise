@@ -15,7 +15,7 @@ std::vector<char> TextFormatter::_char_vector_of(std::stringstream& ss) {
 
 std::vector<char> TextFormatter::commit_entry(const TransactionID transaction_id) {
   std::stringstream ss;
-  ss << "(t," << transaction_id << ")\n";
+  ss << "(c," << transaction_id << ")\n";
 
   return _char_vector_of(ss);
 }
