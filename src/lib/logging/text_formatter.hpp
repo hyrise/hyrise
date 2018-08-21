@@ -7,6 +7,10 @@
 
 namespace opossum {
 
+/*
+ *  Log formatter that writes log entries as text.
+ */
+
 class TextFormatter : public AbstractFormatter {
  public:
   std::vector<char> commit_entry(const TransactionID transaction_id) final;
