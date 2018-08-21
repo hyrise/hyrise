@@ -2,8 +2,6 @@
 
 #include <sstream>
 
-#include "boost/functional/hash.hpp"
-
 namespace opossum {
 
 SQLIdentifier::SQLIdentifier(const std::string& column_name, const std::optional<std::string>& table_name)
@@ -21,19 +19,3 @@ std::string SQLIdentifier::as_string() const {
 }
 
 }  // namespace opossum
-
-namespace std {
-
-size_t hash<opossum::SQLIdentifier>::operator()(const opossum::SQLIdentifier& sql_identifier) const {
-  auto hash = std::hash<std::string>{}(sql_identifier.column_name);
-
-  if (sql_identifier.table_name) {
-    boost::hash_combine(hash, *sql_identifier.table_name);
-  } else {
-    boost::hash_combine(hash, false);
-  }
-
-  return hash;
-}
-
-}  // namespace std
