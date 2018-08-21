@@ -114,29 +114,25 @@ void GroupCommitLogger::_write_to_buffer(const std::vector<char>& data) {
   }
 }
 
-void GroupCommitLogger::_write_buffer_to_logfile() {
-  DebugAssert(_log_file.is_open(), "Logger: Log file not open.");
-  _file_mutex.lock();
-  _buffer_mutex.lock();
-
-  _log_file.write(_buffer, _buffer_position);
-  _log_file.sync();
-
-  _buffer_position = 0u;
-  _has_unflushed_buffer = false;
-
-  for (auto& callback_tuple : _commit_callbacks) {
-    callback_tuple.first(callback_tuple.second);
-  }
-  _commit_callbacks.clear();
-
-  _buffer_mutex.unlock();
-  _file_mutex.unlock();
-}
-
 void GroupCommitLogger::log_flush() {
   if (_has_unflushed_buffer) {
-    _write_buffer_to_logfile();
+    DebugAssert(_log_file.is_open(), "Logger: Log file not open.");
+    _file_mutex.lock();
+    _buffer_mutex.lock();
+
+    _log_file.write(_buffer, _buffer_position);
+    _log_file.sync();
+
+    _buffer_position = 0u;
+    _has_unflushed_buffer = false;
+
+    for (auto& callback_tuple : _commit_callbacks) {
+      callback_tuple.first(callback_tuple.second);
+    }
+    _commit_callbacks.clear();
+
+    _buffer_mutex.unlock();
+    _file_mutex.unlock();
   }
 }
 

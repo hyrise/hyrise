@@ -34,8 +34,6 @@ class GroupCommitLogger : public AbstractLogger {
   GroupCommitLogger(std::unique_ptr<AbstractFormatter> formatter);
 
  private:
-
-  void _write_buffer_to_logfile();
   void _write_to_buffer(const std::vector<char>& data);
 
   void _open_logfile();
