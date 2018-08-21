@@ -64,6 +64,13 @@ const boost::bimap<Logger::Implementation, std::string> logger_to_string =
         {Logger::Implementation::No, "NoLogger"},
     });
 
+const boost::bimap<Logger::Format, std::string> log_format_to_string =
+    make_bimap<Logger::Format, std::string>({
+        {Logger::Format::Text, "TextFormat"},
+        {Logger::Format::Binary, "BinaryFormat"},
+        {Logger::Format::No, "NoFormat"},
+    });
+
 const std::unordered_map<UnionMode, std::string> union_mode_to_string = {{UnionMode::Positions, "UnionPositions"}};
 
 const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string =

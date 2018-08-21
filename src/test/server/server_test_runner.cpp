@@ -30,7 +30,7 @@ class ServerTestRunner : public BaseTest {
 
     // run on port 0 so the server can pick a free one
     auto server_runner = [&, cv](boost::asio::io_service& io_service) {
-      Server server{io_service, /* port = */ 0, test_data_path, Logger::Implementation::No};
+      Server server{io_service, /* port = */ 0, test_data_path, Logger::Implementation::No, Logger::Format::No};
 
       {
         std::unique_lock<std::mutex> lock{mutex};

@@ -37,9 +37,13 @@ AbstractLogger& Logger::get() {
   return *_logger_instance;
 }
 
-void Logger::setup(std::string folder, const Implementation implementation) {
+void Logger::setup(std::string folder, const Implementation implementation, const Format format) {
   DebugAssert(_implementation == Implementation::No, "Logger: Trying to setup logging that has already been setup");
   DebugAssert(folder.length() > 0, "Logger: empty string is no folder");
+
+  Assert((implementation == Implementation::No) == (format == Format::No), 
+         "Logger: Logger and log format must both either be turned on or off.");
+
   if (folder[folder.size() - 1] != '/') {
     folder += '/';
   }
@@ -51,18 +55,34 @@ void Logger::setup(std::string folder, const Implementation implementation) {
 
   _implementation = implementation;
 
+  std::unique_ptr<AbstractFormatter> formatter;
+  switch (format) {
+    case Format::No: {
+      break;
+    }
+    case Format::Text: {
+      formatter = std::make_unique<TextFormatter>();
+      break;
+    }
+    case Format::Binary: {
+      formatter = std::make_unique<BinaryFormatter>();
+      break;
+    }
+    default: {
+      throw std::runtime_error("Logger: format unkown.");
+    }
+  }
+
   switch (_implementation) {
     case Implementation::No: {
       // _logger_instance is initiated with NoLogger
       break;
     }
     case Implementation::Simple: {
-      std::unique_ptr<AbstractFormatter> formatter = std::make_unique<TextFormatter>();
       _logger_instance = std::make_unique<SimpleLogger>(std::move(formatter));
       break;
     }
     case Implementation::GroupCommit: {
-      std::unique_ptr<AbstractFormatter> formatter = std::make_unique<BinaryFormatter>();
       _logger_instance = std::make_unique<GroupCommitLogger>(std::move(formatter));
       break;
     }

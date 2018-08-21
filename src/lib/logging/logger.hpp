@@ -32,6 +32,7 @@ namespace opossum {
 class Logger {
  public:
   enum class Implementation { No, Simple, GroupCommit };
+  enum class Format { No, Text, Binary };
 
   Logger(const Logger&) = delete;
   Logger& operator=(const Logger&) = delete;
@@ -45,7 +46,7 @@ class Logger {
   static std::vector<std::string> get_all_log_file_paths();
 
   // Logging is turned on by console and server on startup by calling setup().
-  static void setup(std::string folder, const Implementation implementation);
+  static void setup(std::string folder, const Implementation implementation, const Format format);
 
   // Called while setting up a new database in console or in tests
   // Current logging implementation has to be shut down beforehand or not instantiated yet.

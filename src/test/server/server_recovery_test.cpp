@@ -8,13 +8,13 @@
 
 namespace opossum {
 
-class ServerRecoveryTest : public BaseTestWithParam<Logger::Implementation> {
+class ServerRecoveryTest : public BaseTestWithParam<std::pair<Logger::Implementation, Logger::Format>> {
  protected:
   static constexpr char _folder[] = "data/";
 
-  void restart_server(Logger::Implementation implementation) {
+  void restart_server(std::pair<Logger::Implementation, Logger::Format> logging) {
     terminate_server();
-    start_server(implementation);
+    start_server(logging);
   }
 
   void TearDown() override {
@@ -47,11 +47,12 @@ class ServerRecoveryTest : public BaseTestWithParam<Logger::Implementation> {
     return {port, pid};
   }
 
-  void start_server(Logger::Implementation implementation) {
-    std::string implementation_string = logger_to_string.left.at(implementation);
+  void start_server(std::pair<Logger::Implementation, Logger::Format> logging) {
+    std::string implementation_string = logger_to_string.left.at(logging.first);
+    std::string format_string = log_format_to_string.left.at(logging.second);
 
     auto cmd =
-        "\"" + build_dir + "/hyriseServer\" --logger " + implementation_string + " --data_path " + test_data_path + _folder + " &";
+        "\"" + build_dir + "/hyriseServer\" --logger " + implementation_string + " --log_format " + format_string + " --data_path " + test_data_path + _folder + " &";
 
     auto [port, server_pid] = exec(cmd.c_str(), "Port: ", "PID: ", '\n');
     _server_pid = server_pid;
@@ -165,14 +166,18 @@ TEST_P(ServerRecoveryTest, TestWorkflow) {
   EXPECT_EQ(s, "");
 }
 
-Logger::Implementation logging_implementations[] = {Logger::Implementation::Simple,
-                                                    Logger::Implementation::GroupCommit};
-
-auto formatter = [](const testing::TestParamInfo<Logger::Implementation> info) {
-  return logger_to_string.left.at(info.param);
+std::pair<Logger::Implementation, Logger::Format> loggings[] = {
+  {Logger::Implementation::Simple, Logger::Format::Text},
+  {Logger::Implementation::Simple, Logger::Format::Binary},
+  {Logger::Implementation::GroupCommit, Logger::Format::Text},
+  {Logger::Implementation::GroupCommit, Logger::Format::Binary}
 };
 
-INSTANTIATE_TEST_CASE_P(logging_implementations, ServerRecoveryTest, ::testing::ValuesIn(logging_implementations),
+auto formatter = [](const testing::TestParamInfo<std::pair<Logger::Implementation, Logger::Format>> info) {
+  return logger_to_string.left.at(info.param.first) + "_" + log_format_to_string.left.at(info.param.second);
+};
+
+INSTANTIATE_TEST_CASE_P(loggings, ServerRecoveryTest, ::testing::ValuesIn(loggings),
                         formatter);
 
 }  // namespace opossum

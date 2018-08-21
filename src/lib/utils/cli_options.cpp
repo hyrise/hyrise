@@ -16,13 +16,21 @@ cxxopts::Options CLIOptions::get_basic_cli_options(const std::string& program_na
     logging_strings.emplace_back(implementation_string);
   }
   const auto logging_options = boost::algorithm::join(logging_strings, ", ");
+
+  std::vector<std::string> log_format_strings;
+  log_format_strings.reserve(log_format_to_string.left.size());
+  for (const auto& [format, format_string]: log_format_to_string.left) {
+    log_format_strings.emplace_back(format_string);
+  }
+  const auto log_format_options = boost::algorithm::join(log_format_strings, ", ");
   
   // clang-format off
   cli_options.add_options()
     ("help", "print this help message")
     // ("c,chunk_size", "ChunkSize, default is 2^32-1", cxxopts::value<ChunkOffset>()->default_value(std::to_string(Chunk::MAX_SIZE))) // NOLINT
     // ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>()->default_value("false")) // NOLINT
-    ("logger", "Set Logging implementation. Options: " + logging_options, cxxopts::value<std::string>()->default_value(logger_to_string.left.at(Logger::Implementation::No))) // NOLINT
+    ("logger", "Set logging implementation. Options: " + logging_options, cxxopts::value<std::string>()->default_value(logger_to_string.left.at(Logger::Implementation::No))) // NOLINT
+    ("log_format", "Set logging format. Options: " + log_format_options, cxxopts::value<std::string>()->default_value(log_format_to_string.left.at(Logger::Format::No))) // NOLINT
     ("data_path", "Set folder for data like logfiles", cxxopts::value<std::string>()->default_value("./data/")); // NOLINT
   // clang-format on
 
