@@ -82,7 +82,7 @@ class EntryWriter : public boost::static_visitor<void> {
   }
 
   void create_null_bitmap(size_t number_of_values) {
-    uint32_t number_of_bitmap_bytes = ceil(number_of_values / 8.0);  // uint32_t resolves to ~ 34 Billion values
+    auto number_of_bitmap_bytes = BinaryFormatter::null_bitmap_size(number_of_values);
     _entry.data.resize(_entry.data.size() + number_of_bitmap_bytes);
     _null_bitmap_pos = _entry.cursor;
     _bit_pos = 0;
@@ -123,6 +123,11 @@ void EntryWriter::operator()(std::string v) {
 template <>
 void EntryWriter::operator()(NullValue v) {
   _set_bit_in_null_bitmap(false);
+}
+
+// uint32_t resolves to ~ 4 Billion values
+uint32_t BinaryFormatter::null_bitmap_size(uint32_t number_of_values) {
+  return ceil(number_of_values / 8.0);
 }
 
 std::vector<char> BinaryFormatter::commit_entry(const TransactionID transaction_id) {
