@@ -1,5 +1,8 @@
 #pragma once
 
+#include <fstream>
+#include <mutex>
+
 #include "abstract_formatter.hpp"
 #include "all_type_variant.hpp"
 #include "types.hpp"
@@ -41,10 +44,14 @@ class AbstractLogger {
 
  protected:
   friend class Logger;
+  AbstractLogger(std::unique_ptr<AbstractFormatter> formatter);
 
-  AbstractLogger(std::unique_ptr<AbstractFormatter> formatter) : _formatter(std::move(formatter)) {}
+ protected:
+  void _open_logfile();
 
   std::unique_ptr<AbstractFormatter> _formatter;
+  std::mutex _file_mutex;
+  std::fstream _log_file;
 };
 
 }  // namespace opossum

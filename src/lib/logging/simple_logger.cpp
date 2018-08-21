@@ -64,16 +64,6 @@ void SimpleLogger::_write_to_logfile(const std::vector<char> data) {
   _file_mutex.unlock();
 }
 
-void SimpleLogger::_open_logfile() {
-  DebugAssert(!_log_file.is_open(), "Logger: Log file not closed before opening another one.");
-  _file_mutex.lock();
-
-  auto path = Logger::get_new_log_path();
-  _log_file.open(path, std::ios::out);
-
-  _file_mutex.unlock();
-}
-
-SimpleLogger::SimpleLogger(std::unique_ptr<AbstractFormatter> formatter) : AbstractLogger(std::move(formatter)) { _open_logfile(); }
+SimpleLogger::SimpleLogger(std::unique_ptr<AbstractFormatter> formatter) : AbstractLogger(std::move(formatter)) {}
 
 }  // namespace opossum

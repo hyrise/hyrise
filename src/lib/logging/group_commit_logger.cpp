@@ -135,23 +135,11 @@ void GroupCommitLogger::log_flush() {
   }
 }
 
-void GroupCommitLogger::_open_logfile() {
-  DebugAssert(!_log_file.is_open(), "Logger: Log file not closed before opening another one.");
-  _file_mutex.lock();
-
-  auto path = Logger::get_new_log_path();
-  _log_file.open(path, std::ios::out | std::ios::binary);
-
-  _file_mutex.unlock();
-}
-
 GroupCommitLogger::GroupCommitLogger(std::unique_ptr<AbstractFormatter> formatter)
     : AbstractLogger(std::move(formatter)), _buffer_capacity(LOG_BUFFER_CAPACITY), _buffer_position(0)
     , _has_unflushed_buffer(false) {
   _buffer = reinterpret_cast<char*>(malloc(_buffer_capacity));
   memset(_buffer, 0, _buffer_capacity);
-
-  _open_logfile();
 
   _flush_thread = std::make_unique<PausableLoopThread>(LOG_INTERVAL, [this](size_t count) { GroupCommitLogger::log_flush(); });
   _flush_thread->resume();

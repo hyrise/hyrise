@@ -36,8 +36,6 @@ class GroupCommitLogger : public AbstractLogger {
  private:
   void _write_to_buffer(const std::vector<char>& data);
 
-  void _open_logfile();
-
   char* _buffer;
   const uint32_t _buffer_capacity;  // uint32_t: Max buffer capacity ~ 4GB
   uint32_t _buffer_position;
@@ -45,9 +43,6 @@ class GroupCommitLogger : public AbstractLogger {
   std::mutex _buffer_mutex;
 
   std::vector<std::pair<std::function<void(TransactionID)>, TransactionID>> _commit_callbacks;
-
-  std::mutex _file_mutex;
-  std::fstream _log_file;
 
   std::unique_ptr<PausableLoopThread> _flush_thread;
 };

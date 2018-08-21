@@ -31,12 +31,7 @@ class SimpleLogger : public AbstractLogger {
   SimpleLogger(std::unique_ptr<AbstractFormatter> formatter);
 
  private:
-
   void _write_to_logfile(const std::vector<char> data);
-  void _open_logfile();
-
-  std::fstream _log_file;
-  std::mutex _file_mutex;
 };
 
 }  // namespace opossum
