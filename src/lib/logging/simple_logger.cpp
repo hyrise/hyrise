@@ -64,8 +64,6 @@ void SimpleLogger::_write_to_logfile(const std::vector<char> data) {
   _file_mutex.unlock();
 }
 
-uint32_t SimpleLogger::recover() { return TextRecoverer::getInstance().recover(); }
-
 void SimpleLogger::_open_logfile() {
   _file_mutex.lock();
 

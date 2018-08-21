@@ -17,6 +17,8 @@ class AbstractFormatter {
 
   virtual std::vector<char> load_table_entry(const std::string& file_path, const std::string& table_name) = 0;
 
+  virtual uint32_t recover() = 0;
+
   AbstractFormatter() = default;
   virtual ~AbstractFormatter() = default;
 };

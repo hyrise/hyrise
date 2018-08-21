@@ -18,6 +18,8 @@ class BinaryFormatter : public AbstractFormatter {
                                             const RowID row_id) final;
 
   std::vector<char> load_table_entry(const std::string& file_path, const std::string& table_name) final;
+
+  uint32_t recover() final;
 };
 
 }  // namespace opossum

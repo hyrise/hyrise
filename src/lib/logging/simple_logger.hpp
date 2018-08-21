@@ -27,9 +27,6 @@ class SimpleLogger : public AbstractLogger {
 
   void log_flush() override;
 
-  // Recovers db from logfiles and returns the number of loaded tables
-  uint32_t recover() override;
-
   SimpleLogger(std::unique_ptr<AbstractFormatter> formatter);
 
  private:

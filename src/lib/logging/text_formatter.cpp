@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include "all_type_variant.hpp"
+#include "text_recoverer.hpp"
 
 namespace opossum{
 
@@ -53,5 +54,6 @@ std::vector<char> TextFormatter::load_table_entry(const std::string& file_path, 
   return _char_vector_of(ss);
 }
 
+uint32_t TextFormatter::recover() { return TextRecoverer::getInstance().recover(); }
 
 }  // namespace opossum

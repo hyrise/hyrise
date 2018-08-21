@@ -19,6 +19,8 @@ class TextFormatter : public AbstractFormatter {
 
   std::vector<char> load_table_entry(const std::string& file_path, const std::string& table_name) final;
 
+  uint32_t recover() final;
+
  protected:
   std::vector<char> _char_vector_of(std::stringstream& ss);
 };

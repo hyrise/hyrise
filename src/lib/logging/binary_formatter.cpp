@@ -1,6 +1,7 @@
 #include "binary_formatter.hpp"
 
 #include "all_type_variant.hpp"
+#include "binary_recoverer.hpp"
 #include "types.hpp"
 
 namespace opossum{
@@ -172,5 +173,7 @@ std::vector<char> BinaryFormatter::load_table_entry(const std::string& file_path
 
   return writer.release_data();
 }
+
+uint32_t BinaryFormatter::recover() { return BinaryRecoverer::getInstance().recover(); }
 
 }  // namespace opossum

@@ -140,8 +140,6 @@ void GroupCommitLogger::log_flush() {
   }
 }
 
-uint32_t GroupCommitLogger::recover() { return BinaryRecoverer::getInstance().recover(); }
-
 void GroupCommitLogger::_open_logfile() {
   DebugAssert(!_log_file.is_open(), "Logger: Log file not closed before opening another one.");
   _file_mutex.lock();
