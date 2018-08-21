@@ -105,13 +105,13 @@ class Sort::SortImplMaterializeOutput {
 
           if (!base_column) {
             base_column = _table_in->get_chunk(chunk_id)->get_column(column_id);
-            accessor = std::move(get_column_accessor<ColumnDataType>(base_column));
+            accessor = get_column_accessor<ColumnDataType>(base_column);
           }
 
           // If the input column is not a ReferenceColumn, we can take a fast(er) path
           if (accessor) {
-            const auto value = accessor->access(chunk_offset);
-            (*column_it)->append_typed_value(value);
+            const auto typed_value = accessor->access(chunk_offset);
+            (*column_it)->append_typed_value(typed_value);
           } else {
             // Previously the value was retrieved by calling a virtual method,
             // which was just as slow as using the subscript operator.
