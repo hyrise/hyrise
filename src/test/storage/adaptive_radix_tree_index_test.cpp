@@ -2,6 +2,7 @@
 #include <memory>
 #include <random>
 #include <set>
+#include <limits>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -43,6 +44,40 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
       pairs.emplace_back(std::make_pair(bc, values1[i]));
     }
     root = index1->_bulk_insert(pairs);
+
+    std::random_device rd;
+    _rng = std::mt19937(rd());
+  }
+
+  void _search_elements(std::vector<int>& values) {
+    std::uniform_int_distribution<int> uni_integer(0, std::numeric_limits<int>::max());
+
+    auto column = create_dict_column_by_type<int>(DataType::Int, values);
+    auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseColumn>>({column}));
+
+    std::set<int> distinct_values(values.begin(), values.end());
+
+    std::set<int> search_values = distinct_values;
+    while (search_values.size() < distinct_values.size()*2) {
+      search_values.insert(uni_integer(_rng));
+    }
+
+    for (const auto& search_value : search_values) {
+      if (distinct_values.find(search_value) != distinct_values.end()) {
+        // match
+        EXPECT_NE(index->lower_bound({search_value}), index->upper_bound({search_value}));
+      } else {
+        // no match
+        EXPECT_EQ(index->upper_bound({search_value}), index->lower_bound({search_value}));
+      }
+
+      int min = *distinct_values.begin();
+      int max = *distinct_values.rbegin();
+
+      EXPECT_EQ(index->upper_bound({min-1}), index->cbegin());
+      EXPECT_EQ(index->upper_bound({max+1}), index->cend());
+    }
+
   }
 
   std::shared_ptr<AdaptiveRadixTreeIndex> index1 = nullptr;
@@ -51,6 +86,8 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
   std::vector<std::pair<AdaptiveRadixTreeIndex::BinaryComparable, ChunkOffset>> pairs;
   std::vector<ValueID> keys1;
   std::vector<ChunkOffset> values1;
+
+  std::mt19937 _rng;
 };
 
 TEST_F(AdaptiveRadixTreeIndexTest, BinaryComparableFromChunkOffset) {
@@ -118,7 +155,7 @@ TEST_F(AdaptiveRadixTreeIndexTest, BulkInsert) {
 TEST_F(AdaptiveRadixTreeIndexTest, VectorOfRandomInts) {
   size_t test_size = 10'001;
   std::vector<int> ints(test_size);
-  for (auto i = 0u; i < ints.size(); ++i) {
+  for (auto i = 0u; i < test_size; ++i) {
     ints[i] = i * 2;
   }
 
@@ -143,13 +180,51 @@ TEST_F(AdaptiveRadixTreeIndexTest, VectorOfRandomInts) {
   }
 
   int max_value = *std::max_element(std::begin(ints), std::end(ints));
-  for (int search_item = 0; search_item < 3 * test_size; search_item++) {
+  for (int search_item = 0; search_item < static_cast<int>(3 * test_size); search_item++) {
     if (search_item % 2 == 0 && search_item <= max_value) continue;
 
-    EXPECT_EQ(*index->upper_bound({search_item}), *index->lower_bound({search_item}));
+    // search for elements not existing
+    EXPECT_EQ(*index->lower_bound({search_item}), *index->upper_bound({search_item}));
   }
 
   EXPECT_EQ(index->upper_bound({99999}), index->cend());
+}
+
+TEST_F(AdaptiveRadixTreeIndexTest, SimpleTest) {
+  std::vector<int> values = {0, 0, 0, 0, 0, 17, 17, 17, 99, std::numeric_limits<int>::max()};
+
+  auto column = create_dict_column_by_type<int>(DataType::Int, values);
+  auto index = std::make_shared<AdaptiveRadixTreeIndex>(std::vector<std::shared_ptr<const BaseColumn>>({column}));
+
+  EXPECT_EQ(*index->cbegin(), 0);
+  EXPECT_EQ(*index->lower_bound({0}), 0);
+  EXPECT_EQ(*index->upper_bound({0}), 5);
+  EXPECT_EQ(*index->lower_bound({17}), 5);
+  EXPECT_EQ(*index->upper_bound({17}), 8);
+  EXPECT_EQ(*index->lower_bound({99}), 8);
+  EXPECT_EQ(*index->upper_bound({99}), 9);
+  EXPECT_EQ(*index->lower_bound({std::numeric_limits<int>::max()}), 9);
+  EXPECT_EQ(index->upper_bound({std::numeric_limits<int>::max()}), index->cend());
+}
+
+TEST_F(AdaptiveRadixTreeIndexTest, SparseVectorOfRandomInts) {
+  size_t test_size = 10'000;
+  std::uniform_int_distribution<int> uni(1, std::numeric_limits<int>::max() - 1);
+
+  std::vector<int> values(test_size);
+  std::generate(values.begin(), values.end(), [this, &uni] () { return uni(_rng); });
+
+  _search_elements(values);
+}
+
+TEST_F(AdaptiveRadixTreeIndexTest, DenseVectorOfRandomInts) {
+  size_t test_size = 10'000;
+  std::exponential_distribution<double> exp(1.0);
+
+  std::vector<int> values(test_size);
+  std::generate(values.begin(), values.end(), [this, &exp] () { return static_cast<int>(exp(_rng)); });
+
+  _search_elements(values);
 }
 
 }  // namespace opossum
