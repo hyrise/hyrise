@@ -5,13 +5,13 @@
 #include <iostream>
 
 #include "constant_mappings.hpp"
-#include "utils/cli_options.hpp"
 #include "logging/logger.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/topology.hpp"
 #include "server/server.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/cli_options.hpp"
 #include "utils/load_table.hpp"
 
 int main(int argc, char* argv[]) {

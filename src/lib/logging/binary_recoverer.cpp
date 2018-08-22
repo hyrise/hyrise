@@ -35,7 +35,7 @@ RowID BinaryRecoverer::_read(std::ifstream& file) {
 AllTypeVariant BinaryRecoverer::_read_all_type_variant(std::ifstream& file, DataType data_type) {
   AllTypeVariant value;
 
-  resolve_data_type(data_type, [&] (auto type) {
+  resolve_data_type(data_type, [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
     value = AllTypeVariant{_read<ColumnDataType>(file)};
   });
@@ -112,7 +112,8 @@ uint32_t BinaryRecoverer::recover() {
           break;
         }
 
-        default: throw("Binary recovery: invalid log type token");
+        default:
+          throw("Binary recovery: invalid log type token");
       }
 
       log_file.read(&log_type, sizeof(char));

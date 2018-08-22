@@ -24,7 +24,7 @@
 #include "all_type_variant.hpp"
 #include "text_recoverer.hpp"
 
-namespace opossum{
+namespace opossum {
 
 std::vector<char> TextFormatter::_char_vector_of(std::stringstream& ss) {
   auto data_string = ss.str();
@@ -38,8 +38,8 @@ std::vector<char> TextFormatter::commit_entry(const TransactionID transaction_id
   return _char_vector_of(ss);
 }
 
-std::vector<char> TextFormatter::value_entry(const TransactionID transaction_id, const std::string& table_name, 
-                                              const RowID row_id, const std::vector<AllTypeVariant>& values) {
+std::vector<char> TextFormatter::value_entry(const TransactionID transaction_id, const std::string& table_name,
+                                             const RowID row_id, const std::vector<AllTypeVariant>& values) {
   std::stringstream ss;
   ss << "(v," << transaction_id << "," << table_name.size() << "," << table_name << "," << row_id << ",(";
 
@@ -58,7 +58,7 @@ std::vector<char> TextFormatter::value_entry(const TransactionID transaction_id,
 }
 
 std::vector<char> TextFormatter::invalidate_entry(const TransactionID transaction_id, const std::string& table_name,
-                                                   const RowID row_id) {
+                                                  const RowID row_id) {
   std::stringstream ss;
   ss << "(i," << transaction_id << "," << table_name.size() << "," << table_name << "," << row_id << ")\n";
 

@@ -3,8 +3,8 @@
 #include <fstream>
 #include <mutex>
 
-#include "abstract_logger.hpp"
 #include "abstract_formatter.hpp"
+#include "abstract_logger.hpp"
 #include "types.hpp"
 
 namespace opossum {

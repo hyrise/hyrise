@@ -11,10 +11,10 @@
 
 #include "abstract_logger.hpp"
 #include "binary_formatter.hpp"
-#include "text_formatter.hpp"
 #include "group_commit_logger.hpp"
 #include "no_logger.hpp"
 #include "simple_logger.hpp"
+#include "text_formatter.hpp"
 #include "utils/filesystem.hpp"
 
 namespace opossum {
@@ -33,15 +33,13 @@ const std::string Logger::_filename = "hyrise-log";        // NOLINT
 
 std::unique_ptr<AbstractLogger> Logger::_logger_instance = std::make_unique<NoLogger>();
 
-AbstractLogger& Logger::get() {
-  return *_logger_instance;
-}
+AbstractLogger& Logger::get() { return *_logger_instance; }
 
 void Logger::setup(std::string folder, const Implementation implementation, const Format format) {
   DebugAssert(_implementation == Implementation::No, "Logger: Trying to setup logging that has already been setup");
   DebugAssert(folder.length() > 0, "Logger: empty string is no folder");
 
-  Assert((implementation == Implementation::No) == (format == Format::No), 
+  Assert((implementation == Implementation::No) == (format == Format::No),
          "Logger: Logger and log format must both either be turned on or off.");
 
   if (folder[folder.size() - 1] != '/') {
@@ -68,9 +66,7 @@ void Logger::setup(std::string folder, const Implementation implementation, cons
       formatter = std::make_unique<BinaryFormatter>();
       break;
     }
-    default: {
-      throw std::runtime_error("Logger: format unkown.");
-    }
+    default: { throw std::runtime_error("Logger: format unkown."); }
   }
 
   switch (_implementation) {
@@ -86,9 +82,7 @@ void Logger::setup(std::string folder, const Implementation implementation, cons
       _logger_instance = std::make_unique<GroupCommitLogger>(std::move(formatter));
       break;
     }
-    default: {
-      throw std::runtime_error("Logger: implementation unkown.");
-    }
+    default: { throw std::runtime_error("Logger: implementation unkown."); }
   }
 }
 

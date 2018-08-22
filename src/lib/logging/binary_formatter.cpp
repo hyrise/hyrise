@@ -30,14 +30,13 @@
  *       - table_name           : table_name.size() + 1                   : string terminated with \0
  */
 
-
 #include "binary_formatter.hpp"
 
 #include "all_type_variant.hpp"
 #include "binary_recoverer.hpp"
 #include "types.hpp"
 
-namespace opossum{
+namespace opossum {
 
 // LogEntry is used to create a single log entry.
 // It keeps track of the cursor position while writing values into a buffer.
@@ -51,16 +50,14 @@ class LogEntry {
 
   void resize(size_t size) {
     auto double_size = 2 * data.size();
-    if (double_size >= size ) {
+    if (double_size >= size) {
       data.resize(double_size);
     } else {
       data.resize(size);
     }
   }
 
-  uint32_t size() const {
-    return cursor;
-  }
+  uint32_t size() const { return cursor; }
 
   template <typename T>
   LogEntry& operator<<(const T& value) {
@@ -74,7 +71,7 @@ class LogEntry {
 template <>
 // clang-format off
 LogEntry& LogEntry::operator<< <std::string>(const std::string& value) {  // NOLINT
-// clang-format on
+  // clang-format on
   DebugAssert(cursor + value.size() < data.size(), "Logger: value does not fit into vector, call resize() beforehand");
 
   value.copy(&data[cursor], value.size());
@@ -110,9 +107,7 @@ class EntryWriter : public boost::static_visitor<void> {
     return *this;
   }
 
-  LogEntry& entry() {
-    return _entry;
-  }
+  LogEntry& entry() { return _entry; }
 
   void create_null_bitmap(size_t number_of_values) {
     auto number_of_bitmap_bytes = BinaryFormatter::null_bitmap_size(number_of_values);
@@ -159,9 +154,7 @@ void EntryWriter::operator()(NullValue v) {
 }
 
 // uint32_t resolves to ~ 4 Billion values
-uint32_t BinaryFormatter::null_bitmap_size(uint32_t number_of_values) {
-  return ceil(number_of_values / 8.0);
-}
+uint32_t BinaryFormatter::null_bitmap_size(uint32_t number_of_values) { return ceil(number_of_values / 8.0); }
 
 std::vector<char> BinaryFormatter::commit_entry(const TransactionID transaction_id) {
   constexpr auto entry_length = sizeof(char) + sizeof(TransactionID);
@@ -172,8 +165,8 @@ std::vector<char> BinaryFormatter::commit_entry(const TransactionID transaction_
   return writer.release_data();
 }
 
-std::vector<char> BinaryFormatter::value_entry(const TransactionID transaction_id, const std::string& table_name, 
-                                              const RowID row_id, const std::vector<AllTypeVariant>& values) {
+std::vector<char> BinaryFormatter::value_entry(const TransactionID transaction_id, const std::string& table_name,
+                                               const RowID row_id, const std::vector<AllTypeVariant>& values) {
   // This is the entry length up to the ChunkOffset.
   // The entry then gets resized for the null value bitmap and each value
   auto entry_length =
@@ -193,7 +186,7 @@ std::vector<char> BinaryFormatter::value_entry(const TransactionID transaction_i
 }
 
 std::vector<char> BinaryFormatter::invalidate_entry(const TransactionID transaction_id, const std::string& table_name,
-                                                   const RowID row_id) {
+                                                    const RowID row_id) {
   const auto entry_length =
       sizeof(char) + sizeof(TransactionID) + (table_name.size() + 1) + sizeof(ChunkID) + sizeof(ChunkOffset);
   EntryWriter writer(entry_length);

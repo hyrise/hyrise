@@ -5,25 +5,25 @@
 #include "constant_mappings.hpp"
 #include "logging/logger.hpp"
 
-namespace opossum{
+namespace opossum {
 
 cxxopts::Options CLIOptions::get_basic_cli_options(const std::string& program_name) {
   cxxopts::Options cli_options{program_name};
 
   std::vector<std::string> logging_strings;
   logging_strings.reserve(logger_to_string.left.size());
-  for (const auto& [implementation, implementation_string]: logger_to_string.left) {
+  for (const auto& [implementation, implementation_string] : logger_to_string.left) {
     logging_strings.emplace_back(implementation_string);
   }
   const auto logging_options = boost::algorithm::join(logging_strings, ", ");
 
   std::vector<std::string> log_format_strings;
   log_format_strings.reserve(log_format_to_string.left.size());
-  for (const auto& [format, format_string]: log_format_to_string.left) {
+  for (const auto& [format, format_string] : log_format_to_string.left) {
     log_format_strings.emplace_back(format_string);
   }
   const auto log_format_options = boost::algorithm::join(log_format_strings, ", ");
-  
+
   // clang-format off
   cli_options.add_options()
     ("help", "print this help message")

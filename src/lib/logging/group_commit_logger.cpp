@@ -63,7 +63,7 @@ void GroupCommitLogger::log_load_table(const std::string& file_path, const std::
 
 void GroupCommitLogger::log_invalidate(const TransactionID transaction_id, const std::string& table_name,
                                        const RowID row_id) {
-  const auto& data = _formatter->invalidate_entry(transaction_id, table_name, row_id); 
+  const auto& data = _formatter->invalidate_entry(transaction_id, table_name, row_id);
   _write_to_buffer(data);
 }
 
@@ -105,12 +105,15 @@ void GroupCommitLogger::log_flush() {
 }
 
 GroupCommitLogger::GroupCommitLogger(std::unique_ptr<AbstractFormatter> formatter)
-    : AbstractLogger(std::move(formatter)), _buffer_capacity(LOG_BUFFER_CAPACITY), _buffer_position(0)
-    , _has_unflushed_buffer(false) {
+    : AbstractLogger(std::move(formatter)),
+      _buffer_capacity(LOG_BUFFER_CAPACITY),
+      _buffer_position(0),
+      _has_unflushed_buffer(false) {
   _buffer = reinterpret_cast<char*>(malloc(_buffer_capacity));
   memset(_buffer, 0, _buffer_capacity);
 
-  _flush_thread = std::make_unique<PausableLoopThread>(LOG_INTERVAL, [this](size_t count) { GroupCommitLogger::log_flush(); });
+  _flush_thread =
+      std::make_unique<PausableLoopThread>(LOG_INTERVAL, [this](size_t count) { GroupCommitLogger::log_flush(); });
   _flush_thread->resume();
 }
 

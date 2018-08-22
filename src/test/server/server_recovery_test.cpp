@@ -33,17 +33,17 @@ class ServerRecoveryTest : public BaseTestWithParam<std::pair<Logger::Implementa
     size_t port_pos;
     size_t pid_pos;
     while (!feof(pipe.get())) {
-        if (fgets(buffer.data(), 128, pipe.get()) != nullptr) {
-            output += buffer.data();
-        }
-        port_pos = output.find(port_str);
-        pid_pos = output.find(pid_str);
-        if (port_pos != std::string::npos && pid_pos != std::string::npos) break;
+      if (fgets(buffer.data(), 128, pipe.get()) != nullptr) {
+        output += buffer.data();
+      }
+      port_pos = output.find(port_str);
+      pid_pos = output.find(pid_str);
+      if (port_pos != std::string::npos && pid_pos != std::string::npos) break;
     }
     auto port = std::stoul(output.substr(port_pos + port_str.length(), output.find(delimiter, port_pos)));
-    
+
     auto pid = std::stoul(output.substr(pid_pos + pid_str.length(), output.find(delimiter, pid_pos)));
-    
+
     return {port, pid};
   }
 
@@ -51,8 +51,8 @@ class ServerRecoveryTest : public BaseTestWithParam<std::pair<Logger::Implementa
     std::string implementation_string = logger_to_string.left.at(logging.first);
     std::string format_string = log_format_to_string.left.at(logging.second);
 
-    auto cmd =
-        "\"" + build_dir + "/hyriseServer\" --logger " + implementation_string + " --log_format " + format_string + " --data_path " + test_data_path + _folder + " &";
+    auto cmd = "\"" + build_dir + "/hyriseServer\" --logger " + implementation_string + " --log_format " +
+               format_string + " --data_path " + test_data_path + _folder + " &";
 
     auto [port, server_pid] = exec(cmd.c_str(), "Port: ", "PID: ", '\n');
     _server_pid = server_pid;
@@ -167,17 +167,15 @@ TEST_P(ServerRecoveryTest, TestWorkflow) {
 }
 
 std::pair<Logger::Implementation, Logger::Format> loggings[] = {
-  {Logger::Implementation::Simple, Logger::Format::Text},
-  {Logger::Implementation::Simple, Logger::Format::Binary},
-  {Logger::Implementation::GroupCommit, Logger::Format::Text},
-  {Logger::Implementation::GroupCommit, Logger::Format::Binary}
-};
+    {Logger::Implementation::Simple, Logger::Format::Text},
+    {Logger::Implementation::Simple, Logger::Format::Binary},
+    {Logger::Implementation::GroupCommit, Logger::Format::Text},
+    {Logger::Implementation::GroupCommit, Logger::Format::Binary}};
 
 auto formatter = [](const testing::TestParamInfo<std::pair<Logger::Implementation, Logger::Format>> info) {
   return logger_to_string.left.at(info.param.first) + "_" + log_format_to_string.left.at(info.param.second);
 };
 
-INSTANTIATE_TEST_CASE_P(loggings, ServerRecoveryTest, ::testing::ValuesIn(loggings),
-                        formatter);
+INSTANTIATE_TEST_CASE_P(loggings, ServerRecoveryTest, ::testing::ValuesIn(loggings), formatter);
 
 }  // namespace opossum
