@@ -19,7 +19,7 @@ int main(int argc, char* argv[]) {
 
   // clang-format off
   cli_options.add_options()
-      ("port", "Specify the port", cxxopts::value<uint16_t>()->default_value("5432")); // NOLINT
+      ("port", "Specify the port", cxxopts::value<uint16_t>()->default_value("0")); // NOLINT
   // clang-format on
 
   const auto cli_parse_result = cli_options.parse(argc, argv);
@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
     // constructor and then runs forever.
     opossum::Server server{io_service, port, data_path, logger_implementation, logger_format};
 
-    std::cout << "Port: " << port << std::endl;
+    std::cout << "Port: " << server.get_port_number() << std::endl;
     std::cout << "PID: " << ::getpid() << std::endl;
 
     io_service.run();
