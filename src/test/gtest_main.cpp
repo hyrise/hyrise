@@ -5,7 +5,7 @@
 #include "utils/filesystem.hpp"
 #include "utils/performance_warning.hpp"
 
-std::string opossum::test_data_path;
+std::string opossum::test_data_path;  // NOLINT
 
 void create_test_data_directory(std::optional<std::string>& prefix) {
   Assert(!filesystem::exists(opossum::test_data_path),
