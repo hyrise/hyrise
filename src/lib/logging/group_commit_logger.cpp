@@ -77,10 +77,10 @@ void GroupCommitLogger::_write_to_buffer(const std::vector<char>& data) {
 
     _buffer_position += data.size();
     _has_unflushed_buffer = true;
-  }
 
-  if (_buffer_position > _buffer_capacity / 2) {
-    log_flush();
+    if (_buffer_position > _buffer_capacity / 2) {
+      log_flush();
+    }
   }
 }
 
