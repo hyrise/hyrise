@@ -44,7 +44,7 @@ class AbstractLogger {
 
  protected:
   friend class Logger;
-  AbstractLogger(std::unique_ptr<AbstractFormatter> formatter);
+  explicit AbstractLogger(std::unique_ptr<AbstractFormatter> formatter);
 
  protected:
   void _open_logfile();

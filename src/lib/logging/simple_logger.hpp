@@ -28,7 +28,7 @@ class SimpleLogger : public AbstractLogger {
 
   void log_flush() override;
 
-  SimpleLogger(std::unique_ptr<AbstractFormatter> formatter);
+  explicit SimpleLogger(std::unique_ptr<AbstractFormatter> formatter);
 
  private:
   void _write_to_logfile(const std::vector<char> data);

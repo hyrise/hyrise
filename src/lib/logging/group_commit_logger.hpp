@@ -31,7 +31,7 @@ class GroupCommitLogger : public AbstractLogger {
 
   void log_flush() override;
 
-  GroupCommitLogger(std::unique_ptr<AbstractFormatter> formatter);
+  explicit GroupCommitLogger(std::unique_ptr<AbstractFormatter> formatter);
 
  private:
   void _write_to_buffer(const std::vector<char>& data);

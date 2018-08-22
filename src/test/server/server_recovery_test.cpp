@@ -54,7 +54,7 @@ class ServerRecoveryTest : public BaseTestWithParam<std::pair<Logger::Implementa
     auto cmd = "\"" + build_dir + "/hyriseServer\" --logger " + implementation_string + " --log_format " +
                format_string + " --data_path " + test_data_path + _folder + " &";
 
-    auto [port, server_pid] = exec(cmd.c_str(), "Port: ", "PID: ", '\n');
+    auto [port, server_pid] = exec(cmd.c_str(), "Port: ", "PID: ", '\n');  // NOLINT
     _server_pid = server_pid;
 
     _connection_string = "hostaddr=127.0.0.1 port=" + std::to_string(port);
