@@ -70,15 +70,14 @@ void GroupCommitLogger::log_invalidate(const TransactionID transaction_id, const
 void GroupCommitLogger::_write_to_buffer(const std::vector<char>& data) {
   // Assume that there is always enough space in the buffer, since it is flushed on hitting half its capacity
   DebugAssert(_buffer_position + data.size() < _buffer_capacity, "logging: entry does not fit into buffer");
+  {
+    std::scoped_lock buffer_lock(_buffer_mutex);
 
-  _buffer_mutex.lock();
+    memcpy(_buffer + _buffer_position, &data[0], data.size());
 
-  memcpy(_buffer + _buffer_position, &data[0], data.size());
-
-  _buffer_position += data.size();
-  _has_unflushed_buffer = true;
-
-  _buffer_mutex.unlock();
+    _buffer_position += data.size();
+    _has_unflushed_buffer = true;
+  }
 
   if (_buffer_position > _buffer_capacity / 2) {
     log_flush();
@@ -88,22 +87,20 @@ void GroupCommitLogger::_write_to_buffer(const std::vector<char>& data) {
 void GroupCommitLogger::log_flush() {
   if (_has_unflushed_buffer) {
     DebugAssert(_log_file.is_open(), "Logger: Log file not open.");
-    _file_mutex.lock();
-    _buffer_mutex.lock();
+    {
+      std::scoped_lock file_and_buffer_lock(_file_mutex, _buffer_mutex);
 
-    _log_file.write(_buffer, _buffer_position);
-    _log_file.sync();
+      _log_file.write(_buffer, _buffer_position);
+      _log_file.sync();
 
-    _buffer_position = 0u;
-    _has_unflushed_buffer = false;
+      _buffer_position = 0u;
+      _has_unflushed_buffer = false;
 
-    for (auto& callback_tuple : _commit_callbacks) {
-      callback_tuple.first(callback_tuple.second);
+      for (auto& callback_tuple : _commit_callbacks) {
+        callback_tuple.first(callback_tuple.second);
+      }
+      _commit_callbacks.clear();
     }
-    _commit_callbacks.clear();
-
-    _buffer_mutex.unlock();
-    _file_mutex.unlock();
   }
 }
 

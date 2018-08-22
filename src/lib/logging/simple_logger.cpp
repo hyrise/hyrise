@@ -44,10 +44,11 @@ void SimpleLogger::log_load_table(const std::string& file_path, const std::strin
 void SimpleLogger::log_flush() { _log_file.sync(); }
 
 void SimpleLogger::_write_to_logfile(const std::vector<char> data) {
-  _file_mutex.lock();
-  DebugAssert(_log_file.is_open(), "Logger: Log file not open.");
-  _log_file.write(&data[0], data.size());
-  _file_mutex.unlock();
+  {
+    std::scoped_lock file_lock(_file_mutex);
+    DebugAssert(_log_file.is_open(), "Logger: Log file not open.");
+    _log_file.write(&data[0], data.size());
+  }
 }
 
 SimpleLogger::SimpleLogger(std::unique_ptr<AbstractFormatter> formatter) : AbstractLogger(std::move(formatter)) {}
