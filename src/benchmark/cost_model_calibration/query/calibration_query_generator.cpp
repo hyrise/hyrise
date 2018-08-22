@@ -17,11 +17,11 @@ namespace opossum {
       std::vector<std::string> queries;
 
       for (const auto & table_definition : table_definitions) {
-        queries.push_back(CalibrationQueryGenerator::_generate_aggregate(table_definition));
+//        queries.push_back(CalibrationQueryGenerator::_generate_aggregate(table_definition));
         queries.push_back(CalibrationQueryGenerator::_generate_table_scan(table_definition));
       }
 
-      queries.push_back(CalibrationQueryGenerator::_generate_join(table_definitions));
+//      queries.push_back(CalibrationQueryGenerator::_generate_join(table_definitions));
 
       return queries;
     }
@@ -132,7 +132,8 @@ namespace opossum {
       auto column_definitions = table_definition.columns;
 
       std::uniform_int_distribution<size_t> number_of_predicates_dist(1, 3);
-      auto number_of_predicates = number_of_predicates_dist(engine);
+//      auto number_of_predicates = number_of_predicates_dist(engine);
+      size_t number_of_predicates = 1;
 
       std::stringstream predicate_stream;
 

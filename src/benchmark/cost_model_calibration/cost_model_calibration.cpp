@@ -4,6 +4,7 @@
 #include <json.hpp>
 
 #include "cost_model_calibration.hpp"
+#include "cost_model_feature_extractor.hpp"
 #include "query/calibration_query_generator.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "operators/table_scan.hpp"
@@ -13,7 +14,6 @@
 #include "storage/storage_manager.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/load_table.hpp"
-//#include "papi.h"
 
 
 namespace opossum {
@@ -79,7 +79,7 @@ void CostModelCalibration::calibrate() {
 }
 
 void CostModelCalibration::_traverse(const std::shared_ptr<const AbstractOperator> & op) {
-  _printOperator(op);
+    _extract_features(op);
 
   if (op->input_left() != nullptr) {
     _traverse(op->input_left());
@@ -90,7 +90,7 @@ void CostModelCalibration::_traverse(const std::shared_ptr<const AbstractOperato
   }
 }
 
-void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOperator> & op) {
+void CostModelCalibration::_extract_features(const std::shared_ptr<const AbstractOperator> &op) {
   auto description = op->name();
   auto time = op->base_performance_data().walltime;
   auto execution_time_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(time).count();
@@ -102,7 +102,7 @@ void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOp
     auto left_input_chunk_count = (op->input_left()) ? op->input_left()->get_output()->chunk_count() : 0;
     auto left_input_memory_usage = (op->input_left()) ? op->input_left()->get_output()->estimate_memory_usage() : 0;
 
-//    auto left_input_chunk_size = (op->input_left()) ? op->input_left()->get_output()->max_chunk_size() : 0;
+    auto left_input_chunk_size = (op->input_left()) ? op->input_left()->get_output()->max_chunk_size() : 0;
 
     // Output
     auto output_row_count = output->row_count();
@@ -125,7 +125,7 @@ void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOp
 //            {"output_chunk_count", output_chunk_count.t},
 //            {"output_memory_usage_bytes", output_memory_usage},
             {"left_input_memory_usage_bytes", left_input_memory_usage},
-//            {"left_input_chunk_size", left_input_chunk_size},
+            {"left_input_chunk_size", left_input_chunk_size},
     };
 
     if (description == "TableScan") {
@@ -156,6 +156,7 @@ void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOp
 
         operator_result["scan_column_data_type"] = scan_column_data_type;
         operator_result["scan_column_memory_usage_bytes"] = scan_column_memory_usage_bytes;
+        operator_result["scan_column_distinct_value_count"] = 0; // TODO
       } else {
         // We are not interested in TableScans with empty inputs - are we?
         return;
@@ -180,6 +181,12 @@ void CostModelCalibration::_printOperator(const std::shared_ptr<const AbstractOp
       operator_result["right_input_chunk_count"] = right_input_chunk_count;
     }
 
+    auto hardware_features = CostModelFeatureExtractor::extract_constant_hardware_features();
+    auto runtime_features = CostModelFeatureExtractor::extract_runtime_hardware_features();
+    operator_result.insert(hardware_features.begin(), hardware_features.end());
+    operator_result.insert(runtime_features.begin(), runtime_features.end());
+
+    // For debug purposes I just emit TableScans right now. Remove if to get Features for all Operator types
     if (description == "TableScan") {
       _operators[description].push_back(operator_result);
     }
