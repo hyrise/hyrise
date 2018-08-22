@@ -1,3 +1,21 @@
+/*
+ *  Formatter that creates text log entries.
+ * 
+ *  The log entries have following format:
+ * 
+ *     Commit Entries:
+ *      (c,<TransactionID>)\n
+ * 
+ *     Value Entries:
+ *      (v,<TransactionID>,<table_name.size()>,<table_name>,<RowID>,(<value1.size()>,<value1>,<value2.size()>,...))\n
+ * 
+ *     Invalidation Entries:
+ *      (i,<TransactionID>,<table_name.size()>,<table_name>,<RowID>)\n
+ * 
+ *     Load Table Entries:
+ *      (l,<path.size()>,<path>,<table_name.size()>,<table_name>)\n
+ */
+
 #include "text_formatter.hpp"
 
 #include <sys/types.h>

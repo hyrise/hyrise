@@ -1,20 +1,6 @@
 /*  
- *  The SimpleLogger naively logs entries in a text file.
- * 
- *  
- *  The log entries have following format:
- * 
- *     Commit Entries:
- *      (t,<TransactionID>)\n
- * 
- *     Value Entries:
- *      (v,<TransactionID>,<table_name.size()>,<table_name>,<RowID>,(<value1.size()>,<value1>,<value2.size()>,...))\n
- * 
- *     Invalidation Entries:
- *      (i,<TransactionID>,<table_name.size()>,<table_name>,<RowID>)\n
- * 
- *     Load Table Entries:
- *      (l,<path.size()>,<path>,<table_name.size()>,<table_name>)\n
+ *  The SimpleLogger naively logs entries into a file. 
+ *  It just writes everything directly to disk and flushes on each commit and table load.
  */
 
 #include "simple_logger.hpp"

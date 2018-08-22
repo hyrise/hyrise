@@ -5,34 +5,6 @@
  *  Both are represented by magic numbers, which are not tested or evaluated yet.
  * 
  * 
- *  The log entries have following format:
- *         
- *         Value                : Number of Bytes                         : Description
- * 
- *     Commit Entries:
- *       - log entry type ('t') : sizeof(char)
- *       - transaction_id       : sizeof(TransactionID)
- * 
- *     Value Entries:
- *       - log entry type ('v') : sizeof(char)
- *       - transaction_id       : sizeof(TransactionID)
- *       - table_name           : table_name.size() + 1                   : string terminated with \0
- *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset)
- *       - NULL bitmap          : ceil(values.size() / 8.0)               : Bitmap indicating NullValues with 1
- *       - value                : length(value)
- *       - any optional values
- * 
- *     Invalidation Entries:
- *       - log entry type ('i') : sizeof(char)
- *       - transaction_id       : sizeof(TransactionID)
- *       - table_name           : table_name.size() + 1                   : string terminated with \0
- *       - row_id               : sizeof(ChunkID) + sizeof(ChunkOffset) 
- *
- *     Load Table Entries:
- *       - log entry type ('l') : sizeof(char)
- *       - file_path            : file_path.size() + 1                    : string terminated with \0
- *       - table_name           : table_name.size() + 1                   : string terminated with \0
- * 
  *  Possible improvements:
  *    1.  For each log entry a vector<char> is allocated to create that entry and then copy it into the buffer.
  *        Maybe allocate a big memory block once.
