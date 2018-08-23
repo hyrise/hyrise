@@ -775,17 +775,15 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     jobs.emplace_back(std::make_shared<JobTask>([&]() {
       // 'keep_nulls' makes sure that the relation on the right keeps NULL values when executing an OUTER join.
       radix_right = partition_radix_parallel<RightType>(materialized_right, right_chunk_offsets, histograms_right,
-                                                           _radix_bits, keep_nulls);
+                                                        _radix_bits, keep_nulls);
     }));
     jobs.back()->schedule();
-    jobs.emplace_back(std::make_shared<JobTask>([&]() { // mutable avoid hashtables being const
-      hashtables = std::move(build<LeftType, HashedType>(radix_left));
+    jobs.emplace_back(std::make_shared<JobTask>([&]() {
+      hashtables = build<LeftType, HashedType>(radix_left);
     }));
     jobs.back()->schedule();
     CurrentScheduler::wait_for_tasks(jobs);
 
-    // Build phase
-    auto hashtables = build<LeftType, HashedType>(radix_left);
 
     // Probe phase
     std::vector<PosList> left_pos_lists;
