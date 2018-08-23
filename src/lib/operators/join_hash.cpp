@@ -768,9 +768,22 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     // Scheduler note: parallelize this at some point. Currently, the amount of jobs would be too high
     auto radix_left =
         partition_radix_parallel<LeftType>(materialized_left, left_chunk_offsets, histograms_left, _radix_bits);
-    // 'keep_nulls' makes sure that the relation on the right keeps NULL values when executing an OUTER join.
-    auto radix_right = partition_radix_parallel<RightType>(materialized_right, right_chunk_offsets, histograms_right,
+
+    RadixContainer<RightType> radix_right;
+    std::vector<std::optional<HashTable<HashedType>>> hashtables;
+
+    std::vector<std::shared_ptr<AbstractTask>> jobs;
+    jobs.emplace_back(std::make_shared<JobTask>([&]() {
+      // 'keep_nulls' makes sure that the relation on the right keeps NULL values when executing an OUTER join.
+      radix_right = partition_radix_parallel<RightType>(materialized_right, right_chunk_offsets, histograms_right,
                                                            _radix_bits, keep_nulls);
+    }));
+    jobs.back()->schedule();
+    jobs.emplace_back(std::make_shared<JobTask>([&]() { // mutable avoid hashtables being const
+      hashtables = std::move(build<LeftType, HashedType>(radix_left));
+    }));
+    jobs.back()->schedule();
+    CurrentScheduler::wait_for_tasks(jobs);
 
     // Build phase
     auto hashtables = build<LeftType, HashedType>(radix_left);
