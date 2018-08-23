@@ -5,6 +5,7 @@
 
 #include "operators/join_hash.hpp"
 #include "operators/join_hash/hash_traits.hpp"
+#include "operators/table_wrapper.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -13,7 +14,15 @@ namespace opossum {
 This contains the tests for the JoinHash implementation.
 */
 
-class JoinHashTest : public BaseTest {};
+class JoinHashTest : public BaseTest {
+ protected:
+  void SetUp() override {
+    _table_wrapper_small = std::make_shared<TableWrapper>(load_table("src/test/tables/joinoperators/anti_int4.tbl", 2));
+    _table_wrapper_small->execute();
+  }
+
+  std::shared_ptr<TableWrapper> _table_wrapper_small;
+};
 
 #define EXPECT_HASH_TYPE(left, right, hash) EXPECT_TRUE((std::is_same_v<hash, JoinHashTraits<left, right>::HashType>))
 #define EXPECT_LEXICAL_CAST(left, right, cast) EXPECT_EQ((JoinHashTraits<left, right>::needs_lexical_cast), (cast))
@@ -106,6 +115,13 @@ TEST_F(JoinHashTest, MixedStringTraits) {
   EXPECT_HASH_TYPE(double, std::string, std::string);
   EXPECT_LEXICAL_CAST(std::string, double, true);
   EXPECT_LEXICAL_CAST(double, std::string, true);
+}
+
+TEST_F(JoinHashTest, OperatorName) {
+  auto join = std::make_shared<JoinHash>(_table_wrapper_small, _table_wrapper_small, JoinMode::Inner,
+                                         ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals);
+
+  EXPECT_EQ(join->name(), "JoinHash");
 }
 
 }  // namespace opossum

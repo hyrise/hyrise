@@ -61,10 +61,12 @@ function(EMBED_LLVM OUTPUT_FILE SYMBOL_NAME)
         .global _${MANGLED_SYMBOL}
         .global ${MANGLED_SIZE_SYMBOL}
         .global _${MANGLED_SIZE_SYMBOL}
+        .p2align 3
         ${MANGLED_SYMBOL}:
         _${MANGLED_SYMBOL}:
         .incbin \"${LLVM_BUNDLE_FILE}\"
         1:
+        .p2align 3
         ${MANGLED_SIZE_SYMBOL}:
         _${MANGLED_SIZE_SYMBOL}:
         .8byte 1b - ${MANGLED_SYMBOL}"

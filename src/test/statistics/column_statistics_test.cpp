@@ -410,4 +410,27 @@ TEST_F(ColumnStatisticsTest, NonNullRatioTwoColumnTest) {
   EXPECT_FLOAT_EQ(result.selectivity, 0.8f * 0.85f * (1.f / 3.f + 1.f / 3.f * 1.f / 2.f));
 }
 
+TEST_F(ColumnStatisticsTest, Dummy) {
+  {
+    auto dummy_col_statistics = ColumnStatistics<int>::dummy();
+    EXPECT_EQ(dummy_col_statistics.min(), 0);
+    EXPECT_EQ(dummy_col_statistics.max(), 0);
+  }
+  {
+    auto dummy_col_statistics = ColumnStatistics<float>::dummy();
+    EXPECT_EQ(dummy_col_statistics.min(), 0.0f);
+    EXPECT_EQ(dummy_col_statistics.max(), 0.0f);
+  }
+  {
+    auto dummy_col_statistics = ColumnStatistics<double>::dummy();
+    EXPECT_EQ(dummy_col_statistics.min(), 0.0);
+    EXPECT_EQ(dummy_col_statistics.max(), 0.0);
+  }
+  {
+    auto dummy_col_statistics = ColumnStatistics<std::string>::dummy();
+    EXPECT_EQ(dummy_col_statistics.min(), "");
+    EXPECT_EQ(dummy_col_statistics.max(), "");
+  }
+}
+
 }  // namespace opossum

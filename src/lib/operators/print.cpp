@@ -41,7 +41,7 @@ void Print::print(const std::shared_ptr<const AbstractOperator>& in, uint32_t fl
 std::shared_ptr<const Table> Print::_on_execute() {
   PerformanceWarningDisabler pwd;
 
-  auto widths = _column_string_widths(8, 20, input_table_left());
+  auto widths = _column_string_widths(_min_cell_width, _max_cell_width, input_table_left());
 
   // print column headers
   _out << "=== Columns" << std::endl;
@@ -93,13 +93,13 @@ std::shared_ptr<const Table> Print::_on_execute() {
         auto end = mvcc_columns->end_cids[row];
         auto tid = mvcc_columns->tids[row];
 
-        auto begin_str = begin == MvccColumns::MAX_COMMIT_ID ? "" : std::to_string(begin);
-        auto end_str = end == MvccColumns::MAX_COMMIT_ID ? "" : std::to_string(end);
-        auto tid_str = tid == 0 ? "" : std::to_string(tid);
+        auto begin_string = begin == MvccColumns::MAX_COMMIT_ID ? "" : std::to_string(begin);
+        auto end_string = end == MvccColumns::MAX_COMMIT_ID ? "" : std::to_string(end);
+        auto tid_string = tid == 0 ? "" : std::to_string(tid);
 
-        _out << "|" << std::setw(6) << begin_str << std::setw(0);
-        _out << "|" << std::setw(6) << end_str << std::setw(0);
-        _out << "|" << std::setw(6) << tid_str << std::setw(0);
+        _out << "|" << std::setw(6) << begin_string << std::setw(0);
+        _out << "|" << std::setw(6) << end_string << std::setw(0);
+        _out << "|" << std::setw(6) << tid_string << std::setw(0);
         _out << "|";
       }
       _out << std::endl;
@@ -135,12 +135,12 @@ std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max,
 }
 
 std::string Print::_truncate_cell(const AllTypeVariant& cell, uint16_t max_width) const {
-  auto cell_str = type_cast<std::string>(cell);
+  auto cell_string = type_cast<std::string>(cell);
   DebugAssert(max_width > 3, "Cannot truncate string with '...' at end with max_width <= 3");
-  if (cell_str.length() > max_width) {
-    return cell_str.substr(0, max_width - 3) + "...";
+  if (cell_string.length() > max_width) {
+    return cell_string.substr(0, max_width - 3) + "...";
   }
-  return cell_str;
+  return cell_string;
 }
 
 }  // namespace opossum

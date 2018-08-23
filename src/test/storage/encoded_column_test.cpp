@@ -232,4 +232,11 @@ TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumnWithShuffledChunkOffs
   });
 }
 
+TEST_P(EncodedColumnTest, IsImmutable) {
+  auto value_column = this->create_int_w_null_value_column();
+  auto base_encoded_column = this->encode_value_column(DataType::Int, value_column);
+
+  EXPECT_THROW(base_encoded_column->append(AllTypeVariant{}), std::logic_error);
+}
+
 }  // namespace opossum
