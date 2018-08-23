@@ -6,8 +6,6 @@
 
 namespace opossum {
 
-OperatorPerformanceData::~OperatorPerformanceData() {}
-
 std::string OperatorPerformanceData::to_string(DescriptionMode description_mode) const {
   return format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(walltime));
 }
