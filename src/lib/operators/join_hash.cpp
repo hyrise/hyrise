@@ -749,10 +749,10 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     This helps choosing a scheduler node for the radix phase (see below).
     */
     // Scheduler note: parallelize this at some point. Currently, the amount of jobs would be too high
-    auto materialized_left = materialize_input<LeftType, HashedType>(left_in_table, _column_ids.first, histograms_left,
+    const auto materialized_left = materialize_input<LeftType, HashedType>(left_in_table, _column_ids.first, histograms_left,
                                                                      _radix_bits, _partitioning_seed);
     // 'keep_nulls' makes sure that the relation on the right materializes NULL values when executing an OUTER join.
-    auto materialized_right = materialize_input<RightType, HashedType>(
+    const auto materialized_right = materialize_input<RightType, HashedType>(
         right_in_table, _column_ids.second, histograms_right, _radix_bits, _partitioning_seed, keep_nulls);
 
     // Radix Partitioning phase
@@ -766,7 +766,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     partitions leftB and leftB should also be on the same node.
     */
     // Scheduler note: parallelize this at some point. Currently, the amount of jobs would be too high
-    auto radix_left =
+    const auto radix_left =
         partition_radix_parallel<LeftType>(materialized_left, left_chunk_offsets, histograms_left, _radix_bits);
 
     RadixContainer<RightType> radix_right;
