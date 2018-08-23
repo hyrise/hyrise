@@ -19,8 +19,8 @@ void TransactionManager::reset() { _reset(INITIAL_TRANSACTION_ID, INITIAL_COMMIT
  * Used by the recovery, which replays transactions from a logfile. 
  * Then the next transaction id is the successor of the logs latest committed transaction.
 */
-void TransactionManager::_reset_to_id(TransactionID transaction_id) {
-  _reset(transaction_id, CommitID(transaction_id));
+void TransactionManager::_reset_to_id(TransactionID transaction_id, CommitID commit_id) {
+  _reset(transaction_id, commit_id);
 }
 
 void TransactionManager::_reset(TransactionID transaction_id, CommitID commit_id) {

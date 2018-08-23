@@ -45,6 +45,7 @@ AllTypeVariant BinaryRecoverer::_read_all_type_variant(std::ifstream& file, Data
 
 uint32_t BinaryRecoverer::recover() {
   TransactionID last_transaction_id{0};
+  CommitID last_commit_id{0};
   for (auto& log_path : Logger::get_all_log_file_paths()) {
     std::ifstream log_file(log_path);
     DebugAssert(log_file.is_open(), "Recoverer: could not open logfile " + log_path);
@@ -70,6 +71,7 @@ uint32_t BinaryRecoverer::recover() {
           auto commit_id = _read<CommitID>(log_file);
           _redo_transactions(transaction_id, commit_id, transactions);
           last_transaction_id = std::max(transaction_id, last_transaction_id);
+          last_commit_id = std::max(commit_id, last_commit_id);
           break;
         }
 
@@ -121,7 +123,7 @@ uint32_t BinaryRecoverer::recover() {
     }
   }
 
-  _update_transaction_id(last_transaction_id);
+  _update_transaction_id(last_transaction_id, last_commit_id);
   return _number_of_loaded_tables;
 }
 

@@ -59,7 +59,7 @@ class TransactionManager : private Noncopyable {
 
  private:
   friend class AbstractRecoverer;
-  static void _reset_to_id(TransactionID transaction_id);
+  static void _reset_to_id(TransactionID transaction_id, CommitID commit_id);
 
  private:
   friend class TransactionContext;

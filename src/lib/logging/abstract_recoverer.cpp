@@ -43,10 +43,9 @@ void AbstractRecoverer::_redo_transactions(const TransactionID transaction_id, c
                      transactions.end());
 }
 
-void AbstractRecoverer::_update_transaction_id(const TransactionID highest_committed_id) {
-  if (highest_committed_id > 0) {
-    TransactionManager::_reset_to_id(highest_committed_id + 1);
-  }
+void AbstractRecoverer::_update_transaction_id(const TransactionID highest_transaction_id, 
+                                               const CommitID highest_commit_id) {
+  TransactionManager::_reset_to_id(highest_transaction_id + 1, highest_commit_id + 1);
 }
 
 void AbstractRecoverer::_recover_table(const std::string& path, const std::string& table_name) {
