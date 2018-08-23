@@ -732,6 +732,8 @@ int Console::_load_plugin(const std::string& args) {
 
   PluginManager::get().load_plugin(plugin_path, plugin_name);
 
+  std::cout << "Plugin (" << plugin_name << ") successfully loaded." << std::endl;
+
   return ReturnCode::Ok;
 }
 
@@ -751,6 +753,8 @@ int Console::_stop_plugin(const std::string& input) {
   // The presence of some plugins might cause certain query plans to be generated which will not work if the plugin
   // is stopped. Therefore, we clear the cache.
   SQLQueryCache<SQLQueryPlan>::get().clear();
+
+  std::cout << "Plugin (" << plugin_name << ") stopped." << std::endl;
 
   return ReturnCode::Ok;
 }

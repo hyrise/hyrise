@@ -48,7 +48,6 @@ void PluginManager::load_plugin(const std::string& path, const PluginName& name)
   _plugins[name] = plugin_handle_wrapper;
 
   plugin->start();
-  std::cout << "Plugin (" << name << ") successfully loaded." << std::endl;
 }
 
 void PluginManager::reset() { get() = PluginManager(); }
@@ -70,7 +69,6 @@ const std::unordered_map<PluginName, PluginHandleWrapper>::iterator PluginManage
 
   auto next = _plugins.erase(it);
 
-  std::cout << "Plugin (" << name << ") stopped." << std::endl;
   return next;
 }
 
