@@ -131,15 +131,15 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
   The hashtables for each partition P should also reside on the same node as the two vectors leftP and rightP.
   */
   std::vector<std::optional<HashTable<HashedType>>> hashtables;
-  hashtables.resize(radix_container.partition_offsets.size() - 1);
+  hashtables.resize(radix_container.partition_offsets.size());
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
-  jobs.reserve(radix_container.partition_offsets.size() - 1);
+  jobs.reserve(radix_container.partition_offsets.size());
 
-  for (size_t current_partition_id = 0; current_partition_id < (radix_container.partition_offsets.size() - 1);
+  for (size_t current_partition_id = 0; current_partition_id < radix_container.partition_offsets.size();
        ++current_partition_id) {
-    const auto partition_left_begin = radix_container.partition_offsets[current_partition_id];
-    const auto partition_left_end = radix_container.partition_offsets[current_partition_id + 1];
+    const auto partition_left_begin = current_partition_id == 0 ? 0 : radix_container.partition_offsets[current_partition_id - 1] + 1;
+    const auto partition_left_end = radix_container.partition_offsets[current_partition_id];
     const auto partition_size = partition_left_end - partition_left_begin;
 
     // Prune empty partitions, so that we don't have too many empty hash tables
@@ -304,19 +304,18 @@ RadixContainer<T> partition_radix_parallel(const std::shared_ptr<Partition<T>>& 
 
   RadixContainer<T> radix_output;
   radix_output.elements = output;
-  radix_output.partition_offsets.resize(num_partitions + 1);
+  radix_output.partition_offsets.resize(num_partitions);
 
   // use histograms to calculate partition offsets
   size_t offset = 0;
   std::vector<std::vector<size_t>> output_offsets_by_chunk(offsets.size(), std::vector<size_t>(num_partitions));
   for (size_t partition_id = 0; partition_id < num_partitions; ++partition_id) {
-    radix_output.partition_offsets[partition_id] = offset;
     for (ChunkID chunk_id{0}; chunk_id < offsets.size(); ++chunk_id) {
       output_offsets_by_chunk[chunk_id][partition_id] = offset;
       offset += (*histograms[chunk_id])[partition_id];
     }
+    radix_output.partition_offsets[partition_id] = offset;
   }
-  radix_output.partition_offsets[num_partitions] = offset;
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(offsets.size());
@@ -364,7 +363,7 @@ void probe(const RadixContainer<RightType>& radix_container,
            const std::vector<std::optional<HashTable<HashedType>>>& hashtables, std::vector<PosList>& pos_lists_left,
            std::vector<PosList>& pos_lists_right, const JoinMode mode) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
-  jobs.reserve(radix_container.partition_offsets.size() - 1);
+  jobs.reserve(radix_container.partition_offsets.size());
 
   /*
     NUMA notes:
@@ -374,10 +373,10 @@ void probe(const RadixContainer<RightType>& radix_container,
     and the job that probes that partition should also be on that NUMA node.
     */
 
-  for (size_t current_partition_id = 0; current_partition_id < (radix_container.partition_offsets.size() - 1);
+  for (size_t current_partition_id = 0; current_partition_id < radix_container.partition_offsets.size();
        ++current_partition_id) {
-    const auto partition_begin = radix_container.partition_offsets[current_partition_id];
-    const auto partition_end = radix_container.partition_offsets[current_partition_id + 1];
+    const auto partition_begin = current_partition_id == 0 ? 0 : radix_container.partition_offsets[current_partition_id - 1] + 1;
+    const auto partition_end = radix_container.partition_offsets[current_partition_id];
 
     // Skip empty partitions to avoid empty output chunks
     if (partition_begin == partition_end) {
@@ -470,12 +469,12 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
                      const std::vector<std::optional<HashTable<HashedType>>>& hashtables,
                      std::vector<PosList>& pos_lists, const JoinMode mode) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
-  jobs.reserve(radix_container.partition_offsets.size() - 1);
+  jobs.reserve(radix_container.partition_offsets.size());
 
-  for (size_t current_partition_id = 0; current_partition_id < (radix_container.partition_offsets.size() - 1);
+  for (size_t current_partition_id = 0; current_partition_id < radix_container.partition_offsets.size();
        ++current_partition_id) {
-    const auto partition_begin = radix_container.partition_offsets[current_partition_id];
-    const auto partition_end = radix_container.partition_offsets[current_partition_id + 1];
+    const auto partition_begin = current_partition_id == 0 ? 0 : radix_container.partition_offsets[current_partition_id - 1] + 1;
+    const auto partition_end = radix_container.partition_offsets[current_partition_id];
 
     // Skip empty partitions to avoid empty output chunks
     if (partition_begin == partition_end) {
@@ -791,7 +790,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     // Probe phase
     std::vector<PosList> left_pos_lists;
     std::vector<PosList> right_pos_lists;
-    const size_t partition_count = radix_right.partition_offsets.size() - 1;
+    const size_t partition_count = radix_right.partition_offsets.size();
     left_pos_lists.resize(partition_count);
     right_pos_lists.resize(partition_count);
     for (size_t i = 0; i < partition_count; i++) {
