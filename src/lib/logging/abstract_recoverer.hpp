@@ -48,7 +48,7 @@ class AbstractRecoverer {
     std::optional<std::vector<AllTypeVariant>> values;
   };
 
-  void _redo_transactions(const TransactionID& transaction_id, std::vector<LoggedItem>& transactions);
+  void _redo_transactions(const TransactionID transaction_id, const CommitID commit_id, std::vector<LoggedItem>& transactions);
 
   void _update_transaction_id(const TransactionID highest_committed_id);
 

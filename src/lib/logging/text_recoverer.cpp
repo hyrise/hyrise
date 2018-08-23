@@ -83,8 +83,7 @@ uint32_t TextRecoverer::recover() {
       if (log_type == 'c') {
         TransactionID transaction_id = std::stoul(_extract_up_to_delimiter(line, next_token_begin, ','));
         CommitID commit_id = std::stoul(_extract_up_to_delimiter(line, next_token_begin, ')'));
-        (void) commit_id;
-        _redo_transactions(transaction_id, transactions);
+        _redo_transactions(transaction_id, commit_id, transactions);
         last_transaction_id = std::max(transaction_id, last_transaction_id);
         continue;
       }

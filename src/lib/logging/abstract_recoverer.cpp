@@ -8,7 +8,8 @@
 
 namespace opossum {
 
-void AbstractRecoverer::_redo_transactions(const TransactionID& transaction_id, std::vector<LoggedItem>& transactions) {
+void AbstractRecoverer::_redo_transactions(const TransactionID transaction_id, const CommitID commit_id,
+                                           std::vector<LoggedItem>& transactions) {
   for (auto& transaction : transactions) {
     if (transaction.transaction_id != transaction_id) continue;
 
@@ -24,12 +25,12 @@ void AbstractRecoverer::_redo_transactions(const TransactionID& transaction_id, 
         DebugAssert(mvcc_columns->begin_cids.size() - 1 == transaction.row_id.chunk_offset,
                     "recovery rowID " + std::to_string(mvcc_columns->begin_cids.size() - 1) + " != logged rowID " +
                         std::to_string(transaction.row_id.chunk_offset));
-        mvcc_columns->begin_cids[mvcc_columns->begin_cids.size() - 1] = transaction_id;
+        mvcc_columns->begin_cids[mvcc_columns->begin_cids.size() - 1] = commit_id;
         break;
       }
       case LogType::Invalidation: {
         auto mvcc_columns = chunk.mvcc_columns();
-        mvcc_columns->end_cids[transaction.row_id.chunk_offset] = transaction_id;
+        mvcc_columns->end_cids[transaction.row_id.chunk_offset] = commit_id;
         break;
       }
       default:
