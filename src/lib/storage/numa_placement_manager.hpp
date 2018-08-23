@@ -66,8 +66,6 @@ class NUMAPlacementManager : public Singleton<NUMAPlacementManager> {
     double imbalance_threshold = 0.1;
   };
 
-  static NUMAPlacementManager& get();
-
   // Returns the memory resource of the next node according to a round robin placement policy
   boost::container::pmr::memory_resource* get_next_memory_resource();
 
@@ -78,11 +76,12 @@ class NUMAPlacementManager : public Singleton<NUMAPlacementManager> {
 
   void set_options(const Options options);
 
-  NUMAPlacementManager(NUMAPlacementManager const&) = delete;
   NUMAPlacementManager(NUMAPlacementManager&&) = delete;
 
  protected:
   NUMAPlacementManager();
+
+  friend class Singleton;
 
   Options _options;
   int _current_node_id;
