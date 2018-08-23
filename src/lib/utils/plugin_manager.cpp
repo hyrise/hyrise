@@ -48,6 +48,7 @@ void PluginManager::load_plugin(const std::string& path, const PluginName& name)
   _plugins[name] = plugin_handle_wrapper;
 
   plugin->start();
+  std::cout << "Plugin (" << name << ") successfully loaded." << std::endl;
 }
 
 void PluginManager::reset() { get() = PluginManager(); }
@@ -58,6 +59,7 @@ void PluginManager::stop_plugin(const PluginName& name) {
   dlclose(plugin_handle_wrapper.handle);
 
   _plugins.erase(name);
+  std::cout << "Plugin (" << name << ") stopped." << std::endl;
 }
 
 void PluginManager::_clean_up() {
