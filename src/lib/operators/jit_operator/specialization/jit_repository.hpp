@@ -42,6 +42,8 @@ class JitRepository : public Singleton<JitRepository> {
   std::mutex& specialization_mutex();
 
  private:
+  JitRepository();
+
   friend class Singleton;
 
   std::shared_ptr<llvm::LLVMContext> _llvm_context;
