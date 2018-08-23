@@ -17,7 +17,7 @@ class SimpleLogger : public AbstractLogger {
   SimpleLogger(const SimpleLogger&) = delete;
   SimpleLogger& operator=(const SimpleLogger&) = delete;
 
-  void log_commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) override;
+  void log_commit(const TransactionID transaction_id, const CommitID commit_id, std::function<void(TransactionID)> callback) override;
 
   void log_value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,
                  const std::vector<AllTypeVariant>& values) override;

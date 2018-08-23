@@ -67,6 +67,8 @@ uint32_t BinaryRecoverer::recover() {
         // commit entry
         case 'c': {
           auto transaction_id = _read<TransactionID>(log_file);
+          auto commit_id = _read<CommitID>(log_file);
+          (void) commit_id;
           _redo_transactions(transaction_id, transactions);
           last_transaction_id = std::max(transaction_id, last_transaction_id);
           break;

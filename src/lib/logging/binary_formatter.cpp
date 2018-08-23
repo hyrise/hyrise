@@ -156,11 +156,11 @@ void EntryWriter::operator()(NullValue v) {
 // uint32_t resolves to ~ 4 Billion values
 uint32_t BinaryFormatter::null_bitmap_size(uint32_t number_of_values) { return ceil(number_of_values / 8.0); }
 
-std::vector<char> BinaryFormatter::commit_entry(const TransactionID transaction_id) {
-  constexpr auto entry_length = sizeof(char) + sizeof(TransactionID);
+std::vector<char> BinaryFormatter::commit_entry(const TransactionID transaction_id, const CommitID commit_id) {
+  constexpr auto entry_length = sizeof(char) + sizeof(TransactionID) + sizeof(CommitID);
   EntryWriter writer(entry_length);
 
-  writer << 'c' << transaction_id;
+  writer << 'c' << transaction_id << commit_id;
 
   return writer.release_data();
 }

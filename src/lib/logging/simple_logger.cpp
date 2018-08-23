@@ -16,8 +16,8 @@
 
 namespace opossum {
 
-void SimpleLogger::log_commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) {
-  const auto& data = _formatter->commit_entry(transaction_id);
+void SimpleLogger::log_commit(const TransactionID transaction_id, const CommitID commit_id, std::function<void(TransactionID)> callback) {
+  const auto& data = _formatter->commit_entry(transaction_id, commit_id);
   _write_to_logfile(data);
   log_flush();
   callback(transaction_id);
