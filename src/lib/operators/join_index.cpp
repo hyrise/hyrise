@@ -188,10 +188,11 @@ void JoinIndex::_perform_join() {
 
   _output_table->append_chunk(output_columns);
 
-  if (performance_data.chunks_scanned_with_index > performance_data.chunks_scanned_without_index) {
-    PerformanceWarning(std::string("Only ") + std::to_string(performance_data.chunks_scanned_with_index) + " of " +
-                       std::to_string(performance_data.chunks_scanned_without_index) +
-                       " chunks scanned using an index");
+  if (performance_data.chunks_scanned_with_index < performance_data.chunks_scanned_without_index) {
+    PerformanceWarning(
+        std::string("Only ") + std::to_string(performance_data.chunks_scanned_with_index) + " of " +
+        std::to_string(performance_data.chunks_scanned_with_index + performance_data.chunks_scanned_without_index) +
+        " chunks scanned using an index");
   }
 }
 
