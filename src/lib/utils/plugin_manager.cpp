@@ -54,23 +54,29 @@ void PluginManager::load_plugin(const std::string& path, const PluginName& name)
 void PluginManager::reset() { get() = PluginManager(); }
 
 void PluginManager::stop_plugin(const PluginName& name) {
-  auto plugin_handle_wrapper = _plugins.at(name);
+  auto plugin = _plugins.find(name);
+  if (plugin != _plugins.cend()) {
+    _stop_plugin(plugin);
+  }
+}
+
+const std::unordered_map<PluginName, PluginHandleWrapper>::iterator PluginManager::_stop_plugin(
+    const std::unordered_map<PluginName, PluginHandleWrapper>::iterator it) {
+  const PluginName name = it->first;
+  auto plugin_handle_wrapper = it->second;
+
   plugin_handle_wrapper.plugin->stop();
   dlclose(plugin_handle_wrapper.handle);
 
-  _plugins.erase(name);
+  auto next = _plugins.erase(it);
+
   std::cout << "Plugin (" << name << ") stopped." << std::endl;
+  return next;
 }
 
 void PluginManager::_clean_up() {
-  // This should work as soon as we support gcc-8 or gcc-8 supports us (https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86740)
-  // for ([[maybe_unused]] auto &[plugin_name, plugin_handle_wrapper] : _plugins) {
-  //   stop_plugin(plugin_name);
-  // }
-
-  for (const auto& p : _plugins) {
-    auto plugin_name = p.first;
-    stop_plugin(plugin_name);
+  for (auto it = _plugins.begin(); it != _plugins.end();) {
+    it = _stop_plugin(it);
   }
 }
 

@@ -47,7 +47,9 @@ class PluginManager : public Singleton<PluginManager> {
 
   std::unordered_map<PluginName, PluginHandleWrapper> _plugins;
 
-  bool _is_duplicate(AbstractPlugin* plugin) const;
   void _clean_up();
+  bool _is_duplicate(AbstractPlugin* plugin) const;
+  const std::unordered_map<PluginName, PluginHandleWrapper>::iterator _stop_plugin(
+      const std::unordered_map<PluginName, PluginHandleWrapper>::iterator it);
 };
 }  // namespace opossum
