@@ -11,6 +11,7 @@ global task_list
 global operator_task_list
 global operator_statistics
 global operator_name
+global to_delete
 
 global counter = 0
 
@@ -70,8 +71,13 @@ probe process(@1).provider("HYRISE").mark("SUMMARY")
                     operator_statistics[operator_id, "runtime"],
                     operator_statistics[operator_id, "rows"],
                     operator_statistics[operator_id, "chunks"])
+                to_delete[tid, counter] = task_id
             }
         }
+         foreach ([tid, counter] in to_delete) {
+            delete task_list[tid, counter]
+        }
+        delete to_delete
         printf("================================================================\n\n")
 }
 
