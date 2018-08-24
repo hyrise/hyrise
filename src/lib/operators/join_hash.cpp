@@ -112,8 +112,9 @@ template <typename T>
 using HashTable = std::unordered_map<T, boost::variant<RowID, PosList>>;
 
 /*
-This struct contains radix-partitioned data in a contiguous buffer,
-as well as a list of offsets for each partition.
+This struct contains radix-partitioned data in a contiguous buffer, as well as a list of
+offsets for each partition. The offsets denote the accumulated sizes.
+We cannot use the last element's position because we could not recognize empty first containers.
 */
 template <typename T>
 struct RadixContainer {
@@ -138,11 +139,11 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
 
   for (size_t current_partition_id = 0; current_partition_id < radix_container.partition_offsets.size();
        ++current_partition_id) {
-    const auto partition_left_begin = current_partition_id == 0 ? 0 : radix_container.partition_offsets[current_partition_id - 1] + 1;
-    const auto partition_left_end = radix_container.partition_offsets[current_partition_id];
+    const auto partition_left_begin = current_partition_id == 0 ? 0 : radix_container.partition_offsets[current_partition_id - 1];
+    const auto partition_left_end = radix_container.partition_offsets[current_partition_id];  // make end non-inclusive
     const auto partition_size = partition_left_end - partition_left_begin;
 
-    // Prune empty partitions, so that we don't have too many empty hash tables
+    // Skip empty partitions, so that we don't have too many empty hash tables
     if (partition_size == 0) {
       continue;
     }
@@ -375,8 +376,8 @@ void probe(const RadixContainer<RightType>& radix_container,
 
   for (size_t current_partition_id = 0; current_partition_id < radix_container.partition_offsets.size();
        ++current_partition_id) {
-    const auto partition_begin = current_partition_id == 0 ? 0 : radix_container.partition_offsets[current_partition_id - 1] + 1;
-    const auto partition_end = radix_container.partition_offsets[current_partition_id];
+    const auto partition_begin = current_partition_id == 0 ? 0 : radix_container.partition_offsets[current_partition_id - 1];
+    const auto partition_end = radix_container.partition_offsets[current_partition_id];  // make end non-inclusive
 
     // Skip empty partitions to avoid empty output chunks
     if (partition_begin == partition_end) {
@@ -473,8 +474,8 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
 
   for (size_t current_partition_id = 0; current_partition_id < radix_container.partition_offsets.size();
        ++current_partition_id) {
-    const auto partition_begin = current_partition_id == 0 ? 0 : radix_container.partition_offsets[current_partition_id - 1] + 1;
-    const auto partition_end = radix_container.partition_offsets[current_partition_id];
+    const auto partition_begin = current_partition_id == 0 ? 0 : radix_container.partition_offsets[current_partition_id - 1];
+    const auto partition_end = radix_container.partition_offsets[current_partition_id];  // make end non-inclusive
 
     // Skip empty partitions to avoid empty output chunks
     if (partition_begin == partition_end) {
