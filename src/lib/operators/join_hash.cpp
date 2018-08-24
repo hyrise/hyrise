@@ -202,7 +202,7 @@ constexpr Hash hash_value(const OriginalType& value, const unsigned int seed) {
 }
 
 template <typename T, typename HashedType>
-std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
+RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, ColumnID column_id,
                                                 std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
                                                 const size_t radix_bits, const unsigned int partitioning_seed,
                                                 bool keep_nulls = false) {
@@ -282,14 +282,17 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
 
   CurrentScheduler::wait_for_tasks(jobs);
 
-  return elements;
+  return RadixContainer<T>{elements, std::vector<size_t>{elements->size()}};
 }
 
 template <typename T>
-RadixContainer<T> partition_radix_parallel(const std::shared_ptr<Partition<T>>& materialized,
+RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_container,
                                            const std::shared_ptr<std::vector<size_t>>& chunk_offsets,
                                            std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
                                            const size_t radix_bits, bool keep_nulls = false) {
+  // materialized items
+  const std::shared_ptr<Partition<T>>& materialized = radix_container.elements;
+
   // fan-out
   const size_t num_partitions = 1ull << radix_bits;
 
@@ -766,23 +769,32 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     partitions leftB and leftB should also be on the same node.
     */
     // Scheduler note: parallelize this at some point. Currently, the amount of jobs would be too high
-    const auto radix_left =
-        partition_radix_parallel<LeftType>(materialized_left, left_chunk_offsets, histograms_left, _radix_bits);
-
+    RadixContainer<LeftType> radix_left;
     RadixContainer<RightType> radix_right;
     std::vector<std::optional<HashTable<HashedType>>> hashtables;
 
     std::vector<std::shared_ptr<AbstractTask>> jobs;
-    jobs.emplace_back(std::make_shared<JobTask>([&]() {
+    if (_radix_bits > 0) {
+      jobs.emplace_back(std::make_shared<JobTask>([&]() {
+        radix_left = partition_radix_parallel<LeftType>(materialized_left, left_chunk_offsets, histograms_left, _radix_bits);
+        hashtables = build<LeftType, HashedType>(radix_left);
+      }));
+      jobs.back()->schedule();
+    } else {
+      radix_left = std::move(materialized_left);
+      hashtables = build<LeftType, HashedType>(materialized_left);
+    }
+    
+    if (_radix_bits > 0) {
+      jobs.emplace_back(std::make_shared<JobTask>([&]() {
       // 'keep_nulls' makes sure that the relation on the right keeps NULL values when executing an OUTER join.
       radix_right = partition_radix_parallel<RightType>(materialized_right, right_chunk_offsets, histograms_right,
                                                         _radix_bits, keep_nulls);
-    }));
-    jobs.back()->schedule();
-    jobs.emplace_back(std::make_shared<JobTask>([&]() {
-      hashtables = build<LeftType, HashedType>(radix_left);
-    }));
-    jobs.back()->schedule();
+      }));
+      jobs.back()->schedule();
+    } else {
+      radix_right = std::move(materialized_right);
+    }
     CurrentScheduler::wait_for_tasks(jobs);
 
 
