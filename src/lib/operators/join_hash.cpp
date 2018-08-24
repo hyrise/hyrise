@@ -741,59 +741,76 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
     Timer performance_timer;
 
-    // Materialization phase
+    // Containers used to store histograms for (potentially subsequent) radix
+    // partitioning phase (in cases _radix_bits > 0). Create during materialization phase.
     std::vector<std::shared_ptr<std::vector<size_t>>> histograms_left;
     std::vector<std::shared_ptr<std::vector<size_t>>> histograms_right;
-    /*
-    NUMA notes:
-    The materialized vectors don't have any strong NUMA preference because they haven't been partitioned yet.
-    However, it would be a good idea to keep each materialized vector on one node if possible.
-    This helps choosing a scheduler node for the radix phase (see below).
-    */
-    // Scheduler note: parallelize this at some point. Currently, the amount of jobs would be too high
-    const auto materialized_left = materialize_input<LeftType, HashedType>(left_in_table, _column_ids.first, histograms_left,
-                                                                     _radix_bits, _partitioning_seed);
-    // 'keep_nulls' makes sure that the relation on the right materializes NULL values when executing an OUTER join.
-    const auto materialized_right = materialize_input<RightType, HashedType>(
-        right_in_table, _column_ids.second, histograms_right, _radix_bits, _partitioning_seed, keep_nulls);
+    // Output containers of materialization phase. Type similar to the output
+    // of radix partitioning phase to allow short cut for _radix_bits == 0
+    // (in this case, we can skip the partitioning alltogether).
+    RadixContainer<LeftType> materialized_left;
+    RadixContainer<RightType> materialized_right;
 
-    // Radix Partitioning phase
-    /*
-    NUMA notes:
-    If the input vectors (the materialized vectors) reside on a specific node, the partitioning worker for
-    this phase should be scheduled on the same node.
-    Additionally, the output vectors in this phase are partitioned by a radix key. Therefore it would be good
-    to pin the outputs from both sides on the same node for each radix partition. For example, if there are
-    only two radix partitions A and B, the partitions leftA and rightA should be on the same node, and the
-    partitions leftB and leftB should also be on the same node.
-    */
-    // Scheduler note: parallelize this at some point. Currently, the amount of jobs would be too high
+    // Containers for potential (skipped when left side small) radix partitioning phase
     RadixContainer<LeftType> radix_left;
     RadixContainer<RightType> radix_right;
     std::vector<std::optional<HashTable<HashedType>>> hashtables;
 
+    // Parallelization of Hash Join:
+    // we have to data paths, one for left side and one for right side:
+    //          Relation Left          Relation Right
+    //                |                       |
+    //           Materialize              Materialize
+    //                |                       |
+    //         (Radix Partition).      (Radix Partition)
+    //                |                       |
+    //          Build Partition               |
+    //                  \_                  _/
+    //                    \_              _/
+    //                      \_          _/
+    //                        \        /
+    //                   Probing (actual Join)
+
     std::vector<std::shared_ptr<AbstractTask>> jobs;
-    if (_radix_bits > 0) {
-      jobs.emplace_back(std::make_shared<JobTask>([&]() {
-        radix_left = partition_radix_parallel<LeftType>(materialized_left, left_chunk_offsets, histograms_left, _radix_bits);
-        hashtables = build<LeftType, HashedType>(radix_left);
-      }));
-      jobs.back()->schedule();
-    } else {
-      radix_left = std::move(materialized_left);
-      hashtables = build<LeftType, HashedType>(materialized_left);
-    }
+
+    // Pre-Probing path of left relation
+    jobs.emplace_back(std::make_shared<JobTask>([&]() {
+      // materialize left table
+      materialized_left = materialize_input<LeftType, HashedType>(
+        left_in_table, _column_ids.first, histograms_left, _radix_bits, _partitioning_seed);
+
+      if (_radix_bits > 0) {
+        // radix partition the left table
+        radix_left = partition_radix_parallel<LeftType>(
+          materialized_left, left_chunk_offsets, histograms_left, _radix_bits);
+      } else {
+        // short cut: skip radix partitioning and use materialized data directly
+        radix_left = std::move(materialized_left);
+      }
+
+      // build hash tables
+      hashtables = build<LeftType, HashedType>(radix_left);
+    }));
+    jobs.back()->schedule();
+
+    jobs.emplace_back(std::make_shared<JobTask>([&]() {
+      // Materialize right table. 'keep_nulls' makes sure that the relation on
+      // the right materializes NULL values when executing an OUTER join.
+      materialized_right = materialize_input<RightType, HashedType>(
+        right_in_table, _column_ids.second, histograms_right, _radix_bits, _partitioning_seed, keep_nulls);
+
+      if (_radix_bits > 0) {
+        // radix partition the right table. 'keep_nulls' makes sure that the
+        // relation on the right keeps NULL values when executing an OUTER join.
+        radix_right = partition_radix_parallel<RightType>(materialized_right, right_chunk_offsets, histograms_right,
+                                                      _radix_bits, keep_nulls);
+      } else {
+        // short cut: skip radix partitioning and use materialized data directly
+        radix_right = std::move(materialized_right);
+      }
+    }));
+    jobs.back()->schedule();
     
-    if (_radix_bits > 0) {
-      jobs.emplace_back(std::make_shared<JobTask>([&]() {
-      // 'keep_nulls' makes sure that the relation on the right keeps NULL values when executing an OUTER join.
-      radix_right = partition_radix_parallel<RightType>(materialized_right, right_chunk_offsets, histograms_right,
-                                                        _radix_bits, keep_nulls);
-      }));
-      jobs.back()->schedule();
-    } else {
-      radix_right = std::move(materialized_right);
-    }
     CurrentScheduler::wait_for_tasks(jobs);
 
 
