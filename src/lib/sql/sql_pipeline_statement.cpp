@@ -264,7 +264,8 @@ const std::shared_ptr<const Table>& SQLPipelineStatement::get_result_table() {
     return _result_table;
   }
 
-  DTRACE_PROBE3(HYRISE, TASKS_PER_STATEMENT, reinterpret_cast<uintptr_t>(&tasks), _sql_string.c_str(), reinterpret_cast<uintptr_t>(this));
+  DTRACE_PROBE3(HYRISE, TASKS_PER_STATEMENT, reinterpret_cast<uintptr_t>(&tasks), _sql_string.c_str(),
+                reinterpret_cast<uintptr_t>(this));
   CurrentScheduler::schedule_and_wait_for_tasks(tasks);
 
   if (_auto_commit) {

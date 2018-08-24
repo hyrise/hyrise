@@ -47,7 +47,8 @@ SQLPipeline SQLPipelineBuilder::create_pipeline() const {
   auto optimizer = _optimizer ? _optimizer : Optimizer::create_default_optimizer();
   auto pipeline = SQLPipeline(_sql, _transaction_context, _use_mvcc, lqp_translator, optimizer, _prepared_statements,
                               _cleanup_temporaries);
-  DTRACE_PROBE3(HYRISE, PIPELINE_CREATION_DONE, pipeline.get_sql_strings().size(), _sql.c_str(), reinterpret_cast<uintptr_t>(this));
+  DTRACE_PROBE3(HYRISE, PIPELINE_CREATION_DONE, pipeline.get_sql_strings().size(), _sql.c_str(),
+                reinterpret_cast<uintptr_t>(this));
   return pipeline;
 }
 
