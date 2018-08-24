@@ -48,7 +48,7 @@ class AbstractRecoverer {
     std::optional<std::vector<AllTypeVariant>> values;
   };
 
-  void _redo_transactions(const TransactionID transaction_id, std::vector<LoggedItem>& transactions);
+  void _redo_transaction(std::map<TransactionID, std::vector<LoggedItem>>& transactions, TransactionID transaction_id);
 
   void _recover_table(const std::string& path, const std::string& table_name);
 

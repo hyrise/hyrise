@@ -60,7 +60,7 @@ uint32_t TextRecoverer::recover() {
     std::ifstream log_file(path);
     DebugAssert(log_file.is_open(), "Recoverer: could not open logfile " + path);
 
-    std::vector<LoggedItem> transactions;
+    std::map<TransactionID, std::vector<LoggedItem>> transactions;
 
     std::string line;
     while (std::getline(log_file, line)) {
@@ -81,7 +81,7 @@ uint32_t TextRecoverer::recover() {
       // if commit entry
       if (log_type == 'c') {
         TransactionID transaction_id = std::stoul(_extract_up_to_delimiter(line, next_token_begin, ')'));
-        _redo_transactions(transaction_id, transactions);
+        _redo_transaction(transactions, transaction_id);
         continue;
       }
 
@@ -111,7 +111,8 @@ uint32_t TextRecoverer::recover() {
 
       // if invalidation
       if (log_type == 'i') {
-        transactions.emplace_back(LoggedItem(LogType::Invalidation, transaction_id, table_name, row_id));
+        transactions[transaction_id].emplace_back(
+          LoggedItem(LogType::Invalidation, transaction_id, table_name, row_id));
         continue;
       }
 
@@ -134,7 +135,7 @@ uint32_t TextRecoverer::recover() {
         DebugAssert(line.length() >= next_token_begin, "Recoverer: line ended before ')'");
       }
 
-      transactions.emplace_back(LoggedItem(LogType::Value, transaction_id, table_name, row_id, values));
+      transactions[transaction_id].emplace_back(LoggedItem(LogType::Value, transaction_id, table_name, row_id, values));
     }
   }
 

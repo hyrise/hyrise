@@ -8,39 +8,38 @@
 
 namespace opossum {
 
-void AbstractRecoverer::_redo_transactions(const TransactionID transaction_id,
-                                           std::vector<LoggedItem>& transactions) {
-  for (auto& transaction : transactions) {
-    if (transaction.transaction_id != transaction_id) continue;
+void AbstractRecoverer::_redo_transaction(std::map<TransactionID, std::vector<LoggedItem>>& transactions, 
+                                          TransactionID transaction_id) {
+  auto transaction = transactions.find(transaction_id);
+  if (transaction == transactions.end()) return;
+  
+  for (auto& item : transaction->second) {
+    auto& table = *StorageManager::get().get_table(item.table_name);
+    auto& chunk = *table.get_chunk(item.row_id.chunk_id);
 
-    auto& table = *StorageManager::get().get_table(transaction.table_name);
-    auto& chunk = *table.get_chunk(transaction.row_id.chunk_id);
-
-    switch (transaction.type) {
+    switch (item.type) {
       case LogType::Value: {
-        chunk.append(*transaction.values);
+        chunk.append(*item.values);
 
         DebugAssert(chunk.has_mvcc_columns(), "Recovery: Table should have MVCC columns.");
         auto mvcc_columns = chunk.mvcc_columns();
-        DebugAssert(mvcc_columns->begin_cids.size() - 1 == transaction.row_id.chunk_offset,
+        DebugAssert(mvcc_columns->begin_cids.size() - 1 == item.row_id.chunk_offset,
                     "recovery rowID " + std::to_string(mvcc_columns->begin_cids.size() - 1) + " != logged rowID " +
-                        std::to_string(transaction.row_id.chunk_offset));
+                        std::to_string(item.row_id.chunk_offset));
         mvcc_columns->begin_cids[mvcc_columns->begin_cids.size() - 1] = 0;
         break;
       }
       case LogType::Invalidation: {
         auto mvcc_columns = chunk.mvcc_columns();
-        mvcc_columns->end_cids[transaction.row_id.chunk_offset] = 0;
+        mvcc_columns->end_cids[item.row_id.chunk_offset] = 0;
         break;
       }
       default:
-        throw("Recovery: Transaction type not implemented.");
+        throw("Recovery: Log item type not implemented.");
     }
   }
 
-  transactions.erase(std::remove_if(transactions.begin(), transactions.end(),
-                                    [&transaction_id](LoggedItem x) { return x.transaction_id == transaction_id; }),
-                     transactions.end());
+  transactions.erase(transaction);
 }
 
 void AbstractRecoverer::_recover_table(const std::string& path, const std::string& table_name) {

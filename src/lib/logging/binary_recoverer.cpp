@@ -48,7 +48,7 @@ uint32_t BinaryRecoverer::recover() {
     std::ifstream log_file(log_path);
     DebugAssert(log_file.is_open(), "Recoverer: could not open logfile " + log_path);
 
-    std::vector<LoggedItem> transactions;
+    std::map<TransactionID, std::vector<LoggedItem>> transactions;
 
     char log_type;
     log_file.read(&log_type, sizeof(char));
@@ -66,7 +66,7 @@ uint32_t BinaryRecoverer::recover() {
         // commit entry
         case 'c': {
           auto transaction_id = _read<TransactionID>(log_file);
-          _redo_transactions(transaction_id, transactions);
+          _redo_transaction(transactions, transaction_id);
           break;
         }
 
@@ -75,7 +75,8 @@ uint32_t BinaryRecoverer::recover() {
           auto transaction_id = _read<TransactionID>(log_file);
           auto table_name = _read<std::string>(log_file);
           auto row_id = _read<RowID>(log_file);
-          transactions.emplace_back(LoggedItem(LogType::Invalidation, transaction_id, table_name, row_id));
+          transactions[transaction_id].emplace_back(
+            LoggedItem(LogType::Invalidation, transaction_id, table_name, row_id));
           break;
         }
 
@@ -106,7 +107,8 @@ uint32_t BinaryRecoverer::recover() {
             }
           }
 
-          transactions.emplace_back(LoggedItem(LogType::Value, transaction_id, table_name, row_id, values));
+          transactions[transaction_id].emplace_back(
+            LoggedItem(LogType::Value, transaction_id, table_name, row_id, values));
           break;
         }
 
