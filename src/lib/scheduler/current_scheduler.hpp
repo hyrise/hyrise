@@ -70,7 +70,6 @@ template <typename TaskType>
 void CurrentScheduler::schedule_tasks(const std::vector<std::shared_ptr<TaskType>>& tasks) {
   DTRACE_PROBE1(HYRISE, SCHEDULE_TASKS, tasks.size());
   for (auto& task : tasks) {
-    // DTRACE_PROBE2(HYRISE, TASKS, reinterpret_cast<uintptr_t>(&tasks), reinterpret_cast<uintptr_t>(&task));
     DTRACE_PROBE2(HYRISE, TASKS, reinterpret_cast<uintptr_t>(&tasks), reinterpret_cast<uintptr_t>(task.get()));
     task->schedule();
   }
