@@ -229,7 +229,6 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   }
 
   // create histograms per chunk
-  histograms = std::vector<std::shared_ptr<std::vector<size_t>>>();
   histograms.resize(chunk_offsets.size());
 
   std::vector<std::shared_ptr<AbstractTask>> jobs;
