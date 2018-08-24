@@ -2,7 +2,7 @@
 
 namespace opossum {
 
-inline bool PerformanceWarningClass::_disabled = []() {  // NOLINT
+bool PerformanceWarningClass::_disabled = []() {  // NOLINT
 // static initializer hack to print some warnings in various binaries
 
 #if IS_DEBUG
