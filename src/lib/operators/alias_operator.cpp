@@ -41,7 +41,7 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
   output_column_definitions.reserve(input_table_left()->column_count());
 
   for (auto column_id = ColumnID{0}; column_id < input_table_left()->column_count(); ++column_id) {
-    const auto& input_column_definition = input_table_left()->column_definitions()[column_id];
+    const auto& input_column_definition = input_table_left()->column_definitions()[_column_ids[column_id]];
 
     output_column_definitions.emplace_back(_aliases[column_id], input_column_definition.data_type,
                                            input_column_definition.nullable);

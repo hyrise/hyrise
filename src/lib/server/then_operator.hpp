@@ -69,7 +69,7 @@ template <class F, class R = std::result_of_t<std::decay_t<F>()>>
 auto invoke(boost::future<void>&& lhs, then_t, F&& f) -> typename std::enable_if<is_future<R>::value, R>::type {
   return lhs
       .then(boost::launch::sync,
-            [f = std::forward<F>(f)](boost::future<void> fut) mutable->R {
+            [f = std::forward<F>(f)](boost::future<void> fut) mutable -> R {
               fut.get();
               return std::move(f)();
             })
@@ -81,7 +81,7 @@ template <class T, class F, class R = std::result_of_t<std::decay_t<F>(T)>>
 auto invoke(boost::future<T>&& lhs, then_t, F&& f) -> typename std::enable_if<is_future<R>::value, R>::type {
   return lhs
       .then(boost::launch::sync,
-            [f = std::forward<F>(f)](boost::future<T> fut) mutable->R {
+            [f = std::forward<F>(f)](boost::future<T> fut) mutable -> R {
               return std::move(f)(std::forward<T>(fut.get()));
             })
       .unwrap();
@@ -91,7 +91,7 @@ auto invoke(boost::future<T>&& lhs, then_t, F&& f) -> typename std::enable_if<is
 template <class F, class R = std::result_of_t<std::decay_t<F>()>>
 auto invoke(boost::future<void>&& lhs, then_t, F&& f) ->
     typename std::enable_if<!is_future<R>::value, boost::future<R>>::type {
-  return lhs.then(boost::launch::sync, [f = std::forward<F>(f)](boost::future<void> fut) mutable->R {
+  return lhs.then(boost::launch::sync, [f = std::forward<F>(f)](boost::future<void> fut) mutable -> R {
     fut.get();
     return std::move(f)();
   });
@@ -101,7 +101,7 @@ auto invoke(boost::future<void>&& lhs, then_t, F&& f) ->
 template <class T, class F, class R = std::result_of_t<std::decay_t<F>(T)>>
 auto invoke(boost::future<T>&& lhs, then_t, F&& f) ->
     typename std::enable_if<!is_future<R>::value, boost::future<R>>::type {
-  return lhs.then(boost::launch::sync, [f = std::forward<F>(f)](boost::future<T> fut) mutable->R {
+  return lhs.then(boost::launch::sync, [f = std::forward<F>(f)](boost::future<T> fut) mutable -> R {
     return std::move(f)(std::forward<T>(fut.get()));
   });
 }

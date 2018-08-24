@@ -38,9 +38,7 @@ auto TaskRunner::dispatch_server_task(std::shared_ptr<TResult> task) -> decltype
               // This result comes in on the scheduler thread, so we want to dispatch it back to the io_service
               return _io_service.post(boost::asio::use_boost_future)
                      // Make sure to be on the main thread before re-throwing the exceptions
-                     >> then >> [result = std::move(result)]() mutable {
-                return result.get();
-              };
+                     >> then >> [result = std::move(result)]() mutable { return result.get(); };
             })
       .unwrap();
 }

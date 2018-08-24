@@ -1,7 +1,7 @@
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
-#include <algorithm>
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
@@ -44,8 +44,7 @@ class PrintWrapper : public Print {
 
  public:
   explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in) : Print(in), tab(in->get_output()) {}
-  explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in,
-                        std::ostream& out, uint32_t flags)
+  explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in, std::ostream& out, uint32_t flags)
       : Print(in, out, flags), tab(in->get_output()) {}
 
   std::vector<uint16_t> test_column_string_widths(uint16_t min, uint16_t max) {
@@ -56,17 +55,11 @@ class PrintWrapper : public Print {
     return _truncate_cell(cell, max_width);
   }
 
-  uint16_t get_max_cell_width() {
-    return _max_cell_width;
-  }
+  uint16_t get_max_cell_width() { return _max_cell_width; }
 
-  bool is_printing_empty_chunks() {
-    return _flags & PrintIgnoreEmptyChunks;
-  }
+  bool is_printing_empty_chunks() { return _flags & PrintIgnoreEmptyChunks; }
 
-  bool is_printing_mvcc_information() {
-    return _flags & PrintMvcc;
-  }
+  bool is_printing_mvcc_information() { return _flags & PrintMvcc; }
 };
 
 TEST_F(OperatorsPrintTest, TableColumnDefinitions) {

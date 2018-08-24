@@ -53,7 +53,7 @@ class RangeFilter : public AbstractFilter {
       }
       case PredicateCondition::Equals: {
         for (const auto& bounds : _ranges) {
-          const auto & [ min, max ] = bounds;
+          const auto& [min, max] = bounds;
 
           if (t_value >= min && t_value <= max) {
             return false;
