@@ -262,8 +262,10 @@ add_library(TestPlugin SHARED
     utils/test_plugin.hpp
 )
 # Prevent the linker under macOS from complaining about undefined methods
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    target_link_libraries(TestPlugin PRIVATE "-undefined dynamic_lookup")
+if (APPLE)
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+        target_link_libraries(TestPlugin PRIVATE "-undefined dynamic_lookup")
+    endif()
 endif()
 
 # Configure NonInstantiablePlugin
@@ -271,8 +273,10 @@ add_library(NonInstantiablePlugin SHARED
     utils/non_instantiable_plugin.cpp
 )
 # Prevent the linker under macOS from complaining about undefined methods
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    target_link_libraries(NonInstantiablePlugin PRIVATE "-undefined dynamic_lookup")
+if (APPLE)
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+        target_link_libraries(NonInstantiablePlugin PRIVATE "-undefined dynamic_lookup")
+    endif()
 endif()
 
 # We define LIB_DIR to always load plugins from the correct directory for testing purposes
