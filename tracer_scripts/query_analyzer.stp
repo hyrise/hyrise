@@ -11,9 +11,7 @@ global task_list
 global operator_task_list
 global operator_statistics
 global operator_name
-global times
 
-global to_delete
 global counter = 0
 
 // If debug is enabled, the executed operators will be printed immidiately to the console
@@ -72,22 +70,8 @@ probe process(@1).provider("HYRISE").mark("SUMMARY")
                     operator_statistics[operator_id, "runtime"],
                     operator_statistics[operator_id, "rows"],
                     operator_statistics[operator_id, "chunks"])
-                times[operator_name[operator_id]] <<< operator_statistics[operator_id, "runtime"]
-                to_delete[tid, counter] = task_id
             }
         }
-
-        foreach ([tid, counter] in to_delete) {
-            delete task_list[tid, counter]
-        }
-        delete to_delete
-
-        println("\nSum of execution time per operator:")
-        foreach (time in times) {
-            printf("\t%s execution time: %i μs (%i times called)\n", time, @sum(times[time]), @count(times[time]))
-        }
-
-        delete times[operator_name[operator_id]]
         printf("================================================================\n\n")
 }
 
@@ -110,14 +94,12 @@ probe process(@1).provider("HYRISE").mark("TASKS")
 // Mapping between AbstractTask and OperatorTask
 probe process(@1).provider("HYRISE").mark("OPERATOR_TASKS")
 {
-    printf("par: %i\n", $arg1)
     operator_task_list[$arg2] = $arg1
 }
 
 // Store performance statistics of each operator executed
 probe process(@1).provider("HYRISE").mark("OPERATOR_EXECUTED")
 {
-    printf("op task: %i\n", $arg5)
     operator_name[$arg5] = user_string($arg1)
     operator_statistics[$arg5, "runtime"] = $arg2
     operator_statistics[$arg5, "rows"] = $arg3

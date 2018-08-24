@@ -82,8 +82,8 @@ void OperatorTask::_on_execute() {
         Fail("Trying to execute operators for a transaction that is already committed");
     }
   }
-  DTRACE_PROBE2(HYRISE, OPERATOR_TASKS, _op, this);
 
+  DTRACE_PROBE2(HYRISE, OPERATOR_TASKS, reinterpret_cast<uintptr_t>(_op.get()), reinterpret_cast<uintptr_t>(this));
   _op->execute();
 
   /**

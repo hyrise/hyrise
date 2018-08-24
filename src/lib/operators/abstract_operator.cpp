@@ -23,7 +23,7 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
 OperatorType AbstractOperator::type() const { return _type; }
 
 void AbstractOperator::execute() {
-  DTRACE_PROBE1(HYRISE, OPERATOR_STARTED, name());
+  DTRACE_PROBE1(HYRISE, OPERATOR_STARTED, name().c_str());
   DebugAssert(!_input_left || _input_left->get_output(), "Left input has not yet been executed");
   DebugAssert(!_input_right || _input_right->get_output(), "Right input has not yet been executed");
   DebugAssert(!_output, "Operator has already been executed");
@@ -53,8 +53,8 @@ void AbstractOperator::execute() {
 
   _base_performance_data.walltime = performance_timer.lap();
 
-  DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name(), _base_performance_data.walltime.count(),
-                _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0, this);
+  DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name().c_str(), _base_performance_data.walltime.count(),
+                _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0, reinterpret_cast<uintptr_t>(this));
 }
 
 // returns the result of the operator
