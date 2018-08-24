@@ -287,7 +287,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 template <typename T>
 RadixContainer<T> partition_radix_parallel(const RadixContainer<T>& radix_container,
                                            const std::shared_ptr<std::vector<size_t>>& chunk_offsets,
-                                           std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
+                                           const std::vector<std::shared_ptr<std::vector<size_t>>>& histograms,
                                            const size_t radix_bits, bool keep_nulls = false) {
   // materialized items
   const std::shared_ptr<Partition<T>>& materialized = radix_container.elements;
@@ -565,7 +565,7 @@ PosListsByColumn setup_pos_lists_by_column(const std::shared_ptr<const Table>& i
 
 void write_output_columns(ChunkColumns& output_columns, const std::shared_ptr<const Table>& input_table,
                           const PosListsByColumn& input_pos_list_ptrs_sptrs_by_column,
-                          std::shared_ptr<PosList> pos_list) {
+                          const std::shared_ptr<PosList> pos_list) {
   std::map<std::shared_ptr<PosLists>, std::shared_ptr<PosList>> output_pos_list_cache;
 
   // We might use this later, but want to have it outside of the for loop
