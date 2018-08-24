@@ -24,9 +24,11 @@ namespace opossum {
 
 class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:
-  AbstractJoinOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
-                       const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                       const ColumnIDPair& column_ids, const PredicateCondition predicate_condition);
+  AbstractJoinOperator(
+      const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
+      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode, const ColumnIDPair& column_ids,
+      const PredicateCondition predicate_condition,
+      std::unique_ptr<OperatorPerformanceData> performance_data = std::make_unique<OperatorPerformanceData>());
 
   JoinMode mode() const;
   const ColumnIDPair& column_ids() const;
