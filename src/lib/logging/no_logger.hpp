@@ -16,7 +16,7 @@ class NoLogger : public AbstractLogger {
   NoLogger(const NoLogger&) = delete;
   NoLogger& operator=(const NoLogger&) = delete;
 
-  void log_commit(const TransactionID transaction_id, const CommitID commit_id, std::function<void(TransactionID)> callback) override {
+  void log_commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) override {
     callback(transaction_id);
   };
 

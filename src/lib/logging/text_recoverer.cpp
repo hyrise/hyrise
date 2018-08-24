@@ -56,8 +56,6 @@ std::string TextRecoverer::_extract_next_value_with_preceding_size(std::string& 
 }
 
 uint32_t TextRecoverer::recover() {
-  TransactionID last_transaction_id{0};
-  CommitID last_commit_id{0};
   for (auto& path : Logger::get_all_log_file_paths()) {
     std::ifstream log_file(path);
     DebugAssert(log_file.is_open(), "Recoverer: could not open logfile " + path);
@@ -82,11 +80,8 @@ uint32_t TextRecoverer::recover() {
 
       // if commit entry
       if (log_type == 'c') {
-        TransactionID transaction_id = std::stoul(_extract_up_to_delimiter(line, next_token_begin, ','));
-        CommitID commit_id = std::stoul(_extract_up_to_delimiter(line, next_token_begin, ')'));
-        _redo_transactions(transaction_id, commit_id, transactions);
-        last_transaction_id = std::max(transaction_id, last_transaction_id);
-        last_commit_id = std::max(commit_id, last_commit_id);
+        TransactionID transaction_id = std::stoul(_extract_up_to_delimiter(line, next_token_begin, ')'));
+        _redo_transactions(transaction_id, transactions);
         continue;
       }
 
@@ -143,7 +138,6 @@ uint32_t TextRecoverer::recover() {
     }
   }
 
-  _update_transaction_id(last_transaction_id, last_commit_id);
   return _number_of_loaded_tables;
 }
 

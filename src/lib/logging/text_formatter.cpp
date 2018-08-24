@@ -31,9 +31,9 @@ std::vector<char> TextFormatter::_char_vector_of(std::stringstream& ss) {
   return std::vector<char>(data_string.begin(), data_string.end());
 }
 
-std::vector<char> TextFormatter::commit_entry(const TransactionID transaction_id, const CommitID commit_id) {
+std::vector<char> TextFormatter::commit_entry(const TransactionID transaction_id) {
   std::stringstream ss;
-  ss << "(c," << transaction_id << "," << commit_id << ")\n";
+  ss << "(c," << transaction_id << ")\n";
 
   return _char_vector_of(ss);
 }

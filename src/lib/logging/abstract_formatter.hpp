@@ -11,7 +11,7 @@ namespace opossum {
 class AbstractFormatter {
  public:
   // Creates a commit entry
-  virtual std::vector<char> commit_entry(const TransactionID transaction_id, const CommitID commit_id) = 0;
+  virtual std::vector<char> commit_entry(const TransactionID transaction_id) = 0;
 
   // Creates a value entry
   virtual std::vector<char> value_entry(const TransactionID transaction_id, const std::string& table_name,

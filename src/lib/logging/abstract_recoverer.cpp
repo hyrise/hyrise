@@ -8,7 +8,7 @@
 
 namespace opossum {
 
-void AbstractRecoverer::_redo_transactions(const TransactionID transaction_id, const CommitID commit_id,
+void AbstractRecoverer::_redo_transactions(const TransactionID transaction_id,
                                            std::vector<LoggedItem>& transactions) {
   for (auto& transaction : transactions) {
     if (transaction.transaction_id != transaction_id) continue;
@@ -25,12 +25,12 @@ void AbstractRecoverer::_redo_transactions(const TransactionID transaction_id, c
         DebugAssert(mvcc_columns->begin_cids.size() - 1 == transaction.row_id.chunk_offset,
                     "recovery rowID " + std::to_string(mvcc_columns->begin_cids.size() - 1) + " != logged rowID " +
                         std::to_string(transaction.row_id.chunk_offset));
-        mvcc_columns->begin_cids[mvcc_columns->begin_cids.size() - 1] = commit_id;
+        mvcc_columns->begin_cids[mvcc_columns->begin_cids.size() - 1] = 0;
         break;
       }
       case LogType::Invalidation: {
         auto mvcc_columns = chunk.mvcc_columns();
-        mvcc_columns->end_cids[transaction.row_id.chunk_offset] = commit_id;
+        mvcc_columns->end_cids[transaction.row_id.chunk_offset] = 0;
         break;
       }
       default:
@@ -41,11 +41,6 @@ void AbstractRecoverer::_redo_transactions(const TransactionID transaction_id, c
   transactions.erase(std::remove_if(transactions.begin(), transactions.end(),
                                     [&transaction_id](LoggedItem x) { return x.transaction_id == transaction_id; }),
                      transactions.end());
-}
-
-void AbstractRecoverer::_update_transaction_id(const TransactionID highest_transaction_id, 
-                                               const CommitID highest_commit_id) {
-  TransactionManager::_reset_to_id(highest_transaction_id + 1, highest_commit_id + 1);
 }
 
 void AbstractRecoverer::_recover_table(const std::string& path, const std::string& table_name) {

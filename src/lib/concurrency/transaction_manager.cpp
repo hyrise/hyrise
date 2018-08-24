@@ -13,21 +13,11 @@ TransactionManager& TransactionManager::get() {
   return instance;
 }
 
-void TransactionManager::reset() { _reset(INITIAL_TRANSACTION_ID, INITIAL_COMMIT_ID); }
-
-/**
- * Used by the recovery, which replays transactions from a logfile. 
- * Then the next transaction id is the successor of the logs latest committed transaction.
-*/
-void TransactionManager::_reset_to_id(TransactionID transaction_id, CommitID commit_id) {
-  _reset(transaction_id, commit_id);
-}
-
-void TransactionManager::_reset(TransactionID transaction_id, CommitID commit_id) {
+void TransactionManager::reset() {
   auto& manager = get();
-  manager._next_transaction_id = transaction_id;
-  manager._last_commit_id = commit_id;
-  manager._last_commit_context = std::make_shared<CommitContext>(transaction_id);
+  manager._next_transaction_id = INITIAL_TRANSACTION_ID;
+  manager._last_commit_id = INITIAL_COMMIT_ID;
+  manager._last_commit_context = std::make_shared<CommitContext>(INITIAL_TRANSACTION_ID);
 }
 
 TransactionManager::TransactionManager()

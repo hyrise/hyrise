@@ -48,10 +48,10 @@ void GroupCommitLogger::log_value(const TransactionID transaction_id, const std:
   _write_to_buffer(data);
 }
 
-void GroupCommitLogger::log_commit(const TransactionID transaction_id, const CommitID commit_id, std::function<void(TransactionID)> callback) {
+void GroupCommitLogger::log_commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) {
   _commit_callbacks.emplace_back(std::make_pair(callback, transaction_id));
 
-  const auto& data = _formatter->commit_entry(transaction_id, commit_id);
+  const auto& data = _formatter->commit_entry(transaction_id);
   _write_to_buffer(data);
 }
 

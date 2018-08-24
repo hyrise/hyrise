@@ -20,7 +20,7 @@ class AbstractLogger {
   // Logs the commit of a transaction.
   // A transaction is committed only after calling its callback.
   // Therefore handle all callbacks in your Logger implementation.
-  virtual void log_commit(const TransactionID transaction_id, const CommitID commit_id, std::function<void(TransactionID)> callback) = 0;
+  virtual void log_commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) = 0;
 
   // Log a single row. Used in case of insert and update.
   virtual void log_value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,

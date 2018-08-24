@@ -58,10 +58,6 @@ class TransactionManager : private Noncopyable {
   std::shared_ptr<TransactionContext> new_transaction_context();
 
  private:
-  friend class AbstractRecoverer;
-  static void _reset_to_id(TransactionID transaction_id, CommitID commit_id);
-
- private:
   friend class TransactionContext;
 
   TransactionManager();
@@ -73,8 +69,6 @@ class TransactionManager : private Noncopyable {
   void _try_increment_last_commit_id(const std::shared_ptr<CommitContext>& context);
 
  private:
-  static void _reset(TransactionID transaction_id, CommitID commit_id);
-
   std::atomic<TransactionID> _next_transaction_id;
   // TransactionID = 0 means "not set" in the MVCC columns
   static constexpr auto INITIAL_TRANSACTION_ID = TransactionID{1};
