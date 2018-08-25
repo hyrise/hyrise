@@ -5,7 +5,7 @@
 
 namespace opossum {
 
-class StringFunctionsTest : public BaseTest{};
+class StringFunctionsTest : public BaseTest {};
 
 TEST_F(StringFunctionsTest, trim_and_split) {
   const std::string test_command = "print opossonauten_table";
