@@ -18,6 +18,10 @@ let "exitcode |= $?"
 grep -rn 'DISABLED_' src/test | grep -v '#[0-9]\+' | sed 's/^\([a-zA-Z/._]*:[0-9]*\).*/\1  Disabled tests should be documented with their issue number (e.g. \/* #123 *\/)/'
 let "exitcode |= $?"
 
+# The singleton pattern should not be manually implemented
+grep -rn 'static[^:]*instance;' --exclude src/lib/utils/singleton.hpp src | grep -v '#[0-9]\+' | sed 's/^\([a-zA-Z/._]*:[0-9]*\).*/\1  Singletons should not be implmented manually. Have a look at src\/utils\/singleton.hpp/'
+let "exitcode |= $?"
+
 # Check for included cpp files. You would think that this is not necessary, but history proves you wrong.
 regex='#include .*\.cpp'
 namecheck=$(find src \( -iname "*.cpp" -o -iname "*.hpp" \) -print0 | xargs -0 grep -rn "$regex" | grep -v NOLINT)

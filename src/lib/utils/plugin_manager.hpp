@@ -18,13 +18,6 @@ class PluginManager : public Singleton<PluginManager> {
   friend class SingletonTest;
 
  public:
-  // Singleton
-  inline static PluginManager& get() {
-    static PluginManager instance;
-
-    return instance;
-  }
-
   void load_plugin(const std::string& path, const PluginName& name);
   void stop_plugin(const PluginName& name);
 
