@@ -364,7 +364,7 @@ int Console::_help(const std::string&) {
   out("  commit                           - Commit a manually created transaction\n");
   out("  txinfo                           - Print information on the current transaction\n");
   out("  pwd                              - Print current working directory\n");
-  out("  load_plugin FILE NAME            - Load and start plugin from disc specified by filepath FILE, store it with NAME\n");
+  out("  load_plugin FILE NAME            - Load and start plugin specified by filepath FILE, store it with NAME\n");
   out("  unload_plugin NAME               - Stop and unload plugin NAME (also clears the query cache)\n");
   out("  quit                             - Exit the HYRISE Console\n");
   out("  help                             - Show this message\n\n");

@@ -35,6 +35,8 @@ void PluginManager::load_plugin(const std::string& path, const PluginName& name)
   PluginHandle plugin_handle = dlopen(path.c_str(), static_cast<uint8_t>(RTLD_NOW) | static_cast<uint8_t>(RTLD_LOCAL));
   Assert(plugin_handle, "Loading plugin failed: " + dlerror());
 
+  // abstract_plugin.hpp defines a macro for exporting plugins which makes them instantiable by providing a
+  // factory method. See the sources of AbstractPlugin and TestPlugin for further details.
   void* factory = dlsym(plugin_handle, "factory");
   Assert(factory, "Instantiating plugin failed: Have you implemented and exported the factory method?");
 

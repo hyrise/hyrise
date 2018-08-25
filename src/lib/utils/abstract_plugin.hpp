@@ -10,7 +10,6 @@ namespace opossum {
 
 // This is necessary to make the plugin instantiable, it leads to plain C linkage to avoid
 // ugly mangled names. Use EXPORT in the implementation file of your plugin.
-
 #define EXPORT(PluginName)                                            \
   extern "C" AbstractPlugin* factory() {                              \
     auto plugin = static_cast<AbstractPlugin*>(&(PluginName::get())); \
@@ -20,7 +19,6 @@ namespace opossum {
 // AbstractPlugin is the abstract super class for all plugins. An example implementation can be found
 // under test/utils/test_plugin.cpp. Usually plugins are implemented as singletons because there
 // shouldn't be multiple instances of them as they would compete against each other.
-
 class AbstractPlugin {
  public:
   virtual const std::string description() const = 0;
