@@ -123,7 +123,7 @@ class Console : public Singleton<Console> {
   int _print_current_working_directory(const std::string& args);
 
   int _load_plugin(const std::string& args);
-  int _stop_plugin(const std::string& input);
+  int _unload_plugin(const std::string& input);
 
   // Creates the pipelines and returns whether is was successful (true) or not (false)
   bool _initialize_pipeline(const std::string& sql);

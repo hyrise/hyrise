@@ -122,7 +122,7 @@ Console::Console()
   register_command("pwd", std::bind(&Console::_print_current_working_directory, this, std::placeholders::_1));
   register_command("setting", std::bind(&Console::_change_runtime_setting, this, std::placeholders::_1));
   register_command("load_plugin", std::bind(&Console::_load_plugin, this, std::placeholders::_1));
-  register_command("stop_plugin", std::bind(&Console::_stop_plugin, this, std::placeholders::_1));
+  register_command("unload_plugin", std::bind(&Console::_unload_plugin, this, std::placeholders::_1));
 
   // Register words specifically for command completion purposes, e.g.
   // for TPC-C table generation, 'CUSTOMER', 'DISTRICT', etc
@@ -364,8 +364,8 @@ int Console::_help(const std::string&) {
   out("  commit                           - Commit a manually created transaction\n");
   out("  txinfo                           - Print information on the current transaction\n");
   out("  pwd                              - Print current working directory\n");
-  out("  load_plugin FILE NAME            - Load plugin from disc specified by filepath FILE, sotre it with NAME\n");
-  out("  stop_plugin NAME                 - Stop and unload plugin NAME (also clears the query cache)\n");
+  out("  load_plugin FILE NAME            - Load and start plugin from disc specified by filepath FILE, sotre it with NAME\n");
+  out("  unload_plugin NAME               - Stop and unload plugin NAME (also clears the query cache)\n");
   out("  quit                             - Exit the HYRISE Console\n");
   out("  help                             - Show this message\n\n");
   out("  setting [property] [value]       - Change a runtime setting\n\n");
@@ -737,12 +737,12 @@ int Console::_load_plugin(const std::string& args) {
   return ReturnCode::Ok;
 }
 
-int Console::_stop_plugin(const std::string& input) {
+int Console::_unload_plugin(const std::string& input) {
   auto arguments = trim_and_split(input);
 
   if (arguments.size() != 1) {
     out("Usage:\n");
-    out("  stop_plugin PLUGINNAME\n");
+    out("  unload_plugin PLUGINNAME\n");
     return ReturnCode::Error;
   }
 
