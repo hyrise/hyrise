@@ -157,6 +157,7 @@ set(
     utils/plugin_test_utils.cpp
     utils/plugin_test_utils.hpp
     utils/singleton_test.cpp
+    utils/string_functions_test.cpp
     gtest_case_template.cpp
     gtest_main.cpp
 )
