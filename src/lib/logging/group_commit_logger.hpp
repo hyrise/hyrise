@@ -15,25 +15,23 @@ class LogEntry;
 /*
  *  Logger that gathers multiple log entries in a buffer before flushing them to disk.
  */
-class GroupCommitLogger : public AbstractLogger {
+class GroupCommitLogger final: public AbstractLogger {
  public:
   GroupCommitLogger(const GroupCommitLogger&) = delete;
   GroupCommitLogger& operator=(const GroupCommitLogger&) = delete;
 
-  void log_commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) override;
+  void log_commit(const TransactionID transaction_id, std::function<void(TransactionID)> callback) final;
 
   void log_value(const TransactionID transaction_id, const std::string& table_name, const RowID row_id,
-                 const std::vector<AllTypeVariant>& values) override;
+                 const std::vector<AllTypeVariant>& values) final;
 
-  void log_invalidate(const TransactionID transaction_id, const std::string& table_name, const RowID row_id) override;
+  void log_invalidate(const TransactionID transaction_id, const std::string& table_name, const RowID row_id) final;
 
-  void log_load_table(const std::string& file_path, const std::string& table_name) override;
+  void log_load_table(const std::string& file_path, const std::string& table_name) final;
 
-  void log_flush() override;
+  void log_flush() final;
 
-  explicit GroupCommitLogger(std::unique_ptr<AbstractFormatter> formatter);
-
- private:
+ protected:
   void _write_to_buffer(const std::vector<char>& data);
 
   char* _buffer;
@@ -45,6 +43,10 @@ class GroupCommitLogger : public AbstractLogger {
   std::vector<std::pair<std::function<void(TransactionID)>, TransactionID>> _commit_callbacks;
 
   std::unique_ptr<PausableLoopThread> _flush_thread;
+
+ private:
+  friend class Logger;
+  explicit GroupCommitLogger(std::unique_ptr<AbstractFormatter> formatter);
 };
 
 }  // namespace opossum

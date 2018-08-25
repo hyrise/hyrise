@@ -11,7 +11,7 @@ namespace opossum {
  *  Log formatter that writes log entries as binary.
  */
 
-class BinaryFormatter : public AbstractFormatter {
+class BinaryFormatter final: public AbstractFormatter {
  public:
   std::vector<char> commit_entry(const TransactionID transaction_id) final;
 
@@ -27,6 +27,10 @@ class BinaryFormatter : public AbstractFormatter {
 
   // returns the number of bytes needed for the null bitmap
   static uint32_t null_bitmap_size(uint32_t number_of_values);
+
+ private:
+  friend class Logger;
+  BinaryFormatter() = default;
 };
 
 }  // namespace opossum

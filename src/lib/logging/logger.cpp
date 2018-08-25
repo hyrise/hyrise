@@ -59,11 +59,11 @@ void Logger::setup(std::string folder, const Implementation implementation, cons
       break;
     }
     case Format::Text: {
-      formatter = std::make_unique<TextFormatter>();
+      formatter = std::unique_ptr<TextFormatter>(new TextFormatter());
       break;
     }
     case Format::Binary: {
-      formatter = std::make_unique<BinaryFormatter>();
+      formatter = std::unique_ptr<BinaryFormatter>(new BinaryFormatter());
       break;
     }
     default: { throw std::runtime_error("Logger: format unkown."); }
@@ -75,11 +75,11 @@ void Logger::setup(std::string folder, const Implementation implementation, cons
       break;
     }
     case Implementation::Simple: {
-      _logger_instance = std::make_unique<SimpleLogger>(std::move(formatter));
+      _logger_instance = std::unique_ptr<SimpleLogger>(new SimpleLogger(std::move(formatter)));
       break;
     }
     case Implementation::GroupCommit: {
-      _logger_instance = std::make_unique<GroupCommitLogger>(std::move(formatter));
+      _logger_instance = std::unique_ptr<GroupCommitLogger>(new GroupCommitLogger(std::move(formatter)));
       break;
     }
     default: { throw std::runtime_error("Logger: implementation unkown."); }
