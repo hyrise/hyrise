@@ -108,6 +108,8 @@ GroupCommitLogger::GroupCommitLogger(std::unique_ptr<AbstractFormatter> formatte
   _buffer = reinterpret_cast<char*>(malloc(_buffer_capacity));
   memset(_buffer, 0, _buffer_capacity);
 
+  _open_logfile();
+
   _flush_thread =
       std::make_unique<PausableLoopThread>(LOG_INTERVAL, [this](size_t count) { GroupCommitLogger::log_flush(); });
   _flush_thread->resume();

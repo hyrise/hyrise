@@ -55,9 +55,6 @@ class Logger {
   // Returns if there is any logging set or turned off by NoLogger
   static bool is_active();
 
-  static const Implementation default_implementation;
-  static const std::string default_data_path;
-
  private:
   // Creates the needed folders where logs are saved
   static void _create_directories();

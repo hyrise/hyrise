@@ -19,7 +19,7 @@ int main(int argc, char* argv[]) {
 
   // clang-format off
   cli_options.add_options()
-      ("port", "Specify the port", cxxopts::value<uint16_t>()->default_value("0")); // NOLINT
+    ("port", "Specify the port", cxxopts::value<uint16_t>()->default_value("0")); // NOLINT
   // clang-format on
 
   const auto cli_parse_result = cli_options.parse(argc, argv);

@@ -22,6 +22,7 @@
 #include "benchmark_utils.hpp"
 #include "concurrency/transaction_context.hpp"
 #include "concurrency/transaction_manager.hpp"
+#include "constant_mappings.hpp"
 #include "logging/logger.hpp"
 #include "operators/get_table.hpp"
 #include "operators/import_csv.hpp"
@@ -38,6 +39,7 @@
 #include "sql/sql_translator.hpp"
 #include "storage/storage_manager.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
+#include "utils/cli_options.hpp"
 #include "utils/filesystem.hpp"
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
@@ -832,22 +834,33 @@ int main(int argc, char** argv) {
 
   int return_code = Return::Ok;
 
+  auto cli_options = opossum::CLIOptions::get_basic_cli_options("console");
+
+  // clang-format off
+  cli_options.add_options()
+    ("script", "Run given .sql script", cxxopts::value<std::string>()); // NOLINT
+  // clang-format on
+
+  const auto cli_parse_result = cli_options.parse(argc, argv);
+
   // Display Usage if too many arguments are provided
-  if (argc > 2) {
+  if (cli_parse_result.count("help")) {
     return_code = Return::Quit;
-    console.out("Usage:\n");
-    console.out("  ./hyriseConsole [SCRIPTFILE] - Start the interactive SQL interface.\n");
-    console.out("                                 Execute script if specified by SCRIPTFILE.\n");
+    console.out(cli_options.help());
   }
 
-  opossum::Logger::setup(opossum::Logger::default_data_path, opossum::Logger::default_implementation);
+  auto logger_implementation = opossum::logger_to_string.right.at(cli_parse_result["logger"].as<std::string>());
+  auto logger_format = opossum::log_format_to_string.right.at(cli_parse_result["log_format"].as<std::string>());
+  auto data_path = cli_parse_result["data_path"].as<std::string>();
+
+  opossum::Logger::setup(data_path, logger_implementation, logger_format);
 
   // Execute .sql script if specified, otherwise recover database from logfiles
-  if (argc == 2) {
+  if (cli_parse_result.count("script")) {
     // Delete all logfiles because they will be conflicting with a fresh database
     console.out("Deleting old logfiles.\n");
     opossum::Logger::delete_log_files();
-    return_code = console.execute_script(std::string(argv[1]));
+    return_code = console.execute_script(cli_parse_result["script"].as<std::string>());
     // Terminate Console if an error occured during script execution
     if (return_code == Return::Error) {
       return_code = Return::Quit;
@@ -859,19 +872,17 @@ int main(int argc, char** argv) {
   }
 
   // Display welcome message if Console started normally
-  if (argc == 1) {
-    console.out("HYRISE SQL Interface\n");
-    console.out("Enter 'generate' to generate the TPC-C tables. Then, you can enter SQL queries.\n");
-    console.out("Type 'help' for more information.\n\n");
+  console.out("HYRISE SQL Interface\n");
+  console.out("Enter 'generate' to generate the TPC-C tables. Then, you can enter SQL queries.\n");
+  console.out("Type 'help' for more information.\n\n");
 
-    console.out("Hyrise is running a ");
-    if (IS_DEBUG) {
-      console.out(ANSI_COLOR_RED "(debug)" ANSI_COLOR_RESET);
-    } else {
-      console.out(ANSI_COLOR_GREEN "(release)" ANSI_COLOR_RESET);
-    }
-    console.out(" build.\n\n");
+  console.out("Hyrise is running a ");
+  if (IS_DEBUG) {
+    console.out(ANSI_COLOR_RED "(debug)" ANSI_COLOR_RESET);
+  } else {
+    console.out(ANSI_COLOR_GREEN "(release)" ANSI_COLOR_RESET);
   }
+  console.out(" build.\n\n");
 
   // Set jmp_env to current program state in preparation for siglongjmp(2)
   // See comment on jmp_env for details

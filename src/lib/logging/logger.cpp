@@ -19,14 +19,10 @@
 
 namespace opossum {
 
-const Logger::Implementation Logger::default_implementation = Implementation::No;
-
 // Logging is initially set to NoLogger and set to an implementation by console or server
 Logger::Implementation Logger::_implementation = Implementation::No;
 
-const std::string Logger::default_data_path = "./data/";  // NOLINT
-
-std::string Logger::_data_path = default_data_path;        // NOLINT
+std::string Logger::_data_path = "";                       // NOLINT
 const std::string Logger::_log_folder = "logs/";           // NOLINT
 std::string Logger::_log_path = _data_path + _log_folder;  // NOLINT
 const std::string Logger::_filename = "hyrise-log";        // NOLINT

@@ -4,9 +4,7 @@
 
 namespace opossum {
 
-AbstractLogger::AbstractLogger(std::unique_ptr<AbstractFormatter> formatter) : _formatter(std::move(formatter)) {
-  _open_logfile();
-}
+AbstractLogger::AbstractLogger(std::unique_ptr<AbstractFormatter> formatter) : _formatter(std::move(formatter)) {}
 
 void AbstractLogger::_open_logfile() {
   DebugAssert(!_log_file.is_open(), "Logger: Log file not closed before opening another one.");
