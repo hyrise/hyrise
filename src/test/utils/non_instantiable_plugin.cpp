@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-// This plugin does not export its instantiation for testing purposes
+// This plugin does not export its instantiation so that we can test if this case is handled correctly.
 class NonInstantiablePlugin : public AbstractPlugin, public Singleton<NonInstantiablePlugin> {
  public:
   const std::string description() const final {
