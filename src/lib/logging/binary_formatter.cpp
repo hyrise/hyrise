@@ -28,6 +28,14 @@
  *       - log entry type ('l') : sizeof(char)
  *       - file_path            : file_path.size() + 1                    : string terminated with \0
  *       - table_name           : table_name.size() + 1                   : string terminated with \0
+ * 
+ * 
+ *  Potential Improvements:
+ *    1.  For each log entry a vector<char> is allocated to create that entry and then copy it into the buffer.
+ *        Maybe allocate a big memory block once.
+ *    2.  The entry vector gets resized for each value. Maybe .reserve() beforehand or calculate the number of bytes for
+ *        all values by iterating over them before putting them into the entry.
+ *        Then the vector needs to be resized just once.
  */
 
 #include "binary_formatter.hpp"

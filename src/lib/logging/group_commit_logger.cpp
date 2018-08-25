@@ -1,17 +1,12 @@
 /*
- *  The GroupCommitLogger gathers log entries in its buffer and flushes them to disk in a binary format:
+ *  The GroupCommitLogger gathers log entries in its buffer and flushes them to disk:
  *    1.  every LOG_INTERVAL
  *    2.  when buffer hits half its capacity
  *  Both are represented by magic numbers, which are not tested or evaluated yet.
  * 
  * 
- *  Possible improvements:
- *    1.  For each log entry a vector<char> is allocated to create that entry and then copy it into the buffer.
- *        Maybe allocate a big memory block once.
- *    2.  The entry vector gets resized for each value. Maybe .reserve() beforehand or calculate the number of bytes for
- *        all values by iterating over them before putting them into the entry.
- *        Then the vector needs to be resized just once.
- *    3.  While writing to disk the buffer is locked with a mutex. A second buffer could be introduced, so log calls can
+ *  Potential improvements:
+ *    1.  While writing to disk the buffer is locked with a mutex. A second buffer could be introduced, so log calls can
  *        be processed in the second buffer while writing the first one to disk.
  */
 
@@ -68,7 +63,8 @@ void GroupCommitLogger::log_invalidate(const TransactionID transaction_id, const
 }
 
 void GroupCommitLogger::_write_to_buffer(const std::vector<char>& data) {
-  // Assume that there is always enough space in the buffer, since it is flushed on hitting half its capacity
+  // Assume that there is always enough space in the buffer, since it is flushed on hitting half its capacity.
+  // The buffer is locked until the flush is executed. Therefore other threads can not interfere.
   DebugAssert(_buffer_position + data.size() < _buffer_capacity, "logging: entry does not fit into buffer");
   {
     std::scoped_lock buffer_lock(_buffer_mutex);
