@@ -1,3 +1,5 @@
+// This file contains probe definitions required for tracing via dtrace.
+
 provider hyrise {
         probe job_start(long id, char* description, uintptr_t this_pointer);
         probe job_end(long id, uintptr_t this_pointer);

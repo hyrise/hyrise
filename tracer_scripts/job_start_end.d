@@ -3,10 +3,11 @@
 #pragma D option bufpolicy=ring
 
 // This script measures the runtime of jobs executed. After cancelling the execution of this
-// script a detailed summary of jobs ran will be printed to the console as a histogram.
+// script a detailed summary of jobs ran will be printed to the console as a histogram. It provides the same
+// functionality as `job_start_end.stp`.
 // NOTE: the job_start probe needs some time to retrieve the job's callers. If there are many short running ones
 //       it might lead to a crash of this script, since the event handling overhead is too high (it always has to
-//       look on the stack). You can simply comment it outif you want. Of course, you will lose the information
+//       look on the stack). You can simply comment it out if you want. Of course, you will lose the information
 //       about the job caller.
 
 

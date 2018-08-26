@@ -585,12 +585,16 @@ endif()
 
 # Generate a macro file containing probe definitions for dtrace users. As soon as a probe is not present
 # in `provider.h` a compile error would be thrown. With this ugly solution we can avoid this.
+# First we find all probes within the code (e.g. DTRACE_PROBE1(HYRISE, TEST, arg1))
+# Than the regex greps provider and probe name and concactenates them with '_' (e.g. HYRISE_TEST)
+# The probes are than written into a file in order to define the probes
+
 set(PROBES_FILE "${CMAKE_SOURCE_DIR}/src/lib/utils/tracing/probe_definitions.hpp")
-set(LINE "#ifndef &\\n#define &(...)\\n#endif")
+set(LINE "#ifndef &\\n#define &(...)\\n#endif\\n")
 add_custom_command (
     OUTPUT ${PROBES_FILE}
     DEPENDS ${SOURCES}
-    COMMAND grep -r --include=*.[ch]pp --exclude=systemtap.hpp --exclude=probe_definitions.hpp -h DTRACE_PROBE ${CMAKE_SOURCE_DIR} |  sed "s/[^(]*(\\([^,]*\\), \\([^(,|))]*\\).*/\\1_\\2/" | uniq | xargs -n 1 -I & printf "${LINE}\\n" > ${PROBES_FILE}
+    COMMAND grep -r --include=*.[ch]pp --exclude=systemtap.hpp --exclude=probe_definitions.hpp -h DTRACE_PROBE ${CMAKE_SOURCE_DIR} |  sed "s/[^(]*(\\([^,]*\\), \\([^(,|))]*\\).*/\\1_\\2/" | uniq | xargs -n 1 -I & printf "${LINE}" > ${PROBES_FILE}
     VERBATIM
 )
 
