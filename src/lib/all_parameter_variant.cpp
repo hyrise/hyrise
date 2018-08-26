@@ -22,11 +22,4 @@ std::string to_string(const AllParameterVariant& x) {
   }
 }
 
-bool all_parameter_variant_near(const AllParameterVariant& lhs, const AllParameterVariant& rhs, double max_abs_error) {
-  if (lhs.type() == typeid(AllTypeVariant) && rhs.type() == typeid(AllTypeVariant)) {
-    return all_type_variant_near(boost::get<AllTypeVariant>(lhs), boost::get<AllTypeVariant>(rhs), max_abs_error);
-  }
-
-  return lhs == rhs;
-}
 }  // namespace opossum

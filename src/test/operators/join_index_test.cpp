@@ -27,7 +27,9 @@ class JoinIndexTest : public BaseTest {
   void SetUp() override {
     // load and create the indexed tables
     _table_wrapper_a = load_table_with_index("src/test/tables/int_float.tbl", 2);
+    _table_wrapper_a_no_index = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
     _table_wrapper_b = load_table_with_index("src/test/tables/int_float2.tbl", 2);
+    _table_wrapper_b_no_index = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float2.tbl", 2));
     _table_wrapper_c = load_table_with_index("src/test/tables/int_string.tbl", 4);
     _table_wrapper_d = load_table_with_index("src/test/tables/string_int.tbl", 3);
     _table_wrapper_e = load_table_with_index("src/test/tables/int_int.tbl", 4);
@@ -45,7 +47,9 @@ class JoinIndexTest : public BaseTest {
 
     // execute all TableWrapper operators in advance
     _table_wrapper_a->execute();
+    _table_wrapper_a_no_index->execute();
     _table_wrapper_b->execute();
+    _table_wrapper_b_no_index->execute();
     _table_wrapper_c->execute();
     _table_wrapper_d->execute();
     _table_wrapper_e->execute();
@@ -63,7 +67,6 @@ class JoinIndexTest : public BaseTest {
   std::shared_ptr<TableWrapper> load_table_with_index(const std::string& filename, const size_t chunk_size) {
     auto table = load_table(filename, chunk_size);
 
-    // TODO(anyone): replace with EncodingType::Dictionary as soon as all index types support new compression
     ChunkEncoder::encode_all_chunks(table, ColumnEncodingSpec{EncodingType::Dictionary});
 
     for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
@@ -83,7 +86,7 @@ class JoinIndexTest : public BaseTest {
   void test_join_output(const std::shared_ptr<const AbstractOperator>& left,
                         const std::shared_ptr<const AbstractOperator>& right,
                         const std::pair<ColumnID, ColumnID>& column_ids, const PredicateCondition predicate_condition,
-                        const JoinMode mode, const std::string& file_name, size_t chunk_size) {
+                        const JoinMode mode, const std::string& file_name, size_t chunk_size, bool using_index = true) {
     // load expected results from file
     std::shared_ptr<Table> expected_result = load_table(file_name, chunk_size);
     EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
@@ -94,17 +97,33 @@ class JoinIndexTest : public BaseTest {
     join->execute();
 
     EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);
+    const auto& performance_data = static_cast<const JoinIndex::PerformanceData&>(join->performance_data());
+    if (using_index && right->get_output()->type() == TableType::Data) {
+      // We can't execute the index join on referencing tables
+      EXPECT_EQ(performance_data.chunks_scanned_with_index, static_cast<size_t>(right->get_output()->chunk_count()));
+      EXPECT_EQ(performance_data.chunks_scanned_without_index, 0);
+    } else {
+      EXPECT_EQ(performance_data.chunks_scanned_with_index, 0);
+      EXPECT_EQ(performance_data.chunks_scanned_without_index, static_cast<size_t>(right->get_output()->chunk_count()));
+    }
   }
 
-  std::shared_ptr<TableWrapper> _table_wrapper_a, _table_wrapper_b, _table_wrapper_c, _table_wrapper_d,
-      _table_wrapper_e, _table_wrapper_f, _table_wrapper_g, _table_wrapper_h, _table_wrapper_i, _table_wrapper_j,
-      _table_wrapper_k, _table_wrapper_l, _table_wrapper_m, _table_wrapper_n;
+  std::shared_ptr<TableWrapper> _table_wrapper_a, _table_wrapper_a_no_index, _table_wrapper_b,
+      _table_wrapper_b_no_index, _table_wrapper_c, _table_wrapper_d, _table_wrapper_e, _table_wrapper_f,
+      _table_wrapper_g, _table_wrapper_h, _table_wrapper_i, _table_wrapper_j, _table_wrapper_k, _table_wrapper_l,
+      _table_wrapper_m, _table_wrapper_n;
 };
 
 typedef ::testing::Types<AdaptiveRadixTreeIndex, CompositeGroupKeyIndex, BTreeIndex /* , GroupKeyIndex */>
     DerivedIndices;
 
 TYPED_TEST_CASE(JoinIndexTest, DerivedIndices);
+
+TYPED_TEST(JoinIndexTest, LeftJoinFallBack) {
+  this->test_join_output(this->_table_wrapper_a_no_index, this->_table_wrapper_b_no_index,
+                         std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
+                         JoinMode::Left, "src/test/tables/joinoperators/int_left_join.tbl", 1, false);
+}
 
 TYPED_TEST(JoinIndexTest, LeftJoin) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
@@ -122,6 +141,12 @@ TYPED_TEST(JoinIndexTest, RightJoin) {
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
                          JoinMode::Right, "src/test/tables/joinoperators/int_right_join.tbl", 1);
+}
+
+TYPED_TEST(JoinIndexTest, RightJoinFallBack) {
+  this->test_join_output(this->_table_wrapper_a_no_index, this->_table_wrapper_b_no_index,
+                         std::pair<ColumnID, ColumnID>(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals,
+                         JoinMode::Right, "src/test/tables/joinoperators/int_right_join.tbl", 1, false);
 }
 
 TYPED_TEST(JoinIndexTest, InnerJoin) {

@@ -1,10 +1,14 @@
 #include "join_hash.hpp"
 
 #include <boost/lexical_cast.hpp>
+#include <boost/variant.hpp>
+
+#include <cmath>
 #include <memory>
 #include <numeric>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -18,7 +22,6 @@
 #include "type_cast.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
-#include "utils/cuckoo_hashtable.hpp"
 #include "utils/murmur_hash.hpp"
 #include "utils/timer.hpp"
 
@@ -105,6 +108,9 @@ struct PartitionedElement {
 template <typename T>
 using Partition = std::vector<PartitionedElement<T>>;
 
+template <typename T>
+using HashTable = std::unordered_map<T, boost::variant<RowID, PosList>>;
+
 /*
 This struct contains radix-partitioned data in a contiguous buffer,
 as well as a list of offsets for each partition.
@@ -145,12 +151,27 @@ std::vector<std::optional<HashTable<HashedType>>> build(const RadixContainer<Lef
                                                  partition_size]() {
       auto& partition_left = static_cast<Partition<LeftType>&>(*radix_container.elements);
 
-      auto hashtable = HashTable<HashedType>{partition_size};
+      // Potentially oversizing the hash table when values are often repeated.
+      // But rather have slightly too large hash tables than paying for complete rehashing/resizing.
+      auto hashtable = HashTable<HashedType>(partition_size);
 
       for (size_t partition_offset = partition_left_begin; partition_offset < partition_left_end; ++partition_offset) {
-        auto& element = partition_left[partition_offset];
+        const auto& element = partition_left[partition_offset];
 
-        hashtable.put(type_cast<HashedType>(element.value), element.row_id);
+        const auto hash_key = type_cast<HashedType>(element.value);
+        const auto it = hashtable.find(hash_key);
+        if (it == hashtable.end()) {
+          // key is not present: add value and row ID
+          hashtable[hash_key] = element.row_id;
+        } else {
+          auto& map_entry = it->second;
+          if (map_entry.type() == typeid(RowID)) {
+            // Previously, there was only one row id stored for this value. Convert the entry to a multi-row-id one.
+            hashtable[hash_key] = PosList{boost::get<RowID>(map_entry), element.row_id};
+          } else {
+            boost::get<PosList>(map_entry).push_back(element.row_id);
+          }
+        }
       }
 
       hashtables[current_partition_id] = std::move(hashtable);
@@ -168,7 +189,7 @@ Hashes the given value into the HashedType that is defined by the current Hash T
 Performs a lexical cast first, if necessary.
 */
 template <typename OriginalType, typename HashedType>
-constexpr uint32_t hash_value(const OriginalType& value, const unsigned int seed) {
+constexpr Hash hash_value(const OriginalType& value, const unsigned int seed) {
   // clang-format off
   // doesn't deal with constexpr nicely
   if constexpr(!std::is_same_v<OriginalType, HashedType>) {
@@ -230,7 +251,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
 
         iterable.for_each([&, chunk_id, keep_nulls](const auto& value) {
           if (!value.is_null() || keep_nulls) {
-            const uint32_t hashed_value = hash_value<T, HashedType>(value.value(), partitioning_seed);
+            const Hash hashed_value = hash_value<T, HashedType>(value.value(), partitioning_seed);
 
             /*
             For ReferenceColumns we do not use the RowIDs from the referenced tables.
@@ -245,7 +266,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
                   PartitionedElement<T>{RowID{chunk_id, value.chunk_offset()}, hashed_value, value.value()};
             }
 
-            const Hash radix = (hashed_value >> (32 - radix_bits * (pass + 1))) & mask;
+            const Hash radix = hashed_value & mask;
             histogram[radix]++;
           }
           // reference_column_offset is only used for ReferenceColumns
@@ -320,7 +341,7 @@ RadixContainer<T> partition_radix_parallel(const std::shared_ptr<Partition<T>>& 
           continue;
         }
 
-        const size_t radix = (element.partition_hash >> (32 - radix_bits * (pass + 1))) & mask;
+        const size_t radix = element.partition_hash & mask;
 
         out[output_offsets[radix]++] = element;
       }
@@ -340,8 +361,8 @@ RadixContainer<T> partition_radix_parallel(const std::shared_ptr<Partition<T>>& 
   */
 template <typename RightType, typename HashedType>
 void probe(const RadixContainer<RightType>& radix_container,
-           const std::vector<std::optional<HashTable<HashedType>>>& hashtables, std::vector<PosList>& pos_list_left,
-           std::vector<PosList>& pos_list_right, const JoinMode mode) {
+           const std::vector<std::optional<HashTable<HashedType>>>& hashtables, std::vector<PosList>& pos_lists_left,
+           std::vector<PosList>& pos_lists_right, const JoinMode mode) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.partition_offsets.size() - 1);
 
@@ -369,8 +390,14 @@ void probe(const RadixContainer<RightType>& radix_container,
       PosList pos_list_left_local;
       PosList pos_list_right_local;
 
-      if (hashtables[current_partition_id]) {
-        const auto& hashtable = hashtables.at(current_partition_id);
+      if (hashtables[current_partition_id].has_value()) {
+        const auto& hashtable = hashtables.at(current_partition_id).value();
+
+        // simple heuristic to estimate result size: half of the partition's rows will match
+        // a more conservative pre-allocation would be the size of the left cluster
+        const size_t expected_output_size = std::max(10.0, std::ceil((partition_end - partition_begin) / 2));
+        pos_list_left_local.reserve(expected_output_size);
+        pos_list_right_local.reserve(expected_output_size);
 
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
           auto& row = partition[partition_offset];
@@ -379,15 +406,14 @@ void probe(const RadixContainer<RightType>& radix_container,
             continue;
           }
 
-          // This is where the actual comparison happens. `get` only returns values that match and eliminates hash
-          // collisions.
-          const auto& matching_rows = hashtable->get(type_cast<HashedType>(row.value));
+          const auto& rows_iter = hashtable.find(type_cast<HashedType>(row.value));
 
-          if (matching_rows) {
-            // We store a variant of <RowID, PosList> to reduce the number of allocations (see the cuckoo hashmap)
-            if (matching_rows->get().type() == typeid(PosList)) {
+          if (rows_iter != hashtable.end()) {
+            // Key exists, thus we have at least one hit
+            const auto& matching_rows_variant = rows_iter->second;
+            if (matching_rows_variant.type() == typeid(PosList)) {
               // Multiple matches, stored in one PosList
-              for (const auto row_id : boost::get<PosList>(matching_rows->get())) {
+              for (const auto row_id : boost::get<PosList>(matching_rows_variant)) {
                 if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
                   pos_list_left_local.emplace_back(row_id);
                   pos_list_right_local.emplace_back(row.row_id);
@@ -395,7 +421,7 @@ void probe(const RadixContainer<RightType>& radix_container,
               }
             } else {
               // A single RowID
-              const auto row_id = boost::get<RowID>(matching_rows->get());
+              const auto row_id = boost::get<RowID>(matching_rows_variant);
               if (row_id.chunk_offset != INVALID_CHUNK_OFFSET) {
                 pos_list_left_local.emplace_back(row_id);
                 pos_list_right_local.emplace_back(row.row_id);
@@ -429,8 +455,8 @@ void probe(const RadixContainer<RightType>& radix_container,
       }
 
       if (!pos_list_left_local.empty()) {
-        pos_list_left[current_partition_id] = std::move(pos_list_left_local);
-        pos_list_right[current_partition_id] = std::move(pos_list_right_local);
+        pos_lists_left[current_partition_id] = std::move(pos_list_left_local);
+        pos_lists_right[current_partition_id] = std::move(pos_list_right_local);
       }
     }));
     jobs.back()->schedule();
@@ -462,7 +488,7 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
 
       PosList pos_list_local;
 
-      if (const auto& hashtable = hashtables[current_partition_id]) {
+      if (hashtables[current_partition_id].has_value()) {
         // Valid hashtable found, so there is at least one match in this partition
 
         for (size_t partition_offset = partition_begin; partition_offset < partition_end; ++partition_offset) {
@@ -472,9 +498,10 @@ void probe_semi_anti(const RadixContainer<RightType>& radix_container,
             continue;
           }
 
-          const auto& matching_rows = hashtable->get(row.value);
+          const auto& hashtable = hashtables[current_partition_id].value();
+          const auto it = hashtable.find(type_cast<HashedType>(row.value));
 
-          if ((mode == JoinMode::Semi && matching_rows) || (mode == JoinMode::Anti && !matching_rows)) {
+          if ((mode == JoinMode::Semi && it != hashtable.end()) || (mode == JoinMode::Anti && it == hashtable.end())) {
             // Semi: found at least one match for this row -> match
             // Anti: no matching rows found -> match
             pos_list_local.emplace_back(row.row_id);
@@ -597,8 +624,49 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         _mode(mode),
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
-        _inputs_swapped(inputs_swapped),
-        _radix_bits(radix_bits) {}
+        _inputs_swapped(inputs_swapped) {
+    /*
+      Setting number of bits for radix clustering:
+      The number of bits is used to create probe partitions with a size that can
+      be expected to fit into the L2 cache.
+      This should incorporate hardware knowledge, once available in Hyrise.
+      As of now, we assume a L2 cache size of 256 KB.
+      We estimate the size the following way:
+        - we assume each key appears once (that is an overestimation space-wise, but we
+        aim rather for a hash map that is slightly smaller than L2 than slightly larger)
+        - each entry in the hash map is a data structure holding the actual value
+        and the RowID
+    */
+    const auto build_relation_size = _left->get_output()->row_count();
+    const auto probe_relation_size = _right->get_output()->row_count();
+
+    if (build_relation_size > probe_relation_size) {
+      /*
+        Hash joins perform best for join relations with a small left join partner. In case the
+        optimizer selects the hash join due to such a situation, but neglects that the
+        input will be switched (e.g., due to the join type), the user will be warned.
+      */
+      std::string warning{"Left relation larger than right relation hash join"};
+      warning += inputs_swapped ? " (input relations have been swapped)." : ".";
+      PerformanceWarning(warning);
+    }
+
+    const auto l2_cache_size = 256'000;  // bytes
+
+    // We assume an std::unordered_map with a linked list within the buckets.
+    // To get a pessimistic estimation (ensure that the hash table fits within the cache), we assume
+    // that each value maps to two RowIDs (thus, no single value optimizatio via boost::variant).
+    const auto complete_hash_map_size =
+        // hash map
+        build_relation_size * (sizeof(LeftType) + sizeof(void*)) +
+        // PosLists
+        (build_relation_size / 2) * (sizeof(PosList) + 2 * sizeof(RowID));
+
+    const auto adaption_factor = 2.0f;  // don't occupy the whole L2 cache
+    const auto cluster_count = std::max(1.0f, (adaption_factor * complete_hash_map_size) / l2_cache_size);
+
+    _radix_bits = std::ceil(std::log2(cluster_count));
+  }
 
  protected:
   const std::shared_ptr<const AbstractOperator> _left, _right;
@@ -609,8 +677,8 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
 
   std::shared_ptr<Table> _output_table;
 
-  const unsigned int _partitioning_seed = 13;
-  const size_t _radix_bits;
+  const unsigned int _partitioning_seed = 17;
+  size_t _radix_bits;
 
   // Determine correct type for hashing
   using HashedType = typename JoinHashTraits<LeftType, RightType>::HashType;
@@ -710,8 +778,16 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     // Probe phase
     std::vector<PosList> left_pos_lists;
     std::vector<PosList> right_pos_lists;
-    left_pos_lists.resize(radix_right.partition_offsets.size() - 1);
-    right_pos_lists.resize(radix_right.partition_offsets.size() - 1);
+    const size_t partition_count = radix_right.partition_offsets.size() - 1;
+    left_pos_lists.resize(partition_count);
+    right_pos_lists.resize(partition_count);
+    for (size_t i = 0; i < partition_count; i++) {
+      // simple heuristic: half of the rows of the right relation will match
+      const size_t result_rows_per_partition = _right->get_output()->row_count() / partition_count / 2;
+
+      left_pos_lists[i].reserve(result_rows_per_partition);
+      right_pos_lists[i].reserve(result_rows_per_partition);
+    }
     /*
     NUMA notes:
     The workers for each radix partition P should be scheduled on the same node as the input data:

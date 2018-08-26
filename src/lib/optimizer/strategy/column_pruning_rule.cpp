@@ -114,8 +114,8 @@ bool ColumnPruningRule::_prune_columns_from_leafs(const std::shared_ptr<Abstract
   return lqp_changed;
 }
 
-void ColumnPruningRule::_prune_columns_in_projections(const std::shared_ptr<AbstractLQPNode> &lqp,
-                                                      const ExpressionUnorderedSet &referenced_columns) {
+void ColumnPruningRule::_prune_columns_in_projections(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                                      const ExpressionUnorderedSet& referenced_columns) {
   /**
    * Prune otherwise unused columns that are forwarded by ProjectionNodes
    */

@@ -1,0 +1,4 @@
+a|b|d|SUM(c)
+int|float|int|long
+12|350.7|1|10
+12|350.7|4|10

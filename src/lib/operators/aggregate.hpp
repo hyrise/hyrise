@@ -24,6 +24,7 @@
 
 namespace opossum {
 
+template <typename AggregateKey>
 struct GroupByContext;
 
 /**
@@ -63,18 +64,12 @@ struct AggregateResult {
 The key type that is used for the aggregation map.
 */
 using AggregateKeyEntry = uint64_t;
-using AggregateKey = pmr_vector<AggregateKeyEntry>;
-using AggregateKeys = pmr_vector<AggregateKey>;
-using KeysPerChunk = pmr_vector<AggregateKeys>;
 
-// We use monotonic_buffer_resource for the vector of vectors that hold the aggregate keys. That is so that we can
-// save time when allocating and we can throw away everything in this temporary structure at once (once the resource
-// gets deleted). Also, we use the scoped_allocator_adaptor to propagate the allocator to all inner vectors.
-// This is suitable here because the amount of memory needed is known from the start. In other places with frequent
-// reallocations, this might make less sense.
-// We use boost over std because libc++ does not yet (July 2018) support monotonic_buffer_resource:
-// https://libcxx.llvm.org/ts1z_status.html
-using AggregateKeysAllocator = boost::container::scoped_allocator_adaptor<PolymorphicAllocator<AggregateKeys>>;
+template <typename AggregateKey>
+using AggregateKeys = pmr_vector<AggregateKey>;
+
+template <typename AggregateKey>
+using KeysPerChunk = pmr_vector<AggregateKeys<AggregateKey>>;
 
 /**
  * Types that are used for the special COUNT(*) and DISTINCT implementations
@@ -99,11 +94,14 @@ class Aggregate : public AbstractReadOnlyOperator {
   const std::string description(DescriptionMode description_mode) const override;
 
   // write the aggregated output for a given aggregate column
-  template <typename ColumnType, AggregateFunction function>
+  template <typename ColumnType, AggregateFunction function, typename AggregateKey>
   void write_aggregate_output(ColumnID column_index);
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;
+
+  template <typename AggregateKey>
+  void _aggregate();
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_input_left,
@@ -118,26 +116,28 @@ class Aggregate : public AbstractReadOnlyOperator {
                                         std::shared_ptr<ColumnVisitorContext>& aggregate_context,
                                         AggregateFunction function);
 
-  template <typename ColumnType>
+  template <typename ColumnType, typename AggregateKey>
   static void _create_aggregate_visitor(boost::hana::basic_type<ColumnType> type,
                                         std::shared_ptr<AbstractColumnVisitor>& builder,
                                         std::shared_ptr<ColumnVisitorContext> context,
-                                        std::shared_ptr<GroupByContext> groupby_context, AggregateFunction function);
+                                        std::shared_ptr<GroupByContext<AggregateKey>> groupby_context,
+                                        AggregateFunction function);
 
-  template <typename ColumnType>
+  template <typename AggregateKey, typename ColumnType>
   void _write_aggregate_output(boost::hana::basic_type<ColumnType> type, ColumnID column_index,
                                AggregateFunction function);
 
   void _write_groupby_output(PosList& pos_list);
 
-  template <typename ColumnDataType, AggregateFunction function>
+  template <typename ColumnDataType, AggregateFunction function, typename AggregateKey>
   void _aggregate_column(ChunkID chunk_id, ColumnID column_index, const BaseColumn& base_column,
-                         const KeysPerChunk& keys_per_chunk);
+                         const KeysPerChunk<AggregateKey>& keys_per_chunk);
 
+  template <typename AggregateKey>
   std::shared_ptr<ColumnVisitorContext> _create_aggregate_context(const DataType data_type,
                                                                   const AggregateFunction function) const;
 
-  template <typename ColumnDataType, AggregateFunction aggregate_function>
+  template <typename ColumnDataType, AggregateFunction aggregate_function, typename AggregateKey>
   std::shared_ptr<ColumnVisitorContext> _create_aggregate_context_impl() const;
 
   const std::vector<AggregateColumnDefinition> _aggregates;
@@ -154,7 +154,17 @@ class Aggregate : public AbstractReadOnlyOperator {
 
 namespace std {
 template <>
-struct hash<opossum::AggregateKey> {
-  size_t operator()(const opossum::AggregateKey& key) const { return boost::hash_range(key.begin(), key.end()); }
+struct hash<opossum::pmr_vector<opossum::AggregateKeyEntry>> {
+  size_t operator()(const opossum::pmr_vector<opossum::AggregateKeyEntry>& key) const {
+    return boost::hash_range(key.begin(), key.end());
+  }
+};
+
+template <>
+struct hash<std::array<opossum::AggregateKeyEntry, 2>> {
+  // gcc7 doesn't support templating by `int N` here.
+  size_t operator()(const std::array<opossum::AggregateKeyEntry, 2>& key) const {
+    return boost::hash_range(key.begin(), key.end());
+  }
 };
 }  // namespace std

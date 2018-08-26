@@ -178,7 +178,8 @@ set(
     operators/aggregate/aggregate_traits.hpp
     operators/aggregate.cpp
     operators/aggregate.hpp
-    operators/base_operator_performance_data.hpp
+    operators/operator_performance_data.cpp
+    operators/operator_performance_data.hpp
     operators/alias_operator.cpp
     operators/alias_operator.hpp
     operators/delete.cpp
@@ -513,7 +514,6 @@ set(
     utils/cli_options.hpp
     utils/cli_options.cpp
     utils/copyable_atomic.hpp
-    utils/cuckoo_hashtable.hpp
     utils/enum_constant.hpp
     utils/filesystem.hpp
     utils/format_bytes.cpp

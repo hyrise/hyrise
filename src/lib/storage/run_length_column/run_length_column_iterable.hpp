@@ -33,6 +33,8 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
     functor(begin, end);
   }
 
+  size_t _on_size() const { return _column.size(); }
+
  private:
   const RunLengthColumn<T>& _column;
 
