@@ -13,6 +13,7 @@
 #include "storage/storage_manager.hpp"
 #include "tpch/tpch_db_generator.hpp"
 #include "tpch/tpch_queries.hpp"
+#include "utils/cli_options.hpp"
 #include "utils/filesystem.hpp"
 #include "utils/load_table.hpp"
 #include "version.hpp"
@@ -306,7 +307,7 @@ NamedQueries BenchmarkRunner::_parse_query_file(const std::string& query_path) {
 }
 
 cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& benchmark_name) {
-  cxxopts::Options cli_options{benchmark_name};
+  auto cli_options = CLIOptions::get_basic_cli_options(benchmark_name);
 
   // Make sure all current encoding types are shown
   std::vector<std::string> encoding_strings;
@@ -333,13 +334,11 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("help", "print this help message")
     ("v,verbose", "Print log messages", cxxopts::value<bool>()->default_value("false"))
     ("r,runs", "Maximum number of runs of a single query(set)", cxxopts::value<size_t>()->default_value("1000")) // NOLINT
-    ("c,chunk_size", "ChunkSize, default is 2^32-1", cxxopts::value<ChunkOffset>()->default_value(std::to_string(Chunk::MAX_SIZE))) // NOLINT
     ("t,time", "Maximum seconds that a query(set) is run", cxxopts::value<size_t>()->default_value("5")) // NOLINT
     ("o,output", "File to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value("")) // NOLINT
     ("m,mode", "IndividualQueries or PermutedQuerySets, default is IndividualQueries", cxxopts::value<std::string>()->default_value("IndividualQueries")) // NOLINT
     ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see below). String options: " + encoding_strings_option, cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT
     ("compression", "Specify vector compression as a string. Options: " + compression_strings_option, cxxopts::value<std::string>()->default_value(""))  // NOLINT
-    ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("mvcc", "Enable MVCC", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("visualize", "Create a visualization image of one LQP and PQP for each query", cxxopts::value<bool>()->default_value("false")); // NOLINT
   // clang-format on

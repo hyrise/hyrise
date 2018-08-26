@@ -871,6 +871,8 @@ int main(int argc, char** argv) {
     console.out("Recovery done. Loaded " + std::to_string(number_of_loaded_tables) + " tables.\n\n");
   }
 
+  console.out("Options --chunk_size and --scheduler are currently ignored");
+
   // Display welcome message if Console started normally
   console.out("HYRISE SQL Interface\n");
   console.out("Enter 'generate' to generate the TPC-C tables. Then, you can enter SQL queries.\n");

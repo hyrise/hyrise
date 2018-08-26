@@ -36,6 +36,8 @@ int main(int argc, char* argv[]) {
     auto logger_format = opossum::log_format_to_string.right.at(cli_parse_result["log_format"].as<std::string>());
     auto data_path = cli_parse_result["data_path"].as<std::string>();
 
+    std::cout << "Options --chunk_size and --scheduler are currently ignored" << std::endl;
+
     // Set scheduler so that the server can execute the tasks on separate threads.
     opossum::CurrentScheduler::set(std::make_shared<opossum::NodeQueueScheduler>());
 
