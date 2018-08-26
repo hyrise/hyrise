@@ -27,7 +27,7 @@ const std::string Logger::_log_folder = "logs/";           // NOLINT
 std::string Logger::_log_path = _data_path + _log_folder;  // NOLINT
 const std::string Logger::_filename = "hyrise-log";        // NOLINT
 
-std::unique_ptr<AbstractLogger> Logger::_logger_instance = std::make_unique<NoLogger>();
+std::unique_ptr<AbstractLogger> Logger::_logger_instance = std::unique_ptr<NoLogger>(new NoLogger());
 
 AbstractLogger& Logger::get() { return *_logger_instance; }
 
@@ -80,6 +80,11 @@ void Logger::setup(std::string folder, const Implementation implementation, cons
     }
     default: { throw std::runtime_error("Logger: implementation unkown."); }
   }
+}
+
+void Logger::reset_to_no_logger() {
+  _implementation = Implementation::No;
+  _logger_instance = std::unique_ptr<NoLogger>(new NoLogger());
 }
 
 bool Logger::is_active() { return _implementation != Implementation::No; }

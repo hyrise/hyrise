@@ -56,6 +56,11 @@ class Logger {
   static bool is_active();
 
  private:
+  friend class LogFileTest;
+
+  // Used by tests to set logging off after test. Should not be used during normal runtime.
+  static void reset_to_no_logger();
+
   // Creates the needed folders where logs are saved
   static void _create_directories();
 
