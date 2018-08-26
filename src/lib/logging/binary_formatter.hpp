@@ -11,7 +11,7 @@ namespace opossum {
  *  Log formatter that writes log entries as binary.
  */
 
-class BinaryFormatter final: public AbstractFormatter {
+class BinaryFormatter final : public AbstractFormatter {
  public:
   std::vector<char> commit_entry(const TransactionID transaction_id) final;
 

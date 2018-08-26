@@ -15,7 +15,7 @@ class LogEntry;
 /*
  *  Logger that gathers multiple log entries in a buffer before flushing them to disk.
  */
-class GroupCommitLogger final: public AbstractLogger {
+class GroupCommitLogger final : public AbstractLogger {
  public:
   GroupCommitLogger(const GroupCommitLogger&) = delete;
   GroupCommitLogger& operator=(const GroupCommitLogger&) = delete;

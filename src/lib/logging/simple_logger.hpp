@@ -12,7 +12,7 @@ namespace opossum {
 /*
  *  Logger that is implemented in a naive way and writes entries into a text file.
  */
-class SimpleLogger final: public AbstractLogger {
+class SimpleLogger final : public AbstractLogger {
  public:
   SimpleLogger(const SimpleLogger&) = delete;
   SimpleLogger& operator=(const SimpleLogger&) = delete;

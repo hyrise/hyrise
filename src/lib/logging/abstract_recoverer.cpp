@@ -8,11 +8,11 @@
 
 namespace opossum {
 
-void AbstractRecoverer::_redo_transaction(std::map<TransactionID, std::vector<LoggedItem>>& transactions, 
+void AbstractRecoverer::_redo_transaction(std::map<TransactionID, std::vector<LoggedItem>>& transactions,
                                           TransactionID transaction_id) {
   auto transaction = transactions.find(transaction_id);
   if (transaction == transactions.end()) return;
-  
+
   for (auto& item : transaction->second) {
     auto& table = *StorageManager::get().get_table(item.table_name);
     auto& chunk = *table.get_chunk(item.row_id.chunk_id);

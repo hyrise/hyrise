@@ -30,9 +30,7 @@ class LogFileTest : public BaseTestWithParam<std::pair<Logger::Implementation, L
     }
   }
 
-  void run_sql(const std::string& sql) {
-    SQLPipelineBuilder{sql}.create_pipeline().get_result_table();
-  }
+  void run_sql(const std::string& sql) { SQLPipelineBuilder{sql}.create_pipeline().get_result_table(); }
 
   std::string _log_file_path;
 };
@@ -43,7 +41,6 @@ class LogFileTest : public BaseTestWithParam<std::pair<Logger::Implementation, L
  *    - delete statements with 'or': "DELETE ... WHERE x=y OR w=z"
  */
 TEST_P(LogFileTest, TestWorkflow) {
-  
   Logger::setup(test_data_path + _folder, GetParam().first, GetParam().second);
 
   run_sql("INSERT INTO a_table VALUES (41, 41.0, 41.0, '41');");
@@ -61,18 +58,18 @@ TEST_P(LogFileTest, TestWorkflow) {
   std::ifstream result_file(_log_file_path);
   std::string result((std::istreambuf_iterator<char>(result_file)), std::istreambuf_iterator<char>());
 
-  std::ifstream expected_file("src/test/logging/results/" + log_format_to_string.left.at(GetParam().second) + "_log_file_result");
+  std::ifstream expected_file("src/test/logging/results/" + log_format_to_string.left.at(GetParam().second) +
+                              "_log_file_result");
   std::string expected((std::istreambuf_iterator<char>(expected_file)), std::istreambuf_iterator<char>());
 
   EXPECT_EQ(expected, result);
 }
 
 std::pair<Logger::Implementation, Logger::Format> loggings[] = {
-  {Logger::Implementation::Simple, Logger::Format::Text},
-  {Logger::Implementation::Simple, Logger::Format::Binary},
-  {Logger::Implementation::GroupCommit, Logger::Format::Text},
-  {Logger::Implementation::GroupCommit, Logger::Format::Binary}
-};
+    {Logger::Implementation::Simple, Logger::Format::Text},
+    {Logger::Implementation::Simple, Logger::Format::Binary},
+    {Logger::Implementation::GroupCommit, Logger::Format::Text},
+    {Logger::Implementation::GroupCommit, Logger::Format::Binary}};
 
 auto formatter = [](const testing::TestParamInfo<std::pair<Logger::Implementation, Logger::Format>> info) {
   return logger_to_string.left.at(info.param.first) + "_" + log_format_to_string.left.at(info.param.second);

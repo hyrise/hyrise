@@ -112,7 +112,7 @@ uint32_t TextRecoverer::recover() {
       // if invalidation
       if (log_type == 'i') {
         transactions[transaction_id].emplace_back(
-          LoggedItem(LogType::Invalidation, transaction_id, table_name, row_id));
+            LoggedItem(LogType::Invalidation, transaction_id, table_name, row_id));
         continue;
       }
 
