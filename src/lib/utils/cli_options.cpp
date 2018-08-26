@@ -12,15 +12,15 @@ cxxopts::Options CLIOptions::get_basic_cli_options(const std::string& program_na
 
   std::vector<std::string> logging_strings;
   logging_strings.reserve(logger_to_string.left.size());
-  for (const auto& [implementation, implementation_string] : logger_to_string.left) {
-    logging_strings.emplace_back(implementation_string);
+  for (const auto& logger_key_value : logger_to_string.left) {
+    logging_strings.emplace_back(logger_key_value.second);
   }
   const auto logging_options = boost::algorithm::join(logging_strings, ", ");
 
   std::vector<std::string> log_format_strings;
   log_format_strings.reserve(log_format_to_string.left.size());
-  for (const auto& [format, format_string] : log_format_to_string.left) {
-    log_format_strings.emplace_back(format_string);
+  for (const auto& format_key_value : log_format_to_string.left) {
+    log_format_strings.emplace_back(format_key_value.second);
   }
   const auto log_format_options = boost::algorithm::join(log_format_strings, ", ");
 
