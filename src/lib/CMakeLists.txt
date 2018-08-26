@@ -252,6 +252,12 @@ set(
     statistics/chunk_statistics/range_filter.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
+    optimizer/join_graph.cpp
+    optimizer/join_graph.hpp
+    optimizer/join_graph_builder.cpp
+    optimizer/join_graph_builder.hpp
+    optimizer/join_graph_edge.cpp
+    optimizer/join_graph_edge.hpp
     optimizer/strategy/abstract_rule.cpp
     optimizer/strategy/abstract_rule.hpp
     optimizer/strategy/column_pruning_rule.cpp

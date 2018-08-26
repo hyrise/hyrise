@@ -89,6 +89,7 @@ set(
     statistics/table_statistics_join_test.cpp
     statistics/table_statistics_test.cpp
     optimizer/lqp_translator_test.cpp
+    optimizer/join_graph_builder_test.cpp
     optimizer/optimizer_test.cpp
     optimizer/strategy/column_pruning_rule_test.cpp
     optimizer/strategy/chunk_pruning_test.cpp
