@@ -13,10 +13,7 @@ using namespace std::string_literals;  // NOLINT
 namespace opossum {
 
 MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& name)
-    : AbstractLQPNode(LQPNodeType::Mock), _name(name), _constructor_arguments(column_definitions) {}
-
-MockNode::MockNode(const std::shared_ptr<TableStatistics>& statistics)
-    : AbstractLQPNode(LQPNodeType::Mock), _constructor_arguments(statistics) {}
+    : AbstractLQPNode(LQPNodeType::Mock), _name(name), _column_definitions(column_definitions) {}
 
 LQPColumnReference MockNode::get_column(const std::string& name) const {
   const auto& column_definitions = this->column_definitions();
@@ -29,25 +26,14 @@ LQPColumnReference MockNode::get_column(const std::string& name) const {
 }
 
 const MockNode::ColumnDefinitions& MockNode::column_definitions() const {
-  Assert(_constructor_arguments.type() == typeid(ColumnDefinitions), "Unexpected type");
-  return boost::get<ColumnDefinitions>(_constructor_arguments);
-}
-
-const boost::variant<MockNode::ColumnDefinitions, std::shared_ptr<TableStatistics>>& MockNode::constructor_arguments()
-    const {
-  return _constructor_arguments;
+  return _column_definitions;
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& MockNode::column_expressions() const {
   if (!_column_expressions) {
     _column_expressions.emplace();
 
-    auto column_count = size_t{0};
-    if (_constructor_arguments.type() == typeid(ColumnDefinitions)) {
-      column_count = boost::get<ColumnDefinitions>(_constructor_arguments).size();
-    } else {
-      column_count = boost::get<std::shared_ptr<TableStatistics>>(_constructor_arguments)->column_statistics().size();
-    }
+    const auto column_count = _column_definitions.size();
 
     for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
       const auto column_reference = LQPColumnReference(shared_from_this(), column_id);
@@ -62,30 +48,23 @@ std::string MockNode::description() const { return "[MockNode '"s + _name.value_
 
 std::shared_ptr<TableStatistics> MockNode::derive_statistics_from(
     const std::shared_ptr<AbstractLQPNode>& left_input, const std::shared_ptr<AbstractLQPNode>& right_input) const {
-  Assert(_constructor_arguments.type() == typeid(std::shared_ptr<TableStatistics>),
-         "Can only return statistics from statistics mock node");
-  return boost::get<std::shared_ptr<TableStatistics>>(_constructor_arguments);
+  Assert(_table_statistics, "MockNode statistics need to be explicitely set");
+  return _table_statistics;
+}
+
+void MockNode::set_statistics(const std::shared_ptr<TableStatistics>& statistics) {
+  _table_statistics = statistics;
 }
 
 std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  if (_constructor_arguments.type() == typeid(std::shared_ptr<TableStatistics>)) {
-    return MockNode::make(boost::get<std::shared_ptr<TableStatistics>>(_constructor_arguments));
-  } else {
-    return MockNode::make(boost::get<ColumnDefinitions>(_constructor_arguments));
-  }
+  const auto mock_node = MockNode::make(_column_definitions);
+  mock_node->set_statistics(_table_statistics);
+  return mock_node;
 }
 
 bool MockNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& mock_node = static_cast<const MockNode&>(rhs);
-
-  if (_constructor_arguments.which() != mock_node._constructor_arguments.which()) return false;
-
-  if (_constructor_arguments.type() == typeid(ColumnDefinitions)) {
-    return boost::get<ColumnDefinitions>(_constructor_arguments) ==
-           boost::get<ColumnDefinitions>(mock_node._constructor_arguments);
-  } else {
-    Fail("Comparison of statistics not implemented, because this is painful");
-  }
+  return _column_definitions == mock_node._column_definitions && _table_statistics == mock_node._table_statistics;
 }
 
 }  // namespace opossum

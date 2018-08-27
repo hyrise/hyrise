@@ -30,16 +30,19 @@ class DpCcpTest : public ::testing::Test {
     const auto table_statistics_b = std::make_shared<TableStatistics>(TableType::Data, 3, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics_b_a});
     const auto table_statistics_c = std::make_shared<TableStatistics>(TableType::Data, 5, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics_c_a});
 
-    node_a = MockNode::make(table_statistics_a);
-    node_b = MockNode::make(table_statistics_b);
-    node_c = MockNode::make(table_statistics_c);
+    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "a");
+    node_a->set_statistics(table_statistics_a);
+    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "b");
+    node_b->set_statistics(table_statistics_b);
+    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}}, "c");
+    node_c->set_statistics(table_statistics_c);
 
-    a_a = {node_a, ColumnID{0}};
-    b_a = {node_b, ColumnID{0}};
-    c_a = {node_c, ColumnID{0}};
+    a_a = node_a->get_column("a");
+    b_a = node_a->get_column("a");
+    c_a = node_a->get_column("a");
   }
 
-  std::shared_ptr<AbstractLQPNode> node_a, node_b, node_c;
+  std::shared_ptr<MockNode> node_a, node_b, node_c;
   std::shared_ptr<AbstractCostModel> cost_model;
   LQPColumnReference a_a, b_a, c_a;
 };
