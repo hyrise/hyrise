@@ -88,6 +88,10 @@ int main(int argc, char* argv[]) {
   }
   config->out << "]" << std::endl;
 
+  if (config->parallel_execution) {
+    Assert(std::find(query_ids.begin(), query_ids.end(), opossum::QueryID{15}) == query_ids.end(), "TPC-H query 15 is not supported for multithreaded benchmarking.");
+  }
+
   // Set up TPCH benchmark
   opossum::NamedQueries queries;
   queries.reserve(query_ids.size());
