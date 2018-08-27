@@ -37,7 +37,7 @@ class JoinNullTest : public JoinTest {
     _table_wrapper_a_null = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float_with_null.tbl", 2));
     _table_wrapper_a_null->execute();
 
-    // load and create DictionaryColumn tables
+    // load and create DictionarySegment tables
     auto table = load_table("src/test/tables/int_float_with_null.tbl", 2);
     ChunkEncoder::encode_chunks(table, {ChunkID{0}, ChunkID{1}});
 

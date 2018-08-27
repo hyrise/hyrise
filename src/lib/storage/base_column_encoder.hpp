@@ -6,7 +6,7 @@
 #include <type_traits>
 
 #include "storage/base_encoded_segment.hpp"
-#include "storage/base_value_column.hpp"
+#include "storage/base_value_segment.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 
@@ -131,14 +131,14 @@ class ColumnEncoder : public BaseSegmentEncoder {
    * Compiles only for supported data types.
    */
   template <typename CxlumnDataType>
-  std::shared_ptr<BaseEncodedColumn> encode(const std::shared_ptr<const BaseValueSegment>& base_value_column,
+  std::shared_ptr<BaseEncodedColumn> encode(const std::shared_ptr<const BaseValueSegment>& base_value_segment,
                                             hana::basic_type<CxlumnDataType> data_type_c) {
     static_assert(decltype(supports(data_type_c))::value);
 
-    const auto value_column = std::dynamic_pointer_cast<const ValueSegment<CxlumnDataType>>(base_value_column);
-    Assert(value_column != nullptr, "Value column must have passed data type.");
+    const auto value_segment = std::dynamic_pointer_cast<const ValueSegment<CxlumnDataType>>(base_value_segment);
+    Assert(value_segment != nullptr, "Value column must have passed data type.");
 
-    return _self()._on_encode(value_column);
+    return _self()._on_encode(value_segment);
   }
   /**@}*/
 

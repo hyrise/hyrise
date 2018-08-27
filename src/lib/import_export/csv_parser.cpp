@@ -81,14 +81,14 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const std::
 
 std::shared_ptr<Table> CsvParser::_create_table_from_meta() {
   TableCxlumnDefinitions colum_definitions;
-  for (const auto& column_meta : _meta.columns) {
+  for (const auto& column_meta : _meta.cxlumns) {
     auto cxlumn_name = column_meta.name;
     BaseCsvConverter::unescape(cxlumn_name);
 
-    auto column_type = column_meta.type;
-    BaseCsvConverter::unescape(column_type);
+    auto cxlumn_type = column_meta.type;
+    BaseCsvConverter::unescape(cxlumn_type);
 
-    const auto data_type = data_type_to_string.right.at(column_type);
+    const auto data_type = data_type_to_string.right.at(cxlumn_type);
 
     colum_definitions.emplace_back(cxlumn_name, data_type, column_meta.nullable);
   }
@@ -156,10 +156,10 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
 
   for (CxlumnID cxlumn_id{0}; cxlumn_id < cxlumn_count; ++cxlumn_id) {
     const auto is_nullable = table.column_is_nullable(cxlumn_id);
-    const auto column_type = table.column_data_type(cxlumn_id);
+    const auto cxlumn_type = table.cxlumn_data_type(cxlumn_id);
 
     converters.emplace_back(
-        make_unique_by_data_type<BaseCsvConverter, CsvConverter>(column_type, row_count, _meta.config, is_nullable));
+        make_unique_by_data_type<BaseCsvConverter, CsvConverter>(cxlumn_type, row_count, _meta.config, is_nullable));
   }
 
   size_t start = 0;

@@ -10,7 +10,7 @@
 #include "storage/dictionary_column.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
-#include "storage/value_column.hpp"
+#include "storage/value_segment.hpp"
 
 namespace opossum {
 
@@ -26,7 +26,7 @@ std::shared_ptr<PosList> BaseSingleColumnTableScanImpl::scan_chunk(ChunkID chunk
   auto matches_out = std::make_shared<PosList>();
   auto context = std::make_shared<Context>(chunk_id, *matches_out);
 
-  resolve_data_and_column_type(*column, [&](const auto data_type_t, const auto& resolved_column) {
+  resolve_data_and_cxlumn_type(*column, [&](const auto data_type_t, const auto& resolved_column) {
     static_cast<AbstractColumnVisitor*>(this)->handle_column(resolved_column, context);
   });
 
@@ -53,7 +53,7 @@ void BaseSingleColumnTableScanImpl::handle_column(const ReferenceSegment& column
 
     auto new_context = std::make_shared<Context>(chunk_id, matches_out, std::move(mapped_chunk_offsets_ptr));
 
-    resolve_data_and_column_type(*referenced_column, [&](const auto data_type_t, const auto& resolved_column) {
+    resolve_data_and_cxlumn_type(*referenced_column, [&](const auto data_type_t, const auto& resolved_column) {
       static_cast<AbstractColumnVisitor*>(this)->handle_column(resolved_column, new_context);
     });
   }

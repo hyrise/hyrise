@@ -11,8 +11,8 @@
 
 #include "all_type_variant.hpp"
 #include "storage/reference_segment.hpp"
-#include "storage/resolve_encoded_column_type.hpp"
-#include "storage/value_column.hpp"
+#include "storage/resolve_encoded_segment_type.hpp"
+#include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -181,11 +181,11 @@ void resolve_data_type(DataType data_type, const Functor& func) {
  *   void process_column(ValueSegment<T>& column);
  *
  *   template <typename T>
- *   void process_column(DictionaryColumn<T>& column);
+ *   void process_column(DictionarySegment<T>& column);
  *
  *   void process_column(ReferenceSegment& column);
  *
- *   resolve_column_type<T>(base_column, [&](auto& typed_column) {
+ *   resolve_cxlumn_type<T>(base_column, [&](auto& typed_column) {
  *     process_column(typed_column);
  *   });
  */
@@ -195,17 +195,17 @@ using ConstOutIfConstIn = std::conditional_t<std::is_const<In>::value, const Out
 template <typename CxlumnDataType, typename BaseSegmentType, typename Functor>
 // BaseSegmentType allows column to be const and non-const
 std::enable_if_t<std::is_same<BaseSegment, std::remove_const_t<BaseSegmentType>>::value>
-/*void*/ resolve_column_type(BaseSegmentType& column, const Functor& func) {
+/*void*/ resolve_cxlumn_type(BaseSegmentType& column, const Functor& func) {
   using ValueSegmentPtr = ConstOutIfConstIn<BaseSegmentType, ValueSegment<CxlumnDataType>>*;
   using ReferenceSegmentPtr = ConstOutIfConstIn<BaseSegmentType, ReferenceSegment>*;
   using EncodedColumnPtr = ConstOutIfConstIn<BaseSegmentType, BaseEncodedColumn>*;
 
-  if (auto value_column = dynamic_cast<ValueSegmentPtr>(&column)) {
-    func(*value_column);
-  } else if (auto ref_column = dynamic_cast<ReferenceSegmentPtr>(&column)) {
-    func(*ref_column);
+  if (auto value_segment = dynamic_cast<ValueSegmentPtr>(&column)) {
+    func(*value_segment);
+  } else if (auto ref_segment = dynamic_cast<ReferenceSegmentPtr>(&column)) {
+    func(*ref_segment);
   } else if (auto encoded_column = dynamic_cast<EncodedColumnPtr>(&column)) {
-    resolve_encoded_column_type<CxlumnDataType>(*encoded_column, func);
+    resolve_encoded_segment_type<CxlumnDataType>(*encoded_column, func);
   } else {
     Fail("Unrecognized column type encountered.");
   }
@@ -225,22 +225,22 @@ std::enable_if_t<std::is_same<BaseSegment, std::remove_const_t<BaseSegmentType>>
  *   void process_column(hana::basic_type<T> type, ValueSegment<T>& column);
  *
  *   template <typename T>
- *   void process_column(hana::basic_type<T> type, DictionaryColumn<T>& column);
+ *   void process_column(hana::basic_type<T> type, DictionarySegment<T>& column);
  *
  *   template <typename T>
  *   void process_column(hana::basic_type<T> type, ReferenceSegment& column);
  *
- *   resolve_data_and_column_type(base_column, [&](auto type, auto& typed_column) {
+ *   resolve_data_and_cxlumn_type(base_column, [&](auto type, auto& typed_column) {
  *     process_column(type, typed_column);
  *   });
  */
 template <typename Functor, typename BaseSegmentType>  // BaseSegmentType allows column to be const and non-const
 std::enable_if_t<std::is_same<BaseSegment, std::remove_const_t<BaseSegmentType>>::value>
-/*void*/ resolve_data_and_column_type(BaseSegmentType& column, const Functor& func) {
+/*void*/ resolve_data_and_cxlumn_type(BaseSegmentType& column, const Functor& func) {
   resolve_data_type(column.data_type(), [&](auto type) {
     using CxlumnDataType = typename decltype(type)::type;
 
-    resolve_column_type<CxlumnDataType>(column, [&](auto& typed_column) { func(type, typed_column); });
+    resolve_cxlumn_type<CxlumnDataType>(column, [&](auto& typed_column) { func(type, typed_column); });
   });
 }
 

@@ -29,8 +29,8 @@ std::shared_ptr<PosList> ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk
 
   auto matches_out = std::make_shared<PosList>();
 
-  resolve_data_and_column_type(*left_column, [&](auto left_type, auto& typed_left_column) {
-    resolve_data_and_column_type(*right_column, [&](auto right_type, auto& typed_right_column) {
+  resolve_data_and_cxlumn_type(*left_column, [&](auto left_type, auto& typed_left_column) {
+    resolve_data_and_cxlumn_type(*right_column, [&](auto right_type, auto& typed_right_column) {
       using LeftColumnType = typename std::decay<decltype(typed_left_column)>::type;
       using RightColumnType = typename std::decay<decltype(typed_right_column)>::type;
 

@@ -17,13 +17,13 @@
 
 namespace opossum {
 
-Chunk::Chunk(const ChunkSegments& columns, const std::shared_ptr<MvccColumns>& mvcc_columns,
+Chunk::Chunk(const ChunkSegments& columns, const std::shared_ptr<MvccData>& mvcc_data,
              const std::optional<PolymorphicAllocator<Chunk>>& alloc,
              const std::shared_ptr<ChunkAccessCounter>& access_counter)
-    : _columns(columns), _mvcc_columns(mvcc_columns), _access_counter(access_counter) {
+    : _columns(columns), _mvcc_data(mvcc_data), _access_counter(access_counter) {
 #if IS_DEBUG
   const auto chunk_size = columns.empty() ? 0u : columns[0]->size();
-  Assert(!_mvcc_columns || _mvcc_columns->size() == chunk_size, "Invalid MvccColumns size");
+  Assert(!_mvcc_data || _mvcc_data->size() == chunk_size, "Invalid MvccData size");
   for (const auto& column : columns) {
     Assert(column->size() == chunk_size, "Columns don't have the same length");
   }
@@ -44,7 +44,7 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
   DebugAssert(is_mutable(), "Can't append to immutable Chunk");
 
   // Do this first to ensure that the first thing to exist in a row are the MVCC columns.
-  if (has_mvcc_columns()) get_scoped_mvcc_columns_lock()->grow_by(1u, MvccColumns::MAX_COMMIT_ID);
+  if (has_mvcc_data()) get_scoped_mvcc_data_lock()->grow_by(1u, MvccData::MAX_COMMIT_ID);
 
   // The added values, i.e., a new row, must have the same number of attributes as the table.
   DebugAssert((_columns.size() == values.size()),
@@ -72,24 +72,24 @@ uint32_t Chunk::size() const {
   return first_column->size();
 }
 
-bool Chunk::has_mvcc_columns() const { return _mvcc_columns != nullptr; }
+bool Chunk::has_mvcc_data() const { return _mvcc_data != nullptr; }
 bool Chunk::has_access_counter() const { return _access_counter != nullptr; }
 
-SharedScopedLockingPtr<MvccColumns> Chunk::get_scoped_mvcc_columns_lock() {
-  DebugAssert((has_mvcc_columns()), "Chunk does not have mvcc columns");
+SharedScopedLockingPtr<MvccData> Chunk::get_scoped_mvcc_data_lock() {
+  DebugAssert((has_mvcc_data()), "Chunk does not have mvcc columns");
 
-  return {*_mvcc_columns, _mvcc_columns->_mutex};
+  return {*_mvcc_data, _mvcc_data->_mutex};
 }
 
-SharedScopedLockingPtr<const MvccColumns> Chunk::get_scoped_mvcc_columns_lock() const {
-  DebugAssert((has_mvcc_columns()), "Chunk does not have mvcc columns");
+SharedScopedLockingPtr<const MvccData> Chunk::get_scoped_mvcc_data_lock() const {
+  DebugAssert((has_mvcc_data()), "Chunk does not have mvcc columns");
 
-  return {*_mvcc_columns, _mvcc_columns->_mutex};
+  return {*_mvcc_data, _mvcc_data->_mutex};
 }
 
-std::shared_ptr<MvccColumns> Chunk::mvcc_columns() const { return _mvcc_columns; }
+std::shared_ptr<MvccData> Chunk::mvcc_data() const { return _mvcc_data; }
 
-void Chunk::set_mvcc_columns(const std::shared_ptr<MvccColumns>& mvcc_columns) { _mvcc_columns = mvcc_columns; }
+void Chunk::set_mvcc_data(const std::shared_ptr<MvccData>& mvcc_data) { _mvcc_data = mvcc_data; }
 
 std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(
     const std::vector<std::shared_ptr<const BaseSegment>>& columns) const {
@@ -171,11 +171,11 @@ size_t Chunk::estimate_memory_usage() const {
   // TODO(anybody) Index memory usage missing
   // TODO(anybody) ChunkAccessCounter memory usage missing
 
-  if (_mvcc_columns) {
-    bytes += sizeof(_mvcc_columns->tids) + sizeof(_mvcc_columns->begin_cids) + sizeof(_mvcc_columns->end_cids);
-    bytes += _mvcc_columns->tids.size() * sizeof(decltype(_mvcc_columns->tids)::value_type);
-    bytes += _mvcc_columns->begin_cids.size() * sizeof(decltype(_mvcc_columns->begin_cids)::value_type);
-    bytes += _mvcc_columns->end_cids.size() * sizeof(decltype(_mvcc_columns->end_cids)::value_type);
+  if (_mvcc_data) {
+    bytes += sizeof(_mvcc_data->tids) + sizeof(_mvcc_data->begin_cids) + sizeof(_mvcc_data->end_cids);
+    bytes += _mvcc_data->tids.size() * sizeof(decltype(_mvcc_data->tids)::value_type);
+    bytes += _mvcc_data->begin_cids.size() * sizeof(decltype(_mvcc_data->begin_cids)::value_type);
+    bytes += _mvcc_data->end_cids.size() * sizeof(decltype(_mvcc_data->end_cids)::value_type);
   }
 
   return bytes;

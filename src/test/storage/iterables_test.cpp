@@ -14,8 +14,8 @@
 #include "storage/fixed_string_dictionary_column.hpp"
 #include "storage/reference_segment/reference_segment_iterable.hpp"
 #include "storage/table.hpp"
-#include "storage/value_column.hpp"
-#include "storage/value_column/value_column_iterable.hpp"
+#include "storage/value_segment.hpp"
+#include "storage/value_segment/value_segment_iterable.hpp"
 
 namespace opossum {
 
@@ -133,15 +133,15 @@ TEST_F(IterablesTest, ValueSegmentNullableReferencedIteratorWithIterators) {
   EXPECT_EQ(sum, 13'579u);
 }
 
-TEST_F(IterablesTest, DictionaryColumnIteratorWithIterators) {
+TEST_F(IterablesTest, DictionarySegmentIteratorWithIterators) {
   ChunkEncoder::encode_all_chunks(table, EncodingType::Dictionary);
 
   auto chunk = table->get_chunk(ChunkID{0u});
 
   auto column = chunk->get_column(CxlumnID{0u});
-  auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<int>>(column);
+  auto dict_column = std::dynamic_pointer_cast<const DictionarySegment<int>>(column);
 
-  auto iterable = DictionaryColumnIterable<int, pmr_vector<int>>{*dict_column};
+  auto iterable = DictionarySegmentIterable<int, pmr_vector<int>>{*dict_column};
 
   auto sum = uint32_t{0};
   iterable.with_iterators(SumUpWithIterator{sum});
@@ -149,17 +149,17 @@ TEST_F(IterablesTest, DictionaryColumnIteratorWithIterators) {
   EXPECT_EQ(sum, 24'825u);
 }
 
-TEST_F(IterablesTest, DictionaryColumnReferencedIteratorWithIterators) {
+TEST_F(IterablesTest, DictionarySegmentReferencedIteratorWithIterators) {
   ChunkEncoder::encode_all_chunks(table, EncodingType::Dictionary);
 
   auto chunk = table->get_chunk(ChunkID{0u});
 
   auto column = chunk->get_column(CxlumnID{0u});
-  auto dict_column = std::dynamic_pointer_cast<const DictionaryColumn<int>>(column);
+  auto dict_column = std::dynamic_pointer_cast<const DictionarySegment<int>>(column);
 
   auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
 
-  auto iterable = DictionaryColumnIterable<int, pmr_vector<int>>{*dict_column};
+  auto iterable = DictionarySegmentIterable<int, pmr_vector<int>>{*dict_column};
 
   auto sum = uint32_t{0};
   iterable.with_iterators(&chunk_offsets, SumUpWithIterator{sum});
@@ -167,15 +167,15 @@ TEST_F(IterablesTest, DictionaryColumnReferencedIteratorWithIterators) {
   EXPECT_EQ(sum, 12'480u);
 }
 
-TEST_F(IterablesTest, FixedStringDictionaryColumnIteratorWithIterators) {
+TEST_F(IterablesTest, FixedStringDictionarySegmentIteratorWithIterators) {
   ChunkEncoder::encode_all_chunks(table_strings, EncodingType::FixedStringDictionary);
 
   auto chunk = table_strings->get_chunk(ChunkID{0u});
 
   auto column = chunk->get_column(CxlumnID{0u});
-  auto dict_column = std::dynamic_pointer_cast<const FixedStringDictionaryColumn<std::string>>(column);
+  auto dict_column = std::dynamic_pointer_cast<const FixedStringDictionarySegment<std::string>>(column);
 
-  auto iterable = DictionaryColumnIterable<std::string, FixedStringVector>{*dict_column};
+  auto iterable = DictionarySegmentIterable<std::string, FixedStringVector>{*dict_column};
 
   auto concatenate = std::string();
   iterable.with_iterators(AppendWithIterator{concatenate});
@@ -183,17 +183,17 @@ TEST_F(IterablesTest, FixedStringDictionaryColumnIteratorWithIterators) {
   EXPECT_EQ(concatenate, "xxxwwwyyyuuutttzzz");
 }
 
-TEST_F(IterablesTest, FixedStringDictionaryColumnReferencedIteratorWithIterators) {
+TEST_F(IterablesTest, FixedStringDictionarySegmentReferencedIteratorWithIterators) {
   ChunkEncoder::encode_all_chunks(table_strings, EncodingType::FixedStringDictionary);
 
   auto chunk = table_strings->get_chunk(ChunkID{0u});
 
   auto column = chunk->get_column(CxlumnID{0u});
-  auto dict_column = std::dynamic_pointer_cast<const FixedStringDictionaryColumn<std::string>>(column);
+  auto dict_column = std::dynamic_pointer_cast<const FixedStringDictionarySegment<std::string>>(column);
 
   auto chunk_offsets = std::vector<ChunkOffsetMapping>{{0u, 0u}, {1u, 2u}, {2u, 3u}};
 
-  auto iterable = DictionaryColumnIterable<std::string, FixedStringVector>{*dict_column};
+  auto iterable = DictionarySegmentIterable<std::string, FixedStringVector>{*dict_column};
 
   auto concatenate = std::string();
   iterable.with_iterators(&chunk_offsets, AppendWithIterator{concatenate});

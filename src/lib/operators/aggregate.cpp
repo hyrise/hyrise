@@ -211,7 +211,7 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, CxlumnID column_index, const
   auto& results = *context.results;
   const auto& hash_keys = keys_per_chunk[chunk_id];
 
-  resolve_column_type<CxlumnDataType>(
+  resolve_cxlumn_type<CxlumnDataType>(
       base_column, [&results, &hash_keys, chunk_id, aggregator](const auto& typed_column) {
         auto iterable = create_iterable_from_column<CxlumnDataType>(typed_column);
 
@@ -269,7 +269,7 @@ void Aggregate::_aggregate() {
       }
     } else {
       DebugAssert(*aggregate.column < input_table->cxlumn_count(), "Aggregate column index out of bounds");
-      if (input_table->column_data_type(*aggregate.column) == DataType::String &&
+      if (input_table->cxlumn_data_type(*aggregate.column) == DataType::String &&
           (aggregate.function == AggregateFunction::Sum || aggregate.function == AggregateFunction::Avg)) {
         Fail("Aggregate: Cannot calculate SUM or AVG on string column");
       }
@@ -325,7 +325,7 @@ void Aggregate::_aggregate() {
   for (size_t group_column_index = 0; group_column_index < _groupby_cxlumn_ids.size(); ++group_column_index) {
     jobs.emplace_back(std::make_shared<JobTask>([&input_table, group_column_index, &keys_per_chunk, this]() {
       const auto cxlumn_id = _groupby_cxlumn_ids.at(group_column_index);
-      const auto data_type = input_table->column_data_type(cxlumn_id);
+      const auto data_type = input_table->cxlumn_data_type(cxlumn_id);
 
       resolve_data_type(data_type, [&](auto type) {
         using CxlumnDataType = typename decltype(type)::type;
@@ -341,7 +341,7 @@ void Aggregate::_aggregate() {
           const auto chunk_in = input_table->get_chunk(chunk_id);
           const auto base_column = chunk_in->get_column(cxlumn_id);
 
-          resolve_column_type<CxlumnDataType>(*base_column, [&](auto& typed_column) {
+          resolve_cxlumn_type<CxlumnDataType>(*base_column, [&](auto& typed_column) {
             auto iterable = create_iterable_from_column<CxlumnDataType>(typed_column);
 
             ChunkOffset chunk_offset{0};
@@ -413,7 +413,7 @@ void Aggregate::_aggregate() {
       _contexts_per_column[cxlumn_id] = context;
       continue;
     }
-    auto data_type = input_table->column_data_type(*aggregate.column);
+    auto data_type = input_table->cxlumn_data_type(*aggregate.column);
     _contexts_per_column[cxlumn_id] = _create_aggregate_context<AggregateKey>(data_type, aggregate.function);
   }
 
@@ -481,7 +481,7 @@ void Aggregate::_aggregate() {
         }
 
         auto base_column = chunk_in->get_column(*aggregate.column);
-        auto data_type = input_table->column_data_type(*aggregate.column);
+        auto data_type = input_table->cxlumn_data_type(*aggregate.column);
 
         /*
         Invoke correct aggregator for each column
@@ -526,10 +526,10 @@ void Aggregate::_aggregate() {
   // add group by columns
   for (const auto cxlumn_id : _groupby_cxlumn_ids) {
     _output_cxlumn_definitions.emplace_back(input_table->cxlumn_name(cxlumn_id),
-                                            input_table->column_data_type(cxlumn_id));
+                                            input_table->cxlumn_data_type(cxlumn_id));
 
     auto groupby_column =
-        make_shared_by_data_type<BaseSegment, ValueSegment>(input_table->column_data_type(cxlumn_id), true);
+        make_shared_by_data_type<BaseSegment, ValueSegment>(input_table->cxlumn_data_type(cxlumn_id), true);
     _groupby_columns.push_back(groupby_column);
     _output_columns.push_back(groupby_column);
   }
@@ -560,7 +560,7 @@ void Aggregate::_aggregate() {
     const auto column = aggregate.column;
 
     // Output column for COUNT(*). int is chosen arbitrarily.
-    const auto data_type = !column ? DataType::Int : input_table->column_data_type(*column);
+    const auto data_type = !column ? DataType::Int : input_table->cxlumn_data_type(*column);
 
     resolve_data_type(data_type, [&, column_index](auto type) {
       _write_aggregate_output<AggregateKey>(type, column_index, aggregate.function);
@@ -750,7 +750,7 @@ void Aggregate::write_aggregate_output(CxlumnID column_index) {
 
   if (aggregate_data_type == DataType::Null) {
     // if not specified, it’s the input column’s type
-    aggregate_data_type = input_table_left()->column_data_type(*aggregate.column);
+    aggregate_data_type = input_table_left()->cxlumn_data_type(*aggregate.column);
   }
 
   // Generate column name, TODO(anybody), actually, the AggregateExpression can do this, but the Aggregate operator

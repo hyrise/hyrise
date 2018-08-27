@@ -12,17 +12,17 @@
 namespace opossum {
 
 template <typename T>
-DictionaryColumn<T>::DictionaryColumn(const std::shared_ptr<const pmr_vector<T>>& dictionary,
+DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T>>& dictionary,
                                       const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
                                       const ValueID null_value_id)
-    : BaseDictionaryColumn(data_type_from_type<T>()),
+    : BaseDictionarySegment(data_type_from_type<T>()),
       _dictionary{dictionary},
       _attribute_vector{attribute_vector},
       _null_value_id{null_value_id},
       _decoder{_attribute_vector->create_base_decoder()} {}
 
 template <typename T>
-const AllTypeVariant DictionaryColumn<T>::operator[](const ChunkOffset chunk_offset) const {
+const AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {
   PerformanceWarning("operator[] used");
 
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
@@ -37,43 +37,43 @@ const AllTypeVariant DictionaryColumn<T>::operator[](const ChunkOffset chunk_off
 }
 
 template <typename T>
-std::shared_ptr<const pmr_vector<T>> DictionaryColumn<T>::dictionary() const {
+std::shared_ptr<const pmr_vector<T>> DictionarySegment<T>::dictionary() const {
   return _dictionary;
 }
 
 template <typename T>
-size_t DictionaryColumn<T>::size() const {
+size_t DictionarySegment<T>::size() const {
   return _attribute_vector->size();
 }
 
 template <typename T>
-std::shared_ptr<BaseSegment> DictionaryColumn<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+std::shared_ptr<BaseSegment> DictionarySegment<T>::copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
   auto new_attribute_vector_ptr = _attribute_vector->copy_using_allocator(alloc);
   auto new_attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(new_attribute_vector_ptr));
   auto new_dictionary = pmr_vector<T>{*_dictionary, alloc};
   auto new_dictionary_ptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(new_dictionary));
-  return std::allocate_shared<DictionaryColumn<T>>(alloc, new_dictionary_ptr, new_attribute_vector_sptr,
+  return std::allocate_shared<DictionarySegment<T>>(alloc, new_dictionary_ptr, new_attribute_vector_sptr,
                                                    _null_value_id);
 }
 
 template <typename T>
-size_t DictionaryColumn<T>::estimate_memory_usage() const {
+size_t DictionarySegment<T>::estimate_memory_usage() const {
   return sizeof(*this) + _dictionary->size() * sizeof(typename decltype(_dictionary)::element_type::value_type) +
          _attribute_vector->data_size();
 }
 
 template <typename T>
-CompressedVectorType DictionaryColumn<T>::compressed_vector_type() const {
+CompressedVectorType DictionarySegment<T>::compressed_vector_type() const {
   return _attribute_vector->type();
 }
 
 template <typename T>
-EncodingType DictionaryColumn<T>::encoding_type() const {
+EncodingType DictionarySegment<T>::encoding_type() const {
   return EncodingType::Dictionary;
 }
 
 template <typename T>
-ValueID DictionaryColumn<T>::lower_bound(const AllTypeVariant& value) const {
+ValueID DictionarySegment<T>::lower_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
   const auto typed_value = type_cast<T>(value);
@@ -84,7 +84,7 @@ ValueID DictionaryColumn<T>::lower_bound(const AllTypeVariant& value) const {
 }
 
 template <typename T>
-ValueID DictionaryColumn<T>::upper_bound(const AllTypeVariant& value) const {
+ValueID DictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
   DebugAssert(!variant_is_null(value), "Null value passed.");
 
   const auto typed_value = type_cast<T>(value);
@@ -95,20 +95,20 @@ ValueID DictionaryColumn<T>::upper_bound(const AllTypeVariant& value) const {
 }
 
 template <typename T>
-size_t DictionaryColumn<T>::unique_values_count() const {
+size_t DictionarySegment<T>::unique_values_count() const {
   return _dictionary->size();
 }
 
 template <typename T>
-std::shared_ptr<const BaseCompressedVector> DictionaryColumn<T>::attribute_vector() const {
+std::shared_ptr<const BaseCompressedVector> DictionarySegment<T>::attribute_vector() const {
   return _attribute_vector;
 }
 
 template <typename T>
-const ValueID DictionaryColumn<T>::null_value_id() const {
+const ValueID DictionarySegment<T>::null_value_id() const {
   return _null_value_id;
 }
 
-EXPLICITLY_INSTANTIATE_DATA_TYPES(DictionaryColumn);
+EXPLICITLY_INSTANTIATE_DATA_TYPES(DictionarySegment);
 
 }  // namespace opossum

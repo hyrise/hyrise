@@ -12,10 +12,10 @@ namespace opossum {
 
 class BaseSegment;
 class ARTNode;
-class BaseDictionaryColumn;
+class BaseDictionarySegment;
 
 /**
- * The AdaptiveRadixTreeIndex (ART) currently works on single DictionaryColumns. Conceptually it also works on
+ * The AdaptiveRadixTreeIndex (ART) currently works on single DictionarySegments. Conceptually it also works on
  * ValueSegments.
  * The ART does not compare full keys, but only partial keys in each node: On level n, the n-th byte of the full key
  * is compared.
@@ -81,7 +81,7 @@ class AdaptiveRadixTreeIndex : public BaseIndex {
 
   std::vector<std::shared_ptr<const BaseSegment>> _get_index_columns() const;
 
-  const std::shared_ptr<const BaseDictionaryColumn> _index_column;
+  const std::shared_ptr<const BaseDictionarySegment> _index_column;
   std::vector<ChunkOffset> _chunk_offsets;
   std::shared_ptr<ARTNode> _root;
 };

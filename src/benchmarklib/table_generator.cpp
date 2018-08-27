@@ -18,7 +18,7 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/numa_placement_manager.hpp"
 #include "storage/table.hpp"
-#include "storage/value_column.hpp"
+#include "storage/value_segment.hpp"
 
 #include "types.hpp"
 
@@ -109,7 +109,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
 
   // Base allocators if we don't use multiple NUMA nodes
   auto allocator_ptr_base_column = PolymorphicAllocator<std::shared_ptr<BaseSegment>>{};
-  auto allocator_value_column_int = PolymorphicAllocator<ValueSegment<int>>{};
+  auto allocator_value_segment_int = PolymorphicAllocator<ValueSegment<int>>{};
   auto allocator_chunk = PolymorphicAllocator<Chunk>{};
   auto allocator_int = PolymorphicAllocator<int>{};
 
@@ -120,7 +120,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
 
       // create allocators for the node
       allocator_ptr_base_column = PolymorphicAllocator<std::shared_ptr<BaseSegment>>{memory_resource};
-      allocator_value_column_int = PolymorphicAllocator<ValueSegment<int>>{memory_resource};
+      allocator_value_segment_int = PolymorphicAllocator<ValueSegment<int>>{memory_resource};
       allocator_chunk = PolymorphicAllocator<Chunk>{memory_resource};
       allocator_int = PolymorphicAllocator<int>{memory_resource};
     }
@@ -173,7 +173,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
       }
 
       // add values to column in chunk, reset value vector
-      columns.push_back(std::allocate_shared<ValueSegment<int>>(allocator_value_column_int,
+      columns.push_back(std::allocate_shared<ValueSegment<int>>(allocator_value_segment_int,
                                                                std::move(value_vectors[column_index]), allocator_int));
       value_vectors[column_index] = tbb::concurrent_vector<int>(chunk_size);
 

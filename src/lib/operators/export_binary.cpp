@@ -145,17 +145,17 @@ void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std:
   export_value(ofstream, static_cast<ChunkID>(table->chunk_count()));
   export_value(ofstream, static_cast<CxlumnID>(table->cxlumn_count()));
 
-  std::vector<std::string> column_types(table->cxlumn_count());
+  std::vector<std::string> cxlumn_types(table->cxlumn_count());
   std::vector<std::string> cxlumn_names(table->cxlumn_count());
   std::vector<bool> columns_are_nullable(table->cxlumn_count());
 
   // Transform column types and copy column names in order to write them to the file.
   for (CxlumnID cxlumn_id{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
-    column_types[cxlumn_id] = data_type_to_string.left.at(table->column_data_type(cxlumn_id));
+    cxlumn_types[cxlumn_id] = data_type_to_string.left.at(table->cxlumn_data_type(cxlumn_id));
     cxlumn_names[cxlumn_id] = table->cxlumn_name(cxlumn_id);
     columns_are_nullable[cxlumn_id] = table->column_is_nullable(cxlumn_id);
   }
-  export_values(ofstream, column_types);
+  export_values(ofstream, cxlumn_types);
   export_values(ofstream, columns_are_nullable);
   export_string_values(ofstream, cxlumn_names);
 }
@@ -170,8 +170,8 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
   // Iterating over all columns of this chunk and exporting them
   for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk->cxlumn_count(); cxlumn_id++) {
     auto visitor =
-        make_unique_by_data_type<AbstractColumnVisitor, ExportBinaryVisitor>(table->column_data_type(cxlumn_id));
-    resolve_data_and_column_type(
+        make_unique_by_data_type<AbstractColumnVisitor, ExportBinaryVisitor>(table->cxlumn_data_type(cxlumn_id));
+    resolve_data_and_cxlumn_type(
         *chunk->get_column(cxlumn_id),
         [&](const auto data_type_t, const auto& resolved_column) { visitor->handle_column(resolved_column, context); });
   }
@@ -183,7 +183,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseValueSegment&
   auto context = std::static_pointer_cast<ExportContext>(base_context);
   const auto& column = static_cast<const ValueSegment<T>&>(base_column);
 
-  export_value(context->ofstream, BinaryColumnType::value_column);
+  export_value(context->ofstream, BinaryColumnType::value_segment);
 
   if (column.is_nullable()) {
     export_values(context->ofstream, column.null_values());
@@ -193,39 +193,39 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseValueSegment&
 }
 
 template <typename T>
-void ExportBinary::ExportBinaryVisitor<T>::handle_column(const ReferenceSegment& ref_column,
+void ExportBinary::ExportBinaryVisitor<T>::handle_column(const ReferenceSegment& ref_segment,
                                                          std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
   // We materialize reference columns and save them as value columns
-  export_value(context->ofstream, BinaryColumnType::value_column);
+  export_value(context->ofstream, BinaryColumnType::value_segment);
 
   // Unfortunately, we have to iterate over all values of the reference column
   // to materialize its contents. Then we can write them to the file
-  for (ChunkOffset row = 0; row < ref_column.size(); ++row) {
-    export_value(context->ofstream, type_cast<T>(ref_column[row]));
+  for (ChunkOffset row = 0; row < ref_segment.size(); ++row) {
+    export_value(context->ofstream, type_cast<T>(ref_segment[row]));
   }
 }
 
 // handle_column implementation for string columns
 template <>
-void ExportBinary::ExportBinaryVisitor<std::string>::handle_column(const ReferenceSegment& ref_column,
+void ExportBinary::ExportBinaryVisitor<std::string>::handle_column(const ReferenceSegment& ref_segment,
                                                                    std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
   // We materialize reference columns and save them as value columns
-  export_value(context->ofstream, BinaryColumnType::value_column);
+  export_value(context->ofstream, BinaryColumnType::value_segment);
 
   // If there is no data, we can skip all of the coming steps.
-  if (ref_column.size() == 0) return;
+  if (ref_segment.size() == 0) return;
 
   std::stringstream values;
   std::string value;
-  std::vector<size_t> string_lengths(ref_column.size());
+  std::vector<size_t> string_lengths(ref_segment.size());
 
   // We export the values materialized
-  for (ChunkOffset row = 0; row < ref_column.size(); ++row) {
-    value = type_cast<std::string>(ref_column[row]);
+  for (ChunkOffset row = 0; row < ref_segment.size(); ++row) {
+    value = type_cast<std::string>(ref_segment[row]);
     string_lengths[row] = value.length();
     values << value;
   }
@@ -235,7 +235,7 @@ void ExportBinary::ExportBinaryVisitor<std::string>::handle_column(const Referen
 }
 
 template <typename T>
-void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseDictionaryColumn& base_column,
+void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseDictionarySegment& base_column,
                                                          std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
@@ -273,13 +273,13 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_column(const BaseDictionaryCol
   export_value(context->ofstream, static_cast<const AttributeVectorWidth>(attribute_vector_width));
 
   if (base_column.encoding_type() == EncodingType::FixedStringDictionary) {
-    const auto& column = static_cast<const FixedStringDictionaryColumn<std::string>&>(base_column);
+    const auto& column = static_cast<const FixedStringDictionarySegment<std::string>&>(base_column);
 
     // Write the dictionary size and dictionary
     export_value(context->ofstream, static_cast<ValueID>(column.dictionary()->size()));
     export_values(context->ofstream, *column.dictionary());
   } else {
-    const auto& column = static_cast<const DictionaryColumn<T>&>(base_column);
+    const auto& column = static_cast<const DictionarySegment<T>&>(base_column);
 
     // Write the dictionary size and dictionary
     export_value(context->ofstream, static_cast<ValueID>(column.dictionary()->size()));

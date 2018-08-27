@@ -46,15 +46,15 @@ std::string LQPSelectExpression::as_cxlumn_name() const {
 }
 
 DataType LQPSelectExpression::data_type() const {
-  Assert(lqp->column_expressions().size() == 1,
+  Assert(lqp->cxlumn_expressions().size() == 1,
          "Can only determine the DataType of SelectExpressions that return exactly one column");
-  return lqp->column_expressions()[0]->data_type();
+  return lqp->cxlumn_expressions()[0]->data_type();
 }
 
 bool LQPSelectExpression::is_nullable() const {
-  Assert(lqp->column_expressions().size() == 1,
+  Assert(lqp->cxlumn_expressions().size() == 1,
          "Can only determine the nullability of SelectExpressions that return exactly one column");
-  return lqp->column_expressions()[0]->is_nullable();
+  return lqp->cxlumn_expressions()[0]->is_nullable();
 }
 
 bool LQPSelectExpression::_shallow_equals(const AbstractExpression& expression) const {

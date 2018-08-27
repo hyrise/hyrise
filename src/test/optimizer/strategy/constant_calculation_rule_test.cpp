@@ -36,13 +36,13 @@ class ConstantCalculationRuleTest : public StrategyBaseTest {
     rule = std::make_shared<ConstantCalculationRule>();
 
     stored_table_node = StoredTableNode::make("table_a");
-    a = stored_table_node->get_column("a");
-    b = stored_table_node->get_column("b");
+    a = stored_table_node->get_cxlumn("a");
+    b = stored_table_node->get_cxlumn("b");
   }
 
   std::shared_ptr<ConstantCalculationRule> rule;
   std::shared_ptr<StoredTableNode> stored_table_node;
-  LQPColumnReference a, b;
+  LQPCxlumnReference a, b;
 };
 
 TEST_F(ConstantCalculationRuleTest, ResolveExpressionTest) {

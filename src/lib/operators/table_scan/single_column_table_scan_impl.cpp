@@ -7,7 +7,7 @@
 #include "storage/base_dictionary_column.hpp"
 #include "storage/column_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/create_iterable_from_column.hpp"
-#include "storage/resolve_encoded_column_type.hpp"
+#include "storage/resolve_encoded_segment_type.hpp"
 
 #include "resolve_type.hpp"
 #include "type_comparison.hpp"
@@ -42,9 +42,9 @@ void SingleColumnTableScanImpl::handle_column(const BaseValueSegment& base_colum
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
   const auto chunk_id = context->_chunk_id;
 
-  const auto left_column_type = _in_table->column_data_type(_left_cxlumn_id);
+  const auto left_cxlumn_type = _in_table->cxlumn_data_type(_left_cxlumn_id);
 
-  resolve_data_type(left_column_type, [&](auto type) {
+  resolve_data_type(left_cxlumn_type, [&](auto type) {
     using CxlumnDataType = typename decltype(type)::type;
 
     auto& left_column = static_cast<const ValueSegment<CxlumnDataType>&>(base_column);
@@ -67,12 +67,12 @@ void SingleColumnTableScanImpl::handle_column(const BaseEncodedColumn& base_colu
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
   const auto chunk_id = context->_chunk_id;
 
-  const auto left_column_type = _in_table->column_data_type(_left_cxlumn_id);
+  const auto left_cxlumn_type = _in_table->cxlumn_data_type(_left_cxlumn_id);
 
-  resolve_data_type(left_column_type, [&](auto type) {
+  resolve_data_type(left_cxlumn_type, [&](auto type) {
     using Type = typename decltype(type)::type;
 
-    resolve_encoded_column_type<Type>(base_column, [&](const auto& typed_column) {
+    resolve_encoded_segment_type<Type>(base_column, [&](const auto& typed_column) {
       auto left_column_iterable = create_iterable_from_column(typed_column);
 
       left_column_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
@@ -84,7 +84,7 @@ void SingleColumnTableScanImpl::handle_column(const BaseEncodedColumn& base_colu
   });
 }
 
-void SingleColumnTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
+void SingleColumnTableScanImpl::handle_column(const BaseDictionarySegment& base_column,
                                               std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
@@ -142,7 +142,7 @@ void SingleColumnTableScanImpl::handle_column(const BaseDictionaryColumn& base_c
   });
 }
 
-ValueID SingleColumnTableScanImpl::_get_search_value_id(const BaseDictionaryColumn& column) const {
+ValueID SingleColumnTableScanImpl::_get_search_value_id(const BaseDictionarySegment& column) const {
   switch (_predicate_condition) {
     case PredicateCondition::Equals:
     case PredicateCondition::NotEquals:
@@ -159,7 +159,7 @@ ValueID SingleColumnTableScanImpl::_get_search_value_id(const BaseDictionaryColu
   }
 }
 
-bool SingleColumnTableScanImpl::_right_value_matches_all(const BaseDictionaryColumn& column,
+bool SingleColumnTableScanImpl::_right_value_matches_all(const BaseDictionarySegment& column,
                                                          const ValueID search_value_id) const {
   switch (_predicate_condition) {
     case PredicateCondition::Equals:
@@ -181,7 +181,7 @@ bool SingleColumnTableScanImpl::_right_value_matches_all(const BaseDictionaryCol
   }
 }
 
-bool SingleColumnTableScanImpl::_right_value_matches_none(const BaseDictionaryColumn& column,
+bool SingleColumnTableScanImpl::_right_value_matches_none(const BaseDictionarySegment& column,
                                                           const ValueID search_value_id) const {
   switch (_predicate_condition) {
     case PredicateCondition::Equals:

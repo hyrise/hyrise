@@ -46,7 +46,7 @@ namespace opossum {
 
 /** We use vectors with custom allocators, e.g, to bind the data object to
  * specific NUMA nodes. This is mainly used in the data objects, i.e.,
- * Chunk, ValueSegment, DictionaryColumn, ReferenceSegment and attribute vectors.
+ * Chunk, ValueSegment, DictionarySegment, ReferenceSegment and attribute vectors.
  * The PolymorphicAllocator provides an abstraction over several allocation
  * methods by adapting to subclasses of boost::container::pmr::memory_resource.
  */
@@ -149,7 +149,7 @@ constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() -
 // ... in ReferenceSegments
 const RowID NULL_ROW_ID = RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};  // TODO(anyone): Couldn’t use constexpr here
 
-// ... in DictionaryColumns
+// ... in DictionarySegments
 constexpr ValueID NULL_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
 
 constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};

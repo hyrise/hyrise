@@ -8,7 +8,7 @@
 #include "import_export/binary.hpp"
 #include "storage/abstract_column_visitor.hpp"
 #include "storage/reference_segment.hpp"
-#include "storage/value_column.hpp"
+#include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -71,7 +71,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
    * Row count             | ChunkOffset                           |  4
    *
    * Next, it dumps the contents of the columns in the respective format (depending on the type
-   * of the column, such as ReferenceSegment, DictionaryColumn, ValueSegment).
+   * of the column, such as ReferenceSegment, DictionarySegment, ValueSegment).
    *
    * @param table The table we are currently exporting
    * @param ofstream The output stream to write to
@@ -134,7 +134,7 @@ class ExportBinary::ExportBinaryVisitor : public AbstractColumnVisitor {
    * @param base_column The Column to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
-  void handle_column(const ReferenceSegment& ref_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
+  void handle_column(const ReferenceSegment& ref_segment, std::shared_ptr<ColumnVisitorContext> base_context) override;
 
   /**
    * Dictionary Columns are dumped with the following layout:
@@ -158,7 +158,7 @@ class ExportBinary::ExportBinaryVisitor : public AbstractColumnVisitor {
    * @param base_column The Column to export
    * @param base_context A context in the form of an ExportContext. Contains a reference to the ofstream.
    */
-  void handle_column(const BaseDictionaryColumn& base_column,
+  void handle_column(const BaseDictionarySegment& base_column,
                      std::shared_ptr<ColumnVisitorContext> base_context) override;
 
   void handle_column(const BaseEncodedColumn& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;

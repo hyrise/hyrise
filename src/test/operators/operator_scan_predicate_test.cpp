@@ -12,14 +12,14 @@ class OperatorScanPredicateTest : public ::testing::Test {
  public:
   void SetUp() override {
     node = MockNode::make(
-        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}, {DataType::String, "c"}});
-    a = node->get_column("a");
-    b = node->get_column("b");
-    c = node->get_column("c");
+        MockNode::CxlumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}, {DataType::String, "c"}});
+    a = node->get_cxlumn("a");
+    b = node->get_cxlumn("b");
+    c = node->get_cxlumn("c");
   }
 
   std::shared_ptr<MockNode> node;
-  LQPColumnReference a, b, c;
+  LQPCxlumnReference a, b, c;
 };
 
 TEST_F(OperatorScanPredicateTest, FromExpression) {

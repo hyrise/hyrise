@@ -17,9 +17,9 @@ TableStatistics generate_table_statistics(const Table& table) {
   cxlumn_statistics.reserve(table.cxlumn_count());
 
   for (CxlumnID cxlumn_id{0}; cxlumn_id < table.cxlumn_count(); ++cxlumn_id) {
-    const auto column_data_type = table.column_data_types()[cxlumn_id];
+    const auto cxlumn_data_type = table.cxlumn_data_types()[cxlumn_id];
 
-    resolve_data_type(column_data_type, [&](auto type) {
+    resolve_data_type(cxlumn_data_type, [&](auto type) {
       using CxlumnDataType = typename decltype(type)::type;
       cxlumn_statistics.emplace_back(generate_cxlumn_statistics<CxlumnDataType>(table, cxlumn_id));
     });

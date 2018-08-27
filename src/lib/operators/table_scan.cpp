@@ -120,13 +120,13 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
         for (CxlumnID cxlumn_id{0u}; cxlumn_id < _in_table->cxlumn_count(); ++cxlumn_id) {
           auto column_in = chunk_in->get_column(cxlumn_id);
 
-          auto ref_column_in = std::dynamic_pointer_cast<const ReferenceSegment>(column_in);
-          DebugAssert(ref_column_in != nullptr, "All columns should be of type ReferenceSegment.");
+          auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(column_in);
+          DebugAssert(ref_segment_in != nullptr, "All columns should be of type ReferenceSegment.");
 
-          const auto pos_list_in = ref_column_in->pos_list();
+          const auto pos_list_in = ref_segment_in->pos_list();
 
-          const auto table_out = ref_column_in->referenced_table();
-          const auto cxlumn_id_out = ref_column_in->referenced_cxlumn_id();
+          const auto table_out = ref_segment_in->referenced_table();
+          const auto cxlumn_id_out = ref_segment_in->referenced_cxlumn_id();
 
           auto& filtered_pos_list = filtered_pos_lists[pos_list_in];
 
@@ -140,13 +140,13 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
             }
           }
 
-          auto ref_column_out = std::make_shared<ReferenceSegment>(table_out, cxlumn_id_out, filtered_pos_list);
-          out_columns.push_back(ref_column_out);
+          auto ref_segment_out = std::make_shared<ReferenceSegment>(table_out, cxlumn_id_out, filtered_pos_list);
+          out_columns.push_back(ref_segment_out);
         }
       } else {
         for (CxlumnID cxlumn_id{0u}; cxlumn_id < _in_table->cxlumn_count(); ++cxlumn_id) {
-          auto ref_column_out = std::make_shared<ReferenceSegment>(_in_table, cxlumn_id, matches_out);
-          out_columns.push_back(ref_column_out);
+          auto ref_segment_out = std::make_shared<ReferenceSegment>(_in_table, cxlumn_id, matches_out);
+          out_columns.push_back(ref_segment_out);
         }
       }
 
@@ -167,8 +167,8 @@ void TableScan::_on_cleanup() { _impl.reset(); }
 
 void TableScan::_init_scan() {
   if (_predicate_condition == PredicateCondition::Like || _predicate_condition == PredicateCondition::NotLike) {
-    const auto left_column_type = _in_table->column_data_type(_left_cxlumn_id);
-    Assert((left_column_type == DataType::String), "LIKE operator only applicable on string columns.");
+    const auto left_cxlumn_type = _in_table->cxlumn_data_type(_left_cxlumn_id);
+    Assert((left_cxlumn_type == DataType::String), "LIKE operator only applicable on string columns.");
 
     DebugAssert(is_variant(_right_parameter), "Right parameter must be variant.");
 

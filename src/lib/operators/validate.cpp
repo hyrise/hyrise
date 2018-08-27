@@ -14,7 +14,7 @@ namespace opossum {
 namespace {
 
 bool is_row_visible(CommitID our_tid, CommitID snapshot_commit_id, ChunkOffset chunk_offset,
-                    const MvccColumns& columns) {
+                    const MvccData& columns) {
   const auto row_tid = columns.tids[chunk_offset].load();
   const auto begin_cid = columns.begin_cids[chunk_offset];
   const auto end_cid = columns.end_cids[chunk_offset];
@@ -76,9 +76,9 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       for (auto row_id : *ref_col_in->pos_list()) {
         const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
-        auto mvcc_columns = referenced_chunk->get_scoped_mvcc_columns_lock();
+        auto mvcc_data = referenced_chunk->get_scoped_mvcc_data_lock();
 
-        if (is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_columns)) {
+        if (is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
           pos_list_out->emplace_back(row_id);
         }
       }
@@ -91,16 +91,16 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
         output_columns.push_back(ref_col_out);
       }
 
-      // Otherwise we have a Value- or DictionaryColumn and simply iterate over all rows to build a poslist.
+      // Otherwise we have a Value- or DictionarySegment and simply iterate over all rows to build a poslist.
     } else {
       referenced_table = in_table;
-      DebugAssert(chunk_in->has_mvcc_columns(), "Trying to use Validate on a table that has no MVCC columns");
-      const auto mvcc_columns = chunk_in->get_scoped_mvcc_columns_lock();
+      DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC columns");
+      const auto mvcc_data = chunk_in->get_scoped_mvcc_data_lock();
 
       // Generate pos_list_out.
       auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
       for (auto i = 0u; i < chunk_size; i++) {
-        if (is_row_visible(our_tid, snapshot_commit_id, i, *mvcc_columns)) {
+        if (is_row_visible(our_tid, snapshot_commit_id, i, *mvcc_data)) {
           pos_list_out->emplace_back(RowID{chunk_id, i});
         }
       }

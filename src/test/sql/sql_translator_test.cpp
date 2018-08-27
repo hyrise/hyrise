@@ -19,10 +19,10 @@
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/limit_node.hpp"
-#include "logical_query_plan/lqp_column_reference.hpp"
+#include "logical_query_plan/lqp_cxlumn_reference.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/show_columns_node.hpp"
+#include "logical_query_plan/show_cxlumns_node.hpp"
 #include "logical_query_plan/show_tables_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -55,17 +55,17 @@ class SQLTranslatorTest : public ::testing::Test {
     stored_table_node_int_float5 = StoredTableNode::make("int_float5");
     stored_table_node_int_int_int = StoredTableNode::make("int_int_int");
 
-    int_float_a = stored_table_node_int_float->get_column("a");
-    int_float_b = stored_table_node_int_float->get_column("b");
-    int_string_a = stored_table_node_int_string->get_column("a");
-    int_string_b = stored_table_node_int_string->get_column("b");
-    int_float2_a = stored_table_node_int_float2->get_column("a");
-    int_float2_b = stored_table_node_int_float2->get_column("b");
-    int_float5_a = stored_table_node_int_float5->get_column("a");
-    int_float5_d = stored_table_node_int_float5->get_column("d");
-    int_int_int_a = stored_table_node_int_int_int->get_column("a");
-    int_int_int_b = stored_table_node_int_int_int->get_column("b");
-    int_int_int_c = stored_table_node_int_int_int->get_column("c");
+    int_float_a = stored_table_node_int_float->get_cxlumn("a");
+    int_float_b = stored_table_node_int_float->get_cxlumn("b");
+    int_string_a = stored_table_node_int_string->get_cxlumn("a");
+    int_string_b = stored_table_node_int_string->get_cxlumn("b");
+    int_float2_a = stored_table_node_int_float2->get_cxlumn("a");
+    int_float2_b = stored_table_node_int_float2->get_cxlumn("b");
+    int_float5_a = stored_table_node_int_float5->get_cxlumn("a");
+    int_float5_d = stored_table_node_int_float5->get_cxlumn("d");
+    int_int_int_a = stored_table_node_int_int_int->get_cxlumn("a");
+    int_int_int_b = stored_table_node_int_int_int->get_cxlumn("b");
+    int_int_int_c = stored_table_node_int_int_int->get_cxlumn("c");
   }
 
   void TearDown() override { StorageManager::reset(); }
@@ -85,7 +85,7 @@ class SQLTranslatorTest : public ::testing::Test {
   std::shared_ptr<StoredTableNode> stored_table_node_int_float2;
   std::shared_ptr<StoredTableNode> stored_table_node_int_float5;
   std::shared_ptr<StoredTableNode> stored_table_node_int_int_int;
-  LQPColumnReference int_float_a, int_float_b, int_string_a, int_string_b, int_float5_a, int_float5_d, int_float2_a,
+  LQPCxlumnReference int_float_a, int_float_b, int_string_a, int_string_b, int_float5_a, int_float5_d, int_float2_a,
       int_float2_b, int_int_int_a, int_int_int_b, int_int_int_c;
 };
 
@@ -113,7 +113,7 @@ TEST_F(SQLTranslatorTest, ExpressionStringTest) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, SelectSingleColumn) {
+TEST_F(SQLTranslatorTest, SelectSingleCxlumn) {
   const auto actual_lqp = compile_query("SELECT a FROM int_float;");
 
   const auto expected_lqp = ProjectionNode::make(expression_vector(int_float_a), stored_table_node_int_float);
@@ -129,12 +129,12 @@ TEST_F(SQLTranslatorTest, SelectStar) {
   EXPECT_LQP_EQ(actual_lqp_table, stored_table_node_int_float);
 }
 
-TEST_F(SQLTranslatorTest, SelectStarSelectsOnlyFromColumns) {
+TEST_F(SQLTranslatorTest, SelectStarSelectsOnlyFromCxlumns) {
   /**
-   * Test that if temporary columns are introduced, these are not selected by "*"
+   * Test that if temporary cxlumns are introduced, these are not selected by "*"
    */
 
-  // "a + b" is a temporary column that shouldn't be in the output
+  // "a + b" is a temporary cxlumn that shouldn't be in the output
   const auto actual_lqp_no_table = compile_query("SELECT * FROM int_float WHERE a + b > 10");
   const auto actual_lqp_table = compile_query("SELECT int_float.* FROM int_float WHERE a + b > 10;");
 
@@ -253,9 +253,9 @@ TEST_F(SQLTranslatorTest, CaseExpressionSearched) {
 }
 
 TEST_F(SQLTranslatorTest, AliasesInSelectList) {
-  const auto actual_lqp = compile_query("SELECT a AS column_a, b, b + a AS sum_column FROM int_float;");
+  const auto actual_lqp = compile_query("SELECT a AS cxlumn_a, b, b + a AS sum_cxlumn FROM int_float;");
 
-  const auto aliases = std::vector<std::string>{{"column_a", "b", "sum_column"}};
+  const auto aliases = std::vector<std::string>{{"cxlumn_a", "b", "sum_cxlumn"}};
   const auto expressions = expression_vector(int_float_a, int_float_b, add_(int_float_b, int_float_a));
 
   // clang-format off
@@ -782,7 +782,7 @@ TEST_F(SQLTranslatorTest, JoinLeftOuter) {
 }
 
 TEST_F(SQLTranslatorTest, JoinNaturalSimple) {
-  // Also test that columns can be referenced after a natural join
+  // Also test that cxlumns can be referenced after a natural join
 
   const auto actual_lqp = compile_query(
       "SELECT "
@@ -806,8 +806,8 @@ TEST_F(SQLTranslatorTest, JoinNaturalSimple) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, JoinNaturalColumnAlias) {
-  // Test that the Natural join can work with column aliases and that the output columns have the correct name
+TEST_F(SQLTranslatorTest, JoinNaturalCxlumnAlias) {
+  // Test that the Natural join can work with cxlumn aliases and that the output cxlumns have the correct name
 
   const auto actual_lqp = compile_query(
       "SELECT "
@@ -873,7 +873,7 @@ TEST_F(SQLTranslatorTest, JoinInnerComplexLogicalPredicate) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, FromColumnAliasingSimple) {
+TEST_F(SQLTranslatorTest, FromCxlumnAliasingSimple) {
   const auto actual_lqp_a = compile_query("SELECT t.x FROM int_float AS t (x, y) WHERE x = t.y");
   const auto actual_lqp_b = compile_query("SELECT t.x FROM (SELECT * FROM int_float) AS t (x, y) WHERE x = t.y");
 
@@ -889,7 +889,7 @@ TEST_F(SQLTranslatorTest, FromColumnAliasingSimple) {
   EXPECT_LQP_EQ(actual_lqp_b, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, FromColumnAliasingTablesSwitchNames) {
+TEST_F(SQLTranslatorTest, FromCxlumnAliasingTablesSwitchNames) {
   // Tricky: Tables "switch names". int_float becomes int_float2 and int_float2 becomes int_float
 
   const auto actual_lqp_a = compile_query(
@@ -1175,9 +1175,9 @@ TEST_F(SQLTranslatorTest, ShowTables) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, ShowColumns) {
+TEST_F(SQLTranslatorTest, ShowCxlumns) {
   const auto actual_lqp = compile_query("SHOW COLUMNS int_float");
-  const auto expected_lqp = ShowColumnsNode::make("int_float");
+  const auto expected_lqp = ShowCxlumnsNode::make("int_float");
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
@@ -1194,7 +1194,7 @@ TEST_F(SQLTranslatorTest, InsertValues) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, InsertValuesColumnReorder) {
+TEST_F(SQLTranslatorTest, InsertValuesCxlumnReorder) {
   const auto actual_lqp = compile_query("INSERT INTO int_float (b, a) VALUES (12.5, 10);");
 
   // clang-format off
@@ -1207,7 +1207,7 @@ TEST_F(SQLTranslatorTest, InsertValuesColumnReorder) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, InsertValuesColumnSubset) {
+TEST_F(SQLTranslatorTest, InsertValuesCxlumnSubset) {
   const auto actual_lqp = compile_query("INSERT INTO int_float (b) VALUES (12.5);");
 
   // clang-format off
@@ -1310,14 +1310,14 @@ TEST_F(SQLTranslatorTest, CreateView) {
       PredicateNode::make(equals_(int_float_a, "b"),
          stored_table_node_int_float)));
 
-  const auto view_columns = std::unordered_map<CxlumnID, std::string>({
+  const auto view_cxlumns = std::unordered_map<CxlumnID, std::string>({
                                                                       {CxlumnID{0}, "a"},
                                                                       {CxlumnID{1}, "b"},
                                                                       {CxlumnID{3}, "t"},
                                                                       });
   // clang-format on
 
-  const auto view = std::make_shared<LQPView>(view_lqp, view_columns);
+  const auto view = std::make_shared<LQPView>(view_lqp, view_cxlumns);
 
   const auto lqp = CreateViewNode::make("my_first_view", view);
 
@@ -1328,7 +1328,7 @@ TEST_F(SQLTranslatorTest, CreateAliasView) {
   const auto actual_lqp = compile_query("CREATE VIEW my_second_view (c, d) AS SELECT * FROM int_float WHERE a = 'b';");
 
   // clang-format off
-  const auto view_columns = std::unordered_map<CxlumnID, std::string>({
+  const auto view_cxlumns = std::unordered_map<CxlumnID, std::string>({
                                                                       {CxlumnID{0}, "c"},
                                                                       {CxlumnID{1}, "d"}
                                                                       });
@@ -1336,7 +1336,7 @@ TEST_F(SQLTranslatorTest, CreateAliasView) {
   const auto view_lqp = PredicateNode::make(equals_(int_float_a, "b"), stored_table_node_int_float);
   // clang-format on
 
-  const auto view = std::make_shared<LQPView>(view_lqp, view_columns);
+  const auto view = std::make_shared<LQPView>(view_lqp, view_cxlumns);
 
   const auto expected_lqp = CreateViewNode::make("my_second_view", view);
 
@@ -1372,7 +1372,7 @@ TEST_F(SQLTranslatorTest, OperatorPrecedence) {
 TEST_F(SQLTranslatorTest, CatchInputErrors) {
   EXPECT_THROW(compile_query("SELECT no_such_table.* FROM int_float;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT no_such_function(5+3);"), InvalidInputException);
-  EXPECT_THROW(compile_query("SELECT no_such_column FROM int_float;"), InvalidInputException);
+  EXPECT_THROW(compile_query("SELECT no_such_cxlumn FROM int_float;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT * FROM no_such_table;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT b, SUM(b) AS s FROM table_a GROUP BY a;"), InvalidInputException);
   EXPECT_THROW(compile_query("SELECT * FROM table_a JOIN table_b ON a = b;"), InvalidInputException);

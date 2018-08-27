@@ -71,7 +71,7 @@ class BaseCxlumnStatistics {
   /**
    * Estimate a Column-Column Predicate, e.g. "a > b"
    */
-  virtual FilterByColumnComparisonEstimate estimate_predicate_with_column(
+  virtual FilterByColumnComparisonEstimate estimate_predicate_with_cxlumn(
       const PredicateCondition predicate_condition, const BaseCxlumnStatistics& base_right_cxlumn_statistics) const = 0;
   /** @} */
 

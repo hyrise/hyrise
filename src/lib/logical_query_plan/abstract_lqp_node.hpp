@@ -25,7 +25,7 @@ enum class LQPNodeType {
   Predicate,
   Projection,
   Root,
-  ShowColumns,
+  ShowCxlumns,
   ShowTables,
   Sort,
   StoredTable,
@@ -118,7 +118,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /**
    * @return The Expressions defining each Column that this node outputs
    */
-  virtual const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const;
+  virtual const std::vector<std::shared_ptr<AbstractExpression>>& cxlumn_expressions() const;
 
   /**
    * @return    All expressions that this node USES (and doesn't just forward)

@@ -21,7 +21,7 @@ class JitBaseSegmentIterator {};
  *
  * Instantiations of this template are part of the column iterable
  * interface (see column_iterables.hpp) and are implemented
- * in sub-classes of ColumnIterable (see e.g. value_column_iterable.hpp)
+ * in sub-classes of ColumnIterable (see e.g. value_segment_iterable.hpp)
  *
  * Value must be a sub-class of AbstractColumnIteratorValue<T>.
  *

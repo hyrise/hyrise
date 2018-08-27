@@ -17,7 +17,7 @@
 
 #include "all_type_variant.hpp"
 #include "chunk_access_counter.hpp"
-#include "mvcc_columns.hpp"
+#include "mvcc_data.hpp"
 #include "table_column_definition.hpp"
 #include "types.hpp"
 #include "utils/copyable_atomic.hpp"
@@ -34,7 +34,7 @@ using ChunkSegments = pmr_vector<std::shared_ptr<BaseSegment>>;
 /**
  * A Chunk is a horizontal partition of a table.
  * It stores the table's data column by column.
- * Optionally, mostly applying to StoredTables, it may also hold a set of MvccColumns.
+ * Optionally, mostly applying to StoredTables, it may also hold MvccData.
  *
  * Find more information about this in our wiki: https://github.com/hyrise/hyrise/wiki/chunk-concept
  */
@@ -43,7 +43,7 @@ class Chunk : private Noncopyable {
   // The last chunk offset is reserved for NULL as used in ReferenceSegments.
   static constexpr ChunkOffset MAX_SIZE = std::numeric_limits<ChunkOffset>::max() - 1;
 
-  Chunk(const ChunkSegments& columns, const std::shared_ptr<MvccColumns>& mvcc_columns = nullptr,
+  Chunk(const ChunkSegments& columns, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
         const std::shared_ptr<ChunkAccessCounter>& access_counter = nullptr);
 
@@ -69,7 +69,7 @@ class Chunk : private Noncopyable {
    * Atomically accesses and returns the column at a given position
    *
    * Note: Concurrently with the execution of operators,
-   *       ValueSegments might be exchanged with DictionaryColumns.
+   *       ValueSegments might be exchanged with DictionarySegments.
    *       Therefore, if you hold a pointer to a column, you can
    *       continue to use it without any inconsistencies.
    *       However, if you call get_column again, be aware that
@@ -79,7 +79,7 @@ class Chunk : private Noncopyable {
 
   const ChunkSegments& columns() const;
 
-  bool has_mvcc_columns() const;
+  bool has_mvcc_data() const;
   bool has_access_counter() const;
 
   /**
@@ -91,11 +91,11 @@ class Chunk : private Noncopyable {
    *
    * @return a locking ptr to the mvcc columns
    */
-  SharedScopedLockingPtr<MvccColumns> get_scoped_mvcc_columns_lock();
-  SharedScopedLockingPtr<const MvccColumns> get_scoped_mvcc_columns_lock() const;
+  SharedScopedLockingPtr<MvccData> get_scoped_mvcc_data_lock();
+  SharedScopedLockingPtr<const MvccData> get_scoped_mvcc_data_lock() const;
 
-  std::shared_ptr<MvccColumns> mvcc_columns() const;
-  void set_mvcc_columns(const std::shared_ptr<MvccColumns>& mvcc_columns);
+  std::shared_ptr<MvccData> mvcc_data() const;
+  void set_mvcc_data(const std::shared_ptr<MvccData>& mvcc_data);
 
   std::vector<std::shared_ptr<BaseIndex>> get_indices(
       const std::vector<std::shared_ptr<const BaseSegment>>& columns) const;
@@ -152,7 +152,7 @@ class Chunk : private Noncopyable {
  private:
   PolymorphicAllocator<Chunk> _alloc;
   ChunkSegments _columns;
-  std::shared_ptr<MvccColumns> _mvcc_columns;
+  std::shared_ptr<MvccData> _mvcc_data;
   std::shared_ptr<ChunkAccessCounter> _access_counter;
   pmr_vector<std::shared_ptr<BaseIndex>> _indices;
   std::shared_ptr<ChunkStatistics> _statistics;

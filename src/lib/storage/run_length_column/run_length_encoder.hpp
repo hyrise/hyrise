@@ -5,8 +5,8 @@
 #include "storage/base_column_encoder.hpp"
 
 #include "storage/run_length_column.hpp"
-#include "storage/value_column.hpp"
-#include "storage/value_column/value_column_iterable.hpp"
+#include "storage/value_segment.hpp"
+#include "storage/value_segment/value_segment_iterable.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
 
@@ -18,14 +18,14 @@ class RunLengthEncoder : public ColumnEncoder<RunLengthEncoder> {
   static constexpr auto _uses_vector_compression = false;
 
   template <typename T>
-  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_column) {
-    const auto alloc = value_column->values().get_allocator();
+  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
+    const auto alloc = value_segment->values().get_allocator();
 
     auto values = pmr_vector<T>{alloc};
     auto null_values = pmr_vector<bool>{alloc};
     auto end_positions = pmr_vector<ChunkOffset>{alloc};
 
-    auto iterable = ValueSegmentIterable<T>{*value_column};
+    auto iterable = ValueSegmentIterable<T>{*value_segment};
 
     iterable.with_iterators([&](auto it, auto end) {
       // Init is_current_null such that it does not equal the first entry

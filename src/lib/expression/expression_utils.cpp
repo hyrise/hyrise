@@ -80,7 +80,7 @@ void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expr
   visit_expression(expression, [&](auto& expression_ptr) {
     if (expression_ptr->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
 
-    const auto lqp_column_expression_ptr = std::dynamic_pointer_cast<LQPColumnExpression>(expression_ptr);
+    const auto lqp_column_expression_ptr = std::dynamic_pointer_cast<LQPCxlumnExpression>(expression_ptr);
     Assert(lqp_column_expression_ptr, "Asked to adapt expression in LQP, but encountered non-LQP ColumnExpression");
 
     expression_ptr = expression_adapt_to_different_lqp(*lqp_column_expression_ptr, node_mapping);
@@ -89,17 +89,17 @@ void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expr
   });
 }
 
-std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQPColumnExpression& lqp_column_expression,
+std::shared_ptr<LQPCxlumnExpression> expression_adapt_to_different_lqp(const LQPCxlumnExpression& lqp_column_expression,
                                                                        const LQPNodeMapping& node_mapping) {
-  const auto node = lqp_column_expression.column_reference.original_node();
+  const auto node = lqp_column_expression.cxlumn_reference.original_node();
   const auto node_mapping_iter = node_mapping.find(node);
   Assert(node_mapping_iter != node_mapping.end(),
          "Couldn't find referenced node (" + node->description() + ") in NodeMapping");
 
-  LQPColumnReference adapted_column_reference{node_mapping_iter->second,
-                                              lqp_column_expression.column_reference.original_cxlumn_id()};
+  LQPCxlumnReference adapted_cxlumn_reference{node_mapping_iter->second,
+                                              lqp_column_expression.cxlumn_reference.original_cxlumn_id()};
 
-  return std::make_shared<LQPColumnExpression>(adapted_column_reference);
+  return std::make_shared<LQPCxlumnExpression>(adapted_cxlumn_reference);
 }
 
 std::string expression_cxlumn_names(const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {

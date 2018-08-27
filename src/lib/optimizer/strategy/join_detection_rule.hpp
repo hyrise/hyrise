@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "abstract_rule.hpp"
-#include "logical_query_plan/lqp_column_reference.hpp"
+#include "logical_query_plan/lqp_cxlumn_reference.hpp"
 #include "types.hpp"
 
 namespace opossum {

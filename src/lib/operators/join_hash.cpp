@@ -81,7 +81,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   auto probe_input = probe_operator->get_output();
 
   _impl = make_unique_by_data_types<AbstractReadOnlyOperatorImpl, JoinHashImpl>(
-      build_input->column_data_type(build_cxlumn_id), probe_input->column_data_type(probe_cxlumn_id), build_operator,
+      build_input->cxlumn_data_type(build_cxlumn_id), probe_input->cxlumn_data_type(probe_cxlumn_id), build_operator,
       probe_operator, _mode, adjusted_cxlumn_ids, _predicate_condition, inputs_swapped, _radix_bits);
   return _impl->_on_execute();
 }
@@ -245,7 +245,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
       histograms[chunk_id] = std::make_shared<std::vector<size_t>>(num_partitions);
       auto& histogram = static_cast<std::vector<size_t>&>(*histograms[chunk_id]);
 
-      resolve_column_type<T>(*column, [&, chunk_id, keep_nulls](auto& typed_column) {
+      resolve_cxlumn_type<T>(*column, [&, chunk_id, keep_nulls](auto& typed_column) {
         auto reference_segment_offset = ChunkID{0};
         auto iterable = create_iterable_from_column<T>(typed_column);
 
@@ -546,9 +546,9 @@ PosListsByColumn setup_pos_lists_by_column(const std::shared_ptr<const Table>& i
     auto pos_lists_iter = pos_list_ptrs->begin();
 
     for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); chunk_id++) {
-      const auto& ref_column_uncasted = input_chunks[chunk_id]->columns()[cxlumn_id];
-      const auto ref_column = std::static_pointer_cast<const ReferenceSegment>(ref_column_uncasted);
-      *pos_lists_iter = ref_column->pos_list();
+      const auto& ref_segment_uncasted = input_chunks[chunk_id]->columns()[cxlumn_id];
+      const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(ref_segment_uncasted);
+      *pos_lists_iter = ref_segment->pos_list();
       ++pos_lists_iter;
     }
 

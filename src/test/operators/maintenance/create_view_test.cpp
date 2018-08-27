@@ -25,7 +25,7 @@ class CreateViewTest : public BaseTest {
 };
 
 TEST_F(CreateViewTest, OperatorName) {
-  const auto view_lqp = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
+  const auto view_lqp = MockNode::make(MockNode::CxlumnDefinitions{{{DataType::Int, "x"}}});
   const auto view = std::make_shared<LQPView>(view_lqp, std::unordered_map<CxlumnID, std::string>{});
 
   auto cv = std::make_shared<CreateView>("view_name", view);
@@ -34,7 +34,7 @@ TEST_F(CreateViewTest, OperatorName) {
 }
 
 TEST_F(CreateViewTest, DeepCopy) {
-  const auto view_lqp = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
+  const auto view_lqp = MockNode::make(MockNode::CxlumnDefinitions{{{DataType::Int, "x"}}});
   const auto view = std::make_shared<LQPView>(view_lqp, std::unordered_map<CxlumnID, std::string>{});
 
   auto cv = std::make_shared<CreateView>("view_name", view);
@@ -47,7 +47,7 @@ TEST_F(CreateViewTest, DeepCopy) {
 }
 
 TEST_F(CreateViewTest, CanCreateViews) {
-  const auto view_lqp = MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "x"}}});
+  const auto view_lqp = MockNode::make(MockNode::CxlumnDefinitions{{{DataType::Int, "x"}}});
   const auto view_in = std::make_shared<LQPView>(view_lqp, std::unordered_map<CxlumnID, std::string>{});
 
   auto cv = std::make_shared<CreateView>("view_name", view_in);

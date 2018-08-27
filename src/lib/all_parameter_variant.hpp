@@ -5,7 +5,7 @@
 
 #include "all_type_variant.hpp"
 #include "expression/parameter_expression.hpp"
-#include "logical_query_plan/lqp_column_reference.hpp"
+#include "logical_query_plan/lqp_cxlumn_reference.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -21,7 +21,7 @@ namespace hana = boost::hana;
 static constexpr auto parameter_types =
     hana::make_tuple(hana::make_pair("AllTypeVariant", hana::type_c<AllTypeVariant>),
                      hana::make_pair("CxlumnID", hana::type_c<CxlumnID>),                      // NOLINT
-                     hana::make_pair("LQPColumnReference", hana::type_c<LQPColumnReference>),  // NOLINT
+                     hana::make_pair("LQPCxlumnReference", hana::type_c<LQPCxlumnReference>),  // NOLINT
                      hana::make_pair("Parameter", hana::type_c<ParameterID>));                 // NOLINT
 
 // This holds only the possible data types.
@@ -41,8 +41,8 @@ inline bool is_variant(const AllParameterVariant& variant) { return (variant.typ
 inline bool is_cxlumn_id(const AllParameterVariant& variant) { return (variant.type() == typeid(CxlumnID)); }
 
 // Function to check if AllParameterVariant is a column origin
-inline bool is_lqp_column_reference(const AllParameterVariant& variant) {
-  return (variant.type() == typeid(LQPColumnReference));
+inline bool is_lqp_cxlumn_reference(const AllParameterVariant& variant) {
+  return (variant.type() == typeid(LQPCxlumnReference));
 }
 
 // Function to check if AllParameterVariant is a ParameterID

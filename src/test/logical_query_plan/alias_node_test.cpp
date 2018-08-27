@@ -15,10 +15,10 @@ namespace opossum {
 class AliasNodeTest : public ::testing::Test {
  public:
   void SetUp() override {
-    const auto mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}});
+    const auto mock_node = MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}});
 
-    const auto a_expression = std::make_shared<LQPColumnExpression>(LQPColumnReference{mock_node, CxlumnID{0}});
-    const auto b_expression = std::make_shared<LQPColumnExpression>(LQPColumnReference{mock_node, CxlumnID{1}});
+    const auto a_expression = std::make_shared<LQPCxlumnExpression>(LQPCxlumnReference{mock_node, CxlumnID{0}});
+    const auto b_expression = std::make_shared<LQPCxlumnExpression>(LQPCxlumnReference{mock_node, CxlumnID{1}});
     const auto expressions = std::vector<std::shared_ptr<AbstractExpression>>{{b_expression, a_expression}};
 
     const auto aliases = std::vector<std::string>{"x", "y"};

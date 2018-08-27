@@ -17,7 +17,7 @@ namespace opossum {
 class UpdateNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    _mock_node = MockNode::make(MockNode::ColumnDefinitions({{DataType::Int, "a"}}));
+    _mock_node = MockNode::make(MockNode::CxlumnDefinitions({{DataType::Int, "a"}}));
     _update_node = UpdateNode::make("table_a", expression_vector(6), _mock_node);
   }
 
@@ -25,7 +25,7 @@ class UpdateNodeTest : public BaseTest {
   std::shared_ptr<MockNode> _mock_node;
 };
 
-TEST_F(UpdateNodeTest, Description) { EXPECT_EQ(_update_node->description(), "[Update] Table: 'table_a' Columns: 6"); }
+TEST_F(UpdateNodeTest, Description) { EXPECT_EQ(_update_node->description(), "[Update] Table: 'table_a' Cxlumns: 6"); }
 
 TEST_F(UpdateNodeTest, TableName) { EXPECT_EQ(_update_node->table_name, "table_a"); }
 

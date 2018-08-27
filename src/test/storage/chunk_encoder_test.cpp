@@ -8,7 +8,7 @@
 
 #include "all_type_variant.hpp"
 #include "storage/base_encoded_segment.hpp"
-#include "storage/base_value_column.hpp"
+#include "storage/base_value_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
@@ -42,8 +42,8 @@ class ChunkEncoderTest : public BaseTest {
       const auto column_spec = spec.at(cxlumn_id);
 
       if (column_spec.encoding_type == EncodingType::Unencoded) {
-        const auto value_column = std::dynamic_pointer_cast<const BaseValueSegment>(column);
-        EXPECT_NE(value_column, nullptr);
+        const auto value_segment = std::dynamic_pointer_cast<const BaseValueSegment>(column);
+        EXPECT_NE(value_segment, nullptr);
       } else {
         const auto encoded_column = std::dynamic_pointer_cast<const BaseEncodedColumn>(column);
         EXPECT_NE(encoded_column, nullptr);
@@ -60,7 +60,7 @@ TEST_F(ChunkEncoderTest, EncodeSingleChunk) {
   const auto chunk_encoding_spec =
       ChunkEncodingSpec{{EncodingType::Dictionary}, {EncodingType::RunLength}, {EncodingType::Dictionary}};
 
-  auto data_types = _table->column_data_types();
+  auto data_types = _table->cxlumn_data_types();
   auto chunk = _table->get_chunk(ChunkID{0u});
 
   ChunkEncoder::encode_chunk(chunk, data_types, chunk_encoding_spec);
@@ -72,7 +72,7 @@ TEST_F(ChunkEncoderTest, LeaveOneColumnUnencoded) {
   const auto chunk_encoding_spec =
       ChunkEncodingSpec{{EncodingType::Unencoded}, {EncodingType::RunLength}, {EncodingType::Dictionary}};
 
-  auto data_types = _table->column_data_types();
+  auto data_types = _table->cxlumn_data_types();
   auto chunk = _table->get_chunk(ChunkID{0u});
 
   ChunkEncoder::encode_chunk(chunk, data_types, chunk_encoding_spec);

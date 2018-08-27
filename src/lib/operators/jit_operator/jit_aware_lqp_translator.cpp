@@ -168,7 +168,7 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
   } else {
     // Add a compute operator for each computed output column (i.e., a column that is not from a stored table).
     auto write_table = std::make_shared<JitWriteTuples>();
-    for (const auto& column_expression : node->column_expressions()) {
+    for (const auto& column_expression : node->cxlumn_expressions()) {
       const auto jit_expression =
           _try_translate_expression_to_jit_expression(*column_expression, *read_tuples, input_node);
       if (!jit_expression) return nullptr;

@@ -9,7 +9,7 @@ namespace opossum {
 StoredTableNode::StoredTableNode(const std::string& table_name)
     : AbstractLQPNode(LQPNodeType::StoredTable), table_name(table_name) {}
 
-LQPColumnReference StoredTableNode::get_column(const std::string& name) const {
+LQPCxlumnReference StoredTableNode::get_cxlumn(const std::string& name) const {
   const auto table = StorageManager::get().get_table(table_name);
   const auto cxlumn_id = table->cxlumn_id_by_name(name);
   return {shared_from_this(), cxlumn_id};
@@ -21,7 +21,7 @@ const std::vector<ChunkID>& StoredTableNode::excluded_chunk_ids() const { return
 
 std::string StoredTableNode::description() const { return "[StoredTable] Name: '" + table_name + "'"; }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::column_expressions() const {
+const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::cxlumn_expressions() const {
   // Need to initialize the expressions lazily because they will have a weak_ptr to this node and we can't obtain that
   // in the constructor
   if (!_expressions) {
@@ -30,7 +30,7 @@ const std::vector<std::shared_ptr<AbstractExpression>>& StoredTableNode::column_
     _expressions.emplace(table->cxlumn_count());
     for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
       (*_expressions)[cxlumn_id] =
-          std::make_shared<LQPColumnExpression>(LQPColumnReference{shared_from_this(), cxlumn_id});
+          std::make_shared<LQPCxlumnExpression>(LQPCxlumnReference{shared_from_this(), cxlumn_id});
     }
   }
 

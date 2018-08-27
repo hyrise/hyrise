@@ -21,11 +21,11 @@ class ProjectionNodeTest : public BaseTest {
  protected:
   void SetUp() override {
     _mock_node = MockNode::make(
-        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
+        MockNode::CxlumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
 
-    _a = _mock_node->get_column("a");
-    _b = _mock_node->get_column("b");
-    _c = _mock_node->get_column("c");
+    _a = _mock_node->get_cxlumn("a");
+    _b = _mock_node->get_cxlumn("b");
+    _c = _mock_node->get_cxlumn("c");
 
     // SELECT c, a, b AS alias_for_b, b+c AS some_addition, a+c [...]
     _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b, add_(_b, _c), add_(_a, _c)), _mock_node);
@@ -33,7 +33,7 @@ class ProjectionNodeTest : public BaseTest {
 
   std::shared_ptr<MockNode> _mock_node;
   std::shared_ptr<ProjectionNode> _projection_node;
-  LQPColumnReference _a, _b, _c;
+  LQPCxlumnReference _a, _b, _c;
 };
 
 TEST_F(ProjectionNodeTest, Description) {

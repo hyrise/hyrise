@@ -52,49 +52,49 @@ class ReferenceSegmentTest : public BaseTest {
 TEST_F(ReferenceSegmentTest, IsImmutable) {
   auto pos_list =
       std::make_shared<PosList>(std::initializer_list<RowID>({{ChunkID{0}, 0}, {ChunkID{0}, 1}, {ChunkID{0}, 2}}));
-  auto ref_column = ReferenceSegment(_test_table, CxlumnID{0}, pos_list);
+  auto ref_segment = ReferenceSegment(_test_table, CxlumnID{0}, pos_list);
 
-  EXPECT_THROW(ref_column.append(1), std::logic_error);
+  EXPECT_THROW(ref_segment.append(1), std::logic_error);
 }
 
 TEST_F(ReferenceSegmentTest, RetrievesValues) {
   // PosList with (0, 0), (0, 1), (0, 2)
   auto pos_list = std::make_shared<PosList>(
       std::initializer_list<RowID>({RowID{ChunkID{0}, 0}, RowID{ChunkID{0}, 1}, RowID{ChunkID{0}, 2}}));
-  auto ref_column = ReferenceSegment(_test_table, CxlumnID{0}, pos_list);
+  auto ref_segment = ReferenceSegment(_test_table, CxlumnID{0}, pos_list);
 
   auto& column = *(_test_table->get_chunk(ChunkID{0})->get_column(CxlumnID{0}));
 
-  EXPECT_EQ(ref_column[0], column[0]);
-  EXPECT_EQ(ref_column[1], column[1]);
-  EXPECT_EQ(ref_column[2], column[2]);
+  EXPECT_EQ(ref_segment[0], column[0]);
+  EXPECT_EQ(ref_segment[1], column[1]);
+  EXPECT_EQ(ref_segment[2], column[2]);
 }
 
 TEST_F(ReferenceSegmentTest, RetrievesValuesOutOfOrder) {
   // PosList with (0, 1), (0, 2), (0, 0)
   auto pos_list = std::make_shared<PosList>(
       std::initializer_list<RowID>({RowID{ChunkID{0}, 1}, RowID{ChunkID{0}, 2}, RowID{ChunkID{0}, 0}}));
-  auto ref_column = ReferenceSegment(_test_table, CxlumnID{0}, pos_list);
+  auto ref_segment = ReferenceSegment(_test_table, CxlumnID{0}, pos_list);
 
   auto& column = *(_test_table->get_chunk(ChunkID{0})->get_column(CxlumnID{0}));
 
-  EXPECT_EQ(ref_column[0], column[1]);
-  EXPECT_EQ(ref_column[1], column[2]);
-  EXPECT_EQ(ref_column[2], column[0]);
+  EXPECT_EQ(ref_segment[0], column[1]);
+  EXPECT_EQ(ref_segment[1], column[2]);
+  EXPECT_EQ(ref_segment[2], column[0]);
 }
 
 TEST_F(ReferenceSegmentTest, RetrievesValuesFromChunks) {
   // PosList with (0, 2), (1, 0), (1, 1)
   auto pos_list = std::make_shared<PosList>(
       std::initializer_list<RowID>({RowID{ChunkID{0}, 2}, RowID{ChunkID{1}, 0}, RowID{ChunkID{1}, 1}}));
-  auto ref_column = ReferenceSegment(_test_table, CxlumnID{0}, pos_list);
+  auto ref_segment = ReferenceSegment(_test_table, CxlumnID{0}, pos_list);
 
   auto& column_1 = *(_test_table->get_chunk(ChunkID{0})->get_column(CxlumnID{0}));
   auto& column_2 = *(_test_table->get_chunk(ChunkID{1})->get_column(CxlumnID{0}));
 
-  EXPECT_EQ(ref_column[0], column_1[2]);
-  EXPECT_TRUE(variant_is_null(ref_column[1]) && variant_is_null(column_2[0]));
-  EXPECT_EQ(ref_column[2], column_2[1]);
+  EXPECT_EQ(ref_segment[0], column_1[2]);
+  EXPECT_TRUE(variant_is_null(ref_segment[1]) && variant_is_null(column_2[0]));
+  EXPECT_EQ(ref_segment[2], column_2[1]);
 }
 
 TEST_F(ReferenceSegmentTest, RetrieveNullValueFromNullRowID) {
@@ -103,14 +103,14 @@ TEST_F(ReferenceSegmentTest, RetrieveNullValueFromNullRowID) {
       std::initializer_list<RowID>({RowID{ChunkID{0u}, ChunkOffset{0u}}, RowID{ChunkID{0u}, ChunkOffset{1u}},
                                     NULL_ROW_ID, RowID{ChunkID{0u}, ChunkOffset{2u}}}));
 
-  auto ref_column = ReferenceSegment(_test_table, CxlumnID{0u}, pos_list);
+  auto ref_segment = ReferenceSegment(_test_table, CxlumnID{0u}, pos_list);
 
   auto& column = *(_test_table->get_chunk(ChunkID{0u})->get_column(CxlumnID{0u}));
 
-  EXPECT_EQ(ref_column[0], column[0]);
-  EXPECT_EQ(ref_column[1], column[1]);
-  EXPECT_TRUE(variant_is_null(ref_column[2]));
-  EXPECT_EQ(ref_column[3], column[2]);
+  EXPECT_EQ(ref_segment[0], column[0]);
+  EXPECT_EQ(ref_segment[1], column[1]);
+  EXPECT_TRUE(variant_is_null(ref_segment[2]));
+  EXPECT_EQ(ref_segment[3], column[2]);
 }
 
 TEST_F(ReferenceSegmentTest, MemoryUsageEstimation) {

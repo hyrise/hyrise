@@ -17,17 +17,17 @@ namespace opossum {
 class LQPUtilsTest : public ::testing::Test {
  public:
   void SetUp() override {
-    node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
-    node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
+    node_a = MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}});
+    node_b = MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}});
 
-    a_a = node_a->get_column("a");
-    a_b = node_a->get_column("b");
-    b_x = node_b->get_column("x");
-    b_y = node_b->get_column("y");
+    a_a = node_a->get_cxlumn("a");
+    a_b = node_a->get_cxlumn("b");
+    b_x = node_b->get_cxlumn("x");
+    b_y = node_b->get_cxlumn("y");
   }
 
   std::shared_ptr<MockNode> node_a, node_b;
-  LQPColumnReference a_a, a_b, b_x, b_y;
+  LQPCxlumnReference a_a, a_b, b_x, b_y;
 };
 
 TEST_F(LQPUtilsTest, LQPSubplanToBooleanExpression_A) {

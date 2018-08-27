@@ -55,7 +55,7 @@ class OperatorsIndexScanTest : public BaseTest {
     _int_int_small_chunk->execute();
   }
 
-  void ASSERT_COLUMN_EQ(std::shared_ptr<const Table> table, const CxlumnID& cxlumn_id,
+  void ASSERT_CXLUMN_EQ(std::shared_ptr<const Table> table, const CxlumnID& cxlumn_id,
                         std::vector<AllTypeVariant> expected) {
     for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto chunk = table->get_chunk(chunk_id);
@@ -120,8 +120,8 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
 
     scan_small_chunk->execute();
 
-    this->ASSERT_COLUMN_EQ(scan->get_output(), CxlumnID{1u}, test.second);
-    this->ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), CxlumnID{1u}, test.second);
+    this->ASSERT_CXLUMN_EQ(scan->get_output(), CxlumnID{1u}, test.second);
+    this->ASSERT_CXLUMN_EQ(scan_small_chunk->get_output(), CxlumnID{1u}, test.second);
   }
 }
 
@@ -152,8 +152,8 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionary
 
     scan_small_chunk->execute();
 
-    this->ASSERT_COLUMN_EQ(scan->get_output(), CxlumnID{1u}, test.second);
-    this->ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), CxlumnID{1u}, test.second);
+    this->ASSERT_CXLUMN_EQ(scan->get_output(), CxlumnID{1u}, test.second);
+    this->ASSERT_CXLUMN_EQ(scan_small_chunk->get_output(), CxlumnID{1u}, test.second);
   }
 }
 
@@ -184,8 +184,8 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryVal
 
     scan_small_chunk->execute();
 
-    this->ASSERT_COLUMN_EQ(scan->get_output(), CxlumnID{1u}, test.second);
-    this->ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), CxlumnID{1u}, test.second);
+    this->ASSERT_CXLUMN_EQ(scan->get_output(), CxlumnID{1u}, test.second);
+    this->ASSERT_CXLUMN_EQ(scan_small_chunk->get_output(), CxlumnID{1u}, test.second);
   }
 }
 
@@ -210,7 +210,7 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnlySomeChunks) {
 
     scan->execute();
 
-    this->ASSERT_COLUMN_EQ(scan->get_output(), CxlumnID{1u}, test.second);
+    this->ASSERT_CXLUMN_EQ(scan->get_output(), CxlumnID{1u}, test.second);
   }
 }
 

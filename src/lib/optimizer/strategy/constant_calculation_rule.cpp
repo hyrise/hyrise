@@ -13,7 +13,7 @@
 #include "expression/expression_utils.hpp"
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/lqp_column_reference.hpp"
+#include "logical_query_plan/lqp_cxlumn_reference.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "resolve_type.hpp"

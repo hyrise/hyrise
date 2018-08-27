@@ -13,14 +13,14 @@ class ExpressionUtilsTest : public ::testing::Test {
  public:
   void SetUp() override {
     node_a =
-        MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}});
-    a_a = LQPColumnReference{node_a, CxlumnID{0}};
-    a_b = LQPColumnReference{node_a, CxlumnID{1}};
-    a_c = LQPColumnReference{node_a, CxlumnID{2}};
+        MockNode::make(MockNode::CxlumnDefinitions{{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}});
+    a_a = LQPCxlumnReference{node_a, CxlumnID{0}};
+    a_b = LQPCxlumnReference{node_a, CxlumnID{1}};
+    a_c = LQPCxlumnReference{node_a, CxlumnID{2}};
   }
 
   std::shared_ptr<MockNode> node_a;
-  LQPColumnReference a_a, a_b, a_c;
+  LQPCxlumnReference a_a, a_b, a_c;
 };
 
 TEST_F(ExpressionUtilsTest, ExpressionFlattenConjunction) {

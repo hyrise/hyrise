@@ -254,7 +254,7 @@ TYPED_TEST(JoinEquiTest, InnerRefJoinFilteredBig) {
                                              "src/test/tables/joinoperators/int_string_inner_join_filtered.tbl", 1);
 }
 
-TYPED_TEST(JoinEquiTest, JoinOnMixedValueAndDictionaryColumns) {
+TYPED_TEST(JoinEquiTest, JoinOnMixedValueAndDictionarySegments) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_c_dict, this->_table_wrapper_b,
                                              CxlumnIDPair(CxlumnID{0}, CxlumnID{0}), PredicateCondition::Equals,
                                              JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join.tbl", 1);

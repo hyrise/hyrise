@@ -43,7 +43,7 @@ class CxlumnStatistics : public BaseCxlumnStatistics {
       const PredicateCondition predicate_condition,
       const std::optional<AllTypeVariant>& value2 = std::nullopt) const override;
 
-  FilterByColumnComparisonEstimate estimate_predicate_with_column(
+  FilterByColumnComparisonEstimate estimate_predicate_with_cxlumn(
       const PredicateCondition predicate_condition,
       const BaseCxlumnStatistics& base_right_cxlumn_statistics) const override;
 

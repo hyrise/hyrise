@@ -26,7 +26,7 @@ template <typename Container>
 void materialize_values(const BaseSegment& column, Container& container) {
   using ContainerValueType = typename Container::value_type;
 
-  resolve_column_type<ContainerValueType>(column, [&](const auto& column) {
+  resolve_cxlumn_type<ContainerValueType>(column, [&](const auto& column) {
     create_iterable_from_column<ContainerValueType>(column).materialize_values(container);
   });
 }
@@ -35,7 +35,7 @@ void materialize_values(const BaseSegment& column, Container& container) {
 template <typename Container>
 void materialize_values_and_nulls(const BaseSegment& column, Container& container) {
   using ContainerValueType = typename Container::value_type::second_type;
-  resolve_column_type<ContainerValueType>(column, [&](const auto& column) {
+  resolve_cxlumn_type<ContainerValueType>(column, [&](const auto& column) {
     create_iterable_from_column<ContainerValueType>(column).materialize_values_and_nulls(container);
   });
 }
@@ -43,7 +43,7 @@ void materialize_values_and_nulls(const BaseSegment& column, Container& containe
 // Materialize the nulls in the Column
 template <typename ColumnValueType, typename Container>
 void materialize_nulls(const BaseSegment& column, Container& container) {
-  resolve_column_type<ColumnValueType>(column, [&](const auto& column) {
+  resolve_cxlumn_type<ColumnValueType>(column, [&](const auto& column) {
     create_iterable_from_column<ColumnValueType>(column).materialize_nulls(container);
   });
 }

@@ -16,13 +16,13 @@ class AbstractExpression;
 class UpdateNode : public EnableMakeForLQPNode<UpdateNode>, public AbstractLQPNode {
  public:
   UpdateNode(const std::string& table_name,
-             const std::vector<std::shared_ptr<AbstractExpression>>& update_column_expressions);
+             const std::vector<std::shared_ptr<AbstractExpression>>& update_cxlumn_expressions);
 
   std::string description() const override;
   std::vector<std::shared_ptr<AbstractExpression>> node_expressions() const override;
 
   const std::string table_name;
-  const std::vector<std::shared_ptr<AbstractExpression>> update_column_expressions;
+  const std::vector<std::shared_ptr<AbstractExpression>> update_cxlumn_expressions;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;

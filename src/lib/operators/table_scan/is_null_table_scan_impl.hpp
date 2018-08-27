@@ -22,7 +22,7 @@ class IsNullTableScanImpl : public BaseSingleColumnTableScanImpl {
 
   void handle_column(const BaseValueSegment& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
 
-  void handle_column(const BaseDictionaryColumn& base_column,
+  void handle_column(const BaseDictionarySegment& base_column,
                      std::shared_ptr<ColumnVisitorContext> base_context) override;
 
   void handle_column(const BaseEncodedColumn& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;

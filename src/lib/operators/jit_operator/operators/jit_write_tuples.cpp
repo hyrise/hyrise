@@ -2,8 +2,8 @@
 
 #include "constant_mappings.hpp"
 #include "resolve_type.hpp"
-#include "storage/base_value_column.hpp"
-#include "storage/value_column.hpp"
+#include "storage/base_value_segment.hpp"
+#include "storage/value_segment.hpp"
 
 namespace opossum {
 

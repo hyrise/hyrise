@@ -18,7 +18,7 @@ namespace opossum {
  * @{
  */
 
-inline auto create_iterable_from_attribute_vector(const BaseDictionaryColumn& column) {
+inline auto create_iterable_from_attribute_vector(const BaseDictionarySegment& column) {
   return erase_type_from_iterable_if_debug(AttributeVectorIterable{*column.attribute_vector(), column.null_value_id()});
 }
 

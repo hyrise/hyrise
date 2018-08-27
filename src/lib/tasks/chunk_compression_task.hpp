@@ -17,7 +17,7 @@ class Chunk;
  * uncompressed column. The exchange is done atomically. Since this can
  * happen during simultaneous access by transactions, operators need to be
  * designed such that they are aware that column types might change from
- * ValueSegment<T> to DictionaryColumn<T> during execution. Shared pointers
+ * ValueSegment<T> to DictionarySegment<T> during execution. Shared pointers
  * ensure that existing value columns remain valid.
  *
  * Exchanging columns does not interfere with the Delete operator because

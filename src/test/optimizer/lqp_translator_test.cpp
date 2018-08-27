@@ -19,7 +19,7 @@
 #include "logical_query_plan/lqp_translator.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/show_columns_node.hpp"
+#include "logical_query_plan/show_cxlumns_node.hpp"
 #include "logical_query_plan/show_tables_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -30,7 +30,7 @@
 #include "operators/join_hash.hpp"
 #include "operators/join_sort_merge.hpp"
 #include "operators/limit.hpp"
-#include "operators/maintenance/show_columns.hpp"
+#include "operators/maintenance/show_cxlumns.hpp"
 #include "operators/maintenance/show_tables.hpp"
 #include "operators/product.hpp"
 #include "operators/projection.hpp"
@@ -64,22 +64,22 @@ class LQPTranslatorTest : public ::testing::Test {
     ChunkEncoder::encode_all_chunks(StorageManager::get().get_table("int_float_chunked"));
 
     int_float_node = StoredTableNode::make("table_int_float");
-    int_float_a = int_float_node->get_column("a");
-    int_float_b = int_float_node->get_column("b");
-    int_float_a_expression = std::make_shared<LQPColumnExpression>(int_float_a);
-    int_float_b_expression = std::make_shared<LQPColumnExpression>(int_float_b);
+    int_float_a = int_float_node->get_cxlumn("a");
+    int_float_b = int_float_node->get_cxlumn("b");
+    int_float_a_expression = std::make_shared<LQPCxlumnExpression>(int_float_a);
+    int_float_b_expression = std::make_shared<LQPCxlumnExpression>(int_float_b);
 
     int_string_node = StoredTableNode::make("table_int_string");
-    int_string_a = int_string_node->get_column("a");
-    int_string_b = int_string_node->get_column("b");
+    int_string_a = int_string_node->get_cxlumn("a");
+    int_string_b = int_string_node->get_cxlumn("b");
 
     int_float2_node = StoredTableNode::make("table_int_float2");
-    int_float2_a = int_float2_node->get_column("a");
-    int_float2_b = int_float2_node->get_column("b");
+    int_float2_a = int_float2_node->get_cxlumn("a");
+    int_float2_b = int_float2_node->get_cxlumn("b");
 
     int_float5_node = StoredTableNode::make("table_int_float5");
-    int_float5_a = int_float5_node->get_column("a");
-    int_float5_d = int_float5_node->get_column("d");
+    int_float5_a = int_float5_node->get_cxlumn("a");
+    int_float5_d = int_float5_node->get_cxlumn("d");
   }
 
   void TearDown() override { StorageManager::reset(); }
@@ -94,7 +94,7 @@ class LQPTranslatorTest : public ::testing::Test {
 
   std::shared_ptr<Table> table_int_float, table_int_float2, table_int_float5, table_alias_name, table_int_string;
   std::shared_ptr<StoredTableNode> int_float_node, int_string_node, int_float2_node, int_float5_node;
-  LQPColumnReference int_float_a, int_float_b, int_string_a, int_string_b, int_float2_a, int_float2_b, int_float5_a,
+  LQPCxlumnReference int_float_a, int_float_b, int_string_a, int_string_b, int_float2_a, int_float2_b, int_float5_a,
       int_float5_d;
   std::shared_ptr<AbstractExpression> int_float_a_expression, int_float_b_expression;
 };
@@ -459,7 +459,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_cxlumn_ids);
   table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_cxlumn_ids);
 
-  auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_column("b"), 42));
+  auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_cxlumn("b"), 42));
   predicate_node->set_left_input(stored_table_node);
   predicate_node->scan_type = ScanType::IndexScan;
   const auto op = LQPTranslator{}.translate_node(predicate_node);
@@ -494,7 +494,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_cxlumn_ids);
   table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_cxlumn_ids);
 
-  auto predicate_node = PredicateNode::make(between(stored_table_node->get_column("b"), 42, 1337));
+  auto predicate_node = PredicateNode::make(between(stored_table_node->get_cxlumn("b"), 42, 1337));
   predicate_node->set_left_input(stored_table_node);
   predicate_node->scan_type = ScanType::IndexScan;
   const auto op = LQPTranslator{}.translate_node(predicate_node);
@@ -538,9 +538,9 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
   table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_cxlumn_ids);
   table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_cxlumn_ids);
 
-  auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_column("b"), 42));
+  auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_cxlumn("b"), 42));
   predicate_node->set_left_input(stored_table_node);
-  auto predicate_node2 = PredicateNode::make(less_than_(stored_table_node->get_column("a"), 42));
+  auto predicate_node2 = PredicateNode::make(less_than_(stored_table_node->get_cxlumn("a"), 42));
   predicate_node2->set_left_input(predicate_node);
 
   // The optimizer should not set this ScanType in this situation
@@ -596,19 +596,19 @@ TEST_F(LQPTranslatorTest, ShowTablesNode) {
   EXPECT_EQ(show_tables_op->name(), "ShowTables");
 }
 
-TEST_F(LQPTranslatorTest, ShowColumnsNode) {
+TEST_F(LQPTranslatorTest, ShowCxlumnsNode) {
   /**
    * Build LQP and translate to PQP
    */
-  const auto show_column_node = ShowColumnsNode::make("table_a");
-  const auto op = LQPTranslator{}.translate_node(show_column_node);
+  const auto show_cxlumn_node = ShowCxlumnsNode::make("table_a");
+  const auto op = LQPTranslator{}.translate_node(show_cxlumn_node);
 
   /**
    * Check PQP
    */
-  const auto show_columns_op = std::dynamic_pointer_cast<ShowColumns>(op);
-  ASSERT_TRUE(show_columns_op);
-  EXPECT_EQ(show_columns_op->name(), "ShowColumns");
+  const auto show_cxlumns_op = std::dynamic_pointer_cast<ShowCxlumns>(op);
+  ASSERT_TRUE(show_cxlumns_op);
+  EXPECT_EQ(show_cxlumns_op->name(), "ShowCxlumns");
 }
 
 TEST_F(LQPTranslatorTest, AggregateNodeSimple) {

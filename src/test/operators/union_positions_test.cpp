@@ -202,8 +202,8 @@ TEST_F(UnionPositionsTest, MultipleReferencedTables) {
    */
   const auto get_pos_list = [](const auto& table, CxlumnID cxlumn_id) {
     const auto column = table->get_chunk(ChunkID{0})->get_column(cxlumn_id);
-    const auto ref_column = std::dynamic_pointer_cast<const ReferenceSegment>(column);
-    return *ref_column->pos_list();
+    const auto ref_segment = std::dynamic_pointer_cast<const ReferenceSegment>(column);
+    return *ref_segment->pos_list();
   };
 
   const auto& output = union_unique_op->get_output();

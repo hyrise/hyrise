@@ -53,7 +53,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
   }
   _out << "|" << std::endl;
   for (CxlumnID col{0}; col < input_table_left()->cxlumn_count(); ++col) {
-    const auto data_type = data_type_to_string.left.at(input_table_left()->column_data_type(col));
+    const auto data_type = data_type_to_string.left.at(input_table_left()->cxlumn_data_type(col));
     _out << "|" << std::setw(widths[col]) << data_type << std::setw(0);
   }
   if (_flags & PrintMvcc) {
@@ -86,15 +86,15 @@ std::shared_ptr<const Table> Print::_on_execute() {
         _out << std::setw(col_width) << cell << "|" << std::setw(0);
       }
 
-      if (_flags & PrintMvcc && chunk->has_mvcc_columns()) {
-        auto mvcc_columns = chunk->get_scoped_mvcc_columns_lock();
+      if (_flags & PrintMvcc && chunk->has_mvcc_data()) {
+        auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
-        auto begin = mvcc_columns->begin_cids[row];
-        auto end = mvcc_columns->end_cids[row];
-        auto tid = mvcc_columns->tids[row];
+        auto begin = mvcc_data->begin_cids[row];
+        auto end = mvcc_data->end_cids[row];
+        auto tid = mvcc_data->tids[row];
 
-        auto begin_string = begin == MvccColumns::MAX_COMMIT_ID ? "" : std::to_string(begin);
-        auto end_string = end == MvccColumns::MAX_COMMIT_ID ? "" : std::to_string(end);
+        auto begin_string = begin == MvccData::MAX_COMMIT_ID ? "" : std::to_string(begin);
+        auto end_string = end == MvccData::MAX_COMMIT_ID ? "" : std::to_string(end);
         auto tid_string = tid == 0 ? "" : std::to_string(tid);
 
         _out << "|" << std::setw(6) << begin_string << std::setw(0);

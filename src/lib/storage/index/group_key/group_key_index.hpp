@@ -12,7 +12,7 @@
 namespace opossum {
 
 class BaseSegment;
-class BaseDictionaryColumn;
+class BaseDictionarySegment;
 class GroupKeyIndexTest;
 
 /**
@@ -72,7 +72,7 @@ class GroupKeyIndex : public BaseIndex {
   std::vector<std::shared_ptr<const BaseSegment>> _get_index_columns() const;
 
  private:
-  const std::shared_ptr<const BaseDictionaryColumn> _index_column;
+  const std::shared_ptr<const BaseDictionarySegment> _index_column;
   std::vector<std::size_t> _index_offsets;   // maps value-ids to offsets in _index_postings
   std::vector<ChunkOffset> _index_postings;  // records positions in the attribute vector
 };

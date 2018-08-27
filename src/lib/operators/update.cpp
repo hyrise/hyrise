@@ -35,7 +35,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
   TableCxlumnDefinitions insert_table_cxlumn_definitions;
   for (CxlumnID cxlumn_id{0}; cxlumn_id < table_to_update->cxlumn_count(); ++cxlumn_id) {
     insert_table_cxlumn_definitions.emplace_back(table_to_update->cxlumn_name(cxlumn_id),
-                                                 table_to_update->column_data_type(cxlumn_id));
+                                                 table_to_update->cxlumn_data_type(cxlumn_id));
   }
 
   auto insert_table = std::make_shared<Table>(insert_table_cxlumn_definitions, TableType::References);

@@ -18,21 +18,21 @@ class StoredTableNodeTest : public BaseTest {
     StorageManager::get().add_table("t_b", load_table("src/test/tables/int_float.tbl", Chunk::MAX_SIZE));
 
     _stored_table_node = StoredTableNode::make("t_a");
-    _a = LQPColumnReference(_stored_table_node, CxlumnID{0});
-    _b = LQPColumnReference(_stored_table_node, CxlumnID{1});
+    _a = LQPCxlumnReference(_stored_table_node, CxlumnID{0});
+    _b = LQPCxlumnReference(_stored_table_node, CxlumnID{1});
 
     _stored_table_node->set_excluded_chunk_ids({ChunkID{2}});
   }
 
   std::shared_ptr<StoredTableNode> _stored_table_node;
-  LQPColumnReference _a, _b;
+  LQPCxlumnReference _a, _b;
 };
 
 TEST_F(StoredTableNodeTest, Description) { EXPECT_EQ(_stored_table_node->description(), "[StoredTable] Name: 't_a'"); }
 
-TEST_F(StoredTableNodeTest, GetColumn) {
-  EXPECT_EQ(_stored_table_node->get_column("a"), _a);
-  EXPECT_EQ(_stored_table_node->get_column("b"), _b);
+TEST_F(StoredTableNodeTest, GetCxlumn) {
+  EXPECT_EQ(_stored_table_node->get_cxlumn("a"), _a);
+  EXPECT_EQ(_stored_table_node->get_cxlumn("b"), _b);
 }
 
 TEST_F(StoredTableNodeTest, Equals) {

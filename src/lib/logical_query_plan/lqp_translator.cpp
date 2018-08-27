@@ -38,7 +38,7 @@
 #include "operators/limit.hpp"
 #include "operators/maintenance/create_view.hpp"
 #include "operators/maintenance/drop_view.hpp"
-#include "operators/maintenance/show_columns.hpp"
+#include "operators/maintenance/show_cxlumns.hpp"
 #include "operators/maintenance/show_tables.hpp"
 #include "operators/operator_join_predicate.hpp"
 #include "operators/operator_scan_predicate.hpp"
@@ -52,7 +52,7 @@
 #include "operators/validate.hpp"
 #include "predicate_node.hpp"
 #include "projection_node.hpp"
-#include "show_columns_node.hpp"
+#include "show_cxlumns_node.hpp"
 #include "sort_node.hpp"
 #include "storage/storage_manager.hpp"
 #include "stored_table_node.hpp"
@@ -113,7 +113,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_by_node_type(
 
       // Maintenance operators
     case LQPNodeType::ShowTables:  return _translate_show_tables_node(node);
-    case LQPNodeType::ShowColumns: return _translate_show_columns_node(node);
+    case LQPNodeType::ShowCxlumns: return _translate_show_cxlumns_node(node);
     case LQPNodeType::CreateView:  return _translate_create_view_node(node);
     case LQPNodeType::DropView:    return _translate_drop_view_node(node);
       // clang-format on
@@ -251,9 +251,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alias_node(
   const auto input_operator = translate_node(input_node);
 
   auto cxlumn_ids = std::vector<CxlumnID>();
-  cxlumn_ids.reserve(alias_node->column_expressions().size());
+  cxlumn_ids.reserve(alias_node->cxlumn_expressions().size());
 
-  for (const auto& expression : alias_node->column_expressions()) {
+  for (const auto& expression : alias_node->cxlumn_expressions()) {
     cxlumn_ids.emplace_back(input_node->get_cxlumn_id(*expression));
   }
 
@@ -267,7 +267,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_projection_node(
   const auto input_operator = translate_node(input_node);
 
   return std::make_shared<Projection>(input_operator,
-                                      _translate_expressions(projection_node->column_expressions(), input_node));
+                                      _translate_expressions(projection_node->cxlumn_expressions(), input_node));
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
@@ -408,7 +408,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_update_node(
   const auto input_operator = translate_node(node->left_input());
   auto update_node = std::dynamic_pointer_cast<UpdateNode>(node);
 
-  auto new_value_exprs = _translate_expressions(update_node->update_column_expressions, node);
+  auto new_value_exprs = _translate_expressions(update_node->update_cxlumn_expressions, node);
 
   auto projection = std::make_shared<Projection>(input_operator, new_value_exprs);
   return std::make_shared<Update>(update_node->table_name, input_operator, projection);
@@ -440,11 +440,11 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_show_tables_node(
   return std::make_shared<ShowTables>();
 }
 
-std::shared_ptr<AbstractOperator> LQPTranslator::_translate_show_columns_node(
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_show_cxlumns_node(
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  DebugAssert(node->left_input() == nullptr, "ShowColumns should not have an input operator.");
-  const auto show_columns_node = std::dynamic_pointer_cast<ShowColumnsNode>(node);
-  return std::make_shared<ShowColumns>(show_columns_node->table_name());
+  DebugAssert(node->left_input() == nullptr, "ShowCxlumns should not have an input operator.");
+  const auto show_cxlumns_node = std::dynamic_pointer_cast<ShowCxlumnsNode>(node);
+  return std::make_shared<ShowCxlumns>(show_cxlumns_node->table_name());
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_view_node(
@@ -472,7 +472,7 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
   for (auto& pqp_expression : pqp_expressions) {
     /**
      * Resolve Expressions to PQPCxlumnExpressions referencing columns from the input Operator. After this, no
-     * LQPColumnExpressions remain in the pqp_expression and it is a valid PQP expression.
+     * LQPCxlumnExpressions remain in the pqp_expression and it is a valid PQP expression.
      */
 
     visit_expression(pqp_expression, [&](auto& expression) {
@@ -495,7 +495,7 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
 
         // Only specify a type for the SubSelect if it has exactly one column. Otherwise the DataType of the Expression
         // is undefined and obtaining it will result in a runtime error.
-        if (lqp_select_expression->lqp->column_expressions().size() == 1u) {
+        if (lqp_select_expression->lqp->cxlumn_expressions().size() == 1u) {
           const auto sub_select_data_type = lqp_select_expression->data_type();
           const auto sub_select_nullable = lqp_select_expression->is_nullable();
 
@@ -510,7 +510,7 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
       // Try to resolve the Expression to a column from the input node
       const auto cxlumn_id = node->find_cxlumn_id(*expression);
       if (cxlumn_id) {
-        const auto referenced_expression = node->column_expressions()[*cxlumn_id];
+        const auto referenced_expression = node->cxlumn_expressions()[*cxlumn_id];
         expression = std::make_shared<PQPCxlumnExpression>(*cxlumn_id, referenced_expression->data_type(),
                                                            referenced_expression->is_nullable(),
                                                            referenced_expression->as_cxlumn_name());

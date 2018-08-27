@@ -41,7 +41,7 @@ constexpr auto encoded_column_for_type = hana::make_map(
  * @see resolve_cxlumn_type in resolve_type.hpp for info on usage
  */
 template <typename CxlumnDataType, typename Functor>
-void resolve_encoded_cxlumn_type(const BaseEncodedColumn& column, const Functor& functor) {
+void resolve_encoded_segment_type(const BaseEncodedColumn& column, const Functor& functor) {
   // Iterate over all pairs in the map
   hana::fold(encoded_column_for_type, false, [&](auto match_found, auto encoded_column_pair) {
     const auto encoding_type_c = hana::first(encoded_column_pair);

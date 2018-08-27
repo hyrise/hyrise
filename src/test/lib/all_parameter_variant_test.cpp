@@ -96,8 +96,8 @@ TEST_F(AllParameterVariantTest, ToString) {
   {
     StorageManager::get().add_table("int_float", load_table("src/test/tables/int_float.tbl"));
     const std::shared_ptr<StoredTableNode> int_float = StoredTableNode::make("int_float");
-    const LQPColumnReference col_a = {int_float, CxlumnID{0}};
-    const LQPColumnReference col_b = {int_float, CxlumnID{1}};
+    const LQPCxlumnReference col_a = {int_float, CxlumnID{0}};
+    const LQPCxlumnReference col_b = {int_float, CxlumnID{1}};
 
     const AllParameterVariant parameter_col_a(col_a);
     EXPECT_EQ(to_string(parameter_col_a), "a");

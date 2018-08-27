@@ -11,7 +11,7 @@
 
 #include "csv_meta.hpp"
 #include "storage/base_column.hpp"
-#include "storage/value_column.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

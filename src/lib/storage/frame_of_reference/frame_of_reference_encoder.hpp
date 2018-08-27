@@ -8,8 +8,8 @@
 #include "storage/base_column_encoder.hpp"
 
 #include "storage/frame_of_reference_segment.hpp"
-#include "storage/value_column.hpp"
-#include "storage/value_column/value_column_iterable.hpp"
+#include "storage/value_segment.hpp"
+#include "storage/value_segment/value_segment_iterable.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
@@ -22,12 +22,12 @@ class FrameOfReferenceEncoder : public ColumnEncoder<FrameOfReferenceEncoder> {
   static constexpr auto _uses_vector_compression = true;  // see base_column_encoder.hpp for details
 
   template <typename T>
-  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_column) {
-    const auto alloc = value_column->values().get_allocator();
+  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
+    const auto alloc = value_segment->values().get_allocator();
 
     static constexpr auto block_size = FrameOfReferenceSegment<T>::block_size;
 
-    const auto size = value_column->size();
+    const auto size = value_segment->size();
 
     // Ceiling of integer division
     const auto div_ceil = [](auto x, auto y) { return (x + y - 1u) / y; };
@@ -49,7 +49,7 @@ class FrameOfReferenceEncoder : public ColumnEncoder<FrameOfReferenceEncoder> {
     // used as optional input for the compression of the offset values
     auto max_offset = uint32_t{0u};
 
-    auto iterable = ValueSegmentIterable<T>{*value_column};
+    auto iterable = ValueSegmentIterable<T>{*value_segment};
     iterable.with_iterators([&](auto column_it, auto column_end) {
       // a temporary storage to hold the values of one block
       auto current_value_block = std::array<T, block_size>{};

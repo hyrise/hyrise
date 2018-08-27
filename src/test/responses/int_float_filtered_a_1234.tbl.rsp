@@ -1,6 +1,6 @@
 response_table {
-  column_type: "int"
-  column_type: "float"
+  cxlumn_type: "int"
+  cxlumn_type: "float"
   cxlumn_name: "a"
   cxlumn_name: "b"
   row {

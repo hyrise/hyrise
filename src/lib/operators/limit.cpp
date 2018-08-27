@@ -61,11 +61,11 @@ std::shared_ptr<const Table> Limit::_on_execute() {
       std::shared_ptr<const Table> referenced_table;
       CxlumnID output_cxlumn_id = cxlumn_id;
 
-      if (auto input_ref_column = std::dynamic_pointer_cast<const ReferenceSegment>(input_base_column)) {
-        output_cxlumn_id = input_ref_column->referenced_cxlumn_id();
-        referenced_table = input_ref_column->referenced_table();
+      if (auto input_ref_segment = std::dynamic_pointer_cast<const ReferenceSegment>(input_base_column)) {
+        output_cxlumn_id = input_ref_segment->referenced_cxlumn_id();
+        referenced_table = input_ref_segment->referenced_table();
         // TODO(all): optimize using whole chunk whenever possible
-        auto begin = input_ref_column->pos_list()->begin();
+        auto begin = input_ref_segment->pos_list()->begin();
         std::copy(begin, begin + output_chunk_row_count, output_pos_list->begin());
       } else {
         referenced_table = input_table;

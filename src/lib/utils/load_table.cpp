@@ -55,8 +55,8 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
     test_table->append(values);
 
     auto chunk = test_table->get_chunk(static_cast<ChunkID>(test_table->chunk_count() - 1));
-    auto mvcc_columns = chunk->get_scoped_mvcc_columns_lock();
-    mvcc_columns->begin_cids.back() = 0;
+    auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
+    mvcc_data->begin_cids.back() = 0;
   }
   return test_table;
 }

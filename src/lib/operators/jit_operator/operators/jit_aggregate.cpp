@@ -3,7 +3,7 @@
 #include "constant_mappings.hpp"
 #include "operators/jit_operator/jit_operations.hpp"
 #include "resolve_type.hpp"
-#include "storage/value_column.hpp"
+#include "storage/value_segment.hpp"
 
 namespace opossum {
 

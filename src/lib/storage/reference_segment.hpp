@@ -11,7 +11,7 @@
 #include "table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "value_column.hpp"
+#include "value_segment.hpp"
 
 namespace opossum {
 

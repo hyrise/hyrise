@@ -43,12 +43,12 @@ void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table>& tab
 
   // Column Types
   for (CxlumnID cxlumn_id{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
-    ColumnMeta column_meta;
+    CxlumnMeta column_meta;
     column_meta.name = table->cxlumn_name(cxlumn_id);
-    column_meta.type = data_type_to_string.left.at(table->column_data_type(cxlumn_id));
+    column_meta.type = data_type_to_string.left.at(table->cxlumn_data_type(cxlumn_id));
     column_meta.nullable = table->column_is_nullable(cxlumn_id);
 
-    meta.columns.push_back(column_meta);
+    meta.cxlumns.push_back(column_meta);
   }
 
   nlohmann::json meta_json = meta;

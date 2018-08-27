@@ -32,17 +32,17 @@ void ChunkCompressionTask::_on_execute() {
     DebugAssert(_chunk_is_completed(chunk, table->max_chunk_size()),
                 "Chunk is not completed and thus can’t be compressed.");
 
-    ChunkEncoder::encode_chunk(chunk, table->column_data_types());
+    ChunkEncoder::encode_chunk(chunk, table->cxlumn_data_types());
   }
 }
 
 bool ChunkCompressionTask::_chunk_is_completed(const std::shared_ptr<Chunk>& chunk, const uint32_t max_chunk_size) {
   if (chunk->size() != max_chunk_size) return false;
 
-  auto mvcc_columns = chunk->get_scoped_mvcc_columns_lock();
+  auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
-  for (const auto begin_cid : mvcc_columns->begin_cids) {
-    if (begin_cid == MvccColumns::MAX_COMMIT_ID) return false;
+  for (const auto begin_cid : mvcc_data->begin_cids) {
+    if (begin_cid == MvccData::MAX_COMMIT_ID) return false;
   }
 
   return true;

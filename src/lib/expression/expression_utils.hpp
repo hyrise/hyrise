@@ -13,7 +13,7 @@
 namespace opossum {
 
 class AbstractLQPNode;
-class LQPColumnExpression;
+class LQPCxlumnExpression;
 class TransactionContext;
 
 /**
@@ -44,14 +44,14 @@ std::vector<std::shared_ptr<AbstractExpression>> expressions_deep_copy(
 
 /**
  * Utility to AbstractExpression::deep_copy() a vector of expressions while adjusting column references in
- * LQPColumnExpressions according to the node_mapping
+ * LQPCxlumnExpressions according to the node_mapping
  */
 std::vector<std::shared_ptr<AbstractExpression>> expressions_copy_and_adapt_to_different_lqp(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const LQPNodeMapping& node_mapping);
 
 /**
  * Utility to AbstractExpression::deep_copy() a single expression while adjusting column references in
- * LQPColumnExpressions according to the node_mapping
+ * LQPCxlumnExpressions according to the node_mapping
  */
 std::shared_ptr<AbstractExpression> expression_copy_and_adapt_to_different_lqp(const AbstractExpression& expression,
                                                                                const LQPNodeMapping& node_mapping);
@@ -62,7 +62,7 @@ std::shared_ptr<AbstractExpression> expression_copy_and_adapt_to_different_lqp(c
 void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expression,
                                        const LQPNodeMapping& node_mapping);
 
-std::shared_ptr<LQPColumnExpression> expression_adapt_to_different_lqp(const LQPColumnExpression& lqp_column_expression,
+std::shared_ptr<LQPCxlumnExpression> expression_adapt_to_different_lqp(const LQPCxlumnExpression& lqp_column_expression,
                                                                        const LQPNodeMapping& node_mapping);
 
 /**
@@ -107,7 +107,7 @@ DataType expression_common_type(const DataType lhs, const DataType rhs);
 
 /**
  * @return Checks whether the expression can be evaluated by the ExpressionEvaluator on top of a specified LQP (i.e.,
- *         all required LQPColumnExpressions are available from this LQP).
+ *         all required LQPCxlumnExpressions are available from this LQP).
  *         To check if an expression is available in a form ready to be used by a scan/join,
  *         use `Operator*Predicate::from_expression(...) != nullptr`.
  */

@@ -66,7 +66,7 @@ void JoinIndex::_create_table_structure() {
   auto add_cxlumn_definitions = [&](auto from_table, bool from_may_produce_null) {
     for (CxlumnID cxlumn_id{0}; cxlumn_id < from_table->cxlumn_count(); ++cxlumn_id) {
       auto nullable = (from_may_produce_null || from_table->column_is_nullable(cxlumn_id));
-      cxlumn_definitions.emplace_back(from_table->cxlumn_name(cxlumn_id), from_table->column_data_type(cxlumn_id),
+      cxlumn_definitions.emplace_back(from_table->cxlumn_name(cxlumn_id), from_table->cxlumn_data_type(cxlumn_id),
                                       nullable);
     }
   };
@@ -121,7 +121,7 @@ void JoinIndex::_perform_join() {
       for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
         const auto chunk_column_left = _left_in_table->get_chunk(chunk_id_left)->get_column(_left_cxlumn_id);
 
-        resolve_data_and_column_type(*chunk_column_left, [&](auto left_type, auto& typed_left_column) {
+        resolve_data_and_cxlumn_type(*chunk_column_left, [&](auto left_type, auto& typed_left_column) {
           using LeftType = typename decltype(left_type)::type;
 
           auto iterable_left = create_iterable_from_column<LeftType>(typed_left_column);

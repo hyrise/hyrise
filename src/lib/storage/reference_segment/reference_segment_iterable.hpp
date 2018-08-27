@@ -79,14 +79,14 @@ class ReferenceSegmentIterable : public ColumnIterable<ReferenceSegmentIterable<
     auto _value_from_any_column(const BaseSegment& column, const ChunkOffset& chunk_offset) const {
       const auto variant_value = column[chunk_offset];
 
-      const auto chunk_offset_into_ref_column =
+      const auto chunk_offset_into_ref_segment =
           static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
 
       if (variant_is_null(variant_value)) {
-        return ColumnIteratorValue<T>{T{}, true, chunk_offset_into_ref_column};
+        return ColumnIteratorValue<T>{T{}, true, chunk_offset_into_ref_segment};
       }
 
-      return ColumnIteratorValue<T>{type_cast<T>(variant_value), false, chunk_offset_into_ref_column};
+      return ColumnIteratorValue<T>{type_cast<T>(variant_value), false, chunk_offset_into_ref_segment};
     }
 
    private:

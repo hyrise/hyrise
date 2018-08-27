@@ -163,7 +163,7 @@ FilterByValueEstimate CxlumnStatistics<CxlumnDataType>::estimate_predicate_with_
 }
 
 template <typename CxlumnDataType>
-FilterByColumnComparisonEstimate CxlumnStatistics<CxlumnDataType>::estimate_predicate_with_column(
+FilterByColumnComparisonEstimate CxlumnStatistics<CxlumnDataType>::estimate_predicate_with_cxlumn(
     const PredicateCondition predicate_condition, const BaseCxlumnStatistics& base_right_cxlumn_statistics) const {
   /**
    * Calculate expected selectivity by looking at what ratio of values of both columns are in the overlapping value
@@ -361,7 +361,7 @@ FilterByColumnComparisonEstimate CxlumnStatistics<CxlumnDataType>::estimate_pred
  * Specialization for strings as they cannot be used in subtractions.
  */
 template <>
-FilterByColumnComparisonEstimate CxlumnStatistics<std::string>::estimate_predicate_with_column(
+FilterByColumnComparisonEstimate CxlumnStatistics<std::string>::estimate_predicate_with_cxlumn(
     const PredicateCondition predicate_condition, const BaseCxlumnStatistics& base_right_cxlumn_statistics) const {
   // TODO(anybody) implement special case for strings
   Assert(_data_type == base_right_cxlumn_statistics.data_type(), "Cannot compare columns of different type");

@@ -2,11 +2,11 @@
 
 #include <memory>
 
-#include "storage/base_value_column.hpp"
+#include "storage/base_value_segment.hpp"
 #include "storage/column_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/create_iterable_from_column.hpp"
-#include "storage/resolve_encoded_column_type.hpp"
-#include "storage/value_column/null_value_vector_iterable.hpp"
+#include "storage/resolve_encoded_segment_type.hpp"
+#include "storage/value_segment/null_value_vector_iterable.hpp"
 
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
@@ -58,7 +58,7 @@ void IsNullTableScanImpl::handle_column(const BaseValueSegment& base_column,
                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
-void IsNullTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
+void IsNullTableScanImpl::handle_column(const BaseDictionarySegment& base_column,
                                         std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
@@ -74,12 +74,12 @@ void IsNullTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 
-  const auto base_column_type = _in_table->column_data_type(_left_cxlumn_id);
+  const auto base_cxlumn_type = _in_table->cxlumn_data_type(_left_cxlumn_id);
 
-  resolve_data_type(base_column_type, [&](auto type) {
+  resolve_data_type(base_cxlumn_type, [&](auto type) {
     using Type = typename decltype(type)::type;
 
-    resolve_encoded_column_type<Type>(base_column, [&](const auto& typed_column) {
+    resolve_encoded_segment_type<Type>(base_column, [&](const auto& typed_column) {
       auto base_column_iterable = create_iterable_from_column(typed_column);
 
       base_column_iterable.with_iterators(

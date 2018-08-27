@@ -80,7 +80,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     }
 
     output_table->append_chunk(output_columns);
-    output_table->get_chunk(chunk_id)->set_mvcc_columns(input_chunk->mvcc_columns());
+    output_table->get_chunk(chunk_id)->set_mvcc_data(input_chunk->mvcc_data());
   }
 
   return output_table;

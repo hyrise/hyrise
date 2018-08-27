@@ -304,12 +304,12 @@ TEST_F(OperatorsImportCsvTest, AutoCompressChunks) {
   // Check if table content is preserved
   EXPECT_TABLE_EQ_ORDERED(result_table, expected_table);
 
-  // Check if columns are compressed into DictionaryColumns
+  // Check if columns are compressed into DictionarySegments
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < result_table->chunk_count(); ++chunk_id) {
     auto chunk = result_table->get_chunk(chunk_id);
     for (CxlumnID cxlumn_id = CxlumnID{0}; cxlumn_id < chunk->cxlumn_count(); ++cxlumn_id) {
       auto base_column = chunk->get_column(cxlumn_id);
-      auto dict_column = std::dynamic_pointer_cast<const BaseDictionaryColumn>(base_column);
+      auto dict_column = std::dynamic_pointer_cast<const BaseDictionarySegment>(base_column);
 
       EXPECT_TRUE(dict_column != nullptr);
     }

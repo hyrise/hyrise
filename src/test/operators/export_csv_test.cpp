@@ -109,7 +109,7 @@ TEST_F(OperatorsExportCsvTest, MultipleChunks) {
                            "6,\"Tag\",3.5\n"));
 }
 
-TEST_F(OperatorsExportCsvTest, DictionaryColumnFixedSizeByteAligned) {
+TEST_F(OperatorsExportCsvTest, DictionarySegmentFixedSizeByteAligned) {
   table->append({1, "Hallo", 3.5f});
   table->append({1, "Hallo", 3.5f});
   table->append({1, "Hallo3", 3.55f});
@@ -129,7 +129,7 @@ TEST_F(OperatorsExportCsvTest, DictionaryColumnFixedSizeByteAligned) {
                            "1,\"Hallo3\",3.55\n"));
 }
 
-TEST_F(OperatorsExportCsvTest, FixedStringDictionaryColumnFixedSizeByteAligned) {
+TEST_F(OperatorsExportCsvTest, FixedStringDictionarySegmentFixedSizeByteAligned) {
   const auto filename_string_table = test_data_path + "string.tbl";
   const auto meta_filename_string_table = filename_string_table + CsvMeta::META_FILE_EXTENSION;
 
@@ -261,8 +261,8 @@ TEST_F(OperatorsExportCsvTest, ExportNullValuesMeta) {
   EXPECT_TRUE(file_exists(meta_filename));
 
   auto meta_information = process_csv_meta_file(meta_filename);
-  EXPECT_TRUE(meta_information.columns.at(0).nullable);
-  EXPECT_TRUE(meta_information.columns.at(1).nullable);
+  EXPECT_TRUE(meta_information.cxlumns.at(0).nullable);
+  EXPECT_TRUE(meta_information.cxlumns.at(1).nullable);
 }
 
 }  // namespace opossum

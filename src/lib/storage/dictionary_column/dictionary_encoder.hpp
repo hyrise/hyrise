@@ -8,7 +8,7 @@
 
 #include "storage/dictionary_column.hpp"
 #include "storage/fixed_string_dictionary_column.hpp"
-#include "storage/value_column.hpp"
+#include "storage/value_segment.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 
 #include "storage/vector_compression/vector_compression.hpp"
@@ -30,20 +30,20 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
   static constexpr auto _uses_vector_compression = true;  // see base_column_encoder.hpp for details
 
   template <typename T>
-  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_column) {
+  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
     // See: https://goo.gl/MCM5rr
     // Create dictionary (enforce uniqueness and sorting)
-    const auto& values = value_column->values();
+    const auto& values = value_segment->values();
 
     if constexpr (Encoding == EncodingType::FixedStringDictionary) {
       // Encode a column with a FixedStringVector as dictionary. std::string is the only supported type
       return _encode_dictionary_column(
           FixedStringVector{values.cbegin(), values.cend(), _calculate_fixed_string_length(values), values.size()},
-          value_column);
+          value_segment);
     } else {
       // Encode a column with a pmr_vector<T> as dictionary
       return _encode_dictionary_column(pmr_vector<T>{values.cbegin(), values.cend(), values.get_allocator()},
-                                       value_column);
+                                       value_segment);
     }
   }
 
@@ -56,13 +56,13 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
 
   template <typename U, typename T>
   std::shared_ptr<BaseEncodedColumn> _encode_dictionary_column(
-      U dictionary, const std::shared_ptr<const ValueSegment<T>>& value_column) {
-    const auto& values = value_column->values();
+      U dictionary, const std::shared_ptr<const ValueSegment<T>>& value_segment) {
+    const auto& values = value_segment->values();
     const auto alloc = values.get_allocator();
 
     // Remove null values from value vector
-    if (value_column->is_nullable()) {
-      const auto& null_values = value_column->null_values();
+    if (value_segment->is_nullable()) {
+      const auto& null_values = value_segment->null_values();
 
       // Swap values to back if value is null
       auto erase_from_here_it = dictionary.end();
@@ -86,8 +86,8 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
 
     const auto null_value_id = static_cast<uint32_t>(dictionary.size());
 
-    if (value_column->is_nullable()) {
-      const auto& null_values = value_column->null_values();
+    if (value_segment->is_nullable()) {
+      const auto& null_values = value_segment->null_values();
 
       /**
        * Iterators are used because values and null_values are of
@@ -121,10 +121,10 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
     auto attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(encoded_attribute_vector));
 
     if constexpr (Encoding == EncodingType::FixedStringDictionary) {
-      return std::allocate_shared<FixedStringDictionaryColumn<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
+      return std::allocate_shared<FixedStringDictionarySegment<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
                                                                   ValueID{null_value_id});
     } else {
-      return std::allocate_shared<DictionaryColumn<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
+      return std::allocate_shared<DictionarySegment<T>>(alloc, dictionary_sptr, attribute_vector_sptr,
                                                        ValueID{null_value_id});
     }
   }

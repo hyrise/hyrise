@@ -70,7 +70,7 @@ class ColumnMaterializer {
                                                                   CxlumnID cxlumn_id) {
     return std::make_shared<JobTask>([this, &output, &null_rows_output, input, cxlumn_id, chunk_id] {
       auto column = input->get_chunk(chunk_id)->get_column(cxlumn_id);
-      resolve_column_type<T>(*column, [&](auto& typed_column) {
+      resolve_cxlumn_type<T>(*column, [&](auto& typed_column) {
         (*output)[chunk_id] = _materialize_column(typed_column, chunk_id, null_rows_output);
       });
     });
@@ -109,7 +109,7 @@ class ColumnMaterializer {
   /**
    * Specialization for dictionary columns
    */
-  std::shared_ptr<MaterializedColumn<T>> _materialize_column(const DictionaryColumn<T>& column, ChunkID chunk_id,
+  std::shared_ptr<MaterializedColumn<T>> _materialize_column(const DictionarySegment<T>& column, ChunkID chunk_id,
                                                              std::unique_ptr<PosList>& null_rows_output) {
     auto output = MaterializedColumn<T>{};
     output.reserve(column.size());

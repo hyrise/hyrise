@@ -10,7 +10,7 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/lqp_column_reference.hpp"
+#include "logical_query_plan/lqp_cxlumn_reference.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
@@ -47,13 +47,13 @@ class PredicateReorderingTest : public StrategyBaseTest {
     node = StoredTableNode::make("a");
     table->set_table_statistics(table_statistics);
 
-    a = LQPColumnReference{node, CxlumnID{0}};
-    b = LQPColumnReference{node, CxlumnID{1}};
-    c = LQPColumnReference{node, CxlumnID{2}};
+    a = LQPCxlumnReference{node, CxlumnID{0}};
+    b = LQPCxlumnReference{node, CxlumnID{1}};
+    c = LQPCxlumnReference{node, CxlumnID{2}};
   }
 
   std::shared_ptr<StoredTableNode> node;
-  LQPColumnReference a, b, c;
+  LQPCxlumnReference a, b, c;
   std::shared_ptr<PredicateReorderingRule> _rule;
 };
 
@@ -125,10 +125,10 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
   // Setup first LQP
   // predicate_node_1 -> predicate_node_0 -> stored_table_node
-  auto predicate_node_0 = PredicateNode::make(less_than_(LQPColumnReference{stored_table_node, CxlumnID{0}}, 20));
+  auto predicate_node_0 = PredicateNode::make(less_than_(LQPCxlumnReference{stored_table_node, CxlumnID{0}}, 20));
   predicate_node_0->set_left_input(stored_table_node);
 
-  auto predicate_node_1 = PredicateNode::make(less_than_(LQPColumnReference{stored_table_node, CxlumnID{0}}, 40));
+  auto predicate_node_1 = PredicateNode::make(less_than_(LQPCxlumnReference{stored_table_node, CxlumnID{0}}, 40));
   predicate_node_1->set_left_input(predicate_node_0);
 
   predicate_node_1->get_statistics();
@@ -137,10 +137,10 @@ TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
 
   // Setup second LQP
   // predicate_node_3 -> predicate_node_2 -> stored_table_node
-  auto predicate_node_2 = PredicateNode::make(less_than_(LQPColumnReference{stored_table_node, CxlumnID{0}}, 40));
+  auto predicate_node_2 = PredicateNode::make(less_than_(LQPCxlumnReference{stored_table_node, CxlumnID{0}}, 40));
   predicate_node_2->set_left_input(stored_table_node);
 
-  auto predicate_node_3 = PredicateNode::make(less_than_(LQPColumnReference{stored_table_node, CxlumnID{0}}, 20));
+  auto predicate_node_3 = PredicateNode::make(less_than_(LQPCxlumnReference{stored_table_node, CxlumnID{0}}, 20));
   predicate_node_3->set_left_input(predicate_node_2);
 
   auto reordered_1 = StrategyBaseTest::apply_rule(_rule, predicate_node_3);
@@ -179,11 +179,11 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
   auto table_0 = MockNode::make(table_statistics);
   auto table_1 = MockNode::make(table_statistics);
   auto cross_node = JoinNode::make(JoinMode::Cross);
-  auto predicate_0 = PredicateNode::make(greater_than_(LQPColumnReference{table_0, CxlumnID{0}}, 80));
-  auto predicate_1 = PredicateNode::make(greater_than_(LQPColumnReference{table_0, CxlumnID{0}}, 60));
-  auto predicate_2 = PredicateNode::make(greater_than_(LQPColumnReference{table_1, CxlumnID{0}}, 90));
-  auto predicate_3 = PredicateNode::make(greater_than_(LQPColumnReference{table_1, CxlumnID{0}}, 50));
-  auto predicate_4 = PredicateNode::make(greater_than_(LQPColumnReference{table_1, CxlumnID{0}}, 30));
+  auto predicate_0 = PredicateNode::make(greater_than_(LQPCxlumnReference{table_0, CxlumnID{0}}, 80));
+  auto predicate_1 = PredicateNode::make(greater_than_(LQPCxlumnReference{table_0, CxlumnID{0}}, 60));
+  auto predicate_2 = PredicateNode::make(greater_than_(LQPCxlumnReference{table_1, CxlumnID{0}}, 90));
+  auto predicate_3 = PredicateNode::make(greater_than_(LQPCxlumnReference{table_1, CxlumnID{0}}, 50));
+  auto predicate_4 = PredicateNode::make(greater_than_(LQPCxlumnReference{table_1, CxlumnID{0}}, 30));
 
   predicate_1->set_left_input(table_0);
   predicate_0->set_left_input(predicate_1);
@@ -229,8 +229,8 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
 
   auto table_node = MockNode::make(table_statistics);
   auto union_node = UnionNode::make(UnionMode::Positions);
-  auto predicate_a_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, CxlumnID{0}}, 90));
-  auto predicate_b_node = PredicateNode::make(greater_than_(LQPColumnReference{table_node, CxlumnID{0}}, 10));
+  auto predicate_a_node = PredicateNode::make(greater_than_(LQPCxlumnReference{table_node, CxlumnID{0}}, 90));
+  auto predicate_b_node = PredicateNode::make(greater_than_(LQPCxlumnReference{table_node, CxlumnID{0}}, 10));
 
   union_node->set_left_input(predicate_a_node);
   union_node->set_right_input(predicate_b_node);

@@ -7,7 +7,7 @@
 
 #include "abstract_lqp_node.hpp"
 #include "all_type_variant.hpp"
-#include "lqp_column_reference.hpp"
+#include "lqp_cxlumn_reference.hpp"
 
 namespace opossum {
 
@@ -22,17 +22,17 @@ class TableStatistics;
  */
 class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
  public:
-  using ColumnDefinitions = std::vector<std::pair<DataType, std::string>>;
+  using CxlumnDefinitions = std::vector<std::pair<DataType, std::string>>;
 
-  explicit MockNode(const ColumnDefinitions& cxlumn_definitions, const std::optional<std::string>& name = {});
+  explicit MockNode(const CxlumnDefinitions& cxlumn_definitions, const std::optional<std::string>& name = {});
   explicit MockNode(const std::shared_ptr<TableStatistics>& statistics);
 
-  LQPColumnReference get_column(const std::string& name) const;
+  LQPCxlumnReference get_cxlumn(const std::string& name) const;
 
-  const ColumnDefinitions& cxlumn_definitions() const;
-  const boost::variant<ColumnDefinitions, std::shared_ptr<TableStatistics>>& constructor_arguments() const;
+  const CxlumnDefinitions& cxlumn_definitions() const;
+  const boost::variant<CxlumnDefinitions, std::shared_ptr<TableStatistics>>& constructor_arguments() const;
 
-  const std::vector<std::shared_ptr<AbstractExpression>>& column_expressions() const override;
+  const std::vector<std::shared_ptr<AbstractExpression>>& cxlumn_expressions() const override;
 
   std::string description() const override;
 
@@ -46,9 +46,9 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
  private:
   std::optional<std::string> _name;
-  mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _column_expressions;
+  mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _cxlumn_expressions;
 
   // Constructor args to keep around for deep_copy()
-  boost::variant<ColumnDefinitions, std::shared_ptr<TableStatistics>> _constructor_arguments;
+  boost::variant<CxlumnDefinitions, std::shared_ptr<TableStatistics>> _constructor_arguments;
 };
 }  // namespace opossum

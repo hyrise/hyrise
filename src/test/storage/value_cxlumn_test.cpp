@@ -5,7 +5,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/storage/value_column.hpp"
+#include "../lib/storage/value_segment.hpp"
 
 namespace opossum {
 

@@ -20,26 +20,26 @@ class ColumnPruningRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
     node_a = MockNode::make(
-        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "a");
+        MockNode::CxlumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "a");
     node_b = MockNode::make(
-        MockNode::ColumnDefinitions{{DataType::Int, "u"}, {DataType::Int, "v"}, {DataType::Int, "w"}}, "b");
-    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}}, "c");
+        MockNode::CxlumnDefinitions{{DataType::Int, "u"}, {DataType::Int, "v"}, {DataType::Int, "w"}}, "b");
+    node_c = MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}}, "c");
 
-    a = node_a->get_column("a");
-    b = node_a->get_column("b");
-    c = node_a->get_column("c");
-    u = node_b->get_column("u");
-    v = node_b->get_column("v");
-    w = node_b->get_column("w");
-    x = node_c->get_column("x");
-    y = node_c->get_column("y");
+    a = node_a->get_cxlumn("a");
+    b = node_a->get_cxlumn("b");
+    c = node_a->get_cxlumn("c");
+    u = node_b->get_cxlumn("u");
+    v = node_b->get_cxlumn("v");
+    w = node_b->get_cxlumn("w");
+    x = node_c->get_cxlumn("x");
+    y = node_c->get_cxlumn("y");
 
     rule = std::make_shared<ColumnPruningRule>();
   }
 
   std::shared_ptr<ColumnPruningRule> rule;
   std::shared_ptr<MockNode> node_a, node_b, node_c;
-  LQPColumnReference a, b, c, u, v, w, x, y;
+  LQPCxlumnReference a, b, c, u, v, w, x, y;
 };
 
 TEST_F(ColumnPruningRuleTest, NoUnion) {

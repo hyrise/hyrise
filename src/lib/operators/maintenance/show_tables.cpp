@@ -10,7 +10,7 @@
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "storage/value_column.hpp"
+#include "storage/value_segment.hpp"
 
 namespace opossum {
 

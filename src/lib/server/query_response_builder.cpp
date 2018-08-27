@@ -15,13 +15,13 @@ std::vector<ColumnDescription> QueryResponseBuilder::build_row_description(const
   std::vector<ColumnDescription> result;
 
   const auto& cxlumn_names = table->cxlumn_names();
-  const auto& column_types = table->column_data_types();
+  const auto& cxlumn_types = table->cxlumn_data_types();
 
   for (auto cxlumn_id = 0u; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
     uint32_t object_id;
     int32_t type_id;
 
-    switch (column_types[cxlumn_id]) {
+    switch (cxlumn_types[cxlumn_id]) {
       case DataType::Int:
         object_id = 23;
         type_id = 4;

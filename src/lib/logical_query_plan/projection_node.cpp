@@ -21,7 +21,7 @@ std::string ProjectionNode::description() const {
   return stream.str();
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& ProjectionNode::column_expressions() const {
+const std::vector<std::shared_ptr<AbstractExpression>>& ProjectionNode::cxlumn_expressions() const {
   return expressions;
 }
 

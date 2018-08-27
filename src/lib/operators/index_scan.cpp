@@ -75,8 +75,8 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID 
     ChunkSegments columns;
 
     for (CxlumnID cxlumn_id{0u}; cxlumn_id < _in_table->cxlumn_count(); ++cxlumn_id) {
-      auto ref_column_out = std::make_shared<ReferenceSegment>(_in_table, cxlumn_id, matches_out);
-      columns.push_back(ref_column_out);
+      auto ref_segment_out = std::make_shared<ReferenceSegment>(_in_table, cxlumn_id, matches_out);
+      columns.push_back(ref_segment_out);
     }
 
     std::lock_guard<std::mutex> lock(output_mutex);

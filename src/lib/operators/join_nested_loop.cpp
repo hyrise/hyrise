@@ -66,14 +66,14 @@ void JoinNestedLoop::_create_table_structure() {
   for (CxlumnID cxlumn_id{0}; cxlumn_id < _left_in_table->cxlumn_count(); ++cxlumn_id) {
     const auto nullable = (left_may_produce_null || _left_in_table->column_is_nullable(cxlumn_id));
     output_cxlumn_definitions.emplace_back(_left_in_table->cxlumn_name(cxlumn_id),
-                                           _left_in_table->column_data_type(cxlumn_id), nullable);
+                                           _left_in_table->cxlumn_data_type(cxlumn_id), nullable);
   }
 
   // Preparing output table by adding columns from right table
   for (CxlumnID cxlumn_id{0}; cxlumn_id < _right_in_table->cxlumn_count(); ++cxlumn_id) {
     const auto nullable = (right_may_produce_null || _right_in_table->column_is_nullable(cxlumn_id));
     output_cxlumn_definitions.emplace_back(_right_in_table->cxlumn_name(cxlumn_id),
-                                           _right_in_table->column_data_type(cxlumn_id), nullable);
+                                           _right_in_table->cxlumn_data_type(cxlumn_id), nullable);
   }
 
   _output_table = std::make_shared<Table>(output_cxlumn_definitions, TableType::References);
@@ -118,8 +118,8 @@ void JoinNestedLoop::_join_two_untyped_columns(const std::shared_ptr<const BaseS
                                                const std::shared_ptr<const BaseSegment>& column_right,
                                                const ChunkID chunk_id_left, const ChunkID chunk_id_right,
                                                JoinNestedLoop::JoinParams& params) {
-  resolve_data_and_column_type(*column_left, [&](auto left_type, auto& typed_left_column) {
-    resolve_data_and_column_type(*column_right, [&](auto right_type, auto& typed_right_column) {
+  resolve_data_and_cxlumn_type(*column_left, [&](auto left_type, auto& typed_left_column) {
+    resolve_data_and_cxlumn_type(*column_right, [&](auto right_type, auto& typed_right_column) {
       using LeftType = typename decltype(left_type)::type;
       using RightType = typename decltype(right_type)::type;
 
@@ -210,7 +210,7 @@ void JoinNestedLoop::_perform_join() {
     for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < right_table->chunk_count(); ++chunk_id_right) {
       const auto column_right = right_table->get_chunk(chunk_id_right)->get_column(right_cxlumn_id);
 
-      resolve_data_and_column_type(*column_right, [&](auto right_type, auto& typed_right_column) {
+      resolve_data_and_cxlumn_type(*column_right, [&](auto right_type, auto& typed_right_column) {
         using RightType = typename decltype(right_type)::type;
 
         auto iterable_right = create_iterable_from_column<RightType>(typed_right_column);

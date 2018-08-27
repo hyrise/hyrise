@@ -15,7 +15,7 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "logical_query_plan/show_columns_node.hpp"
+#include "logical_query_plan/show_cxlumns_node.hpp"
 #include "logical_query_plan/show_tables_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
@@ -49,10 +49,10 @@ class LQPFindSubplanMismatchTest : public ::testing::Test {
     std::shared_ptr<SortNode> sort_node;
     std::shared_ptr<ProjectionNode> projection_node;
 
-    LQPColumnReference table_a_a;
-    LQPColumnReference table_b_a;
-    LQPColumnReference table_c_a;
-    LQPColumnReference table_c_b;
+    LQPCxlumnReference table_a_a;
+    LQPCxlumnReference table_b_a;
+    LQPCxlumnReference table_c_a;
+    LQPCxlumnReference table_c_b;
   };
 
   void SetUp() override {
@@ -67,13 +67,13 @@ class LQPFindSubplanMismatchTest : public ::testing::Test {
   void _init_query_nodes(QueryNodes& query_nodes) const {
     query_nodes.stored_table_node_a = StoredTableNode::make("table_a");
     query_nodes.validate_node = ValidateNode::make();
-    query_nodes.mock_node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}});
-    query_nodes.mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "b"}, {DataType::Int, "c"}});
+    query_nodes.mock_node_a = MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "a"}});
+    query_nodes.mock_node_b = MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "b"}, {DataType::Int, "c"}});
 
-    query_nodes.table_a_a = LQPColumnReference{query_nodes.stored_table_node_a, CxlumnID{0}};
-    query_nodes.table_b_a = LQPColumnReference{query_nodes.mock_node_a, CxlumnID{0}};
-    query_nodes.table_c_a = LQPColumnReference{query_nodes.mock_node_b, CxlumnID{0}};
-    query_nodes.table_c_b = LQPColumnReference{query_nodes.mock_node_b, CxlumnID{1}};
+    query_nodes.table_a_a = LQPCxlumnReference{query_nodes.stored_table_node_a, CxlumnID{0}};
+    query_nodes.table_b_a = LQPCxlumnReference{query_nodes.mock_node_a, CxlumnID{0}};
+    query_nodes.table_c_a = LQPCxlumnReference{query_nodes.mock_node_b, CxlumnID{0}};
+    query_nodes.table_c_b = LQPCxlumnReference{query_nodes.mock_node_b, CxlumnID{1}};
 
     query_nodes.predicate_node_a = PredicateNode::make(less_than_(query_nodes.table_a_a, 41));
     query_nodes.predicate_node_b = PredicateNode::make(between(query_nodes.table_a_a, 42, 45));

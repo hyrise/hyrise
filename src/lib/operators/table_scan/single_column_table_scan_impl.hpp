@@ -30,7 +30,7 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
 
   void handle_column(const BaseValueSegment& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
 
-  void handle_column(const BaseDictionaryColumn& base_column,
+  void handle_column(const BaseDictionarySegment& base_column,
                      std::shared_ptr<ColumnVisitorContext> base_context) override;
 
   void handle_column(const BaseEncodedColumn& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
@@ -43,11 +43,11 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
    * @{
    */
 
-  ValueID _get_search_value_id(const BaseDictionaryColumn& column) const;
+  ValueID _get_search_value_id(const BaseDictionarySegment& column) const;
 
-  bool _right_value_matches_all(const BaseDictionaryColumn& column, const ValueID search_value_id) const;
+  bool _right_value_matches_all(const BaseDictionarySegment& column, const ValueID search_value_id) const;
 
-  bool _right_value_matches_none(const BaseDictionaryColumn& column, const ValueID search_value_id) const;
+  bool _right_value_matches_none(const BaseDictionarySegment& column, const ValueID search_value_id) const;
 
   template <typename Functor>
   void _with_operator_for_dict_column_scan(const PredicateCondition predicate_condition, const Functor& func) const {

@@ -30,7 +30,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "sql/sql_query_plan.hpp"
 #include "storage/materialize.hpp"
-#include "storage/value_column.hpp"
+#include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 
 using namespace std::string_literals;            // NOLINT
@@ -960,8 +960,8 @@ void ExpressionEvaluator::_materialize_column_if_not_yet_materialized(const Cxlu
 
   const auto& column = *_chunk->get_column(cxlumn_id);
 
-  resolve_data_type(column.data_type(), [&](const auto column_data_type_t) {
-    using CxlumnDataType = typename decltype(column_data_type_t)::type;
+  resolve_data_type(column.data_type(), [&](const auto cxlumn_data_type_t) {
+    using CxlumnDataType = typename decltype(cxlumn_data_type_t)::type;
 
     std::vector<CxlumnDataType> values;
     materialize_values(column, values);
@@ -1122,7 +1122,7 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
     const auto& table = tables[table_idx];
 
     Assert(table->cxlumn_count() == 1, "Expected precisely one column from SubSelect");
-    Assert(table->column_data_type(CxlumnID{0}) == data_type_from_type<Result>(),
+    Assert(table->cxlumn_data_type(CxlumnID{0}) == data_type_from_type<Result>(),
            "Expected different DataType from SubSelect");
 
     std::vector<bool> result_nulls;

@@ -17,9 +17,9 @@ class BaseCompressedVector;
  * Uses vector compression schemes for its attribute vector.
  */
 template <typename T>
-class DictionaryColumn : public BaseDictionaryColumn {
+class DictionarySegment : public BaseDictionarySegment {
  public:
-  explicit DictionaryColumn(const std::shared_ptr<const pmr_vector<T>>& dictionary,
+  explicit DictionarySegment(const std::shared_ptr<const pmr_vector<T>>& dictionary,
                             const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
                             const ValueID null_value_id);
 
@@ -48,7 +48,7 @@ class DictionaryColumn : public BaseDictionaryColumn {
   /**@}*/
 
   /**
-   * @defgroup BaseDictionaryColumn interface
+   * @defgroup BaseDictionarySegment interface
    * @{
    */
   EncodingType encoding_type() const final;

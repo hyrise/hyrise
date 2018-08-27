@@ -26,7 +26,7 @@ bool ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) co
   auto actually_used_columns = _collect_actually_used_columns(lqp);
 
   // The output columns of the plan are always considered to be referenced (i.e., we cannot prune them)
-  const auto output_columns = lqp->column_expressions();
+  const auto output_columns = lqp->cxlumn_expressions();
   actually_used_columns.insert(output_columns.begin(), output_columns.end());
 
   // Search for ProjectionNodes that forward the unused columns and prune them accordingly
@@ -94,13 +94,13 @@ bool ColumnPruningRule::_prune_columns_from_leafs(const std::shared_ptr<Abstract
 
     // Collect all columns from the leaf that are actually referenced
     auto referenced_leaf_columns = std::vector<std::shared_ptr<AbstractExpression>>{};
-    for (const auto& expression : leaf->column_expressions()) {
+    for (const auto& expression : leaf->cxlumn_expressions()) {
       if (referenced_columns.find(expression) != referenced_columns.end()) {
         referenced_leaf_columns.emplace_back(expression);
       }
     }
 
-    if (leaf->column_expressions().size() == referenced_leaf_columns.size()) continue;
+    if (leaf->cxlumn_expressions().size() == referenced_leaf_columns.size()) continue;
 
     // We cannot have a ProjectionNode that outputs no columns, so let's avoid that
     if (referenced_leaf_columns.empty()) continue;

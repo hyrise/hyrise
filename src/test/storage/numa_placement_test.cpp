@@ -18,7 +18,7 @@
 #include "../lib/storage/numa_placement_manager.hpp"
 #include "../lib/storage/storage_manager.hpp"
 #include "../lib/storage/table.hpp"
-#include "../lib/storage/value_column.hpp"
+#include "../lib/storage/value_segment.hpp"
 #include "../lib/tasks/migration_preparation_task.hpp"
 #include "../lib/types.hpp"
 
@@ -57,13 +57,13 @@ class NUMAPlacementTest : public BaseTest {
       ChunkSegments columns;
 
       const auto alloc = PolymorphicAllocator<Chunk>(Topology::get().get_memory_resource(0));
-      auto value_column = std::allocate_shared<ValueSegment<int>>(alloc, alloc);
-      auto& values = value_column->values();
+      auto value_segment = std::allocate_shared<ValueSegment<int>>(alloc, alloc);
+      auto& values = value_segment->values();
       values.reserve(num_rows_per_chunk);
       for (size_t row = 0; row < num_rows_per_chunk; row++) {
         values.push_back(static_cast<int>(row % 1000));
       }
-      columns.push_back(value_column);
+      columns.push_back(value_segment);
       table->append_chunk(columns, alloc, std::make_shared<ChunkAccessCounter>(alloc));
     }
     ChunkEncoder::encode_all_chunks(table);

@@ -9,7 +9,7 @@ namespace opossum {
 std::shared_ptr<PQPCxlumnExpression> PQPCxlumnExpression::from_table(const Table& table,
                                                                      const std::string& cxlumn_name) {
   const auto cxlumn_id = table.cxlumn_id_by_name(cxlumn_name);
-  return std::make_shared<PQPCxlumnExpression>(cxlumn_id, table.column_data_type(cxlumn_id),
+  return std::make_shared<PQPCxlumnExpression>(cxlumn_id, table.cxlumn_data_type(cxlumn_id),
                                                table.column_is_nullable(cxlumn_id), cxlumn_name);
 }
 

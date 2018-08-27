@@ -3,7 +3,7 @@
 #include <boost/preprocessor/seq/for_each.hpp>
 
 #include "all_type_variant.hpp"
-#include "storage/base_value_column.hpp"
+#include "storage/base_value_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/column_iterables/base_column_iterators.hpp"
 

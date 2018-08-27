@@ -29,9 +29,9 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpressio
   }
 #endif
 
-  _column_expressions.reserve(group_by_expressions.size() + aggregate_expressions.size());
-  _column_expressions.insert(_column_expressions.end(), group_by_expressions.begin(), group_by_expressions.end());
-  _column_expressions.insert(_column_expressions.end(), aggregate_expressions.begin(), aggregate_expressions.end());
+  _cxlumn_expressions.reserve(group_by_expressions.size() + aggregate_expressions.size());
+  _cxlumn_expressions.insert(_cxlumn_expressions.end(), group_by_expressions.begin(), group_by_expressions.end());
+  _cxlumn_expressions.insert(_cxlumn_expressions.end(), aggregate_expressions.begin(), aggregate_expressions.end());
 }
 
 std::string AggregateNode::description() const {
@@ -51,9 +51,9 @@ std::shared_ptr<TableStatistics> AggregateNode::derive_statistics_from(
   const auto row_count = input_statistics->row_count();
 
   std::vector<std::shared_ptr<const BaseCxlumnStatistics>> cxlumn_statistics;
-  cxlumn_statistics.reserve(_column_expressions.size());
+  cxlumn_statistics.reserve(_cxlumn_expressions.size());
 
-  for (const auto& expression : _column_expressions) {
+  for (const auto& expression : _cxlumn_expressions) {
     const auto cxlumn_id = left_input->find_cxlumn_id(*expression);
     if (cxlumn_id) {
       cxlumn_statistics.emplace_back(input_statistics->cxlumn_statistics()[*cxlumn_id]);
@@ -70,11 +70,11 @@ std::shared_ptr<TableStatistics> AggregateNode::derive_statistics_from(
   return std::make_shared<TableStatistics>(TableType::Data, row_count, cxlumn_statistics);
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::column_expressions() const {
-  return _column_expressions;
+const std::vector<std::shared_ptr<AbstractExpression>>& AggregateNode::cxlumn_expressions() const {
+  return _cxlumn_expressions;
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::node_expressions() const { return _column_expressions; }
+std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::node_expressions() const { return _cxlumn_expressions; }
 
 std::shared_ptr<AbstractLQPNode> AggregateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return std::make_shared<AggregateNode>(

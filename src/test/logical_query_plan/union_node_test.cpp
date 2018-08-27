@@ -14,9 +14,9 @@ class UnionNodeTest : public BaseTest {
  protected:
   void SetUp() override {
     _mock_node1 = MockNode::make(
-        MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
-    _mock_node2 = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "u"}, {DataType::Int, "v"}}, "t_b");
-    _mock_node3 = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}}, "t_v");
+        MockNode::CxlumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
+    _mock_node2 = MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "u"}, {DataType::Int, "v"}}, "t_b");
+    _mock_node3 = MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "x"}}, "t_v");
 
     _a = {_mock_node1, CxlumnID{0}};
     _b = {_mock_node1, CxlumnID{1}};
@@ -29,9 +29,9 @@ class UnionNodeTest : public BaseTest {
 
   std::shared_ptr<MockNode> _mock_node1, _mock_node2, _mock_node3;
   std::shared_ptr<UnionNode> _union_node;
-  LQPColumnReference _a;
-  LQPColumnReference _b;
-  LQPColumnReference _c;
+  LQPCxlumnReference _a;
+  LQPCxlumnReference _b;
+  LQPCxlumnReference _c;
 };
 
 TEST_F(UnionNodeTest, Description) { EXPECT_EQ(_union_node->description(), "[UnionNode] Mode: UnionPositions"); }
@@ -40,10 +40,10 @@ TEST_F(UnionNodeTest, StatisticsNotImplemented) {
   EXPECT_THROW(_union_node->derive_statistics_from(_mock_node1, _mock_node1), std::exception);
 }
 
-TEST_F(UnionNodeTest, OutputColumnExpressions) {
-  EXPECT_EQ(*_union_node->column_expressions().at(0), *_mock_node1->column_expressions().at(0));
-  EXPECT_EQ(*_union_node->column_expressions().at(1), *_mock_node1->column_expressions().at(1));
-  EXPECT_EQ(*_union_node->column_expressions().at(2), *_mock_node1->column_expressions().at(2));
+TEST_F(UnionNodeTest, OutputCxlumnExpressions) {
+  EXPECT_EQ(*_union_node->cxlumn_expressions().at(0), *_mock_node1->cxlumn_expressions().at(0));
+  EXPECT_EQ(*_union_node->cxlumn_expressions().at(1), *_mock_node1->cxlumn_expressions().at(1));
+  EXPECT_EQ(*_union_node->cxlumn_expressions().at(2), *_mock_node1->cxlumn_expressions().at(2));
 }
 
 TEST_F(UnionNodeTest, Equals) { EXPECT_EQ(*_union_node, *_union_node); }

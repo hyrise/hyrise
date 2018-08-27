@@ -8,7 +8,7 @@
 
 #include "storage/column_iterables/chunk_offset_mapping.hpp"
 #include "storage/reference_segment.hpp"
-#include "storage/value_column.hpp"
+#include "storage/value_segment.hpp"
 
 namespace opossum {
 
@@ -35,7 +35,7 @@ void Sort::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVaria
 
 std::shared_ptr<const Table> Sort::_on_execute() {
   _impl = make_unique_by_data_type<AbstractReadOnlyOperatorImpl, SortImpl>(
-      input_table_left()->column_data_type(_cxlumn_id), input_table_left(), _cxlumn_id, _order_by_mode,
+      input_table_left()->cxlumn_data_type(_cxlumn_id), input_table_left(), _cxlumn_id, _order_by_mode,
       _output_chunk_size);
   return _impl->_on_execute();
 }
@@ -75,9 +75,9 @@ class Sort::SortImplMaterializeOutput {
 
     // Materialize column-wise
     for (CxlumnID cxlumn_id{0u}; cxlumn_id < output->cxlumn_count(); ++cxlumn_id) {
-      const auto column_data_type = output->column_data_type(cxlumn_id);
+      const auto cxlumn_data_type = output->cxlumn_data_type(cxlumn_id);
 
-      resolve_data_type(column_data_type, [&](auto type) {
+      resolve_data_type(cxlumn_data_type, [&](auto type) {
         using CxlumnDataType = typename decltype(type)::type;
 
         // Initialize value columns
@@ -188,7 +188,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
 
       auto base_column = chunk->get_column(_cxlumn_id);
 
-      resolve_column_type<SortColumnType>(*base_column, [&](auto& typed_column) {
+      resolve_cxlumn_type<SortColumnType>(*base_column, [&](auto& typed_column) {
         auto iterable = create_iterable_from_column<SortColumnType>(typed_column);
 
         iterable.for_each([&](const auto& value) {

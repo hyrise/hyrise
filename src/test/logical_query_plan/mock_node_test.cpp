@@ -23,7 +23,7 @@ class MockNodeTest : public ::testing::Test {
 
     _mock_node_a = MockNode::make(_statistics);
     _mock_node_b =
-        MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "mock_name");
+        MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "mock_name");
   }
 
   std::shared_ptr<MockNode> _mock_node_a;
@@ -36,16 +36,16 @@ TEST_F(MockNodeTest, Description) {
   EXPECT_EQ(_mock_node_b->description(), "[MockNode 'mock_name']");
 }
 
-TEST_F(MockNodeTest, OutputColumnExpression) {
-  ASSERT_EQ(_mock_node_a->column_expressions().size(), 4u);
-  EXPECT_EQ(*_mock_node_a->column_expressions().at(0), *column_({_mock_node_a, CxlumnID{0}}));
-  EXPECT_EQ(*_mock_node_a->column_expressions().at(1), *column_({_mock_node_a, CxlumnID{1}}));
-  EXPECT_EQ(*_mock_node_a->column_expressions().at(2), *column_({_mock_node_a, CxlumnID{2}}));
-  EXPECT_EQ(*_mock_node_a->column_expressions().at(3), *column_({_mock_node_a, CxlumnID{3}}));
+TEST_F(MockNodeTest, OutputCxlumnExpression) {
+  ASSERT_EQ(_mock_node_a->cxlumn_expressions().size(), 4u);
+  EXPECT_EQ(*_mock_node_a->cxlumn_expressions().at(0), *cxlumn_({_mock_node_a, CxlumnID{0}}));
+  EXPECT_EQ(*_mock_node_a->cxlumn_expressions().at(1), *cxlumn_({_mock_node_a, CxlumnID{1}}));
+  EXPECT_EQ(*_mock_node_a->cxlumn_expressions().at(2), *cxlumn_({_mock_node_a, CxlumnID{2}}));
+  EXPECT_EQ(*_mock_node_a->cxlumn_expressions().at(3), *cxlumn_({_mock_node_a, CxlumnID{3}}));
 
-  ASSERT_EQ(_mock_node_b->column_expressions().size(), 2u);
-  EXPECT_EQ(*_mock_node_b->column_expressions().at(0), *column_({_mock_node_b, CxlumnID{0}}));
-  EXPECT_EQ(*_mock_node_b->column_expressions().at(1), *column_({_mock_node_b, CxlumnID{1}}));
+  ASSERT_EQ(_mock_node_b->cxlumn_expressions().size(), 2u);
+  EXPECT_EQ(*_mock_node_b->cxlumn_expressions().at(0), *cxlumn_({_mock_node_b, CxlumnID{0}}));
+  EXPECT_EQ(*_mock_node_b->cxlumn_expressions().at(1), *cxlumn_({_mock_node_b, CxlumnID{1}}));
 }
 
 TEST_F(MockNodeTest, Equals) {
@@ -60,7 +60,7 @@ TEST_F(MockNodeTest, Equals) {
 
   //
   const auto same_mock_node_b =
-      MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "mock_name");
+      MockNode::make(MockNode::CxlumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}}, "mock_name");
   EXPECT_EQ(*_mock_node_b, *_mock_node_b);
   EXPECT_EQ(*_mock_node_b, *same_mock_node_b);
 }

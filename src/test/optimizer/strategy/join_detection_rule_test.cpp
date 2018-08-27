@@ -40,12 +40,12 @@ class JoinDetectionRuleTest : public StrategyBaseTest, public ::testing::WithPar
     _table_node_b = StoredTableNode::make("b");
     _table_node_c = StoredTableNode::make("c");
 
-    _a_a = LQPColumnReference{_table_node_a, CxlumnID{0}};
-    _a_b = LQPColumnReference{_table_node_a, CxlumnID{1}};
-    _b_a = LQPColumnReference{_table_node_b, CxlumnID{0}};
-    _b_b = LQPColumnReference{_table_node_b, CxlumnID{1}};
-    _c_a = LQPColumnReference{_table_node_c, CxlumnID{1}};
-    _c_b = LQPColumnReference{_table_node_c, CxlumnID{1}};
+    _a_a = LQPCxlumnReference{_table_node_a, CxlumnID{0}};
+    _a_b = LQPCxlumnReference{_table_node_a, CxlumnID{1}};
+    _b_a = LQPCxlumnReference{_table_node_b, CxlumnID{0}};
+    _b_b = LQPCxlumnReference{_table_node_b, CxlumnID{1}};
+    _c_a = LQPCxlumnReference{_table_node_c, CxlumnID{1}};
+    _c_b = LQPCxlumnReference{_table_node_c, CxlumnID{1}};
 
     _rule = std::make_shared<JoinDetectionRule>();
   }
@@ -72,7 +72,7 @@ class JoinDetectionRuleTest : public StrategyBaseTest, public ::testing::WithPar
   std::shared_ptr<StoredTableNode> _table_node_a, _table_node_b, _table_node_c;
   std::shared_ptr<JoinDetectionRule> _rule;
 
-  LQPColumnReference _a_a, _a_b, _b_a, _b_b, _c_a, _c_b;
+  LQPCxlumnReference _a_a, _a_b, _b_a, _b_b, _c_a, _c_b;
 };
 
 TEST_F(JoinDetectionRuleTest, SimpleDetectionTest) {

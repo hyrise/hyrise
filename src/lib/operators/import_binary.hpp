@@ -11,7 +11,7 @@
 #include "import_export/binary.hpp"
 #include "storage/base_column.hpp"
 #include "storage/dictionary_column.hpp"
-#include "storage/value_column.hpp"
+#include "storage/value_segment.hpp"
 
 namespace opossum {
 
@@ -115,11 +115,11 @@ class ImportBinary : public AbstractReadOnlyOperator {
    *
    */
   template <typename T>
-  static std::shared_ptr<ValueSegment<T>> _import_value_column(std::ifstream& file, ChunkOffset row_count,
+  static std::shared_ptr<ValueSegment<T>> _import_value_segment(std::ifstream& file, ChunkOffset row_count,
                                                               bool is_nullable);
 
   /*
-   * Imports a serialized DictionaryColumn from the given file.
+   * Imports a serialized DictionarySegment from the given file.
    * The file must contain data in the following format:
    *
    * Description           | Type                                  | Size in bytes
@@ -135,7 +135,7 @@ class ImportBinary : public AbstractReadOnlyOperator {
    * °: This field is needed if the type of the column is NOT a string
    */
   template <typename T>
-  static std::shared_ptr<DictionaryColumn<T>> _import_dictionary_column(std::ifstream& file, ChunkOffset row_count);
+  static std::shared_ptr<DictionarySegment<T>> _import_dictionary_column(std::ifstream& file, ChunkOffset row_count);
 
   // Calls the _import_attribute_vector<uintX_t> function that corresponds to the given attribute_vector_width.
   static std::shared_ptr<BaseCompressedVector> _import_attribute_vector(std::ifstream& file, ChunkOffset row_count,

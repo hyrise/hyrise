@@ -50,7 +50,7 @@ class LQPSelectExpressionTest : public ::testing::Test {
   std::shared_ptr<AbstractLQPNode> lqp_a, lqp_c;
   std::shared_ptr<ParameterExpression> parameter_c;
   std::shared_ptr<LQPSelectExpression> select_a, select_c;
-  LQPColumnReference a, b;
+  LQPCxlumnReference a, b;
 };
 
 TEST_F(LQPSelectExpressionTest, DeepEquals) {
@@ -65,7 +65,7 @@ TEST_F(LQPSelectExpressionTest, DeepEquals) {
       int_float_node_a));
 
   const auto int_float_node_b = StoredTableNode::make("int_float");
-  const auto a2 = int_float_node_b->get_column("a");
+  const auto a2 = int_float_node_b->get_cxlumn("a");
   const auto parameter_d = parameter_(ParameterID{0}, a2);
   const auto lqp_d =
   AggregateNode::make(expression_vector(), expression_vector(count_(add_(a, parameter_d))),

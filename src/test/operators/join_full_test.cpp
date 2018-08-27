@@ -383,7 +383,7 @@ TYPED_TEST(JoinFullTest, NotEqualInnerJoinDict) {
       PredicateCondition::NotEquals, JoinMode::Inner, "src/test/tables/joinoperators/float_notequal_inner_join.tbl", 1);
 }
 
-TYPED_TEST(JoinFullTest, JoinOnMixedValueAndDictionaryColumns) {
+TYPED_TEST(JoinFullTest, JoinOnMixedValueAndDictionarySegments) {
   this->template test_join_output<TypeParam>(this->_table_wrapper_c_dict, this->_table_wrapper_b,
                                              CxlumnIDPair(CxlumnID{0}, CxlumnID{0}), PredicateCondition::Equals,
                                              JoinMode::Inner, "src/test/tables/joinoperators/int_inner_join.tbl", 1);

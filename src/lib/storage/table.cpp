@@ -11,7 +11,7 @@
 #include "resolve_type.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "value_column.hpp"
+#include "value_segment.hpp"
 
 namespace opossum {
 
@@ -51,12 +51,12 @@ std::vector<std::string> Table::cxlumn_names() const {
   return names;
 }
 
-DataType Table::column_data_type(const CxlumnID cxlumn_id) const {
+DataType Table::cxlumn_data_type(const CxlumnID cxlumn_id) const {
   DebugAssert(cxlumn_id < _cxlumn_definitions.size(), "CxlumnID out of range");
   return _cxlumn_definitions[cxlumn_id].data_type;
 }
 
-std::vector<DataType> Table::column_data_types() const {
+std::vector<DataType> Table::cxlumn_data_types() const {
   std::vector<DataType> data_types;
   data_types.reserve(_cxlumn_definitions.size());
   for (const auto& column_definition : _cxlumn_definitions) {
@@ -159,13 +159,13 @@ void Table::append_chunk(const ChunkSegments& columns, const std::optional<Polym
   }
 #endif
 
-  std::shared_ptr<MvccColumns> mvcc_columns;
+  std::shared_ptr<MvccData> mvcc_data;
 
   if (_use_mvcc == UseMvcc::Yes) {
-    mvcc_columns = std::make_shared<MvccColumns>(chunk_size);
+    mvcc_data = std::make_shared<MvccData>(chunk_size);
   }
 
-  _chunks.emplace_back(std::make_shared<Chunk>(columns, mvcc_columns, alloc, access_counter));
+  _chunks.emplace_back(std::make_shared<Chunk>(columns, mvcc_data, alloc, access_counter));
 }
 
 void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
@@ -183,7 +183,7 @@ void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
   }
 #endif
 
-  DebugAssert(chunk->has_mvcc_columns() == (_use_mvcc == UseMvcc::Yes),
+  DebugAssert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes),
               "Chunk does not have the same MVCC setting as the table.");
 
   _chunks.emplace_back(chunk);

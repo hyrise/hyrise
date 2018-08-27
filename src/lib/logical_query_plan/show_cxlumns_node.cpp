@@ -1,4 +1,4 @@
-#include "show_columns_node.hpp"
+#include "show_cxlumns_node.hpp"
 
 #include <string>
 
@@ -16,8 +16,8 @@ std::shared_ptr<AbstractLQPNode> ShowCxlumnsNode::_on_shallow_copy(LQPNodeMappin
 }
 
 bool ShowCxlumnsNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
-  const auto& show_columns_node_rhs = static_cast<const ShowCxlumnsNode&>(rhs);
-  return _table_name == show_columns_node_rhs._table_name;
+  const auto& show_cxlumns_node_rhs = static_cast<const ShowCxlumnsNode&>(rhs);
+  return _table_name == show_cxlumns_node_rhs._table_name;
 }
 
 }  // namespace opossum

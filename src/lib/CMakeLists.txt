@@ -120,8 +120,8 @@ set(
     logical_query_plan/limit_node.hpp
     logical_query_plan/logical_plan_root_node.cpp
     logical_query_plan/logical_plan_root_node.hpp
-    logical_query_plan/lqp_column_reference.cpp
-    logical_query_plan/lqp_column_reference.hpp
+    logical_query_plan/lqp_cxlumn_reference.cpp
+    logical_query_plan/lqp_cxlumn_reference.hpp
     logical_query_plan/lqp_translator.cpp
     logical_query_plan/lqp_translator.hpp
     logical_query_plan/lqp_utils.cpp
@@ -132,8 +132,8 @@ set(
     logical_query_plan/predicate_node.hpp
     logical_query_plan/projection_node.cpp
     logical_query_plan/projection_node.hpp
-    logical_query_plan/show_columns_node.cpp
-    logical_query_plan/show_columns_node.hpp
+    logical_query_plan/show_cxlumns_node.cpp
+    logical_query_plan/show_cxlumns_node.hpp
     logical_query_plan/show_tables_node.cpp
     logical_query_plan/show_tables_node.hpp
     logical_query_plan/sort_node.cpp
@@ -205,8 +205,8 @@ set(
     operators/maintenance/create_view.hpp
     operators/maintenance/drop_view.cpp
     operators/maintenance/drop_view.hpp
-    operators/maintenance/show_columns.cpp
-    operators/maintenance/show_columns.hpp
+    operators/maintenance/show_cxlumns.cpp
+    operators/maintenance/show_cxlumns.hpp
     operators/maintenance/show_tables.cpp
     operators/maintenance/show_tables.hpp
     operators/maintenance/show_tables.hpp
@@ -353,7 +353,7 @@ set(
     storage/base_dictionary_column.hpp
     storage/base_encoded_segment.cpp
     storage/base_encoded_segment.hpp
-    storage/base_value_column.hpp
+    storage/base_value_segment.hpp
     storage/chunk_access_counter.cpp
     storage/chunk_access_counter.hpp
     storage/chunk.cpp
@@ -414,8 +414,8 @@ set(
     storage/index/group_key/variable_length_key_store.hpp
     storage/index/index_info.hpp
     storage/materialize.hpp
-    storage/mvcc_columns.cpp
-    storage/mvcc_columns.hpp
+    storage/mvcc_data.cpp
+    storage/mvcc_data.hpp
     storage/numa_placement_manager.cpp
     storage/numa_placement_manager.hpp
     storage/proxy_chunk.cpp
@@ -423,7 +423,7 @@ set(
     storage/reference_segment.cpp
     storage/reference_segment.hpp
     storage/reference_segment/reference_segment_iterable.hpp
-    storage/resolve_encoded_column_type.hpp
+    storage/resolve_encoded_segment_type.hpp
     storage/run_length_column.cpp
     storage/run_length_column.hpp
     storage/run_length_column/run_length_column_iterable.hpp
@@ -436,10 +436,10 @@ set(
     storage/table_column_definition.hpp
     storage/table.cpp
     storage/table.hpp
-    storage/value_column.cpp
-    storage/value_column.hpp
-    storage/value_column/null_value_vector_iterable.hpp
-    storage/value_column/value_column_iterable.hpp
+    storage/value_segment.cpp
+    storage/value_segment.hpp
+    storage/value_segment/null_value_vector_iterable.hpp
+    storage/value_segment/value_segment_iterable.hpp
     storage/vector_compression/base_compressed_vector.hpp
     storage/vector_compression/base_vector_compressor.hpp
     storage/vector_compression/base_vector_decompressor.hpp

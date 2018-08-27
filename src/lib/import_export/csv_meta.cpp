@@ -58,11 +58,11 @@ void from_json(const nlohmann::json& json, CsvMeta& meta) {
   if (json.find("columns") != json.end()) {
     Assert(json.at("columns").is_array(), "CSV meta file,\"Columns\" field has to be a json array.");
     for (const auto& column : json.at("columns")) {
-      ColumnMeta column_meta;
+      CxlumnMeta column_meta;
       column_meta.name = column.at("name");
       column_meta.type = column.at("type");
       assign_if_exists(column_meta.nullable, column, "nullable");
-      meta.columns.push_back(column_meta);
+      meta.cxlumns.push_back(column_meta);
     }
   }
 
@@ -79,7 +79,7 @@ void to_json(nlohmann::json& json, const CsvMeta& meta) {
                                          {"rfc_mode", meta.config.rfc_mode}};
 
   auto columns = nlohmann::json::parse("[]");
-  for (const auto& column_meta : meta.columns) {
+  for (const auto& column_meta : meta.cxlumns) {
     columns.emplace_back(
         nlohmann::json{{"name", column_meta.name}, {"type", column_meta.type}, {"nullable", column_meta.nullable}});
   }
@@ -94,7 +94,7 @@ void to_json(nlohmann::json& json, const CsvMeta& meta) {
   }
 }
 
-bool operator==(const ColumnMeta& left, const ColumnMeta& right) {
+bool operator==(const CxlumnMeta& left, const CxlumnMeta& right) {
   return std::tie(left.name, left.type, left.nullable) == std::tie(right.name, right.type, right.nullable);
 }
 
@@ -106,8 +106,8 @@ bool operator==(const ParseConfig& left, const ParseConfig& right) {
 }
 
 bool operator==(const CsvMeta& left, const CsvMeta& right) {
-  return std::tie(left.chunk_size, left.auto_compress, left.config, left.columns) ==
-         std::tie(right.chunk_size, right.auto_compress, right.config, right.columns);
+  return std::tie(left.chunk_size, left.auto_compress, left.config, left.cxlumns) ==
+         std::tie(right.chunk_size, right.auto_compress, right.config, right.cxlumns);
 }
 
 }  // namespace opossum

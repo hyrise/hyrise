@@ -59,10 +59,10 @@ TEST_F(StorageTableTest, GetColumnName) {
 }
 
 TEST_F(StorageTableTest, GetColumnType) {
-  EXPECT_EQ(t->column_data_type(CxlumnID{0}), DataType::Int);
-  EXPECT_EQ(t->column_data_type(CxlumnID{1}), DataType::String);
+  EXPECT_EQ(t->cxlumn_data_type(CxlumnID{0}), DataType::Int);
+  EXPECT_EQ(t->cxlumn_data_type(CxlumnID{1}), DataType::String);
   // TODO(anyone): Do we want checks here?
-  // EXPECT_THROW(t->column_data_type(CxlumnID{2}), std::exception);
+  // EXPECT_THROW(t->cxlumn_data_type(CxlumnID{2}), std::exception);
 }
 
 TEST_F(StorageTableTest, GetCxlumnIDByName) {
@@ -83,7 +83,7 @@ TEST_F(StorageTableTest, GetValue) {
   EXPECT_THROW(t->get_value<int>(CxlumnID{3}, 0u), std::exception);
 }
 
-TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
+TEST_F(StorageTableTest, ShrinkingMvccDataHasNoSideEffects) {
   t = std::make_shared<Table>(cxlumn_definitions, TableType::Data, 2, UseMvcc::Yes);
 
   t->append({4, "Hello,"});
@@ -94,30 +94,30 @@ TEST_F(StorageTableTest, ShrinkingMvccColumnsHasNoSideEffects) {
   const auto values = std::vector<CommitID>{1u, 2u};
 
   {
-    // acquiring mvcc_columns locks them
-    auto mvcc_columns = chunk->get_scoped_mvcc_columns_lock();
+    // acquiring mvcc_data locks them
+    auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
-    mvcc_columns->tids[0u] = values[0u];
-    mvcc_columns->tids[1u] = values[1u];
-    mvcc_columns->begin_cids[0u] = values[0u];
-    mvcc_columns->begin_cids[1u] = values[1u];
-    mvcc_columns->end_cids[0u] = values[0u];
-    mvcc_columns->end_cids[1u] = values[1u];
+    mvcc_data->tids[0u] = values[0u];
+    mvcc_data->tids[1u] = values[1u];
+    mvcc_data->begin_cids[0u] = values[0u];
+    mvcc_data->begin_cids[1u] = values[1u];
+    mvcc_data->end_cids[0u] = values[0u];
+    mvcc_data->end_cids[1u] = values[1u];
   }
 
   const auto previous_size = chunk->size();
 
-  chunk->get_scoped_mvcc_columns_lock()->shrink();
+  chunk->get_scoped_mvcc_data_lock()->shrink();
 
   ASSERT_EQ(previous_size, chunk->size());
-  ASSERT_TRUE(chunk->has_mvcc_columns());
+  ASSERT_TRUE(chunk->has_mvcc_data());
 
-  auto new_mvcc_columns = chunk->get_scoped_mvcc_columns_lock();
+  auto new_mvcc_data = chunk->get_scoped_mvcc_data_lock();
 
   for (auto i = 0u; i < chunk->size(); ++i) {
-    EXPECT_EQ(new_mvcc_columns->tids[i], values[i]);
-    EXPECT_EQ(new_mvcc_columns->begin_cids[i], values[i]);
-    EXPECT_EQ(new_mvcc_columns->end_cids[i], values[i]);
+    EXPECT_EQ(new_mvcc_data->tids[i], values[i]);
+    EXPECT_EQ(new_mvcc_data->begin_cids[i], values[i]);
+    EXPECT_EQ(new_mvcc_data->end_cids[i], values[i]);
   }
 }
 

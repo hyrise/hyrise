@@ -29,7 +29,7 @@ namespace opossum {
  *    The output columns are determined by the top-most ProjectionNode. If there is no ProjectionNode, all columns from
  *    the input node are considered as outputs.
  *    In case we find any PredicateNode or UnionNode during our traversal, we need to create a JitFilter operator.
- *    Whenever a non-primitive value (such as a predicate conditions, LQPExpression of LQPColumnReferences - which
+ *    Whenever a non-primitive value (such as a predicate conditions, LQPExpression of LQPCxlumnReferences - which
  *    can in turn reference a LQPExpression in a ProjectionNode) is encountered, it is converted to an JitExpression
  *    by a helper method first. We then add a JitCompute operator to our chain and use its result value instead of the
  *    original non-primitive value.

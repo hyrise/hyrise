@@ -32,9 +32,9 @@ class JitAwareLQPTranslatorTest : public BaseTest {
     stored_table_node_a2 = std::make_shared<StoredTableNode>("table_a");
     stored_table_node_b = std::make_shared<StoredTableNode>("table_b");
 
-    a_a = stored_table_node_a->get_column("a");
-    a_b = stored_table_node_a->get_column("b");
-    a_c = stored_table_node_a->get_column("c");
+    a_a = stored_table_node_a->get_cxlumn("a");
+    a_b = stored_table_node_a->get_cxlumn("b");
+    a_c = stored_table_node_a->get_cxlumn("c");
   }
 
   void TearDown() override { StorageManager::get().reset(); }
@@ -59,7 +59,7 @@ class JitAwareLQPTranslatorTest : public BaseTest {
   }
 
   std::shared_ptr<StoredTableNode> stored_table_node_a, stored_table_node_a2, stored_table_node_b;
-  LQPColumnReference a_a, a_b, a_c;
+  LQPCxlumnReference a_a, a_b, a_c;
 };
 
 TEST_F(JitAwareLQPTranslatorTest, RequiresAtLeastTwoJittableOperators) {

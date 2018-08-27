@@ -72,9 +72,9 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     auto col_a = std::make_shared<ReferenceSegment>(test_table_part_compressed, CxlumnID{0}, pos_list);
     auto col_b = std::make_shared<ReferenceSegment>(test_table_part_compressed, CxlumnID{1}, pos_list);
 
-    ChunkSegments columns({col_a, col_b});
+    ChunkSegments segments({col_a, col_b});
 
-    table->append_chunk(columns);
+    table->append_chunk(segments);
     auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
     table_wrapper->execute();
     return table_wrapper;
@@ -110,46 +110,46 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       }
     }
 
-    ChunkSegments columns;
+    ChunkSegments segments;
     TableCxlumnDefinitions cxlumn_definitions;
 
     for (auto cxlumn_id = CxlumnID{0u}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
-      cxlumn_definitions.emplace_back(table->cxlumn_name(cxlumn_id), table->column_data_type(cxlumn_id));
+      cxlumn_definitions.emplace_back(table->cxlumn_name(cxlumn_id), table->cxlumn_data_type(cxlumn_id));
 
-      auto column_out = std::make_shared<ReferenceSegment>(table, cxlumn_id, pos_list);
-      columns.push_back(column_out);
+      auto segment_out = std::make_shared<ReferenceSegment>(table, cxlumn_id, pos_list);
+      segments.push_back(segment_out);
     }
 
     auto table_out = std::make_shared<Table>(cxlumn_definitions, TableType::References);
 
-    table_out->append_chunk(columns);
+    table_out->append_chunk(segments);
 
     return table_out;
   }
 
-  std::shared_ptr<const Table> create_referencing_table_w_null_row_id(const bool references_dict_column) {
+  std::shared_ptr<const Table> create_referencing_table_w_null_row_id(const bool references_dict_segment) {
     const auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
 
-    if (references_dict_column) {
+    if (references_dict_segment) {
       ChunkEncoder::encode_all_chunks(table, _encoding_type);
     }
 
     auto pos_list_a = std::make_shared<PosList>(
         PosList{RowID{ChunkID{0u}, 1u}, RowID{ChunkID{1u}, 0u}, RowID{ChunkID{0u}, 2u}, RowID{ChunkID{0u}, 3u}});
-    auto ref_column_a = std::make_shared<ReferenceSegment>(table, CxlumnID{0u}, pos_list_a);
+    auto ref_segment_a = std::make_shared<ReferenceSegment>(table, CxlumnID{0u}, pos_list_a);
 
     auto pos_list_b = std::make_shared<PosList>(
         PosList{NULL_ROW_ID, RowID{ChunkID{0u}, 0u}, RowID{ChunkID{1u}, 2u}, RowID{ChunkID{0u}, 1u}});
-    auto ref_column_b = std::make_shared<ReferenceSegment>(table, CxlumnID{1u}, pos_list_b);
+    auto ref_segment_b = std::make_shared<ReferenceSegment>(table, CxlumnID{1u}, pos_list_b);
 
     TableCxlumnDefinitions cxlumn_definitions;
     cxlumn_definitions.emplace_back("a", DataType::Int, true);
     cxlumn_definitions.emplace_back("b", DataType::Int, true);
     auto ref_table = std::make_shared<Table>(cxlumn_definitions, TableType::References);
 
-    ChunkSegments columns({ref_column_a, ref_column_b});
+    ChunkSegments segments({ref_segment_a, ref_segment_b});
 
-    ref_table->append_chunk(columns);
+    ref_table->append_chunk(segments);
 
     return ref_table;
   }
@@ -164,19 +164,19 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       scan->execute();
 
       const auto expected_result = std::vector<AllTypeVariant>{{12, 123}};
-      ASSERT_COLUMN_EQ(scan->get_output(), CxlumnID{0u}, expected);
+      ASSERT_CXLUMN_EQ(scan->get_output(), CxlumnID{0u}, expected);
     }
   }
 
-  void ASSERT_COLUMN_EQ(std::shared_ptr<const Table> table, const CxlumnID& cxlumn_id,
+  void ASSERT_CXLUMN_EQ(std::shared_ptr<const Table> table, const CxlumnID& cxlumn_id,
                         std::vector<AllTypeVariant> expected) {
     for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto chunk = table->get_chunk(chunk_id);
 
       for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk->size(); ++chunk_offset) {
-        const auto& column = *chunk->get_column(cxlumn_id);
+        const auto& segment = *chunk->get_column(cxlumn_id);
 
-        const auto found_value = column[chunk_offset];
+        const auto found_value = segment[chunk_offset];
         const auto comparator = [found_value](const AllTypeVariant expected_value) {
           // returns equivalency, not equality to simulate std::multiset.
           // multiset cannot be used because it triggers a compiler / lib bug when built in CI
@@ -237,7 +237,7 @@ TEST_P(OperatorsTableScanTest, SingleScanReturnsCorrectRowCount) {
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnCompressedColumn) {
+TEST_P(OperatorsTableScanTest, ScanOnCompressedSegments) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
 
   std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
@@ -263,14 +263,14 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedColumn) {
 
     scan_int->execute();
 
-    ASSERT_COLUMN_EQ(scan_int->get_output(), CxlumnID{1}, test.second);
+    ASSERT_CXLUMN_EQ(scan_int->get_output(), CxlumnID{1}, test.second);
 
     scan_int_partly->execute();
-    ASSERT_COLUMN_EQ(scan_int_partly->get_output(), CxlumnID{1}, test.second);
+    ASSERT_CXLUMN_EQ(scan_int_partly->get_output(), CxlumnID{1}, test.second);
   }
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnReferencedCompressedColumn) {
+TEST_P(OperatorsTableScanTest, ScanOnReferencedCompressedSegments) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
 
   std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
@@ -304,8 +304,8 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedCompressedColumn) {
     scan2->execute();
     scan_partly2->execute();
 
-    ASSERT_COLUMN_EQ(scan2->get_output(), CxlumnID{1}, test.second);
-    ASSERT_COLUMN_EQ(scan_partly2->get_output(), CxlumnID{1}, test.second);
+    ASSERT_CXLUMN_EQ(scan2->get_output(), CxlumnID{1}, test.second);
+    ASSERT_CXLUMN_EQ(scan_partly2->get_output(), CxlumnID{1}, test.second);
   }
 }
 
@@ -326,11 +326,11 @@ TEST_P(OperatorsTableScanTest, ScanWeirdPosList) {
     auto scan_partly = std::make_shared<TableScan>(table_wrapper, CxlumnID{0}, test.first, 10);
     scan_partly->execute();
 
-    ASSERT_COLUMN_EQ(scan_partly->get_output(), CxlumnID{1}, test.second);
+    ASSERT_CXLUMN_EQ(scan_partly->get_output(), CxlumnID{1}, test.second);
   }
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnCompressedColumnValueGreaterThanMaxDictionaryValue) {
+TEST_P(OperatorsTableScanTest, ScanOnCompressedSegmentsValueGreaterThanMaxDictionaryValue) {
   const auto all_rows =
       std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
   const auto no_rows = std::vector<AllTypeVariant>{};
@@ -350,12 +350,12 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedColumnValueGreaterThanMaxDictiona
     auto scan_partly = std::make_shared<TableScan>(_int_int_partly_compressed, CxlumnID{0}, test.first, 30);
     scan_partly->execute();
 
-    ASSERT_COLUMN_EQ(scan->get_output(), CxlumnID{1}, test.second);
-    ASSERT_COLUMN_EQ(scan_partly->get_output(), CxlumnID{1}, test.second);
+    ASSERT_CXLUMN_EQ(scan->get_output(), CxlumnID{1}, test.second);
+    ASSERT_CXLUMN_EQ(scan_partly->get_output(), CxlumnID{1}, test.second);
   }
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnCompressedColumnValueLessThanMinDictionaryValue) {
+TEST_P(OperatorsTableScanTest, ScanOnCompressedSegmentsValueLessThanMinDictionaryValue) {
   const auto all_rows =
       std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
   const auto no_rows = std::vector<AllTypeVariant>{};
@@ -375,12 +375,12 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedColumnValueLessThanMinDictionaryV
     auto scan_partly = std::make_shared<TableScan>(_int_int_partly_compressed, CxlumnID{0} /* "a" */, test.first, -10);
     scan_partly->execute();
 
-    ASSERT_COLUMN_EQ(scan->get_output(), CxlumnID{1}, test.second);
-    ASSERT_COLUMN_EQ(scan_partly->get_output(), CxlumnID{1}, test.second);
+    ASSERT_CXLUMN_EQ(scan->get_output(), CxlumnID{1}, test.second);
+    ASSERT_CXLUMN_EQ(scan_partly->get_output(), CxlumnID{1}, test.second);
   }
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnIntValueSegmentWithFloatColumnWithNullValues) {
+TEST_P(OperatorsTableScanTest, ScanOnIntValueSegmentWithFloatSegmentWithNullValues) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -391,10 +391,10 @@ TEST_P(OperatorsTableScanTest, ScanOnIntValueSegmentWithFloatColumnWithNullValue
   scan->execute();
 
   const auto expected = std::vector<AllTypeVariant>{12345, 1234, 12345, 1234};
-  ASSERT_COLUMN_EQ(scan->get_output(), CxlumnID{0u}, expected);
+  ASSERT_CXLUMN_EQ(scan->get_output(), CxlumnID{0u}, expected);
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnReferencedIntValueSegmentWithFloatColumnWithNullValues) {
+TEST_P(OperatorsTableScanTest, ScanOnReferencedIntValueSegmentWithFloatSegmentWithNullValues) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_referencing_table(table));
@@ -405,10 +405,10 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedIntValueSegmentWithFloatColumnWit
   scan->execute();
 
   const auto expected = std::vector<AllTypeVariant>{12345, 1234, 12345, 1234};
-  ASSERT_COLUMN_EQ(scan->get_output(), CxlumnID{0u}, expected);
+  ASSERT_CXLUMN_EQ(scan->get_output(), CxlumnID{0u}, expected);
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnIntCompressedColumnWithFloatColumnWithNullValues) {
+TEST_P(OperatorsTableScanTest, ScanOnIntCompressedSegmentsWithFloatSegmentWithNullValues) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
@@ -420,10 +420,10 @@ TEST_P(OperatorsTableScanTest, ScanOnIntCompressedColumnWithFloatColumnWithNullV
   scan->execute();
 
   const auto expected = std::vector<AllTypeVariant>{12345, 1234, 12345, 1234};
-  ASSERT_COLUMN_EQ(scan->get_output(), CxlumnID{0u}, expected);
+  ASSERT_CXLUMN_EQ(scan->get_output(), CxlumnID{0u}, expected);
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnReferencedIntCompressedColumnWithFloatColumnWithNullValues) {
+TEST_P(OperatorsTableScanTest, ScanOnReferencedIntCompressedSegmentsWithFloatSegmentWithNullValues) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
@@ -435,10 +435,10 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedIntCompressedColumnWithFloatColum
   scan->execute();
 
   const auto expected = std::vector<AllTypeVariant>{12345, 1234, 12345, 1234};
-  ASSERT_COLUMN_EQ(scan->get_output(), CxlumnID{0u}, expected);
+  ASSERT_CXLUMN_EQ(scan->get_output(), CxlumnID{0u}, expected);
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnCompressedColumnAroundBounds) {
+TEST_P(OperatorsTableScanTest, ScanOnCompressedSegmentsAroundBounds) {
   // scanning for a value that is around the dictionary's bounds
 
   std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
@@ -458,8 +458,8 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedColumnAroundBounds) {
     auto scan_partly = std::make_shared<opossum::TableScan>(_int_int_partly_compressed, CxlumnID{0}, test.first, 0);
     scan_partly->execute();
 
-    ASSERT_COLUMN_EQ(scan->get_output(), CxlumnID{1}, test.second);
-    ASSERT_COLUMN_EQ(scan_partly->get_output(), CxlumnID{1}, test.second);
+    ASSERT_CXLUMN_EQ(scan->get_output(), CxlumnID{1}, test.second);
+    ASSERT_CXLUMN_EQ(scan_partly->get_output(), CxlumnID{1}, test.second);
   }
 }
 
@@ -476,7 +476,7 @@ TEST_P(OperatorsTableScanTest, ScanWithEmptyInput) {
   EXPECT_EQ(scan_2->get_output()->row_count(), static_cast<size_t>(0));
 }
 
-TEST_P(OperatorsTableScanTest, ScanOnWideDictionaryColumn) {
+TEST_P(OperatorsTableScanTest, ScanOnWideDictionarySegment) {
   // 2**8 + 1 values require a data type of 16bit.
   const auto table_wrapper_dict_16 = get_table_op_with_n_dict_entries((1 << 8) + 1);
   auto scan_1 =
@@ -512,7 +512,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueSegment) {
   scan_for_null_values(table_wrapper, tests);
 }
 
-TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedColumn) {
+TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSegments) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
@@ -563,7 +563,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueSegment) {
   scan_for_null_values(table_wrapper, tests);
 }
 
-TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedCompressedColumn) {
+TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedCompressedSegments) {
   auto table = load_table("src/test/tables/int_int_w_null_8_rows.tbl", 4);
   ChunkEncoder::encode_all_chunks(table, _encoding_type);
 
@@ -589,7 +589,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedValueSe
   scan_for_null_values(table_wrapper, tests);
 }
 
-TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedCompressedColumn) {
+TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedCompressedSegments) {
   auto table = create_referencing_table_w_null_row_id(true);
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
@@ -626,7 +626,7 @@ TEST_P(OperatorsTableScanTest, ScanWithExcludedFirstChunk) {
   scan->set_excluded_chunk_ids({ChunkID{0u}});
   scan->execute();
 
-  ASSERT_COLUMN_EQ(scan->get_output(), CxlumnID{1}, expected);
+  ASSERT_CXLUMN_EQ(scan->get_output(), CxlumnID{1}, expected);
 }
 
 TEST_P(OperatorsTableScanTest, SetParameters) {

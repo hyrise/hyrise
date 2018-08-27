@@ -32,7 +32,7 @@ class SortNodeTest : public ::testing::Test {
 
   std::shared_ptr<StoredTableNode> _table_node;
   std::shared_ptr<SortNode> _sort_node;
-  LQPColumnReference _a_i, _a_f, _a_d;
+  LQPCxlumnReference _a_i, _a_f, _a_d;
 };
 
 TEST_F(SortNodeTest, Descriptions) {

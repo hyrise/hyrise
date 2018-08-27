@@ -28,7 +28,7 @@ class PredicateNodeTest : public ::testing::Test {
   void TearDown() override { StorageManager::reset(); }
 
   std::shared_ptr<StoredTableNode> _table_node;
-  LQPColumnReference _i, _f;
+  LQPCxlumnReference _i, _f;
   std::shared_ptr<PredicateNode> _predicate_node;
 };
 

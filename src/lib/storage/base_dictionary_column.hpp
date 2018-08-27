@@ -9,9 +9,9 @@ namespace opossum {
 class BaseCompressedVector;
 
 /**
- * @brief Base class of DictionaryColumn<T> exposing type-independent interface
+ * @brief Base class of DictionarySegment<T> exposing type-independent interface
  */
-class BaseDictionaryColumn : public BaseEncodedColumn {
+class BaseDictionarySegment : public BaseEncodedColumn {
  public:
   using BaseEncodedColumn::BaseEncodedColumn;
 

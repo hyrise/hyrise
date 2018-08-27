@@ -9,7 +9,7 @@
 #include "resolve_type.hpp"
 #include "storage/base_encoded_segment.hpp"
 #include "storage/storage_manager.hpp"
-#include "storage/value_column.hpp"
+#include "storage/value_segment.hpp"
 #include "type_cast.hpp"
 #include "utils/assert.hpp"
 
@@ -108,9 +108,9 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
   // These TypedColumnProcessors kind of retrieve the template parameter of the columns.
   auto typed_column_processors = std::vector<std::unique_ptr<AbstractTypedColumnProcessor>>();
-  for (const auto& column_type : _target_table->column_data_types()) {
+  for (const auto& cxlumn_type : _target_table->cxlumn_data_types()) {
     typed_column_processors.emplace_back(
-        make_unique_by_data_type<AbstractTypedColumnProcessor, TypedColumnProcessor>(column_type));
+        make_unique_by_data_type<AbstractTypedColumnProcessor, TypedColumnProcessor>(cxlumn_type));
   }
 
   auto total_rows_to_insert = static_cast<uint32_t>(input_table_left()->row_count());
@@ -139,7 +139,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       auto rows_to_insert_this_loop = std::min(_target_table->max_chunk_size() - current_chunk->size(), remaining_rows);
 
       // Resize MVCC vectors.
-      current_chunk->get_scoped_mvcc_columns_lock()->grow_by(rows_to_insert_this_loop, MvccColumns::MAX_COMMIT_ID);
+      current_chunk->get_scoped_mvcc_data_lock()->grow_by(rows_to_insert_this_loop, MvccData::MAX_COMMIT_ID);
 
       // Resize current chunk to full size.
       auto old_size = current_chunk->size();
@@ -201,7 +201,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       // the transaction IDs are set here and not during the resize, because
       // tbb::concurrent_vector::grow_to_at_least(n, t)" does not work with atomics, since their copy constructor is
       // deleted.
-      target_chunk->get_scoped_mvcc_columns_lock()->tids[i] = context->transaction_id();
+      target_chunk->get_scoped_mvcc_data_lock()->tids[i] = context->transaction_id();
       _inserted_rows.emplace_back(RowID{target_chunk_id, i});
     }
 
@@ -216,9 +216,9 @@ void Insert::_on_commit_records(const CommitID cid) {
   for (auto row_id : _inserted_rows) {
     auto chunk = _target_table->get_chunk(row_id.chunk_id);
 
-    auto mvcc_columns = chunk->get_scoped_mvcc_columns_lock();
-    mvcc_columns->begin_cids[row_id.chunk_offset] = cid;
-    mvcc_columns->tids[row_id.chunk_offset] = 0u;
+    auto mvcc_data = chunk->get_scoped_mvcc_data_lock();
+    mvcc_data->begin_cids[row_id.chunk_offset] = cid;
+    mvcc_data->tids[row_id.chunk_offset] = 0u;
   }
 }
 
@@ -227,11 +227,11 @@ void Insert::_on_rollback_records() {
     auto chunk = _target_table->get_chunk(row_id.chunk_id);
     // We set the begin and end cids to 0 (effectively making it invisible for everyone) so that the ChunkCompression
     // does not think that this row is still incomplete. We need to make sure that the end is written before the begin.
-    chunk->get_scoped_mvcc_columns_lock()->end_cids[row_id.chunk_offset] = 0u;
+    chunk->get_scoped_mvcc_data_lock()->end_cids[row_id.chunk_offset] = 0u;
     std::atomic_thread_fence(std::memory_order_release);
-    chunk->get_scoped_mvcc_columns_lock()->begin_cids[row_id.chunk_offset] = 0u;
+    chunk->get_scoped_mvcc_data_lock()->begin_cids[row_id.chunk_offset] = 0u;
 
-    chunk->get_scoped_mvcc_columns_lock()->tids[row_id.chunk_offset] = 0u;
+    chunk->get_scoped_mvcc_data_lock()->tids[row_id.chunk_offset] = 0u;
   }
 }
 

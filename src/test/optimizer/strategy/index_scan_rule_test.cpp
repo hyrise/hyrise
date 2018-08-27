@@ -38,9 +38,9 @@ class IndexScanRuleTest : public StrategyBaseTest {
     rule = std::make_shared<IndexScanRule>();
 
     stored_table_node = StoredTableNode::make("a");
-    a = stored_table_node->get_column("a");
-    b = stored_table_node->get_column("b");
-    c = stored_table_node->get_column("c");
+    a = stored_table_node->get_cxlumn("a");
+    b = stored_table_node->get_cxlumn("b");
+    c = stored_table_node->get_cxlumn("c");
   }
 
   std::shared_ptr<TableStatistics> generate_mock_statistics(float row_count = 0.0f) {
@@ -54,7 +54,7 @@ class IndexScanRuleTest : public StrategyBaseTest {
   std::shared_ptr<IndexScanRule> rule;
   std::shared_ptr<StoredTableNode> stored_table_node;
   std::shared_ptr<Table> table;
-  LQPColumnReference a, b, c;
+  LQPCxlumnReference a, b, c;
 };
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {

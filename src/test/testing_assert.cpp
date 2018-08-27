@@ -10,7 +10,7 @@
 #include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "storage/table.hpp"
-#include "storage/value_column.hpp"
+#include "storage/value_segment.hpp"
 
 #define ANSI_COLOR_RED "\x1B[31m"
 #define ANSI_COLOR_GREEN "\x1B[32m"
@@ -31,7 +31,7 @@ Matrix _table_to_matrix(const std::shared_ptr<const opossum::Table>& table) {
   // set column names/types
   for (auto cxlumn_id = opossum::CxlumnID{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
     matrix[0][cxlumn_id] = table->cxlumn_name(cxlumn_id);
-    matrix[1][cxlumn_id] = opossum::data_type_to_string.left.at(table->column_data_type(cxlumn_id));
+    matrix[1][cxlumn_id] = opossum::data_type_to_string.left.at(table->cxlumn_data_type(cxlumn_id));
   }
 
   // set values
@@ -147,8 +147,8 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   //  - column names and types
   DataType left_col_type, right_col_type;
   for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < expected_table->cxlumn_count(); ++cxlumn_id) {
-    left_col_type = opossum_table->column_data_type(cxlumn_id);
-    right_col_type = expected_table->column_data_type(cxlumn_id);
+    left_col_type = opossum_table->cxlumn_data_type(cxlumn_id);
+    right_col_type = expected_table->cxlumn_data_type(cxlumn_id);
     // This is needed for the SQLiteTestrunner, since SQLite does not differentiate between float/double, and int/long.
     if (type_cmp_mode == TypeCmpMode::Lenient) {
       if (left_col_type == DataType::Double) {
@@ -176,8 +176,8 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
     if (left_col_type != right_col_type) {
       const std::string error_type = "Column type mismatch (column " + std::to_string(cxlumn_id) + ")";
       const std::string error_msg =
-          "Actual column type: " + data_type_to_string.left.at(opossum_table->column_data_type(cxlumn_id)) + "\n" +
-          "Expected column type: " + data_type_to_string.left.at(expected_table->column_data_type(cxlumn_id));
+          "Actual column type: " + data_type_to_string.left.at(opossum_table->cxlumn_data_type(cxlumn_id)) + "\n" +
+          "Expected column type: " + data_type_to_string.left.at(expected_table->cxlumn_data_type(cxlumn_id));
 
       print_table_comparison(error_type, error_msg, {{1, cxlumn_id}});
       return false;
@@ -219,19 +219,19 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
         highlight_if(!(variant_is_null(opossum_matrix[row_id][cxlumn_id]) &&
                        variant_is_null(expected_matrix[row_id][cxlumn_id])),
                      row_id, cxlumn_id);
-      } else if (opossum_table->column_data_type(cxlumn_id) == DataType::Float) {
+      } else if (opossum_table->cxlumn_data_type(cxlumn_id) == DataType::Float) {
         auto left_val = type_cast<float>(opossum_matrix[row_id][cxlumn_id]);
         auto right_val = type_cast<float>(expected_matrix[row_id][cxlumn_id]);
 
         highlight_if(!almost_equals(left_val, right_val, float_comparison_mode), row_id, cxlumn_id);
-      } else if (opossum_table->column_data_type(cxlumn_id) == DataType::Double) {
+      } else if (opossum_table->cxlumn_data_type(cxlumn_id) == DataType::Double) {
         auto left_val = type_cast<double>(opossum_matrix[row_id][cxlumn_id]);
         auto right_val = type_cast<double>(expected_matrix[row_id][cxlumn_id]);
 
         highlight_if(!almost_equals(left_val, right_val, float_comparison_mode), row_id, cxlumn_id);
       } else {
-        if (type_cmp_mode == TypeCmpMode::Lenient && (opossum_table->column_data_type(cxlumn_id) == DataType::Int ||
-                                                      opossum_table->column_data_type(cxlumn_id) == DataType::Long)) {
+        if (type_cmp_mode == TypeCmpMode::Lenient && (opossum_table->cxlumn_data_type(cxlumn_id) == DataType::Int ||
+                                                      opossum_table->cxlumn_data_type(cxlumn_id) == DataType::Long)) {
           auto left_val = type_cast<int64_t>(opossum_matrix[row_id][cxlumn_id]);
           auto right_val = type_cast<int64_t>(expected_matrix[row_id][cxlumn_id]);
           highlight_if(left_val != right_val, row_id, cxlumn_id);

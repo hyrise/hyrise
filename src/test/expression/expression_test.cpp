@@ -42,8 +42,8 @@ class ExpressionTest : public ::testing::Test {
 
   void TearDown() { StorageManager::reset(); }
 
-  LQPColumnReference a, b;
-  LQPColumnReference a_nullable, b_nullable;
+  LQPCxlumnReference a, b;
+  LQPCxlumnReference a_nullable, b_nullable;
   std::shared_ptr<StoredTableNode> int_float_node, int_float_node_nullable;
   std::shared_ptr<AbstractLQPNode> lqp_a, lqp_b, lqp_c;
   std::shared_ptr<Table> table_int_float, table_int_float_with_null;
@@ -112,7 +112,7 @@ TEST_F(ExpressionTest, RequiresCalculation) {
   EXPECT_TRUE(unary_minus_(5)->requires_computation());
   EXPECT_FALSE(parameter_(ParameterID{5})->requires_computation());
   EXPECT_FALSE(parameter_(ParameterID{5}, a)->requires_computation());
-  EXPECT_FALSE(column_(a)->requires_computation());
+  EXPECT_FALSE(cxlumn_(a)->requires_computation());
   EXPECT_FALSE(PQPCxlumnExpression::from_table(*table_int_float, "a")->requires_computation());
   EXPECT_FALSE(value_(5)->requires_computation());
   EXPECT_TRUE(cast_(5, DataType::Int)->requires_computation());
@@ -240,8 +240,8 @@ TEST_F(ExpressionTest, IsNullable) {
   EXPECT_TRUE(case_(1, 1, null_())->is_nullable());
   EXPECT_TRUE(add_(greater_than_(2, null_()), 1)->is_nullable());
   EXPECT_TRUE(and_(greater_than_(2, null_()), 1)->is_nullable());
-  EXPECT_FALSE(column_(a)->is_nullable());
-  EXPECT_TRUE(column_(a_nullable)->is_nullable());
+  EXPECT_FALSE(cxlumn_(a)->is_nullable());
+  EXPECT_TRUE(cxlumn_(a_nullable)->is_nullable());
   EXPECT_FALSE(cast_(12, DataType::String)->is_nullable());
   EXPECT_TRUE(cast_(null_(), DataType::String)->is_nullable());
   EXPECT_TRUE(sum_(null_())->is_nullable());

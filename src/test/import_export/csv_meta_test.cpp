@@ -12,9 +12,9 @@ TEST_F(CsvMetaTest, ProcessCsvMetaFile) {
 
   auto meta_expected = CsvMeta{};
   meta_expected.chunk_size = 2;
-  meta_expected.columns.emplace_back(ColumnMeta{"a", "int", false});
-  meta_expected.columns.emplace_back(ColumnMeta{"b", "string", false});
-  meta_expected.columns.emplace_back(ColumnMeta{"c", "float", true});
+  meta_expected.cxlumns.emplace_back(CxlumnMeta{"a", "int", false});
+  meta_expected.cxlumns.emplace_back(CxlumnMeta{"b", "string", false});
+  meta_expected.cxlumns.emplace_back(CxlumnMeta{"c", "float", true});
 
   EXPECT_EQ(meta_expected, meta);
 }
@@ -31,7 +31,7 @@ TEST_F(CsvMetaTest, ParseConfigOnlySingleCharacters) {
   auto json_meta = nlohmann::json::parse(R"(
     {
       "chunk_size": 5,
-      "columns": [
+      "cxlumns": [
         {
           "name": "a",
           "type": "string"
@@ -47,11 +47,11 @@ TEST_F(CsvMetaTest, ParseConfigOnlySingleCharacters) {
   EXPECT_THROW(from_json(json_meta, meta), std::logic_error);
 }
 
-TEST_F(CsvMetaTest, ColumnsMustBeArray) {
+TEST_F(CsvMetaTest, CxlumnsMustBeArray) {
   auto json_meta = nlohmann::json::parse(R"(
     {
       "chunk_size": 5,
-      "columns": {}
+      "cxlumns": {}
     }
   )");
 

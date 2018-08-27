@@ -63,7 +63,7 @@ void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const BaseSegm
   std::vector<std::pair<ChunkOffset, DataType>> values;
 
   // Materialize
-  resolve_column_type<DataType>(*column, [&](const auto& typed_column) {
+  resolve_cxlumn_type<DataType>(*column, [&](const auto& typed_column) {
     auto iterable_left = create_iterable_from_column<DataType>(typed_column);
     iterable_left.for_each([&](const auto& value) {
       if (value.is_null()) return;

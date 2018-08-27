@@ -7,7 +7,7 @@
 #include "storage/frame_of_reference/frame_of_reference_iterable.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_column/run_length_column_iterable.hpp"
-#include "storage/value_column/value_column_iterable.hpp"
+#include "storage/value_segment/value_segment_iterable.hpp"
 
 namespace opossum {
 
@@ -35,8 +35,8 @@ auto create_iterable_from_column(const ValueSegment<T>& column) {
 }
 
 template <typename T>
-auto create_iterable_from_column(const DictionaryColumn<T>& column) {
-  return erase_type_from_iterable_if_debug(DictionaryColumnIterable<T, pmr_vector<T>>{column});
+auto create_iterable_from_column(const DictionarySegment<T>& column) {
+  return erase_type_from_iterable_if_debug(DictionarySegmentIterable<T, pmr_vector<T>>{column});
 }
 
 template <typename T>
@@ -45,8 +45,8 @@ auto create_iterable_from_column(const RunLengthColumn<T>& column) {
 }
 
 template <typename T>
-auto create_iterable_from_column(const FixedStringDictionaryColumn<T>& column) {
-  return erase_type_from_iterable_if_debug(DictionaryColumnIterable<T, FixedStringVector>{column});
+auto create_iterable_from_column(const FixedStringDictionarySegment<T>& column) {
+  return erase_type_from_iterable_if_debug(DictionarySegmentIterable<T, FixedStringVector>{column});
 }
 
 template <typename T>

@@ -10,7 +10,7 @@
 
 #include "resolve_type.hpp"
 #include "storage/table.hpp"
-#include "storage/value_column.hpp"
+#include "storage/value_segment.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -108,14 +108,14 @@ class AbstractBenchmarkTableGenerator {
 
         // write output chunks if column size has reached chunk_size
         if (row_index % _chunk_size == _chunk_size - 1) {
-          auto value_column = std::make_shared<opossum::ValueSegment<T>>(std::move(column));
+          auto value_segment = std::make_shared<opossum::ValueSegment<T>>(std::move(column));
 
           if (is_first_column) {
             columns_by_chunk.emplace_back();
-            columns_by_chunk.back().push_back(value_column);
+            columns_by_chunk.back().push_back(value_segment);
           } else {
             opossum::ChunkID chunk_id{static_cast<uint32_t>(row_index / _chunk_size)};
-            columns_by_chunk[chunk_id].push_back(value_column);
+            columns_by_chunk[chunk_id].push_back(value_segment);
           }
 
           // reset column
@@ -128,15 +128,15 @@ class AbstractBenchmarkTableGenerator {
 
     // write partially filled last chunk
     if (row_index % _chunk_size != 0) {
-      auto value_column = std::make_shared<opossum::ValueSegment<T>>(std::move(column));
+      auto value_segment = std::make_shared<opossum::ValueSegment<T>>(std::move(column));
 
       // add Chunk if it is the first column, e.g. WAREHOUSE_ID in the example above
       if (is_first_column) {
         columns_by_chunk.emplace_back();
-        columns_by_chunk.back().push_back(value_column);
+        columns_by_chunk.back().push_back(value_segment);
       } else {
         opossum::ChunkID chunk_id{static_cast<uint32_t>(row_index / _chunk_size)};
-        columns_by_chunk[chunk_id].push_back(value_column);
+        columns_by_chunk[chunk_id].push_back(value_segment);
       }
     }
   }

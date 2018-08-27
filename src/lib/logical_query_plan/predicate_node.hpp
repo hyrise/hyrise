@@ -8,7 +8,7 @@
 #include "abstract_lqp_node.hpp"
 #include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
-#include "lqp_column_reference.hpp"
+#include "lqp_cxlumn_reference.hpp"
 
 namespace opossum {
 

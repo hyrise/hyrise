@@ -19,17 +19,17 @@ namespace opossum {
 class SQLIdentifierResolverTest : public ::testing::Test {
  public:
   void SetUp() override {
-    node_a = MockNode::make(MockNode::ColumnDefinitions{
+    node_a = MockNode::make(MockNode::CxlumnDefinitions{
         {{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}, {DataType::Int, "d"}}});
     node_b =
-        MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}});
+        MockNode::make(MockNode::CxlumnDefinitions{{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}});
     node_c =
-        MockNode::make(MockNode::ColumnDefinitions{{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}});
+        MockNode::make(MockNode::CxlumnDefinitions{{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}});
 
-    expression_a = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, CxlumnID{0}));
-    expression_b = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, CxlumnID{1}));
-    expression_c = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, CxlumnID{2}));
-    expression_unnamed = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, CxlumnID{3}));
+    expression_a = std::make_shared<LQPCxlumnExpression>(LQPCxlumnReference(node_a, CxlumnID{0}));
+    expression_b = std::make_shared<LQPCxlumnExpression>(LQPCxlumnReference(node_a, CxlumnID{1}));
+    expression_c = std::make_shared<LQPCxlumnExpression>(LQPCxlumnReference(node_a, CxlumnID{2}));
+    expression_unnamed = std::make_shared<LQPCxlumnExpression>(LQPCxlumnReference(node_a, CxlumnID{3}));
 
     context.set_cxlumn_name(expression_a, {"a"s});
     context.set_cxlumn_name(expression_b, {"b"s});
@@ -83,7 +83,7 @@ TEST_F(SQLIdentifierResolverTest, TableNameChanges) {
 }
 
 TEST_F(SQLIdentifierResolverTest, ColumnNameRedundancy) {
-  auto expression_a2 = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_c, CxlumnID{2}));
+  auto expression_a2 = std::make_shared<LQPCxlumnExpression>(LQPCxlumnReference(node_c, CxlumnID{2}));
 
   context.set_cxlumn_name(expression_a2, {"a"s});
 
@@ -104,9 +104,9 @@ TEST_F(SQLIdentifierResolverTest, ResolveOuterExpression) {
   /**
    * Create context and context proxy for the outermost query
    */
-  const auto outermost_expression_a = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_b, CxlumnID{0}));
-  const auto outermost_expression_b = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_b, CxlumnID{1}));
-  const auto outermost_expression_c = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_b, CxlumnID{2}));
+  const auto outermost_expression_a = std::make_shared<LQPCxlumnExpression>(LQPCxlumnReference(node_b, CxlumnID{0}));
+  const auto outermost_expression_b = std::make_shared<LQPCxlumnExpression>(LQPCxlumnReference(node_b, CxlumnID{1}));
+  const auto outermost_expression_c = std::make_shared<LQPCxlumnExpression>(LQPCxlumnReference(node_b, CxlumnID{2}));
   const auto outermost_context = std::make_shared<SQLIdentifierResolver>();
   outermost_context->set_cxlumn_name(outermost_expression_a, "outermost_a");
   outermost_context->set_cxlumn_name(outermost_expression_b, "b");  // Intentionally named just "b"
@@ -120,8 +120,8 @@ TEST_F(SQLIdentifierResolverTest, ResolveOuterExpression) {
    * Create context and context proxy for the nested ("intermediate") query
    */
   auto intermediate_context = std::make_shared<SQLIdentifierResolver>();
-  const auto intermediate_expression_a = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_c, CxlumnID{0}));
-  const auto intermediate_expression_b = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_c, CxlumnID{1}));
+  const auto intermediate_expression_a = std::make_shared<LQPCxlumnExpression>(LQPCxlumnReference(node_c, CxlumnID{0}));
+  const auto intermediate_expression_b = std::make_shared<LQPCxlumnExpression>(LQPCxlumnReference(node_c, CxlumnID{1}));
   intermediate_context->set_cxlumn_name(intermediate_expression_a, "intermediate_a");
   intermediate_context->set_cxlumn_name(intermediate_expression_b, "b");  // Intentionally named just "b"
   intermediate_context->set_table_name(intermediate_expression_b, "Intermediate");
@@ -171,7 +171,7 @@ TEST_F(SQLIdentifierResolverTest, DeepEqualsIsUsed) {
    * Test that we can use equivalent Expression objects that are stored in different Objects
    */
 
-  const auto expression_a2 = std::make_shared<LQPColumnExpression>(LQPColumnReference(node_a, CxlumnID{0}));
+  const auto expression_a2 = std::make_shared<LQPCxlumnExpression>(LQPCxlumnReference(node_a, CxlumnID{0}));
   context.set_cxlumn_name(expression_a2, "a2");
   context.set_table_name(expression_a2, "T2");
   EXPECT_EQ(context.resolve_identifier_relaxed({"a2"s, "T2"}), expression_a);

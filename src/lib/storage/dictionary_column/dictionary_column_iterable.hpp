@@ -12,12 +12,12 @@
 namespace opossum {
 
 template <typename T, typename Dictionary>
-class DictionaryColumnIterable : public PointAccessibleColumnIterable<DictionaryColumnIterable<T, Dictionary>> {
+class DictionarySegmentIterable : public PointAccessibleColumnIterable<DictionarySegmentIterable<T, Dictionary>> {
  public:
-  explicit DictionaryColumnIterable(const DictionaryColumn<T>& column)
+  explicit DictionarySegmentIterable(const DictionarySegment<T>& column)
       : _column{column}, _dictionary(column.dictionary()) {}
 
-  explicit DictionaryColumnIterable(const FixedStringDictionaryColumn<std::string>& column)
+  explicit DictionarySegmentIterable(const FixedStringDictionarySegment<std::string>& column)
       : _column{column}, _dictionary(column.fixed_string_dictionary()) {}
 
   template <typename Functor>
@@ -49,7 +49,7 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
   size_t _on_size() const { return _column.size(); }
 
  private:
-  const BaseDictionaryColumn& _column;
+  const BaseDictionarySegment& _column;
   std::shared_ptr<const Dictionary> _dictionary;
 
  private:

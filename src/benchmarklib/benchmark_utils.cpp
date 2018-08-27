@@ -375,8 +375,8 @@ void BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
       }
     }
 
-    const auto& column_type = table->column_data_type(cxlumn_id);
-    const auto& encoding_by_data_type = type_mapping.find(column_type);
+    const auto& cxlumn_type = table->cxlumn_data_type(cxlumn_id);
+    const auto& encoding_by_data_type = type_mapping.find(cxlumn_type);
     if (encoding_by_data_type != type_mapping.end()) {
       // The column type has a specific encoding
       chunk_spec.push_back(encoding_by_data_type->second);

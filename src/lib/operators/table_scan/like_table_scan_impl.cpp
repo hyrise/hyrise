@@ -12,9 +12,9 @@
 
 #include "storage/column_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/create_iterable_from_column.hpp"
-#include "storage/resolve_encoded_column_type.hpp"
-#include "storage/value_column.hpp"
-#include "storage/value_column/value_column_iterable.hpp"
+#include "storage/resolve_encoded_segment_type.hpp"
+#include "storage/value_segment.hpp"
+#include "storage/value_segment/value_segment_iterable.hpp"
 
 namespace opossum {
 
@@ -43,13 +43,13 @@ void LikeTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
   const auto chunk_id = context->_chunk_id;
 
-  resolve_encoded_column_type<std::string>(base_column, [&](const auto& typed_column) {
+  resolve_encoded_segment_type<std::string>(base_column, [&](const auto& typed_column) {
     auto left_iterable = create_iterable_from_column(typed_column);
     _scan_iterable(left_iterable, chunk_id, matches_out, mapped_chunk_offsets.get());
   });
 }
 
-void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
+void LikeTableScanImpl::handle_column(const BaseDictionarySegment& base_column,
                                       std::shared_ptr<ColumnVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   auto& matches_out = context->_matches_out;
@@ -59,10 +59,10 @@ void LikeTableScanImpl::handle_column(const BaseDictionaryColumn& base_column,
   std::pair<size_t, std::vector<bool>> result;
 
   if (base_column.encoding_type() == EncodingType::Dictionary) {
-    const auto& left_column = static_cast<const DictionaryColumn<std::string>&>(base_column);
+    const auto& left_column = static_cast<const DictionarySegment<std::string>&>(base_column);
     result = _find_matches_in_dictionary(*left_column.dictionary());
   } else {
-    const auto& left_column = static_cast<const FixedStringDictionaryColumn<std::string>&>(base_column);
+    const auto& left_column = static_cast<const FixedStringDictionarySegment<std::string>&>(base_column);
     result = _find_matches_in_dictionary(*left_column.dictionary());
   }
 

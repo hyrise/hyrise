@@ -41,8 +41,8 @@ class Table : private Noncopyable {
   const std::string& cxlumn_name(const CxlumnID cxlumn_id) const;
   std::vector<std::string> cxlumn_names() const;
 
-  DataType column_data_type(const CxlumnID cxlumn_id) const;
-  std::vector<DataType> column_data_types() const;
+  DataType cxlumn_data_type(const CxlumnID cxlumn_id) const;
+  std::vector<DataType> cxlumn_data_types() const;
 
   bool column_is_nullable(const CxlumnID cxlumn_id) const;
   std::vector<bool> columns_are_nullable() const;

@@ -59,13 +59,13 @@ void JoinSortMerge::_on_set_parameters(const std::unordered_map<ParameterID, All
 
 std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
   // Check column types
-  const auto& left_column_type = input_table_left()->column_data_type(_cxlumn_ids.first);
-  DebugAssert(left_column_type == input_table_right()->column_data_type(_cxlumn_ids.second),
+  const auto& left_cxlumn_type = input_table_left()->cxlumn_data_type(_cxlumn_ids.first);
+  DebugAssert(left_cxlumn_type == input_table_right()->cxlumn_data_type(_cxlumn_ids.second),
               "Left and right column types do not match. The sort merge join requires matching column types");
 
   // Create implementation to compute the join result
   _impl = make_unique_by_data_type<AbstractJoinOperatorImpl, JoinSortMergeImpl>(
-      left_column_type, *this, _cxlumn_ids.first, _cxlumn_ids.second, _predicate_condition, _mode);
+      left_cxlumn_type, *this, _cxlumn_ids.first, _cxlumn_ids.second, _predicate_condition, _mode);
 
   return _impl->_on_execute();
 }
@@ -592,11 +592,11 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
         if (input_table->chunk_count() > 0) {
           const auto base_column = input_table->get_chunk(ChunkID{0})->get_column(cxlumn_id);
-          const auto ref_column = std::dynamic_pointer_cast<const ReferenceSegment>(base_column);
+          const auto ref_segment = std::dynamic_pointer_cast<const ReferenceSegment>(base_column);
 
-          auto new_ref_column = std::make_shared<ReferenceSegment>(ref_column->referenced_table(),
-                                                                  ref_column->referenced_cxlumn_id(), new_pos_list);
-          output_columns.push_back(new_ref_column);
+          auto new_ref_segment = std::make_shared<ReferenceSegment>(ref_segment->referenced_table(),
+                                                                  ref_segment->referenced_cxlumn_id(), new_pos_list);
+          output_columns.push_back(new_ref_segment);
         } else {
           // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencING to
           // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceSegment that
@@ -606,8 +606,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
           output_columns.push_back(std::make_shared<ReferenceSegment>(dummy_table, cxlumn_id, pos_list));
         }
       } else {
-        auto new_ref_column = std::make_shared<ReferenceSegment>(input_table, cxlumn_id, pos_list);
-        output_columns.push_back(new_ref_column);
+        auto new_ref_segment = std::make_shared<ReferenceSegment>(input_table, cxlumn_id, pos_list);
+        output_columns.push_back(new_ref_segment);
       }
     }
   }

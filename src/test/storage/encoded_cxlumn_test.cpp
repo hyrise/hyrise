@@ -13,7 +13,7 @@
 #include "storage/column_encoding_utils.hpp"
 #include "storage/create_iterable_from_column.hpp"
 #include "storage/encoding_type.hpp"
-#include "storage/resolve_encoded_cxlumn_type.hpp"
+#include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/value_segment.hpp"
 
 #include "types.hpp"
@@ -133,7 +133,7 @@ TEST_P(EncodedColumnTest, SequentiallyReadNotNullableIntColumn) {
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
-  resolve_encoded_cxlumn_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_column) {
+  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_column) {
     auto value_segment_iterable = create_iterable_from_column(*value_segment);
     auto encoded_column_iterable = create_iterable_from_column(encoded_column);
 
@@ -153,7 +153,7 @@ TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumn) {
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
-  resolve_encoded_cxlumn_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_column) {
+  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_column) {
     auto value_segment_iterable = create_iterable_from_column(*value_segment);
     auto encoded_column_iterable = create_iterable_from_column(encoded_column);
 
@@ -188,7 +188,7 @@ TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumnWithChunkOffsetsList)
 
   auto chunk_offsets_list = this->create_sequential_chunk_offsets_list();
 
-  resolve_encoded_cxlumn_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_column) {
+  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_column) {
     auto value_segment_iterable = create_iterable_from_column(*value_segment);
     auto encoded_column_iterable = create_iterable_from_column(encoded_column);
 
@@ -214,7 +214,7 @@ TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumnWithShuffledChunkOffs
 
   auto chunk_offsets_list = this->create_random_access_chunk_offsets_list();
 
-  resolve_encoded_cxlumn_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_column) {
+  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_column) {
     auto value_segment_iterable = create_iterable_from_column(*value_segment);
     auto encoded_column_iterable = create_iterable_from_column(encoded_column);
 

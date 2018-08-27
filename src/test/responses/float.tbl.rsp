@@ -1,5 +1,5 @@
 response_table {
-  column_type: "float"
+  cxlumn_type: "float"
   cxlumn_name: "a"
   row {
     value {

@@ -14,7 +14,7 @@
 #include "storage/numa_placement_manager.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
-#include "storage/value_column.hpp"
+#include "storage/value_segment.hpp"
 #include "testing_assert.hpp"
 #include "types.hpp"
 #include "utils/load_table.hpp"
@@ -32,13 +32,13 @@ class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>:
  protected:
   // creates a dictionary column with the given type and values
   template <typename T>
-  static std::shared_ptr<DictionaryColumn<T>> create_dict_column_by_type(DataType data_type,
+  static std::shared_ptr<DictionarySegment<T>> create_dict_column_by_type(DataType data_type,
                                                                          const std::vector<T>& values) {
     auto vector_values = tbb::concurrent_vector<T>(values.begin(), values.end());
-    auto value_column = std::make_shared<ValueSegment<T>>(std::move(vector_values));
+    auto value_segment = std::make_shared<ValueSegment<T>>(std::move(vector_values));
 
-    auto compressed_column = encode_column(EncodingType::Dictionary, data_type, value_column);
-    return std::static_pointer_cast<DictionaryColumn<T>>(compressed_column);
+    auto compressed_column = encode_column(EncodingType::Dictionary, data_type, value_segment);
+    return std::static_pointer_cast<DictionarySegment<T>>(compressed_column);
   }
 
   void _execute_all(const std::vector<std::shared_ptr<AbstractOperator>>& operators) {
