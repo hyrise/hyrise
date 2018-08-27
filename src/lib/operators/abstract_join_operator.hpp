@@ -24,9 +24,11 @@ namespace opossum {
 
 class AbstractJoinOperator : public AbstractReadOnlyOperator {
  public:
-  AbstractJoinOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator> left,
-                       const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
-                       const ColumnIDPair& column_ids, const PredicateCondition predicate_condition);
+  AbstractJoinOperator(
+      const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
+      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode, const ColumnIDPair& column_ids,
+      const PredicateCondition predicate_condition,
+      std::unique_ptr<OperatorPerformanceData> performance_data = std::make_unique<OperatorPerformanceData>());
 
   JoinMode mode() const;
   const ColumnIDPair& column_ids() const;
@@ -37,6 +39,8 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
   const JoinMode _mode;
   const ColumnIDPair _column_ids;
   const PredicateCondition _predicate_condition;
+
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   // Some operators need an internal implementation class, mostly in cases where
   // their execute method depends on a template parameter. An example for this is

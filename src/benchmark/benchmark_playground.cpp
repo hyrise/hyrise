@@ -36,7 +36,7 @@ class BenchmarkPlaygroundFixture : public BenchmarkBasicFixture {
   void SetUp(::benchmark::State& state) override {
     BenchmarkBasicFixture::SetUp(state);
 
-    clear_cache();
+    _clear_cache();
 
     // Fill the vector with 1M values in the pattern 0, 1, 2, 3, 0, 1, 2, 3, ...
     // The "TableScan" will scan for one value (2), so it will select 25%.

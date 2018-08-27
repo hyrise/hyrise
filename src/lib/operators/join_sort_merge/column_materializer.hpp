@@ -64,10 +64,10 @@ class ColumnMaterializer {
   /**
    * Creates a job to materialize and sort a chunk.
    **/
-  std::shared_ptr<JobTask> _create_chunk_materialization_job(std::unique_ptr<MaterializedColumnList<T>>& output,
-                                                             std::unique_ptr<PosList>& null_rows_output,
-                                                             ChunkID chunk_id, std::shared_ptr<const Table> input,
-                                                             ColumnID column_id) {
+  std::shared_ptr<AbstractTask> _create_chunk_materialization_job(std::unique_ptr<MaterializedColumnList<T>>& output,
+                                                                  std::unique_ptr<PosList>& null_rows_output,
+                                                                  ChunkID chunk_id, std::shared_ptr<const Table> input,
+                                                                  ColumnID column_id) {
     return std::make_shared<JobTask>([this, &output, &null_rows_output, input, column_id, chunk_id] {
       auto column = input->get_chunk(chunk_id)->get_column(column_id);
       resolve_column_type<T>(*column, [&](auto& typed_column) {

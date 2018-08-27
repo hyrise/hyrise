@@ -36,8 +36,8 @@ class Pagination {
   void _print_help_screen();
 
   std::vector<std::string> _lines;
-  size_t _size_x;
-  size_t _size_y;
+  size_t _size_x{0};
+  size_t _size_y{0};
 };
 
 }  // namespace opossum

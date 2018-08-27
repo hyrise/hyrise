@@ -8,8 +8,8 @@
 #include "utils/assert.hpp"
 
 namespace opossum {
-UnionAll::UnionAll(const std::shared_ptr<const AbstractOperator> left_in,
-                   const std::shared_ptr<const AbstractOperator> right_in)
+UnionAll::UnionAll(const std::shared_ptr<const AbstractOperator>& left_in,
+                   const std::shared_ptr<const AbstractOperator>& right_in)
     : AbstractReadOnlyOperator(OperatorType::UnionAll, left_in, right_in) {
   // nothing to do here
 }
@@ -33,7 +33,7 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
       // iterating over all columns of the current chunk
       for (ColumnID column_id{0}; column_id < input->column_count(); ++column_id) {
         // While we don't modify the column, we need to get a non-const pointer so that we can put it into the chunk
-        output_columns.push_back(input->get_chunk(in_chunk_id)->get_mutable_column(column_id));
+        output_columns.push_back(input->get_chunk(in_chunk_id)->get_column(column_id));
       }
 
       // adding newly filled chunk to the output table
@@ -43,9 +43,12 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
 
   return output;
 }
-std::shared_ptr<AbstractOperator> UnionAll::_on_recreate(
-    const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-    const std::shared_ptr<AbstractOperator>& recreated_input_right) const {
-  return std::make_shared<UnionAll>(recreated_input_left, recreated_input_right);
+std::shared_ptr<AbstractOperator> UnionAll::_on_deep_copy(
+    const std::shared_ptr<AbstractOperator>& copied_input_left,
+    const std::shared_ptr<AbstractOperator>& copied_input_right) const {
+  return std::make_shared<UnionAll>(copied_input_left, copied_input_right);
 }
+
+void UnionAll::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+
 }  // namespace opossum

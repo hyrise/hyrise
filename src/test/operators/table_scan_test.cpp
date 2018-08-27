@@ -629,4 +629,27 @@ TEST_P(OperatorsTableScanTest, ScanWithExcludedFirstChunk) {
   ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, expected);
 }
 
+TEST_P(OperatorsTableScanTest, SetParameters) {
+  const auto parameters = std::unordered_map<ParameterID, AllTypeVariant>{{ParameterID{3}, AllTypeVariant{5}},
+                                                                          {ParameterID{2}, AllTypeVariant{6}}};
+
+  const auto scan_a =
+      std::make_shared<opossum::TableScan>(_int_int_compressed, ColumnID{0}, PredicateCondition::GreaterThanEquals, 4);
+  scan_a->set_parameters(parameters);
+  EXPECT_EQ(scan_a->left_column_id(), ColumnID{0});
+  EXPECT_EQ(scan_a->right_parameter(), AllParameterVariant{4});
+
+  const auto scan_b = std::make_shared<opossum::TableScan>(_int_int_compressed, ColumnID{0},
+                                                           PredicateCondition::GreaterThanEquals, ParameterID{2});
+  scan_b->set_parameters(parameters);
+  EXPECT_EQ(scan_b->left_column_id(), ColumnID{0});
+  EXPECT_EQ(scan_b->right_parameter(), AllParameterVariant{6});
+
+  const auto scan_c = std::make_shared<opossum::TableScan>(_int_int_compressed, ColumnID{0},
+                                                           PredicateCondition::GreaterThanEquals, ParameterID{4});
+  scan_c->set_parameters(parameters);
+  EXPECT_EQ(scan_c->left_column_id(), ColumnID{0});
+  EXPECT_EQ(scan_c->right_parameter(), AllParameterVariant{ParameterID{4}});
+}
+
 }  // namespace opossum

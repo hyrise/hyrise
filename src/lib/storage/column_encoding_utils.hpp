@@ -24,7 +24,7 @@ std::unique_ptr<BaseColumnEncoder> create_encoder(EncodingType encoding_type);
  * @return encoded column if data type is supported else throws exception
  */
 std::shared_ptr<BaseEncodedColumn> encode_column(EncodingType encoding_type, DataType data_type,
-                                                 std::shared_ptr<const BaseValueColumn> column,
+                                                 const std::shared_ptr<const BaseValueColumn>& column,
                                                  std::optional<VectorCompressionType> zero_suppression_type = {});
 
 }  // namespace opossum

@@ -29,17 +29,18 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config, const NamedQueri
 
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
   if (config.enable_scheduler) {
-    const auto topology = Topology::create_numa_topology();
     config.out << "- Multi-threaded Topology:" << std::endl;
-    topology->print(config.out);
+    Topology::get().print(config.out);
 
-    const auto scheduler = std::make_shared<NodeQueueScheduler>(topology);
+    const auto scheduler = std::make_shared<NodeQueueScheduler>();
     CurrentScheduler::set(scheduler);
   }
 }
 
 void BenchmarkRunner::run() {
   _config.out << "\n- Starting Benchmark..." << std::endl;
+
+  auto benchmark_start = std::chrono::steady_clock::now();
 
   // Run the queries in the selected mode
   switch (_config.benchmark_mode) {
@@ -53,6 +54,9 @@ void BenchmarkRunner::run() {
     }
   }
 
+  auto benchmark_end = std::chrono::steady_clock::now();
+  _total_run_duration = benchmark_end - benchmark_start;
+
   // Create report
   if (_config.output_file_path) {
     std::ofstream output_file(*_config.output_file_path);
@@ -64,7 +68,8 @@ void BenchmarkRunner::run() {
   // Visualize query plans
   if (_config.enable_visualization) {
     for (const auto& name_and_plans : _query_plans) {
-      const auto& name = name_and_plans.first;
+      auto name = name_and_plans.first;
+      boost::replace_all(name, " ", "_");
       const auto& lqps = name_and_plans.second.lqps;
       const auto& pqps = name_and_plans.second.pqps;
 
@@ -129,7 +134,8 @@ void BenchmarkRunner::_benchmark_individual_queries() {
 
     QueryBenchmarkResult result;
     result.num_iterations = state.num_iterations;
-    result.duration = state.end - state.begin;
+    result.duration = state.benchmark_end - state.benchmark_begin;
+    result.iteration_durations = state.iteration_durations;
 
     _query_results_by_query_name.emplace(name, result);
   }
@@ -149,7 +155,6 @@ void BenchmarkRunner::_execute_query(const NamedQuery& named_query) {
   if (_config.enable_visualization) {
     const auto query_plans_iter = _query_plans.find(name);
     if (query_plans_iter == _query_plans.end()) {
-      Assert(pipeline.get_query_plans().size() == 1, "Expected exactly one SQLQueryPlan");
       QueryPlans plans{pipeline.get_optimized_logical_plans(), pipeline.get_query_plans()};
       _query_plans.emplace(name, plans);
     }
@@ -162,15 +167,26 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
   for (const auto& named_query : _queries) {
     const auto& name = named_query.first;
     const auto& query_result = _query_results_by_query_name.at(name);
+    DebugAssert(query_result.iteration_durations.size() == query_result.num_iterations,
+                "number of iterations and number of iteration durations does not match");
 
     const auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(query_result.duration).count();
     const auto duration_seconds = static_cast<float>(duration_ns) / 1'000'000'000;
     const auto items_per_second = static_cast<float>(query_result.num_iterations) / duration_seconds;
     const auto time_per_query = duration_ns / query_result.num_iterations;
 
+    // Transform iteration Durations into numerical representation
+    auto iteration_durations = std::vector<double>();
+    iteration_durations.reserve(query_result.iteration_durations.size());
+    std::transform(query_result.iteration_durations.cbegin(), query_result.iteration_durations.cend(),
+                   std::back_inserter(iteration_durations), [](const auto& duration) {
+                     return static_cast<double>(std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count());
+                   });
+
     nlohmann::json benchmark{
         {"name", name},
         {"iterations", query_result.num_iterations},
+        {"iteration_durations", iteration_durations},
         {"avg_real_time_per_iteration", time_per_query},
         {"items_per_second", items_per_second},
         {"time_unit", "ns"},
@@ -179,7 +195,9 @@ void BenchmarkRunner::_create_report(std::ostream& stream) const {
     benchmarks.push_back(benchmark);
   }
 
-  nlohmann::json report{{"context", _context}, {"benchmarks", benchmarks}};
+  const auto total_run_duration_seconds = std::chrono::duration_cast<std::chrono::seconds>(_total_run_duration).count();
+  nlohmann::json report{
+      {"context", _context}, {"benchmarks", benchmarks}, {"total_run_duration (s)", total_run_duration_seconds}};
 
   stream << std::setw(2) << report << std::endl;
 }
@@ -200,7 +218,7 @@ BenchmarkRunner BenchmarkRunner::create(const BenchmarkConfig& config, const std
     }
 
     config.out << "- Adding table '" << table_name << "'" << std::endl;
-    encode_table(table_name, table, config);
+    BenchmarkTableEncoder::encode(table_name, table, config.encoding_config);
     StorageManager::get().add_table(table_name, table);
   }
 
@@ -314,9 +332,9 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
   cli_options.add_options()
     ("help", "print this help message")
     ("v,verbose", "Print log messages", cxxopts::value<bool>()->default_value("false"))
-    ("r,runs", "Maximum number of runs of a single query(set)", cxxopts::value<size_t>()->default_value("1000")) // NOLINT
+    ("r,runs", "Maximum number of runs of a single query (set)", cxxopts::value<size_t>()->default_value("10000")) // NOLINT
     ("c,chunk_size", "ChunkSize, default is 2^32-1", cxxopts::value<ChunkOffset>()->default_value(std::to_string(Chunk::MAX_SIZE))) // NOLINT
-    ("t,time", "Maximum seconds that a query(set) is run", cxxopts::value<size_t>()->default_value("5")) // NOLINT
+    ("t,time", "Maximum seconds that a query (set) is run", cxxopts::value<size_t>()->default_value("60")) // NOLINT
     ("o,output", "File to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value("")) // NOLINT
     ("m,mode", "IndividualQueries or PermutedQuerySets, default is IndividualQueries", cxxopts::value<std::string>()->default_value("IndividualQueries")) // NOLINT
     ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see below). String options: " + encoding_strings_option, cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT
@@ -351,45 +369,6 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
       {"using_scheduler", config.enable_scheduler},
       {"verbose", config.verbose},
       {"GIT-HASH", GIT_HEAD_SHA1 + std::string(GIT_IS_DIRTY ? "-dirty" : "")}};
-}
-
-void BenchmarkRunner::encode_table(const std::string& table_name, std::shared_ptr<Table> table,
-                                   const BenchmarkConfig& config) {
-  const auto& encoding_config = config.encoding_config;
-  const auto& type_mapping = encoding_config.type_encoding_mapping;
-  const auto& custom_mapping = encoding_config.custom_encoding_mapping;
-
-  const auto& column_mapping_it = custom_mapping.find(table_name);
-  const auto table_has_custom_encoding = column_mapping_it != custom_mapping.end();
-
-  ChunkEncodingSpec chunk_spec;
-
-  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
-    if (table_has_custom_encoding) {
-      const auto& column_name = table->column_name(column_id);
-      const auto& column_mapping = column_mapping_it->second;
-      const auto& column_encoding = column_mapping.find(column_name);
-      if (column_encoding != column_mapping.end()) {
-        // The column has a custom encoding
-        config.out << "- Custom encoding for " << table_name << "[" + column_name + "]" << std::endl;
-        chunk_spec.push_back(column_encoding->second);
-        continue;
-      }
-    }
-
-    const auto& column_type_str = data_type_to_string.left.find(table->column_data_type(column_id))->second;
-    const auto& type_encoding = type_mapping.find(column_type_str);
-    if (type_encoding != type_mapping.end()) {
-      // The column type has a specific encoding
-      chunk_spec.push_back(type_encoding->second);
-      continue;
-    }
-
-    // No custom or type encoding were specified, use default
-    chunk_spec.push_back(encoding_config.default_encoding_spec);
-  }
-
-  return ChunkEncoder::encode_all_chunks(table, chunk_spec);
 }
 
 }  // namespace opossum

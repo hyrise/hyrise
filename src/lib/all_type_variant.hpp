@@ -90,6 +90,8 @@ using AllTypeVariant = detail::AllTypeVariant;
 // Function to check if AllTypeVariant is null
 inline bool variant_is_null(const AllTypeVariant& variant) { return (variant.which() == 0); }
 
+bool is_floating_point_data_type(const DataType data_type);
+
 /**
  * Notes:
  *   – Use this instead of AllTypeVariant{}, AllTypeVariant{NullValue{}}, NullValue{}, etc.
@@ -117,12 +119,13 @@ static const auto NULL_VALUE = AllTypeVariant{};
   BOOST_PP_SEQ_FOR_EACH(EXPLICIT_INSTANTIATION, template_class, DATA_TYPES) \
   static_assert(true, "End call of macro with a semicolon")
 
-/**@}*/
-
-/**
- * Checks whether two variants are equal, except when they contain float/double. In this case check whether they are
- * near, e.g. withing a certain absolute difference from each other.
- */
-bool all_type_variant_near(const AllTypeVariant& lhs, const AllTypeVariant& rhs, double max_abs_error = 0.001);
-
 }  // namespace opossum
+
+namespace std {
+
+template <>
+struct hash<opossum::AllTypeVariant> {
+  size_t operator()(const opossum::AllTypeVariant& all_type_variant) const;
+};
+
+}  // namespace std

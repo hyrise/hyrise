@@ -46,6 +46,8 @@ class DictionaryColumnIterable : public PointAccessibleColumnIterable<Dictionary
     });
   }
 
+  size_t _on_size() const { return _column.size(); }
+
  private:
   const BaseDictionaryColumn& _column;
   std::shared_ptr<const Dictionary> _dictionary;

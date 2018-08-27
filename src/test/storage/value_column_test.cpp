@@ -96,10 +96,6 @@ TEST_F(StorageValueColumnTest, ArraySubscriptOperatorReturnsNullValue) {
   EXPECT_TRUE(variant_is_null(vc_double[0]));
 }
 
-TEST_F(StorageValueColumnTest, StringTooLong) {
-  EXPECT_THROW(vc_str.append(std::string(std::numeric_limits<StringLength>::max() + 1ul, 'A')), std::exception);
-}
-
 TEST_F(StorageValueColumnTest, MemoryUsageEstimation) {
   /**
    * WARNING: Since it's hard to assert what constitutes a correct "estimation", this just tests basic sanity of the

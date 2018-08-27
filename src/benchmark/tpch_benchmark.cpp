@@ -39,8 +39,8 @@ int main(int argc, char* argv[]) {
 
   // clang-format off
   cli_options.add_options()
-    ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("0.001"))
-    ("queries", "Specify queries to run, default is all that are supported", cxxopts::value<std::vector<opossum::QueryID>>()); // NOLINT
+    ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("0.1"))
+    ("queries", "Specify queries to run, default is all", cxxopts::value<std::vector<opossum::QueryID>>()); // NOLINT
   // clang-format on
 
   std::unique_ptr<opossum::BenchmarkConfig> config;
@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
   if (opossum::CLIConfigParser::cli_has_json_config(argc, argv)) {
     // JSON config file was passed in
     const auto json_config = opossum::CLIConfigParser::parse_json_config_file(argv[1]);
-    scale_factor = json_config.value("scale", 0.001f);
+    scale_factor = json_config.value("scale", 0.1f);
     query_ids = json_config.value("queries", std::vector<opossum::QueryID>());
 
     config = std::make_unique<opossum::BenchmarkConfig>(
@@ -104,7 +104,7 @@ int main(int argc, char* argv[]) {
     const auto& table_name = opossum::tpch_table_names.at(tpch_table.first);
     auto& table = tpch_table.second;
 
-    opossum::BenchmarkRunner::encode_table(table_name, table, *config);
+    opossum::BenchmarkTableEncoder::encode(table_name, table, config->encoding_config);
     opossum::StorageManager::get().add_table(table_name, table);
   }
   config->out << "- ... done." << std::endl;

@@ -8,14 +8,15 @@
 
 namespace opossum {
 
-AbstractJoinOperator::AbstractJoinOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator> left,
-                                           const std::shared_ptr<const AbstractOperator> right, const JoinMode mode,
-                                           const ColumnIDPair& column_ids, const PredicateCondition predicate_condition)
-    : AbstractReadOnlyOperator(type, left, right),
+AbstractJoinOperator::AbstractJoinOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
+                                           const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
+                                           const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
+                                           std::unique_ptr<OperatorPerformanceData> performance_data)
+    : AbstractReadOnlyOperator(type, left, right, std::move(performance_data)),
       _mode(mode),
       _column_ids(column_ids),
       _predicate_condition(predicate_condition) {
-  DebugAssert(mode != JoinMode::Cross && mode != JoinMode::Natural,
+  DebugAssert(mode != JoinMode::Cross,
               "Specified JoinMode not supported by an AbstractJoin, use Product etc. instead.");
 }
 
@@ -37,5 +38,7 @@ const std::string AbstractJoinOperator::description(DescriptionMode description_
   return name() + separator + "(" + join_mode_to_string.at(_mode) + " Join where " + column_name_left + " " +
          predicate_condition_to_string.left.at(_predicate_condition) + " " + column_name_right + ")";
 }
+
+void AbstractJoinOperator::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
 }  // namespace opossum

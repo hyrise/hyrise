@@ -40,11 +40,13 @@ class CommitFuncOp : public AbstractReadWriteOperator {
     return nullptr;
   }
 
-  std::shared_ptr<AbstractOperator> _on_recreate(
-      const std::vector<AllParameterVariant>& args, const std::shared_ptr<AbstractOperator>& recreated_input_left,
-      const std::shared_ptr<AbstractOperator>& recreated_input_right) const override {
+  std::shared_ptr<AbstractOperator> _on_deep_copy(
+      const std::shared_ptr<AbstractOperator>& copied_input_left,
+      const std::shared_ptr<AbstractOperator>& copied_input_right) const override {
     Fail("Unexpected function call");
   }
+
+  void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override {}
 
   void _on_commit_records(const CommitID cid) override { _func(); }
 

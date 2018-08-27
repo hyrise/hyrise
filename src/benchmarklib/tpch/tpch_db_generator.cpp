@@ -11,16 +11,8 @@ extern "C" {
 #include "storage/chunk.hpp"
 #include "storage/storage_manager.hpp"
 
-/**
- * Declare tpch_dbgen function we use that are not exposed by tpch-dbgen via headers
- */
-extern "C" {
-void row_start(int t);
-void row_stop(int t);
-}
-
 extern char** asc_date;
-extern seed_t Seed[];
+extern seed_t seed[];
 
 namespace {
 
@@ -125,7 +117,8 @@ class TableBuilder {
     // Create a column from each column vector and add it to the Chunk, then re-initialize the vector
     boost::hana::for_each(_column_vectors, [&](auto&& vector) {
       using T = typename std::decay_t<decltype(vector)>::value_type;
-      chunk_columns.push_back(std::make_shared<opossum::ValueColumn<T>>(std::move(vector)));
+      // reason for nolint: clang-tidy wants this to be a forward, but that doesn't work
+      chunk_columns.push_back(std::make_shared<opossum::ValueColumn<T>>(std::move(vector)));  // NOLINT
       vector = std::decay_t<decltype(vector)>();
     });
     _table->append_chunk(chunk_columns);
@@ -138,8 +131,8 @@ std::unordered_map<opossum::TpchTable, std::underlying_type_t<opossum::TpchTable
     {opossum::TpchTable::Nation, NATION}, {opossum::TpchTable::Region, REGION}};
 
 template <typename DSSType, typename MKRetType, typename... Args>
-DSSType _call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Args...), opossum::TpchTable table,
-                       Args... args) {
+DSSType call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Args...), opossum::TpchTable table,
+                      Args... args) {
   /**
    * Preserve calling scheme (row_start(); mk...(); row_stop(); as in dbgen's gen_tbl())
    */
@@ -148,7 +141,7 @@ DSSType _call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Ar
 
   row_start(dbgen_table_id);
 
-  DSSType value;
+  DSSType value{};
   mk_fn(idx, &value, std::forward<Args>(args)...);
 
   row_stop(dbgen_table_id);
@@ -156,7 +149,7 @@ DSSType _call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Ar
   return value;
 }
 
-float _convert_money(DSS_HUGE cents) {
+float convert_money(DSS_HUGE cents) {
   const auto dollars = cents / 100;
   cents %= 100;
   return dollars + (static_cast<float>(cents)) / 100.0f;
@@ -165,22 +158,22 @@ float _convert_money(DSS_HUGE cents) {
 /**
  * Call this after using dbgen to avoid memory leaks
  */
-void _dbgen_cleanup() {
+void dbgen_cleanup() {
   for (auto* distribution : {&nations,     &regions,        &o_priority_set, &l_instruct_set,
                              &l_smode_set, &l_category_set, &l_rflag_set,    &c_mseg_set,
                              &colors,      &p_types_set,    &p_cntr_set,     &articles,
                              &nouns,       &adjectives,     &adverbs,        &prepositions,
                              &verbs,       &terminators,    &auxillaries,    &np,
                              &vp,          &grammar}) {
-    free(distribution->permute);
+    free(distribution->permute);  // NOLINT
     distribution->permute = nullptr;
   }
 
   if (asc_date != nullptr) {
     for (size_t idx = 0; idx < TOTDATE; ++idx) {
-      free(asc_date[idx]);
+      free(asc_date[idx]);  // NOLINT
     }
-    free(asc_date);
+    free(asc_date);  // NOLINT
   }
   asc_date = nullptr;
 }
@@ -215,9 +208,9 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate(
   const auto customer_count = static_cast<size_t>(tdefs[CUST].base * _scale_factor);
 
   for (size_t row_idx = 0; row_idx < customer_count; row_idx++) {
-    auto customer = _call_dbgen_mk<customer_t>(row_idx + 1, mk_cust, TpchTable::Customer);
+    auto customer = call_dbgen_mk<customer_t>(row_idx + 1, mk_cust, TpchTable::Customer);
     customer_builder.append_row(customer.custkey, customer.name, customer.address, customer.nation_code, customer.phone,
-                                _convert_money(customer.acctbal), customer.mktsegment, customer.comment);
+                                convert_money(customer.acctbal), customer.mktsegment, customer.comment);
   }
 
   /**
@@ -226,18 +219,18 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate(
   const auto order_count = static_cast<size_t>(tdefs[ORDER].base * _scale_factor);
 
   for (size_t order_idx = 0; order_idx < order_count; ++order_idx) {
-    const auto order = _call_dbgen_mk<order_t>(order_idx + 1, mk_order, TpchTable::Orders, 0l, _scale_factor);
+    const auto order = call_dbgen_mk<order_t>(order_idx + 1, mk_order, TpchTable::Orders, 0l, _scale_factor);
 
     order_builder.append_row(order.okey, order.custkey, std::string(1, order.orderstatus),
-                             _convert_money(order.totalprice), order.odate, order.opriority, order.clerk,
+                             convert_money(order.totalprice), order.odate, order.opriority, order.clerk,
                              order.spriority, order.comment);
 
     for (auto line_idx = 0; line_idx < order.lines; ++line_idx) {
       const auto& lineitem = order.l[line_idx];
 
       lineitem_builder.append_row(lineitem.okey, lineitem.partkey, lineitem.suppkey, lineitem.lcnt, lineitem.quantity,
-                                  _convert_money(lineitem.eprice), _convert_money(lineitem.discount),
-                                  _convert_money(lineitem.tax), std::string(1, lineitem.rflag[0]),
+                                  convert_money(lineitem.eprice), convert_money(lineitem.discount),
+                                  convert_money(lineitem.tax), std::string(1, lineitem.rflag[0]),
                                   std::string(1, lineitem.lstatus[0]), lineitem.sdate, lineitem.cdate, lineitem.rdate,
                                   lineitem.shipinstruct, lineitem.shipmode, lineitem.comment);
     }
@@ -249,13 +242,13 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate(
   const auto part_count = static_cast<size_t>(tdefs[PART].base * _scale_factor);
 
   for (size_t part_idx = 0; part_idx < part_count; ++part_idx) {
-    const auto part = _call_dbgen_mk<part_t>(part_idx + 1, mk_part, TpchTable::Part, _scale_factor);
+    const auto part = call_dbgen_mk<part_t>(part_idx + 1, mk_part, TpchTable::Part, _scale_factor);
 
     part_builder.append_row(part.partkey, part.name, part.mfgr, part.brand, part.type, part.size, part.container,
-                            _convert_money(part.retailprice), part.comment);
+                            convert_money(part.retailprice), part.comment);
 
     for (const auto& partsupp : part.s) {
-      partsupp_builder.append_row(partsupp.partkey, partsupp.suppkey, partsupp.qty, _convert_money(partsupp.scost),
+      partsupp_builder.append_row(partsupp.partkey, partsupp.suppkey, partsupp.qty, convert_money(partsupp.scost),
                                   partsupp.comment);
     }
   }
@@ -266,10 +259,10 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate(
   const auto supplier_count = static_cast<size_t>(tdefs[SUPP].base * _scale_factor);
 
   for (size_t supplier_idx = 0; supplier_idx < supplier_count; ++supplier_idx) {
-    const auto supplier = _call_dbgen_mk<supplier_t>(supplier_idx + 1, mk_supp, TpchTable::Supplier);
+    const auto supplier = call_dbgen_mk<supplier_t>(supplier_idx + 1, mk_supp, TpchTable::Supplier);
 
     supplier_builder.append_row(supplier.suppkey, supplier.name, supplier.address, supplier.nation_code, supplier.phone,
-                                _convert_money(supplier.acctbal), supplier.comment);
+                                convert_money(supplier.acctbal), supplier.comment);
   }
 
   /**
@@ -278,7 +271,7 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate(
   const auto nation_count = static_cast<size_t>(tdefs[NATION].base);
 
   for (size_t nation_idx = 0; nation_idx < nation_count; ++nation_idx) {
-    const auto nation = _call_dbgen_mk<code_t>(nation_idx + 1, mk_nation, TpchTable::Nation);
+    const auto nation = call_dbgen_mk<code_t>(nation_idx + 1, mk_nation, TpchTable::Nation);
     nation_builder.append_row(nation.code, nation.text, nation.join, nation.comment);
   }
 
@@ -288,14 +281,14 @@ std::unordered_map<TpchTable, std::shared_ptr<Table>> TpchDbGenerator::generate(
   const auto region_count = static_cast<size_t>(tdefs[REGION].base);
 
   for (size_t region_idx = 0; region_idx < region_count; ++region_idx) {
-    const auto region = _call_dbgen_mk<code_t>(region_idx + 1, mk_region, TpchTable::Region);
+    const auto region = call_dbgen_mk<code_t>(region_idx + 1, mk_region, TpchTable::Region);
     region_builder.append_row(region.code, region.text, region.comment);
   }
 
   /**
    * Clean up dbgen every time we finish table generation to avoid memory leaks in dbgen
    */
-  _dbgen_cleanup();
+  dbgen_cleanup();
 
   return {
       {TpchTable::Customer, customer_builder.finish_table()}, {TpchTable::Orders, order_builder.finish_table()},

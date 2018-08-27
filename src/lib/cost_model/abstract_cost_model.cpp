@@ -7,6 +7,8 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/operator_join_predicate.hpp"
+#include "operators/operator_scan_predicate.hpp"
 #include "operators/product.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/union_positions.hpp"
@@ -26,18 +28,21 @@ Cost AbstractCostModel::estimate_lqp_node_cost(const std::shared_ptr<AbstractLQP
    * TODO(anybody) somehow ask the LQPTranslator about this instead of making assumptions.
    */
 
-  switch (node->type()) {
+  switch (node->type) {
     case LQPNodeType::Predicate:
       operator_type = OperatorType::TableScan;
       break;
 
     case LQPNodeType::Join: {
       const auto join_node = std::static_pointer_cast<JoinNode>(node);
+      const auto operator_predicate = OperatorJoinPredicate::from_expression(
+          *join_node->join_predicate, *join_node->left_input(), *join_node->right_input());
+      Assert(operator_predicate, "Expected Join predicate to be OperatorScanPredicate compatible");
 
-      if (join_node->join_mode() == JoinMode::Cross) {
+      if (join_node->join_mode == JoinMode::Cross) {
         operator_type = OperatorType::Product;
-      } else if (join_node->join_mode() == JoinMode::Inner &&
-                 join_node->predicate_condition() == PredicateCondition::Equals) {
+      } else if (join_node->join_mode == JoinMode::Inner &&
+                 operator_predicate->predicate_condition == PredicateCondition::Equals) {
         operator_type = OperatorType::JoinHash;
       } else {
         operator_type = OperatorType::JoinSortMerge;

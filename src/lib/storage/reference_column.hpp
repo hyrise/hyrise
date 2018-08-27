@@ -20,8 +20,8 @@ class ReferenceColumn : public BaseColumn {
  public:
   // creates a reference column
   // the parameters specify the positions and the referenced column
-  ReferenceColumn(const std::shared_ptr<const Table> referenced_table, const ColumnID referenced_column_id,
-                  const std::shared_ptr<const PosList> pos);
+  ReferenceColumn(const std::shared_ptr<const Table>& referenced_table, const ColumnID referenced_column_id,
+                  const std::shared_ptr<const PosList>& pos);
 
   const AllTypeVariant operator[](const ChunkOffset chunk_offset) const override;
 
@@ -33,41 +33,6 @@ class ReferenceColumn : public BaseColumn {
   const std::shared_ptr<const Table> referenced_table() const;
 
   ColumnID referenced_column_id() const;
-
-  // visitor pattern, see base_column.hpp
-  void visit(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> context = nullptr) const override;
-
-  template <typename ContextClass>
-  void visit_dereferenced(ColumnVisitable& visitable, std::shared_ptr<ColumnVisitableContext> ctx) const {
-    /*
-    The pos_list might be unsorted. In that case, we would have to jump around from chunk to chunk.
-    One-chunk-at-a-time processing should be faster. For this, we place a pair {chunk_offset, original_position}
-    into a vector for each chunk. A potential optimization would be to only do this if the pos_list is really
-    unsorted.
-    */
-
-    std::unordered_map<ChunkID, std::shared_ptr<std::vector<ChunkOffset>>, std::hash<decltype(ChunkID().t)>>
-        all_chunk_offsets;
-
-    for (auto row_id : *(_pos_list)) {
-      auto iter = all_chunk_offsets.find(row_id.chunk_id);
-      if (iter == all_chunk_offsets.end())
-        iter = all_chunk_offsets.emplace(row_id.chunk_id, std::make_shared<std::vector<ChunkOffset>>()).first;
-
-      iter->second->emplace_back(row_id.chunk_offset);
-    }
-
-    for (auto& pair : all_chunk_offsets) {
-      auto& chunk_id = pair.first;
-      auto& chunk_offsets = pair.second;
-
-      auto chunk = _referenced_table->get_chunk(chunk_id);
-      auto referenced_column = chunk->get_column(_referenced_column_id);
-
-      auto context = std::make_shared<ContextClass>(referenced_column, _referenced_table, ctx, chunk_id, chunk_offsets);
-      referenced_column->visit(visitable, context);
-    }
-  }
 
   std::shared_ptr<BaseColumn> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
 

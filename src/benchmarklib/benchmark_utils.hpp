@@ -25,8 +25,10 @@ using TimePoint = std::chrono::high_resolution_clock::time_point;
 using NamedQuery = std::pair<std::string, std::string>;
 using NamedQueries = std::vector<NamedQuery>;
 
-using EncodingMapping = std::map<std::string, ColumnEncodingSpec>;
-using TableColumnEncodingMapping = std::unordered_map<std::string, EncodingMapping>;
+using DataTypeEncodingMapping = std::unordered_map<DataType, ColumnEncodingSpec>;
+
+// Map<TABLE_NAME, Map<COLUMN_NAME, ColumnEncoding>>
+using TableColumnEncodingMapping = std::unordered_map<std::string, std::unordered_map<std::string, ColumnEncodingSpec>>;
 
 /**
  * @return std::cout if `verbose` is true, otherwise returns a discarding stream
@@ -36,6 +38,7 @@ std::ostream& get_out_stream(const bool verbose);
 struct QueryBenchmarkResult {
   size_t num_iterations = 0;
   Duration duration = Duration{};
+  std::vector<Duration> iteration_durations;
 };
 
 using QueryID = size_t;
@@ -53,23 +56,27 @@ struct BenchmarkState {
   bool keep_running();
 
   State state{State::NotStarted};
-  TimePoint begin = TimePoint{};
-  TimePoint end = TimePoint{};
+  TimePoint benchmark_begin = TimePoint{};
+  TimePoint iteration_begin = TimePoint{};
+  TimePoint benchmark_end = TimePoint{};
 
   size_t num_iterations = 0;
   size_t max_num_iterations;
   Duration max_duration;
+  std::vector<Duration> iteration_durations;
 };
 
 // View EncodingConfig::description to see format of encoding JSON
 struct EncodingConfig {
   EncodingConfig();
-  EncodingConfig(ColumnEncodingSpec default_encoding_spec, EncodingMapping type_encoding_mapping,
+  EncodingConfig(ColumnEncodingSpec default_encoding_spec, DataTypeEncodingMapping type_encoding_mapping,
                  TableColumnEncodingMapping encoding_mapping);
   explicit EncodingConfig(ColumnEncodingSpec default_encoding_spec);
 
+  static EncodingConfig unencoded();
+
   const ColumnEncodingSpec default_encoding_spec;
-  const EncodingMapping type_encoding_mapping;
+  const DataTypeEncodingMapping type_encoding_mapping;
   const TableColumnEncodingMapping custom_encoding_mapping;
 
   static ColumnEncodingSpec encoding_spec_from_strings(const std::string& encoding_str,
@@ -82,10 +89,15 @@ struct EncodingConfig {
   static const char* description;
 };
 
+class BenchmarkTableEncoder {
+ public:
+  static void encode(const std::string& table_name, const std::shared_ptr<Table>& table, const EncodingConfig& config);
+};
+
 // View BenchmarkConfig::description to see format of the JSON-version
 struct BenchmarkConfig {
   BenchmarkConfig(const BenchmarkMode benchmark_mode, const bool verbose, const ChunkOffset chunk_size,
-                  const EncodingConfig encoding_config, const size_t max_num_query_runs, const Duration& max_duration,
+                  const EncodingConfig& encoding_config, const size_t max_num_query_runs, const Duration& max_duration,
                   const UseMvcc use_mvcc, const std::optional<std::string>& output_file_path,
                   const bool enable_scheduler, const bool enable_visualization, std::ostream& out);
 
