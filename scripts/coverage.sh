@@ -46,7 +46,7 @@ rm -fr coverage; mkdir coverage
 ${path_to_compiler}llvm-profdata merge -o ./default.profdata ./default.profraw
 
 # gather list of files for SOURCES environment variable (because llvm-cov does not support exclusions)
-SOURCES=$(llvm-cov show -dump-collected-paths -instr-profile ./default.profdata build-coverage/hyriseTest ./src/lib/ 2>&1 | awk '{print "./" substr($0,'$((${#PWD}+2))')}' | grep -v operators/jit_operator/specialization/llvm/)
+SOURCES=$(${path_to_compiler}llvm-cov show -dump-collected-paths -instr-profile ./default.profdata build-coverage/hyriseTest ./src/lib/ 2>&1 | awk '{print "./" substr($0,'$((${#PWD}+2))')}' | grep -v operators/jit_operator/specialization/llvm/)
 
 # run LLVM’s code coverage tool
 ${path_to_compiler}llvm-cov show -format=html -instr-profile ./default.profdata build-coverage/hyriseTest -output-dir=./coverage $SOURCES
