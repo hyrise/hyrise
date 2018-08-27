@@ -4,9 +4,9 @@
 #include "gtest/gtest.h"
 
 #include "../lib/resolve_type.hpp"
-#include "../lib/storage/base_column.hpp"
+#include "../lib/storage/base_segment.hpp"
 #include "../lib/storage/chunk.hpp"
-#include "../lib/storage/column_encoding_utils.hpp"
+#include "../lib/storage/segment_encoding_utils.hpp"
 #include "../lib/storage/index/group_key/composite_group_key_index.hpp"
 #include "../lib/storage/index/group_key/group_key_index.hpp"
 #include "../lib/types.hpp"
@@ -17,7 +17,7 @@ class StorageChunkTest : public BaseTest {
  protected:
   void SetUp() override {
     vc_int = make_shared_by_data_type<BaseValueSegment, ValueSegment>(DataType::Int);
-    vc_int->append(4);
+    vc_int->append(4);                                                                                                                    // check for vc_ as well
     vc_int->append(6);
     vc_int->append(3);
 
@@ -65,8 +65,8 @@ TEST_F(StorageChunkTest, RetrieveColumn) {
   c = std::make_shared<Chunk>(ChunkSegments({vc_int, vc_str}));
   c->append({2, "two"});
 
-  auto base_col = c->get_column(CxlumnID{0});
-  EXPECT_EQ(base_col->size(), 4u);
+  auto base_segment = c->get_segment(CxlumnID{0});
+  EXPECT_EQ(base_segment->size(), 4u);
 }
 
 TEST_F(StorageChunkTest, UnknownColumnType) {
@@ -105,12 +105,12 @@ TEST_F(StorageChunkTest, GetIndexByCxlumnID) {
   auto index_int_str =
       c->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{dc_int, dc_str});
 
-  EXPECT_EQ(c->get_index(ColumnIndexType::GroupKey, std::vector<CxlumnID>{CxlumnID{0}}), index_int);
-  EXPECT_EQ(c->get_index(ColumnIndexType::CompositeGroupKey, std::vector<CxlumnID>{CxlumnID{0}}), index_int_str);
-  EXPECT_EQ(c->get_index(ColumnIndexType::CompositeGroupKey, std::vector<CxlumnID>{CxlumnID{0}, CxlumnID{1}}),
+  EXPECT_EQ(c->get_index(SegmentIndexType::GroupKey, std::vector<CxlumnID>{CxlumnID{0}}), index_int);
+  EXPECT_EQ(c->get_index(SegmentIndexType::CompositeGroupKey, std::vector<CxlumnID>{CxlumnID{0}}), index_int_str);
+  EXPECT_EQ(c->get_index(SegmentIndexType::CompositeGroupKey, std::vector<CxlumnID>{CxlumnID{0}, CxlumnID{1}}),
             index_int_str);
-  EXPECT_EQ(c->get_index(ColumnIndexType::GroupKey, std::vector<CxlumnID>{CxlumnID{1}}), index_str);
-  EXPECT_EQ(c->get_index(ColumnIndexType::CompositeGroupKey, std::vector<CxlumnID>{CxlumnID{1}}), nullptr);
+  EXPECT_EQ(c->get_index(SegmentIndexType::GroupKey, std::vector<CxlumnID>{CxlumnID{1}}), index_str);
+  EXPECT_EQ(c->get_index(SegmentIndexType::CompositeGroupKey, std::vector<CxlumnID>{CxlumnID{1}}), nullptr);
 }
 
 TEST_F(StorageChunkTest, GetIndexByColumnPointer) {
@@ -120,14 +120,14 @@ TEST_F(StorageChunkTest, GetIndexByColumnPointer) {
   auto index_int_str =
       c->create_index<CompositeGroupKeyIndex>(std::vector<std::shared_ptr<const BaseSegment>>{dc_int, dc_str});
 
-  EXPECT_EQ(c->get_index(ColumnIndexType::GroupKey, std::vector<std::shared_ptr<const BaseSegment>>{dc_int}), index_int);
-  EXPECT_EQ(c->get_index(ColumnIndexType::CompositeGroupKey, std::vector<std::shared_ptr<const BaseSegment>>{dc_int}),
+  EXPECT_EQ(c->get_index(SegmentIndexType::GroupKey, std::vector<std::shared_ptr<const BaseSegment>>{dc_int}), index_int);
+  EXPECT_EQ(c->get_index(SegmentIndexType::CompositeGroupKey, std::vector<std::shared_ptr<const BaseSegment>>{dc_int}),
             index_int_str);
   EXPECT_EQ(
-      c->get_index(ColumnIndexType::CompositeGroupKey, std::vector<std::shared_ptr<const BaseSegment>>{dc_int, dc_str}),
+      c->get_index(SegmentIndexType::CompositeGroupKey, std::vector<std::shared_ptr<const BaseSegment>>{dc_int, dc_str}),
       index_int_str);
-  EXPECT_EQ(c->get_index(ColumnIndexType::GroupKey, std::vector<std::shared_ptr<const BaseSegment>>{dc_str}), index_str);
-  EXPECT_EQ(c->get_index(ColumnIndexType::CompositeGroupKey, std::vector<std::shared_ptr<const BaseSegment>>{dc_str}),
+  EXPECT_EQ(c->get_index(SegmentIndexType::GroupKey, std::vector<std::shared_ptr<const BaseSegment>>{dc_str}), index_str);
+  EXPECT_EQ(c->get_index(SegmentIndexType::CompositeGroupKey, std::vector<std::shared_ptr<const BaseSegment>>{dc_str}),
             nullptr);
 }
 

@@ -61,9 +61,9 @@ class OperatorsIndexScanTest : public BaseTest {
       const auto chunk = table->get_chunk(chunk_id);
 
       for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk->size(); ++chunk_offset) {
-        const auto& column = *chunk->get_column(cxlumn_id);
+        const auto& segment = *chunk->get_segment(cxlumn_id);
 
-        const auto found_value = column[chunk_offset];
+        const auto found_value = segment[chunk_offset];
         const auto comparator = [found_value](const AllTypeVariant expected_value) {
           // returns equivalency, not equality to simulate std::multiset.
           // multiset cannot be used because it triggers a compiler / lib bug when built in CI
@@ -85,7 +85,7 @@ class OperatorsIndexScanTest : public BaseTest {
   std::vector<ChunkID> _chunk_ids;
   std::vector<ChunkID> _chunk_ids_partly_compressed;
   std::vector<CxlumnID> _cxlumn_ids;
-  ColumnIndexType _index_type;
+  SegmentIndexType _index_type;
 };
 
 typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex, CompositeGroupKeyIndex,
@@ -94,7 +94,7 @@ typedef ::testing::Types<GroupKeyIndex, AdaptiveRadixTreeIndex, CompositeGroupKe
 
 TYPED_TEST_CASE(OperatorsIndexScanTest, DerivedIndices);
 
-TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
+TYPED_TEST(OperatorsIndexScanTest, SingleCxlumnScanOnDataTable) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
 
   const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{4}};
@@ -125,7 +125,7 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
   }
 }
 
-TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionaryValue) {
+TYPED_TEST(OperatorsIndexScanTest, SingleCxlumnScanValueGreaterThanMaxDictionaryValue) {
   const auto all_rows =
       std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
   const auto no_rows = std::vector<AllTypeVariant>{};
@@ -157,7 +157,7 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionary
   }
 }
 
-TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryValue) {
+TYPED_TEST(OperatorsIndexScanTest, SingleCxlumnScanValueLessThanMinDictionaryValue) {
   const auto all_rows =
       std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
   const auto no_rows = std::vector<AllTypeVariant>{};
@@ -189,7 +189,7 @@ TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryVal
   }
 }
 
-TYPED_TEST(OperatorsIndexScanTest, SingleColumnScanOnlySomeChunks) {
+TYPED_TEST(OperatorsIndexScanTest, SingleCxlumnScanOnlySomeChunks) {
   const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{4}};
   const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{9}};
 
@@ -226,7 +226,7 @@ TYPED_TEST(OperatorsIndexScanTest, OperatorName) {
 TYPED_TEST(OperatorsIndexScanTest, InvalidIndexTypeThrows) {
   const auto right_values = std::vector<AllTypeVariant>(this->_cxlumn_ids.size(), AllTypeVariant{0});
 
-  auto scan = std::make_shared<opossum::IndexScan>(this->_int_int, ColumnIndexType::Invalid, this->_cxlumn_ids,
+  auto scan = std::make_shared<opossum::IndexScan>(this->_int_int, SegmentIndexType::Invalid, this->_cxlumn_ids,
                                                    PredicateCondition::GreaterThan, right_values);
   EXPECT_THROW(scan->execute(), std::logic_error);
 }

@@ -13,7 +13,7 @@
 
 namespace opossum {
 
-IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& in, const ColumnIndexType index_type,
+IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& in, const SegmentIndexType index_type,
                      const std::vector<CxlumnID>& left_cxlumn_ids, const PredicateCondition predicate_condition,
                      const std::vector<AllTypeVariant>& right_values, const std::vector<AllTypeVariant>& right_values2)
     : AbstractReadOnlyOperator{OperatorType::IndexScan, in},

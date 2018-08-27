@@ -29,7 +29,7 @@ const AllTypeVariant ReferenceSegment::operator[](const ChunkOffset chunk_offset
 
   auto chunk = _referenced_table->get_chunk(row_id.chunk_id);
 
-  return (*chunk->get_column(_referenced_cxlumn_id))[row_id.chunk_offset];
+  return (*chunk->get_segment(_referenced_cxlumn_id))[row_id.chunk_offset];
 }
 
 void ReferenceSegment::append(const AllTypeVariant&) { Fail("ReferenceSegment is immutable"); }

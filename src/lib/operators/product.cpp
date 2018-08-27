@@ -71,7 +71,7 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
       CxlumnID referenced_column;
       std::shared_ptr<const PosList> pos_list_in;
 
-      if (auto ref_col_in = std::dynamic_pointer_cast<const ReferenceSegment>(chunk_in->get_column(cxlumn_id))) {
+      if (auto ref_col_in = std::dynamic_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(cxlumn_id))) {
         referenced_table = ref_col_in->referenced_table();
         referenced_column = ref_col_in->referenced_cxlumn_id();
         pos_list_in = ref_col_in->pos_list();

@@ -1,11 +1,11 @@
-#include "column_encoding_utils.hpp"
+#include "segment_encoding_utils.hpp"
 
 #include <map>
 #include <memory>
 
 #include "storage/dictionary_column/dictionary_encoder.hpp"
 #include "storage/frame_of_reference/frame_of_reference_encoder.hpp"
-#include "storage/run_length_column/run_length_encoder.hpp"
+#include "storage/run_length_segment/run_length_encoder.hpp"
 
 #include "storage/base_value_segment.hpp"
 #include "utils/assert.hpp"
@@ -38,7 +38,7 @@ std::unique_ptr<BaseSegmentEncoder> create_encoder(EncodingType encoding_type) {
   return encoder->create_new();
 }
 
-std::shared_ptr<BaseEncodedColumn> encode_column(EncodingType encoding_type, DataType data_type,
+std::shared_ptr<BaseEncodedSegment> encode_column(EncodingType encoding_type, DataType data_type,
                                                  const std::shared_ptr<const BaseValueSegment>& column,
                                                  std::optional<VectorCompressionType> zero_suppression_type) {
   auto encoder = create_encoder(encoding_type);

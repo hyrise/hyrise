@@ -119,12 +119,12 @@ class ColumnMaterializerNUMA {
     // This allocator ensures that materialized values are colocated with the actual values.
     auto alloc = MaterializedValueAllocator<T>{input->get_chunk(chunk_id)->get_allocator()};
 
-    const auto column = input->get_chunk(chunk_id)->get_column(cxlumn_id);
+    const auto column = input->get_chunk(chunk_id)->get_segment(cxlumn_id);
 
     return std::make_shared<JobTask>(
         [this, &output, &null_rows_output, column, chunk_id, alloc, numa_node_id] {
-          resolve_cxlumn_type<T>(*column, [&](auto& typed_column) {
-            _materialize_column(typed_column, chunk_id, null_rows_output, (*output)[numa_node_id]);
+          resolve_cxlumn_type<T>(*column, [&](auto& typed_segment) {
+            _materialize_column(typed_segment, chunk_id, null_rows_output, (*output)[numa_node_id]);
           });
         },
         false);

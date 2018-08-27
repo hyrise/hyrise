@@ -14,7 +14,7 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/base_column.hpp"
+#include "storage/base_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/proxy_chunk.hpp"
 #include "storage/reference_segment.hpp"
@@ -104,12 +104,12 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
       /**
        * matches_out contains a list of row IDs into this chunk. If this is not a reference table, we can
-       * directly use the matches to construct the reference columns of the output. If it is a reference column,
+       * directly use the matches to construct the reference segments of the output. If it is a reference segment,
        * we need to resolve the row IDs so that they reference the physical data columns (value, dictionary) instead,
        * since we don’t allow multi-level referencing. To save time and space, we want to share position lists
        * between columns as much as possible. Position lists can be shared between two columns iff
        * (a) they point to the same table and
-       * (b) the reference columns of the input table point to the same positions in the same order
+       * (b) the reference segments of the input table point to the same positions in the same order
        *     (i.e. they share their position list).
        */
       if (_in_table->type() == TableType::References) {
@@ -118,7 +118,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
         auto filtered_pos_lists = std::map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>>{};
 
         for (CxlumnID cxlumn_id{0u}; cxlumn_id < _in_table->cxlumn_count(); ++cxlumn_id) {
-          auto column_in = chunk_in->get_column(cxlumn_id);
+          auto column_in = chunk_in->get_segment(cxlumn_id);
 
           auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(column_in);
           DebugAssert(ref_segment_in != nullptr, "All columns should be of type ReferenceSegment.");

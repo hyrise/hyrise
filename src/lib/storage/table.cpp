@@ -45,8 +45,8 @@ const std::string& Table::cxlumn_name(const CxlumnID cxlumn_id) const {
 std::vector<std::string> Table::cxlumn_names() const {
   std::vector<std::string> names;
   names.reserve(_cxlumn_definitions.size());
-  for (const auto& column_definition : _cxlumn_definitions) {
-    names.emplace_back(column_definition.name);
+  for (const auto& cxlumn_definition : _cxlumn_definitions) {
+    names.emplace_back(cxlumn_definition.name);
   }
   return names;
 }
@@ -59,8 +59,8 @@ DataType Table::cxlumn_data_type(const CxlumnID cxlumn_id) const {
 std::vector<DataType> Table::cxlumn_data_types() const {
   std::vector<DataType> data_types;
   data_types.reserve(_cxlumn_definitions.size());
-  for (const auto& column_definition : _cxlumn_definitions) {
-    data_types.emplace_back(column_definition.data_type);
+  for (const auto& cxlumn_definition : _cxlumn_definitions) {
+    data_types.emplace_back(cxlumn_definition.data_type);
   }
   return data_types;
 }
@@ -80,7 +80,7 @@ std::vector<bool> Table::columns_are_nullable() const {
 
 CxlumnID Table::cxlumn_id_by_name(const std::string& cxlumn_name) const {
   const auto iter = std::find_if(_cxlumn_definitions.begin(), _cxlumn_definitions.end(),
-                                 [&](const auto& column_definition) { return column_definition.name == cxlumn_name; });
+                                 [&](const auto& cxlumn_definition) { return cxlumn_definition.name == cxlumn_name; });
   Assert(iter != _cxlumn_definitions.end(), "Couldn't find column '" + cxlumn_name + "'");
   return static_cast<CxlumnID>(std::distance(_cxlumn_definitions.begin(), iter));
 }
@@ -95,10 +95,10 @@ void Table::append(const std::vector<AllTypeVariant>& values) {
 
 void Table::append_mutable_chunk() {
   ChunkSegments columns;
-  for (const auto& column_definition : _cxlumn_definitions) {
-    resolve_data_type(column_definition.data_type, [&](auto type) {
+  for (const auto& cxlumn_definition : _cxlumn_definitions) {
+    resolve_data_type(cxlumn_definition.data_type, [&](auto type) {
       using CxlumnDataType = typename decltype(type)::type;
-      columns.push_back(std::make_shared<ValueSegment<CxlumnDataType>>(column_definition.nullable));
+      columns.push_back(std::make_shared<ValueSegment<CxlumnDataType>>(cxlumn_definition.nullable));
     });
   }
   append_chunk(columns);
@@ -200,8 +200,8 @@ size_t Table::estimate_memory_usage() const {
     bytes += chunk->estimate_memory_usage();
   }
 
-  for (const auto& column_definition : _cxlumn_definitions) {
-    bytes += column_definition.name.size();
+  for (const auto& cxlumn_definition : _cxlumn_definitions) {
+    bytes += cxlumn_definition.name.size();
   }
 
   // TODO(anybody) Statistics and Indices missing from Memory Usage Estimation

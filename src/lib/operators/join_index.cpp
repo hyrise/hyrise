@@ -104,7 +104,7 @@ void JoinIndex::_perform_join() {
   // Scan all chunks for right input
   for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < _right_in_table->chunk_count(); ++chunk_id_right) {
     const auto chunk_right = _right_in_table->get_chunk(chunk_id_right);
-    const auto column_right = chunk_right->get_column(_right_cxlumn_id);
+    const auto column_right = chunk_right->get_segment(_right_cxlumn_id);
     const auto indices = chunk_right->get_indices(std::vector<CxlumnID>{_right_cxlumn_id});
     if (track_right_matches) _right_matches[chunk_id_right].resize(chunk_right->size());
 
@@ -119,7 +119,7 @@ void JoinIndex::_perform_join() {
     // Scan all chunks from left input
     if (index != nullptr) {
       for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
-        const auto chunk_column_left = _left_in_table->get_chunk(chunk_id_left)->get_column(_left_cxlumn_id);
+        const auto chunk_column_left = _left_in_table->get_chunk(chunk_id_left)->get_segment(_left_cxlumn_id);
 
         resolve_data_and_cxlumn_type(*chunk_column_left, [&](auto left_type, auto& typed_left_column) {
           using LeftType = typename decltype(left_type)::type;
@@ -135,9 +135,9 @@ void JoinIndex::_perform_join() {
       performance_data.chunks_scanned_with_index++;
     } else {
       // Fall back to NestedLoopJoin
-      const auto chunk_column_right = _right_in_table->get_chunk(chunk_id_right)->get_column(_right_cxlumn_id);
+      const auto chunk_column_right = _right_in_table->get_chunk(chunk_id_right)->get_segment(_right_cxlumn_id);
       for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < _left_in_table->chunk_count(); ++chunk_id_left) {
-        const auto chunk_column_left = _left_in_table->get_chunk(chunk_id_left)->get_column(_left_cxlumn_id);
+        const auto chunk_column_left = _left_in_table->get_chunk(chunk_id_left)->get_segment(_left_cxlumn_id);
         JoinNestedLoop::JoinParams params{*_pos_list_left,
                                           *_pos_list_right,
                                           _left_matches[chunk_id_left],
@@ -146,7 +146,7 @@ void JoinIndex::_perform_join() {
                                           track_right_matches,
                                           _mode,
                                           _predicate_condition};
-        JoinNestedLoop::_join_two_untyped_columns(chunk_column_left, chunk_column_right, chunk_id_left, chunk_id_right,
+        JoinNestedLoop::_join_two_untyped_segments(chunk_column_left, chunk_column_right, chunk_id_left, chunk_id_right,
                                                   params);
       }
       performance_data.chunks_scanned_without_index++;
@@ -328,7 +328,7 @@ void JoinIndex::_write_output_columns(ChunkSegments& output_columns, const std::
         ChunkID current_chunk_id{0};
 
         auto reference_segment =
-            std::static_pointer_cast<const ReferenceSegment>(input_table->get_chunk(ChunkID{0})->get_column(cxlumn_id));
+            std::static_pointer_cast<const ReferenceSegment>(input_table->get_chunk(ChunkID{0})->get_segment(cxlumn_id));
 
         // de-reference to the correct RowID so the output can be used in a Multi Join
         for (const auto row : *pos_list) {
@@ -340,7 +340,7 @@ void JoinIndex::_write_output_columns(ChunkSegments& output_columns, const std::
             current_chunk_id = row.chunk_id;
 
             reference_segment = std::dynamic_pointer_cast<const ReferenceSegment>(
-                input_table->get_chunk(current_chunk_id)->get_column(cxlumn_id));
+                input_table->get_chunk(current_chunk_id)->get_segment(cxlumn_id));
           }
           new_pos_list->push_back(reference_segment->pos_list()->at(row.chunk_offset));
         }

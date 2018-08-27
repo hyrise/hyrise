@@ -409,7 +409,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_column_
     const PQPCxlumnExpression& column_expression) {
   Assert(_chunk, "Cannot access Columns in this Expression as it doesn't operate on a Table/Chunk");
 
-  const auto& column = *_chunk->get_column(column_expression.cxlumn_id);
+  const auto& column = *_chunk->get_segment(column_expression.cxlumn_id);
   Assert(column.data_type() == data_type_from_type<Result>(), "Can't evaluate column to different type");
 
   _materialize_column_if_not_yet_materialized(column_expression.cxlumn_id);
@@ -709,7 +709,7 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_select_expression_fo
     const auto& parameter_id_cxlumn_id = expression.parameters[parameter_idx];
     const auto parameter_id = parameter_id_cxlumn_id.first;
     const auto cxlumn_id = parameter_id_cxlumn_id.second;
-    const auto& column = *_chunk->get_column(cxlumn_id);
+    const auto& column = *_chunk->get_segment(cxlumn_id);
 
     resolve_data_type(column.data_type(), [&](const auto data_type_t) {
       using CxlumnDataType = typename decltype(data_type_t)::type;
@@ -958,7 +958,7 @@ void ExpressionEvaluator::_materialize_column_if_not_yet_materialized(const Cxlu
 
   if (_column_materializations[cxlumn_id]) return;
 
-  const auto& column = *_chunk->get_column(cxlumn_id);
+  const auto& column = *_chunk->get_segment(cxlumn_id);
 
   resolve_data_type(column.data_type(), [&](const auto cxlumn_data_type_t) {
     using CxlumnDataType = typename decltype(cxlumn_data_type_t)::type;
@@ -1130,7 +1130,7 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
     result_values.reserve(table->row_count());
 
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-      const auto& result_column = *table->get_chunk(chunk_id)->get_column(CxlumnID{0});
+      const auto& result_column = *table->get_chunk(chunk_id)->get_segment(CxlumnID{0});
       materialize_values(result_column, result_values);
     }
 
@@ -1138,7 +1138,7 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
       result_nulls.reserve(table->row_count());
 
       for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-        const auto& result_column = *table->get_chunk(chunk_id)->get_column(CxlumnID{0});
+        const auto& result_column = *table->get_chunk(chunk_id)->get_segment(CxlumnID{0});
         materialize_nulls<Result>(result_column, result_nulls);
       }
     }

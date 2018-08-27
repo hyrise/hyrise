@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "base_column.hpp"
+#include "base_segment.hpp"
 #include "table.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -18,7 +18,7 @@ namespace opossum {
 // ReferenceSegment is a specific column type that stores all its values as position list of a referenced column
 class ReferenceSegment : public BaseSegment {
  public:
-  // creates a reference column
+  // creates a reference segment
   // the parameters specify the positions and the referenced column
   ReferenceSegment(const std::shared_ptr<const Table>& referenced_table, const CxlumnID referenced_cxlumn_id,
                   const std::shared_ptr<const PosList>& pos);

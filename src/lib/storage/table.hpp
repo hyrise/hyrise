@@ -6,11 +6,11 @@
 #include <utility>
 #include <vector>
 
-#include "base_column.hpp"
+#include "base_segment.hpp"
 #include "chunk.hpp"
 #include "proxy_chunk.hpp"
 #include "storage/index/index_info.hpp"
-#include "storage/table_column_definition.hpp"
+#include "storage/table_cxlumn_definition.hpp"
 #include "type_cast.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -130,7 +130,7 @@ class Table : private Noncopyable {
       size_t current_size = chunk->size();
       row_counter += current_size;
       if (row_counter > row_number) {
-        return get<T>((*chunk->get_column(cxlumn_id))[row_number + current_size - row_counter]);
+        return get<T>((*chunk->get_segment(cxlumn_id))[row_number + current_size - row_counter]);
       }
     }
     Fail("Row does not exist.");
@@ -149,7 +149,7 @@ class Table : private Noncopyable {
 
   template <typename Index>
   void create_index(const std::vector<CxlumnID>& cxlumn_ids, const std::string& name = "") {
-    ColumnIndexType index_type = get_index_type_of<Index>();
+    SegmentIndexType index_type = get_index_type_of<Index>();
 
     for (auto& chunk : _chunks) {
       chunk->create_index<Index>(cxlumn_ids);

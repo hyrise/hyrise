@@ -2,8 +2,8 @@
 
 #include <boost/iterator/iterator_facade.hpp>
 
-#include "storage/column_iterables/chunk_offset_mapping.hpp"
-#include "storage/column_iterables/column_iterator_values.hpp"
+#include "storage/segment_iterables/chunk_offset_mapping.hpp"
+#include "storage/segment_iterables/segment_iterator_values.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -20,10 +20,10 @@ class JitBaseSegmentIterator {};
  * @brief base class of all iterators used by iterables
  *
  * Instantiations of this template are part of the column iterable
- * interface (see column_iterables.hpp) and are implemented
- * in sub-classes of ColumnIterable (see e.g. value_segment_iterable.hpp)
+ * interface (see segment_iterables/.hpp) and are implemented
+ * in sub-classes of SegmentIterable (see e.g. value_segment_iterable.hpp)
  *
- * Value must be a sub-class of AbstractColumnIteratorValue<T>.
+ * Value must be a sub-class of AbstractSegmentIteratorValue<T>.
  *
  *
  * Why is boost::iterator_core_access a friend class?
@@ -52,18 +52,18 @@ class BaseSegmentIterator : public boost::iterator_facade<Derived, Value, boost:
 /**
  * @brief base class of all point-access iterators used by iterables
  *
- * This iterator should be used whenever a reference column is “dereferenced”,
+ * This iterator should be used whenever a reference segment is “dereferenced”,
  * i.e., its underlying value or dictionary column is iterated over.
  * index_into_referenced is the index into the underlying data structure.
- * index_of_referencing is the current index in the reference column.
+ * index_of_referencing is the current index in the reference segment.
  *
  *
  * Example Usage
  *
- * class Iterator : public BasePointAccessColumnIterator<Iterator, Value> {
+ * class Iterator : public BasePointAccessSegmentIterator<Iterator, Value> {
  *  public:
  *   Iterator(const ChunkOffsetIterator& chunk_offset_it)
- *       : BasePointAccessColumnIterator<Iterator, Value>{chunk_offset_it} {}
+ *       : BasePointAccessSegmentIterator<Iterator, Value>{chunk_offset_it} {}
  *
  *  private:
  *   friend class boost::iterator_core_access;  // the following methods need to be accessible by the base class
@@ -72,9 +72,9 @@ class BaseSegmentIterator : public boost::iterator_facade<Derived, Value, boost:
  * };
  */
 template <typename Derived, typename Value>
-class BasePointAccessColumnIterator : public BaseSegmentIterator<Derived, Value> {
+class BasePointAccessSegmentIterator : public BaseSegmentIterator<Derived, Value> {
  public:
-  explicit BasePointAccessColumnIterator(const ChunkOffsetsIterator& chunk_offsets_it)
+  explicit BasePointAccessSegmentIterator(const ChunkOffsetsIterator& chunk_offsets_it)
       : _chunk_offsets_it{chunk_offsets_it} {}
 
  protected:
@@ -88,7 +88,7 @@ class BasePointAccessColumnIterator : public BaseSegmentIterator<Derived, Value>
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
   void increment() { ++_chunk_offsets_it; }
-  bool equal(const BasePointAccessColumnIterator& other) const {
+  bool equal(const BasePointAccessSegmentIterator& other) const {
     return (_chunk_offsets_it == other._chunk_offsets_it);
   }
 

@@ -123,7 +123,7 @@ set(
     statistics/table_statistics_test.cpp
     statistics/table_statistics_test.cpp
     storage/adaptive_radix_tree_index_test.cpp
-    storage/any_cxlumn_iterable_test.cpp
+    storage/any_segment_iterable_test.cpp
     storage/btree_index_test.cpp
     storage/chunk_encoder_test.cpp
     storage/chunk_test.cpp
@@ -144,7 +144,7 @@ set(
     storage/single_cxlumn_index_test.cpp
     storage/storage_manager_test.cpp
     storage/table_test.cpp
-    storage/value_cxlumn_test.cpp
+    storage/value_segment_test.cpp
     storage/variable_length_key_base_test.cpp
     storage/variable_length_key_store_test.cpp
     storage/variable_length_key_test.cpp

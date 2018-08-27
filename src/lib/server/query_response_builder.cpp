@@ -108,7 +108,7 @@ boost::future<void> QueryResponseBuilder::_send_query_response_rows(const send_r
   std::vector<std::string> row_strings(chunk.cxlumn_count());
 
   for (CxlumnID cxlumn_id{0}; cxlumn_id < CxlumnID{chunk.cxlumn_count()}; ++cxlumn_id) {
-    const auto& column = chunk.get_column(cxlumn_id);
+    const auto& column = chunk.get_segment(cxlumn_id);
     row_strings[cxlumn_id] = type_cast<std::string>((*column)[current_chunk_offset]);
   }
 

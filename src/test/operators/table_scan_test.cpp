@@ -69,10 +69,10 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     pos_list->emplace_back(RowID{ChunkID{0}, 0});
     pos_list->emplace_back(RowID{ChunkID{0}, 4});
 
-    auto col_a = std::make_shared<ReferenceSegment>(test_table_part_compressed, CxlumnID{0}, pos_list);
-    auto col_b = std::make_shared<ReferenceSegment>(test_table_part_compressed, CxlumnID{1}, pos_list);
+    auto segment_a = std::make_shared<ReferenceSegment>(test_table_part_compressed, CxlumnID{0}, pos_list);
+    auto segment_b = std::make_shared<ReferenceSegment>(test_table_part_compressed, CxlumnID{1}, pos_list);
 
-    ChunkSegments segments({col_a, col_b});
+    ChunkSegments segments({segment_a, segment_b});
 
     table->append_chunk(segments);
     auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -174,7 +174,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       const auto chunk = table->get_chunk(chunk_id);
 
       for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk->size(); ++chunk_offset) {
-        const auto& segment = *chunk->get_column(cxlumn_id);
+        const auto& segment = *chunk->get_segment(cxlumn_id);
 
         const auto found_value = segment[chunk_offset];
         const auto comparator = [found_value](const AllTypeVariant expected_value) {

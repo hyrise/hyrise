@@ -6,7 +6,7 @@
 #include "gtest/gtest.h"
 
 #include "storage/chunk_encoder.hpp"
-#include "storage/column_encoding_utils.hpp"
+#include "storage/segment_encoding_utils.hpp"
 #include "storage/fixed_string_dictionary_column.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
@@ -27,17 +27,17 @@ TEST_F(StorageFixedStringDictionarySegmentTest, CompressColumnString) {
   vc_str->append("Bill");
 
   auto col = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
-  auto dict_col = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(col);
+  auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(col);
 
   // Test attribute_vector size
-  EXPECT_EQ(dict_col->size(), 6u);
-  EXPECT_EQ(dict_col->attribute_vector()->size(), 6u);
+  EXPECT_EQ(dict_segment->size(), 6u);
+  EXPECT_EQ(dict_segment->attribute_vector()->size(), 6u);
 
   // Test dictionary size (uniqueness)
-  EXPECT_EQ(dict_col->unique_values_count(), 4u);
+  EXPECT_EQ(dict_segment->unique_values_count(), 4u);
 
   // Test sorting
-  auto dict = dict_col->dictionary();
+  auto dict = dict_segment->dictionary();
   EXPECT_EQ((*dict)[0], "Alexander");
   EXPECT_EQ((*dict)[1], "Bill");
   EXPECT_EQ((*dict)[2], "Hasso");
@@ -50,15 +50,15 @@ TEST_F(StorageFixedStringDictionarySegmentTest, Decode) {
   vc_str->append("Bill");
 
   auto col = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
-  auto dict_col = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(col);
+  auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(col);
 
-  EXPECT_EQ(dict_col->encoding_type(), EncodingType::FixedStringDictionary);
-  EXPECT_EQ(dict_col->compressed_vector_type(), CompressedVectorType::FixedSize1ByteAligned);
+  EXPECT_EQ(dict_segment->encoding_type(), EncodingType::FixedStringDictionary);
+  EXPECT_EQ(dict_segment->compressed_vector_type(), CompressedVectorType::FixedSize1ByteAligned);
 
   // Decode values
-  EXPECT_EQ((*dict_col)[0], AllTypeVariant("Bill"));
-  EXPECT_EQ((*dict_col)[1], AllTypeVariant("Steve"));
-  EXPECT_EQ((*dict_col)[2], AllTypeVariant("Bill"));
+  EXPECT_EQ((*dict_segment)[0], AllTypeVariant("Bill"));
+  EXPECT_EQ((*dict_segment)[1], AllTypeVariant("Steve"));
+  EXPECT_EQ((*dict_segment)[2], AllTypeVariant("Bill"));
 }
 
 TEST_F(StorageFixedStringDictionarySegmentTest, LongStrings) {
@@ -67,10 +67,10 @@ TEST_F(StorageFixedStringDictionarySegmentTest, LongStrings) {
   vc_str->append("Short");
 
   auto col = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
-  auto dict_col = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(col);
+  auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(col);
 
   // Test sorting
-  auto dict = dict_col->dictionary();
+  auto dict = dict_segment->dictionary();
   EXPECT_EQ((*dict)[0], "QuiteShort");
   EXPECT_EQ((*dict)[1], "Short");
   EXPECT_EQ((*dict)[2], "ThisIsAVeryLongStringThisIsAVeryLongStringThisIsAVeryLongString");
@@ -82,14 +82,14 @@ TEST_F(StorageFixedStringDictionarySegmentTest, CopyUsingAlloctor) {
   vc_str->append("Alexander");
 
   auto col = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
-  auto dict_col = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(col);
+  auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(col);
 
-  auto alloc = dict_col->dictionary()->get_allocator();
-  auto base_column = dict_col->copy_using_allocator(alloc);
-  auto dict_col_copy = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(base_column);
+  auto alloc = dict_segment->dictionary()->get_allocator();
+  auto base_segment = dict_segment->copy_using_allocator(alloc);
+  auto dict_segment_copy = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(base_segment);
 
-  EXPECT_EQ(dict_col->dictionary()->get_allocator(), dict_col_copy->dictionary()->get_allocator());
-  auto dict = dict_col_copy->dictionary();
+  EXPECT_EQ(dict_segment->dictionary()->get_allocator(), dict_segment_copy->dictionary()->get_allocator());
+  auto dict = dict_segment_copy->dictionary();
 
   EXPECT_EQ((*dict)[0], "Alexander");
   EXPECT_EQ((*dict)[1], "Bill");
@@ -105,17 +105,17 @@ TEST_F(StorageFixedStringDictionarySegmentTest, LowerUpperBound) {
   vc_str->append("K");
 
   auto col = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
-  auto dict_col = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(col);
+  auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(col);
 
   // Test for AllTypeVariant as parameter
-  EXPECT_EQ(dict_col->lower_bound(AllTypeVariant("E")), (ValueID)2);
-  EXPECT_EQ(dict_col->upper_bound(AllTypeVariant("E")), (ValueID)3);
+  EXPECT_EQ(dict_segment->lower_bound(AllTypeVariant("E")), (ValueID)2);
+  EXPECT_EQ(dict_segment->upper_bound(AllTypeVariant("E")), (ValueID)3);
 
-  EXPECT_EQ(dict_col->lower_bound(AllTypeVariant("F")), (ValueID)3);
-  EXPECT_EQ(dict_col->upper_bound(AllTypeVariant("F")), (ValueID)3);
+  EXPECT_EQ(dict_segment->lower_bound(AllTypeVariant("F")), (ValueID)3);
+  EXPECT_EQ(dict_segment->upper_bound(AllTypeVariant("F")), (ValueID)3);
 
-  EXPECT_EQ(dict_col->lower_bound(AllTypeVariant("Z")), INVALID_VALUE_ID);
-  EXPECT_EQ(dict_col->upper_bound(AllTypeVariant("Z")), INVALID_VALUE_ID);
+  EXPECT_EQ(dict_segment->lower_bound(AllTypeVariant("Z")), INVALID_VALUE_ID);
+  EXPECT_EQ(dict_segment->upper_bound(AllTypeVariant("Z")), INVALID_VALUE_ID);
 }
 
 TEST_F(StorageFixedStringDictionarySegmentTest, NullValues) {
@@ -126,10 +126,10 @@ TEST_F(StorageFixedStringDictionarySegmentTest, NullValues) {
   vc_str->append("E");
 
   auto col = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
-  auto dict_col = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(col);
+  auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(col);
 
-  EXPECT_EQ(dict_col->null_value_id(), 2u);
-  EXPECT_TRUE(variant_is_null((*dict_col)[1]));
+  EXPECT_EQ(dict_segment->null_value_id(), 2u);
+  EXPECT_TRUE(variant_is_null((*dict_segment)[1]));
 }
 
 TEST_F(StorageFixedStringDictionarySegmentTest, MemoryUsageEstimation) {

@@ -5,13 +5,13 @@
 #include <utility>
 #include <vector>
 
-#include "storage/column_iterables.hpp"
+#include "storage/segment_iterables.hpp"
 #include "storage/reference_segment.hpp"
 
 namespace opossum {
 
 template <typename T>
-class ReferenceSegmentIterable : public ColumnIterable<ReferenceSegmentIterable<T>> {
+class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable<T>> {
  public:
   explicit ReferenceSegmentIterable(const ReferenceSegment& column) : _column{column} {}
 
@@ -34,7 +34,7 @@ class ReferenceSegmentIterable : public ColumnIterable<ReferenceSegmentIterable<
   const ReferenceSegment& _column;
 
  private:
-  class Iterator : public BaseSegmentIterator<Iterator, ColumnIteratorValue<T>> {
+  class Iterator : public BaseSegmentIterator<Iterator, SegmentIteratorValue<T>> {
    public:
     using PosListIterator = PosList::const_iterator;
 
@@ -56,8 +56,8 @@ class ReferenceSegmentIterable : public ColumnIterable<ReferenceSegmentIterable<
     bool equal(const Iterator& other) const { return _pos_list_it == other._pos_list_it; }
 
     // TODO(anyone): benchmark if using two maps instead doing the dynamic cast every time really is faster.
-    ColumnIteratorValue<T> dereference() const {
-      if (_pos_list_it->is_null()) return ColumnIteratorValue<T>{T{}, true, 0u};
+    SegmentIteratorValue<T> dereference() const {
+      if (_pos_list_it->is_null()) return SegmentIteratorValue<T>{T{}, true, 0u};
 
       const auto chunk_id = _pos_list_it->chunk_id;
       const auto& chunk_offset = _pos_list_it->chunk_offset;
@@ -65,7 +65,7 @@ class ReferenceSegmentIterable : public ColumnIterable<ReferenceSegmentIterable<
       if (chunk_id != _cached_chunk_id) {
         _cached_chunk_id = chunk_id;
         const auto chunk = _table->get_chunk(chunk_id);
-        _cached_column = chunk->get_column(_cxlumn_id);
+        _cached_column = chunk->get_segment(_cxlumn_id);
       }
 
       /**
@@ -83,10 +83,10 @@ class ReferenceSegmentIterable : public ColumnIterable<ReferenceSegmentIterable<
           static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
 
       if (variant_is_null(variant_value)) {
-        return ColumnIteratorValue<T>{T{}, true, chunk_offset_into_ref_segment};
+        return SegmentIteratorValue<T>{T{}, true, chunk_offset_into_ref_segment};
       }
 
-      return ColumnIteratorValue<T>{type_cast<T>(variant_value), false, chunk_offset_into_ref_segment};
+      return SegmentIteratorValue<T>{type_cast<T>(variant_value), false, chunk_offset_into_ref_segment};
     }
 
    private:

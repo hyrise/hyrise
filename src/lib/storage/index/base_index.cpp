@@ -5,7 +5,7 @@
 
 namespace opossum {
 
-BaseIndex::BaseIndex(const ColumnIndexType type) : _type{type} {}
+BaseIndex::BaseIndex(const SegmentIndexType type) : _type{type} {}
 
 bool BaseIndex::is_index_for(const std::vector<std::shared_ptr<const BaseSegment>>& columns) const {
   auto index_columns = _get_index_columns();
@@ -36,6 +36,6 @@ BaseIndex::Iterator BaseIndex::cbegin() const { return _cbegin(); }
 
 BaseIndex::Iterator BaseIndex::cend() const { return _cend(); }
 
-ColumnIndexType BaseIndex::type() const { return _type; }
+SegmentIndexType BaseIndex::type() const { return _type; }
 
 }  // namespace opossum

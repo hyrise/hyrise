@@ -2,7 +2,7 @@
 
 #include <type_traits>
 
-#include "storage/column_iterables.hpp"
+#include "storage/segment_iterables.hpp"
 
 #include "storage/dictionary_column.hpp"
 #include "storage/fixed_string_dictionary_column.hpp"
@@ -12,7 +12,7 @@
 namespace opossum {
 
 template <typename T, typename Dictionary>
-class DictionarySegmentIterable : public PointAccessibleColumnIterable<DictionarySegmentIterable<T, Dictionary>> {
+class DictionarySegmentIterable : public PointAccessibleSegmentIterable<DictionarySegmentIterable<T, Dictionary>> {
  public:
   explicit DictionarySegmentIterable(const DictionarySegment<T>& column)
       : _column{column}, _dictionary(column.dictionary()) {}
@@ -54,7 +54,7 @@ class DictionarySegmentIterable : public PointAccessibleColumnIterable<Dictionar
 
  private:
   template <typename ZsIteratorType>
-  class Iterator : public BaseSegmentIterator<Iterator<ZsIteratorType>, ColumnIteratorValue<T>> {
+  class Iterator : public BaseSegmentIterator<Iterator<ZsIteratorType>, SegmentIteratorValue<T>> {
    public:
     explicit Iterator(const Dictionary& dictionary, const ValueID null_value_id, const ZsIteratorType attribute_it,
                       ChunkOffset chunk_offset)
@@ -73,16 +73,16 @@ class DictionarySegmentIterable : public PointAccessibleColumnIterable<Dictionar
 
     bool equal(const Iterator& other) const { return _attribute_it == other._attribute_it; }
 
-    ColumnIteratorValue<T> dereference() const {
+    SegmentIteratorValue<T> dereference() const {
       const auto value_id = *_attribute_it;
       const auto is_null = (value_id == _null_value_id);
 
-      if (is_null) return ColumnIteratorValue<T>{T{}, true, _chunk_offset};
+      if (is_null) return SegmentIteratorValue<T>{T{}, true, _chunk_offset};
 
       if constexpr (std::is_same<Dictionary, FixedStringVector>::value) {
-        return ColumnIteratorValue<T>{_dictionary.get_string_at(value_id), false, _chunk_offset};
+        return SegmentIteratorValue<T>{_dictionary.get_string_at(value_id), false, _chunk_offset};
       } else {
-        return ColumnIteratorValue<T>{_dictionary[value_id], false, _chunk_offset};
+        return SegmentIteratorValue<T>{_dictionary[value_id], false, _chunk_offset};
       }
     }
 
@@ -95,11 +95,11 @@ class DictionarySegmentIterable : public PointAccessibleColumnIterable<Dictionar
 
   template <typename ZsDecoderType>
   class PointAccessIterator
-      : public BasePointAccessColumnIterator<PointAccessIterator<ZsDecoderType>, ColumnIteratorValue<T>> {
+      : public BasePointAccessSegmentIterator<PointAccessIterator<ZsDecoderType>, SegmentIteratorValue<T>> {
    public:
     PointAccessIterator(const Dictionary& dictionary, const ValueID null_value_id, ZsDecoderType& attribute_decoder,
                         ChunkOffsetsIterator chunk_offsets_it)
-        : BasePointAccessColumnIterator<PointAccessIterator<ZsDecoderType>, ColumnIteratorValue<T>>{chunk_offsets_it},
+        : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecoderType>, SegmentIteratorValue<T>>{chunk_offsets_it},
           _dictionary{dictionary},
           _null_value_id{null_value_id},
           _attribute_decoder{attribute_decoder} {}
@@ -107,18 +107,18 @@ class DictionarySegmentIterable : public PointAccessibleColumnIterable<Dictionar
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-    ColumnIteratorValue<T> dereference() const {
+    SegmentIteratorValue<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
       const auto value_id = _attribute_decoder.get(chunk_offsets.into_referenced);
       const auto is_null = (value_id == _null_value_id);
 
-      if (is_null) return ColumnIteratorValue<T>{T{}, true, chunk_offsets.into_referencing};
+      if (is_null) return SegmentIteratorValue<T>{T{}, true, chunk_offsets.into_referencing};
 
       if constexpr (std::is_same<Dictionary, FixedStringVector>::value) {
-        return ColumnIteratorValue<T>{_dictionary.get_string_at(value_id), false, chunk_offsets.into_referencing};
+        return SegmentIteratorValue<T>{_dictionary.get_string_at(value_id), false, chunk_offsets.into_referencing};
       } else {
-        return ColumnIteratorValue<T>{_dictionary[value_id], false, chunk_offsets.into_referencing};
+        return SegmentIteratorValue<T>{_dictionary[value_id], false, chunk_offsets.into_referencing};
       }
     }
 

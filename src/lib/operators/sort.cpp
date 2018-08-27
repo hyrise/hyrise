@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include "storage/column_iterables/chunk_offset_mapping.hpp"
+#include "storage/segment_iterables/chunk_offset_mapping.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/value_segment.hpp"
 
@@ -46,7 +46,7 @@ void Sort::_on_cleanup() { _impl.reset(); }
 template <typename SortColumnType>
 class Sort::SortImplMaterializeOutput {
  public:
-  // creates a new table with reference columns
+  // creates a new table with reference segments
   SortImplMaterializeOutput(const std::shared_ptr<const Table>& in,
                             const std::shared_ptr<std::vector<std::pair<RowID, SortColumnType>>>& id_value_map,
                             const size_t output_chunk_size)
@@ -80,7 +80,7 @@ class Sort::SortImplMaterializeOutput {
       resolve_data_type(cxlumn_data_type, [&](auto type) {
         using CxlumnDataType = typename decltype(type)::type;
 
-        // Initialize value columns
+        // Initialize value segments
         auto columns_out = std::vector<std::shared_ptr<ValueSegment<CxlumnDataType>>>(chunk_count_out);
         std::generate(columns_out.begin(), columns_out.end(),
                       []() { return std::make_shared<ValueSegment<CxlumnDataType>>(true); });
@@ -91,7 +91,7 @@ class Sort::SortImplMaterializeOutput {
         for (auto row_index = 0u; row_index < row_count_out; ++row_index) {
           const auto [chunk_id, chunk_offset] = _row_id_value_vector->at(row_index).first;  // NOLINT
 
-          const auto column = _table_in->get_chunk(chunk_id)->get_column(cxlumn_id);
+          const auto column = _table_in->get_chunk(chunk_id)->get_segment(cxlumn_id);
 
           // Previously the value was retrieved by calling a virtual method,
           // which was just as slow as using the subscript operator.
@@ -100,7 +100,7 @@ class Sort::SortImplMaterializeOutput {
 
           ++chunk_offset_out;
 
-          // Check if value column is full
+          // Check if value segment is full
           if (chunk_offset_out >= _output_chunk_size) {
             chunk_offset_out = 0u;
             chunk_it->push_back(*column_it);
@@ -186,10 +186,10 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
     for (ChunkID chunk_id{0}; chunk_id < _table_in->chunk_count(); ++chunk_id) {
       auto chunk = _table_in->get_chunk(chunk_id);
 
-      auto base_column = chunk->get_column(_cxlumn_id);
+      auto base_segment = chunk->get_segment(_cxlumn_id);
 
-      resolve_cxlumn_type<SortColumnType>(*base_column, [&](auto& typed_column) {
-        auto iterable = create_iterable_from_column<SortColumnType>(typed_column);
+      resolve_cxlumn_type<SortColumnType>(*base_segment, [&](auto& typed_segment) {
+        auto iterable = create_iterable_from_column<SortColumnType>(typed_segment);
 
         iterable.for_each([&](const auto& value) {
           if (value.is_null()) {

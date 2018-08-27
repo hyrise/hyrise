@@ -41,7 +41,7 @@ class DictionarySegment : public BaseDictionarySegment {
   /**@}*/
 
   /**
-   * @defgroup BaseEncodedColumn interface
+   * @defgroup BaseEncodedSegment interface
    * @{
    */
   CompressedVectorType compressed_vector_type() const final;

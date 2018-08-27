@@ -10,7 +10,7 @@
 
 #include "constant_mappings.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/column_encoding_utils.hpp"
+#include "storage/segment_encoding_utils.hpp"
 #include "storage/create_iterable_from_column.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
@@ -21,7 +21,7 @@
 
 namespace opossum {
 
-class EncodedColumnTest : public BaseTestWithParam<ColumnEncodingSpec> {
+class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
  protected:
   static constexpr auto max_value = 1'024;
 
@@ -95,15 +95,15 @@ class EncodedColumnTest : public BaseTestWithParam<ColumnEncodingSpec> {
   }
 
   template <typename T>
-  std::shared_ptr<BaseEncodedColumn> encode_value_segment(DataType data_type,
+  std::shared_ptr<BaseEncodedSegment> encode_value_segment(DataType data_type,
                                                          const std::shared_ptr<ValueSegment<T>>& value_segment) {
-    const auto column_encoding_spec = GetParam();
-    return encode_column(column_encoding_spec.encoding_type, data_type, value_segment,
-                         column_encoding_spec.vector_compression_type);
+    const auto segment_encoding_spec = GetParam();
+    return encode_column(segment_encoding_spec.encoding_type, data_type, value_segment,
+                         segment_encoding_spec.vector_compression_type);
   }
 };
 
-auto formatter = [](const ::testing::TestParamInfo<ColumnEncodingSpec> info) {
+auto formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
   const auto spec = info.param;
 
   auto stream = std::stringstream{};
@@ -119,60 +119,60 @@ auto formatter = [](const ::testing::TestParamInfo<ColumnEncodingSpec> info) {
 };
 
 INSTANTIATE_TEST_CASE_P(
-    ColumnEncodingSpecs, EncodedColumnTest,
-    ::testing::Values(ColumnEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
-                      ColumnEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
-                      ColumnEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128},
-                      ColumnEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned},
-                      ColumnEncodingSpec{EncodingType::RunLength}),
+    SegmentEncodingSpecs, EncodedSegmentTest,
+    ::testing::Values(SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
+                      SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::FixedSizeByteAligned},
+                      SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128},
+                      SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::FixedSizeByteAligned},
+                      SegmentEncodingSpec{EncodingType::RunLength}),
     formatter);
 
-TEST_P(EncodedColumnTest, SequentiallyReadNotNullableIntColumn) {
+TEST_P(EncodedSegmentTest, SequentiallyReadNotNullableIntColumn) {
   auto value_segment = this->create_int_value_segment();
   auto base_encoded_segment = this->encode_value_segment(DataType::Int, value_segment);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
-  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_column) {
+  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_column(*value_segment);
-    auto encoded_column_iterable = create_iterable_from_column(encoded_column);
+    auto encoded_segment_iterable = create_iterable_from_column(encoded_segment);
 
     value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
-      encoded_column_iterable.with_iterators([&](auto encoded_column_it, auto encoded_column_end) {
-        for (; encoded_column_it != encoded_column_end; ++encoded_column_it, ++value_segment_it) {
-          EXPECT_EQ(value_segment_it->value(), encoded_column_it->value());
+      encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
+        for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
+          EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
         }
       });
     });
   });
 }
 
-TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumn) {
+TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntColumn) {
   auto value_segment = this->create_int_w_null_value_segment();
   auto base_encoded_segment = this->encode_value_segment(DataType::Int, value_segment);
 
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
-  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_column) {
+  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_column(*value_segment);
-    auto encoded_column_iterable = create_iterable_from_column(encoded_column);
+    auto encoded_segment_iterable = create_iterable_from_column(encoded_segment);
 
     value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
-      encoded_column_iterable.with_iterators([&](auto encoded_column_it, auto encoded_column_end) {
+      encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
         auto row_idx = 0;
-        for (; encoded_column_it != encoded_column_end; ++encoded_column_it, ++value_segment_it, ++row_idx) {
-          // This covers `EncodedColumn::operator[]`
+        for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it, ++row_idx) {
+          // This covers `EncodedSegment::operator[]`
           if (variant_is_null((*value_segment)[row_idx])) {
-            EXPECT_TRUE(variant_is_null(encoded_column[row_idx]));
+            EXPECT_TRUE(variant_is_null(encoded_segment[row_idx]));
           } else {
-            EXPECT_EQ((*value_segment)[row_idx], encoded_column[row_idx]);
+            EXPECT_EQ((*value_segment)[row_idx], encoded_segment[row_idx]);
           }
 
           // This covers the point access iterator
-          EXPECT_EQ(value_segment_it->is_null(), encoded_column_it->is_null());
+          EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
 
           if (!value_segment_it->is_null()) {
-            EXPECT_EQ(value_segment_it->value(), encoded_column_it->value());
+            EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
           }
         }
       });
@@ -180,7 +180,7 @@ TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumn) {
   });
 }
 
-TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumnWithChunkOffsetsList) {
+TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntColumnWithChunkOffsetsList) {
   auto value_segment = this->create_int_w_null_value_segment();
   auto base_encoded_segment = this->encode_value_segment(DataType::Int, value_segment);
 
@@ -188,17 +188,17 @@ TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumnWithChunkOffsetsList)
 
   auto chunk_offsets_list = this->create_sequential_chunk_offsets_list();
 
-  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_column) {
+  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_column(*value_segment);
-    auto encoded_column_iterable = create_iterable_from_column(encoded_column);
+    auto encoded_segment_iterable = create_iterable_from_column(encoded_segment);
 
     value_segment_iterable.with_iterators(&chunk_offsets_list, [&](auto value_segment_it, auto value_segment_end) {
-      encoded_column_iterable.with_iterators(&chunk_offsets_list, [&](auto encoded_column_it, auto encoded_column_end) {
-        for (; encoded_column_it != encoded_column_end; ++encoded_column_it, ++value_segment_it) {
-          EXPECT_EQ(value_segment_it->is_null(), encoded_column_it->is_null());
+      encoded_segment_iterable.with_iterators(&chunk_offsets_list, [&](auto encoded_segment_it, auto encoded_segment_end) {
+        for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
+          EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
 
           if (!value_segment_it->is_null()) {
-            EXPECT_EQ(value_segment_it->value(), encoded_column_it->value());
+            EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
           }
         }
       });
@@ -206,7 +206,7 @@ TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumnWithChunkOffsetsList)
   });
 }
 
-TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumnWithShuffledChunkOffsetsList) {
+TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntColumnWithShuffledChunkOffsetsList) {
   auto value_segment = this->create_int_w_null_value_segment();
   auto base_encoded_segment = this->encode_value_segment(DataType::Int, value_segment);
 
@@ -214,17 +214,17 @@ TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumnWithShuffledChunkOffs
 
   auto chunk_offsets_list = this->create_random_access_chunk_offsets_list();
 
-  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_column) {
+  resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
     auto value_segment_iterable = create_iterable_from_column(*value_segment);
-    auto encoded_column_iterable = create_iterable_from_column(encoded_column);
+    auto encoded_segment_iterable = create_iterable_from_column(encoded_segment);
 
     value_segment_iterable.with_iterators(&chunk_offsets_list, [&](auto value_segment_it, auto value_segment_end) {
-      encoded_column_iterable.with_iterators(&chunk_offsets_list, [&](auto encoded_column_it, auto encoded_column_end) {
-        for (; encoded_column_it != encoded_column_end; ++encoded_column_it, ++value_segment_it) {
-          EXPECT_EQ(value_segment_it->is_null(), encoded_column_it->is_null());
+      encoded_segment_iterable.with_iterators(&chunk_offsets_list, [&](auto encoded_segment_it, auto encoded_segment_end) {
+        for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it) {
+          EXPECT_EQ(value_segment_it->is_null(), encoded_segment_it->is_null());
 
           if (!value_segment_it->is_null()) {
-            EXPECT_EQ(value_segment_it->value(), encoded_column_it->value());
+            EXPECT_EQ(value_segment_it->value(), encoded_segment_it->value());
           }
         }
       });
@@ -232,7 +232,7 @@ TEST_P(EncodedColumnTest, SequentiallyReadNullableIntColumnWithShuffledChunkOffs
   });
 }
 
-TEST_P(EncodedColumnTest, IsImmutable) {
+TEST_P(EncodedSegmentTest, IsImmutable) {
   auto value_segment = this->create_int_w_null_value_segment();
   auto base_encoded_segment = this->encode_value_segment(DataType::Int, value_segment);
 

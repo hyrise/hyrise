@@ -2,7 +2,7 @@
 
 #include <type_traits>
 
-#include "storage/column_iterables/base_column_iterators.hpp"
+#include "storage/segment_iterables/base_segment_iterators.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 
@@ -58,7 +58,7 @@ namespace opossum {
  *
  */
 template <typename Derived>
-class ColumnIterable {
+class SegmentIterable {
  public:
   /**
    * @param f is a generic lambda accepting two iterators as parameters
@@ -134,18 +134,18 @@ class ColumnIterable {
 /**
  * @brief base class of all point-accessible column iterables
  *
- * Extends the interface of ColumnIterable by two variants of
+ * Extends the interface of SegmentIterable by two variants of
  * with_iterators and for_each. These methods accept in addition
  * to the generic lambda mapped chunk offsets (i.e. a ChunkOffsetList).
  * In most cases, this list will be generated from a pos_list of a
- * reference column (see chunk_offset_mapping.hpp). When such a list is
+ * reference segment (see chunk_offset_mapping.hpp). When such a list is
  * passed, the used iterators only iterate over the chunk offsets that
  * were included in the pos_list; everything else is skipped.
  */
 template <typename Derived>
-class PointAccessibleColumnIterable : public ColumnIterable<Derived> {
+class PointAccessibleSegmentIterable : public SegmentIterable<Derived> {
  public:
-  using ColumnIterable<Derived>::with_iterators;  // needed because of “name hiding”
+  using SegmentIterable<Derived>::with_iterators;  // needed because of “name hiding”
 
   template <typename Functor>
   void with_iterators(const ChunkOffsetsList* mapped_chunk_offsets, const Functor& functor) const {
@@ -156,7 +156,7 @@ class PointAccessibleColumnIterable : public ColumnIterable<Derived> {
     }
   }
 
-  using ColumnIterable<Derived>::for_each;  // needed because of “name hiding”
+  using SegmentIterable<Derived>::for_each;  // needed because of “name hiding”
 
   template <typename Functor>
   void for_each(const ChunkOffsetsList* mapped_chunk_offsets, const Functor& functor) const {

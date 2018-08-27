@@ -3,16 +3,16 @@
 #include <iterator>
 #include <type_traits>
 
-#include "storage/column_iterables.hpp"
-#include "storage/column_iterables/any_column_iterator.hpp"
+#include "storage/segment_iterables.hpp"
+#include "storage/segment_iterables/any_segment_iterator.hpp"
 
 namespace opossum {
 
 template <typename IterableT>
-class AnyColumnIterable;
+class AnySegmentIterable;
 
 /**
- * @brief Wraps passed column iterable in an AnyColumnIterable
+ * @brief Wraps passed column iterable in an AnySegmentIterable
  *
  * Iterators of returned iterables will all have the same type,
  * which reduces compile times due to fewer template instantiations.
@@ -23,55 +23,55 @@ template <typename IterableT>
 auto erase_type_from_iterable(const IterableT& iterable);
 
 /**
- * @brief Wraps passed column iterable in an AnyColumnIterable in debug mode
+ * @brief Wraps passed column iterable in an AnySegmentIterable in debug mode
  */
 template <typename IterableT>
 decltype(auto) erase_type_from_iterable_if_debug(const IterableT& iterable);
 
 /**
- * @defgroup AnyColumnIterable Traits
+ * @defgroup AnySegmentIterable Traits
  * @{
  */
 
 template <typename IterableT>
-struct is_any_column_iterable : std::false_type {};
+struct is_any_segment_iterable : std::false_type {};
 
 template <typename IterableT>
-struct is_any_column_iterable<AnyColumnIterable<IterableT>> : std::true_type {};
+struct is_any_segment_iterable<AnySegmentIterable<IterableT>> : std::true_type {};
 
 template <typename IterableT>
-constexpr auto is_any_column_iterable_v = is_any_column_iterable<IterableT>::value;
+constexpr auto is_any_segment_iterable_v = is_any_segment_iterable<IterableT>::value;
 /**@}*/
 
 /**
  * @brief Makes any column iterable return type-erased iterators
  *
- * AnyColumnIterable’s sole reason for existence is compile speed.
+ * AnySegmentIterable’s sole reason for existence is compile speed.
  * Since iterables are almost always used in highly templated code,
  * the functor or lambda passed to their with_iterators methods is
  * called using many different iterators, which leads to a lot of code
- * being generated. This affects compile times. The AnyColumnIterator
+ * being generated. This affects compile times. The AnySegmentIterator
  * alleviates the long compile times by erasing the iterators’ types and
  * thus reducing the number of instantiations to one (for each column type).
  *
- * The iterators forwarded are of type AnyColumnIterator<T>. They wrap
+ * The iterators forwarded are of type AnySegmentIterator<T>. They wrap
  * any column iterator with the cost of a virtual function call for each access.
  */
 template <typename IterableT>
-class AnyColumnIterable : public PointAccessibleColumnIterable<AnyColumnIterable<IterableT>> {
-  static_assert(!is_any_column_iterable_v<IterableT>, "Iterables should not be wrapped twice.");
+class AnySegmentIterable : public PointAccessibleSegmentIterable<AnySegmentIterable<IterableT>> {
+  static_assert(!is_any_segment_iterable_v<IterableT>, "Iterables should not be wrapped twice.");
 
  public:
-  explicit AnyColumnIterable(const IterableT& iterable) : _iterable{iterable} {}
+  explicit AnySegmentIterable(const IterableT& iterable) : _iterable{iterable} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
     _iterable._on_with_iterators([&functor](auto it, auto end) {
-      using ColumnIteratorValueT = typename std::iterator_traits<decltype(it)>::value_type;
-      using DataTypeT = typename ColumnIteratorValueT::Type;
+      using SegmentIteratorValueT = typename std::iterator_traits<decltype(it)>::value_type;
+      using DataTypeT = typename SegmentIteratorValueT::Type;
 
-      auto any_it = AnyColumnIterator<DataTypeT>{it};
-      auto any_end = AnyColumnIterator<DataTypeT>{end};
+      auto any_it = AnySegmentIterator<DataTypeT>{it};
+      auto any_end = AnySegmentIterator<DataTypeT>{end};
 
       functor(any_it, any_end);
     });
@@ -80,11 +80,11 @@ class AnyColumnIterable : public PointAccessibleColumnIterable<AnyColumnIterable
   template <typename Functor>
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
     _iterable._on_with_iterators(mapped_chunk_offsets, [&functor](auto it, auto end) {
-      using ColumnIteratorValueT = typename std::iterator_traits<decltype(it)>::value_type;
-      using DataTypeT = typename ColumnIteratorValueT::Type;
+      using SegmentIteratorValueT = typename std::iterator_traits<decltype(it)>::value_type;
+      using DataTypeT = typename SegmentIteratorValueT::Type;
 
-      auto any_it = AnyColumnIterator<DataTypeT>{it};
-      auto any_end = AnyColumnIterator<DataTypeT>{end};
+      auto any_it = AnySegmentIterator<DataTypeT>{it};
+      auto any_end = AnySegmentIterator<DataTypeT>{end};
 
       functor(any_it, any_end);
     });
@@ -99,10 +99,10 @@ class AnyColumnIterable : public PointAccessibleColumnIterable<AnyColumnIterable
 template <typename IterableT>
 auto erase_type_from_iterable(const IterableT& iterable) {
   // clang-format off
-  if constexpr(is_any_column_iterable_v<IterableT>) {
+  if constexpr(is_any_segment_iterable_v<IterableT>) {
     return iterable;
   } else {
-    return AnyColumnIterable{iterable};
+    return AnySegmentIterable{iterable};
   }
   // clang-format on
 }

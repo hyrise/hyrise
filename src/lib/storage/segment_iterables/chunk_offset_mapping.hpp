@@ -8,12 +8,12 @@
 namespace opossum {
 
 /**
- * Mapping between chunk offset into a reference column and
+ * Mapping between chunk offset into a reference segment and
  * its dereferenced counter part, i.e., a reference into the
  * referenced value or dictionary column.
  */
 struct ChunkOffsetMapping {
-  ChunkOffset into_referencing;  // chunk offset into reference column
+  ChunkOffset into_referencing;  // chunk offset into reference segment
   ChunkOffset into_referenced;   // used to access values in the referenced data column
 };
 

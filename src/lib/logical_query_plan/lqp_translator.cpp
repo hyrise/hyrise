@@ -181,7 +181,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   auto value2_variant = std::optional<AllTypeVariant>{};
 
   // Currently, we will only use IndexScans if the predicate node directly follows a StoredTableNode.
-  // Our IndexScan implementation does not work on reference columns yet.
+  // Our IndexScan implementation does not work on reference segments yet.
   Assert(node->left_input()->type == LQPNodeType::StoredTable, "IndexScan must follow a StoredTableNode.");
 
   const auto predicate = std::dynamic_pointer_cast<AbstractPredicateExpression>(node->predicate);
@@ -214,14 +214,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   for (ChunkID chunk_id{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
     const auto chunk = table->get_chunk(chunk_id);
-    if (chunk->get_index(ColumnIndexType::GroupKey, cxlumn_ids)) {
+    if (chunk->get_index(SegmentIndexType::GroupKey, cxlumn_ids)) {
       indexed_chunks.emplace_back(chunk_id);
     }
   }
 
   // All chunks that have an index on cxlumn_ids are handled by an IndexScan. All other chunks are handled by
   // TableScan(s).
-  auto index_scan = std::make_shared<IndexScan>(input_operator, ColumnIndexType::GroupKey, cxlumn_ids,
+  auto index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::GroupKey, cxlumn_ids,
                                                 predicate->predicate_condition, right_values, right_values2);
 
   // See explanation for BETWEEN handling in _translate_predicate_node above.

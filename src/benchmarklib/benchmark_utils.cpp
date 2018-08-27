@@ -260,7 +260,7 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
       const auto& columns = table.value();
 
       Assert(columns.is_object(), "The custom column encoding needs to be specified as a json object.");
-      custom_encoding_mapping.emplace(table_name, std::unordered_map<std::string, ColumnEncodingSpec>());
+      custom_encoding_mapping.emplace(table_name, std::unordered_map<std::string, SegmentEncodingSpec>());
 
       for (const auto& column : nlohmann::json::iterator_wrapper(columns)) {
         const auto& cxlumn_name = column.key();
@@ -278,25 +278,25 @@ std::string CLIConfigParser::detailed_help(const cxxopts::Options& options) {
   return options.help() + BenchmarkConfig::description + EncodingConfig::description;
 }
 
-EncodingConfig::EncodingConfig() : EncodingConfig{ColumnEncodingSpec{EncodingType::Dictionary}} {}
+EncodingConfig::EncodingConfig() : EncodingConfig{SegmentEncodingSpec{EncodingType::Dictionary}} {}
 
-EncodingConfig::EncodingConfig(ColumnEncodingSpec default_encoding_spec)
+EncodingConfig::EncodingConfig(SegmentEncodingSpec default_encoding_spec)
     : EncodingConfig{std::move(default_encoding_spec), {}, {}} {}
 
-EncodingConfig::EncodingConfig(ColumnEncodingSpec default_encoding_spec, DataTypeEncodingMapping type_encoding_mapping,
+EncodingConfig::EncodingConfig(SegmentEncodingSpec default_encoding_spec, DataTypeEncodingMapping type_encoding_mapping,
                                TableColumnEncodingMapping encoding_mapping)
     : default_encoding_spec{std::move(default_encoding_spec)},
       type_encoding_mapping{std::move(type_encoding_mapping)},
       custom_encoding_mapping{std::move(encoding_mapping)} {}
 
-EncodingConfig EncodingConfig::unencoded() { return EncodingConfig{ColumnEncodingSpec{EncodingType::Unencoded}}; }
+EncodingConfig EncodingConfig::unencoded() { return EncodingConfig{SegmentEncodingSpec{EncodingType::Unencoded}}; }
 
-ColumnEncodingSpec EncodingConfig::encoding_spec_from_strings(const std::string& encoding_str,
+SegmentEncodingSpec EncodingConfig::encoding_spec_from_strings(const std::string& encoding_str,
                                                               const std::string& compression_str) {
   const auto encoding = EncodingConfig::encoding_string_to_type(encoding_str);
   const auto compression = EncodingConfig::compression_string_to_type(compression_str);
 
-  return compression ? ColumnEncodingSpec{encoding, *compression} : ColumnEncodingSpec{encoding};
+  return compression ? SegmentEncodingSpec{encoding, *compression} : SegmentEncodingSpec{encoding};
 }
 
 EncodingType EncodingConfig::encoding_string_to_type(const std::string& encoding_str) {
@@ -315,7 +315,7 @@ std::optional<VectorCompressionType> EncodingConfig::compression_string_to_type(
 }
 
 nlohmann::json EncodingConfig::to_json() const {
-  const auto encoding_spec_to_string_map = [](const ColumnEncodingSpec& spec) {
+  const auto encoding_spec_to_string_map = [](const SegmentEncodingSpec& spec) {
     nlohmann::json mapping{};
     mapping["encoding"] = encoding_type_to_string.left.at(spec.encoding_type);
     if (spec.vector_compression_type) {
@@ -367,10 +367,10 @@ void BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
     if (table_has_custom_encoding) {
       const auto& cxlumn_name = table->cxlumn_name(cxlumn_id);
       const auto& encoding_by_cxlumn_name = column_mapping_it->second;
-      const auto& column_encoding = encoding_by_cxlumn_name.find(cxlumn_name);
-      if (column_encoding != encoding_by_cxlumn_name.end()) {
+      const auto& segment_encoding = encoding_by_cxlumn_name.find(cxlumn_name);
+      if (segment_encoding != encoding_by_cxlumn_name.end()) {
         // The column has a custom encoding
-        chunk_spec.push_back(column_encoding->second);
+        chunk_spec.push_back(segment_encoding->second);
         continue;
       }
     }

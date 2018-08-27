@@ -16,9 +16,9 @@ TEST_F(JitReadWriteTupleTest, CreateOutputTable) {
                                                {"d", DataType::Double, false},
                                                {"e", DataType::String, true}};
 
-  for (const auto& column_definition : cxlumn_definitions) {
-    write_tuples->add_output_column(column_definition.name,
-                                    JitTupleValue(column_definition.data_type, column_definition.nullable, 0));
+  for (const auto& cxlumn_definition : cxlumn_definitions) {
+    write_tuples->add_output_cxlumn(cxlumn_definition.name,
+                                    JitTupleValue(cxlumn_definition.data_type, cxlumn_definition.nullable, 0));
   }
 
   auto output_table = write_tuples->create_output_table(1);
@@ -28,11 +28,11 @@ TEST_F(JitReadWriteTupleTest, CreateOutputTable) {
 TEST_F(JitReadWriteTupleTest, TupleIndicesAreIncremented) {
   auto read_tuples = std::make_shared<JitReadTuples>();
 
-  // Add different kinds of values (input columns, literals, temporary values) to the runtime tuple
-  auto tuple_index_1 = read_tuples->add_input_column(DataType::Int, false, CxlumnID{0}).tuple_index();
+  // Add different kinds of values (input cxlumns, literals, temporary values) to the runtime tuple
+  auto tuple_index_1 = read_tuples->add_input_cxlumn(DataType::Int, false, CxlumnID{0}).tuple_index();
   auto tuple_index_2 = read_tuples->add_literal_value(1).tuple_index();
   auto tuple_index_3 = read_tuples->add_temporary_value();
-  auto tuple_index_4 = read_tuples->add_input_column(DataType::Int, false, CxlumnID{1}).tuple_index();
+  auto tuple_index_4 = read_tuples->add_input_cxlumn(DataType::Int, false, CxlumnID{1}).tuple_index();
   auto tuple_index_5 = read_tuples->add_literal_value("some string").tuple_index();
   auto tuple_index_6 = read_tuples->add_temporary_value();
 
@@ -43,8 +43,8 @@ TEST_F(JitReadWriteTupleTest, TupleIndicesAreIncremented) {
   ASSERT_LT(tuple_index_4, tuple_index_5);
   ASSERT_LT(tuple_index_5, tuple_index_6);
 
-  // Adding the same input column twice should not create a new value in the tuple
-  auto tuple_index_1_b = read_tuples->add_input_column(DataType::Int, false, CxlumnID{0}).tuple_index();
+  // Adding the same input cxlumn twice should not create a new value in the tuple
+  auto tuple_index_1_b = read_tuples->add_input_cxlumn(DataType::Int, false, CxlumnID{0}).tuple_index();
   ASSERT_EQ(tuple_index_1, tuple_index_1_b);
 }
 
@@ -75,11 +75,11 @@ TEST_F(JitReadWriteTupleTest, CopyTable) {
   auto write_tuples = std::make_shared<JitWriteTuples>();
   read_tuples->set_next_operator(write_tuples);
 
-  // Add all input table columns to pipeline
-  auto a_value = read_tuples->add_input_column(DataType::Int, true, CxlumnID{0});
-  auto b_value = read_tuples->add_input_column(DataType::Float, true, CxlumnID{1});
-  write_tuples->add_output_column("a", a_value);
-  write_tuples->add_output_column("b", b_value);
+  // Add all input table cxlumns to pipeline
+  auto a_value = read_tuples->add_input_cxlumn(DataType::Int, true, CxlumnID{0});
+  auto b_value = read_tuples->add_input_cxlumn(DataType::Float, true, CxlumnID{1});
+  write_tuples->add_output_cxlumn("a", a_value);
+  write_tuples->add_output_cxlumn("b", b_value);
 
   // Initialize operators with actual input table
   auto input_table = load_table("src/test/tables/int_float_null_sorted_asc.tbl", 2);

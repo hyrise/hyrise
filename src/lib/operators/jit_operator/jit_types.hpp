@@ -5,7 +5,7 @@
 #include "all_type_variant.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/chunk.hpp"
-#include "storage/column_iterables/base_column_iterators.hpp"
+#include "storage/segment_iterables/base_segment_iterators.hpp"
 
 namespace opossum {
 
@@ -47,12 +47,12 @@ namespace opossum {
 
 /* The JitVariantVector can be used in two ways:
  * 1) As a vector of variant values.
- *    Imagine you want to store a database row (aka tuple) of some table. Since each column of the table could have a
+ *    Imagine you want to store a database row (aka tuple) of some table. Since each cxlumn of the table could have a
  *    different type, a std::vector<Variant> seems like a good choice. To store N values, the vector is resized to
- *    contain N slots and each value (representing one column) can be accessed by its index from [0, N).
+ *    contain N slots and each value (representing one cxlumn) can be accessed by its index from [0, N).
  *    We do something slightly different here: Instead of one vector (where each vector element can hold any of a number
  *    of types), we create one strongly typed vector per data type. All of these vectors have size N, so each value
- *    (representing one column of the tuple) has a slot in each vector.
+ *    (representing one cxlumn of the tuple) has a slot in each vector.
  *    Accessing the value at position P as an "int" will return the element at position P in the integer vector.
  *    There is no automatic type conversions happening here. Storing a value as "int" and reading it later as "double"
  *    won't work, since this accesses different memory locations in different vectors.
@@ -60,7 +60,7 @@ namespace opossum {
  *
  * 2) As a variant vector.
  *    This data structure can also be used to store a vector of values of some unknown, but fixed type.
- *    Say you want to build an aggregate operator and need to store a column of aggregate values. All values
+ *    Say you want to build an aggregate operator and need to store a cxlumn of aggregate values. All values
  *    produced will have the same type, but there is no way of knowing that type in advance.
  *    By adding a templated "grow_by_one" function to the implementation below, we can add an arbitrary number of
  *    elements to the std::vector of that data type. All other vectors will remain empty.
@@ -102,14 +102,14 @@ class BaseJitColumnReader;
 class BaseJitColumnWriter;
 
 // The JitAggregate operator (and possibly future hashing based operators) require an efficient way to hash tuples
-// across multiple columns (i.e., the key-type of the hashmap spans multiple columns).
-// Since the number / data types of the columns are not known at compile time, we use a regular
+// across multiple cxlumns (i.e., the key-type of the hashmap spans multiple cxlumns).
+// Since the number / data types of the cxlumns are not known at compile time, we use a regular
 // hashmap in combination with some JitVariantVectors to build the foundation for more flexible hashing.
 // See the JitAggregate operator (jit_aggregate.hpp) for details.
 // The runtime hashmap is part of the JitRuntimeContext to keep mutable state from the operators.
 struct JitRuntimeHashmap {
   std::unordered_map<uint64_t, std::vector<size_t>> indices;
-  std::vector<JitVariantVector> columns;
+  std::vector<JitVariantVector> cxlumns;
 };
 
 // The structure encapsulates all data available to the JitOperatorWrapper at runtime,
@@ -168,11 +168,11 @@ class JitTupleValue {
 // However, this is enough for the jit engine to optimize any operation involving the value.
 // It only knows how to access the value from the runtime context.
 // Compared to JitTupleValues, the hashmap values offer an additional dimension: The value is configured with a
-// column_index, which references a column in the runtime hashmap. However, this column is not a single value but a
+// cxlumn_index, which references a cxlumn in the runtime hashmap. However, this cxlumn is not a single value but a
 // vector. Whenever the JitHashmapValue is used in a computation, an additional row_index is required to specify the
 // value inside the vector that should be used for the computation.
 // Example: A JitHashmapValue may refer to an aggregate that is computed in the JitAggregate operator. The
-// JitHashmapValue stores information about the data type, nullability of the aggregate, and the index of the column in
+// JitHashmapValue stores information about the data type, nullability of the aggregate, and the index of the cxlumn in
 // the runtime hashmap that stores the computed aggregates.
 // However, the JitAggregate operator computes multiple aggregate values - one for each group of tuples.
 // The JitHashmapValue represents all these aggregates (i.e., the entire vector of aggregates) at once.
@@ -180,19 +180,19 @@ class JitTupleValue {
 // processing).
 class JitHashmapValue {
  public:
-  JitHashmapValue(const DataType data_type, const bool is_nullable, const size_t column_index);
+  JitHashmapValue(const DataType data_type, const bool is_nullable, const size_t cxlumn_index);
 
   DataType data_type() const;
   bool is_nullable() const;
-  size_t column_index() const;
+  size_t cxlumn_index() const;
 
   template <typename T>
   T get(const size_t index, JitRuntimeContext& context) const {
-    return context.hashmap.columns[_column_index].get<T>(index);
+    return context.hashmap.cxlumns[_cxlumn_index].get<T>(index);
   }
   template <typename T>
   void set(const T value, const size_t index, JitRuntimeContext& context) const {
-    context.hashmap.columns[_column_index].set<T>(index, value);
+    context.hashmap.cxlumns[_cxlumn_index].set<T>(index, value);
   }
 
   bool is_null(const size_t index, JitRuntimeContext& context) const;
@@ -201,12 +201,12 @@ class JitHashmapValue {
  private:
   const DataType _data_type;
   const bool _is_nullable;
-  const size_t _column_index;
+  const size_t _cxlumn_index;
 };
 
 enum class JitExpressionType {
   Addition,
-  Column,
+  Cxlumn,
   Subtraction,
   Multiplication,
   Division,

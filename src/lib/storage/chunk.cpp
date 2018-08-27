@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "base_column.hpp"
+#include "base_segment.hpp"
 #include "chunk.hpp"
 #include "index/base_index.hpp"
 #include "reference_segment.hpp"
@@ -58,7 +58,7 @@ void Chunk::append(const std::vector<AllTypeVariant>& values) {
   }
 }
 
-std::shared_ptr<BaseSegment> Chunk::get_column(CxlumnID cxlumn_id) const {
+std::shared_ptr<BaseSegment> Chunk::get_segment(CxlumnID cxlumn_id) const {
   return std::atomic_load(&_columns.at(cxlumn_id));
 }
 
@@ -68,7 +68,7 @@ uint16_t Chunk::cxlumn_count() const { return _columns.size(); }
 
 uint32_t Chunk::size() const {
   if (_columns.empty()) return 0;
-  auto first_column = get_column(CxlumnID{0});
+  auto first_column = get_segment(CxlumnID{0});
   return first_column->size();
 }
 
@@ -100,11 +100,11 @@ std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(
 }
 
 std::vector<std::shared_ptr<BaseIndex>> Chunk::get_indices(const std::vector<CxlumnID>& cxlumn_ids) const {
-  auto columns = _get_columns_for_ids(cxlumn_ids);
+  auto columns = _get_segments_for_ids(cxlumn_ids);
   return get_indices(columns);
 }
 
-std::shared_ptr<BaseIndex> Chunk::get_index(const ColumnIndexType index_type,
+std::shared_ptr<BaseIndex> Chunk::get_index(const SegmentIndexType index_type,
                                             const std::vector<std::shared_ptr<const BaseSegment>>& columns) const {
   auto index_it = std::find_if(_indices.cbegin(), _indices.cend(), [&](const auto& index) {
     return index->is_index_for(columns) && index->type() == index_type;
@@ -113,9 +113,9 @@ std::shared_ptr<BaseIndex> Chunk::get_index(const ColumnIndexType index_type,
   return (index_it == _indices.cend()) ? nullptr : *index_it;
 }
 
-std::shared_ptr<BaseIndex> Chunk::get_index(const ColumnIndexType index_type,
+std::shared_ptr<BaseIndex> Chunk::get_index(const SegmentIndexType index_type,
                                             const std::vector<CxlumnID>& cxlumn_ids) const {
-  auto columns = _get_columns_for_ids(cxlumn_ids);
+  auto columns = _get_segments_for_ids(cxlumn_ids);
   return get_index(index_type, columns);
 }
 
@@ -128,13 +128,13 @@ void Chunk::remove_index(const std::shared_ptr<BaseIndex>& index) {
 bool Chunk::references_exactly_one_table() const {
   if (cxlumn_count() == 0) return false;
 
-  auto first_column = std::dynamic_pointer_cast<const ReferenceSegment>(get_column(CxlumnID{0}));
+  auto first_column = std::dynamic_pointer_cast<const ReferenceSegment>(get_segment(CxlumnID{0}));
   if (first_column == nullptr) return false;
   auto first_referenced_table = first_column->referenced_table();
   auto first_pos_list = first_column->pos_list();
 
   for (CxlumnID cxlumn_id{1}; cxlumn_id < cxlumn_count(); ++cxlumn_id) {
-    const auto column = std::dynamic_pointer_cast<const ReferenceSegment>(get_column(cxlumn_id));
+    const auto column = std::dynamic_pointer_cast<const ReferenceSegment>(get_segment(cxlumn_id));
     if (column == nullptr) return false;
 
     if (first_referenced_table != column->referenced_table()) return false;
@@ -181,7 +181,7 @@ size_t Chunk::estimate_memory_usage() const {
   return bytes;
 }
 
-std::vector<std::shared_ptr<const BaseSegment>> Chunk::_get_columns_for_ids(
+std::vector<std::shared_ptr<const BaseSegment>> Chunk::_get_segments_for_ids(
     const std::vector<CxlumnID>& cxlumn_ids) const {
   DebugAssert(([&]() {
                 for (auto cxlumn_id : cxlumn_ids)
@@ -193,7 +193,7 @@ std::vector<std::shared_ptr<const BaseSegment>> Chunk::_get_columns_for_ids(
   auto columns = std::vector<std::shared_ptr<const BaseSegment>>{};
   columns.reserve(cxlumn_ids.size());
   std::transform(cxlumn_ids.cbegin(), cxlumn_ids.cend(), std::back_inserter(columns),
-                 [&](const auto& cxlumn_id) { return get_column(cxlumn_id); });
+                 [&](const auto& cxlumn_id) { return get_segment(cxlumn_id); });
   return columns;
 }
 

@@ -30,36 +30,36 @@ class JitAggregateTest : public BaseTest {
   std::shared_ptr<JitAggregate> _aggregate;
 };
 
-// Make sure, that groupby columns are properly added to the output table
-TEST_F(JitAggregateTest, AddsGroupByColumnsToOutputTable) {
+// Make sure that groupby cxlumns are properly added to the output table
+TEST_F(JitAggregateTest, AddsGroupByCxlumnsToOutputTable) {
   const auto cxlumn_definitions = TableCxlumnDefinitions({{"a", DataType::Int, false},
                                                           {"b", DataType::Long, true},
                                                           {"c", DataType::Float, false},
                                                           {"d", DataType::Double, false},
                                                           {"e", DataType::String, true}});
 
-  for (const auto& column_definition : cxlumn_definitions) {
-    _aggregate->add_groupby_column(column_definition.name,
-                                   JitTupleValue(column_definition.data_type, column_definition.nullable, 0));
+  for (const auto& cxlumn_definition : cxlumn_definitions) {
+    _aggregate->add_groupby_cxlumn(cxlumn_definition.name,
+                                   JitTupleValue(cxlumn_definition.data_type, cxlumn_definition.nullable, 0));
   }
 
   auto output_table = _aggregate->create_output_table(Chunk::MAX_SIZE);
   EXPECT_EQ(output_table->cxlumn_definitions(), cxlumn_definitions);
 }
 
-// Make sure, that aggregates are added to the output table with correct data type and nullability (e.g., count
+// Make sure that aggregates are added to the output table with correct data type and nullability (e.g., count
 // aggregates should be non-nullable and of type long independent of the type and nullability of the input value).
-TEST_F(JitAggregateTest, AddsAggregateColumnsToOutputTable) {
-  _aggregate->add_aggregate_column("count", JitTupleValue(DataType::String, false, 0), AggregateFunction::Count);
-  _aggregate->add_aggregate_column("count_nullable", JitTupleValue(DataType::Int, true, 0), AggregateFunction::Count);
-  _aggregate->add_aggregate_column("max", JitTupleValue(DataType::Float, false, 0), AggregateFunction::Max);
-  _aggregate->add_aggregate_column("max_nullable", JitTupleValue(DataType::Double, true, 0), AggregateFunction::Max);
-  _aggregate->add_aggregate_column("min", JitTupleValue(DataType::Long, false, 0), AggregateFunction::Min);
-  _aggregate->add_aggregate_column("min_nullable", JitTupleValue(DataType::Int, true, 0), AggregateFunction::Min);
-  _aggregate->add_aggregate_column("avg", JitTupleValue(DataType::Float, false, 0), AggregateFunction::Avg);
-  _aggregate->add_aggregate_column("avg_nullable", JitTupleValue(DataType::Double, true, 0), AggregateFunction::Avg);
-  _aggregate->add_aggregate_column("sum", JitTupleValue(DataType::Long, false, 0), AggregateFunction::Sum);
-  _aggregate->add_aggregate_column("sum_nullable", JitTupleValue(DataType::Int, true, 0), AggregateFunction::Sum);
+TEST_F(JitAggregateTest, AddsAggregateCxlumnsToOutputTable) {
+  _aggregate->add_aggregate_cxlumn("count", JitTupleValue(DataType::String, false, 0), AggregateFunction::Count);
+  _aggregate->add_aggregate_cxlumn("count_nullable", JitTupleValue(DataType::Int, true, 0), AggregateFunction::Count);
+  _aggregate->add_aggregate_cxlumn("max", JitTupleValue(DataType::Float, false, 0), AggregateFunction::Max);
+  _aggregate->add_aggregate_cxlumn("max_nullable", JitTupleValue(DataType::Double, true, 0), AggregateFunction::Max);
+  _aggregate->add_aggregate_cxlumn("min", JitTupleValue(DataType::Long, false, 0), AggregateFunction::Min);
+  _aggregate->add_aggregate_cxlumn("min_nullable", JitTupleValue(DataType::Int, true, 0), AggregateFunction::Min);
+  _aggregate->add_aggregate_cxlumn("avg", JitTupleValue(DataType::Float, false, 0), AggregateFunction::Avg);
+  _aggregate->add_aggregate_cxlumn("avg_nullable", JitTupleValue(DataType::Double, true, 0), AggregateFunction::Avg);
+  _aggregate->add_aggregate_cxlumn("sum", JitTupleValue(DataType::Long, false, 0), AggregateFunction::Sum);
+  _aggregate->add_aggregate_cxlumn("sum_nullable", JitTupleValue(DataType::Int, true, 0), AggregateFunction::Sum);
 
   const auto output_table = _aggregate->create_output_table(Chunk::MAX_SIZE);
 
@@ -80,44 +80,44 @@ TEST_F(JitAggregateTest, AddsAggregateColumnsToOutputTable) {
 // Check, that aggregates on invalid data types are rejected.
 TEST_F(JitAggregateTest, InvalidAggregatesAreRejected) {
   EXPECT_THROW(
-      _aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::String, false, 0), AggregateFunction::Max),
+      _aggregate->add_aggregate_cxlumn("invalid", JitTupleValue(DataType::String, false, 0), AggregateFunction::Max),
       std::logic_error);
   EXPECT_THROW(
-      _aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::String, true, 0), AggregateFunction::Min),
+      _aggregate->add_aggregate_cxlumn("invalid", JitTupleValue(DataType::String, true, 0), AggregateFunction::Min),
       std::logic_error);
   EXPECT_THROW(
-      _aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::Null, false, 0), AggregateFunction::Avg),
+      _aggregate->add_aggregate_cxlumn("invalid", JitTupleValue(DataType::Null, false, 0), AggregateFunction::Avg),
       std::logic_error);
   EXPECT_THROW(
-      _aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::Null, true, 0), AggregateFunction::Sum),
+      _aggregate->add_aggregate_cxlumn("invalid", JitTupleValue(DataType::Null, true, 0), AggregateFunction::Sum),
       std::logic_error);
-  EXPECT_THROW(_aggregate->add_aggregate_column("invalid", JitTupleValue(DataType::Int, false, 0),
+  EXPECT_THROW(_aggregate->add_aggregate_cxlumn("invalid", JitTupleValue(DataType::Int, false, 0),
                                                 AggregateFunction::CountDistinct),
                std::logic_error);
 }
 
-// Check, that any order of groupby and aggregates columns is reflected in the output table.
-TEST_F(JitAggregateTest, MaintainsColumnOrderInOutputTable) {
-  _aggregate->add_aggregate_column("a", JitTupleValue(DataType::String, false, 0), AggregateFunction::Count);
-  _aggregate->add_groupby_column("b", JitTupleValue(DataType::Double, false, 0));
-  _aggregate->add_aggregate_column("c", JitTupleValue(DataType::Long, true, 0), AggregateFunction::Min);
-  _aggregate->add_groupby_column("d", JitTupleValue(DataType::Int, true, 0));
+// Check, that any order of groupby and aggregates cxlumns is reflected in the output table.
+TEST_F(JitAggregateTest, MaintainsCxlumnOrderInOutputTable) {
+  _aggregate->add_aggregate_cxlumn("a", JitTupleValue(DataType::String, false, 0), AggregateFunction::Count);
+  _aggregate->add_groupby_cxlumn("b", JitTupleValue(DataType::Double, false, 0));
+  _aggregate->add_aggregate_cxlumn("c", JitTupleValue(DataType::Long, true, 0), AggregateFunction::Min);
+  _aggregate->add_groupby_cxlumn("d", JitTupleValue(DataType::Int, true, 0));
 
   const auto output_table = _aggregate->create_output_table(Chunk::MAX_SIZE);
   const auto expected_cxlumn_names = std::vector<std::string>({"a", "b", "c", "d"});
   EXPECT_EQ(output_table->cxlumn_names(), expected_cxlumn_names);
 }
 
-// Check, that the aggregate operator combines multiple columns when grouping tuples.
-TEST_F(JitAggregateTest, GroupsByMultipleColumns) {
+// Check, that the aggregate operator combines multiple cxlumns when grouping tuples.
+TEST_F(JitAggregateTest, GroupsByMultipleCxlumns) {
   JitRuntimeContext context;
   context.tuple.resize(2);
 
   const auto value_a = JitTupleValue(DataType::Int, false, 0);
   const auto value_b = JitTupleValue(DataType::Int, false, 1);
 
-  _aggregate->add_groupby_column("a", value_a);
-  _aggregate->add_groupby_column("b", value_b);
+  _aggregate->add_groupby_cxlumn("a", value_a);
+  _aggregate->add_groupby_cxlumn("b", value_b);
 
   auto output_table = _aggregate->create_output_table(Chunk::MAX_SIZE);
   _aggregate->before_query(*output_table, context);
@@ -156,8 +156,8 @@ TEST_F(JitAggregateTest, GroupsNullValues) {
   const auto value_a = JitTupleValue(DataType::Int, true, 0);
   const auto value_b = JitTupleValue(DataType::Int, true, 1);
 
-  _aggregate->add_groupby_column("a", value_a);
-  _aggregate->add_groupby_column("b", value_b);
+  _aggregate->add_groupby_cxlumn("a", value_a);
+  _aggregate->add_groupby_cxlumn("b", value_b);
 
   auto output_table = _aggregate->create_output_table(Chunk::MAX_SIZE);
   _aggregate->before_query(*output_table, context);
@@ -188,12 +188,12 @@ TEST_F(JitAggregateTest, CorrectlyComputesAggregates) {
   const auto value_b = JitTupleValue(DataType::Int, true, 1);
 
   // We compute an aggregate of each type on the same input value.
-  _aggregate->add_groupby_column("groupby", value_a);
-  _aggregate->add_aggregate_column("count", value_b, AggregateFunction::Count);
-  _aggregate->add_aggregate_column("sum", value_b, AggregateFunction::Sum);
-  _aggregate->add_aggregate_column("max", value_b, AggregateFunction::Max);
-  _aggregate->add_aggregate_column("min", value_b, AggregateFunction::Min);
-  _aggregate->add_aggregate_column("avg", value_b, AggregateFunction::Avg);
+  _aggregate->add_groupby_cxlumn("groupby", value_a);
+  _aggregate->add_aggregate_cxlumn("count", value_b, AggregateFunction::Count);
+  _aggregate->add_aggregate_cxlumn("sum", value_b, AggregateFunction::Sum);
+  _aggregate->add_aggregate_cxlumn("max", value_b, AggregateFunction::Max);
+  _aggregate->add_aggregate_cxlumn("min", value_b, AggregateFunction::Min);
+  _aggregate->add_aggregate_cxlumn("avg", value_b, AggregateFunction::Avg);
 
   auto output_table = _aggregate->create_output_table(Chunk::MAX_SIZE);
   _aggregate->before_query(*output_table, context);
@@ -243,19 +243,19 @@ TEST_F(JitAggregateTest, CorrectlyComputesAggregates) {
                                 FloatComparisonMode::AbsoluteDifference));
 }
 
-// Check the computation of aggregate values when there are no groupby columns.
-TEST_F(JitAggregateTest, NoGroupByColumns) {
+// Check the computation of aggregate values when there are no groupby cxlumns.
+TEST_F(JitAggregateTest, NoGroupByCxlumns) {
   JitRuntimeContext context;
   context.tuple.resize(1);
 
   const auto value = JitTupleValue(DataType::Int, false, 0);
 
   // We compute an aggregate of each type.
-  _aggregate->add_aggregate_column("count", value, AggregateFunction::Count);
-  _aggregate->add_aggregate_column("sum", value, AggregateFunction::Sum);
-  _aggregate->add_aggregate_column("max", value, AggregateFunction::Max);
-  _aggregate->add_aggregate_column("min", value, AggregateFunction::Min);
-  _aggregate->add_aggregate_column("avg", value, AggregateFunction::Avg);
+  _aggregate->add_aggregate_cxlumn("count", value, AggregateFunction::Count);
+  _aggregate->add_aggregate_cxlumn("sum", value, AggregateFunction::Sum);
+  _aggregate->add_aggregate_cxlumn("max", value, AggregateFunction::Max);
+  _aggregate->add_aggregate_cxlumn("min", value, AggregateFunction::Min);
+  _aggregate->add_aggregate_cxlumn("avg", value, AggregateFunction::Avg);
 
   auto output_table = _aggregate->create_output_table(Chunk::MAX_SIZE);
   _aggregate->before_query(*output_table, context);
@@ -289,12 +289,12 @@ TEST_F(JitAggregateTest, EmptyInputTable) {
   const auto value_b = JitTupleValue(DataType::Int, true, 1);
 
   // We compute an aggregate of each type on the same input value.
-  _aggregate->add_groupby_column("groupby", value_a);
-  _aggregate->add_aggregate_column("count", value_b, AggregateFunction::Count);
-  _aggregate->add_aggregate_column("sum", value_b, AggregateFunction::Sum);
-  _aggregate->add_aggregate_column("max", value_b, AggregateFunction::Max);
-  _aggregate->add_aggregate_column("min", value_b, AggregateFunction::Min);
-  _aggregate->add_aggregate_column("avg", value_b, AggregateFunction::Avg);
+  _aggregate->add_groupby_cxlumn("groupby", value_a);
+  _aggregate->add_aggregate_cxlumn("count", value_b, AggregateFunction::Count);
+  _aggregate->add_aggregate_cxlumn("sum", value_b, AggregateFunction::Sum);
+  _aggregate->add_aggregate_cxlumn("max", value_b, AggregateFunction::Max);
+  _aggregate->add_aggregate_cxlumn("min", value_b, AggregateFunction::Min);
+  _aggregate->add_aggregate_cxlumn("avg", value_b, AggregateFunction::Avg);
 
   auto output_table = _aggregate->create_output_table(Chunk::MAX_SIZE);
   _aggregate->before_query(*output_table, context);
@@ -312,19 +312,19 @@ TEST_F(JitAggregateTest, EmptyInputTable) {
                                 FloatComparisonMode::AbsoluteDifference));
 }
 
-// Check the computation of aggregate values on an empty table with no groupby columns.
-TEST_F(JitAggregateTest, EmptyInputTableNoGroupbyColumns) {
+// Check the computation of aggregate values on an empty table with no groupby cxlumns.
+TEST_F(JitAggregateTest, EmptyInputTableNoGroupbyCxlumns) {
   JitRuntimeContext context;
   context.tuple.resize(1);
 
   const auto value = JitTupleValue(DataType::Int, false, 0);
 
   // We compute an aggregate of each type on the same input value.
-  _aggregate->add_aggregate_column("count", value, AggregateFunction::Count);
-  _aggregate->add_aggregate_column("sum", value, AggregateFunction::Sum);
-  _aggregate->add_aggregate_column("max", value, AggregateFunction::Max);
-  _aggregate->add_aggregate_column("min", value, AggregateFunction::Min);
-  _aggregate->add_aggregate_column("avg", value, AggregateFunction::Avg);
+  _aggregate->add_aggregate_cxlumn("count", value, AggregateFunction::Count);
+  _aggregate->add_aggregate_cxlumn("sum", value, AggregateFunction::Sum);
+  _aggregate->add_aggregate_cxlumn("max", value, AggregateFunction::Max);
+  _aggregate->add_aggregate_cxlumn("min", value, AggregateFunction::Min);
+  _aggregate->add_aggregate_cxlumn("avg", value, AggregateFunction::Avg);
 
   auto output_table = _aggregate->create_output_table(Chunk::MAX_SIZE);
   _aggregate->before_query(*output_table, context);

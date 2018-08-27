@@ -11,7 +11,7 @@
 #include "storage/dictionary_column.hpp"
 #include "storage/fixed_string_dictionary_column.hpp"
 #include "storage/frame_of_reference_segment.hpp"
-#include "storage/run_length_column.hpp"
+#include "storage/run_length_segment.hpp"
 
 #include "storage/encoding_type.hpp"
 
@@ -27,9 +27,9 @@ namespace hana = boost::hana;
  *
  * Note: Add your encoded column class here!
  */
-constexpr auto encoded_column_for_type = hana::make_map(
+constexpr auto encoded_segment_for_type = hana::make_map(
     hana::make_pair(enum_c<EncodingType, EncodingType::Dictionary>, template_c<DictionarySegment>),
-    hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, template_c<RunLengthColumn>),
+    hana::make_pair(enum_c<EncodingType, EncodingType::RunLength>, template_c<RunLengthSegment>),
     hana::make_pair(enum_c<EncodingType, EncodingType::FixedStringDictionary>, template_c<FixedStringDictionarySegment>),
     hana::make_pair(enum_c<EncodingType, EncodingType::FrameOfReference>, template_c<FrameOfReferenceSegment>));
 
@@ -41,11 +41,11 @@ constexpr auto encoded_column_for_type = hana::make_map(
  * @see resolve_cxlumn_type in resolve_type.hpp for info on usage
  */
 template <typename CxlumnDataType, typename Functor>
-void resolve_encoded_segment_type(const BaseEncodedColumn& column, const Functor& functor) {
+void resolve_encoded_segment_type(const BaseEncodedSegment& column, const Functor& functor) {
   // Iterate over all pairs in the map
-  hana::fold(encoded_column_for_type, false, [&](auto match_found, auto encoded_column_pair) {
-    const auto encoding_type_c = hana::first(encoded_column_pair);
-    const auto column_template_c = hana::second(encoded_column_pair);
+  hana::fold(encoded_segment_for_type, false, [&](auto match_found, auto encoded_segment_pair) {
+    const auto encoding_type_c = hana::first(encoded_segment_pair);
+    const auto column_template_c = hana::second(encoded_segment_pair);
 
     constexpr auto encoding_type = hana::value(encoding_type_c);
 

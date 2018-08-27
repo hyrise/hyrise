@@ -30,7 +30,7 @@ class BaseCompressedVector;
  */
 template <typename T, typename = std::enable_if_t<encoding_supports_data_type(
                           enum_c<EncodingType, EncodingType::FrameOfReference>, hana::type_c<T>)>>
-class FrameOfReferenceSegment : public BaseEncodedColumn {
+class FrameOfReferenceSegment : public BaseEncodedSegment {
  public:
   /**
    * The column is divided into fixed-size blocks.
@@ -65,7 +65,7 @@ class FrameOfReferenceSegment : public BaseEncodedColumn {
   /**@}*/
 
   /**
-   * @defgroup BaseEncodedColumn interface
+   * @defgroup BaseEncodedSegment interface
    * @{
    */
 

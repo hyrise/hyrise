@@ -23,7 +23,7 @@ namespace opossum {
 
 #define JIT_GROW_BY_ONE_CASE(r, types) \
   case JIT_GET_ENUM_VALUE(0, types):   \
-    return context.hashmap.columns[value.column_index()].grow_by_one<JIT_GET_DATA_TYPE(0, types)>(initial_value);
+    return context.hashmap.cxlumns[value.cxlumn_index()].grow_by_one<JIT_GET_DATA_TYPE(0, types)>(initial_value);
 
 void jit_not(const JitTupleValue& lhs, const JitTupleValue& result, JitRuntimeContext& context) {
   DebugAssert(lhs.data_type() == DataType::Bool && result.data_type() == DataType::Bool, "invalid type for operation");

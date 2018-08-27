@@ -40,11 +40,11 @@ void JitReadTuples::before_chunk(const Table& in_table, const Chunk& in_chunk, J
   // Create the column iterator for each input column and store them to the runtime context
   for (const auto& input_column : _input_columns) {
     const auto cxlumn_id = input_column.cxlumn_id;
-    const auto column = in_chunk.get_column(cxlumn_id);
+    const auto column = in_chunk.get_segment(cxlumn_id);
     const auto is_nullable = in_table.column_is_nullable(cxlumn_id);
-    resolve_data_and_cxlumn_type(*column, [&](auto type, auto& typed_column) {
+    resolve_data_and_cxlumn_type(*column, [&](auto type, auto& typed_segment) {
       using CxlumnDataType = typename decltype(type)::type;
-      create_iterable_from_column<CxlumnDataType>(typed_column).with_iterators([&](auto it, auto end) {
+      create_iterable_from_column<CxlumnDataType>(typed_segment).with_iterators([&](auto it, auto end) {
         using IteratorType = decltype(it);
         if (is_nullable) {
           context.inputs.push_back(
@@ -68,7 +68,7 @@ void JitReadTuples::execute(JitRuntimeContext& context) const {
   }
 }
 
-JitTupleValue JitReadTuples::add_input_column(const DataType data_type, const bool is_nullable,
+JitTupleValue JitReadTuples::add_input_cxlumn(const DataType data_type, const bool is_nullable,
                                               const CxlumnID cxlumn_id) {
   // There is no need to add the same input column twice.
   // If the same column is requested for the second time, we return the JitTupleValue created previously.
@@ -102,7 +102,7 @@ std::vector<JitInputColumn> JitReadTuples::input_columns() const { return _input
 
 std::vector<JitInputLiteral> JitReadTuples::input_literals() const { return _input_literals; }
 
-std::optional<CxlumnID> JitReadTuples::find_input_column(const JitTupleValue& tuple_value) const {
+std::optional<CxlumnID> JitReadTuples::find_input_cxlumn(const JitTupleValue& tuple_value) const {
   const auto it = std::find_if(_input_columns.begin(), _input_columns.end(), [&tuple_value](const auto& input_column) {
     return input_column.tuple_value == tuple_value;
   });

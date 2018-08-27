@@ -84,8 +84,8 @@ void SQLiteWrapper::create_table_from_tbl(const std::string& file, const std::st
 void SQLiteWrapper::create_table(const Table& table, const std::string& table_name) {
   std::vector<std::string> col_types;
 
-  for (const auto& column_definition : table.cxlumn_definitions()) {
-    switch (column_definition.data_type) {
+  for (const auto& cxlumn_definition : table.cxlumn_definitions()) {
+    switch (cxlumn_definition.data_type) {
       case DataType::Int:
       case DataType::Long:
         col_types.push_back("INT");
@@ -124,7 +124,7 @@ void SQLiteWrapper::create_table(const Table& table, const std::string& table_na
 
       insert_query << "INSERT INTO " << table_name << " VALUES (";
       for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < table.cxlumn_count(); cxlumn_id++) {
-        const auto column = chunk->get_column(cxlumn_id);
+        const auto column = chunk->get_segment(cxlumn_id);
         const auto value = (*column)[chunk_offset];
 
         if (col_types[cxlumn_id] == "TEXT" && !variant_is_null(value)) {

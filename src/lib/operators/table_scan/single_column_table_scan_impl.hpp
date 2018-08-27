@@ -28,14 +28,14 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
 
   std::shared_ptr<PosList> scan_chunk(ChunkID) override;
 
-  void handle_column(const BaseValueSegment& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
+  void handle_segment(const BaseValueSegment& base_segment, std::shared_ptr<SegmentVisitorContext> base_context) override;
 
-  void handle_column(const BaseDictionarySegment& base_column,
-                     std::shared_ptr<ColumnVisitorContext> base_context) override;
+  void handle_segment(const BaseDictionarySegment& base_segment,
+                     std::shared_ptr<SegmentVisitorContext> base_context) override;
 
-  void handle_column(const BaseEncodedColumn& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
+  void handle_segment(const BaseEncodedSegment& base_segment, std::shared_ptr<SegmentVisitorContext> base_context) override;
 
-  using BaseSingleColumnTableScanImpl::handle_column;
+  using BaseSingleColumnTableScanImpl::handle_segment;
 
  private:
   /**
@@ -50,7 +50,7 @@ class SingleColumnTableScanImpl : public BaseSingleColumnTableScanImpl {
   bool _right_value_matches_none(const BaseDictionarySegment& column, const ValueID search_value_id) const;
 
   template <typename Functor>
-  void _with_operator_for_dict_column_scan(const PredicateCondition predicate_condition, const Functor& func) const {
+  void _with_operator_for_dict_segment_scan(const PredicateCondition predicate_condition, const Functor& func) const {
     switch (predicate_condition) {
       case PredicateCondition::Equals:
         func(std::equal_to<void>{});

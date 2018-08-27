@@ -7,7 +7,7 @@
 #include "base_table_scan_impl.hpp"
 
 #include "storage/abstract_column_visitor.hpp"
-#include "storage/column_iterables/chunk_offset_mapping.hpp"
+#include "storage/segment_iterables/chunk_offset_mapping.hpp"
 
 #include "types.hpp"
 
@@ -20,7 +20,7 @@ class AttributeVectorIterable;
 /**
  * @brief The base class of table scan impls that scan a single column
  *
- * Resolves reference columns. The position list of reference columns
+ * Resolves reference segments. The position list of reference segments
  * is split by the referenced columns and then each is visited separately.
  */
 class BaseSingleColumnTableScanImpl : public BaseTableScanImpl, public AbstractColumnVisitor {
@@ -30,13 +30,13 @@ class BaseSingleColumnTableScanImpl : public BaseTableScanImpl, public AbstractC
 
   std::shared_ptr<PosList> scan_chunk(ChunkID chunk_id) override;
 
-  void handle_column(const ReferenceSegment& column, std::shared_ptr<ColumnVisitorContext> base_context) override;
+  void handle_segment(const ReferenceSegment& column, std::shared_ptr<SegmentVisitorContext> base_context) override;
 
  protected:
   /**
    * @brief the context used for the columns’ visitor pattern
    */
-  struct Context : public ColumnVisitorContext {
+  struct Context : public SegmentVisitorContext {
     Context(const ChunkID chunk_id, PosList& matches_out) : _chunk_id{chunk_id}, _matches_out{matches_out} {}
 
     Context(const ChunkID chunk_id, PosList& matches_out, std::unique_ptr<ChunkOffsetsList> mapped_chunk_offsets)

@@ -51,7 +51,7 @@ class AbstractBenchmarkTableGenerator {
    * @param generator_function  a lambda function to generate a vector of values for this column
    */
   template <typename T>
-  void add_column(std::vector<opossum::ChunkSegments>& columns_by_chunk,
+  void add_cxlumn(std::vector<opossum::ChunkSegments>& columns_by_chunk,
                   opossum::TableCxlumnDefinitions& cxlumn_definitions, std::string name,
                   std::shared_ptr<std::vector<size_t>> cardinalities,
                   const std::function<std::vector<T>(std::vector<size_t>)>& generator_function) {
@@ -153,13 +153,13 @@ class AbstractBenchmarkTableGenerator {
    * @param generator_function  a lambda function to generate a value for this column
    */
   template <typename T>
-  void add_column(std::vector<opossum::ChunkSegments>& columns_by_chunk,
+  void add_cxlumn(std::vector<opossum::ChunkSegments>& columns_by_chunk,
                   opossum::TableCxlumnDefinitions& cxlumn_definitions, std::string name,
                   std::shared_ptr<std::vector<size_t>> cardinalities,
                   const std::function<T(std::vector<size_t>)>& generator_function) {
     const std::function<std::vector<T>(std::vector<size_t>)> wrapped_generator_function =
         [generator_function](std::vector<size_t> indices) { return std::vector<T>({generator_function(indices)}); };
-    add_column(columns_by_chunk, cxlumn_definitions, name, cardinalities, wrapped_generator_function);
+    add_cxlumn(columns_by_chunk, cxlumn_definitions, name, cardinalities, wrapped_generator_function);
   }
 };
 }  // namespace opossum

@@ -19,7 +19,7 @@ namespace opossum {
  * declared using `final`.
  */
 template <typename T>
-class AbstractColumnIteratorValue {
+class AbstractSegmentIteratorValue {
  public:
   using Type = T;
 
@@ -30,7 +30,7 @@ class AbstractColumnIteratorValue {
   /**
    * @brief Returns the chunk offset of the current value.
    *
-   * The chunk offset can point either into a reference column,
+   * The chunk offset can point either into a reference segment,
    * if returned by a point-access iterator, or into an actual data column.
    */
   virtual const ChunkOffset& chunk_offset() const = 0;
@@ -42,11 +42,11 @@ class AbstractColumnIteratorValue {
  * Used in most column iterators.
  */
 template <typename T>
-class ColumnIteratorValue : public AbstractColumnIteratorValue<T> {
+class SegmentIteratorValue : public AbstractSegmentIteratorValue<T> {
  public:
   static constexpr bool Nullable = true;
 
-  ColumnIteratorValue(const T& value, const bool null_value, const ChunkOffset& chunk_offset)
+  SegmentIteratorValue(const T& value, const bool null_value, const ChunkOffset& chunk_offset)
       : _value{value}, _null_value{null_value}, _chunk_offset{chunk_offset} {}
 
   const T& value() const final { return _value; }
@@ -65,11 +65,11 @@ class ColumnIteratorValue : public AbstractColumnIteratorValue<T> {
  * Used when an underlying column (or data structure) cannot be null.
  */
 template <typename T>
-class NonNullColumnIteratorValue : public AbstractColumnIteratorValue<T> {
+class NonNullSegmentIteratorValue : public AbstractSegmentIteratorValue<T> {
  public:
   static constexpr bool Nullable = false;
 
-  NonNullColumnIteratorValue(const T& value, const ChunkOffset& chunk_offset)
+  NonNullSegmentIteratorValue(const T& value, const ChunkOffset& chunk_offset)
       : _value{value}, _chunk_offset{chunk_offset} {}
 
   const T& value() const final { return _value; }
@@ -88,11 +88,11 @@ class NonNullColumnIteratorValue : public AbstractColumnIteratorValue<T> {
  *
  * @see NullValueVectorIterable
  */
-class ColumnIteratorNullValue : public AbstractColumnIteratorValue<boost::blank> {
+class SegmentIteratorNullValue : public AbstractSegmentIteratorValue<boost::blank> {
  public:
   static constexpr bool Nullable = true;
 
-  ColumnIteratorNullValue(const bool null_value, const ChunkOffset& chunk_offset)
+  SegmentIteratorNullValue(const bool null_value, const ChunkOffset& chunk_offset)
       : _null_value{null_value}, _chunk_offset{chunk_offset} {}
 
   const boost::blank& value() const final { return _blank; }

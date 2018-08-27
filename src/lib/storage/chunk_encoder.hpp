@@ -17,17 +17,17 @@ namespace opossum {
 class Chunk;
 class Table;
 
-struct ColumnEncodingSpec {
-  constexpr ColumnEncodingSpec() : encoding_type{EncodingType::Dictionary} {}
-  constexpr ColumnEncodingSpec(EncodingType encoding_type_) : encoding_type{encoding_type_} {}
-  constexpr ColumnEncodingSpec(EncodingType encoding_type_, VectorCompressionType vector_compression_type_)
+struct SegmentEncodingSpec {
+  constexpr SegmentEncodingSpec() : encoding_type{EncodingType::Dictionary} {}
+  constexpr SegmentEncodingSpec(EncodingType encoding_type_) : encoding_type{encoding_type_} {}
+  constexpr SegmentEncodingSpec(EncodingType encoding_type_, VectorCompressionType vector_compression_type_)
       : encoding_type{encoding_type_}, vector_compression_type{vector_compression_type_} {}
 
   EncodingType encoding_type;
   std::optional<VectorCompressionType> vector_compression_type;
 };
 
-using ChunkEncodingSpec = std::vector<ColumnEncodingSpec>;
+using ChunkEncodingSpec = std::vector<SegmentEncodingSpec>;
 
 /**
  * @brief Interface for encoding chunks
@@ -56,7 +56,7 @@ class ChunkEncoder {
    * @brief Encodes a chunk using the same column-encoding spec
    */
   static void encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::vector<DataType>& data_types,
-                           const ColumnEncodingSpec& column_encoding_spec = {});
+                           const SegmentEncodingSpec& segment_encoding_spec = {});
 
   /**
    * @brief Encodes the specified chunks of the passed table
@@ -70,7 +70,7 @@ class ChunkEncoder {
    * @brief Encodes the specified chunks of the passed table using a single column-encoding spec
    */
   static void encode_chunks(const std::shared_ptr<Table>& table, const std::vector<ChunkID>& chunk_ids,
-                            const ColumnEncodingSpec& column_encoding_spec = {});
+                            const SegmentEncodingSpec& segment_encoding_spec = {});
 
   /**
    * @brief Encodes an entire table
@@ -91,7 +91,7 @@ class ChunkEncoder {
    * @brief Encodes an entire table using a single column-encoding spec
    */
   static void encode_all_chunks(const std::shared_ptr<Table>& table,
-                                const ColumnEncodingSpec& column_encoding_spec = {});
+                                const SegmentEncodingSpec& segment_encoding_spec = {});
 };
 
 }  // namespace opossum

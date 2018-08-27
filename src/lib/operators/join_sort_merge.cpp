@@ -581,18 +581,18 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   /**
   * Adds the columns from an input table to the output table
   **/
-  void _add_output_columns(ChunkSegments& output_columns, std::shared_ptr<const Table> input_table,
+  void _add_output_cxlumns(ChunkSegments& output_columns, std::shared_ptr<const Table> input_table,
                            std::shared_ptr<const PosList> pos_list) {
     auto cxlumn_count = input_table->cxlumn_count();
     for (CxlumnID cxlumn_id{0}; cxlumn_id < cxlumn_count; ++cxlumn_id) {
       // Add the column data (in the form of a poslist)
       if (input_table->type() == TableType::References) {
-        // Create a pos_list referencing the original column instead of the reference column
+        // Create a pos_list referencing the original column instead of the reference segment
         auto new_pos_list = _dereference_pos_list(input_table, cxlumn_id, pos_list);
 
         if (input_table->chunk_count() > 0) {
-          const auto base_column = input_table->get_chunk(ChunkID{0})->get_column(cxlumn_id);
-          const auto ref_segment = std::dynamic_pointer_cast<const ReferenceSegment>(base_column);
+          const auto base_segment = input_table->get_chunk(ChunkID{0})->get_segment(cxlumn_id);
+          const auto ref_segment = std::dynamic_pointer_cast<const ReferenceSegment>(base_segment);
 
           auto new_ref_segment = std::make_shared<ReferenceSegment>(ref_segment->referenced_table(),
                                                                   ref_segment->referenced_cxlumn_id(), new_pos_list);
@@ -613,15 +613,15 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
   }
 
   /**
-  * Turns a pos list that is pointing to reference column entries into a pos list pointing to the original table.
-  * This is done because there should not be any reference columns referencing reference columns.
+  * Turns a pos list that is pointing to reference segment entries into a pos list pointing to the original table.
+  * This is done because there should not be any reference segments referencing reference segments.
   **/
   std::shared_ptr<PosList> _dereference_pos_list(const std::shared_ptr<const Table>& input_table, CxlumnID cxlumn_id,
                                                  const std::shared_ptr<const PosList>& pos_list) {
     // Get all the input pos lists so that we only have to pointer cast the columns once
     auto input_pos_lists = std::vector<std::shared_ptr<const PosList>>();
     for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); ++chunk_id) {
-      auto b_column = input_table->get_chunk(chunk_id)->get_column(cxlumn_id);
+      auto b_column = input_table->get_chunk(chunk_id)->get_segment(cxlumn_id);
       auto r_column = std::dynamic_pointer_cast<const ReferenceSegment>(b_column);
       input_pos_lists.push_back(r_column->pos_list());
     }
@@ -680,8 +680,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractJoinOperatorImpl {
 
     // Add the columns from both input tables to the output
     ChunkSegments output_columns;
-    _add_output_columns(output_columns, _sort_merge_join.input_table_left(), output_left);
-    _add_output_columns(output_columns, _sort_merge_join.input_table_right(), output_right);
+    _add_output_cxlumns(output_columns, _sort_merge_join.input_table_left(), output_left);
+    _add_output_cxlumns(output_columns, _sort_merge_join.input_table_right(), output_right);
 
     // Build the output_table with one Chunk
     auto output_cxlumn_definitions = concatenated(_sort_merge_join.input_table_left()->cxlumn_definitions(),

@@ -33,7 +33,7 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
       // iterating over all columns of the current chunk
       for (CxlumnID cxlumn_id{0}; cxlumn_id < input->cxlumn_count(); ++cxlumn_id) {
         // While we don't modify the column, we need to get a non-const pointer so that we can put it into the chunk
-        output_columns.push_back(input->get_chunk(in_chunk_id)->get_column(cxlumn_id));
+        output_columns.push_back(input->get_chunk(in_chunk_id)->get_segment(cxlumn_id));
       }
 
       // adding newly filled chunk to the output table

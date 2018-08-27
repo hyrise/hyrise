@@ -56,12 +56,12 @@ std::shared_ptr<const Table> Limit::_on_execute() {
     size_t output_chunk_row_count = std::min<size_t>(input_chunk->size(), num_rows - i);
 
     for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table->cxlumn_count(); cxlumn_id++) {
-      const auto input_base_column = input_chunk->get_column(cxlumn_id);
+      const auto input_base_segment = input_chunk->get_segment(cxlumn_id);
       auto output_pos_list = std::make_shared<PosList>(output_chunk_row_count);
       std::shared_ptr<const Table> referenced_table;
       CxlumnID output_cxlumn_id = cxlumn_id;
 
-      if (auto input_ref_segment = std::dynamic_pointer_cast<const ReferenceSegment>(input_base_column)) {
+      if (auto input_ref_segment = std::dynamic_pointer_cast<const ReferenceSegment>(input_base_segment)) {
         output_cxlumn_id = input_ref_segment->referenced_cxlumn_id();
         referenced_table = input_ref_segment->referenced_table();
         // TODO(all): optimize using whole chunk whenever possible

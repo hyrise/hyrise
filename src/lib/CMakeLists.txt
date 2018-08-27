@@ -347,9 +347,9 @@ set(
     sql/sql_identifier_resolver_proxy.hpp
     sql/sql_translator.cpp
     sql/sql_translator.hpp
-    storage/base_column.cpp
-    storage/base_column_encoder.hpp
-    storage/base_column.hpp
+    storage/base_segment.cpp
+    storage/base_segment_encoder.hpp
+    storage/base_segment.hpp
     storage/base_dictionary_column.hpp
     storage/base_encoded_segment.cpp
     storage/base_encoded_segment.hpp
@@ -360,21 +360,21 @@ set(
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
     storage/chunk.hpp
-    storage/column_encoding_utils.cpp
-    storage/column_encoding_utils.hpp
-    storage/column_iterables/any_column_iterable.hpp
-    storage/column_iterables/any_column_iterator.hpp
-    storage/column_iterables/base_column_iterators.hpp
-    storage/column_iterables/chunk_offset_mapping.cpp
-    storage/column_iterables/chunk_offset_mapping.hpp
-    storage/column_iterables/column_iterator_values.hpp
-    storage/column_iterables/create_iterable_from_attribute_vector.hpp
-    storage/column_iterables.hpp
+    storage/segment_encoding_utils.cpp
+    storage/segment_encoding_utils.hpp
+    storage/segment_iterables/any_segment_iterable.hpp
+    storage/segment_iterables/any_segment_iterator.hpp
+    storage/segment_iterables/base_segment_iterators.hpp
+    storage/segment_iterables/chunk_offset_mapping.cpp
+    storage/segment_iterables/chunk_offset_mapping.hpp
+    storage/segment_iterables/segment_iterator_values.hpp
+    storage/segment_iterables/create_iterable_from_attribute_vector.hpp
+    storage/segment_iterables.hpp
     storage/abstract_column_visitor.hpp
     storage/create_iterable_from_column.hpp
     storage/dictionary_column/attribute_vector_iterable.hpp
     storage/dictionary_column.cpp
-    storage/dictionary_column/dictionary_column_iterable.hpp
+    storage/dictionary_column/dictionary_segment_iterable.hpp
     storage/dictionary_column/dictionary_encoder.hpp
     storage/dictionary_column.hpp
     storage/encoding_type.hpp
@@ -424,16 +424,16 @@ set(
     storage/reference_segment.hpp
     storage/reference_segment/reference_segment_iterable.hpp
     storage/resolve_encoded_segment_type.hpp
-    storage/run_length_column.cpp
-    storage/run_length_column.hpp
-    storage/run_length_column/run_length_column_iterable.hpp
-    storage/run_length_column/run_length_encoder.hpp
+    storage/run_length_segment.cpp
+    storage/run_length_segment.hpp
+    storage/run_length_segment/run_length_segment_iterable.hpp
+    storage/run_length_segment/run_length_encoder.hpp
     storage/lqp_view.cpp
     storage/lqp_view.hpp
     storage/storage_manager.cpp
     storage/storage_manager.hpp
-    storage/table_column_definition.cpp
-    storage/table_column_definition.hpp
+    storage/table_cxlumn_definition.cpp
+    storage/table_cxlumn_definition.hpp
     storage/table.cpp
     storage/table.hpp
     storage/value_segment.cpp

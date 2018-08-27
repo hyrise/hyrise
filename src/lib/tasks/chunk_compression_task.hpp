@@ -13,12 +13,12 @@ class Chunk;
  * @brief Compresses a chunk of a table using the default encoding
  *
  * The task compresses a chunk by sequentially compressing columns.
- * From each value column, a dictionary column is created that replaces the
+ * From each value segment, a dictionary column is created that replaces the
  * uncompressed column. The exchange is done atomically. Since this can
  * happen during simultaneous access by transactions, operators need to be
  * designed such that they are aware that column types might change from
  * ValueSegment<T> to DictionarySegment<T> during execution. Shared pointers
- * ensure that existing value columns remain valid.
+ * ensure that existing value segments remain valid.
  *
  * Exchanging columns does not interfere with the Delete operator because
  * it does not touch the columns. However, inserting records while simultaneously

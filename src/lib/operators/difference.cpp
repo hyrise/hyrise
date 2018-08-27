@@ -45,14 +45,14 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     // creating a temporary row representation with strings to be filled column wise
     auto string_row_vector = std::vector<std::stringstream>(chunk->size());
     for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table_right()->cxlumn_count(); cxlumn_id++) {
-      const auto base_column = chunk->get_column(cxlumn_id);
+      const auto base_segment = chunk->get_segment(cxlumn_id);
 
       // filling the row vector with all values from this column
       auto row_string_buffer = std::stringstream{};
-      for (ChunkOffset chunk_offset = 0; chunk_offset < base_column->size(); chunk_offset++) {
+      for (ChunkOffset chunk_offset = 0; chunk_offset < base_segment->size(); chunk_offset++) {
         // Previously we called a virtual method of the BaseSegment interface here.
         // It was replaced with a call to the subscript operator as that is equally slow.
-        const auto value = (*base_column)[chunk_offset];
+        const auto value = (*base_segment)[chunk_offset];
         _append_string_representation(string_row_vector[chunk_offset], value);
       }
     }
@@ -74,16 +74,16 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     std::unordered_map<std::shared_ptr<const PosList>, std::shared_ptr<PosList>> out_pos_list_map;
 
     for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table_left()->cxlumn_count(); cxlumn_id++) {
-      const auto base_column = in_chunk->get_column(cxlumn_id);
-      // temporary variables needed to create the reference column
+      const auto base_segment = in_chunk->get_segment(cxlumn_id);
+      // temporary variables needed to create the reference segment
       const auto referenced_column = std::dynamic_pointer_cast<const ReferenceSegment>(
-          input_table_left()->get_chunk(chunk_id)->get_column(cxlumn_id));
+          input_table_left()->get_chunk(chunk_id)->get_segment(cxlumn_id));
       auto out_cxlumn_id = cxlumn_id;
       auto out_referenced_table = input_table_left();
       std::shared_ptr<const PosList> in_pos_list;
 
       if (referenced_column) {
-        // if the input column was a reference column then the output column must reference the same values/objects
+        // if the input column was a reference segment then the output column must reference the same values/objects
         out_cxlumn_id = referenced_column->referenced_cxlumn_id();
         out_referenced_table = referenced_column->referenced_table();
         in_pos_list = referenced_column->pos_list();
@@ -106,11 +106,11 @@ std::shared_ptr<const Table> Difference::_on_execute() {
       // creating string representation off the row at chunk_offset
       auto row_string_buffer = std::stringstream{};
       for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table_left()->cxlumn_count(); cxlumn_id++) {
-        const auto base_column = in_chunk->get_column(cxlumn_id);
+        const auto base_segment = in_chunk->get_segment(cxlumn_id);
 
         // Previously a virtual method of the BaseSegment interface was called here.
         // It was replaced with a call to the subscript operator as that is equally slow.
-        const auto value = (*base_column)[chunk_offset];
+        const auto value = (*base_segment)[chunk_offset];
         _append_string_representation(row_string_buffer, value);
       }
       const auto row_string = row_string_buffer.str();

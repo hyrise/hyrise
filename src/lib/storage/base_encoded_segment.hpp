@@ -1,6 +1,6 @@
 #pragma once
 
-#include "storage/base_column.hpp"
+#include "storage/base_segment.hpp"
 #include "storage/encoding_type.hpp"
 
 namespace opossum {
@@ -13,7 +13,7 @@ enum class CompressedVectorType : uint8_t;
  * Since encoded columns are immutable, all member variables
  * of sub-classes should be declared const.
  */
-class BaseEncodedColumn : public BaseSegment {
+class BaseEncodedSegment : public BaseSegment {
  public:
   using BaseSegment::BaseSegment;
 

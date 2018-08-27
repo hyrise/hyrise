@@ -2,12 +2,12 @@
 
 #include <utility>
 
-#include "storage/column_iterables.hpp"
+#include "storage/segment_iterables.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace opossum {
 
-class AttributeVectorIterable : public PointAccessibleColumnIterable<AttributeVectorIterable> {
+class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeVectorIterable> {
  public:
   explicit AttributeVectorIterable(const BaseCompressedVector& attribute_vector, const ValueID null_value_id)
       : _attribute_vector{attribute_vector}, _null_value_id{null_value_id} {}
@@ -42,7 +42,7 @@ class AttributeVectorIterable : public PointAccessibleColumnIterable<AttributeVe
 
  private:
   template <typename ZsIteratorType>
-  class Iterator : public BaseSegmentIterator<Iterator<ZsIteratorType>, ColumnIteratorValue<ValueID>> {
+  class Iterator : public BaseSegmentIterator<Iterator<ZsIteratorType>, SegmentIteratorValue<ValueID>> {
    public:
     explicit Iterator(const ValueID null_value_id, ZsIteratorType attribute_it, ChunkOffset chunk_offset)
         : _null_value_id{null_value_id}, _attribute_it{attribute_it}, _chunk_offset{chunk_offset} {}
@@ -57,7 +57,7 @@ class AttributeVectorIterable : public PointAccessibleColumnIterable<AttributeVe
 
     bool equal(const Iterator& other) const { return _attribute_it == other._attribute_it; }
 
-    ColumnIteratorValue<ValueID> dereference() const {
+    SegmentIteratorValue<ValueID> dereference() const {
       const auto value_id = static_cast<ValueID>(*_attribute_it);
       const auto is_null = (value_id == _null_value_id);
 
@@ -72,19 +72,19 @@ class AttributeVectorIterable : public PointAccessibleColumnIterable<AttributeVe
 
   template <typename ZsDecoderType>
   class PointAccessIterator
-      : public BasePointAccessColumnIterator<PointAccessIterator<ZsDecoderType>, ColumnIteratorValue<ValueID>> {
+      : public BasePointAccessSegmentIterator<PointAccessIterator<ZsDecoderType>, SegmentIteratorValue<ValueID>> {
    public:
     PointAccessIterator(const ValueID null_value_id, ZsDecoderType& attribute_decoder,
                         ChunkOffsetsIterator chunk_offsets_it)
-        : BasePointAccessColumnIterator<PointAccessIterator<ZsDecoderType>,
-                                        ColumnIteratorValue<ValueID>>{chunk_offsets_it},
+        : BasePointAccessSegmentIterator<PointAccessIterator<ZsDecoderType>,
+                                        SegmentIteratorValue<ValueID>>{chunk_offsets_it},
           _null_value_id{null_value_id},
           _attribute_decoder{attribute_decoder} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-    ColumnIteratorValue<ValueID> dereference() const {
+    SegmentIteratorValue<ValueID> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
       const auto value_id = static_cast<ValueID>(_attribute_decoder.get(chunk_offsets.into_referenced));

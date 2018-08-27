@@ -9,7 +9,7 @@
 
 #include "abstract_read_only_operator.hpp"
 #include "import_export/binary.hpp"
-#include "storage/base_column.hpp"
+#include "storage/base_segment.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/value_segment.hpp"
 

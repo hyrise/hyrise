@@ -107,9 +107,9 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
   _target_table = StorageManager::get().get_table(_target_table_name);
 
   // These TypedColumnProcessors kind of retrieve the template parameter of the columns.
-  auto typed_column_processors = std::vector<std::unique_ptr<AbstractTypedColumnProcessor>>();
+  auto typed_segment_processors = std::vector<std::unique_ptr<AbstractTypedColumnProcessor>>();
   for (const auto& cxlumn_type : _target_table->cxlumn_data_types()) {
-    typed_column_processors.emplace_back(
+    typed_segment_processors.emplace_back(
         make_unique_by_data_type<AbstractTypedColumnProcessor, TypedColumnProcessor>(cxlumn_type));
   }
 
@@ -144,7 +144,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       // Resize current chunk to full size.
       auto old_size = current_chunk->size();
       for (CxlumnID cxlumn_id{0}; cxlumn_id < current_chunk->cxlumn_count(); ++cxlumn_id) {
-        typed_column_processors[cxlumn_id]->resize_vector(current_chunk->get_column(cxlumn_id),
+        typed_segment_processors[cxlumn_id]->resize_vector(current_chunk->get_segment(cxlumn_id),
                                                           old_size + rows_to_insert_this_loop);
       }
 
@@ -179,9 +179,9 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       const auto source_chunk = input_table_left()->get_chunk(source_chunk_id);
       auto num_to_insert = std::min(source_chunk->size() - source_chunk_start_index, still_to_insert);
       for (CxlumnID cxlumn_id{0}; cxlumn_id < target_chunk->cxlumn_count(); ++cxlumn_id) {
-        const auto& source_column = source_chunk->get_column(cxlumn_id);
-        typed_column_processors[cxlumn_id]->copy_data(source_column, source_chunk_start_index,
-                                                      target_chunk->get_column(cxlumn_id), target_start_index,
+        const auto& source_column = source_chunk->get_segment(cxlumn_id);
+        typed_segment_processors[cxlumn_id]->copy_data(source_column, source_chunk_start_index,
+                                                      target_chunk->get_segment(cxlumn_id), target_start_index,
                                                       num_to_insert);
       }
       still_to_insert -= num_to_insert;

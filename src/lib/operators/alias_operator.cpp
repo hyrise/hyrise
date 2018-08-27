@@ -41,10 +41,10 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
   output_cxlumn_definitions.reserve(input_table_left()->cxlumn_count());
 
   for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < input_table_left()->cxlumn_count(); ++cxlumn_id) {
-    const auto& input_column_definition = input_table_left()->cxlumn_definitions()[_cxlumn_ids[cxlumn_id]];
+    const auto& input_cxlumn_definition = input_table_left()->cxlumn_definitions()[_cxlumn_ids[cxlumn_id]];
 
-    output_cxlumn_definitions.emplace_back(_aliases[cxlumn_id], input_column_definition.data_type,
-                                           input_column_definition.nullable);
+    output_cxlumn_definitions.emplace_back(_aliases[cxlumn_id], input_cxlumn_definition.data_type,
+                                           input_cxlumn_definition.nullable);
   }
 
   /**
@@ -61,7 +61,7 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
     output_columns.reserve(input_table_left()->cxlumn_count());
 
     for (const auto& cxlumn_id : _cxlumn_ids) {
-      output_columns.emplace_back(input_chunk->get_column(cxlumn_id));
+      output_columns.emplace_back(input_chunk->get_segment(cxlumn_id));
     }
 
     output_table->append_chunk(output_columns, input_chunk->get_allocator(), input_chunk->access_counter());

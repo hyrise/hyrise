@@ -25,10 +25,10 @@ using TimePoint = std::chrono::high_resolution_clock::time_point;
 using NamedQuery = std::pair<std::string, std::string>;
 using NamedQueries = std::vector<NamedQuery>;
 
-using DataTypeEncodingMapping = std::unordered_map<DataType, ColumnEncodingSpec>;
+using DataTypeEncodingMapping = std::unordered_map<DataType, SegmentEncodingSpec>;
 
 // Map<TABLE_NAME, Map<cxlumn_name, ColumnEncoding>>
-using TableColumnEncodingMapping = std::unordered_map<std::string, std::unordered_map<std::string, ColumnEncodingSpec>>;
+using TableColumnEncodingMapping = std::unordered_map<std::string, std::unordered_map<std::string, SegmentEncodingSpec>>;
 
 /**
  * @return std::cout if `verbose` is true, otherwise returns a discarding stream
@@ -69,17 +69,17 @@ struct BenchmarkState {
 // View EncodingConfig::description to see format of encoding JSON
 struct EncodingConfig {
   EncodingConfig();
-  EncodingConfig(ColumnEncodingSpec default_encoding_spec, DataTypeEncodingMapping type_encoding_mapping,
+  EncodingConfig(SegmentEncodingSpec default_encoding_spec, DataTypeEncodingMapping type_encoding_mapping,
                  TableColumnEncodingMapping encoding_mapping);
-  explicit EncodingConfig(ColumnEncodingSpec default_encoding_spec);
+  explicit EncodingConfig(SegmentEncodingSpec default_encoding_spec);
 
   static EncodingConfig unencoded();
 
-  const ColumnEncodingSpec default_encoding_spec;
+  const SegmentEncodingSpec default_encoding_spec;
   const DataTypeEncodingMapping type_encoding_mapping;
   const TableColumnEncodingMapping custom_encoding_mapping;
 
-  static ColumnEncodingSpec encoding_spec_from_strings(const std::string& encoding_str,
+  static SegmentEncodingSpec encoding_spec_from_strings(const std::string& encoding_str,
                                                        const std::string& compression_str);
   static EncodingType encoding_string_to_type(const std::string& encoding_str);
   static std::optional<VectorCompressionType> compression_string_to_type(const std::string& compression_str);

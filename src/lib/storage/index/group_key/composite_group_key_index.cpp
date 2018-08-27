@@ -36,11 +36,11 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
   // cast and check columns
   _indexed_columns.reserve(indexed_columns.size());
   for (const auto& column : indexed_columns) {
-    auto dict_column = std::dynamic_pointer_cast<const BaseDictionarySegment>(column);
-    Assert(static_cast<bool>(dict_column), "CompositeGroupKeyIndex only works with dictionary columns.");
-    Assert(is_fixed_size_byte_aligned(dict_column->compressed_vector_type()),
+    auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(column);
+    Assert(static_cast<bool>(dict_segment), "CompositeGroupKeyIndex only works with dictionary columns.");
+    Assert(is_fixed_size_byte_aligned(dict_segment->compressed_vector_type()),
            "CompositeGroupKeyIndex only works with fixed-size byte-aligned compressed attribute vectors.");
-    _indexed_columns.emplace_back(dict_column);
+    _indexed_columns.emplace_back(dict_segment);
   }
 
   // retrieve amount of memory consumed by each concatenated key

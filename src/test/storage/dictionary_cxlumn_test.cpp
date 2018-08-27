@@ -6,7 +6,7 @@
 #include "gtest/gtest.h"
 
 #include "storage/chunk_encoder.hpp"
-#include "storage/column_encoding_utils.hpp"
+#include "storage/segment_encoding_utils.hpp"
 #include "storage/dictionary_column.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
@@ -29,16 +29,16 @@ TEST_F(StorageDictionarySegmentTest, CompressColumnInt) {
   vc_int->append(3);
 
   auto col = encode_column(EncodingType::Dictionary, DataType::Int, vc_int);
-  auto dict_col = std::dynamic_pointer_cast<DictionarySegment<int>>(col);
+  auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(col);
 
   // Test attribute_vector size
-  EXPECT_EQ(dict_col->size(), 6u);
+  EXPECT_EQ(dict_segment->size(), 6u);
 
   // Test dictionary size (uniqueness)
-  EXPECT_EQ(dict_col->unique_values_count(), 3u);
+  EXPECT_EQ(dict_segment->unique_values_count(), 3u);
 
   // Test sorting
-  auto dict = dict_col->dictionary();
+  auto dict = dict_segment->dictionary();
   EXPECT_EQ((*dict)[0], 3);
   EXPECT_EQ((*dict)[1], 4);
   EXPECT_EQ((*dict)[2], 5);
@@ -53,16 +53,16 @@ TEST_F(StorageDictionarySegmentTest, CompressColumnString) {
   vc_str->append("Bill");
 
   auto col = encode_column(EncodingType::Dictionary, DataType::String, vc_str);
-  auto dict_col = std::dynamic_pointer_cast<DictionarySegment<std::string>>(col);
+  auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<std::string>>(col);
 
   // Test attribute_vector size
-  EXPECT_EQ(dict_col->size(), 6u);
+  EXPECT_EQ(dict_segment->size(), 6u);
 
   // Test dictionary size (uniqueness)
-  EXPECT_EQ(dict_col->unique_values_count(), 4u);
+  EXPECT_EQ(dict_segment->unique_values_count(), 4u);
 
   // Test sorting
-  auto dict = dict_col->dictionary();
+  auto dict = dict_segment->dictionary();
   EXPECT_EQ((*dict)[0], "Alexander");
   EXPECT_EQ((*dict)[1], "Bill");
   EXPECT_EQ((*dict)[2], "Hasso");
@@ -78,16 +78,16 @@ TEST_F(StorageDictionarySegmentTest, CompressColumnDouble) {
   vc_double->append(1.1);
 
   auto col = encode_column(EncodingType::Dictionary, DataType::Double, vc_double);
-  auto dict_col = std::dynamic_pointer_cast<DictionarySegment<double>>(col);
+  auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<double>>(col);
 
   // Test attribute_vector size
-  EXPECT_EQ(dict_col->size(), 6u);
+  EXPECT_EQ(dict_segment->size(), 6u);
 
   // Test dictionary size (uniqueness)
-  EXPECT_EQ(dict_col->unique_values_count(), 3u);
+  EXPECT_EQ(dict_segment->unique_values_count(), 3u);
 
   // Test sorting
-  auto dict = dict_col->dictionary();
+  auto dict = dict_segment->dictionary();
   EXPECT_EQ((*dict)[0], 0.9);
   EXPECT_EQ((*dict)[1], 1.0);
   EXPECT_EQ((*dict)[2], 1.1);
@@ -104,38 +104,38 @@ TEST_F(StorageDictionarySegmentTest, CompressNullableColumnInt) {
   vc_int->append(3);
 
   auto col = encode_column(EncodingType::Dictionary, DataType::Int, vc_int);
-  auto dict_col = std::dynamic_pointer_cast<DictionarySegment<int>>(col);
+  auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(col);
 
   // Test attribute_vector size
-  EXPECT_EQ(dict_col->size(), 6u);
+  EXPECT_EQ(dict_segment->size(), 6u);
 
   // Test dictionary size (uniqueness)
-  EXPECT_EQ(dict_col->unique_values_count(), 2u);
+  EXPECT_EQ(dict_segment->unique_values_count(), 2u);
 
   // Test sorting
-  auto dict = dict_col->dictionary();
+  auto dict = dict_segment->dictionary();
   EXPECT_EQ((*dict)[0], 3);
   EXPECT_EQ((*dict)[1], 4);
 
   // Test retrieval of null value
-  EXPECT_TRUE(variant_is_null((*dict_col)[4]));
+  EXPECT_TRUE(variant_is_null((*dict_segment)[4]));
 }
 
 TEST_F(StorageDictionarySegmentTest, LowerUpperBound) {
   for (int i = 0; i <= 10; i += 2) vc_int->append(i);
 
   auto col = encode_column(EncodingType::Dictionary, DataType::Int, vc_int);
-  auto dict_col = std::dynamic_pointer_cast<DictionarySegment<int>>(col);
+  auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(col);
 
   // Test for AllTypeVariant as parameter
-  EXPECT_EQ(dict_col->lower_bound(AllTypeVariant(4)), (ValueID)2);
-  EXPECT_EQ(dict_col->upper_bound(AllTypeVariant(4)), (ValueID)3);
+  EXPECT_EQ(dict_segment->lower_bound(AllTypeVariant(4)), (ValueID)2);
+  EXPECT_EQ(dict_segment->upper_bound(AllTypeVariant(4)), (ValueID)3);
 
-  EXPECT_EQ(dict_col->lower_bound(AllTypeVariant(5)), (ValueID)3);
-  EXPECT_EQ(dict_col->upper_bound(AllTypeVariant(5)), (ValueID)3);
+  EXPECT_EQ(dict_segment->lower_bound(AllTypeVariant(5)), (ValueID)3);
+  EXPECT_EQ(dict_segment->upper_bound(AllTypeVariant(5)), (ValueID)3);
 
-  EXPECT_EQ(dict_col->lower_bound(AllTypeVariant(15)), INVALID_VALUE_ID);
-  EXPECT_EQ(dict_col->upper_bound(AllTypeVariant(15)), INVALID_VALUE_ID);
+  EXPECT_EQ(dict_segment->lower_bound(AllTypeVariant(15)), INVALID_VALUE_ID);
+  EXPECT_EQ(dict_segment->upper_bound(AllTypeVariant(15)), INVALID_VALUE_ID);
 }
 
 TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedVectorSize) {
@@ -144,11 +144,11 @@ TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedVectorSize) {
   vc_int->append(2);
 
   auto col = encode_column(EncodingType::Dictionary, DataType::Int, vc_int);
-  auto dict_col = std::dynamic_pointer_cast<DictionarySegment<int>>(col);
+  auto dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(col);
   auto attribute_vector_uint8_t =
-      std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint8_t>>(dict_col->attribute_vector());
+      std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint8_t>>(dict_segment->attribute_vector());
   auto attribute_vector_uint16_t =
-      std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint16_t>>(dict_col->attribute_vector());
+      std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint16_t>>(dict_segment->attribute_vector());
 
   EXPECT_NE(attribute_vector_uint8_t, nullptr);
   EXPECT_EQ(attribute_vector_uint16_t, nullptr);
@@ -158,11 +158,11 @@ TEST_F(StorageDictionarySegmentTest, FixedSizeByteAlignedVectorSize) {
   }
 
   col = encode_column(EncodingType::Dictionary, DataType::Int, vc_int);
-  dict_col = std::dynamic_pointer_cast<DictionarySegment<int>>(col);
+  dict_segment = std::dynamic_pointer_cast<DictionarySegment<int>>(col);
   attribute_vector_uint8_t =
-      std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint8_t>>(dict_col->attribute_vector());
+      std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint8_t>>(dict_segment->attribute_vector());
   attribute_vector_uint16_t =
-      std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint16_t>>(dict_col->attribute_vector());
+      std::dynamic_pointer_cast<const FixedSizeByteAlignedVector<uint16_t>>(dict_segment->attribute_vector());
 
   EXPECT_EQ(attribute_vector_uint8_t, nullptr);
   EXPECT_NE(attribute_vector_uint16_t, nullptr);

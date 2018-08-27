@@ -45,7 +45,7 @@ class BaseIndex : private Noncopyable {
    */
 
   BaseIndex() = delete;
-  explicit BaseIndex(const ColumnIndexType type);
+  explicit BaseIndex(const SegmentIndexType type);
   BaseIndex(BaseIndex&&) = default;
   BaseIndex& operator=(BaseIndex&&) = default;
   virtual ~BaseIndex() = default;
@@ -106,7 +106,7 @@ class BaseIndex : private Noncopyable {
    */
   Iterator cend() const;
 
-  ColumnIndexType type() const;
+  SegmentIndexType type() const;
 
  protected:
   /**
@@ -120,6 +120,6 @@ class BaseIndex : private Noncopyable {
   virtual std::vector<std::shared_ptr<const BaseSegment>> _get_index_columns() const = 0;
 
  private:
-  const ColumnIndexType _type;
+  const SegmentIndexType _type;
 };
 }  // namespace opossum

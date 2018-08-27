@@ -11,9 +11,9 @@ class BaseCompressedVector;
 /**
  * @brief Base class of DictionarySegment<T> exposing type-independent interface
  */
-class BaseDictionarySegment : public BaseEncodedColumn {
+class BaseDictionarySegment : public BaseEncodedSegment {
  public:
-  using BaseEncodedColumn::BaseEncodedColumn;
+  using BaseEncodedSegment::BaseEncodedSegment;
 
   EncodingType encoding_type() const override = 0;
 

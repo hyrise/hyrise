@@ -69,9 +69,9 @@ class ColumnMaterializer {
                                                                   ChunkID chunk_id, std::shared_ptr<const Table> input,
                                                                   CxlumnID cxlumn_id) {
     return std::make_shared<JobTask>([this, &output, &null_rows_output, input, cxlumn_id, chunk_id] {
-      auto column = input->get_chunk(chunk_id)->get_column(cxlumn_id);
-      resolve_cxlumn_type<T>(*column, [&](auto& typed_column) {
-        (*output)[chunk_id] = _materialize_column(typed_column, chunk_id, null_rows_output);
+      auto column = input->get_chunk(chunk_id)->get_segment(cxlumn_id);
+      resolve_cxlumn_type<T>(*column, [&](auto& typed_segment) {
+        (*output)[chunk_id] = _materialize_column(typed_segment, chunk_id, null_rows_output);
       });
     });
   }

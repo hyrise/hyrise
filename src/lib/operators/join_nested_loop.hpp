@@ -49,13 +49,13 @@ class JoinNestedLoop : public AbstractJoinOperator {
   // reduces the compile time from twelve minutes to less than three.
 
   static void __attribute__((noinline))
-  _join_two_untyped_columns(const std::shared_ptr<const BaseSegment>& column_left,
+  _join_two_untyped_segments(const std::shared_ptr<const BaseSegment>& column_left,
                             const std::shared_ptr<const BaseSegment>& column_right, const ChunkID chunk_id_left,
                             const ChunkID chunk_id_right, JoinParams& params);
 
   template <typename BinaryFunctor, typename LeftIterator, typename RightIterator>
   static void __attribute__((noinline))
-  _join_two_typed_columns(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
+  _join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it, LeftIterator left_end,
                           RightIterator right_begin, RightIterator right_end, const ChunkID chunk_id_left,
                           const ChunkID chunk_id_right, JoinParams& params);
 

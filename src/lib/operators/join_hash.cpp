@@ -221,7 +221,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
   // fill work queue
   size_t output_offset = 0;
   for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); chunk_id++) {
-    auto column = in_table->get_chunk(chunk_id)->get_column(cxlumn_id);
+    auto column = in_table->get_chunk(chunk_id)->get_segment(cxlumn_id);
 
     chunk_offsets[chunk_id] = output_offset;
     output_offset += column->size();
@@ -239,15 +239,15 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
       // Get information from work queue
       auto output_offset = chunk_offsets[chunk_id];
       auto output_iterator = elements->begin() + output_offset;
-      auto column = in_table->get_chunk(chunk_id)->get_column(cxlumn_id);
+      auto column = in_table->get_chunk(chunk_id)->get_segment(cxlumn_id);
 
       // prepare histogram
       histograms[chunk_id] = std::make_shared<std::vector<size_t>>(num_partitions);
       auto& histogram = static_cast<std::vector<size_t>&>(*histograms[chunk_id]);
 
-      resolve_cxlumn_type<T>(*column, [&, chunk_id, keep_nulls](auto& typed_column) {
+      resolve_cxlumn_type<T>(*column, [&, chunk_id, keep_nulls](auto& typed_segment) {
         auto reference_segment_offset = ChunkID{0};
-        auto iterable = create_iterable_from_column<T>(typed_column);
+        auto iterable = create_iterable_from_column<T>(typed_segment);
 
         iterable.for_each([&, chunk_id, keep_nulls](const auto& value) {
           if (!value.is_null() || keep_nulls) {
@@ -258,7 +258,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
             Instead, we use the index in the ReferenceSegment itself. This way we can later correctly dereference
             values from different inputs (important for Multi Joins).
             */
-            if constexpr (std::is_same<std::decay<decltype(typed_column)>, ReferenceSegment>::value) {
+            if constexpr (std::is_same<std::decay<decltype(typed_segment)>, ReferenceSegment>::value) {
               *(output_iterator++) =
                   PartitionedElement<T>{RowID{chunk_id, reference_segment_offset}, hashed_value, value.value()};
             } else {
@@ -270,7 +270,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
             histogram[radix]++;
           }
           // reference_segment_offset is only used for ReferenceSegments
-          if constexpr (std::is_same<std::decay<decltype(typed_column)>, ReferenceSegment>::value) {
+          if constexpr (std::is_same<std::decay<decltype(typed_segment)>, ReferenceSegment>::value) {
             reference_segment_offset++;
           }
         });
@@ -595,7 +595,7 @@ void write_output_columns(ChunkSegments& output_columns, const std::shared_ptr<c
         }
 
         auto ref_col =
-            std::static_pointer_cast<const ReferenceSegment>(input_table->get_chunk(ChunkID{0})->get_column(cxlumn_id));
+            std::static_pointer_cast<const ReferenceSegment>(input_table->get_chunk(ChunkID{0})->get_segment(cxlumn_id));
         output_columns.push_back(std::make_shared<ReferenceSegment>(ref_col->referenced_table(),
                                                                    ref_col->referenced_cxlumn_id(), iter->second));
       } else {

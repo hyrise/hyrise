@@ -141,11 +141,11 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
           _try_translate_expression_to_jit_expression(*groupby_expression, *read_tuples, input_node);
       if (!jit_expression) return nullptr;
       // Create a JitCompute operator for each computed groupby column ...
-      if (jit_expression->expression_type() != JitExpressionType::Column) {
+      if (jit_expression->expression_type() != JitExpressionType::Cxlumn) {
         jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_expression));
       }
       // ... and add the column to the JitAggregate operator.
-      aggregate->add_groupby_column(groupby_expression->as_cxlumn_name(), jit_expression->result());
+      aggregate->add_groupby_cxlumn(groupby_expression->as_cxlumn_name(), jit_expression->result());
     }
 
     for (const auto& expression : aggregate_node->aggregate_expressions) {
@@ -156,11 +156,11 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
           _try_translate_expression_to_jit_expression(*aggregate_expression->arguments[0], *read_tuples, input_node);
       if (!jit_expression) return nullptr;
       // Create a JitCompute operator for each aggregate expression on a computed value ...
-      if (jit_expression->expression_type() != JitExpressionType::Column) {
+      if (jit_expression->expression_type() != JitExpressionType::Cxlumn) {
         jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_expression));
       }
       // ... and add the aggregate expression to the JitAggregate operator.
-      aggregate->add_aggregate_column(aggregate_expression->as_cxlumn_name(), jit_expression->result(),
+      aggregate->add_aggregate_cxlumn(aggregate_expression->as_cxlumn_name(), jit_expression->result(),
                                       aggregate_expression->aggregate_function);
     }
 
@@ -174,10 +174,10 @@ std::shared_ptr<JitOperatorWrapper> JitAwareLQPTranslator::_try_translate_sub_pl
       if (!jit_expression) return nullptr;
       // If the JitExpression is of type JitExpressionType::Column, there is no need to add a compute node, since it
       // would not compute anything anyway
-      if (jit_expression->expression_type() != JitExpressionType::Column) {
+      if (jit_expression->expression_type() != JitExpressionType::Cxlumn) {
         jit_operator->add_jit_operator(std::make_shared<JitCompute>(jit_expression));
       }
-      write_table->add_output_column(column_expression->as_cxlumn_name(), jit_expression->result());
+      write_table->add_output_cxlumn(column_expression->as_cxlumn_name(), jit_expression->result());
     }
 
     jit_operator->add_jit_operator(write_table);
@@ -192,7 +192,7 @@ std::shared_ptr<const JitExpression> JitAwareLQPTranslator::_try_translate_expre
   const auto input_node_cxlumn_id = input_node->find_cxlumn_id(expression);
   if (input_node_cxlumn_id) {
     const auto tuple_value =
-        jit_source.add_input_column(expression.data_type(), expression.is_nullable(), *input_node_cxlumn_id);
+        jit_source.add_input_cxlumn(expression.data_type(), expression.is_nullable(), *input_node_cxlumn_id);
     return std::make_shared<JitExpression>(tuple_value);
   }
 

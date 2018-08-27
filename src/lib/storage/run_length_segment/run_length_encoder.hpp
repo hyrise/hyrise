@@ -2,9 +2,9 @@
 
 #include <memory>
 
-#include "storage/base_column_encoder.hpp"
+#include "storage/base_segment_encoder.hpp"
 
-#include "storage/run_length_column.hpp"
+#include "storage/run_length_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
 #include "types.hpp"
@@ -18,7 +18,7 @@ class RunLengthEncoder : public ColumnEncoder<RunLengthEncoder> {
   static constexpr auto _uses_vector_compression = false;
 
   template <typename T>
-  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
+  std::shared_ptr<BaseEncodedSegment> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
     const auto alloc = value_segment->values().get_allocator();
 
     auto values = pmr_vector<T>{alloc};
@@ -61,7 +61,7 @@ class RunLengthEncoder : public ColumnEncoder<RunLengthEncoder> {
     auto values_ptr = std::allocate_shared<pmr_vector<T>>(alloc, std::move(values));
     auto null_values_ptr = std::allocate_shared<pmr_vector<bool>>(alloc, std::move(null_values));
     auto end_positions_ptr = std::allocate_shared<pmr_vector<ChunkOffset>>(alloc, std::move(end_positions));
-    return std::allocate_shared<RunLengthColumn<T>>(alloc, values_ptr, null_values_ptr, end_positions_ptr);
+    return std::allocate_shared<RunLengthSegment<T>>(alloc, values_ptr, null_values_ptr, end_positions_ptr);
   }
 };
 

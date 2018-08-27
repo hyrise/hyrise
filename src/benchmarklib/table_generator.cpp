@@ -108,7 +108,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
   pseudorandom_engine.seed(rd());
 
   // Base allocators if we don't use multiple NUMA nodes
-  auto allocator_ptr_base_column = PolymorphicAllocator<std::shared_ptr<BaseSegment>>{};
+  auto allocator_ptr_base_segment = PolymorphicAllocator<std::shared_ptr<BaseSegment>>{};
   auto allocator_value_segment_int = PolymorphicAllocator<ValueSegment<int>>{};
   auto allocator_chunk = PolymorphicAllocator<Chunk>{};
   auto allocator_int = PolymorphicAllocator<int>{};
@@ -119,14 +119,14 @@ std::shared_ptr<Table> TableGenerator::generate_table(
       auto memory_resource = NUMAPlacementManager::get().get_next_memory_resource();
 
       // create allocators for the node
-      allocator_ptr_base_column = PolymorphicAllocator<std::shared_ptr<BaseSegment>>{memory_resource};
+      allocator_ptr_base_segment = PolymorphicAllocator<std::shared_ptr<BaseSegment>>{memory_resource};
       allocator_value_segment_int = PolymorphicAllocator<ValueSegment<int>>{memory_resource};
       allocator_chunk = PolymorphicAllocator<Chunk>{memory_resource};
       allocator_int = PolymorphicAllocator<int>{memory_resource};
     }
 #endif
 
-    auto columns = ChunkSegments(allocator_ptr_base_column);
+    auto columns = ChunkSegments(allocator_ptr_base_segment);
     for (ChunkID column_index{0}; column_index < num_cxlumns; ++column_index) {
       const auto& column_data_distribution = column_data_distributions[column_index];
 
@@ -185,7 +185,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
   }
 
   if (encoding_type.has_value()) {
-    ChunkEncoder::encode_all_chunks(table, ColumnEncodingSpec{encoding_type.value()});
+    ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{encoding_type.value()});
   }
 
   return table;

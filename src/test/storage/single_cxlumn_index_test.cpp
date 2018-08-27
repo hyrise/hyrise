@@ -7,7 +7,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/storage/base_column.hpp"
+#include "../lib/storage/base_segment.hpp"
 #include "../lib/storage/chunk.hpp"
 #include "../lib/storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "../lib/storage/index/group_key/composite_group_key_index.hpp"
@@ -19,15 +19,15 @@
 namespace opossum {
 
 template <typename DerivedIndex>
-class SingleColumnIndexTest : public BaseTest {
+class SingleSegmentIndexTest : public BaseTest {
  protected:
   void SetUp() override {
-    dict_col_int = BaseTest::create_dict_column_by_type<int>(DataType::Int, {3, 4, 0, 4, 2, 7, 8, 1, 4, 9});
-    index_int = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_col_int}));
+    dict_segment_int = BaseTest::create_dict_segment_by_type<int>(DataType::Int, {3, 4, 0, 4, 2, 7, 8, 1, 4, 9});
+    index_int = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_int}));
 
-    dict_col_str = BaseTest::create_dict_column_by_type<std::string>(DataType::String,
+    dict_segment_str = BaseTest::create_dict_segment_by_type<std::string>(DataType::String,
                                                                      {"hello", "world", "test", "foo", "bar", "foo"});
-    index_str = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_col_str}));
+    index_str = std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>({dict_segment_str}));
   }
 
   template <class Iterator>
@@ -40,31 +40,31 @@ class SingleColumnIndexTest : public BaseTest {
   }
 
   std::shared_ptr<BaseIndex> index_int = nullptr;
-  std::shared_ptr<BaseSegment> dict_col_int = nullptr;
+  std::shared_ptr<BaseSegment> dict_segment_int = nullptr;
   std::shared_ptr<BaseIndex> index_str = nullptr;
-  std::shared_ptr<BaseSegment> dict_col_str = nullptr;
+  std::shared_ptr<BaseSegment> dict_segment_str = nullptr;
 };
 
 // List of indices to test
 typedef ::testing::Types<GroupKeyIndex, CompositeGroupKeyIndex, AdaptiveRadixTreeIndex /* add further indices */>
     DerivedIndices;
-TYPED_TEST_CASE(SingleColumnIndexTest, DerivedIndices);
+TYPED_TEST_CASE(SingleSegmentIndexTest, DerivedIndices);
 
-TYPED_TEST(SingleColumnIndexTest, FullRange) {
+TYPED_TEST(SingleSegmentIndexTest, FullRange) {
   auto begin_int = this->index_int->cbegin();
   auto end_int = this->index_int->cend();
-  auto result_values_int = this->result_as_vector(this->dict_col_int, begin_int, end_int);
+  auto result_values_int = this->result_as_vector(this->dict_segment_int, begin_int, end_int);
   auto expected_values_int = std::vector<AllTypeVariant>{0, 1, 2, 3, 4, 4, 4, 7, 8, 9};
   EXPECT_EQ(expected_values_int, result_values_int);
 
   auto begin_str = this->index_str->cbegin();
   auto end_str = this->index_str->cend();
-  auto result_values_str = this->result_as_vector(this->dict_col_str, begin_str, end_str);
+  auto result_values_str = this->result_as_vector(this->dict_segment_str, begin_str, end_str);
   auto expected_values_str = std::vector<AllTypeVariant>{"bar", "foo", "foo", "hello", "test", "world"};
   EXPECT_EQ(expected_values_str, result_values_str);
 }
 
-TYPED_TEST(SingleColumnIndexTest, PointQueryWithSingleReturnValue) {
+TYPED_TEST(SingleSegmentIndexTest, PointQueryWithSingleReturnValue) {
   auto begin = this->index_int->lower_bound({3});
   auto end = this->index_int->upper_bound({3});
 
@@ -74,7 +74,7 @@ TYPED_TEST(SingleColumnIndexTest, PointQueryWithSingleReturnValue) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleColumnIndexTest, PointQueryWithNoReturnValue) {
+TYPED_TEST(SingleSegmentIndexTest, PointQueryWithNoReturnValue) {
   auto begin = this->index_int->lower_bound({5});
   auto end = this->index_int->upper_bound({5});
 
@@ -83,7 +83,7 @@ TYPED_TEST(SingleColumnIndexTest, PointQueryWithNoReturnValue) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleColumnIndexTest, PointQueryWithMultipleReturnValues) {
+TYPED_TEST(SingleSegmentIndexTest, PointQueryWithMultipleReturnValues) {
   auto begin = this->index_int->lower_bound({4});
   auto end = this->index_int->upper_bound({4});
 
@@ -92,12 +92,12 @@ TYPED_TEST(SingleColumnIndexTest, PointQueryWithMultipleReturnValues) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleColumnIndexTest, RangeQuery) {
+TYPED_TEST(SingleSegmentIndexTest, RangeQuery) {
   auto begin = this->index_int->lower_bound({1});
   auto end = this->index_int->upper_bound({3});
 
   auto result_positions = std::set<std::size_t>(begin, end);
-  auto result_values = this->result_as_vector(this->dict_col_int, begin, end);
+  auto result_values = this->result_as_vector(this->dict_segment_int, begin, end);
 
   auto expected_positions = std::set<std::size_t>{0, 4, 7};
   auto expected_values = std::vector<AllTypeVariant>{1, 2, 3};
@@ -106,7 +106,7 @@ TYPED_TEST(SingleColumnIndexTest, RangeQuery) {
   EXPECT_EQ(expected_values, result_values);
 }
 
-TYPED_TEST(SingleColumnIndexTest, RangeQueryBelow) {
+TYPED_TEST(SingleSegmentIndexTest, RangeQueryBelow) {
   auto begin = this->index_int->lower_bound({-3});
   auto end = this->index_int->upper_bound({-1});
 
@@ -115,7 +115,7 @@ TYPED_TEST(SingleColumnIndexTest, RangeQueryBelow) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleColumnIndexTest, RangeQueryPartiallyBelow) {
+TYPED_TEST(SingleSegmentIndexTest, RangeQueryPartiallyBelow) {
   auto begin = this->index_int->lower_bound({-3});
   auto end = this->index_int->upper_bound({1});
 
@@ -124,7 +124,7 @@ TYPED_TEST(SingleColumnIndexTest, RangeQueryPartiallyBelow) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleColumnIndexTest, RangeQueryAbove) {
+TYPED_TEST(SingleSegmentIndexTest, RangeQueryAbove) {
   auto begin = this->index_int->lower_bound({10});
   auto end = this->index_int->upper_bound({13});
 
@@ -133,7 +133,7 @@ TYPED_TEST(SingleColumnIndexTest, RangeQueryAbove) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleColumnIndexTest, RangeQueryPartiallyAbove) {
+TYPED_TEST(SingleSegmentIndexTest, RangeQueryPartiallyAbove) {
   auto begin = this->index_int->lower_bound({8});
   auto end = this->index_int->upper_bound({13});
 
@@ -142,7 +142,7 @@ TYPED_TEST(SingleColumnIndexTest, RangeQueryPartiallyAbove) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleColumnIndexTest, RangeQueryOpenEnd) {
+TYPED_TEST(SingleSegmentIndexTest, RangeQueryOpenEnd) {
   auto begin = this->index_int->lower_bound({8});
   auto end = this->index_int->cend();
 
@@ -151,7 +151,7 @@ TYPED_TEST(SingleColumnIndexTest, RangeQueryOpenEnd) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleColumnIndexTest, RangeQueryOpenBegin) {
+TYPED_TEST(SingleSegmentIndexTest, RangeQueryOpenBegin) {
   auto begin = this->index_int->cbegin();
   auto end = this->index_int->upper_bound({1});
 
@@ -160,17 +160,17 @@ TYPED_TEST(SingleColumnIndexTest, RangeQueryOpenBegin) {
   EXPECT_EQ(expected, result);
 }
 
-TYPED_TEST(SingleColumnIndexTest, IsIndexForTest) {
-  EXPECT_TRUE(this->index_int->is_index_for({this->dict_col_int}));
-  EXPECT_TRUE(this->index_str->is_index_for({this->dict_col_str}));
+TYPED_TEST(SingleSegmentIndexTest, IsIndexForTest) {
+  EXPECT_TRUE(this->index_int->is_index_for({this->dict_segment_int}));
+  EXPECT_TRUE(this->index_str->is_index_for({this->dict_segment_str}));
 
-  EXPECT_FALSE(this->index_int->is_index_for({this->dict_col_str}));
-  EXPECT_FALSE(this->index_str->is_index_for({this->dict_col_int}));
-  EXPECT_FALSE(this->index_str->is_index_for({this->dict_col_str, this->dict_col_int}));
+  EXPECT_FALSE(this->index_int->is_index_for({this->dict_segment_str}));
+  EXPECT_FALSE(this->index_str->is_index_for({this->dict_segment_int}));
+  EXPECT_FALSE(this->index_str->is_index_for({this->dict_segment_str, this->dict_segment_int}));
   EXPECT_FALSE(this->index_str->is_index_for({}));
 }
 
-TYPED_TEST(SingleColumnIndexTest, IndexOnNonDictionaryThrows) {
+TYPED_TEST(SingleSegmentIndexTest, IndexOnNonDictionaryThrows) {
   if (!IS_DEBUG) return;
   auto vc_int = make_shared_by_data_type<BaseSegment, ValueSegment>(DataType::Int);
   vc_int->append(4);

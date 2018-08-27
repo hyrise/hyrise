@@ -18,20 +18,20 @@ class IsNullTableScanImpl : public BaseSingleColumnTableScanImpl {
   IsNullTableScanImpl(const std::shared_ptr<const Table>& in_table, const CxlumnID base_cxlumn_id,
                       const PredicateCondition& predicate_condition);
 
-  void handle_column(const ReferenceSegment& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
+  void handle_segment(const ReferenceSegment& base_segment, std::shared_ptr<SegmentVisitorContext> base_context) override;
 
-  void handle_column(const BaseValueSegment& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
+  void handle_segment(const BaseValueSegment& base_segment, std::shared_ptr<SegmentVisitorContext> base_context) override;
 
-  void handle_column(const BaseDictionarySegment& base_column,
-                     std::shared_ptr<ColumnVisitorContext> base_context) override;
+  void handle_segment(const BaseDictionarySegment& base_segment,
+                     std::shared_ptr<SegmentVisitorContext> base_context) override;
 
-  void handle_column(const BaseEncodedColumn& base_column, std::shared_ptr<ColumnVisitorContext> base_context) override;
+  void handle_segment(const BaseEncodedSegment& base_segment, std::shared_ptr<SegmentVisitorContext> base_context) override;
 
-  using BaseSingleColumnTableScanImpl::handle_column;
+  using BaseSingleColumnTableScanImpl::handle_segment;
 
  private:
   /**
-   * @defgroup Methods used for handling value columns
+   * @defgroup Methods used for handling value segments
    * @{
    */
 

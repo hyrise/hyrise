@@ -1,13 +1,13 @@
 #pragma once
 
-#include "base_column.hpp"
+#include "base_segment.hpp"
 
 namespace opossum {
 
 /**
- * @brief Super class of value columns
+ * @brief Super class of value segments
  *
- * Exposes all methods of value columns that do not rely on its specific data type.
+ * Exposes all methods of value segments that do not rely on its specific data type.
  */
 class BaseValueSegment : public BaseSegment {
  public:

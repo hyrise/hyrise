@@ -15,11 +15,11 @@ class Table;
  *
  * Supports:
  * - comparing columns of different numerical data types
- * - comparing dictionary and value columns
- * - comparing reference columns
+ * - comparing dictionary and value segments
+ * - comparing reference segments
  *
  * Note: Since we have ruled out the possibility that a table might have
- *       reference columns and data columns, comparing a reference to a
+ *       reference segments and data columns, comparing a reference to a
  *       data column is not supported.
  */
 class ColumnComparisonTableScanImpl : public BaseTableScanImpl {

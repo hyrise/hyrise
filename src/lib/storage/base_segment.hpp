@@ -10,7 +10,7 @@
 namespace opossum {
 
 class AbstractColumnVisitor;
-class ColumnVisitorContext;
+class SegmentVisitorContext;
 
 // BaseSegment is the abstract super class for all column types,
 // e.g., ValueSegment, ReferenceSegment

@@ -62,9 +62,9 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
     ChunkSegments output_columns;
     auto pos_list_out = std::make_shared<PosList>();
     auto referenced_table = std::shared_ptr<const Table>();
-    const auto ref_col_in = std::dynamic_pointer_cast<const ReferenceSegment>(chunk_in->get_column(CxlumnID{0}));
+    const auto ref_col_in = std::dynamic_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(CxlumnID{0}));
 
-    // If the columns in this chunk reference a column, build a poslist for a reference column.
+    // If the columns in this chunk reference a column, build a poslist for a reference segment.
     if (ref_col_in) {
       DebugAssert(chunk_in->references_exactly_one_table(),
                   "Input to Validate contains a Chunk referencing more than one table.");
@@ -85,7 +85,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
       // Construct the actual ReferenceSegment objects and add them to the chunk.
       for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk_in->cxlumn_count(); ++cxlumn_id) {
-        const auto column = std::static_pointer_cast<const ReferenceSegment>(chunk_in->get_column(cxlumn_id));
+        const auto column = std::static_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(cxlumn_id));
         const auto referenced_cxlumn_id = column->referenced_cxlumn_id();
         auto ref_col_out = std::make_shared<ReferenceSegment>(referenced_table, referenced_cxlumn_id, pos_list_out);
         output_columns.push_back(ref_col_out);

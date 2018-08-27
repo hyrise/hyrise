@@ -51,13 +51,13 @@ TableStatistics TableStatistics::estimate_predicate(const CxlumnID cxlumn_id,
   const auto left_operand_cxlumn_statistics = _cxlumn_statistics[cxlumn_id];
 
   if (is_cxlumn_id(value)) {
-    const auto value_cxlumn_id = boost::get<CxlumnID>(value);
+    const auto value_segment_id = boost::get<CxlumnID>(value);
 
     const auto estimation = left_operand_cxlumn_statistics->estimate_predicate_with_cxlumn(
-        predicate_condition, *_cxlumn_statistics[value_cxlumn_id]);
+        predicate_condition, *_cxlumn_statistics[value_segment_id]);
 
     predicated_cxlumn_statistics[cxlumn_id] = estimation.left_cxlumn_statistics;
-    predicated_cxlumn_statistics[value_cxlumn_id] = estimation.right_cxlumn_statistics;
+    predicated_cxlumn_statistics[value_segment_id] = estimation.right_cxlumn_statistics;
     predicated_row_count *= estimation.selectivity;
   } else if (is_variant(value)) {
     const auto variant_value = boost::get<AllTypeVariant>(value);

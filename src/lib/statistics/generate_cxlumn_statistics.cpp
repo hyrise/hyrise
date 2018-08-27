@@ -11,7 +11,7 @@ std::shared_ptr<BaseCxlumnStatistics> generate_cxlumn_statistics<std::string>(co
                                                                               const CxlumnID cxlumn_id) {
   std::unordered_set<std::string> distinct_set;
   // It would be nice to use string_view here, but the iterables hold copies of the values, not references themselves.
-  // ColumnIteratorValue would have to be changed to `T& _value` and this brings a whole bunch of problems in iterators
+  // SegmentIteratorValue would have to be changed to `T& _value` and this brings a whole bunch of problems in iterators
   // that create stack copies of the accessed values (e.g., for ReferenceSegments)
 
   auto null_value_count = size_t{0};
@@ -20,9 +20,9 @@ std::shared_ptr<BaseCxlumnStatistics> generate_cxlumn_statistics<std::string>(co
   auto max = std::string{};
 
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
-    const auto base_column = table.get_chunk(chunk_id)->get_column(cxlumn_id);
+    const auto base_segment = table.get_chunk(chunk_id)->get_segment(cxlumn_id);
 
-    resolve_cxlumn_type<std::string>(*base_column, [&](auto& column) {
+    resolve_cxlumn_type<std::string>(*base_segment, [&](auto& column) {
       auto iterable = create_iterable_from_column<std::string>(column);
       iterable.for_each([&](const auto& column_value) {
         if (column_value.is_null()) {

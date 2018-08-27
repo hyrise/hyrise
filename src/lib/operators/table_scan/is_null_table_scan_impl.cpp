@@ -3,7 +3,7 @@
 #include <memory>
 
 #include "storage/base_value_segment.hpp"
-#include "storage/column_iterables/create_iterable_from_attribute_vector.hpp"
+#include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
 #include "storage/create_iterable_from_column.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/value_segment/null_value_vector_iterable.hpp"
@@ -20,12 +20,12 @@ IsNullTableScanImpl::IsNullTableScanImpl(const std::shared_ptr<const Table>& in_
               "Invalid PredicateCondition");
 }
 
-void IsNullTableScanImpl::handle_column(const ReferenceSegment& base_column,
-                                        std::shared_ptr<ColumnVisitorContext> base_context) {
+void IsNullTableScanImpl::handle_segment(const ReferenceSegment& base_segment,
+                                        std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
-  BaseSingleColumnTableScanImpl::handle_column(base_column, base_context);
+  BaseSingleColumnTableScanImpl::handle_segment(base_segment, base_context);
 
-  const auto pos_list = *base_column.pos_list();
+  const auto pos_list = *base_segment.pos_list();
 
   // Additionally to the null values in the referencED column, we need to find null values in the referencING column
   if (_predicate_condition == PredicateCondition::IsNull) {
@@ -35,42 +35,42 @@ void IsNullTableScanImpl::handle_column(const ReferenceSegment& base_column,
   }
 }
 
-void IsNullTableScanImpl::handle_column(const BaseValueSegment& base_column,
-                                        std::shared_ptr<ColumnVisitorContext> base_context) {
+void IsNullTableScanImpl::handle_segment(const BaseValueSegment& base_segment,
+                                        std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 
-  if (_matches_all(base_column)) {
-    _add_all(*context, base_column.size());
+  if (_matches_all(base_segment)) {
+    _add_all(*context, base_segment.size());
     return;
   }
 
-  if (_matches_none(base_column)) {
+  if (_matches_none(base_segment)) {
     return;
   }
 
-  DebugAssert(base_column.is_nullable(),
+  DebugAssert(base_segment.is_nullable(),
               "Columns that are not nullable should have been caught by edge case handling.");
 
-  auto base_column_iterable = NullValueVectorIterable{base_column.null_values()};
+  auto base_segment_iterable = NullValueVectorIterable{base_segment.null_values()};
 
-  base_column_iterable.with_iterators(mapped_chunk_offsets.get(),
+  base_segment_iterable.with_iterators(mapped_chunk_offsets.get(),
                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
-void IsNullTableScanImpl::handle_column(const BaseDictionarySegment& base_column,
-                                        std::shared_ptr<ColumnVisitorContext> base_context) {
+void IsNullTableScanImpl::handle_segment(const BaseDictionarySegment& base_segment,
+                                        std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 
-  auto base_column_iterable = create_iterable_from_attribute_vector(base_column);
+  auto base_segment_iterable = create_iterable_from_attribute_vector(base_segment);
 
-  base_column_iterable.with_iterators(mapped_chunk_offsets.get(),
+  base_segment_iterable.with_iterators(mapped_chunk_offsets.get(),
                                       [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
 }
 
-void IsNullTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
-                                        std::shared_ptr<ColumnVisitorContext> base_context) {
+void IsNullTableScanImpl::handle_segment(const BaseEncodedSegment& base_segment,
+                                        std::shared_ptr<SegmentVisitorContext> base_context) {
   auto context = std::static_pointer_cast<Context>(base_context);
   const auto& mapped_chunk_offsets = context->_mapped_chunk_offsets;
 
@@ -79,10 +79,10 @@ void IsNullTableScanImpl::handle_column(const BaseEncodedColumn& base_column,
   resolve_data_type(base_cxlumn_type, [&](auto type) {
     using Type = typename decltype(type)::type;
 
-    resolve_encoded_segment_type<Type>(base_column, [&](const auto& typed_column) {
-      auto base_column_iterable = create_iterable_from_column(typed_column);
+    resolve_encoded_segment_type<Type>(base_segment, [&](const auto& typed_segment) {
+      auto base_segment_iterable = create_iterable_from_column(typed_segment);
 
-      base_column_iterable.with_iterators(
+      base_segment_iterable.with_iterators(
           mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });
     });
   });

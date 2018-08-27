@@ -10,7 +10,7 @@
 #endif
 
 #include "all_type_variant.hpp"
-#include "storage/base_column.hpp"
+#include "storage/base_segment.hpp"
 #include "types.hpp"
 
 namespace opossum {

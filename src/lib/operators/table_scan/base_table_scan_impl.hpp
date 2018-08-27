@@ -3,7 +3,7 @@
 #include <functional>
 #include <memory>
 
-#include "storage/column_iterables.hpp"
+#include "storage/segment_iterables.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 

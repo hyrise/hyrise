@@ -6,8 +6,8 @@
 
 namespace opossum {
 
-void BaseEncodedColumn::append(const AllTypeVariant&) { Fail("Encoded column is immutable."); }
+void BaseEncodedSegment::append(const AllTypeVariant&) { Fail("Encoded column is immutable."); }
 
-CompressedVectorType BaseEncodedColumn::compressed_vector_type() const { return CompressedVectorType::Invalid; }
+CompressedVectorType BaseEncodedSegment::compressed_vector_type() const { return CompressedVectorType::Invalid; }
 
 }  // namespace opossum

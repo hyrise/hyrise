@@ -11,7 +11,7 @@
 namespace opossum {
 
 // operator to join two tables using one column of each table
-// output is a table with reference columns
+// output is a table with reference segments
 // to filter by multiple criteria, you can chain the operator
 
 // As with most operators, we do not guarantee a stable operation with regards

@@ -40,7 +40,7 @@ TEST_F(OperatorScanPredicateTest, FromExpression) {
   EXPECT_EQ(operator_predicate_b.value, AllParameterVariant{CxlumnID{1}});
 }
 
-TEST_F(OperatorScanPredicateTest, FromExpressionColumnRight) {
+TEST_F(OperatorScanPredicateTest, FromExpressionCxlumnRight) {
   // `5 > a` becomes `a < 5`
   const auto operator_predicates_a = OperatorScanPredicate::from_expression(*greater_than_(5, a), *node);
   ASSERT_TRUE(operator_predicates_a);

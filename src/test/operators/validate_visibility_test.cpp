@@ -17,8 +17,8 @@ class OperatorsValidateVisibilityTest : public BaseTest {
  protected:
   void SetUp() override {
     TableCxlumnDefinitions cxlumn_definitions;
-    cxlumn_definitions.emplace_back("col_1", DataType::Int);
-    cxlumn_definitions.emplace_back("col_2", DataType::Int);
+    cxlumn_definitions.emplace_back("a", DataType::Int);
+    cxlumn_definitions.emplace_back("b", DataType::Int);
     t = std::make_shared<Table>(cxlumn_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
     t->append({123, 456});
 

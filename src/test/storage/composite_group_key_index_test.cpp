@@ -7,7 +7,7 @@
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
-#include "storage/base_column.hpp"
+#include "storage/base_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/variable_length_key_proxy.hpp"
@@ -56,8 +56,8 @@ namespace opossum {
 class CompositeGroupKeyIndexTest : public BaseTest {
  protected:
   void SetUp() override {
-    _column_int = create_dict_column_by_type<int32_t>(DataType::Int, {2, 1, 0, 1, 0, 3, 2, 3});
-    _column_str = create_dict_column_by_type<std::string>(
+    _column_int = create_dict_segment_by_type<int32_t>(DataType::Int, {2, 1, 0, 1, 0, 3, 2, 3});
+    _column_str = create_dict_segment_by_type<std::string>(
         DataType::String, {"hotel", "delta", "frank", "delta", "apple", "charlie", "charlie", "inbox"});
 
     _index_int_str = std::make_shared<CompositeGroupKeyIndex>(

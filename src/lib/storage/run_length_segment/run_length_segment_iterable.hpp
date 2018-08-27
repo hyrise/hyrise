@@ -2,16 +2,16 @@
 
 #include <algorithm>
 
-#include "storage/column_iterables.hpp"
+#include "storage/segment_iterables.hpp"
 
-#include "storage/run_length_column.hpp"
+#include "storage/run_length_segment.hpp"
 
 namespace opossum {
 
 template <typename T>
-class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthColumnIterable<T>> {
+class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLengthSegmentIterable<T>> {
  public:
-  explicit RunLengthColumnIterable(const RunLengthColumn<T>& column) : _column{column} {}
+  explicit RunLengthSegmentIterable(const RunLengthSegment<T>& column) : _column{column} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
@@ -36,10 +36,10 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
   size_t _on_size() const { return _column.size(); }
 
  private:
-  const RunLengthColumn<T>& _column;
+  const RunLengthSegment<T>& _column;
 
  private:
-  class Iterator : public BaseSegmentIterator<Iterator, ColumnIteratorValue<T>> {
+  class Iterator : public BaseSegmentIterator<Iterator, SegmentIteratorValue<T>> {
    public:
     using ValueIterator = typename pmr_vector<T>::const_iterator;
     using NullValueIterator = typename pmr_vector<bool>::const_iterator;
@@ -68,8 +68,8 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
 
     bool equal(const Iterator& other) const { return _current_position == other._current_position; }
 
-    ColumnIteratorValue<T> dereference() const {
-      return ColumnIteratorValue<T>{*_value_it, *_null_value_it, _current_position};
+    SegmentIteratorValue<T> dereference() const {
+      return SegmentIteratorValue<T>{*_value_it, *_null_value_it, _current_position};
     }
 
    private:
@@ -93,12 +93,12 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
    *   - a linear search in the range [previous_end_position, n] if new_pos >= previous_pos
    *   - a binary search in the range [0, previous_end_position] else
    */
-  class PointAccessIterator : public BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorValue<T>> {
+  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator, SegmentIteratorValue<T>> {
    public:
     explicit PointAccessIterator(const pmr_vector<T>& values, const pmr_vector<bool>& null_values,
                                  const pmr_vector<ChunkOffset>& end_positions,
                                  const ChunkOffsetsIterator& chunk_offsets_it)
-        : BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorValue<T>>{chunk_offsets_it},
+        : BasePointAccessSegmentIterator<PointAccessIterator, SegmentIteratorValue<T>>{chunk_offsets_it},
           _values{values},
           _null_values{null_values},
           _end_positions{end_positions},
@@ -108,7 +108,7 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-    ColumnIteratorValue<T> dereference() const {
+    SegmentIteratorValue<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
       const auto current_chunk_offset = chunk_offsets.into_referenced;
@@ -132,7 +132,7 @@ class RunLengthColumnIterable : public PointAccessibleColumnIterable<RunLengthCo
       _prev_chunk_offset = current_chunk_offset;
       _prev_index = current_index;
 
-      return ColumnIteratorValue<T>{value, is_null, chunk_offsets.into_referencing};
+      return SegmentIteratorValue<T>{value, is_null, chunk_offsets.into_referencing};
     }
 
    private:

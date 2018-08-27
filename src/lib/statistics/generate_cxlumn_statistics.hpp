@@ -23,9 +23,9 @@ std::shared_ptr<BaseCxlumnStatistics> generate_cxlumn_statistics(const Table& ta
   auto max = std::numeric_limits<CxlumnDataType>::lowest();
 
   for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); ++chunk_id) {
-    const auto base_column = table.get_chunk(chunk_id)->get_column(cxlumn_id);
+    const auto base_segment = table.get_chunk(chunk_id)->get_segment(cxlumn_id);
 
-    resolve_cxlumn_type<CxlumnDataType>(*base_column, [&](auto& column) {
+    resolve_cxlumn_type<CxlumnDataType>(*base_segment, [&](auto& column) {
       auto iterable = create_iterable_from_column<CxlumnDataType>(column);
       iterable.for_each([&](const auto& column_value) {
         if (column_value.is_null()) {

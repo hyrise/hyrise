@@ -73,7 +73,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
       // Forward input column if possible
       if (expression->type == ExpressionType::PQPColumn && forward_columns) {
         const auto pqp_column_expression = std::dynamic_pointer_cast<PQPCxlumnExpression>(expression);
-        output_columns.emplace_back(input_chunk->get_column(pqp_column_expression->cxlumn_id));
+        output_columns.emplace_back(input_chunk->get_segment(pqp_column_expression->cxlumn_id));
       } else {
         output_columns.emplace_back(evaluator.evaluate_expression_to_column(*expression));
       }

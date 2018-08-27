@@ -66,16 +66,16 @@ class JitWriteTuples : public AbstractJittableSink {
   void before_query(Table& out_table, JitRuntimeContext& context) const override;
   void after_chunk(Table& out_table, JitRuntimeContext& context) const override;
 
-  void add_output_column(const std::string& cxlumn_name, const JitTupleValue& value);
+  void add_output_cxlumn(const std::string& cxlumn_name, const JitTupleValue& value);
 
-  std::vector<JitOutputColumn> output_columns() const;
+  std::vector<JitOutputColumn> output_cxlumns() const;
 
  private:
   void _consume(JitRuntimeContext& context) const final;
 
   void _create_output_chunk(JitRuntimeContext& context) const;
 
-  std::vector<JitOutputColumn> _output_columns;
+  std::vector<JitOutputColumn> _output_cxlumns;
 };
 
 }  // namespace opossum

@@ -129,8 +129,8 @@ TEST_F(JitAwareLQPTranslatorTest, JitOperatorsRejectIndexScan) {
   }
 }
 
-TEST_F(JitAwareLQPTranslatorTest, InputColumnsAreAddedToJitReadTupleAdapter) {
-  // The query reads two columns from the input table. These input columns must be added to the JitReadTuples adapter to
+TEST_F(JitAwareLQPTranslatorTest, InputCxlumnsAreAddedToJitReadTupleAdapter) {
+  // The query reads two cxlumns from the input table. These input cxlumns must be added to the JitReadTuples adapter to
   // make their data accessible by other JitOperators.
   const auto jit_operator_wrapper = translate_query("SELECT a, b FROM table_b WHERE a > 1");
   ASSERT_TRUE(jit_operator_wrapper);
@@ -141,21 +141,21 @@ TEST_F(JitAwareLQPTranslatorTest, InputColumnsAreAddedToJitReadTupleAdapter) {
   const auto jit_read_tuples = std::dynamic_pointer_cast<JitReadTuples>(jit_operators[0]);
   ASSERT_NE(jit_read_tuples, nullptr);
 
-  // There should be two input columns
-  const auto input_columns = jit_read_tuples->input_columns();
-  ASSERT_EQ(input_columns.size(), 2u);
+  // There should be two input cxlumns
+  const auto input_cxlumns = jit_read_tuples->input_columns();
+  ASSERT_EQ(input_cxlumns.size(), 2u);
 
-  ASSERT_EQ(input_columns[0].cxlumn_id, CxlumnID{0});
-  ASSERT_EQ(input_columns[0].tuple_value.data_type(), DataType::Int);
-  ASSERT_EQ(input_columns[0].tuple_value.is_nullable(), true);
+  ASSERT_EQ(input_cxlumns[0].cxlumn_id, CxlumnID{0});
+  ASSERT_EQ(input_cxlumns[0].tuple_value.data_type(), DataType::Int);
+  ASSERT_EQ(input_cxlumns[0].tuple_value.is_nullable(), true);
 
-  ASSERT_EQ(input_columns[1].cxlumn_id, CxlumnID{1});
-  ASSERT_EQ(input_columns[1].tuple_value.data_type(), DataType::Float);
-  ASSERT_EQ(input_columns[1].tuple_value.is_nullable(), true);
+  ASSERT_EQ(input_cxlumns[1].cxlumn_id, CxlumnID{1});
+  ASSERT_EQ(input_cxlumns[1].tuple_value.data_type(), DataType::Float);
+  ASSERT_EQ(input_cxlumns[1].tuple_value.is_nullable(), true);
 }
 
 TEST_F(JitAwareLQPTranslatorTest, LiteralValuesAreAddedToJitReadTupleAdapter) {
-  // The query contains two literals. Literals are treated like values read from a column inside the operator pipeline.
+  // The query contains two literals. Literals are treated like values read from a cxlumn inside the operator pipeline.
   // The JitReadTuples adapter is responsible for making these literals available from within the pipeline.
   const auto jit_operator_wrapper = translate_query("SELECT a, b FROM table_b WHERE a > 1 AND b > 1.2");
   ASSERT_TRUE(jit_operator_wrapper);
@@ -179,8 +179,8 @@ TEST_F(JitAwareLQPTranslatorTest, LiteralValuesAreAddedToJitReadTupleAdapter) {
   ASSERT_EQ(input_literals[1].tuple_value.is_nullable(), false);
 }
 
-TEST_F(JitAwareLQPTranslatorTest, ColumnSubsetIsOutputCorrectly) {
-  // Select a subset of columns
+TEST_F(JitAwareLQPTranslatorTest, CxlumnSubsetIsOutputCorrectly) {
+  // Select a subset of cxlumns
   const auto jit_operator_wrapper = translate_query("SELECT a FROM table_a WHERE a > 1");
   ASSERT_TRUE(jit_operator_wrapper);
   const auto jit_operators = jit_operator_wrapper->jit_operators();
@@ -191,15 +191,15 @@ TEST_F(JitAwareLQPTranslatorTest, ColumnSubsetIsOutputCorrectly) {
   const auto jit_write_tuples = std::dynamic_pointer_cast<JitWriteTuples>(jit_operators[3]);
   ASSERT_NE(jit_write_tuples, nullptr);
 
-  const auto output_columns = jit_write_tuples->output_columns();
-  ASSERT_EQ(output_columns.size(), 1u);
+  const auto output_cxlumns = jit_write_tuples->output_cxlumns();
+  ASSERT_EQ(output_cxlumns.size(), 1u);
 
-  // The column output in the JitWriteTuples adapter should match the column read by the JitReadTuples adapter
-  ASSERT_EQ(jit_read_tuples->find_input_column(output_columns[0].tuple_value), CxlumnID{0});
+  // The cxlumn output in the JitWriteTuples adapter should match the cxlumn read by the JitReadTuples adapter
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(output_cxlumns[0].tuple_value), CxlumnID{0});
 }
 
-TEST_F(JitAwareLQPTranslatorTest, AllColumnsAreOutputCorrectly) {
-  // Select all columns
+TEST_F(JitAwareLQPTranslatorTest, AllCxlumnsAreOutputCorrectly) {
+  // Select all cxlumns
   const auto jit_operator_wrapper = translate_query("SELECT * FROM table_a WHERE a > 1");
   ASSERT_TRUE(jit_operator_wrapper);
   const auto jit_operators = jit_operator_wrapper->jit_operators();
@@ -210,15 +210,15 @@ TEST_F(JitAwareLQPTranslatorTest, AllColumnsAreOutputCorrectly) {
   const auto jit_write_tuples = std::dynamic_pointer_cast<JitWriteTuples>(jit_operators[3]);
   ASSERT_NE(jit_write_tuples, nullptr);
 
-  const auto output_columns = jit_write_tuples->output_columns();
-  ASSERT_EQ(output_columns.size(), 3u);
-  ASSERT_EQ(jit_read_tuples->find_input_column(output_columns[0].tuple_value), CxlumnID{0});
-  ASSERT_EQ(jit_read_tuples->find_input_column(output_columns[1].tuple_value), CxlumnID{1});
-  ASSERT_EQ(jit_read_tuples->find_input_column(output_columns[2].tuple_value), CxlumnID{2});
+  const auto output_cxlumns = jit_write_tuples->output_cxlumns();
+  ASSERT_EQ(output_cxlumns.size(), 3u);
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(output_cxlumns[0].tuple_value), CxlumnID{0});
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(output_cxlumns[1].tuple_value), CxlumnID{1});
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(output_cxlumns[2].tuple_value), CxlumnID{2});
 }
 
-TEST_F(JitAwareLQPTranslatorTest, ReorderedColumnsAreOutputCorrectly) {
-  // Select columns in different order
+TEST_F(JitAwareLQPTranslatorTest, ReorderedCxlumnsAreOutputCorrectly) {
+  // Select cxlumns in different order
   const auto jit_operator_wrapper = translate_query("SELECT c, a FROM table_a WHERE a > 1");
   ASSERT_TRUE(jit_operator_wrapper);
   const auto jit_operators = jit_operator_wrapper->jit_operators();
@@ -229,13 +229,13 @@ TEST_F(JitAwareLQPTranslatorTest, ReorderedColumnsAreOutputCorrectly) {
   const auto jit_write_tuples = std::dynamic_pointer_cast<JitWriteTuples>(jit_operators[3]);
   ASSERT_NE(jit_write_tuples, nullptr);
 
-  const auto output_columns = jit_write_tuples->output_columns();
-  ASSERT_EQ(output_columns.size(), 2u);
-  ASSERT_EQ(jit_read_tuples->find_input_column(output_columns[0].tuple_value), CxlumnID{2});
-  ASSERT_EQ(jit_read_tuples->find_input_column(output_columns[1].tuple_value), CxlumnID{0});
+  const auto output_cxlumns = jit_write_tuples->output_cxlumns();
+  ASSERT_EQ(output_cxlumns.size(), 2u);
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(output_cxlumns[0].tuple_value), CxlumnID{2});
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(output_cxlumns[1].tuple_value), CxlumnID{0});
 }
 
-TEST_F(JitAwareLQPTranslatorTest, OutputColumnNamesAndAlias) {
+TEST_F(JitAwareLQPTranslatorTest, OutputCxlumnNamesAndAlias) {
   const auto jit_operator_wrapper = translate_query("SELECT a, b as b_new FROM table_a WHERE a > 1");
   ASSERT_TRUE(jit_operator_wrapper);
   const auto jit_operators = jit_operator_wrapper->jit_operators();
@@ -244,10 +244,10 @@ TEST_F(JitAwareLQPTranslatorTest, OutputColumnNamesAndAlias) {
   const auto jit_write_tuples = std::dynamic_pointer_cast<JitWriteTuples>(jit_operators[3]);
   ASSERT_NE(jit_write_tuples, nullptr);
 
-  const auto output_columns = jit_write_tuples->output_columns();
-  ASSERT_EQ(output_columns.size(), 2u);
-  ASSERT_EQ(output_columns[0].cxlumn_name, "a");
-  ASSERT_EQ(output_columns[1].cxlumn_name, "b");
+  const auto output_cxlumns = jit_write_tuples->output_cxlumns();
+  ASSERT_EQ(output_cxlumns.size(), 2u);
+  ASSERT_EQ(output_cxlumns[0].cxlumn_name, "a");
+  ASSERT_EQ(output_cxlumns[1].cxlumn_name, "b");
 }
 
 TEST_F(JitAwareLQPTranslatorTest, ConsecutivePredicatesGetTransformedToConjunction) {
@@ -277,22 +277,22 @@ TEST_F(JitAwareLQPTranslatorTest, ConsecutivePredicatesGetTransformedToConjuncti
   const auto a_gt_b = expression->left_child();
 
   ASSERT_EQ(a_gt_b->expression_type(), JitExpressionType::GreaterThan);
-  ASSERT_EQ(a_gt_b->left_child()->expression_type(), JitExpressionType::Column);
-  ASSERT_EQ(a_gt_b->right_child()->expression_type(), JitExpressionType::Column);
-  ASSERT_EQ(jit_read_tuples->find_input_column(a_gt_b->left_child()->result()), CxlumnID{0});
-  ASSERT_EQ(jit_read_tuples->find_input_column(a_gt_b->right_child()->result()), CxlumnID{1});
+  ASSERT_EQ(a_gt_b->left_child()->expression_type(), JitExpressionType::Cxlumn);
+  ASSERT_EQ(a_gt_b->right_child()->expression_type(), JitExpressionType::Cxlumn);
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(a_gt_b->left_child()->result()), CxlumnID{0});
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(a_gt_b->right_child()->result()), CxlumnID{1});
 
   ASSERT_EQ(b_gt_c->expression_type(), JitExpressionType::GreaterThan);
-  ASSERT_EQ(b_gt_c->left_child()->expression_type(), JitExpressionType::Column);
-  ASSERT_EQ(b_gt_c->right_child()->expression_type(), JitExpressionType::Column);
-  ASSERT_EQ(jit_read_tuples->find_input_column(b_gt_c->left_child()->result()), CxlumnID{1});
-  ASSERT_EQ(jit_read_tuples->find_input_column(b_gt_c->right_child()->result()), CxlumnID{2});
+  ASSERT_EQ(b_gt_c->left_child()->expression_type(), JitExpressionType::Cxlumn);
+  ASSERT_EQ(b_gt_c->right_child()->expression_type(), JitExpressionType::Cxlumn);
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(b_gt_c->left_child()->result()), CxlumnID{1});
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(b_gt_c->right_child()->result()), CxlumnID{2});
 
   ASSERT_EQ(c_gt_a->expression_type(), JitExpressionType::GreaterThan);
-  ASSERT_EQ(c_gt_a->left_child()->expression_type(), JitExpressionType::Column);
-  ASSERT_EQ(c_gt_a->right_child()->expression_type(), JitExpressionType::Column);
-  ASSERT_EQ(jit_read_tuples->find_input_column(c_gt_a->left_child()->result()), CxlumnID{2});
-  ASSERT_EQ(jit_read_tuples->find_input_column(c_gt_a->right_child()->result()), CxlumnID{0});
+  ASSERT_EQ(c_gt_a->left_child()->expression_type(), JitExpressionType::Cxlumn);
+  ASSERT_EQ(c_gt_a->right_child()->expression_type(), JitExpressionType::Cxlumn);
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(c_gt_a->left_child()->result()), CxlumnID{2});
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(c_gt_a->right_child()->result()), CxlumnID{0});
 
   // Check that the filter operates on the computed value
   ASSERT_EQ(jit_filter->condition(), expression->result());
@@ -334,22 +334,22 @@ TEST_F(JitAwareLQPTranslatorTest, UnionsGetTransformedToDisjunction) {
   const auto c_gt_a = expression->right_child();
 
   ASSERT_EQ(a_gt_b->expression_type(), JitExpressionType::GreaterThan);
-  ASSERT_EQ(a_gt_b->left_child()->expression_type(), JitExpressionType::Column);
-  ASSERT_EQ(a_gt_b->right_child()->expression_type(), JitExpressionType::Column);
-  ASSERT_EQ(jit_read_tuples->find_input_column(a_gt_b->left_child()->result()), CxlumnID{0});
-  ASSERT_EQ(jit_read_tuples->find_input_column(a_gt_b->right_child()->result()), CxlumnID{1});
+  ASSERT_EQ(a_gt_b->left_child()->expression_type(), JitExpressionType::Cxlumn);
+  ASSERT_EQ(a_gt_b->right_child()->expression_type(), JitExpressionType::Cxlumn);
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(a_gt_b->left_child()->result()), CxlumnID{0});
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(a_gt_b->right_child()->result()), CxlumnID{1});
 
   ASSERT_EQ(b_gt_c->expression_type(), JitExpressionType::GreaterThan);
-  ASSERT_EQ(b_gt_c->left_child()->expression_type(), JitExpressionType::Column);
-  ASSERT_EQ(b_gt_c->right_child()->expression_type(), JitExpressionType::Column);
-  ASSERT_EQ(jit_read_tuples->find_input_column(b_gt_c->left_child()->result()), CxlumnID{1});
-  ASSERT_EQ(jit_read_tuples->find_input_column(b_gt_c->right_child()->result()), CxlumnID{2});
+  ASSERT_EQ(b_gt_c->left_child()->expression_type(), JitExpressionType::Cxlumn);
+  ASSERT_EQ(b_gt_c->right_child()->expression_type(), JitExpressionType::Cxlumn);
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(b_gt_c->left_child()->result()), CxlumnID{1});
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(b_gt_c->right_child()->result()), CxlumnID{2});
 
   ASSERT_EQ(c_gt_a->expression_type(), JitExpressionType::GreaterThan);
-  ASSERT_EQ(c_gt_a->left_child()->expression_type(), JitExpressionType::Column);
-  ASSERT_EQ(c_gt_a->right_child()->expression_type(), JitExpressionType::Column);
-  ASSERT_EQ(jit_read_tuples->find_input_column(c_gt_a->left_child()->result()), CxlumnID{2});
-  ASSERT_EQ(jit_read_tuples->find_input_column(c_gt_a->right_child()->result()), CxlumnID{0});
+  ASSERT_EQ(c_gt_a->left_child()->expression_type(), JitExpressionType::Cxlumn);
+  ASSERT_EQ(c_gt_a->right_child()->expression_type(), JitExpressionType::Cxlumn);
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(c_gt_a->left_child()->result()), CxlumnID{2});
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(c_gt_a->right_child()->result()), CxlumnID{0});
 
   // Check that the filter operates on the computed value
   ASSERT_EQ(jit_filter->condition(), expression->result());
@@ -380,22 +380,22 @@ TEST_F(JitAwareLQPTranslatorTest, AMoreComplexQuery) {
 
   const auto a_lte_b = expression_1->left_child();
   ASSERT_EQ(a_lte_b->expression_type(), JitExpressionType::LessThanEquals);
-  ASSERT_EQ(a_lte_b->left_child()->expression_type(), JitExpressionType::Column);
-  ASSERT_EQ(a_lte_b->right_child()->expression_type(), JitExpressionType::Column);
-  ASSERT_EQ(jit_read_tuples->find_input_column(a_lte_b->left_child()->result()), CxlumnID{0});
-  ASSERT_EQ(jit_read_tuples->find_input_column(a_lte_b->right_child()->result()), CxlumnID{1});
+  ASSERT_EQ(a_lte_b->left_child()->expression_type(), JitExpressionType::Cxlumn);
+  ASSERT_EQ(a_lte_b->right_child()->expression_type(), JitExpressionType::Cxlumn);
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(a_lte_b->left_child()->result()), CxlumnID{0});
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(a_lte_b->right_child()->result()), CxlumnID{1});
 
   const auto b_gt_a_plus_c = expression_1->right_child();
   ASSERT_EQ(b_gt_a_plus_c->expression_type(), JitExpressionType::GreaterThan);
-  ASSERT_EQ(b_gt_a_plus_c->left_child()->expression_type(), JitExpressionType::Column);
-  ASSERT_EQ(jit_read_tuples->find_input_column(b_gt_a_plus_c->left_child()->result()), CxlumnID{1});
+  ASSERT_EQ(b_gt_a_plus_c->left_child()->expression_type(), JitExpressionType::Cxlumn);
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(b_gt_a_plus_c->left_child()->result()), CxlumnID{1});
 
   const auto a_plus_c = b_gt_a_plus_c->right_child();
   ASSERT_EQ(a_plus_c->expression_type(), JitExpressionType::Addition);
-  ASSERT_EQ(a_plus_c->left_child()->expression_type(), JitExpressionType::Column);
-  ASSERT_EQ(a_plus_c->right_child()->expression_type(), JitExpressionType::Column);
-  ASSERT_EQ(jit_read_tuples->find_input_column(a_plus_c->left_child()->result()), CxlumnID{0});
-  ASSERT_EQ(jit_read_tuples->find_input_column(a_plus_c->right_child()->result()), CxlumnID{2});
+  ASSERT_EQ(a_plus_c->left_child()->expression_type(), JitExpressionType::Cxlumn);
+  ASSERT_EQ(a_plus_c->right_child()->expression_type(), JitExpressionType::Cxlumn);
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(a_plus_c->left_child()->result()), CxlumnID{0});
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(a_plus_c->right_child()->result()), CxlumnID{2});
 
   // Check that the filter operates on the computed value
   ASSERT_EQ(jit_filter->condition(), expression_1->result());
@@ -403,20 +403,20 @@ TEST_F(JitAwareLQPTranslatorTest, AMoreComplexQuery) {
   // Check the structure of the computed expression
   const auto expression_2 = jit_compute_2->expression();
   ASSERT_EQ(expression_2->expression_type(), JitExpressionType::Multiplication);
-  ASSERT_EQ(expression_2->right_child()->expression_type(), JitExpressionType::Column);
-  ASSERT_EQ(jit_read_tuples->find_input_column(expression_2->right_child()->result()), CxlumnID{2});
+  ASSERT_EQ(expression_2->right_child()->expression_type(), JitExpressionType::Cxlumn);
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(expression_2->right_child()->result()), CxlumnID{2});
 
   const auto a_plus_b = expression_2->left_child();
   ASSERT_EQ(a_plus_b->expression_type(), JitExpressionType::Addition);
-  ASSERT_EQ(a_plus_b->left_child()->expression_type(), JitExpressionType::Column);
-  ASSERT_EQ(a_plus_b->right_child()->expression_type(), JitExpressionType::Column);
-  ASSERT_EQ(jit_read_tuples->find_input_column(a_plus_b->left_child()->result()), CxlumnID{0});
-  ASSERT_EQ(jit_read_tuples->find_input_column(a_plus_b->right_child()->result()), CxlumnID{1});
+  ASSERT_EQ(a_plus_b->left_child()->expression_type(), JitExpressionType::Cxlumn);
+  ASSERT_EQ(a_plus_b->right_child()->expression_type(), JitExpressionType::Cxlumn);
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(a_plus_b->left_child()->result()), CxlumnID{0});
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(a_plus_b->right_child()->result()), CxlumnID{1});
 
-  const auto output_columns = jit_write_tuples->output_columns();
-  ASSERT_EQ(output_columns.size(), 2u);
-  ASSERT_EQ(jit_read_tuples->find_input_column(output_columns[0].tuple_value), CxlumnID{0});
-  ASSERT_EQ(expression_2->result(), std::make_optional(output_columns[1].tuple_value));
+  const auto output_cxlumns = jit_write_tuples->output_cxlumns();
+  ASSERT_EQ(output_cxlumns.size(), 2u);
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(output_cxlumns[0].tuple_value), CxlumnID{0});
+  ASSERT_EQ(expression_2->result(), std::make_optional(output_cxlumns[1].tuple_value));
 }
 
 TEST_F(JitAwareLQPTranslatorTest, AggregateOperator) {
@@ -438,38 +438,38 @@ TEST_F(JitAwareLQPTranslatorTest, AggregateOperator) {
   // Check the structure of the computed expression
   const auto expression = jit_compute->expression();
   ASSERT_EQ(expression->expression_type(), JitExpressionType::Addition);
-  ASSERT_EQ(jit_read_tuples->find_input_column(expression->left_child()->result()), CxlumnID{0});
-  ASSERT_EQ(jit_read_tuples->find_input_column(expression->right_child()->result()), CxlumnID{1});
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(expression->left_child()->result()), CxlumnID{0});
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(expression->right_child()->result()), CxlumnID{1});
 
-  // Check that the aggregate operator is configured with the correct group-by and aggregate columns
-  const auto groupby_columns = jit_aggregate->groupby_columns();
-  ASSERT_EQ(groupby_columns.size(), 1u);
-  ASSERT_EQ(groupby_columns[0].cxlumn_name, "a");
-  ASSERT_EQ(jit_read_tuples->find_input_column(groupby_columns[0].tuple_value), CxlumnID{0});
+  // Check that the aggregate operator is configured with the correct group-by and aggregate cxlumns
+  const auto groupby_cxlumns = jit_aggregate->groupby_cxlumns();
+  ASSERT_EQ(groupby_cxlumns.size(), 1u);
+  ASSERT_EQ(groupby_cxlumns[0].cxlumn_name, "a");
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(groupby_cxlumns[0].tuple_value), CxlumnID{0});
 
-  const auto aggregate_columns = jit_aggregate->aggregate_columns();
-  ASSERT_EQ(aggregate_columns.size(), 5u);
+  const auto aggregate_cxlumns = jit_aggregate->aggregate_cxlumns();
+  ASSERT_EQ(aggregate_cxlumns.size(), 5u);
 
-  ASSERT_EQ(aggregate_columns[0].cxlumn_name, "COUNT(a)");
-  ASSERT_EQ(aggregate_columns[0].function, AggregateFunction::Count);
-  ASSERT_EQ(jit_read_tuples->find_input_column(aggregate_columns[0].tuple_value), CxlumnID{0});
+  ASSERT_EQ(aggregate_cxlumns[0].cxlumn_name, "COUNT(a)");
+  ASSERT_EQ(aggregate_cxlumns[0].function, AggregateFunction::Count);
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(aggregate_cxlumns[0].tuple_value), CxlumnID{0});
 
-  ASSERT_EQ(aggregate_columns[1].cxlumn_name, "SUM(b)");
-  ASSERT_EQ(aggregate_columns[1].function, AggregateFunction::Sum);
-  ASSERT_EQ(jit_read_tuples->find_input_column(aggregate_columns[1].tuple_value), CxlumnID{1});
+  ASSERT_EQ(aggregate_cxlumns[1].cxlumn_name, "SUM(b)");
+  ASSERT_EQ(aggregate_cxlumns[1].function, AggregateFunction::Sum);
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(aggregate_cxlumns[1].tuple_value), CxlumnID{1});
 
-  ASSERT_EQ(aggregate_columns[2].cxlumn_name, "AVG(a + b)");
-  ASSERT_EQ(aggregate_columns[2].function, AggregateFunction::Avg);
+  ASSERT_EQ(aggregate_cxlumns[2].cxlumn_name, "AVG(a + b)");
+  ASSERT_EQ(aggregate_cxlumns[2].function, AggregateFunction::Avg);
   // This aggregate function should operates on the result of the previously computed expression
-  ASSERT_EQ(aggregate_columns[2].tuple_value, expression->result());
+  ASSERT_EQ(aggregate_cxlumns[2].tuple_value, expression->result());
 
-  ASSERT_EQ(aggregate_columns[3].cxlumn_name, "MIN(a)");
-  ASSERT_EQ(aggregate_columns[3].function, AggregateFunction::Min);
-  ASSERT_EQ(jit_read_tuples->find_input_column(aggregate_columns[3].tuple_value), CxlumnID{0});
+  ASSERT_EQ(aggregate_cxlumns[3].cxlumn_name, "MIN(a)");
+  ASSERT_EQ(aggregate_cxlumns[3].function, AggregateFunction::Min);
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(aggregate_cxlumns[3].tuple_value), CxlumnID{0});
 
-  ASSERT_EQ(aggregate_columns[4].cxlumn_name, "MAX(b)");
-  ASSERT_EQ(aggregate_columns[4].function, AggregateFunction::Max);
-  ASSERT_EQ(jit_read_tuples->find_input_column(aggregate_columns[4].tuple_value), CxlumnID{1});
+  ASSERT_EQ(aggregate_cxlumns[4].cxlumn_name, "MAX(b)");
+  ASSERT_EQ(aggregate_cxlumns[4].function, AggregateFunction::Max);
+  ASSERT_EQ(jit_read_tuples->find_input_cxlumn(aggregate_cxlumns[4].tuple_value), CxlumnID{1});
 }
 
 }  // namespace opossum

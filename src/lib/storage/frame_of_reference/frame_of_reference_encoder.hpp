@@ -5,7 +5,7 @@
 #include <limits>
 #include <memory>
 
-#include "storage/base_column_encoder.hpp"
+#include "storage/base_segment_encoder.hpp"
 
 #include "storage/frame_of_reference_segment.hpp"
 #include "storage/value_segment.hpp"
@@ -19,10 +19,10 @@ namespace opossum {
 class FrameOfReferenceEncoder : public ColumnEncoder<FrameOfReferenceEncoder> {
  public:
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::FrameOfReference>;
-  static constexpr auto _uses_vector_compression = true;  // see base_column_encoder.hpp for details
+  static constexpr auto _uses_vector_compression = true;  // see base_segment_encoder.hpp for details
 
   template <typename T>
-  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
+  std::shared_ptr<BaseEncodedSegment> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
     const auto alloc = value_segment->values().get_allocator();
 
     static constexpr auto block_size = FrameOfReferenceSegment<T>::block_size;

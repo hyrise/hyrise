@@ -2,7 +2,7 @@
 
 #include "all_type_variant.hpp"
 #include "b_tree_index_impl.hpp"
-#include "storage/base_column.hpp"
+#include "storage/base_segment.hpp"
 #include "storage/index/base_index.hpp"
 #include "types.hpp"
 

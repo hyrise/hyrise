@@ -6,7 +6,7 @@
 namespace opossum {
 
 JitExpression::JitExpression(const JitTupleValue& tuple_value)
-    : _expression_type{JitExpressionType::Column}, _result_value{tuple_value} {}
+    : _expression_type{JitExpressionType::Cxlumn}, _result_value{tuple_value} {}
 
 JitExpression::JitExpression(const std::shared_ptr<const JitExpression>& child, const JitExpressionType expression_type,
                              const size_t result_tuple_index)
@@ -23,7 +23,7 @@ JitExpression::JitExpression(const std::shared_ptr<const JitExpression>& left_ch
       _result_value{JitTupleValue(_compute_result_type(), result_tuple_index)} {}
 
 std::string JitExpression::to_string() const {
-  if (_expression_type == JitExpressionType::Column) {
+  if (_expression_type == JitExpressionType::Cxlumn) {
     return "x" + std::to_string(_result_value.tuple_index());
   }
 
@@ -34,7 +34,7 @@ std::string JitExpression::to_string() const {
 
 void JitExpression::compute(JitRuntimeContext& context) const {
   // We are dealing with an already computed value here, so there is nothing to do.
-  if (_expression_type == JitExpressionType::Column) {
+  if (_expression_type == JitExpressionType::Cxlumn) {
     return;
   }
 

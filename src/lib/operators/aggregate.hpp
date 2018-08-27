@@ -42,7 +42,7 @@ struct AggregateCxlumnDefinition final {
 
 /*
 Operator to aggregate columns by certain functions, such as min, max, sum, average, and count. The output is a table
- with reference columns. As with most operators we do not guarantee a stable operation with regards to positions -
+ with reference segments. As with most operators we do not guarantee a stable operation with regards to positions -
  i.e. your sorting order.
 
 For implementation details, please check the wiki: https://github.com/hyrise/hyrise/wiki/Aggregate-Operator
@@ -113,13 +113,13 @@ class Aggregate : public AbstractReadOnlyOperator {
 
   template <typename ColumnType>
   static void _create_aggregate_context(boost::hana::basic_type<ColumnType> type,
-                                        std::shared_ptr<ColumnVisitorContext>& aggregate_context,
+                                        std::shared_ptr<SegmentVisitorContext>& aggregate_context,
                                         AggregateFunction function);
 
   template <typename ColumnType, typename AggregateKey>
   static void _create_aggregate_visitor(boost::hana::basic_type<ColumnType> type,
                                         std::shared_ptr<AbstractColumnVisitor>& builder,
-                                        std::shared_ptr<ColumnVisitorContext> context,
+                                        std::shared_ptr<SegmentVisitorContext> context,
                                         std::shared_ptr<GroupByContext<AggregateKey>> groupby_context,
                                         AggregateFunction function);
 
@@ -130,15 +130,15 @@ class Aggregate : public AbstractReadOnlyOperator {
   void _write_groupby_output(PosList& pos_list);
 
   template <typename CxlumnDataType, AggregateFunction function, typename AggregateKey>
-  void _aggregate_column(ChunkID chunk_id, CxlumnID column_index, const BaseSegment& base_column,
+  void _aggregate_column(ChunkID chunk_id, CxlumnID column_index, const BaseSegment& base_segment,
                          const KeysPerChunk<AggregateKey>& keys_per_chunk);
 
   template <typename AggregateKey>
-  std::shared_ptr<ColumnVisitorContext> _create_aggregate_context(const DataType data_type,
+  std::shared_ptr<SegmentVisitorContext> _create_aggregate_context(const DataType data_type,
                                                                   const AggregateFunction function) const;
 
   template <typename CxlumnDataType, AggregateFunction aggregate_function, typename AggregateKey>
-  std::shared_ptr<ColumnVisitorContext> _create_aggregate_context_impl() const;
+  std::shared_ptr<SegmentVisitorContext> _create_aggregate_context_impl() const;
 
   const std::vector<AggregateCxlumnDefinition> _aggregates;
   const std::vector<CxlumnID> _groupby_cxlumn_ids;
@@ -147,7 +147,7 @@ class Aggregate : public AbstractReadOnlyOperator {
   ChunkSegments _output_columns;
 
   ChunkSegments _groupby_columns;
-  std::vector<std::shared_ptr<ColumnVisitorContext>> _contexts_per_column;
+  std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
 };
 
 }  // namespace opossum

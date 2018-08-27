@@ -3,7 +3,7 @@
 #include <optional>
 
 #include "resolve_type.hpp"
-#include "storage/base_column.hpp"
+#include "storage/base_segment.hpp"
 #include "storage/create_iterable_from_column.hpp"
 
 namespace opossum {
@@ -16,7 +16,7 @@ namespace opossum {
  * ```c++
  *   pmr_vector<std::optional<T>> values_and_nulls;
  *   values_and_nulls.reserve(chunk->size()); // Optional
- *   materialize_values_and_nulls(*chunk->get_column(expression->cxlumn_id()), values_and_nulls);
+ *   materialize_values_and_nulls(*chunk->get_segment(expression->cxlumn_id()), values_and_nulls);
  *   return values_and_nulls;
  * ```
  */

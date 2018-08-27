@@ -51,7 +51,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
       if (current_pos_list == nullptr || current_row_in_left_chunk == current_pos_list->size()) {
         current_row_in_left_chunk = 0u;
         current_pos_list = std::static_pointer_cast<const ReferenceSegment>(
-                               input_table_left()->get_chunk(current_left_chunk_id)->get_column(CxlumnID{0}))
+                               input_table_left()->get_chunk(current_left_chunk_id)->get_segment(CxlumnID{0}))
                                ->pos_list();
         current_left_chunk_id++;
       }
@@ -76,9 +76,9 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     auto right_chunk = input_table_right()->get_chunk(chunk_id);
 
     for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table_left()->cxlumn_count(); ++cxlumn_id) {
-      auto right_col = right_chunk->get_column(cxlumn_id);
+      auto right_col = right_chunk->get_segment(cxlumn_id);
 
-      auto left_col = std::dynamic_pointer_cast<const ReferenceSegment>(left_chunk->get_column(cxlumn_id));
+      auto left_col = std::dynamic_pointer_cast<const ReferenceSegment>(left_chunk->get_segment(cxlumn_id));
 
       insert_chunk->replace_column(left_col->referenced_cxlumn_id(), right_col);
     }
@@ -127,7 +127,7 @@ bool Update::_execution_input_valid(const std::shared_ptr<TransactionContext>& c
 
     if (!chunk->references_exactly_one_table()) return false;
 
-    const auto first_column = std::static_pointer_cast<const ReferenceSegment>(chunk->get_column(CxlumnID{0}));
+    const auto first_column = std::static_pointer_cast<const ReferenceSegment>(chunk->get_segment(CxlumnID{0}));
     if (table_to_update != first_column->referenced_table()) return false;
   }
 

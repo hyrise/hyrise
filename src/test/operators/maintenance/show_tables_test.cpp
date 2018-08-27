@@ -38,12 +38,12 @@ TEST_F(ShowTablesTest, CanShowTables) {
 
   auto out = st->get_output();
   EXPECT_EQ(out->row_count(), 2u) << "ShowTables returned wrong number of tables";
-  EXPECT_EQ(out->cxlumn_count(), 1u) << "ShowTables returned wrong number of columns";
+  EXPECT_EQ(out->cxlumn_count(), 1u) << "ShowTables returned wrong number of cxlumns";
 
-  auto column =
-      std::static_pointer_cast<const ValueSegment<std::string>>(out->get_chunk(ChunkID{0})->get_column(CxlumnID{0}));
-  EXPECT_EQ(column->values()[0], "first_table");
-  EXPECT_EQ(column->values()[1], "second_table");
+  auto segment =
+      std::static_pointer_cast<const ValueSegment<std::string>>(out->get_chunk(ChunkID{0})->get_segment(CxlumnID{0}));
+  EXPECT_EQ(segment->values()[0], "first_table");
+  EXPECT_EQ(segment->values()[1], "second_table");
 }
 
 TEST_F(ShowTablesTest, NoTables) {
@@ -52,7 +52,7 @@ TEST_F(ShowTablesTest, NoTables) {
 
   auto out = st->get_output();
   EXPECT_EQ(out->row_count(), 0u) << "ShowTables returned wrong number of tables";
-  EXPECT_EQ(out->cxlumn_count(), 1u) << "ShowTables returned wrong number of columns";
+  EXPECT_EQ(out->cxlumn_count(), 1u) << "ShowTables returned wrong number of cxlumns";
 }
 
 }  // namespace opossum

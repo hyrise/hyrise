@@ -14,7 +14,7 @@
  *
  * {
  *   PerformanceWarningDisabler pwd;
- *   std::cout << base_column[5] << std::endl; // this does not cause a warning
+ *   std::cout << base_segment[5] << std::endl; // this does not cause a warning
  * }
  * // warnings are enabled again
  *

@@ -10,7 +10,7 @@
 #include <utility>
 
 #include "csv_meta.hpp"
-#include "storage/base_column.hpp"
+#include "storage/base_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

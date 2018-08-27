@@ -10,8 +10,8 @@ namespace opossum {
 std::string JitWriteTuples::description() const {
   std::stringstream desc;
   desc << "[WriteTuple] ";
-  for (const auto& output_column : _output_columns) {
-    desc << output_column.cxlumn_name << " = x" << output_column.tuple_value.tuple_index() << ", ";
+  for (const auto& output_cxlumn : _output_cxlumns) {
+    desc << output_cxlumn.cxlumn_name << " = x" << output_cxlumn.tuple_value.tuple_index() << ", ";
   }
   return desc.str();
 }
@@ -19,11 +19,11 @@ std::string JitWriteTuples::description() const {
 std::shared_ptr<Table> JitWriteTuples::create_output_table(const ChunkOffset input_table_chunk_size) const {
   TableCxlumnDefinitions cxlumn_definitions;
 
-  for (const auto& output_column : _output_columns) {
+  for (const auto& output_cxlumn : _output_cxlumns) {
     // Add a column definition for each output column
-    const auto data_type = output_column.tuple_value.data_type();
-    const auto is_nullable = output_column.tuple_value.is_nullable();
-    cxlumn_definitions.emplace_back(output_column.cxlumn_name, data_type, is_nullable);
+    const auto data_type = output_cxlumn.tuple_value.data_type();
+    const auto is_nullable = output_cxlumn.tuple_value.is_nullable();
+    cxlumn_definitions.emplace_back(output_cxlumn.cxlumn_name, data_type, is_nullable);
   }
 
   return std::make_shared<Table>(cxlumn_definitions, TableType::Data, input_table_chunk_size);
@@ -38,11 +38,11 @@ void JitWriteTuples::after_chunk(Table& out_table, JitRuntimeContext& context) c
   }
 }
 
-void JitWriteTuples::add_output_column(const std::string& cxlumn_name, const JitTupleValue& value) {
-  _output_columns.push_back({cxlumn_name, value});
+void JitWriteTuples::add_output_cxlumn(const std::string& cxlumn_name, const JitTupleValue& value) {
+  _output_cxlumns.push_back({cxlumn_name, value});
 }
 
-std::vector<JitOutputColumn> JitWriteTuples::output_columns() const { return _output_columns; }
+std::vector<JitOutputColumn> JitWriteTuples::output_cxlumns() const { return _output_cxlumns; }
 
 void JitWriteTuples::_consume(JitRuntimeContext& context) const {
   for (const auto& output : context.outputs) {
@@ -54,23 +54,23 @@ void JitWriteTuples::_create_output_chunk(JitRuntimeContext& context) const {
   context.out_chunk.clear();
   context.outputs.clear();
 
-  // Create new value columns and add them to the runtime context to make them accessible by the column writers
-  for (const auto& output_column : _output_columns) {
-    const auto data_type = output_column.tuple_value.data_type();
-    const auto is_nullable = output_column.tuple_value.is_nullable();
+  // Create new value segments and add them to the runtime context to make them accessible by the column writers
+  for (const auto& output_cxlumn : _output_cxlumns) {
+    const auto data_type = output_cxlumn.tuple_value.data_type();
+    const auto is_nullable = output_cxlumn.tuple_value.is_nullable();
 
     // Create the appropriate column writer for the output column
     resolve_data_type(data_type, [&](auto type) {
       using CxlumnDataType = typename decltype(type)::type;
-      auto column = std::make_shared<ValueSegment<CxlumnDataType>>(output_column.tuple_value.is_nullable());
+      auto column = std::make_shared<ValueSegment<CxlumnDataType>>(output_cxlumn.tuple_value.is_nullable());
       context.out_chunk.push_back(column);
 
       if (is_nullable) {
         context.outputs.push_back(std::make_shared<JitColumnWriter<ValueSegment<CxlumnDataType>, CxlumnDataType, true>>(
-            column, output_column.tuple_value));
+            column, output_cxlumn.tuple_value));
       } else {
         context.outputs.push_back(std::make_shared<JitColumnWriter<ValueSegment<CxlumnDataType>, CxlumnDataType, false>>(
-            column, output_column.tuple_value));
+            column, output_cxlumn.tuple_value));
       }
     });
   }

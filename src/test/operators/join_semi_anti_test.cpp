@@ -44,7 +44,7 @@ TEST_F(JoinSemiAntiTest, SemiJoin) {
                              JoinMode::Semi, "src/test/tables/int.tbl", 1);
 }
 
-TEST_F(JoinSemiAntiTest, SemiJoinRefColumns) {
+TEST_F(JoinSemiAntiTest, SemiJoinRefSegments) {
   auto scan_a = std::make_shared<TableScan>(_table_wrapper_k, CxlumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
 
@@ -66,7 +66,7 @@ TEST_F(JoinSemiAntiTest, AntiJoin) {
                              JoinMode::Anti, "src/test/tables/joinoperators/anti_int4.tbl", 1);
 }
 
-TEST_F(JoinSemiAntiTest, AntiJoinRefColumns) {
+TEST_F(JoinSemiAntiTest, AntiJoinRefSegments) {
   auto scan_a = std::make_shared<TableScan>(_table_wrapper_k, CxlumnID{0}, PredicateCondition::GreaterThanEquals, 0);
   scan_a->execute();
 

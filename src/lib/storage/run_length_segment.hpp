@@ -22,13 +22,13 @@ class BaseCompressedVector;
  * sorted list can be traversed via binary search, which
  * makes randomly accessing elements much faster.
  *
- * As in value columns, null values are represented as an
+ * As in value segments, null values are represented as an
  * additional boolean vector.
  */
 template <typename T>
-class RunLengthColumn : public BaseEncodedColumn {
+class RunLengthSegment : public BaseEncodedSegment {
  public:
-  explicit RunLengthColumn(const std::shared_ptr<const pmr_vector<T>>& values,
+  explicit RunLengthSegment(const std::shared_ptr<const pmr_vector<T>>& values,
                            const std::shared_ptr<const pmr_vector<bool>>& null_values,
                            const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions);
 
@@ -52,7 +52,7 @@ class RunLengthColumn : public BaseEncodedColumn {
   /**@}*/
 
   /**
-   * @defgroup BaseEncodedColumn interface
+   * @defgroup BaseEncodedSegment interface
    * @{
    */
 

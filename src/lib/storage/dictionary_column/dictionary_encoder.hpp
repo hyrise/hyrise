@@ -4,7 +4,7 @@
 #include <limits>
 #include <memory>
 
-#include "storage/base_column_encoder.hpp"
+#include "storage/base_segment_encoder.hpp"
 
 #include "storage/dictionary_column.hpp"
 #include "storage/fixed_string_dictionary_column.hpp"
@@ -27,10 +27,10 @@ template <auto Encoding>
 class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
  public:
   static constexpr auto _encoding_type = enum_c<EncodingType, Encoding>;
-  static constexpr auto _uses_vector_compression = true;  // see base_column_encoder.hpp for details
+  static constexpr auto _uses_vector_compression = true;  // see base_segment_encoder.hpp for details
 
   template <typename T>
-  std::shared_ptr<BaseEncodedColumn> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
+  std::shared_ptr<BaseEncodedSegment> _on_encode(const std::shared_ptr<const ValueSegment<T>>& value_segment) {
     // See: https://goo.gl/MCM5rr
     // Create dictionary (enforce uniqueness and sorting)
     const auto& values = value_segment->values();
@@ -55,7 +55,7 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
   }
 
   template <typename U, typename T>
-  std::shared_ptr<BaseEncodedColumn> _encode_dictionary_column(
+  std::shared_ptr<BaseEncodedSegment> _encode_dictionary_column(
       U dictionary, const std::shared_ptr<const ValueSegment<T>>& value_segment) {
     const auto& values = value_segment->values();
     const auto alloc = values.get_allocator();

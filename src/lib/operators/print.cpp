@@ -9,7 +9,7 @@
 
 #include "constant_mappings.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/base_column.hpp"
+#include "storage/base_segment.hpp"
 #include "type_cast.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -41,20 +41,20 @@ void Print::print(const std::shared_ptr<const AbstractOperator>& in, uint32_t fl
 std::shared_ptr<const Table> Print::_on_execute() {
   PerformanceWarningDisabler pwd;
 
-  auto widths = _column_string_widths(_min_cell_width, _max_cell_width, input_table_left());
+  auto widths = _cxlumn_string_widths(_min_cell_width, _max_cell_width, input_table_left());
 
-  // print column headers
-  _out << "=== Columns" << std::endl;
-  for (CxlumnID col{0}; col < input_table_left()->cxlumn_count(); ++col) {
-    _out << "|" << std::setw(widths[col]) << input_table_left()->cxlumn_name(col) << std::setw(0);
+  // print cxlumn headers
+  _out << "=== Cxlumns" << std::endl;
+  for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table_left()->cxlumn_count(); ++cxlumn_id) {
+    _out << "|" << std::setw(widths[cxlumn_id]) << input_table_left()->cxlumn_name(cxlumn_id) << std::setw(0);
   }
   if (_flags & PrintMvcc) {
     _out << "||        MVCC        ";
   }
   _out << "|" << std::endl;
-  for (CxlumnID col{0}; col < input_table_left()->cxlumn_count(); ++col) {
-    const auto data_type = data_type_to_string.left.at(input_table_left()->cxlumn_data_type(col));
-    _out << "|" << std::setw(widths[col]) << data_type << std::setw(0);
+  for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table_left()->cxlumn_count(); ++cxlumn_id) {
+    const auto data_type = data_type_to_string.left.at(input_table_left()->cxlumn_data_type(cxlumn_id));
+    _out << "|" << std::setw(widths[cxlumn_id]) << data_type << std::setw(0);
   }
   if (_flags & PrintMvcc) {
     _out << "||_BEGIN|_END  |_TID  ";
@@ -78,11 +78,11 @@ std::shared_ptr<const Table> Print::_on_execute() {
     // print the rows in the chunk
     for (size_t row = 0; row < chunk->size(); ++row) {
       _out << "|";
-      for (CxlumnID col{0}; col < chunk->cxlumn_count(); ++col) {
+      for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk->cxlumn_count(); ++cxlumn_id) {
         // well yes, we use BaseSegment::operator[] here, but since Print is not an operation that should
         // be part of a regular query plan, let's keep things simple here
-        auto col_width = widths[col];
-        auto cell = _truncate_cell((*chunk->get_column(col))[row], col_width);
+        auto col_width = widths[cxlumn_id];
+        auto cell = _truncate_cell((*chunk->get_segment(cxlumn_id))[row], col_width);
         _out << std::setw(col_width) << cell << "|" << std::setw(0);
       }
 
@@ -112,7 +112,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
 // In order to print the table as an actual table, with columns being aligned, we need to calculate the
 // number of characters in the printed representation of each column
 // `min` and `max` can be used to limit the width of the columns - however, every column fits at least the column's name
-std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max,
+std::vector<uint16_t> Print::_cxlumn_string_widths(uint16_t min, uint16_t max,
                                                    const std::shared_ptr<const Table>& table) const {
   std::vector<uint16_t> widths(table->cxlumn_count());
   // calculate the length of the column name
@@ -126,7 +126,7 @@ std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max,
 
     for (CxlumnID col{0}; col < chunk->cxlumn_count(); ++col) {
       for (size_t row = 0; row < chunk->size(); ++row) {
-        auto cell_length = static_cast<uint16_t>(to_string((*chunk->get_column(col))[row]).size());
+        auto cell_length = static_cast<uint16_t>(to_string((*chunk->get_segment(col))[row]).size());
         widths[col] = std::max({min, widths[col], std::min(max, cell_length)});
       }
     }

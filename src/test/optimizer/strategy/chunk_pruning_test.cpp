@@ -190,7 +190,7 @@ TEST_F(ChunkPruningTest, LotsOfRangesFilterTest) {
   EXPECT_EQ(excluded, expected);
 }
 
-TEST_F(ChunkPruningTest, RunLengthColumnPruningTest) {
+TEST_F(ChunkPruningTest, RunLengthSegmentPruningTest) {
   auto stored_table_node = std::make_shared<StoredTableNode>("run_length_compressed");
 
   auto predicate_node = std::make_shared<PredicateNode>(equals_(LQPCxlumnReference(stored_table_node, CxlumnID{0}), 2));

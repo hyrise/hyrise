@@ -18,8 +18,8 @@ class OperatorsPrintTest : public BaseTest {
  protected:
   void SetUp() override {
     TableCxlumnDefinitions cxlumn_definitions;
-    cxlumn_definitions.emplace_back("col_1", DataType::Int);
-    cxlumn_definitions.emplace_back("col_2", DataType::String);
+    cxlumn_definitions.emplace_back("cxlumn_1", DataType::Int);
+    cxlumn_definitions.emplace_back("cxlumn_2", DataType::String);
     t = std::make_shared<Table>(cxlumn_definitions, TableType::Data, chunk_size);
     StorageManager::get().add_table(table_name, t);
 
@@ -47,8 +47,8 @@ class PrintWrapper : public Print {
   explicit PrintWrapper(const std::shared_ptr<AbstractOperator> in, std::ostream& out, uint32_t flags)
       : Print(in, out, flags), tab(in->get_output()) {}
 
-  std::vector<uint16_t> test_column_string_widths(uint16_t min, uint16_t max) {
-    return _column_string_widths(min, max, tab);
+  std::vector<uint16_t> test_cxlumn_string_widths(uint16_t min, uint16_t max) {
+    return _cxlumn_string_widths(min, max, tab);
   }
 
   std::string test_truncate_cell(const AllTypeVariant& cell, uint16_t max_width) {
@@ -72,8 +72,8 @@ TEST_F(OperatorsPrintTest, TableCxlumnDefinitions) {
   auto output_string = output.str();
 
   // rather hard-coded tests
-  EXPECT_TRUE(output_string.find("col_1") != std::string::npos);
-  EXPECT_TRUE(output_string.find("col_2") != std::string::npos);
+  EXPECT_TRUE(output_string.find("cxlumn_1") != std::string::npos);
+  EXPECT_TRUE(output_string.find("cxlumn_2") != std::string::npos);
   EXPECT_TRUE(output_string.find("int") != std::string::npos);
   EXPECT_TRUE(output_string.find("string") != std::string::npos);
 }
@@ -105,18 +105,18 @@ TEST_F(OperatorsPrintTest, FilledTable) {
   EXPECT_TRUE(output_string.find("|10|a|") == std::string::npos);
 }
 
-TEST_F(OperatorsPrintTest, GetColumnWidths) {
+TEST_F(OperatorsPrintTest, GetCxlumnWidths) {
   uint16_t min = 8;
   uint16_t max = 20;
 
   auto tab = StorageManager::get().get_table(table_name);
 
   auto pr_wrap = std::make_shared<PrintWrapper>(gt);
-  auto print_lengths = pr_wrap->test_column_string_widths(min, max);
+  auto print_lengths = pr_wrap->test_cxlumn_string_widths(min, max);
 
-  // we have two columns, thus two 'lengths'
+  // we have two cxlumns, thus two 'lengths'
   ASSERT_EQ(print_lengths.size(), static_cast<size_t>(2));
-  // with empty columns and short col names, we should see the minimal lengths
+  // with empty cxlumns and short cxlumn names, we should see the minimal lengths
   EXPECT_EQ(print_lengths.at(0), static_cast<size_t>(min));
   EXPECT_EQ(print_lengths.at(1), static_cast<size_t>(min));
 
@@ -124,7 +124,7 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
 
   tab->append({ten_digits_ints, "quite a long string with more than $max chars"});
 
-  print_lengths = pr_wrap->test_column_string_widths(min, max);
+  print_lengths = pr_wrap->test_cxlumn_string_widths(min, max);
   EXPECT_EQ(print_lengths.at(0), static_cast<size_t>(10));
   EXPECT_EQ(print_lengths.at(1), static_cast<size_t>(max));
 }
@@ -207,7 +207,7 @@ TEST_F(OperatorsPrintTest, AllFlags) {
 }
 
 TEST_F(OperatorsPrintTest, MVCCTableLoad) {
-  // per default, MVCC columns are created when loading tables
+  // per default, MVCC data is created when loading tables
   std::shared_ptr<TableWrapper> table = std::make_shared<TableWrapper>(load_table("src/test/tables/int_float.tbl", 2));
   table->execute();
 
@@ -226,11 +226,11 @@ TEST_F(OperatorsPrintTest, MVCCTableLoad) {
 TEST_F(OperatorsPrintTest, DirectInstantiations) {
   Print::print(gt, 0, output);
   auto output_op_inst = output.str();
-  EXPECT_TRUE(output_op_inst.find("col_1") != std::string::npos);
+  EXPECT_TRUE(output_op_inst.find("cxlumn_1") != std::string::npos);
 
   Print::print(t, 0, output);
   auto output_tab_inst = output.str();
-  EXPECT_TRUE(output_tab_inst.find("col_1") != std::string::npos);
+  EXPECT_TRUE(output_tab_inst.find("cxlumn_1") != std::string::npos);
 }
 
 }  // namespace opossum

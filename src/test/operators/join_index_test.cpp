@@ -67,15 +67,15 @@ class JoinIndexTest : public BaseTest {
   std::shared_ptr<TableWrapper> load_table_with_index(const std::string& filename, const size_t chunk_size) {
     auto table = load_table(filename, chunk_size);
 
-    ChunkEncoder::encode_all_chunks(table, ColumnEncodingSpec{EncodingType::Dictionary});
+    ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
 
     for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       auto chunk = table->get_chunk(chunk_id);
 
-      std::vector<CxlumnID> columns{1};
+      std::vector<CxlumnID> cxlumns{1};
       for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk->cxlumn_count(); ++cxlumn_id) {
-        columns[0] = cxlumn_id;
-        chunk->create_index<DerivedIndex>(columns);
+        cxlumns[0] = cxlumn_id;
+        chunk->create_index<DerivedIndex>(cxlumns);
       }
     }
 
@@ -264,31 +264,31 @@ TYPED_TEST(JoinIndexTest, OuterJoinDict) {
 }
 
 TYPED_TEST(JoinIndexTest, SmallerInnerJoin) {
-  // Joining two Integer Columns
+  // Joining two Integer Cxlumns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<CxlumnID, CxlumnID>(CxlumnID{0}, CxlumnID{0}), PredicateCondition::LessThan,
                          JoinMode::Inner, "src/test/tables/joinoperators/int_smaller_inner_join.tbl", 1);
 
-  // Joining two Float Columns
+  // Joining two Float Cxlumns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<CxlumnID, CxlumnID>(CxlumnID{1}, CxlumnID{1}), PredicateCondition::LessThan,
                          JoinMode::Inner, "src/test/tables/joinoperators/float_smaller_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, SmallerInnerJoinDict) {
-  // Joining two Integer Columns
+  // Joining two Integer Cxlumns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<CxlumnID, CxlumnID>(CxlumnID{0}, CxlumnID{0}), PredicateCondition::LessThan,
                          JoinMode::Inner, "src/test/tables/joinoperators/int_smaller_inner_join.tbl", 1);
 
-  // Joining two Float Columns
+  // Joining two Float Cxlumns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<CxlumnID, CxlumnID>(CxlumnID{1}, CxlumnID{1}), PredicateCondition::LessThan,
                          JoinMode::Inner, "src/test/tables/joinoperators/float_smaller_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, SmallerInnerJoin2) {
-  // Joining two Integer Columns
+  // Joining two Integer Cxlumns
   this->test_join_output(this->_table_wrapper_j, this->_table_wrapper_i,
                          std::pair<CxlumnID, CxlumnID>(CxlumnID{0}, CxlumnID{0}), PredicateCondition::LessThan,
                          JoinMode::Inner, "src/test/tables/joinoperators/int_smaller_inner_join_2.tbl", 1);
@@ -301,19 +301,19 @@ TYPED_TEST(JoinIndexTest, SmallerOuterJoin) {
 }
 
 TYPED_TEST(JoinIndexTest, SmallerEqualInnerJoin) {
-  // Joining two Integer Columns
+  // Joining two Integer Cxlumns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<CxlumnID, CxlumnID>(CxlumnID{0}, CxlumnID{0}), PredicateCondition::LessThanEquals,
                          JoinMode::Inner, "src/test/tables/joinoperators/int_smallerequal_inner_join.tbl", 1);
 
-  // Joining two Float Columns
+  // Joining two Float Cxlumns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<CxlumnID, CxlumnID>(CxlumnID{1}, CxlumnID{1}), PredicateCondition::LessThanEquals,
                          JoinMode::Inner, "src/test/tables/joinoperators/float_smallerequal_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, SmallerEqualInnerJoin2) {
-  // Joining two Integer Columns
+  // Joining two Integer Cxlumns
   this->test_join_output(this->_table_wrapper_j, this->_table_wrapper_i,
                          std::pair<CxlumnID, CxlumnID>(CxlumnID{0}, CxlumnID{0}), PredicateCondition::LessThanEquals,
                          JoinMode::Inner, "src/test/tables/joinoperators/int_smallerequal_inner_join_2.tbl", 1);
@@ -326,31 +326,31 @@ TYPED_TEST(JoinIndexTest, SmallerEqualOuterJoin) {
 }
 
 TYPED_TEST(JoinIndexTest, GreaterInnerJoin) {
-  // Joining two Integer Column
+  // Joining two Integer Cxlumns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<CxlumnID, CxlumnID>(CxlumnID{0}, CxlumnID{0}), PredicateCondition::GreaterThan,
                          JoinMode::Inner, "src/test/tables/joinoperators/int_greater_inner_join.tbl", 1);
 
-  // Joining two Float Columns
+  // Joining two Float Cxlumns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<CxlumnID, CxlumnID>(CxlumnID{1}, CxlumnID{1}), PredicateCondition::GreaterThan,
                          JoinMode::Inner, "src/test/tables/joinoperators/float_greater_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, GreaterInnerJoinDict) {
-  // Joining two Integer Column
+  // Joining two Integer Cxlumns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<CxlumnID, CxlumnID>(CxlumnID{0}, CxlumnID{0}), PredicateCondition::GreaterThan,
                          JoinMode::Inner, "src/test/tables/joinoperators/int_greater_inner_join.tbl", 1);
 
-  // Joining two Float Columns
+  // Joining two Float Cxlumns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<CxlumnID, CxlumnID>(CxlumnID{1}, CxlumnID{1}), PredicateCondition::GreaterThan,
                          JoinMode::Inner, "src/test/tables/joinoperators/float_greater_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, GreaterInnerJoin2) {
-  // Joining two Integer Columns
+  // Joining two Integer Cxlumns
   this->test_join_output(this->_table_wrapper_i, this->_table_wrapper_j,
                          std::pair<CxlumnID, CxlumnID>(CxlumnID{0}, CxlumnID{0}), PredicateCondition::GreaterThan,
                          JoinMode::Inner, "src/test/tables/joinoperators/int_greater_inner_join_2.tbl", 1);
@@ -363,24 +363,24 @@ TYPED_TEST(JoinIndexTest, GreaterOuterJoin) {
 }
 
 TYPED_TEST(JoinIndexTest, GreaterEqualInnerJoin) {
-  // Joining two Integer Columns
+  // Joining two Integer Cxlumns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<CxlumnID, CxlumnID>(CxlumnID{0}, CxlumnID{0}), PredicateCondition::GreaterThanEquals,
                          JoinMode::Inner, "src/test/tables/joinoperators/int_greaterequal_inner_join.tbl", 1);
 
-  // Joining two Float Columns
+  // Joining two Float Cxlumns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<CxlumnID, CxlumnID>(CxlumnID{1}, CxlumnID{1}), PredicateCondition::GreaterThanEquals,
                          JoinMode::Inner, "src/test/tables/joinoperators/float_greaterequal_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, GreaterEqualInnerJoinDict) {
-  // Joining two Integer Columns
+  // Joining two Integer Cxlumns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<CxlumnID, CxlumnID>(CxlumnID{0}, CxlumnID{0}), PredicateCondition::GreaterThanEquals,
                          JoinMode::Inner, "src/test/tables/joinoperators/int_greaterequal_inner_join.tbl", 1);
 
-  // Joining two Float Columns
+  // Joining two Float Cxlumns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<CxlumnID, CxlumnID>(CxlumnID{1}, CxlumnID{1}), PredicateCondition::GreaterThanEquals,
                          JoinMode::Inner, "src/test/tables/joinoperators/float_greaterequal_inner_join.tbl", 1);
@@ -393,29 +393,29 @@ TYPED_TEST(JoinIndexTest, GreaterEqualOuterJoin) {
 }
 
 TYPED_TEST(JoinIndexTest, GreaterEqualInnerJoin2) {
-  // Joining two Integer Columns
+  // Joining two Integer Cxlumns
   this->test_join_output(this->_table_wrapper_i, this->_table_wrapper_j,
                          std::pair<CxlumnID, CxlumnID>(CxlumnID{0}, CxlumnID{0}), PredicateCondition::GreaterThanEquals,
                          JoinMode::Inner, "src/test/tables/joinoperators/int_greaterequal_inner_join_2.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, NotEqualInnerJoin) {
-  // Joining two Integer Columns
+  // Joining two Integer Cxlumns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<CxlumnID, CxlumnID>(CxlumnID{0}, CxlumnID{0}), PredicateCondition::NotEquals,
                          JoinMode::Inner, "src/test/tables/joinoperators/int_notequal_inner_join.tbl", 1);
-  // Joining two Float Columns
+  // Joining two Float Cxlumns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<CxlumnID, CxlumnID>(CxlumnID{1}, CxlumnID{1}), PredicateCondition::NotEquals,
                          JoinMode::Inner, "src/test/tables/joinoperators/float_notequal_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinIndexTest, NotEqualInnerJoinDict) {
-  // Joining two Integer Columns
+  // Joining two Integer Cxlumns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<CxlumnID, CxlumnID>(CxlumnID{0}, CxlumnID{0}), PredicateCondition::NotEquals,
                          JoinMode::Inner, "src/test/tables/joinoperators/int_notequal_inner_join.tbl", 1);
-  // Joining two Float Columns
+  // Joining two Float Cxlumns
   this->test_join_output(this->_table_wrapper_a, this->_table_wrapper_b,
                          std::pair<CxlumnID, CxlumnID>(CxlumnID{1}, CxlumnID{1}), PredicateCondition::NotEquals,
                          JoinMode::Inner, "src/test/tables/joinoperators/float_notequal_inner_join.tbl", 1);
@@ -524,7 +524,7 @@ TYPED_TEST(JoinIndexTest, MultiJoinOnRefOuter) {
                          "src/test/tables/joinoperators/int_inner_multijoin_val_val_val_leftouter.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, RightJoinRefColumn) {
+TYPED_TEST(JoinIndexTest, RightJoinRefCxlumn) {
   // scan that returns all rows
   auto scan_a =
       std::make_shared<TableScan>(this->_table_wrapper_a, CxlumnID{0}, PredicateCondition::GreaterThanEquals, 0);
@@ -535,7 +535,7 @@ TYPED_TEST(JoinIndexTest, RightJoinRefColumn) {
                          "src/test/tables/joinoperators/int_right_join.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, LeftJoinRefColumn) {
+TYPED_TEST(JoinIndexTest, LeftJoinRefCxlumn) {
   // scan that returns all rows
   auto scan_b =
       std::make_shared<TableScan>(this->_table_wrapper_b, CxlumnID{0}, PredicateCondition::GreaterThanEquals, 0);
@@ -546,7 +546,7 @@ TYPED_TEST(JoinIndexTest, LeftJoinRefColumn) {
                          1);
 }
 
-TYPED_TEST(JoinIndexTest, RightJoinEmptyRefColumn) {
+TYPED_TEST(JoinIndexTest, RightJoinEmptyRefCxlumn) {
   // scan that returns no rows
   auto scan_a = std::make_shared<TableScan>(this->_table_wrapper_a, CxlumnID{0}, PredicateCondition::Equals, 0);
   scan_a->execute();
@@ -556,7 +556,7 @@ TYPED_TEST(JoinIndexTest, RightJoinEmptyRefColumn) {
                          "src/test/tables/joinoperators/int_join_empty.tbl", 1);
 }
 
-TYPED_TEST(JoinIndexTest, LeftJoinEmptyRefColumn) {
+TYPED_TEST(JoinIndexTest, LeftJoinEmptyRefCxlumn) {
   // scan that returns no rows
   auto scan_b = std::make_shared<TableScan>(this->_table_wrapper_b, CxlumnID{0}, PredicateCondition::Equals, 0);
   scan_b->execute();

@@ -42,7 +42,7 @@ TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
     auto chunk = table_dict->get_chunk(chunk_id);
 
     for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk->cxlumn_count(); ++cxlumn_id) {
-      auto segment = chunk->get_column(cxlumn_id);
+      auto segment = chunk->get_segment(cxlumn_id);
 
       auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(segment);
       ASSERT_NE(dict_segment, nullptr);
@@ -66,7 +66,7 @@ TEST_F(ChunkCompressionTaskTest, DictionarySize) {
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     auto chunk = table_dict->get_chunk(chunk_id);
     for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk->cxlumn_count(); ++cxlumn_id) {
-      auto segment = chunk->get_column(cxlumn_id);
+      auto segment = chunk->get_segment(cxlumn_id);
 
       auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(segment);
       ASSERT_NE(dict_segment, nullptr);
@@ -97,7 +97,7 @@ TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
 
   for (auto i = ChunkID{0}; i < table->chunk_count() - 1; ++i) {
     auto dict_segment =
-        std::dynamic_pointer_cast<const BaseDictionarySegment>(table->get_chunk(i)->get_column(CxlumnID{0}));
+        std::dynamic_pointer_cast<const BaseDictionarySegment>(table->get_chunk(i)->get_segment(CxlumnID{0}));
     ASSERT_NE(dict_segment, nullptr);
   }
 

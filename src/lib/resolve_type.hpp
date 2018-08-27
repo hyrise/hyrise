@@ -185,8 +185,8 @@ void resolve_data_type(DataType data_type, const Functor& func) {
  *
  *   void process_column(ReferenceSegment& column);
  *
- *   resolve_cxlumn_type<T>(base_column, [&](auto& typed_column) {
- *     process_column(typed_column);
+ *   resolve_cxlumn_type<T>(base_segment, [&](auto& typed_segment) {
+ *     process_column(typed_segment);
  *   });
  */
 template <typename In, typename Out>
@@ -198,14 +198,14 @@ std::enable_if_t<std::is_same<BaseSegment, std::remove_const_t<BaseSegmentType>>
 /*void*/ resolve_cxlumn_type(BaseSegmentType& column, const Functor& func) {
   using ValueSegmentPtr = ConstOutIfConstIn<BaseSegmentType, ValueSegment<CxlumnDataType>>*;
   using ReferenceSegmentPtr = ConstOutIfConstIn<BaseSegmentType, ReferenceSegment>*;
-  using EncodedColumnPtr = ConstOutIfConstIn<BaseSegmentType, BaseEncodedColumn>*;
+  using EncodedSegmentPtr = ConstOutIfConstIn<BaseSegmentType, BaseEncodedSegment>*;
 
   if (auto value_segment = dynamic_cast<ValueSegmentPtr>(&column)) {
     func(*value_segment);
   } else if (auto ref_segment = dynamic_cast<ReferenceSegmentPtr>(&column)) {
     func(*ref_segment);
-  } else if (auto encoded_column = dynamic_cast<EncodedColumnPtr>(&column)) {
-    resolve_encoded_segment_type<CxlumnDataType>(*encoded_column, func);
+  } else if (auto encoded_segment = dynamic_cast<EncodedSegmentPtr>(&column)) {
+    resolve_encoded_segment_type<CxlumnDataType>(*encoded_segment, func);
   } else {
     Fail("Unrecognized column type encountered.");
   }
@@ -230,8 +230,8 @@ std::enable_if_t<std::is_same<BaseSegment, std::remove_const_t<BaseSegmentType>>
  *   template <typename T>
  *   void process_column(hana::basic_type<T> type, ReferenceSegment& column);
  *
- *   resolve_data_and_cxlumn_type(base_column, [&](auto type, auto& typed_column) {
- *     process_column(type, typed_column);
+ *   resolve_data_and_cxlumn_type(base_segment, [&](auto type, auto& typed_segment) {
+ *     process_column(type, typed_segment);
  *   });
  */
 template <typename Functor, typename BaseSegmentType>  // BaseSegmentType allows column to be const and non-const
@@ -240,7 +240,7 @@ std::enable_if_t<std::is_same<BaseSegment, std::remove_const_t<BaseSegmentType>>
   resolve_data_type(column.data_type(), [&](auto type) {
     using CxlumnDataType = typename decltype(type)::type;
 
-    resolve_cxlumn_type<CxlumnDataType>(column, [&](auto& typed_column) { func(type, typed_column); });
+    resolve_cxlumn_type<CxlumnDataType>(column, [&](auto& typed_segment) { func(type, typed_segment); });
   });
 }
 

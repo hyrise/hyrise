@@ -3,16 +3,16 @@
 #include <iterator>
 #include <utility>
 
-#include "storage/column_iterables.hpp"
+#include "storage/segment_iterables.hpp"
 #include "types.hpp"
 
 namespace opossum {
 
 /**
- * This is an iterable for the null value vector of a value column.
+ * This is an iterable for the null value vector of a value segment.
  * It is used for example in the IS NULL implementation of the table scan.
  */
-class NullValueVectorIterable : public PointAccessibleColumnIterable<NullValueVectorIterable> {
+class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueVectorIterable> {
  public:
   explicit NullValueVectorIterable(const pmr_concurrent_vector<bool>& null_values) : _null_values{null_values} {}
 
@@ -34,7 +34,7 @@ class NullValueVectorIterable : public PointAccessibleColumnIterable<NullValueVe
   const pmr_concurrent_vector<bool>& _null_values;
 
  private:
-  class Iterator : public BaseSegmentIterator<Iterator, ColumnIteratorNullValue> {
+  class Iterator : public BaseSegmentIterator<Iterator, SegmentIteratorNullValue> {
    public:
     using NullValueIterator = pmr_concurrent_vector<bool>::const_iterator;
 
@@ -48,8 +48,8 @@ class NullValueVectorIterable : public PointAccessibleColumnIterable<NullValueVe
     void increment() { ++_null_value_it; }
     bool equal(const Iterator& other) const { return _null_value_it == other._null_value_it; }
 
-    ColumnIteratorNullValue dereference() const {
-      return ColumnIteratorNullValue{*_null_value_it,
+    SegmentIteratorNullValue dereference() const {
+      return SegmentIteratorNullValue{*_null_value_it,
                                      static_cast<ChunkOffset>(std::distance(_begin_null_value_it, _null_value_it))};
     }
 
@@ -58,22 +58,22 @@ class NullValueVectorIterable : public PointAccessibleColumnIterable<NullValueVe
     NullValueIterator _null_value_it;
   };
 
-  class PointAccessIterator : public BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorNullValue> {
+  class PointAccessIterator : public BasePointAccessSegmentIterator<PointAccessIterator, SegmentIteratorNullValue> {
    public:
     using NullValueVector = pmr_concurrent_vector<bool>;
 
    public:
     explicit PointAccessIterator(const NullValueVector& null_values, const ChunkOffsetsIterator& chunk_offsets_it)
-        : BasePointAccessColumnIterator<PointAccessIterator, ColumnIteratorNullValue>{chunk_offsets_it},
+        : BasePointAccessSegmentIterator<PointAccessIterator, SegmentIteratorNullValue>{chunk_offsets_it},
           _null_values{null_values} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-    ColumnIteratorNullValue dereference() const {
+    SegmentIteratorNullValue dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
 
-      return ColumnIteratorNullValue{_null_values[chunk_offsets.into_referenced], chunk_offsets.into_referencing};
+      return SegmentIteratorNullValue{_null_values[chunk_offsets.into_referenced], chunk_offsets.into_referencing};
     }
 
    private:

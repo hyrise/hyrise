@@ -24,8 +24,8 @@ ColumnComparisonTableScanImpl::ColumnComparisonTableScanImpl(const std::shared_p
 std::shared_ptr<PosList> ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
   const auto chunk = _in_table->get_chunk(chunk_id);
 
-  const auto left_column = chunk->get_column(_left_cxlumn_id);
-  const auto right_column = chunk->get_column(_right_cxlumn_id);
+  const auto left_column = chunk->get_segment(_left_cxlumn_id);
+  const auto right_column = chunk->get_segment(_right_cxlumn_id);
 
   auto matches_out = std::make_shared<PosList>();
 
@@ -39,10 +39,10 @@ std::shared_ptr<PosList> ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk
 
       /**
        * This generic lambda is instantiated for each type (int, long, etc.) and
-       * each column type (value, dictionary, reference column) per column!
+       * each column type (value, dictionary, reference segment) per column!
        * That’s 3x5 combinations each and 15x15=225 in total. However, not all combinations are valid or possible.
-       * Only data columns (value, dictionary) or reference columns will be compared, as a table with both data and
-       * reference columns is ruled out. Moreover it is not possible to compare strings to any of the four numerical
+       * Only data columns (value, dictionary) or reference segments will be compared, as a table with both data and
+       * reference segments is ruled out. Moreover it is not possible to compare strings to any of the four numerical
        * data types. Therefore, we need to check for these cases and exclude them via the constexpr-if which
        * reduces the number of combinations to 85.
        */
@@ -62,11 +62,11 @@ std::shared_ptr<PosList> ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk
       // clang-format off
       if constexpr((NEITHER_IS_reference_segment || BOTH_ARE_reference_segmentS) &&
                    (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMNS)) {
-        auto left_column_iterable = create_iterable_from_column<LeftType>(typed_left_column);
-        auto right_column_iterable = create_iterable_from_column<RightType>(typed_right_column);
+        auto left_segment_iterable = create_iterable_from_column<LeftType>(typed_left_column);
+        auto right_segment_iterable = create_iterable_from_column<RightType>(typed_right_column);
 
-        left_column_iterable.with_iterators([&](auto left_it, auto left_end) {
-          right_column_iterable.with_iterators([&](auto right_it, auto right_end) {
+        left_segment_iterable.with_iterators([&](auto left_it, auto left_end) {
+          right_segment_iterable.with_iterators([&](auto right_it, auto right_end) {
             with_comparator(_predicate_condition, [&](auto comparator) {
               this->_binary_scan(comparator, left_it, left_end, right_it, chunk_id, *matches_out);
             });

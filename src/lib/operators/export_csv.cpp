@@ -84,7 +84,7 @@ void ExportCsv::_generate_content_file(const std::shared_ptr<const Table>& table
 
     for (ChunkOffset chunk_offset = 0; chunk_offset < chunk->size(); ++chunk_offset) {
       for (CxlumnID cxlumn_id{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
-        const auto column = chunk->get_column(cxlumn_id);
+        const auto column = chunk->get_segment(cxlumn_id);
 
         // The previous implementation did a double dispatch (at least two virtual method calls)
         // So the subscript operator cannot be much slower.

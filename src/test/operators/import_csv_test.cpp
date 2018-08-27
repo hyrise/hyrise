@@ -17,7 +17,7 @@ namespace opossum {
 
 class OperatorsImportCsvTest : public BaseTest {};
 
-TEST_F(OperatorsImportCsvTest, SingleFloatColumn) {
+TEST_F(OperatorsImportCsvTest, SingleFloatSegment) {
   auto importer = std::make_shared<ImportCsv>("src/test/csv/float.csv");
   importer->execute();
   std::shared_ptr<Table> expected_table = load_table("src/test/tables/float.tbl", 5);
@@ -304,14 +304,14 @@ TEST_F(OperatorsImportCsvTest, AutoCompressChunks) {
   // Check if table content is preserved
   EXPECT_TABLE_EQ_ORDERED(result_table, expected_table);
 
-  // Check if columns are compressed into DictionarySegments
+  // Check if segments are compressed into DictionarySegments
   for (ChunkID chunk_id = ChunkID{0}; chunk_id < result_table->chunk_count(); ++chunk_id) {
     auto chunk = result_table->get_chunk(chunk_id);
     for (CxlumnID cxlumn_id = CxlumnID{0}; cxlumn_id < chunk->cxlumn_count(); ++cxlumn_id) {
-      auto base_column = chunk->get_column(cxlumn_id);
-      auto dict_column = std::dynamic_pointer_cast<const BaseDictionarySegment>(base_column);
+      auto base_segment = chunk->get_segment(cxlumn_id);
+      auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(base_segment);
 
-      EXPECT_TRUE(dict_column != nullptr);
+      EXPECT_TRUE(dict_segment != nullptr);
     }
   }
 }

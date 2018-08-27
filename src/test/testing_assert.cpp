@@ -43,7 +43,7 @@ Matrix _table_to_matrix(const std::shared_ptr<const opossum::Table>& table) {
     if (chunk->size() == 0) continue;
 
     for (auto cxlumn_id = opossum::CxlumnID{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
-      const auto column = chunk->get_column(cxlumn_id);
+      const auto column = chunk->get_segment(cxlumn_id);
 
       for (auto chunk_offset = opossum::ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
         matrix[row_offset + chunk_offset + 2][cxlumn_id] = (*column)[chunk_offset];

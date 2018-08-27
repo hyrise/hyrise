@@ -7,7 +7,7 @@
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
 
-#include "../lib/storage/base_column.hpp"
+#include "../lib/storage/base_segment.hpp"
 #include "../lib/storage/chunk.hpp"
 #include "../lib/storage/index/group_key/composite_group_key_index.hpp"
 #include "../lib/types.hpp"
@@ -18,14 +18,14 @@ template <typename DerivedIndex>
 class MultiColumnIndexTest : public BaseTest {
  protected:
   void SetUp() override {
-    dict_col_int = BaseTest::create_dict_column_by_type<int>(DataType::Int, {3, 4, 0, 4, 2, 7, 8, 4, 1, 9});
-    dict_col_str = BaseTest::create_dict_column_by_type<std::string>(
+    dict_segment_int = BaseTest::create_dict_segment_by_type<int>(DataType::Int, {3, 4, 0, 4, 2, 7, 8, 4, 1, 9});
+    dict_segment_str = BaseTest::create_dict_segment_by_type<std::string>(
         DataType::String, {"foo", "bar", "baz", "foo", "bar", "baz", "foo", "bar", "baz", "foo"});
 
     index_int_str =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>{dict_col_int, dict_col_str});
+        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>{dict_segment_int, dict_segment_str});
     index_str_int =
-        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>{dict_col_str, dict_col_int});
+        std::make_shared<DerivedIndex>(std::vector<std::shared_ptr<const BaseSegment>>{dict_segment_str, dict_segment_int});
   }
 
   template <class Iterator>
@@ -44,8 +44,8 @@ class MultiColumnIndexTest : public BaseTest {
 
   std::shared_ptr<BaseIndex> index_int_str = nullptr;
   std::shared_ptr<BaseIndex> index_str_int = nullptr;
-  std::shared_ptr<BaseSegment> dict_col_int = nullptr;
-  std::shared_ptr<BaseSegment> dict_col_str = nullptr;
+  std::shared_ptr<BaseSegment> dict_segment_int = nullptr;
+  std::shared_ptr<BaseSegment> dict_segment_str = nullptr;
 };
 
 // List of indices to test
@@ -56,7 +56,7 @@ TYPED_TEST(MultiColumnIndexTest, FullRange) {
   auto begin_int_str = this->index_int_str->cbegin();
   auto end_int_str = this->index_int_str->cend();
   auto result_values_int_str =
-      this->result_as_vector({this->dict_col_int, this->dict_col_str}, begin_int_str, end_int_str);
+      this->result_as_vector({this->dict_segment_int, this->dict_segment_str}, begin_int_str, end_int_str);
   auto expected_values_int_str =
       std::vector<std::vector<AllTypeVariant>>{{0, "baz"}, {1, "baz"}, {2, "bar"}, {3, "foo"}, {4, "bar"},
                                                {4, "bar"}, {4, "foo"}, {7, "baz"}, {8, "foo"}, {9, "foo"}};
@@ -65,7 +65,7 @@ TYPED_TEST(MultiColumnIndexTest, FullRange) {
   auto begin_str_int = this->index_str_int->cbegin();
   auto end_str_int = this->index_str_int->cend();
   auto result_values_str_int =
-      this->result_as_vector({this->dict_col_str, this->dict_col_int}, begin_str_int, end_str_int);
+      this->result_as_vector({this->dict_segment_str, this->dict_segment_int}, begin_str_int, end_str_int);
   auto expected_values_str_int =
       std::vector<std::vector<AllTypeVariant>>{{"bar", 2}, {"bar", 4}, {"bar", 4}, {"baz", 0}, {"baz", 1},
                                                {"baz", 7}, {"foo", 3}, {"foo", 4}, {"foo", 8}, {"foo", 9}};
@@ -181,34 +181,34 @@ TYPED_TEST(MultiColumnIndexTest, QueryWithFewerValuesThanColumns) {
 }
 
 TYPED_TEST(MultiColumnIndexTest, IsIndexForTest) {
-  EXPECT_TRUE(this->index_int_str->is_index_for({this->dict_col_int}));
-  EXPECT_TRUE(this->index_int_str->is_index_for({this->dict_col_int, this->dict_col_str}));
-  EXPECT_TRUE(this->index_str_int->is_index_for({this->dict_col_str}));
-  EXPECT_TRUE(this->index_str_int->is_index_for({this->dict_col_str, this->dict_col_int}));
+  EXPECT_TRUE(this->index_int_str->is_index_for({this->dict_segment_int}));
+  EXPECT_TRUE(this->index_int_str->is_index_for({this->dict_segment_int, this->dict_segment_str}));
+  EXPECT_TRUE(this->index_str_int->is_index_for({this->dict_segment_str}));
+  EXPECT_TRUE(this->index_str_int->is_index_for({this->dict_segment_str, this->dict_segment_int}));
 
-  EXPECT_FALSE(this->index_int_str->is_index_for({this->dict_col_str, this->dict_col_int}));
-  EXPECT_FALSE(this->index_str_int->is_index_for({this->dict_col_int}));
-  EXPECT_FALSE(this->index_str_int->is_index_for({this->dict_col_int, this->dict_col_str}));
+  EXPECT_FALSE(this->index_int_str->is_index_for({this->dict_segment_str, this->dict_segment_int}));
+  EXPECT_FALSE(this->index_str_int->is_index_for({this->dict_segment_int}));
+  EXPECT_FALSE(this->index_str_int->is_index_for({this->dict_segment_int, this->dict_segment_str}));
   EXPECT_FALSE(this->index_str_int->is_index_for({}));
 }
 
 TYPED_TEST(MultiColumnIndexTest, CreateAndRetrieveUsingChunk) {
-  auto chunk = std::make_shared<Chunk>(ChunkSegments({this->dict_col_int, this->dict_col_str}));
+  auto chunk = std::make_shared<Chunk>(ChunkSegments({this->dict_segment_int, this->dict_segment_str}));
 
-  chunk->create_index<TypeParam>({this->dict_col_int});
-  chunk->create_index<TypeParam>({this->dict_col_int, this->dict_col_str});
+  chunk->create_index<TypeParam>({this->dict_segment_int});
+  chunk->create_index<TypeParam>({this->dict_segment_int, this->dict_segment_str});
 
-  auto indices_int = chunk->get_indices({this->dict_col_int});
-  auto indices_int_str = chunk->get_indices({this->dict_col_int, this->dict_col_str});
-  auto indices_str = chunk->get_indices({this->dict_col_str});
+  auto indices_int = chunk->get_indices({this->dict_segment_int});
+  auto indices_int_str = chunk->get_indices({this->dict_segment_int, this->dict_segment_str});
+  auto indices_str = chunk->get_indices({this->dict_segment_str});
 
   EXPECT_EQ(2u, indices_int.size());
   EXPECT_EQ(1u, indices_int_str.size());
   EXPECT_EQ(0u, indices_str.size());
 
-  EXPECT_TRUE(indices_int[0]->is_index_for({this->dict_col_int}));
-  EXPECT_TRUE(indices_int[1]->is_index_for({this->dict_col_int}));
-  EXPECT_TRUE(indices_int_str[0]->is_index_for({this->dict_col_int, this->dict_col_str}));
+  EXPECT_TRUE(indices_int[0]->is_index_for({this->dict_segment_int}));
+  EXPECT_TRUE(indices_int[1]->is_index_for({this->dict_segment_int}));
+  EXPECT_TRUE(indices_int_str[0]->is_index_for({this->dict_segment_int, this->dict_segment_str}));
 }
 
 }  // namespace opossum

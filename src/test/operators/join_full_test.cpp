@@ -213,31 +213,31 @@ TYPED_TEST(JoinFullTest, OuterJoinDict) {
 }
 
 TYPED_TEST(JoinFullTest, SmallerInnerJoin) {
-  // Joining two Integer Columns
+  // Joining two Integer cxlumns
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, CxlumnIDPair(CxlumnID{0}, CxlumnID{0}),
       PredicateCondition::LessThan, JoinMode::Inner, "src/test/tables/joinoperators/int_smaller_inner_join.tbl", 1);
 
-  // Joining two Float Columns
+  // Joining two Float cxlumns
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, CxlumnIDPair(CxlumnID{1}, CxlumnID{1}),
       PredicateCondition::LessThan, JoinMode::Inner, "src/test/tables/joinoperators/float_smaller_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, SmallerInnerJoinDict) {
-  // Joining two Integer Columns
+  // Joining two Integer cxlumns
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a_dict, this->_table_wrapper_b_dict, CxlumnIDPair(CxlumnID{0}, CxlumnID{0}),
       PredicateCondition::LessThan, JoinMode::Inner, "src/test/tables/joinoperators/int_smaller_inner_join.tbl", 1);
 
-  // Joining two Float Columns
+  // Joining two Float cxlumns
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a_dict, this->_table_wrapper_b_dict, CxlumnIDPair(CxlumnID{1}, CxlumnID{1}),
       PredicateCondition::LessThan, JoinMode::Inner, "src/test/tables/joinoperators/float_smaller_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, SmallerInnerJoin2) {
-  // Joining two Integer Columns
+  // Joining two Integer cxlumns
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_j, this->_table_wrapper_i, CxlumnIDPair(CxlumnID{0}, CxlumnID{0}),
       PredicateCondition::LessThan, JoinMode::Inner, "src/test/tables/joinoperators/int_smaller_inner_join_2.tbl", 1);
@@ -250,13 +250,13 @@ TYPED_TEST(JoinFullTest, SmallerOuterJoin) {
 }
 
 TYPED_TEST(JoinFullTest, SmallerEqualInnerJoin) {
-  // Joining two Integer Columns
+  // Joining two Integer cxlumns
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
                                              CxlumnIDPair(CxlumnID{0}, CxlumnID{0}), PredicateCondition::LessThanEquals,
                                              JoinMode::Inner,
                                              "src/test/tables/joinoperators/int_smallerequal_inner_join.tbl", 1);
 
-  // Joining two Float Columns
+  // Joining two Float cxlumns
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
                                              CxlumnIDPair(CxlumnID{1}, CxlumnID{1}), PredicateCondition::LessThanEquals,
                                              JoinMode::Inner,
@@ -264,7 +264,7 @@ TYPED_TEST(JoinFullTest, SmallerEqualInnerJoin) {
 }
 
 TYPED_TEST(JoinFullTest, SmallerEqualInnerJoin2) {
-  // Joining two Integer Columns
+  // Joining two Integer cxlumns
   this->template test_join_output<TypeParam>(this->_table_wrapper_j, this->_table_wrapper_i,
                                              CxlumnIDPair(CxlumnID{0}, CxlumnID{0}), PredicateCondition::LessThanEquals,
                                              JoinMode::Inner,
@@ -279,12 +279,12 @@ TYPED_TEST(JoinFullTest, SmallerEqualOuterJoin) {
 }
 
 TYPED_TEST(JoinFullTest, GreaterInnerJoin) {
-  // Joining two Integer Column
+  // Joining two Integer cxlumns
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, CxlumnIDPair(CxlumnID{0}, CxlumnID{0}),
       PredicateCondition::GreaterThan, JoinMode::Inner, "src/test/tables/joinoperators/int_greater_inner_join.tbl", 1);
 
-  // Joining two Float Columns
+  // Joining two Float cxlumns
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
                                              CxlumnIDPair(CxlumnID{1}, CxlumnID{1}), PredicateCondition::GreaterThan,
                                              JoinMode::Inner,
@@ -292,12 +292,12 @@ TYPED_TEST(JoinFullTest, GreaterInnerJoin) {
 }
 
 TYPED_TEST(JoinFullTest, GreaterInnerJoinDict) {
-  // Joining two Integer Column
+  // Joining two Integer cxlumns
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a_dict, this->_table_wrapper_b_dict, CxlumnIDPair(CxlumnID{0}, CxlumnID{0}),
       PredicateCondition::GreaterThan, JoinMode::Inner, "src/test/tables/joinoperators/int_greater_inner_join.tbl", 1);
 
-  // Joining two Float Columns
+  // Joining two Float cxlumns
   this->template test_join_output<TypeParam>(this->_table_wrapper_a_dict, this->_table_wrapper_b_dict,
                                              CxlumnIDPair(CxlumnID{1}, CxlumnID{1}), PredicateCondition::GreaterThan,
                                              JoinMode::Inner,
@@ -305,7 +305,7 @@ TYPED_TEST(JoinFullTest, GreaterInnerJoinDict) {
 }
 
 TYPED_TEST(JoinFullTest, GreaterInnerJoin2) {
-  // Joining two Integer Columns
+  // Joining two Integer cxlumns
   this->template test_join_output<TypeParam>(this->_table_wrapper_i, this->_table_wrapper_j,
                                              CxlumnIDPair(CxlumnID{0}, CxlumnID{0}), PredicateCondition::GreaterThan,
                                              JoinMode::Inner,
@@ -319,13 +319,13 @@ TYPED_TEST(JoinFullTest, GreaterOuterJoin) {
 }
 
 TYPED_TEST(JoinFullTest, GreaterEqualInnerJoin) {
-  // Joining two Integer Columns
+  // Joining two Integer cxlumns
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
                                              CxlumnIDPair(CxlumnID{0}, CxlumnID{0}),
                                              PredicateCondition::GreaterThanEquals, JoinMode::Inner,
                                              "src/test/tables/joinoperators/int_greaterequal_inner_join.tbl", 1);
 
-  // Joining two Float Columns
+  // Joining two Float cxlumns
   this->template test_join_output<TypeParam>(this->_table_wrapper_a, this->_table_wrapper_b,
                                              CxlumnIDPair(CxlumnID{1}, CxlumnID{1}),
                                              PredicateCondition::GreaterThanEquals, JoinMode::Inner,
@@ -333,13 +333,13 @@ TYPED_TEST(JoinFullTest, GreaterEqualInnerJoin) {
 }
 
 TYPED_TEST(JoinFullTest, GreaterEqualInnerJoinDict) {
-  // Joining two Integer Columns
+  // Joining two Integer cxlumns
   this->template test_join_output<TypeParam>(this->_table_wrapper_a_dict, this->_table_wrapper_b_dict,
                                              CxlumnIDPair(CxlumnID{0}, CxlumnID{0}),
                                              PredicateCondition::GreaterThanEquals, JoinMode::Inner,
                                              "src/test/tables/joinoperators/int_greaterequal_inner_join.tbl", 1);
 
-  // Joining two Float Columns
+  // Joining two Float cxlumns
   this->template test_join_output<TypeParam>(this->_table_wrapper_a_dict, this->_table_wrapper_b_dict,
                                              CxlumnIDPair(CxlumnID{1}, CxlumnID{1}),
                                              PredicateCondition::GreaterThanEquals, JoinMode::Inner,
@@ -354,7 +354,7 @@ TYPED_TEST(JoinFullTest, GreaterEqualOuterJoin) {
 }
 
 TYPED_TEST(JoinFullTest, GreaterEqualInnerJoin2) {
-  // Joining two Integer Columns
+  // Joining two Integer cxlumns
   this->template test_join_output<TypeParam>(this->_table_wrapper_i, this->_table_wrapper_j,
                                              CxlumnIDPair(CxlumnID{0}, CxlumnID{0}),
                                              PredicateCondition::GreaterThanEquals, JoinMode::Inner,
@@ -362,22 +362,22 @@ TYPED_TEST(JoinFullTest, GreaterEqualInnerJoin2) {
 }
 
 TYPED_TEST(JoinFullTest, NotEqualInnerJoin) {
-  // Joining two Integer Columns
+  // Joining two Integer cxlumns
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, CxlumnIDPair(CxlumnID{0}, CxlumnID{0}),
       PredicateCondition::NotEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_notequal_inner_join.tbl", 1);
-  // Joining two Float Columns
+  // Joining two Float cxlumns
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a, this->_table_wrapper_b, CxlumnIDPair(CxlumnID{1}, CxlumnID{1}),
       PredicateCondition::NotEquals, JoinMode::Inner, "src/test/tables/joinoperators/float_notequal_inner_join.tbl", 1);
 }
 
 TYPED_TEST(JoinFullTest, NotEqualInnerJoinDict) {
-  // Joining two Integer Columns
+  // Joining two Integer cxlumns
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a_dict, this->_table_wrapper_b_dict, CxlumnIDPair(CxlumnID{0}, CxlumnID{0}),
       PredicateCondition::NotEquals, JoinMode::Inner, "src/test/tables/joinoperators/int_notequal_inner_join.tbl", 1);
-  // Joining two Float Columns
+  // Joining two Float cxlumns
   this->template test_join_output<TypeParam>(
       this->_table_wrapper_a_dict, this->_table_wrapper_b_dict, CxlumnIDPair(CxlumnID{1}, CxlumnID{1}),
       PredicateCondition::NotEquals, JoinMode::Inner, "src/test/tables/joinoperators/float_notequal_inner_join.tbl", 1);
