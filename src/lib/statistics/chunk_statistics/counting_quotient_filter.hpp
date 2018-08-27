@@ -11,6 +11,7 @@
 #include "types.hpp"
 
 #include "storage/base_column.hpp"
+#include "abstract_filter.hpp"
 
 
 
@@ -25,10 +26,10 @@ CQF can be configured with quotient size, which determines the number of slots, 
 corresponds to the slot size. At this time, the remainder size must be 2, 4, 8, 16 or 32. */
 
 template <typename ElementType>
-class CountingQuotientFilter {
+class CountingQuotientFilter : AbstractFilter {
  public:
   CountingQuotientFilter(uint8_t quotient_bits, uint8_t remainder_bits);
-  virtual ~CountingQuotientFilter() = default;
+  virtual ~CountingQuotientFilter();
   void insert(ElementType value, uint64_t count);
   void insert(ElementType value);
   void populate(std::shared_ptr<const BaseColumn> column);
@@ -37,6 +38,8 @@ class CountingQuotientFilter {
   uint64_t memory_consumption() const;
   double load_factor() const;
   bool is_full() const;
+
+  virtual bool can_prune(const AllTypeVariant& value, const PredicateCondition predicate_type) const override;
 
  private:
   std::optional<gqf2::quotient_filter> _quotient_filter2;

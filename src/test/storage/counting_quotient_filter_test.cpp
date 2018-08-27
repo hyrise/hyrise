@@ -10,7 +10,7 @@
 
 #include "../lib/storage/base_column.hpp"
 #include "../lib/storage/chunk.hpp"
-#include "../lib/storage/index/counting_quotient_filter/counting_quotient_filter.hpp"
+#include "../lib/statistics/chunk_statistics/counting_quotient_filter.hpp"
 #include "../lib/types.hpp"
 
 namespace opossum {

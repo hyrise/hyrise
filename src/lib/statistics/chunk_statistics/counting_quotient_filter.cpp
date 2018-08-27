@@ -9,6 +9,7 @@
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "storage/create_iterable_from_column.hpp"
+#include "types.hpp"
 
 
 
@@ -91,6 +92,13 @@ template <typename ElementType>
 uint64_t CountingQuotientFilter<ElementType>::count_all_type(AllTypeVariant value) const {
   DebugAssert(value.type() == typeid(ElementType), "Value does not have the same type as the filter elements");
   return count(type_cast<ElementType>(value));
+}
+
+template <typename ElementType>
+bool CountingQuotientFilter<ElementType>::can_prune(const AllTypeVariant& value,
+    const PredicateCondition predicate_type) const {
+  DebugAssert(predicate_type == PredicateCondition::Equals, "CQF only supports equality predicates");
+  return count_all_type(value) > 0;
 }
 
 template <typename ElementType>
