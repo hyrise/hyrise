@@ -1,33 +1,34 @@
 #pragma once
 
+#include <vector>
+#include <string>
+
 #include "cqf2.hpp"
 #include "cqf4.hpp"
 #include "cqf8.hpp"
 #include "cqf16.hpp"
 #include "cqf32.hpp"
 #include "types.hpp"
+
 #include "storage/base_column.hpp"
 
-#include <vector>
-#include <string>
+
 
 
 namespace opossum {
 
-/*
-Counting Quotient Filters allow you to keep track of which values are present in a column and how often. Filters
+/* Counting Quotient Filters allow you to keep track of which values are present in a column and how often. Filters
 work approximately. If a membership query yields a positive result, the value is probably present but there is
 a chance of a false positive. If the query delivers a negative result, the item is guaranteed to not be contained.
 In the same way, items can be over counted but not under counted.
 CQF can be configured with quotient size, which determines the number of slots, and the remainder size, which
-corresponds to the slot size. At this time, the remainder size must be 2, 4, 8, 16 or 32.
-*/
+corresponds to the slot size. At this time, the remainder size must be 2, 4, 8, 16 or 32. */
 
 template <typename ElementType>
 class CountingQuotientFilter {
  public:
   CountingQuotientFilter(uint8_t quotient_bits, uint8_t remainder_bits);
-  virtual ~CountingQuotientFilter();// = default;
+  virtual ~CountingQuotientFilter() = default;
   void insert(ElementType value, uint64_t count);
   void insert(ElementType value);
   void populate(std::shared_ptr<const BaseColumn> column);
@@ -49,7 +50,6 @@ class CountingQuotientFilter {
   uint64_t _hash_bits;
   uint64_t _hash(ElementType value) const;
   const uint32_t _seed = std::rand();
-
 };
 
-} // namespace opossum
+}  // namespace opossum

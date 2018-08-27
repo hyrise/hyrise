@@ -1,13 +1,16 @@
 #include "counting_quotient_filter.hpp"
+
+#include <cmath>
+#include <iostream>
+#include <string>
+
 #include "utils/murmur_hash.hpp"
 #include "resolve_type.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "storage/create_iterable_from_column.hpp"
 
-#include <cmath>
-#include <iostream>
-#include <string>
+
 
 namespace opossum {
 
@@ -62,7 +65,6 @@ CountingQuotientFilter<ElementType>::~CountingQuotientFilter() {
 
 template <typename ElementType>
 void CountingQuotientFilter<ElementType>::insert(ElementType element, uint64_t count) {
-  //std::cout << "load factor: " << load_factor() << std::endl;
   uint64_t bitmask = static_cast<uint64_t>(std::pow(2, _hash_bits)) - 1;
   uint64_t hash = bitmask & _hash(element);
   for (uint64_t i = 0; i < count; i++) {
@@ -113,7 +115,6 @@ uint64_t CountingQuotientFilter<ElementType>::count(ElementType element) const {
 **/
 template <typename ElementType>
 uint64_t CountingQuotientFilter<ElementType>::_hash(ElementType value) const {
-  //auto hash = xxh::xxhash<64, ElementType>(&value, 1, _seed);
   auto hash = murmur2<ElementType>(value, _seed);
   return static_cast<uint64_t>(hash);
 }
@@ -123,7 +124,6 @@ uint64_t CountingQuotientFilter<ElementType>::_hash(ElementType value) const {
 **/
 template <>
 uint64_t CountingQuotientFilter<std::string>::_hash(std::string value) const {
-  //auto hash = xxh::xxhash<64, char>(value.data(), value.length(), _seed);
   auto hash = murmur_hash2(value.data(), value.length(), _seed);
   return static_cast<uint64_t>(hash);
 }
@@ -153,7 +153,6 @@ uint64_t CountingQuotientFilter<ElementType>::memory_consumption() const {
   } else {
     memory_consumption += gqf32::memory_consumption(_quotient_filter32.value());
   }
-  //std::cout << "Filter: " << memory_consumption << " bytes" << std::endl;
   return memory_consumption;
 }
 
@@ -179,4 +178,4 @@ bool CountingQuotientFilter<ElementType>::is_full() const {
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(CountingQuotientFilter);
 
-} // namespace opossum
+}  // namespace opossum
