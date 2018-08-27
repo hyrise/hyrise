@@ -64,6 +64,10 @@ endif()
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
 endif()
+set(BUILD_TYPES Debug RelWithDebInfo Release)
+if(NOT CMAKE_BUILD_TYPE IN_LIST BUILD_TYPES)
+    message(FATAL_ERROR "Unknown Build Type: ${CMAKE_BUILD_TYPE}")
+endif()
 
 # CMake settings
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH}) # To allow CMake to locate our Find*.cmake files
