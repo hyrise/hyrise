@@ -18,11 +18,11 @@ constexpr bool is_valid_name(const char* name) {
 
 #if defined(__APPLE__) || defined(__MACOS__)
 
-#include "utils/tracing/provider.h"
 #include "utils/tracing/probe_definitions.hpp"
+#include "utils/tracing/provider.h"
 
 // Construct the probe definition by provider and probe name
-#define BUILD_PROBE_NAME(provider, probe, ...)                                                                          \
+#define BUILD_PROBE_NAME(provider, probe, ...)                                                                     \
   static_assert(is_valid_name(#provider) && is_valid_name(#probe), "Provider and probe name must be upper case!"); \
   provider##_##probe(__VA_ARGS__);
 
@@ -42,11 +42,15 @@ constexpr bool is_valid_name(const char* name) {
   BUILD_PROBE_NAME(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8);
 #define DTRACE_PROBE9(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9) \
   BUILD_PROBE_NAME(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9);
-#define DTRACE_PROBE10(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9, param10) \
+#define DTRACE_PROBE10(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9, \
+                       param10)                                                                                 \
   BUILD_PROBE_NAME(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9, param10);
-#define DTRACE_PROBE11(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9, param10, param11) \
-  BUILD_PROBE_NAME(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9, param10, param11);
-#define DTRACE_PROBE12(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9, param10, param11, \
-                       param12)                                                                                         \
-  BUILD_PROBE_NAME(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9, param10, param11, param12);
+#define DTRACE_PROBE11(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9,      \
+                       param10, param11)                                                                             \
+  BUILD_PROBE_NAME(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9, param10, \
+                   param11);
+#define DTRACE_PROBE12(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9,      \
+                       param10, param11, param12)                                                                    \
+  BUILD_PROBE_NAME(provider, probe, param1, param2, param3, param4, param5, param6, param7, param8, param9, param10, \
+                   param11, param12);
 #endif

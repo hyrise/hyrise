@@ -12,7 +12,7 @@
 #include "utils/format_duration.hpp"
 #include "utils/print_directed_acyclic_graph.hpp"
 #include "utils/timer.hpp"
-#include "utils/tracing/systemtap.hpp"
+#include "utils/tracing/probes.hpp"
 
 namespace opossum {
 

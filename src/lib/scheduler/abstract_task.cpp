@@ -8,7 +8,7 @@
 #include "abstract_scheduler.hpp"
 #include "current_scheduler.hpp"
 #include "task_queue.hpp"
-#include "utils/tracing/systemtap.hpp"
+#include "utils/tracing/probes.hpp"
 #include "worker.hpp"
 
 #include "utils/assert.hpp"

@@ -12,7 +12,7 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/processing_unit.hpp"
 #include "scheduler/worker.hpp"
-#include "utils/tracing/systemtap.hpp"
+#include "utils/tracing/probes.hpp"
 
 namespace opossum {
 OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op, CleanupTemporaries cleanup_temporaries,

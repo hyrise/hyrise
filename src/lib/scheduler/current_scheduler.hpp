@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "utils/assert.hpp"
-#include "utils/tracing/systemtap.hpp"
+#include "utils/tracing/probes.hpp"
 #include "worker.hpp"
 
 namespace opossum {

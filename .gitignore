@@ -22,6 +22,8 @@ lqp*.png
 compile_times.txt
 exported_table_statistics.json
 version.hpp
+provider.h
+probe_definitions.hpp
 
 # Ignore cmake user files
 *.txt.user

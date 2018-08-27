@@ -515,7 +515,7 @@ set(
     utils/timer.cpp
     utils/timer.hpp
     utils/tracing/provider.h
-    utils/tracing/systemtap.hpp
+    utils/tracing/probes.hpp
     ${CMAKE_BINARY_DIR}/version.hpp
 )
 
@@ -594,7 +594,7 @@ set(LINE "#ifndef &\\n#define &(...)\\n#endif\\n")
 add_custom_command (
     OUTPUT ${PROBES_FILE}
     DEPENDS ${SOURCES}
-    COMMAND grep -r --include=*.[ch]pp --exclude=systemtap.hpp --exclude=probe_definitions.hpp -h DTRACE_PROBE ${CMAKE_SOURCE_DIR} |  sed "s/[^(]*(\\([^,]*\\), \\([^(,|))]*\\).*/\\1_\\2/" | uniq | xargs -n 1 -I & printf "${LINE}" > ${PROBES_FILE}
+    COMMAND grep -r --include=*.[ch]pp --exclude=probes.hpp --exclude=probe_definitions.hpp -h DTRACE_PROBE ${CMAKE_SOURCE_DIR} |  sed "s/[^(]*(\\([^,]*\\), \\([^(,|))]*\\).*/\\1_\\2/" | uniq | xargs -n 1 -I & printf "${LINE}" > ${PROBES_FILE}
     VERBATIM
 )
 
