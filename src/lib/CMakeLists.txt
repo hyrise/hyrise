@@ -589,6 +589,10 @@ endif()
 
 # Configure the regular hyrise library used for tests/server/playground...
 add_library(hyrise STATIC ${SOURCES})
+
+# -rdynamic orders the linker to export the symbols so that plugins can use them.
 target_link_libraries(hyrise ${LIBRARIES} -rdynamic)
 target_include_directories(hyrise PUBLIC ${CMAKE_BINARY_DIR})
+
+# -fPIC generates position independent code which is necessary because plugins might access hyrise functions.
 target_compile_options(hyrise PRIVATE -fPIC)
