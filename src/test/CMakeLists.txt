@@ -280,8 +280,8 @@ if (APPLE)
     endif()
 endif()
 
-# We define LIB_DIR to always load plugins from the correct directory for testing purposes
-add_definitions(-DLIB_DIR="${CMAKE_BINARY_DIR}/lib/")
+# We define TEST_PLUGIN_DIR to always load plugins from the correct directory for testing purposes
+add_definitions(-DTEST_PLUGIN_DIR="${CMAKE_BINARY_DIR}/lib/")
 
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})

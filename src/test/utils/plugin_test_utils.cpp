@@ -9,9 +9,9 @@ namespace opossum {
 #endif
 
 const std::string build_dylib_path(const std::string& name) {
-  // CMAKE makes LIB_DIR point to the ${CMAKE_BINARY_DIR}/lib/
+  // CMAKE makes TEST_PLUGIN_DIR point to the ${CMAKE_BINARY_DIR}/lib/
   // Dynamic libraries have platform-dependent suffixes
-  return std::string(LIB_DIR) + name + std::string(DYNAMIC_LIBRARY_SUFFIX);
+  return std::string(TEST_PLUGIN_DIR) + name + std::string(DYNAMIC_LIBRARY_SUFFIX);
 }
 
 }  // namespace opossum
