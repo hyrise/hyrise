@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
   // clang-format off
   cli_options.add_options()
     ("s,scale", "Database scale factor (1.0 ~ 1GB)", cxxopts::value<float>()->default_value("0.1"))
-    ("queries", "Specify queries to run, default is all", cxxopts::value<std::vector<opossum::QueryID>>()); // NOLINT
+    ("q,queries", "Specify queries to run, default is all", cxxopts::value<std::vector<opossum::QueryID>>()); // NOLINT
   // clang-format on
 
   std::unique_ptr<opossum::BenchmarkConfig> config;
