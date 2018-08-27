@@ -17,7 +17,7 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
 
   std::string line;
   std::getline(infile, line);
-  std::vector<std::string> col_names = _split<std::string>(line, '|');
+  std::vector<std::string> cxlumn_names = _split<std::string>(line, '|');
   std::getline(infile, line);
   std::vector<std::string> col_types = _split<std::string>(line, '|');
 
@@ -31,11 +31,11 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
   }
 
   TableCxlumnDefinitions cxlumn_definitions;
-  for (size_t i = 0; i < col_names.size(); i++) {
+  for (size_t i = 0; i < cxlumn_names.size(); i++) {
     const auto data_type = data_type_to_string.right.find(col_types[i]);
     Assert(data_type != data_type_to_string.right.end(),
-           std::string("Invalid data type ") + col_types[i] + " for column " + col_names[i]);
-    cxlumn_definitions.emplace_back(col_names[i], data_type->second, col_nullable[i]);
+           std::string("Invalid data type ") + col_types[i] + " for column " + cxlumn_names[i]);
+    cxlumn_definitions.emplace_back(cxlumn_names[i], data_type->second, col_nullable[i]);
   }
   std::shared_ptr<Table> test_table =
       std::make_shared<Table>(cxlumn_definitions, TableType::Data, chunk_size, UseMvcc::Yes);

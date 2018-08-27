@@ -11,7 +11,7 @@
 #include "all_type_variant.hpp"
 #include "join_nested_loop.hpp"
 #include "resolve_type.hpp"
-#include "storage/create_iterable_from_column.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 #include "storage/index/base_index.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
@@ -65,7 +65,7 @@ void JoinIndex::_create_table_structure() {
   TableCxlumnDefinitions cxlumn_definitions;
   auto add_cxlumn_definitions = [&](auto from_table, bool from_may_produce_null) {
     for (CxlumnID cxlumn_id{0}; cxlumn_id < from_table->cxlumn_count(); ++cxlumn_id) {
-      auto nullable = (from_may_produce_null || from_table->column_is_nullable(cxlumn_id));
+      auto nullable = (from_may_produce_null || from_table->cxlumn_is_nullable(cxlumn_id));
       cxlumn_definitions.emplace_back(from_table->cxlumn_name(cxlumn_id), from_table->cxlumn_data_type(cxlumn_id),
                                       nullable);
     }
@@ -124,7 +124,7 @@ void JoinIndex::_perform_join() {
         resolve_data_and_cxlumn_type(*chunk_column_left, [&](auto left_type, auto& typed_left_column) {
           using LeftType = typename decltype(left_type)::type;
 
-          auto iterable_left = create_iterable_from_column<LeftType>(typed_left_column);
+          auto iterable_left = create_iterable_from_segment<LeftType>(typed_left_column);
 
           // utilize index for join
           iterable_left.with_iterators([&](auto left_it, auto left_end) {

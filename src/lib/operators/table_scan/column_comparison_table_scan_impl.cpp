@@ -5,7 +5,7 @@
 #include <type_traits>
 
 #include "storage/chunk.hpp"
-#include "storage/create_iterable_from_column.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 #include "storage/table.hpp"
 
 #include "utils/assert.hpp"
@@ -24,34 +24,34 @@ ColumnComparisonTableScanImpl::ColumnComparisonTableScanImpl(const std::shared_p
 std::shared_ptr<PosList> ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk_id) {
   const auto chunk = _in_table->get_chunk(chunk_id);
 
-  const auto left_column = chunk->get_segment(_left_cxlumn_id);
-  const auto right_column = chunk->get_segment(_right_cxlumn_id);
+  const auto left_segment = chunk->get_segment(_left_cxlumn_id);
+  const auto right_segment = chunk->get_segment(_right_cxlumn_id);
 
   auto matches_out = std::make_shared<PosList>();
 
-  resolve_data_and_cxlumn_type(*left_column, [&](auto left_type, auto& typed_left_column) {
-    resolve_data_and_cxlumn_type(*right_column, [&](auto right_type, auto& typed_right_column) {
-      using LeftColumnType = typename std::decay<decltype(typed_left_column)>::type;
-      using RightColumnType = typename std::decay<decltype(typed_right_column)>::type;
+  resolve_data_and_cxlumn_type(*left_segment, [&](auto left_type, auto& typed_left_segment) {
+    resolve_data_and_cxlumn_type(*right_segment, [&](auto right_type, auto& typed_right_segment) {
+      using LeftColumnType = typename std::decay<decltype(typed_left_segment)>::type;
+      using RightColumnType = typename std::decay<decltype(typed_right_segment)>::type;
 
       using LeftType = typename decltype(left_type)::type;
       using RightType = typename decltype(right_type)::type;
 
       /**
        * This generic lambda is instantiated for each type (int, long, etc.) and
-       * each column type (value, dictionary, reference segment) per column!
+       * each segment type (value, dictionary, reference segment)!
        * That’s 3x5 combinations each and 15x15=225 in total. However, not all combinations are valid or possible.
-       * Only data columns (value, dictionary) or reference segments will be compared, as a table with both data and
+       * Only data segments (value, dictionary) or reference segments will be compared, as a table with both data and
        * reference segments is ruled out. Moreover it is not possible to compare strings to any of the four numerical
        * data types. Therefore, we need to check for these cases and exclude them via the constexpr-if which
        * reduces the number of combinations to 85.
        */
 
-      constexpr auto LEFT_IS_reference_segment = (std::is_same<LeftColumnType, ReferenceSegment>{});
-      constexpr auto RIGHT_IS_reference_segment = (std::is_same<RightColumnType, ReferenceSegment>{});
+      constexpr auto LEFT_IS_REFERENCE_SEGMENT = (std::is_same<LeftColumnType, ReferenceSegment>{});
+      constexpr auto RIGHT_IS_REFERENCE_SEGMENT = (std::is_same<RightColumnType, ReferenceSegment>{});
 
-      constexpr auto NEITHER_IS_reference_segment = !LEFT_IS_reference_segment && !RIGHT_IS_reference_segment;
-      constexpr auto BOTH_ARE_reference_segmentS = LEFT_IS_reference_segment && RIGHT_IS_reference_segment;
+      constexpr auto NEITHER_IS_REFERENCE_SEGMENT = !LEFT_IS_REFERENCE_SEGMENT && !RIGHT_IS_REFERENCE_SEGMENT;
+      constexpr auto BOTH_ARE_REFERENCE_SEGMENTS = LEFT_IS_REFERENCE_SEGMENT && RIGHT_IS_REFERENCE_SEGMENT;
 
       constexpr auto LEFT_IS_STRING_COLUMN = (std::is_same<LeftType, std::string>{});
       constexpr auto RIGHT_IS_STRING_COLUMN = (std::is_same<RightType, std::string>{});
@@ -60,10 +60,10 @@ std::shared_ptr<PosList> ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk
       constexpr auto BOTH_ARE_STRING_COLUMNS = LEFT_IS_STRING_COLUMN && RIGHT_IS_STRING_COLUMN;
 
       // clang-format off
-      if constexpr((NEITHER_IS_reference_segment || BOTH_ARE_reference_segmentS) &&
+      if constexpr((NEITHER_IS_REFERENCE_SEGMENT || BOTH_ARE_REFERENCE_SEGMENTS) &&
                    (NEITHER_IS_STRING_COLUMN || BOTH_ARE_STRING_COLUMNS)) {
-        auto left_segment_iterable = create_iterable_from_column<LeftType>(typed_left_column);
-        auto right_segment_iterable = create_iterable_from_column<RightType>(typed_right_column);
+        auto left_segment_iterable = create_iterable_from_segment<LeftType>(typed_left_segment);
+        auto right_segment_iterable = create_iterable_from_segment<RightType>(typed_right_segment);
 
         left_segment_iterable.with_iterators([&](auto left_it, auto left_end) {
           right_segment_iterable.with_iterators([&](auto right_it, auto right_end) {
@@ -73,7 +73,7 @@ std::shared_ptr<PosList> ColumnComparisonTableScanImpl::scan_chunk(ChunkID chunk
           });
         });
       } else {
-        Fail("Invalid column combination detected!");   // NOLINT - cpplint.py does not know about constexpr
+        Fail("Invalid segment combination detected!");   // NOLINT - cpplint.py does not know about constexpr
       }
       // clang-format on
     });

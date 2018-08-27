@@ -12,15 +12,15 @@ namespace opossum {
 template <typename T>
 class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfReferenceIterable<T>> {
  public:
-  explicit FrameOfReferenceIterable(const FrameOfReferenceSegment<T>& column) : _column{column} {}
+  explicit FrameOfReferenceIterable(const FrameOfReferenceSegment<T>& segment) : _segment{segment} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
-    resolve_compressed_vector_type(_column.offset_values(), [&](const auto& offset_values) {
+    resolve_compressed_vector_type(_segment.offset_values(), [&](const auto& offset_values) {
       using OffsetValueIteratorT = decltype(offset_values.cbegin());
 
-      auto begin = Iterator<OffsetValueIteratorT>{_column.block_minima().cbegin(), offset_values.cbegin(),
-                                                  _column.null_values().cbegin()};
+      auto begin = Iterator<OffsetValueIteratorT>{_segment.block_minima().cbegin(), offset_values.cbegin(),
+                                                  _segment.null_values().cbegin()};
 
       auto end = Iterator<OffsetValueIteratorT>{offset_values.cend()};
 
@@ -30,11 +30,11 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
 
   template <typename Functor>
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
-    resolve_compressed_vector_type(_column.offset_values(), [&](const auto& vector) {
+    resolve_compressed_vector_type(_segment.offset_values(), [&](const auto& vector) {
       auto decoder = vector.create_decoder();
       using OffsetValueDecompressorT = std::decay_t<decltype(*decoder)>;
 
-      auto begin = PointAccessIterator<OffsetValueDecompressorT>{&_column.block_minima(), &_column.null_values(),
+      auto begin = PointAccessIterator<OffsetValueDecompressorT>{&_segment.block_minima(), &_segment.null_values(),
                                                                  decoder.get(), mapped_chunk_offsets.cbegin()};
 
       auto end = PointAccessIterator<OffsetValueDecompressorT>{mapped_chunk_offsets.cend()};
@@ -43,10 +43,10 @@ class FrameOfReferenceIterable : public PointAccessibleSegmentIterable<FrameOfRe
     });
   }
 
-  size_t _on_size() const { return _column.size(); }
+  size_t _on_size() const { return _segment.size(); }
 
  private:
-  const FrameOfReferenceSegment<T>& _column;
+  const FrameOfReferenceSegment<T>& _segment;
 
  private:
   template <typename OffsetValueIteratorT>

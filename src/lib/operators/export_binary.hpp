@@ -90,7 +90,7 @@ class ExportBinary : public AbstractReadOnlyOperator {
 };
 
 template <typename T>
-class ExportBinary::ExportBinaryVisitor : public AbstractColumnVisitor {
+class ExportBinary::ExportBinaryVisitor : public AbstractSegmentVisitor {
   /**
    * Value Columns are dumped with the following layout:
    *

@@ -3,7 +3,7 @@
 #include <map>
 #include <memory>
 
-#include "storage/dictionary_column/dictionary_encoder.hpp"
+#include "storage/dictionary_segment/dictionary_encoder.hpp"
 #include "storage/frame_of_reference/frame_of_reference_encoder.hpp"
 #include "storage/run_length_segment/run_length_encoder.hpp"
 
@@ -18,7 +18,7 @@ namespace {
 /**
  * @brief Mapping of encoding types to encoders
  *
- * Add your column encoder here!
+ * Add your segment encoder here!
  */
 const auto encoder_for_type = std::map<EncodingType, std::shared_ptr<BaseSegmentEncoder>>{
     {EncodingType::Dictionary, std::make_shared<DictionaryEncoder<EncodingType::Dictionary>>()},
@@ -38,8 +38,8 @@ std::unique_ptr<BaseSegmentEncoder> create_encoder(EncodingType encoding_type) {
   return encoder->create_new();
 }
 
-std::shared_ptr<BaseEncodedSegment> encode_column(EncodingType encoding_type, DataType data_type,
-                                                 const std::shared_ptr<const BaseValueSegment>& column,
+std::shared_ptr<BaseEncodedSegment> encode_segment(EncodingType encoding_type, DataType data_type,
+                                                 const std::shared_ptr<const BaseValueSegment>& segment,
                                                  std::optional<VectorCompressionType> zero_suppression_type) {
   auto encoder = create_encoder(encoding_type);
 
@@ -47,7 +47,7 @@ std::shared_ptr<BaseEncodedSegment> encode_column(EncodingType encoding_type, Da
     encoder->set_vector_compression(*zero_suppression_type);
   }
 
-  return encoder->encode(column, data_type);
+  return encoder->encode(segment, data_type);
 }
 
 }  // namespace opossum

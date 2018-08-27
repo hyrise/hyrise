@@ -170,7 +170,7 @@ TEST_F(PredicateReorderingTest, PredicatesAsRightInput) {
    */
 
   /**
-   * The mocked table has one column of int32_ts with the value range 0..100
+   * The mocked table has one cxlumn of int32_ts with the value range 0..100
    */
   auto cxlumn_statistics = std::make_shared<CxlumnStatistics<int32_t>>(CxlumnID{0}, 100.0f, 0.0f, 100.0f);
   auto table_statistics = std::make_shared<TableStatistics>(
@@ -221,7 +221,7 @@ TEST_F(PredicateReorderingTest, PredicatesWithMultipleOutputs) {
    */
 
   /**
-   * The mocked table has one column of int32_ts with the value range 0..100
+   * The mocked table has one cxlumn of int32_ts with the value range 0..100
    */
   auto cxlumn_statistics = std::make_shared<CxlumnStatistics<int32_t>>(CxlumnID{0}, 100.0f, 0.0f, 100.0f);
   auto table_statistics = std::make_shared<TableStatistics>(

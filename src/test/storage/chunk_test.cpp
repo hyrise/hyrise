@@ -26,8 +26,8 @@ class StorageChunkTest : public BaseTest {
     vc_str->append("world");
     vc_str->append("!");
 
-    dc_int = encode_column(EncodingType::Dictionary, DataType::Int, vc_int);
-    dc_str = encode_column(EncodingType::Dictionary, DataType::String, vc_str);
+    dc_int = encode_segment(EncodingType::Dictionary, DataType::Int, vc_int);
+    dc_str = encode_segment(EncodingType::Dictionary, DataType::String, vc_str);
 
     ChunkSegments empty_columns;
     empty_columns.push_back(std::make_shared<ValueSegment<int32_t>>());

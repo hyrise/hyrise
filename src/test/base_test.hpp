@@ -10,7 +10,7 @@
 #include "operators/abstract_operator.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "storage/segment_encoding_utils.hpp"
-#include "storage/dictionary_column.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/numa_placement_manager.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
@@ -37,8 +37,8 @@ class BaseTestWithParam : public std::conditional<std::is_same<ParamType, void>:
     auto vector_values = tbb::concurrent_vector<T>(values.begin(), values.end());
     auto value_segment = std::make_shared<ValueSegment<T>>(std::move(vector_values));
 
-    auto compressed_column = encode_column(EncodingType::Dictionary, data_type, value_segment);
-    return std::static_pointer_cast<DictionarySegment<T>>(compressed_column);
+    auto compressed_segment = encode_segment(EncodingType::Dictionary, data_type, value_segment);
+    return std::static_pointer_cast<DictionarySegment<T>>(compressed_segment);
   }
 
   void _execute_all(const std::vector<std::shared_ptr<AbstractOperator>>& operators) {

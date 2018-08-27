@@ -30,12 +30,12 @@ std::shared_ptr<const Table> ShowTables::_on_execute() {
   auto table = std::make_shared<Table>(TableCxlumnDefinitions{{"table_name", DataType::String}}, TableType::Data);
 
   const auto table_names = StorageManager::get().table_names();
-  const auto column = std::make_shared<ValueSegment<std::string>>(
+  const auto segment = std::make_shared<ValueSegment<std::string>>(
       tbb::concurrent_vector<std::string>(table_names.begin(), table_names.end()));
 
-  ChunkSegments columns;
-  columns.push_back(column);
-  table->append_chunk(columns);
+  ChunkSegments segments;
+  segments.push_back(segment);
+  table->append_chunk(segments);
 
   return table;
 }

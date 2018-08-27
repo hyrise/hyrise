@@ -56,7 +56,7 @@ class Sort::SortImplMaterializeOutput {
     // First we create a new table as the output
     auto output = std::make_shared<Table>(_table_in->cxlumn_definitions(), TableType::Data, _output_chunk_size);
 
-    // We have decided against duplicating MVCC columns in https://github.com/hyrise/hyrise/issues/408
+    // We have decided against duplicating MVCC data in https://github.com/hyrise/hyrise/issues/408
 
     // After we created the output table and initialized the column structure, we can start adding values. Because the
     // values are not ordered by input chunks anymore, we can't process them chunk by chunk. Instead the values are
@@ -189,7 +189,7 @@ class Sort::SortImpl : public AbstractReadOnlyOperatorImpl {
       auto base_segment = chunk->get_segment(_cxlumn_id);
 
       resolve_cxlumn_type<SortColumnType>(*base_segment, [&](auto& typed_segment) {
-        auto iterable = create_iterable_from_column<SortColumnType>(typed_segment);
+        auto iterable = create_iterable_from_segment<SortColumnType>(typed_segment);
 
         iterable.for_each([&](const auto& value) {
           if (value.is_null()) {

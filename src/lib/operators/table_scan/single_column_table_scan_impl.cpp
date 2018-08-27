@@ -4,9 +4,9 @@
 #include <utility>
 #include <vector>
 
-#include "storage/base_dictionary_column.hpp"
+#include "storage/base_dictionary_segment.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
-#include "storage/create_iterable_from_column.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
 
 #include "resolve_type.hpp"
@@ -49,7 +49,7 @@ void SingleColumnTableScanImpl::handle_segment(const BaseValueSegment& base_segm
 
     auto& left_column = static_cast<const ValueSegment<CxlumnDataType>&>(base_segment);
 
-    auto left_segment_iterable = create_iterable_from_column(left_column);
+    auto left_segment_iterable = create_iterable_from_segment(left_column);
 
     left_segment_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
       with_comparator(_predicate_condition, [&](auto comparator) {
@@ -73,7 +73,7 @@ void SingleColumnTableScanImpl::handle_segment(const BaseEncodedSegment& base_se
     using Type = typename decltype(type)::type;
 
     resolve_encoded_segment_type<Type>(base_segment, [&](const auto& typed_segment) {
-      auto left_segment_iterable = create_iterable_from_column(typed_segment);
+      auto left_segment_iterable = create_iterable_from_segment(typed_segment);
 
       left_segment_iterable.with_iterators(mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) {
         with_comparator(_predicate_condition, [&](auto comparator) {

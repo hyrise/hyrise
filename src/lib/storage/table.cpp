@@ -65,12 +65,12 @@ std::vector<DataType> Table::cxlumn_data_types() const {
   return data_types;
 }
 
-bool Table::column_is_nullable(const CxlumnID cxlumn_id) const {
+bool Table::cxlumn_is_nullable(const CxlumnID cxlumn_id) const {
   DebugAssert(cxlumn_id < _cxlumn_definitions.size(), "CxlumnID out of range");
   return _cxlumn_definitions[cxlumn_id].nullable;
 }
 
-std::vector<bool> Table::columns_are_nullable() const {
+std::vector<bool> Table::cxlumns_are_nullable() const {
   std::vector<bool> nullable(cxlumn_count());
   for (size_t cxlumn_idx = 0; cxlumn_idx < cxlumn_count(); ++cxlumn_idx) {
     nullable[cxlumn_idx] = _cxlumn_definitions[cxlumn_idx].nullable;
@@ -81,7 +81,7 @@ std::vector<bool> Table::columns_are_nullable() const {
 CxlumnID Table::cxlumn_id_by_name(const std::string& cxlumn_name) const {
   const auto iter = std::find_if(_cxlumn_definitions.begin(), _cxlumn_definitions.end(),
                                  [&](const auto& cxlumn_definition) { return cxlumn_definition.name == cxlumn_name; });
-  Assert(iter != _cxlumn_definitions.end(), "Couldn't find column '" + cxlumn_name + "'");
+  Assert(iter != _cxlumn_definitions.end(), "Couldn't find cxlumn '" + cxlumn_name + "'");
   return static_cast<CxlumnID>(std::distance(_cxlumn_definitions.begin(), iter));
 }
 
@@ -94,14 +94,14 @@ void Table::append(const std::vector<AllTypeVariant>& values) {
 }
 
 void Table::append_mutable_chunk() {
-  ChunkSegments columns;
+  ChunkSegments segments;
   for (const auto& cxlumn_definition : _cxlumn_definitions) {
     resolve_data_type(cxlumn_definition.data_type, [&](auto type) {
       using CxlumnDataType = typename decltype(type)::type;
-      columns.push_back(std::make_shared<ValueSegment<CxlumnDataType>>(cxlumn_definition.nullable));
+      segments.push_back(std::make_shared<ValueSegment<CxlumnDataType>>(cxlumn_definition.nullable));
     });
   }
-  append_chunk(columns);
+  append_chunk(segments);
 }
 
 uint64_t Table::row_count() const {
@@ -140,20 +140,20 @@ const ProxyChunk Table::get_chunk_with_access_counting(ChunkID chunk_id) const {
   return ProxyChunk(_chunks[chunk_id]);
 }
 
-void Table::append_chunk(const ChunkSegments& columns, const std::optional<PolymorphicAllocator<Chunk>>& alloc,
+void Table::append_chunk(const ChunkSegments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc,
                          const std::shared_ptr<ChunkAccessCounter>& access_counter) {
-  const auto chunk_size = columns.empty() ? 0u : columns[0]->size();
+  const auto chunk_size = segments.empty() ? 0u : segments[0]->size();
 
 #if IS_DEBUG
-  for (const auto& column : columns) {
-    DebugAssert(column->size() == chunk_size, "Columns don't have the same length");
-    const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(column) != nullptr;
+  for (const auto& segment : segments) {
+    DebugAssert(segment->size() == chunk_size, "Columns don't have the same length");
+    const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
     switch (_type) {
       case TableType::References:
-        DebugAssert(is_reference_segment, "Invalid column type");
+        DebugAssert(is_reference_segment, "Invalid segment type");
         break;
       case TableType::Data:
-        DebugAssert(!is_reference_segment, "Invalid column type");
+        DebugAssert(!is_reference_segment, "Invalid segment type");
         break;
     }
   }
@@ -165,19 +165,19 @@ void Table::append_chunk(const ChunkSegments& columns, const std::optional<Polym
     mvcc_data = std::make_shared<MvccData>(chunk_size);
   }
 
-  _chunks.emplace_back(std::make_shared<Chunk>(columns, mvcc_data, alloc, access_counter));
+  _chunks.emplace_back(std::make_shared<Chunk>(segments, mvcc_data, alloc, access_counter));
 }
 
 void Table::append_chunk(const std::shared_ptr<Chunk>& chunk) {
 #if IS_DEBUG
-  for (const auto& column : chunk->columns()) {
-    const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(column) != nullptr;
+  for (const auto& segment : chunk->segments()) {
+    const auto is_reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment) != nullptr;
     switch (_type) {
       case TableType::References:
-        DebugAssert(is_reference_segment, "Invalid column type");
+        DebugAssert(is_reference_segment, "Invalid segment type");
         break;
       case TableType::Data:
-        DebugAssert(!is_reference_segment, "Invalid column type");
+        DebugAssert(!is_reference_segment, "Invalid segment type");
         break;
     }
   }

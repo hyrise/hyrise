@@ -254,8 +254,8 @@ set(
     optimizer/optimizer.hpp
     optimizer/strategy/abstract_rule.cpp
     optimizer/strategy/abstract_rule.hpp
-    optimizer/strategy/column_pruning_rule.cpp
-    optimizer/strategy/column_pruning_rule.hpp
+    optimizer/strategy/cxlumn_pruning_rule.cpp
+    optimizer/strategy/cxlumn_pruning_rule.hpp
     optimizer/strategy/chunk_pruning_rule.cpp
     optimizer/strategy/chunk_pruning_rule.hpp
     optimizer/strategy/constant_calculation_rule.cpp
@@ -350,7 +350,7 @@ set(
     storage/base_segment.cpp
     storage/base_segment_encoder.hpp
     storage/base_segment.hpp
-    storage/base_dictionary_column.hpp
+    storage/base_dictionary_segment.hpp
     storage/base_encoded_segment.cpp
     storage/base_encoded_segment.hpp
     storage/base_value_segment.hpp
@@ -371,20 +371,20 @@ set(
     storage/segment_iterables/create_iterable_from_attribute_vector.hpp
     storage/segment_iterables.hpp
     storage/abstract_column_visitor.hpp
-    storage/create_iterable_from_column.hpp
-    storage/dictionary_column/attribute_vector_iterable.hpp
-    storage/dictionary_column.cpp
-    storage/dictionary_column/dictionary_segment_iterable.hpp
-    storage/dictionary_column/dictionary_encoder.hpp
-    storage/dictionary_column.hpp
+    storage/create_iterable_from_segment.hpp
+    storage/dictionary_segment/attribute_vector_iterable.hpp
+    storage/dictionary_segment.cpp
+    storage/dictionary_segment/dictionary_segment_iterable.hpp
+    storage/dictionary_segment/dictionary_encoder.hpp
+    storage/dictionary_segment.hpp
     storage/encoding_type.hpp
-    storage/fixed_string_dictionary_column.cpp
-    storage/fixed_string_dictionary_column.hpp
-    storage/fixed_string_dictionary_column/fixed_string.cpp
-    storage/fixed_string_dictionary_column/fixed_string.hpp
-    storage/fixed_string_dictionary_column/fixed_string_vector.cpp
-    storage/fixed_string_dictionary_column/fixed_string_vector.hpp
-    storage/fixed_string_dictionary_column/fixed_string_vector_iterator.hpp
+    storage/fixed_string_dictionary_segment.cpp
+    storage/fixed_string_dictionary_segment.hpp
+    storage/fixed_string_dictionary_segment/fixed_string.cpp
+    storage/fixed_string_dictionary_segment/fixed_string.hpp
+    storage/fixed_string_dictionary_segment/fixed_string_vector.cpp
+    storage/fixed_string_dictionary_segment/fixed_string_vector.hpp
+    storage/fixed_string_dictionary_segment/fixed_string_vector_iterator.hpp
     storage/frame_of_reference_segment.cpp
     storage/frame_of_reference_segment.hpp
     storage/frame_of_reference/frame_of_reference_encoder.hpp

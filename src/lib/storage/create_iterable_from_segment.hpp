@@ -15,9 +15,9 @@ template <typename T>
 class ReferenceSegmentIterable;
 
 /**
- * @defgroup Uniform interface to create an iterable from a column
+ * @defgroup Uniform interface to create an iterable from a segment
  *
- * These methods cannot be part of the columns’ interfaces because
+ * These methods cannot be part of the segments' interfaces because
  * reference segment are not templated and thus don’t know their type.
  *
  * All iterables implement the same interface using static polymorphism
@@ -30,28 +30,28 @@ class ReferenceSegmentIterable;
  */
 
 template <typename T>
-auto create_iterable_from_segment(const ValueSegment<T>& column) {
-  return erase_type_from_iterable_if_debug(ValueSegmentIterable<T>{column});
+auto create_iterable_from_segment(const ValueSegment<T>& segment) {
+  return erase_type_from_iterable_if_debug(ValueSegmentIterable<T>{segment});
 }
 
 template <typename T>
-auto create_iterable_from_segment(const DictionarySegment<T>& column) {
-  return erase_type_from_iterable_if_debug(DictionarySegmentIterable<T, pmr_vector<T>>{column});
+auto create_iterable_from_segment(const DictionarySegment<T>& segment) {
+  return erase_type_from_iterable_if_debug(DictionarySegmentIterable<T, pmr_vector<T>>{segment});
 }
 
 template <typename T>
-auto create_iterable_from_segment(const RunLengthSegment<T>& column) {
-  return erase_type_from_iterable_if_debug(RunLengthSegmentIterable<T>{column});
+auto create_iterable_from_segment(const RunLengthSegment<T>& segment) {
+  return erase_type_from_iterable_if_debug(RunLengthSegmentIterable<T>{segment});
 }
 
 template <typename T>
-auto create_iterable_from_segment(const FixedStringDictionarySegment<T>& column) {
-  return erase_type_from_iterable_if_debug(DictionarySegmentIterable<T, FixedStringVector>{column});
+auto create_iterable_from_segment(const FixedStringDictionarySegment<T>& segment) {
+  return erase_type_from_iterable_if_debug(DictionarySegmentIterable<T, FixedStringVector>{segment});
 }
 
 template <typename T>
-auto create_iterable_from_segment(const FrameOfReferenceSegment<T>& column) {
-  return erase_type_from_iterable_if_debug(FrameOfReferenceIterable<T>{column});
+auto create_iterable_from_segment(const FrameOfReferenceSegment<T>& segment) {
+  return erase_type_from_iterable_if_debug(FrameOfReferenceIterable<T>{segment});
 }
 
 /**
@@ -59,7 +59,7 @@ auto create_iterable_from_segment(const FrameOfReferenceSegment<T>& column) {
  * includes this file leading to a circular dependency
  */
 template <typename T>
-auto create_iterable_from_segment(const ReferenceSegment& column);
+auto create_iterable_from_segment(const ReferenceSegment& segment);
 
 /**@}*/
 

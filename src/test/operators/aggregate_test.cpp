@@ -136,21 +136,21 @@ TEST_F(OperatorsAggregateTest, OperatorName) {
   EXPECT_EQ(aggregate->name(), "Aggregate");
 }
 
-TEST_F(OperatorsAggregateTest, CannotSumStringColumns) {
+TEST_F(OperatorsAggregateTest, CannotSumStringCxlumns) {
   auto aggregate = std::make_shared<Aggregate>(
       _table_wrapper_1_1_string, std::vector<AggregateCxlumnDefinition>{{CxlumnID{0}, AggregateFunction::Sum}},
       std::vector<CxlumnID>{CxlumnID{0}});
   EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
-TEST_F(OperatorsAggregateTest, CannotAvgStringColumns) {
+TEST_F(OperatorsAggregateTest, CannotAvgStringCxlumns) {
   auto aggregate = std::make_shared<Aggregate>(
       _table_wrapper_1_1_string, std::vector<AggregateCxlumnDefinition>{{CxlumnID{0}, AggregateFunction::Avg}},
       std::vector<CxlumnID>{CxlumnID{0}});
   EXPECT_THROW(aggregate->execute(), std::logic_error);
 }
 
-TEST_F(OperatorsAggregateTest, CanCountStringColumns) {
+TEST_F(OperatorsAggregateTest, CanCountStringCxlumns) {
   this->test_output(_table_wrapper_1_1_string, {{CxlumnID{0}, AggregateFunction::Count}}, {CxlumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/count_str.tbl", 1);
 }
@@ -416,7 +416,7 @@ TEST_F(OperatorsAggregateTest, NoGroupbyAndNoAggregate) {
 /**
  * Tests for NULL values
  */
-TEST_F(OperatorsAggregateTest, CanCountStringColumnsWithNull) {
+TEST_F(OperatorsAggregateTest, CanCountStringCxlumnsWithNull) {
   this->test_output(_table_wrapper_1_1_string_null, {{CxlumnID{1}, AggregateFunction::Count}}, {CxlumnID{0}},
                     "src/test/tables/aggregateoperator/groupby_string_1gb_1agg/count_str_null.tbl", 1, false);
 }

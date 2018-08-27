@@ -9,10 +9,10 @@
 namespace opossum {
 
 /**
- * @brief Return type of column iterators
+ * @brief Return type of segment iterators
  *
  * The class documents the interface that can be expected
- * of an object returned by a column iterator.
+ * of an object returned by a segment iterator.
  * The actual returned method will however be a sub-class
  * in order to avoid expensive virtual method calls.
  * For this reason, all methods in sub-classes should be
@@ -37,9 +37,9 @@ class AbstractSegmentIteratorValue {
 };
 
 /**
- * @brief The most generic column iterator value
+ * @brief The most generic segment iterator value
  *
- * Used in most column iterators.
+ * Used in most segment iterators.
  */
 template <typename T>
 class SegmentIteratorValue : public AbstractSegmentIteratorValue<T> {
@@ -60,7 +60,7 @@ class SegmentIteratorValue : public AbstractSegmentIteratorValue<T> {
 };
 
 /**
- * @brief Column iterator value which is never null.
+ * @brief Segment iterator value which is never null.
  *
  * Used when an underlying column (or data structure) cannot be null.
  */
@@ -82,7 +82,7 @@ class NonNullSegmentIteratorValue : public AbstractSegmentIteratorValue<T> {
 };
 
 /**
- * @brief Column iterator value without value information
+ * @brief Segment iterator value without value information
  *
  * Used for data structures that only store if the entry is null or not.
  *

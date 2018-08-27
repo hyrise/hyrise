@@ -145,22 +145,22 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
   }
 
   //  - column names and types
-  DataType left_col_type, right_col_type;
+  DataType left_cxlumn_type, right_cxlumn_type;
   for (auto cxlumn_id = CxlumnID{0}; cxlumn_id < expected_table->cxlumn_count(); ++cxlumn_id) {
-    left_col_type = opossum_table->cxlumn_data_type(cxlumn_id);
-    right_col_type = expected_table->cxlumn_data_type(cxlumn_id);
+    left_cxlumn_type = opossum_table->cxlumn_data_type(cxlumn_id);
+    right_cxlumn_type = expected_table->cxlumn_data_type(cxlumn_id);
     // This is needed for the SQLiteTestrunner, since SQLite does not differentiate between float/double, and int/long.
     if (type_cmp_mode == TypeCmpMode::Lenient) {
-      if (left_col_type == DataType::Double) {
-        left_col_type = DataType::Float;
-      } else if (left_col_type == DataType::Long) {
-        left_col_type = DataType::Int;
+      if (left_cxlumn_type == DataType::Double) {
+        left_cxlumn_type = DataType::Float;
+      } else if (left_cxlumn_type == DataType::Long) {
+        left_cxlumn_type = DataType::Int;
       }
 
-      if (right_col_type == DataType::Double) {
-        right_col_type = DataType::Float;
-      } else if (right_col_type == DataType::Long) {
-        right_col_type = DataType::Int;
+      if (right_cxlumn_type == DataType::Double) {
+        right_cxlumn_type = DataType::Float;
+      } else if (right_cxlumn_type == DataType::Long) {
+        right_cxlumn_type = DataType::Int;
       }
     }
 
@@ -173,7 +173,7 @@ bool check_table_equal(const std::shared_ptr<const Table>& opossum_table,
       return false;
     }
 
-    if (left_col_type != right_col_type) {
+    if (left_cxlumn_type != right_cxlumn_type) {
       const std::string error_type = "Column type mismatch (column " + std::to_string(cxlumn_id) + ")";
       const std::string error_msg =
           "Actual column type: " + data_type_to_string.left.at(opossum_table->cxlumn_data_type(cxlumn_id)) + "\n" +

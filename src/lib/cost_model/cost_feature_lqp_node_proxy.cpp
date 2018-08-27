@@ -77,7 +77,7 @@ CostFeatureVariant CostFeatureLQPNodeProxy::_extract_feature_from_predicate_node
     case CostFeature::PredicateCondition:
       return operator_predicate.predicate_condition;
 
-    case CostFeature::RightOperandIsColumn:
+    case CostFeature::RightOperandIsCxlumn:
       return is_cxlumn_id(operator_predicate.value);
 
     default:
@@ -100,7 +100,7 @@ CostFeatureVariant CostFeatureLQPNodeProxy::_extract_feature_from_join_node(cons
     case CostFeature::PredicateCondition:
       return operator_predicate->predicate_condition;
 
-    case CostFeature::RightOperandIsColumn:
+    case CostFeature::RightOperandIsCxlumn:
       return true;
 
     default:

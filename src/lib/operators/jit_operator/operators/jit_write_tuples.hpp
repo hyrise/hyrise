@@ -14,7 +14,7 @@ class BaseJitColumnWriter {
   virtual void write_value(JitRuntimeContext& context) const = 0;
 };
 
-struct JitOutputColumn {
+struct JitOutputCxlumn {
   std::string cxlumn_name;
   JitTupleValue tuple_value;
 };
@@ -68,14 +68,14 @@ class JitWriteTuples : public AbstractJittableSink {
 
   void add_output_cxlumn(const std::string& cxlumn_name, const JitTupleValue& value);
 
-  std::vector<JitOutputColumn> output_cxlumns() const;
+  std::vector<JitOutputCxlumn> output_cxlumns() const;
 
  private:
   void _consume(JitRuntimeContext& context) const final;
 
   void _create_output_chunk(JitRuntimeContext& context) const;
 
-  std::vector<JitOutputColumn> _output_cxlumns;
+  std::vector<JitOutputCxlumn> _output_cxlumns;
 };
 
 }  // namespace opossum

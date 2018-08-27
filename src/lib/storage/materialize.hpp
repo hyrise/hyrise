@@ -4,7 +4,7 @@
 
 #include "resolve_type.hpp"
 #include "storage/base_segment.hpp"
-#include "storage/create_iterable_from_column.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 
 namespace opossum {
 
@@ -23,28 +23,28 @@ namespace opossum {
 
 // Materialize the values in the Column
 template <typename Container>
-void materialize_values(const BaseSegment& column, Container& container) {
+void materialize_values(const BaseSegment& segment, Container& container) {
   using ContainerValueType = typename Container::value_type;
 
-  resolve_cxlumn_type<ContainerValueType>(column, [&](const auto& column) {
-    create_iterable_from_column<ContainerValueType>(column).materialize_values(container);
+  resolve_cxlumn_type<ContainerValueType>(segment, [&](const auto& segment) {
+    create_iterable_from_segment<ContainerValueType>(segment).materialize_values(container);
   });
 }
 
 // Materialize the values/nulls in the Column
 template <typename Container>
-void materialize_values_and_nulls(const BaseSegment& column, Container& container) {
+void materialize_values_and_nulls(const BaseSegment& segment, Container& container) {
   using ContainerValueType = typename Container::value_type::second_type;
-  resolve_cxlumn_type<ContainerValueType>(column, [&](const auto& column) {
-    create_iterable_from_column<ContainerValueType>(column).materialize_values_and_nulls(container);
+  resolve_cxlumn_type<ContainerValueType>(segment, [&](const auto& segment) {
+    create_iterable_from_segment<ContainerValueType>(segment).materialize_values_and_nulls(container);
   });
 }
 
 // Materialize the nulls in the Column
 template <typename ColumnValueType, typename Container>
-void materialize_nulls(const BaseSegment& column, Container& container) {
-  resolve_cxlumn_type<ColumnValueType>(column, [&](const auto& column) {
-    create_iterable_from_column<ColumnValueType>(column).materialize_nulls(container);
+void materialize_nulls(const BaseSegment& segment, Container& container) {
+  resolve_cxlumn_type<ColumnValueType>(segment, [&](const auto& segment) {
+    create_iterable_from_segment<ColumnValueType>(segment).materialize_nulls(container);
   });
 }
 

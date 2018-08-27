@@ -6,7 +6,7 @@
 #include "cxlumn_statistics.hpp"
 #include "generate_cxlumn_statistics.hpp"
 #include "resolve_type.hpp"
-#include "storage/create_iterable_from_column.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 #include "storage/table.hpp"
 #include "table_statistics.hpp"
 

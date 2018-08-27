@@ -18,7 +18,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "storage/abstract_column_visitor.hpp"
-#include "storage/create_iterable_from_column.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 #include "type_cast.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
@@ -247,7 +247,7 @@ std::shared_ptr<Partition<T>> materialize_input(const std::shared_ptr<const Tabl
 
       resolve_cxlumn_type<T>(*column, [&, chunk_id, keep_nulls](auto& typed_segment) {
         auto reference_segment_offset = ChunkID{0};
-        auto iterable = create_iterable_from_column<T>(typed_segment);
+        auto iterable = create_iterable_from_segment<T>(typed_segment);
 
         iterable.for_each([&, chunk_id, keep_nulls](const auto& value) {
           if (!value.is_null() || keep_nulls) {
@@ -546,7 +546,7 @@ PosListsByColumn setup_pos_lists_by_column(const std::shared_ptr<const Table>& i
     auto pos_lists_iter = pos_list_ptrs->begin();
 
     for (ChunkID chunk_id{0}; chunk_id < input_table->chunk_count(); chunk_id++) {
-      const auto& ref_segment_uncasted = input_chunks[chunk_id]->columns()[cxlumn_id];
+      const auto& ref_segment_uncasted = input_chunks[chunk_id]->segments()[cxlumn_id];
       const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(ref_segment_uncasted);
       *pos_lists_iter = ref_segment->pos_list();
       ++pos_lists_iter;
@@ -561,7 +561,7 @@ PosListsByColumn setup_pos_lists_by_column(const std::shared_ptr<const Table>& i
   return pos_lists_by_column;
 }
 
-void write_output_columns(ChunkSegments& output_columns, const std::shared_ptr<const Table>& input_table,
+void write_output_segments(ChunkSegments& output_segments, const std::shared_ptr<const Table>& input_table,
                           const PosListsByColumn& input_pos_list_ptrs_sptrs_by_column,
                           std::shared_ptr<PosList> pos_list) {
   std::map<std::shared_ptr<PosLists>, std::shared_ptr<PosList>> output_pos_list_cache;
@@ -596,7 +596,7 @@ void write_output_columns(ChunkSegments& output_columns, const std::shared_ptr<c
 
         auto ref_col =
             std::static_pointer_cast<const ReferenceSegment>(input_table->get_chunk(ChunkID{0})->get_segment(cxlumn_id));
-        output_columns.push_back(std::make_shared<ReferenceSegment>(ref_col->referenced_table(),
+        output_segments.push_back(std::make_shared<ReferenceSegment>(ref_col->referenced_table(),
                                                                    ref_col->referenced_cxlumn_id(), iter->second));
       } else {
         // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencING to
@@ -604,10 +604,10 @@ void write_output_columns(ChunkSegments& output_columns, const std::shared_ptr<c
         // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceSegment ref
         // it.
         if (!dummy_table) dummy_table = Table::create_dummy_table(input_table->cxlumn_definitions());
-        output_columns.push_back(std::make_shared<ReferenceSegment>(dummy_table, cxlumn_id, pos_list));
+        output_segments.push_back(std::make_shared<ReferenceSegment>(dummy_table, cxlumn_id, pos_list));
       }
     } else {
-      output_columns.push_back(std::make_shared<ReferenceSegment>(input_table, cxlumn_id, pos_list));
+      output_segments.push_back(std::make_shared<ReferenceSegment>(input_table, cxlumn_id, pos_list));
     }
   }
 }
@@ -827,7 +827,7 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
     }
 
     for (size_t partition_id = 0; partition_id < left_pos_lists.size(); ++partition_id) {
-      // moving the values into a shared pos list saves us some work in write_output_columns. We know that
+      // moving the values into a shared pos list saves us some work in write_output_segments. We know that
       // left_pos_lists and right_pos_lists will not be used again.
       auto left = std::make_shared<PosList>(std::move(left_pos_lists[partition_id]));
       auto right = std::make_shared<PosList>(std::move(right_pos_lists[partition_id]));
@@ -836,22 +836,22 @@ class JoinHash::JoinHashImpl : public AbstractJoinOperatorImpl {
         continue;
       }
 
-      ChunkSegments output_columns;
+      ChunkSegments output_segments;
 
       // we need to swap back the inputs, so that the order of the output columns is not harmed
       if (_inputs_swapped) {
-        write_output_columns(output_columns, right_in_table, right_pos_lists_by_column, right);
+        write_output_segments(output_segments, right_in_table, right_pos_lists_by_column, right);
 
         // Semi/Anti joins are always swapped but do not need the outer relation
         if (!only_output_right_input) {
-          write_output_columns(output_columns, left_in_table, left_pos_lists_by_column, left);
+          write_output_segments(output_segments, left_in_table, left_pos_lists_by_column, left);
         }
       } else {
-        write_output_columns(output_columns, left_in_table, left_pos_lists_by_column, left);
-        write_output_columns(output_columns, right_in_table, right_pos_lists_by_column, right);
+        write_output_segments(output_segments, left_in_table, left_pos_lists_by_column, left);
+        write_output_segments(output_segments, right_in_table, right_pos_lists_by_column, right);
       }
 
-      _output_table->append_chunk(output_columns);
+      _output_table->append_chunk(output_segments);
     }
 
     return _output_table;

@@ -3,28 +3,28 @@
 #include <memory>
 #include <vector>
 
-#include "storage/base_dictionary_column.hpp"
+#include "storage/base_dictionary_segment.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
 namespace opossum {
 
-GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment>>& index_columns)
+GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment>>& columns)
     : BaseIndex{get_index_type_of<GroupKeyIndex>()},
-      _index_column(std::dynamic_pointer_cast<const BaseDictionarySegment>(index_columns[0])) {
-  Assert(static_cast<bool>(_index_column), "GroupKeyIndex only works with dictionary columns.");
-  Assert((index_columns.size() == 1), "GroupKeyIndex only works with a single column.");
+      _indexed_segments(std::dynamic_pointer_cast<const BaseDictionarySegment>(columns[0])) {
+  Assert(static_cast<bool>(_indexed_segments), "GroupKeyIndex only works with dictionary columns.");
+  Assert((columns.size() == 1), "GroupKeyIndex only works with a single column.");
 
   // 1) Initialize the index structures
   // 1a) Set the index_offset to size of the dictionary + 1 (plus one to mark the ending position)
   //     and set all offsets to 0
-  _index_offsets = std::vector<size_t>(_index_column->unique_values_count() + 1u, 0u);
+  _index_offsets = std::vector<size_t>(_indexed_segments->unique_values_count() + 1u, 0u);
   // 1b) Set the _index_postings to the size of the attribute vector
-  _index_postings = std::vector<ChunkOffset>(_index_column->size());
+  _index_postings = std::vector<ChunkOffset>(_indexed_segments->size());
 
   // 2) Count the occurrences of value-ids: Iterate once over the attribute vector (i.e. value ids)
   //    and count the occurrences of each value id at their respective position in the dictionary,
   //    i.e. the position in the _index_offsets
-  resolve_compressed_vector_type(*_index_column->attribute_vector(), [&](auto& attribute_vector) {
+  resolve_compressed_vector_type(*_indexed_segments->attribute_vector(), [&](auto& attribute_vector) {
     for (const auto& value_id : attribute_vector) {
       _index_offsets[value_id + 1u]++;
     }
@@ -38,7 +38,7 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment
   auto index_offset_copy = std::vector<size_t>(_index_offsets);
 
   // 4b) Iterate once again over the attribute vector to obtain the write-offsets
-  resolve_compressed_vector_type(*_index_column->attribute_vector(), [&](auto& attribute_vector) {
+  resolve_compressed_vector_type(*_indexed_segments->attribute_vector(), [&](auto& attribute_vector) {
     auto value_id_it = attribute_vector.cbegin();
     auto position = 0u;
     for (; value_id_it != attribute_vector.cend(); ++value_id_it, ++position) {
@@ -55,14 +55,14 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment
 GroupKeyIndex::Iterator GroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   DebugAssert((values.size() == 1), "Group Key Index expects only one input value");
 
-  ValueID value_id = _index_column->lower_bound(*values.begin());
+  ValueID value_id = _indexed_segments->lower_bound(*values.begin());
   return _get_postings_iterator_at(value_id);
 }
 
 GroupKeyIndex::Iterator GroupKeyIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
   DebugAssert((values.size() == 1), "Group Key Index expects only one input value");
 
-  ValueID value_id = _index_column->upper_bound(*values.begin());
+  ValueID value_id = _indexed_segments->upper_bound(*values.begin());
   return _get_postings_iterator_at(value_id);
 }
 
@@ -87,6 +87,6 @@ GroupKeyIndex::Iterator GroupKeyIndex::_get_postings_iterator_at(ValueID value_i
   return iter;
 }
 
-std::vector<std::shared_ptr<const BaseSegment>> GroupKeyIndex::_get_index_columns() const { return {_index_column}; }
+std::vector<std::shared_ptr<const BaseSegment>> GroupKeyIndex::_get_indexed_segments() const { return {_indexed_segments}; }
 
 }  // namespace opossum

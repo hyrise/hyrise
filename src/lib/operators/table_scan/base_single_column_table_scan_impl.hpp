@@ -23,7 +23,7 @@ class AttributeVectorIterable;
  * Resolves reference segments. The position list of reference segments
  * is split by the referenced columns and then each is visited separately.
  */
-class BaseSingleColumnTableScanImpl : public BaseTableScanImpl, public AbstractColumnVisitor {
+class BaseSingleColumnTableScanImpl : public BaseTableScanImpl, public AbstractSegmentVisitor {
  public:
   BaseSingleColumnTableScanImpl(const std::shared_ptr<const Table>& in_table, const CxlumnID cxlumn_id,
                                 const PredicateCondition predicate_condition);

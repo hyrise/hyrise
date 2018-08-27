@@ -24,7 +24,7 @@ namespace opossum {
  *
  * ## Example
  *  Table T0
- *    == Columns ==
+ *    == Cxlumns ==
  *    a   | b
  *    int | int
  *    == Chunk 0 ==
@@ -35,7 +35,7 @@ namespace opossum {
  *    4   | 6
  *
  *  Table T1
- *    == Columns ==
+ *    == Cxlumns ==
  *    c
  *    ref T0.a
  *    == Chunk 0 ==
@@ -45,7 +45,7 @@ namespace opossum {
  *    RowID{0, 1}
  *
  *  Table T2
- *    == Columns ==
+ *    == Cxlumns ==
  *    c
  *    ref T0.a
  *    == Chunk 0 ==
@@ -57,7 +57,7 @@ namespace opossum {
  *    RowID{0, 1}
  *
  *  Table UnionUnique(T1, T2)
- *    == Columns ==
+ *    == Cxlumns ==
  *    c
  *    ref T0.a
  *    == Chunk 0 ==

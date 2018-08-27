@@ -1,4 +1,4 @@
-#include "column_pruning_rule.hpp"
+#include "cxlumn_pruning_rule.hpp"
 
 #include <unordered_map>
 
@@ -18,59 +18,59 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-std::string ColumnPruningRule::name() const { return "Column Pruning Rule"; }
+std::string CxlumnPruningRule::name() const { return "Column Pruning Rule"; }
 
-bool ColumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const {
-  // Collect the columns that are used in expressions somewhere in the LQP.
-  // This EXCLUDES columns that are merely forwarded by Projections throughout the LQP
-  auto actually_used_columns = _collect_actually_used_columns(lqp);
+bool CxlumnPruningRule::apply_to(const std::shared_ptr<AbstractLQPNode>& lqp) const {
+  // Collect the cxlumns that are used in expressions somewhere in the LQP.
+  // This EXCLUDES cxlumns that are merely forwarded by Projections throughout the LQP
+  auto actually_used_cxlumns = _collect_actually_used_cxlumns(lqp);
 
-  // The output columns of the plan are always considered to be referenced (i.e., we cannot prune them)
-  const auto output_columns = lqp->cxlumn_expressions();
-  actually_used_columns.insert(output_columns.begin(), output_columns.end());
+  // The output cxlumns of the plan are always considered to be referenced (i.e., we cannot prune them)
+  const auto output_cxlumns = lqp->cxlumn_expressions();
+  actually_used_cxlumns.insert(output_cxlumns.begin(), output_cxlumns.end());
 
-  // Search for ProjectionNodes that forward the unused columns and prune them accordingly
-  _prune_columns_in_projections(lqp, actually_used_columns);
+  // Search for ProjectionNodes that forward the unused cxlumns and prune them accordingly
+  _prune_cxlumns_in_projections(lqp, actually_used_cxlumns);
 
-  // Search the plan for leaf nodes and prune all columns from them that are not referenced
-  return _prune_columns_from_leafs(lqp, actually_used_columns);
+  // Search the plan for leaf nodes and prune all cxlumns from them that are not referenced
+  return _prune_cxlumns_from_leafs(lqp, actually_used_cxlumns);
 }
 
-ExpressionUnorderedSet ColumnPruningRule::_collect_actually_used_columns(const std::shared_ptr<AbstractLQPNode>& lqp) {
-  auto consumed_columns = ExpressionUnorderedSet{};
+ExpressionUnorderedSet CxlumnPruningRule::_collect_actually_used_cxlumns(const std::shared_ptr<AbstractLQPNode>& lqp) {
+  auto consumed_cxlumns = ExpressionUnorderedSet{};
 
-  // Search an expression for referenced columns
-  const auto collect_consumed_columns_from_expression = [&](const auto& expression) {
+  // Search an expression for referenced cxlumns
+  const auto collect_consumed_cxlumns_from_expression = [&](const auto& expression) {
     visit_expression(expression, [&](const auto& sub_expression) {
-      if (sub_expression->type == ExpressionType::LQPColumn) {
-        consumed_columns.emplace(sub_expression);
+      if (sub_expression->type == ExpressionType::LQPCxlumn) {
+        consumed_cxlumns.emplace(sub_expression);
       }
       return ExpressionVisitation::VisitArguments;
     });
   };
 
-  // Search the entire LQP for columns used in AbstractLQPNode::node_expressions(), i.e. columns that are necessary for
+  // Search the entire LQP for cxlumns used in AbstractLQPNode::node_expressions(), i.e. cxlumns that are necessary for
   // the "functioning" of the LQP.
-  // For ProjectionNodes, ignore forwarded columns (since they would include all columns and we wouldn't be able to
+  // For ProjectionNodes, ignore forwarded cxlumns (since they would include all cxlumns and we wouldn't be able to
   // prune) by only searching the arguments of expression.
   visit_lqp(lqp, [&](const auto& node) {
     for (const auto& expression : node->node_expressions()) {
       if (node->type == LQPNodeType::Projection) {
         for (const auto& argument : expression->arguments) {
-          collect_consumed_columns_from_expression(argument);
+          collect_consumed_cxlumns_from_expression(argument);
         }
       } else {
-        collect_consumed_columns_from_expression(expression);
+        collect_consumed_cxlumns_from_expression(expression);
       }
     }
     return LQPVisitation::VisitInputs;
   });
 
-  return consumed_columns;
+  return consumed_cxlumns;
 }
 
-bool ColumnPruningRule::_prune_columns_from_leafs(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                                  const ExpressionUnorderedSet& referenced_columns) {
+bool CxlumnPruningRule::_prune_cxlumns_from_leafs(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                                  const ExpressionUnorderedSet& referenced_cxlumns) {
   auto lqp_changed = false;
 
   // Collect all parents of leafs and on which input side their leave is (if a node has two leafs as inputs, it will be
@@ -86,38 +86,38 @@ bool ColumnPruningRule::_prune_columns_from_leafs(const std::shared_ptr<Abstract
     return LQPVisitation::VisitInputs;
   });
 
-  // Insert ProjectionNodes that prune unused columns between the leafs and their parents
+  // Insert ProjectionNodes that prune unused cxlumns between the leafs and their parents
   for (const auto& parent_and_leaf_input_side : leaf_parents) {
     const auto& parent = parent_and_leaf_input_side.first;
     const auto& leaf_input_side = parent_and_leaf_input_side.second;
     const auto leaf = parent->input(leaf_input_side);
 
-    // Collect all columns from the leaf that are actually referenced
-    auto referenced_leaf_columns = std::vector<std::shared_ptr<AbstractExpression>>{};
+    // Collect all cxlumns from the leaf that are actually referenced
+    auto referenced_leaf_cxlumns = std::vector<std::shared_ptr<AbstractExpression>>{};
     for (const auto& expression : leaf->cxlumn_expressions()) {
-      if (referenced_columns.find(expression) != referenced_columns.end()) {
-        referenced_leaf_columns.emplace_back(expression);
+      if (referenced_cxlumns.find(expression) != referenced_cxlumns.end()) {
+        referenced_leaf_cxlumns.emplace_back(expression);
       }
     }
 
-    if (leaf->cxlumn_expressions().size() == referenced_leaf_columns.size()) continue;
+    if (leaf->cxlumn_expressions().size() == referenced_leaf_cxlumns.size()) continue;
 
-    // We cannot have a ProjectionNode that outputs no columns, so let's avoid that
-    if (referenced_leaf_columns.empty()) continue;
+    // We cannot have a ProjectionNode that outputs no cxlumns, so let's avoid that
+    if (referenced_leaf_cxlumns.empty()) continue;
 
-    // If a leaf outputs columns that are never used, prune those columns by inserting a ProjectionNode that only
-    // contains the used columns
-    lqp_insert_node(parent, leaf_input_side, ProjectionNode::make(referenced_leaf_columns));
+    // If a leaf outputs cxlumns that are never used, prune those cxlumns by inserting a ProjectionNode that only
+    // contains the used cxlumns
+    lqp_insert_node(parent, leaf_input_side, ProjectionNode::make(referenced_leaf_cxlumns));
     lqp_changed = true;
   }
 
   return lqp_changed;
 }
 
-void ColumnPruningRule::_prune_columns_in_projections(const std::shared_ptr<AbstractLQPNode>& lqp,
-                                                      const ExpressionUnorderedSet& referenced_columns) {
+void CxlumnPruningRule::_prune_cxlumns_in_projections(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                                      const ExpressionUnorderedSet& referenced_cxlumns) {
   /**
-   * Prune otherwise unused columns that are forwarded by ProjectionNodes
+   * Prune otherwise unused cxlumns that are forwarded by ProjectionNodes
    */
 
   // First collect all the ProjectionNodes. Don't prune while visiting because visit_lqp() can't deal with nodes being
@@ -133,20 +133,20 @@ void ColumnPruningRule::_prune_columns_in_projections(const std::shared_ptr<Abst
   for (const auto& projection_node : projection_nodes) {
     auto referenced_projection_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
     for (const auto& expression : projection_node->node_expressions()) {
-      // We keep all non-column expressions
-      if (expression->type != ExpressionType::LQPColumn) {
+      // We keep all non-cxlumn expressions
+      if (expression->type != ExpressionType::LQPCxlumn) {
         referenced_projection_expressions.emplace_back(expression);
-      } else if (referenced_columns.find(expression) != referenced_columns.end()) {
+      } else if (referenced_cxlumns.find(expression) != referenced_cxlumns.end()) {
         referenced_projection_expressions.emplace_back(expression);
       }
     }
 
     if (projection_node->node_expressions().size() == referenced_projection_expressions.size()) {
-      // No columns to prune
+      // No cxlumns to prune
       continue;
     }
 
-    // We cannot have a ProjectionNode that outputs no columns
+    // We cannot have a ProjectionNode that outputs no cxlumns
     if (referenced_projection_expressions.empty()) {
       lqp_remove_node(projection_node);
     } else {

@@ -11,7 +11,7 @@
 #include "constant_mappings.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/segment_encoding_utils.hpp"
-#include "storage/create_iterable_from_column.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/value_segment.hpp"
@@ -98,7 +98,7 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   std::shared_ptr<BaseEncodedSegment> encode_value_segment(DataType data_type,
                                                          const std::shared_ptr<ValueSegment<T>>& value_segment) {
     const auto segment_encoding_spec = GetParam();
-    return encode_column(segment_encoding_spec.encoding_type, data_type, value_segment,
+    return encode_segment(segment_encoding_spec.encoding_type, data_type, value_segment,
                          segment_encoding_spec.vector_compression_type);
   }
 };
@@ -134,8 +134,8 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNotNullableIntColumn) {
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
   resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
-    auto value_segment_iterable = create_iterable_from_column(*value_segment);
-    auto encoded_segment_iterable = create_iterable_from_column(encoded_segment);
+    auto value_segment_iterable = create_iterable_from_segment(*value_segment);
+    auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
     value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
       encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
@@ -154,8 +154,8 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntColumn) {
   EXPECT_EQ(value_segment->size(), base_encoded_segment->size());
 
   resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
-    auto value_segment_iterable = create_iterable_from_column(*value_segment);
-    auto encoded_segment_iterable = create_iterable_from_column(encoded_segment);
+    auto value_segment_iterable = create_iterable_from_segment(*value_segment);
+    auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
     value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
       encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
@@ -189,8 +189,8 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntColumnWithChunkOffsetsList
   auto chunk_offsets_list = this->create_sequential_chunk_offsets_list();
 
   resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
-    auto value_segment_iterable = create_iterable_from_column(*value_segment);
-    auto encoded_segment_iterable = create_iterable_from_column(encoded_segment);
+    auto value_segment_iterable = create_iterable_from_segment(*value_segment);
+    auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
     value_segment_iterable.with_iterators(&chunk_offsets_list, [&](auto value_segment_it, auto value_segment_end) {
       encoded_segment_iterable.with_iterators(&chunk_offsets_list, [&](auto encoded_segment_it, auto encoded_segment_end) {
@@ -215,8 +215,8 @@ TEST_P(EncodedSegmentTest, SequentiallyReadNullableIntColumnWithShuffledChunkOff
   auto chunk_offsets_list = this->create_random_access_chunk_offsets_list();
 
   resolve_encoded_segment_type<int32_t>(*base_encoded_segment, [&](const auto& encoded_segment) {
-    auto value_segment_iterable = create_iterable_from_column(*value_segment);
-    auto encoded_segment_iterable = create_iterable_from_column(encoded_segment);
+    auto value_segment_iterable = create_iterable_from_segment(*value_segment);
+    auto encoded_segment_iterable = create_iterable_from_segment(encoded_segment);
 
     value_segment_iterable.with_iterators(&chunk_offsets_list, [&](auto value_segment_it, auto value_segment_end) {
       encoded_segment_iterable.with_iterators(&chunk_offsets_list, [&](auto encoded_segment_it, auto encoded_segment_end) {

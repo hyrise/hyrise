@@ -12,7 +12,7 @@ template <typename IterableT>
 class AnySegmentIterable;
 
 /**
- * @brief Wraps passed column iterable in an AnySegmentIterable
+ * @brief Wraps passed segment iterable in an AnySegmentIterable
  *
  * Iterators of returned iterables will all have the same type,
  * which reduces compile times due to fewer template instantiations.
@@ -23,7 +23,7 @@ template <typename IterableT>
 auto erase_type_from_iterable(const IterableT& iterable);
 
 /**
- * @brief Wraps passed column iterable in an AnySegmentIterable in debug mode
+ * @brief Wraps passed segment iterable in an AnySegmentIterable in debug mode
  */
 template <typename IterableT>
 decltype(auto) erase_type_from_iterable_if_debug(const IterableT& iterable);
@@ -44,7 +44,7 @@ constexpr auto is_any_segment_iterable_v = is_any_segment_iterable<IterableT>::v
 /**@}*/
 
 /**
- * @brief Makes any column iterable return type-erased iterators
+ * @brief Makes any segment iterable return type-erased iterators
  *
  * AnySegmentIterable’s sole reason for existence is compile speed.
  * Since iterables are almost always used in highly templated code,
@@ -55,7 +55,7 @@ constexpr auto is_any_segment_iterable_v = is_any_segment_iterable<IterableT>::v
  * thus reducing the number of instantiations to one (for each column type).
  *
  * The iterators forwarded are of type AnySegmentIterator<T>. They wrap
- * any column iterator with the cost of a virtual function call for each access.
+ * any segment iterator with the cost of a virtual function call for each access.
  */
 template <typename IterableT>
 class AnySegmentIterable : public PointAccessibleSegmentIterable<AnySegmentIterable<IterableT>> {

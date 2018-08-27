@@ -19,7 +19,7 @@ class JitBaseSegmentIterator {};
 /**
  * @brief base class of all iterators used by iterables
  *
- * Instantiations of this template are part of the column iterable
+ * Instantiations of this template are part of the segment iterable
  * interface (see segment_iterables/.hpp) and are implemented
  * in sub-classes of SegmentIterable (see e.g. value_segment_iterable.hpp)
  *

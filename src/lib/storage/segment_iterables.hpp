@@ -9,7 +9,7 @@
 namespace opossum {
 
 /**
- * @brief base class of all column iterables
+ * @brief base class of all segment iterables
  *
  * Implements the method with_iterators, which accepts a generic lambda
  * (or similar) that expects a begin and end iterator to the underlying
@@ -132,7 +132,7 @@ class SegmentIterable {
 };
 
 /**
- * @brief base class of all point-accessible column iterables
+ * @brief base class of all point-accessible segment iterables
  *
  * Extends the interface of SegmentIterable by two variants of
  * with_iterators and for_each. These methods accept in addition

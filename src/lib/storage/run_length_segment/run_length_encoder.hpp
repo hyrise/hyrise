@@ -12,7 +12,7 @@
 
 namespace opossum {
 
-class RunLengthEncoder : public ColumnEncoder<RunLengthEncoder> {
+class RunLengthEncoder : public SegmentEncoder<RunLengthEncoder> {
  public:
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::RunLength>;
   static constexpr auto _uses_vector_compression = false;
@@ -34,13 +34,13 @@ class RunLengthEncoder : public ColumnEncoder<RunLengthEncoder> {
       auto current_index = 0u;
 
       for (; it != end; ++it) {
-        auto column_value = *it;
+        auto segment_value = *it;
 
         const auto previous_value = current_value;
         const auto is_previous_null = is_current_null;
 
-        current_value = column_value.value();
-        is_current_null = column_value.is_null();
+        current_value = segment_value.value();
+        is_current_null = segment_value.is_null();
 
         if ((is_previous_null == is_current_null) && (is_previous_null || (previous_value == current_value))) {
           end_positions.back() = current_index;

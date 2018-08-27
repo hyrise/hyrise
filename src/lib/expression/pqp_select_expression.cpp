@@ -30,13 +30,13 @@ std::shared_ptr<AbstractExpression> PQPSelectExpression::deep_copy() const {
 
 DataType PQPSelectExpression::data_type() const {
   Assert(_data_type_info,
-         "Can't determine the DataType of this SelectExpression, probably because it returns multiple columns");
+         "Can't determine the DataType of this SelectExpression, probably because it returns multiple cxlumns");
   return _data_type_info->data_type;
 }
 
 bool PQPSelectExpression::is_nullable() const {
   Assert(_data_type_info,
-         "Can't determine the nullability of this SelectExpression, probably because it returns multiple columns");
+         "Can't determine the nullability of this SelectExpression, probably because it returns multiple cxlumns");
   return _data_type_info->nullable;
 }
 

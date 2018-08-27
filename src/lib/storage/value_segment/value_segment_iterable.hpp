@@ -11,39 +11,39 @@ namespace opossum {
 template <typename T>
 class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentIterable<T>> {
  public:
-  explicit ValueSegmentIterable(const ValueSegment<T>& column) : _column{column} {}
+  explicit ValueSegmentIterable(const ValueSegment<T>& segment) : _segment{segment} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
-    if (_column.is_nullable()) {
-      auto begin = Iterator{_column.values().cbegin(), _column.values().cbegin(), _column.null_values().cbegin()};
-      auto end = Iterator{_column.values().cbegin(), _column.values().cend(), _column.null_values().cend()};
+    if (_segment.is_nullable()) {
+      auto begin = Iterator{_segment.values().cbegin(), _segment.values().cbegin(), _segment.null_values().cbegin()};
+      auto end = Iterator{_segment.values().cbegin(), _segment.values().cend(), _segment.null_values().cend()};
       functor(begin, end);
       return;
     }
 
-    auto begin = NonNullIterator{_column.values().cbegin(), _column.values().cbegin()};
-    auto end = NonNullIterator{_column.values().cend(), _column.values().cend()};
+    auto begin = NonNullIterator{_segment.values().cbegin(), _segment.values().cbegin()};
+    auto end = NonNullIterator{_segment.values().cend(), _segment.values().cend()};
     functor(begin, end);
   }
 
   template <typename Functor>
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
-    if (_column.is_nullable()) {
-      auto begin = PointAccessIterator{_column.values(), _column.null_values(), mapped_chunk_offsets.cbegin()};
-      auto end = PointAccessIterator{_column.values(), _column.null_values(), mapped_chunk_offsets.cend()};
+    if (_segment.is_nullable()) {
+      auto begin = PointAccessIterator{_segment.values(), _segment.null_values(), mapped_chunk_offsets.cbegin()};
+      auto end = PointAccessIterator{_segment.values(), _segment.null_values(), mapped_chunk_offsets.cend()};
       functor(begin, end);
     } else {
-      auto begin = NonNullPointAccessIterator{_column.values(), mapped_chunk_offsets.cbegin()};
-      auto end = NonNullPointAccessIterator{_column.values(), mapped_chunk_offsets.cend()};
+      auto begin = NonNullPointAccessIterator{_segment.values(), mapped_chunk_offsets.cbegin()};
+      auto end = NonNullPointAccessIterator{_segment.values(), mapped_chunk_offsets.cend()};
       functor(begin, end);
     }
   }
 
-  size_t _on_size() const { return _column.size(); }
+  size_t _on_size() const { return _segment.size(); }
 
  private:
-  const ValueSegment<T>& _column;
+  const ValueSegment<T>& _segment;
 
  private:
   class NonNullIterator : public BaseSegmentIterator<NonNullIterator, NonNullSegmentIteratorValue<T>> {

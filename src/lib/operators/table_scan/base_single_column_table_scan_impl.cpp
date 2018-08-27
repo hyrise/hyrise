@@ -7,7 +7,7 @@
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"
 #include "storage/segment_iterables/chunk_offset_mapping.hpp"
-#include "storage/dictionary_column.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
@@ -27,7 +27,7 @@ std::shared_ptr<PosList> BaseSingleColumnTableScanImpl::scan_chunk(ChunkID chunk
   auto context = std::make_shared<Context>(chunk_id, *matches_out);
 
   resolve_data_and_cxlumn_type(*column, [&](const auto data_type_t, const auto& resolved_column) {
-    static_cast<AbstractColumnVisitor*>(this)->handle_segment(resolved_column, context);
+    static_cast<AbstractSegmentVisitor*>(this)->handle_segment(resolved_column, context);
   });
 
   return matches_out;
@@ -54,7 +54,7 @@ void BaseSingleColumnTableScanImpl::handle_segment(const ReferenceSegment& colum
     auto new_context = std::make_shared<Context>(chunk_id, matches_out, std::move(mapped_chunk_offsets_ptr));
 
     resolve_data_and_cxlumn_type(*referenced_column, [&](const auto data_type_t, const auto& resolved_column) {
-      static_cast<AbstractColumnVisitor*>(this)->handle_segment(resolved_column, new_context);
+      static_cast<AbstractSegmentVisitor*>(this)->handle_segment(resolved_column, new_context);
     });
   }
 }

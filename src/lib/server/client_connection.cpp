@@ -137,10 +137,10 @@ boost::future<void> ClientConnection::send_row_description(const std::vector<Col
    The field name.
 
    Int32
-   If the field can be identified as a column of a specific table, the object ID of the table; otherwise zero.
+   If the field can be identified as a cxlumn of a specific table, the object ID of the table; otherwise zero.
 
    Int16
-   If the field can be identified as a column of a specific table, the attribute number of the column; otherwise zero.
+   If the field can be identified as a cxlumn of a specific table, the attribute number of the cxlumn; otherwise zero.
 
    Int32
    The object ID of the field's data type.
@@ -158,13 +158,13 @@ boost::future<void> ClientConnection::send_row_description(const std::vector<Col
    be zero.
    */
 
-  for (const auto& column_description : row_description) {
-    PostgresWireHandler::write_string(*output_packet, column_description.cxlumn_name);
+  for (const auto& cxlumn_description : row_description) {
+    PostgresWireHandler::write_string(*output_packet, cxlumn_description.cxlumn_name);
     PostgresWireHandler::write_value(*output_packet, htonl(0u));  // no object id
     PostgresWireHandler::write_value(*output_packet, htons(0u));  // no attribute number
 
-    PostgresWireHandler::write_value(*output_packet, htonl(column_description.object_id));   // object id of type
-    PostgresWireHandler::write_value(*output_packet, htons(column_description.type_width));  // regular int
+    PostgresWireHandler::write_value(*output_packet, htonl(cxlumn_description.object_id));   // object id of type
+    PostgresWireHandler::write_value(*output_packet, htons(cxlumn_description.type_width));  // regular int
     PostgresWireHandler::write_value(*output_packet, htonl(-1));                             // no modifier
     PostgresWireHandler::write_value(*output_packet, htons(0u));                             // text format
   }
@@ -184,19 +184,19 @@ boost::future<void> ClientConnection::send_data_row(const std::vector<std::strin
   Length of message contents in bytes, including self.
 
   Int16
-  The number of column values that follow (possibly zero).
+  The number of cxlumn values that follow (possibly zero).
 
-  Next, the following pair of fields appear for each column:
+  Next, the following pair of fields appear for each cxlumn:
 
   Int32
-  The length of the column value, in bytes (this count does not include itself). Can be zero. As a special case,
-  -1 indicates a NULL column value. No value bytes follow in the NULL case.
+  The length of the cxlumn value, in bytes (this count does not include itself). Can be zero. As a special case,
+  -1 indicates a NULL cxlumn value. No value bytes follow in the NULL case.
 
   Byte n
-  The value of the column, in the format indicated by the associated format code. n is the above length.
+  The value of the cxlumn, in the format indicated by the associated format code. n is the above length.
   */
 
-  // Number of columns in row
+  // Number of cxlumns in row
   PostgresWireHandler::write_value(*output_packet, htons(row_strings.size()));
 
   for (const auto& value_string : row_strings) {

@@ -130,7 +130,7 @@ set(
     storage/composite_group_key_index_test.cpp
     storage/compressed_vector_test.cpp
     storage/dictionary_cxlumn_test.cpp
-    storage/encoded_cxlumn_test.cpp
+    storage/encoded_segment_test.cpp
     storage/encoding_test.hpp
     storage/fixed_string_dictionary_cxlumn_test.cpp
     storage/fixed_string_vector_test.cpp

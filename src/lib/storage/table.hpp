@@ -30,7 +30,7 @@ class Table : private Noncopyable {
   explicit Table(const TableCxlumnDefinitions& cxlumn_definitions, const TableType type,
                  const uint32_t max_chunk_size = Chunk::MAX_SIZE, const UseMvcc use_mvcc = UseMvcc::No);
   /**
-   * @defgroup Getter and convenience functions for the column definitions
+   * @defgroup Getter and convenience functions for the cxlumn definitions
    * @{
    */
 
@@ -44,10 +44,10 @@ class Table : private Noncopyable {
   DataType cxlumn_data_type(const CxlumnID cxlumn_id) const;
   std::vector<DataType> cxlumn_data_types() const;
 
-  bool column_is_nullable(const CxlumnID cxlumn_id) const;
-  std::vector<bool> columns_are_nullable() const;
+  bool cxlumn_is_nullable(const CxlumnID cxlumn_id) const;
+  std::vector<bool> cxlumns_are_nullable() const;
 
-  // Fail()s, if there is no column of that name
+  // Fail()s, if there is no cxlumn of that name
   CxlumnID cxlumn_id_by_name(const std::string& cxlumn_name) const;
 
   /** @} */
@@ -87,17 +87,17 @@ class Table : private Noncopyable {
 
   /**
    * Creates a new Chunk and appends it to this table.
-   * Makes sure the @param columns match with the TableType (only ReferenceSegments or only data containing columns)
+   * Makes sure the @param segments match with the TableType (only ReferenceSegments or only data containing segments)
    * En/Disables MVCC for the Chunk depending on whether MVCC is enabled for the table (has_mvcc())
-   * This is a convenience method to enable automatically creating a chunk with correct settings given a set of columns.
+   * This is a convenience method to enable automatically creating a chunk with correct settings given a set of segments.
    * @param alloc
    */
-  void append_chunk(const ChunkSegments& columns, const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
+  void append_chunk(const ChunkSegments& segments, const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt,
                     const std::shared_ptr<ChunkAccessCounter>& access_counter = nullptr);
 
   /**
    * Appends an existing chunk to this table.
-   * Makes sure the columns in the chunk match with the TableType and the MVCC setting is the same as for the table.
+   * Makes sure the segments in the chunk match with the TableType and the MVCC setting is the same as for the table.
    */
   void append_chunk(const std::shared_ptr<Chunk>& chunk);
 

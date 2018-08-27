@@ -243,7 +243,7 @@ const char* const tpch_query_6 =
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
  *  3. Extract is not supported
- *    a. Use SUBSTR instead (because our date columns are strings AND SQLite doesn't support EXTRACT)
+ *    a. Use SUBSTR instead (because our date cxlumns are strings AND SQLite doesn't support EXTRACT)
  */
 const char* const tpch_query_7 =
     R"(SELECT
@@ -325,7 +325,7 @@ const char* const tpch_query_7 =
  *  2. dates are not supported
  *    a. use strings as data type for now
  *  3. Extract is not supported
- *    a. Use SUBSTR instead (because our date columns are strings AND SQLite doesn't support EXTRACT)
+ *    a. Use SUBSTR instead (because our date cxlumns are strings AND SQLite doesn't support EXTRACT)
  */
 const char* const tpch_query_8 =
     R"(SELECT o_year, SUM(case when nation = 'BRAZIL' then volume else 0 end) / SUM(volume) as mkt_share

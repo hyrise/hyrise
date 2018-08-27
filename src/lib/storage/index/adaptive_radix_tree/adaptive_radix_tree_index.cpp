@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "adaptive_radix_tree_nodes.hpp"
-#include "storage/base_dictionary_column.hpp"
+#include "storage/base_dictionary_segment.hpp"
 #include "storage/index/base_index.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "types.hpp"
@@ -16,18 +16,18 @@
 
 namespace opossum {
 
-AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& index_columns)
+AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index)
     : BaseIndex{get_index_type_of<AdaptiveRadixTreeIndex>()},
-      _index_column(std::dynamic_pointer_cast<const BaseDictionarySegment>(index_columns.front())) {
-  Assert(static_cast<bool>(_index_column), "AdaptiveRadixTree only works with dictionary columns for now");
-  Assert((index_columns.size() == 1), "AdaptiveRadixTree only works with a single column");
+      _indexed_segment(std::dynamic_pointer_cast<const BaseDictionarySegment>(segments_to_index.front())) {
+  Assert(static_cast<bool>(_indexed_segment), "AdaptiveRadixTree only works with dictionary columns for now");
+  Assert((segments_to_index.size() == 1), "AdaptiveRadixTree only works with a single column");
 
   // For each value ID in the attribute vector, create a pair consisting of a BinaryComparable of
   // this value ID and its ChunkOffset (needed for bulk-inserting).
   std::vector<std::pair<BinaryComparable, ChunkOffset>> pairs_to_insert;
-  pairs_to_insert.reserve(_index_column->attribute_vector()->size());
+  pairs_to_insert.reserve(_indexed_segment->attribute_vector()->size());
 
-  resolve_compressed_vector_type(*_index_column->attribute_vector(), [&](const auto& attribute_vector) {
+  resolve_compressed_vector_type(*_indexed_segment->attribute_vector(), [&](const auto& attribute_vector) {
     auto chunk_offset = ChunkOffset{0u};
     auto value_id_it = attribute_vector.cbegin();
     for (; value_id_it != attribute_vector.cend(); ++value_id_it, ++chunk_offset) {
@@ -40,7 +40,7 @@ AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(const std::vector<std::shared_ptr
 
 BaseIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   assert(values.size() == 1);
-  ValueID value_id = _index_column->lower_bound(values[0]);
+  ValueID value_id = _indexed_segment->lower_bound(values[0]);
   if (value_id == INVALID_VALUE_ID) {
     return _chunk_offsets.end();
   }
@@ -49,7 +49,7 @@ BaseIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<AllTy
 
 BaseIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
   assert(values.size() == 1);
-  ValueID value_id = _index_column->upper_bound(values[0]);
+  ValueID value_id = _indexed_segment->upper_bound(values[0]);
   if (value_id == INVALID_VALUE_ID) {
     return _chunk_offsets.end();
   } else {
@@ -120,8 +120,8 @@ std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
   }
 }
 
-std::vector<std::shared_ptr<const BaseSegment>> AdaptiveRadixTreeIndex::_get_index_columns() const {
-  return {_index_column};
+std::vector<std::shared_ptr<const BaseSegment>> AdaptiveRadixTreeIndex::_get_indexed_segments() const {
+  return {_indexed_segment};
 }
 
 AdaptiveRadixTreeIndex::BinaryComparable::BinaryComparable(ValueID value) : _parts(sizeof(value)) {

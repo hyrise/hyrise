@@ -6,8 +6,8 @@
 
 #include "storage/base_segment_encoder.hpp"
 
-#include "storage/dictionary_column.hpp"
-#include "storage/fixed_string_dictionary_column.hpp"
+#include "storage/dictionary_segment.hpp"
+#include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 
@@ -18,13 +18,13 @@
 namespace opossum {
 
 /**
- * @brief Encodes a column using dictionary encoding and compresses its attribute vector using vector compression.
+ * @brief Encodes a segment using dictionary encoding and compresses its attribute vector using vector compression.
  *
  * The algorithm first creates an attribute vector of standard size (uint32_t) and then compresses it
  * using fixed-size byte-aligned encoding.
  */
 template <auto Encoding>
-class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
+class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
  public:
   static constexpr auto _encoding_type = enum_c<EncodingType, Encoding>;
   static constexpr auto _uses_vector_compression = true;  // see base_segment_encoder.hpp for details
@@ -36,13 +36,13 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
     const auto& values = value_segment->values();
 
     if constexpr (Encoding == EncodingType::FixedStringDictionary) {
-      // Encode a column with a FixedStringVector as dictionary. std::string is the only supported type
-      return _encode_dictionary_column(
+      // Encode a segment with a FixedStringVector as dictionary. std::string is the only supported type
+      return _encode_dictionary_segment(
           FixedStringVector{values.cbegin(), values.cend(), _calculate_fixed_string_length(values), values.size()},
           value_segment);
     } else {
-      // Encode a column with a pmr_vector<T> as dictionary
-      return _encode_dictionary_column(pmr_vector<T>{values.cbegin(), values.cend(), values.get_allocator()},
+      // Encode a segment with a pmr_vector<T> as dictionary
+      return _encode_dictionary_segment(pmr_vector<T>{values.cbegin(), values.cend(), values.get_allocator()},
                                        value_segment);
     }
   }
@@ -55,7 +55,7 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
   }
 
   template <typename U, typename T>
-  std::shared_ptr<BaseEncodedSegment> _encode_dictionary_column(
+  std::shared_ptr<BaseEncodedSegment> _encode_dictionary_segment(
       U dictionary, const std::shared_ptr<const ValueSegment<T>>& value_segment) {
     const auto& values = value_segment->values();
     const auto alloc = values.get_allocator();
@@ -116,7 +116,7 @@ class DictionaryEncoder : public ColumnEncoder<DictionaryEncoder<Encoding>> {
     const auto max_value = dictionary.size() + 1u;
 
     auto encoded_attribute_vector = compress_vector(
-        attribute_vector, ColumnEncoder<DictionaryEncoder<Encoding>>::vector_compression_type(), alloc, {max_value});
+        attribute_vector, SegmentEncoder<DictionaryEncoder<Encoding>>::vector_compression_type(), alloc, {max_value});
     auto dictionary_sptr = std::allocate_shared<U>(alloc, std::move(dictionary));
     auto attribute_vector_sptr = std::shared_ptr<const BaseCompressedVector>(std::move(encoded_attribute_vector));
 

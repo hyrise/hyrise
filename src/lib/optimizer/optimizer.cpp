@@ -8,7 +8,7 @@
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "strategy/chunk_pruning_rule.hpp"
-#include "strategy/column_pruning_rule.hpp"
+#include "strategy/cxlumn_pruning_rule.hpp"
 #include "strategy/constant_calculation_rule.hpp"
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/join_detection_rule.hpp"
@@ -83,7 +83,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   // Run pruning just once since the rule would otherwise insert the pruning ProjectionNodes multiple times.
   RuleBatch pruning_batch(RuleBatchExecutionPolicy::Once);
-  pruning_batch.add_rule(std::make_shared<ColumnPruningRule>());
+  pruning_batch.add_rule(std::make_shared<CxlumnPruningRule>());
   optimizer->add_rule_batch(pruning_batch);
 
   RuleBatch main_batch(RuleBatchExecutionPolicy::Iterative);

@@ -62,7 +62,7 @@ std::shared_ptr<AbstractExpression> expression_copy_and_adapt_to_different_lqp(c
 void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expression,
                                        const LQPNodeMapping& node_mapping);
 
-std::shared_ptr<LQPCxlumnExpression> expression_adapt_to_different_lqp(const LQPCxlumnExpression& lqp_column_expression,
+std::shared_ptr<LQPCxlumnExpression> expression_adapt_to_different_lqp(const LQPCxlumnExpression& lqp_cxlumn_expression,
                                                                        const LQPNodeMapping& node_mapping);
 
 /**

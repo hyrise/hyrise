@@ -54,7 +54,7 @@ std::shared_ptr<const Table> ShowCxlumns::_on_execute() {
   const auto vc_types = std::make_shared<ValueSegment<std::string>>(std::move(data_types));
   columns.push_back(vc_types);
 
-  const auto& column_nullables = table->columns_are_nullable();
+  const auto& column_nullables = table->cxlumns_are_nullable();
   const auto vc_nullables = std::make_shared<ValueSegment<int32_t>>(
       tbb::concurrent_vector<int32_t>(column_nullables.begin(), column_nullables.end()));
   columns.push_back(vc_nullables);

@@ -142,7 +142,7 @@ TEST_F(JitAwareLQPTranslatorTest, InputCxlumnsAreAddedToJitReadTupleAdapter) {
   ASSERT_NE(jit_read_tuples, nullptr);
 
   // There should be two input cxlumns
-  const auto input_cxlumns = jit_read_tuples->input_columns();
+  const auto input_cxlumns = jit_read_tuples->input_cxlumns();
   ASSERT_EQ(input_cxlumns.size(), 2u);
 
   ASSERT_EQ(input_cxlumns[0].cxlumn_id, CxlumnID{0});

@@ -10,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-#include "storage/base_dictionary_column.hpp"
+#include "storage/base_dictionary_segment.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_utils.hpp"
@@ -19,14 +19,14 @@
 
 namespace opossum {
 
-CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment>>& indexed_columns)
+CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index)
     : BaseIndex{get_index_type_of<CompositeGroupKeyIndex>()} {
-  Assert(!indexed_columns.empty(), "CompositeGroupKeyIndex requires at least one column to be indexed.");
+  Assert(!segments_to_index.empty(), "CompositeGroupKeyIndex requires at least one column to be indexed.");
 
   if (IS_DEBUG) {
-    auto first_size = indexed_columns.front()->size();
+    auto first_size = segments_to_index.front()->size();
     [[gnu::unused]] auto all_column_have_same_size =
-        std::all_of(indexed_columns.cbegin(), indexed_columns.cend(),
+        std::all_of(segments_to_index.cbegin(), segments_to_index.cend(),
                     [first_size](const auto& column) { return column->size() == first_size; });
 
     DebugAssert(all_column_have_same_size,
@@ -34,33 +34,33 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(const std::vector<std::shared_ptr
   }
 
   // cast and check columns
-  _indexed_columns.reserve(indexed_columns.size());
-  for (const auto& column : indexed_columns) {
+  _indexed_segments.reserve(segments_to_index.size());
+  for (const auto& column : segments_to_index) {
     auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(column);
     Assert(static_cast<bool>(dict_segment), "CompositeGroupKeyIndex only works with dictionary columns.");
     Assert(is_fixed_size_byte_aligned(dict_segment->compressed_vector_type()),
            "CompositeGroupKeyIndex only works with fixed-size byte-aligned compressed attribute vectors.");
-    _indexed_columns.emplace_back(dict_segment);
+    _indexed_segments.emplace_back(dict_segment);
   }
 
   // retrieve amount of memory consumed by each concatenated key
   auto bytes_per_key = std::accumulate(
-      _indexed_columns.begin(), _indexed_columns.end(), CompositeKeyLength{0u},
+      _indexed_segments.begin(), _indexed_segments.end(), CompositeKeyLength{0u},
       [](auto key_length, const auto& column) {
         return key_length + byte_width_for_fixed_size_byte_aligned_type(column->compressed_vector_type());
       });
 
   // create concatenated keys and save their positions
   // at this point duplicated keys may be created, they will be handled later
-  auto column_size = _indexed_columns.front()->size();
+  auto column_size = _indexed_segments.front()->size();
   auto keys = std::vector<VariableLengthKey>(column_size);
   _position_list.resize(column_size);
 
   auto attribute_vector_widths_and_decompressors = [&]() {
     auto decompressors =
-        std::vector<std::pair<size_t, std::unique_ptr<BaseVectorDecompressor>>>(_indexed_columns.size());
+        std::vector<std::pair<size_t, std::unique_ptr<BaseVectorDecompressor>>>(_indexed_segments.size());
 
-    std::transform(_indexed_columns.cbegin(), _indexed_columns.cend(), decompressors.begin(), [](const auto& column) {
+    std::transform(_indexed_segments.cbegin(), _indexed_segments.cend(), decompressors.begin(), [](const auto& column) {
       const auto byte_width = byte_width_for_fixed_size_byte_aligned_type(column->compressed_vector_type());
       auto decompressor = column->attribute_vector()->create_base_decoder();
       return std::make_pair(byte_width, std::move(decompressor));
@@ -121,15 +121,15 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
 
   // retrieve the partial keys for every value except for the last one and append them into one partial-key
   for (size_t column = 0; column < values.size() - 1; ++column) {
-    auto partial_key = _indexed_columns[column]->lower_bound(values[column]);
+    auto partial_key = _indexed_segments[column]->lower_bound(values[column]);
     auto bits_of_partial_key =
-        byte_width_for_fixed_size_byte_aligned_type(_indexed_columns[column]->compressed_vector_type()) * CHAR_BIT;
+        byte_width_for_fixed_size_byte_aligned_type(_indexed_segments[column]->compressed_vector_type()) * CHAR_BIT;
     result.shift_and_set(partial_key, bits_of_partial_key);
   }
 
   // retrieve the partial key for the last value (depending on whether we have a lower- or upper-bound-query)
   // and append it to the previously created partial key to obtain the key containing all provided values
-  const auto& column_for_last_value = _indexed_columns[values.size() - 1];
+  const auto& column_for_last_value = _indexed_segments[values.size() - 1];
   auto&& partial_key = is_upper_bound ? column_for_last_value->upper_bound(values.back())
                                       : column_for_last_value->lower_bound(values.back());
   auto bits_of_partial_key =
@@ -138,7 +138,7 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
 
   // fill empty space of key with zeros if less values than columns were provided
   auto empty_bits = std::accumulate(
-      _indexed_columns.cbegin() + values.size(), _indexed_columns.cend(), static_cast<uint8_t>(0u),
+      _indexed_segments.cbegin() + values.size(), _indexed_segments.cend(), static_cast<uint8_t>(0u),
       [](auto value, auto column) {
         return value + byte_width_for_fixed_size_byte_aligned_type(column->compressed_vector_type()) * CHAR_BIT;
       });
@@ -165,10 +165,10 @@ BaseIndex::Iterator CompositeGroupKeyIndex::_get_position_iterator_for_key(const
   return position_it;
 }
 
-std::vector<std::shared_ptr<const BaseSegment>> CompositeGroupKeyIndex::_get_index_columns() const {
+std::vector<std::shared_ptr<const BaseSegment>> CompositeGroupKeyIndex::_get_indexed_segments() const {
   auto result = std::vector<std::shared_ptr<const BaseSegment>>();
-  result.reserve(_indexed_columns.size());
-  for (auto&& indexed_column : _indexed_columns) {
+  result.reserve(_indexed_segments.size());
+  for (auto&& indexed_column : _indexed_segments) {
     result.emplace_back(indexed_column);
   }
   return result;

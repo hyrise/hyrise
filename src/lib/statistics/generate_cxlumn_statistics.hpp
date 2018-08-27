@@ -5,7 +5,7 @@
 #include "base_cxlumn_statistics.hpp"
 #include "cxlumn_statistics.hpp"
 #include "resolve_type.hpp"
-#include "storage/create_iterable_from_column.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
@@ -26,7 +26,7 @@ std::shared_ptr<BaseCxlumnStatistics> generate_cxlumn_statistics(const Table& ta
     const auto base_segment = table.get_chunk(chunk_id)->get_segment(cxlumn_id);
 
     resolve_cxlumn_type<CxlumnDataType>(*base_segment, [&](auto& column) {
-      auto iterable = create_iterable_from_column<CxlumnDataType>(column);
+      auto iterable = create_iterable_from_segment<CxlumnDataType>(column);
       iterable.for_each([&](const auto& column_value) {
         if (column_value.is_null()) {
           ++null_value_count;

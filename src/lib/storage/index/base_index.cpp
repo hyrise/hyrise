@@ -8,7 +8,7 @@ namespace opossum {
 BaseIndex::BaseIndex(const SegmentIndexType type) : _type{type} {}
 
 bool BaseIndex::is_index_for(const std::vector<std::shared_ptr<const BaseSegment>>& columns) const {
-  auto index_columns = _get_index_columns();
+  auto index_columns = _get_indexed_segments();
   if (columns.size() > index_columns.size()) return false;
   if (columns.empty()) return false;
 
@@ -19,14 +19,14 @@ bool BaseIndex::is_index_for(const std::vector<std::shared_ptr<const BaseSegment
 }
 
 BaseIndex::Iterator BaseIndex::lower_bound(const std::vector<AllTypeVariant>& values) const {
-  DebugAssert((_get_index_columns().size() >= values.size()),
+  DebugAssert((_get_indexed_segments().size() >= values.size()),
               "BaseIndex: The amount of queried columns has to be less or equal to the number of indexed columns.");
 
   return _lower_bound(values);
 }
 
 BaseIndex::Iterator BaseIndex::upper_bound(const std::vector<AllTypeVariant>& values) const {
-  DebugAssert((_get_index_columns().size() >= values.size()),
+  DebugAssert((_get_indexed_segments().size() >= values.size()),
               "BaseIndex: The amount of queried columns has to be less or equal to the number of indexed columns.");
 
   return _upper_bound(values);

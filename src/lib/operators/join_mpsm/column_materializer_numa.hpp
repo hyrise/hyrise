@@ -8,7 +8,7 @@
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/topology.hpp"
-#include "storage/create_iterable_from_column.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 #include "types.hpp"
 #include "utils/numa_memory_resource.hpp"
 
@@ -140,7 +140,7 @@ class ColumnMaterializerNUMA {
 
     output->reserve(column.size());
 
-    auto iterable = create_iterable_from_column<T>(column);
+    auto iterable = create_iterable_from_segment<T>(column);
 
     iterable.for_each([&](const auto& column_value) {
       const auto row_id = RowID{chunk_id, column_value.chunk_offset()};
@@ -168,7 +168,7 @@ class ColumnMaterializerNUMA {
     auto value_ids = column.attribute_vector();
     auto dict = column.dictionary();
 
-    auto iterable = create_iterable_from_column(column);
+    auto iterable = create_iterable_from_segment(column);
     iterable.for_each([&](const auto& column_value) {
       const auto row_id = RowID{chunk_id, column_value.chunk_offset()};
       if (column_value.is_null()) {

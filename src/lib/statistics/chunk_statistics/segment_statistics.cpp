@@ -11,8 +11,8 @@
 #include "min_max_filter.hpp"
 #include "range_filter.hpp"
 #include "storage/base_encoded_segment.hpp"
-#include "storage/create_iterable_from_column.hpp"
-#include "storage/dictionary_column.hpp"
+#include "storage/create_iterable_from_segment.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment.hpp"
 #include "storage/value_segment.hpp"
@@ -54,7 +54,7 @@ std::shared_ptr<SegmentStatistics> SegmentStatistics::build_statistics(
         statistics = build_statistics_from_dictionary(dictionary);
     } else {
       // if we have a generic column we create the dictionary ourselves
-      auto iterable = create_iterable_from_column<DataTypeT>(typed_segment);
+      auto iterable = create_iterable_from_segment<DataTypeT>(typed_segment);
       std::unordered_set<DataTypeT> values;
       iterable.for_each([&](const auto& value) {
         // we are only interested in non-null values

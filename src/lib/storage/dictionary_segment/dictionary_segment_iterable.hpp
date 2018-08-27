@@ -4,8 +4,8 @@
 
 #include "storage/segment_iterables.hpp"
 
-#include "storage/dictionary_column.hpp"
-#include "storage/fixed_string_dictionary_column.hpp"
+#include "storage/dictionary_segment.hpp"
+#include "storage/fixed_string_dictionary_segment.hpp"
 
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
@@ -14,42 +14,42 @@ namespace opossum {
 template <typename T, typename Dictionary>
 class DictionarySegmentIterable : public PointAccessibleSegmentIterable<DictionarySegmentIterable<T, Dictionary>> {
  public:
-  explicit DictionarySegmentIterable(const DictionarySegment<T>& column)
-      : _column{column}, _dictionary(column.dictionary()) {}
+  explicit DictionarySegmentIterable(const DictionarySegment<T>& segment)
+      : _segment{segment}, _dictionary(segment.dictionary()) {}
 
-  explicit DictionarySegmentIterable(const FixedStringDictionarySegment<std::string>& column)
-      : _column{column}, _dictionary(column.fixed_string_dictionary()) {}
+  explicit DictionarySegmentIterable(const FixedStringDictionarySegment<std::string>& segment)
+      : _segment{segment}, _dictionary(segment.fixed_string_dictionary()) {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
-    resolve_compressed_vector_type(*_column.attribute_vector(), [&](const auto& vector) {
+    resolve_compressed_vector_type(*_segment.attribute_vector(), [&](const auto& vector) {
       using ZsIteratorType = decltype(vector.cbegin());
 
-      auto begin = Iterator<ZsIteratorType>{*_dictionary, _column.null_value_id(), vector.cbegin(), ChunkOffset{0u}};
-      auto end = Iterator<ZsIteratorType>{*_dictionary, _column.null_value_id(), vector.cend(),
-                                          static_cast<ChunkOffset>(_column.size())};
+      auto begin = Iterator<ZsIteratorType>{*_dictionary, _segment.null_value_id(), vector.cbegin(), ChunkOffset{0u}};
+      auto end = Iterator<ZsIteratorType>{*_dictionary, _segment.null_value_id(), vector.cend(),
+                                          static_cast<ChunkOffset>(_segment.size())};
       functor(begin, end);
     });
   }
 
   template <typename Functor>
   void _on_with_iterators(const ChunkOffsetsList& mapped_chunk_offsets, const Functor& functor) const {
-    resolve_compressed_vector_type(*_column.attribute_vector(), [&](const auto& vector) {
+    resolve_compressed_vector_type(*_segment.attribute_vector(), [&](const auto& vector) {
       auto decoder = vector.create_decoder();
       using ZsDecoderType = std::decay_t<decltype(*decoder)>;
 
-      auto begin = PointAccessIterator<ZsDecoderType>{*_dictionary, _column.null_value_id(), *decoder,
+      auto begin = PointAccessIterator<ZsDecoderType>{*_dictionary, _segment.null_value_id(), *decoder,
                                                       mapped_chunk_offsets.cbegin()};
-      auto end = PointAccessIterator<ZsDecoderType>{*_dictionary, _column.null_value_id(), *decoder,
+      auto end = PointAccessIterator<ZsDecoderType>{*_dictionary, _segment.null_value_id(), *decoder,
                                                     mapped_chunk_offsets.cend()};
       functor(begin, end);
     });
   }
 
-  size_t _on_size() const { return _column.size(); }
+  size_t _on_size() const { return _segment.size(); }
 
  private:
-  const BaseDictionarySegment& _column;
+  const BaseDictionarySegment& _segment;
   std::shared_ptr<const Dictionary> _dictionary;
 
  private:

@@ -19,10 +19,10 @@ void execute_tasks_with_context(std::vector<std::shared_ptr<OperatorTask>>& task
 
 template <typename T>
 std::shared_ptr<ValueSegment<T>> create_single_value_segment(T value) {
-  tbb::concurrent_vector<T> column;
-  column.push_back(value);
+  tbb::concurrent_vector<T> vector;
+  vector.push_back(value);
 
-  return std::make_shared<ValueSegment<T>>(std::move(column));
+  return std::make_shared<ValueSegment<T>>(std::move(vector));
 }
 
 }  // namespace opossum

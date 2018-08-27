@@ -17,7 +17,7 @@
 #include "statistics/cxlumn_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/dictionary_column.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"

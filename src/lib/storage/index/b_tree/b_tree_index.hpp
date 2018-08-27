@@ -26,7 +26,7 @@ class BTreeIndex : public BaseIndex {
   Iterator _upper_bound(const std::vector<AllTypeVariant>&) const override;
   Iterator _cbegin() const override;
   Iterator _cend() const override;
-  std::vector<std::shared_ptr<const BaseSegment>> _get_index_columns() const override;
+  std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const override;
 
   std::shared_ptr<const BaseSegment> _index_column;
   std::shared_ptr<BaseBTreeIndexImpl> _impl;

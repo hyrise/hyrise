@@ -7,7 +7,7 @@
 
 #include "storage/chunk_encoder.hpp"
 #include "storage/segment_encoding_utils.hpp"
-#include "storage/fixed_string_dictionary_column.hpp"
+#include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
 
@@ -26,8 +26,8 @@ TEST_F(StorageFixedStringDictionarySegmentTest, CompressColumnString) {
   vc_str->append("Hasso");
   vc_str->append("Bill");
 
-  auto col = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
-  auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(col);
+  auto base_segment = encode_segment(EncodingType::FixedStringDictionary, DataType::String, vc_str);
+  auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(base_segment);
 
   // Test attribute_vector size
   EXPECT_EQ(dict_segment->size(), 6u);
@@ -49,8 +49,8 @@ TEST_F(StorageFixedStringDictionarySegmentTest, Decode) {
   vc_str->append("Steve");
   vc_str->append("Bill");
 
-  auto col = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
-  auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(col);
+  auto base_segment = encode_segment(EncodingType::FixedStringDictionary, DataType::String, vc_str);
+  auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(base_segment);
 
   EXPECT_EQ(dict_segment->encoding_type(), EncodingType::FixedStringDictionary);
   EXPECT_EQ(dict_segment->compressed_vector_type(), CompressedVectorType::FixedSize1ByteAligned);
@@ -66,8 +66,8 @@ TEST_F(StorageFixedStringDictionarySegmentTest, LongStrings) {
   vc_str->append("QuiteShort");
   vc_str->append("Short");
 
-  auto col = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
-  auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(col);
+  auto base_segment = encode_segment(EncodingType::FixedStringDictionary, DataType::String, vc_str);
+  auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(base_segment);
 
   // Test sorting
   auto dict = dict_segment->dictionary();
@@ -81,8 +81,8 @@ TEST_F(StorageFixedStringDictionarySegmentTest, CopyUsingAlloctor) {
   vc_str->append("Steve");
   vc_str->append("Alexander");
 
-  auto col = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
-  auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(col);
+  auto base_segment = encode_segment(EncodingType::FixedStringDictionary, DataType::String, vc_str);
+  auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(base_segment);
 
   auto alloc = dict_segment->dictionary()->get_allocator();
   auto base_segment = dict_segment->copy_using_allocator(alloc);
@@ -104,8 +104,8 @@ TEST_F(StorageFixedStringDictionarySegmentTest, LowerUpperBound) {
   vc_str->append("I");
   vc_str->append("K");
 
-  auto col = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
-  auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(col);
+  auto base_segment = encode_segment(EncodingType::FixedStringDictionary, DataType::String, vc_str);
+  auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(base_segment);
 
   // Test for AllTypeVariant as parameter
   EXPECT_EQ(dict_segment->lower_bound(AllTypeVariant("E")), (ValueID)2);
@@ -125,8 +125,8 @@ TEST_F(StorageFixedStringDictionarySegmentTest, NullValues) {
   vc_str->append(NULL_VALUE);
   vc_str->append("E");
 
-  auto col = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
-  auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(col);
+  auto base_segment = encode_segment(EncodingType::FixedStringDictionary, DataType::String, vc_str);
+  auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(base_segment);
 
   EXPECT_EQ(dict_segment->null_value_id(), 2u);
   EXPECT_TRUE(variant_is_null((*dict_segment)[1]));
@@ -137,22 +137,22 @@ TEST_F(StorageFixedStringDictionarySegmentTest, MemoryUsageEstimation) {
    * WARNING: Since it's hard to assert what constitutes a correct "estimation", this just tests basic sanity of the
    * memory usage estimations
    */
-  const auto empty_compressed_column = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
-  const auto empty_dictionary_column =
-      std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(empty_compressed_column);
-  const auto empty_memory_usage = empty_dictionary_column->estimate_memory_usage();
+  const auto empty_compressed_segment = encode_segment(EncodingType::FixedStringDictionary, DataType::String, vc_str);
+  const auto empty_dictionary_segment =
+      std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(empty_compressed_segment);
+  const auto empty_memory_usage = empty_dictionary_segment->estimate_memory_usage();
 
   vc_str->append("A");
   vc_str->append("B");
   vc_str->append("C");
-  const auto compressed_column = encode_column(EncodingType::FixedStringDictionary, DataType::String, vc_str);
-  const auto dictionary_column = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(compressed_column);
+  const auto compressed_segment = encode_segment(EncodingType::FixedStringDictionary, DataType::String, vc_str);
+  const auto dictionary_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<std::string>>(compressed_segment);
 
   static constexpr auto size_of_attribute = 1u;
   static constexpr auto size_of_dictionary = 3u;
 
   // We have to substract 1 since the empty FixedStringColumn actually contains one null terminator
-  EXPECT_EQ(dictionary_column->estimate_memory_usage(),
+  EXPECT_EQ(dictionary_segment->estimate_memory_usage(),
             empty_memory_usage - 1u + 3 * size_of_attribute + size_of_dictionary);
 }
 

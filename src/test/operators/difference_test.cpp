@@ -60,7 +60,7 @@ TEST_F(OperatorsDifferenceTest, DifferneceOnReferenceTables) {
   EXPECT_TABLE_EQ_UNORDERED(difference->get_output(), expected_result);
 }
 
-TEST_F(OperatorsDifferenceTest, ThrowWrongColumnNumberException) {
+TEST_F(OperatorsDifferenceTest, ThrowWrongCxlumnNumberException) {
   if (!IS_DEBUG) return;
   auto table_wrapper_c = std::make_shared<TableWrapper>(load_table("src/test/tables/int.tbl", 2));
   table_wrapper_c->execute();
@@ -70,7 +70,7 @@ TEST_F(OperatorsDifferenceTest, ThrowWrongColumnNumberException) {
   EXPECT_THROW(difference->execute(), std::exception);
 }
 
-TEST_F(OperatorsDifferenceTest, ThrowWrongColumnOrderException) {
+TEST_F(OperatorsDifferenceTest, ThrowWrongCxlumnOrderException) {
   if (!IS_DEBUG) return;
 
   auto table_wrapper_d = std::make_shared<TableWrapper>(load_table("src/test/tables/float_int.tbl", 2));

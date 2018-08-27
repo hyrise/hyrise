@@ -16,7 +16,7 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/create_iterable_from_column.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 #include "type_comparison.hpp"
 #include "utils/aligned_size.hpp"
 #include "utils/assert.hpp"
@@ -213,7 +213,7 @@ void Aggregate::_aggregate_column(ChunkID chunk_id, CxlumnID column_index, const
 
   resolve_cxlumn_type<CxlumnDataType>(
       base_segment, [&results, &hash_keys, chunk_id, aggregator](const auto& typed_segment) {
-        auto iterable = create_iterable_from_column<CxlumnDataType>(typed_segment);
+        auto iterable = create_iterable_from_segment<CxlumnDataType>(typed_segment);
 
         ChunkOffset chunk_offset{0};
 
@@ -342,7 +342,7 @@ void Aggregate::_aggregate() {
           const auto base_segment = chunk_in->get_segment(cxlumn_id);
 
           resolve_cxlumn_type<CxlumnDataType>(*base_segment, [&](auto& typed_segment) {
-            auto iterable = create_iterable_from_column<CxlumnDataType>(typed_segment);
+            auto iterable = create_iterable_from_segment<CxlumnDataType>(typed_segment);
 
             ChunkOffset chunk_offset{0};
             iterable.for_each([&](const auto& value) {

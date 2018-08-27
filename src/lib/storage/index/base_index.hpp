@@ -13,7 +13,7 @@ namespace opossum {
 class BaseSegment;
 
 /**
- * BaseIndex is the abstract super class for all index types, e.g. GroupKeyIndex , CompositeGroupKeyIndex,
+ * BaseIndex is the abstract super class for all index types, e.g. GroupKeyIndex, CompositeGroupKeyIndex,
  * ARTIndex etc.
  * It is assumed that all index types support range queries and that they are composite indices.
  * I.e. the index is sorted based on the column order. To check whether a key is less than another
@@ -117,7 +117,7 @@ class BaseIndex : private Noncopyable {
   virtual Iterator _upper_bound(const std::vector<AllTypeVariant>&) const = 0;
   virtual Iterator _cbegin() const = 0;
   virtual Iterator _cend() const = 0;
-  virtual std::vector<std::shared_ptr<const BaseSegment>> _get_index_columns() const = 0;
+  virtual std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const = 0;
 
  private:
   const SegmentIndexType _type;

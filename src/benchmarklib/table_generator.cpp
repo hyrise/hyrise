@@ -29,8 +29,8 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
   std::vector<tbb::concurrent_vector<int>> value_vectors;
   auto vector_size = std::min(static_cast<size_t>(chunk_size), _num_rows);
   /*
-   * Generate table layout with enumerated column names (i.e., "col_1", "col_2", ...)
-   * Create a vector for each column.
+   * Generate table layout with enumerated cxlumn names (i.e., "col_1", "col_2", ...)
+   * Create a vector for each cxlumn.
    */
   TableCxlumnDefinitions cxlumn_definitions;
   for (size_t i = 0; i < _num_cxlumns; i++) {
@@ -47,15 +47,15 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
      * Reset vectors and chunk.
      */
     if (i % vector_size == 0 && i > 0) {
-      ChunkSegments columns;
+      ChunkSegments segments;
       for (size_t j = 0; j < _num_cxlumns; j++) {
-        columns.push_back(std::make_shared<ValueSegment<int>>(std::move(value_vectors[j])));
+        segments.push_back(std::make_shared<ValueSegment<int>>(std::move(value_vectors[j])));
         value_vectors[j] = tbb::concurrent_vector<int>(vector_size);
       }
-      table->append_chunk(columns);
+      table->append_chunk(segments);
     }
     /*
-     * Set random value for every column.
+     * Set random value for every row.
      */
     for (size_t j = 0; j < _num_cxlumns; j++) {
       value_vectors[j][i % vector_size] = dist(engine);
@@ -65,11 +65,11 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
    * Add remaining values to table, if any.
    */
   if (!value_vectors[0].empty()) {
-    ChunkSegments columns;
+    ChunkSegments segments;
     for (size_t j = 0; j < _num_cxlumns; j++) {
-      columns.push_back(std::make_shared<ValueSegment<int>>(std::move(value_vectors[j])));
+      segments.push_back(std::make_shared<ValueSegment<int>>(std::move(value_vectors[j])));
     }
-    table->append_chunk(columns);
+    table->append_chunk(segments);
   }
 
   if (encoding_type.has_value()) {
@@ -80,10 +80,10 @@ std::shared_ptr<Table> TableGenerator::generate_table(const ChunkID chunk_size,
 }
 
 std::shared_ptr<Table> TableGenerator::generate_table(
-    const std::vector<CxlumnDataDistribution>& column_data_distributions, const size_t num_rows,
+    const std::vector<CxlumnDataDistribution>& cxlumn_data_distributions, const size_t num_rows,
     const size_t chunk_size, std::optional<EncodingType> encoding_type, const bool numa_distribute_chunks) {
   Assert(chunk_size != 0, "cannot generate table with chunk size 0");
-  const auto num_cxlumns = column_data_distributions.size();
+  const auto num_cxlumns = cxlumn_data_distributions.size();
   const auto num_chunks = std::ceil(static_cast<double>(num_rows) / static_cast<double>(chunk_size));
 
   // create result table and container for vectors holding the generated values for the columns
@@ -128,7 +128,7 @@ std::shared_ptr<Table> TableGenerator::generate_table(
 
     auto columns = ChunkSegments(allocator_ptr_base_segment);
     for (ChunkID column_index{0}; column_index < num_cxlumns; ++column_index) {
-      const auto& column_data_distribution = column_data_distributions[column_index];
+      const auto& column_data_distribution = cxlumn_data_distributions[column_index];
 
       // generate distribution from column configuration
       switch (column_data_distribution.distribution_type) {

@@ -1,4 +1,4 @@
-#include "dictionary_column.hpp"
+#include "dictionary_segment.hpp"
 
 #include <memory>
 #include <string>

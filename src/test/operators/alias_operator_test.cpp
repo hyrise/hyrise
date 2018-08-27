@@ -28,7 +28,7 @@ TEST_F(AliasOperatorTest, Name) {
   EXPECT_EQ(alias_operator->description(DescriptionMode::MultiLine), "Alias [z\nx\ny]");
 }
 
-TEST_F(AliasOperatorTest, OutputColumnNames) {
+TEST_F(AliasOperatorTest, OutputCxlumnNames) {
   alias_operator->execute();
   EXPECT_TABLE_EQ_ORDERED(alias_operator->get_output(), load_table("src/test/tables/int_int_float_aliased.tbl"));
 }

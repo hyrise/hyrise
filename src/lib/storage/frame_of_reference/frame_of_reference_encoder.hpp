@@ -16,7 +16,7 @@
 
 namespace opossum {
 
-class FrameOfReferenceEncoder : public ColumnEncoder<FrameOfReferenceEncoder> {
+class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
  public:
   static constexpr auto _encoding_type = enum_c<EncodingType, EncodingType::FrameOfReference>;
   static constexpr auto _uses_vector_compression = true;  // see base_segment_encoder.hpp for details
@@ -42,7 +42,7 @@ class FrameOfReferenceEncoder : public ColumnEncoder<FrameOfReferenceEncoder> {
     auto offset_values = pmr_vector<uint32_t>{alloc};
     offset_values.reserve(size);
 
-    // holds whether a column value is null
+    // holds whether a segment value is null
     auto null_values = pmr_vector<bool>{alloc};
     null_values.reserve(size);
 
@@ -50,17 +50,17 @@ class FrameOfReferenceEncoder : public ColumnEncoder<FrameOfReferenceEncoder> {
     auto max_offset = uint32_t{0u};
 
     auto iterable = ValueSegmentIterable<T>{*value_segment};
-    iterable.with_iterators([&](auto column_it, auto column_end) {
+    iterable.with_iterators([&](auto segment_it, auto segment_end) {
       // a temporary storage to hold the values of one block
       auto current_value_block = std::array<T, block_size>{};
 
-      while (column_it != column_end) {
+      while (segment_it != segment_end) {
         auto value_block_it = current_value_block.begin();
-        for (; value_block_it != current_value_block.end() && column_it != column_end; ++value_block_it, ++column_it) {
-          const auto column_value = *column_it;
+        for (; value_block_it != current_value_block.end() && segment_it != segment_end; ++value_block_it, ++segment_it) {
+          const auto segment_value = *segment_it;
 
-          *value_block_it = column_value.is_null() ? T{0u} : column_value.value();
-          null_values.push_back(column_value.is_null());
+          *value_block_it = segment_value.is_null() ? T{0u} : segment_value.value();
+          null_values.push_back(segment_value.is_null());
         }
 
         // The last value block might not be filled completely

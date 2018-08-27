@@ -7,7 +7,7 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/union_node.hpp"
-#include "optimizer/strategy/column_pruning_rule.hpp"
+#include "optimizer/strategy/cxlumn_pruning_rule.hpp"
 
 #include "strategy_base_test.hpp"
 #include "testing_assert.hpp"
@@ -16,7 +16,7 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 
-class ColumnPruningRuleTest : public StrategyBaseTest {
+class CxlumnPruningRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
     node_a = MockNode::make(
@@ -34,15 +34,15 @@ class ColumnPruningRuleTest : public StrategyBaseTest {
     x = node_c->get_cxlumn("x");
     y = node_c->get_cxlumn("y");
 
-    rule = std::make_shared<ColumnPruningRule>();
+    rule = std::make_shared<CxlumnPruningRule>();
   }
 
-  std::shared_ptr<ColumnPruningRule> rule;
+  std::shared_ptr<CxlumnPruningRule> rule;
   std::shared_ptr<MockNode> node_a, node_b, node_c;
   LQPCxlumnReference a, b, c, u, v, w, x, y;
 };
 
-TEST_F(ColumnPruningRuleTest, NoUnion) {
+TEST_F(CxlumnPruningRuleTest, NoUnion) {
   // clang-format off
   const auto lqp =
   ProjectionNode::make(expression_vector(add_(mul_(a, u), 5)),
@@ -69,7 +69,7 @@ TEST_F(ColumnPruningRuleTest, NoUnion) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(ColumnPruningRuleTest, WithUnion) {
+TEST_F(CxlumnPruningRuleTest, WithUnion) {
   // clang-format off
   const auto lqp =
   ProjectionNode::make(expression_vector(a),
@@ -95,7 +95,7 @@ TEST_F(ColumnPruningRuleTest, WithUnion) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(ColumnPruningRuleTest, WithMultipleProjections) {
+TEST_F(CxlumnPruningRuleTest, WithMultipleProjections) {
   // clang-format off
   const auto lqp =
   ProjectionNode::make(expression_vector(a),

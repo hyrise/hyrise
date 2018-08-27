@@ -9,32 +9,32 @@
 
 namespace opossum {
 
-class AbstractColumnVisitor;
+class AbstractSegmentVisitor;
 class SegmentVisitorContext;
 
-// BaseSegment is the abstract super class for all column types,
+// BaseSegment is the abstract super class for all segment types,
 // e.g., ValueSegment, ReferenceSegment
 class BaseSegment : private Noncopyable {
  public:
   explicit BaseSegment(const DataType data_type);
   virtual ~BaseSegment() = default;
 
-  // the type of the data contained in this column
+  // the type of the data contained in this segment
   DataType data_type() const;
 
   // returns the value at a given position
   virtual const AllTypeVariant operator[](const ChunkOffset chunk_offset) const = 0;
 
-  // appends the value at the end of the column
+  // appends the value at the end of the segment
   virtual void append(const AllTypeVariant& val) = 0;
 
   // returns the number of values
   virtual size_t size() const = 0;
 
-  // Copies a column using a new allocator. This is useful for placing the column on a new NUMA node.
+  // Copies a segment using a new allocator. This is useful for placing the segment on a new NUMA node.
   virtual std::shared_ptr<BaseSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const = 0;
 
-  // Estimate how much memory the Column is using. Might be inaccurate, especially if the column contains non-primitive
+  // Estimate how much memory the Column is using. Might be inaccurate, especially if the segment contains non-primitive
   // data, such as strings who memory usage is implementation defined
   virtual size_t estimate_memory_usage() const = 0;
 

@@ -16,7 +16,7 @@ class BaseJitColumnReader {
   virtual void read_value(JitRuntimeContext& context) = 0;
 };
 
-struct JitInputColumn {
+struct JitInputCxlumn {
   CxlumnID cxlumn_id;
   JitTupleValue tuple_value;
 };
@@ -30,22 +30,22 @@ struct JitInputLiteral {
  * It is responsible for:
  * 1) storing literal values to the runtime tuple before the query is executed
  * 2) reading data from the the input table to the runtime tuple
- * 3) advancing the column iterators
+ * 3) advancing the segment iterators
  * 4) keeping track of the number of values in the runtime tuple. Whenever
  *    another operator needs to store a temporary value in the runtime tuple,
  *    it can request a slot in the tuple from JitReadTuples.
  */
 class JitReadTuples : public AbstractJittable {
-  /* JitColumnReaders wrap the column iterable interface used by most operators and makes it accessible
+  /* JitColumnReaders wrap the segment iterable interface used by most operators and makes it accessible
    * to the JitOperatorWrapper.
    *
    * Why we need this wrapper:
-   * Most operators access data by creating a fixed number (usually one or two) of column iterables and
+   * Most operators access data by creating a fixed number (usually one or two) of segment iterables and
    * then immediately use those iterators in a lambda. The JitOperatorWrapper, on the other hand, processes
-   * data in a tuple-at-a-time fashion and thus needs access to an arbitrary number of column iterators
+   * data in a tuple-at-a-time fashion and thus needs access to an arbitrary number of segment iterators
    * at the same time.
    *
-   * We solve this problem by introducing a template-free super class to all column iterators. This allows us to
+   * We solve this problem by introducing a template-free super class to all segment iterators. This allows us to
    * create an iterator for each input column (before processing each chunk) and store these iterators in a
    * common vector in the runtime context.
    * We then use JitColumnReader instances to access these iterators. JitColumnReaders are templated with the
@@ -93,7 +93,7 @@ class JitReadTuples : public AbstractJittable {
   JitTupleValue add_literal_value(const AllTypeVariant& value);
   size_t add_temporary_value();
 
-  std::vector<JitInputColumn> input_columns() const;
+  std::vector<JitInputCxlumn> input_cxlumns() const;
   std::vector<JitInputLiteral> input_literals() const;
 
   std::optional<CxlumnID> find_input_cxlumn(const JitTupleValue& tuple_value) const;
@@ -103,7 +103,7 @@ class JitReadTuples : public AbstractJittable {
 
  protected:
   uint32_t _num_tuple_values{0};
-  std::vector<JitInputColumn> _input_columns;
+  std::vector<JitInputCxlumn> _input_cxlumns;
   std::vector<JitInputLiteral> _input_literals;
 
  private:

@@ -7,8 +7,8 @@
 #include "resolve_type.hpp"
 #include "scheduler/current_scheduler.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/create_iterable_from_column.hpp"
-#include "storage/dictionary_column.hpp"
+#include "storage/create_iterable_from_segment.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "types.hpp"
 
@@ -85,7 +85,7 @@ class ColumnMaterializer {
     auto output = MaterializedColumn<T>{};
     output.reserve(column.size());
 
-    auto iterable = create_iterable_from_column<T>(column);
+    auto iterable = create_iterable_from_segment<T>(column);
 
     iterable.for_each([&](const auto& column_value) {
       const auto row_id = RowID{chunk_id, column_value.chunk_offset()};
@@ -154,7 +154,7 @@ class ColumnMaterializer {
         }
       }
     } else {
-      auto iterable = create_iterable_from_column(column);
+      auto iterable = create_iterable_from_segment(column);
       iterable.for_each([&](const auto& column_value) {
         const auto row_id = RowID{chunk_id, column_value.chunk_offset()};
         if (column_value.is_null()) {

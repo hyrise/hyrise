@@ -292,11 +292,11 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
 
   for (; pqp_expression_iter != pqp_expressions.rend(); ++pqp_expression_iter, ++order_by_mode_iter) {
     const auto& pqp_expression = *pqp_expression_iter;
-    const auto pqp_column_expression = std::dynamic_pointer_cast<PQPCxlumnExpression>(pqp_expression);
-    Assert(pqp_column_expression,
+    const auto pqp_cxlumn_expression = std::dynamic_pointer_cast<PQPCxlumnExpression>(pqp_expression);
+    Assert(pqp_cxlumn_expression,
            "Sort Expression '"s + pqp_expression->as_cxlumn_name() + "' must be available as column, LQP is invalid");
 
-    current_pqp = std::make_shared<Sort>(current_pqp, pqp_column_expression->cxlumn_id, *order_by_mode_iter);
+    current_pqp = std::make_shared<Sort>(current_pqp, pqp_cxlumn_expression->cxlumn_id, *order_by_mode_iter);
   }
 
   return current_pqp;
@@ -517,7 +517,7 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
         return ExpressionVisitation::DoNotVisitArguments;
       }
 
-      AssertInput(expression->type != ExpressionType::LQPColumn,
+      AssertInput(expression->type != ExpressionType::LQPCxlumn,
                   "Failed to resolve Column '"s + expression->as_cxlumn_name() + "', LQP is invalid");
 
       return ExpressionVisitation::VisitArguments;

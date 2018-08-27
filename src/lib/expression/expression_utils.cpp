@@ -78,26 +78,26 @@ std::shared_ptr<AbstractExpression> expression_copy_and_adapt_to_different_lqp(c
 void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expression,
                                        const LQPNodeMapping& node_mapping) {
   visit_expression(expression, [&](auto& expression_ptr) {
-    if (expression_ptr->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
+    if (expression_ptr->type != ExpressionType::LQPCxlumn) return ExpressionVisitation::VisitArguments;
 
-    const auto lqp_column_expression_ptr = std::dynamic_pointer_cast<LQPCxlumnExpression>(expression_ptr);
-    Assert(lqp_column_expression_ptr, "Asked to adapt expression in LQP, but encountered non-LQP ColumnExpression");
+    const auto lqp_cxlumn_expression_ptr = std::dynamic_pointer_cast<LQPCxlumnExpression>(expression_ptr);
+    Assert(lqp_cxlumn_expression_ptr, "Asked to adapt expression in LQP, but encountered non-LQP ColumnExpression");
 
-    expression_ptr = expression_adapt_to_different_lqp(*lqp_column_expression_ptr, node_mapping);
+    expression_ptr = expression_adapt_to_different_lqp(*lqp_cxlumn_expression_ptr, node_mapping);
 
     return ExpressionVisitation::DoNotVisitArguments;
   });
 }
 
-std::shared_ptr<LQPCxlumnExpression> expression_adapt_to_different_lqp(const LQPCxlumnExpression& lqp_column_expression,
+std::shared_ptr<LQPCxlumnExpression> expression_adapt_to_different_lqp(const LQPCxlumnExpression& lqp_cxlumn_expression,
                                                                        const LQPNodeMapping& node_mapping) {
-  const auto node = lqp_column_expression.cxlumn_reference.original_node();
+  const auto node = lqp_cxlumn_expression.cxlumn_reference.original_node();
   const auto node_mapping_iter = node_mapping.find(node);
   Assert(node_mapping_iter != node_mapping.end(),
          "Couldn't find referenced node (" + node->description() + ") in NodeMapping");
 
   LQPCxlumnReference adapted_cxlumn_reference{node_mapping_iter->second,
-                                              lqp_column_expression.cxlumn_reference.original_cxlumn_id()};
+                                              lqp_cxlumn_expression.cxlumn_reference.original_cxlumn_id()};
 
   return std::make_shared<LQPCxlumnExpression>(adapted_cxlumn_reference);
 }
@@ -140,7 +140,7 @@ bool expression_evaluable_on_lqp(const std::shared_ptr<AbstractExpression>& expr
 
   visit_expression(expression, [&](const auto& sub_expression) {
     if (lqp.find_cxlumn_id(*sub_expression)) return ExpressionVisitation::DoNotVisitArguments;
-    if (sub_expression->type == ExpressionType::LQPColumn) evaluable = false;
+    if (sub_expression->type == ExpressionType::LQPCxlumn) evaluable = false;
     return ExpressionVisitation::VisitArguments;
   });
 

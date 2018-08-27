@@ -50,7 +50,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
    * input TableType (References or Data) matches the output column type.
    */
   const auto only_projects_columns = std::all_of(expressions.begin(), expressions.end(), [&](const auto& expression) {
-    return expression->type == ExpressionType::PQPColumn;
+    return expression->type == ExpressionType::PQPCxlumn;
   });
 
   const auto output_table_type = only_projects_columns ? input_table_left()->type() : TableType::Data;
@@ -71,11 +71,11 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     ExpressionEvaluator evaluator(input_table_left(), chunk_id);
     for (const auto& expression : expressions) {
       // Forward input column if possible
-      if (expression->type == ExpressionType::PQPColumn && forward_columns) {
-        const auto pqp_column_expression = std::dynamic_pointer_cast<PQPCxlumnExpression>(expression);
-        output_columns.emplace_back(input_chunk->get_segment(pqp_column_expression->cxlumn_id));
+      if (expression->type == ExpressionType::PQPCxlumn && forward_columns) {
+        const auto pqp_cxlumn_expression = std::dynamic_pointer_cast<PQPCxlumnExpression>(expression);
+        output_columns.emplace_back(input_chunk->get_segment(pqp_cxlumn_expression->cxlumn_id));
       } else {
-        output_columns.emplace_back(evaluator.evaluate_expression_to_column(*expression));
+        output_columns.emplace_back(evaluator.evaluate_expression_to_segment(*expression));
       }
     }
 

@@ -52,10 +52,10 @@ TEST_F(ShowCxlumnsTest, CanShowCxlumnsWithNull) {
   EXPECT_TABLE_EQ_ORDERED(sc->get_output(), expected_result);
 }
 
-TEST_F(ShowCxlumnsTest, NoColumns) {
-  StorageManager::get().add_table("no_columns", std::make_shared<Table>(TableCxlumnDefinitions{}, TableType::Data));
+TEST_F(ShowCxlumnsTest, NoCxlumns) {
+  StorageManager::get().add_table("no_cxlumns", std::make_shared<Table>(TableCxlumnDefinitions{}, TableType::Data));
 
-  auto sc = std::make_shared<ShowCxlumns>("no_columns");
+  auto sc = std::make_shared<ShowCxlumns>("no_cxlumns");
   sc->execute();
 
   auto out = sc->get_output();

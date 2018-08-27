@@ -69,10 +69,10 @@ class GroupKeyIndex : public BaseIndex {
    */
   Iterator _get_postings_iterator_at(ValueID value_id) const;
 
-  std::vector<std::shared_ptr<const BaseSegment>> _get_index_columns() const;
+  std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const;
 
  private:
-  const std::shared_ptr<const BaseDictionarySegment> _index_column;
+  const std::shared_ptr<const BaseDictionarySegment> _indexed_segments;
   std::vector<std::size_t> _index_offsets;   // maps value-ids to offsets in _index_postings
   std::vector<ChunkOffset> _index_postings;  // records positions in the attribute vector
 };

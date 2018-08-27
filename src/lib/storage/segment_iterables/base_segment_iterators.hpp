@@ -19,7 +19,7 @@ class JitBaseSegmentIterator {};
 /**
  * @brief base class of all iterators used by iterables
  *
- * Instantiations of this template are part of the column iterable
+ * Instantiations of this template are part of the segment iterable
  * interface (see segment_iterables/.hpp) and are implemented
  * in sub-classes of SegmentIterable (see e.g. value_segment_iterable.hpp)
  *
@@ -53,7 +53,7 @@ class BaseSegmentIterator : public boost::iterator_facade<Derived, Value, boost:
  * @brief base class of all point-access iterators used by iterables
  *
  * This iterator should be used whenever a reference segment is “dereferenced”,
- * i.e., its underlying value or dictionary column is iterated over.
+ * i.e., its underlying value or dictionary segment is iterated over.
  * index_into_referenced is the index into the underlying data structure.
  * index_of_referencing is the current index in the reference segment.
  *

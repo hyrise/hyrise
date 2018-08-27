@@ -23,7 +23,7 @@ std::shared_ptr<BaseCxlumnStatistics> generate_cxlumn_statistics<std::string>(co
     const auto base_segment = table.get_chunk(chunk_id)->get_segment(cxlumn_id);
 
     resolve_cxlumn_type<std::string>(*base_segment, [&](auto& column) {
-      auto iterable = create_iterable_from_column<std::string>(column);
+      auto iterable = create_iterable_from_segment<std::string>(column);
       iterable.for_each([&](const auto& column_value) {
         if (column_value.is_null()) {
           ++null_value_count;

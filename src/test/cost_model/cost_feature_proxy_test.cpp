@@ -110,7 +110,7 @@ TYPED_TEST(CostFeatureProxyTest, AllFeatures) {
   EXPECT_EQ(proxies.join_proxy->extract_feature(CostFeature::LeftInputIsReferences).boolean(), false);
   EXPECT_EQ(proxies.predicate_proxy->extract_feature(CostFeature::LeftInputIsReferences).boolean(), true);
   EXPECT_EQ(proxies.join_proxy->extract_feature(CostFeature::RightInputIsReferences).boolean(), false);
-  EXPECT_EQ(proxies.predicate_proxy->extract_feature(CostFeature::RightOperandIsColumn).boolean(), false);
+  EXPECT_EQ(proxies.predicate_proxy->extract_feature(CostFeature::RightOperandIsCxlumn).boolean(), false);
   EXPECT_EQ(proxies.join_proxy->extract_feature(CostFeature::LeftInputIsMajor).boolean(), true);
 }
 

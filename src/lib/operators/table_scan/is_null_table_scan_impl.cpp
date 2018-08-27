@@ -4,7 +4,7 @@
 
 #include "storage/base_value_segment.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
-#include "storage/create_iterable_from_column.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/value_segment/null_value_vector_iterable.hpp"
 
@@ -80,7 +80,7 @@ void IsNullTableScanImpl::handle_segment(const BaseEncodedSegment& base_segment,
     using Type = typename decltype(type)::type;
 
     resolve_encoded_segment_type<Type>(base_segment, [&](const auto& typed_segment) {
-      auto base_segment_iterable = create_iterable_from_column(typed_segment);
+      auto base_segment_iterable = create_iterable_from_segment(typed_segment);
 
       base_segment_iterable.with_iterators(
           mapped_chunk_offsets.get(), [&](auto left_it, auto left_end) { this->_scan(left_it, left_end, *context); });

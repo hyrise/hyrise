@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-// ValueSegment is a specific column type that stores all its values in a vector.
+// ValueSegment is a specific segment type that stores all its values in a vector.
 template <typename T>
 class ValueSegment : public BaseValueSegment {
  public:
@@ -36,7 +36,7 @@ class ValueSegment : public BaseValueSegment {
   // Only use if you are certain that no null values are present, otherwise an Assert fails.
   const T get(const ChunkOffset chunk_offset) const;
 
-  // Add a value to the end of the column.
+  // Add a value to the end of the segment.
   void append(const AllTypeVariant& val) final;
 
   // Return all values. This is the preferred method to check a value at a certain index. Usually you need to
@@ -45,7 +45,7 @@ class ValueSegment : public BaseValueSegment {
   const pmr_concurrent_vector<T>& values() const;
   pmr_concurrent_vector<T>& values();
 
-  // Return whether column supports null values.
+  // Return whether segment supports null values.
   bool is_nullable() const final;
 
   // Return null value vector that indicates whether a value is null with true at position i.
@@ -55,7 +55,7 @@ class ValueSegment : public BaseValueSegment {
   const pmr_concurrent_vector<bool>& null_values() const final;
   pmr_concurrent_vector<bool>& null_values() final;
 
-  // Return the number of entries in the column.
+  // Return the number of entries in the segment.
   size_t size() const final;
 
   // Copies a ValueSegment using a new allocator. This is useful for placing the ValueSegment on a new NUMA node.
@@ -66,8 +66,8 @@ class ValueSegment : public BaseValueSegment {
  protected:
   pmr_concurrent_vector<T> _values;
 
-  // While a ValueSegment knows if it is nullable or not by looking at this optional, most other column types
-  // (e.g. DictionarySegment) does not. For this reason, we need to store the nullable information separately
+  // While a ValueSegment knows if it is nullable or not by looking at this optional, most other segment types
+  // (e.g. DictionarySegment) do not. For this reason, we need to store the nullable information separately
   // in the table's definition.
   std::optional<pmr_concurrent_vector<bool>> _null_values;
 };

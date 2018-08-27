@@ -43,7 +43,7 @@ enum class CostFeature {
    */
   LeftInputIsReferences,
   RightInputIsReferences,  // *Input is References
-  RightOperandIsColumn,    // Only valid for TableScans
+  RightOperandIsCxlumn,    // Only valid for TableScans
   LeftInputIsMajor         // LeftInputRowCount > RightInputRowCount
 };
 

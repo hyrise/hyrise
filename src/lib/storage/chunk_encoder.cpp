@@ -36,8 +36,8 @@ void ChunkEncoder::encode_chunk(const std::shared_ptr<Chunk>& chunk, const std::
       // No need to encode, but we still want to have statistics for the now immutable value segment
       cxlumn_statistics.push_back(SegmentStatistics::build_statistics(data_type, value_segment));
     } else {
-      auto encoded_segment = encode_column(spec.encoding_type, data_type, value_segment, spec.vector_compression_type);
-      chunk->replace_column(cxlumn_id, encoded_segment);
+      auto encoded_segment = encode_segment(spec.encoding_type, data_type, value_segment, spec.vector_compression_type);
+      chunk->replace_segment(cxlumn_id, encoded_segment);
       cxlumn_statistics.push_back(SegmentStatistics::build_statistics(data_type, encoded_segment));
     }
   }

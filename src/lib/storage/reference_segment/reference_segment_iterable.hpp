@@ -13,25 +13,25 @@ namespace opossum {
 template <typename T>
 class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable<T>> {
  public:
-  explicit ReferenceSegmentIterable(const ReferenceSegment& column) : _column{column} {}
+  explicit ReferenceSegmentIterable(const ReferenceSegment& segment) : _segment{segment} {}
 
   template <typename Functor>
   void _on_with_iterators(const Functor& functor) const {
-    const auto table = _column.referenced_table();
-    const auto cxlumn_id = _column.referenced_cxlumn_id();
+    const auto table = _segment.referenced_table();
+    const auto cxlumn_id = _segment.referenced_cxlumn_id();
 
-    const auto begin_it = _column.pos_list()->begin();
-    const auto end_it = _column.pos_list()->end();
+    const auto begin_it = _segment.pos_list()->begin();
+    const auto end_it = _segment.pos_list()->end();
 
     auto begin = Iterator{table, cxlumn_id, begin_it, begin_it};
     auto end = Iterator{table, cxlumn_id, begin_it, end_it};
     functor(begin, end);
   }
 
-  size_t _on_size() const { return _column.size(); }
+  size_t _on_size() const { return _segment.size(); }
 
  private:
-  const ReferenceSegment& _column;
+  const ReferenceSegment& _segment;
 
  private:
   class Iterator : public BaseSegmentIterator<Iterator, SegmentIteratorValue<T>> {
@@ -44,7 +44,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
         : _table{table},
           _cxlumn_id{cxlumn_id},
           _cached_chunk_id{INVALID_CHUNK_ID},
-          _cached_column{nullptr},
+          _cached_segment{nullptr},
           _begin_pos_list_it{begin_pos_list_it},
           _pos_list_it{pos_list_it} {}
 
@@ -65,19 +65,19 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       if (chunk_id != _cached_chunk_id) {
         _cached_chunk_id = chunk_id;
         const auto chunk = _table->get_chunk(chunk_id);
-        _cached_column = chunk->get_segment(_cxlumn_id);
+        _cached_segment = chunk->get_segment(_cxlumn_id);
       }
 
       /**
-       * This is just a temporary solution to supporting encoded column type.
+       * This is just a temporary solution to supporting encoded segment type.
        * It’s very slow and is going to be replaced very soon!
        */
-      return _value_from_any_column(*_cached_column, chunk_offset);
+      return _value_from_any_segment(*_cached_segment, chunk_offset);
     }
 
    private:
-    auto _value_from_any_column(const BaseSegment& column, const ChunkOffset& chunk_offset) const {
-      const auto variant_value = column[chunk_offset];
+    auto _value_from_any_segment(const BaseSegment& segment, const ChunkOffset& chunk_offset) const {
+      const auto variant_value = segment[chunk_offset];
 
       const auto chunk_offset_into_ref_segment =
           static_cast<ChunkOffset>(std::distance(_begin_pos_list_it, _pos_list_it));
@@ -94,7 +94,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     const CxlumnID _cxlumn_id;
 
     mutable ChunkID _cached_chunk_id;
-    mutable std::shared_ptr<const BaseSegment> _cached_column;
+    mutable std::shared_ptr<const BaseSegment> _cached_segment;
 
     const PosListIterator _begin_pos_list_it;
     PosListIterator _pos_list_it;

@@ -76,11 +76,11 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
     auto right_chunk = input_table_right()->get_chunk(chunk_id);
 
     for (CxlumnID cxlumn_id{0}; cxlumn_id < input_table_left()->cxlumn_count(); ++cxlumn_id) {
-      auto right_col = right_chunk->get_segment(cxlumn_id);
+      auto right_segment = right_chunk->get_segment(cxlumn_id);
 
-      auto left_col = std::dynamic_pointer_cast<const ReferenceSegment>(left_chunk->get_segment(cxlumn_id));
+      auto left_segment = std::dynamic_pointer_cast<const ReferenceSegment>(left_chunk->get_segment(cxlumn_id));
 
-      insert_chunk->replace_column(left_col->referenced_cxlumn_id(), right_col);
+      insert_chunk->replace_segment(left_segment->referenced_cxlumn_id(), right_segment);
     }
   }
 

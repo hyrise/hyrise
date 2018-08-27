@@ -42,7 +42,7 @@ void JitWriteTuples::add_output_cxlumn(const std::string& cxlumn_name, const Jit
   _output_cxlumns.push_back({cxlumn_name, value});
 }
 
-std::vector<JitOutputColumn> JitWriteTuples::output_cxlumns() const { return _output_cxlumns; }
+std::vector<JitOutputCxlumn> JitWriteTuples::output_cxlumns() const { return _output_cxlumns; }
 
 void JitWriteTuples::_consume(JitRuntimeContext& context) const {
   for (const auto& output : context.outputs) {

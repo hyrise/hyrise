@@ -45,7 +45,7 @@ class OperatorsTableScanStringTest : public BaseTest, public ::testing::WithPara
 
     // load and compress string table
     if (::testing::UnitTest::GetInstance()->current_test_info()->value_param()) {
-      // Not all tests are parameterized - only those using compressed columns are. We have to ask the testing
+      // Not all tests are parameterized - only those using compressed segments are. We have to ask the testing
       // framework if a parameter is set. Otherwise, GetParam would fail.
       auto test_table_string_compressed = load_table("src/test/tables/int_string_like.tbl", 5);
       std::vector<ChunkEncodingSpec> spec = {{EncodingType::Unencoded, GetParam()},
@@ -96,7 +96,7 @@ TEST_P(OperatorsTableScanStringTest, ScanLessThan) {
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-TEST_F(OperatorsTableScanStringTest, ScanLikeNonStringColumn) {
+TEST_F(OperatorsTableScanStringTest, ScanLikeNonStringCxlumn) {
   auto scan = std::make_shared<TableScan>(_gt, CxlumnID{0}, PredicateCondition::Like, "%test");
   EXPECT_THROW(scan->execute(), std::exception);
 }
@@ -147,14 +147,14 @@ TEST_P(OperatorsTableScanStringTest, ScanLikeEmptyStringDict) {
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-TEST_P(OperatorsTableScanStringTest, ScanLikeStartingOnDictColumn) {
+TEST_P(OperatorsTableScanStringTest, ScanLikeStartingOnDictCxlumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_starting.tbl", 1);
   auto scan = std::make_shared<TableScan>(_gt_string_compressed, CxlumnID{1}, PredicateCondition::Like, "Dampf%");
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-TEST_P(OperatorsTableScanStringTest, ScanLikeStartingOnReferencedDictColumn) {
+TEST_P(OperatorsTableScanStringTest, ScanLikeStartingOnReferencedDictCxlumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_starting.tbl", 1);
   auto scan1 = std::make_shared<TableScan>(_gt_string_compressed, CxlumnID{0}, PredicateCondition::GreaterThan, 0);
   scan1->execute();
@@ -171,7 +171,7 @@ TEST_F(OperatorsTableScanStringTest, ScanLikeEnding) {
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-TEST_P(OperatorsTableScanStringTest, ScanLikeEndingOnDictColumn) {
+TEST_P(OperatorsTableScanStringTest, ScanLikeEndingOnDictCxlumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_ending.tbl", 1);
   auto scan =
       std::make_shared<TableScan>(_gt_string_compressed, CxlumnID{1}, PredicateCondition::Like, "%gesellschaft");
@@ -179,7 +179,7 @@ TEST_P(OperatorsTableScanStringTest, ScanLikeEndingOnDictColumn) {
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-TEST_P(OperatorsTableScanStringTest, ScanLikeEndingOnReferencedDictColumn) {
+TEST_P(OperatorsTableScanStringTest, ScanLikeEndingOnReferencedDictCxlumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_ending.tbl", 1);
   auto scan1 = std::make_shared<TableScan>(_gt_string_compressed, CxlumnID{0}, PredicateCondition::GreaterThan, 0);
   scan1->execute();
@@ -229,7 +229,7 @@ TEST_F(OperatorsTableScanStringTest, ScanLikeContaining) {
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-TEST_P(OperatorsTableScanStringTest, ScanLikeContainingOnDictColumn) {
+TEST_P(OperatorsTableScanStringTest, ScanLikeContainingOnDictCxlumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_containing.tbl", 1);
   auto scan = std::make_shared<TableScan>(_gt_string_compressed, CxlumnID{1}, PredicateCondition::Like,
                                           "%schifffahrtsgesellschaft%");
@@ -237,7 +237,7 @@ TEST_P(OperatorsTableScanStringTest, ScanLikeContainingOnDictColumn) {
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-TEST_P(OperatorsTableScanStringTest, ScanLikeContainingOnReferencedDictColumn) {
+TEST_P(OperatorsTableScanStringTest, ScanLikeContainingOnReferencedDictCxlumn) {
   std::shared_ptr<Table> expected_result = load_table("src/test/tables/int_string_like_containing.tbl", 1);
   auto scan1 = std::make_shared<TableScan>(_gt_string_compressed, CxlumnID{0}, PredicateCondition::GreaterThan, 0);
   scan1->execute();
@@ -253,13 +253,13 @@ TEST_F(OperatorsTableScanStringTest, ScanLikeNotFound) {
   EXPECT_EQ(scan->get_output()->row_count(), 0u);
 }
 
-TEST_P(OperatorsTableScanStringTest, ScanLikeNotFoundOnDictColumn) {
+TEST_P(OperatorsTableScanStringTest, ScanLikeNotFoundOnDictCxlumn) {
   auto scan = std::make_shared<TableScan>(_gt_string_compressed, CxlumnID{1}, PredicateCondition::Like, "%not_there%");
   scan->execute();
   EXPECT_EQ(scan->get_output()->row_count(), 0u);
 }
 
-TEST_P(OperatorsTableScanStringTest, ScanLikeNotFoundOnReferencedDictColumn) {
+TEST_P(OperatorsTableScanStringTest, ScanLikeNotFoundOnReferencedDictCxlumn) {
   auto scan1 = std::make_shared<TableScan>(_gt_string_compressed, CxlumnID{0}, PredicateCondition::GreaterThan, 0);
   scan1->execute();
   auto scan2 = std::make_shared<TableScan>(scan1, CxlumnID{1}, PredicateCondition::Like, "%not_there%");

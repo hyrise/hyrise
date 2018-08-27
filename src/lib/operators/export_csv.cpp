@@ -46,7 +46,7 @@ void ExportCsv::_generate_meta_info_file(const std::shared_ptr<const Table>& tab
     CxlumnMeta column_meta;
     column_meta.name = table->cxlumn_name(cxlumn_id);
     column_meta.type = data_type_to_string.left.at(table->cxlumn_data_type(cxlumn_id));
-    column_meta.nullable = table->column_is_nullable(cxlumn_id);
+    column_meta.nullable = table->cxlumn_is_nullable(cxlumn_id);
 
     meta.cxlumns.push_back(column_meta);
   }

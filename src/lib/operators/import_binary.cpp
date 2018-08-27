@@ -129,7 +129,7 @@ void ImportBinary::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& ta
   ChunkSegments output_columns;
   for (CxlumnID cxlumn_id{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
     output_columns.push_back(
-        _import_column(file, row_count, table->cxlumn_data_type(cxlumn_id), table->column_is_nullable(cxlumn_id)));
+        _import_column(file, row_count, table->cxlumn_data_type(cxlumn_id), table->cxlumn_is_nullable(cxlumn_id)));
   }
   table->append_chunk(output_columns);
 }
@@ -147,15 +147,15 @@ std::shared_ptr<BaseSegment> ImportBinary::_import_column(std::ifstream& file, C
 
 template <typename CxlumnDataType>
 std::shared_ptr<BaseSegment> ImportBinary::_import_column(std::ifstream& file, ChunkOffset row_count, bool is_nullable) {
-  const auto cxlumn_type = _read_value<BinaryColumnType>(file);
+  const auto cxlumn_type = _read_value<BinarySegmentType>(file);
 
   switch (cxlumn_type) {
-    case BinaryColumnType::value_segment:
+    case BinarySegmentType::value_segment:
       return _import_value_segment<CxlumnDataType>(file, row_count, is_nullable);
-    case BinaryColumnType::dictionary_column:
-      return _import_dictionary_column<CxlumnDataType>(file, row_count);
+    case BinarySegmentType::dictionary_segment:
+      return _import_dictionary_segment<CxlumnDataType>(file, row_count);
     default:
-      // This case happens if the read column type is not a valid BinaryColumnType.
+      // This case happens if the read column type is not a valid BinarySegmentType.
       Fail("Cannot import column: invalid column type");
   }
 }
@@ -191,7 +191,7 @@ std::shared_ptr<ValueSegment<T>> ImportBinary::_import_value_segment(std::ifstre
 }
 
 template <typename T>
-std::shared_ptr<DictionarySegment<T>> ImportBinary::_import_dictionary_column(std::ifstream& file,
+std::shared_ptr<DictionarySegment<T>> ImportBinary::_import_dictionary_segment(std::ifstream& file,
                                                                              ChunkOffset row_count) {
   const auto attribute_vector_width = _read_value<AttributeVectorWidth>(file);
   const auto dictionary_size = _read_value<ValueID>(file);

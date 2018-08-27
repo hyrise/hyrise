@@ -3,33 +3,28 @@
 #include <memory>
 #include <string>
 
-#include "base_dictionary_column.hpp"
-#include "fixed_string_dictionary_column/fixed_string_vector.hpp"
+#include "base_dictionary_segment.hpp"
+#include "storage/vector_compression/base_compressed_vector.hpp"
 #include "types.hpp"
-#include "vector_compression/base_compressed_vector.hpp"
 
 namespace opossum {
 
 class BaseCompressedVector;
 
 /**
- * @brief Column implementing dictionary encoding for strings
+ * @brief Column implementing dictionary encoding
  *
- * It compresses string columns by avoiding small string optimization.
  * Uses vector compression schemes for its attribute vector.
  */
 template <typename T>
-class FixedStringDictionarySegment : public BaseDictionarySegment {
+class DictionarySegment : public BaseDictionarySegment {
  public:
-  explicit FixedStringDictionarySegment(const std::shared_ptr<const FixedStringVector>& dictionary,
-                                       const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
-                                       const ValueID null_value_id);
-
-  // returns the dictionary as pmr_vector
-  std::shared_ptr<const pmr_vector<std::string>> dictionary() const;
+  explicit DictionarySegment(const std::shared_ptr<const pmr_vector<T>>& dictionary,
+                            const std::shared_ptr<const BaseCompressedVector>& attribute_vector,
+                            const ValueID null_value_id);
 
   // returns an underlying dictionary
-  std::shared_ptr<const FixedStringVector> fixed_string_dictionary() const;
+  std::shared_ptr<const pmr_vector<T>> dictionary() const;
 
   /**
    * @defgroup BaseSegment interface
@@ -70,10 +65,10 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
   /**@}*/
 
  protected:
-  const std::shared_ptr<const FixedStringVector> _dictionary;
+  const std::shared_ptr<const pmr_vector<T>> _dictionary;
   const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
   const ValueID _null_value_id;
-  const std::unique_ptr<BaseVectorDecompressor> _decoder;
+  std::unique_ptr<BaseVectorDecompressor> _decoder;
 };
 
 }  // namespace opossum

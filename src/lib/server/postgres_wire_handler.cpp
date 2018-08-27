@@ -82,8 +82,8 @@ BindPacket PostgresWireHandler::handle_bind_packet(const InputPacket& packet) {
     parameter_values.emplace_back(x_str);
   }
 
-  auto num_result_column_format_codes = ntohs(read_value<int16_t>(packet));
-  auto result_column_format_codes = read_values<int16_t>(packet, num_result_column_format_codes);
+  auto num_result_cxlumn_format_codes = ntohs(read_value<int16_t>(packet));
+  auto result_cxlumn_format_codes = read_values<int16_t>(packet, num_result_cxlumn_format_codes);
 
   return BindPacket{statement_name, portal, std::move(parameter_values)};
 }

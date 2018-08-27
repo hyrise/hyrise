@@ -70,7 +70,7 @@ CostFeatureVariant CostFeatureOperatorProxy::_extract_feature_impl(const CostFea
         Fail("This CostFeature is not defined for this LQPNodeType");
       }
 
-    case CostFeature::RightOperandIsColumn:
+    case CostFeature::RightOperandIsCxlumn:
       if (_op->type() == OperatorType::TableScan) {
         return is_cxlumn_id(std::static_pointer_cast<TableScan>(_op)->right_parameter());
       } else {

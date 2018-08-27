@@ -36,7 +36,7 @@ class BaseSegmentEncoder {
   /**
    * @brief Encodes a value segment that has the given data type.
    *
-   * @return encoded column if data type is supported else throws exception
+   * @return encoded segment if data type is supported else throws exception
    */
   virtual std::shared_ptr<BaseEncodedSegment> encode(const std::shared_ptr<const BaseValueSegment>& column,
                                                     DataType data_type) = 0;
@@ -60,7 +60,7 @@ class BaseSegmentEncoder {
 };
 
 template <typename Derived>
-class ColumnEncoder : public BaseSegmentEncoder {
+class SegmentEncoder : public BaseSegmentEncoder {
  public:
   /**
    * @defgroup Virtual interface implementation

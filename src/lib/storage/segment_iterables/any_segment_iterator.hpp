@@ -9,8 +9,8 @@ namespace opossum {
 namespace detail {
 
 /**
- * Emulates a base class for column iterators with a virtual interface.
- * It duplicates all methods implemented by column iterators as part of
+ * Emulates a base class for segment iterators with a virtual interface.
+ * It duplicates all methods implemented by segment iterators as part of
  * a virtual interface.
  */
 template <typename T>
@@ -23,7 +23,7 @@ class AnySegmentIteratorWrapperBase {
   virtual SegmentIteratorValue<T> dereference() const = 0;
 
   /**
-   * Column iterators need to be copyable so we need a way
+   * Segment iterators need to be copyable so we need a way
    * to copy the iterator within the wrapper.
    */
   virtual std::unique_ptr<AnySegmentIteratorWrapperBase<T>> clone() const = 0;
@@ -70,15 +70,15 @@ template <typename IterableT>
 class AnySegmentIterable;
 
 /**
- * @brief Erases the type of any column iterator
+ * @brief Erases the type of any segment iterator
  *
- * Erases the type of any column iterator by wrapping it
+ * Erases the type of any segment iterator by wrapping it
  * in a templated class inheriting from a common base class.
  * The base class specifies a virtual interface which is
  * implemented by the templated sub-class.
  *
  * AnySegmentIterator inherits from BaseSegmentIterator and
- * thus has the same interface as all other column iterators.
+ * thus has the same interface as all other segment iterators.
  *
  * AnySegmentIterator exists only to improve compile times and should
  * not be used outside of AnySegmentIterable.

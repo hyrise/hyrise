@@ -15,7 +15,7 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/topology.hpp"
 #include "storage/abstract_column_visitor.hpp"
-#include "storage/dictionary_column.hpp"
+#include "storage/dictionary_segment.hpp"
 
 #include "storage/reference_segment.hpp"
 #include "storage/value_segment.hpp"

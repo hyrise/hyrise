@@ -16,31 +16,31 @@
 namespace opossum {
 
 // We need these classes to perform the dynamic cast into a templated ValueSegment
-class AbstractTypedColumnProcessor : public Noncopyable {
+class AbstractTypedSegmentProcessor : public Noncopyable {
  public:
-  AbstractTypedColumnProcessor() = default;
-  AbstractTypedColumnProcessor(const AbstractTypedColumnProcessor&) = delete;
-  AbstractTypedColumnProcessor& operator=(const AbstractTypedColumnProcessor&) = delete;
-  AbstractTypedColumnProcessor(AbstractTypedColumnProcessor&&) = default;
-  AbstractTypedColumnProcessor& operator=(AbstractTypedColumnProcessor&&) = default;
-  virtual ~AbstractTypedColumnProcessor() = default;
-  virtual void resize_vector(std::shared_ptr<BaseSegment> column, size_t new_size) = 0;
+  AbstractTypedSegmentProcessor() = default;
+  AbstractTypedSegmentProcessor(const AbstractTypedSegmentProcessor&) = delete;
+  AbstractTypedSegmentProcessor& operator=(const AbstractTypedSegmentProcessor&) = delete;
+  AbstractTypedSegmentProcessor(AbstractTypedSegmentProcessor&&) = default;
+  AbstractTypedSegmentProcessor& operator=(AbstractTypedSegmentProcessor&&) = default;
+  virtual ~AbstractTypedSegmentProcessor() = default;
+  virtual void resize_vector(std::shared_ptr<BaseSegment> segment, size_t new_size) = 0;
   virtual void copy_data(std::shared_ptr<const BaseSegment> source, size_t source_start_index,
                          std::shared_ptr<BaseSegment> target, size_t target_start_index, size_t length) = 0;
 };
 
 template <typename T>
-class TypedColumnProcessor : public AbstractTypedColumnProcessor {
+class TypedSegmentProcessor : public AbstractTypedSegmentProcessor {
  public:
-  void resize_vector(std::shared_ptr<BaseSegment> column, size_t new_size) override {
-    auto val_column = std::dynamic_pointer_cast<ValueSegment<T>>(column);
-    DebugAssert(static_cast<bool>(val_column), "Type mismatch");
-    auto& values = val_column->values();
+  void resize_vector(std::shared_ptr<BaseSegment> segment, size_t new_size) override {
+    auto value_segment = std::dynamic_pointer_cast<ValueSegment<T>>(segment);
+    DebugAssert(static_cast<bool>(value_segment), "Type mismatch");
+    auto& values = value_segment->values();
 
     values.resize(new_size);
 
-    if (val_column->is_nullable()) {
-      val_column->null_values().resize(new_size);
+    if (value_segment->is_nullable()) {
+      value_segment->null_values().resize(new_size);
     }
   }
 
@@ -63,15 +63,15 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
                       casted_target->null_values().begin() + target_start_index);
         } else {
           for (const auto null_value : casted_source->null_values()) {
-            Assert(!null_value, "Trying to insert NULL into non-NULL column");
+            Assert(!null_value, "Trying to insert NULL into non-NULL segment");
           }
         }
       }
     } else if (auto casted_dummy_source = std::dynamic_pointer_cast<const ValueSegment<int32_t>>(source)) {
-      // We use the column type of the Dummy table used to insert a single null value.
+      // We use the segment type of the Dummy table used to insert a single null value.
       // A few asserts are needed to guarantee correct behaviour.
       Assert(length == 1, "Cannot insert multiple unknown null values at once.");
-      Assert(casted_dummy_source->size() == 1, "Source column is of wrong type.");
+      Assert(casted_dummy_source->size() == 1, "Source segment is of wrong type.");
       Assert(casted_dummy_source->null_values().front() == true, "Only value in dummy table must be NULL!");
       Assert(target_is_nullable, "Cannot insert NULL into NOT NULL target.");
 
@@ -79,8 +79,8 @@ class TypedColumnProcessor : public AbstractTypedColumnProcessor {
       casted_target->null_values()[target_start_index] = true;
     } else {
       // } else if(auto casted_source = std::dynamic_pointer_cast<ReferenceSegment>(source)){
-      // since we have no guarantee that a ReferenceSegment references only a single other column,
-      // this would require us to find out the referenced column's type for each single row.
+      // since we have no guarantee that a ReferenceSegment references only a single other segment,
+      // this would require us to find out the referenced segment's type for each single row.
       // instead, we just use the slow path below.
       for (auto i = 0u; i < length; i++) {
         auto ref_value = (*source)[source_start_index + i];
@@ -106,11 +106,11 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
   _target_table = StorageManager::get().get_table(_target_table_name);
 
-  // These TypedColumnProcessors kind of retrieve the template parameter of the columns.
-  auto typed_segment_processors = std::vector<std::unique_ptr<AbstractTypedColumnProcessor>>();
+  // These TypedSegmentProcessors kind of retrieve the template parameter of the segments.
+  auto typed_segment_processors = std::vector<std::unique_ptr<AbstractTypedSegmentProcessor>>();
   for (const auto& cxlumn_type : _target_table->cxlumn_data_types()) {
     typed_segment_processors.emplace_back(
-        make_unique_by_data_type<AbstractTypedColumnProcessor, TypedColumnProcessor>(cxlumn_type));
+        make_unique_by_data_type<AbstractTypedSegmentProcessor, TypedSegmentProcessor>(cxlumn_type));
   }
 
   auto total_rows_to_insert = static_cast<uint32_t>(input_table_left()->row_count());
@@ -179,8 +179,8 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       const auto source_chunk = input_table_left()->get_chunk(source_chunk_id);
       auto num_to_insert = std::min(source_chunk->size() - source_chunk_start_index, still_to_insert);
       for (CxlumnID cxlumn_id{0}; cxlumn_id < target_chunk->cxlumn_count(); ++cxlumn_id) {
-        const auto& source_column = source_chunk->get_segment(cxlumn_id);
-        typed_segment_processors[cxlumn_id]->copy_data(source_column, source_chunk_start_index,
+        const auto& source_segment = source_chunk->get_segment(cxlumn_id);
+        typed_segment_processors[cxlumn_id]->copy_data(source_segment, source_chunk_start_index,
                                                       target_chunk->get_segment(cxlumn_id), target_start_index,
                                                       num_to_insert);
       }

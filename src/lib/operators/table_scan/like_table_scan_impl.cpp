@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
-#include "storage/create_iterable_from_column.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/value_segment.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
@@ -44,7 +44,7 @@ void LikeTableScanImpl::handle_segment(const BaseEncodedSegment& base_segment,
   const auto chunk_id = context->_chunk_id;
 
   resolve_encoded_segment_type<std::string>(base_segment, [&](const auto& typed_segment) {
-    auto left_iterable = create_iterable_from_column(typed_segment);
+    auto left_iterable = create_iterable_from_segment(typed_segment);
     _scan_iterable(left_iterable, chunk_id, matches_out, mapped_chunk_offsets.get());
   });
 }

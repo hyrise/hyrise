@@ -68,8 +68,8 @@ std::unique_ptr<Base> make_unique_by_data_type(DataType data_type, ConstructorAr
  * returning it as a unique_ptr of its non-templated base class.
  * It does the same as make_unique_by_data_type but with two data types.
  *
- * @param data_type1 is an enum value of any of the supported column types
- * @param data_type2 is an enum value of any of the supported column types
+ * @param data_type1 is an enum value of any of the supported cxlumn types
+ * @param data_type2 is an enum value of any of the supported cxlumn types
  * @param args is a list of constructor arguments
  *
  * Note: We need to pass parameter packs explicitly for GCC due to the following bug:
@@ -109,7 +109,7 @@ std::shared_ptr<Base> make_shared_by_data_type(DataType data_type, ConstructorAr
 /**
  * Resolves a data type by passing a hana::type object on to a generic lambda
  *
- * @param data_type is an enum value of any of the supported column types
+ * @param data_type is an enum value of any of the supported cxlumn types
  * @param func is a generic lambda or similar accepting a hana::type object
  *
  *
@@ -169,78 +169,78 @@ void resolve_data_type(DataType data_type, const Functor& func) {
 }
 
 /**
- * Given a BaseSegment and its known column type, resolve the column implementation and call the lambda
+ * Given a BaseSegment and its known cxlumn type, resolve the segment implementation and call the lambda
  *
- * @param func is a generic lambda or similar accepting a reference to a specialized column (value, dictionary,
+ * @param func is a generic lambda or similar accepting a reference to a specialized segment (value, dictionary,
  * reference)
  *
  *
  * Example:
  *
  *   template <typename T>
- *   void process_column(ValueSegment<T>& column);
+ *   void process_segment(ValueSegment<T>& segment);
  *
  *   template <typename T>
- *   void process_column(DictionarySegment<T>& column);
+ *   void process_segment(DictionarySegment<T>& segment);
  *
- *   void process_column(ReferenceSegment& column);
+ *   void process_segment(ReferenceSegment& segment);
  *
  *   resolve_cxlumn_type<T>(base_segment, [&](auto& typed_segment) {
- *     process_column(typed_segment);
+ *     process_segment(typed_segment);
  *   });
  */
 template <typename In, typename Out>
 using ConstOutIfConstIn = std::conditional_t<std::is_const<In>::value, const Out, Out>;
 
 template <typename CxlumnDataType, typename BaseSegmentType, typename Functor>
-// BaseSegmentType allows column to be const and non-const
+// BaseSegmentType allows segment to be const and non-const
 std::enable_if_t<std::is_same<BaseSegment, std::remove_const_t<BaseSegmentType>>::value>
-/*void*/ resolve_cxlumn_type(BaseSegmentType& column, const Functor& func) {
+/*void*/ resolve_cxlumn_type(BaseSegmentType& segment, const Functor& func) {
   using ValueSegmentPtr = ConstOutIfConstIn<BaseSegmentType, ValueSegment<CxlumnDataType>>*;
   using ReferenceSegmentPtr = ConstOutIfConstIn<BaseSegmentType, ReferenceSegment>*;
   using EncodedSegmentPtr = ConstOutIfConstIn<BaseSegmentType, BaseEncodedSegment>*;
 
-  if (auto value_segment = dynamic_cast<ValueSegmentPtr>(&column)) {
+  if (auto value_segment = dynamic_cast<ValueSegmentPtr>(&segment)) {
     func(*value_segment);
-  } else if (auto ref_segment = dynamic_cast<ReferenceSegmentPtr>(&column)) {
+  } else if (auto ref_segment = dynamic_cast<ReferenceSegmentPtr>(&segment)) {
     func(*ref_segment);
-  } else if (auto encoded_segment = dynamic_cast<EncodedSegmentPtr>(&column)) {
+  } else if (auto encoded_segment = dynamic_cast<EncodedSegmentPtr>(&segment)) {
     resolve_encoded_segment_type<CxlumnDataType>(*encoded_segment, func);
   } else {
-    Fail("Unrecognized column type encountered.");
+    Fail("Unrecognized cxlumn type encountered.");
   }
 }
 
 /**
- * Resolves a data type by passing a hana::type object and the downcasted column on to a generic lambda
+ * Resolves a data type by passing a hana::type object and the downcasted segment on to a generic lambda
  *
- * @param data_type is an enum value of any of the supported column types
+ * @param data_type is an enum value of any of the supported cxlumn types
  * @param func is a generic lambda or similar accepting two parameters: a hana::type object and
- *   a reference to a specialized column (value, dictionary, reference)
+ *   a reference to a specialized segment (value, dictionary, reference)
  *
  *
  * Example:
  *
  *   template <typename T>
- *   void process_column(hana::basic_type<T> type, ValueSegment<T>& column);
+ *   void process_segment(hana::basic_type<T> type, ValueSegment<T>& segment);
  *
  *   template <typename T>
- *   void process_column(hana::basic_type<T> type, DictionarySegment<T>& column);
+ *   void process_segment(hana::basic_type<T> type, DictionarySegment<T>& segment);
  *
  *   template <typename T>
- *   void process_column(hana::basic_type<T> type, ReferenceSegment& column);
+ *   void process_segment(hana::basic_type<T> type, ReferenceSegment& segment);
  *
  *   resolve_data_and_cxlumn_type(base_segment, [&](auto type, auto& typed_segment) {
- *     process_column(type, typed_segment);
+ *     process_segment(type, typed_segment);
  *   });
  */
-template <typename Functor, typename BaseSegmentType>  // BaseSegmentType allows column to be const and non-const
+template <typename Functor, typename BaseSegmentType>  // BaseSegmentType allows segment to be const and non-const
 std::enable_if_t<std::is_same<BaseSegment, std::remove_const_t<BaseSegmentType>>::value>
-/*void*/ resolve_data_and_cxlumn_type(BaseSegmentType& column, const Functor& func) {
-  resolve_data_type(column.data_type(), [&](auto type) {
+/*void*/ resolve_data_and_cxlumn_type(BaseSegmentType& segment, const Functor& func) {
+  resolve_data_type(segment.data_type(), [&](auto type) {
     using CxlumnDataType = typename decltype(type)::type;
 
-    resolve_cxlumn_type<CxlumnDataType>(column, [&](auto& typed_segment) { func(type, typed_segment); });
+    resolve_cxlumn_type<CxlumnDataType>(segment, [&](auto& typed_segment) { func(type, typed_segment); });
   });
 }
 
@@ -249,10 +249,10 @@ std::enable_if_t<std::is_same<BaseSegment, std::remove_const_t<BaseSegmentType>>
  */
 template <typename T>
 constexpr DataType data_type_from_type() {
-  static_assert(hana::contains(data_types, hana::type_c<T>), "Type not a valid column type.");
+  static_assert(hana::contains(data_types, hana::type_c<T>), "Type not a valid cxlumn type.");
 
   return hana::fold_left(data_type_pairs, DataType{}, [](auto data_type, auto type_tuple) {
-    // check whether T is one of the column types
+    // check whether T is one of the cxlumn types
     if (hana::type_c<T> == hana::second(type_tuple)) {
       return hana::first(type_tuple);
     }

@@ -49,7 +49,7 @@ class ExpressionEvaluator final {
   // For Expressions that reference Columns from a single table
   explicit ExpressionEvaluator(const std::shared_ptr<const Table>& table, const ChunkID chunk_id);
 
-  std::shared_ptr<BaseSegment> evaluate_expression_to_column(const AbstractExpression& expression);
+  std::shared_ptr<BaseSegment> evaluate_expression_to_segment(const AbstractExpression& expression);
 
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> evaluate_expression_to_result(const AbstractExpression& expression);
@@ -88,7 +88,7 @@ class ExpressionEvaluator final {
                                                                    const ChunkOffset chunk_offset);
 
   template <typename Result>
-  std::shared_ptr<ExpressionResult<Result>> _evaluate_column_expression(const PQPCxlumnExpression& column_expression);
+  std::shared_ptr<ExpressionResult<Result>> _evaluate_cxlumn_expression(const PQPCxlumnExpression& cxlumn_expression);
 
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> _evaluate_case_expression(const CaseExpression& case_expression);
@@ -155,7 +155,7 @@ class ExpressionEvaluator final {
    */
   std::vector<bool> _evaluate_default_null_logic(const std::vector<bool>& left, const std::vector<bool>& right) const;
 
-  void _materialize_column_if_not_yet_materialized(const CxlumnID cxlumn_id);
+  void _materialize_segment_if_not_yet_materialized(const CxlumnID cxlumn_id);
 
   std::shared_ptr<ExpressionResult<std::string>> _evaluate_substring(
       const std::vector<std::shared_ptr<AbstractExpression>>& arguments);
@@ -170,8 +170,8 @@ class ExpressionEvaluator final {
   std::shared_ptr<const Chunk> _chunk;
   size_t _output_row_count{1};
 
-  // One entry for each column in the _chunk, may be nullptr if the column hasn't been materialized
-  std::vector<std::shared_ptr<BaseExpressionResult>> _column_materializations;
+  // One entry for each segment in the _chunk, may be nullptr if the segment hasn't (yet) been materialized
+  std::vector<std::shared_ptr<BaseExpressionResult>> _segment_materializations;
 };
 
 }  // namespace opossum

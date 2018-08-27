@@ -14,10 +14,10 @@ namespace opossum {
 namespace {
 
 bool is_row_visible(CommitID our_tid, CommitID snapshot_commit_id, ChunkOffset chunk_offset,
-                    const MvccData& columns) {
-  const auto row_tid = columns.tids[chunk_offset].load();
-  const auto begin_cid = columns.begin_cids[chunk_offset];
-  const auto end_cid = columns.end_cids[chunk_offset];
+                    const MvccData& mvcc_data) {
+  const auto row_tid = mvcc_data.tids[chunk_offset].load();
+  const auto begin_cid = mvcc_data.begin_cids[chunk_offset];
+  const auto end_cid = mvcc_data.end_cids[chunk_offset];
 
   // Taken from: https://github.com/hyrise/hyrise/blob/master/docs/documentation/queryexecution/tx.rst
   // auto own_insert = (our_tid == row_tid) && !(snapshot_commit_id >= begin_cid) && !(snapshot_commit_id >= end_cid);
@@ -59,19 +59,19 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   for (ChunkID chunk_id{0}; chunk_id < in_table->chunk_count(); ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
 
-    ChunkSegments output_columns;
+    ChunkSegments output_segments;
     auto pos_list_out = std::make_shared<PosList>();
     auto referenced_table = std::shared_ptr<const Table>();
     const auto ref_col_in = std::dynamic_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(CxlumnID{0}));
 
-    // If the columns in this chunk reference a column, build a poslist for a reference segment.
+    // If the segments in this chunk reference a segment, build a poslist for a reference segment.
     if (ref_col_in) {
       DebugAssert(chunk_in->references_exactly_one_table(),
                   "Input to Validate contains a Chunk referencing more than one table.");
 
       // Check all rows in the old poslist and put them in pos_list_out if they are visible.
       referenced_table = ref_col_in->referenced_table();
-      DebugAssert(referenced_table->has_mvcc(), "Trying to use Validate on a table that has no MVCC columns");
+      DebugAssert(referenced_table->has_mvcc(), "Trying to use Validate on a table that has no MVCC data");
 
       for (auto row_id : *ref_col_in->pos_list()) {
         const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
@@ -85,16 +85,16 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
       // Construct the actual ReferenceSegment objects and add them to the chunk.
       for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk_in->cxlumn_count(); ++cxlumn_id) {
-        const auto column = std::static_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(cxlumn_id));
-        const auto referenced_cxlumn_id = column->referenced_cxlumn_id();
+        const auto reference_segment = std::static_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(cxlumn_id));
+        const auto referenced_cxlumn_id = reference_segment->referenced_cxlumn_id();
         auto ref_col_out = std::make_shared<ReferenceSegment>(referenced_table, referenced_cxlumn_id, pos_list_out);
-        output_columns.push_back(ref_col_out);
+        output_segments.push_back(ref_col_out);
       }
 
       // Otherwise we have a Value- or DictionarySegment and simply iterate over all rows to build a poslist.
     } else {
       referenced_table = in_table;
-      DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC columns");
+      DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
       const auto mvcc_data = chunk_in->get_scoped_mvcc_data_lock();
 
       // Generate pos_list_out.
@@ -108,12 +108,12 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       // Create actual ReferenceSegment objects.
       for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk_in->cxlumn_count(); ++cxlumn_id) {
         auto ref_col_out = std::make_shared<ReferenceSegment>(referenced_table, cxlumn_id, pos_list_out);
-        output_columns.push_back(ref_col_out);
+        output_segments.push_back(ref_col_out);
       }
     }
 
     if (!pos_list_out->empty() > 0) {
-      output->append_chunk(output_columns);
+      output->append_chunk(output_segments);
     }
   }
   return output;

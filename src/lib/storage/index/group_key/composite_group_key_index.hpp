@@ -48,14 +48,14 @@ class CompositeGroupKeyIndex : public BaseIndex {
   CompositeGroupKeyIndex& operator=(CompositeGroupKeyIndex&&) = default;
   ~CompositeGroupKeyIndex() = default;
 
-  explicit CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment>>& indexed_columns);
+  explicit CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const BaseSegment>>& segments_to_index);
 
  private:
   Iterator _lower_bound(const std::vector<AllTypeVariant>& values) const final;
   Iterator _upper_bound(const std::vector<AllTypeVariant>& values) const final;
   Iterator _cbegin() const final;
   Iterator _cend() const final;
-  std::vector<std::shared_ptr<const BaseSegment>> _get_index_columns() const final;
+  std::vector<std::shared_ptr<const BaseSegment>> _get_indexed_segments() const final;
 
   /**
    * Creates a VariableLengthKey using the values given as parameters.
@@ -98,7 +98,7 @@ class CompositeGroupKeyIndex : public BaseIndex {
 
  private:
   // the columns the index is based on
-  std::vector<std::shared_ptr<const BaseDictionarySegment>> _indexed_columns;
+  std::vector<std::shared_ptr<const BaseDictionarySegment>> _indexed_segments;
 
   // contains concatenated value-ids
   VariableLengthKeyStore _keys;

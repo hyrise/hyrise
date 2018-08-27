@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "import_export/binary.hpp"
-#include "storage/dictionary_column.hpp"
+#include "storage/dictionary_segment.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/fixed_size_byte_aligned/fixed_size_byte_aligned_vector.hpp"
@@ -147,16 +147,16 @@ void ExportBinary::_write_header(const std::shared_ptr<const Table>& table, std:
 
   std::vector<std::string> cxlumn_types(table->cxlumn_count());
   std::vector<std::string> cxlumn_names(table->cxlumn_count());
-  std::vector<bool> columns_are_nullable(table->cxlumn_count());
+  std::vector<bool> cxlumns_are_nullable(table->cxlumn_count());
 
-  // Transform column types and copy column names in order to write them to the file.
+  // Transform cxlumn types and copy cxlumn names in order to write them to the file.
   for (CxlumnID cxlumn_id{0}; cxlumn_id < table->cxlumn_count(); ++cxlumn_id) {
     cxlumn_types[cxlumn_id] = data_type_to_string.left.at(table->cxlumn_data_type(cxlumn_id));
     cxlumn_names[cxlumn_id] = table->cxlumn_name(cxlumn_id);
-    columns_are_nullable[cxlumn_id] = table->column_is_nullable(cxlumn_id);
+    cxlumns_are_nullable[cxlumn_id] = table->cxlumn_is_nullable(cxlumn_id);
   }
   export_values(ofstream, cxlumn_types);
-  export_values(ofstream, columns_are_nullable);
+  export_values(ofstream, cxlumns_are_nullable);
   export_string_values(ofstream, cxlumn_names);
 }
 
@@ -167,13 +167,13 @@ void ExportBinary::_write_chunk(const std::shared_ptr<const Table>& table, std::
 
   export_value(ofstream, static_cast<ChunkOffset>(chunk->size()));
 
-  // Iterating over all columns of this chunk and exporting them
+  // Iterating over all segments of this chunk and exporting them
   for (CxlumnID cxlumn_id{0}; cxlumn_id < chunk->cxlumn_count(); cxlumn_id++) {
     auto visitor =
-        make_unique_by_data_type<AbstractColumnVisitor, ExportBinaryVisitor>(table->cxlumn_data_type(cxlumn_id));
+        make_unique_by_data_type<AbstractSegmentVisitor, ExportBinaryVisitor>(table->cxlumn_data_type(cxlumn_id));
     resolve_data_and_cxlumn_type(
         *chunk->get_segment(cxlumn_id),
-        [&](const auto data_type_t, const auto& resolved_column) { visitor->handle_segment(resolved_column, context); });
+        [&](const auto data_type_t, const auto& resolved_segment) { visitor->handle_segment(resolved_segment, context); });
   }
 }
 
@@ -183,7 +183,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseValueSegment
   auto context = std::static_pointer_cast<ExportContext>(base_context);
   const auto& column = static_cast<const ValueSegment<T>&>(base_segment);
 
-  export_value(context->ofstream, BinaryColumnType::value_segment);
+  export_value(context->ofstream, BinarySegmentType::value_segment);
 
   if (column.is_nullable()) {
     export_values(context->ofstream, column.null_values());
@@ -198,7 +198,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const ReferenceSegment
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
   // We materialize reference segments and save them as value segments
-  export_value(context->ofstream, BinaryColumnType::value_segment);
+  export_value(context->ofstream, BinarySegmentType::value_segment);
 
   // Unfortunately, we have to iterate over all values of the reference segment
   // to materialize its contents. Then we can write them to the file
@@ -214,7 +214,7 @@ void ExportBinary::ExportBinaryVisitor<std::string>::handle_segment(const Refere
   auto context = std::static_pointer_cast<ExportContext>(base_context);
 
   // We materialize reference segments and save them as value segments
-  export_value(context->ofstream, BinaryColumnType::value_segment);
+  export_value(context->ofstream, BinarySegmentType::value_segment);
 
   // If there is no data, we can skip all of the coming steps.
   if (ref_segment.size() == 0) return;
@@ -254,7 +254,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseDictionarySe
     Fail("Does only support fixed-size byte-aligned compressed attribute vectors.");
   }
 
-  export_value(context->ofstream, BinaryColumnType::dictionary_column);
+  export_value(context->ofstream, BinarySegmentType::dictionary_segment);
 
   const auto attribute_vector_width = [&]() {
     switch (base_segment.compressed_vector_type()) {
@@ -293,7 +293,7 @@ void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseDictionarySe
 template <typename T>
 void ExportBinary::ExportBinaryVisitor<T>::handle_segment(const BaseEncodedSegment& base_segment,
                                                          std::shared_ptr<SegmentVisitorContext> base_context) {
-  Fail("Binary export not implemented yet for encoded columns.");
+  Fail("Binary export not implemented yet for encoded segments.");
 }
 
 template <typename T>

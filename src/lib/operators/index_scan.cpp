@@ -72,15 +72,15 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job_and_schedule(const ChunkID 
     // reused to track accesses of the output chunk. Accesses of derived chunks are counted towards the
     // original chunk.
 
-    ChunkSegments columns;
+    ChunkSegments segments;
 
     for (CxlumnID cxlumn_id{0u}; cxlumn_id < _in_table->cxlumn_count(); ++cxlumn_id) {
       auto ref_segment_out = std::make_shared<ReferenceSegment>(_in_table, cxlumn_id, matches_out);
-      columns.push_back(ref_segment_out);
+      segments.push_back(ref_segment_out);
     }
 
     std::lock_guard<std::mutex> lock(output_mutex);
-    _out_table->append_chunk(columns, chunk->get_allocator(), chunk->access_counter());
+    _out_table->append_chunk(segments, chunk->get_allocator(), chunk->access_counter());
   });
 
   job_task->schedule();
@@ -92,10 +92,10 @@ void IndexScan::_validate_input() {
   Assert(_predicate_condition != PredicateCondition::NotLike, "Predicate condition not supported by index scan.");
 
   Assert(_left_cxlumn_ids.size() == _right_values.size(),
-         "Count mismatch: left column IDs and right values don’t have same size.");
+         "Count mismatch: left cxlumn IDs and right values don’t have same size.");
   if (_predicate_condition == PredicateCondition::Between) {
     Assert(_left_cxlumn_ids.size() == _right_values2.size(),
-           "Count mismatch: left column IDs and right values don’t have same size.");
+           "Count mismatch: left cxlumn IDs and right values don’t have same size.");
   }
 
   Assert(_in_table->type() == TableType::Data, "IndexScan only supports persistent tables right now.");
@@ -111,7 +111,7 @@ PosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   auto matches_out = PosList{};
 
   const auto index = chunk->get_index(_index_type, _left_cxlumn_ids);
-  Assert(index != nullptr, "Index of specified type not found for column (vector).");
+  Assert(index != nullptr, "Index of specified type not found for segment (vector).");
 
   switch (_predicate_condition) {
     case PredicateCondition::Equals: {

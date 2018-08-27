@@ -29,13 +29,13 @@ struct MvccData {
 
   /**
    * Compacts the internal representation of
-   * the mvcc columns in order to reduce fragmentation
-   * Locks mvcc columns exclusively in order to do so
+   * the mvcc data in order to reduce fragmentation
+   * Locks mvcc data exclusively in order to do so
    */
   void shrink();
 
   /**
-   * Grows all mvcc columns by the given delta
+   * Grows mvcc data by the given delta
    *
    * @param begin_cid value all new begin_cids will be set to
    */
@@ -45,10 +45,10 @@ struct MvccData {
 
  private:
   /**
-   * @brief Mutex used to manage access to MVCC columns
+   * @brief Mutex used to manage access to MVCC data
    *
    * Exclusively locked in shrink()
-   * Locked for shared ownership when MVCC columns of a Chunk are accessed
+   * Locked for shared ownership when MVCC data of a Chunk are accessed
    * via the get_scoped_mvcc_data_lock() getters
    */
   std::shared_mutex _mutex;

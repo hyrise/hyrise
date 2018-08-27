@@ -1,4 +1,4 @@
-#include "fixed_string_dictionary_column.hpp"
+#include "fixed_string_dictionary_segment.hpp"
 
 #include <algorithm>
 #include <memory>
