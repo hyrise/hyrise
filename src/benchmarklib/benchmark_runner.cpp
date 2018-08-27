@@ -104,21 +104,44 @@ void BenchmarkRunner::_benchmark_permuted_query_sets() {
   std::random_device random_device;
   std::mt19937 random_generator(random_device());
 
-  BenchmarkState state{_config.max_num_query_runs, _config.max_duration};
-  while (state.keep_running()) {
-    std::shuffle(mutable_named_queries.begin(), mutable_named_queries.end(), random_generator);
+  if (_config.parallel_execution) {
+    for (auto run = size_t{0}; run < _config.max_num_query_runs; ++run) {
+      std::shuffle(mutable_named_queries.begin(), mutable_named_queries.end(), random_generator);
 
-    for (const auto& named_query : mutable_named_queries) {
-      const auto query_benchmark_begin = std::chrono::steady_clock::now();
+      for (const auto& named_query : mutable_named_queries) {
+        const auto query_benchmark_begin = std::chrono::steady_clock::now();
 
-      // Execute the query, we don't care about the results
-      _execute_query(named_query);
+        auto tasks = std::vector<std::shared_ptr<AbstractTask>>();
+        for (auto run = size_t{0}; run < _config.max_num_query_runs; ++run) {
+          auto query_tasks = _schedule_query_execution(named_query);
+          tasks.insert(tasks.end(), query_tasks.begin(), query_tasks.end());
+        }
+        CurrentScheduler::wait_for_tasks(tasks);
 
-      const auto query_benchmark_end = std::chrono::steady_clock::now();
+        const auto query_benchmark_end = std::chrono::steady_clock::now();
 
-      auto& query_benchmark_result = _query_results_by_query_name[named_query.first];
-      query_benchmark_result.duration += query_benchmark_end - query_benchmark_begin;
-      query_benchmark_result.num_iterations++;
+        auto& query_benchmark_result = _query_results_by_query_name[named_query.first];
+        query_benchmark_result.duration += query_benchmark_end - query_benchmark_begin;
+        query_benchmark_result.num_iterations++;
+      }
+    }
+  } else {
+    BenchmarkState state{_config.max_num_query_runs, _config.max_duration};
+    while (state.keep_running()) {
+      std::shuffle(mutable_named_queries.begin(), mutable_named_queries.end(), random_generator);
+
+      for (const auto& named_query : mutable_named_queries) {
+        const auto query_benchmark_begin = std::chrono::steady_clock::now();
+
+        // Execute the query, we don't care about the results
+        _execute_query(named_query);
+
+        const auto query_benchmark_end = std::chrono::steady_clock::now();
+
+        auto& query_benchmark_result = _query_results_by_query_name[named_query.first];
+        query_benchmark_result.duration += query_benchmark_end - query_benchmark_begin;
+        query_benchmark_result.num_iterations++;
+      }
     }
   }
 }
