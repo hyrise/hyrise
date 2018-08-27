@@ -5,21 +5,11 @@
 namespace opossum {
 
 /**
- * Cost model that returns the rough number of tuple accesses of the Operator.
- *
- * Research (e.g. "How Good Are Query Optimizers, Really?" by Leis et al) suggests very simple CostModels such as this
- * one are "good enough". Especially cardinality estimation has a bigger impact on plan quality by orders of magnitude.
- *
- * Currently costs all Join Operators, TableScans and UnionPositions
+ * Logical complexity cost model
  */
 class CostModelLogical : public AbstractCostModel {
- public:
-  std::string name() const override;
-
-  Cost get_reference_operator_cost(const std::shared_ptr<AbstractOperator>& op) const override;
-
  protected:
-  Cost _cost_model_impl(const OperatorType operator_type, const AbstractCostFeatureProxy& feature_proxy) const override;
+  virtual Cost _estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const override;
 };
 
 }  // namespace opossum

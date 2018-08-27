@@ -82,16 +82,8 @@ set(
     import_export/csv_parser.hpp
     import_export/csv_writer.cpp
     import_export/csv_writer.hpp
-    cost_model/abstract_cost_feature_proxy.cpp
-    cost_model/abstract_cost_feature_proxy.hpp
     cost_model/abstract_cost_model.cpp
     cost_model/abstract_cost_model.hpp
-    cost_model/cost_feature.cpp
-    cost_model/cost_feature.hpp
-    cost_model/cost_feature_lqp_node_proxy.cpp
-    cost_model/cost_feature_lqp_node_proxy.hpp
-    cost_model/cost_feature_operator_proxy.cpp
-    cost_model/cost_feature_operator_proxy.hpp
     cost_model/cost.hpp
     cost_model/cost_model_logical.cpp
     cost_model/cost_model_logical.hpp
@@ -250,6 +242,10 @@ set(
     statistics/chunk_statistics/chunk_statistics.hpp
     statistics/chunk_statistics/min_max_filter.hpp
     statistics/chunk_statistics/range_filter.hpp
+    optimizer/dp_ccp.cpp
+    optimizer/dp_ccp.hpp
+    optimizer/enumerate_ccp.cpp
+    optimizer/enumerate_ccp.hpp
     optimizer/optimizer.cpp
     optimizer/optimizer.hpp
     optimizer/join_graph.cpp

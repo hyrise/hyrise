@@ -1,0 +1,77 @@
+#include "gtest/gtest.h"
+
+#include "cost_model/cost_model_logical.hpp"
+#include "expression/expression_functional.hpp"
+#include "logical_query_plan/mock_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/union_node.hpp"
+#include "optimizer/dp_ccp.hpp"
+#include "optimizer/join_graph.hpp"
+#include "storage/storage_manager.hpp"
+#include "statistics/column_statistics.hpp"
+#include "statistics/table_statistics.hpp"
+#include "utils/load_table.hpp"
+#include "testing_assert.hpp"
+
+using namespace opossum::expression_functional;  // NOLINT
+
+namespace opossum {
+
+class DpCcpTest : public ::testing::Test {
+ public:
+  void SetUp() override {
+    cost_model = std::make_shared<CostModelLogical>();
+
+    const auto column_statistics_a_a = std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10.0f, 1, 50);
+    const auto column_statistics_b_a = std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10.0f, 40, 100);
+    const auto column_statistics_c_a = std::make_shared<ColumnStatistics<int32_t>>(0.0f, 10.0f, 1, 100);
+
+    const auto table_statistics_a = std::make_shared<TableStatistics>(TableType::Data, 20, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics_a_a});
+    const auto table_statistics_b = std::make_shared<TableStatistics>(TableType::Data, 3, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics_b_a});
+    const auto table_statistics_c = std::make_shared<TableStatistics>(TableType::Data, 5, std::vector<std::shared_ptr<const BaseColumnStatistics>>{column_statistics_c_a});
+
+    node_a = MockNode::make(table_statistics_a);
+    node_b = MockNode::make(table_statistics_b);
+    node_c = MockNode::make(table_statistics_c);
+
+    a_a = {node_a, ColumnID{0}};
+    b_a = {node_b, ColumnID{0}};
+    c_a = {node_c, ColumnID{0}};
+  }
+
+  std::shared_ptr<AbstractLQPNode> node_a, node_b, node_c;
+  std::shared_ptr<AbstractCostModel> cost_model;
+  LQPColumnReference a_a, b_a, c_a;
+};
+
+TEST_F(DpCcpTest, Basic) {
+  /**
+   * Test two vertices and a single join predicate
+   */
+
+  auto join_edge_a_b = JoinGraphEdge{JoinGraphVertexSet{3, 0b011}, expression_vector(equals_(a_a, b_a))};
+  auto join_edge_a_c = JoinGraphEdge{JoinGraphVertexSet{3, 0b101}, expression_vector(equals_(a_a, c_a))};
+
+  auto join_graph = std::make_shared<JoinGraph>(
+    std::vector<std::shared_ptr<AbstractLQPNode>>({node_a, node_b, node_c}),
+    std::vector<JoinGraphEdge>({join_edge_a_b, join_edge_a_c})
+  );
+  DpCcp dp_ccp{cost_model};
+
+  const auto actual_lqp = dp_ccp(join_graph);
+
+  actual_lqp->print();
+
+  // clang-format off
+  const auto expected_lqp =
+  JoinNode::make(JoinMode::Inner, equals_(a_a, c_a),
+    JoinNode::make(JoinMode::Inner, equals_(a_a, b_a),
+      node_a,
+      node_b),
+    node_c);
+  // clang-format on
+
+  EXPECT_LQP_EQ(expected_lqp, actual_lqp);
+}
+
+}  // namespace opossum

@@ -11,7 +11,7 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "optimizer/join_graph_builder.hpp"
 
-using namespace opossum::expression_functional;
+using namespace opossum::expression_functional;  // NOLINT
 
 namespace opossum {
 

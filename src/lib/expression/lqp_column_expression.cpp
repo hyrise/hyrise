@@ -27,9 +27,13 @@ std::string LQPColumnExpression::as_column_name() const {
 
   } else if (column_reference.original_node()->type == LQPNodeType::Mock) {
     const auto mock_node = std::static_pointer_cast<const MockNode>(column_reference.original_node());
-    Assert(column_reference.original_column_id() < mock_node->column_definitions().size(), "ColumnID out of range");
-    return mock_node->column_definitions()[column_reference.original_column_id()].second;
 
+    if (mock_node->constructor_arguments().type() == typeid(MockNode::ColumnDefinitions)) {
+      Assert(column_reference.original_column_id() < mock_node->column_definitions().size(), "ColumnID out of range");
+      return mock_node->column_definitions()[column_reference.original_column_id()].second;
+    } else {
+      return std::string("ColumnID ") + std::to_string(column_reference.original_column_id());
+    }
   } else {
     Fail("Only columns in StoredTableNodes and MockNodes (for tests) can be referenced in LQPColumnExpressions");
   }

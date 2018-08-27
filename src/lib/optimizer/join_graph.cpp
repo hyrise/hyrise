@@ -21,7 +21,7 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinGraph::find_local_predicate
   vertex_set.set(vertex_idx);
 
   for (const auto& edge : edges) {
-    if (edge.vertex_set == vertex_set) continue;
+    if (edge.vertex_set != vertex_set) continue;
 
     for (const auto& predicate : edge.predicates) {
       predicates.emplace_back(predicate);
