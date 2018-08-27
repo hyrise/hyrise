@@ -59,11 +59,11 @@ target_compile_options(
 add_library(
     cqf
 
-    cqf/src/gqf_wrapper_2.c
-    cqf/src/gqf_file.c
-    cqf/src/gqf.c
-    cqf/src/hashutil.c
-    cqf/src/zipf.c
+    cqf/src/cqf2.cpp
+    cqf/src/cqf4.cpp
+    cqf/src/cqf8.cpp
+    cqf/src/cqf16.cpp
+    cqf/src/cqf32.cpp
 )
 
 target_compile_options(
@@ -77,7 +77,6 @@ target_include_directories(
 
     PUBLIC
     cqf/include
-    cqf
 )
 
 

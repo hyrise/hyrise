@@ -1,24 +1,28 @@
 #pragma once
 
-
-#include <gqf.h>
+#include "cqf2.hpp"
+#include "cqf4.hpp"
+#include "cqf8.hpp"
+#include "cqf16.hpp"
+#include "cqf32.hpp"
 #include "types.hpp"
 #include "storage/base_column.hpp"
 
-#include <cstdint>
 #include <vector>
 #include <string>
-#include <cstdlib>
-#include <ctime>
 
 
 namespace opossum {
 
-/**
-Following the idea and implementation of Pandey, Johnson and Patro:
-Paper: A General-Purpose Counting Filter: Making Every Bit Count
-Repository: https://github.com/splatlab/cqf
-**/
+/*
+Counting Quotient Filters allow you to keep track of which values are present in a column and how often. Filters
+work approximately. If a membership query yields a positive result, the value is probably present but there is
+a chance of a false positive. If the query delivers a negative result, the item is guaranteed to not be contained.
+In the same way, items can be over counted but not under counted.
+CQF can be configured with quotient size, which determines the number of slots, and the remainder size, which
+corresponds to the slot size. At this time, the remainder size must be 2, 4, 8, 16 or 32.
+*/
+
 template <typename ElementType>
 class CountingQuotientFilter {
  public:
@@ -29,12 +33,16 @@ class CountingQuotientFilter {
   void populate(std::shared_ptr<const BaseColumn> column);
   uint64_t count(ElementType value) const;
   uint64_t count_all_type(AllTypeVariant value) const;
-  //uint64_t memory_consumption() const;
+  uint64_t memory_consumption() const;
   double load_factor() const;
   bool is_full() const;
 
  private:
-  int filter_id;
+  std::optional<gqf2::quotient_filter> _quotient_filter2;
+  std::optional<gqf4::quotient_filter> _quotient_filter4;
+  std::optional<gqf8::quotient_filter> _quotient_filter8;
+  std::optional<gqf16::quotient_filter> _quotient_filter16;
+  std::optional<gqf32::quotient_filter> _quotient_filter32;
   uint64_t _quotient_bits;
   uint64_t _remainder_bits;
   uint64_t _number_of_slots;
